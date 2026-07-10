@@ -85,9 +85,9 @@ const RecommendedFixPanel: React.FC<RecommendedFixPanelProps> = ({ report, onApp
       setIsApplying(false);
     } catch (error) {
       console.error('Error applying fix:', error);
-      setError(error instanceof Error
-        ? error.message
-        : t('recommendedFix.errors.unknown', { defaultValue: 'An unknown error occurred' }));
+      setError(t('recommendedFix.errors.applyFailed', {
+        defaultValue: 'Failed to apply reconciliation fix. Please refresh and try again.',
+      }));
       setIsApplying(false);
     }
   };

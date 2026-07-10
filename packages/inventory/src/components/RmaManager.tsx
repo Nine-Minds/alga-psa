@@ -8,6 +8,11 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { toast } from 'react-hot-toast';
 import type { ColumnDefinition, IRmaCase, IStockLocation, IVendor, RmaType } from '@alga-psa/types';
 import {
@@ -97,6 +102,16 @@ export function RmaManager({
   const reload = useCallback(async () => {
     try {
       const [list, owed] = await Promise.all([listRmaCases({}), deadUnitsOwedReport()]);
+      if (isActionMessageError(list) || isActionPermissionError(list)) {
+        setCases([]);
+        toast.error(getErrorMessage(list));
+        return;
+      }
+      if (isActionMessageError(owed) || isActionPermissionError(owed)) {
+        setDeadOwed([]);
+        toast.error(getErrorMessage(owed));
+        return;
+      }
       setCases(list);
       setDeadOwed(owed);
     } catch (e: any) {
@@ -112,6 +127,16 @@ export function RmaManager({
           listStockLocations({ includeInactive: false }),
           listVendors({ includeInactive: false }),
         ]);
+        if (isActionMessageError(locs) || isActionPermissionError(locs)) {
+          setLocations([]);
+          toast.error(getErrorMessage(locs));
+          return;
+        }
+        if (isActionMessageError(vens) || isActionPermissionError(vens)) {
+          setVendors([]);
+          toast.error(getErrorMessage(vens));
+          return;
+        }
         setLocations(locs);
         setVendors(vens);
       } catch (e: any) {
@@ -134,10 +159,12 @@ export function RmaManager({
     setSaving(true);
     try {
       const payload = { returned_unit_id: form.returned_unit_id.trim(), reason: form.reason.trim() || null };
-      if (form.rma_type === 'advance_replacement') {
-        await openAdvanceRma(payload);
-      } else {
-        await openRma(payload);
+      const result = form.rma_type === 'advance_replacement'
+        ? await openAdvanceRma(payload)
+        : await openRma(payload);
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
       }
       toast.success(t('rma.caseOpened', 'RMA case opened.'));
       setDialogOpen(false);
@@ -156,7 +183,11 @@ export function RmaManager({
     }
     setActioning(true);
     try {
-      await receiveReturn(receiveCase.rma_id, { location_id: receiveLocation });
+      const result = await receiveReturn(receiveCase.rma_id, { location_id: receiveLocation });
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       toast.success(t('rma.returnReceived', 'Return received.'));
       setReceiveCase(null);
       await reload();
@@ -174,7 +205,11 @@ export function RmaManager({
     }
     setActioning(true);
     try {
-      await sendToVendor(vendorCase.rma_id, { vendor_id: vendorId, rma_reference: vendorRef.trim() || null });
+      const result = await sendToVendor(vendorCase.rma_id, { vendor_id: vendorId, rma_reference: vendorRef.trim() || null });
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       toast.success(t('rma.sentToVendor', 'Sent to vendor.'));
       setVendorCase(null);
       await reload();

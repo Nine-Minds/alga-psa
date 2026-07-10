@@ -290,10 +290,16 @@ const UserManagement = (): React.JSX.Element => {
     try {
       setIsCopyingPortalLink(true);
       const linkResult = await getTenantPortalLoginLink();
+      if (!linkResult.success) {
+        toast.error(linkResult.error);
+        return;
+      }
+
+      const portalLink = linkResult.data;
       if (typeof navigator !== 'undefined' && navigator.clipboard) {
-        await navigator.clipboard.writeText(linkResult.url);
+        await navigator.clipboard.writeText(portalLink.url);
         toast.success(
-          linkResult.source === 'vanity'
+          portalLink.source === 'vanity'
             ? t('users.messages.success.copiedVanityLink')
             : t('users.messages.success.copiedCanonicalLink')
         );
@@ -526,6 +532,8 @@ const fetchContacts = async (): Promise<void> => {
             EMAIL_ALREADY_EXISTS: 'users.messages.error.emailAlreadyInUse',
             LICENSE_LIMIT_REACHED: 'users.messages.error.licenseLimitReached',
             SOLO_PLAN_LIMIT: 'users.messages.error.soloPlanLimit',
+            PERMISSION_DENIED: 'users.messages.error.permissionDenied',
+            USER_CREATE_FAILED: 'users.messages.error.createUser',
           };
           const message = t(keysByCode[result.code], { defaultValue: result.error });
           toast.error(message);

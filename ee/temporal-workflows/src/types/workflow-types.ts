@@ -20,7 +20,17 @@ export interface TenantCreationInput {
     firstName: string;
     lastName: string;
     email: string;
+    // Pre-set admin password (appliance install: the operator chose it during
+    // setup). Omitted => a temporary password is generated.
+    password?: string;
   };
+  // Pre-minted tenant id to adopt (appliance install-code redemption mints the
+  // id in the registry before the tenant exists). Omitted => DB-generated.
+  tenantId?: string;
+  // Appliance installs have no nineminds management tenant, no Stripe, and the
+  // operator already knows their password — skip the hosted-only steps.
+  skipCustomerTracking?: boolean;
+  skipWelcomeEmail?: boolean;
   companyName?: string;
   clientName?: string;
   contractLine?: string;
@@ -67,6 +77,8 @@ export interface TenantCreationResult {
 export interface CreateTenantActivityInput {
   tenantName: string;
   email: string;
+  // Pre-minted tenant id to adopt; omitted => DB-generated.
+  tenantId?: string;
   companyName?: string;
   clientName?: string;
   licenseCount?: number; // Number of licenses for the tenant
@@ -106,6 +118,8 @@ export interface CreateAdminUserActivityInput {
   lastName: string;
   email: string;
   clientId?: string;
+  // Pre-set password (appliance install). Omitted => generated.
+  password?: string;
 }
 
 export interface CreateAdminUserActivityResult {

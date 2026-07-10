@@ -82,6 +82,22 @@ export interface TicketingData {
   statuses?: any[];
 }
 
+function onboardingActionErrorMessage(error: unknown, fallback: string): string {
+  const message = error instanceof Error ? error.message : typeof error === 'string' ? error : '';
+
+  if (
+    message.startsWith('User with email ') ||
+    message === 'Service type is required' ||
+    message === 'Invalid service type selected' ||
+    message === 'Select or create a board before adding ticket statuses.' ||
+    message.startsWith('You do not have permission')
+  ) {
+    return message;
+  }
+
+  return fallback;
+}
+
 export const saveClientInfo = withAuth(async (
   currentUser: IUserWithRoles,
   { tenant }: AuthContext,
@@ -138,7 +154,7 @@ export const saveClientInfo = withAuth(async (
     return { success: true };
   } catch (error) {
     console.error('Error saving client info:', error);
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    return { success: false, error: onboardingActionErrorMessage(error, 'Failed to save client information') };
   }
 });
 
@@ -238,7 +254,7 @@ export const addSingleTeamMember = withAuth(async (
 
         created = member.email;
       } catch (memberError) {
-        error = memberError instanceof Error ? memberError.message : 'Unknown error';
+        error = onboardingActionErrorMessage(memberError, 'Failed to create team member');
       }
     });
 
@@ -265,7 +281,7 @@ export const addSingleTeamMember = withAuth(async (
     }
   } catch (error) {
     console.error('Error adding single team member:', error);
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    return { success: false, error: onboardingActionErrorMessage(error, 'Failed to create team member') };
   }
 });
 
@@ -384,7 +400,7 @@ export const addTeamMembers = withAuth(async (
         } catch (memberError) {
           failed.push({ 
             member, 
-            error: memberError instanceof Error ? memberError.message : 'Unknown error' 
+            error: onboardingActionErrorMessage(memberError, 'Failed to create team member')
           });
         }
       }
@@ -420,7 +436,7 @@ export const addTeamMembers = withAuth(async (
     };
   } catch (error) {
     console.error('Error adding team members:', error);
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    return { success: false, error: onboardingActionErrorMessage(error, 'Failed to add team members') };
   }
 });
 
@@ -499,7 +515,7 @@ export const createClient = withAuth(async (
       const result = await createClientInternal(clientData);
       
       if (!result.success) {
-        throw new Error(result.error || 'Failed to create client');
+        throw new Error(result.error || 'Client creation returned an unsuccessful result without an error message.');
       }
 
       clientId = result.data.client_id;
@@ -546,7 +562,7 @@ export const createClient = withAuth(async (
     return { success: false, error: 'Failed to create client' };
   } catch (error) {
     console.error('Error creating client:', error);
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    return { success: false, error: onboardingActionErrorMessage(error, 'Failed to create client') };
   }
 });
 
@@ -626,7 +642,7 @@ export const addClientContact = withAuth(async (
     };
   } catch (error) {
     console.error('Error adding client contact:', error);
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    return { success: false, error: onboardingActionErrorMessage(error, 'Failed to add client contact') };
   }
 });
 
@@ -720,7 +736,7 @@ export const setupBilling = withAuth(async (
     return { success: true, data: { serviceId } };
   } catch (error) {
     console.error('Error setting up billing:', error);
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    return { success: false, error: onboardingActionErrorMessage(error, 'Failed to set up billing') };
   }
 });
 
@@ -995,7 +1011,7 @@ export const configureTicketing = withAuth(async (
     return { success: true, data: createdIds };
   } catch (error) {
     console.error('Error configuring ticketing:', error);
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    return { success: false, error: onboardingActionErrorMessage(error, 'Failed to configure ticketing') };
   }
 });
 
@@ -1048,7 +1064,7 @@ export const validateOnboardingDefaults = withAuth(async (
     return { success: true };
   } catch (error) {
     console.error('Error validating onboarding defaults:', error);
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    return { success: false, error: onboardingActionErrorMessage(error, 'Failed to validate onboarding defaults') };
   }
 });
 
@@ -1066,7 +1082,7 @@ export const completeOnboarding = withAuth(async (
     return { success: true };
   } catch (error) {
     console.error('Error completing onboarding:', error);
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    return { success: false, error: onboardingActionErrorMessage(error, 'Failed to complete onboarding') };
   }
 });
 
@@ -1104,7 +1120,7 @@ export const getAvailableRoles = withAuth(async (
     console.error('Error fetching available roles:', error);
     return { 
       success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+      error: onboardingActionErrorMessage(error, 'Failed to load available roles')
     };
   }
 });
@@ -1139,7 +1155,7 @@ export const getOnboardingInitialData = withAuth(async (
     console.error('Error getting onboarding initial data:', error);
     return { 
       success: false, 
-      error: error instanceof Error ? error.message : 'Unknown error' 
+      error: onboardingActionErrorMessage(error, 'Failed to load onboarding data')
     };
   }
 });
@@ -1194,7 +1210,7 @@ export const getTenantTicketingData = withAuth(async (
     console.error('Error getting tenant ticketing data:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: onboardingActionErrorMessage(error, 'Failed to load ticketing setup data')
     };
   }
 });

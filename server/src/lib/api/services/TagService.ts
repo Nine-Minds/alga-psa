@@ -9,6 +9,7 @@ import { BaseService, ServiceContext, ListResult, tenantDb } from '@alga-psa/db'
 import { withTransaction } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import { publishEvent } from 'server/src/lib/eventBus/publishers';
+import { ConflictError, NotFoundError, ValidationError } from '../middleware/apiMiddleware';
 
 // Import tag models and interfaces
 import TagDefinition, { ITagDefinition } from '@alga-psa/tags/models/tagDefinition';
@@ -266,7 +267,7 @@ export class TagService extends BaseService {
         .first();
       
       if (!mapping) {
-        throw new Error(`Tag mapping with id ${id} not found`);
+        throw new NotFoundError(`Tag mapping with id ${id} not found`);
       }
 
       const previousDefinition = await TagDefinition.get(trx, tenant, mapping.tag_id);
@@ -297,7 +298,7 @@ export class TagService extends BaseService {
         .first();
       
       if (!updated) {
-        throw new Error('Tag not found after update');
+        throw new NotFoundError('Tag not found after update');
       }
 
       return {
@@ -690,10 +691,10 @@ export class TagService extends BaseService {
       // Validate hex color codes if provided
       const hexColorRegex = /^#[0-9A-F]{6}$/i;
       if (backgroundColor && !hexColorRegex.test(backgroundColor)) {
-        throw new Error('Invalid background color format');
+        throw new ValidationError('Invalid background color format');
       }
       if (textColor && !hexColorRegex.test(textColor)) {
-        throw new Error('Invalid text color format');
+        throw new ValidationError('Invalid text color format');
       }
 
       // Find the definition and update it
@@ -744,7 +745,7 @@ export class TagService extends BaseService {
     const { result, publish } = await withTransaction(knex, async (trx) => {
       // Validate tag text
       if (!newTagText || !newTagText.trim()) {
-        throw new Error('Tag text cannot be empty');
+        throw new ValidationError('Tag text cannot be empty');
       }
 
       const trimmedNewText = newTagText.trim();
@@ -766,7 +767,7 @@ export class TagService extends BaseService {
         .first();
         
       if (!tag) {
-        throw new Error(`Tag with id ${tagId} not found`);
+        throw new NotFoundError(`Tag with id ${tagId} not found`);
       }
 
       // Don't update if text is the same
@@ -801,7 +802,7 @@ export class TagService extends BaseService {
       const newDefinition = await TagDefinition.findByTextAndType(trx, tenant, trimmedNewText, tag.tagged_type);
 
       if (newDefinition) {
-        throw new Error(`Tag "${trimmedNewText}" already exists for ${tag.tagged_type} entities`);
+        throw new ConflictError(`Tag "${trimmedNewText}" already exists for ${tag.tagged_type} entities`);
       }
 
       // Update the definition
@@ -854,7 +855,7 @@ export class TagService extends BaseService {
     const { deletedCount, deletedTagId } = await withTransaction(knex, async (trx) => {
       // Validate tag text
       if (!tagText || !tagText.trim()) {
-        throw new Error('Tag text cannot be empty');
+        throw new ValidationError('Tag text cannot be empty');
       }
 
       const trimmedText = tagText.trim();

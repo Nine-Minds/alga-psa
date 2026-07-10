@@ -20,11 +20,32 @@ import type { IDocument } from '@alga-psa/types';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { buildNoteCreatedPayload } from '@alga-psa/workflow-streams';
 import { assertMspPermission } from '../lib/authHelpers';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 export interface ClientNoteContent {
   document: IDocument | null;
   blockData: unknown | null;
   lastUpdated: string | null;
+}
+
+type ClientNoteActionError = ActionMessageError | ActionPermissionError;
+
+function clientNoteActionErrorFrom(error: unknown): ClientNoteActionError | null {
+  if (!(error instanceof Error)) {
+    return null;
+  }
+  if (error.message.includes('Permission denied')) {
+    return permissionError(error.message);
+  }
+  if (error.message === 'Client not found') {
+    return actionError('Client not found');
+  }
+  return null;
 }
 
 /**
@@ -35,8 +56,14 @@ export const getClientNoteContent = withAuth(async (
   user,
   { tenant },
   clientId: string
-): Promise<ClientNoteContent> => {
-  await assertMspPermission(user, 'client', 'read', 'Permission denied: Cannot read clients');
+): Promise<ClientNoteContent | ClientNoteActionError> => {
+  try {
+    await assertMspPermission(user, 'client', 'read', 'Permission denied: Cannot read clients');
+  } catch (error) {
+    const expected = clientNoteActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 
   const { knex } = await createTenantKnex();
 
@@ -97,7 +124,9 @@ export const getClientNoteContent = withAuth(async (
     };
   } catch (error) {
     console.error('Error getting client note content:', error);
-    throw new Error('Failed to get client note content');
+    const expected = clientNoteActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 });
 
@@ -110,8 +139,14 @@ export const saveClientNote = withAuth(async (
   { tenant },
   clientId: string,
   blockData: unknown
-): Promise<{ document_id: string }> => {
-  await assertMspPermission(user, 'client', 'update', 'Permission denied: Cannot update clients');
+): Promise<{ document_id: string } | ClientNoteActionError> => {
+  try {
+    await assertMspPermission(user, 'client', 'update', 'Permission denied: Cannot update clients');
+  } catch (error) {
+    const expected = clientNoteActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 
   const { knex } = await createTenantKnex();
 
@@ -172,7 +207,9 @@ export const saveClientNote = withAuth(async (
     }
   } catch (error) {
     console.error('Error saving client note:', error);
-    throw new Error('Failed to save client note');
+    const expected = clientNoteActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 });
 
@@ -185,8 +222,14 @@ export const deleteClientNote = withAuth(async (
   { tenant },
   clientId: string,
   deleteDocument: boolean = false
-): Promise<void> => {
-  await assertMspPermission(user, 'client', 'update', 'Permission denied: Cannot update clients');
+): Promise<void | ClientNoteActionError> => {
+  try {
+    await assertMspPermission(user, 'client', 'update', 'Permission denied: Cannot update clients');
+  } catch (error) {
+    const expected = clientNoteActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 
   const { knex } = await createTenantKnex();
 
@@ -230,6 +273,8 @@ export const deleteClientNote = withAuth(async (
     });
   } catch (error) {
     console.error('Error deleting client note:', error);
-    throw new Error('Failed to delete client note');
+    const expected = clientNoteActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 });

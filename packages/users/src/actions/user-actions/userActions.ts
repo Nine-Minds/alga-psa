@@ -39,7 +39,9 @@ export type AddUserErrorCode =
   | 'ROLE_CLIENT_NOT_ALLOWED_FOR_MSP'
   | 'EMAIL_ALREADY_EXISTS'
   | 'LICENSE_LIMIT_REACHED'
-  | 'SOLO_PLAN_LIMIT';
+  | 'SOLO_PLAN_LIMIT'
+  | 'PERMISSION_DENIED'
+  | 'USER_CREATE_FAILED';
 
 type AddUserResult =
   | { success: true; user: SafeApiUser }
@@ -48,7 +50,9 @@ type AddUserResult =
 export type UpdateUserErrorCode =
   | 'EMAIL_ALREADY_EXISTS'
   | 'REPORTS_TO_SELF'
-  | 'REPORTS_TO_CYCLE';
+  | 'REPORTS_TO_CYCLE'
+  | 'PERMISSION_DENIED'
+  | 'USER_UPDATE_FAILED';
 
 export type UpdateUserResult =
   | { success: true; user: SafeApiUser | null }
@@ -141,7 +145,7 @@ export const checkEmailExistsGlobally = withAuth(async (
   _ctx,
   email: string,
   userType?: 'internal' | 'client'
-): Promise<boolean> => {
+): Promise<boolean | ActionResult> => {
   try {
     const db = await getAdminConnection();
 
@@ -163,7 +167,15 @@ export const checkEmailExistsGlobally = withAuth(async (
     });
   } catch (error) {
     logger.error('Error checking email existence globally:', error);
-    throw error; // Preserve original error
+    const message = getErrorMessage(error);
+    if (message.startsWith('Permission denied:')) {
+      return { success: false, error: message };
+    }
+    const dbError = error as { code?: string };
+    if (dbError?.code === '22P02') {
+      return { success: false, error: 'The selected user type or email check input is invalid. Please refresh and try again.' };
+    }
+    throw error;
   }
 });
 
@@ -346,9 +358,38 @@ export const addUser = withAuth(async (
     logger.error('Error adding user:', error);
     const message = getErrorMessage(error);
     if (message.startsWith('Permission denied:')) {
-      throw error;
+      return { success: false, code: 'PERMISSION_DENIED', error: message };
     }
-    throw new Error('Failed to add user');
+    if (message.startsWith('Tenant not found:')) {
+      return {
+        success: false,
+        code: 'USER_CREATE_FAILED',
+        error: 'Tenant not found. Please refresh and try again.',
+      };
+    }
+    const dbError = error as { code?: string; column?: string };
+    if (dbError?.code === '23505') {
+      return {
+        success: false,
+        code: 'EMAIL_ALREADY_EXISTS',
+        error: 'A user with this email address already exists',
+      };
+    }
+    if (dbError?.code === '23503' || dbError?.code === '22P02') {
+      return {
+        success: false,
+        code: 'USER_CREATE_FAILED',
+        error: 'One of the selected user values is invalid or no longer exists. Please refresh and try again.',
+      };
+    }
+    if (dbError?.code === '23502') {
+      return {
+        success: false,
+        code: 'USER_CREATE_FAILED',
+        error: `Missing required user field${dbError.column ? `: ${dbError.column}` : ''}.`,
+      };
+    }
+    throw error;
   }
 });
 
@@ -576,6 +617,27 @@ export const deleteUser = withAuth(async (
     return response;
   } catch (error) {
     logger.error('Error deleting user:', error);
+    const message = getErrorMessage(error);
+    if (message.startsWith('Permission denied:')) {
+      return {
+        success: false,
+        canDelete: false,
+        code: 'PERMISSION_DENIED',
+        message,
+        dependencies: [],
+        alternatives: []
+      };
+    }
+    if (message.includes('not found')) {
+      return {
+        success: false,
+        canDelete: false,
+        code: 'NOT_FOUND',
+        message: 'User not found. It may have already been deleted. Please refresh and try again.',
+        dependencies: [],
+        alternatives: []
+      };
+    }
     return {
       success: false,
       canDelete: false,
@@ -712,9 +774,38 @@ export const updateUser = withAuth(async (
     logger.error(`Failed to update user with id ${userId}:`, error);
     const message = getErrorMessage(error);
     if (message.startsWith('Permission denied:')) {
-      throw error;
+      return { success: false, code: 'PERMISSION_DENIED', error: message };
     }
-    throw new Error('Failed to update user');
+    if (message === 'User not found') {
+      return {
+        success: false,
+        code: 'USER_UPDATE_FAILED',
+        error: 'User not found. Please refresh and try again.',
+      };
+    }
+    const dbError = error as { code?: string; column?: string };
+    if (dbError?.code === '23505') {
+      return {
+        success: false,
+        code: 'EMAIL_ALREADY_EXISTS',
+        error: 'A user with this email address already exists',
+      };
+    }
+    if (dbError?.code === '23503' || dbError?.code === '22P02') {
+      return {
+        success: false,
+        code: 'USER_UPDATE_FAILED',
+        error: 'One of the selected user values is invalid or no longer exists. Please refresh and try again.',
+      };
+    }
+    if (dbError?.code === '23502') {
+      return {
+        success: false,
+        code: 'USER_UPDATE_FAILED',
+        error: `Missing required user field${dbError.column ? `: ${dbError.column}` : ''}.`,
+      };
+    }
+    throw error;
   }
 });
 
@@ -723,7 +814,7 @@ export const updateUserRoles = withAuth(async (
   { tenant },
   userId: string,
   roleIds: string[]
-): Promise<void> => {
+): Promise<void | ActionResult> => {
   try {
     const {knex: db} = await createTenantKnex();
 
@@ -764,7 +855,27 @@ export const updateUserRoles = withAuth(async (
     revalidatePath('/settings');
   } catch (error) {
     logger.error(`Failed to update roles for user with id ${userId}:`, error);
-    throw new Error('Failed to update user roles');
+    const message = getErrorMessage(error);
+    if (message.startsWith('Permission denied:')) {
+      return { success: false, error: message };
+    }
+    const dbError = error as { code?: string; column?: string };
+    if (dbError?.code === '22P02' || dbError?.code === '23503') {
+      return {
+        success: false,
+        error: 'One of the selected users or roles is invalid or no longer exists. Please refresh and try again.',
+      };
+    }
+    if (dbError?.code === '23502') {
+      return {
+        success: false,
+        error: `Missing required user role field${dbError.column ? `: ${dbError.column}` : ''}.`,
+      };
+    }
+    if (dbError?.code === '23505') {
+      return { success: false, error: 'That user already has one of the selected roles.' };
+    }
+    throw error;
   }
 });
 
@@ -799,7 +910,7 @@ export async function verifyContactEmail(email: string): Promise<{ exists: boole
     };
   } catch (error) {
     logger.error('Failed to verify contact email:', error);
-    throw new Error('Failed to verify contact email');
+    throw error;
   }
 }
 
@@ -903,6 +1014,36 @@ export const registerClientUser = withAuth(async (
     });
   } catch (error) {
     logger.error('Error registering client user:', error);
+    const message = getErrorMessage(error);
+    if (message.startsWith('Permission denied:')) {
+      return {
+        success: false,
+        code: 'REGISTRATION_FAILED',
+        error: message,
+      };
+    }
+    if (message === 'Client portal User role not found for tenant') {
+      return {
+        success: false,
+        code: 'REGISTRATION_FAILED',
+        error: 'Client portal role is not configured for this tenant. Please refresh and try again.',
+      };
+    }
+    const dbError = error as { code?: string };
+    if (dbError?.code === '23505') {
+      return {
+        success: false,
+        code: 'EMAIL_ALREADY_EXISTS',
+        error: 'A user with this email address already exists',
+      };
+    }
+    if (dbError?.code === '23503' || dbError?.code === '22P02') {
+      return {
+        success: false,
+        code: 'REGISTRATION_FAILED',
+        error: 'One of the selected registration records is invalid or no longer exists. Please refresh and try again.',
+      };
+    }
     return {
       success: false,
       code: 'REGISTRATION_FAILED',
@@ -1109,7 +1250,7 @@ export const uploadUserAvatar = withAuth(async (
       errorStack: error.stack,
       errorName: error.name
     });
-    return { success: false, error: error.message || 'An unexpected error occurred while uploading the avatar.' };
+    return { success: false, error: 'An unexpected error occurred while uploading the avatar.' };
   }
 });
 
@@ -1179,6 +1320,6 @@ export const deleteUserAvatar = withAuth(async (
       errorStack: error.stack,
       errorName: error.name
     });
-    return { success: false, error: error.message || 'An unexpected error occurred while deleting the avatar.' };
+    return { success: false, error: 'An unexpected error occurred while deleting the avatar.' };
   }
 });

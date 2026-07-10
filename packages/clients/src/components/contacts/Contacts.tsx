@@ -7,7 +7,7 @@ import { ITag } from '@alga-psa/types';
 import type { IDocument } from '@alga-psa/types';
 import { getAllContacts, getContactsByClient, getAllClients, searchContactListIds } from '@alga-psa/clients/actions';
 import { exportContactsToCSV, deleteContact, updateContact, getContactLastUsagePhoneTypes, deleteOrphanedPhoneTypes } from '@alga-psa/clients/actions';
-import { findTagsByEntityIds, findAllTagsByType } from '@alga-psa/tags/actions';
+import { findTagsByEntityIds, findAllTagsByType, isTagActionError } from '@alga-psa/tags/actions';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import {
@@ -25,7 +25,11 @@ import { PrintableTable } from '@alga-psa/ui/components/PrintableTable';
 import { SearchInput } from '@alga-psa/ui/components/SearchInput';
 import { Pen, Eye, CloudDownload, MoreVertical, Upload, Trash2, XCircle, ExternalLink, Power, RotateCcw, Printer, Settings2, Share2 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
 import QuickAddContact from './QuickAddContact';
 import { useDrawer, useClientDrawer } from "@alga-psa/ui";
@@ -44,7 +48,6 @@ import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { getCurrentUserAsync } from '../../lib/usersHelpers';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
-import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
@@ -55,6 +58,8 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { ShortcutActiveRegion, usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 
 const CONTACTS_PAGE_SIZE_SETTING = 'contacts_page_size';
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 interface ContactsProps {
   initialContacts: IContact[];
@@ -238,6 +243,10 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
           contacts.map((contact: IContact): string => contact.contact_name_id),
           'contact'
         );
+        if (isTagActionError(contactTags)) {
+          console.error('Error fetching tags:', contactTags);
+          return;
+        }
 
         const newContactTags: Record<string, ITag[]> = {};
         contactTags.forEach(tag => {
@@ -262,6 +271,11 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
     const fetchAllTags = async () => {
       try {
         const allTags = await findAllTagsByType('contact');
+        if (isTagActionError(allTags)) {
+          console.error('Error fetching all tags:', allTags);
+          setAllUniqueTags([]);
+          return;
+        }
         setAllUniqueTags(allTags);
       } catch (error) {
         console.error('Error fetching all tags:', error);
@@ -536,6 +550,10 @@ const Contacts: React.FC<ContactsProps> = ({ initialContacts, clientId, preSelec
         ...contactToDelete,
         is_inactive: true
       });
+      if (isReturnedActionError(updatedContact)) {
+        handleError(updatedContact);
+        return;
+      }
 
       // Update contact in the list to reflect inactive status
       setContacts(prevContacts =>

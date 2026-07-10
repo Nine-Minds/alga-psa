@@ -5,10 +5,52 @@ import { withTransaction, createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { IStockUnit, IStockMovement, StockUnitStatus, StockMovementType } from '@alga-psa/types';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 async function requireInvRead(user: any): Promise<void> {
   if (!(await hasPermission(user, 'inventory', 'read'))) {
     throw new Error('Permission denied: inventory read required');
+  }
+}
+
+export type StockUnitActionError = ActionMessageError | ActionPermissionError;
+
+function stockUnitActionErrorFrom(error: unknown): StockUnitActionError | null {
+  if (error instanceof Error) {
+    if (error.message.startsWith('Permission denied') || error.message === 'user is not logged in') {
+      return permissionError(error.message);
+    }
+  }
+
+  const dbError = error as { code?: string };
+  if (dbError?.code === '22P02') {
+    return actionError('One of the selected stock-unit values is invalid. Please refresh and try again.');
+  }
+  if (dbError?.code === '22007' || dbError?.code === '22008') {
+    return actionError('Choose a valid stock movement date range.');
+  }
+  if (dbError?.code === '23503') {
+    return actionError('One of the selected stock-unit records is no longer valid. Please refresh and try again.');
+  }
+  if (dbError?.code === '23505') {
+    return actionError('This stock-unit lookup conflicts with an existing record. Please refresh and try again.');
+  }
+
+  return null;
+}
+
+async function withStockUnitActionErrors<T>(work: () => Promise<T>): Promise<T | StockUnitActionError> {
+  try {
+    return await work();
+  } catch (error) {
+    const expected = stockUnitActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 }
 
@@ -18,13 +60,15 @@ async function requireInvRead(user: any): Promise<void> {
  * Returns [] for non-serialized products (they have no unit rows).
  */
 export const listAvailableStockUnits = withAuth(
-  async (user, { tenant }, serviceId: string): Promise<IStockUnit[]> => {
-    await requireInvRead(user);
-    const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
-      return (await trx('stock_units')
-        .where({ tenant, service_id: serviceId, status: 'in_stock' })
-        .orderBy('received_at', 'asc')) as IStockUnit[];
+  async (user, { tenant }, serviceId: string): Promise<IStockUnit[] | StockUnitActionError> => {
+    return withStockUnitActionErrors(async () => {
+      await requireInvRead(user);
+      const { knex: db } = await createTenantKnex();
+      return withTransaction(db, async (trx: Knex.Transaction) => {
+        return (await trx('stock_units')
+          .where({ tenant, service_id: serviceId, status: 'in_stock' })
+          .orderBy('received_at', 'asc')) as IStockUnit[];
+      });
     });
   },
 );
@@ -47,27 +91,31 @@ export const listStockUnits = withAuth(
       location_id?: string;
       client_id?: string;
     },
-  ): Promise<IStockUnit[]> => {
-    await requireInvRead(user);
-    const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
-      const q = trx('stock_units').where({ tenant });
-      if (filter?.service_id) q.andWhere({ service_id: filter.service_id });
-      if (filter?.status) q.andWhere({ status: filter.status });
-      if (filter?.location_id) q.andWhere({ location_id: filter.location_id });
-      if (filter?.client_id) q.andWhere({ client_id: filter.client_id });
-      return (await q.orderBy('received_at', 'desc')) as IStockUnit[];
+  ): Promise<IStockUnit[] | StockUnitActionError> => {
+    return withStockUnitActionErrors(async () => {
+      await requireInvRead(user);
+      const { knex: db } = await createTenantKnex();
+      return withTransaction(db, async (trx: Knex.Transaction) => {
+        const q = trx('stock_units').where({ tenant });
+        if (filter?.service_id) q.andWhere({ service_id: filter.service_id });
+        if (filter?.status) q.andWhere({ status: filter.status });
+        if (filter?.location_id) q.andWhere({ location_id: filter.location_id });
+        if (filter?.client_id) q.andWhere({ client_id: filter.client_id });
+        return (await q.orderBy('received_at', 'desc')) as IStockUnit[];
+      });
     });
   },
 );
 
 export const getStockUnit = withAuth(
-  async (user, { tenant }, unitId: string): Promise<IStockUnit | null> => {
-    await requireInvRead(user);
-    const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
-      const row = await trx('stock_units').where({ tenant, unit_id: unitId }).first();
-      return (row ?? null) as IStockUnit | null;
+  async (user, { tenant }, unitId: string): Promise<IStockUnit | null | StockUnitActionError> => {
+    return withStockUnitActionErrors(async () => {
+      await requireInvRead(user);
+      const { knex: db } = await createTenantKnex();
+      return withTransaction(db, async (trx: Knex.Transaction) => {
+        const row = await trx('stock_units').where({ tenant, unit_id: unitId }).first();
+        return (row ?? null) as IStockUnit | null;
+      });
     });
   },
 );
@@ -77,7 +125,8 @@ export const getStockUnit = withAuth(
  * provisioning lookups. Returns units in any status.
  */
 export const searchUnitsBySerial = withAuth(
-  async (user, { tenant }, q: string): Promise<IStockUnit[]> => {
+  async (user, { tenant }, q: string): Promise<IStockUnit[] | StockUnitActionError> => {
+    return withStockUnitActionErrors(async () => {
     await requireInvRead(user);
     const term = (q ?? '').trim();
     if (!term) return [];
@@ -88,6 +137,7 @@ export const searchUnitsBySerial = withAuth(
         .whereRaw('serial_number ILIKE ? ESCAPE ?', [`%${escapeLike(term)}%`, '\\'])
         .orderBy('received_at', 'desc')) as IStockUnit[];
     });
+    });
   },
 );
 
@@ -96,7 +146,8 @@ export const searchUnitsBySerial = withAuth(
  * tenant-unique; provisioning and field lookups key on it. Any status.
  */
 export const searchUnitsByMac = withAuth(
-  async (user, { tenant }, q: string): Promise<IStockUnit[]> => {
+  async (user, { tenant }, q: string): Promise<IStockUnit[] | StockUnitActionError> => {
+    return withStockUnitActionErrors(async () => {
     await requireInvRead(user);
     const term = (q ?? '').trim();
     if (!term) return [];
@@ -107,6 +158,7 @@ export const searchUnitsByMac = withAuth(
         .whereNotNull('mac_address')
         .whereRaw('mac_address ILIKE ? ESCAPE ?', [`%${escapeLike(term)}%`, '\\'])
         .orderBy('received_at', 'desc')) as IStockUnit[];
+    });
     });
   },
 );
@@ -120,7 +172,8 @@ export const getUnitDetail = withAuth(
     user,
     { tenant },
     unitId: string,
-  ): Promise<{ unit: IStockUnit; movements: IStockMovement[] } | null> => {
+  ): Promise<{ unit: IStockUnit; movements: IStockMovement[] } | null | StockUnitActionError> => {
+    return withStockUnitActionErrors(async () => {
     await requireInvRead(user);
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
@@ -132,6 +185,7 @@ export const getUnitDetail = withAuth(
         .where({ tenant, unit_id: unitId })
         .orderBy('created_at', 'asc')) as IStockMovement[];
       return { unit, movements };
+    });
     });
   },
 );
@@ -152,7 +206,8 @@ export const listStockMovements = withAuth(
       from?: string | Date;
       to?: string | Date;
     },
-  ): Promise<IStockMovement[]> => {
+  ): Promise<IStockMovement[] | StockUnitActionError> => {
+    return withStockUnitActionErrors(async () => {
     await requireInvRead(user);
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
@@ -169,6 +224,7 @@ export const listStockMovements = withAuth(
       if (filter?.to) q.andWhere('created_at', '<=', filter.to);
       return (await q.orderBy('created_at', 'desc')) as IStockMovement[];
     });
+    });
   },
 );
 
@@ -183,7 +239,8 @@ export const advisoryLookup = withAuth(
     user,
     { tenant },
     input: { serials?: string[]; macs?: string[] },
-  ): Promise<IStockUnit[]> => {
+  ): Promise<IStockUnit[] | StockUnitActionError> => {
+    return withStockUnitActionErrors(async () => {
     await requireInvRead(user);
     const serials = (input.serials ?? []).map((s) => (s ?? '').trim()).filter(Boolean);
     const macs = (input.macs ?? []).map((m) => (m ?? '').trim()).filter(Boolean);
@@ -199,6 +256,7 @@ export const advisoryLookup = withAuth(
         }
       });
       return (await q.orderBy('received_at', 'desc')) as IStockUnit[];
+    });
     });
   },
 );

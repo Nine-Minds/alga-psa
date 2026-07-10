@@ -11,6 +11,16 @@ import { IconPicker, getIconComponent } from '@alga-psa/ui/components/IconPicker
 import { createInteractionType, updateInteractionType, getAllInteractionTypes } from '@alga-psa/clients/actions/interactionTypeActions';
 import { IInteractionType } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 interface QuickAddInteractionTypeProps {
   isOpen: boolean;
@@ -46,6 +56,11 @@ export const QuickAddInteractionType: React.FC<QuickAddInteractionTypeProps> = (
         // Get next available order
         try {
           const types = await getAllInteractionTypes();
+          if (isReturnedActionError(types)) {
+            setError(getErrorMessage(types));
+            setDisplayOrder(1);
+            return;
+          }
           const maxOrder = types.reduce((max, t) => Math.max(max, t.display_order || 0), 0);
           setDisplayOrder(maxOrder + 1);
         } catch (error) {
@@ -86,10 +101,18 @@ export const QuickAddInteractionType: React.FC<QuickAddInteractionTypeProps> = (
 
       if (editingType) {
         // Update existing type
-        await updateInteractionType(editingType.type_id, typeData);
+        const result = await updateInteractionType(editingType.type_id, typeData);
+        if (isReturnedActionError(result)) {
+          setError(getErrorMessage(result));
+          return;
+        }
       } else {
         // Create new type
-        await createInteractionType(typeData);
+        const result = await createInteractionType(typeData);
+        if (isReturnedActionError(result)) {
+          setError(getErrorMessage(result));
+          return;
+        }
       }
       
       onSuccess();

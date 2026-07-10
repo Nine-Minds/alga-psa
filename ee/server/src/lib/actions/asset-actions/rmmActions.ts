@@ -26,6 +26,29 @@ async function assertAdvancedAssetsAccess(): Promise<void> {
   await assertTierAccess(TIER_FEATURES.ADVANCED_ASSETS);
 }
 
+function isExpectedRmmActionError(error: unknown): boolean {
+  if (!(error instanceof Error)) {
+    return false;
+  }
+
+  return [
+    'Asset not found',
+    'Asset is not managed by NinjaOne',
+    'No active NinjaOne integration found',
+    'requires reconnection',
+    'No refresh token available',
+    'NinjaOne client credentials not configured',
+    'Sync is already in progress',
+    'No tenant found',
+  ].some((message) => error.message.includes(message));
+}
+
+function rmmCommandFailureMessage(operation: 'reboot' | 'script'): string {
+  return operation === 'reboot'
+    ? 'Unable to send reboot command. Confirm the device is online and remote actions are enabled.'
+    : 'Unable to run script. Confirm the device is online and the script is available.';
+}
+
 /**
  * Get cached RMM data for an asset
  * Returns data from the database (populated during sync) for instant page load
@@ -181,7 +204,10 @@ export async function refreshAssetRmmData(assetId: string): Promise<RmmCachedDat
     return getAssetRmmData(assetId);
   } catch (error) {
     console.error('Error refreshing asset RMM data:', error);
-    throw new Error('Failed to refresh asset RMM data');
+    if (isExpectedRmmActionError(error)) {
+      throw error;
+    }
+    throw error;
   }
 }
 
@@ -230,7 +256,10 @@ export async function getAssetRemoteControlUrl(
     }
   } catch (error) {
     console.error('Error getting remote control URL:', error);
-    throw new Error('Failed to get remote control URL');
+    if (isExpectedRmmActionError(error)) {
+      throw error;
+    }
+    throw error;
   }
 }
 
@@ -269,9 +298,10 @@ export async function triggerRmmReboot(assetId: string): Promise<{ success: bool
         message: `Reboot command sent to ${asset.name}`,
       };
     } catch (rebootError) {
+      console.warn('RMM reboot command failed:', rebootError);
       return {
         success: false,
-        message: rebootError instanceof Error ? rebootError.message : 'Failed to send reboot command',
+        message: rmmCommandFailureMessage('reboot'),
       };
     }
   } catch (error) {
@@ -319,9 +349,10 @@ export async function triggerRmmScript(
         message: `Script queued for execution on ${asset.name}`,
       };
     } catch (scriptError) {
+      console.warn('RMM script execution failed:', scriptError);
       return {
         success: false,
-        message: scriptError instanceof Error ? scriptError.message : 'Failed to run script',
+        message: rmmCommandFailureMessage('script'),
       };
     }
   } catch (error) {

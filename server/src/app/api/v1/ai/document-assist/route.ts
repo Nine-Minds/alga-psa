@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     if (error instanceof AddOnAccessError) {
       return new Response(
-        JSON.stringify({ error: error.message }),
+        JSON.stringify({ error: 'AI Assistant add-on access is not available for this workspace.' }),
         { status: 403, headers: { 'Content-Type': 'application/json' } },
       );
     }

@@ -295,7 +295,9 @@
     "deleteTimeEntryFailed": "Falha ao excluir entrada de hora",
     "timeEntryDeleted": "Entrada de tempo excluída",
     "closeFailed": "Falha ao fechar ticket",
-    "scheduleVisitFailed": "Falha ao abrir o agendador"
+    "scheduleVisitFailed": "Falha ao abrir o agendador",
+    "loadCommentsFailed": "Failed to load comments",
+    "updateTicketFailed": "Failed to update ticket"
   },
   "conversation": {
     "comments": "Comentários",

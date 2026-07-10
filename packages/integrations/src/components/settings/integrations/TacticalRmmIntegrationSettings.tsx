@@ -36,6 +36,10 @@ import type { IClient, IContact, ColumnDefinition } from '@alga-psa/types';
 import { getIntegrationClients, getIntegrationContacts } from '../../../actions/clientLookupActions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
+function getActionFailureMessage(result: { error?: string } | null | undefined, fallback: string): string {
+  return result?.error || fallback;
+}
+
 export function TacticalRmmIntegrationSettings() {
   const { t } = useTranslation('msp/integrations');
   const { toast } = useToast();
@@ -97,7 +101,7 @@ export function TacticalRmmIntegrationSettings() {
         getRmmIntegrationIdByProvider({ provider: 'tacticalrmm' }),
       ]);
       if (!res.success) {
-        setError(t('integrations.rmm.tactical.errors.loadSettings', { defaultValue: 'Failed to load Tactical RMM settings' }));
+        setError(getActionFailureMessage(res, t('integrations.rmm.tactical.errors.loadSettings', { defaultValue: 'Failed to load Tactical RMM settings' })));
         return;
       }
 
@@ -116,7 +120,7 @@ export function TacticalRmmIntegrationSettings() {
   const loadOrgMappings = React.useCallback(async () => {
     const res = await listTacticalRmmOrganizationMappings();
     if (!res.success) {
-      setError(t('integrations.rmm.tactical.errors.loadOrgMappings', { defaultValue: 'Failed to load organization mappings' }));
+      setError(getActionFailureMessage(res, t('integrations.rmm.tactical.errors.loadOrgMappings', { defaultValue: 'Failed to load organization mappings' })));
       return;
     }
     setOrgMappings(res.mappings || []);
@@ -180,8 +184,9 @@ export function TacticalRmmIntegrationSettings() {
         password: authMode === 'knox' ? password : undefined,
       });
       if (!res.success) {
-        setError(t('integrations.rmm.tactical.errors.saveConfig', { defaultValue: 'Failed to save Tactical RMM configuration' }));
-        toast({ title: t('integrations.rmm.tactical.toasts.saveFailedTitle', { defaultValue: 'Save failed' }), description: t('integrations.rmm.tactical.toasts.unknownError', { defaultValue: 'Unknown error' }), variant: 'destructive' });
+        const message = getActionFailureMessage(res, t('integrations.rmm.tactical.errors.saveConfig', { defaultValue: 'Failed to save Tactical RMM configuration' }));
+        setError(message);
+        toast({ title: t('integrations.rmm.tactical.toasts.saveFailedTitle', { defaultValue: 'Save failed' }), description: message, variant: 'destructive' });
         return;
       }
 
@@ -209,8 +214,9 @@ export function TacticalRmmIntegrationSettings() {
           setError(t('integrations.rmm.tactical.errors.totpRequired', { defaultValue: 'TOTP is required. Enter your current code and test again.' }));
           return;
         }
-        setError(t('integrations.rmm.tactical.errors.connectionTest', { defaultValue: 'Connection test failed' }));
-        toast({ title: t('integrations.rmm.tactical.toasts.connectionFailedTitle', { defaultValue: 'Connection failed' }), description: t('integrations.rmm.tactical.toasts.unknownError', { defaultValue: 'Unknown error' }), variant: 'destructive' });
+        const message = getActionFailureMessage(res, t('integrations.rmm.tactical.errors.connectionTest', { defaultValue: 'Connection test failed' }));
+        setError(message);
+        toast({ title: t('integrations.rmm.tactical.toasts.connectionFailedTitle', { defaultValue: 'Connection failed' }), description: message, variant: 'destructive' });
         return;
       }
 
@@ -232,8 +238,9 @@ export function TacticalRmmIntegrationSettings() {
     try {
       const res = await disconnectTacticalRmmIntegration();
       if (!res.success) {
-        setError(t('integrations.rmm.tactical.errors.disconnect', { defaultValue: 'Disconnect failed' }));
-        toast({ title: t('integrations.rmm.tactical.toasts.disconnectFailedTitle', { defaultValue: 'Disconnect failed' }), description: t('integrations.rmm.tactical.toasts.unknownError', { defaultValue: 'Unknown error' }), variant: 'destructive' });
+        const message = getActionFailureMessage(res, t('integrations.rmm.tactical.errors.disconnect', { defaultValue: 'Disconnect failed' }));
+        setError(message);
+        toast({ title: t('integrations.rmm.tactical.toasts.disconnectFailedTitle', { defaultValue: 'Disconnect failed' }), description: message, variant: 'destructive' });
         return;
       }
       setSuccess(t('integrations.rmm.tactical.success.disconnected', { defaultValue: 'Disconnected.' }));
@@ -254,8 +261,9 @@ export function TacticalRmmIntegrationSettings() {
     try {
       const res = await syncTacticalRmmOrganizations();
       if (!res.success) {
-        setError(t('integrations.rmm.tactical.errors.syncOrgs', { defaultValue: 'Organization sync failed' }));
-        toast({ title: t('integrations.rmm.tactical.toasts.syncFailedTitle', { defaultValue: 'Sync failed' }), description: t('integrations.rmm.tactical.toasts.unknownError', { defaultValue: 'Unknown error' }), variant: 'destructive' });
+        const message = getActionFailureMessage(res, t('integrations.rmm.tactical.errors.syncOrgs', { defaultValue: 'Organization sync failed' }));
+        setError(message);
+        toast({ title: t('integrations.rmm.tactical.toasts.syncFailedTitle', { defaultValue: 'Sync failed' }), description: message, variant: 'destructive' });
         return;
       }
       setSuccess(
@@ -278,8 +286,9 @@ export function TacticalRmmIntegrationSettings() {
     try {
       const res = await syncTacticalRmmDevices();
       if (!res.success) {
-        setError(t('integrations.rmm.tactical.errors.syncDevices', { defaultValue: 'Device sync failed' }));
-        toast({ title: t('integrations.rmm.tactical.toasts.syncFailedTitle', { defaultValue: 'Sync failed' }), description: t('integrations.rmm.tactical.toasts.unknownError', { defaultValue: 'Unknown error' }), variant: 'destructive' });
+        const message = getActionFailureMessage(res, t('integrations.rmm.tactical.errors.syncDevices', { defaultValue: 'Device sync failed' }));
+        setError(message);
+        toast({ title: t('integrations.rmm.tactical.toasts.syncFailedTitle', { defaultValue: 'Sync failed' }), description: message, variant: 'destructive' });
         return;
       }
       setSuccess(
@@ -304,8 +313,9 @@ export function TacticalRmmIntegrationSettings() {
       autoSyncAssets: patch.autoSyncAssets,
     });
     if (!res.success) {
-      setError(t('integrations.rmm.tactical.errors.updateMapping', { defaultValue: 'Failed to update mapping' }));
-      toast({ title: t('integrations.rmm.tactical.toasts.updateFailedTitle', { defaultValue: 'Update failed' }), description: t('integrations.rmm.tactical.toasts.unknownError', { defaultValue: 'Unknown error' }), variant: 'destructive' });
+      const message = getActionFailureMessage(res, t('integrations.rmm.tactical.errors.updateMapping', { defaultValue: 'Failed to update mapping' }));
+      setError(message);
+      toast({ title: t('integrations.rmm.tactical.toasts.updateFailedTitle', { defaultValue: 'Update failed' }), description: message, variant: 'destructive' });
       return;
     }
     await loadOrgMappings();
@@ -324,8 +334,9 @@ export function TacticalRmmIntegrationSettings() {
     try {
       const res = await backfillTacticalRmmAlerts();
       if (!res.success) {
-        setError(t('integrations.rmm.tactical.errors.backfillAlerts', { defaultValue: 'Alert backfill failed' }));
-        toast({ title: t('integrations.rmm.tactical.toasts.backfillFailedTitle', { defaultValue: 'Backfill failed' }), description: t('integrations.rmm.tactical.toasts.unknownError', { defaultValue: 'Unknown error' }), variant: 'destructive' });
+        const message = getActionFailureMessage(res, t('integrations.rmm.tactical.errors.backfillAlerts', { defaultValue: 'Alert backfill failed' }));
+        setError(message);
+        toast({ title: t('integrations.rmm.tactical.toasts.backfillFailedTitle', { defaultValue: 'Backfill failed' }), description: message, variant: 'destructive' });
         return;
       }
       setSuccess(
@@ -348,8 +359,9 @@ export function TacticalRmmIntegrationSettings() {
     try {
       const res = await ingestTacticalRmmSoftwareInventory();
       if (!res.success) {
-        setError(t('integrations.rmm.tactical.errors.ingestSoftware', { defaultValue: 'Software ingestion failed' }));
-        toast({ title: t('integrations.rmm.tactical.toasts.ingestionFailedTitle', { defaultValue: 'Ingestion failed' }), description: t('integrations.rmm.tactical.toasts.unknownError', { defaultValue: 'Unknown error' }), variant: 'destructive' });
+        const message = getActionFailureMessage(res, t('integrations.rmm.tactical.errors.ingestSoftware', { defaultValue: 'Software ingestion failed' }));
+        setError(message);
+        toast({ title: t('integrations.rmm.tactical.toasts.ingestionFailedTitle', { defaultValue: 'Ingestion failed' }), description: message, variant: 'destructive' });
         return;
       }
       setSuccess(

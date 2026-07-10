@@ -10,6 +10,7 @@
 
 import { NextResponse } from 'next/server';
 import { getAssetRemoteControlUrl } from '@/lib/actions/asset-actions/rmmActions';
+import { rmmErrorResponse, rmmRouteErrorFrom } from '../rmmRouteErrors';
 
 export async function GET(
   request: Request,
@@ -51,6 +52,10 @@ export async function GET(
     });
   } catch (error) {
     console.error('Failed to get remote control URL:', error);
+    const expectedError = rmmRouteErrorFrom(error);
+    if (expectedError) {
+      return rmmErrorResponse(expectedError);
+    }
     return NextResponse.json(
       { error: 'Failed to get remote control URL' },
       { status: 500 }

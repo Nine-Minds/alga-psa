@@ -47,7 +47,16 @@ import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossF
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { TicketLiveConflictState } from './ticketLiveFields';
 import { usePageSaveShortcut } from '@alga-psa/ui/keyboard-shortcuts';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
+const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 interface TicketInfoProps {
   id: string; // Made required since it's needed for reflection registration
@@ -459,6 +468,13 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
           const data = await getTicketCategoriesByBoard(boardIdToFetch);
 
           if (fetchingBoardIdRef.current === boardIdToFetch) {
+            if (isReturnedActionError(data)) {
+              console.warn('Failed to fetch pending board config:', getErrorMessage(data));
+              setPendingCategories([]);
+              setPendingBoardConfig(null);
+              setIsLoadingBoardConfig(false);
+              return;
+            }
             if (data && data.categories) {
               const categoriesArray = Array.isArray(data.categories) ? data.categories : [];
               setPendingCategories(categoriesArray);
@@ -557,6 +573,17 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
         if (ticket.board_id) {
           // Fetch categories for the specific board
           const data = await getTicketCategoriesByBoard(ticket.board_id);
+          if (isReturnedActionError(data)) {
+            console.warn('Failed to fetch ticket categories:', getErrorMessage(data));
+            setCategories([]);
+            setBoardConfig({
+              category_type: 'custom',
+              priority_type: 'custom',
+              display_itil_impact: false,
+              display_itil_urgency: false,
+            });
+            return;
+          }
           // Ensure data is properly resolved and categories is an array
           if (data && data.categories) {
             // Extra safety check - ensure it's actually an array
@@ -578,6 +605,17 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
         } else {
           // If no board, fetch all categories and use custom categories
           const fetchedCategories = await getTicketCategories();
+          if (isReturnedActionError(fetchedCategories)) {
+            console.warn('Failed to fetch ticket categories:', getErrorMessage(fetchedCategories));
+            setCategories([]);
+            setBoardConfig({
+              category_type: 'custom',
+              priority_type: 'custom',
+              display_itil_impact: false,
+              display_itil_urgency: false,
+            });
+            return;
+          }
           // Ensure fetchedCategories is an array
           if (Array.isArray(fetchedCategories)) {
             setCategories(fetchedCategories);

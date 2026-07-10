@@ -26,6 +26,18 @@ function normalizeBoolean(value: unknown): boolean {
 const tenantScopedTable = (trx: Knex | Knex.Transaction, table: string, tenant: string) =>
   tenantDb(trx, tenant).table(table);
 
+function referenceDataDeleteErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : typeof error === 'string' ? error : '';
+
+  if (
+    message === 'Cannot delete service type that is being used by services. Please update or delete the services first.'
+  ) {
+    return message;
+  }
+
+  return 'Failed to delete reference data item';
+}
+
 async function seedBoardTicketStatusesFromStandards(
   trx: Knex.Transaction,
   tenant: string,
@@ -799,14 +811,15 @@ export const deleteReferenceDataItem = withAuth(async (
     };
   } catch (error) {
     console.error('Error deleting reference data item:', error);
+    const message = referenceDataDeleteErrorMessage(error);
     return {
       success: false,
       canDelete: false,
       code: 'VALIDATION_FAILED',
-      message: error instanceof Error ? error.message : 'Unknown error',
+      message,
       dependencies: [],
       alternatives: [],
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: message
     };
   }
 });

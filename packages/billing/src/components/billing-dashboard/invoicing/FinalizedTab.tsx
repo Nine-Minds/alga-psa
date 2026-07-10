@@ -20,7 +20,10 @@ import {
 import type { ColumnDefinition, InvoiceViewModel as DbInvoiceViewModel, IInvoiceTemplate } from '@alga-psa/types';
 import { fetchInvoicesPaginated } from '@alga-psa/billing/actions/invoiceQueries';
 import { getInvoiceTemplates } from '@alga-psa/billing/actions/invoiceTemplates';
-import { unfinalizeInvoice } from '@alga-psa/billing/actions/invoiceModification';
+import {
+  unfinalizeInvoice,
+  type InvoiceMutationActionResult,
+} from '@alga-psa/billing/actions/invoiceModification';
 import { downloadInvoicePDF } from '@alga-psa/billing/actions/invoiceGeneration';
 import { scheduleInvoiceZipAction } from '@alga-psa/billing/actions/invoiceJobActions';
 import { SendInvoiceEmailDialog } from './SendInvoiceEmailDialog';
@@ -28,6 +31,11 @@ import { toPlainDate } from '@alga-psa/core';
 import InvoicePreviewPanel from './InvoicePreviewPanel';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { useRangeSelection } from '@alga-psa/ui/hooks';
 import { InvoiceSyncBadge } from '../../invoices/InvoiceSyncBadge';
 import { useInvoiceSyncStatuses } from '../../invoices/useInvoiceSyncStatuses';
@@ -36,6 +44,16 @@ interface FinalizedTabProps {
   onRefreshNeeded: () => void;
   refreshTrigger: number;
 }
+
+const isInvoiceMutationError = (
+  result: InvoiceMutationActionResult,
+): result is Exclude<InvoiceMutationActionResult, { success: true }> => (
+  isActionMessageError(result) || isActionPermissionError(result)
+);
+
+const isReturnedActionError = (result: unknown) => (
+  isActionMessageError(result) || isActionPermissionError(result)
+);
 
 const FinalizedTab: React.FC<FinalizedTabProps> = ({
   onRefreshNeeded,
@@ -126,6 +144,18 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
         getInvoiceTemplates()
       ]);
 
+      if (isReturnedActionError(paginatedResult)) {
+        setError(getErrorMessage(paginatedResult));
+        setInvoices([]);
+        setTotalInvoices(0);
+        return;
+      }
+      if (isReturnedActionError(fetchedTemplates)) {
+        setError(getErrorMessage(fetchedTemplates));
+        setTemplates([]);
+        return;
+      }
+
       setInvoices(paginatedResult.invoices);
       setTotalInvoices(paginatedResult.total);
       setTemplates(fetchedTemplates);
@@ -199,7 +229,12 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
     setError(null);
     try {
       // Call server action to get PDF data as plain array
-      const { pdfData, invoiceNumber } = await downloadInvoicePDF(selectedInvoice.invoice_id, selectedTemplateId);
+      const result = await downloadInvoicePDF(selectedInvoice.invoice_id, selectedTemplateId);
+      if (isReturnedActionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
+      const { pdfData, invoiceNumber } = result;
 
       // Convert plain array to Uint8Array and create blob
       const blob = new Blob([new Uint8Array(pdfData)], { type: 'application/pdf' });
@@ -233,7 +268,11 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
     if (!selectedInvoice) return;
     setError(null);
     try {
-      await unfinalizeInvoice(selectedInvoice.invoice_id);
+      const result = await unfinalizeInvoice(selectedInvoice.invoice_id);
+      if (isInvoiceMutationError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
       await loadData();
       onRefreshNeeded();
       updateUrlParams({ invoiceId: null, templateId: null });
@@ -248,7 +287,11 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
   const handleBulkDownload = async () => {
     setError(null);
     try {
-      await scheduleInvoiceZipAction(Array.from(selectedInvoices));
+      const result = await scheduleInvoiceZipAction(Array.from(selectedInvoices));
+      if (isReturnedActionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
       setSelectedInvoices(new Set());
     } catch (error) {
       console.error('Failed to generate PDFs:', error);
@@ -273,7 +316,11 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
     setError(null);
     try {
       for (const invoiceId of selectedInvoices) {
-        await unfinalizeInvoice(invoiceId);
+        const result = await unfinalizeInvoice(invoiceId);
+        if (isInvoiceMutationError(result)) {
+          setError(getErrorMessage(result));
+          return;
+        }
       }
       setSelectedInvoices(new Set());
       await loadData();
@@ -376,7 +423,10 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
               <DropdownMenuItem
                 onClick={async () => {
                   try {
-                    await scheduleInvoiceZipAction([record.invoice_id]);
+                    const result = await scheduleInvoiceZipAction([record.invoice_id]);
+                    if (isReturnedActionError(result)) {
+                      setError(getErrorMessage(result));
+                    }
                   } catch (error) {
                     setError(t('finalizedTab.errors.pdfFailed', {
                       defaultValue: 'Failed to generate PDF. Please try again.',
@@ -401,7 +451,11 @@ const FinalizedTab: React.FC<FinalizedTabProps> = ({
               <DropdownMenuItem
                 onClick={async () => {
                   try {
-                    await unfinalizeInvoice(record.invoice_id);
+                    const result = await unfinalizeInvoice(record.invoice_id);
+                    if (isInvoiceMutationError(result)) {
+                      setError(getErrorMessage(result));
+                      return;
+                    }
                     await loadData();
                     onRefreshNeeded();
                   } catch (error) {

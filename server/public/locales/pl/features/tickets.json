@@ -337,7 +337,9 @@
     "pastedImageDeleteFailed_few": "Komentarz usunięto, ale nie udało się usunąć {{count}} wklejonych obrazów.",
     "pastedImageDeleteFailed_many": "Komentarz usunięto, ale nie udało się usunąć {{count}} wklejonych obrazów.",
     "closeFailed": "Nie udało się zamknąć zgłoszenia",
-    "scheduleVisitFailed": "Nie udało się otworzyć harmonogramu"
+    "scheduleVisitFailed": "Nie udało się otworzyć harmonogramu",
+    "loadCommentsFailed": "Failed to load comments",
+    "updateTicketFailed": "Failed to update ticket"
   },
   "conversation": {
     "comments": "Komentarze",

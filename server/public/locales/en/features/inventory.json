@@ -717,7 +717,7 @@
     },
     "entryAdded": "Landed-cost entry added.",
     "fields": {
-      "amount": "Amount ($ {{currency}})"
+      "amount": "Amount ({{currency}})"
     },
     "loadError": "Couldn't load landed costs.",
     "nothingReceived": "Nothing received yet — receive the PO first, then apply.",
@@ -744,6 +744,7 @@
     "addPurchaseOrder": "Add Purchase Order",
     "allVendors": "All vendors",
     "amountOnOrder": "{{amount}} on order",
+    "mixedCurrencyOnOrder": "{{count}} purchase orders on order across multiple currencies",
     "cancelConfirm": "Are you sure you want to cancel purchase order {{poNumber}}? This cannot be undone.",
     "cancelFailed": "Couldn't cancel the purchase order.",
     "cancelTitle": "Cancel purchase order",
@@ -963,6 +964,15 @@
     "emailFailed": "Couldn't email the confirmation.",
     "emailSuccess": "Confirmation emailed to {{recipients}}",
     "enterSerial": "Enter at least one serial number.",
+    "errors": {
+      "documentGenerationFailed": "Failed to generate the document",
+      "downloadPermissionDenied": "Permission denied: cannot download sales order documents",
+      "emailConfirmationFailed": "Failed to email the confirmation",
+      "emailPermissionDenied": "Permission denied: cannot email sales order documents",
+      "emailSendFailed": "Email failed to send.",
+      "noRecipientEmail": "No recipient email on file for this client.",
+      "notFound": "Sales order not found"
+    },
     "fields": {
       "allocationMode": "How to allocate stock",
       "clientPoNumber": "Client PO number",
@@ -1056,7 +1066,8 @@
     "title": "Sales Orders",
     "total": "Total",
     "unassignedBackorder": "{{count}} backordered line(s) have no preferred vendor — create those POs manually.",
-    "unnamedService": "Unnamed"
+    "unnamedService": "Unnamed",
+    "notFound": "Sales order not found."
   },
   "stock": {
     "actions": {
@@ -1234,6 +1245,7 @@
     "title": "Transfers",
     "toLocation": "To location",
     "vanLoadList": "Van load list",
+    "vanLoadListReplenishment": "Van load list replenishment",
     "status": {
       "dispatched": "Dispatched",
       "received": "Received",

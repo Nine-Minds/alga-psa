@@ -1344,7 +1344,8 @@
         "makeDefault": "Tornar padrão",
         "noDefault": "Sem padrão",
         "saving": "Salvando…",
-        "undepositedFunds": "Fundos não depositados (padrão)"
+        "undepositedFunds": "Fundos não depositados (padrão)",
+        "catalogLoadError": "Failed to load QuickBooks sync configuration options."
       }
     },
     "rmm": {
@@ -1872,6 +1873,11 @@
         },
         "descriptionCe": "Registre domínios de consultoria para descoberta de SSO de login do MSP. A verificação de propriedade não é aplicada no Community Edition e os domínios não gerenciados voltam para os provedores de nível de aplicativo Nine Minds.",
         "descriptionEe": "Gerencie o ciclo de vida de reivindicação de domínio para descoberta de provedor de SSO de login MSP. Domínios não reivindicados ou inelegíveis recorrem aos provedores de nível de aplicativo Nine Minds.",
+        "moved": {
+          "title": "MSP SSO Login Domains",
+          "body": "Single sign-on settings, including login-domain claims, have moved to Security → Single Sign-On.",
+          "cta": "Open Single Sign-On settings"
+        },
         "dnsHost": "Hospedar:",
         "dnsInstructions": "Adicione o registro DNS TXT e clique em Verificar:",
         "dnsValue": "Valor:",

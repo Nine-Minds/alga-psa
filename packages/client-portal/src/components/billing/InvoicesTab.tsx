@@ -23,13 +23,18 @@ import {
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import toast from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { getErrorMessage, handleError, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { getRecurringServicePeriodSummary } from './recurringServicePeriodSummary';
 
 interface InvoicesTabProps {
   formatCurrency: (amount: number, currencyCode?: string) => string;
   formatDate: (date: string | { toString(): string } | undefined | null) => string;
 }
+
+const isBillingActionError = (
+  value: unknown
+): value is { readonly actionError: string } | { readonly permissionError: string } =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
   formatCurrency,
@@ -78,6 +83,11 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
       setError(null);
       try {
         const fetchedInvoices = await getClientInvoices();
+        if (isBillingActionError(fetchedInvoices)) {
+          setInvoices([]);
+          setError(getErrorMessage(fetchedInvoices));
+          return;
+        }
         setInvoices(fetchedInvoices);
       } catch (err) {
         console.error('Error loading invoices:', err);
@@ -117,6 +127,11 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
       toast.success(t('invoice.downloadStarted', 'Preparing PDF download...'));
       const result = await downloadClientInvoicePdf(invoiceId);
 
+      if (isBillingActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
+
       if (result.success && result.fileId) {
         // Trigger download
         const downloadUrl = `/api/documents/download/${result.fileId}`;
@@ -148,6 +163,11 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
     try {
       toast.success(t('invoice.emailStarted', 'Sending invoice email...'));
       const result = await sendClientInvoiceEmail(invoiceId);
+
+      if (isBillingActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
 
       if (result.success) {
         toast.success(t('invoice.emailSent', 'Invoice email sent successfully.'));

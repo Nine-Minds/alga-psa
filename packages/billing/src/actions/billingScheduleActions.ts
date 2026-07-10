@@ -13,6 +13,12 @@ import {
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+import {
   applyClientCadenceChange,
   previewClientCadenceScheduleChange,
   type ClientCadenceChangePreview,
@@ -37,13 +43,15 @@ export type ClientBillingScheduleConfig = {
   anchor: NormalizedBillingCycleAnchorSettings;
 };
 
+type BillingScheduleActionError = ActionMessageError | ActionPermissionError;
+
 export const getClientBillingScheduleSummaries = withAuth(async (
   user,
   { tenant },
   clientIds: string[]
-): Promise<Record<string, ClientBillingScheduleConfig>> => {
+): Promise<Record<string, ClientBillingScheduleConfig> | BillingScheduleActionError> => {
   if (!await hasPermission(user as any, 'billing', 'read')) {
-    throw new Error('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required');
   }
   if (clientIds.length === 0) {
     return {};
@@ -98,15 +106,22 @@ export const updateClientBillingSchedule = withAuth(async (
   user,
   { tenant },
   input: UpdateClientBillingScheduleInput
-): Promise<{ success: true }> => {
+): Promise<{ success: true } | BillingScheduleActionError> => {
   if (!await hasPermission(user as any, 'billing', 'update')) {
-    throw new Error('Permission denied: billing update required');
+    return permissionError('Permission denied: billing update required');
   }
   const { knex } = await createTenantKnex();
 
-  await withTransaction(knex, async (trx: Knex.Transaction) => {
-    await applyClientCadenceChange(trx, tenant, input);
-  });
+  try {
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
+      await applyClientCadenceChange(trx, tenant, input);
+    });
+  } catch (error) {
+    if (error instanceof Error && /client.*not found/i.test(error.message)) {
+      return actionError('Client not found. It may have been updated or deleted. Please refresh and try again.');
+    }
+    throw error;
+  }
 
   return { success: true };
 });
@@ -127,9 +142,9 @@ export const previewClientCadenceChange = withAuth(async (
   user,
   { tenant },
   input: PreviewClientCadenceChangeInput
-): Promise<ClientCadenceChangePreview> => {
+): Promise<ClientCadenceChangePreview | BillingScheduleActionError> => {
   if (!await hasPermission(user as any, 'billing', 'read')) {
-    throw new Error('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required');
   }
   const { knex } = await createTenantKnex();
 

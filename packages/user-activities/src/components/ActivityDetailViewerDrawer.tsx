@@ -16,7 +16,12 @@ import { Button } from '@alga-psa/ui/components/Button';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { getCurrentUser, getAllUsersBasic } from "@alga-psa/user-composition/actions/userQueryActions";
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { formatISO } from 'date-fns';
 import { IWorkItem } from "@alga-psa/types";
 import { TimeSheetStatus, ITimePeriodWithStatusView } from "@alga-psa/types";
@@ -35,6 +40,10 @@ interface ActivityDetailViewerDrawerProps {
   workItemType?: string;
   onClose: () => void;
   onActionComplete?: () => void;
+}
+
+function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
+  return isActionMessageError(value) || isActionPermissionError(value);
 }
 
 // Helper component for document viewing/editing
@@ -217,6 +226,10 @@ export function ActivityDetailViewerDrawer({
 
         case ActivityType.PROJECT_TASK: {
           const taskData = await ctx.getTaskWithDetails(activityId);
+          if (isReturnedActionError(taskData)) {
+            setError(getErrorMessage(taskData));
+            break;
+          }
           // Get users for the TaskEdit component
           const users = await getAllUsersBasic();
 
@@ -328,6 +341,10 @@ export function ActivityDetailViewerDrawer({
           try {
             // Fetch the time entry details
             const timeEntryData = await ctx.getTimeEntryById(activityId);
+            if (isReturnedActionError(timeEntryData)) {
+              setError(getErrorMessage(timeEntryData));
+              break;
+            }
 
             if (!timeEntryData) {
               throw new Error(t('drawer.timeEntryNotFound', { defaultValue: 'Time entry not found' }));
@@ -377,10 +394,14 @@ export function ActivityDetailViewerDrawer({
                   onSave: async (updatedTimeEntry) => {
                     try {
                       // Save the updated time entry
-                      await ctx.saveTimeEntry({
+                      const savedEntry = await ctx.saveTimeEntry({
                         ...updatedTimeEntry,
                         entry_id: timeEntryData.entry_id
                       });
+                      if (isReturnedActionError(savedEntry)) {
+                        handleError(savedEntry, t('drawer.timeEntryUpdatedError', { defaultValue: 'Failed to update time entry' }));
+                        return;
+                      }
                       // Invalidate cache for this activity type
                       invalidateCache(ActivityType.TIME_ENTRY);
                       toast.success(t('drawer.timeEntryUpdatedSuccess', { defaultValue: 'Time entry updated successfully' }));
@@ -625,6 +646,10 @@ export function ActivityDetailViewerDrawer({
                   try {
                     setIsLoading(true);
                     const taskData = await ctx.getTaskWithDetails(taskId);
+                    if (isReturnedActionError(taskData)) {
+                      setError(getErrorMessage(taskData));
+                      return;
+                    }
                     const users = await getAllUsersBasic();
 
                     setContent(

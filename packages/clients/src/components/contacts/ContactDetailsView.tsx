@@ -27,10 +27,17 @@ import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
 import { getContactAvatarUrlActionAsync } from '../../lib/usersHelpers';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 // Stable empty array reference to avoid infinite re-render loops
 // when the `documents` prop is not passed (default `= []` creates a new ref each render).
 const EMPTY_DOCUMENTS: IDocument[] = [];
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 interface ContactDetailsViewProps {
   id?: string; // Made optional to maintain backward compatibility
@@ -291,21 +298,19 @@ const ContactDetailsView: React.FC<ContactDetailsViewProps> = ({
         ...contact,
         client_id: clientId || ''
       });
+      if (isReturnedActionError(updatedContact)) {
+        setError(getErrorMessage(updatedContact));
+        setSelectedClientId(contact.client_id || null);
+        return;
+      }
       
       setContact(updatedContact);
       setIsEditingClient(false);
     } catch (err) {
       console.error('Error updating client:', err);
-      if (err instanceof Error) {
-        setError(t('contactDetailsView.errors.updateClientFailedWithMessage', {
-          defaultValue: 'Failed to update client: {{message}}',
-          message: err.message
-        }));
-      } else {
-        setError(t('contactDetailsView.errors.updateClientFailed', {
-          defaultValue: 'Failed to update client. Please try again.'
-        }));
-      }
+      setError(t('contactDetailsView.errors.updateClientFailed', {
+        defaultValue: 'Failed to update client. Please try again.'
+      }));
       // Revert the selection on error
       setSelectedClientId(contact.client_id || null);
     }

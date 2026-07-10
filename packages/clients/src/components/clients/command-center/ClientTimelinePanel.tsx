@@ -7,8 +7,19 @@ import type {
   ClientTimelineEventType,
 } from '../../../lib/commandCenterTypes';
 import { CardShell } from './PulseCards';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 type TFn = (key: string, options?: Record<string, unknown>) => string;
+
+function isReturnedActionError(value: unknown): value is ActionMessageError | ActionPermissionError {
+  return isActionMessageError(value) || isActionPermissionError(value);
+}
 
 interface ClientTimelinePanelProps {
   idPrefix: string;
@@ -78,7 +89,10 @@ export default function ClientTimelinePanel({ idPrefix, clientId, formatMoney, o
           : activeTypes[activeFilter],
         limit: 20,
       });
-
+      if (isReturnedActionError(page)) {
+        setError(getErrorMessage(page));
+        return;
+      }
       setEvents((previous) => (cursor ? [...previous, ...page.events] : page.events));
       setNextCursor(page.nextCursor);
     } catch {

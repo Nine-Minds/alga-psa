@@ -421,7 +421,13 @@ export const setDefaultQboRealm = withAuth(async (
     await updateAccountingSyncSettings(knex, tenant, { defaultRealm: realmId });
     return { success: true };
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'An unexpected error occurred.';
-    return { success: false, error: message };
+    if (error instanceof Error && error.message === 'Accounting sync is only available in Enterprise Edition.') {
+      return { success: false, error: 'Accounting sync is only available in Enterprise Edition.' };
+    }
+    if (error instanceof Error && error.message === 'Forbidden') {
+      return { success: false, error: 'You do not have permission to update accounting sync settings.' };
+    }
+    console.error('Failed to set default QuickBooks realm:', error);
+    return { success: false, error: 'Failed to update the default QuickBooks company. Please try again.' };
   }
 });

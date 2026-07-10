@@ -4,8 +4,8 @@ import { randomUUID } from 'node:crypto';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
-import { permissionError } from '@alga-psa/ui/lib/errorHandling';
-import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
+import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { RenewalWorkItemStatus } from '@alga-psa/types';
 import { normalizeClientContract } from '@alga-psa/shared/billingClients/clientContracts';
 import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
@@ -201,6 +201,52 @@ export type RenewalTicketRetryResult = {
   retried: boolean;
 };
 
+type RenewalQueueActionError = ActionMessageError | ActionPermissionError;
+
+function renewalQueueActionErrorFrom(error: unknown): RenewalQueueActionError | null {
+  if (error instanceof Error) {
+    if (error.message.startsWith('Permission denied')) {
+      return permissionError(error.message);
+    }
+
+    switch (error.message) {
+      case 'Client contract id is required':
+        return actionError('Client contract id is required.');
+      case 'Renewal work item not found':
+        return actionError('Renewal work item not found. It may have been updated or deleted. Please refresh and try again.');
+      case 'Snooze target date is required':
+        return actionError('Choose a snooze date before saving.');
+      case 'Snooze target date is invalid':
+        return actionError('Choose a valid snooze date.');
+      case 'Snooze target date must be in the future':
+        return actionError('Choose a future snooze date.');
+      case 'Assigned owner must be a user id string or null':
+        return actionError('Choose a valid renewal owner.');
+      case 'Assigned owner was not found in this tenant':
+        return actionError('The selected renewal owner is no longer available. Please refresh and try again.');
+      case 'Cross-tenant owner identifier is not allowed':
+        return permissionError('Permission denied: Cannot assign renewals to a user from another tenant.');
+      case 'Activated renewal contract id is required':
+        return actionError('Activated renewal contract id is required.');
+      case 'Cross-tenant activated contract identifier is not allowed':
+        return permissionError('Permission denied: Cannot complete renewal with a contract from another tenant.');
+      case 'Activated renewal contract was not found in active status':
+        return actionError('The activated renewal contract is no longer active. Please refresh and try again.');
+      case 'Manual retry is only available for due renewal cycles':
+        return actionError('Manual retry is only available for due renewal cycles.');
+    }
+
+    if (error.message.startsWith('Only ') || error.message.startsWith('Cannot snooze renewal work item')) {
+      return actionError(error.message);
+    }
+    if (error.message.startsWith('Renewal draft can only be created')) {
+      return actionError(error.message);
+    }
+  }
+
+  return null;
+}
+
 const getAvailableActionsForStatus = (status: RenewalWorkItemStatus): RenewalQueueAction[] => {
   if (status === 'pending') {
     return ['mark_renewing', 'mark_non_renewing', 'create_renewal_draft', 'snooze', 'assign_owner'];
@@ -316,64 +362,72 @@ export const markRenewalQueueItemRenewing = withAuth(async (
   { tenant },
   clientContractId: string,
   note?: string
-): Promise<RenewalQueueMutationResult | ActionPermissionError> => {
+): Promise<RenewalQueueMutationResult | RenewalQueueActionError> => {
   const denied = await requireBillingUpdatePermission(user);
   if (denied) return denied;
 
-  if (typeof clientContractId !== 'string' || clientContractId.trim().length === 0) {
-    throw new Error('Client contract id is required');
+  try {
+    if (typeof clientContractId !== 'string' || clientContractId.trim().length === 0) {
+      throw new Error('Client contract id is required');
+    }
+
+    const { knex } = await createTenantKnex();
+    const actorUserId = resolveActorUserId(user);
+    const normalizedNote = normalizeActionNote(note);
+
+    return knex.transaction(async (trx) => {
+      const db = tenantDb(trx, tenant);
+      const row = await db.table('client_contracts')
+        .where({
+          client_contract_id: clientContractId,
+          is_active: true,
+        })
+        .select('client_contract_id', 'status')
+        .first();
+
+      if (!row) {
+        throw new Error('Renewal work item not found');
+      }
+
+      const previousStatus = toRenewalWorkItemStatus((row as any).status);
+      if (previousStatus !== 'pending' && previousStatus !== 'non_renewing' && previousStatus !== 'snoozed') {
+        throw new Error(
+          `Only pending, non_renewing, or snoozed renewal work items can transition to renewing (current: ${previousStatus})`
+        );
+      }
+
+      const updatedAt = new Date().toISOString();
+      await db.table('client_contracts')
+        .where({
+          client_contract_id: clientContractId,
+        })
+        .update(
+          withActionTimestamp(
+            withActionNote(
+              withActionActor(
+                withActionLabel({
+                  status: 'renewing',
+                  updated_at: updatedAt,
+                }, 'mark_renewing'), actorUserId
+              ), normalizedNote
+            ), updatedAt
+          )
+        );
+
+      return {
+        client_contract_id: clientContractId,
+        previous_status: previousStatus,
+        status: 'renewing',
+        updated_at: updatedAt,
+      };
+    });
+  } catch (error) {
+    const expected = renewalQueueActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
   }
-
-  const { knex } = await createTenantKnex();
-  const actorUserId = resolveActorUserId(user);
-  const normalizedNote = normalizeActionNote(note);
-
-  return knex.transaction(async (trx) => {
-    const db = tenantDb(trx, tenant);
-    const row = await db.table('client_contracts')
-      .where({
-        client_contract_id: clientContractId,
-        is_active: true,
-      })
-      .select('client_contract_id', 'status')
-      .first();
-
-    if (!row) {
-      throw new Error('Renewal work item not found');
-    }
-
-    const previousStatus = toRenewalWorkItemStatus((row as any).status);
-    if (previousStatus !== 'pending' && previousStatus !== 'non_renewing' && previousStatus !== 'snoozed') {
-      throw new Error(
-        `Only pending, non_renewing, or snoozed renewal work items can transition to renewing (current: ${previousStatus})`
-      );
-    }
-
-    const updatedAt = new Date().toISOString();
-    await db.table('client_contracts')
-      .where({
-        client_contract_id: clientContractId,
-      })
-      .update(
-        withActionTimestamp(
-          withActionNote(
-            withActionActor(
-              withActionLabel({
-                status: 'renewing',
-                updated_at: updatedAt,
-              }, 'mark_renewing'), actorUserId
-            ), normalizedNote
-          ), updatedAt
-        )
-      );
-
-    return {
-      client_contract_id: clientContractId,
-      previous_status: previousStatus,
-      status: 'renewing',
-      updated_at: updatedAt,
-    };
-  });
 });
 
 export const markRenewalQueueItemNonRenewing = withAuth(async (
@@ -381,64 +435,72 @@ export const markRenewalQueueItemNonRenewing = withAuth(async (
   { tenant },
   clientContractId: string,
   note?: string
-): Promise<RenewalQueueMutationResult | ActionPermissionError> => {
+): Promise<RenewalQueueMutationResult | RenewalQueueActionError> => {
   const denied = await requireBillingUpdatePermission(user);
   if (denied) return denied;
 
-  if (typeof clientContractId !== 'string' || clientContractId.trim().length === 0) {
-    throw new Error('Client contract id is required');
+  try {
+    if (typeof clientContractId !== 'string' || clientContractId.trim().length === 0) {
+      throw new Error('Client contract id is required');
+    }
+
+    const { knex } = await createTenantKnex();
+    const actorUserId = resolveActorUserId(user);
+    const normalizedNote = normalizeActionNote(note);
+
+    return knex.transaction(async (trx) => {
+      const db = tenantDb(trx, tenant);
+      const row = await db.table('client_contracts')
+        .where({
+          client_contract_id: clientContractId,
+          is_active: true,
+        })
+        .select('client_contract_id', 'status')
+        .first();
+
+      if (!row) {
+        throw new Error('Renewal work item not found');
+      }
+
+      const previousStatus = toRenewalWorkItemStatus((row as any).status);
+      if (previousStatus !== 'pending' && previousStatus !== 'renewing' && previousStatus !== 'snoozed') {
+        throw new Error(
+          `Only pending, renewing, or snoozed renewal work items can transition to non_renewing (current: ${previousStatus})`
+        );
+      }
+
+      const updatedAt = new Date().toISOString();
+      await db.table('client_contracts')
+        .where({
+          client_contract_id: clientContractId,
+        })
+        .update(
+          withActionTimestamp(
+            withActionNote(
+              withActionActor(
+                withActionLabel({
+                  status: 'non_renewing',
+                  updated_at: updatedAt,
+                }, 'mark_non_renewing'), actorUserId
+              ), normalizedNote
+            ), updatedAt
+          )
+        );
+
+      return {
+        client_contract_id: clientContractId,
+        previous_status: previousStatus,
+        status: 'non_renewing',
+        updated_at: updatedAt,
+      };
+    });
+  } catch (error) {
+    const expected = renewalQueueActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
   }
-
-  const { knex } = await createTenantKnex();
-  const actorUserId = resolveActorUserId(user);
-  const normalizedNote = normalizeActionNote(note);
-
-  return knex.transaction(async (trx) => {
-    const db = tenantDb(trx, tenant);
-    const row = await db.table('client_contracts')
-      .where({
-        client_contract_id: clientContractId,
-        is_active: true,
-      })
-      .select('client_contract_id', 'status')
-      .first();
-
-    if (!row) {
-      throw new Error('Renewal work item not found');
-    }
-
-    const previousStatus = toRenewalWorkItemStatus((row as any).status);
-    if (previousStatus !== 'pending' && previousStatus !== 'renewing' && previousStatus !== 'snoozed') {
-      throw new Error(
-        `Only pending, renewing, or snoozed renewal work items can transition to non_renewing (current: ${previousStatus})`
-      );
-    }
-
-    const updatedAt = new Date().toISOString();
-    await db.table('client_contracts')
-      .where({
-        client_contract_id: clientContractId,
-      })
-      .update(
-        withActionTimestamp(
-          withActionNote(
-            withActionActor(
-              withActionLabel({
-                status: 'non_renewing',
-                updated_at: updatedAt,
-              }, 'mark_non_renewing'), actorUserId
-            ), normalizedNote
-          ), updatedAt
-        )
-      );
-
-    return {
-      client_contract_id: clientContractId,
-      previous_status: previousStatus,
-      status: 'non_renewing',
-      updated_at: updatedAt,
-    };
-  });
 });
 
 export const createRenewalDraftForQueueItem = withAuth(async (
@@ -1096,7 +1158,8 @@ export const retryRenewalQueueTicketCreation = withAuth(async (
         retried: true,
       };
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('Failed to retry renewal due date automation:', error);
+      const errorMessage = 'Failed to create the renewal ticket. Please try again.';
       await db.table('client_contracts')
         .where({ client_contract_id: clientContractId })
         .update({

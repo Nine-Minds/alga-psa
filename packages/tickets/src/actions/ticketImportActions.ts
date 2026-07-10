@@ -19,6 +19,12 @@ import {
   getBoardCloseRulesRow,
 } from '@alga-psa/shared/lib/ticketCloseRules';
 import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+import {
   MappableTicketField,
   ITicketImportReferenceData,
   ITicketImportResult,
@@ -29,6 +35,67 @@ import {
   IPriorityResolution,
   ICategoryResolution,
 } from '@alga-psa/types';
+
+type TicketImportActionError = ActionMessageError | ActionPermissionError;
+
+function ticketImportActionErrorFrom(error: unknown): TicketImportActionError | null {
+  if (error instanceof Error) {
+    if (error.message.includes('Permission denied')) {
+      return permissionError(error.message);
+    }
+    if (
+      error.message === 'Cannot create custom priorities for an ITIL board. Map unmatched priorities to existing ITIL priorities or use the default.' ||
+      error.message === 'No ticket statuses found for the selected board. Please configure statuses first.' ||
+      error.message === 'No ticket priorities found. Please configure priorities first.'
+    ) {
+      return actionError(error.message);
+    }
+  }
+
+  const dbError = error as { code?: string; column?: string; constraint?: string };
+  if (dbError?.code === '22P02') {
+    return actionError('One of the imported ticket values is invalid. Please refresh reference data and try again.');
+  }
+  if (dbError?.code === '23505') {
+    return actionError('A ticket import record conflicts with an existing record. Review duplicate clients, contacts, statuses, priorities, categories, or tags.');
+  }
+  if (dbError?.code === '23503') {
+    return actionError('A referenced client, contact, board, status, priority, category, team, or user was not found. Refresh reference data and try again.');
+  }
+  if (dbError?.code === '23502') {
+    return actionError(`Missing required import value${dbError.column ? `: ${dbError.column}` : ''}.`);
+  }
+  if (dbError?.code === '23514') {
+    return actionError('One of the imported values is invalid for this field.');
+  }
+  return null;
+}
+
+function ticketImportRowErrorMessage(error: unknown): string {
+  const expected = ticketImportActionErrorFrom(error);
+  if (expected) {
+    const candidate = expected as unknown as { actionError?: unknown; permissionError?: unknown };
+    return typeof candidate.actionError === 'string'
+      ? candidate.actionError
+      : String(candidate.permissionError ?? 'Ticket import failed');
+  }
+
+  const dbError = error as { code?: string; column?: string; constraint?: string };
+  if (dbError?.code === '23505') {
+    return 'A matching record already exists.';
+  }
+  if (dbError?.code === '23503') {
+    return 'A referenced client, contact, board, status, priority, category, team, or user was not found.';
+  }
+  if (dbError?.code === '23502') {
+    return `Missing required value${dbError.column ? `: ${dbError.column}` : ''}.`;
+  }
+  if (dbError?.code === '23514') {
+    return 'One of the imported values is invalid for this field.';
+  }
+
+  return 'Unable to save this import row. Check required fields and mapped references.';
+}
 
 function tenantWhereColumnSql(
   conn: Knex | Knex.Transaction,
@@ -45,7 +112,7 @@ function tenantWhereColumnSql(
   const markerIndex = compiled.sql.indexOf(marker);
 
   if (markerIndex < 0) {
-    throw new Error('Unable to compile tenant where column SQL fragment');
+    throw new Error('Tenant where-column SQL fragment marker was not present in compiled SQL.');
   }
 
   return {
@@ -347,10 +414,11 @@ export const importTickets = withAuth(async (
   priorityResolutions: IPriorityResolution[],
   categoryResolutions: ICategoryResolution[],
   defaultBoardId: string
-): Promise<ITicketImportResult> => {
-  const { knex: db } = await createTenantKnex();
+): Promise<ITicketImportResult | TicketImportActionError> => {
+  try {
+    const { knex: db } = await createTenantKnex();
 
-  return await withTransaction(db, async (trx: Knex.Transaction) => {
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
     const tenantScopedTable = (table: string) => tenantDb(trx, tenant).table(table);
 
     if (!await hasPermission(user, 'ticket', 'create')) {
@@ -408,7 +476,7 @@ export const importTickets = withAuth(async (
         return result;
       } catch (err) {
         await trx.raw(`ROLLBACK TO SAVEPOINT ${sp}`);
-        const msg = err instanceof Error ? err.message : 'Unknown error';
+        const msg = ticketImportRowErrorMessage(err);
         errors.push(`${label}: ${msg}`);
         return null;
       }
@@ -851,5 +919,12 @@ export const importTickets = withAuth(async (
       warnings,
       ticketNumbers,
     };
-  });
+    });
+  } catch (error) {
+    const expected = ticketImportActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
+  }
 });

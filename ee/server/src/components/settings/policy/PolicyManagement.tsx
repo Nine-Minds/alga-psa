@@ -33,7 +33,7 @@ import {
 } from '@alga-psa/ui/components/DropdownMenu';
 import { TIER_FEATURES, type ColumnDefinition, type IUserWithRoles, type ITeam } from '@alga-psa/types';
 import { getAllUsers, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
-import { getTeams, getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
+import { getTeams, getTeamAvatarUrlsBatchAction, isTeamActionError } from '@alga-psa/teams/actions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useTierFeature } from 'server/src/context/TierContext';
 import {
@@ -312,6 +312,12 @@ export default function PolicyManagement() {
       .then(([users, teams]) => {
         if (cancelled) return;
         setAllUsers(users);
+        if (isTeamActionError(teams)) {
+          console.warn('Cannot load teams for assignment picker data:', teams);
+          setAllTeams([]);
+          setPickerDataLoaded(true);
+          return;
+        }
         setAllTeams(teams);
         setPickerDataLoaded(true);
       })

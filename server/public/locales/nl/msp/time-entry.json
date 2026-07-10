@@ -448,7 +448,8 @@
     "taskUpdated": "Taak succesvol bijgewerkt",
     "saveChangesFailed": "Kan wijzigingen niet opslaan",
     "changesSaved": "Wijzigingen succesvol opgeslagen",
-    "workItemDeleted": "Werkitem succesvol verwijderd"
+    "workItemDeleted": "Werkitem succesvol verwijderd",
+    "submitFailed": "Failed to submit time sheet"
   },
   "bundleNotice": {
     "withNumber": "Dit ticket is gebundeld onder {{number}}. Bundeltijd wordt meestal op het hoofdticket geregistreerd.",

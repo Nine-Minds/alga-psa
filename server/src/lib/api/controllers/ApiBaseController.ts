@@ -267,6 +267,9 @@ export abstract class ApiBaseController {
           );
         });
       } catch (error) {
+        if (error instanceof Error && error.message === 'Resource not found or permission denied') {
+          return handleApiError(new NotFoundError(`${this.options.resource} not found`));
+        }
         return handleApiError(error);
       }
     };
@@ -295,6 +298,9 @@ export abstract class ApiBaseController {
           return createSuccessResponse(resource, 200, undefined, apiRequest);
         });
       } catch (error) {
+        if (error instanceof Error && error.message === 'Resource not found or permission denied') {
+          return handleApiError(new NotFoundError(`${this.options.resource} not found`));
+        }
         return handleApiError(error);
       }
     };
@@ -332,6 +338,9 @@ export abstract class ApiBaseController {
           }
         });
       } catch (error) {
+        if (error instanceof Error && error.message === 'Resource not found or permission denied') {
+          return handleApiError(new NotFoundError(`${this.options.resource} not found`));
+        }
         return handleApiError(error);
       }
     };
@@ -369,6 +378,9 @@ export abstract class ApiBaseController {
           return createSuccessResponse(updated, 200, undefined, apiRequest);
         });
       } catch (error) {
+        if (error instanceof Error && error.message === 'Resource not found or permission denied') {
+          return handleApiError(new NotFoundError(`${this.options.resource} not found`));
+        }
         return handleApiError(error);
       }
     };

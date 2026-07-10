@@ -27,7 +27,7 @@ import {
   ProjectSearchData,
   ProjectExportQuery
 } from '../schemas/project';
-import { NotFoundError } from '../middleware/apiMiddleware';
+import { ConflictError, NotFoundError, ValidationError } from '../middleware/apiMiddleware';
 import { ProjectModel } from '@alga-psa/projects/models';
 import { publishEvent, publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import { OrderingService } from 'server/src/lib/services/orderingService';
@@ -279,7 +279,7 @@ export class ProjectService extends BaseService<IProject> {
         } catch (error) {
           // If status lookup fails, throw error since status is required
           console.error('Could not get default project status:', error);
-          throw new Error('Unable to determine project status. Please ensure project statuses are configured.');
+          throw new ConflictError('Unable to determine project status. Please ensure project statuses are configured.');
         }
       } else if (!this.isUUID(data.status)) {
         // Convert status name to UUID
@@ -1054,7 +1054,7 @@ export class ProjectService extends BaseService<IProject> {
       }
   
       if (!status) {
-        throw new Error('No default project status found');
+        throw new ConflictError('No default project status found');
       }
   
       return status;
@@ -1094,7 +1094,7 @@ export class ProjectService extends BaseService<IProject> {
       .first();
 
     if (!status) {
-      throw new Error(`Invalid status: ${statusName}`);
+      throw new ValidationError(`Invalid status: ${statusName}`);
     }
 
     return status.status_id;

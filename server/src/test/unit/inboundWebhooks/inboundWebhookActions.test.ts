@@ -607,9 +607,11 @@ describe('inbound webhook server actions', () => {
     createTenantKnex.mockResolvedValue({ knex });
 
     const { upsertInboundWebhook } = await import('@/lib/actions/inboundWebhookActions');
-    await expect(upsertInboundWebhook(validUpsertInput())).rejects.toThrow(
-      'Inbound webhook slug "rmm-alerts" already exists',
-    );
+    const result = await upsertInboundWebhook(validUpsertInput());
+
+    expect(result).toEqual({
+      actionError: 'Inbound webhook slug "rmm-alerts" already exists.',
+    });
 
     expect(hasPermission).toHaveBeenCalledWith(expect.objectContaining({ user_id: 'user-1' }), 'inbound_webhook', 'create', knex);
     expect(builder.where).toHaveBeenCalledWith({ tenant: 'tenant-a', slug: 'rmm-alerts' });
@@ -646,13 +648,17 @@ describe('inbound webhook server actions', () => {
     createTenantKnex.mockResolvedValue({ knex });
 
     const { upsertInboundWebhook } = await import('@/lib/actions/inboundWebhookActions');
-    await expect(upsertInboundWebhook(validUpsertInput({
+    const result = await upsertInboundWebhook(validUpsertInput({
       handler_type: 'workflow',
       handler_config: {
         type: 'workflow',
         workflow_id: '11111111-1111-4111-8111-111111111111',
       },
-    }))).rejects.toThrow('Inbound webhook workflow handlers require Enterprise edition');
+    }));
+
+    expect(result).toEqual({
+      actionError: 'Inbound webhook workflow handlers require Enterprise edition.',
+    });
 
     expect(hasPermission).toHaveBeenCalledWith(
       expect.objectContaining({ user_id: 'user-1' }),
@@ -790,7 +796,11 @@ describe('inbound webhook server actions', () => {
 
     const { listInboundWebhooks } = await import('@/lib/actions/inboundWebhookActions');
 
-    await expect(listInboundWebhooks()).rejects.toThrow('Forbidden: inbound_webhook:read permission required');
+    const result = await listInboundWebhooks();
+
+    expect(result).toEqual({
+      permissionError: 'Permission denied: inbound_webhook:read permission required',
+    });
     expect(hasPermission).toHaveBeenCalledWith(expect.objectContaining({ user_id: 'user-1' }), 'inbound_webhook', 'read', knex);
     expect(knex).not.toHaveBeenCalled();
   });

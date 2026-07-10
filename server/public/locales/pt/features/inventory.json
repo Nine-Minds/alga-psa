@@ -744,6 +744,7 @@
     "addPurchaseOrder": "Adicionar Pedido de Compra",
     "allVendors": "Todos os fornecedores",
     "amountOnOrder": "{{amount}} em pedido",
+    "mixedCurrencyOnOrder": "{{count}} pedidos de compra em aberto em várias moedas",
     "cancelConfirm": "Tem certeza de que deseja cancelar o pedido de compra {{poNumber}}? Isso não pode ser desfeito.",
     "cancelFailed": "Não foi possível cancelar o pedido de compra.",
     "cancelTitle": "Cancelar pedido de compra",
@@ -963,6 +964,15 @@
     "emailFailed": "Não foi possível enviar a confirmação por e-mail.",
     "emailSuccess": "Confirmação enviada por e-mail para {{recipients}}",
     "enterSerial": "Insira pelo menos um número de série.",
+    "errors": {
+      "documentGenerationFailed": "Não foi possível gerar o documento",
+      "downloadPermissionDenied": "Permissão negada: não é possível baixar documentos de pedidos de venda",
+      "emailConfirmationFailed": "Não foi possível enviar a confirmação por e-mail",
+      "emailPermissionDenied": "Permissão negada: não é possível enviar documentos de pedidos de venda por e-mail",
+      "emailSendFailed": "Falha ao enviar o e-mail.",
+      "noRecipientEmail": "Não há e-mail de destinatário cadastrado para este cliente.",
+      "notFound": "Pedido de venda não encontrado"
+    },
     "fields": {
       "allocationMode": "Modo de alocação",
       "clientPoNumber": "Client PO number",
@@ -1056,7 +1066,8 @@
     "title": "Pedidos de Venda",
     "total": "Total",
     "unassignedBackorder": "{{count}} linha(s) em pendência não têm fornecedor preferencial — crie esses POs manualmente.",
-    "unnamedService": "Unnamed"
+    "unnamedService": "Unnamed",
+    "notFound": "Sales order not found."
   },
   "stock": {
     "actions": {
@@ -1234,6 +1245,7 @@
     "title": "Transferências",
     "toLocation": "Localização de destino",
     "vanLoadList": "Lista de carga da van",
+    "vanLoadListReplenishment": "Reposição da lista de carga da van",
     "status": {
       "dispatched": "Despachado",
       "received": "Recebido",

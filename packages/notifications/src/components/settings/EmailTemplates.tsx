@@ -18,6 +18,7 @@ import {
   updateTenantTemplateAction,
   cloneSystemTemplateAction,
   deactivateTenantTemplateAction,
+  isNotificationActionError,
   sendTestEmailAction
 } from "../../actions";
 import {
@@ -33,6 +34,7 @@ import {
   DropdownMenuItem,
 } from "@alga-psa/ui/components/DropdownMenu";
 import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
+import { getErrorMessage } from "@alga-psa/ui/lib/errorHandling";
 
 // Language names mapping (shared across component)
 const LANGUAGE_NAMES: Record<string, string> = {
@@ -246,7 +248,8 @@ export function EmailTemplates() {
         const currentTemplates = await getTemplatesAction(currentTenant);
         setTemplates(currentTemplates);
       } catch (err) {
-        setError(err instanceof Error ? err.message : t('notifications.emailTemplatesUi.errors.loadFailed', 'Failed to load templates'));
+        console.error('Failed to load email templates:', err);
+        setError(t('notifications.emailTemplatesUi.errors.loadFailed', 'Failed to load templates'));
       }
     }
     init();
@@ -272,7 +275,11 @@ export function EmailTemplates() {
 
     try {
       setIsCloning(true);
-      await cloneSystemTemplateAction(tenant, template.id);
+      const result = await cloneSystemTemplateAction(tenant, template.id);
+      if (isNotificationActionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
 
       // Refresh templates
       const currentTemplates = await getTemplatesAction(tenant);
@@ -652,8 +659,8 @@ function ViewTemplateDialog({
       } else {
         setTestResult({ success: false, message: result.error || t('notifications.emailTemplatesUi.test.failed', 'Failed to send test email.') });
       }
-    } catch (err) {
-      setTestResult({ success: false, message: err instanceof Error ? err.message : t('notifications.emailTemplatesUi.test.failed', 'Failed to send test email.') });
+    } catch {
+      setTestResult({ success: false, message: t('notifications.emailTemplatesUi.test.failed', 'Failed to send test email.') });
     } finally {
       setSendingTest(false);
     }
@@ -813,8 +820,8 @@ function EditTemplateDialog({
       } else {
         setTestResult({ success: false, message: result.error || t('notifications.emailTemplatesUi.test.failed', 'Failed to send test email.') });
       }
-    } catch (err) {
-      setTestResult({ success: false, message: err instanceof Error ? err.message : t('notifications.emailTemplatesUi.test.failed', 'Failed to send test email.') });
+    } catch {
+      setTestResult({ success: false, message: t('notifications.emailTemplatesUi.test.failed', 'Failed to send test email.') });
     } finally {
       setSendingTest(false);
     }

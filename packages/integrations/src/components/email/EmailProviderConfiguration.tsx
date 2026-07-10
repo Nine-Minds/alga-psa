@@ -11,7 +11,11 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Plus, Settings, Trash2, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+} from '@alga-psa/ui/lib/errorHandling';
 import {
   GmailProviderForm,
   ImapProviderForm,
@@ -101,8 +105,11 @@ function EmailProviderConfigurationContent({
 
       const data = await getEmailProviders();
       setProviders(data.providers || []);
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      console.error('Failed to load email providers:', err);
+      setError(t('configuration.feedback.loadProvidersError', {
+        defaultValue: 'Failed to load email providers',
+      }));
     } finally {
       setLoading(false);
     }
@@ -117,7 +124,11 @@ function EmailProviderConfigurationContent({
 
   const handleProviderDeleted = async (providerId: string) => {
     try {
-      await deleteEmailProvider(providerId);
+      const result = await deleteEmailProvider(providerId);
+      if (isActionMessageError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
 
       setProviders(prev => prev.filter(p => p.id !== providerId));
 
@@ -125,7 +136,7 @@ function EmailProviderConfigurationContent({
 
       onProviderDeleted?.(providerId);
     } catch (err: any) {
-      setError(err.message);
+      setError(getErrorMessage(err));
     }
   };
 
@@ -154,9 +165,12 @@ function EmailProviderConfigurationContent({
         setError(message);
         toast.error(message, { id: toastId });
       }
-    } catch (err: any) {
-      setError(err.message);
-      handleError(err, err.message);
+    } catch (err) {
+      const message = t('configuration.feedback.connectionError', {
+        defaultValue: 'Connection test failed',
+      });
+      setError(message);
+      handleError(err, message);
     }
   };
 
@@ -182,8 +196,11 @@ function EmailProviderConfigurationContent({
           defaultValue: 'Failed to refresh watch subscription',
         }));
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      console.error('Failed to refresh email watch subscription:', err);
+      setError(t('configuration.feedback.refreshWatchError', {
+        defaultValue: 'Failed to refresh watch subscription',
+      }));
     }
   };
 
@@ -198,8 +215,11 @@ function EmailProviderConfigurationContent({
           defaultValue: 'Renewal failed',
         }));
       }
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      console.error('Failed to retry email subscription renewal:', err);
+      setError(t('configuration.feedback.renewalError', {
+        defaultValue: 'Renewal failed',
+      }));
     }
   };
 
@@ -218,8 +238,11 @@ function EmailProviderConfigurationContent({
         }));
       }
       window.open(result.authUrl, '_blank', 'width=600,height=700');
-    } catch (err: any) {
-      setError(err.message);
+    } catch (err) {
+      console.error('Failed to initiate IMAP OAuth:', err);
+      setError(t('configuration.feedback.initiateOauthError', {
+        defaultValue: 'Failed to initiate IMAP OAuth',
+      }));
     }
   };
 
@@ -236,16 +259,20 @@ function EmailProviderConfigurationContent({
           defaultValue: 'Failed to resync IMAP provider',
         });
         toast.error(message, { id: toastId });
-        throw new Error(message);
+        setError(message);
+        return;
       }
       toast.success(t('configuration.feedback.resyncStarted', {
         defaultValue: 'Resync started for {{providerName}}.',
         providerName: provider.providerName,
       }), { id: toastId });
       await loadProviders();
-    } catch (err: any) {
-      setError(err.message);
-      handleError(err, err.message);
+    } catch (err) {
+      const message = t('configuration.feedback.resyncError', {
+        defaultValue: 'Failed to resync IMAP provider',
+      });
+      setError(message);
+      handleError(err, message);
     }
   };
 

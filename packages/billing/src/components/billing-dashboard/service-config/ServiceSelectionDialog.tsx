@@ -11,6 +11,10 @@ import { IService } from '@alga-psa/types';
 import { getServices } from '@alga-psa/billing/actions';
 import { addServiceToContractLine } from '@alga-psa/billing/actions/contractLineServiceActions';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+
+const isReturnedActionError = (value: unknown): boolean =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 interface ServiceSelectionDialogProps {
   isOpen: boolean;
@@ -119,10 +123,14 @@ export function ServiceSelectionDialog({
       
       // Add each selected service to the plan
       for (const serviceId of selectedServices) {
-        await addServiceToContractLine(
+        const result = await addServiceToContractLine(
           planId,
           serviceId
         );
+        if (isReturnedActionError(result)) {
+          setError(getErrorMessage(result));
+          return;
+        }
       }
       
       if (onServiceAdded) {

@@ -14,6 +14,11 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  type ActionMessageError,
+} from '@alga-psa/ui/lib/errorHandling';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Globe, Send, Inbox, Mail, Eye, EyeOff, CheckCircle, XCircle } from 'lucide-react';
@@ -24,6 +29,8 @@ import {
   refreshManagedEmailDomain,
   deleteManagedEmailDomain,
   type ManagedDomainStatus,
+  type ManagedDomainActionResult,
+  type ManagedDomainActionFailure,
 } from '@ee/lib/actions/email-actions/managedDomainActions';
 import { EmailProviderConfiguration } from '@alga-psa/integrations/components';
 import type { EmailProvider } from '@alga-psa/integrations/components';
@@ -39,14 +46,14 @@ type EmailSettingsUpdateInput = Partial<TenantEmailSettings> & {
 };
 
 type ManagedEmailOverrides = {
-  getManagedEmailDomains?: () => Promise<ManagedDomainStatus[]>;
+  getManagedEmailDomains?: () => Promise<ManagedDomainStatus[] | ManagedDomainActionFailure>;
   requestManagedEmailDomain?: (
     domain: string
-  ) => Promise<{ success: boolean; alreadyRunning?: boolean }>;
+  ) => Promise<ManagedDomainActionResult>;
   refreshManagedEmailDomain?: (
     domain: string
-  ) => Promise<{ success: boolean; alreadyRunning?: boolean }>;
-  deleteManagedEmailDomain?: (domain: string) => Promise<{ success: boolean }>;
+  ) => Promise<ManagedDomainActionResult>;
+  deleteManagedEmailDomain?: (domain: string) => Promise<ManagedDomainActionResult>;
 };
 
 /**
@@ -68,6 +75,21 @@ function getManagedEmailOverrides(): ManagedEmailOverrides | undefined {
 
   return globalWithOverrides.__ALGA_MANAGED_EMAIL_OVERRIDES__;
 }
+
+function getManagedDomainFailureMessage(result: ManagedDomainActionResult, fallback: string): string {
+  return 'error' in result ? result.error || fallback : fallback;
+}
+
+function isManagedDomainActionFailure(value: unknown): value is ManagedDomainActionFailure {
+  return Boolean(
+    value &&
+    typeof value === 'object' &&
+    (value as { success?: unknown }).success === false &&
+    typeof (value as { error?: unknown }).error === 'string'
+  );
+}
+
+type EmailSettingsActionResult = TenantEmailSettings | ActionMessageError | null;
 
 interface EmailSettingsProps {}
 
@@ -115,6 +137,18 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
   const [smtpTestResult, setSmtpTestResult] = useState<{ success: boolean; message?: string; error?: string } | null>(null);
   const [pendingDomainRemoval, setPendingDomainRemoval] = useState<string | null>(null);
 
+  const resolveEmailSettingsResult = (
+    result: EmailSettingsActionResult,
+    fallback: string
+  ): TenantEmailSettings | null => {
+    if (isActionMessageError(result)) {
+      toast.error(getErrorMessage(result) || fallback);
+      return null;
+    }
+
+    return result;
+  };
+
   useEffect(() => {
     if (!canUseManagedEmail) {
       setDomains([]);
@@ -140,6 +174,11 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
     try {
       const fetcher = overrides?.getManagedEmailDomains ?? getManagedEmailDomains;
       const data = await fetcher();
+      if (isManagedDomainActionFailure(data)) {
+        setDomains([]);
+        toast.error(data.error || t('managed.messages.loadDomainsFailed'));
+        return;
+      }
       setDomains(data);
     } catch (err: any) {
       console.error(err);
@@ -152,10 +191,11 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
   const loadOutboundState = async () => {
     setLoadingOutbound(true);
     try {
-      const [settings, providerResult] = await Promise.all([
+      const [settingsResult, providerResult] = await Promise.all([
         getEmailSettings(),
         getEmailProviders()
       ]);
+      const settings = resolveEmailSettingsResult(settingsResult, t('managed.messages.loadOutboundSettingsFailed'));
 
       if (settings) {
         setEmailSettings(settings);
@@ -299,7 +339,11 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
         updates.defaultFromDomain = outboundDomain || emailSettings?.defaultFromDomain;
       }
 
-      const updated = await updateEmailSettings(updates);
+      const updatedResult = await updateEmailSettings(updates);
+      const updated = resolveEmailSettingsResult(updatedResult, t('managed.messages.ticketingFromSaveFailed'));
+      if (!updated) {
+        return;
+      }
 
       setEmailSettings(updated);
       initializeTicketingFromSelection(updated, inboundProviders);
@@ -319,10 +363,14 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
 
     setSavingTicketingFrom(true);
     try {
-      const updated = await updateEmailSettings({
+      const updatedResult = await updateEmailSettings({
         ticketingFromEmail: null,
         ticketingFromName: null,
       } satisfies EmailSettingsUpdateInput);
+      const updated = resolveEmailSettingsResult(updatedResult, t('managed.messages.ticketingFromClearFailed'));
+      if (!updated) {
+        return;
+      }
 
       setEmailSettings(updated);
       initializeTicketingFromSelection(updated, inboundProviders);
@@ -377,7 +425,12 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
     }
 
     try {
-      const updated = await updateEmailSettings(updatedSettings);
+      const updatedResult = await updateEmailSettings(updatedSettings);
+      const updated = resolveEmailSettingsResult(updatedResult, t('managed.messages.switchProviderFailed'));
+      if (!updated) {
+        setOutboundProvider(emailSettings.emailProvider === 'smtp' ? 'smtp' : 'resend');
+        return;
+      }
       setEmailSettings(updated);
     } catch (err: any) {
       console.error('[ManagedEmailSettings] Failed to switch provider', err);
@@ -418,11 +471,16 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
       return null;
     }
 
-    const updated = await updateEmailSettings({
+    const updatedResult = await updateEmailSettings({
       emailProvider: 'smtp',
       providerConfigs: emailSettings.providerConfigs,
       defaultFromDomain: from.trim().split('@').pop() || emailSettings.defaultFromDomain
     });
+    const updated = resolveEmailSettingsResult(updatedResult, t('managed.messages.smtpSaveFailed'));
+    if (!updated) {
+      return null;
+    }
+
     setEmailSettings(updated);
     return updated;
   };
@@ -472,7 +530,11 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
     setBusyDomain(newDomain.trim());
     try {
       const requester = overrides?.requestManagedEmailDomain ?? requestManagedEmailDomain;
-      await requester(newDomain.trim());
+      const result = await requester(newDomain.trim());
+      if (!result.success) {
+        toast.error(getManagedDomainFailureMessage(result, t('managed.messages.domainRequestFailed')));
+        return;
+      }
       toast.success(t('managed.messages.domainSubmitted'));
       setNewDomain('');
       await loadDomains();
@@ -488,7 +550,11 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
     setBusyDomain(domain);
     try {
       const refresher = overrides?.refreshManagedEmailDomain ?? refreshManagedEmailDomain;
-      await refresher(domain);
+      const result = await refresher(domain);
+      if (!result.success) {
+        toast.error(getManagedDomainFailureMessage(result, t('managed.messages.refreshStatusFailed')));
+        return;
+      }
       toast.success(t('managed.messages.verificationRecheckScheduled'));
       await loadDomains();
     } catch (err: any) {
@@ -510,13 +576,25 @@ export const ManagedEmailSettings: React.FC<EmailSettingsProps> = () => {
     setBusyDomain(domain);
     try {
       const deleter = overrides?.deleteManagedEmailDomain ?? deleteManagedEmailDomain;
-      await deleter(domain);
+      const result = await deleter(domain);
+      if (!result.success) {
+        toast.error(getManagedDomainFailureMessage(result, t('managed.messages.removeDomainFailed')));
+        return;
+      }
 
       if (emailSettings && (removesActiveOutboundDomain || removesTicketingFromDomain)) {
-        const updatedSettings = await updateEmailSettings({
+        const updatedSettingsResult = await updateEmailSettings({
           defaultFromDomain: removesActiveOutboundDomain ? null : emailSettings.defaultFromDomain,
           ticketingFromEmail: removesTicketingFromDomain ? null : emailSettings.ticketingFromEmail,
         } satisfies EmailSettingsUpdateInput);
+        const updatedSettings = resolveEmailSettingsResult(
+          updatedSettingsResult,
+          t('managed.messages.removeDomainFailed')
+        );
+        if (!updatedSettings) {
+          return;
+        }
+
         setEmailSettings(updatedSettings);
         initializeTicketingFromSelection(updatedSettings, inboundProviders);
       }

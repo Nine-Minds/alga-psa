@@ -295,7 +295,9 @@
     "addCommentFailed": "Failed to add comment",
     "deleteTimeEntryFailed": "Failed to delete time entry",
     "timeEntryDeleted": "Time entry deleted",
-    "closeFailed": "Failed to close ticket"
+    "closeFailed": "Failed to close ticket",
+    "loadCommentsFailed": "Failed to load comments",
+    "updateTicketFailed": "Failed to update ticket"
   },
   "conversation": {
     "comments": "Comments",

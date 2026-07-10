@@ -4,6 +4,12 @@ import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import type { Knex } from 'knex';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 const COUNTABLE_INVOICE_STATUSES = [
   'sent',
@@ -21,6 +27,16 @@ type ProfitabilityDateInput = {
   start?: string;
   end?: string;
 };
+
+export type ProfitabilityActionError = ActionMessageError | ActionPermissionError;
+
+function isProfitabilityActionError(value: unknown): value is ProfitabilityActionError {
+  return Boolean(
+    value &&
+    typeof value === 'object' &&
+    ('actionError' in value || 'permissionError' in value)
+  );
+}
 
 export interface ProfitabilityMetricFields {
   revenue: number;
@@ -287,22 +303,23 @@ class MetricAccumulator {
   }
 }
 
-function requireTenant(tenant: string | null | undefined): string {
+function requireTenant(tenant: string | null | undefined): string | ProfitabilityActionError {
   if (!tenant) {
-    throw new Error('No tenant context');
+    return actionError('No tenant context. Please refresh and try again.');
   }
   return tenant;
 }
 
-function normalizeDateInput(input: ProfitabilityDateInput): { startDate: string; endDate: string } {
+function normalizeDateInput(input: ProfitabilityDateInput): { startDate: string; endDate: string } | ProfitabilityActionError {
   const startDate = input.startDate ?? input.start;
   const endDate = input.endDate ?? input.end;
   if (!startDate || !endDate) {
-    throw new Error('startDate and endDate are required');
+    return actionError('Start date and end date are required.');
   }
   return { startDate, endDate };
 }
 
+// LEVERAGE: friction tenant-default-currency - duplicate of inventory resolveTenantCurrency; consolidate into a shared server util.
 async function getTenantDefaultCurrency(knex: Knex, tenant: string): Promise<string> {
   const row = await tenantDb(knex, tenant).table('default_billing_settings')
     .select('default_currency_code')
@@ -1158,10 +1175,13 @@ function applyAllFactsToAccumulator(acc: MetricAccumulator, facts: FactBundle) {
 
 async function getFactBundleForAction(user: Parameters<typeof hasPermission>[0], tenant: string | null | undefined, input: ProfitabilityDateInput) {
   if (!await hasPermission(user, 'billing', 'read')) {
-    throw new Error('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required');
   }
   const tenantId = requireTenant(tenant);
-  const { startDate, endDate } = normalizeDateInput(input);
+  if (isProfitabilityActionError(tenantId)) return tenantId;
+  const dateInput = normalizeDateInput(input);
+  if (isProfitabilityActionError(dateInput)) return dateInput;
+  const { startDate, endDate } = dateInput;
   const { knex } = await createTenantKnex();
   return fetchFacts(knex, tenantId, startDate, endDate);
 }
@@ -1170,8 +1190,9 @@ export const getProfitabilitySummary = withAuth(async (
   user,
   { tenant },
   input: ProfitabilityDateInput
-): Promise<ProfitabilitySummary> => {
+): Promise<ProfitabilitySummary | ProfitabilityActionError> => {
   const facts = await getFactBundleForAction(user, tenant, input);
+  if (isProfitabilityActionError(facts)) return facts;
   const acc = new MetricAccumulator();
   applyAllFactsToAccumulator(acc, facts);
   return {
@@ -1185,8 +1206,9 @@ export const getClientProfitability = withAuth(async (
   user,
   { tenant },
   input: ProfitabilityDateInput
-): Promise<ClientProfitabilityRow[]> => {
+): Promise<ClientProfitabilityRow[] | ProfitabilityActionError> => {
   const facts = await getFactBundleForAction(user, tenant, input);
+  if (isProfitabilityActionError(facts)) return facts;
   const rows = new Map<string, { clientId: string | null; clientName: string; acc: MetricAccumulator }>();
 
   const getRow = (id: string | null, name: string | null | undefined) => {
@@ -1255,8 +1277,9 @@ export const getAgreementProfitability = withAuth(async (
   user,
   { tenant },
   input: ProfitabilityDateInput & { clientId?: string | null }
-): Promise<AgreementProfitabilityRow[]> => {
+): Promise<AgreementProfitabilityRow[] | ProfitabilityActionError> => {
   const facts = await getFactBundleForAction(user, tenant, input);
+  if (isProfitabilityActionError(facts)) return facts;
   const buckets = new Map<string, AgreementBucket>();
 
   const getBucket = (
@@ -1352,8 +1375,9 @@ export const getTicketProfitability = withAuth(async (
   user,
   { tenant },
   input: ProfitabilityDateInput & { clientId?: string | null; clientContractId?: string | null }
-): Promise<TicketProfitabilityRow[]> => {
+): Promise<TicketProfitabilityRow[] | ProfitabilityActionError> => {
   const facts = await getFactBundleForAction(user, tenant, input);
+  if (isProfitabilityActionError(facts)) return facts;
   const rows = new Map<string, {
     ticketId: string;
     ticketNumber: string | null;

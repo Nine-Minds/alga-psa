@@ -16,8 +16,14 @@ export async function POST(request: NextRequest) {
       allowedProducts: ['psa', 'algadesk'],
     });
 
-    const body = await request.json();
-    const { providerId } = body;
+    let body: { providerId?: unknown };
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: 'Request body must be valid JSON' }, { status: 400 });
+    }
+
+    const providerId = typeof body.providerId === 'string' ? body.providerId.trim() : '';
     if (!providerId) {
       return NextResponse.json({ error: 'providerId is required' }, { status: 400 });
     }
@@ -49,6 +55,6 @@ export async function POST(request: NextRequest) {
       return toProductAccessDeniedResponse(error);
     }
     console.error('IMAP resync error:', error);
-    return NextResponse.json({ error: error.message || 'Failed to resync IMAP provider' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to resync IMAP provider. Please try again.' }, { status: 500 });
   }
 }

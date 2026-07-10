@@ -62,6 +62,10 @@ export default function SessionManagement() {
       setRevoking(sessionId);
       const result = await revokeSessionAction(sessionId);
 
+      if (!result.success) {
+        throw new Error(result.message);
+      }
+
       if (result.is_current) {
         toast.success(t('sessionManagement.messages.loggingOut', 'Logging out...'));
         // Redirect to login after a short delay

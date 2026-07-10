@@ -9,6 +9,13 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import type { IBoard } from '@alga-psa/types';
 import {
   assignClientPortalVisibilityGroupToContact,
@@ -40,6 +47,16 @@ type VisibilityContact = {
 };
 
 const FULL_ACCESS_VALUE = '__full_access__';
+
+type ReturnedActionError = ActionMessageError | ActionPermissionError;
+
+function isReturnedActionError(value: unknown): value is ReturnedActionError {
+  return isActionMessageError(value) || isActionPermissionError(value);
+}
+
+function getReturnedActionError(...values: unknown[]): ReturnedActionError | null {
+  return values.find(isReturnedActionError) ?? null;
+}
 
 export function VisibilityGroupsSettings() {
   const { t } = useTranslation('client-portal');
@@ -74,6 +91,16 @@ export function VisibilityGroupsSettings() {
       getClientPortalVisibilityContacts(),
     ]);
 
+    const actionError = getReturnedActionError(groupRows, contactRows);
+    if (actionError) {
+      toast({
+        variant: 'destructive',
+        title: t('clientSettings.visibilityGroups.loadError', 'Unable to load visibility groups'),
+        description: getErrorMessage(actionError),
+      });
+      return;
+    }
+
     applyGroupsAndContacts(groupRows as VisibilityGroup[], contactRows as VisibilityContact[]);
   };
 
@@ -86,8 +113,18 @@ export function VisibilityGroupsSettings() {
         getClientPortalVisibilityGroupBoards(),
       ]);
 
+      const actionError = getReturnedActionError(groupRows, contactRows, boardRows);
+      if (actionError) {
+        toast({
+          variant: 'destructive',
+          title: t('clientSettings.visibilityGroups.loadError', 'Unable to load visibility groups'),
+          description: getErrorMessage(actionError),
+        });
+        return;
+      }
+
       applyGroupsAndContacts(groupRows as VisibilityGroup[], contactRows as VisibilityContact[]);
-      setBoards(boardRows);
+      setBoards(boardRows as IBoard[]);
     } catch (error) {
       console.error('Failed to load visibility groups', error);
       toast({
@@ -122,6 +159,14 @@ export function VisibilityGroupsSettings() {
     try {
       setIsSaving(true);
       const group = await getClientPortalVisibilityGroup(groupId);
+      if (isReturnedActionError(group)) {
+        toast({
+          variant: 'destructive',
+          title: t('clientSettings.visibilityGroups.loadError', 'Unable to load visibility group'),
+          description: getErrorMessage(group),
+        });
+        return;
+      }
       if (!group) {
         throw new Error('Group not found');
       }
@@ -161,11 +206,22 @@ export function VisibilityGroupsSettings() {
 
     setIsSaving(true);
     try {
+      const result = editingGroupId
+        ? await updateClientPortalVisibilityGroup(editingGroupId, payload)
+        : await createClientPortalVisibilityGroup(payload);
+
+      if (isReturnedActionError(result)) {
+        toast({
+          variant: 'destructive',
+          title: t('clientSettings.visibilityGroups.saveError', 'Unable to save visibility group'),
+          description: getErrorMessage(result),
+        });
+        return;
+      }
+
       if (editingGroupId) {
-        await updateClientPortalVisibilityGroup(editingGroupId, payload);
         toast({ title: t('clientSettings.visibilityGroups.updateSuccess', 'Visibility group updated') });
       } else {
-        await createClientPortalVisibilityGroup(payload);
         toast({ title: t('clientSettings.visibilityGroups.createSuccess', 'Visibility group created') });
       }
 
@@ -194,6 +250,15 @@ export function VisibilityGroupsSettings() {
     setIsSaving(true);
     try {
       const result = await deleteClientPortalVisibilityGroup(pendingDeleteGroupId);
+
+      if (isReturnedActionError(result)) {
+        toast({
+          variant: 'destructive',
+          title: t('clientSettings.visibilityGroups.deleteError', 'Unable to delete visibility group'),
+          description: getErrorMessage(result),
+        });
+        return;
+      }
 
       if (!result.ok) {
         const description = result.code === 'ASSIGNED_TO_CONTACTS'
@@ -238,10 +303,22 @@ export function VisibilityGroupsSettings() {
 
     try {
       setIsSaving(true);
-      await assignClientPortalVisibilityGroupToContact({
+      const result = await assignClientPortalVisibilityGroupToContact({
         contactId,
         groupId: nextGroupId
       });
+      if (isReturnedActionError(result)) {
+        setAssignments((current) => ({
+          ...current,
+          [contactId]: previousValue
+        }));
+        toast({
+          variant: 'destructive',
+          title: t('clientSettings.visibilityGroups.assignError', 'Unable to assign visibility group'),
+          description: getErrorMessage(result),
+        });
+        return;
+      }
       await refreshGroupsAndContacts().catch((refreshError) => {
         console.error('Failed to refresh visibility group counts after assignment update', refreshError);
       });

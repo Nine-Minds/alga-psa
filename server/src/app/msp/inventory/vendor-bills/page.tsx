@@ -4,6 +4,7 @@ import { VendorBillsManager } from '@alga-psa/inventory/components';
 // (F047, ghost-usage props idiom); billing permissions are enforced inside the actions.
 import { exportVendorBillToAccounting, getVendorBillExportStatuses } from '@alga-psa/billing/actions';
 import { getSession } from '@alga-psa/auth';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import { enforceServerProductRoute } from '@/lib/serverProductRouteGuard';
@@ -24,8 +25,14 @@ export default async function VendorBillsPage() {
   }
 
   let initialBills: any[] = [];
+  let loadErrorMessage: string | undefined;
   try {
-    initialBills = await listVendorBills();
+    const result = await listVendorBills();
+    if (isActionMessageError(result) || isActionPermissionError(result)) {
+      loadErrorMessage = getErrorMessage(result);
+    } else {
+      initialBills = result;
+    }
   } catch (error) {
     console.error('Failed to load vendor bills:', error);
   }
@@ -33,6 +40,7 @@ export default async function VendorBillsPage() {
   return (
     <VendorBillsManager
       initialBills={initialBills}
+      loadErrorMessage={loadErrorMessage}
       exportBill={exportVendorBillToAccounting}
       getExportStatuses={getVendorBillExportStatuses}
     />

@@ -333,7 +333,8 @@
     "created": "\"{{name}}\" created. Add another client below.",
     "createAndAddAnother": "Create + Add Another",
     "createAndView": "Create + View Client",
-    "additionalDetails": "Additional Details"
+    "additionalDetails": "Additional Details",
+    "createFailed": "Failed to create client. Please try again."
   },
   "clientCreatedDialog": {
     "title": "Client Created",
@@ -451,7 +452,8 @@
     "formattingError": "Formatting Error",
     "removeAssignmentTitle": "Remove Contract Line Assignment",
     "removeAssignmentMessage": "Are you sure you want to remove this contract line assignment from the client? The contract line itself will not be deleted.",
-    "contracts": "Contracts"
+    "contracts": "Contracts",
+    "taxRatesLoadError": "Failed to load tax rate configuration."
   },
   "clientBillingSchedule": {
     "title": "Billing schedule",
@@ -599,7 +601,8 @@
     "startDate": "Start Date",
     "startDateRequired": "Start date is required",
     "updateAssignment": "Update Assignment",
-    "useTenantRenewalDefaults": "Use tenant renewal defaults"
+    "useTenantRenewalDefaults": "Use tenant renewal defaults",
+    "saveError": "Failed to save contract. Please try again."
   },
   "clientContractLineDashboard": {
     "title": "Usage metrics (last 30 days)",
@@ -908,7 +911,10 @@
     "skippedExistingMessage": "{{count}} clients were skipped because they already exist. Enable \"Update existing clients\" to overwrite them.",
     "error": "Error",
     "updateExistingTitle": "Update Existing Clients",
-    "updateExistingMessage": "{{count}} clients already exist. Do you want to update them with the new data?"
+    "updateExistingMessage": "{{count}} clients already exist. Do you want to update them with the new data?",
+    "invalidRowsBlocked": "Fix {{count}} invalid rows or enable \"Skip invalid records\" before importing.",
+    "noValidRows": "There are no valid client rows to import.",
+    "serverFailures": "{{failed}} of {{total}} clients failed to import. Review the row issues below."
   },
   "clientsList": {
     "name": "Name",
@@ -1065,7 +1071,8 @@
     "retry": "Retry",
     "loadError": "Notes failed to load",
     "unknownError": "Unknown error",
-    "loadErrorTitle": "Notes failed to load"
+    "loadErrorTitle": "Notes failed to load",
+    "loadErrorDescription": "Could not load notes. Please try again."
   },
   "actions": {
     "cancel": "Cancel",
@@ -1229,7 +1236,9 @@
         "endRequired": "End time is required to create a Teams meeting",
         "startRequired": "Start time is required to create a Teams meeting",
         "unavailable": "Teams meeting creation is not available for this tenant."
-      }
+      },
+      "loadFailed": "Interaction options could not be loaded. Please try again.",
+      "saveFailed": "The interaction could not be saved. Please try again."
     },
     "feed": {
       "addInteraction": "Add interaction",
@@ -1242,7 +1251,9 @@
       "searchPlaceholder": "Search interactions",
       "startDate": "Start Date",
       "title": "Interactions",
-      "typePlaceholder": "Interaction Type"
+      "typePlaceholder": "Interaction Type",
+      "loadFailed": "Interactions could not be loaded. Please try again.",
+      "typesLoadFailed": "Interaction types could not be loaded. Please try again."
     },
     "overall": {
       "allContacts": "All Contacts",
@@ -1259,7 +1270,8 @@
       "startTimeLabel": "Interaction Start Time",
       "startTimePlaceholder": "Filter from this start time",
       "statusPlaceholder": "Status",
-      "title": "Recent Interactions"
+      "title": "Recent Interactions",
+      "statusesLoadFailed": "Interaction statuses could not be loaded. Please try again."
     }
   },
   "clientDrawer": {

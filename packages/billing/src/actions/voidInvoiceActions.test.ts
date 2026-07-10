@@ -267,12 +267,13 @@ describe('voidInvoice (credit note)', () => {
     const { knex, log } = makeVoidHarness();
     vi.mocked(createTenantKnex).mockResolvedValue({ knex, tenant: 'tenant-1' } as any);
 
-    await (voidInvoice as any)(
+    const result = await (voidInvoice as any)(
       { user_id: 'user-1' },
       { tenant: 'tenant-1' },
       'inv-cn-1',
       'duplicate credit note'
     );
+    expect(result).toEqual({ success: true });
 
     // Pool credit removed from the client balance…
     expect(log).toContainEqual({
@@ -295,14 +296,16 @@ describe('voidInvoice (credit note)', () => {
     const { knex, log } = makeVoidHarness({ consumed: true });
     vi.mocked(createTenantKnex).mockResolvedValue({ knex, tenant: 'tenant-1' } as any);
 
-    await expect(
-      (voidInvoice as any)(
-        { user_id: 'user-1' },
-        { tenant: 'tenant-1' },
-        'inv-cn-1',
-        'too late'
-      )
-    ).rejects.toThrow(/applied credit/);
+    const result = await (voidInvoice as any)(
+      { user_id: 'user-1' },
+      { tenant: 'tenant-1' },
+      'inv-cn-1',
+      'too late'
+    );
+    expect(result).toEqual({
+      success: false,
+      error: 'This credit note has applied credit. Unapply the credit before voiding.',
+    });
 
     // Nothing was mutated.
     expect(log.filter((e) => e.op !== 'decrement').every((e) => e.op !== 'insert' && e.op !== 'update')).toBe(true);

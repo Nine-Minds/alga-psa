@@ -14,11 +14,21 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 interface TeamListProps {
   teams: ITeam[];
   onSelectTeam: (team: ITeam | null, deleted?: boolean) => void;
 }
+
+const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 const TeamList: React.FC<TeamListProps> = ({ teams, onSelectTeam }) => {
   const { t } = useTranslation('msp/settings');
@@ -76,14 +86,18 @@ const TeamList: React.FC<TeamListProps> = ({ teams, onSelectTeam }) => {
           team_id: '',
         };
         const createdTeam = await createTeam(newTeam);
+        if (isReturnedActionError(createdTeam)) {
+          setError(getErrorMessage(createdTeam));
+          return;
+        }
         onSelectTeam(createdTeam, false);
         setNewTeamName('');
         setSelectedManagerId('');
         setShowAddForm(false);
         setError(null);
       } catch (err: unknown) {
-        setError(t('teams.messages.error.createFailed', { error: err instanceof Error ? err.message : String(err) }));
         console.error('Error creating team:', err);
+        setError(t('teams.messages.error.createFailed'));
       }
     }
   };

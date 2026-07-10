@@ -7,6 +7,7 @@
 
 import { NextResponse } from 'next/server';
 import { getAssetSummaryMetrics } from '@alga-psa/assets/actions/assetActions';
+import { assetActionErrorFrom, assetActionErrorMessage } from '@alga-psa/assets/actions/assetActionErrors';
 
 export async function GET(
   request: Request,
@@ -19,6 +20,17 @@ export async function GET(
     }
 
     const summary = await getAssetSummaryMetrics(id);
+    const expectedError = assetActionErrorFrom(summary);
+    if (expectedError) {
+      const message = assetActionErrorMessage(expectedError);
+      const status = 'permissionError' in expectedError
+        ? 403
+        : message.startsWith('Asset not found')
+          ? 404
+          : 400;
+
+      return NextResponse.json({ error: message }, { status });
+    }
 
     return NextResponse.json({
       data: summary,
@@ -31,9 +43,6 @@ export async function GET(
     });
   } catch (error) {
     console.error('Failed to get asset summary:', error);
-    if (error instanceof Error && error.message === 'Asset not found') {
-      return NextResponse.json({ error: 'Asset not found' }, { status: 404 });
-    }
     return NextResponse.json(
       { error: 'Failed to get asset summary' },
       { status: 500 }

@@ -744,6 +744,7 @@
     "addPurchaseOrder": "Dodaj zamówienie zakupu",
     "allVendors": "Wszyscy dostawcy",
     "amountOnOrder": "{{amount}} zamówione",
+    "mixedCurrencyOnOrder": "{{count}} zamówień zakupu w toku w wielu walutach",
     "cancelConfirm": "Czy na pewno chcesz anulować zamówienie zakupu {{poNumber}}? Tej operacji nie można cofnąć.",
     "cancelFailed": "Nie udało się anulować zamówienia zakupu.",
     "cancelTitle": "Anuluj zamówienie zakupu",
@@ -963,6 +964,15 @@
     "emailFailed": "Nie udało się wysłać potwierdzenia e-mailem.",
     "emailSuccess": "Potwierdzenie wysłane e-mailem do {{recipients}}",
     "enterSerial": "Wprowadź co najmniej jeden numer seryjny.",
+    "errors": {
+      "documentGenerationFailed": "Nie udało się wygenerować dokumentu",
+      "downloadPermissionDenied": "Odmowa uprawnień: nie można pobrać dokumentów zamówienia sprzedaży",
+      "emailConfirmationFailed": "Nie udało się wysłać potwierdzenia e-mailem",
+      "emailPermissionDenied": "Odmowa uprawnień: nie można wysłać e-mailem dokumentów zamówienia sprzedaży",
+      "emailSendFailed": "Nie udało się wysłać e-maila.",
+      "noRecipientEmail": "Brak adresu e-mail odbiorcy dla tego klienta.",
+      "notFound": "Nie znaleziono zamówienia sprzedaży"
+    },
     "fields": {
       "allocationMode": "Tryb alokacji",
       "clientPoNumber": "Client PO number",
@@ -1056,7 +1066,8 @@
     "title": "Zamówienia sprzedaży",
     "total": "Total",
     "unassignedBackorder": "{{count}} zaległych linii nie ma preferowanego dostawcy — utwórz te PO ręcznie.",
-    "unnamedService": "Unnamed"
+    "unnamedService": "Unnamed",
+    "notFound": "Sales order not found."
   },
   "stock": {
     "actions": {
@@ -1234,6 +1245,7 @@
     "title": "Transfery",
     "toLocation": "Lokalizacja docelowa",
     "vanLoadList": "Lista załadunku vana",
+    "vanLoadListReplenishment": "Uzupełnienie listy załadunku vana",
     "status": {
       "dispatched": "Wysłano",
       "received": "Odebrano",

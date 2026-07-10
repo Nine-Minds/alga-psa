@@ -4,6 +4,7 @@ import { Knex } from 'knex';
 import { withTransaction, createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import { permissionError, type ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { reconcileStockLevels } from '../lib';
 
 // NOTE: 'use server' file — export ONLY async functions (+ erased types).
@@ -21,6 +22,8 @@ export interface RebuildStockCachesResult {
   corrections: StockCacheCorrection[];
 }
 
+export type ReconcileActionError = ActionPermissionError;
+
 /**
  * Rebuild the stock_levels cache for every stock-tracked product from the sources of
  * truth (movement ledger / unit statuses / open SO reservations) and report exactly
@@ -28,9 +31,9 @@ export interface RebuildStockCachesResult {
  * before it existed, a drifted reserved/held counter was permanently stuck.
  */
 export const rebuildStockCaches = withAuth(
-  async (user, { tenant }): Promise<RebuildStockCachesResult> => {
+  async (user, { tenant }): Promise<RebuildStockCachesResult | ReconcileActionError> => {
     if (!(await hasPermission(user, 'inventory', 'update'))) {
-      throw new Error('Permission denied: inventory update required');
+      return permissionError('Permission denied: inventory update required');
     }
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {

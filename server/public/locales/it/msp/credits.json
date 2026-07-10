@@ -70,7 +70,8 @@
     "expirationPeriod": "Periodo di scadenza:",
     "daysUnit": "{{count}} giorni",
     "notificationDays": "Giorni di notifica:",
-    "none": "Nessuno"
+    "none": "Nessuno",
+    "loadErrorPrefix": "Error loading credit expiration settings:"
   },
   "charts": {
     "expirationSummary": "Riepilogo scadenza crediti",

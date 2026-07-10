@@ -9,9 +9,40 @@
  * is here (server app) because the inventory package cannot depend on billing.
  */
 
-import { downloadSalesOrderPDF, type SalesOrderDocumentType } from '@alga-psa/billing/actions';
+import {
+  downloadSalesOrderPDF,
+  SalesOrderDocumentError,
+  type SalesOrderDocumentType,
+} from '@alga-psa/billing/actions';
+import { isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 const VALID_TYPES: SalesOrderDocumentType[] = ['sales-order', 'packing-slip', 'pick-list'];
+
+function salesOrderDocumentError(error: unknown): { status: number; message: string } {
+  if (isActionPermissionError(error)) {
+    return { status: 403, message: 'You do not have permission to download sales order documents.' };
+  }
+  if (isActionMessageError(error)) {
+    return { status: /not found/i.test(error.actionError) ? 404 : 422, message: error.actionError };
+  }
+  if (error instanceof SalesOrderDocumentError) {
+    if (error.code === 'permission_denied') {
+      return { status: 403, message: error.message };
+    }
+    if (error.code === 'not_found') {
+      return { status: 404, message: error.message };
+    }
+    return { status: 422, message: error.message };
+  }
+  const message = error instanceof Error ? error.message : '';
+  if (/permission denied/i.test(message)) {
+    return { status: 403, message: 'You do not have permission to download sales order documents.' };
+  }
+  if (/not found/i.test(message)) {
+    return { status: 404, message: 'Sales order not found.' };
+  }
+  return { status: 500, message: 'Failed to generate the document.' };
+}
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -19,7 +50,16 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   const documentType: SalesOrderDocumentType =
     typeParam && (VALID_TYPES as string[]).includes(typeParam) ? (typeParam as SalesOrderDocumentType) : 'sales-order';
   try {
-    const { pdfData, soNumber } = await downloadSalesOrderPDF(id, documentType);
+    const result = await downloadSalesOrderPDF(id, documentType);
+    if (isActionPermissionError(result) || isActionMessageError(result)) {
+      const { status, message } = salesOrderDocumentError(result);
+      return new Response(JSON.stringify({ error: message }), {
+        status,
+        headers: { 'Content-Type': 'application/json' },
+      });
+    }
+
+    const { pdfData, soNumber } = result;
     const body = new Uint8Array(pdfData);
     const suffix = documentType === 'sales-order' ? '' : `-${documentType}`;
     return new Response(body, {
@@ -31,8 +71,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
       },
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to generate the document';
-    const status = /permission denied/i.test(message) ? 403 : /not found/i.test(message) ? 404 : 400;
+    const { status, message } = salesOrderDocumentError(error);
     return new Response(JSON.stringify({ error: message }), {
       status,
       headers: { 'Content-Type': 'application/json' },

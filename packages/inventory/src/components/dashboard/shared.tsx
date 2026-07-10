@@ -3,6 +3,12 @@
 import React from 'react';
 import { ArrowRight } from 'lucide-react';
 import { cn } from '@alga-psa/ui/lib/utils';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+export {
+  CurrencyFormatProvider,
+  useCurrencyFormat,
+  type CurrencyFormat,
+} from '@alga-psa/ui/lib';
 
 /**
  * Shared primitives for the inventory dashboard bento tiles
@@ -19,65 +25,6 @@ export function pct(value: number, dp = 0): string {
 
 export function clientHref(clientId: string | null | undefined): string {
   return clientId ? `/msp/clients/${clientId}` : '/msp/inventory/sales-orders';
-}
-
-/**
- * Locale/currency-aware money formatting for the dashboard. The provider is
- * seeded once at the root from the tenant's default billing currency and the
- * active i18n locale; tiles read the formatters through the hook so every
- * amount renders with the correct symbol and grouping instead of a hardcoded $.
- */
-const DEFAULT_LOCALE = 'en';
-const DEFAULT_CURRENCY = 'USD';
-
-export interface CurrencyFormat {
-  /** Whole-number by default (dp=0), preserving the prior display. */
-  money: (cents: number, dp?: number) => string;
-  /** Explicit +/− prefix on the absolute value (−$340 / +$40). */
-  moneySigned: (cents: number) => string;
-}
-
-function buildCurrencyFormat(locale: string, currencyCode: string): CurrencyFormat {
-  const format = (cents: number, dp = 0) =>
-    new Intl.NumberFormat(locale, {
-      style: 'currency',
-      currency: currencyCode,
-      minimumFractionDigits: dp,
-      maximumFractionDigits: dp,
-    }).format(Number(cents || 0) / 100);
-  return {
-    money: format,
-    moneySigned: (cents: number) => {
-      const abs = format(Math.abs(cents));
-      if (cents < 0) return `−${abs}`;
-      if (cents > 0) return `+${abs}`;
-      return abs;
-    },
-  };
-}
-
-const CurrencyFormatContext = React.createContext<CurrencyFormat>(
-  buildCurrencyFormat(DEFAULT_LOCALE, DEFAULT_CURRENCY),
-);
-
-export function CurrencyFormatProvider({
-  currencyCode,
-  locale,
-  children,
-}: {
-  currencyCode: string;
-  locale: string;
-  children: React.ReactNode;
-}) {
-  const value = React.useMemo(
-    () => buildCurrencyFormat(locale || DEFAULT_LOCALE, currencyCode || DEFAULT_CURRENCY),
-    [locale, currencyCode],
-  );
-  return <CurrencyFormatContext.Provider value={value}>{children}</CurrencyFormatContext.Provider>;
-}
-
-export function useCurrencyFormat(): CurrencyFormat {
-  return React.useContext(CurrencyFormatContext);
 }
 
 export function shortDate(iso: string): string {
@@ -181,6 +128,8 @@ export function TileLink({ id, href, children }: { id: string; href: string; chi
 
 /** Aging chip, color-stepped: ≥45d red, ≥30d amber, else quiet. */
 export function AgePill({ days, prefix = '' }: { days: number | null; prefix?: string }) {
+  const { t } = useTranslation('features/inventory');
+
   if (days == null) return null;
   const cls =
     days >= 45
@@ -188,5 +137,6 @@ export function AgePill({ days, prefix = '' }: { days: number | null; prefix?: s
       : days >= 30
         ? 'bg-amber-50 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400'
         : 'bg-[rgb(var(--color-border-100))] text-[rgb(var(--color-text-500))]';
-  return <span className={`rounded px-1.5 py-0.5 font-mono text-[11px] ${cls}`}>{prefix}{days}d</span>;
+  const age = t('dashboard.attention.metric.ageDays', '{{days}}d', { days });
+  return <span className={`rounded px-1.5 py-0.5 font-mono text-[11px] ${cls}`}>{prefix}{age}</span>;
 }

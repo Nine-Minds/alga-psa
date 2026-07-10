@@ -45,7 +45,7 @@ export function GoogleIntegrationSettings() {
     const res = await getGoogleIntegrationStatus();
     setStatus(res);
     if (!res.success) {
-      setError(t('integrations.google.settings.errors.loadFailed', { defaultValue: 'Failed to load Google settings' }));
+      setError(res.error || t('integrations.google.settings.errors.loadFailed', { defaultValue: 'Failed to load Google settings' }));
     } else if (res.config) {
       setProjectId(res.config.projectId || '');
       setGmailClientId(res.config.gmailClientId || '');
@@ -76,8 +76,9 @@ export function GoogleIntegrationSettings() {
         calendarClientSecret: useSameForCalendar ? undefined : calendarClientSecret
       });
       if (!res.success) {
-        setError(t('integrations.google.settings.errors.saveFailed', { defaultValue: 'Failed to save Google settings' }));
-        toast({ title: t('integrations.google.settings.toasts.saveFailedTitle', { defaultValue: 'Unable to save Google settings' }), description: t('integrations.google.settings.toasts.unknownError', { defaultValue: 'Unknown error' }), variant: 'destructive' });
+        const message = res.error || t('integrations.google.settings.errors.saveFailed', { defaultValue: 'Failed to save Google settings' });
+        setError(message);
+        toast({ title: t('integrations.google.settings.toasts.saveFailedTitle', { defaultValue: 'Unable to save Google settings' }), description: message, variant: 'destructive' });
         return;
       }
       toast({ title: t('integrations.google.settings.toasts.savedTitle', { defaultValue: 'Google settings saved' }), description: t('integrations.google.settings.toasts.savedDescription', { defaultValue: 'Tenant Google configuration updated successfully.' }) });
@@ -93,8 +94,9 @@ export function GoogleIntegrationSettings() {
       setError(null);
       const res = await resetGoogleProvidersToDisconnected();
       if (!res.success) {
-        setError(t('integrations.google.settings.errors.resetFailed', { defaultValue: 'Failed to reset Google providers' }));
-        toast({ title: t('integrations.google.settings.toasts.resetFailedTitle', { defaultValue: 'Reset failed' }), description: t('integrations.google.settings.toasts.unknownError', { defaultValue: 'Unknown error' }), variant: 'destructive' });
+        const message = res.error || t('integrations.google.settings.errors.resetFailed', { defaultValue: 'Failed to reset Google providers' });
+        setError(message);
+        toast({ title: t('integrations.google.settings.toasts.resetFailedTitle', { defaultValue: 'Reset failed' }), description: message, variant: 'destructive' });
         return;
       }
       toast({ title: t('integrations.google.settings.toasts.resetTitle', { defaultValue: 'Google providers reset' }), description: t('integrations.google.settings.toasts.resetDescription', { defaultValue: 'All Google providers are now disconnected and require re-authorization.' }) });

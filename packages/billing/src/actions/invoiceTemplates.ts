@@ -18,12 +18,55 @@ import type { TemplateAst, WasmInvoiceViewModel, RenderOutput } from '@alga-psa/
 import { v4 as uuidv4 } from 'uuid';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import {
+    actionError,
+    permissionError,
+    type ActionMessageError,
+    type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 import { evaluateTemplateAst } from '../lib/invoice-template-ast/evaluator';
 import { renderEvaluatedTemplateAst } from '../lib/invoice-template-ast/react-renderer';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 
 const GLOBAL_TEMPLATE_LOOKUP = 'global-template-lookup';
+type InvoiceTemplateActionError = ActionMessageError | ActionPermissionError;
+
+function invoiceTemplateActionErrorFrom(error: unknown): InvoiceTemplateActionError | null {
+    if (error instanceof Error) {
+        if (error.message.startsWith('Permission denied')) {
+            return permissionError(error.message);
+        }
+        if (error.message === 'standard template selection requires a standard template code') {
+            return actionError('Select a standard invoice template before saving.');
+        }
+        if (error.message === 'Template id is required when no templateAst override is provided.') {
+            return actionError('Select an invoice template before previewing.');
+        }
+        if (/^Template .+ not found for tenant .+$/.test(error.message) || error.message === 'TEMPLATE_NOT_FOUND') {
+            return actionError('Invoice template not found. It may have been updated or deleted. Please refresh and try again.');
+        }
+        if (/^Template .+ does not have a canonical templateAst payload\.$/.test(error.message)) {
+            return actionError('Invoice template is missing its design payload. Please choose another template.');
+        }
+    }
+
+    const dbError = error as { code?: string; column?: string };
+    if (dbError?.code === '22P02') {
+        return actionError('One of the selected invoice template values is invalid. Please refresh and try again.');
+    }
+    if (dbError?.code === '23502') {
+        return actionError(`Missing required invoice template field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    }
+    if (dbError?.code === '23503') {
+        return actionError('The selected invoice template or client no longer exists. Please refresh and try again.');
+    }
+    if (dbError?.code === '23505') {
+        return actionError('An invoice template with those settings already exists.');
+    }
+
+    return null;
+}
 
 export const getInvoiceTemplate = withAuth(async (
     user,
@@ -77,9 +120,9 @@ export const getInvoiceTemplate = withAuth(async (
 export const getInvoiceTemplates = withAuth(async (
     user,
     { tenant }
-): Promise<IInvoiceTemplate[]> => {
+): Promise<IInvoiceTemplate[] | InvoiceTemplateActionError> => {
     if (!await hasPermission(user, 'billing', 'read')) {
-        throw new Error('Permission denied: billing read required');
+        return permissionError('Permission denied: billing read required');
     }
 
     const { knex } = await createTenantKnex();
@@ -100,14 +143,18 @@ export const setDefaultTemplate = withAuth(async (
     user,
     { tenant },
     payload: SetDefaultTemplatePayload
-): Promise<void> => {
+): Promise<void | InvoiceTemplateActionError> => {
     if (!await hasPermission(user, 'billing', 'update')) {
-        throw new Error('Permission denied: billing update required');
+        return permissionError('Permission denied: billing update required');
+    }
+    if (payload.templateSource === 'standard' && !payload.standardTemplateCode) {
+        return actionError('Select a standard invoice template before saving.');
     }
 
     const { knex } = await createTenantKnex();
 
-    await withTransaction(knex, async (trx: Knex.Transaction) => {
+    try {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
         const db = tenantDb(trx, tenant);
         await db.table('invoice_template_assignments')
             .where({ scope_type: 'tenant' })
@@ -117,14 +164,13 @@ export const setDefaultTemplate = withAuth(async (
         await db.table('invoice_templates')
             .update({ is_default: false });
 
-        if (payload.templateSource === 'standard' && !payload.standardTemplateCode) {
-            throw new Error('standard template selection requires a standard template code');
-        }
-
         if (payload.templateSource === 'custom') {
-            await db.table('invoice_templates')
+            const updated = await db.table('invoice_templates')
                 .where({ template_id: payload.templateId })
                 .update({ is_default: true });
+            if (updated === 0) {
+                throw new Error('TEMPLATE_NOT_FOUND');
+            }
         }
 
         const baseAssignment = {
@@ -150,6 +196,11 @@ export const setDefaultTemplate = withAuth(async (
 
         await db.table('invoice_template_assignments').insert(assignmentRecord);
     });
+    } catch (error) {
+        const expected = invoiceTemplateActionErrorFrom(error);
+        if (expected) return expected;
+        throw error;
+    }
 });
 
 export const getDefaultTemplate = withAuth(async (
@@ -168,19 +219,28 @@ export const setClientTemplate = withAuth(async (
     { tenant },
     clientId: string,
     templateId: string | null
-): Promise<void> => {
+): Promise<void | InvoiceTemplateActionError> => {
     if (!await hasPermission(user, 'billing', 'update')) {
-        throw new Error('Permission denied: billing update required');
+        return permissionError('Permission denied: billing update required');
     }
 
     const { knex } = await createTenantKnex();
-    await withTransaction(knex, async (trx: Knex.Transaction) => {
-      return await tenantDb(trx, tenant).table('clients')
+    try {
+    const updated = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return tenantDb(trx, tenant).table('clients')
           .where({
               client_id: clientId
           })
           .update({ invoice_template_id: templateId });
     });
+    if (updated === 0) {
+        return actionError('Client not found. It may have been updated or deleted. Please refresh and try again.');
+    }
+    } catch (error) {
+        const expected = invoiceTemplateActionErrorFrom(error);
+        if (expected) return expected;
+        throw error;
+    }
 });
 
 // Saves tenant-specific invoice templates with AST as the canonical runtime payload.
@@ -190,7 +250,7 @@ export const saveInvoiceTemplate = withAuth(async (
     template: Omit<IInvoiceTemplate, 'tenant'> & { isClone?: boolean }
 ): Promise<{ success: boolean; template?: IInvoiceTemplate; error?: string }> => {
     if (!await hasPermission(user, 'billing', 'update')) {
-        throw new Error('Permission denied: billing update required');
+        return { success: false, error: 'Permission denied: billing update required' };
     }
 
     const { knex } = await createTenantKnex();
@@ -253,7 +313,13 @@ export const saveInvoiceTemplate = withAuth(async (
         return { success: true, template: savedTemplate as IInvoiceTemplate };
     } catch (saveError: any) {
         console.error('Error saving template metadata:', saveError);
-        return { success: false, error: saveError?.message || String(saveError) };
+        const expected = invoiceTemplateActionErrorFrom(saveError);
+        return {
+            success: false,
+            error: expected
+                ? ('permissionError' in expected ? expected.permissionError : expected.actionError)
+                : saveError?.message || String(saveError),
+        };
     }
 });
 
@@ -334,7 +400,7 @@ export const renderTemplateOnServer = withAuth(async (
     templateId: string | null,
     invoiceData: WasmInvoiceViewModel | null, // Allow null invoiceData
     options?: RenderTemplateOnServerOptions
-): Promise<RenderOutput> => {
+): Promise<RenderOutput | InvoiceTemplateActionError> => {
     // Handle null invoiceData early
     if (!invoiceData) {
         console.warn(`renderTemplateOnServer called with null invoiceData for template ${templateId}. Returning empty output.`);
@@ -374,9 +440,11 @@ export const renderTemplateOnServer = withAuth(async (
 
     } catch (error: any) {
         console.error(`[Server Action] Error rendering template ${templateId}:`, error);
-        // Re-throw a more specific error or return a structured error object
-        // For now, re-throwing the original error message
-        throw new Error(`Failed to render template ${templateId} on server: ${error.message}`);
+        const expected = invoiceTemplateActionErrorFrom(error);
+        if (expected) {
+          return expected;
+        }
+        throw error;
     }
 });
 
@@ -386,7 +454,15 @@ export const deleteInvoiceTemplate = withAuth(async (
     templateId: string
 ): Promise<DeletionValidationResult & { success: boolean; deleted?: boolean; error?: string }> => {
     if (!await hasPermission(user, 'billing', 'delete')) {
-        throw new Error('Permission denied: billing delete required');
+        return {
+            success: false,
+            canDelete: false,
+            code: 'VALIDATION_FAILED',
+            message: 'Permission denied: billing delete required',
+            dependencies: [],
+            alternatives: [],
+            error: 'Permission denied: billing delete required',
+        };
     }
 
     const { knex } = await createTenantKnex();
@@ -477,14 +553,18 @@ export const deleteInvoiceTemplate = withAuth(async (
         };
     } catch (error: any) {
         console.error(`Error deleting invoice template ${templateId} for tenant ${tenant}:`, error);
+        const expected = invoiceTemplateActionErrorFrom(error);
+        const message = expected
+            ? ('permissionError' in expected ? expected.permissionError : expected.actionError)
+            : error?.message || 'An unexpected error occurred while deleting the template.';
         return {
             success: false,
             canDelete: false,
             code: 'VALIDATION_FAILED',
-            message: error?.message || 'An unexpected error occurred while deleting the template.',
+            message,
             dependencies: [],
             alternatives: [],
-            error: error?.message || 'An unexpected error occurred while deleting the template.'
+            error: message
         };
     }
 });

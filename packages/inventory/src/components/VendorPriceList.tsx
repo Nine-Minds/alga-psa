@@ -4,10 +4,18 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
+import { CurrencyInput } from '@alga-psa/ui/components/CurrencyInput';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
+import { CURRENCY_OPTIONS, toMinorUnits } from '@alga-psa/core';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { toast } from 'react-hot-toast';
 import type { IVendor, IVendorProduct } from '@alga-psa/types';
 import { listVendorProducts, upsertVendorProduct, deleteVendorProduct, listInventoryProducts } from '../actions';
@@ -17,17 +25,17 @@ type OfferRow = IVendorProduct & { service_name: string | null; sku: string | nu
 interface OfferForm {
   service_id: string;
   vendor_sku: string;
-  unit_cost: string; // dollars
+  unit_cost: string; // major units, converted to integer minor units on save
   cost_currency: string;
   lead_time_days: string;
   is_preferred: boolean;
 }
 
-const emptyOffer = (): OfferForm => ({
+const emptyOffer = (currencyCode: string): OfferForm => ({
   service_id: '',
   vendor_sku: '',
   unit_cost: '',
-  cost_currency: 'USD',
+  cost_currency: currencyCode,
   lead_time_days: '',
   is_preferred: false,
 });
@@ -37,32 +45,54 @@ const emptyOffer = (): OfferForm => ({
  * PO lines and reorder suggestions price from these rows; the preferred offer also
  * drives which vendor auto-suggested POs group under.
  */
-export function VendorPriceList({ vendor, onClose }: { vendor: IVendor | null; onClose: () => void }) {
+export function VendorPriceList({
+  vendor,
+  onClose,
+  defaultCurrencyCode = 'USD',
+}: {
+  vendor: IVendor | null;
+  onClose: () => void;
+  defaultCurrencyCode?: string;
+}) {
   const { t } = useTranslation('features/inventory');
+  const { money, fractionDigits } = useCurrencyFormat();
   const [offers, setOffers] = useState<OfferRow[]>([]);
   const [products, setProducts] = useState<Array<{ service_id: string; service_name: string | null; sku: string | null }>>([]);
-  const [form, setForm] = useState<OfferForm>(emptyOffer());
+  const [form, setForm] = useState<OfferForm>(emptyOffer(defaultCurrencyCode));
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
     if (!vendor) return;
     try {
-      setOffers(await listVendorProducts({ vendor_id: vendor.vendor_id }));
+      const result = await listVendorProducts({ vendor_id: vendor.vendor_id });
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        setOffers([]);
+        toast.error(getErrorMessage(result));
+        return;
+      }
+      setOffers(result);
     } catch (e: any) {
       toast.error(e?.message || t('vendorPriceList.loadError', "Couldn't load the price list."));
     }
   }, [vendor, t]);
 
   useEffect(() => {
-    setForm(emptyOffer());
+    setForm(emptyOffer(defaultCurrencyCode));
     setOffers([]);
     load();
     if (vendor) {
       listInventoryProducts()
-        .then((rows: any[]) => setProducts(rows.map((r) => ({ service_id: r.service_id, service_name: r.service_name, sku: r.sku }))))
+        .then((rows) => {
+          if (isActionMessageError(rows) || isActionPermissionError(rows)) {
+            setProducts([]);
+            toast.error(getErrorMessage(rows));
+            return;
+          }
+          setProducts(rows.map((r) => ({ service_id: r.service_id, service_name: r.service_name, sku: r.sku })));
+        })
         .catch(() => setProducts([]));
     }
-  }, [vendor, load]);
+  }, [defaultCurrencyCode, vendor, load]);
 
   const save = async () => {
     if (!vendor) return;
@@ -78,17 +108,21 @@ export function VendorPriceList({ vendor, onClose }: { vendor: IVendor | null; o
     const leadDays = form.lead_time_days.trim() === '' ? null : Number(form.lead_time_days);
     setSaving(true);
     try {
-      await upsertVendorProduct({
+      const result = await upsertVendorProduct({
         vendor_id: vendor.vendor_id,
         service_id: form.service_id,
         vendor_sku: form.vendor_sku.trim() || null,
-        unit_cost: dollars == null ? null : Math.round(dollars * 100),
-        cost_currency: form.cost_currency.trim() || 'USD',
+        unit_cost: dollars == null ? null : toMinorUnits(dollars, undefined, form.cost_currency),
+        cost_currency: form.cost_currency || defaultCurrencyCode,
         lead_time_days: leadDays,
         is_preferred: form.is_preferred,
       });
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       toast.success(t('vendorPriceList.offerSaved', 'Offer saved.'));
-      setForm(emptyOffer());
+      setForm(emptyOffer(defaultCurrencyCode));
       await load();
     } catch (e: any) {
       toast.error(e?.message || t('vendorPriceList.saveError', "Couldn't save the offer."));
@@ -100,7 +134,11 @@ export function VendorPriceList({ vendor, onClose }: { vendor: IVendor | null; o
   const remove = async (offer: OfferRow) => {
     if (!vendor) return;
     try {
-      await deleteVendorProduct(vendor.vendor_id, offer.service_id);
+      const result = await deleteVendorProduct(vendor.vendor_id, offer.service_id);
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       toast.success(t('vendorPriceList.offerRemoved', 'Offer removed.'));
       await load();
     } catch (e: any) {
@@ -109,11 +147,13 @@ export function VendorPriceList({ vendor, onClose }: { vendor: IVendor | null; o
   };
 
   const startEdit = (offer: OfferRow) => {
+    const currency = offer.cost_currency ?? defaultCurrencyCode;
+    const digits = fractionDigits(currency);
     setForm({
       service_id: offer.service_id,
       vendor_sku: offer.vendor_sku ?? '',
-      unit_cost: offer.unit_cost != null ? (Number(offer.unit_cost) / 100).toFixed(2) : '',
-      cost_currency: offer.cost_currency ?? 'USD',
+      unit_cost: offer.unit_cost != null ? (Number(offer.unit_cost) / Math.pow(10, digits)).toFixed(digits) : '',
+      cost_currency: currency,
       lead_time_days: offer.lead_time_days != null ? String(offer.lead_time_days) : '',
       is_preferred: Boolean(offer.is_preferred),
     });
@@ -151,7 +191,7 @@ export function VendorPriceList({ vendor, onClose }: { vendor: IVendor | null; o
                   </td>
                   <td className="py-2 px-2 font-mono text-xs">{o.vendor_sku || t('common.emptyValue', '—')}</td>
                   <td className="py-2 px-2 text-right tabular-nums">
-                    {o.unit_cost != null ? `$${(Number(o.unit_cost) / 100).toFixed(2)} ${o.cost_currency}` : t('common.emptyValue', '—')}
+                    {o.unit_cost != null ? money(Number(o.unit_cost), o.cost_currency ?? defaultCurrencyCode) : t('common.emptyValue', '—')}
                   </td>
                   <td className="py-2 px-2 text-right tabular-nums">
                     {o.lead_time_days != null ? t('vendorPriceList.leadTimeDays', '{{days}}d', { days: o.lead_time_days }) : t('common.emptyValue', '—')}
@@ -206,18 +246,19 @@ export function VendorPriceList({ vendor, onClose }: { vendor: IVendor | null; o
               value={form.vendor_sku}
               onChange={(e) => setForm({ ...form, vendor_sku: e.target.value })}
             />
-            <Input
+            <CurrencyInput
               id="vendor-offer-cost"
-              label={t('vendorPriceList.fields.cost', 'Cost ($)')}
-              type="number"
-              value={form.unit_cost}
-              onChange={(e) => setForm({ ...form, unit_cost: e.target.value })}
+              label={t('vendorPriceList.fields.cost', 'Cost')}
+              currencyCode={form.cost_currency}
+              value={form.unit_cost ? Number(form.unit_cost) : undefined}
+              onChange={(value) => setForm({ ...form, unit_cost: value == null ? '' : String(value) })}
             />
-            <Input
+            <CustomSelect
               id="vendor-offer-currency"
               label={t('vendorPriceList.fields.currency', 'Currency')}
               value={form.cost_currency}
-              onChange={(e) => setForm({ ...form, cost_currency: e.target.value.toUpperCase() })}
+              onValueChange={(value) => setForm({ ...form, cost_currency: value })}
+              options={CURRENCY_OPTIONS.map((option) => ({ value: option.value, label: option.label }))}
             />
             <Input
               id="vendor-offer-lead-time"

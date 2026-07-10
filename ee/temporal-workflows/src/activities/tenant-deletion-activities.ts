@@ -9,6 +9,7 @@
  */
 
 import { Context } from '@temporalio/activity';
+import { Client, Connection } from '@temporalio/client';
 import crypto from 'crypto';
 import { getAdminConnection, refreshAdminConnection } from '@alga-psa/db/admin.js';
 import { getTenantTableScope, retryOnReadOnly, tenantDb, type TenantTableScope } from '@alga-psa/db';
@@ -2215,4 +2216,83 @@ export async function recordReactivationPaymentAlert(
   }
 
   return { success: true };
+}
+
+/**
+ * Delete every recurring Temporal Schedule owned by a tenant.
+ *
+ * Every per-tenant schedule — accounting-sync-cycle, rmm-alert-reconciliation,
+ * huntress-incident-poll, and workflow-v2 `workflow-schedule:*` — is created by
+ * TemporalJobRunner, which bakes `{ tenantId }` into the started workflow's
+ * `args[0]`. We match on that baked tenantId rather than the schedule id: the
+ * `workflow-schedule:<workflowId>:<scheduleId>` ids carry no tenant, so an
+ * id-substring match would silently orphan them. Global maintenance schedules
+ * run `maintenanceJobWorkflow` with no tenantId and are left untouched.
+ *
+ * Must run BEFORE deleteTenantData drops the `jobs` table, otherwise the
+ * schedules keep firing genericJobWorkflow against deleted parent rows and fail
+ * their FK bookkeeping on every fire (the orphaned-schedule bug this closes).
+ * Idempotent: safe to retry — a re-run re-lists and skips anything already gone.
+ */
+export async function deleteTenantSchedules(
+  tenantId: string
+): Promise<{ deletedScheduleIds: string[] }> {
+  const log = logger();
+  const connection = await Connection.connect({
+    address: process.env.TEMPORAL_ADDRESS || 'temporal-frontend.temporal.svc.cluster.local:7233',
+  });
+  const client = new Client({
+    connection,
+    namespace: process.env.TEMPORAL_NAMESPACE || 'default',
+  });
+
+  const deletedScheduleIds: string[] = [];
+  try {
+    for await (const summary of client.schedule.list()) {
+      const { scheduleId } = summary;
+
+      let belongsToTenant = false;
+      try {
+        const description = await client.schedule.getHandle(scheduleId).describe();
+        const action = description.action as { type?: string; args?: unknown[] };
+        const firstArg = action?.type === 'startWorkflow' ? action.args?.[0] : undefined;
+        const bakedTenantId =
+          firstArg && typeof firstArg === 'object'
+            ? (firstArg as { tenantId?: unknown }).tenantId
+            : undefined;
+        belongsToTenant = bakedTenantId === tenantId;
+      } catch (describeError) {
+        // Vanished between list and describe, or not a start-workflow schedule
+        // we can introspect — skip rather than block the deletion.
+        log.warn('Could not describe schedule during tenant teardown', {
+          tenantId,
+          scheduleId,
+          error: describeError instanceof Error ? describeError.message : String(describeError),
+        });
+        continue;
+      }
+
+      if (!belongsToTenant) continue;
+
+      try {
+        await client.schedule.getHandle(scheduleId).delete();
+        deletedScheduleIds.push(scheduleId);
+        log.info('Deleted tenant schedule', { tenantId, scheduleId });
+      } catch (deleteError) {
+        const message = deleteError instanceof Error ? deleteError.message : String(deleteError);
+        // Idempotent: a concurrent delete already removed it.
+        if (/not.?found/i.test(message)) continue;
+        throw deleteError;
+      }
+    }
+
+    log.info('Tenant schedule teardown complete', {
+      tenantId,
+      deletedCount: deletedScheduleIds.length,
+      deletedScheduleIds,
+    });
+    return { deletedScheduleIds };
+  } finally {
+    await connection.close().catch(() => {});
+  }
 }

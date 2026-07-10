@@ -18,6 +18,12 @@ import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { getProjectMetadata } from '@alga-psa/projects/actions/projectActions';
 import type { IProjectPhase, IProjectStatusMapping } from '@alga-psa/types';
 import { ChevronUp, ChevronDown, Trash2 } from 'lucide-react';
+import { toast } from 'react-hot-toast';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 interface ProjectTaskStatusSettingsProps {
   projectId: string;
@@ -25,6 +31,10 @@ interface ProjectTaskStatusSettingsProps {
 }
 
 const DEFAULT_SCOPE = '__project_defaults__';
+
+function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
+  return isActionMessageError(value) || isActionPermissionError(value);
+}
 
 export function ProjectTaskStatusSettings({ projectId, initialPhaseId }: ProjectTaskStatusSettingsProps) {
   const { t } = useTranslation(['features/projects', 'common']);
@@ -58,6 +68,10 @@ export function ProjectTaskStatusSettings({ projectId, initialPhaseId }: Project
   async function loadPhases() {
     try {
       const metadata = await getProjectMetadata(projectId);
+      if (isReturnedActionError(metadata)) {
+        toast.error(getErrorMessage(metadata));
+        return;
+      }
       if (metadata && 'phases' in metadata) {
         setPhases(metadata.phases);
       }
@@ -103,7 +117,11 @@ export function ProjectTaskStatusSettings({ projectId, initialPhaseId }: Project
     setStatuses(newStatuses);
 
     try {
-      await reorderProjectStatuses(projectId, updates, selectedPhaseId);
+      const result = await reorderProjectStatuses(projectId, updates, selectedPhaseId);
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        loadStatuses();
+      }
     } catch (error) {
       console.error('Failed to reorder statuses:', error);
       loadStatuses();
@@ -125,7 +143,11 @@ export function ProjectTaskStatusSettings({ projectId, initialPhaseId }: Project
     setStatuses(newStatuses);
 
     try {
-      await reorderProjectStatuses(projectId, updates, selectedPhaseId);
+      const result = await reorderProjectStatuses(projectId, updates, selectedPhaseId);
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        loadStatuses();
+      }
     } catch (error) {
       console.error('Failed to reorder statuses:', error);
       loadStatuses();
@@ -135,6 +157,10 @@ export function ProjectTaskStatusSettings({ projectId, initialPhaseId }: Project
   async function initiateDelete(mappingId: string, statusName: string) {
     try {
       const taskCount = await getStatusMappingTaskCount(mappingId);
+      if (isReturnedActionError(taskCount)) {
+        toast.error(getErrorMessage(taskCount));
+        return;
+      }
       // Find the first other status to default the move target
       const otherStatuses = statuses.filter(s => s.project_status_mapping_id !== mappingId);
       setDeleteConfirmation({
@@ -155,7 +181,11 @@ export function ProjectTaskStatusSettings({ projectId, initialPhaseId }: Project
     setIsMutating(true);
     try {
       const moveTarget = deleteConfirmation.taskCount > 0 ? deleteConfirmation.moveToMappingId : undefined;
-      await deleteProjectStatusMapping(deleteConfirmation.mappingId, moveTarget);
+      const result = await deleteProjectStatusMapping(deleteConfirmation.mappingId, moveTarget);
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       await loadStatuses();
     } catch (error: any) {
       console.error('Failed to delete status:', error);
@@ -170,7 +200,11 @@ export function ProjectTaskStatusSettings({ projectId, initialPhaseId }: Project
 
     setIsMutating(true);
     try {
-      await copyProjectStatusesToPhase(projectId, selectedPhaseId);
+      const result = await copyProjectStatusesToPhase(projectId, selectedPhaseId);
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       await loadStatuses();
     } catch (error) {
       console.error('Failed to copy project defaults to phase:', error);
@@ -185,7 +219,11 @@ export function ProjectTaskStatusSettings({ projectId, initialPhaseId }: Project
 
     setIsMutating(true);
     try {
-      await removePhaseStatuses(selectedPhaseId);
+      const result = await removePhaseStatuses(selectedPhaseId);
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       await loadStatuses();
     } catch (error) {
       console.error('Failed to remove phase statuses:', error);

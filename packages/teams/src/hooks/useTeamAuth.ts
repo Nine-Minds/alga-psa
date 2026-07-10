@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getTeams } from '@alga-psa/teams/actions';
+import { getTeams, isTeamActionError } from '@alga-psa/teams/actions';
 import type { ITeam, IUser } from '@alga-psa/types';
 
 export function useTeamAuth(currentUser: IUser | null) {
@@ -18,6 +18,12 @@ export function useTeamAuth(currentUser: IUser | null) {
 
       try {
         const allTeams = await getTeams();
+        if (isTeamActionError(allTeams)) {
+          console.warn('[useTeamAuth] Cannot load teams for manager check; defaulting to non-manager', allTeams);
+          setIsManager(false);
+          setManagedTeams([]);
+          return;
+        }
         const userManagedTeams = allTeams.filter((team) => team.manager_id === currentUser.user_id);
 
         setIsManager(userManagedTeams.length > 0);
@@ -34,4 +40,3 @@ export function useTeamAuth(currentUser: IUser | null) {
 
   return { isManager, managedTeams };
 }
-

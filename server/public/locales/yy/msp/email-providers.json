@@ -11,7 +11,8 @@
       "resyncing": "55555 {{providerName}} 55555",
       "resyncError": "55555",
       "resyncStarted": "55555 {{providerName}} 55555",
-      "enterpriseOnly": "55555"
+      "enterpriseOnly": "55555",
+      "loadProvidersError": "55555"
     },
     "editDrawer": {
       "title": "55555",
@@ -293,7 +294,8 @@
         "popupBlocked": "55555",
         "closedEarly": "55555",
         "authorizationFailed": "55555",
-        "popupFailed": "55555"
+        "popupFailed": "55555",
+        "configureFailed": "55555"
       },
       "messages": {
         "setupIncomplete": "55555 {{error}} 55555",

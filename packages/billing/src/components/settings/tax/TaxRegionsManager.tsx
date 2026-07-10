@@ -5,7 +5,12 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod'; // Assuming this is installed, will verify later if needed
 import * as z from 'zod';
 import toast from 'react-hot-toast'; // Use react-hot-toast
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { MoreVertical, PlusCircle } from 'lucide-react';
 
 import { Button } from '@alga-psa/ui/components/Button';
@@ -78,9 +83,15 @@ export function TaxRegionsManager() {
     setIsLoading(true);
     try {
       const fetchedRegions = await getTaxRegions();
+      if (isActionMessageError(fetchedRegions) || isActionPermissionError(fetchedRegions)) {
+        setRegions([]);
+        handleError(fetchedRegions, getErrorMessage(fetchedRegions));
+        return;
+      }
       setRegions(fetchedRegions);
     } catch (error) {
-      handleError(error, t('tax.regions.errors.load', { defaultValue: 'Failed to load tax regions.' }));
+      console.error('Failed to load tax regions:', error);
+      handleError(t('tax.regions.errors.load', { defaultValue: 'Failed to load tax regions.' }));
     } finally {
       setIsLoading(false);
     }
@@ -126,24 +137,33 @@ export function TaxRegionsManager() {
     try {
       if (editingRegion) {
         // Update requires region_code separately
-        await updateTaxRegion(editingRegion.region_code, {
+        const result = await updateTaxRegion(editingRegion.region_code, {
             region_code: data.region_code,
             region_name: data.region_name,
             is_active: data.is_active,
         });
+        if (isActionMessageError(result) || isActionPermissionError(result)) {
+          handleError(getErrorMessage(result));
+          return;
+        }
       } else {
         // Create uses data directly
-        await createTaxRegion({
+        const result = await createTaxRegion({
             region_code: data.region_code,
             region_name: data.region_name,
             is_active: data.is_active,
         });
+        if (isActionMessageError(result) || isActionPermissionError(result)) {
+          handleError(getErrorMessage(result));
+          return;
+        }
       }
       toast.success(successMessage);
       await fetchRegions(); // Refresh data
       handleCloseDialog();
     } catch (error: any) {
-      handleError(error, errorMessage);
+      console.error('Failed to save tax region:', error);
+      handleError(errorMessage);
     } finally {
       setIsSubmitting(false);
     }
@@ -165,7 +185,11 @@ export function TaxRegionsManager() {
     ); // Changed from toast.info
 
     try {
-      await updateTaxRegion(region.region_code, { is_active: newStatus });
+      const result = await updateTaxRegion(region.region_code, { is_active: newStatus });
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        handleError(getErrorMessage(result));
+        return;
+      }
       toast.success(
         newStatus
           ? t('tax.regions.toast.activated', {
@@ -179,8 +203,8 @@ export function TaxRegionsManager() {
       );
       await fetchRegions(); // Refresh data
     } catch (error: any) {
+      console.error('Failed to update tax region active state:', error);
       handleError(
-        error,
         newStatus
           ? t('tax.regions.errors.activate', { defaultValue: 'Failed to activate tax region.' })
           : t('tax.regions.errors.deactivate', { defaultValue: 'Failed to deactivate tax region.' })

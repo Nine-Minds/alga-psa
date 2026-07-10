@@ -231,7 +231,8 @@
       "notFound": "Devis introuvable",
       "save": "Échec de l'enregistrement du devis",
       "saveFailed": "Échec de l'enregistrement du devis",
-      "workflowAction": "Échec de {{action}}"
+      "workflowAction": "Échec de {{action}}",
+      "removeItem": "Failed to remove quote item"
     },
     "loading": "Chargement du formulaire de devis...",
     "notices": {
@@ -556,7 +557,10 @@
       "contact": "Contact",
       "internal": "Interne"
     },
-    "removeAriaLabel": "Supprimer {{email}}"
+    "removeAriaLabel": "Supprimer {{email}}",
+    "errors": {
+      "contactsLoadFailed": "Could not load client contacts."
+    }
   },
   "quoteConversion": {
     "title": "Convertir le devis",

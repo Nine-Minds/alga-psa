@@ -148,7 +148,10 @@ export default function McpServerSettings() {
       setPlatformProviders(s.platformProviders);
       return;
     }
-    Promise.all([reloadIdps(), reloadAgents(), reloadRoles()]).catch((e) => setError(String(e.message ?? e)));
+    Promise.all([reloadIdps(), reloadAgents(), reloadRoles()]).catch((e) => {
+      console.error('Failed to load MCP settings:', e);
+      setError('Failed to load MCP settings.');
+    });
     api<{ data: { microsoft?: { entraTenantId: string; displayName: string | null } } }>('/api/v1/mcp/idp-suggestions')
       .then((r) => setSuggestion(r.data))
       .catch(() => {});
@@ -163,7 +166,8 @@ export default function McpServerSettings() {
     try {
       await fn();
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      console.error('Failed to update MCP settings:', e);
+      setError('Failed to update MCP settings.');
     } finally {
       setBusy(false);
     }

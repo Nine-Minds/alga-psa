@@ -10,6 +10,21 @@ import { getHocuspocusJwtSecret } from '@/lib/hocuspocusJwt';
 
 const LIVE_TOKEN_TTL_SECONDS = 5 * 60;
 
+function getTicketActionError(value: unknown): { message: string; status: 403 | 404 | 400 } | null {
+  if (typeof value !== 'object' || value === null) {
+    return null;
+  }
+  const candidate = value as { actionError?: unknown; permissionError?: unknown };
+  if (typeof candidate.permissionError === 'string') {
+    return { message: 'Forbidden', status: 403 };
+  }
+  if (typeof candidate.actionError === 'string') {
+    const status = candidate.actionError.toLowerCase().includes('not found') ? 404 : 400;
+    return { message: candidate.actionError, status };
+  }
+  return null;
+}
+
 async function decodeSessionUserFromRequest(request: NextRequest): Promise<{ id?: string; tenant?: string } | null> {
   const requestCookies = request.cookies;
   if (!requestCookies) {
@@ -97,7 +112,11 @@ export async function GET(
       return NextResponse.json({ error: 'Ticket ID is required' }, { status: 400 });
     }
 
-    await getTicketById(ticketId);
+    const ticketResult = await getTicketById(ticketId);
+    const ticketError = getTicketActionError(ticketResult);
+    if (ticketError) {
+      return NextResponse.json({ error: ticketError.message }, { status: ticketError.status });
+    }
 
     const secret = await getHocuspocusJwtSecret();
     const token = jwt.sign(

@@ -448,7 +448,8 @@
     "taskUpdated": "Tâche mise à jour avec succès",
     "saveChangesFailed": "Échec de l'enregistrement des modifications",
     "changesSaved": "Modifications enregistrées avec succès",
-    "workItemDeleted": "Élément de travail supprimé avec succès"
+    "workItemDeleted": "Élément de travail supprimé avec succès",
+    "submitFailed": "Failed to submit time sheet"
   },
   "bundleNotice": {
     "withNumber": "Ce ticket est groupé sous {{number}}. Le temps du groupe est généralement enregistré sur le ticket principal.",

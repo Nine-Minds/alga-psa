@@ -13,6 +13,54 @@ import {
   RequestLocalAuthorizationCache,
   createAuthorizationKernel,
 } from '@alga-psa/authorization/kernel';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+type ProjectTaskCommentActionError = ActionMessageError | ActionPermissionError;
+
+function projectTaskCommentActionErrorFrom(error: unknown): ProjectTaskCommentActionError | null {
+  if (error instanceof Error) {
+    const message = error.message;
+    if (message.includes('Permission denied')) {
+      return permissionError(message);
+    }
+    if (message === 'Only internal users can comment on tasks') {
+      return actionError('Only internal users can comment on tasks.');
+    }
+    if (message === 'Task not found') {
+      return actionError('Task not found. It may have been deleted. Please refresh and try again.');
+    }
+    if (message === 'Parent task comment not found') {
+      return actionError('The comment you are replying to was not found. Please refresh and try again.');
+    }
+    if (message === 'Parent task comment must belong to the same task') {
+      return actionError('Replies must stay on the same task thread. Please refresh and try again.');
+    }
+    if (message === 'Cannot reply to a deleted task comment') {
+      return actionError('You cannot reply to a deleted comment.');
+    }
+    if (message === 'Comment not found') {
+      return actionError('Comment not found. It may have been deleted. Please refresh and try again.');
+    }
+    if (message.startsWith('You can only edit') || message.startsWith('You can only delete')) {
+      return actionError(message);
+    }
+  }
+
+  const dbError = error as { code?: string; column?: string };
+  if (dbError?.code === '23502') {
+    return actionError(`Missing required comment field${dbError.column ? `: ${dbError.column}` : ''}.`);
+  }
+  if (dbError?.code === '23503') {
+    return actionError('The selected task or comment no longer exists. Please refresh and try again.');
+  }
+
+  return null;
+}
 
 function tenantScopedTable(
   conn: Knex | Knex.Transaction,
@@ -84,7 +132,8 @@ export const createTaskComment = withAuth(async (
   comment: Omit<IProjectTaskComment, 'taskCommentId' | 'tenant' | 'createdAt' | 'authorType' | 'markdownContent' | 'userId'> & {
     parent_comment_id?: string | null;
   }
-): Promise<string> => {
+): Promise<string | ProjectTaskCommentActionError> => {
+  try {
   const { knex: db } = await createTenantKnex();
 
   return await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -162,7 +211,7 @@ export const createTaskComment = withAuth(async (
     }
 
     if (!taskCommentId || !threadId) {
-      throw new Error('Failed to generate task comment/thread identifiers');
+      throw new Error('Database UUID generation did not return task comment/thread identifiers.');
     }
 
     // Insert comment (convert camelCase to snake_case for DB)
@@ -227,6 +276,11 @@ export const createTaskComment = withAuth(async (
 
     return newComment.task_comment_id;
   });
+  } catch (error) {
+    const expected = projectTaskCommentActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 });
 
 /**
@@ -236,7 +290,8 @@ export const getTaskComments = withAuth(async (
   _user,
   { tenant },
   taskId: string
-): Promise<IProjectTaskCommentWithUser[]> => {
+): Promise<IProjectTaskCommentWithUser[] | ProjectTaskCommentActionError> => {
+  try {
   const { knex: db } = await createTenantKnex();
 
   const commentsQuery = tenantScopedTable(db, 'project_task_comments', tenant);
@@ -281,6 +336,11 @@ export const getTaskComments = withAuth(async (
     email: comment.email,
     avatarUrl: avatarUrls.get(comment.user_id) || null,
   }));
+  } catch (error) {
+    const expected = projectTaskCommentActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 });
 
 /**
@@ -291,7 +351,8 @@ export const updateTaskComment = withAuth(async (
   { tenant },
   taskCommentId: string,
   updates: Partial<Pick<IProjectTaskComment, 'note'>>
-): Promise<void> => {
+): Promise<void | ProjectTaskCommentActionError> => {
+  try {
   const { knex: db } = await createTenantKnex();
   const userId = user.user_id;
 
@@ -362,6 +423,11 @@ export const updateTaskComment = withAuth(async (
       }
     });
   });
+  } catch (error) {
+    const expected = projectTaskCommentActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 });
 
 /**
@@ -371,7 +437,8 @@ export const deleteTaskComment = withAuth(async (
   user,
   { tenant },
   taskCommentId: string
-): Promise<void> => {
+): Promise<void | ProjectTaskCommentActionError> => {
+  try {
   const { knex: db } = await createTenantKnex();
   const userId = user.user_id;
 
@@ -463,6 +530,11 @@ export const deleteTaskComment = withAuth(async (
       }
     });
   });
+  } catch (error) {
+    const expected = projectTaskCommentActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 });
 
 /**
@@ -472,7 +544,8 @@ export const getTaskCommentCount = withAuth(async (
   user,
   { tenant },
   taskId: string
-): Promise<number> => {
+): Promise<number | ProjectTaskCommentActionError> => {
+  try {
   if (!await hasPermission(user, 'project_task', 'read')) {
     throw new Error('Permission denied: cannot read task comments');
   }
@@ -485,6 +558,11 @@ export const getTaskCommentCount = withAuth(async (
     .first();
 
   return parseInt(result?.count as string) || 0;
+  } catch (error) {
+    const expected = projectTaskCommentActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 });
 
 /**
@@ -494,7 +572,8 @@ export const getTaskCommentCountsBatch = withAuth(async (
   user,
   { tenant },
   taskIds: string[]
-): Promise<Record<string, number>> => {
+): Promise<Record<string, number> | ProjectTaskCommentActionError> => {
+  try {
   if (taskIds.length === 0) return {};
 
   if (!await hasPermission(user, 'project_task', 'read')) {
@@ -514,4 +593,9 @@ export const getTaskCommentCountsBatch = withAuth(async (
     counts[row.task_id as string] = parseInt(row.count as string) || 0;
   }
   return counts;
+  } catch (error) {
+    const expected = projectTaskCommentActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 });

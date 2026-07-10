@@ -6,7 +6,11 @@
 import { NextResponse } from 'next/server';
 
 import { rotateInboundWebhookSecret } from '@/lib/actions/inboundWebhookActions';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import {
+  createServerActionErrorResponse,
+  handleApiError,
+  isServerActionErrorResult,
+} from 'server/src/lib/api/middleware/apiMiddleware';
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -16,6 +20,9 @@ export async function POST(_request: Request, context: RouteContext) {
   try {
     const { id } = await context.params;
     const result = await rotateInboundWebhookSecret(id);
+    if (isServerActionErrorResult(result)) {
+      return createServerActionErrorResponse(result);
+    }
     return NextResponse.json({ data: result.webhook, secret: result.secret });
   } catch (error) {
     return handleApiError(error);

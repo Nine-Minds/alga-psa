@@ -6,6 +6,7 @@ import { Knex } from 'knex';
 import { IProject } from '@alga-psa/types';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
+import { clientPortalActionErrorFrom, type ClientPortalActionError } from './clientPortalActionErrors';
 
 /**
  * Get clientId from user's contact - avoids nested withAuth calls
@@ -35,40 +36,48 @@ export const getClientProjectDetails = withAuth(async (
   user: IUserWithRoles,
   { tenant }: AuthContext,
   projectId: string
-): Promise<IProject | null> => {
-  const { knex } = await createTenantKnex();
-  const scopedDb = tenantDb(knex, tenant);
+): Promise<IProject | null | ClientPortalActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
+    const scopedDb = tenantDb(knex, tenant);
 
-  const clientId = await getClientIdFromUser(knex, user, tenant);
-  if (!clientId) {
-    throw new Error('Client not found');
+    const clientId = await getClientIdFromUser(knex, user, tenant);
+    if (!clientId) {
+      throw new Error('Client not found');
+    }
+
+    // Fetch project with client access verification
+    const projectQuery = scopedDb.table('projects')
+      .select([
+        'projects.project_id',
+        'projects.project_name',
+        'projects.project_number',
+        'projects.wbs_code',
+        'projects.description',
+        'projects.start_date',
+        'projects.end_date',
+        'projects.status',
+        'statuses.name as status_name',
+        'statuses.is_closed',
+        'projects.created_at',
+        'projects.updated_at',
+        'projects.client_portal_config'
+      ])
+      .where('projects.project_id', projectId)
+      .where('projects.client_id', clientId)
+      .where('projects.is_inactive', false)
+      .first();
+    scopedDb.tenantJoin(projectQuery, 'statuses', 'projects.status', 'statuses.status_id', { type: 'left' });
+    const project = await projectQuery as IProject | undefined;
+
+    return project || null;
+  } catch (error) {
+    const expected = clientPortalActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
   }
-
-  // Fetch project with client access verification
-  const projectQuery = scopedDb.table('projects')
-    .select([
-      'projects.project_id',
-      'projects.project_name',
-      'projects.project_number',
-      'projects.wbs_code',
-      'projects.description',
-      'projects.start_date',
-      'projects.end_date',
-      'projects.status',
-      'statuses.name as status_name',
-      'statuses.is_closed',
-      'projects.created_at',
-      'projects.updated_at',
-      'projects.client_portal_config'
-    ])
-    .where('projects.project_id', projectId)
-    .where('projects.client_id', clientId)
-    .where('projects.is_inactive', false)
-    .first();
-  scopedDb.tenantJoin(projectQuery, 'statuses', 'projects.status', 'statuses.status_id', { type: 'left' });
-  const project = await projectQuery as IProject | undefined;
-
-  return project || null;
 });
 
 /**
@@ -90,14 +99,15 @@ export const getClientProjects = withAuth(async (
   total: number;
   page: number;
   pageSize: number;
-}> => {
-  const { knex } = await createTenantKnex();
-  const scopedDb = tenantDb(knex, tenant);
+} | ClientPortalActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
+    const scopedDb = tenantDb(knex, tenant);
 
-  const clientId = await getClientIdFromUser(knex, user, tenant);
-  if (!clientId) {
-    throw new Error('Client not found');
-  }
+    const clientId = await getClientIdFromUser(knex, user, tenant);
+    if (!clientId) {
+      throw new Error('Client not found');
+    }
 
   // Set up query with pagination, sorting, filtering
   const query = scopedDb.table('projects')
@@ -182,10 +192,17 @@ export const getClientProjects = withAuth(async (
     ]);
   });
   
-  return {
-    projects: projects as IProject[],
-    total: parseInt(countResult?.count as string) || 0,
-    page,
-    pageSize
-  };
+    return {
+      projects: projects as IProject[],
+      total: parseInt(countResult?.count as string) || 0,
+      page,
+      pageSize
+    };
+  } catch (error) {
+    const expected = clientPortalActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
+  }
 });

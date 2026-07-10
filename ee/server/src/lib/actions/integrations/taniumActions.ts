@@ -28,8 +28,31 @@ const TANIUM_API_TOKEN_SECRET = 'tanium_api_token';
 const TANIUM_ASSET_API_URL_SECRET = 'tanium_asset_api_url';
 const TANIUM_CRITICALITY_SENSOR_NAME = 'Endpoint Criticality with Level';
 
-function sanitizeError(error: unknown): string {
-  return error instanceof Error ? error.message : String(error);
+function sanitizeError(error: unknown, fallback = 'Unable to complete the Tanium request.'): string {
+  const message = error instanceof Error ? error.message : typeof error === 'string' ? error : '';
+
+  if (!message) {
+    return fallback;
+  }
+
+  if (message === 'Forbidden' || message.startsWith('Forbidden:')) {
+    return 'You do not have permission to manage Tanium settings.';
+  }
+
+  if (
+    message.startsWith('Tanium Gateway') ||
+    message.startsWith('Tanium API token') ||
+    message.startsWith('Tanium Asset API') ||
+    message === 'Tanium Gateway URL is required.'
+  ) {
+    return message;
+  }
+
+  if (message.includes('fetch failed') || message.includes('ECONNREFUSED') || message.includes('ENOTFOUND')) {
+    return 'Unable to reach Tanium. Verify the Gateway URL and network connectivity.';
+  }
+
+  return fallback;
 }
 
 function withAdvancedAssetsAccess<TArgs extends unknown[], TResult>(
@@ -255,7 +278,7 @@ export const getTaniumSettings = withAdvancedAssetsAccess(async (user, { tenant 
       },
     };
   } catch (error) {
-    return { success: false, error: sanitizeError(error) };
+    return { success: false, error: sanitizeError(error, 'Unable to load Tanium settings.') };
   }
 });
 
@@ -307,7 +330,7 @@ export const saveTaniumConfiguration = withAdvancedAssetsAccess(async (
       integrationId: row.integration_id as string,
     };
   } catch (error) {
-    return { success: false, error: sanitizeError(error) };
+    return { success: false, error: sanitizeError(error, 'Unable to save Tanium configuration.') };
   }
 });
 
@@ -341,14 +364,14 @@ export const testTaniumConnection = withAdvancedAssetsAccess(async (user, { tena
         .where({ provider: PROVIDER })
         .update({
           is_active: false,
-          sync_error: sanitizeError(error),
+          sync_error: sanitizeError(error, 'Unable to test the Tanium connection.'),
           updated_at: knex.fn.now(),
         });
     } catch {
       // Best effort.
     }
 
-    return { success: false, error: sanitizeError(error) };
+    return { success: false, error: sanitizeError(error, 'Unable to test the Tanium connection.') };
   }
 });
 
@@ -377,7 +400,7 @@ export const disconnectTaniumIntegration = withAdvancedAssetsAccess(async (user,
 
     return { success: true };
   } catch (error) {
-    return { success: false, error: sanitizeError(error) };
+    return { success: false, error: sanitizeError(error, 'Unable to disconnect Tanium.') };
   }
 });
 
@@ -470,11 +493,11 @@ export const syncTaniumScopes = withAdvancedAssetsAccess(async (user, { tenant }
       .where({ provider: PROVIDER })
       .update({
         sync_status: 'error',
-        sync_error: sanitizeError(error),
+        sync_error: sanitizeError(error, 'Unable to sync Tanium scopes.'),
         updated_at: knex.fn.now(),
       });
 
-    return { success: false, error: sanitizeError(error) };
+    return { success: false, error: sanitizeError(error, 'Unable to sync Tanium scopes.') };
   }
 });
 
@@ -518,7 +541,7 @@ export const getTaniumOrganizationMappings = withAdvancedAssetsAccess(async (use
 
     return { success: true, mappings: rows, clients };
   } catch (error) {
-    return { success: false, error: sanitizeError(error) };
+    return { success: false, error: sanitizeError(error, 'Unable to load Tanium organization mappings.') };
   }
 });
 
@@ -553,7 +576,7 @@ export const updateTaniumOrganizationMapping = withAdvancedAssetsAccess(async (
 
     return { success: true };
   } catch (error) {
-    return { success: false, error: sanitizeError(error) };
+    return { success: false, error: sanitizeError(error, 'Unable to update the Tanium organization mapping.') };
   }
 });
 
@@ -627,7 +650,7 @@ export const triggerTaniumFullSync = withAdvancedAssetsAccess(async (user, { ten
         console.warn('Tanium criticality enrichment failed; continuing inventory sync', {
           tenant,
           scopeId: externalScopeId,
-          error: sanitizeError(criticalityError),
+          error: sanitizeError(criticalityError, 'Unable to load Tanium criticality data.'),
         });
       }
 
@@ -697,7 +720,7 @@ export const triggerTaniumFullSync = withAdvancedAssetsAccess(async (user, { ten
           }
         } catch (error) {
           processed += 1;
-          errors.push(`${endpoint.id}: ${sanitizeError(error)}`);
+          errors.push(`${endpoint.id}: ${sanitizeError(error, 'Unable to sync this Tanium endpoint.')}`);
         }
       }
     }
@@ -728,10 +751,10 @@ export const triggerTaniumFullSync = withAdvancedAssetsAccess(async (user, { ten
       .where({ provider: PROVIDER })
       .update({
         sync_status: 'error',
-        sync_error: sanitizeError(error),
+        sync_error: sanitizeError(error, 'Unable to sync Tanium inventory.'),
         updated_at: knex.fn.now(),
       });
 
-    return { success: false, error: sanitizeError(error) };
+    return { success: false, error: sanitizeError(error, 'Unable to sync Tanium inventory.') };
   }
 });

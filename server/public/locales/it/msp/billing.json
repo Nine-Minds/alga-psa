@@ -253,7 +253,8 @@
       "secondaryApproverRequired": "Inserisci il nome e l'e-mail dell'approvatore secondario",
       "invalidVerificationCode": "Codice di verifica non valido",
       "unknown": "Si è verificato un errore sconosciuto",
-      "reportNotFound": "Report di riconciliazione non trovato. Il rapporto potrebbe essere stato eliminato oppure potresti non avere l'autorizzazione per visualizzarlo."
+      "reportNotFound": "Report di riconciliazione non trovato. Il rapporto potrebbe essere stato eliminato oppure potresti non avere l'autorizzazione per visualizzarlo.",
+      "resolveFailed": "Failed to resolve reconciliation report."
     }
   },
   "discrepancy": {
@@ -334,7 +335,8 @@
       "resolveReport": "Risolvi il rapporto"
     },
     "errors": {
-      "unknown": "Si è verificato un errore sconosciuto"
+      "unknown": "Si è verificato un errore sconosciuto",
+      "resolveFailed": "Failed to resolve reconciliation report. Please refresh and try again."
     }
   },
   "recommendedFix": {
@@ -387,7 +389,8 @@
     "errors": {
       "notesRequired": "Si prega di fornire note che spieghino il motivo di questa correzione",
       "invalidAmount": "Inserisci un importo valido",
-      "unknown": "Si è verificato un errore sconosciuto"
+      "unknown": "Si è verificato un errore sconosciuto",
+      "applyFailed": "Failed to apply reconciliation fix. Please refresh and try again."
     }
   },
   "usage": {

@@ -28,6 +28,7 @@ import {
   bulkApplyTagsToEntities,
   findTagsByEntityIds,
 } from '@alga-psa/tags/actions/tagActions';
+import { isTagActionError } from '@alga-psa/tags/actions/tagActionErrors';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { validateArray, validateData } from '@alga-psa/validation';
@@ -44,6 +45,7 @@ import { OrderingService } from '../lib/orderingUtils';
 import { buildProjectTaskWebhookChanges } from '../lib/projectTaskWebhookChanges';
 import { applyTicketLinkRestriction } from '../lib/taskTicketMapping';
 import { validateAndFixOrderKeys } from './regenerateOrderKeys';
+import { isProjectOrderKeyActionError } from './projectOrderKeyActionErrors';
 import {
   buildProjectTaskAssignedPayload,
   buildProjectTaskCompletedPayload,
@@ -61,6 +63,106 @@ import {
   type AuthorizationSubject,
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
+import {
+  actionError,
+  isActionMessageError,
+  isActionPermissionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+export type ProjectTaskActionError = ActionMessageError | ActionPermissionError;
+
+const EXPECTED_PROJECT_TASK_ERROR_PREFIXES = [
+    'All tasks must be in the same phase',
+    'Cannot delete task:',
+    'Current phase of original task not found',
+    'Current phase not found',
+    'Current status mapping not found',
+    'Dependency not found',
+    'Failed to create status mappings for target project',
+    'Failed to find or create status mappings for target project',
+    'One or both tasks not found',
+    'No valid status mapping found',
+    'No valid status mappings found',
+    'Original task not found',
+    'Phase not found',
+    'Project not found',
+    'Project phase not found',
+    'Some tasks not found',
+    'Target project has no status mappings after default mapping bootstrap',
+    'Target phase not found',
+    'Target status not found',
+    'Task not found',
+    'Team lead not found',
+    'Team not found',
+];
+
+function formatProjectTaskValidationIssues(error: unknown): string | null {
+    const issues = (error as { issues?: Array<{ path?: Array<string | number>; message?: string }> })?.issues;
+    if (!Array.isArray(issues) || issues.length === 0) {
+        return null;
+    }
+
+    return issues
+        .map((issue) => {
+            const field = issue.path?.join('.');
+            return field ? `${field}: ${issue.message || 'Invalid value'}` : issue.message || 'Invalid value';
+        })
+        .join('; ');
+}
+
+function projectTaskActionErrorFrom(error: unknown): ProjectTaskActionError | null {
+    if (isActionMessageError(error) || isActionPermissionError(error)) {
+        return error as ProjectTaskActionError;
+    }
+
+    if (error instanceof Error) {
+        if (error.message.includes('Permission denied')) {
+            return permissionError(error.message);
+        }
+        if (EXPECTED_PROJECT_TASK_ERROR_PREFIXES.some((message) => error.message.startsWith(message))) {
+            return actionError(error.message);
+        }
+    }
+
+    const validationMessage = formatProjectTaskValidationIssues(error);
+    if (validationMessage) {
+        return actionError(`Please fix the task details: ${validationMessage}`);
+    }
+
+    const dbError = error as { code?: string; column?: string };
+    if (dbError?.code === '22P02') {
+        return actionError('One of the selected task values is invalid. Please refresh and try again.');
+    }
+    if (dbError?.code === '23502') {
+        return actionError(`Missing required task field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    }
+    if (dbError?.code === '23503') {
+        return actionError('One of the selected project or task records no longer exists. Please refresh and try again.');
+    }
+    if (dbError?.code === '23505') {
+        return actionError('This task change conflicts with an existing record. Please refresh and try again.');
+    }
+    if (dbError?.code === '23514') {
+        return actionError('One of the task values is not allowed. Please review the form and try again.');
+    }
+
+    return null;
+}
+
+async function withProjectTaskActionErrors<T>(work: () => Promise<T>): Promise<T | ProjectTaskActionError> {
+    try {
+        return await work();
+    } catch (error) {
+        const expected = projectTaskActionErrorFrom(error);
+        if (expected) {
+            return expected;
+        }
+        throw error;
+    }
+}
 
 function tenantScopedTable(
     conn: Knex | Knex.Transaction,
@@ -576,7 +678,7 @@ export const updateTaskWithChecklist = withAuth(async (
     { tenant },
     taskId: string,
     taskData: Partial<IProjectTask>
-): Promise<IProjectTask | null> => {
+): Promise<IProjectTask | null | ProjectTaskActionError> => {
     try {
         const {knex: db} = await createTenantKnex();
 
@@ -699,6 +801,10 @@ export const updateTaskWithChecklist = withAuth(async (
             return finalTask;
         });
     } catch (error) {
+        const expected = projectTaskActionErrorFrom(error);
+        if (expected) {
+            return expected;
+        }
         console.error('Error updating task:', error);
         throw error;
     }
@@ -710,7 +816,7 @@ export const addTaskToPhase = withAuth(async (
     phaseId: string,
     taskData: Omit<IProjectTask, 'task_id' | 'phase_id' | 'created_at' | 'updated_at' | 'tenant'>,
     checklistItems: Omit<ITaskChecklistItem, 'checklist_item_id' | 'task_id' | 'created_at' | 'updated_at' | 'tenant'>[]
-): Promise<IProjectTask|null> => {
+): Promise<IProjectTask | null | ProjectTaskActionError> => {
     try {
         const {knex: db} = await createTenantKnex();
 
@@ -773,6 +879,10 @@ export const addTaskToPhase = withAuth(async (
             return taskWithChecklist;
         });
     } catch (error) {
+        const expected = projectTaskActionErrorFrom(error);
+        if (expected) {
+            return expected;
+        }
         console.error('Error adding task to phase:', error);
         throw error;
     }
@@ -785,11 +895,12 @@ export const updateTaskStatus = withAuth(async (
     projectStatusMappingId: string,
     beforeTaskId?: string | null,
     afterTaskId?: string | null
-): Promise<IProjectTask> => {
-    const {knex: db} = await createTenantKnex();
+): Promise<IProjectTask | ProjectTaskActionError> => {
+    try {
+        const {knex: db} = await createTenantKnex();
 
-    return await withTransaction(db, async (trx: Knex.Transaction) => {
-        await checkPermission(user, 'project', 'update', trx);
+        return await withTransaction(db, async (trx: Knex.Transaction) => {
+            await checkPermission(user, 'project', 'update', trx);
 
         try {
             // Get the current task to preserve its phase_id
@@ -915,7 +1026,15 @@ export const updateTaskStatus = withAuth(async (
             console.error('Error in updateTaskStatus transaction:', error);
             throw error;
         }
-    });
+        });
+    } catch (error) {
+        const expected = projectTaskActionErrorFrom(error);
+        if (expected) {
+            return expected;
+        }
+        console.error('Error updating task status:', error);
+        throw error;
+    }
 });
 
 export const addChecklistItemToTask = withAuth(async (
@@ -923,7 +1042,7 @@ export const addChecklistItemToTask = withAuth(async (
     { tenant },
     taskId: string,
     itemData: Omit<ITaskChecklistItem, 'checklist_item_id' | 'task_id' | 'created_at' | 'updated_at'>
-): Promise<ITaskChecklistItem> => {
+): Promise<ITaskChecklistItem | ProjectTaskActionError> => {
     try {
         const validatedData = validateData(createChecklistItemSchema, itemData);
 
@@ -938,6 +1057,10 @@ export const addChecklistItemToTask = withAuth(async (
             return await ProjectTaskModel.addChecklistItem(trx, tenant, taskId, validatedData as Omit<ITaskChecklistItem, 'checklist_item_id' | 'task_id' | 'created_at' | 'updated_at' | 'tenant'>);
         });
     } catch (error) {
+        const expected = projectTaskActionErrorFrom(error);
+        if (expected) {
+            return expected;
+        }
         console.error('Error adding checklist item to task:', error);
         throw error;
     }
@@ -948,7 +1071,7 @@ export const updateChecklistItem = withAuth(async (
     { tenant },
     checklistItemId: string,
     itemData: Partial<ITaskChecklistItem>
-): Promise<ITaskChecklistItem> => {
+): Promise<ITaskChecklistItem | ProjectTaskActionError> => {
     try {
         const validatedData = validateData(updateChecklistItemSchema, itemData);
 
@@ -963,6 +1086,10 @@ export const updateChecklistItem = withAuth(async (
             return await ProjectTaskModel.updateChecklistItem(trx, tenant, checklistItemId, validatedData);
         });
     } catch (error) {
+        const expected = projectTaskActionErrorFrom(error);
+        if (expected) {
+            return expected;
+        }
         console.error('Error updating checklist item:', error);
         throw error;
     }
@@ -972,7 +1099,7 @@ export const deleteChecklistItem = withAuth(async (
     user,
     { tenant },
     checklistItemId: string
-): Promise<void> => {
+): Promise<void | ProjectTaskActionError> => {
     try {
         const {knex: db} = await createTenantKnex();
         await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -985,6 +1112,10 @@ export const deleteChecklistItem = withAuth(async (
             await ProjectTaskModel.deleteChecklistItem(trx, tenant, checklistItemId);
         });
     } catch (error) {
+        const expected = projectTaskActionErrorFrom(error);
+        if (expected) {
+            return expected;
+        }
         console.error('Error deleting checklist item:', error);
         throw error;
     }
@@ -994,7 +1125,7 @@ export const getTaskChecklistItems = withAuth(async (
     user,
     { tenant },
     taskId: string
-): Promise<ITaskChecklistItem[]> => {
+): Promise<ITaskChecklistItem[] | ProjectTaskActionError> => {
     try {
         const {knex: db} = await createTenantKnex();
         return await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -1007,6 +1138,10 @@ export const getTaskChecklistItems = withAuth(async (
             return await ProjectTaskModel.getChecklistItems(trx, tenant, taskId);
         });
     } catch (error) {
+        const expected = projectTaskActionErrorFrom(error);
+        if (expected) {
+            return expected;
+        }
         console.error('Error fetching task checklist items:', error);
         throw error;
     }
@@ -1016,7 +1151,7 @@ export const deleteTask = withAuth(async (
     user,
     { tenant },
     taskId: string
-): Promise<void> => {
+): Promise<void | ProjectTaskActionError> => {
     try {
         const {knex: db} = await createTenantKnex();
 
@@ -1063,6 +1198,10 @@ export const deleteTask = withAuth(async (
             });
         });
     } catch (error) {
+        const expected = projectTaskActionErrorFrom(error);
+        if (expected) {
+            return expected;
+        }
         console.error('Error deleting task:', error);
         throw error;
     }
@@ -1075,7 +1214,7 @@ export const addTicketLinkAction = withAuth(async (
     taskId: string | null,
     ticketId: string,
     phaseId: string
-): Promise<IProjectTicketLink> => {
+): Promise<IProjectTicketLink | ProjectTaskActionError> => {
     try {
         const {knex: db} = await createTenantKnex();
         return await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -1092,6 +1231,10 @@ export const addTicketLinkAction = withAuth(async (
             return await ProjectTaskModel.addTaskTicketLink(trx, tenant, projectId, taskId, ticketId, phaseId);
         });
     } catch (error) {
+        const expected = projectTaskActionErrorFrom(error);
+        if (expected) {
+            return expected;
+        }
         console.error('Error adding ticket link:', error);
         throw error;
     }
@@ -1101,7 +1244,7 @@ export const getTaskTicketLinksAction = withAuth(async (
     user,
     { tenant },
     taskId: string
-): Promise<IProjectTicketLinkWithDetails[]> => {
+): Promise<IProjectTicketLinkWithDetails[] | ProjectTaskActionError> => {
     try {
         const {knex: db} = await createTenantKnex();
         return await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -1121,6 +1264,10 @@ export const getTaskTicketLinksAction = withAuth(async (
             return links.map((link) => applyTicketLinkRestriction(link, allowedTicketIds));
         });
     } catch (error) {
+        const expected = projectTaskActionErrorFrom(error);
+        if (expected) {
+            return expected;
+        }
         console.error('Error getting task ticket links:', error);
         throw error;
     }
@@ -1130,7 +1277,7 @@ export const getLinkedTasksForTicketAction = withAuth(async (
     user,
     { tenant },
     ticketId: string
-): Promise<ITicketLinkedTask[]> => {
+): Promise<ITicketLinkedTask[] | ProjectTaskActionError> => {
     try {
         const {knex: db} = await createTenantKnex();
         return await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -1167,6 +1314,10 @@ export const getLinkedTasksForTicketAction = withAuth(async (
             });
         });
     } catch (error) {
+        const expected = projectTaskActionErrorFrom(error);
+        if (expected) {
+            return expected;
+        }
         console.error('Error getting linked tasks for ticket:', error);
         throw error;
     }
@@ -1183,7 +1334,7 @@ export const getTasksForPhase = withAuth(async (
     taskDependencies: { [taskId: string]: { predecessors: IProjectTaskDependency[]; successors: IProjectTaskDependency[] } };
     checklistItems: { [taskId: string]: ITaskChecklistItem[] };
     taskTags: Record<string, ITag[]>;
-}> => {
+} | ProjectTaskActionError> => {
     try {
         const {knex: db} = await createTenantKnex();
         return await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -1232,6 +1383,10 @@ export const getTasksForPhase = withAuth(async (
                         .select('ptd.*', 'pt.task_name as successor_task_name', 'pt.wbs_code as successor_wbs_code', 'pt.task_type_key as successor_task_type_key')
                     : []
             ]);
+            const safeTagsArray = isTagActionError(tagsArray) ? [] : tagsArray;
+            if (isTagActionError(tagsArray)) {
+                console.warn('[getProjectTasksByPhase] Failed to load task tags:', tagsArray);
+            }
 
             const allowedTicketIds = await filterAuthorizedTicketIds(
                 trx,
@@ -1311,7 +1466,7 @@ export const getTasksForPhase = withAuth(async (
                 });
             }
 
-            for (const tag of tagsArray) {
+            for (const tag of safeTagsArray) {
                 const entityId = tag.tagged_id;
                 if (entityId) {
                     if (!taskTags[entityId]) {
@@ -1324,6 +1479,10 @@ export const getTasksForPhase = withAuth(async (
             return { tasks, ticketLinks, taskResources, taskDependencies, checklistItems, taskTags };
         });
     } catch (error) {
+        const expected = projectTaskActionErrorFrom(error);
+        if (expected) {
+            return expected;
+        }
         console.error('Error getting tasks for phase:', error);
         throw error;
     }
@@ -1335,7 +1494,7 @@ export const addTaskResourceAction = withAuth(async (
     taskId: string,
     userId: string,
     role?: string
-): Promise<void> => {
+): Promise<void | ProjectTaskActionError> => {
     try {
         const {knex: db} = await createTenantKnex();
         await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -1369,6 +1528,10 @@ export const addTaskResourceAction = withAuth(async (
             }
         });
     } catch (error) {
+        const expected = projectTaskActionErrorFrom(error);
+        if (expected) {
+            return expected;
+        }
         console.error('Error adding task resource:', error);
         throw error;
     }
@@ -1384,7 +1547,7 @@ export const addTaskResourcesAction = withAuth(async (
     taskId: string,
     userIds: string[],
     role?: string
-): Promise<any[]> => {
+): Promise<any[] | ProjectTaskActionError> => {
     try {
         const {knex: db} = await createTenantKnex();
         const { resources, added, projectId, primaryAgentId } = await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -1447,6 +1610,10 @@ export const addTaskResourcesAction = withAuth(async (
 
         return resources;
     } catch (error) {
+        const expected = projectTaskActionErrorFrom(error);
+        if (expected) {
+            return expected;
+        }
         console.error('Error adding task resources:', error);
         throw error;
     }
@@ -1457,7 +1624,7 @@ export const assignTeamToProjectTask = withAuth(async (
     { tenant },
     taskId: string,
     teamId: string
-): Promise<void> => {
+): Promise<void | ProjectTaskActionError> => {
     try {
         const {knex: db} = await createTenantKnex();
         const eventData = await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -1573,6 +1740,10 @@ export const assignTeamToProjectTask = withAuth(async (
             });
         }
     } catch (error) {
+        const expected = projectTaskActionErrorFrom(error);
+        if (expected) {
+            return expected;
+        }
         console.error('Error assigning team to project task:', error);
         throw error;
     }
@@ -1590,7 +1761,7 @@ export const removeTeamFromProjectTask = withAuth(async (
     { tenant },
     taskId: string,
     options: RemoveTeamFromProjectTaskOptions
-): Promise<void> => {
+): Promise<void | ProjectTaskActionError> => {
     try {
         const {knex: db} = await createTenantKnex();
         await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -1658,6 +1829,10 @@ export const removeTeamFromProjectTask = withAuth(async (
                 });
         });
     } catch (error) {
+        const expected = projectTaskActionErrorFrom(error);
+        if (expected) {
+            return expected;
+        }
         console.error('Error removing team from project task:', error);
         throw error;
     }
@@ -1667,7 +1842,7 @@ export const removeTaskResourceAction = withAuth(async (
     user,
     { tenant },
     assignmentId: string
-): Promise<void> => {
+): Promise<void | ProjectTaskActionError> => {
     try {
         const {knex: db} = await createTenantKnex();
         await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -1680,6 +1855,10 @@ export const removeTaskResourceAction = withAuth(async (
             await ProjectTaskModel.removeTaskResource(trx, tenant, assignmentId);
         });
     } catch (error) {
+        const expected = projectTaskActionErrorFrom(error);
+        if (expected) {
+            return expected;
+        }
         console.error('Error removing task resource:', error);
         throw error;
     }
@@ -1689,7 +1868,7 @@ export const getTaskResourcesAction = withAuth(async (
     user,
     { tenant },
     taskId: string
-): Promise<any[]> => {
+): Promise<any[] | ProjectTaskActionError> => {
     try {
         const {knex: db} = await createTenantKnex();
         return await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -1702,6 +1881,10 @@ export const getTaskResourcesAction = withAuth(async (
             return await ProjectTaskModel.getTaskResources(trx, tenant, taskId);
         });
     } catch (error) {
+        const expected = projectTaskActionErrorFrom(error);
+        if (expected) {
+            return expected;
+        }
         console.error('Error getting task resources:', error);
         throw error;
     }
@@ -1711,7 +1894,7 @@ export const deleteTaskTicketLinkAction = withAuth(async (
     user,
     { tenant },
     linkId: string
-): Promise<void> => {
+): Promise<void | ProjectTaskActionError> => {
     try {
         const {knex: db} = await createTenantKnex();
         await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -1724,6 +1907,10 @@ export const deleteTaskTicketLinkAction = withAuth(async (
             await ProjectTaskModel.deleteTaskTicketLink(trx, tenant, linkId);
         });
     } catch (error) {
+        const expected = projectTaskActionErrorFrom(error);
+        if (expected) {
+            return expected;
+        }
         console.error('Error deleting ticket link:', error);
         throw error;
     }
@@ -1733,7 +1920,7 @@ export const deleteTaskTicketLinksByTicketIdAction = withAuth(async (
     user,
     { tenant },
     ticketId: string
-): Promise<void> => {
+): Promise<void | ProjectTaskActionError> => {
     try {
         const {knex: db} = await createTenantKnex();
         await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -1748,6 +1935,10 @@ export const deleteTaskTicketLinksByTicketIdAction = withAuth(async (
             await ProjectTaskModel.deleteTaskTicketLinksByTicketId(trx, tenant, ticketId);
         });
     } catch (error) {
+        const expected = projectTaskActionErrorFrom(error);
+        if (expected) {
+            return expected;
+        }
         console.error('Error deleting ticket links by ticket_id:', error);
         throw error;
     }
@@ -1762,7 +1953,7 @@ export const moveTaskToPhase = withAuth(async (
     targetProjectId?: string,
     beforeTaskId?: string | null,
     afterTaskId?: string | null
-): Promise<IProjectTask> => {
+): Promise<IProjectTask | ProjectTaskActionError> => {
     try {
         const {knex: db} = await createTenantKnex();
 
@@ -1823,7 +2014,7 @@ export const moveTaskToPhase = withAuth(async (
                     // Fetch the newly created mappings
                     const updatedMappings = await ProjectModel.getProjectStatusMappings(trx, tenant, newPhase.project_id);
                     if (!updatedMappings || updatedMappings.length === 0) {
-                        throw new Error('Failed to create status mappings for target project');
+                        throw new Error('Default project status mapping creation produced no mappings for the target project.');
                     }
                     finalStatusMappingId = updatedMappings[0].project_status_mapping_id;
                 } else {
@@ -1983,6 +2174,10 @@ export const moveTaskToPhase = withAuth(async (
             return updatedTask;
         });
     } catch (error) {
+        const expected = projectTaskActionErrorFrom(error);
+        if (expected) {
+            return expected;
+        }
         console.error('Error moving task to new phase:', error);
         throw error;
     }
@@ -2001,7 +2196,7 @@ export const duplicateTaskToPhase = withAuth(async (
         duplicateChecklist?: boolean;
         duplicateTicketLinks?: boolean;
     }
-): Promise<IProjectTask> => {
+): Promise<IProjectTask | ProjectTaskActionError> => {
     try {
         const {knex: db} = await createTenantKnex();
 
@@ -2056,7 +2251,7 @@ export const duplicateTaskToPhase = withAuth(async (
                          }
                          const updatedMappings = await ProjectModel.getProjectStatusMappings(trx, tenant, newPhase.project_id);
                          if (!updatedMappings || updatedMappings.length === 0) {
-                             throw new Error('Failed to find or create status mappings for target project');
+                             throw new Error('Target project has no status mappings after default mapping bootstrap.');
                          }
                          finalStatusMappingId = updatedMappings[0].project_status_mapping_id; // Use the first created one
                      } else {
@@ -2078,7 +2273,7 @@ export const duplicateTaskToPhase = withAuth(async (
                          }
                          const updatedMappings = await ProjectModel.getProjectStatusMappings(trx, tenant, newPhase.project_id);
                          if (!updatedMappings || updatedMappings.length === 0) {
-                             throw new Error('Failed to find or create status mappings for target project');
+                             throw new Error('Target project has no status mappings after default mapping bootstrap.');
                          }
                          finalStatusMappingId = updatedMappings[0].project_status_mapping_id;
                     } else {
@@ -2225,17 +2420,17 @@ export const duplicateTaskToPhase = withAuth(async (
             // Fetch again to potentially include relations if needed, though addTask returns the core task
             const finalNewTask = await ProjectTaskModel.getTaskById(trx, tenant, newTask.task_id);
             if (!finalNewTask) {
-                throw new Error("Failed to retrieve the newly created task after duplication.");
+                throw new Error("Duplicated project task could not be reloaded after insert.");
             }
             return finalNewTask;
         });
     } catch (error) {
-        console.error('Error duplicating task to new phase:', error);
-        // Consider more specific error handling or re-throwing
-        if (error instanceof Error) {
-            throw new Error(`Failed to duplicate task: ${error.message}`);
+        const expected = projectTaskActionErrorFrom(error);
+        if (expected) {
+            return expected;
         }
-        throw new Error('An unknown error occurred while duplicating the task.');
+        console.error('Error duplicating task to new phase:', error);
+        throw error;
     }
 });
 
@@ -2243,7 +2438,7 @@ export const getTaskWithDetails = withAuth(async (
     user,
     { tenant },
     taskId: string
-) => {
+): Promise<any | ProjectTaskActionError> => {
     try {
         const {knex: db} = await createTenantKnex();
 
@@ -2308,6 +2503,10 @@ export const getTaskWithDetails = withAuth(async (
             };
         });
     } catch (error) {
+        const expected = projectTaskActionErrorFrom(error);
+        if (expected) {
+            return expected;
+        }
         console.error('Error getting task with details:', error);
         throw error;
     }
@@ -2319,11 +2518,12 @@ export const reorderTask = withAuth(async (
     taskId: string,
     beforeTaskId?: string | null,
     afterTaskId?: string | null
-): Promise<void> => {
-    const {knex: db} = await createTenantKnex();
+): Promise<void | ProjectTaskActionError> => {
+    try {
+        const {knex: db} = await createTenantKnex();
 
-    await withTransaction(db, async (trx: Knex.Transaction) => {
-        await checkPermission(user, 'project', 'update', trx);
+        await withTransaction(db, async (trx: Knex.Transaction) => {
+            await checkPermission(user, 'project', 'update', trx);
 
         // Get the task being moved
         const task = await tenantScopedTable(trx, 'project_tasks', tenant)
@@ -2378,6 +2578,10 @@ export const reorderTask = withAuth(async (
                 task.project_status_mapping_id
             );
 
+            if (isProjectOrderKeyActionError(wasFixed)) {
+                throw wasFixed;
+            }
+
             if (wasFixed) {
                 // Retry the reorder after fixing
                 await reorderTask(taskId, beforeTaskId, afterTaskId);
@@ -2385,7 +2589,15 @@ export const reorderTask = withAuth(async (
                 throw error;
             }
         }
-    });
+        });
+    } catch (error) {
+        const expected = projectTaskActionErrorFrom(error);
+        if (expected) {
+            return expected;
+        }
+        console.error('Error reordering task:', error);
+        throw error;
+    }
 });
 
 // Keep the old function for backward compatibility but update it to use order_key
@@ -2393,7 +2605,7 @@ export const reorderTasksInStatus = withAuth(async (
     user,
     { tenant },
     tasks: { taskId: string, newWbsCode: string }[]
-): Promise<void> => {
+): Promise<void | ProjectTaskActionError> => {
     try {
         const {knex: db} = await createTenantKnex();
         await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -2431,6 +2643,10 @@ export const reorderTasksInStatus = withAuth(async (
             ));
         });
     } catch (error) {
+        const expected = projectTaskActionErrorFrom(error);
+        if (expected) {
+            return expected;
+        }
         console.error('Error reordering tasks:', error);
         throw error;
     }
@@ -2454,6 +2670,9 @@ export const cleanupOrderKeysForStatus = withAuth(async (
             await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
 
             const wasFixed = await validateAndFixOrderKeys(phaseId, statusId);
+            if (isProjectOrderKeyActionError(wasFixed)) {
+                throw wasFixed;
+            }
 
             if (wasFixed) {
                 return {
@@ -2471,6 +2690,16 @@ export const cleanupOrderKeysForStatus = withAuth(async (
         return result;
     } catch (error) {
         console.error('Error cleaning up order keys:', error);
+        const expected = projectTaskActionErrorFrom(error);
+        if (expected) {
+            const candidate = expected as unknown as { permissionError?: unknown; actionError?: unknown };
+            return {
+                success: false,
+                message: typeof candidate.permissionError === 'string'
+                    ? candidate.permissionError
+                    : String(candidate.actionError ?? 'Failed to clean up order keys')
+            };
+        }
         return {
             success: false,
             message: 'Failed to clean up order keys'
@@ -2482,11 +2711,13 @@ export const cleanupOrderKeysForStatus = withAuth(async (
 export const getTaskTypes = withAuth(async (
     user,
     { tenant }
-): Promise<ITaskType[]> => {
-    const {knex: db} = await createTenantKnex();
-    return await withTransaction(db, async (trx: Knex.Transaction) => {
-        await checkPermission(user, 'project', 'read', trx);
-        return await TaskTypeModel.getAllTaskTypes(trx, tenant);
+): Promise<ITaskType[] | ProjectTaskActionError> => {
+    return withProjectTaskActionErrors(async () => {
+        const {knex: db} = await createTenantKnex();
+        return await withTransaction(db, async (trx: Knex.Transaction) => {
+            await checkPermission(user, 'project', 'read', trx);
+            return await TaskTypeModel.getAllTaskTypes(trx, tenant);
+        });
     });
 });
 
@@ -2494,15 +2725,17 @@ export const createCustomTaskType = withAuth(async (
     user,
     { tenant },
     data: Omit<ITaskType, 'type_id' | 'tenant' | 'created_at' | 'updated_at'>
-): Promise<ITaskType> => {
-    const {knex: db} = await createTenantKnex();
-    await checkPermission(user, 'project', 'create', db);
+): Promise<ITaskType | ProjectTaskActionError> => {
+    return withProjectTaskActionErrors(async () => {
+        const {knex: db} = await createTenantKnex();
+        await checkPermission(user, 'project', 'create', db);
 
-    return await TaskTypeModel.createCustomTaskType(
-        db,
-        tenant,
-        data as Omit<ICustomTaskType, 'type_id' | 'tenant' | 'created_at' | 'updated_at'>
-    );
+        return await TaskTypeModel.createCustomTaskType(
+            db,
+            tenant,
+            data as Omit<ICustomTaskType, 'type_id' | 'tenant' | 'created_at' | 'updated_at'>
+        );
+    });
 });
 
 // Task Dependency Actions
@@ -2514,20 +2747,21 @@ export const addTaskDependency = withAuth(async (
     dependencyType?: DependencyType,
     leadLagDays: number = 0,
     notes?: string
-): Promise<IProjectTaskDependency> => {
-    const { knex: db } = await createTenantKnex();
+): Promise<IProjectTaskDependency | ProjectTaskActionError> => {
+    return withProjectTaskActionErrors(async () => {
+        const { knex: db } = await createTenantKnex();
 
-    return await withTransaction(db, async (trx) => {
-        await checkPermission(user, 'project', 'update', trx);
-        const [predecessorProjectId, successorProjectId] = await Promise.all([
-            resolveProjectIdForTask(trx as Knex.Transaction, tenant, predecessorTaskId),
-            resolveProjectIdForTask(trx as Knex.Transaction, tenant, successorTaskId),
-        ]);
-        if (!predecessorProjectId || !successorProjectId) {
-            throw new Error('Project not found for dependency task');
-        }
-        await assertProjectReadAllowedById(trx as Knex.Transaction, tenant, user as IUserWithRoles, predecessorProjectId);
-        await assertProjectReadAllowedById(trx as Knex.Transaction, tenant, user as IUserWithRoles, successorProjectId);
+        return await withTransaction(db, async (trx) => {
+            await checkPermission(user, 'project', 'update', trx);
+            const [predecessorProjectId, successorProjectId] = await Promise.all([
+                resolveProjectIdForTask(trx as Knex.Transaction, tenant, predecessorTaskId),
+                resolveProjectIdForTask(trx as Knex.Transaction, tenant, successorTaskId),
+            ]);
+            if (!predecessorProjectId || !successorProjectId) {
+                throw new Error('Project not found for dependency task');
+            }
+            await assertProjectReadAllowedById(trx as Knex.Transaction, tenant, user as IUserWithRoles, predecessorProjectId);
+            await assertProjectReadAllowedById(trx as Knex.Transaction, tenant, user as IUserWithRoles, successorProjectId);
 
         // Handle 'blocked_by' by swapping the tasks and using 'blocks' instead
         let actualPredecessorId = predecessorTaskId;
@@ -2603,7 +2837,8 @@ export const addTaskDependency = withAuth(async (
             }
         }
 
-        return dependency;
+            return dependency;
+        });
     });
 });
 
@@ -2614,17 +2849,19 @@ export const getTaskDependencies = withAuth(async (
 ): Promise<{
     predecessors: IProjectTaskDependency[],
     successors: IProjectTaskDependency[]
-}> => {
-    const {knex: db} = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
-        await checkPermission(user, 'project', 'read', trx);
-        const projectId = await resolveProjectIdForTask(trx, tenant, taskId);
-        if (!projectId) {
-            throw new Error('Project not found for task');
-        }
-        await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
+} | ProjectTaskActionError> => {
+    return withProjectTaskActionErrors(async () => {
+        const {knex: db} = await createTenantKnex();
+        return withTransaction(db, async (trx: Knex.Transaction) => {
+            await checkPermission(user, 'project', 'read', trx);
+            const projectId = await resolveProjectIdForTask(trx, tenant, taskId);
+            if (!projectId) {
+                throw new Error('Project not found for task');
+            }
+            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
 
-        return TaskDependencyModel.getTaskDependencies(trx, tenant, taskId);
+            return TaskDependencyModel.getTaskDependencies(trx, tenant, taskId);
+        });
     });
 });
 
@@ -2632,11 +2869,12 @@ export const removeTaskDependency = withAuth(async (
     user,
     { tenant },
     dependencyId: string
-): Promise<void> => {
-    const {knex: db} = await createTenantKnex();
+): Promise<void | ProjectTaskActionError> => {
+    return withProjectTaskActionErrors(async () => {
+        const {knex: db} = await createTenantKnex();
 
-    await withTransaction(db, async (trx) => {
-        await checkPermission(user, 'project', 'update', trx);
+        await withTransaction(db, async (trx) => {
+            await checkPermission(user, 'project', 'update', trx);
 
         const dependency = await tenantScopedTable(trx, 'project_task_dependencies', tenant)
             .where('dependency_id', dependencyId)
@@ -2678,15 +2916,16 @@ export const removeTaskDependency = withAuth(async (
             actor: { actorType: 'USER' as const, actorUserId: user.user_id },
         };
 
-        await publishWorkflowEvent({
-            eventType: 'PROJECT_TASK_DEPENDENCY_UNBLOCKED',
-            ctx,
-            payload: buildProjectTaskDependencyUnblockedPayload({
-                projectId: phase.project_id,
-                taskId: blockRelation.blockedTaskId,
-                unblockedByTaskId: blockRelation.blockedByTaskId,
-                unblockedAt: occurredAt,
-            }),
+            await publishWorkflowEvent({
+                eventType: 'PROJECT_TASK_DEPENDENCY_UNBLOCKED',
+                ctx,
+                payload: buildProjectTaskDependencyUnblockedPayload({
+                    projectId: phase.project_id,
+                    taskId: blockRelation.blockedTaskId,
+                    unblockedByTaskId: blockRelation.blockedByTaskId,
+                    unblockedAt: occurredAt,
+                }),
+            });
         });
     });
 });
@@ -2696,29 +2935,31 @@ export const updateTaskDependency = withAuth(async (
     { tenant },
     dependencyId: string,
     data: Partial<Pick<IProjectTaskDependency, 'lead_lag_days' | 'notes'>>
-): Promise<IProjectTaskDependency> => {
-    const {knex: db} = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
-        await checkPermission(user, 'project', 'update', trx);
-        const dependency = await tenantScopedTable(trx, 'project_task_dependencies', tenant)
-            .where('dependency_id', dependencyId)
-            .first();
+): Promise<IProjectTaskDependency | ProjectTaskActionError> => {
+    return withProjectTaskActionErrors(async () => {
+        const {knex: db} = await createTenantKnex();
+        return withTransaction(db, async (trx: Knex.Transaction) => {
+            await checkPermission(user, 'project', 'update', trx);
+            const dependency = await tenantScopedTable(trx, 'project_task_dependencies', tenant)
+                .where('dependency_id', dependencyId)
+                .first();
 
-        if (!dependency) {
-            throw new Error('Dependency not found');
-        }
+            if (!dependency) {
+                throw new Error('Dependency not found');
+            }
 
-        const [predecessorProjectId, successorProjectId] = await Promise.all([
-            resolveProjectIdForTask(trx, tenant, dependency.predecessor_task_id),
-            resolveProjectIdForTask(trx, tenant, dependency.successor_task_id),
-        ]);
-        if (!predecessorProjectId || !successorProjectId) {
-            throw new Error('Project not found for dependency task');
-        }
-        await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, predecessorProjectId);
-        await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, successorProjectId);
+            const [predecessorProjectId, successorProjectId] = await Promise.all([
+                resolveProjectIdForTask(trx, tenant, dependency.predecessor_task_id),
+                resolveProjectIdForTask(trx, tenant, dependency.successor_task_id),
+            ]);
+            if (!predecessorProjectId || !successorProjectId) {
+                throw new Error('Project not found for dependency task');
+            }
+            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, predecessorProjectId);
+            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, successorProjectId);
 
-        return TaskDependencyModel.updateDependency(trx, tenant, dependencyId, data);
+            return TaskDependencyModel.updateDependency(trx, tenant, dependencyId, data);
+        });
     });
 });
 
@@ -2726,7 +2967,7 @@ export const getTaskById = withAuth(async (
     user,
     { tenant },
     taskId: string
-): Promise<IProjectTask | null> => {
+): Promise<IProjectTask | null | ProjectTaskActionError> => {
     try {
         const {knex: db} = await createTenantKnex();
         return await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -2744,6 +2985,10 @@ export const getTaskById = withAuth(async (
             return task || null;
         });
     } catch (error) {
+        const expected = projectTaskActionErrorFrom(error);
+        if (expected) {
+            return expected;
+        }
         console.error('Error fetching task by ID:', error);
         throw error;
     }
@@ -2762,12 +3007,13 @@ export const getAllProjectTasksForListView = withAuth(async (
     checklistItems: Record<string, ITaskChecklistItem[]>;
     taskTags: Record<string, ITag[]>;
     taskDependencies: Record<string, { predecessors: IProjectTaskDependency[]; successors: IProjectTaskDependency[] }>;
-}> => {
-    const { knex: db } = await createTenantKnex();
+} | ProjectTaskActionError> => {
+    return withProjectTaskActionErrors(async () => {
+        const { knex: db } = await createTenantKnex();
 
-    return await withTransaction(db, async (trx: Knex.Transaction) => {
-        await checkPermission(user, 'project', 'read', trx);
-        await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
+        return await withTransaction(db, async (trx: Knex.Transaction) => {
+            await checkPermission(user, 'project', 'read', trx);
+            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
 
         // 1. Get all phases for this project
         const phases = await tenantScopedTable(trx, 'project_phases', tenant)
@@ -2818,6 +3064,10 @@ export const getAllProjectTasksForListView = withAuth(async (
                     .select('ptd.*', 'pt.task_name as successor_task_name', 'pt.wbs_code as successor_wbs_code')
                 : []
         ]);
+        const safeTagsArray = isTagActionError(tagsArray) ? [] : tagsArray;
+        if (isTagActionError(tagsArray)) {
+            console.warn('[getProjectTasksWithDetails] Failed to load task tags:', tagsArray);
+        }
 
         const allowedTicketIds = await filterAuthorizedTicketIds(
             trx,
@@ -2850,7 +3100,7 @@ export const getAllProjectTasksForListView = withAuth(async (
             (checklistItems[item.task_id] ??= []).push(item);
         }
         // Tags: findTagsByEntityIds returns ITag[] with tagged_id field
-        for (const tag of tagsArray) {
+        for (const tag of safeTagsArray) {
             if (tag.tagged_id) {
                 (taskTags[tag.tagged_id] ??= []).push(tag);
             }
@@ -2886,7 +3136,8 @@ export const getAllProjectTasksForListView = withAuth(async (
             });
         }
 
-        return { phases, tasks, statuses, ticketLinks, taskResources, checklistItems, taskTags, taskDependencies };
+            return { phases, tasks, statuses, ticketLinks, taskResources, checklistItems, taskTags, taskDependencies };
+        });
     });
 });
 
@@ -2897,11 +3148,12 @@ export const getPhaseTaskCounts = withAuth(async (
     user,
     { tenant },
     projectId: string
-): Promise<Record<string, number>> => {
-    const { knex: db } = await createTenantKnex();
-    return await withTransaction(db, async (trx: Knex.Transaction) => {
-        await checkPermission(user, 'project', 'read', trx);
-        await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
+): Promise<Record<string, number> | ProjectTaskActionError> => {
+    return withProjectTaskActionErrors(async () => {
+        const { knex: db } = await createTenantKnex();
+        return await withTransaction(db, async (trx: Knex.Transaction) => {
+            await checkPermission(user, 'project', 'read', trx);
+            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
 
         const countsQuery = tenantScopedTable(trx, 'project_tasks as pt', tenant);
         tenantDb(trx, tenant).tenantJoin(countsQuery, 'project_phases as pp', 'pt.phase_id', 'pp.phase_id');
@@ -2915,7 +3167,8 @@ export const getPhaseTaskCounts = withAuth(async (
         for (const row of counts) {
             result[row.phase_id] = Number(row.count);
         }
-        return result;
+            return result;
+        });
     });
 });
 
@@ -2931,12 +3184,13 @@ export const getProjectTaskData = withAuth(async (
     taskTags: Record<string, ITag[]>;
     checklistItems: Record<string, ITaskChecklistItem[]>;
     taskDependencies: Record<string, { predecessors: IProjectTaskDependency[]; successors: IProjectTaskDependency[] }>;
-}> => {
-    const { knex: db } = await createTenantKnex();
+} | ProjectTaskActionError> => {
+    return withProjectTaskActionErrors(async () => {
+        const { knex: db } = await createTenantKnex();
 
-    return await withTransaction(db, async (trx: Knex.Transaction) => {
-        await checkPermission(user, 'project', 'read', trx);
-        await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
+        return await withTransaction(db, async (trx: Knex.Transaction) => {
+            await checkPermission(user, 'project', 'read', trx);
+            await assertProjectReadAllowedById(trx, tenant, user as IUserWithRoles, projectId);
 
         // 1. Get all tasks across all phases for this project
         const phases = await tenantScopedTable(trx, 'project_phases', tenant)
@@ -2976,6 +3230,10 @@ export const getProjectTaskData = withAuth(async (
                     .select('ptd.*', 'pt.task_name as successor_task_name', 'pt.wbs_code as successor_wbs_code')
                 : []
         ]);
+        const safeTagsArray = isTagActionError(tagsArray) ? [] : tagsArray;
+        if (isTagActionError(tagsArray)) {
+            console.warn('[getProjectTasksByIds] Failed to load task tags:', tagsArray);
+        }
 
         // 3. Convert arrays to maps keyed by task_id
         const taskResources: Record<string, any[]> = {};
@@ -2991,7 +3249,7 @@ export const getProjectTaskData = withAuth(async (
         for (const item of checklistItemsArray) {
             (checklistItems[item.task_id] ??= []).push(item);
         }
-        for (const tag of tagsArray) {
+        for (const tag of safeTagsArray) {
             if (tag.tagged_id) {
                 (taskTags[tag.tagged_id] ??= []).push(tag);
             }
@@ -3026,7 +3284,8 @@ export const getProjectTaskData = withAuth(async (
             });
         }
 
-        return { tasks, taskResources, taskTags, checklistItems, taskDependencies };
+            return { tasks, taskResources, taskTags, checklistItems, taskDependencies };
+        });
     });
 });
 
@@ -3060,7 +3319,13 @@ export const bulkAddTagsToTasks = withAuth(async (
 
   const { knex } = await createTenantKnex();
   if (!(await hasPermission(user, 'project', 'update', knex))) {
-    throw new Error('Permission denied: Cannot update project tasks');
+    return {
+      updatedIds: [],
+      failed: uniqueIds.map((taskId) => ({
+        taskId,
+        message: 'Permission denied: Cannot update project tasks',
+      })),
+    };
   }
 
   // Filter to task IDs that actually exist in this tenant. tag_mappings.tagged_id
@@ -3089,10 +3354,14 @@ export const bulkAddTagsToTasks = withAuth(async (
   const existingByTask = new Map<string, string[]>();
   try {
     const existing = await findTagsByEntityIds(validIds, 'project_task');
-    for (const tag of existing) {
-      const texts = existingByTask.get(tag.tagged_id) ?? [];
-      texts.push(tag.tag_text);
-      existingByTask.set(tag.tagged_id, texts);
+    if (isTagActionError(existing)) {
+      console.warn('[bulkAddTagsToTasks] Failed to load existing tags for dedupe:', existing);
+    } else {
+      for (const tag of existing) {
+        const texts = existingByTask.get(tag.tagged_id) ?? [];
+        texts.push(tag.tag_text);
+        existingByTask.set(tag.tagged_id, texts);
+      }
     }
   } catch (error) {
     console.warn('[bulkAddTagsToTasks] Failed to load existing tags for dedupe:', error);
@@ -3147,7 +3416,8 @@ export const bulkAddTagsToTasks = withAuth(async (
     });
     appliedByEntity = result.appliedByEntity;
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Failed to add tags to tasks';
+    console.error('Failed to add tags to project tasks:', error);
+    const message = 'Failed to add tags to tasks. Please refresh and try again.';
     // The whole batch shares one transaction, so a throw fails every valid task;
     // keep the not-found entries already collected above.
     return {

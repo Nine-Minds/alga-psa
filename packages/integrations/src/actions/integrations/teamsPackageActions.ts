@@ -34,6 +34,15 @@ interface MicrosoftProfileRow {
   is_archived: boolean;
 }
 
+function teamsPackageErrorMessage(error: unknown, fallback: string): string {
+  const message = error instanceof Error ? error.message : '';
+  if (message === 'Forbidden' || message.includes('Permission denied')) {
+    return 'Forbidden';
+  }
+
+  return fallback;
+}
+
 interface TeamsAppManifest {
   $schema: string;
   manifestVersion: string;
@@ -425,7 +434,7 @@ async function getTeamsAppPackageStatusImpl(
       },
     };
   } catch (err: any) {
-    return { success: false, error: err?.message || 'Failed to build Teams app package' };
+    return { success: false, error: teamsPackageErrorMessage(err, 'Failed to build Teams app package') };
   }
 }
 

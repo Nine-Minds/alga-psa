@@ -45,13 +45,20 @@ import { TimePicker } from '@alga-psa/ui/components/TimePicker';
 import { createTagsForEntity } from '@alga-psa/tags/actions/tagActions';
 import { getTeams } from '@alga-psa/teams/actions/team-actions/teamActions';
 import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions/team-actions/avatarActions';
+import { isTeamActionError } from '@alga-psa/teams/actions/team-actions/teamActionErrors';
 import { assignTeamToTicket } from '../actions/teamAssignmentActions';
 import type { ITeam } from '@alga-psa/types';
 import { useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { useQuickAddClient } from '@alga-psa/ui/context';
 import QuickAddCategory from './QuickAddCategory';
-import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { parseTicketRichTextContent, serializeTicketRichTextContent } from '../lib/ticketRichText';
 import { removeTicketRichTextImageUrls, replaceTicketRichTextImageUrls } from '../lib/ticketRichTextImages';
@@ -66,6 +73,9 @@ function FormOrDiv({ isEmbedded, onSubmit, children }: { isEmbedded: boolean; on
   }
   return <form onSubmit={onSubmit} className="space-y-4" noValidate>{children}</form>;
 }
+
+const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 // Helper function to format location display
 const formatLocationDisplay = (location: IClientLocation, unnamedFallback = 'Unnamed Location'): string => {
@@ -394,6 +404,10 @@ export function QuickAddTicket({
     const fetchTeamsData = async () => {
       try {
         const fetchedTeams = await getTeams();
+        if (isTeamActionError(fetchedTeams)) {
+          console.warn('Cannot load teams for quick-add ticket assignment:', fetchedTeams);
+          return;
+        }
         setTeams(fetchedTeams);
       } catch (err) {
         console.error('Error fetching teams:', err);
@@ -521,6 +535,17 @@ export function QuickAddTicket({
       if (boardId) {
         try {
           const data = await getTicketCategoriesByBoard(boardId);
+          if (isReturnedActionError(data)) {
+            setError(getErrorMessage(data));
+            setCategories([]);
+            setBoardConfig({
+              category_type: 'custom',
+              priority_type: 'custom',
+              display_itil_impact: false,
+              display_itil_urgency: false,
+            });
+            return;
+          }
           // Ensure data is properly resolved and categories is an array
           if (data && data.categories && Array.isArray(data.categories)) {
             setCategories(data.categories);
@@ -792,13 +817,16 @@ export function QuickAddTicket({
     );
     const serializedDescription = serializeTicketRichTextContent(finalizedDescriptionContent);
 
-    await updateTicket(newTicket.ticket_id, {
+    const updateResult = await updateTicket(newTicket.ticket_id, {
       attributes: {
         ...(newTicket.attributes || {}),
         description: serializedDescription,
       },
       updated_at: new Date().toISOString(),
     });
+    if (isReturnedActionError(updateResult)) {
+      throw new Error(getErrorMessage(updateResult));
+    }
 
     return serializedDescription;
   };
@@ -886,6 +914,10 @@ export function QuickAddTicket({
       // The selected ITIL category ID is already in selectedCategories/categoryId
 
       const newTicket = await addTicket(formData);
+      if (isReturnedActionError(newTicket)) {
+        setError(getErrorMessage(newTicket));
+        return;
+      }
       if (!newTicket) {
         throw new Error(t('errors.createTicketFailed', 'Failed to create ticket. Please try again.'));
       }
@@ -901,10 +933,15 @@ export function QuickAddTicket({
       // Assign team if selected
       if (assignedTeamId && newTicket.ticket_id) {
         try {
-          await assignTeamToTicket(newTicket.ticket_id, assignedTeamId);
+          const assignResult = await assignTeamToTicket(newTicket.ticket_id, assignedTeamId);
+          if (isReturnedActionError(assignResult)) {
+            throw new Error(getErrorMessage(assignResult));
+          }
         } catch (teamError) {
           console.error('Failed to assign team:', teamError);
-          toast.error(t('quickAdd.teamAssignmentPartialFailure', 'Ticket created but team assignment failed'));
+          toast.error(teamError instanceof Error
+            ? teamError.message
+            : t('quickAdd.teamAssignmentPartialFailure', 'Ticket created but team assignment failed'));
         }
       }
 
@@ -912,7 +949,10 @@ export function QuickAddTicket({
       if (tempAdditionalAgents.length > 0 && newTicket.ticket_id) {
         for (const agent of tempAdditionalAgents) {
           try {
-            await addTicketResource(newTicket.ticket_id, agent.user_id, 'support');
+            const resourceResult = await addTicketResource(newTicket.ticket_id, agent.user_id, 'support');
+            if (isReturnedActionError(resourceResult)) {
+              throw new Error(getErrorMessage(resourceResult));
+            }
           } catch (agentError) {
             console.error(`Failed to add additional agent ${agent.user_id}:`, agentError);
           }
@@ -971,7 +1011,7 @@ export function QuickAddTicket({
       }
     } catch (error) {
       console.error('Error creating ticket:', error);
-      setError(error instanceof Error ? error.message : t('errors.createTicketFailed', 'Failed to create ticket. Please try again.'));
+      setError(t('errors.createTicketFailed', 'Failed to create ticket. Please try again.'));
     } finally {
       setIsSubmitting(false);
     }

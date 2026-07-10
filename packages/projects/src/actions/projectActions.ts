@@ -42,8 +42,8 @@ import {
 } from '@alga-psa/workflow-streams';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { deleteEntityTags, deleteEntitiesTags } from '@alga-psa/tags/lib/tagCleanup';
-import { permissionError } from '@alga-psa/ui/lib/errorHandling';
-import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { actionError, isActionMessageError, isActionPermissionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
+import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { filterAuthorizedTicketIds } from './projectTaskActions';
 import { applyTicketLinkRestriction } from '../lib/taskTicketMapping';
 import {
@@ -56,9 +56,81 @@ import {
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 
+type ProjectActionError = ActionMessageError | ActionPermissionError;
+
 const PROJECT_LIST_SEARCH_TSQUERY_UNSAFE_RE = /[^\p{L}\p{N}\s]+/gu;
 const PROJECT_LIST_SEARCH_IDENTIFIER_TOKEN_PATTERN = /\b[A-Z]+-?\d+\b/i;
 const PROJECT_LIST_SEARCH_TYPES = ['project', 'project_phase', 'project_task', 'project_task_comment'] as const;
+
+const EXPECTED_PROJECT_ACTION_ERROR_PREFIXES = [
+    'No projects available with valid phases',
+    'No projects found',
+    'Phase not found',
+    'Project not found',
+    'Project phase not found',
+    'Project status not found',
+];
+
+function projectActionErrorFrom(error: unknown): ProjectActionError | null {
+    if (isActionMessageError(error) || isActionPermissionError(error)) {
+        return error as ProjectActionError;
+    }
+
+    const issues = (error as { issues?: unknown })?.issues;
+    if (Array.isArray(issues) && issues.length > 0) {
+        return actionError('Project validation failed. Please review the project details and try again.');
+    }
+
+    if (error instanceof Error) {
+        if (error.message.includes('Permission denied')) {
+            return permissionError(error.message);
+        }
+        if (EXPECTED_PROJECT_ACTION_ERROR_PREFIXES.some((message) => error.message.startsWith(message))) {
+            return actionError(error.message);
+        }
+        if (error.message.startsWith('Project ') && error.message.includes(' not found in tenant ')) {
+            return actionError('Project not found');
+        }
+    }
+
+    const dbError = error as { code?: string; column?: string };
+    if (dbError?.code === '22P02') {
+        return actionError('One of the selected project values is invalid. Please refresh and try again.');
+    }
+    if (dbError?.code === '23502') {
+        return actionError(`Missing required project field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    }
+    if (dbError?.code === '23503') {
+        return actionError('One of the selected project records no longer exists. Please refresh and try again.');
+    }
+    if (dbError?.code === '23505') {
+        return actionError('This project change conflicts with an existing record. Please refresh and try again.');
+    }
+    if (dbError?.code === '23514') {
+        return actionError('One of the project values is not allowed. Please review the form and try again.');
+    }
+
+    return null;
+}
+
+function projectDeleteErrorMessage(error: unknown): string {
+    if (error instanceof Error) {
+        if (error.message.includes('Permission denied')) {
+            return error.message;
+        }
+        if (error.message.includes('not found')) {
+            return 'Project not found';
+        }
+        if (error.message.includes('violates foreign key constraint')) {
+            return 'Cannot delete project because it has associated records';
+        }
+        if (error.message.includes('connection') || error.message.includes('timeout')) {
+            return 'Database connection issue. Please try again.';
+        }
+    }
+
+    return 'Unable to delete project. Please refresh and try again.';
+}
 
 const extendedCreateProjectSchema = createProjectSchema.extend({
   assigned_to: z.string().nullable().optional(),
@@ -131,7 +203,7 @@ function tenantJoinSubquerySql(
   const markerIndex = compiled.sql.indexOf(marker);
 
   if (markerIndex < 0) {
-    throw new Error('Unable to compile tenant join subquery SQL fragment');
+    throw new Error('Tenant join subquery SQL fragment marker was not present in compiled SQL.');
   }
 
   return {
@@ -678,7 +750,7 @@ export const getProjectTreeData = withAuth(async (user, { tenant }, projectId?: 
       );
 
       if (authorizedProjects.length === 0) {
-        throw new Error('No projects found');
+        return [];
       }
 
       const treeData = await Promise.all(authorizedProjects.map(async (project): Promise<{
@@ -766,7 +838,7 @@ export const getProjectTreeData = withAuth(async (user, { tenant }, projectId?: 
         );
 
       if (validTreeData.length === 0) {
-        throw new Error('No projects available with valid phases');
+        return [];
       }
 
       return validTreeData;
@@ -777,7 +849,7 @@ export const getProjectTreeData = withAuth(async (user, { tenant }, projectId?: 
   }
 });
 
-export const updatePhase = withAuth(async (user, { tenant }, phaseId: string, phaseData: Partial<IProjectPhase>): Promise<IProjectPhase | ActionPermissionError> => {
+export const updatePhase = withAuth(async (user, { tenant }, phaseId: string, phaseData: Partial<IProjectPhase>): Promise<IProjectPhase | ProjectActionError> => {
     try {
         // Skip validation in development mode since we're handling the types correctly
         const { knex } = await createTenantKnex();
@@ -813,17 +885,15 @@ export const updatePhase = withAuth(async (user, { tenant }, phaseId: string, ph
         return updatedPhase;
     } catch (error) {
         console.error('Error updating project phase:', error);
-        if (typeof error === 'string' && error.includes('Permission denied')) {
-            return permissionError(error);
-        }
-        if (error instanceof Error && error.message.includes('Permission denied')) {
-            return permissionError(error.message);
+        const expected = projectActionErrorFrom(error);
+        if (expected) {
+            return expected;
         }
         throw error;
     }
 });
 
-export const deletePhase = withAuth(async (user, { tenant }, phaseId: string): Promise<void | ActionPermissionError> => {
+export const deletePhase = withAuth(async (user, { tenant }, phaseId: string): Promise<void | ProjectActionError> => {
     try {
         const { knex } = await createTenantKnex();
         const denied = await checkPermission(user, 'project', 'delete', knex);
@@ -854,11 +924,15 @@ export const deletePhase = withAuth(async (user, { tenant }, phaseId: string): P
         }
     } catch (error) {
         console.error('Error deleting project phase:', error);
+        const expected = projectActionErrorFrom(error);
+        if (expected) {
+            return expected;
+        }
         throw error;
     }
 });
 
-export const addProjectPhase = withAuth(async (user, { tenant }, phaseData: Omit<IProjectPhase, 'phase_id' | 'created_at' | 'updated_at' | 'tenant'>): Promise<IProjectPhase | ActionPermissionError> => {
+export const addProjectPhase = withAuth(async (user, { tenant }, phaseData: Omit<IProjectPhase, 'phase_id' | 'created_at' | 'updated_at' | 'tenant'>): Promise<IProjectPhase | ProjectActionError> => {
     try {
         const validatedData = validateData(projectPhaseSchema.omit({
             phase_id: true,
@@ -937,11 +1011,16 @@ export const addProjectPhase = withAuth(async (user, { tenant }, phaseData: Omit
         return createdPhase;
     } catch (error) {
         console.error('Error adding project phase:', error);
+        const expected = projectActionErrorFrom(error);
+        if (expected) {
+            return expected;
+        }
         throw error;
     }
 });
 
-export const reorderPhase = withAuth(async (user, { tenant }, phaseId: string, beforePhaseId?: string | null, afterPhaseId?: string | null): Promise<void | ActionPermissionError> => {
+export const reorderPhase = withAuth(async (user, { tenant }, phaseId: string, beforePhaseId?: string | null, afterPhaseId?: string | null): Promise<void | ProjectActionError> => {
+    try {
     const { knex: db } = await createTenantKnex();
 
     const denied = await checkPermission(user, 'project', 'update', db);
@@ -1001,7 +1080,11 @@ export const reorderPhase = withAuth(async (user, { tenant }, phaseId: string, b
 
             // Try to recover by regenerating all order keys for the project
             const { regenerateOrderKeysForPhases } = await import('./regenerateOrderKeys');
-            await regenerateOrderKeysForPhases(phase.project_id);
+            const { isProjectOrderKeyActionError } = await import('./projectOrderKeyActionErrors');
+            const regenerationResult = await regenerateOrderKeysForPhases(phase.project_id);
+            if (isProjectOrderKeyActionError(regenerationResult)) {
+                throw regenerationResult;
+            }
 
             // Try again with fresh order keys
             const freshBeforePhase = beforePhaseId ? await tenantScopedTable(trx, 'project_phases', tenant)
@@ -1031,6 +1114,14 @@ export const reorderPhase = withAuth(async (user, { tenant }, phaseId: string, b
             });
         }
     });
+    } catch (error) {
+        console.error('Error reordering project phase:', error);
+        const expected = projectActionErrorFrom(error);
+        if (expected) {
+            return expected;
+        }
+        throw error;
+    }
 });
 
 export const getProject = withAuth(async (user, { tenant }, projectId: string): Promise<IProject | null | ActionPermissionError> => {
@@ -1103,7 +1194,7 @@ export const createProject = withAuth(async (
     /** If true, skip publishing events (useful when called within another action's transaction) */
     skipEvents?: boolean;
   }
-): Promise<IProject | ActionPermissionError> => {
+): Promise<IProject | ActionPermissionError | ActionMessageError> => {
     try {
         const { knex: permKnex } = await createTenantKnex();
         const denied = await checkPermission(user, 'project', 'create', permKnex);
@@ -1113,7 +1204,7 @@ export const createProject = withAuth(async (
         const projectStatuses = await getProjectStatusesInternal(tenant, user);
 
         if (projectStatuses.length === 0) {
-            throw new Error('No project statuses found');
+            return actionError('Project statuses are not configured. Add at least one project status before creating projects.');
         }
 
         const { knex } = await createTenantKnex();
@@ -1138,7 +1229,7 @@ export const createProject = withAuth(async (
         console.log(`[createProject] selectedTaskStatusIds:`, selectedTaskStatusIds);
 
         if (taskStatusesToUse.length === 0) {
-            throw new Error('No project task statuses found. Please ensure task statuses are configured.');
+            return actionError('Project task statuses are not configured. Add at least one task status before creating projects.');
         }
 
         const validatedData = validateData(createProjectSchema, projectData);
@@ -1236,7 +1327,7 @@ export const createProject = withAuth(async (
             // Fetch the full project details including contact and assigned user
             const project = await ProjectModel.getById(trx, tenant, newProject.project_id);
             if (!project) {
-                throw new Error('Failed to fetch created project details');
+                throw new Error('Created project could not be reloaded after insert.');
             }
             return project;
         };
@@ -1263,6 +1354,13 @@ export const createProject = withAuth(async (
         return fullProject;
     } catch (error) {
         console.error('Error creating project:', error);
+        if (error instanceof Error && error.message === 'Failed to fetch created project details') {
+            return actionError('Project could not be created because its details could not be loaded. Please try again.');
+        }
+        const expected = projectActionErrorFrom(error);
+        if (expected) {
+            return expected;
+        }
         throw error;
     }
 });
@@ -1279,7 +1377,7 @@ async function getProjectStatusesInternal(tenant: string, user: IUser): Promise<
     });
 }
 
-export const updateProject = withAuth(async (user, { tenant }, projectId: string, projectData: Partial<IProject>): Promise<IProject | ActionPermissionError> => {
+export const updateProject = withAuth(async (user, { tenant }, projectId: string, projectData: Partial<IProject>): Promise<IProject | ProjectActionError> => {
     try {
         // Remove tenant field if present in projectData
         const { tenant: tenantField, ...safeProjectData } = projectData;
@@ -1379,6 +1477,10 @@ export const updateProject = withAuth(async (user, { tenant }, projectId: string
         return updatedProject;
     } catch (error) {
         console.error('Error updating project:', error);
+        const expected = projectActionErrorFrom(error);
+        if (expected) {
+            return expected;
+        }
         throw error;
     }
 });
@@ -1452,14 +1554,14 @@ export const deleteProject = withAuth(async (
             success: false,
             canDelete: false,
             code: 'VALIDATION_FAILED',
-            message: error instanceof Error ? error.message : 'Failed to delete project',
+            message: projectDeleteErrorMessage(error),
             dependencies: [],
             alternatives: []
         };
     }
 });
 
-export const getProjectMetadata = withAuth(async (user, { tenant }, projectId: string): Promise<ActionPermissionError | {
+export const getProjectMetadata = withAuth(async (user, { tenant }, projectId: string): Promise<ProjectActionError | {
     project: IProject;
     phases: IProjectPhase[];
     statuses: ProjectStatus[];
@@ -1530,6 +1632,10 @@ export const getProjectMetadata = withAuth(async (user, { tenant }, projectId: s
         };
     } catch (error) {
         console.error('Error getting project metadata:', error);
+        const expected = projectActionErrorFrom(error);
+        if (expected) {
+            return expected;
+        }
         throw error;
     }
 });
@@ -1674,7 +1780,7 @@ function mapStatusMappingsToStatuses(
     return statuses.filter((status): status is ProjectStatus => status !== null);
 }
 
-export const getProjectDetails = withAuth(async (user, { tenant }, projectId: string): Promise<ActionPermissionError | {
+export const getProjectDetails = withAuth(async (user, { tenant }, projectId: string): Promise<ProjectActionError | {
     project: IProject;
     phases: IProjectPhase[];
     tasks: IProjectTask[];
@@ -1765,11 +1871,15 @@ export const getProjectDetails = withAuth(async (user, { tenant }, projectId: st
         };
     } catch (error) {
         console.error('Error fetching project details:', error);
+        const expected = projectActionErrorFrom(error);
+        if (expected) {
+            return expected;
+        }
         throw error;
     }
 });
 
-export const updateProjectStructure = withAuth(async (user, { tenant }, projectId: string, updates: { phases: Partial<IProjectPhase>[]; tasks: Partial<IProjectTask>[] }): Promise<void | ActionPermissionError> => {
+export const updateProjectStructure = withAuth(async (user, { tenant }, projectId: string, updates: { phases: Partial<IProjectPhase>[]; tasks: Partial<IProjectTask>[] }): Promise<void | ProjectActionError> => {
     try {
         const { knex } = await createTenantKnex();
         const denied = await checkPermission(user, 'project', 'update', knex);
@@ -1781,6 +1891,10 @@ export const updateProjectStructure = withAuth(async (user, { tenant }, projectI
         });
     } catch (error) {
         console.error('Error updating project structure:', error);
+        const expected = projectActionErrorFrom(error);
+        if (expected) {
+            return expected;
+        }
         throw error;
     }
 });
@@ -1814,22 +1928,31 @@ export const getProjectStatusesByPhase = withAuth(async (
     user,
     { tenant },
     projectId: string
-): Promise<Record<string, ProjectStatus[]>> => {
-    const { knex } = await createTenantKnex();
+): Promise<Record<string, ProjectStatus[]> | ProjectActionError> => {
+    try {
+        const { knex } = await createTenantKnex();
 
-    // Resolve every phase's statuses inside a single transaction, verifying
-    // access once. The actual resolution batches all phases into 3 queries
-    // total (see resolveAllPhaseStatusesInternal) rather than querying per
-    // phase, which previously also opened a transaction per phase.
-    return await withTransaction(knex, async (trx: Knex.Transaction) => {
-        if (!await hasPermission(user, 'project', 'read', trx)) {
-            throw new Error('Permission denied: Cannot read project');
+        // Resolve every phase's statuses inside a single transaction, verifying
+        // access once. The actual resolution batches all phases into 3 queries
+        // total (see resolveAllPhaseStatusesInternal) rather than querying per
+        // phase, which previously also opened a transaction per phase.
+        return await withTransaction(knex, async (trx: Knex.Transaction) => {
+            if (!await hasPermission(user, 'project', 'read', trx)) {
+                throw new Error('Permission denied: Cannot read project');
+            }
+            await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
+
+            const phases = await ProjectModel.getPhases(trx, tenant, projectId);
+            return resolveAllPhaseStatusesInternal(trx, tenant, projectId, phases);
+        });
+    } catch (error) {
+        console.error('Error fetching project statuses by phase:', error);
+        const expected = projectActionErrorFrom(error);
+        if (expected) {
+            return expected;
         }
-        await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
-
-        const phases = await ProjectModel.getPhases(trx, tenant, projectId);
-        return resolveAllPhaseStatusesInternal(trx, tenant, projectId, phases);
-    });
+        throw error;
+    }
 });
 
 // Resolve the effective statuses for every phase in 3 queries total, regardless
@@ -1884,7 +2007,7 @@ async function resolveAllPhaseStatusesInternal(
     return result;
 }
 
-export const addStatusToProject = withAuth(async (user, { tenant }, projectId: string, statusData: Omit<IStatus, 'status_id' | 'created_at' | 'updated_at'>): Promise<IStatus | ActionPermissionError> => {
+export const addStatusToProject = withAuth(async (user, { tenant }, projectId: string, statusData: Omit<IStatus, 'status_id' | 'created_at' | 'updated_at'>): Promise<IStatus | ProjectActionError> => {
     try {
         const { knex } = await createTenantKnex();
         const denied = await checkPermission(user, 'project', 'update', knex);
@@ -1896,6 +2019,10 @@ export const addStatusToProject = withAuth(async (user, { tenant }, projectId: s
         });
     } catch (error) {
         console.error('Error adding status to task:', error);
+        const expected = projectActionErrorFrom(error);
+        if (expected) {
+            return expected;
+        }
         throw error;
     }
 });
@@ -1907,7 +2034,7 @@ export const updateProjectStatus = withAuth(async (
     statusId: string,
     statusData: Partial<IStatus>,
     mappingData: Partial<IProjectStatusMapping>
-): Promise<IStatus | ActionPermissionError> => {
+): Promise<IStatus | ProjectActionError> => {
     try {
         const { knex } = await createTenantKnex();
         const denied = await checkPermission(user, 'project', 'update', knex);
@@ -1944,11 +2071,15 @@ export const updateProjectStatus = withAuth(async (
         return updatedStatus;
     } catch (error) {
         console.error('Error updating project status:', error);
+        const expected = projectActionErrorFrom(error);
+        if (expected) {
+            return expected;
+        }
         throw error;
     }
 });
 
-export const deleteProjectStatus = withAuth(async (user, { tenant }, statusId: string): Promise<void | ActionPermissionError> => {
+export const deleteProjectStatus = withAuth(async (user, { tenant }, statusId: string): Promise<void | ProjectActionError> => {
     try {
         const { knex } = await createTenantKnex();
         const denied = await checkPermission(user, 'project', 'delete', knex);
@@ -1967,6 +2098,10 @@ export const deleteProjectStatus = withAuth(async (user, { tenant }, statusId: s
         });
     } catch (error) {
         console.error('Error deleting project status:', error);
+        const expected = projectActionErrorFrom(error);
+        if (expected) {
+            return expected;
+        }
         throw error;
     }
 });

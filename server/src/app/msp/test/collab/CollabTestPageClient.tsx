@@ -8,10 +8,19 @@ import { searchUsersForMentions } from '@alga-psa/user-composition/actions';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Input } from '@alga-psa/ui/components/Input';
-import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { syncCollabSnapshot } from '@alga-psa/documents/actions/collaborativeEditingActions';
 
 type ConnectionStatus = 'connecting' | 'connected' | 'disconnected';
+
+const isDocumentActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
+  isActionPermissionError(value) || isActionMessageError(value);
 
 type PresenceUser = {
   id: string;
@@ -102,8 +111,8 @@ export default function CollabTestPageClient({ userId, userName, tenantId }: Col
         user_id: userId,
         block_data: DEFAULT_DOC_CONTENT,
       });
-      if (isActionPermissionError(result)) {
-        setDocError(result.permissionError);
+      if (isDocumentActionError(result)) {
+        setDocError(getErrorMessage(result));
         return;
       }
       router.push(`/msp/test/collab?doc=${encodeURIComponent(result.document_id)}`);

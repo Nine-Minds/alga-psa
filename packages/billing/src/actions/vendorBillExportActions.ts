@@ -7,8 +7,16 @@ import { AccountingExportService } from '../services/accountingExportService';
 import { resolveDefaultRealm } from '../services/accountingSync/accountingSyncSettings';
 import type { Knex } from 'knex';
 import type { VendorBillExportStatus } from '@alga-psa/inventory/lib/integrationTypes';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 export type { VendorBillExportStatus, VendorBillExportState } from '@alga-psa/inventory/lib/integrationTypes';
+
+type VendorBillExportActionError = ActionMessageError | ActionPermissionError;
 
 type ExportStatusRow = {
   bill_id: string;
@@ -158,9 +166,9 @@ export const exportVendorBillToAccounting = withAuth(async (
   user,
   { tenant },
   billId: string
-): Promise<VendorBillExportStatus> => {
+): Promise<VendorBillExportStatus | VendorBillExportActionError> => {
   if (!(await hasPermission(user, 'billing', 'update'))) {
-    throw new Error('Permission denied: billing update required');
+    return permissionError('Permission denied: billing update required');
   }
 
   const { knex } = await createTenantKnex();
@@ -180,10 +188,13 @@ export const exportVendorBillToAccounting = withAuth(async (
       .where({ tenant, bill_id: billId })
       .first('bill_id', 'total_amount', 'currency_code', 'bill_number');
     if (!row) {
-      throw new Error('Vendor bill not found');
+      return null;
     }
     return row as { bill_id: string; total_amount: string | number; currency_code: string | null; bill_number: string };
   });
+  if (!bill) {
+    return actionError('Vendor bill not found. It may have been updated or deleted. Please refresh and try again.');
+  }
 
   const targetRealm = await resolveDefaultRealm(knex, tenant);
   const exportService = await AccountingExportService.createForTenant(tenant);
@@ -228,9 +239,9 @@ export const getVendorBillExportStatuses = withAuth(async (
   user,
   { tenant },
   billIds: string[]
-): Promise<VendorBillExportStatus[]> => {
+): Promise<VendorBillExportStatus[] | VendorBillExportActionError> => {
   if (!(await hasPermission(user, 'billing', 'read'))) {
-    throw new Error('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required');
   }
 
   const { knex } = await createTenantKnex();

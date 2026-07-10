@@ -768,7 +768,7 @@ export class TeamService extends BaseService<ITeam> {
         .first();
       
       if (!manager) {
-        throw new Error('Manager not found or inactive');
+        throw new NotFoundError('Manager not found or inactive');
       }
 
       // Check if manager is currently a team member

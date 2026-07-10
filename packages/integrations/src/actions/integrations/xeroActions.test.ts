@@ -308,6 +308,57 @@ describe('Xero integration actions', () => {
     expect(xeroCreateMock).toHaveBeenNthCalledWith(5, 'tenant-1', null);
   });
 
+  it('catalog actions report a missing Xero connection instead of returning an empty catalog', async () => {
+    getXeroConnectionSummariesMock.mockResolvedValue([]);
+
+    const result = await getXeroAccounts();
+
+    expect(result).toEqual({
+      actionError: 'Connect Xero before loading Xero accounts.'
+    });
+    expect(xeroCreateMock).not.toHaveBeenCalled();
+  });
+
+  it('catalog actions report expired Xero connections as reconnect-required errors', async () => {
+    getXeroConnectionSummariesMock.mockResolvedValue([
+      {
+        connectionId: 'connection-expired',
+        xeroTenantId: 'tenant-guid-expired',
+        tenantName: 'Expired Org',
+        status: 'expired'
+      }
+    ] as any);
+
+    const result = await getXeroItems();
+
+    expect(result).toEqual({
+      actionError: 'Reconnect Xero before loading Xero items.'
+    });
+    expect(xeroCreateMock).not.toHaveBeenCalled();
+  });
+
+  it('catalog actions report provider auth failures as reconnect-required errors', async () => {
+    getXeroConnectionSummariesMock.mockResolvedValue([
+      {
+        connectionId: 'connection-1',
+        xeroTenantId: 'tenant-guid-1',
+        tenantName: 'Acme Holdings',
+        status: 'connected'
+      }
+    ] as any);
+    xeroCreateMock.mockResolvedValue({
+      listTaxRates: vi.fn(async () => {
+        throw new Error('invalid_grant');
+      })
+    });
+
+    const result = await getXeroTaxRates();
+
+    expect(result).toEqual({
+      actionError: 'Reconnect Xero before loading Xero tax rates.'
+    });
+  });
+
   it('T024/T030: non-enterprise save attempts are rejected before writing secrets', async () => {
     process.env.NEXT_PUBLIC_EDITION = 'community';
     process.env.EDITION = 'ce';
@@ -367,7 +418,13 @@ describe('Xero integration actions', () => {
   it('T029/T030: billing permission is required for status and save/disconnect writes', async () => {
     hasPermissionMock.mockResolvedValue(false);
 
-    await expect(getXeroConnectionStatus()).rejects.toThrow('Forbidden');
+    await expect(getXeroConnectionStatus()).resolves.toEqual(
+      expect.objectContaining({
+        connected: false,
+        error: 'Forbidden: You do not have permission to view Xero integration settings.',
+        errorCode: 'FORBIDDEN',
+      })
+    );
     await expect(
       saveXeroCredentials({
         clientId: 'client-id',
@@ -375,11 +432,11 @@ describe('Xero integration actions', () => {
       })
     ).resolves.toEqual({
       success: false,
-      error: 'Forbidden'
+      error: 'Forbidden: You do not have permission to manage Xero integration settings.'
     });
     await expect(disconnectXero()).resolves.toEqual({
       success: false,
-      error: 'Forbidden'
+      error: 'Forbidden: You do not have permission to manage Xero integration settings.'
     });
   });
 

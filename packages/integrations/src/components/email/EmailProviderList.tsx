@@ -15,6 +15,11 @@ import type { EmailProvider } from './types';
 import { EmailProviderCard, EmptyProviderPlaceholder } from './EmailProviderCard';
 import { RefreshCw } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import toast from 'react-hot-toast';
+import {
+  getErrorMessage,
+  isActionMessageError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 interface EmailProviderListProps {
   providers: EmailProvider[];
@@ -68,7 +73,7 @@ export function EmailProviderList({
   const handleChangeDefaults = async (provider: EmailProvider, newDefaultsId?: string) => {
     try {
       setUpdatingProviderId(provider.id);
-      await updateEmailProvider(provider.id, {
+      const result = await updateEmailProvider(provider.id, {
         tenant: provider.tenant,
         providerType: provider.providerType,
         providerName: provider.providerName,
@@ -76,9 +81,14 @@ export function EmailProviderList({
         isActive: provider.isActive,
         inboundTicketDefaultsId: newDefaultsId || undefined,
       } as any);
+      if (isActionMessageError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       onRefresh();
     } catch (e) {
       console.error('Failed to update provider defaults', e);
+      toast.error(getErrorMessage(e));
     } finally {
       setUpdatingProviderId(null);
     }

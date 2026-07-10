@@ -18,6 +18,7 @@ import { ColumnDefinition } from '@alga-psa/types';
 import { ICreditReconciliationReport, ReconciliationStatus } from '@alga-psa/types';
 import { validateClientCredit } from '@alga-psa/billing/actions/creditReconciliationActions';
 import { toast } from 'react-hot-toast';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 import {
   fetchReconciliationReports,
@@ -267,6 +268,10 @@ const CreditReconciliation: React.FC = () => {
 
       // Call the server action to run validation for the selected client
       const result = await validateClientCredit(selectedClient);
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
 
       console.log('Validation result:', result);
 

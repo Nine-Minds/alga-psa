@@ -5,6 +5,13 @@ import { withTransaction, createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { IPurchaseOrder, ISalesOrder } from '@alga-psa/types';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+import { resolveTenantCurrency } from '../lib/tenantCurrency';
 
 /**
  * Read-only inventory reporting + dashboard widgets. See design doc §10 / §11.
@@ -17,6 +24,39 @@ async function requireInvRead(user: any): Promise<void> {
   }
 }
 
+export type InventoryReportingActionError = ActionMessageError | ActionPermissionError;
+
+function inventoryReportingActionErrorFrom(error: unknown): InventoryReportingActionError | null {
+  if (error instanceof Error) {
+    if (error.message.startsWith('Permission denied') || error.message === 'user is not logged in') {
+      return permissionError(error.message);
+    }
+    if (error.message === 'Invalid time value') {
+      return actionError('Choose a valid report date range.');
+    }
+  }
+
+  const dbError = error as { code?: string };
+  if (dbError?.code === '22007' || dbError?.code === '22008' || dbError?.code === '22P02') {
+    return actionError('Choose a valid report date range.');
+  }
+  if (dbError?.code === '23503') {
+    return actionError('One of the selected inventory records is no longer valid. Please refresh and try again.');
+  }
+
+  return null;
+}
+
+async function withInventoryReportingActionErrors<T>(work: () => Promise<T>): Promise<T | InventoryReportingActionError> {
+  try {
+    return await work();
+  } catch (error) {
+    const expected = inventoryReportingActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
+}
+
 /**
  * Accounting awareness (F150): surface which Alga products are inventory-tracked,
  * i.e. the Alga-side equivalent of Xero's IsTrackedAsInventory / QBO's "Inventory"
@@ -24,17 +64,19 @@ async function requireInvRead(user: any): Promise<void> {
  * this report lets an MSP reconcile Alga's tracked SKUs against their books.
  */
 export const getAccountingInventoryAlignment = withAuth(
-  async (user, { tenant }): Promise<Array<{ service_id: string; service_name: string; sku: string | null; track_stock: boolean; is_serialized: boolean; average_cost: number | null }>> => {
-    await requireInvRead(user);
-    const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
-      const scopedDb = tenantDb(trx, tenant);
-      const query = scopedDb.table('product_inventory_settings as pis');
-      scopedDb.tenantJoin(query, 'service_catalog as sc', 'pis.service_id', 'sc.service_id');
-      return query
-        .where({ 'pis.track_stock': true })
-        .select('pis.service_id', 'sc.service_name', 'sc.sku', 'pis.track_stock', 'pis.is_serialized', 'pis.average_cost')
-        .orderBy('sc.service_name', 'asc');
+  async (user, { tenant }): Promise<Array<{ service_id: string; service_name: string; sku: string | null; track_stock: boolean; is_serialized: boolean; average_cost: number | null }> | InventoryReportingActionError> => {
+    return withInventoryReportingActionErrors(async () => {
+      await requireInvRead(user);
+      const { knex: db } = await createTenantKnex();
+      return withTransaction(db, async (trx: Knex.Transaction) => {
+        const scopedDb = tenantDb(trx, tenant);
+        const query = scopedDb.table('product_inventory_settings as pis');
+        scopedDb.tenantJoin(query, 'service_catalog as sc', 'pis.service_id', 'sc.service_id');
+        return query
+          .where({ 'pis.track_stock': true })
+          .select('pis.service_id', 'sc.service_name', 'sc.sku', 'pis.track_stock', 'pis.is_serialized', 'pis.average_cost')
+          .orderBy('sc.service_name', 'asc');
+      });
     });
   },
 );
@@ -48,6 +90,7 @@ export interface InventoryValueLocationRow {
 export interface InventoryValueReport {
   by_location: InventoryValueLocationRow[];
   grand_total: number;
+  currency_code: string;
 }
 
 /**
@@ -55,11 +98,13 @@ export interface InventoryValueReport {
  * cost = product_inventory_settings.average_cost for non-serialized products;
  * for serialized products it is the sum of each in_stock unit's unit_cost.
  */
-export const inventoryValueReport = withAuth(async (user, { tenant }): Promise<InventoryValueReport> => {
-  await requireInvRead(user);
-  const { knex: db } = await createTenantKnex();
-  return withTransaction(db, async (trx: Knex.Transaction) => {
+export const inventoryValueReport = withAuth(async (user, { tenant }): Promise<InventoryValueReport | InventoryReportingActionError> => {
+  return withInventoryReportingActionErrors(async () => {
+    await requireInvRead(user);
+    const { knex: db } = await createTenantKnex();
+    return withTransaction(db, async (trx: Knex.Transaction) => {
     const scopedDb = tenantDb(trx, tenant);
+    const currency_code = await resolveTenantCurrency(trx, tenant);
     const valueByLocation = new Map<string, number>();
 
     // Non-serialized: on-hand × average_cost from stock_levels joined to settings.
@@ -103,7 +148,8 @@ export const inventoryValueReport = withAuth(async (user, { tenant }): Promise<I
       .sort((a, b) => a.location_name.localeCompare(b.location_name));
 
     const grand_total = by_location.reduce((sum, r) => sum + r.total_value, 0);
-    return { by_location, grand_total };
+    return { by_location, grand_total, currency_code };
+    });
   });
 });
 
@@ -147,10 +193,11 @@ function normalizeReportBoundary(value: string | Date | undefined, endExclusive:
  * cogs = Σ(cogs_cost) on the consume movement, margin = revenue − cogs.
  */
 export const marginReport = withAuth(
-  async (user, { tenant }, filter?: { from?: string | Date; to?: string | Date }): Promise<MarginReport> => {
-    await requireInvRead(user);
-    const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
+  async (user, { tenant }, filter?: { from?: string | Date; to?: string | Date }): Promise<MarginReport | InventoryReportingActionError> => {
+    return withInventoryReportingActionErrors(async () => {
+      await requireInvRead(user);
+      const { knex: db } = await createTenantKnex();
+      return withTransaction(db, async (trx: Knex.Transaction) => {
       const scopedDb = tenantDb(trx, tenant);
       const from = normalizeReportBoundary(filter?.from, false);
       const toExclusive = normalizeReportBoundary(filter?.to, true);
@@ -204,11 +251,7 @@ export const marginReport = withAuth(
       const total_revenue_cents = rows.reduce((s, r) => s + r.revenue_cents, 0);
       const total_cogs_cents = rows.reduce((s, r) => s + r.cogs_cents, 0);
       const total_margin_cents = total_revenue_cents - total_cogs_cents;
-      const billingSettingsRow = await trx('default_billing_settings')
-        .where({ tenant })
-        .select<{ default_currency_code: string | null }>('default_currency_code')
-        .first();
-      const currency_code = billingSettingsRow?.default_currency_code || 'USD';
+      const currency_code = await resolveTenantCurrency(trx, tenant);
       return {
         rows,
         total_revenue_cents,
@@ -217,6 +260,7 @@ export const marginReport = withAuth(
         total_margin_pct: total_revenue_cents === 0 ? null : (total_margin_cents / total_revenue_cents) * 100,
         currency_code,
       };
+      });
     });
   },
 );
@@ -240,11 +284,12 @@ export interface ExpiringWarrantyRow {
  * (deployed or in stock). Already-retired units are excluded.
  */
 export const expiringWarrantyReport = withAuth(
-  async (user, { tenant }, withinDays: number): Promise<ExpiringWarrantyRow[]> => {
-    await requireInvRead(user);
-    const days = Number.isFinite(withinDays) ? Math.max(0, Math.floor(withinDays)) : 0;
-    const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
+  async (user, { tenant }, withinDays: number): Promise<ExpiringWarrantyRow[] | InventoryReportingActionError> => {
+    return withInventoryReportingActionErrors(async () => {
+      await requireInvRead(user);
+      const days = Number.isFinite(withinDays) ? Math.max(0, Math.floor(withinDays)) : 0;
+      const { knex: db } = await createTenantKnex();
+      return withTransaction(db, async (trx: Knex.Transaction) => {
       const scopedDb = tenantDb(trx, tenant);
       const query = scopedDb.table('stock_units as su');
       scopedDb.tenantJoin(query, 'service_catalog as sc', 'su.service_id', 'sc.service_id', { type: 'left' });
@@ -267,6 +312,7 @@ export const expiringWarrantyReport = withAuth(
         )
         .orderBy('su.warranty_expires_at', 'asc');
       return rows;
+      });
     });
   },
 );
@@ -280,15 +326,17 @@ export interface OpenPosWidget {
 }
 
 /** Non-terminal purchase orders (not received/cancelled): count + list. */
-export const openPosWidget = withAuth(async (user, { tenant }): Promise<OpenPosWidget> => {
-  await requireInvRead(user);
-  const { knex: db } = await createTenantKnex();
-  return withTransaction(db, async (trx: Knex.Transaction) => {
+export const openPosWidget = withAuth(async (user, { tenant }): Promise<OpenPosWidget | InventoryReportingActionError> => {
+  return withInventoryReportingActionErrors(async () => {
+    await requireInvRead(user);
+    const { knex: db } = await createTenantKnex();
+    return withTransaction(db, async (trx: Knex.Transaction) => {
     const scopedDb = tenantDb(trx, tenant);
     const purchase_orders = (await scopedDb.table('purchase_orders')
       .whereIn('status', OPEN_PO_STATUSES as unknown as string[])
       .orderBy('order_date', 'desc')) as IPurchaseOrder[];
     return { count: purchase_orders.length, purchase_orders };
+    });
   });
 });
 
@@ -298,15 +346,17 @@ export interface OpenSosWidget {
 }
 
 /** Non-terminal sales orders (not closed/cancelled): count + list. */
-export const openSosWidget = withAuth(async (user, { tenant }): Promise<OpenSosWidget> => {
-  await requireInvRead(user);
-  const { knex: db } = await createTenantKnex();
-  return withTransaction(db, async (trx: Knex.Transaction) => {
+export const openSosWidget = withAuth(async (user, { tenant }): Promise<OpenSosWidget | InventoryReportingActionError> => {
+  return withInventoryReportingActionErrors(async () => {
+    await requireInvRead(user);
+    const { knex: db } = await createTenantKnex();
+    return withTransaction(db, async (trx: Knex.Transaction) => {
     const scopedDb = tenantDb(trx, tenant);
     const sales_orders = (await scopedDb.table('sales_orders')
       .whereIn('status', OPEN_SO_STATUSES as unknown as string[])
       .orderBy('order_date', 'desc')) as ISalesOrder[];
     return { count: sales_orders.length, sales_orders };
+    });
   });
 });
 
@@ -341,6 +391,7 @@ export interface WriteOffByUser {
 export interface WriteOffReportData {
   from: string;
   to: string;
+  currency_code: string;
   rows: WriteOffRow[];
   /** True when more events exist than the row cap; totals below still cover the FULL range. */
   truncated: boolean;
@@ -364,11 +415,13 @@ export const writeOffReport = withAuth(
     user,
     { tenant },
     opts?: { from?: string | null; to?: string | null },
-  ): Promise<WriteOffReportData> => {
-    await requireInvRead(user);
-    const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
+  ): Promise<WriteOffReportData | InventoryReportingActionError> => {
+    return withInventoryReportingActionErrors(async () => {
+      await requireInvRead(user);
+      const { knex: db } = await createTenantKnex();
+      return withTransaction(db, async (trx: Knex.Transaction) => {
       const scopedDb = tenantDb(trx, tenant);
+      const currency_code = await resolveTenantCurrency(trx, tenant);
       const to = opts?.to ? new Date(opts.to) : new Date();
       const from = opts?.from ? new Date(opts.from) : new Date(to.getTime() - 90 * 86_400_000);
       // End of the 'to' day, so a date-only input includes that whole day.
@@ -466,6 +519,7 @@ export const writeOffReport = withAuth(
       return {
         from: from.toISOString(),
         to: toEnd.toISOString(),
+        currency_code,
         rows,
         truncated,
         by_user,
@@ -473,6 +527,7 @@ export const writeOffReport = withAuth(
         total_gains_cents,
         net_cents: total_losses_cents + total_gains_cents,
       };
+      });
     });
   },
 );

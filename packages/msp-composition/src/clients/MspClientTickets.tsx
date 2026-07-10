@@ -16,13 +16,19 @@ import { useDrawer } from "@alga-psa/ui";
 import TicketDetails from '@alga-psa/tickets/components/ticket/TicketDetails';
 import { getConsolidatedTicketData } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { useRouter } from 'next/navigation';
 import { buildCreateTicketHref } from '@alga-psa/tickets/lib/createTicketRoute';
 import { createTicketColumns } from '@alga-psa/tickets/lib';
 import { getTicketingDisplaySettings, type TicketingDisplaySettings } from '@alga-psa/tickets/actions/ticketDisplaySettings';
 import { ITag } from '@alga-psa/types';
 import { findTagsByEntityIds } from '@alga-psa/tags/actions/tagActions';
+import { isTagActionError } from '@alga-psa/tags/actions/tagActionErrors';
 import { useTagPermissions } from '@alga-psa/tags/hooks';
 import { TagFilter } from '@alga-psa/ui/components';
 import MultiUserPicker from '@alga-psa/ui/components/MultiUserPicker';
@@ -41,6 +47,10 @@ interface ClientTicketsProps {
   initialCategories?: ITicketCategory[];
   initialTags?: ITag[];
   initialUsers?: IUser[];
+}
+
+function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
+  return isActionMessageError(value) || isActionPermissionError(value);
 }
 
 const useDebounce = <T,>(value: T, delay: number): T => {
@@ -149,6 +159,14 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
       };
 
       const result = await getTicketsForListWithCursor(filters, cursor);
+      if (isReturnedActionError(result)) {
+        handleError(getErrorMessage(result));
+        if (resetTickets) {
+          setTickets([]);
+        }
+        setNextCursor(null);
+        return;
+      }
 
       if (resetTickets) {
         setTickets(result.tickets);
@@ -232,6 +250,10 @@ const MspClientTickets: React.FC<ClientTicketsProps> = ({
       try {
         const ticketIds = tickets.map(t => t.ticket_id).filter(Boolean) as string[];
         const tags = await findTagsByEntityIds(ticketIds, 'ticket');
+        if (isTagActionError(tags)) {
+          console.error('Error fetching tags:', tags);
+          return;
+        }
 
         const newTicketTags: Record<string, ITag[]> = {};
         tags.forEach(tag => {

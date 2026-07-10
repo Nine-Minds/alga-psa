@@ -33,6 +33,12 @@ import {
 } from '../../actions/client-portal-actions/client-kb';
 import type { IKBArticleWithDocument, ArticleType } from '@alga-psa/types';
 import type { ITag } from '@alga-psa/types';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+
+const isReturnedActionError = (
+  value: unknown
+): value is { readonly actionError: string } | { readonly permissionError: string } =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 const TYPE_ICONS: Record<ArticleType, React.ReactNode> = {
   how_to: <BookOpen className="w-5 h-5 text-blue-500" />,
@@ -195,6 +201,10 @@ export default function ClientKBPage({ onArticleClick }: ClientKBPageProps) {
       }
 
       const result = await getClientKBArticles(page, pageSize, filters);
+      if (isReturnedActionError(result)) {
+        setLoadError(getErrorMessage(result));
+        return;
+      }
       setArticles(result.articles);
       setTotalPages(result.totalPages);
       setTotal(result.total);
@@ -209,6 +219,10 @@ export default function ClientKBPage({ onArticleClick }: ClientKBPageProps) {
   const loadCategories = useCallback(async () => {
     try {
       const result = await getClientKBCategories();
+      if (isReturnedActionError(result)) {
+        setLoadError(getErrorMessage(result));
+        return;
+      }
       setCategories(result);
     } catch (error) {
       console.error('Failed to load categories:', error);
@@ -218,6 +232,10 @@ export default function ClientKBPage({ onArticleClick }: ClientKBPageProps) {
   const loadTags = useCallback(async () => {
     try {
       const result = await getClientKBTags();
+      if (isReturnedActionError(result)) {
+        setAvailableTags([]);
+        return;
+      }
       setAvailableTags(result as ITag[]);
     } catch (error) {
       console.error('Failed to load tags:', error);

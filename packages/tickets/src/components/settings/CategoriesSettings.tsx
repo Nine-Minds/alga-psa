@@ -14,7 +14,14 @@ import { getAllBoards } from '../../actions/board-actions/boardActions';
 import type { IBoard } from '@alga-psa/types';
 import { getAvailableReferenceData, importReferenceData, checkImportConflicts, type ImportConflict } from '@alga-psa/reference-data/actions/referenceDataActions';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
@@ -32,6 +39,9 @@ import {
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import QuickAddCategory from '../QuickAddCategory';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+
+const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 const CategoriesSettings = (): React.JSX.Element => {
   const { t } = useTranslation('features/tickets');
@@ -84,6 +94,11 @@ const CategoriesSettings = (): React.JSX.Element => {
   const fetchCategories = async () => {
     try {
       const allCategories = await getAllCategories();
+      if (isReturnedActionError(allCategories)) {
+        toast.error(getErrorMessage(allCategories));
+        setCategories([]);
+        return;
+      }
       // Organize categories hierarchically
       const parentCategories = allCategories
         .filter(cat => !cat.parent_category)
@@ -208,7 +223,12 @@ const CategoriesSettings = (): React.JSX.Element => {
         updateData.board_id = formData.board_id;
       }
       
-      await updateCategory(editingCategory.category_id, updateData);
+      const updatedCategory = await updateCategory(editingCategory.category_id, updateData);
+      if (isReturnedActionError(updatedCategory)) {
+        setError(getErrorMessage(updatedCategory));
+        return;
+      }
+
       toast.success(t('settings.categories.saveSuccess', 'Category updated successfully'));
       
       setShowAddEditDialog(false);
@@ -217,7 +237,7 @@ const CategoriesSettings = (): React.JSX.Element => {
       await fetchCategories();
     } catch (error) {
       console.error('Error saving category:', error);
-      setError(error instanceof Error ? error.message : t('settings.categories.saveFailed', 'Failed to save category'));
+      setError(t('settings.categories.saveFailed', 'Failed to save category'));
     }
   };
 

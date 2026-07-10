@@ -15,6 +15,12 @@ import {
   type ServicePlan
 } from "@alga-psa/client-portal/actions";
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+
+const isReturnedActionError = (
+  value: unknown
+): value is { readonly actionError: string } | { readonly permissionError: string } =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 export default function ServicesSection() {
   const { t: tAccount } = useTranslation('client-portal');
@@ -38,9 +44,14 @@ export default function ServicesSection() {
     const loadServices = async () => {
       try {
         const data = await getActiveServices();
+        if (isReturnedActionError(data)) {
+          setError(getErrorMessage(data));
+          return;
+        }
         setServices(data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : tAccountServices('loadError', 'Failed to load services'));
+        console.error('Failed to load services:', err);
+        setError(tAccountServices('loadError', 'Failed to load services'));
       } finally {
         setIsLoading(false);
       }
@@ -56,10 +67,15 @@ export default function ServicesSection() {
 
     try {
       const contractLines = await getServiceUpgrades(service.id);
+      if (isReturnedActionError(contractLines)) {
+        setError(getErrorMessage(contractLines));
+        return;
+      }
       setAvailableContractLines(contractLines);
       setIsManaging(true);
     } catch (err) {
-      setError(err instanceof Error ? err.message : tAccountServices('loadContractLinesError', 'Failed to load service contract lines'));
+      console.error('Failed to load service contract lines:', err);
+      setError(tAccountServices('loadContractLinesError', 'Failed to load service contract lines'));
     }
   };
 
@@ -71,13 +87,25 @@ export default function ServicesSection() {
 
     try {
       if (isUpgrade) {
-        await upgradeService(selectedService.id, contractLineId);
+        const result = await upgradeService(selectedService.id, contractLineId);
+        if (isReturnedActionError(result)) {
+          setActionError(getErrorMessage(result));
+          return;
+        }
       } else {
-        await downgradeService(selectedService.id, contractLineId);
+        const result = await downgradeService(selectedService.id, contractLineId);
+        if (isReturnedActionError(result)) {
+          setActionError(getErrorMessage(result));
+          return;
+        }
       }
 
       // Refresh services list
       const updatedServices = await getActiveServices();
+      if (isReturnedActionError(updatedServices)) {
+        setActionError(getErrorMessage(updatedServices));
+        return;
+      }
       setServices(updatedServices);
       
       // Close dialog
@@ -85,7 +113,8 @@ export default function ServicesSection() {
       setSelectedService(null);
       setAvailableContractLines([]);
     } catch (err) {
-      setActionError(err instanceof Error ? err.message : tAccountServices('updateError', 'Failed to update service'));
+      console.error('Failed to update service:', err);
+      setActionError(tAccountServices('updateError', 'Failed to update service'));
     } finally {
       setIsProcessing(false);
     }

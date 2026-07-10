@@ -73,14 +73,44 @@ function normalizeBaseUrl(input: string): string {
 }
 
 function axiosErrorToMessage(err: unknown): string {
-  if (err && typeof err === 'object' && (err as any).isAxiosError) {
+  if (axios.isAxiosError(err)) {
     const ax = err as AxiosError<any>;
     const status = ax.response?.status;
-    const detail = ax.response?.data ? JSON.stringify(ax.response.data) : ax.message;
-    if (status === 401) return 'Unauthorized (401): invalid credentials or token expired.';
-    return status ? `Request failed (${status}): ${detail}` : `Request failed: ${detail}`;
+    if (!status) {
+      return 'Unable to reach Tactical RMM. Check the instance URL and network access.';
+    }
+    if (status === 400) {
+      return 'Tactical RMM rejected the request. Check the configured URL and credentials.';
+    }
+    if (status === 401) {
+      return 'Tactical RMM credentials are invalid or expired. Reconnect the integration.';
+    }
+    if (status === 403) {
+      return 'Tactical RMM rejected the request because the configured account does not have permission.';
+    }
+    if (status === 404) {
+      return 'Tactical RMM endpoint was not found. Check the instance URL and Beta API access.';
+    }
+    if (status === 429) {
+      return 'Tactical RMM rate limit was reached. Try again later.';
+    }
+    if (status >= 500) {
+      return 'Tactical RMM is temporarily unavailable. Try again later.';
+    }
+    return `Tactical RMM request failed with status ${status}.`;
   }
-  return err instanceof Error ? err.message : 'Unknown error';
+
+  if (err instanceof Error) {
+    if (
+      err.message === 'Instance URL is not configured' ||
+      err.message === 'Knox username/password not configured' ||
+      err.message.startsWith('TOTP required')
+    ) {
+      return err.message;
+    }
+  }
+
+  return 'Tactical RMM operation failed. Please try again.';
 }
 
 async function upsertIntegrationRow(args: {
@@ -844,8 +874,8 @@ export const syncTacticalRmmDevices = withAuth(async (
 
       for (const agent of agents) {
         processed += 1;
+        const agentId = String((agent as any).agent_id ?? (agent as any).id ?? (agent as any).pk ?? '');
         try {
-          const agentId = String((agent as any).agent_id ?? (agent as any).id ?? (agent as any).pk ?? '');
           if (!agentId) {
             errors.push(`Agent record missing id (org=${externalOrgId})`);
             continue;
@@ -1049,8 +1079,8 @@ export const syncTacticalRmmDevices = withAuth(async (
 
             updated += 1;
           }
-        } catch (e) {
-          errors.push(e instanceof Error ? e.message : 'Unknown error syncing agent');
+        } catch {
+          errors.push(`Failed to sync agent ${agentId}.`);
         }
       }
     }
@@ -1530,8 +1560,8 @@ export const ingestTacticalRmmSoftwareInventory = withAuth(async (
         const stats = await syncAssetSoftwareToNormalizedTables(knex, tenant, assetId, softwareList, syncTs);
         installed += stats.installed;
         updatedAssets += 1;
-      } catch (e) {
-        errors.push(e instanceof Error ? e.message : `Failed syncing software for agent ${agentId}`);
+      } catch {
+        errors.push(`Failed to ingest software for agent ${agentId}.`);
       }
     }
 

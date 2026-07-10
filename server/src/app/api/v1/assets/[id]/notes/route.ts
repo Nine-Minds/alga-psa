@@ -13,6 +13,25 @@ import {
   saveAssetNote,
   deleteAssetNote,
 } from '@alga-psa/assets/actions/assetNoteActions';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+const isActionError = (value: unknown) =>
+  isActionPermissionError(value) || isActionMessageError(value);
+
+function actionErrorResponse(error: unknown) {
+  const message = getErrorMessage(error);
+  const status = isActionPermissionError(error)
+    ? 403
+    : message.toLowerCase().includes('not found')
+      ? 404
+      : 400;
+
+  return NextResponse.json({ error: message }, { status });
+}
 
 export async function GET(
   request: Request,
@@ -25,6 +44,9 @@ export async function GET(
     }
 
     const noteContent = await getAssetNoteContent(id);
+    if (isActionError(noteContent)) {
+      return actionErrorResponse(noteContent);
+    }
 
     return NextResponse.json({
       data: noteContent,
@@ -66,6 +88,9 @@ export async function PUT(
     }
 
     const result = await saveAssetNote(id, blockData);
+    if (isActionError(result)) {
+      return actionErrorResponse(result);
+    }
 
     return NextResponse.json({
       data: result,
@@ -100,7 +125,10 @@ export async function DELETE(
     const url = new URL(request.url);
     const deleteDocument = url.searchParams.get('delete_document') === 'true';
 
-    await deleteAssetNote(id, deleteDocument);
+    const result = await deleteAssetNote(id, deleteDocument);
+    if (isActionError(result)) {
+      return actionErrorResponse(result);
+    }
 
     return NextResponse.json({
       message: 'Notes deleted successfully',

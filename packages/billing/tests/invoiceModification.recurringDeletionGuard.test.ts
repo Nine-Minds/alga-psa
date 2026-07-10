@@ -105,9 +105,9 @@ describe('hardDeleteInvoice recurring detail safeguards', () => {
   it('T205: blocks hard deletion once canonical recurring detail periods exist on the invoice', async () => {
     const { hardDeleteInvoice } = await import('../src/actions/invoiceModification.ts');
 
-    await expect(hardDeleteInvoice('invoice-1')).rejects.toThrow(
-      'Cannot delete invoice invoice-1: canonical recurring detail periods already exist. Cancel the invoice instead of deleting it.'
-    );
+    await expect(hardDeleteInvoice('invoice-1')).resolves.toEqual({
+      actionError: 'Cannot delete invoice invoice-1: canonical recurring detail periods already exist. Cancel the invoice instead of deleting it.',
+    });
 
     expect(state.queriedTables).toContain('invoices');
     expect(state.queriedTables).toContain('invoice_charge_details as iid');

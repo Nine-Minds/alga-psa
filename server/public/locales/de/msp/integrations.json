@@ -1344,7 +1344,8 @@
         "makeDefault": "Als Standard festlegen",
         "noDefault": "Kein Standard",
         "saving": "Speichern…",
-        "undepositedFunds": "Nicht eingezahlte Mittel (Standard)"
+        "undepositedFunds": "Nicht eingezahlte Mittel (Standard)",
+        "catalogLoadError": "Failed to load QuickBooks sync configuration options."
       }
     },
     "rmm": {
@@ -1872,6 +1873,11 @@
         },
         "descriptionCe": "Registrieren Sie Hinweisdomänen für die MSP-Login-SSO-Erkennung. Besitznachweise werden in der Community Edition nicht erzwungen, und nicht verwaltete Domänen greifen auf Nine-Minds-App-Provider zurück.",
         "descriptionEe": "Verwalten Sie den Lebenszyklus von Domänenansprüchen für die Provider-Erkennung beim MSP-Login-SSO. Nicht beanspruchte oder nicht zulässige Domänen greifen auf Nine-Minds-App-Provider zurück.",
+        "moved": {
+          "title": "MSP SSO Login Domains",
+          "body": "Single sign-on settings, including login-domain claims, have moved to Security → Single Sign-On.",
+          "cta": "Open Single Sign-On settings"
+        },
         "dnsHost": "Host:",
         "dnsInstructions": "DNS-TXT-Eintrag hinzufügen und anschließend auf „Verifizieren“ klicken:",
         "dnsValue": "Wert:",

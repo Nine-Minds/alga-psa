@@ -70,15 +70,19 @@ export async function reverseCreditApplicationsForInvoice(
   }
 }
 
+export type VoidInvoiceResult =
+  | { success: true }
+  | { success: false; error: string };
+
 export const voidInvoice = withAuth(async (
   user,
   { tenant },
   invoiceId: string,
   reason: string
-) => {
+): Promise<VoidInvoiceResult> => {
   const trimmedReason = reason?.trim();
   if (!trimmedReason) {
-    throw new Error('A reason is required to void an invoice.');
+    return { success: false, error: 'A reason is required to void an invoice.' };
   }
 
   const { knex } = await createTenantKnex();
@@ -90,17 +94,17 @@ export const voidInvoice = withAuth(async (
     .first();
 
   if (!invoice) {
-    throw new Error('Invoice not found.');
+    return { success: false, error: 'Invoice not found.' };
   }
 
   // Guard: drafts must be deleted, not voided
   if (!invoice.finalized_at) {
-    throw new Error('Drafts must be deleted, not voided.');
+    return { success: false, error: 'Drafts must be deleted, not voided.' };
   }
 
   // Guard: already cancelled
   if (invoice.status === 'cancelled') {
-    throw new Error('Invoice is already voided.');
+    return { success: false, error: 'Invoice is already voided.' };
   }
 
   // Guard: payments exist
@@ -115,7 +119,7 @@ export const voidInvoice = withAuth(async (
     paymentSum = 0;
   }
   if (paymentSum > 0) {
-    throw new Error('Unwind payments before voiding.');
+    return { success: false, error: 'Unwind payments before voiding.' };
   }
 
   // Guard: consumed credit notes (for credit note invoices)
@@ -143,7 +147,7 @@ export const voidInvoice = withAuth(async (
         .first('credit_id');
 
       if (consumedCredit) {
-        throw new Error('This credit note has applied credit. Unapply the credit before voiding.');
+        return { success: false, error: 'This credit note has applied credit. Unapply the credit before voiding.' };
       }
     }
   }
@@ -232,4 +236,6 @@ export const voidInvoice = withAuth(async (
   // Fire-and-forget: enqueue void_invoice op if accounting mapping exists
   const { knex: syncKnex } = await createTenantKnex();
   void enqueueInvoiceVoid(syncKnex, tenant, invoiceId);
+
+  return { success: true };
 });

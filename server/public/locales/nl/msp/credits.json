@@ -70,7 +70,8 @@
     "expirationPeriod": "Vervalperiode:",
     "daysUnit": "{{count}} dagen",
     "notificationDays": "Meldingsdagen:",
-    "none": "Geen"
+    "none": "Geen",
+    "loadErrorPrefix": "Error loading credit expiration settings:"
   },
   "charts": {
     "expirationSummary": "Overzicht van kredietverval",

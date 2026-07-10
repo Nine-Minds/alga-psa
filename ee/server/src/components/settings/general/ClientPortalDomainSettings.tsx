@@ -10,6 +10,13 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 import {
   disablePortalDomainAction,
@@ -29,6 +36,8 @@ interface StatusBadgeConfig {
   label: string;
   variant: BadgeVariant;
 }
+
+type PortalDomainActionError = ActionMessageError | ActionPermissionError;
 
 const STATUS_BADGE_VARIANTS: Record<PortalDomainStatus, BadgeVariant> = {
   pending_dns: 'warning',
@@ -69,6 +78,10 @@ function useStatusBadge() {
 }
 
 function resolveErrorMessage(error: unknown, fallback: string): string {
+  if (isPortalDomainActionError(error)) {
+    return getErrorMessage(error) || fallback;
+  }
+
   if (error instanceof Error && error.message) {
     return error.message;
   }
@@ -82,6 +95,10 @@ function resolveErrorMessage(error: unknown, fallback: string): string {
     }
   }
   return fallback;
+}
+
+function isPortalDomainActionError(value: unknown): value is PortalDomainActionError {
+  return isActionMessageError(value) || isActionPermissionError(value);
 }
 
 const ClientPortalDomainSettings = () => {
@@ -103,6 +120,13 @@ const ClientPortalDomainSettings = () => {
     setPortalLoading(true);
     try {
       const status = await getPortalDomainStatusAction();
+      if (isPortalDomainActionError(status)) {
+        const message = resolveErrorMessage(status, t('clientPortal.domain.messages.loadFailed'));
+        setPortalError(message);
+        toast.error(message);
+        return;
+      }
+
       setPortalStatus(status);
       setDomainInput(status.domain ?? '');
       setPortalError(null);
@@ -133,6 +157,13 @@ const ClientPortalDomainSettings = () => {
     setSubmitting(true);
     try {
       const result = await requestPortalDomainRegistrationAction({ domain: domainInput.trim() });
+      if (isPortalDomainActionError(result)) {
+        const message = resolveErrorMessage(result, t('clientPortal.domain.messages.registerFailed'));
+        setPortalError(message);
+        toast.error(message);
+        return;
+      }
+
       setPortalStatus(result.status);
       setDomainInput(result.status.domain ?? domainInput.trim());
       setPortalError(null);
@@ -151,6 +182,13 @@ const ClientPortalDomainSettings = () => {
     setRefreshing(true);
     try {
       const status = await refreshPortalDomainStatusAction();
+      if (isPortalDomainActionError(status)) {
+        const message = resolveErrorMessage(status, t('clientPortal.domain.messages.refreshFailed'));
+        setPortalError(message);
+        toast.error(message);
+        return;
+      }
+
       setPortalStatus(status);
       setDomainInput(status.domain ?? domainInput);
       setPortalError(null);
@@ -168,6 +206,13 @@ const ClientPortalDomainSettings = () => {
     setRetrying(true);
     try {
       const status = await retryPortalDomainRegistrationAction();
+      if (isPortalDomainActionError(status)) {
+        const message = resolveErrorMessage(status, t('clientPortal.domain.messages.retryFailed'));
+        setPortalError(message);
+        toast.error(message);
+        return;
+      }
+
       setPortalStatus(status);
       setDomainInput(status.domain ?? domainInput);
       setPortalError(null);
@@ -198,6 +243,13 @@ const ClientPortalDomainSettings = () => {
     setSubmitting(true);
     try {
       const status = await disablePortalDomainAction();
+      if (isPortalDomainActionError(status)) {
+        const message = resolveErrorMessage(status, t('clientPortal.domain.messages.disableFailed'));
+        setPortalError(message);
+        toast.error(message);
+        return;
+      }
+
       setPortalStatus(status);
       setDomainInput(status.domain ?? '');
       setPortalError(null);

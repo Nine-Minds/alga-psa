@@ -554,8 +554,7 @@ const QuickAddClient: React.FC<QuickAddClientProps> = ({
       }
       } catch (error: any) {
       console.error("Error creating client:", error);
-      const errorMessage = error.message || "Failed to create client. Please try again.";
-      setError(errorMessage);
+      setError(t('quickAddClient.createFailed', { defaultValue: 'Failed to create client. Please try again.' }));
       setIsSubmitting(false);
     }
   };

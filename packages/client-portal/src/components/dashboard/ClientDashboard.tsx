@@ -39,8 +39,14 @@ import {
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { toBrowserDate } from '../appointments/dateUtils';
 import type { AppointmentSummary } from '../appointments/types';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 type TranslateFn = ReturnType<typeof useTranslation>['t'];
+
+const isReturnedActionError = (
+  value: unknown
+): value is { readonly actionError: string } | { readonly permissionError: string } =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 function activityVisuals(type: RecentActivity['type']): {
   Icon: React.ComponentType<{ className?: string }>;
@@ -210,9 +216,11 @@ export function ClientDashboard({ productCode = 'psa' }: { productCode?: Product
   const [devices, setDevices] = useState<Asset[]>([]);
   const [firstName, setFirstName] = useState<string>('');
   const [error, setError] = useState<boolean>(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   const fetchDashboardData = useCallback(async () => {
     setError(false);
+    setErrorMessage(null);
     try {
       if (isAlgaDeskPortal) {
         const [user, metricsData, activityData] = await Promise.all([
@@ -220,10 +228,15 @@ export function ClientDashboard({ productCode = 'psa' }: { productCode?: Product
           getDashboardMetrics(),
           getRecentActivity().catch(() => [] as RecentActivity[]),
         ]);
+        if (isReturnedActionError(metricsData)) {
+          setErrorMessage(getErrorMessage(metricsData));
+          setError(true);
+          return;
+        }
         setFirstName(user?.first_name || '');
         setMetrics(metricsData);
         setUpcomingAppointments([]);
-        setActivities((activityData || []).filter((activity) => activity.type === 'ticket'));
+        setActivities(isReturnedActionError(activityData) ? [] : (activityData || []).filter((activity) => activity.type === 'ticket'));
         setDevices([]);
         return;
       }
@@ -235,6 +248,11 @@ export function ClientDashboard({ productCode = 'psa' }: { productCode?: Product
         getRecentActivity().catch(() => [] as RecentActivity[]),
         getClientAssets().catch(() => [] as Asset[]),
       ]);
+      if (isReturnedActionError(metricsData)) {
+        setErrorMessage(getErrorMessage(metricsData));
+        setError(true);
+        return;
+      }
       setFirstName(user?.first_name || '');
       setMetrics(metricsData);
 
@@ -246,10 +264,11 @@ export function ClientDashboard({ productCode = 'psa' }: { productCode?: Product
         setUpcomingAppointments([]);
       }
 
-      setActivities(activityData || []);
-      setDevices(devicesData || []);
+      setActivities(isReturnedActionError(activityData) ? [] : activityData || []);
+      setDevices(isReturnedActionError(devicesData) ? [] : devicesData || []);
     } catch (err) {
       console.error('Error loading dashboard:', err);
+      setErrorMessage(null);
       setError(true);
     }
   }, [isAlgaDeskPortal]);
@@ -279,7 +298,7 @@ export function ClientDashboard({ productCode = 'psa' }: { productCode?: Product
         <Card>
           <CardContent className="p-8 pt-8">
             <div className="text-center text-[rgb(var(--color-text-700))]">
-              <p>{t('dashboard.error')}</p>
+              <p>{errorMessage || t('dashboard.error')}</p>
             </div>
           </CardContent>
         </Card>

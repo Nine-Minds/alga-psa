@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
+import { CurrencyInput } from '@alga-psa/ui/components/CurrencyInput';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
@@ -21,6 +22,13 @@ import {
 } from '@alga-psa/ui/components/DropdownMenu';
 import { ChevronDown, Trash2 } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { toast } from 'react-hot-toast';
 import { formatCurrencyFromMinorUnits, toMinorUnits, currencyFractionDigits } from '@alga-psa/core';
 import type {
@@ -50,9 +58,9 @@ import {
  * the server picks the standard (or tenant/client override) template per type.
  */
 const SO_DOCUMENT_TYPES = [
-  { type: 'sales-order', label: 'Order Confirmation', suffix: '' },
-  { type: 'packing-slip', label: 'Packing Slip', suffix: '-packing-slip' },
-  { type: 'pick-list', label: 'Pick List', suffix: '-pick-list' },
+  { type: 'sales-order', suffix: '' },
+  { type: 'packing-slip', suffix: '-packing-slip' },
+  { type: 'pick-list', suffix: '-pick-list' },
 ] as const;
 
 /**
@@ -156,6 +164,7 @@ const emptyForm = (): FormState => ({
 
 export interface SalesOrdersManagerProps {
   initialSos: ISalesOrder[];
+  loadErrorMessage?: string;
   /** Active stock locations for the fulfill dialog's source selector. */
   locations?: IStockLocation[];
   /** Clients for the create-SO client picker. */
@@ -166,16 +175,24 @@ export interface SalesOrdersManagerProps {
   fulfillAndInvoice: FulfillAndInvoiceFn;
   generateInvoice: GenerateInvoiceFn;
   confirmDropShip: ConfirmDropShipFn;
+  defaultCurrencyCode?: string;
 }
+
+type ReturnedActionError = ActionMessageError | ActionPermissionError;
+
+const isReturnedActionError = (value: unknown): value is ReturnedActionError =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 export function SalesOrdersManager({
   initialSos,
+  loadErrorMessage,
   locations = [],
   clients = [],
   services = [],
   fulfillAndInvoice,
   generateInvoice,
   confirmDropShip,
+  defaultCurrencyCode = 'USD',
 }: SalesOrdersManagerProps) {
   const router = useRouter();
   const { t } = useTranslation('features/inventory');
@@ -242,12 +259,23 @@ export function SalesOrdersManager({
 
   const reload = useCallback(async () => {
     try {
-      setSos(await listSalesOrders({}));
+      const result = await listSalesOrders({});
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
+      setSos(result);
     } catch (e) {
       console.error(e);
       toast.error(t('salesOrders.loadError', 'Failed to load sales orders'));
     }
   }, [t]);
+
+  useEffect(() => {
+    if (loadErrorMessage) {
+      toast.error(loadErrorMessage);
+    }
+  }, [loadErrorMessage]);
 
   const openCreate = () => {
     setForm(emptyForm());
@@ -255,13 +283,13 @@ export function SalesOrdersManager({
   };
 
   // Currency is a property of who you bill, not a per-order choice: derive it from the picked
-  // client and render it read-only (falling back to USD only when the client has none).
+  // client and render it read-only (falling back to the tenant default when the client has none).
   const onClientSelect = (clientId: string | null) => {
     const picked = clientId ? clients.find((c) => c.client_id === clientId) : undefined;
     setForm((f) => ({
       ...f,
       client_id: clientId ?? '',
-      currency_code: picked?.default_currency_code || (clientId ? 'USD' : ''),
+      currency_code: picked?.default_currency_code || (clientId ? defaultCurrencyCode : ''),
     }));
   };
 
@@ -276,7 +304,7 @@ export function SalesOrdersManager({
   // seeds the editable unit price from its catalog default_rate (stored in minor units).
   const onServicePicked = (idx: number, serviceId: string) => {
     const svc = serviceById.get(serviceId);
-    const currency = form.currency_code || 'USD';
+    const currency = form.currency_code || defaultCurrencyCode;
     const seededPrice =
       svc?.default_rate != null
         ? String(svc.default_rate / Math.pow(10, currencyFractionDigits(currency)))
@@ -288,7 +316,7 @@ export function SalesOrdersManager({
   const removeLine = (idx: number) =>
     setForm((f) => ({ ...f, lines: f.lines.filter((_, i) => i !== idx) }));
 
-  const currency = form.currency_code || 'USD';
+  const currency = form.currency_code || defaultCurrencyCode;
   // Running total: Σ quantity × unit price, in the resolved currency's minor units. Lines without
   // a picked service or a positive quantity don't contribute.
   const totalMinor = form.lines.reduce((sum, l) => {
@@ -328,7 +356,7 @@ export function SalesOrdersManager({
     }
     setSaving(true);
     try {
-      await createSalesOrder({
+      const result = await createSalesOrder({
         client_id: form.client_id.trim(),
         currency_code: form.currency_code.trim(),
         invoice_mode: form.invoice_mode,
@@ -338,6 +366,10 @@ export function SalesOrdersManager({
         notes: form.notes.trim() || null,
         lines,
       });
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       toast.success(t('salesOrders.created', 'Sales order created'));
       setDialogOpen(false);
       await reload();
@@ -352,7 +384,12 @@ export function SalesOrdersManager({
     if (busy) return;
     setBusy(`confirm:${so.so_id}`);
     try {
-      await confirmSalesOrder(so.so_id);
+      const result = await confirmSalesOrder(so.so_id);
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        await reload();
+        return;
+      }
       toast.success(t('salesOrders.confirmed', 'Sales order confirmed'));
       await reload();
     } catch (e: any) {
@@ -366,7 +403,12 @@ export function SalesOrdersManager({
     if (busy) return;
     setBusy(`cancel:${so.so_id}`);
     try {
-      await cancelSalesOrder(so.so_id);
+      const result = await cancelSalesOrder(so.so_id);
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        await reload();
+        return;
+      }
       toast.success(t('salesOrders.cancelled', 'Sales order cancelled'));
       await reload();
     } catch (e: any) {
@@ -479,7 +521,7 @@ export function SalesOrdersManager({
                   id={`document-so-${rec.so_id}-${d.type}`}
                   onClick={() => downloadSalesOrderDocument(rec.so_id, rec.so_number, d.type, d.suffix, t)}
                 >
-                  {documentLabels[d.type] ?? d.label}
+                  {documentLabels[d.type]}
                 </DropdownMenuItem>
               ))}
               <DropdownMenuSeparator />
@@ -643,14 +685,12 @@ export function SalesOrdersManager({
                       )}
                     </div>
                     <div className="w-32">
-                      <Input
+                      <CurrencyInput
                         id={`sales-order-line-price-${idx}`}
-                        type="number"
-                        min="0"
-                        step="0.01"
+                        currencyCode={currency}
                         className="text-right tabular-nums"
-                        value={line.unit_price}
-                        onChange={(e) => setLine(idx, { unit_price: e.target.value })}
+                        value={line.unit_price ? Number(line.unit_price) : undefined}
+                        onChange={(value) => setLine(idx, { unit_price: value == null ? '' : String(value) })}
                       />
                     </div>
                     <div className="w-8 flex justify-center pt-2">

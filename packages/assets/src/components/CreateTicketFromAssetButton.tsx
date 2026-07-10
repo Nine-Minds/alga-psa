@@ -12,7 +12,13 @@ import { getTicketStatuses } from '@alga-psa/reference-data/actions';
 import { useAssetCrossFeature } from '../context/AssetCrossFeatureContext';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+    handleError,
+    isActionMessageError,
+    isActionPermissionError,
+    type ActionMessageError,
+    type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
@@ -22,6 +28,9 @@ interface CreateTicketFromAssetButtonProps {
     variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost' | 'link';
     size?: 'default' | 'sm' | 'lg' | 'icon';
 }
+
+const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
+    isActionMessageError(value) || isActionPermissionError(value);
 
 export default function CreateTicketFromAssetButton({ asset, defaultBoardId, variant = 'default', size = 'sm' }: CreateTicketFromAssetButtonProps) {
     const { t } = useTranslation('msp/assets');
@@ -187,6 +196,12 @@ export default function CreateTicketFromAssetButton({ asset, defaultBoardId, var
                 asset_id: asset.asset_id,
                 client_id: asset.client_id
             });
+            if (isReturnedActionError(ticket)) {
+                handleError(ticket, t('createTicketFromAssetButton.errors.createFailed', {
+                    defaultValue: 'Failed to create ticket'
+                }));
+                return;
+            }
 
             toast.success(t('createTicketFromAssetButton.success.created', {
                 defaultValue: 'Ticket created successfully'

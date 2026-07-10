@@ -21,6 +21,7 @@ import { parse } from 'date-fns';
 import { getClientByIdForBilling } from '@alga-psa/billing/actions/billingClientsActions';
 import { getRecurringAuthoringPreview } from '../recurringAuthoringPreview';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import {
   useBillingFrequencyOptions,
   useFormatBillingFrequency,
@@ -48,6 +49,10 @@ export function ReviewContractStep({ data }: ReviewContractStepProps) {
 
       try {
         const client = await getClientByIdForBilling(data.client_id);
+        if (isActionMessageError(client) || isActionPermissionError(client)) {
+          setClientName(data.client_id);
+          return;
+        }
         setClientName(client?.client_name || data.client_id);
       } catch (error) {
         console.error('Error loading client name:', error);

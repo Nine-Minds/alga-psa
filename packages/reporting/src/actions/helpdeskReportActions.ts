@@ -4,6 +4,10 @@ import { hasPermission, withAuth } from '@alga-psa/auth';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { IUserWithRoles } from '@alga-psa/types';
 import type { Knex } from 'knex';
+import {
+  reportingActionErrorFrom,
+  type ReportingActionError,
+} from './report-actions/reportingActionErrors';
 
 export type ReportRangeDays = 7 | 30 | 90;
 
@@ -149,17 +153,18 @@ async function assertCanReadReports(
 }
 
 export const getTicketWorkloadReport = withAuth(
-  async (user, { tenant }, rangeDaysInput?: number): Promise<TicketWorkloadReport> => {
-    const rangeDays = normalizeRangeDays(rangeDaysInput);
-    const { knex } = await createTenantKnex();
-    await assertCanReadReports(user, knex);
-    const scopedDb = tenantDb(knex, tenant);
-    const withStatus = (query: Knex.QueryBuilder) =>
-      scopedDb.tenantJoin(query, 'statuses as s', 't.status_id', 's.status_id');
-    const withPriority = (query: Knex.QueryBuilder) =>
-      scopedDb.tenantJoin(query, 'priorities as p', 't.priority_id', 'p.priority_id', { type: 'left' });
-    const withAssignee = (query: Knex.QueryBuilder) =>
-      scopedDb.tenantJoin(query, 'users as u', 't.assigned_to', 'u.user_id', { type: 'left' });
+  async (user, { tenant }, rangeDaysInput?: number): Promise<TicketWorkloadReport | ReportingActionError> => {
+    try {
+      const rangeDays = normalizeRangeDays(rangeDaysInput);
+      const { knex } = await createTenantKnex();
+      await assertCanReadReports(user, knex);
+      const scopedDb = tenantDb(knex, tenant);
+      const withStatus = (query: Knex.QueryBuilder) =>
+        scopedDb.tenantJoin(query, 'statuses as s', 't.status_id', 's.status_id');
+      const withPriority = (query: Knex.QueryBuilder) =>
+        scopedDb.tenantJoin(query, 'priorities as p', 't.priority_id', 'p.priority_id', { type: 'left' });
+      const withAssignee = (query: Knex.QueryBuilder) =>
+        scopedDb.tenantJoin(query, 'users as u', 't.assigned_to', 'u.user_id', { type: 'left' });
 
     const [
       createdRow,
@@ -223,32 +228,38 @@ export const getTicketWorkloadReport = withAuth(
         count: toCount(row.count),
       }));
 
-    return {
-      rangeDays,
-      summary: {
-        created: toCount(createdRow?.count),
-        closed: toCount(closedRow?.count),
-        open: toCount(openRow?.count),
-        awaitingCustomer: toCount(awaitingCustomerRow?.count),
-        awaitingInternal: toCount(awaitingInternalRow?.count),
-      },
-      byStatus: mapBuckets(statusRows),
-      byPriority: mapBuckets(priorityRows),
-      byAssignee: mapBuckets(assigneeRows),
-    };
+      return {
+        rangeDays,
+        summary: {
+          created: toCount(createdRow?.count),
+          closed: toCount(closedRow?.count),
+          open: toCount(openRow?.count),
+          awaitingCustomer: toCount(awaitingCustomerRow?.count),
+          awaitingInternal: toCount(awaitingInternalRow?.count),
+        },
+        byStatus: mapBuckets(statusRows),
+        byPriority: mapBuckets(priorityRows),
+        byAssignee: mapBuckets(assigneeRows),
+      };
+    } catch (error) {
+      const expected = reportingActionErrorFrom(error);
+      if (expected) return expected;
+      throw error;
+    }
   },
 );
 
 export const getTimeUtilizationReport = withAuth(
-  async (user, { tenant }, rangeDaysInput?: number): Promise<TimeUtilizationReport> => {
-    const rangeDays = normalizeRangeDays(rangeDaysInput);
-    const { knex } = await createTenantKnex();
-    await assertCanReadReports(user, knex);
-    const scopedDb = tenantDb(knex, tenant);
-    const withUser = (query: Knex.QueryBuilder) =>
-      scopedDb.tenantJoin(query, 'users as u', 'te.user_id', 'u.user_id', { type: 'left' });
-    const withService = (query: Knex.QueryBuilder) =>
-      scopedDb.tenantJoin(query, 'service_catalog as sc', 'te.service_id', 'sc.service_id', { type: 'left' });
+  async (user, { tenant }, rangeDaysInput?: number): Promise<TimeUtilizationReport | ReportingActionError> => {
+    try {
+      const rangeDays = normalizeRangeDays(rangeDaysInput);
+      const { knex } = await createTenantKnex();
+      await assertCanReadReports(user, knex);
+      const scopedDb = tenantDb(knex, tenant);
+      const withUser = (query: Knex.QueryBuilder) =>
+        scopedDb.tenantJoin(query, 'users as u', 'te.user_id', 'u.user_id', { type: 'left' });
+      const withService = (query: Knex.QueryBuilder) =>
+        scopedDb.tenantJoin(query, 'service_catalog as sc', 'te.service_id', 'sc.service_id', { type: 'left' });
 
     const [summaryRow, userRows, serviceRows, workTypeRows] = await Promise.all([
       scopedDb.table('time_entries')
@@ -291,45 +302,51 @@ export const getTimeUtilizationReport = withAuth(
     const billableHours = minutesToHours((summaryRow as any)?.billable_minutes);
     const nonBillableHours = Math.max(0, Math.round((totalHours - billableHours) * 10) / 10);
 
-    return {
-      rangeDays,
-      summary: {
-        totalHours,
-        billableHours,
-        nonBillableHours,
-        billablePercent: totalHours > 0 ? Math.round((billableHours / totalHours) * 100) : 0,
-        entries: toCount((summaryRow as any)?.entries),
-      },
-      byUser: userRows.map((row) => ({
-        userId: row.user_id,
-        name: row.name || 'Unknown user',
-        totalHours: minutesToHours(row.total_minutes),
-        billableHours: minutesToHours(row.billable_minutes),
-        entries: toCount(row.entries),
-      })),
-      byService: serviceRows.map((row) => ({
-        label: row.label || 'No service',
-        count: minutesToHours(row.count),
-      })),
-      byWorkType: workTypeRows.map((row) => ({
-        label: row.label || 'No work type',
-        count: toCount(row.count),
-      })),
-    };
+      return {
+        rangeDays,
+        summary: {
+          totalHours,
+          billableHours,
+          nonBillableHours,
+          billablePercent: totalHours > 0 ? Math.round((billableHours / totalHours) * 100) : 0,
+          entries: toCount((summaryRow as any)?.entries),
+        },
+        byUser: userRows.map((row) => ({
+          userId: row.user_id,
+          name: row.name || 'Unknown user',
+          totalHours: minutesToHours(row.total_minutes),
+          billableHours: minutesToHours(row.billable_minutes),
+          entries: toCount(row.entries),
+        })),
+        byService: serviceRows.map((row) => ({
+          label: row.label || 'No service',
+          count: minutesToHours(row.count),
+        })),
+        byWorkType: workTypeRows.map((row) => ({
+          label: row.label || 'No work type',
+          count: toCount(row.count),
+        })),
+      };
+    } catch (error) {
+      const expected = reportingActionErrorFrom(error);
+      if (expected) return expected;
+      throw error;
+    }
   },
 );
 
 export const getTeamPerformanceReport = withAuth(
-  async (user, { tenant }, rangeDaysInput?: number): Promise<TeamPerformanceReport> => {
-    const rangeDays = normalizeRangeDays(rangeDaysInput);
-    const { knex } = await createTenantKnex();
-    await assertCanReadReports(user, knex);
-    const scopedDb = tenantDb(knex, tenant);
-    const withAssignee = (query: Knex.QueryBuilder) =>
-      scopedDb.tenantJoin(query, 'users as u', 't.assigned_to', 'u.user_id', { type: 'left' });
-    const withStatus = (query: Knex.QueryBuilder, type: 'inner' | 'left' = 'inner') =>
-      scopedDb.tenantJoin(query, 'statuses as s', 't.status_id', 's.status_id', type === 'left' ? { type: 'left' } : undefined);
-    const userNameExpression = knex.raw("COALESCE(NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''), 'Unassigned') as name");
+  async (user, { tenant }, rangeDaysInput?: number): Promise<TeamPerformanceReport | ReportingActionError> => {
+    try {
+      const rangeDays = normalizeRangeDays(rangeDaysInput);
+      const { knex } = await createTenantKnex();
+      await assertCanReadReports(user, knex);
+      const scopedDb = tenantDb(knex, tenant);
+      const withAssignee = (query: Knex.QueryBuilder) =>
+        scopedDb.tenantJoin(query, 'users as u', 't.assigned_to', 'u.user_id', { type: 'left' });
+      const withStatus = (query: Knex.QueryBuilder, type: 'inner' | 'left' = 'inner') =>
+        scopedDb.tenantJoin(query, 'statuses as s', 't.status_id', 's.status_id', type === 'left' ? { type: 'left' } : undefined);
+      const userNameExpression = knex.raw("COALESCE(NULLIF(TRIM(CONCAT(u.first_name, ' ', u.last_name)), ''), 'Unassigned') as name");
 
     const [createdRows, closedRows, openRows, summaryRow] = await Promise.all([
       withAssignee(scopedDb.table('tickets as t'))
@@ -407,43 +424,49 @@ export const getTeamPerformanceReport = withAuth(
       .sort((left, right) => (right.closedTickets + right.createdTickets + right.openTickets) - (left.closedTickets + left.createdTickets + left.openTickets))
       .slice(0, 10);
 
-    return {
-      rangeDays,
-      summary: {
-        createdTickets: toCount((summaryRow as any)?.created_tickets),
-        closedTickets: toCount((summaryRow as any)?.closed_tickets),
-        openAssignedTickets: toCount((summaryRow as any)?.open_assigned_tickets),
-        activeAssignees: toCount((summaryRow as any)?.active_assignees),
-        avgResolutionHours: toNullableNumber((summaryRow as any)?.avg_resolution_hours),
-      },
-      byAssignee,
-      openByAssignee: openRows.map((row) => ({
-        label: row.name,
-        count: toCount(row.count),
-      })),
-      closedByAssignee: closedRows.map((row) => ({
-        label: row.name,
-        count: toCount(row.count),
-      })),
-    };
+      return {
+        rangeDays,
+        summary: {
+          createdTickets: toCount((summaryRow as any)?.created_tickets),
+          closedTickets: toCount((summaryRow as any)?.closed_tickets),
+          openAssignedTickets: toCount((summaryRow as any)?.open_assigned_tickets),
+          activeAssignees: toCount((summaryRow as any)?.active_assignees),
+          avgResolutionHours: toNullableNumber((summaryRow as any)?.avg_resolution_hours),
+        },
+        byAssignee,
+        openByAssignee: openRows.map((row) => ({
+          label: row.name,
+          count: toCount(row.count),
+        })),
+        closedByAssignee: closedRows.map((row) => ({
+          label: row.name,
+          count: toCount(row.count),
+        })),
+      };
+    } catch (error) {
+      const expected = reportingActionErrorFrom(error);
+      if (expected) return expected;
+      throw error;
+    }
   },
 );
 
 export const getEmailChannelHealthReport = withAuth(
-  async (user, { tenant }, rangeDaysInput?: number): Promise<EmailChannelHealthReport> => {
-    const rangeDays = normalizeRangeDays(rangeDaysInput);
-    const { knex } = await createTenantKnex();
-    await assertCanReadReports(user, knex);
-    const scopedDb = tenantDb(knex, tenant);
-    const withTicketFromProcessedMessage = (query: Knex.QueryBuilder) =>
-      scopedDb.tenantJoin(query, 'tickets as t', 'epm.ticket_id', 't.ticket_id', { type: 'left' });
-    const withRecentProcessedMessages = (query: Knex.QueryBuilder) =>
-      scopedDb.tenantJoin(query, 'email_processed_messages as epm', 'ep.id', 'epm.provider_id', {
-        type: 'left',
-        on: (join) => {
-          join.andOn('epm.processed_at', '>=', knex.raw(`NOW() - INTERVAL '${rangeDays} days'`));
-        },
-      });
+  async (user, { tenant }, rangeDaysInput?: number): Promise<EmailChannelHealthReport | ReportingActionError> => {
+    try {
+      const rangeDays = normalizeRangeDays(rangeDaysInput);
+      const { knex } = await createTenantKnex();
+      await assertCanReadReports(user, knex);
+      const scopedDb = tenantDb(knex, tenant);
+      const withTicketFromProcessedMessage = (query: Knex.QueryBuilder) =>
+        scopedDb.tenantJoin(query, 'tickets as t', 'epm.ticket_id', 't.ticket_id', { type: 'left' });
+      const withRecentProcessedMessages = (query: Knex.QueryBuilder) =>
+        scopedDb.tenantJoin(query, 'email_processed_messages as epm', 'ep.id', 'epm.provider_id', {
+          type: 'left',
+          on: (join) => {
+            join.andOn('epm.processed_at', '>=', knex.raw(`NOW() - INTERVAL '${rangeDays} days'`));
+          },
+        });
 
     const [providerRows, summaryRow, statusRows, channelRows] = await Promise.all([
       scopedDb.table('email_providers')
@@ -503,50 +526,56 @@ export const getEmailChannelHealthReport = withAuth(
     const healthyChannels = providerRows.filter((row) => row.is_active && row.status === 'connected').length;
     const problemChannels = providerRows.filter((row) => row.is_active && row.status !== 'connected').length;
 
-    return {
-      rangeDays,
-      summary: {
-        totalChannels,
-        activeChannels,
-        healthyChannels,
-        problemChannels,
-        processedEmails: toCount((summaryRow as any)?.processed_emails),
-        ticketsCreated: toCount((summaryRow as any)?.tickets_created),
-        failedEmails: toCount((summaryRow as any)?.failed_emails),
-        avgProcessingMinutes: toNullableNumber((summaryRow as any)?.avg_processing_minutes),
-        avgTicketCreationMinutes: toNullableNumber((summaryRow as any)?.avg_ticket_creation_minutes),
-      },
-      byStatus: statusRows.map((row) => ({
-        label: row.label || 'unknown',
-        count: toCount(row.count),
-      })),
-      channels: channelRows.map((row) => ({
-        providerId: row.id,
-        providerName: row.provider_name || row.mailbox || 'Unnamed channel',
-        mailbox: row.mailbox || '',
-        providerType: row.provider_type || 'unknown',
-        isActive: Boolean(row.is_active),
-        status: row.status || 'unknown',
-        processedEmails: toCount(row.processed_emails),
-        ticketsCreated: toCount(row.tickets_created),
-        failedEmails: toCount(row.failed_emails),
-        avgTicketCreationMinutes: toNullableNumber(row.avg_ticket_creation_minutes),
-        lastSyncAt: toIsoString(row.last_sync_at),
-      })),
-    };
+      return {
+        rangeDays,
+        summary: {
+          totalChannels,
+          activeChannels,
+          healthyChannels,
+          problemChannels,
+          processedEmails: toCount((summaryRow as any)?.processed_emails),
+          ticketsCreated: toCount((summaryRow as any)?.tickets_created),
+          failedEmails: toCount((summaryRow as any)?.failed_emails),
+          avgProcessingMinutes: toNullableNumber((summaryRow as any)?.avg_processing_minutes),
+          avgTicketCreationMinutes: toNullableNumber((summaryRow as any)?.avg_ticket_creation_minutes),
+        },
+        byStatus: statusRows.map((row) => ({
+          label: row.label || 'unknown',
+          count: toCount(row.count),
+        })),
+        channels: channelRows.map((row) => ({
+          providerId: row.id,
+          providerName: row.provider_name || row.mailbox || 'Unnamed channel',
+          mailbox: row.mailbox || '',
+          providerType: row.provider_type || 'unknown',
+          isActive: Boolean(row.is_active),
+          status: row.status || 'unknown',
+          processedEmails: toCount(row.processed_emails),
+          ticketsCreated: toCount(row.tickets_created),
+          failedEmails: toCount(row.failed_emails),
+          avgTicketCreationMinutes: toNullableNumber(row.avg_ticket_creation_minutes),
+          lastSyncAt: toIsoString(row.last_sync_at),
+        })),
+      };
+    } catch (error) {
+      const expected = reportingActionErrorFrom(error);
+      if (expected) return expected;
+      throw error;
+    }
   },
 );
 
 export const getTicketAgingReport = withAuth(
-  async (user, { tenant }, rangeDaysInput?: number): Promise<TicketAgingReport> => {
-    const rangeDays = normalizeRangeDays(rangeDaysInput);
-    const { knex } = await createTenantKnex();
-    await assertCanReadReports(user, knex);
-    const scopedDb = tenantDb(knex, tenant);
-    const withStatus = (query: Knex.QueryBuilder) =>
-      scopedDb.tenantJoin(query, 'statuses as s', 't.status_id', 's.status_id');
-    const withClient = (query: Knex.QueryBuilder) =>
-      scopedDb.tenantJoin(query, 'clients as c', 't.client_id', 'c.client_id', { type: 'left' });
+  async (user, { tenant }, rangeDaysInput?: number): Promise<TicketAgingReport | ReportingActionError> => {
+    try {
+      const rangeDays = normalizeRangeDays(rangeDaysInput);
+      const { knex } = await createTenantKnex();
+      await assertCanReadReports(user, knex);
+      const scopedDb = tenantDb(knex, tenant);
+      const withStatus = (query: Knex.QueryBuilder) =>
+        scopedDb.tenantJoin(query, 'statuses as s', 't.status_id', 's.status_id');
+      const withClient = (query: Knex.QueryBuilder) =>
+        scopedDb.tenantJoin(query, 'clients as c', 't.client_id', 'c.client_id', { type: 'left' });
 
     const [agingRows, responseRows, oldestRows] = await Promise.all([
       withStatus(scopedDb.table('tickets as t'))
@@ -607,28 +636,33 @@ export const getTicketAgingReport = withAuth(
       age_days: number | string | null;
     }>;
 
-    return {
-      rangeDays,
-      summary: {
-        open: toCount(aging?.open_count),
-        under2Days: toCount(aging?.under_2_days),
-        days2To7: toCount(aging?.days_2_to_7),
-        days8To30: toCount(aging?.days_8_to_30),
-        over30Days: toCount(aging?.over_30_days),
-      },
-      byAge,
-      byResponseState: responseRows.map((row) => ({
-        label: row.label,
-        count: toCount(row.count),
-      })),
-      oldestOpenTickets: typedOldestRows.map((row) => ({
-        ticketId: row.ticket_id,
-        ticketNumber: String(row.ticket_number ?? ''),
-        title: row.title ?? '',
-        clientName: row.client_name ?? '',
-        enteredAt: toIsoString(row.entered_at),
-        ageDays: toCount(row.age_days),
-      })),
-    };
+      return {
+        rangeDays,
+        summary: {
+          open: toCount(aging?.open_count),
+          under2Days: toCount(aging?.under_2_days),
+          days2To7: toCount(aging?.days_2_to_7),
+          days8To30: toCount(aging?.days_8_to_30),
+          over30Days: toCount(aging?.over_30_days),
+        },
+        byAge,
+        byResponseState: responseRows.map((row) => ({
+          label: row.label,
+          count: toCount(row.count),
+        })),
+        oldestOpenTickets: typedOldestRows.map((row) => ({
+          ticketId: row.ticket_id,
+          ticketNumber: String(row.ticket_number ?? ''),
+          title: row.title ?? '',
+          clientName: row.client_name ?? '',
+          enteredAt: toIsoString(row.entered_at),
+          ageDays: toCount(row.age_days),
+        })),
+      };
+    } catch (error) {
+      const expected = reportingActionErrorFrom(error);
+      if (expected) return expected;
+      throw error;
+    }
   },
 );

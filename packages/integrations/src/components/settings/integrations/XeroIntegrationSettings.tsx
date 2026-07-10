@@ -111,7 +111,7 @@ export default function XeroIntegrationSettings() {
       });
 
       if (!result.success) {
-        setError(t('integrations.xero.settings.errors.saveCredentials', { defaultValue: 'Failed to save Xero credentials.' }));
+        setError(result.error ?? t('integrations.xero.settings.errors.saveCredentials', { defaultValue: 'Failed to save Xero credentials.' }));
         return;
       }
 
@@ -132,7 +132,7 @@ export default function XeroIntegrationSettings() {
     try {
       const result = await disconnectXero();
       if (!result.success) {
-        setError(t('integrations.xero.settings.errors.disconnect', { defaultValue: 'Failed to disconnect Xero.' }));
+        setError(result.error ?? t('integrations.xero.settings.errors.disconnect', { defaultValue: 'Failed to disconnect Xero.' }));
         return;
       }
 

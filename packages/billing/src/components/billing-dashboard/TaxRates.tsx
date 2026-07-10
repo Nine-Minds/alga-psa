@@ -29,6 +29,11 @@ import { TaxRateDetailPanel } from './TaxRateDetailPanel';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 const TaxRates: React.FC = () => {
   const { t } = useTranslation('msp/service-catalog');
@@ -85,6 +90,11 @@ const TaxRates: React.FC = () => {
     setIsLoading(true);
     try {
       const rates = await getTaxRates();
+      if (isActionMessageError(rates) || isActionPermissionError(rates)) {
+        setTaxRates([]);
+        setError(getErrorMessage(rates));
+        return;
+      }
       setTaxRates(rates);
       setError(null);
     } catch (error) {
@@ -100,6 +110,11 @@ const TaxRates: React.FC = () => {
    try {
        setIsLoadingTaxRegions(true);
        const regions = await getActiveTaxRegions();
+       if (isActionMessageError(regions) || isActionPermissionError(regions)) {
+         setErrorTaxRegions(getErrorMessage(regions));
+         setTaxRegions([]);
+         return;
+       }
        setTaxRegions(regions);
        setErrorTaxRegions(null);
    } catch (error) {
@@ -145,13 +160,21 @@ const TaxRates: React.FC = () => {
     try {
       setValidationErrors([]);
       if (isEditing) {
-        await updateTaxRate(currentTaxRate as ITaxRate);
+        const result = await updateTaxRate(currentTaxRate as ITaxRate);
+        if (isActionMessageError(result) || isActionPermissionError(result)) {
+          setError(getErrorMessage(result));
+          return;
+        }
       } else {
         const newTaxRateWithId: ITaxRate = {
           ...currentTaxRate,
           tax_rate_id: uuidv4(),
         } as ITaxRate;
-        await addTaxRate(newTaxRateWithId);
+        const result = await addTaxRate(newTaxRateWithId);
+        if (isActionMessageError(result) || isActionPermissionError(result)) {
+          setError(getErrorMessage(result));
+          return;
+        }
       }
       setIsDialogOpen(false);
       setCurrentTaxRate({}); // Reverted: Clear state

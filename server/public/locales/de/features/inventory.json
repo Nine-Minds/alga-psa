@@ -744,6 +744,7 @@
     "addPurchaseOrder": "Bestellung hinzufügen",
     "allVendors": "Alle Lieferanten",
     "amountOnOrder": "{{amount}} bestellt",
+    "mixedCurrencyOnOrder": "{{count}} Bestellungen über mehrere Währungen hinweg bestellt",
     "cancelConfirm": "Möchten Sie die Bestellung {{poNumber}} wirklich stornieren? Dies kann nicht rückgängig gemacht werden.",
     "cancelFailed": "Die Bestellung konnte nicht storniert werden.",
     "cancelTitle": "Bestellung stornieren",
@@ -963,6 +964,15 @@
     "emailFailed": "Die Bestätigung konnte nicht per E-Mail gesendet werden.",
     "emailSuccess": "Bestätigung per E-Mail an {{recipients}} gesendet",
     "enterSerial": "Geben Sie mindestens eine Seriennummer ein.",
+    "errors": {
+      "documentGenerationFailed": "Das Dokument konnte nicht erstellt werden",
+      "downloadPermissionDenied": "Keine Berechtigung: Kundenauftragsdokumente können nicht heruntergeladen werden",
+      "emailConfirmationFailed": "Die Bestätigung konnte nicht per E-Mail gesendet werden",
+      "emailPermissionDenied": "Keine Berechtigung: Kundenauftragsdokumente können nicht per E-Mail gesendet werden",
+      "emailSendFailed": "E-Mail konnte nicht gesendet werden.",
+      "noRecipientEmail": "Für diesen Kunden ist keine Empfänger-E-Mail hinterlegt.",
+      "notFound": "Kundenauftrag nicht gefunden"
+    },
     "fields": {
       "allocationMode": "Zuordnungsmodus",
       "clientPoNumber": "Client PO number",
@@ -1056,7 +1066,8 @@
     "title": "Kundenaufträge",
     "total": "Total",
     "unassignedBackorder": "{{count}} rückständige Position(en) haben keinen bevorzugten Lieferanten — erstellen Sie diese POs manuell.",
-    "unnamedService": "Unnamed"
+    "unnamedService": "Unnamed",
+    "notFound": "Sales order not found."
   },
   "stock": {
     "actions": {
@@ -1234,6 +1245,7 @@
     "title": "Umlagerungen",
     "toLocation": "Zielstandort",
     "vanLoadList": "Fahrzeug-Ladeliste",
+    "vanLoadListReplenishment": "Auffüllung der Fahrzeug-Ladeliste",
     "status": {
       "dispatched": "Versendet",
       "received": "Empfangen",

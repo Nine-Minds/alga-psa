@@ -9,6 +9,7 @@ import { publishEvent } from '@alga-psa/event-bus/publishers';
 import type { IStatus } from '@alga-psa/types';
 
 import Status from '../../models/status';
+import { boardActionErrorFrom, type BoardActionError } from './boardActionErrors';
 
 type StatusSearchEventType = 'STATUS_CREATED' | 'STATUS_UPDATED' | 'STATUS_DELETED';
 
@@ -314,12 +315,20 @@ export async function saveBoardTicketStatusesForBoard(
   return persistBoardTicketStatuses(trx, tenant, boardId, userId, statuses);
 }
 
-export const getBoardTicketStatuses = withAuth(async (_user, { tenant }, boardId: string): Promise<IStatus[]> => {
+export const getBoardTicketStatuses = withAuth(async (_user, { tenant }, boardId: string): Promise<IStatus[] | BoardActionError> => {
   const { knex: db } = await createTenantKnex();
-  return withTransaction(db, async (trx: Knex.Transaction) => {
-    await ensureBoardExists(trx, tenant, boardId);
-    return Status.getTicketStatusesByBoard(trx, tenant, boardId);
-  });
+  try {
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      await ensureBoardExists(trx, tenant, boardId);
+      return Status.getTicketStatusesByBoard(trx, tenant, boardId);
+    });
+  } catch (error) {
+    const expected = boardActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
+  }
 });
 
 export const saveBoardTicketStatuses = withAuth(async (
@@ -327,11 +336,19 @@ export const saveBoardTicketStatuses = withAuth(async (
   { tenant },
   boardId: string,
   statuses: BoardTicketStatusInput[]
-): Promise<IStatus[]> => {
+): Promise<IStatus[] | BoardActionError> => {
   const { knex: db } = await createTenantKnex();
-  return withTransaction(db, async (trx: Knex.Transaction) => (
-    persistBoardTicketStatuses(trx, tenant, boardId, user.user_id, statuses)
-  ));
+  try {
+    return await withTransaction(db, async (trx: Knex.Transaction) => (
+      persistBoardTicketStatuses(trx, tenant, boardId, user.user_id, statuses)
+    ));
+  } catch (error) {
+    const expected = boardActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
+  }
 });
 
 export const createBoardTicketStatus = withAuth(async (
@@ -339,39 +356,47 @@ export const createBoardTicketStatus = withAuth(async (
   { tenant },
   boardId: string,
   statusData: BoardTicketStatusInput
-): Promise<IStatus> => {
+): Promise<IStatus | BoardActionError> => {
   const { knex: db } = await createTenantKnex();
-  const createdStatus = await withTransaction(db, async (trx: Knex.Transaction) => {
-    const existingStatuses = await Status.getTicketStatusesByBoard(trx, tenant, boardId);
-    const existingStatusIds = new Set(existingStatuses.map((status) => status.status_id));
-    const nextStatuses: BoardTicketStatusInput[] = existingStatuses.map((status) => ({
-      status_id: status.status_id,
-      name: status.name,
-      is_closed: status.is_closed,
-      is_default: statusData.is_default ? false : Boolean(status.is_default),
-      order_number: status.order_number,
-      color: status.color ?? null,
-      icon: status.icon ?? null,
-    }));
+  try {
+    const createdStatus = await withTransaction(db, async (trx: Knex.Transaction) => {
+      const existingStatuses = await Status.getTicketStatusesByBoard(trx, tenant, boardId);
+      const existingStatusIds = new Set(existingStatuses.map((status) => status.status_id));
+      const nextStatuses: BoardTicketStatusInput[] = existingStatuses.map((status) => ({
+        status_id: status.status_id,
+        name: status.name,
+        is_closed: status.is_closed,
+        is_default: statusData.is_default ? false : Boolean(status.is_default),
+        order_number: status.order_number,
+        color: status.color ?? null,
+        icon: status.icon ?? null,
+      }));
 
-    nextStatuses.push({
-      ...statusData,
-      is_default: statusData.is_default ?? existingStatuses.length === 0,
-      order_number: statusData.order_number ?? ((existingStatuses.length + 1) * 10),
+      nextStatuses.push({
+        ...statusData,
+        is_default: statusData.is_default ?? existingStatuses.length === 0,
+        order_number: statusData.order_number ?? ((existingStatuses.length + 1) * 10),
+      });
+
+      const savedStatuses = await persistBoardTicketStatuses(trx, tenant, boardId, user.user_id, nextStatuses);
+      const created = savedStatuses.find((status) => !existingStatusIds.has(status.status_id));
+
+      if (!created) {
+        throw new Error('Board ticket status insert completed without returning a new status.');
+      }
+
+      return created;
     });
 
-    const savedStatuses = await persistBoardTicketStatuses(trx, tenant, boardId, user.user_id, nextStatuses);
-    const created = savedStatuses.find((status) => !existingStatusIds.has(status.status_id));
-
-    if (!created) {
-      throw new Error('Failed to create board ticket status');
+    await publishStatusSearchEvent('STATUS_CREATED', tenant, createdStatus.status_id, boardId, user.user_id);
+    return createdStatus;
+  } catch (error) {
+    const expected = boardActionErrorFrom(error);
+    if (expected) {
+      return expected;
     }
-
-    return created;
-  });
-
-  await publishStatusSearchEvent('STATUS_CREATED', tenant, createdStatus.status_id, boardId, user.user_id);
-  return createdStatus;
+    throw error;
+  }
 });
 
 export const updateBoardTicketStatus = withAuth(async (
@@ -380,66 +405,74 @@ export const updateBoardTicketStatus = withAuth(async (
   boardId: string,
   statusId: string,
   statusData: Partial<BoardTicketStatusInput>
-): Promise<IStatus> => {
-  if (statusData.status_id && statusData.status_id !== statusId) {
-    throw new Error('Ticket statuses cannot be moved or replaced implicitly.');
-  }
-
-  const nextBoardId = (statusData as Partial<IStatus>).board_id;
-  if (nextBoardId && nextBoardId !== boardId) {
-    throw new Error('Ticket statuses cannot be moved across boards implicitly.');
-  }
-
-  const nextStatusType = (statusData as Partial<IStatus>).status_type;
-  if (nextStatusType && nextStatusType !== 'ticket') {
-    throw new Error('Board ticket status actions only support ticket statuses.');
-  }
-
+): Promise<IStatus | BoardActionError> => {
   const { knex: db } = await createTenantKnex();
-  const updatedStatus = await withTransaction(db, async (trx: Knex.Transaction) => {
-    const existingStatuses = await Status.getTicketStatusesByBoard(trx, tenant, boardId);
-    const currentStatus = existingStatuses.find((status) => status.status_id === statusId);
-
-    if (!currentStatus) {
-      throw new Error('Ticket status not found on the selected board.');
+  try {
+    if (statusData.status_id && statusData.status_id !== statusId) {
+      throw new Error('Ticket statuses cannot be moved or replaced implicitly.');
     }
 
-    const nextStatuses = existingStatuses.map((status) => {
-      if (status.status_id === statusId) {
-        return {
-          status_id: status.status_id,
-          name: statusData.name ?? status.name,
-          is_closed: statusData.is_closed ?? status.is_closed,
-          is_default: statusData.is_default ?? Boolean(status.is_default),
-          order_number: statusData.order_number ?? status.order_number,
-          color: statusData.color ?? status.color ?? null,
-          icon: statusData.icon ?? status.icon ?? null,
-        };
+    const nextBoardId = (statusData as Partial<IStatus>).board_id;
+    if (nextBoardId && nextBoardId !== boardId) {
+      throw new Error('Ticket statuses cannot be moved across boards implicitly.');
+    }
+
+    const nextStatusType = (statusData as Partial<IStatus>).status_type;
+    if (nextStatusType && nextStatusType !== 'ticket') {
+      throw new Error('Board ticket status actions only support ticket statuses.');
+    }
+
+    const updatedStatus = await withTransaction(db, async (trx: Knex.Transaction) => {
+      const existingStatuses = await Status.getTicketStatusesByBoard(trx, tenant, boardId);
+      const currentStatus = existingStatuses.find((status) => status.status_id === statusId);
+
+      if (!currentStatus) {
+        throw new Error('Ticket status not found on the selected board.');
       }
 
-      return {
-        status_id: status.status_id,
-        name: status.name,
-        is_closed: status.is_closed,
-        is_default: statusData.is_default ? false : Boolean(status.is_default),
-        order_number: status.order_number,
-        color: status.color ?? null,
-        icon: status.icon ?? null,
-      };
+      const nextStatuses = existingStatuses.map((status) => {
+        if (status.status_id === statusId) {
+          return {
+            status_id: status.status_id,
+            name: statusData.name ?? status.name,
+            is_closed: statusData.is_closed ?? status.is_closed,
+            is_default: statusData.is_default ?? Boolean(status.is_default),
+            order_number: statusData.order_number ?? status.order_number,
+            color: statusData.color ?? status.color ?? null,
+            icon: statusData.icon ?? status.icon ?? null,
+          };
+        }
+
+        return {
+          status_id: status.status_id,
+          name: status.name,
+          is_closed: status.is_closed,
+          is_default: statusData.is_default ? false : Boolean(status.is_default),
+          order_number: status.order_number,
+          color: status.color ?? null,
+          icon: status.icon ?? null,
+        };
+      });
+
+      const savedStatuses = await persistBoardTicketStatuses(trx, tenant, boardId, user.user_id, nextStatuses);
+      const updated = savedStatuses.find((status) => status.status_id === statusId);
+
+      if (!updated) {
+        throw new Error('Board ticket status update completed without returning the updated status.');
+      }
+
+      return updated;
     });
 
-    const savedStatuses = await persistBoardTicketStatuses(trx, tenant, boardId, user.user_id, nextStatuses);
-    const updated = savedStatuses.find((status) => status.status_id === statusId);
-
-    if (!updated) {
-      throw new Error('Failed to update board ticket status');
+    await publishStatusSearchEvent('STATUS_UPDATED', tenant, updatedStatus.status_id, boardId, user.user_id);
+    return updatedStatus;
+  } catch (error) {
+    const expected = boardActionErrorFrom(error);
+    if (expected) {
+      return expected;
     }
-
-    return updated;
-  });
-
-  await publishStatusSearchEvent('STATUS_UPDATED', tenant, updatedStatus.status_id, boardId, user.user_id);
-  return updatedStatus;
+    throw error;
+  }
 });
 
 export const deleteBoardTicketStatus = withAuth(async (
@@ -447,29 +480,37 @@ export const deleteBoardTicketStatus = withAuth(async (
   { tenant },
   boardId: string,
   statusId: string
-): Promise<IStatus[]> => {
+): Promise<IStatus[] | BoardActionError> => {
   const { knex: db } = await createTenantKnex();
-  const remainingStatuses = await withTransaction(db, async (trx: Knex.Transaction) => {
-    const existingStatuses = await Status.getTicketStatusesByBoard(trx, tenant, boardId);
-    if (!existingStatuses.some((status) => status.status_id === statusId)) {
-      throw new Error('Ticket status not found on the selected board.');
+  try {
+    const remainingStatuses = await withTransaction(db, async (trx: Knex.Transaction) => {
+      const existingStatuses = await Status.getTicketStatusesByBoard(trx, tenant, boardId);
+      if (!existingStatuses.some((status) => status.status_id === statusId)) {
+        throw new Error('Ticket status not found on the selected board.');
+      }
+
+      const nextStatuses = existingStatuses
+        .filter((status) => status.status_id !== statusId)
+        .map((status) => ({
+          status_id: status.status_id,
+          name: status.name,
+          is_closed: status.is_closed,
+          is_default: Boolean(status.is_default),
+          order_number: status.order_number,
+          color: status.color ?? null,
+          icon: status.icon ?? null,
+        }));
+
+      return persistBoardTicketStatuses(trx, tenant, boardId, user.user_id, nextStatuses);
+    });
+
+    await publishStatusSearchEvent('STATUS_DELETED', tenant, statusId, boardId, user.user_id);
+    return remainingStatuses;
+  } catch (error) {
+    const expected = boardActionErrorFrom(error);
+    if (expected) {
+      return expected;
     }
-
-    const nextStatuses = existingStatuses
-      .filter((status) => status.status_id !== statusId)
-      .map((status) => ({
-        status_id: status.status_id,
-        name: status.name,
-        is_closed: status.is_closed,
-        is_default: Boolean(status.is_default),
-        order_number: status.order_number,
-        color: status.color ?? null,
-        icon: status.icon ?? null,
-      }));
-
-    return persistBoardTicketStatuses(trx, tenant, boardId, user.user_id, nextStatuses);
-  });
-
-  await publishStatusSearchEvent('STATUS_DELETED', tenant, statusId, boardId, user.user_id);
-  return remainingStatuses;
+    throw error;
+  }
 });

@@ -1344,7 +1344,8 @@
         "makeDefault": "Make default",
         "noDefault": "No default",
         "saving": "Saving…",
-        "undepositedFunds": "Undeposited Funds (default)"
+        "undepositedFunds": "Undeposited Funds (default)",
+        "catalogLoadError": "Failed to load QuickBooks sync configuration options."
       }
     },
     "rmm": {
@@ -1872,6 +1873,11 @@
         },
         "descriptionCe": "Register advisory domains for MSP login SSO discovery. Ownership verification is not enforced in Community Edition, and unmanaged domains fall back to Nine Minds app-level providers.",
         "descriptionEe": "Manage domain claim lifecycle for MSP login SSO provider discovery. Unclaimed or ineligible domains fall back to Nine Minds app-level providers.",
+        "moved": {
+          "title": "MSP SSO Login Domains",
+          "body": "Single sign-on settings, including login-domain claims, have moved to Security → Single Sign-On.",
+          "cta": "Open Single Sign-On settings"
+        },
         "dnsHost": "Host:",
         "dnsInstructions": "Add DNS TXT record, then click Verify:",
         "dnsValue": "Value:",

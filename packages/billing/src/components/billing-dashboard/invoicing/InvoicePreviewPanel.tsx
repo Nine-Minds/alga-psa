@@ -33,6 +33,11 @@ import { resolveTemplatePrintSettingsFromAst } from '../../../lib/invoice-templa
 import DraftInvoiceDetailsCard, { type DraftInvoiceDetailsSummary } from './DraftInvoiceDetailsCard';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+import {
   queueInvoiceSync,
   runAccountingSyncNow,
   resolveAccountingDriftReExport,
@@ -104,6 +109,8 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
   const [voidLoading, setVoidLoading] = useState(false);
   const [applyCreditOpen, setApplyCreditOpen] = useState(false);
   const containerRef = React.useRef<HTMLDivElement>(null);
+  const isReturnedActionError = (value: unknown) =>
+    isActionMessageError(value) || isActionPermissionError(value);
 
   // QBO sync status for this invoice
   const syncIds = invoiceId ? [invoiceId] : [];
@@ -175,6 +182,12 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
           getResolvedInvoiceTemplateId(invoiceId),
         ]);
 
+        if (isReturnedActionError(viewModel)) {
+          throw new Error(getErrorMessage(viewModel));
+        }
+        if (isReturnedActionError(summary)) {
+          throw new Error(getErrorMessage(summary));
+        }
         if (!viewModel) {
           throw new Error(`Invoice data for ID ${invoiceId} not found.`);
         }
@@ -335,7 +348,11 @@ const InvoicePreviewPanel: React.FC<InvoicePreviewPanelProps> = ({
     setVoidError(null);
     setVoidLoading(true);
     try {
-      await voidInvoice(invoiceId, voidReason);
+      const result = await voidInvoice(invoiceId, voidReason);
+      if (!result.success) {
+        setVoidError((result as { error?: string }).error ?? null);
+        return;
+      }
       setVoidDialogOpen(false);
       setVoidReason('');
       setPreviewRefreshCounter((c) => c + 1);

@@ -9,10 +9,45 @@ import {
   addMaterial,
   deleteMaterial,
   listMaterials,
+  MaterialValidationError,
   queryAvailableStockUnits,
   queryCatalogPickerItems,
   queryServicePrices,
 } from '@alga-psa/inventory/lib';
+import { InsufficientStockError } from '@alga-psa/inventory/lib/consume';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+type ProjectMaterialActionError = ActionMessageError | ActionPermissionError;
+
+function projectMaterialActionErrorFrom(error: unknown): ProjectMaterialActionError | null {
+  if (error instanceof Error) {
+    if (error.message.includes('Permission denied')) {
+      return permissionError(error.message);
+    }
+    if (
+      error instanceof MaterialValidationError ||
+      error instanceof InsufficientStockError ||
+      error.message === 'Cannot delete a billed material.'
+    ) {
+      return actionError(error.message);
+    }
+  }
+
+  const dbError = error as { code?: string; column?: string };
+  if (dbError?.code === '23502') {
+    return actionError(`Missing required material field${dbError.column ? `: ${dbError.column}` : ''}.`);
+  }
+  if (dbError?.code === '23503') {
+    return actionError('The selected project, client, product, or stock unit is no longer valid. Please refresh and try again.');
+  }
+
+  return null;
+}
 
 export interface CatalogPickerSearchOptions {
   search?: string;
@@ -57,12 +92,20 @@ export const listProjectMaterials = withAuth(async (
   user,
   { tenant },
   projectId: string
-): Promise<IProjectMaterial[]> => {
-  if (!await hasPermission(user, 'project', 'read')) {
-    throw new Error('Permission denied: project read required');
+): Promise<IProjectMaterial[] | ProjectMaterialActionError> => {
+  try {
+    if (!await hasPermission(user, 'project', 'read')) {
+      return permissionError('Permission denied: project read required');
+    }
+    const { knex: db } = await createTenantKnex();
+    return (await listMaterials(db, tenant, 'project', projectId)) as IProjectMaterial[];
+  } catch (error) {
+    const expected = projectMaterialActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
   }
-  const { knex: db } = await createTenantKnex();
-  return (await listMaterials(db, tenant, 'project', projectId)) as IProjectMaterial[];
 });
 
 export const addProjectMaterial = withAuth(async (
@@ -78,17 +121,25 @@ export const addProjectMaterial = withAuth(async (
     description?: string | null;
     unit_id?: string | null; // serialized: the picked stock unit to deliver
   }
-): Promise<IProjectMaterial> => {
-  if (!await hasPermission(user, 'project', 'update')) {
-    throw new Error('Permission denied: project update required');
+): Promise<IProjectMaterial | ProjectMaterialActionError> => {
+  try {
+    if (!await hasPermission(user, 'project', 'update')) {
+      return permissionError('Permission denied: project update required');
+    }
+    const { knex: db } = await createTenantKnex();
+    return (await addMaterial(
+      db,
+      tenant,
+      { ...input, parent_type: 'project', parent_id: input.project_id },
+      (user as any)?.user_id ?? null,
+    )) as IProjectMaterial;
+  } catch (error) {
+    const expected = projectMaterialActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
   }
-  const { knex: db } = await createTenantKnex();
-  return (await addMaterial(
-    db,
-    tenant,
-    { ...input, parent_type: 'project', parent_id: input.project_id },
-    (user as any)?.user_id ?? null,
-  )) as IProjectMaterial;
 });
 
 /** In-stock serialized units available to pick when adding a serialized product as a material. */
@@ -108,10 +159,18 @@ export const deleteProjectMaterial = withAuth(async (
   user,
   { tenant },
   projectMaterialId: string
-): Promise<void> => {
-  if (!await hasPermission(user, 'project', 'update')) {
-    throw new Error('Permission denied: project update required');
+): Promise<void | ProjectMaterialActionError> => {
+  try {
+    if (!await hasPermission(user, 'project', 'update')) {
+      return permissionError('Permission denied: project update required');
+    }
+    const { knex: db } = await createTenantKnex();
+    await deleteMaterial(db, tenant, 'project', projectMaterialId, (user as any)?.user_id ?? null);
+  } catch (error) {
+    const expected = projectMaterialActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
   }
-  const { knex: db } = await createTenantKnex();
-  await deleteMaterial(db, tenant, 'project', projectMaterialId, (user as any)?.user_id ?? null);
 });

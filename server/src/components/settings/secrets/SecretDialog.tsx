@@ -13,7 +13,11 @@ import {
 } from '@alga-psa/tenancy/actions/tenant-secret-actions';
 import type { TenantSecretMetadata } from '@alga-psa/workflows/secrets';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { Eye, EyeOff, AlertCircle } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
@@ -23,6 +27,9 @@ interface SecretDialogProps {
   secret: TenantSecretMetadata | null;
   onSuccess: () => void;
 }
+
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 export default function SecretDialog({
   open,
@@ -108,17 +115,25 @@ export default function SecretDialog({
       setSaving(true);
 
       if (isEditing) {
-        await updateSecret(secret.name, {
+        const result = await updateSecret(secret.name, {
           value: value || undefined,
           description: description || undefined
         });
+        if (isReturnedActionError(result)) {
+          handleError(result, t('secrets.messages.error.saveFailed'));
+          return;
+        }
         toast.success(t('secrets.messages.success.updated', { name: secret.name }));
       } else {
-        await createSecret({
+        const result = await createSecret({
           name,
           value,
           description: description || undefined
         });
+        if (isReturnedActionError(result)) {
+          handleError(result, t('secrets.messages.error.saveFailed'));
+          return;
+        }
         toast.success(t('secrets.messages.success.created', { name }));
       }
 

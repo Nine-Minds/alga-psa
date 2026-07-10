@@ -8,6 +8,14 @@ import { IUser } from '@alga-psa/types';
 import ScheduleEntry from '@alga-psa/shared/models/scheduleEntry';
 import User from '@alga-psa/db/models/user';
 import { parseWorkItemStatusNameFilterValue } from '@alga-psa/reference-data/actions/status-actions/workItemStatusFilter';
+import {
+  actionError,
+  isActionMessageError,
+  isActionPermissionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 export interface BaseSearchOptions {
   searchTerm?: string;
@@ -40,6 +48,67 @@ interface SearchResult {
   total: number;
 }
 
+export type WorkItemActionError = ActionMessageError | ActionPermissionError;
+type WorkItemActionResult<T> = T | WorkItemActionError;
+
+const supportedWorkItemTypes = new Set<WorkItemType>([
+  'ticket',
+  'project_task',
+  'ad_hoc',
+  'interaction',
+  'appointment_request',
+]);
+
+function workItemActionErrorFrom(error: unknown): WorkItemActionError | null {
+  if (isActionMessageError(error) || isActionPermissionError(error)) {
+    return error;
+  }
+
+  if (error instanceof Error) {
+    const message = error.message;
+
+    if (
+      message.includes('Permission denied:') ||
+      message.includes('Access denied:') ||
+      message.includes('User not authenticated')
+    ) {
+      return permissionError(message);
+    }
+
+    if (message === 'Start time and end time are required for ad-hoc entries') {
+      return actionError('Start time and end time are required for ad-hoc entries.');
+    }
+
+    if (message.startsWith('Unsupported work item type:')) {
+      return actionError('That work item type is not supported for scheduling.');
+    }
+
+    if (message.includes('not found in tenant')) {
+      return actionError('The selected schedule entry or user is no longer available. Please refresh and try again.');
+    }
+
+    if (message.includes('Validation failed')) {
+      return actionError(message.replace(/^Validation failed:\s*/, ''));
+    }
+  }
+
+  const dbError = error as { code?: string; column?: string; constraint?: string };
+  if (dbError?.code === '22P02') {
+    return actionError('The selected work item is invalid. Please refresh and try again.');
+  }
+  if (dbError?.code === '23502') {
+    return actionError(`Missing required schedule field${dbError.column ? `: ${dbError.column}` : ''}.`);
+  }
+  if (dbError?.code === '23503') {
+    return actionError('The selected work item, schedule entry, or assignee is no longer valid. Please refresh and try again.');
+  }
+  if (dbError?.code === '23505') {
+    return actionError('That schedule entry already exists. Please refresh and try again.');
+  }
+
+  return null;
+}
+
 const UUID_PATTERN =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -54,7 +123,7 @@ export const searchDispatchWorkItems = withAuth(async (
   user,
   { tenant },
   options: DispatchSearchOptions
-): Promise<SearchResult> => {
+): Promise<WorkItemActionResult<SearchResult>> => {
   try {
     const {knex: db} = await createTenantKnex();
     const tenantScopedDb = tenantDb(db, tenant);
@@ -271,7 +340,9 @@ export const searchDispatchWorkItems = withAuth(async (
     };
   } catch (error) {
     console.error('Error searching dispatch work items:', error);
-    throw new Error('Failed to search dispatch work items');
+    const expected = workItemActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 });
 
@@ -283,7 +354,7 @@ export const searchPickerWorkItems = withAuth(async (
   user,
   { tenant },
   options: PickerSearchOptions
-): Promise<SearchResult> => {
+): Promise<WorkItemActionResult<SearchResult>> => {
   try {
     const {knex: db} = await createTenantKnex();
     const tenantScopedDb = tenantDb(db, tenant);
@@ -714,7 +785,9 @@ export const searchPickerWorkItems = withAuth(async (
     console.error('Error searching picker work items:', error);
     console.error('Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     console.error('Error message:', error instanceof Error ? error.message : error);
-    throw new Error('Failed to search picker work items: ' + (error instanceof Error ? error.message : error));
+    const expected = workItemActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 });
 
@@ -722,7 +795,7 @@ export const createWorkItem = withAuth(async (
   user,
   { tenant },
   item: Omit<IWorkItem, "work_item_id">
-): Promise<Omit<IExtendedWorkItem, "tenant">> => {
+): Promise<WorkItemActionResult<Omit<IExtendedWorkItem, "tenant">>> => {
   try {
     const {knex: db} = await createTenantKnex();
 
@@ -760,7 +833,9 @@ export const createWorkItem = withAuth(async (
     };
   } catch (error) {
     console.error('Error creating work item:', error);
-    throw new Error('Failed to create work item');
+    const expected = workItemActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 });
 
@@ -769,8 +844,12 @@ export const getWorkItemById = withAuth(async (
   { tenant },
   workItemId: string,
   workItemType: WorkItemType
-): Promise<Omit<IExtendedWorkItem, "tenant"> | null> => {
+): Promise<WorkItemActionResult<Omit<IExtendedWorkItem, "tenant"> | null>> => {
   try {
+    if (!supportedWorkItemTypes.has(workItemType)) {
+      throw new Error(`Unsupported work item type: ${workItemType}`);
+    }
+
     const {knex: db} = await createTenantKnex();
     const tenantScopedDb = tenantDb(db, tenant);
     let workItem;
@@ -976,6 +1055,8 @@ export const getWorkItemById = withAuth(async (
     return null;
   } catch (error) {
     console.error('Error fetching work item by ID:', error);
-    throw new Error('Failed to fetch work item by ID');
+    const expected = workItemActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 });

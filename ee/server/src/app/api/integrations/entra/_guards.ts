@@ -52,7 +52,7 @@ export async function requireEntraUiFlagEnabled(
       return NextResponse.json(
         {
           success: false,
-          error: error.message,
+          error: 'Microsoft Entra integration is not available for this workspace.',
         },
         { status: 403 }
       );

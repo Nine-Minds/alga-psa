@@ -744,6 +744,7 @@
     "addPurchaseOrder": "Aggiungi ordine di acquisto",
     "allVendors": "Tutti i fornitori",
     "amountOnOrder": "{{amount}} in ordine",
+    "mixedCurrencyOnOrder": "{{count}} ordini di acquisto in ordine in più valute",
     "cancelConfirm": "Sei sicuro di voler annullare l'ordine di acquisto {{poNumber}}? L'operazione non può essere annullata.",
     "cancelFailed": "Impossibile annullare l'ordine di acquisto.",
     "cancelTitle": "Annulla ordine di acquisto",
@@ -963,6 +964,15 @@
     "emailFailed": "Impossibile inviare la conferma via email.",
     "emailSuccess": "Conferma inviata via email a {{recipients}}",
     "enterSerial": "Inserisci almeno un numero di serie.",
+    "errors": {
+      "documentGenerationFailed": "Impossibile generare il documento",
+      "downloadPermissionDenied": "Autorizzazione negata: impossibile scaricare i documenti dell'ordine di vendita",
+      "emailConfirmationFailed": "Impossibile inviare la conferma via email",
+      "emailPermissionDenied": "Autorizzazione negata: impossibile inviare via email i documenti dell'ordine di vendita",
+      "emailSendFailed": "Invio dell'email non riuscito.",
+      "noRecipientEmail": "Nessuna email destinatario registrata per questo cliente.",
+      "notFound": "Ordine di vendita non trovato"
+    },
     "fields": {
       "allocationMode": "Modalità di allocazione",
       "clientPoNumber": "Client PO number",
@@ -1056,7 +1066,8 @@
     "title": "Ordini di vendita",
     "total": "Total",
     "unassignedBackorder": "{{count}} riga/righe in arretrato non hanno un fornitore preferito — crea quei PO manualmente.",
-    "unnamedService": "Unnamed"
+    "unnamedService": "Unnamed",
+    "notFound": "Sales order not found."
   },
   "stock": {
     "actions": {
@@ -1234,6 +1245,7 @@
     "title": "Trasferimenti",
     "toLocation": "Ubicazione di destinazione",
     "vanLoadList": "Lista di carico del furgone",
+    "vanLoadListReplenishment": "Rifornimento della lista di carico del furgone",
     "status": {
       "dispatched": "Spedito",
       "received": "Ricevuto",

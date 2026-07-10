@@ -70,7 +70,8 @@
     "expirationPeriod": "Okres wygaśnięcia:",
     "daysUnit": "{{count}} dni",
     "notificationDays": "Dni powiadomień:",
-    "none": "Brak"
+    "none": "Brak",
+    "loadErrorPrefix": "Error loading credit expiration settings:"
   },
   "charts": {
     "expirationSummary": "Podsumowanie wygaśnięcia kredytów",

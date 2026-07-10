@@ -2,12 +2,18 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { getTicketFormOptions } from '../actions/optimizedTicketActions';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 const CACHE_KEY = 'ticket_form_options';
 const CACHE_TIMESTAMP_KEY = 'ticket_form_options_ts';
 const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
 
-export type TicketFormOptions = Awaited<ReturnType<typeof getTicketFormOptions>>;
+type TicketFormOptionsResult = Awaited<ReturnType<typeof getTicketFormOptions>>;
+export type TicketFormOptions = Exclude<TicketFormOptionsResult, { actionError: string } | { permissionError: string }>;
 
 interface UseTicketFormOptionsResult {
   options: TicketFormOptions | null;
@@ -31,6 +37,10 @@ function writeCache(options: TicketFormOptions): void {
     sessionStorage.setItem(CACHE_KEY, JSON.stringify(options));
     sessionStorage.setItem(CACHE_TIMESTAMP_KEY, String(Date.now()));
   } catch { /* ignore — storage full or unavailable */ }
+}
+
+function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
+  return isActionMessageError(value) || isActionPermissionError(value);
 }
 
 /**
@@ -86,6 +96,10 @@ export function useTicketFormOptions(
       fetchingRef.current = true;
       try {
         const serverOptions = await getTicketFormOptions();
+        if (isReturnedActionError(serverOptions)) {
+          console.warn('[useTicketFormOptions] Unable to fetch form options:', getErrorMessage(serverOptions));
+          return;
+        }
         if (!stale) {
           setOptions(serverOptions);
           writeCache(serverOptions);
@@ -111,6 +125,10 @@ export function useTicketFormOptions(
       fetchingRef.current = true;
       try {
         const serverOptions = await getTicketFormOptions();
+        if (isReturnedActionError(serverOptions)) {
+          console.warn('[useTicketFormOptions] Unable to refresh form options:', getErrorMessage(serverOptions));
+          return;
+        }
         setOptions(serverOptions);
         writeCache(serverOptions);
       } catch (err) {

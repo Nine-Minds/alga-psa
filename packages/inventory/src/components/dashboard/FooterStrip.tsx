@@ -10,8 +10,22 @@ interface FooterStripProps {
   footer: InventoryDashboardData['footer'];
 }
 
+type MoneyBucket = InventoryDashboardData['footer']['value_by_currency'][number];
+
 function Divider() {
   return <span className="hidden h-5 w-px flex-shrink-0 bg-[rgb(var(--color-border-200))] md:block" />;
+}
+
+function formatMoneyBuckets(
+  buckets: MoneyBucket[] | undefined,
+  fallbackAmount: number,
+  money: ReturnType<typeof useCurrencyFormat>['money'],
+  absolute = false,
+): string {
+  const rows = buckets && buckets.length > 0 ? buckets : [{ amount: fallbackAmount, currency_code: undefined }];
+  return rows
+    .map((row) => money(absolute ? Math.abs(row.amount) : row.amount, row.currency_code))
+    .join(' + ');
 }
 
 function Stat({
@@ -35,7 +49,8 @@ function Stat({
 export function FooterStrip({ footer }: FooterStripProps) {
   const { t } = useTranslation('features/inventory');
   const { money } = useCurrencyFormat();
-  const deltaPositive = footer.wow_delta >= 0;
+  const deltaPositive =
+    footer.wow_delta_by_currency.length === 1 ? footer.wow_delta_by_currency[0].amount >= 0 : footer.wow_delta >= 0;
   return (
     <section
       id="inventory-dashboard-health-footer"
@@ -43,7 +58,7 @@ export function FooterStrip({ footer }: FooterStripProps) {
     >
       <Stat
         label={t('dashboard.footer.title', 'Inventory health')}
-        value={money(footer.value)}
+        value={formatMoneyBuckets(footer.value_by_currency, footer.value, money)}
         detail={
           <span
             className={
@@ -53,7 +68,7 @@ export function FooterStrip({ footer }: FooterStripProps) {
             }
           >
             {deltaPositive ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
-            {money(Math.abs(footer.wow_delta))} {t('dashboard.footer.weekAbbrev', 'wk')}
+            {formatMoneyBuckets(footer.wow_delta_by_currency, footer.wow_delta, money, true)} {t('dashboard.footer.weekAbbrev', 'wk')}
           </span>
         }
       />
@@ -68,7 +83,7 @@ export function FooterStrip({ footer }: FooterStripProps) {
           <Divider />
           <Stat
             label={t('dashboard.footer.deadStock', 'Dead stock')}
-            value={money(footer.dead_stock.amount)}
+            value={formatMoneyBuckets(footer.dead_stock.amount_by_currency, footer.dead_stock.amount, money)}
             detail={
               <span className="font-semibold text-amber-700 dark:text-amber-300">
                 {t('dashboard.footer.deadStockDetail', '{{location}} · 90d', {

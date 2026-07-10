@@ -10,6 +10,11 @@ import { QboClientService } from '@alga-psa/integrations/lib/qbo/qboClientServic
 import { getQboCustomers } from '@alga-psa/integrations/actions/qboActions';
 import logger from '@alga-psa/core/logger';
 import type { AccountingExternalChange } from '@alga-psa/types';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 import { SyncMappingLedger } from '../services/accountingSync/syncMappingLedger';
 import { getAccountingSyncSettings, updateAccountingSyncSettings } from '../services/accountingSync/accountingSyncSettings';
@@ -84,6 +89,7 @@ export const getCustomerMatchCandidates = withAuth(async (
     mappedExternalName: string | null;
     suggestion: { externalId: string; externalName: string; exact: boolean } | null;
   }>;
+  error?: string;
 }> => {
   assertEnterpriseEdition();
   await checkBillingReadAccess(user);
@@ -120,7 +126,13 @@ export const getCustomerMatchCandidates = withAuth(async (
   }
 
   // QBO customers (via integrations action — cached, realm-prioritised)
-  const qboCustomers = await getQboCustomers({ realmId: realm });
+  const qboCustomersResult = await getQboCustomers({ realmId: realm });
+  const qboCustomers = isActionMessageError(qboCustomersResult) || isActionPermissionError(qboCustomersResult)
+    ? []
+    : qboCustomersResult;
+  const catalogError = isActionMessageError(qboCustomersResult) || isActionPermissionError(qboCustomersResult)
+    ? getErrorMessage(qboCustomersResult)
+    : undefined;
 
   // Build match candidates only for unmapped clients
   const unmappedClients = clientRows
@@ -166,7 +178,7 @@ export const getCustomerMatchCandidates = withAuth(async (
     };
   });
 
-  return { rows };
+  return { rows, ...(catalogError ? { error: catalogError } : {}) };
 });
 
 // ─── 2. linkClientToQboCustomer ───────────────────────────────────────────────
@@ -295,9 +307,8 @@ export const createQboCustomerForClient = withAuth(async (
 
     return { created: true, externalId: result.externalCompanyId };
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to create QBO customer.';
     logger.error('[qboOnboarding] createQboCustomerForClient failed', { tenant, clientId, error });
-    return { created: false, error: message };
+    return { created: false, error: 'Failed to create QBO customer. Please check the QuickBooks connection and try again.' };
   }
 });
 

@@ -30,7 +30,12 @@ import {
 } from '../../../actions/serviceActions';
 import { getAvailableReferenceData, importReferenceData, checkImportConflicts, ImportConflict } from '@alga-psa/reference-data/actions/referenceDataActions';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 // Type for the data returned by getServiceTypesForSelection
@@ -74,10 +79,21 @@ const ServiceTypeSettings: React.FC = () => {
     try {
       // Fetch the service types for selection (includes standard types)
       const fetchedTypes = await getServiceTypesForSelection();
+      if (isActionMessageError(fetchedTypes) || isActionPermissionError(fetchedTypes)) {
+        setAllTypes([]);
+        setTenantTypes([]);
+        setError(getErrorMessage(fetchedTypes));
+        return;
+      }
       setAllTypes(fetchedTypes);
       
       // Fetch all tenant service types with full data including order_number
       const tenantServiceTypes = await getAllServiceTypes();
+      if (isActionMessageError(tenantServiceTypes) || isActionPermissionError(tenantServiceTypes)) {
+        setTenantTypes([]);
+        setError(getErrorMessage(tenantServiceTypes));
+        return;
+      }
       
       // Sort by order_number
       tenantServiceTypes.sort((a, b) => a.order_number - b.order_number);
@@ -177,7 +193,11 @@ const ServiceTypeSettings: React.FC = () => {
       if (editingType.id) { // Update existing
         // Prepare update data (exclude non-updatable fields)
         const { id, tenant, created_at, updated_at, ...updateData } = editingType;
-        await updateServiceType(id, updateData);
+        const result = await updateServiceType(id, updateData);
+        if (isActionMessageError(result) || isActionPermissionError(result)) {
+          setValidationErrors([getErrorMessage(result)]);
+          return;
+        }
       } else { // Create new
         // Prepare create data with required fields
         // We've already validated these fields exist above
@@ -187,7 +207,11 @@ const ServiceTypeSettings: React.FC = () => {
             is_active: editingType.is_active ?? true, // Default to active
             order_number: editingType.order_number!,
         };
-        await createServiceType(createData);
+        const result = await createServiceType(createData);
+        if (isActionMessageError(result) || isActionPermissionError(result)) {
+          setValidationErrors([getErrorMessage(result)]);
+          return;
+        }
       }
       handleCloseEditDialog();
       await fetchTypes(); // Refresh list
@@ -220,7 +244,11 @@ const ServiceTypeSettings: React.FC = () => {
     if (!typeToDelete) return;
     setError(null);
     try {
-      await deleteServiceType(typeToDelete.id);
+      const result = await deleteServiceType(typeToDelete.id);
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
       handleCloseDeleteDialog();
       await fetchTypes(); // Refresh list
     } catch (deleteError) {
@@ -257,7 +285,8 @@ const ServiceTypeSettings: React.FC = () => {
         await handleImport();
       }
     } catch (error) {
-      handleError(error, t('serviceTypes.errors.checkConflicts', {
+      console.error('Failed to check service type import conflicts:', error);
+      handleError(t('serviceTypes.errors.checkConflicts', {
         defaultValue: 'Failed to check conflicts'
       }));
     }
@@ -289,7 +318,8 @@ const ServiceTypeSettings: React.FC = () => {
       setConflictResolutions({});
       await fetchTypes();
     } catch (error) {
-      handleError(error, t('serviceTypes.errors.import', {
+      console.error('Failed to import service types:', error);
+      handleError(t('serviceTypes.errors.import', {
         defaultValue: 'Failed to import service types'
       }));
     }

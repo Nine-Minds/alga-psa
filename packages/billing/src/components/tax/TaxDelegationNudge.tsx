@@ -5,7 +5,13 @@ import toast from 'react-hot-toast';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { Cloud } from 'lucide-react';
 import {
   getTenantTaxSettings,
@@ -18,6 +24,11 @@ const SUPPORTED_ADAPTERS: SupportedAdapter[] = [
   { key: 'xero', label: 'Xero', statusParam: 'xero_status' },
   { key: 'qbo', label: 'QuickBooks Online', statusParam: 'qbo_status' },
 ];
+
+type ReturnedActionError = ActionMessageError | ActionPermissionError;
+
+const isReturnedActionError = (value: unknown): value is ReturnedActionError =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 function detectJustConnectedAdapter(searchParams: URLSearchParams | null): SupportedAdapter | null {
   if (!searchParams) return null;
@@ -54,6 +65,10 @@ export function TaxDelegationNudge(): React.JSX.Element | null {
       try {
         const settings = await getTenantTaxSettings();
         if (cancelled) return;
+        if (isReturnedActionError(settings)) {
+          handleError(settings, 'Unable to load current tax settings.');
+          return;
+        }
         setCurrentSource(settings?.default_tax_source ?? 'internal');
       } catch (err) {
         handleError(err, 'Unable to load current tax settings.');
@@ -78,10 +93,14 @@ export function TaxDelegationNudge(): React.JSX.Element | null {
     if (!justConnected) return;
     setApplying(true);
     try {
-      await updateTenantTaxSettings({
+      const result = await updateTenantTaxSettings({
         default_tax_source: 'external',
         allow_external_tax_override: true,
       });
+      if (isReturnedActionError(result)) {
+        handleError(result);
+        return;
+      }
       toast.success(
         `${justConnected.label} will calculate tax on new invoices. You can change this in Billing settings.`,
       );

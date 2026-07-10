@@ -8,13 +8,22 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { IProject } from '@alga-psa/types';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { createTemplateFromProject } from '../../actions/projectTemplateActions';
 import { useTranslation } from 'react-i18next';
 
 interface CreateTemplateFormProps {
   projects: IProject[];
   categories: string[];
+}
+
+function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
+  return isActionMessageError(value) || isActionPermissionError(value);
 }
 
 export default function CreateTemplateForm({ projects, categories }: CreateTemplateFormProps) {
@@ -45,6 +54,10 @@ export default function CreateTemplateForm({ projects, categories }: CreateTempl
         description: formData.description || undefined,
         category: formData.category || undefined
       });
+      if (isReturnedActionError(templateId)) {
+        handleError(getErrorMessage(templateId));
+        return;
+      }
 
       toast.success(t('templates.create.createdSuccess', 'Template created successfully'));
       router.push(`/msp/projects/templates/${templateId}`);

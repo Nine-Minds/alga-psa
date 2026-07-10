@@ -4,10 +4,18 @@ import { Temporal } from '@js-temporal/polyfill';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
-export const resolveClientBillingCurrency = withAuth(async (user, { tenant }, clientId: string, asOfDate?: string): Promise<string> => {
+export type BillingCurrencyActionError = ActionMessageError | ActionPermissionError;
+
+export const resolveClientBillingCurrency = withAuth(async (user, { tenant }, clientId: string, asOfDate?: string): Promise<string | BillingCurrencyActionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    throw new Error('Permission denied: Cannot resolve client billing currency');
+    return permissionError('Permission denied: Cannot resolve client billing currency');
   }
   const { knex } = await createTenantKnex();
   const db = tenantDb(knex, tenant);
@@ -34,7 +42,7 @@ export const resolveClientBillingCurrency = withAuth(async (user, { tenant }, cl
 
   const unique = Array.from(new Set(currencies.map((r: any) => r.currency_code).filter(Boolean)));
   if (unique.length > 1) {
-    throw new Error(`Client has active contracts in multiple currencies (${unique.join(', ')}).`);
+    return actionError(`Client has active contracts in multiple currencies (${unique.join(', ')}).`);
   }
 
   if (unique[0]) return unique[0];

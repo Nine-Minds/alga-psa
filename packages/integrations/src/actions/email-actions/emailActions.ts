@@ -9,6 +9,10 @@ import {
   createOrFindIntegrationContactByEmail,
   findIntegrationContactByEmailAddress,
 } from '../clientLookupActions';
+import {
+  isActionMessageError,
+  type ActionMessageError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 // =============================================================================
 // INTERFACES
@@ -147,7 +151,7 @@ export async function findContactByEmail(email: string): Promise<FindContactByEm
  * Create or find contact by email and client
  * This is a thin wrapper around the contactActions domain function
  */
-export async function createOrFindContact(input: CreateOrFindContactInput): Promise<CreateOrFindContactOutput> {
+export async function createOrFindContact(input: CreateOrFindContactInput): Promise<CreateOrFindContactOutput | ActionMessageError> {
   const result = await createOrFindIntegrationContactByEmail({
     email: input.email,
     name: input.name,
@@ -155,6 +159,9 @@ export async function createOrFindContact(input: CreateOrFindContactInput): Prom
     phone: input.phone,
     title: input.title
   });
+  if (isActionMessageError(result)) {
+    return result as ActionMessageError;
+  }
 
   // Transform to email workflow expected format
   return {

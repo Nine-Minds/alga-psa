@@ -18,6 +18,7 @@ import {
   type TenantCreationInput,
   type TenantCreationResult,
 } from '@ee/lib/tenant-management/workflowClient';
+import { tenantManagementRouteError } from '../tenantManagementRouteErrors';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -312,27 +313,16 @@ export async function POST(request: NextRequest): Promise<NextResponse> {
       });
     }
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const routeError = tenantManagementRouteError(error, 'Failed to create tenant.');
 
     observabilityLogger.error('Tenant creation failed', error, {
       event_type: 'tenant_management_action_failed',
       action: 'create_tenant',
     });
 
-    if (
-      errorMessage.includes('Access denied') ||
-      errorMessage.includes('Authentication')
-    ) {
-      return NextResponse.json({ success: false, error: errorMessage }, { status: 403 });
-    }
-
-    if (errorMessage.includes('Invalid productCode')) {
-      return NextResponse.json({ success: false, error: errorMessage }, { status: 400 });
-    }
-
     return NextResponse.json({
       success: false,
-      error: errorMessage,
-    }, { status: 500 });
+      error: routeError.error,
+    }, { status: routeError.status });
   }
 }

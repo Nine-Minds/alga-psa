@@ -448,7 +448,8 @@
     "taskUpdated": "Attività aggiornata con successo",
     "saveChangesFailed": "Impossibile salvare le modifiche",
     "changesSaved": "Modifiche salvate con successo",
-    "workItemDeleted": "Elemento di lavoro eliminato con successo"
+    "workItemDeleted": "Elemento di lavoro eliminato con successo",
+    "submitFailed": "Failed to submit time sheet"
   },
   "bundleNotice": {
     "withNumber": "Questo ticket è in bundle sotto {{number}}. Il tempo del bundle viene solitamente registrato sul ticket principale.",

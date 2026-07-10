@@ -25,11 +25,16 @@ export async function setupPubSub(request: SetupPubSubRequest) {
     
     if (!serviceAccountKey) {
       console.error('❌ Google service account credentials not found');
-      throw new Error('Google service account credentials not configured for this tenant.');
+      throw new Error('GOOGLE_SERVICE_ACCOUNT_MISSING');
     }
 
     console.log('🔑 Google service account credentials loaded successfully');
-    const credentials = JSON.parse(serviceAccountKey);
+    let credentials: Record<string, any>;
+    try {
+      credentials = JSON.parse(serviceAccountKey);
+    } catch {
+      throw new Error('GOOGLE_SERVICE_ACCOUNT_INVALID_JSON');
+    }
 
     // Create OAuth2 client with service account
     console.log('🔐 Initializing Google Auth with service account');
@@ -204,6 +209,15 @@ export async function setupPubSub(request: SetupPubSubRequest) {
         webhookUrl: request.webhookUrl
       }
     });
-    throw new Error(`Failed to setup Google Pub/Sub: ${error.message}`);
+    if (error instanceof Error) {
+      if (error.message === 'GOOGLE_SERVICE_ACCOUNT_MISSING') {
+        throw new Error('Google service account credentials are not configured for this tenant.');
+      }
+      if (error.message === 'GOOGLE_SERVICE_ACCOUNT_INVALID_JSON') {
+        throw new Error('Google service account credentials are not valid JSON.');
+      }
+    }
+
+    throw new Error('Unable to configure Google Pub/Sub. Check the Google Cloud project, service account permissions, and webhook settings.');
   }
 }

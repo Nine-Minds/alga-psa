@@ -72,7 +72,14 @@ vi.mock('react-hot-toast', () => ({
 }));
 
 vi.mock('@alga-psa/ui/lib/errorHandling', () => ({
+  getErrorMessage: (error: unknown) => {
+    if (error && typeof error === 'object' && 'actionError' in error) return String((error as any).actionError);
+    if (error && typeof error === 'object' && 'permissionError' in error) return String((error as any).permissionError);
+    return error instanceof Error ? error.message : String(error);
+  },
   handleError: vi.fn(),
+  isActionMessageError: (value: unknown) => Boolean(value && typeof value === 'object' && 'actionError' in value),
+  isActionPermissionError: (value: unknown) => Boolean(value && typeof value === 'object' && 'permissionError' in value),
 }));
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({

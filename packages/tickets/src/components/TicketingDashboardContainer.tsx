@@ -4,7 +4,12 @@ import React, { useState, useCallback, useEffect, useRef } from 'react';
 import TicketingDashboard from './TicketingDashboard';
 import { fetchTicketsWithPagination } from '../actions/optimizedTicketActions';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { ITicketListItem, ITicketListFilters, ITag, ITeam } from '@alga-psa/types';
 import { IUser } from '@alga-psa/types';
 import { IBoard } from '@alga-psa/types';
@@ -37,6 +42,10 @@ const ALLOWED_SORT_KEYS = new Set([
   'entered_by_name',
   'due_date'
 ]);
+
+function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
+  return isActionMessageError(value) || isActionPermissionError(value);
+}
 
 function decodeCsvParam(value: string | null): string[] | undefined {
   if (!value) return undefined;
@@ -364,6 +373,13 @@ export default function TicketingDashboardContainer({
       );
 
       if (requestId !== latestFetchRequestIdRef.current) {
+        return;
+      }
+
+      if (isReturnedActionError(result)) {
+        handleError(getErrorMessage(result), t('errors.fetchTickets', 'Failed to fetch tickets'));
+        setTickets([]);
+        setTotalCount(0);
         return;
       }
 

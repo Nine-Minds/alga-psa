@@ -25,6 +25,7 @@ import { TierConfig } from './ServiceTierEditor'; // Import TierConfig type
 import { useBillingFrequencyOptions } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 // Keep GenericPlanServicesList for now, might remove in Phase 3
 import GenericPlanServicesList from './GenericContractLineServicesList';
@@ -57,6 +58,9 @@ type AllServiceValidationErrors = {
 type FetchedServiceConfig = IContractLineServiceConfiguration & IContractLineServiceUsageConfig & {
     tiers?: IContractLineServiceRateTier[];
 };
+
+const isReturnedActionError = (value: unknown): boolean =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 export function UsagePlanConfiguration({
   contractLineId,
@@ -103,6 +107,11 @@ export function UsagePlanConfiguration({
     try {
       // 0. Fetch base plan details first
       const fetchedPlan = await getContractLineById(contractLineId);
+      if (isReturnedActionError(fetchedPlan)) {
+        setError(getErrorMessage(fetchedPlan));
+        setLoading(false);
+        return;
+      }
       if (!fetchedPlan || fetchedPlan.contract_line_type !== 'Usage') {
         setError(t('configuration.usage.errors.invalidPlanTypeOrNotFound', {
           defaultValue: 'Invalid plan type or plan not found.',
@@ -120,6 +129,11 @@ export function UsagePlanConfiguration({
 
       // 1. Fetch the list of services associated with the plan
       const servicesList = await getContractLineServicesWithConfigurations(contractLineId);
+      if (isReturnedActionError(servicesList)) {
+        setError(getErrorMessage(servicesList));
+        setLoading(false);
+        return;
+      }
       setPlanServices(servicesList);
 
       if (servicesList.length === 0) {
@@ -130,7 +144,12 @@ export function UsagePlanConfiguration({
       const configPromises = servicesList.map(service =>
         // Use service.configuration.service_id as it's guaranteed by PlanServiceWithConfig type
         getContractLineConfigurationForService(contractLineId, service.configuration.service_id)
-          .then(config => ({ serviceId: service.configuration.service_id, config: config as FetchedServiceConfig | null })) // Cast result
+          .then(config => {
+            if (isReturnedActionError(config)) {
+              throw new Error(getErrorMessage(config));
+            }
+            return { serviceId: service.configuration.service_id, config: config as FetchedServiceConfig | null };
+          }) // Cast result
           .catch(err => {
             console.error(`Error fetching config for service ${service.configuration.service_id}:`, err);
             // Return null config on error for this specific service
@@ -225,7 +244,11 @@ export function UsagePlanConfiguration({
       };
 
       if (plan?.contract_line_id) {
-        await updateContractLine(plan.contract_line_id, planData);
+        const updateResult = await updateContractLine(plan.contract_line_id, planData);
+        if (isReturnedActionError(updateResult)) {
+          setPlanBasicsErrors([getErrorMessage(updateResult)]);
+          return;
+        }
       }
 
       await fetchPlanData();
@@ -481,7 +504,12 @@ export function UsagePlanConfiguration({
       });
 
       // Execute all save operations concurrently
-      await Promise.all(savePromises);
+      const saveResults = await Promise.all(savePromises);
+      const expectedSaveError = saveResults.find(isReturnedActionError);
+      if (expectedSaveError) {
+        setSaveError(getErrorMessage(expectedSaveError));
+        return;
+      }
 
       // 5. Handle success
       console.log("Successfully saved configurations for services:", changedServiceIds);

@@ -7,6 +7,16 @@ import { importReferenceData, getAvailableReferenceData } from '@alga-psa/refere
 import { withAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
 
+function serviceTypeActionErrorMessage(error: unknown, fallback: string): string {
+  const message = error instanceof Error ? error.message : typeof error === 'string' ? error : '';
+
+  if (message.startsWith('Permission denied')) {
+    return message;
+  }
+
+  return fallback;
+}
+
 export const getStandardServiceTypes = withAuth(async (
   _user: IUserWithRoles,
   _ctx: AuthContext
@@ -27,7 +37,7 @@ export const getStandardServiceTypes = withAuth(async (
     console.error('Error getting standard service types:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: serviceTypeActionErrorMessage(error, 'Failed to load standard service types')
     };
   }
 });
@@ -55,7 +65,7 @@ export const importServiceTypes = withAuth(async (
     console.error('Error importing service types:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: serviceTypeActionErrorMessage(error, 'Failed to import service types')
     };
   }
 });
@@ -86,7 +96,7 @@ export const getTenantServiceTypes = withAuth(async (
     console.error('Error getting tenant service types:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: serviceTypeActionErrorMessage(error, 'Failed to load service types')
     };
   }
 });
@@ -122,7 +132,7 @@ export const createTenantServiceType = withAuth(async (
     console.error('Error creating tenant service type:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: serviceTypeActionErrorMessage(error, 'Failed to create service type'),
     };
   }
 });

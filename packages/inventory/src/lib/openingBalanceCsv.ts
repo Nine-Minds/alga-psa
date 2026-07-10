@@ -1,5 +1,7 @@
 import type { Knex } from 'knex';
+import { toMinorUnits } from '@alga-psa/core';
 import { recordStockMovement } from './movements';
+import { resolveTenantCurrency } from './tenantCurrency';
 
 export interface CsvParseResult {
   header: string[];
@@ -119,15 +121,15 @@ function parsePositiveInteger(value: string): number | null {
   return parsed;
 }
 
-function parseCostCents(value: string): number | null {
+function parseCostMinorUnits(value: string, currencyCode: string): number | null {
   if (!/^-?(?:\d+(?:\.\d*)?|\.\d+)$/.test(value)) return null;
   const parsed = Number(value);
   if (!Number.isFinite(parsed) || parsed < 0) return null;
-  const cents = Math.round(parsed * 100);
-  return Number.isSafeInteger(cents) ? cents : null;
+  const minorUnits = toMinorUnits(parsed, undefined, currencyCode);
+  return Number.isSafeInteger(minorUnits) ? minorUnits : null;
 }
 
-export function shapeOpeningBalanceRows(parsed: CsvParseResult): CsvShapeResult {
+export function shapeOpeningBalanceRows(parsed: CsvParseResult, currencyCode: string = 'USD'): CsvShapeResult {
   const errors: Array<{ row: number; message: string }> = [];
   const rows: OpeningBalanceCsvRow[] = [];
 
@@ -191,9 +193,9 @@ export function shapeOpeningBalanceRows(parsed: CsvParseResult): CsvShapeResult 
 
     let unitCostCents: number | null = null;
     if (unitCostText) {
-      unitCostCents = parseCostCents(unitCostText);
+      unitCostCents = parseCostMinorUnits(unitCostText, currencyCode);
       if (unitCostCents === null) {
-        errors.push({ row: rowNumber, message: 'unit_cost must be a non-negative dollar amount' });
+        errors.push({ row: rowNumber, message: 'unit_cost must be a non-negative amount' });
       }
     }
 
@@ -296,6 +298,7 @@ interface OpeningBalancePreparation {
   validation: OpeningBalanceValidation;
   settingsByService: Map<string, SettingsLookupRow>;
   missingSettingsSerialized: Map<string, boolean>;
+  defaultCurrency: string;
 }
 
 function normalizedKey(value: string | null | undefined): string {
@@ -353,7 +356,8 @@ async function prepareOpeningBalance(
   opts?: OpeningBalanceOptions,
 ): Promise<OpeningBalancePreparation> {
   const parsed = parseCsv(csvText);
-  const shaped = shapeOpeningBalanceRows(parsed);
+  const defaultCurrency = await resolveTenantCurrency(trx, tenant);
+  const shaped = shapeOpeningBalanceRows(parsed, defaultCurrency);
   const errors: OpeningBalanceRowError[] = [...shaped.errors];
   const warnings: OpeningBalanceWarning[] = [];
   const errorRows = new Set<number>();
@@ -377,7 +381,7 @@ async function prepareOpeningBalance(
       warnings,
       summary: emptySummary(parsed.rows.length),
     };
-    return { validation, settingsByService, missingSettingsSerialized };
+    return { validation, settingsByService, missingSettingsSerialized, defaultCurrency };
   }
 
   const candidates = shaped.rows.filter((row) => !errorRows.has(row.row));
@@ -569,7 +573,7 @@ async function prepareOpeningBalance(
     warnings,
     summary: summarize(parsed.rows.length, previewRows, missingSettingsSerialized),
   };
-  return { validation, settingsByService, missingSettingsSerialized };
+  return { validation, settingsByService, missingSettingsSerialized, defaultCurrency };
 }
 
 export async function validateOpeningBalance(
@@ -610,6 +614,7 @@ export async function applyOpeningBalance(
   const reason = `opening_balance_import: ${batchLabel}`;
   const rows = validation.rows;
   const serviceIds = Array.from(new Set(rows.map((row) => row.service_id)));
+  const defaultCurrency = prepared.defaultCurrency;
 
   let settingsCreated = 0;
   for (const [serviceId, isSerialized] of prepared.missingSettingsSerialized) {
@@ -620,7 +625,7 @@ export async function applyOpeningBalance(
         service_id: serviceId,
         track_stock: true,
         is_serialized: isSerialized,
-        cost_currency: 'USD',
+        cost_currency: defaultCurrency,
       })
       .onConflict(['tenant', 'service_id'])
       .ignore()
@@ -642,7 +647,7 @@ export async function applyOpeningBalance(
     oldBulkBasis.set(serviceId, {
       quantity: await totalOnHand(trx, tenant, serviceId),
       average_cost: Number(settings.average_cost ?? 0),
-      cost_currency: settings.cost_currency ?? 'USD',
+      cost_currency: settings.cost_currency ?? defaultCurrency,
     });
   }
 
@@ -653,7 +658,7 @@ export async function applyOpeningBalance(
 
   for (const row of rows) {
     const settings = settingsByService.get(row.service_id);
-    const costCurrency = settings?.cost_currency ?? 'USD';
+    const costCurrency = settings?.cost_currency ?? defaultCurrency;
     totalValueCents += row.quantity * (row.unit_cost_cents ?? 0);
 
     if (row.is_serialized) {

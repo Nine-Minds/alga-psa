@@ -8,11 +8,12 @@ import { DataTable } from "@alga-psa/ui/components/DataTable";
 import { ColumnDefinition } from "@alga-psa/types";
 import { ChevronDown, ChevronRight, CornerDownRight, MoreVertical } from "lucide-react";
 import { toast } from "react-hot-toast";
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { getErrorMessage, handleError } from '@alga-psa/ui/lib/errorHandling';
 import { useUserPreference } from "@alga-psa/user-composition/hooks";
 import {
   getInternalNotificationCategoriesAction,
   getSubtypesAction,
+  isNotificationActionError,
   updateInternalCategoryAction,
   updateInternalSubtypeAction
 } from "../../actions";
@@ -69,7 +70,8 @@ export function InternalNotificationCategories() {
         const currentCategories = await getInternalNotificationCategoriesAction();
         setCategories(currentCategories);
       } catch (err) {
-        setError(err instanceof Error ? err.message : t('notifications.internalCategoriesUi.errors.loadCategories', 'Failed to load categories'));
+        console.error('Failed to load internal notification categories:', err);
+        setError(t('notifications.internalCategoriesUi.errors.loadCategories', 'Failed to load categories'));
       }
     }
     init();
@@ -260,7 +262,12 @@ function InternalNotificationCategoriesContent({
         })
       );
 
-      await Promise.all([...categoryPromises, ...subtypePromises]);
+      const results = await Promise.all([...categoryPromises, ...subtypePromises]);
+      const firstError = results.find(isNotificationActionError);
+      if (firstError) {
+        toast.error(getErrorMessage(firstError));
+        return;
+      }
 
       // Update original state to current state
       setOriginalCategories([...categories]);

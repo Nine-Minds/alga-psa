@@ -5,6 +5,7 @@ import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { revalidatePath } from 'next/cache';
 import { Knex } from 'knex';
+import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErrors';
 
 function tenantScopedTable(
   conn: Knex | Knex.Transaction,
@@ -19,101 +20,109 @@ export const assignTeamToTicket = withAuth(async (
   { tenant },
   ticketId: string,
   teamId: string
-): Promise<void> => {
-  const { knex: db } = await createTenantKnex();
-  const assignedTo = await withTransaction(db, async (trx: Knex.Transaction) => {
-    if (!await hasPermission(user, 'ticket', 'update', trx)) {
-      throw new Error('Permission denied: Cannot assign team to ticket');
-    }
-
-    const ticket = await tenantScopedTable(trx, 'tickets', tenant)
-      .where({ ticket_id: ticketId })
-      .first();
-
-    if (!ticket) {
-      throw new Error('Ticket not found');
-    }
-
-    const team = await tenantScopedTable(trx, 'teams', tenant)
-      .where({ team_id: teamId })
-      .first();
-
-    if (!team) {
-      throw new Error('Team not found');
-    }
-
-    if (!team.manager_id) {
-      throw new Error('Team lead not found');
-    }
-
-    const teamMembers = await tenantDb(trx, tenant)
-      .tenantJoin(
-        tenantScopedTable(trx, 'team_members', tenant),
-        'users',
-        'team_members.user_id',
-        'users.user_id'
-      )
-      .where({ 'team_members.team_id': teamId })
-      .andWhere('users.is_inactive', false)
-      .select('team_members.user_id') as Array<{ user_id: string }>;
-
-    // assigned_to is guaranteed non-null: either the ticket already has one,
-    // or we fall back to team.manager_id (validated above).
-    const resolvedAssignedTo: string = (ticket.assigned_to as string | null) || team.manager_id;
-
-    await tenantScopedTable(trx, 'tickets', tenant)
-      .where({ ticket_id: ticketId })
-      .update({
-        assigned_team_id: teamId,
-        assigned_to: resolvedAssignedTo,
-        updated_by: user.user_id,
-        updated_at: new Date()
-      });
-
-    const memberIds = teamMembers
-      .map((member: { user_id: string }) => member.user_id)
-      .filter((userId: string) => userId && userId !== resolvedAssignedTo);
-
-    if (memberIds.length > 0) {
-      const existingResources = await tenantScopedTable(trx, 'ticket_resources', tenant)
-        .where({ ticket_id: ticketId })
-        .whereIn('additional_user_id', memberIds)
-        .select('additional_user_id');
-
-      const existingIds = new Set(existingResources.map((row: { additional_user_id: string }) => row.additional_user_id));
-      const toInsert = memberIds.filter((userId) => !existingIds.has(userId));
-
-      if (toInsert.length > 0) {
-        await tenantScopedTable(trx, 'ticket_resources', tenant).insert(
-          toInsert.map((userId) => ({
-            ticket_id: ticketId,
-            assigned_to: resolvedAssignedTo,
-            additional_user_id: userId,
-            role: 'team_member',
-            tenant,
-            assigned_at: new Date()
-          }))
-        );
+): Promise<void | TicketActionError> => {
+  try {
+    const { knex: db } = await createTenantKnex();
+    const assignedTo = await withTransaction(db, async (trx: Knex.Transaction) => {
+      if (!await hasPermission(user, 'ticket', 'update', trx)) {
+        throw new Error('Permission denied: Cannot assign team to ticket');
       }
+
+      const ticket = await tenantScopedTable(trx, 'tickets', tenant)
+        .where({ ticket_id: ticketId })
+        .first();
+
+      if (!ticket) {
+        throw new Error('Ticket not found');
+      }
+
+      const team = await tenantScopedTable(trx, 'teams', tenant)
+        .where({ team_id: teamId })
+        .first();
+
+      if (!team) {
+        throw new Error('Team not found');
+      }
+
+      if (!team.manager_id) {
+        throw new Error('Team lead not found');
+      }
+
+      const teamMembers = await tenantDb(trx, tenant)
+        .tenantJoin(
+          tenantScopedTable(trx, 'team_members', tenant),
+          'users',
+          'team_members.user_id',
+          'users.user_id'
+        )
+        .where({ 'team_members.team_id': teamId })
+        .andWhere('users.is_inactive', false)
+        .select('team_members.user_id') as Array<{ user_id: string }>;
+
+      // assigned_to is guaranteed non-null: either the ticket already has one,
+      // or we fall back to team.manager_id (validated above).
+      const resolvedAssignedTo: string = (ticket.assigned_to as string | null) || team.manager_id;
+
+      await tenantScopedTable(trx, 'tickets', tenant)
+        .where({ ticket_id: ticketId })
+        .update({
+          assigned_team_id: teamId,
+          assigned_to: resolvedAssignedTo,
+          updated_by: user.user_id,
+          updated_at: new Date()
+        });
+
+      const memberIds = teamMembers
+        .map((member: { user_id: string }) => member.user_id)
+        .filter((userId: string) => userId && userId !== resolvedAssignedTo);
+
+      if (memberIds.length > 0) {
+        const existingResources = await tenantScopedTable(trx, 'ticket_resources', tenant)
+          .where({ ticket_id: ticketId })
+          .whereIn('additional_user_id', memberIds)
+          .select('additional_user_id');
+
+        const existingIds = new Set(existingResources.map((row: { additional_user_id: string }) => row.additional_user_id));
+        const toInsert = memberIds.filter((userId) => !existingIds.has(userId));
+
+        if (toInsert.length > 0) {
+          await tenantScopedTable(trx, 'ticket_resources', tenant).insert(
+            toInsert.map((userId) => ({
+              ticket_id: ticketId,
+              assigned_to: resolvedAssignedTo,
+              additional_user_id: userId,
+              role: 'team_member',
+              tenant,
+              assigned_at: new Date()
+            }))
+          );
+        }
+      }
+
+      return resolvedAssignedTo;
+    });
+
+    // Emit event after transaction commits so subscribers can see the data
+    await publishEvent({
+      eventType: 'TICKET_ASSIGNED',
+      payload: {
+        tenantId: tenant,
+        ticketId,
+        userId: assignedTo,
+        assignedByUserId: user.user_id,
+        changes: { assigned_team_id: teamId }
+      }
+    });
+
+    // Invalidate ticket list cache so team badge appears on navigation back
+    revalidatePath('/msp/tickets');
+  } catch (error) {
+    const expected = ticketActionErrorFrom(error);
+    if (expected) {
+      return expected;
     }
-
-    return resolvedAssignedTo;
-  });
-
-  // Emit event after transaction commits so subscribers can see the data
-  await publishEvent({
-    eventType: 'TICKET_ASSIGNED',
-    payload: {
-      tenantId: tenant,
-      ticketId,
-      userId: assignedTo,
-      assignedByUserId: user.user_id,
-      changes: { assigned_team_id: teamId }
-    }
-  });
-
-  // Invalidate ticket list cache so team badge appears on navigation back
-  revalidatePath('/msp/tickets');
+    throw error;
+  }
 });
 
 export type RemoveTeamFromTicketMode = 'remove_all' | 'keep_all' | 'selective';
@@ -128,45 +137,53 @@ export const removeTeamFromTicket = withAuth(async (
   { tenant },
   ticketId: string,
   options: RemoveTeamFromTicketOptions
-): Promise<void> => {
-  const { knex: db } = await createTenantKnex();
-  return withTransaction(db, async (trx: Knex.Transaction) => {
-    if (!await hasPermission(user, 'ticket', 'update', trx)) {
-      throw new Error('Permission denied: Cannot remove team from ticket');
+): Promise<void | TicketActionError> => {
+  try {
+    const { knex: db } = await createTenantKnex();
+    await withTransaction(db, async (trx: Knex.Transaction) => {
+      if (!await hasPermission(user, 'ticket', 'update', trx)) {
+        throw new Error('Permission denied: Cannot remove team from ticket');
+      }
+
+      const ticket = await tenantScopedTable(trx, 'tickets', tenant)
+        .where({ ticket_id: ticketId })
+        .first();
+
+      if (!ticket) {
+        throw new Error('Ticket not found');
+      }
+
+      const mode = options.mode;
+      if (mode === 'remove_all') {
+        await tenantScopedTable(trx, 'ticket_resources', tenant)
+          .where({ ticket_id: ticketId, role: 'team_member' })
+          .delete();
+      }
+
+      if (mode === 'selective') {
+        const keepIds = new Set(options.keepUserIds ?? []);
+        await tenantScopedTable(trx, 'ticket_resources', tenant)
+          .where({ ticket_id: ticketId, role: 'team_member' })
+          .whereNotIn('additional_user_id', Array.from(keepIds))
+          .delete();
+      }
+
+      await tenantScopedTable(trx, 'tickets', tenant)
+        .where({ ticket_id: ticketId })
+        .update({
+          assigned_team_id: null,
+          updated_by: user.user_id,
+          updated_at: new Date()
+        });
+    });
+
+    // Invalidate ticket list cache so team badge removal is reflected
+    revalidatePath('/msp/tickets');
+  } catch (error) {
+    const expected = ticketActionErrorFrom(error);
+    if (expected) {
+      return expected;
     }
-
-    const ticket = await tenantScopedTable(trx, 'tickets', tenant)
-      .where({ ticket_id: ticketId })
-      .first();
-
-    if (!ticket) {
-      throw new Error('Ticket not found');
-    }
-
-    const mode = options.mode;
-    if (mode === 'remove_all') {
-      await tenantScopedTable(trx, 'ticket_resources', tenant)
-        .where({ ticket_id: ticketId, role: 'team_member' })
-        .delete();
-    }
-
-    if (mode === 'selective') {
-      const keepIds = new Set(options.keepUserIds ?? []);
-      await tenantScopedTable(trx, 'ticket_resources', tenant)
-        .where({ ticket_id: ticketId, role: 'team_member' })
-        .whereNotIn('additional_user_id', Array.from(keepIds))
-        .delete();
-    }
-
-    await tenantScopedTable(trx, 'tickets', tenant)
-      .where({ ticket_id: ticketId })
-      .update({
-        assigned_team_id: null,
-        updated_by: user.user_id,
-        updated_at: new Date()
-      });
-  });
-
-  // Invalidate ticket list cache so team badge removal is reflected
-  revalidatePath('/msp/tickets');
+    throw error;
+  }
 });

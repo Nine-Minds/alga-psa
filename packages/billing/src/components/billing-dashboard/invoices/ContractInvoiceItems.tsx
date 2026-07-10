@@ -5,6 +5,7 @@ import Link from 'next/link';
 import type { IInvoiceCharge } from '@alga-psa/types';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
+import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 import {
   getActiveClientLocationsForBilling,
@@ -61,6 +62,10 @@ const ContractInvoiceItems: React.FC<ContractInvoiceItemsProps> = ({ items, clie
       }
       try {
         const locations = await getActiveClientLocationsForBilling(clientId);
+        if (isActionPermissionError(locations)) {
+          if (!cancelled) setClientLocations([]);
+          return;
+        }
         if (!cancelled) setClientLocations(locations);
       } catch (error) {
         console.error('Failed to load client locations for invoice items:', error);
@@ -84,6 +89,10 @@ const ContractInvoiceItems: React.FC<ContractInvoiceItemsProps> = ({ items, clie
     }
     getInvoiceLineCogs(invoiceId)
       .then((rows) => {
+        if (isActionPermissionError(rows)) {
+          if (!cancelled) setCogsByItem(new Map());
+          return;
+        }
         if (!cancelled) setCogsByItem(new Map(rows.map((r) => [r.item_id, r])));
       })
       .catch(() => {

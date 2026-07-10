@@ -31,6 +31,12 @@ import {
 } from '@alga-psa/workflow-streams';
 import { buildContactPrimarySetPayload } from '@alga-psa/workflow-streams';
 import { ensureDefaultContractForClientIfBillingConfigured } from '@alga-psa/shared/billingClients/defaultContract';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { applyClientListIndexedSearchFilter } from '../lib/listSearchSql';
 
 const CLIENT_PORTAL_MUTABLE_CLIENT_PROPERTIES = new Set([
@@ -39,6 +45,7 @@ const CLIENT_PORTAL_MUTABLE_CLIENT_PROPERTIES = new Set([
   'company_size',
   'annual_revenue',
 ]);
+type ClientUpdateActionError = ActionMessageError | ActionPermissionError;
 
 function tenantScopedTable(
   conn: Knex | Knex.Transaction,
@@ -48,6 +55,53 @@ function tenantScopedTable(
   return tenantDb(conn, tenant).table(table);
 }
 
+function updateClientExpectedErrorFrom(error: unknown, clientName?: string | null): ClientUpdateActionError | null {
+  if (error instanceof Error) {
+    if (error.message.includes('Permission denied')) {
+      return permissionError(error.message);
+    }
+    if (/unauthorized|not authenticated|must sign in/i.test(error.message)) {
+      return permissionError('You must be signed in to manage clients.');
+    }
+    if (error.message === 'Client not found') {
+      return actionError('Client not found');
+    }
+  }
+
+  const dbError = error as { code?: string; constraint?: string; column?: string; message?: string };
+  if (dbError?.code === '23505') {
+    if (dbError.constraint?.includes('clients_tenant_client_name_unique')) {
+      return actionError(`A client with the name "${clientName || 'this name'}" already exists. Please choose a different name.`);
+    }
+    return actionError('A client with these details already exists. Please check the client name.');
+  }
+  if (dbError?.code === '23503') {
+    return actionError('Referenced data not found. Please check account manager, billing contact, and related client settings.');
+  }
+  if (dbError?.code === '22P02') {
+    return actionError('One of the selected client values is invalid. Please refresh and try again.');
+  }
+  if (dbError?.code === '23514') {
+    return actionError('Invalid client data provided. Please check all fields and try again.');
+  }
+  if (dbError?.code === '23502') {
+    return actionError(`Missing required client field${dbError.column ? `: ${dbError.column}` : ''}.`);
+  }
+
+  return null;
+}
+
+function clientActionMessageFrom(error: unknown, fallback: string, clientName?: string | null): string {
+  const expected = updateClientExpectedErrorFrom(error, clientName);
+  if (expected) {
+    const candidate = expected as unknown as { actionError?: unknown; permissionError?: unknown };
+    return typeof candidate.actionError === 'string'
+      ? candidate.actionError
+      : String(candidate.permissionError ?? fallback);
+  }
+
+  return fallback;
+}
 function maybeUserActor(currentUser: any) {
   const userId = currentUser?.user_id;
   if (typeof userId !== 'string' || !userId) return undefined;
@@ -176,15 +230,21 @@ async function cleanupEntraReferencesBeforeClientDelete(
   }
 }
 
-export const updateClient = withAuth(async (user, { tenant }, clientId: string, updateData: Partial<Omit<IClient, 'account_manager_full_name'>>): Promise<IClient> => {
-  await assertMspOrClientPortalOwnClientPermission(
-    user,
-    tenant,
-    clientId,
-    'client',
-    'update',
-    'Permission denied: Cannot update clients. Please contact your administrator if you need additional access.'
-  );
+export const updateClient = withAuth(async (user, { tenant }, clientId: string, updateData: Partial<Omit<IClient, 'account_manager_full_name'>>): Promise<IClient | ClientUpdateActionError> => {
+  try {
+    await assertMspOrClientPortalOwnClientPermission(
+      user,
+      tenant,
+      clientId,
+      'client',
+      'update',
+      'Permission denied: Cannot update clients. Please contact your administrator if you need additional access.'
+    );
+  } catch (error) {
+    const expected = updateClientExpectedErrorFrom(error, updateData.client_name);
+    if (expected) return expected;
+    throw error;
+  }
 
   const isClientPortalUpdate = isClientPortalUser(user);
   const permittedUpdateData = isClientPortalUpdate
@@ -273,7 +333,7 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
         .returning('*');
 
       if (!updatedClient) {
-        throw new Error('Failed to fetch updated client');
+        throw new Error('Client update completed without returning the updated record.');
       }
 
       return {
@@ -392,16 +452,18 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
     return updatedClientWithLogo;
   } catch (error) {
     console.error('Error updating client:', error);
-    throw new Error('Failed to update client');
+    const expected = updateClientExpectedErrorFrom(error, permittedUpdateData.client_name);
+    if (expected) return expected;
+    throw error;
   }
 });
 
 export const createClient = withAuth(async (user, { tenant }, client: Omit<IClient, 'client_id' | 'created_at' | 'updated_at' | 'account_manager_full_name'>): Promise<{ success: true; data: IClient } | { success: false; error: string }> => {
-  await assertMspPermission(user, 'client', 'create', 'Permission denied: Cannot create clients');
-
-  const { knex } = await createTenantKnex();
-
   try {
+    await assertMspPermission(user, 'client', 'create', 'Permission denied: Cannot create clients');
+
+    const { knex } = await createTenantKnex();
+
     // Ensure website field is synchronized between properties.website and url
     const clientData = { ...client };
 
@@ -447,7 +509,7 @@ export const createClient = withAuth(async (user, { tenant }, client: Omit<IClie
     });
 
     if (!createdClient) {
-      throw new Error('Failed to create client');
+      throw new Error('Client insert completed without returning the created record.');
     }
 
     // Create default tax settings for the new client
@@ -480,6 +542,17 @@ export const createClient = withAuth(async (user, { tenant }, client: Omit<IClie
   } catch (error: any) {
     console.error('Error creating client:', error);
 
+    const expected = updateClientExpectedErrorFrom(error, client.client_name);
+    if (expected) {
+      const candidate = expected as unknown as { actionError?: unknown; permissionError?: unknown };
+      return {
+        success: false,
+        error: typeof candidate.permissionError === 'string'
+          ? candidate.permissionError
+          : String(candidate.actionError ?? 'Failed to create client'),
+      };
+    }
+
     // Handle specific database constraint violations
     if (error.code === '23505') { // PostgreSQL unique constraint violation
       if (error.constraint && error.constraint.includes('clients_tenant_client_name_unique')) {
@@ -505,7 +578,7 @@ export const createClient = withAuth(async (user, { tenant }, client: Omit<IClie
     }
 
     // Default fallback for system errors
-    throw new Error('Failed to create client. Please try again.');
+    throw error;
   }
 });
 
@@ -997,7 +1070,14 @@ export const deleteClient = withAuth(async (user, { tenant }, clientId: string):
   counts?: Record<string, number>;
 }> => {
   if (!await hasMspPermission(user, 'client', 'delete')) {
-    throw new Error('Permission denied: Cannot delete clients');
+    return {
+      success: false,
+      canDelete: false,
+      code: 'PERMISSION_DENIED',
+      message: 'Permission denied: Cannot delete clients',
+      dependencies: [],
+      alternatives: []
+    };
   }
 
   try {
@@ -1170,15 +1250,21 @@ export const deleteClient = withAuth(async (user, { tenant }, clientId: string):
       success: false,
       canDelete: false,
       code: 'VALIDATION_FAILED',
-      message: error instanceof Error ? error.message : 'Failed to delete client',
+      message: clientActionMessageFrom(error, 'Failed to delete client'),
       dependencies: [],
       alternatives: []
     };
   }
 });
 
-export const exportClientsToCSV = withAuth(async (user, { tenant }, clients: IClient[]): Promise<string> => {
-  await assertMspPermission(user, 'client', 'read', 'Permission denied: Cannot export clients');
+export const exportClientsToCSV = withAuth(async (user, { tenant }, clients: IClient[]): Promise<string | ClientUpdateActionError> => {
+  try {
+    await assertMspPermission(user, 'client', 'read', 'Permission denied: Cannot export clients');
+  } catch (error) {
+    const expected = updateClientExpectedErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 
   const { knex } = await createTenantKnex();
 
@@ -1196,12 +1282,16 @@ export const exportClientsToCSV = withAuth(async (user, { tenant }, clients: ICl
     });
 
     // Fetch tags for all clients
-    const { findTagsByEntityIds } = await import('@alga-psa/tags/actions');
+    const { findTagsByEntityIds, isTagActionError: isImportedTagActionError } = await import('@alga-psa/tags/actions');
     const tags = await findTagsByEntityIds(clientIds, 'client');
+    const safeTags = isImportedTagActionError(tags) ? [] : tags;
+    if (isImportedTagActionError(tags)) {
+      console.warn('[exportClientsToCSV] Failed to load client tags:', tags);
+    }
 
     // Create a map of client_id to tags
     const tagMap = new Map<string, string[]>();
-    tags.forEach(tag => {
+    safeTags.forEach(tag => {
       if (!tagMap.has(tag.tagged_id)) {
         tagMap.set(tag.tagged_id, []);
       }
@@ -1304,8 +1394,14 @@ export const getAllClientIds = withAuth(async (user, { tenant }, params: {
   searchTerm?: string;
   clientTypeFilter?: 'all' | 'company' | 'individual';
   selectedTags?: string[];
-} = {}): Promise<string[]> => {
-  await assertMspPermission(user, 'client', 'read', 'Permission denied: Cannot read clients');
+} = {}): Promise<string[] | ClientUpdateActionError> => {
+  try {
+    await assertMspPermission(user, 'client', 'read', 'Permission denied: Cannot read clients');
+  } catch (error) {
+    const expected = updateClientExpectedErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 
   const { knex: db } = await createTenantKnex();
 
@@ -1379,8 +1475,14 @@ export const checkExistingClients = withAuth(async (
   user,
   { tenant },
   clientNames: string[]
-): Promise<IClient[]> => {
-  await assertMspPermission(user, 'client', 'read', 'Permission denied: Cannot read clients');
+): Promise<IClient[] | ClientUpdateActionError> => {
+  try {
+    await assertMspPermission(user, 'client', 'read', 'Permission denied: Cannot read clients');
+  } catch (error) {
+    const expected = updateClientExpectedErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 
   const { knex: db } = await createTenantKnex();
 
@@ -1401,16 +1503,30 @@ export interface ImportClientResult {
   skipped?: boolean;
 }
 
+function clientImportFailureResults(
+  clientsData: Array<Record<string, any>> | null | undefined,
+  message: string
+): ImportClientResult[] {
+  const rows = clientsData && clientsData.length > 0 ? clientsData : [{}];
+  return rows.map((originalData) => ({
+    success: false,
+    message,
+    originalData,
+  }));
+}
+
 export const importClientsFromCSV = withAuth(async (
   user,
   { tenant },
   clientsData: Array<Record<string, any>>,
   updateExisting: boolean = false
 ): Promise<ImportClientResult[]> => {
-  await assertMspPermission(user, 'client', 'create', 'Permission denied: Cannot create clients');
+  if (!await hasMspPermission(user, 'client', 'create')) {
+    return clientImportFailureResults(clientsData, 'Permission denied: Cannot create clients');
+  }
 
   if (updateExisting && !await hasMspPermission(user, 'client', 'update')) {
-    throw new Error('Permission denied: Cannot update clients');
+    return clientImportFailureResults(clientsData, 'Permission denied: Cannot update clients');
   }
 
   const results: ImportClientResult[] = [];
@@ -1684,7 +1800,7 @@ export const uploadClientLogo = withAuth(async (
     return { success: true, logoUrl: result.imageUrl };
   } catch (error) {
     console.error('[uploadClientLogo] Error during upload process:', error);
-    const message = error instanceof Error ? error.message : 'Failed to upload client logo';
+    const message = clientActionMessageFrom(error, 'Failed to upload client logo');
     return { success: false, message };
   }
 });
@@ -1724,7 +1840,7 @@ export const deleteClientLogo = withAuth(async (
     return { success: true };
   } catch (error) {
     console.error('Error deleting client logo:', error);
-    const message = error instanceof Error ? error.message : 'Failed to delete client logo';
+    const message = clientActionMessageFrom(error, 'Failed to delete client logo');
     return { success: false, message };
   }
 });
@@ -1778,7 +1894,7 @@ export const deactivateClientContacts = withAuth(async (
     return { success: true, contactsDeactivated: result.contactsDeactivated };
   } catch (error) {
     console.error('Error deactivating client contacts:', error);
-    const message = error instanceof Error ? error.message : 'Failed to deactivate client contacts';
+    const message = clientActionMessageFrom(error, 'Failed to deactivate client contacts');
     return { success: false, contactsDeactivated: 0, message };
   }
 });
@@ -1859,7 +1975,7 @@ export const markClientInactiveWithContacts = withAuth(async (
     return { success: true, contactsDeactivated: result.contactsDeactivated };
   } catch (error) {
     console.error('Error marking client and contacts as inactive:', error);
-    const message = error instanceof Error ? error.message : 'Failed to mark client as inactive';
+    const message = clientActionMessageFrom(error, 'Failed to mark client as inactive');
     return { success: false, contactsDeactivated: 0, message };
   }
 });
@@ -1928,7 +2044,7 @@ export const markClientActiveWithContacts = withAuth(async (
     return { success: true, contactsReactivated: result.contactsReactivated };
   } catch (error) {
     console.error('Error marking client and contacts as active:', error);
-    const message = error instanceof Error ? error.message : 'Failed to mark client as active';
+    const message = clientActionMessageFrom(error, 'Failed to mark client as active');
     return { success: false, contactsReactivated: 0, message };
   }
 });
@@ -1982,7 +2098,7 @@ export const reactivateClientContacts = withAuth(async (
     return { success: true, contactsReactivated: result.contactsReactivated };
   } catch (error) {
     console.error('Error reactivating client contacts:', error);
-    const message = error instanceof Error ? error.message : 'Failed to reactivate client contacts';
+    const message = clientActionMessageFrom(error, 'Failed to reactivate client contacts');
     return { success: false, contactsReactivated: 0, message };
   }
 });

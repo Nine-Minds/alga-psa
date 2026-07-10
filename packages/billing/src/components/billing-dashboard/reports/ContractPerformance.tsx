@@ -12,6 +12,14 @@ import { getClientContractsForBilling, getAllClientsForBilling } from '@alga-psa
 import { IClient } from '@alga-psa/types';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 interface ContractMetrics {
   contractId: string;
@@ -43,6 +51,11 @@ const ContractPerformance: React.FC = () => {
     
     try {
       const fetchedContracts = await getContracts();
+      if (isReturnedActionError(fetchedContracts)) {
+        setError(getErrorMessage(fetchedContracts));
+        setContracts([]);
+        return;
+      }
       setContracts(fetchedContracts);
       
       // Calculate metrics for all contracts
@@ -70,6 +83,9 @@ const ContractPerformance: React.FC = () => {
     try {
       // Get all clients
       const clients = await getAllClientsForBilling(false);
+      if (isReturnedActionError(clients)) {
+        throw new Error(getErrorMessage(clients));
+      }
       
       // Get all clients using this contract
       const clientsWithContract: IClient[] = [];
@@ -77,6 +93,9 @@ const ContractPerformance: React.FC = () => {
       
       for (const client of clients) {
         const clientContracts = await getClientContractsForBilling(client.client_id);
+        if (isReturnedActionError(clientContracts)) {
+          throw new Error(getErrorMessage(clientContracts));
+        }
         const matchingContract = clientContracts.find(cc => 
           cc.contract_id === contract.contract_id && cc.is_active
         );
@@ -91,6 +110,9 @@ const ContractPerformance: React.FC = () => {
       
       // Get all contract lines in the contract
       const contractLines = await getContractLinesForContract(contract.contract_id);
+      if (isReturnedActionError(contractLines)) {
+        throw new Error(getErrorMessage(contractLines));
+      }
       
       return {
         contractId: contract.contract_id,

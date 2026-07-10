@@ -8,6 +8,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { getErrorMessage, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { getAllUsersBasic, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
 import { getQuoteRecipientContacts } from '../../../actions/quoteRecipientActions';
 import type { IContact, IUser } from '@alga-psa/types';
@@ -58,6 +59,7 @@ export function QuoteSendRecipientsField({
   const { t } = useTranslation('msp/quotes');
   const [internalUsers, setInternalUsers] = useState<IUser[]>([]);
   const [contacts, setContacts] = useState<IContact[]>([]);
+  const [contactLoadError, setContactLoadError] = useState<string | null>(null);
   const [userAvatarUrls, setUserAvatarUrls] = useState<Record<string, string | null>>({});
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState('');
@@ -85,20 +87,32 @@ export function QuoteSendRecipientsField({
     let cancelled = false;
     if (!clientId) {
       setContacts([]);
+      setContactLoadError(null);
       return;
     }
+    setContactLoadError(null);
     getQuoteRecipientContacts(clientId, 'active')
       .then((rows) => {
         if (cancelled) return;
+        if (isActionPermissionError(rows)) {
+          setContacts([]);
+          setContactLoadError(getErrorMessage(rows));
+          return;
+        }
         setContacts(Array.isArray(rows) ? rows : []);
       })
       .catch(() => {
-        if (!cancelled) setContacts([]);
+        if (!cancelled) {
+          setContacts([]);
+          setContactLoadError(t('quoteRecipients.errors.contactsLoadFailed', {
+            defaultValue: 'Could not load client contacts.',
+          }));
+        }
       });
     return () => {
       cancelled = true;
     };
-  }, [clientId]);
+  }, [clientId, t]);
 
   // Batch-fetch avatar URLs for internal users (contacts already carry avatarUrl from hydration).
   useEffect(() => {
@@ -361,6 +375,10 @@ export function QuoteSendRecipientsField({
       </Button>
 
       {dropdownContent && portalContainer && createPortal(dropdownContent, portalContainer)}
+
+      {contactLoadError && (
+        <p className="text-xs text-destructive">{contactLoadError}</p>
+      )}
 
       {value.length > 0 && (
         <div className="flex flex-wrap gap-1.5">

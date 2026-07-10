@@ -107,7 +107,7 @@ export async function GET(request: NextRequest): Promise<NextResponse> {
         error.message.includes('Authentication')
       ) {
         return NextResponse.json(
-          { success: false, error: error.message },
+          { success: false, error: 'Access denied to platform reports.' },
           { status: 403 }
         );
       }

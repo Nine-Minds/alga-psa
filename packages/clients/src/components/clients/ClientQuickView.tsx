@@ -3,6 +3,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { DeletionValidationResult, IClient, IClientWithLocation, IContact, ISlaPolicy, ITag } from '@alga-psa/types';
 import { findTagsByEntityId } from '@alga-psa/tags/actions/tagActions';
+import { isTagActionError } from '@alga-psa/tags/actions/tagActionErrors';
 import { getAllUsersBasicAsync } from '../../lib/usersHelpers';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import {
@@ -29,6 +30,13 @@ import { listInboundTicketDestinationOptions } from '@alga-psa/clients/actions/i
 import { startClientEntraSync } from '@alga-psa/clients/actions/entraClientSyncActions';
 import { useClientCrossFeature } from '../../context/ClientCrossFeatureContext';
 import { handleError, useDrawer, DeleteEntityDialog } from '@alga-psa/ui';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { Button } from '@alga-psa/ui/components/Button';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';
@@ -53,6 +61,10 @@ import {
   shouldShowEntraSyncAction,
 } from './clientDetailsEntraSyncAction';
 import { ClientDetailsTabContent } from './ClientDetailsTabContent';
+
+function isClientActionError(value: unknown): value is ActionMessageError | ActionPermissionError {
+  return isActionMessageError(value) || isActionPermissionError(value);
+}
 
 interface ClientQuickViewProps {
   clientId?: string;
@@ -187,6 +199,10 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
     (async () => {
       try {
         const clientTags = await findTagsByEntityId(editedClient.client_id, 'client');
+        if (isTagActionError(clientTags)) {
+          console.error('Error fetching tags:', clientTags);
+          return;
+        }
         if (!cancelled) {
           setTags(clientTags);
         }
@@ -229,6 +245,10 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
       try {
         const rows = await listClientInboundEmailDomains(editedClient.client_id);
         if (!cancelled) {
+          if (isClientActionError(rows)) {
+            toast.error(getErrorMessage(rows));
+            return;
+          }
           setInboundEmailDomains((rows ?? []).map((r: any) => ({ id: r.id, domain: r.domain })));
         }
       } catch (err) {
@@ -247,6 +267,11 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
       try {
         const rows = await listInboundTicketDestinationOptions();
         if (cancelled) return;
+        if (isClientActionError(rows)) {
+          toast.error(getErrorMessage(rows));
+          setInboundDestinationOptions([]);
+          return;
+        }
         setInboundDestinationOptions((rows ?? []).map((row: any) => ({
           value: row.id,
           label: row.is_active
@@ -276,6 +301,10 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
       try {
         const rows = await listClientNameAliases(editedClient.client_id);
         if (!cancelled) {
+          if (isClientActionError(rows)) {
+            toast.error(getErrorMessage(rows));
+            return;
+          }
           setClientNameAliases((rows ?? []).map((r: any) => ({ id: r.id, alias: r.alias })));
         }
       } catch (err) {
@@ -515,7 +544,13 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
         properties: restOfEditedClient.properties ? { ...restOfEditedClient.properties } : {},
         account_manager_id: editedClientRef.current.account_manager_id === '' ? null : editedClientRef.current.account_manager_id,
       };
-      const updatedClient = await updateClient(client.client_id, dataToUpdate) as IClient;
+      const updateResult = await updateClient(client.client_id, dataToUpdate);
+      if (isClientActionError(updateResult)) {
+        handleError(updateResult);
+        return;
+      }
+
+      const updatedClient = updateResult as IClient;
       setClient(updatedClient);
       setEditedClient(updatedClient);
       setHasUnsavedChanges(false);
@@ -543,11 +578,16 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
     setIsInboundDomainBusy(true);
     try {
       const created = await addClientInboundEmailDomain(editedClient.client_id, domain);
+      if (isClientActionError(created)) {
+        toast.error(getErrorMessage(created));
+        return;
+      }
       setInboundEmailDomains((prev) => [...prev, { id: (created as any).id, domain: (created as any).domain }]);
       setInboundDomainDraft('');
       toast.success(t('clientDetails.inboundDomainAdded'));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t('clientDetails.inboundDomainAddFailed'));
+      console.error('Failed to add inbound email domain:', err);
+      toast.error(t('clientDetails.inboundDomainAddFailed'));
     } finally {
       setIsInboundDomainBusy(false);
     }
@@ -557,11 +597,16 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
     if (!editedClient?.client_id || !domainId) return;
     setIsInboundDomainBusy(true);
     try {
-      await removeClientInboundEmailDomain(editedClient.client_id, domainId);
+      const result = await removeClientInboundEmailDomain(editedClient.client_id, domainId);
+      if (isClientActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       setInboundEmailDomains((prev) => prev.filter((domain) => domain.id !== domainId));
       toast.success(t('clientDetails.inboundDomainRemoved'));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t('clientDetails.inboundDomainRemoveFailed'));
+      console.error('Failed to remove inbound email domain:', err);
+      toast.error(t('clientDetails.inboundDomainRemoveFailed'));
     } finally {
       setIsInboundDomainBusy(false);
     }
@@ -574,11 +619,16 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
     setIsAliasBusy(true);
     try {
       const created = await addClientNameAlias(editedClient.client_id, alias);
+      if (isClientActionError(created)) {
+        toast.error(getErrorMessage(created));
+        return;
+      }
       setClientNameAliases((prev) => [...prev, { id: (created as any).id, alias: (created as any).alias }]);
       setAliasDraft('');
       toast.success(t('clientDetails.nameAliasAdded', { defaultValue: 'Alias added' }));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t('clientDetails.nameAliasAddFailed', { defaultValue: 'Failed to add alias' }));
+      console.error('Failed to add client alias:', err);
+      toast.error(t('clientDetails.nameAliasAddFailed', { defaultValue: 'Failed to add alias' }));
     } finally {
       setIsAliasBusy(false);
     }
@@ -588,11 +638,16 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
     if (!editedClient?.client_id || !aliasId) return;
     setIsAliasBusy(true);
     try {
-      await removeClientNameAlias(editedClient.client_id, aliasId);
+      const result = await removeClientNameAlias(editedClient.client_id, aliasId);
+      if (isClientActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       setClientNameAliases((prev) => prev.filter((alias) => alias.id !== aliasId));
       toast.success(t('clientDetails.nameAliasRemoved', { defaultValue: 'Alias removed' }));
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : t('clientDetails.nameAliasRemoveFailed', { defaultValue: 'Failed to remove alias' }));
+      console.error('Failed to remove client alias:', err);
+      toast.error(t('clientDetails.nameAliasRemoveFailed', { defaultValue: 'Failed to remove alias' }));
     } finally {
       setIsAliasBusy(false);
     }
@@ -731,7 +786,7 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
       }
     } catch (err) {
       console.error('Failed to delete client:', err);
-      toast.error(err instanceof Error ? err.message : t('clientDetails.deleteError'));
+      toast.error(t('clientDetails.deleteError'));
     } finally {
       setIsDeleteProcessing(false);
     }

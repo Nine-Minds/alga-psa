@@ -35,6 +35,19 @@ import { ReflectionParentContext } from '@alga-psa/ui/ui-reflection/ReflectionPa
 import { DialogComponent, FormFieldComponent } from '@alga-psa/ui/ui-reflection/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { interpolateFallback } from '@alga-psa/ui/lib/i18n/interpolateFallback';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+type ClientLocationActionError = ActionMessageError | ActionPermissionError;
+
+function isClientLocationActionError(value: unknown): value is ClientLocationActionError {
+  return isActionMessageError(value) || isActionPermissionError(value);
+}
 
 interface ClientLocationsProps {
   clientId: string;
@@ -470,6 +483,15 @@ export default function ClientLocations({ clientId, isEditing }: ClientLocations
     setIsLocationsLoading(true);
     try {
       const fetchedLocations = await getClientLocations(clientId);
+      if (isClientLocationActionError(fetchedLocations)) {
+        toast({
+          title: t('status.error', 'Error'),
+          description: getErrorMessage(fetchedLocations),
+          variant: 'destructive',
+        });
+        setLocations([]);
+        return;
+      }
       setLocations(fetchedLocations);
     } catch (error) {
       console.error('Error loading locations:', error);
@@ -556,13 +578,29 @@ export default function ClientLocations({ clientId, isEditing }: ClientLocations
 
       if (editingLocation) {
         const { client_id, ...updateData } = locationData;
-        await updateClientLocation(editingLocation.location_id, updateData);
+        const result = await updateClientLocation(editingLocation.location_id, updateData);
+        if (isClientLocationActionError(result)) {
+          toast({
+            title: t('status.error', 'Error'),
+            description: getErrorMessage(result),
+            variant: 'destructive',
+          });
+          return;
+        }
         toast({
           title: t('status.success', 'Success'),
           description: t('clients.locations.success.update', 'Location updated successfully'),
         });
       } else {
-        await createClientLocation(clientId, locationData);
+        const result = await createClientLocation(clientId, locationData);
+        if (isClientLocationActionError(result)) {
+          toast({
+            title: t('status.error', 'Error'),
+            description: getErrorMessage(result),
+            variant: 'destructive',
+          });
+          return;
+        }
         toast({
           title: t('status.success', 'Success'),
           description: t('clients.locations.success.create', 'Location created successfully'),
@@ -595,7 +633,15 @@ export default function ClientLocations({ clientId, isEditing }: ClientLocations
     if (!locationToDelete) return;
 
     try {
-      await deleteClientLocation(locationToDelete.location_id);
+      const result = await deleteClientLocation(locationToDelete.location_id);
+      if (isClientLocationActionError(result)) {
+        toast({
+          title: t('status.error', 'Error'),
+          description: getErrorMessage(result),
+          variant: 'destructive',
+        });
+        return;
+      }
       toast({
         title: t('status.success', 'Success'),
         description: t('clients.locations.success.delete', 'Location deleted successfully'),
@@ -616,7 +662,15 @@ export default function ClientLocations({ clientId, isEditing }: ClientLocations
 
   const handleSetDefault = async (locationId: string) => {
     try {
-      await setDefaultClientLocation(locationId);
+      const result = await setDefaultClientLocation(locationId);
+      if (isClientLocationActionError(result)) {
+        toast({
+          title: t('status.error', 'Error'),
+          description: getErrorMessage(result),
+          variant: 'destructive',
+        });
+        return;
+      }
       toast({
         title: t('status.success', 'Success'),
         description: t('clients.locations.success.setDefault', 'Default location updated'),

@@ -11,7 +11,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import {
   getAllSessionsAction,
   revokeSessionAction,
@@ -61,6 +61,9 @@ export default function AdminSessionManagement() {
         getAllSessionsAction(),
         getAllUsers(true, undefined) // Include inactive users, all types
       ]);
+      if (isActionPermissionError(sessionsData)) {
+        throw sessionsData;
+      }
       setSessions(sessionsData.sessions);
       setFilteredSessions(sessionsData.sessions);
       setUsers(usersData);
@@ -153,6 +156,10 @@ export default function AdminSessionManagement() {
     try {
       setRevoking(sessionId);
       const result = await revokeSessionAction(sessionId);
+
+      if (!result.success) {
+        throw new Error(result.message);
+      }
 
       if (result.is_current) {
         toast.success(t('security.sessions.messages.loggingOut'));

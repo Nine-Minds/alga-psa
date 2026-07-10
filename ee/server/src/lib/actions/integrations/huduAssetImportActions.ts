@@ -26,6 +26,7 @@ import type {
   HuduAssetImportFailure,
   HuduAssetImportResult,
 } from '../../integrations/hudu/assetImportCore';
+import { huduActionErrorMessage } from './huduActionErrors';
 
 // These types are NOT re-exported: a `'use server'` module may only export
 // async actions (Next turns a type re-export into a missing value export).
@@ -85,7 +86,7 @@ export const importHuduAsset = withHuduAssetCreateAccess(
       return result;
     } catch (error) {
       logger.error('[HuduAssetImportActions] importHuduAsset failed', { tenant, error: toErrorMessage(error) });
-      return { success: false, error: toErrorMessage(error) };
+      return { success: false, error: huduActionErrorMessage(error, 'Unable to import the Hudu asset. Please try again.') };
     }
   }
 );
@@ -117,7 +118,11 @@ export const importAllUnmatchedHuduAssets = withHuduAssetCreateAccess(
         tenant,
         error: toErrorMessage(error),
       });
-      return { success: false, error: toErrorMessage(error), partial: summary };
+      return {
+        success: false,
+        error: huduActionErrorMessage(error, 'Unable to import unmatched Hudu assets. Please try again.'),
+        partial: summary,
+      };
     }
   }
 );

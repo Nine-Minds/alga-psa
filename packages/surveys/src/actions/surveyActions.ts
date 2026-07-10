@@ -11,9 +11,81 @@ import { getAllBoards } from '@alga-psa/reference-data/actions/boardActions';
 import { getTicketStatuses } from '@alga-psa/reference-data/actions/status-actions/statusActions';
 import { getAllPriorities } from '@alga-psa/reference-data/actions/priorityActions';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 const SURVEY_TEMPLATE_TABLE = 'survey_templates';
 const SURVEY_TRIGGER_TABLE = 'survey_triggers';
+
+export type SurveyActionError = ActionMessageError | ActionPermissionError;
+
+function isSurveyActionError(value: unknown): value is SurveyActionError {
+  return Boolean(
+    value &&
+    typeof value === 'object' &&
+    (
+      typeof (value as { actionError?: unknown }).actionError === 'string' ||
+      typeof (value as { permissionError?: unknown }).permissionError === 'string'
+    )
+  );
+}
+
+function surveyActionErrorFrom(error: unknown): SurveyActionError | null {
+  if (isSurveyActionError(error)) {
+    return error;
+  }
+
+  if (error instanceof z.ZodError) {
+    const firstIssue = error.issues[0];
+    return actionError(firstIssue?.message || 'Survey data is invalid. Please review the form and try again.');
+  }
+
+  if (error instanceof Error) {
+    const message = error.message;
+    if (message.includes('Permission denied') || /unauthorized|not authenticated|must sign in/i.test(message)) {
+      return permissionError(message);
+    }
+    if (message === 'Survey template not found') {
+      return actionError('Survey template not found. It may have been deleted. Please refresh and try again.');
+    }
+    if (message === 'Survey trigger not found') {
+      return actionError('Survey trigger not found. It may have been deleted. Please refresh and try again.');
+    }
+    if (message === 'Template does not belong to current tenant') {
+      return actionError('Choose an existing survey template before saving the trigger.');
+    }
+    if (
+      message === 'Unable to load boards.' ||
+      message === 'Unable to load statuses.' ||
+      message === 'Unable to load priorities.'
+    ) {
+      return actionError(message);
+    }
+  }
+
+  const dbError = error as { code?: string; column?: string; constraint?: string };
+  if (dbError?.code === '22P02') {
+    return actionError('One of the selected survey values is invalid. Please refresh and try again.');
+  }
+  if (dbError?.code === '23502') {
+    return actionError(`Missing required survey field${dbError.column ? `: ${dbError.column}` : ''}.`);
+  }
+  if (dbError?.code === '23503') {
+    return actionError('The selected survey template or related record no longer exists. Please refresh and try again.');
+  }
+  if (dbError?.code === '23505') {
+    return actionError('A survey record with these details already exists.');
+  }
+  if (dbError?.code === '23514') {
+    return actionError('One of the survey values is not allowed. Please review the form and try again.');
+  }
+
+  return null;
+}
 
 const ratingTypeSchema = z.enum(['stars', 'numbers', 'emojis']);
 const ratingScaleSchema = z.union([z.literal(3), z.literal(5), z.literal(10)]);
@@ -130,86 +202,110 @@ export type SurveyTrigger = {
   updatedAt: Date;
 };
 
-export const getSurveyTemplates = withAuth(async (_user, { tenant }): Promise<SurveyTemplate[]> => {
-  const { knex } = await createTenantKnex();
+export const getSurveyTemplates = withAuth(async (_user, { tenant }): Promise<SurveyTemplate[] | SurveyActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
 
-  const rows = await tenantDb(knex, tenant).table<TemplateRow>(SURVEY_TEMPLATE_TABLE)
-    .orderBy('template_name', 'asc');
+    const rows = await tenantDb(knex, tenant).table<TemplateRow>(SURVEY_TEMPLATE_TABLE)
+      .orderBy('template_name', 'asc');
 
-  return rows.map(mapTemplateRow);
+    return rows.map(mapTemplateRow);
+  } catch (error) {
+    const expected = surveyActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 });
 
-export const getSurveyTemplateById = withAuth(async (_user, { tenant }, templateId: string): Promise<SurveyTemplate | null> => {
-  const { knex } = await createTenantKnex();
+export const getSurveyTemplateById = withAuth(async (_user, { tenant }, templateId: string): Promise<SurveyTemplate | null | SurveyActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
 
-  const row = await tenantDb(knex, tenant).table<TemplateRow>(SURVEY_TEMPLATE_TABLE)
-    .where({ template_id: templateId })
-    .first();
-
-  return row ? mapTemplateRow(row) : null;
-});
-
-export const createSurveyTemplate = withAuth(async (_user, { tenant }, input: CreateTemplateInput): Promise<SurveyTemplate> => {
-  const parsed = baseTemplateSchema.parse(input);
-  const { knex } = await createTenantKnex();
-
-  const inserted = await withTransaction(knex, async (trx) => {
-    if (parsed.isDefault) {
-      await tenantDb(trx, tenant).table(SURVEY_TEMPLATE_TABLE)
-        .update({ is_default: false, updated_at: trx.fn.now() });
-    }
-
-    const payload = buildTemplateInsertPayload(trx, tenant, parsed);
-    const [row] = await tenantDb(trx, tenant).table<TemplateRow>(SURVEY_TEMPLATE_TABLE)
-      .insert(payload)
-      .returning('*');
-
-    if (!row) {
-      throw new Error('Failed to create survey template');
-    }
-
-    return row;
-  });
-
-  return mapTemplateRow(inserted);
-});
-
-export const updateSurveyTemplate = withAuth(async (_user, { tenant }, templateId: string, input: UpdateTemplateInput): Promise<SurveyTemplate> => {
-  const parsed = updateTemplateSchema.parse(input);
-  const { knex } = await createTenantKnex();
-
-  const updated = await withTransaction(knex, async (trx) => {
-    const current = await tenantDb(trx, tenant).table<TemplateRow>(SURVEY_TEMPLATE_TABLE)
-      .where({ template_id: templateId })
-      .first()
-      .forUpdate();
-
-    if (!current) {
-      throw new Error('Survey template not found');
-    }
-
-    if (parsed.isDefault) {
-      await tenantDb(trx, tenant).table(SURVEY_TEMPLATE_TABLE)
-        .update({ is_default: false, updated_at: trx.fn.now() });
-    }
-
-    const updatePayload = buildTemplateUpdatePayload(trx, parsed);
-    await tenantDb(trx, tenant).table(SURVEY_TEMPLATE_TABLE)
-      .where({ template_id: templateId })
-      .update(updatePayload);
-
-    const refreshed = await tenantDb(trx, tenant).table<TemplateRow>(SURVEY_TEMPLATE_TABLE)
+    const row = await tenantDb(knex, tenant).table<TemplateRow>(SURVEY_TEMPLATE_TABLE)
       .where({ template_id: templateId })
       .first();
 
-    if (!refreshed) {
-      throw new Error('Failed to load updated survey template');
-    }
+    return row ? mapTemplateRow(row) : null;
+  } catch (error) {
+    const expected = surveyActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
+});
 
-    return refreshed;
-  });
+export const createSurveyTemplate = withAuth(async (_user, { tenant }, input: CreateTemplateInput): Promise<SurveyTemplate | SurveyActionError> => {
+  try {
+    const parsed = baseTemplateSchema.parse(input);
+    const { knex } = await createTenantKnex();
 
-  return mapTemplateRow(updated);
+    const inserted = await withTransaction(knex, async (trx) => {
+      if (parsed.isDefault) {
+        await tenantDb(trx, tenant).table(SURVEY_TEMPLATE_TABLE)
+          .update({ is_default: false, updated_at: trx.fn.now() });
+      }
+
+      const payload = buildTemplateInsertPayload(trx, tenant, parsed);
+      const [row] = await tenantDb(trx, tenant).table<TemplateRow>(SURVEY_TEMPLATE_TABLE)
+        .insert(payload)
+        .returning('*');
+
+      if (!row) {
+        throw new Error('Survey template insert completed without returning a record.');
+      }
+
+      return row;
+    });
+
+    return mapTemplateRow(inserted);
+  } catch (error) {
+    const expected = surveyActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
+});
+
+export const updateSurveyTemplate = withAuth(async (_user, { tenant }, templateId: string, input: UpdateTemplateInput): Promise<SurveyTemplate | SurveyActionError> => {
+  try {
+    const parsed = updateTemplateSchema.parse(input);
+    const { knex } = await createTenantKnex();
+
+    const updated = await withTransaction(knex, async (trx) => {
+      const current = await tenantDb(trx, tenant).table<TemplateRow>(SURVEY_TEMPLATE_TABLE)
+        .where({ template_id: templateId })
+        .first()
+        .forUpdate();
+
+      if (!current) {
+        throw new Error('Survey template not found');
+      }
+
+      if (parsed.isDefault) {
+        await tenantDb(trx, tenant).table(SURVEY_TEMPLATE_TABLE)
+          .update({ is_default: false, updated_at: trx.fn.now() });
+      }
+
+      const updatePayload = buildTemplateUpdatePayload(trx, parsed);
+      await tenantDb(trx, tenant).table(SURVEY_TEMPLATE_TABLE)
+        .where({ template_id: templateId })
+        .update(updatePayload);
+
+      const refreshed = await tenantDb(trx, tenant).table<TemplateRow>(SURVEY_TEMPLATE_TABLE)
+        .where({ template_id: templateId })
+        .first();
+
+      if (!refreshed) {
+        throw new Error('Updated survey template could not be reloaded.');
+      }
+
+      return refreshed;
+    });
+
+    return mapTemplateRow(updated);
+  } catch (error) {
+    const expected = surveyActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 });
 
 export const deleteSurveyTemplate = withAuth(async (
@@ -235,7 +331,10 @@ export const deleteSurveyTemplate = withAuth(async (
       deleted: result.deleted
     };
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to delete survey template';
+    console.error('Failed to delete survey template:', error);
+    const message = error instanceof Error && error.message === 'Survey template not found'
+      ? 'Survey template not found.'
+      : 'Failed to delete survey template. Please try again.';
     return {
       success: false,
       canDelete: false,
@@ -247,13 +346,19 @@ export const deleteSurveyTemplate = withAuth(async (
   }
 });
 
-export const getSurveyTriggers = withAuth(async (_user, { tenant }): Promise<SurveyTrigger[]> => {
-  const { knex } = await createTenantKnex();
+export const getSurveyTriggers = withAuth(async (_user, { tenant }): Promise<SurveyTrigger[] | SurveyActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
 
-  const rows = await tenantDb(knex, tenant).table<TriggerRow>(SURVEY_TRIGGER_TABLE)
-    .orderBy('created_at', 'asc');
+    const rows = await tenantDb(knex, tenant).table<TriggerRow>(SURVEY_TRIGGER_TABLE)
+      .orderBy('created_at', 'asc');
 
-  return rows.map(mapTriggerRow);
+    return rows.map(mapTriggerRow);
+  } catch (error) {
+    const expected = surveyActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 });
 
 export async function getSurveyTriggersForTenant(
@@ -269,109 +374,127 @@ export async function getSurveyTriggersForTenant(
   });
 }
 
-export const createSurveyTrigger = withAuth(async (_user, { tenant }, input: CreateTriggerInput): Promise<SurveyTrigger> => {
-  const parsed = baseTriggerSchema.parse(input);
-  const { knex } = await createTenantKnex();
-  const sanitisedConditions = sanitiseTriggerConditions(parsed.triggerType, parsed.triggerConditions);
+export const createSurveyTrigger = withAuth(async (_user, { tenant }, input: CreateTriggerInput): Promise<SurveyTrigger | SurveyActionError> => {
+  try {
+    const parsed = baseTriggerSchema.parse(input);
+    const { knex } = await createTenantKnex();
+    const sanitisedConditions = sanitiseTriggerConditions(parsed.triggerType, parsed.triggerConditions);
 
-  const row = await withTransaction(knex, async (trx) => {
-    await assertTemplateBelongsToTenant(trx, tenant, parsed.templateId);
+    const row = await withTransaction(knex, async (trx) => {
+      await assertTemplateBelongsToTenant(trx, tenant, parsed.templateId);
 
-    const [created] = await tenantDb(trx, tenant).table<TriggerRow>(SURVEY_TRIGGER_TABLE)
-      .insert({
-        tenant,
-        template_id: parsed.templateId,
-        trigger_type: parsed.triggerType,
-        trigger_conditions: sanitisedConditions,
-        enabled: parsed.enabled ?? true,
-      })
-      .returning('*');
+      const [created] = await tenantDb(trx, tenant).table<TriggerRow>(SURVEY_TRIGGER_TABLE)
+        .insert({
+          tenant,
+          template_id: parsed.templateId,
+          trigger_type: parsed.triggerType,
+          trigger_conditions: sanitisedConditions,
+          enabled: parsed.enabled ?? true,
+        })
+        .returning('*');
 
-    if (!created) {
-      throw new Error('Failed to create survey trigger');
-    }
+      if (!created) {
+        throw new Error('Survey trigger insert completed without returning a record.');
+      }
 
-    return created;
-  });
+      return created;
+    });
 
-  return mapTriggerRow(row);
+    return mapTriggerRow(row);
+  } catch (error) {
+    const expected = surveyActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 });
 
-export const updateSurveyTrigger = withAuth(async (_user, { tenant }, triggerId: string, input: UpdateTriggerInput): Promise<SurveyTrigger> => {
-  const parsed = updateTriggerSchema.parse({ ...input, triggerId });
-  const { knex } = await createTenantKnex();
+export const updateSurveyTrigger = withAuth(async (_user, { tenant }, triggerId: string, input: UpdateTriggerInput): Promise<SurveyTrigger | SurveyActionError> => {
+  try {
+    const parsed = updateTriggerSchema.parse({ ...input, triggerId });
+    const { knex } = await createTenantKnex();
 
-  const updated = await withTransaction(knex, async (trx) => {
-    const current = await tenantDb(trx, tenant).table<TriggerRow>(SURVEY_TRIGGER_TABLE)
+    const updated = await withTransaction(knex, async (trx) => {
+      const current = await tenantDb(trx, tenant).table<TriggerRow>(SURVEY_TRIGGER_TABLE)
+        .where({ trigger_id: triggerId })
+        .first()
+        .forUpdate();
+
+      if (!current) {
+        throw new Error('Survey trigger not found');
+      }
+
+      const currentConditions = normaliseTriggerConditions(current.trigger_conditions);
+
+      if (parsed.templateId) {
+        await assertTemplateBelongsToTenant(trx, tenant, parsed.templateId);
+      }
+
+      const updatePayload: Record<string, unknown> = {
+        updated_at: trx.fn.now(),
+      };
+
+      const targetTriggerType =
+        parsed.triggerType ?? (current.trigger_type as SurveyTrigger['triggerType']);
+
+      if (parsed.templateId) {
+        updatePayload.template_id = parsed.templateId;
+      }
+      if (parsed.triggerType) {
+        updatePayload.trigger_type = parsed.triggerType;
+      }
+      if (parsed.triggerConditions) {
+        updatePayload.trigger_conditions = sanitiseTriggerConditions(
+          targetTriggerType,
+          parsed.triggerConditions
+        );
+      } else if (parsed.triggerType && parsed.triggerType !== current.trigger_type) {
+        updatePayload.trigger_conditions = sanitiseTriggerConditions(
+          parsed.triggerType,
+          currentConditions
+        );
+      }
+      if (typeof parsed.enabled === 'boolean') {
+        updatePayload.enabled = parsed.enabled;
+      }
+
+      await tenantDb(trx, tenant).table(SURVEY_TRIGGER_TABLE)
+        .where({ trigger_id: triggerId })
+        .update(updatePayload);
+
+      const refreshed = await tenantDb(trx, tenant).table<TriggerRow>(SURVEY_TRIGGER_TABLE)
+        .where({ trigger_id: triggerId })
+        .first();
+
+      if (!refreshed) {
+        throw new Error('Updated survey trigger could not be reloaded.');
+      }
+
+      return refreshed;
+    });
+
+    return mapTriggerRow(updated);
+  } catch (error) {
+    const expected = surveyActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
+});
+
+export const deleteSurveyTrigger = withAuth(async (_user, { tenant }, triggerId: string): Promise<void | SurveyActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
+
+    const deleted = await tenantDb(knex, tenant).table(SURVEY_TRIGGER_TABLE)
       .where({ trigger_id: triggerId })
-      .first()
-      .forUpdate();
+      .del();
 
-    if (!current) {
+    if (deleted === 0) {
       throw new Error('Survey trigger not found');
     }
-
-    const currentConditions = normaliseTriggerConditions(current.trigger_conditions);
-
-    if (parsed.templateId) {
-      await assertTemplateBelongsToTenant(trx, tenant, parsed.templateId);
-    }
-
-    const updatePayload: Record<string, unknown> = {
-      updated_at: trx.fn.now(),
-    };
-
-    const targetTriggerType =
-      parsed.triggerType ?? (current.trigger_type as SurveyTrigger['triggerType']);
-
-    if (parsed.templateId) {
-      updatePayload.template_id = parsed.templateId;
-    }
-    if (parsed.triggerType) {
-      updatePayload.trigger_type = parsed.triggerType;
-    }
-    if (parsed.triggerConditions) {
-      updatePayload.trigger_conditions = sanitiseTriggerConditions(
-        targetTriggerType,
-        parsed.triggerConditions
-      );
-    } else if (parsed.triggerType && parsed.triggerType !== current.trigger_type) {
-      updatePayload.trigger_conditions = sanitiseTriggerConditions(
-        parsed.triggerType,
-        currentConditions
-      );
-    }
-    if (typeof parsed.enabled === 'boolean') {
-      updatePayload.enabled = parsed.enabled;
-    }
-
-    await tenantDb(trx, tenant).table(SURVEY_TRIGGER_TABLE)
-      .where({ trigger_id: triggerId })
-      .update(updatePayload);
-
-    const refreshed = await tenantDb(trx, tenant).table<TriggerRow>(SURVEY_TRIGGER_TABLE)
-      .where({ trigger_id: triggerId })
-      .first();
-
-    if (!refreshed) {
-      throw new Error('Failed to load updated survey trigger');
-    }
-
-    return refreshed;
-  });
-
-  return mapTriggerRow(updated);
-});
-
-export const deleteSurveyTrigger = withAuth(async (_user, { tenant }, triggerId: string): Promise<void> => {
-  const { knex } = await createTenantKnex();
-
-  const deleted = await tenantDb(knex, tenant).table(SURVEY_TRIGGER_TABLE)
-    .where({ trigger_id: triggerId })
-    .del();
-
-  if (deleted === 0) {
-    throw new Error('Survey trigger not found');
+  } catch (error) {
+    const expected = surveyActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 });
 
@@ -523,32 +646,60 @@ const getProjectStatusesForSurveys = withAuth(async (user, { tenant }): Promise<
   });
 });
 
-export async function getSurveyTriggerReferenceData(): Promise<SurveyTriggerReferenceData> {
-  const [boards, ticketStatuses, projectStatuses, priorities] = await Promise.all([
-    getAllBoards(true).catch((error: unknown) => {
-      console.error('[surveyActions] Failed to load boards for trigger reference data', error);
-      throw new Error('Unable to load boards.');
-    }),
-    getTicketStatuses().catch((error: unknown) => {
-      console.error('[surveyActions] Failed to load statuses for trigger reference data', error);
-      throw new Error('Unable to load statuses.');
-    }),
-    getProjectStatusesForSurveys().catch((error: unknown) => {
-      console.error('[surveyActions] Failed to load project statuses for trigger reference data', error);
-      return [];
-    }),
-    getAllPriorities('ticket').catch((error: unknown) => {
-      console.error('[surveyActions] Failed to load priorities for trigger reference data', error);
-      throw new Error('Unable to load priorities.');
-    }),
-  ]);
+export async function getSurveyTriggerReferenceData(): Promise<SurveyTriggerReferenceData | SurveyActionError> {
+  try {
+    const [boards, ticketStatuses, projectStatuses, priorities] = await Promise.all([
+      getAllBoards(true)
+        .then((result) => {
+          if (isSurveyActionError(result)) throw result;
+          return result;
+        })
+        .catch((error: unknown) => {
+          const expected = surveyActionErrorFrom(error);
+          if (expected) throw expected;
+          console.error('[surveyActions] Failed to load boards for trigger reference data', error);
+          throw actionError('Unable to load boards.');
+        }),
+      getTicketStatuses()
+        .then((result) => {
+          if (isSurveyActionError(result)) throw result;
+          return result;
+        })
+        .catch((error: unknown) => {
+          const expected = surveyActionErrorFrom(error);
+          if (expected) throw expected;
+          console.error('[surveyActions] Failed to load statuses for trigger reference data', error);
+          throw actionError('Unable to load statuses.');
+        }),
+      getProjectStatusesForSurveys().catch((error: unknown) => {
+        console.error('[surveyActions] Failed to load project statuses for trigger reference data', error);
+        return [];
+      }),
+      getAllPriorities('ticket')
+        .then((result) => {
+          if (isSurveyActionError(result)) throw result;
+          return result;
+        })
+        .catch((error: unknown) => {
+          const expected = surveyActionErrorFrom(error);
+          if (expected) throw expected;
+          console.error('[surveyActions] Failed to load priorities for trigger reference data', error);
+          throw actionError('Unable to load priorities.');
+        }),
+    ]);
 
-  return {
-    boards,
-    ticketStatuses,
-    projectStatuses,
-    priorities,
-  };
+    return {
+      boards,
+      ticketStatuses,
+      projectStatuses,
+      priorities,
+    };
+  } catch (error) {
+    const expected = surveyActionErrorFrom(error);
+    if (expected) return expected;
+    console.error('[surveyActions] Failed to load trigger reference data', error);
+    return actionError('Unable to load survey trigger options. Please try again.');
+  }
 }
 
 function buildTemplateInsertPayload(

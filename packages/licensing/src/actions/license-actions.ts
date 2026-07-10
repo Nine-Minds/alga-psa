@@ -52,7 +52,7 @@ export async function getLicenseUsageAction(): Promise<{
     console.error('Error getting license usage:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to get license usage',
+      error: 'Failed to get license usage',
     };
   }
 }
@@ -104,7 +104,7 @@ export async function getActiveUserCountAction(): Promise<{
     console.error('Error getting active user count:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to get active user count',
+      error: 'Failed to get active user count',
     };
   }
 }

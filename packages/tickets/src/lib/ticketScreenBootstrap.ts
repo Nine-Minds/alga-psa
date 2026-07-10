@@ -6,6 +6,7 @@ import type {
   TicketTimeEntriesSummary,
 } from '@alga-psa/types';
 import type { TicketTimelineEntry } from '@alga-psa/shared/lib/ticketActivity';
+import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import type {
   TicketBillingRollup,
   TicketInteractionSummary,
@@ -57,7 +58,7 @@ export interface TicketScreenBootstrap {
     slaPolicyName: Promise<string | null>;
     /** Shared by TimeLoggedSummary and TicketTimeEntries — one query, two consumers. */
     timeEntries: Promise<TicketTimeEntriesSummary | null>;
-    materials: Promise<ITicketMaterial[]>;
+    materials: Promise<ITicketMaterial[] | ActionMessageError | ActionPermissionError>;
     /** Prev/next pager data, computed server-side with the request's returnFilters. */
     adjacentTickets: Promise<AdjacentTicketData | null>;
   } | null;

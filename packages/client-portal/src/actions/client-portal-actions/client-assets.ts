@@ -4,6 +4,7 @@ import { Knex } from 'knex';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
 import type { Asset, IUserWithRoles } from '@alga-psa/types';
+import { clientPortalActionErrorFrom, type ClientPortalActionError } from './clientPortalActionErrors';
 
 export type ClientAssetType =
   | 'workstation'
@@ -97,31 +98,32 @@ export const listClientAssets = withAuth(async (
   user: IUserWithRoles,
   { tenant }: AuthContext,
   params: ListClientAssetsParams = {},
-): Promise<ListClientAssetsResponse> => {
-  const { knex } = await createTenantKnex();
-  const page = Math.max(1, params.page ?? 1);
-  const limit = Math.min(MAX_LIMIT, Math.max(1, params.limit ?? DEFAULT_LIMIT));
-  const sortField = SORT_FIELDS[params.sort_by ?? 'updated_at'];
-  const sortDirection = params.sort_direction === 'asc' ? 'asc' : 'desc';
+): Promise<ListClientAssetsResponse | ClientPortalActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
+    const page = Math.max(1, params.page ?? 1);
+    const limit = Math.min(MAX_LIMIT, Math.max(1, params.limit ?? DEFAULT_LIMIT));
+    const sortField = SORT_FIELDS[params.sort_by ?? 'updated_at'];
+    const sortDirection = params.sort_direction === 'asc' ? 'asc' : 'desc';
 
-  return withTransaction(knex, async (trx: Knex.Transaction) => {
-    const clientId = await resolveClientId(trx, user, tenant);
+    return withTransaction(knex, async (trx: Knex.Transaction) => {
+      const clientId = await resolveClientId(trx, user, tenant);
 
-    const baseQuery = () => {
-      const q = tenantScopedTable(trx, 'assets', tenant).where({ client_id: clientId });
-      if (params.asset_type) q.where('asset_type', params.asset_type);
-      if (params.status === 'active') q.whereNot('status', 'inactive');
-      if (params.status === 'inactive') q.where('status', 'inactive');
-      if (params.search) {
-        const term = `%${params.search.trim().toLowerCase()}%`;
-        q.where((b) => {
-          b.whereRaw('LOWER(name) LIKE ?', [term])
-            .orWhereRaw('LOWER(asset_tag) LIKE ?', [term])
-            .orWhereRaw('LOWER(serial_number) LIKE ?', [term]);
-        });
-      }
-      return q;
-    };
+      const baseQuery = () => {
+        const q = tenantScopedTable(trx, 'assets', tenant).where({ client_id: clientId });
+        if (params.asset_type) q.where('asset_type', params.asset_type);
+        if (params.status === 'active') q.whereNot('status', 'inactive');
+        if (params.status === 'inactive') q.where('status', 'inactive');
+        if (params.search) {
+          const term = `%${params.search.trim().toLowerCase()}%`;
+          q.where((b) => {
+            b.whereRaw('LOWER(name) LIKE ?', [term])
+              .orWhereRaw('LOWER(asset_tag) LIKE ?', [term])
+              .orWhereRaw('LOWER(serial_number) LIKE ?', [term]);
+          });
+        }
+        return q;
+      };
 
     // Counts: filtered total, plus active/inactive and per-type counts across
     // the entire client (so the summary tiles don't drift when the user paginates
@@ -168,31 +170,46 @@ export const listClientAssets = withAuth(async (
       .limit(limit)
       .offset(offset);
 
-    return {
-      assets: rows.map(serializeAsset),
-      total: Number(filteredCount?.count ?? 0),
-      active: Number(statusCounts?.active ?? 0),
-      inactive: Number(statusCounts?.inactive ?? 0),
-      by_type: byType,
-      page,
-      limit,
-    };
-  });
+      return {
+        assets: rows.map(serializeAsset),
+        total: Number(filteredCount?.count ?? 0),
+        active: Number(statusCounts?.active ?? 0),
+        inactive: Number(statusCounts?.inactive ?? 0),
+        by_type: byType,
+        page,
+        limit,
+      };
+    });
+  } catch (error) {
+    const expected = clientPortalActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
+  }
 });
 
 /** Backwards-compatible: returns all assets for small previews (dashboard widget). */
 export const getClientAssets = withAuth(async (
   user: IUserWithRoles,
   { tenant }: AuthContext,
-): Promise<Asset[]> => {
-  const { knex } = await createTenantKnex();
-  return withTransaction(knex, async (trx: Knex.Transaction) => {
-    const clientId = await resolveClientId(trx, user, tenant);
-    const assets = await tenantScopedTable(trx, 'assets', tenant)
-      .where({ client_id: clientId })
-      .orderBy('updated_at', 'desc');
-    return assets.map(serializeAsset);
-  });
+): Promise<Asset[] | ClientPortalActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
+    return withTransaction(knex, async (trx: Knex.Transaction) => {
+      const clientId = await resolveClientId(trx, user, tenant);
+      const assets = await tenantScopedTable(trx, 'assets', tenant)
+        .where({ client_id: clientId })
+        .orderBy('updated_at', 'desc');
+      return assets.map(serializeAsset);
+    });
+  } catch (error) {
+    const expected = clientPortalActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
+  }
 });
 
 /**
@@ -205,13 +222,21 @@ export const getClientAssetById = withAuth(async (
   user: IUserWithRoles,
   { tenant }: AuthContext,
   assetId: string,
-): Promise<Asset | null> => {
-  const { knex } = await createTenantKnex();
-  return withTransaction(knex, async (trx: Knex.Transaction) => {
-    const clientId = await resolveClientId(trx, user, tenant);
-    const row = await tenantScopedTable(trx, 'assets', tenant)
-      .where({ client_id: clientId, asset_id: assetId })
-      .first();
-    return row ? serializeAsset(row) : null;
-  });
+): Promise<Asset | null | ClientPortalActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
+    return withTransaction(knex, async (trx: Knex.Transaction) => {
+      const clientId = await resolveClientId(trx, user, tenant);
+      const row = await tenantScopedTable(trx, 'assets', tenant)
+        .where({ client_id: clientId, asset_id: assetId })
+        .first();
+      return row ? serializeAsset(row) : null;
+    });
+  } catch (error) {
+    const expected = clientPortalActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
+  }
 });

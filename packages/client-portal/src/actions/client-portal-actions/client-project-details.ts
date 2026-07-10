@@ -21,6 +21,20 @@ type ClientTaskDocument = {
   uploaded_by_name: string;
 };
 
+function clientProjectUploadErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : typeof error === 'string' ? error : '';
+
+  if (
+    message === 'File type not allowed' ||
+    message.startsWith('File size exceeds limit of ') ||
+    message.startsWith('Invalid file format.')
+  ) {
+    return message;
+  }
+
+  return 'Upload failed';
+}
+
 /**
  * Helper to verify client access and get config
  * Note: Must be called within withAuth context
@@ -567,7 +581,7 @@ export const uploadClientTaskDocument = withAuth(async (
     return { success: true, documentId };
   } catch (error) {
     console.error('Error uploading client document:', error);
-    return { success: false, error: error instanceof Error ? error.message : 'Upload failed' };
+    return { success: false, error: clientProjectUploadErrorMessage(error) };
   }
 });
 

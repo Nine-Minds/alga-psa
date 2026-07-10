@@ -7,7 +7,9 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { toast } from 'react-hot-toast';
 import type { ColumnDefinition, IStockLocation, IStockMovement, IStockUnit } from '@alga-psa/types';
 import {
@@ -20,6 +22,7 @@ import {
 
 type SearchMode = 'serial' | 'mac';
 type UnitDetail = { unit: IStockUnit; movements: IStockMovement[] };
+const isReturnedActionError = (value: unknown) => isActionMessageError(value) || isActionPermissionError(value);
 
 function fmtDate(v?: string | Date | null): string {
   if (!v) return '';
@@ -31,12 +34,6 @@ function fmtDateTime(v?: string | Date | null): string {
   if (!v) return '';
   const d = new Date(v);
   return isNaN(d.getTime()) ? '' : d.toLocaleString();
-}
-
-function fmtCents(v?: number | string | null): string {
-  if (v === null || v === undefined || v === '') return '';
-  const n = Number(v); // pg returns bigint columns as strings
-  return Number.isFinite(n) ? `$${(n / 100).toFixed(2)}` : '';
 }
 
 function csvValue(v: unknown): string {
@@ -67,6 +64,7 @@ function statusVariant(v?: string | null) {
 
 export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[] }) {
   const { t } = useTranslation('features/inventory');
+  const { money } = useCurrencyFormat();
 
   const SEARCH_MODE_OPTIONS = [
     { value: 'serial', label: t('stockUnits.searchMode.serial', 'Serial number') },
@@ -117,7 +115,13 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
   const reload = useCallback(async () => {
     setLoading(true);
     try {
-      setUnits(await listStockUnits({}));
+      const result = await listStockUnits({});
+      if (isReturnedActionError(result)) {
+        setUnits([]);
+        toast.error(getErrorMessage(result));
+        return;
+      }
+      setUnits(result);
     } catch (e: any) {
       console.error(e);
       toast.error(e?.message || t('stockUnits.loadFailed', 'Failed to load units'));
@@ -138,6 +142,11 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
         searchMode === 'serial'
           ? await searchUnitsBySerial(term)
           : await searchUnitsByMac(term);
+      if (isReturnedActionError(results)) {
+        setUnits([]);
+        toast.error(getErrorMessage(results));
+        return;
+      }
       setUnits(results);
     } catch (e: any) {
       console.error(e);
@@ -160,11 +169,19 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
           getUnitDetail(unitId),
           locations === null ? listStockLocations() : Promise.resolve(locations),
         ]);
+        if (isReturnedActionError(detail)) {
+          toast.error(getErrorMessage(detail));
+          return;
+        }
         if (!detail) {
           toast.error(t('stockUnits.historyNotFound', 'Unit history not found'));
           return;
         }
         if (locations === null) {
+          if (isReturnedActionError(loadedLocations)) {
+            toast.error(getErrorMessage(loadedLocations));
+            return;
+          }
           setLocations(loadedLocations);
         }
         setHistoryDetail(detail);
@@ -325,7 +342,11 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
                 </div>
                 <div>
                   <div className="text-xs text-gray-500">{t('stockUnits.detail.unitCost', 'Unit cost')}</div>
-                  <div className="font-mono">{fmtCents(historyDetail.unit.unit_cost) || t('common.emptyValue', '—')}</div>
+                  <div className="font-mono">
+                    {historyDetail.unit.unit_cost == null
+                      ? t('common.emptyValue', '—')
+                      : money(Number(historyDetail.unit.unit_cost), historyDetail.unit.cost_currency ?? undefined)}
+                  </div>
                 </div>
                 {historyDetail.unit.received_at && (
                   <div>

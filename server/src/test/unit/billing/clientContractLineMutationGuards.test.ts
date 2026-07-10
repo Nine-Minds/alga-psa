@@ -65,9 +65,9 @@ describe('client contract line mutation guards', () => {
 
     const { removeClientContractLine } = await import('@alga-psa/clients/actions/clientContractLineActions');
 
-    await expect(removeClientContractLine(ASSIGNMENT_SCOPED_LINE_ID)).rejects.toThrow(
-      'Cannot deactivate contract line assignment before 2099-01-31 as it has been invoiced through that date.'
-    );
+    await expect(removeClientContractLine(ASSIGNMENT_SCOPED_LINE_ID)).resolves.toEqual({
+      actionError: 'Cannot deactivate contract line assignment before 2099-01-31 as it has been invoiced through that date.',
+    });
 
     expect(knex).toHaveBeenCalledWith('invoice_charge_details as iid');
     expect(detailBuilder.andWhere).toHaveBeenCalledWith('clsc.contract_line_id', ASSIGNMENT_SCOPED_LINE_ID);
@@ -91,9 +91,9 @@ describe('client contract line mutation guards', () => {
 
     await expect(
       editClientContractLine(ASSIGNMENT_SCOPED_LINE_ID, { contract_line_id: 'replacement-line-2' } as any)
-    ).rejects.toThrow(
-      'Cannot replace contract line assignment after it has authoritative recurring detail periods through 2025-01-31. End the current line and add a new contract line instead.'
-    );
+    ).resolves.toEqual({
+      actionError: 'Cannot replace contract line assignment after it has authoritative recurring detail periods through 2025-01-31. End the current line and add a new contract line instead.',
+    });
 
     expect(knex).toHaveBeenCalledWith('invoice_charge_details as iid');
     expect(withTransaction).not.toHaveBeenCalled();

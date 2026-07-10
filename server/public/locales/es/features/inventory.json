@@ -744,6 +744,7 @@
     "addPurchaseOrder": "Añadir orden de compra",
     "allVendors": "Todos los proveedores",
     "amountOnOrder": "{{amount}} en pedido",
+    "mixedCurrencyOnOrder": "{{count}} órdenes de compra en pedido en varias monedas",
     "cancelConfirm": "¿Está seguro de que desea cancelar la orden de compra {{poNumber}}? Esta acción no se puede deshacer.",
     "cancelFailed": "No se pudo cancelar la orden de compra.",
     "cancelTitle": "Cancelar orden de compra",
@@ -963,6 +964,15 @@
     "emailFailed": "No se pudo enviar la confirmación por correo.",
     "emailSuccess": "Confirmación enviada por correo a {{recipients}}",
     "enterSerial": "Introduzca al menos un número de serie.",
+    "errors": {
+      "documentGenerationFailed": "No se pudo generar el documento",
+      "downloadPermissionDenied": "Permiso denegado: no se pueden descargar documentos de órdenes de venta",
+      "emailConfirmationFailed": "No se pudo enviar la confirmación por correo",
+      "emailPermissionDenied": "Permiso denegado: no se pueden enviar por correo documentos de órdenes de venta",
+      "emailSendFailed": "No se pudo enviar el correo.",
+      "noRecipientEmail": "No hay correo electrónico de destinatario registrado para este cliente.",
+      "notFound": "Orden de venta no encontrada"
+    },
     "fields": {
       "allocationMode": "Modo de asignación",
       "clientPoNumber": "Client PO number",
@@ -1056,7 +1066,8 @@
     "title": "Órdenes de venta",
     "total": "Total",
     "unassignedBackorder": "{{count}} línea(s) en pedido pendiente no tienen proveedor preferido — cree esas órdenes de compra manualmente.",
-    "unnamedService": "Unnamed"
+    "unnamedService": "Unnamed",
+    "notFound": "Sales order not found."
   },
   "stock": {
     "actions": {
@@ -1234,6 +1245,7 @@
     "title": "Transferencias",
     "toLocation": "Ubicación de destino",
     "vanLoadList": "Lista de carga de la furgoneta",
+    "vanLoadListReplenishment": "Reposición de lista de carga de la furgoneta",
     "status": {
       "dispatched": "Despachado",
       "received": "Recibido",

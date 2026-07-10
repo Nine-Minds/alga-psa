@@ -3,7 +3,12 @@
 import { useState, useRef, useCallback, memo, useEffect } from 'react';
 import { formatISO } from 'date-fns';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
@@ -21,6 +26,10 @@ import { TimeEntryProvider, useTimeEntry } from './TimeEntryProvider';
 import TimeEntrySkeletons from './TimeEntrySkeletons';
 import SingleTimeEntryForm from './SingleTimeEntryForm';
 import { validateTimeEntry } from './utils';
+
+function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
+  return isActionMessageError(value) || isActionPermissionError(value);
+}
 
 interface TimeEntryDialogProps {
   id?: string;
@@ -156,6 +165,9 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
 
       if (onTimeEntriesUpdate && timeSheetId) {
         const fetchedTimeEntries = await fetchTimeEntriesForTimeSheet(timeSheetId);
+        if (isReturnedActionError(fetchedTimeEntries)) {
+          throw new Error(getErrorMessage(fetchedTimeEntries));
+        }
         const updatedEntries = fetchedTimeEntries.map(entry => ({
           ...entry,
           start_time: typeof entry.start_time === 'string' ? entry.start_time : formatISO(entry.start_time),
@@ -179,11 +191,17 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
     try {
       const entry = entries[index];
       if (entry?.entry_id) {
-        await deleteTimeEntry(entry.entry_id);
+        const result = await deleteTimeEntry(entry.entry_id);
+        if (isReturnedActionError(result)) {
+          throw new Error(getErrorMessage(result));
+        }
       }
 
       if (onTimeEntriesUpdate && timeSheetId) {
         const fetchedTimeEntries = await fetchTimeEntriesForTimeSheet(timeSheetId);
+        if (isReturnedActionError(fetchedTimeEntries)) {
+          throw new Error(getErrorMessage(fetchedTimeEntries));
+        }
         const updatedEntries = fetchedTimeEntries.map(entry => ({
           ...entry,
           start_time: typeof entry.start_time === 'string' ? entry.start_time : formatISO(entry.start_time),

@@ -6,6 +6,12 @@ import { getAllBoards, getAllPriorities, getTicketStatuses } from '@alga-psa/ref
 import { getAllUsersBasic } from '@alga-psa/user-composition/actions';
 import { getTicketCategoriesByBoard } from '@alga-psa/tickets/actions/ticketCategoryActions';
 import {
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+import {
   addBasicFormFieldToDefinitionDraft,
   archiveServiceRequestDefinitionFromManagement,
   createBlankServiceRequestDefinition,
@@ -111,6 +117,12 @@ export interface ServiceRequestTicketRoutingBoardData {
   } | null;
 }
 
+type ServiceRequestActionError = ActionMessageError | ActionPermissionError;
+
+function isReturnedActionError(value: unknown): value is ServiceRequestActionError {
+  return isActionMessageError(value) || isActionPermissionError(value);
+}
+
 export const getServiceRequestTicketRoutingReferenceDataAction = withAuth(async (
   user
 ): Promise<ServiceRequestTicketRoutingReferenceData> => {
@@ -134,7 +146,7 @@ export const getServiceRequestTicketRoutingBoardDataAction = withAuth(async (
   user,
   _ctx,
   boardId: string
-): Promise<ServiceRequestTicketRoutingBoardData> => {
+): Promise<ServiceRequestTicketRoutingBoardData | ServiceRequestActionError> => {
   const { knex } = await createTenantKnex();
   await requireServiceRequestPermission(user, 'read', knex);
 
@@ -150,6 +162,10 @@ export const getServiceRequestTicketRoutingBoardDataAction = withAuth(async (
     getTicketStatuses(boardId),
     getTicketCategoriesByBoard(boardId),
   ]);
+
+  if (isReturnedActionError(boardCategoryData)) {
+    return boardCategoryData;
+  }
 
   return {
     statuses,

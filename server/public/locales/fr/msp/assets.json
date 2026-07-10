@@ -1004,7 +1004,8 @@
     "description": "Panneau de notes en texte enrichi pour des notes spécifiques aux actifs et un contexte opérationnel rapide",
     "errors": {
       "loadTitle": "Les notes n'ont pas pu être chargées",
-      "unknown": "Erreur inconnue"
+      "unknown": "Erreur inconnue",
+      "loadDescription": "Could not load notes. Please try again."
     },
     "lastUpdated": "Dernière mise à jour : {{value}}"
   },

@@ -70,7 +70,8 @@
     "expirationPeriod": "11111",
     "daysUnit": "11111 {{count}} 11111",
     "notificationDays": "11111",
-    "none": "11111"
+    "none": "11111",
+    "loadErrorPrefix": "11111"
   },
   "charts": {
     "expirationSummary": "11111",

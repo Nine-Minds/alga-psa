@@ -295,7 +295,9 @@
     "deleteTimeEntryFailed": "Impossibile eliminare la voce di tempo",
     "timeEntryDeleted": "Voce di tempo eliminata",
     "closeFailed": "Impossibile chiudere il ticket",
-    "scheduleVisitFailed": "Impossibile aprire il pianificatore"
+    "scheduleVisitFailed": "Impossibile aprire il pianificatore",
+    "loadCommentsFailed": "Failed to load comments",
+    "updateTicketFailed": "Failed to update ticket"
   },
   "conversation": {
     "comments": "Commenti",

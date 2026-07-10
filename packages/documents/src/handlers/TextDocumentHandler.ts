@@ -1,5 +1,6 @@
 import type { IDocument, PreviewResponse } from '@alga-psa/types';
 import { BaseDocumentHandler } from './BaseDocumentHandler';
+import { documentPreviewErrorMessage } from './previewErrors';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 
@@ -82,7 +83,7 @@ export class TextDocumentHandler extends BaseDocumentHandler {
       console.error(`[TextDocumentHandler] Error generating preview for document ${document.document_id}:`, error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to generate text document preview'
+        error: documentPreviewErrorMessage(error, 'Failed to generate text document preview')
       };
     }
   }

@@ -134,8 +134,7 @@ export function TaskList({
       ));
     } catch (err) {
       setError(t('taskList.errors.claimFailed', {
-        defaultValue: 'Failed to claim task: {{error}}',
-        error: err instanceof Error ? err.message : t('taskList.errors.unknown', { defaultValue: 'Unknown error' }),
+        defaultValue: 'Failed to claim task. Please try again.',
       }));
       console.error('Error claiming task:', err);
     } finally {
@@ -157,8 +156,7 @@ export function TaskList({
       ));
     } catch (err) {
       setError(t('taskList.errors.unclaimFailed', {
-        defaultValue: 'Failed to unclaim task: {{error}}',
-        error: err instanceof Error ? err.message : t('taskList.errors.unknown', { defaultValue: 'Unknown error' }),
+        defaultValue: 'Failed to unclaim task. Please try again.',
       }));
       console.error('Error unclaiming task:', err);
     } finally {
