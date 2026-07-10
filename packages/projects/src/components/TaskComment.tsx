@@ -15,6 +15,12 @@ import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomat
 import { searchUsersForMentions } from '@alga-psa/user-composition/actions';
 import { ReactionDisplay } from '@alga-psa/ui/components/ReactionDisplay';
 import type { IAggregatedReaction } from '@alga-psa/types';
+import { toast } from 'react-hot-toast';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 interface TaskCommentProps {
   comment: IProjectTaskCommentWithUser;
@@ -103,14 +109,18 @@ const TaskComment: React.FC<TaskCommentProps> = ({
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      await updateTaskComment(comment.taskCommentId, {
+      const result = await updateTaskComment(comment.taskCommentId, {
         note: JSON.stringify(editedContent)
       });
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       setIsEditing(false);
       onUpdate();
     } catch (error) {
       console.error('Failed to update comment:', error);
-      // TODO: Show error toast
+      toast.error(t('actions.save', 'Save') + ' failed');
     } finally {
       setIsSaving(false);
     }
@@ -118,11 +128,15 @@ const TaskComment: React.FC<TaskCommentProps> = ({
 
   const handleDelete = async () => {
     try {
-      await deleteTaskComment(comment.taskCommentId);
+      const result = await deleteTaskComment(comment.taskCommentId);
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       onDelete();
     } catch (error) {
       console.error('Failed to delete comment:', error);
-      // TODO: Show error toast
+      toast.error(t('actions.delete', 'Delete') + ' failed');
     }
   };
 

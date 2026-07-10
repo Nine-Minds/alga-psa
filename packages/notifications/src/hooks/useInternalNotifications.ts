@@ -16,7 +16,7 @@ import {
   getUnreadCountAction,
   markAsReadAction,
   markAllAsReadAction,
-	} from '@alga-psa/notifications/actions';
+	} from '@alga-psa/notifications/actions/internal-notification-actions/internalNotificationActions';
 	
 	const getHocuspocusUrl = () => {
 	  const configuredUrl = process.env.NEXT_PUBLIC_HOCUSPOCUS_URL;

@@ -94,8 +94,7 @@ export const uploadContactAvatar = withAuth(async (
     return { success: true, imageUrl: uploadResult.imageUrl };
   } catch (error) {
     console.error('[contactAvatarActions] Failed to upload contact avatar:', error);
-    const message = error instanceof Error ? error.message : 'Failed to upload contact avatar';
-    return { success: false, message };
+    return { success: false, message: 'Failed to upload contact avatar' };
   }
 });
 
@@ -132,7 +131,6 @@ export const deleteContactAvatar = withAuth(async (
     return { success: true };
   } catch (error) {
     console.error('[contactAvatarActions] Failed to delete contact avatar:', error);
-    const message = error instanceof Error ? error.message : 'Failed to delete contact avatar';
-    return { success: false, message };
+    return { success: false, message: 'Failed to delete contact avatar' };
   }
 });

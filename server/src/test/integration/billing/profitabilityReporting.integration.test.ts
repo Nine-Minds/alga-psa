@@ -608,10 +608,18 @@ describe('Profitability Reporting Integration', () => {
     holder.permissionGranted = false;
     holder.permissionCalls = [];
     try {
-      await expect(getProfitabilitySummary(RANGE)).rejects.toThrow(/Permission denied/);
-      await expect(getClientProfitability(RANGE)).rejects.toThrow(/Permission denied/);
-      await expect(getAgreementProfitability(RANGE)).rejects.toThrow(/Permission denied/);
-      await expect(getTicketProfitability(RANGE)).rejects.toThrow(/Permission denied/);
+      await expect(getProfitabilitySummary(RANGE)).resolves.toEqual({
+        permissionError: 'Permission denied: billing read required',
+      });
+      await expect(getClientProfitability(RANGE)).resolves.toEqual({
+        permissionError: 'Permission denied: billing read required',
+      });
+      await expect(getAgreementProfitability(RANGE)).resolves.toEqual({
+        permissionError: 'Permission denied: billing read required',
+      });
+      await expect(getTicketProfitability(RANGE)).resolves.toEqual({
+        permissionError: 'Permission denied: billing read required',
+      });
     } finally {
       holder.permissionGranted = true;
     }

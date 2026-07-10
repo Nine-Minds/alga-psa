@@ -17,7 +17,12 @@ import {
 import { createTenantProjectStatus } from '../../actions/projectTaskStatusActions';
 import { toast } from 'react-hot-toast';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { QuickAddStatus } from '@alga-psa/ui/components/QuickAddStatus';
 import type { IStatus } from '@alga-psa/types';
 import {
@@ -40,6 +45,17 @@ interface TemplateStatusManagerProps {
   onStatusRemoved: (mappingId: string, moveTasksToMappingId?: string) => void;
   onPhaseStatusesRemoved?: (templatePhaseId: string) => void;
   onStatusReordered: (orderedMappingIds: string[], templatePhaseId?: string | null) => void;
+}
+
+function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
+  return isActionMessageError(value) || isActionPermissionError(value);
+}
+
+function unwrapTemplateActionResult<T>(value: T | { actionError: string } | { permissionError: string }): T {
+  if (isReturnedActionError(value)) {
+    throw new Error(getErrorMessage(value));
+  }
+  return value;
 }
 
 export function TemplateStatusManager({
@@ -106,11 +122,11 @@ export function TemplateStatusManager({
 
     setIsAdding(true);
     try {
-      const newMapping = await addTemplateStatusMapping(
+      const newMapping = unwrapTemplateActionResult(await addTemplateStatusMapping(
         templateId,
         { status_id: selectedStatusId },
         selectedTemplatePhaseId
-      );
+      ));
       onStatusAdded(newMapping);
       setSelectedStatusId('');
       toast.success(t('templates.statuses.added'));
@@ -138,7 +154,7 @@ export function TemplateStatusManager({
     if (!removeConfirmation) return;
     try {
       const moveTarget = removeConfirmation.taskCount > 0 ? removeConfirmation.moveToMappingId : undefined;
-      await removeTemplateStatusMapping(removeConfirmation.mappingId);
+      unwrapTemplateActionResult(await removeTemplateStatusMapping(removeConfirmation.mappingId));
       onStatusRemoved(removeConfirmation.mappingId, moveTarget);
       toast.success(t('templates.statuses.removed'));
     } catch (error) {
@@ -171,7 +187,7 @@ export function TemplateStatusManager({
 
     try {
       const orderedIds = sortedMappings.map((m) => m.template_status_mapping_id);
-      await reorderTemplateStatusMappings(templateId, orderedIds, selectedTemplatePhaseId);
+      unwrapTemplateActionResult(await reorderTemplateStatusMappings(templateId, orderedIds, selectedTemplatePhaseId));
     } catch (error) {
       handleError(error, 'Failed to reorder status columns');
     } finally {
@@ -183,7 +199,7 @@ export function TemplateStatusManager({
     if (!selectedTemplatePhaseId) return;
 
     try {
-      const copiedMappings = await copyTemplateStatusesToPhase(templateId, selectedTemplatePhaseId);
+      const copiedMappings = unwrapTemplateActionResult(await copyTemplateStatusesToPhase(templateId, selectedTemplatePhaseId));
       copiedMappings.forEach((mapping) => onStatusAdded(mapping));
       toast.success(t('templates.statuses.copied_to_phase'));
     } catch (error) {
@@ -195,7 +211,7 @@ export function TemplateStatusManager({
     if (!selectedTemplatePhaseId) return;
 
     try {
-      await removeTemplatePhaseStatuses(templateId, selectedTemplatePhaseId);
+      unwrapTemplateActionResult(await removeTemplatePhaseStatuses(templateId, selectedTemplatePhaseId));
       onPhaseStatusesRemoved?.(selectedTemplatePhaseId);
       toast.success(t('templates.statuses.reverted'));
     } catch (error) {
@@ -220,11 +236,11 @@ export function TemplateStatusManager({
 
     setIsAdding(true);
     try {
-      const newMapping = await addTemplateStatusMapping(
+      const newMapping = unwrapTemplateActionResult(await addTemplateStatusMapping(
         templateId,
         { status_id: newStatus.status_id },
         selectedTemplatePhaseId
-      );
+      ));
       onStatusAdded(newMapping);
       toast.success(t('templates.statuses.added'));
     } catch (error) {

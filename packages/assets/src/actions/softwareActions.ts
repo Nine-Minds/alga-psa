@@ -23,6 +23,7 @@ import {
   UpdateSoftwareCatalogRequest,
 } from '@alga-psa/types';
 import type { Knex } from 'knex';
+import { assetActionErrorFrom, type AssetActionError } from './assetActionErrors';
 
 function tenantScopedTable(knex: Knex, tenant: string, table: string): Knex.QueryBuilder<any, any> {
   return tenantDb(knex, tenant).table(table) as Knex.QueryBuilder<any, any>;
@@ -36,7 +37,7 @@ export const getAssetSoftware = withAuth(async (
   _user,
   { tenant },
   params: AssetSoftwareQueryParams
-): Promise<AssetSoftwareListResponse> => {
+): Promise<AssetSoftwareListResponse | AssetActionError> => {
   const { knex } = await createTenantKnex();
 
   const {
@@ -124,15 +125,19 @@ export const getAssetSoftware = withAuth(async (
       limit,
     };
   } catch (error) {
+    const expected = assetActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
     console.error('Error getting asset software:', error);
-    throw new Error('Failed to get asset software');
+    throw error;
   }
 });
 
 /**
  * Get software summary statistics for an asset
  */
-export const getAssetSoftwareSummary = withAuth(async (_user, { tenant }, assetId: string): Promise<AssetSoftwareSummary> => {
+export const getAssetSoftwareSummary = withAuth(async (_user, { tenant }, assetId: string): Promise<AssetSoftwareSummary | AssetActionError> => {
   const { knex } = await createTenantKnex();
 
   try {
@@ -205,8 +210,12 @@ export const getAssetSoftwareSummary = withAuth(async (_user, { tenant }, assetI
       recently_installed_count,
     };
   } catch (error) {
+    const expected = assetActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
     console.error('Error getting asset software summary:', error);
-    throw new Error('Failed to get asset software summary');
+    throw error;
   }
 });
 
@@ -217,7 +226,7 @@ export const searchSoftwareFleetWide = withAuth(async (
   _user,
   { tenant },
   params: SoftwareSearchParams
-): Promise<SoftwareSearchResponse> => {
+): Promise<SoftwareSearchResponse | AssetActionError> => {
   const { knex } = await createTenantKnex();
 
   const {
@@ -350,8 +359,12 @@ export const searchSoftwareFleetWide = withAuth(async (
       limit,
     };
   } catch (error) {
+    const expected = assetActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
     console.error('Error searching software fleet-wide:', error);
-    throw new Error('Failed to search software');
+    throw error;
   }
 });
 
@@ -363,7 +376,7 @@ export const updateSoftwareCatalogEntry = withAuth(async (
   { tenant },
   softwareId: string,
   updates: UpdateSoftwareCatalogRequest
-): Promise<void> => {
+): Promise<void | AssetActionError> => {
   const { knex } = await createTenantKnex();
 
   try {
@@ -385,8 +398,12 @@ export const updateSoftwareCatalogEntry = withAuth(async (
         .update(updateData);
     }
   } catch (error) {
+    const expected = assetActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
     console.error('Error updating software catalog entry:', error);
-    throw new Error('Failed to update software catalog entry');
+    throw error;
   }
 });
 
@@ -401,7 +418,7 @@ export const getRecentSoftwareChanges = withAuth(async (
 ): Promise<{
   installed: AssetSoftwareDisplayItem[];
   uninstalled: AssetSoftwareDisplayItem[];
-}> => {
+} | AssetActionError> => {
   const { knex } = await createTenantKnex();
 
   try {
@@ -481,7 +498,11 @@ export const getRecentSoftwareChanges = withAuth(async (
       })),
     };
   } catch (error) {
+    const expected = assetActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
     console.error('Error getting recent software changes:', error);
-    throw new Error('Failed to get recent software changes');
+    throw error;
   }
 });

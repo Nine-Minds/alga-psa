@@ -184,17 +184,14 @@ data:
       require_initial_tenant_value INITIAL_ADMIN_EMAIL
       require_initial_tenant_value INITIAL_ADMIN_PASSWORD
 
-      log "Creating initial appliance tenant and admin user"
-      # INITIAL_TENANT_ID (set when an install code was redeemed) makes
-      # create-tenant adopt the registry-minted tenant id; empty => DB-generated.
-      INITIAL_ADMIN_PASSWORD="${INITIAL_ADMIN_PASSWORD}" INITIAL_TENANT_ID="${INITIAL_TENANT_ID:-}" npx tsx /app/server/scripts/create-tenant.ts \
-        --tenant "${INITIAL_TENANT_NAME}" \
-        --companyName "${INITIAL_TENANT_NAME}" \
-        --clientName "${INITIAL_TENANT_NAME}" \
-        --email "${INITIAL_ADMIN_EMAIL}" \
-        --firstName "${INITIAL_ADMIN_FIRST_NAME}" \
-        --lastName "${INITIAL_ADMIN_LAST_NAME}" \
-        --productCode psa
+      log "Creating initial appliance tenant and admin user (Temporal tenantCreationWorkflow)"
+      # Runs the same Temporal workflow the hosted environment uses for tenant
+      # provisioning. The script reads the INITIAL_* env vars directly
+      # (INITIAL_TENANT_ID, set when an install code was redeemed, makes the
+      # workflow adopt the registry-minted tenant id; empty => DB-generated).
+      # The temporal-worker deploys concurrently with this job; the workflow
+      # queues until the worker polls, and the script waits for the result.
+      node /app/server/scripts/appliance-create-tenant.mjs
       log "Initial appliance tenant and admin user created"
     }
 

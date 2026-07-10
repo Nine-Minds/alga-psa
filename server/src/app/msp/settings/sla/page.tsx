@@ -3,26 +3,24 @@
 import { Suspense, useState, useCallback, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { CustomTabs } from '@alga-psa/ui/components/CustomTabs';
-import {
-  SlaPolicyList,
-  SlaPolicyForm,
-  SlaPauseSettings,
-  BusinessHoursSettings,
-  EscalationManagerSettings,
-  SlaMetricsCards,
-  SlaComplianceGauge,
-  SlaTrendChart,
-  SlaBreachChart,
-  SlaBreachesTable,
-  SlaTicketsAtRisk
-} from '@alga-psa/sla/components';
+import { SlaPolicyList } from '@alga-psa/sla/components/SlaPolicyList';
+import { SlaPolicyForm } from '@alga-psa/sla/components/SlaPolicyForm';
+import { SlaPauseSettings } from '@alga-psa/sla/components/SlaPauseSettings';
+import { BusinessHoursSettings } from '@alga-psa/sla/components/BusinessHoursSettings';
+import { EscalationManagerSettings } from '@alga-psa/sla/components/EscalationManagerSettings';
+import { SlaMetricsCards } from '@alga-psa/sla/components/dashboard/SlaMetricsCards';
+import { SlaComplianceGauge } from '@alga-psa/sla/components/dashboard/SlaComplianceGauge';
+import { SlaTrendChart } from '@alga-psa/sla/components/dashboard/SlaTrendChart';
+import { SlaBreachChart } from '@alga-psa/sla/components/dashboard/SlaBreachChart';
+import { SlaBreachesTable } from '@alga-psa/sla/components/dashboard/SlaBreachesTable';
+import { SlaTicketsAtRisk } from '@alga-psa/sla/components/dashboard/SlaTicketsAtRisk';
 import {
   getSlaOverview,
   getSlaTrend,
   getBreachRateByPriority,
   getRecentBreaches,
   getTicketsAtRisk
-} from '@alga-psa/sla/actions';
+} from '@alga-psa/sla/actions/slaReportingActions';
 import {
   ISlaPolicy,
   ISlaOverview,
@@ -32,8 +30,8 @@ import {
   ISlaTicketAtRisk,
   ISlaReportingFilters
 } from '@alga-psa/sla/types';
-import { getAllBoards } from '@alga-psa/reference-data/actions';
-import { getAllClients } from '@alga-psa/clients/actions';
+import { getAllBoards } from '@alga-psa/reference-data/actions/boardActions';
+import { getAllClients } from '@alga-psa/clients/actions/queryActions';
 import { Button } from '@alga-psa/ui/components/Button';
 import { ArrowLeft, RefreshCw, Calendar } from 'lucide-react';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';

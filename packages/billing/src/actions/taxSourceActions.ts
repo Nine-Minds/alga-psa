@@ -5,6 +5,14 @@ import type { TaxSource } from '@alga-psa/types';
 import { getTaxImportState } from '@alga-psa/types';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import {
+  actionError,
+  isActionMessageError,
+  isActionPermissionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 /**
  * Client-specific tax source resolution result.
@@ -16,6 +24,8 @@ export interface ClientTaxSourceInfo {
   isOverride: boolean;
 }
 
+type TaxSourceActionError = ActionMessageError | ActionPermissionError;
+
 /**
  * Get the effective tax source for a client.
  * Checks client override first, then falls back to tenant settings.
@@ -26,9 +36,9 @@ export const getEffectiveTaxSourceForClient = withAuth(async (
   _user,
   { tenant },
   clientId: string
-): Promise<ClientTaxSourceInfo> => {
+): Promise<ClientTaxSourceInfo | TaxSourceActionError> => {
   if (!await hasPermission(_user, 'billing', 'read')) {
-    throw new Error('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required');
   }
   const { knex } = await createTenantKnex();
 
@@ -70,19 +80,25 @@ export const getEffectiveTaxSourceForClient = withAuth(async (
  * This should be called during invoice creation to set the initial tax_source.
  */
 export const shouldUseTaxDelegation = withAuth(async (_user, ctx, clientId: string): Promise<boolean> => {
-  const { taxSource } = await getEffectiveTaxSourceForClient(clientId);
-  return taxSource === 'external';
+  const result = await getEffectiveTaxSourceForClient(clientId);
+  if (isActionMessageError(result) || isActionPermissionError(result)) {
+    return false;
+  }
+  return result.taxSource === 'external';
 });
 
 /**
  * Get the initial tax_source value for a new invoice based on client settings.
  * Returns 'pending_external' for external delegation, 'internal' otherwise.
  */
-export const getInitialInvoiceTaxSource = withAuth(async (_user, ctx, clientId: string): Promise<TaxSource> => {
-  const { taxSource } = await getEffectiveTaxSourceForClient(clientId);
+export const getInitialInvoiceTaxSource = withAuth(async (_user, ctx, clientId: string): Promise<TaxSource | TaxSourceActionError> => {
+  const result = await getEffectiveTaxSourceForClient(clientId);
+  if (isActionMessageError(result) || isActionPermissionError(result)) {
+    return result as TaxSourceActionError;
+  }
 
   // If client uses external tax, new invoices start as 'pending_external'
-  if (taxSource === 'external') {
+  if (result.taxSource === 'external') {
     return 'pending_external';
   }
 
@@ -116,9 +132,9 @@ export const validateInvoiceFinalization = withAuth(async (
   _user,
   { tenant },
   invoiceId: string
-): Promise<InvoiceFinalizationValidation> => {
+): Promise<InvoiceFinalizationValidation | TaxSourceActionError> => {
   if (!await hasPermission(_user, 'billing', 'read')) {
-    throw new Error('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required');
   }
   const { knex } = await createTenantKnex();
 
@@ -164,9 +180,9 @@ export const updateInvoiceTaxSource = withAuth(async (
   { tenant },
   invoiceId: string,
   newTaxSource: TaxSource
-): Promise<{ success: boolean; error?: string }> => {
+): Promise<{ success: boolean; error?: string } | TaxSourceActionError> => {
   if (!await hasPermission(_user, 'billing', 'update')) {
-    throw new Error('Permission denied: billing update required');
+    return permissionError('Permission denied: billing update required');
   }
   const { knex } = await createTenantKnex();
 

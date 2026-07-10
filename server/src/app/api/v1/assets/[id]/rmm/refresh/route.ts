@@ -7,6 +7,7 @@
 
 import { NextResponse } from 'next/server';
 import { refreshAssetRmmData } from '@/lib/actions/asset-actions/rmmActions';
+import { rmmErrorResponse, rmmRouteErrorFrom } from '../rmmRouteErrors';
 
 export async function POST(
   request: Request,
@@ -41,6 +42,10 @@ export async function POST(
     });
   } catch (error) {
     console.error('Failed to refresh asset RMM data:', error);
+    const expectedError = rmmRouteErrorFrom(error);
+    if (expectedError) {
+      return rmmErrorResponse(expectedError);
+    }
     return NextResponse.json(
       { error: 'Failed to refresh RMM data' },
       { status: 500 }

@@ -231,7 +231,6 @@ export async function processInboundWebhookRequest(input: ProcessInboundWebhookR
       });
       return NextResponse.json(responseBody);
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Inbound webhook dispatch failed';
       const isMappingError = error instanceof InboundWebhookMappingError;
       const responseStatus = isMappingError ? 400 : 500;
       const responseBody = {
@@ -239,7 +238,11 @@ export async function processInboundWebhookRequest(input: ProcessInboundWebhookR
         error: isMappingError ? 'mapping_failed' : 'dispatch_failed',
       };
       const handlerOutcome =
-        error instanceof InboundWebhookActionError ? error.toOutcome() : { error: message };
+        error instanceof InboundWebhookActionError
+          ? error.toOutcome()
+          : isMappingError
+            ? { error: error.message }
+            : { error: 'Inbound webhook dispatch failed' };
       await updateInboundDeliveryOutcome(knex, {
         tenant,
         deliveryId,

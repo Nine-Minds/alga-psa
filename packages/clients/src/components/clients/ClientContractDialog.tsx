@@ -179,12 +179,9 @@ export function ClientContractDialog({
             : undefined,
       });
       handleClose(); // Close only on success
-    } catch (err) { // Add catch block
-      if (err instanceof Error) {
-        setError(err.message); // Set error state with backend message
-      } else {
-        setError(t('clientContractDialog.unexpectedError', { defaultValue: 'An unexpected error occurred.' })); // Generic fallback
-      }
+    } catch (err) {
+      console.error('Failed to save client contract:', err);
+      setError(t('clientContractDialog.saveError', { defaultValue: 'Failed to save contract. Please try again.' }));
     }
   };
 

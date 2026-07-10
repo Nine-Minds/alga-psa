@@ -6,6 +6,8 @@ import { withAuth } from '@alga-psa/auth';
 import { Knex } from 'knex';
 import { hasPermission } from '../lib/permissions';
 import { getContactAvatarUrlsBatchAction } from './avatarActions';
+import { permissionError } from '@alga-psa/ui/lib/errorHandling';
+import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 export type ContactFilterStatus = 'active' | 'inactive' | 'all';
 
@@ -20,9 +22,9 @@ export const getContactsForPicker = withAuth(async (
   status: ContactFilterStatus = 'active',
   sortBy: string = 'full_name',
   sortDirection: 'asc' | 'desc' = 'asc'
-): Promise<IContact[]> => {
+): Promise<IContact[] | ActionPermissionError> => {
   if (!await hasPermission(user, 'contact', 'read')) {
-    throw new Error('Permission denied: Cannot read contacts');
+    return permissionError('Permission denied: Cannot read contacts');
   }
 
   const { knex: db } = await createTenantKnex();

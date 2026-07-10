@@ -26,7 +26,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@alga-psa/ui/components/DropdownMenu';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { formatDateTime, getUserTimeZone, utcToLocal } from '@alga-psa/core';
 import {
@@ -42,6 +49,10 @@ import {
 import type { IChecklistTemplate, ITicketChecklistItem } from '../../actions/checklists';
 
 const COMPLETED_AT_FORMAT = 'MMM d, yyyy h:mm a';
+
+function isReturnedActionError(value: unknown): value is ActionMessageError | ActionPermissionError {
+  return isActionMessageError(value) || isActionPermissionError(value);
+}
 
 /**
  * Summary used for the progress chip rendered near the ticket status control.
@@ -205,6 +216,13 @@ const TicketChecklistSection: React.FC<TicketChecklistSectionProps> = ({
 
       try {
         const updated = await setChecklistItemCompleted(itemId, completed);
+        if (isReturnedActionError(updated)) {
+          applyItems(
+            itemsRef.current.map((item) => (item.checklist_item_id === itemId ? previousItem : item))
+          );
+          toast.error(getErrorMessage(updated));
+          return;
+        }
         applyItems(
           itemsRef.current.map((item) =>
             item.checklist_item_id === itemId ? mergeServerItem(item, updated, sessionUserName) : item
@@ -226,6 +244,10 @@ const TicketChecklistSection: React.FC<TicketChecklistSectionProps> = ({
     setIsAddingItem(true);
     try {
       const created = await addChecklistItem(ticketId, { item_name: name });
+      if (isReturnedActionError(created)) {
+        toast.error(getErrorMessage(created));
+        return;
+      }
       applyItems([...itemsRef.current, { ...created, completed_by_name: null }]);
       setNewItemName('');
     } catch (error) {
@@ -253,6 +275,10 @@ const TicketChecklistSection: React.FC<TicketChecklistSectionProps> = ({
     if (!current || !name || name === current.item_name) return;
     try {
       const updated = await updateChecklistItem(editingItemId, { item_name: name });
+      if (isReturnedActionError(updated)) {
+        toast.error(getErrorMessage(updated));
+        return;
+      }
       applyItems(
         itemsRef.current.map((item) =>
           item.checklist_item_id === current.checklist_item_id ? mergeServerItem(item, updated) : item
@@ -267,6 +293,10 @@ const TicketChecklistSection: React.FC<TicketChecklistSectionProps> = ({
     async (item: ITicketChecklistItem) => {
       try {
         const updated = await updateChecklistItem(item.checklist_item_id, { is_required: !item.is_required });
+        if (isReturnedActionError(updated)) {
+          toast.error(getErrorMessage(updated));
+          return;
+        }
         applyItems(
           itemsRef.current.map((existing) =>
             existing.checklist_item_id === item.checklist_item_id ? mergeServerItem(existing, updated) : existing
@@ -282,7 +312,11 @@ const TicketChecklistSection: React.FC<TicketChecklistSectionProps> = ({
   const handleDeleteItem = useCallback(
     async (item: ITicketChecklistItem) => {
       try {
-        await deleteChecklistItem(item.checklist_item_id);
+        const result = await deleteChecklistItem(item.checklist_item_id);
+        if (isReturnedActionError(result)) {
+          toast.error(getErrorMessage(result));
+          return;
+        }
         applyItems(itemsRef.current.filter((existing) => existing.checklist_item_id !== item.checklist_item_id));
       } catch (error) {
         handleError(error, t('checklist.deleteFailed', 'Failed to delete checklist item'));
@@ -305,7 +339,12 @@ const TicketChecklistSection: React.FC<TicketChecklistSectionProps> = ({
       applyItems(renumbered);
       setIsReordering(true);
       try {
-        await reorderChecklistItems(ticketId, renumbered.map((item) => item.checklist_item_id));
+        const result = await reorderChecklistItems(ticketId, renumbered.map((item) => item.checklist_item_id));
+        if (isReturnedActionError(result)) {
+          applyItems(current);
+          toast.error(getErrorMessage(result));
+          return;
+        }
       } catch (error) {
         applyItems(current);
         handleError(error, t('checklist.reorderFailed', 'Failed to reorder checklist items'));
@@ -336,6 +375,10 @@ const TicketChecklistSection: React.FC<TicketChecklistSectionProps> = ({
       setApplyingTemplateId(template.template_id);
       try {
         const result = await applyChecklistTemplate(ticketId, template.template_id);
+        if (isReturnedActionError(result)) {
+          toast.error(getErrorMessage(result));
+          return;
+        }
         if (!result.applied) {
           toast(t('checklist.templateAlreadyApplied', 'This template was already applied to this ticket.'));
         } else {

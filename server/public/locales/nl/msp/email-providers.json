@@ -11,7 +11,8 @@
       "resyncing": "{{providerName}} opnieuw synchroniseren...",
       "resyncError": "Het opnieuw synchroniseren van de IMAP-provider is mislukt",
       "resyncStarted": "Hersynchronisatie gestart voor {{providerName}}.",
-      "enterpriseOnly": "Microsoft 365 inkomende e-mail is alleen beschikbaar in Enterprise Edition."
+      "enterpriseOnly": "Microsoft 365 inkomende e-mail is alleen beschikbaar in Enterprise Edition.",
+      "loadProvidersError": "Failed to load email providers"
     },
     "editDrawer": {
       "title": "E-mailprovider bewerken",
@@ -293,7 +294,8 @@
         "popupBlocked": "Kan de OAuth-pop-up niet openen. Sta pop-ups toe voor deze site.",
         "closedEarly": "Het autorisatievenster werd gesloten voordat het werd voltooid.",
         "authorizationFailed": "Autorisatie mislukt",
-        "popupFailed": "OAuth-pop-up mislukt"
+        "popupFailed": "OAuth-pop-up mislukt",
+        "configureFailed": "Failed to configure Gmail provider"
       },
       "messages": {
         "setupIncomplete": "Provider opgeslagen maar installatie onvolledig: {{error}}",

@@ -10,13 +10,13 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Button } from '@alga-psa/ui/components/Button';
 import { PhoneInput } from '@alga-psa/ui/components/PhoneInput';
-import { getAllCountries, ICountry } from '@alga-psa/clients/actions';
+import { getAllCountries, ICountry } from '@alga-psa/clients/actions/countryActions';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import TimezonePicker from '@alga-psa/ui/components/TimezonePicker';
 import CustomTabs, { TabContent } from '@alga-psa/ui/components/CustomTabs';
 import ViewSwitcher, { ViewSwitcherOption } from '@alga-psa/ui/components/ViewSwitcher';
-import { getCurrentUser } from '@alga-psa/user-composition/actions';
-import { updateUser } from '@alga-psa/users/actions';
+import { getCurrentUser } from '@alga-psa/user-composition/actions/userQueryActions';
+import { updateUser } from '@alga-psa/users/actions/user-actions/userActions';
 import { useUserAvatar, invalidateUserAvatar } from '@alga-psa/user-composition/hooks';
 import type { IUserWithRoles } from '@alga-psa/types';
 import type { NotificationCategory, NotificationSubtype, UserNotificationPreference } from '@alga-psa/notifications';
@@ -24,10 +24,11 @@ import {
   getCategoriesAction,
   getCategoryWithSubtypesAction,
   updateUserPreferenceAction
-} from '@alga-psa/notifications/actions';
-import { InternalNotificationPreferences } from '@alga-psa/notifications/components';
-import { PasswordChangeForm, UserAvatarUpload } from '@alga-psa/users/components';
-import { SessionManagement } from '@alga-psa/auth/components';
+} from '@alga-psa/notifications/actions/notification-actions/notificationActions';
+import { InternalNotificationPreferences } from '@alga-psa/notifications/components/settings/InternalNotificationPreferences';
+import PasswordChangeForm from '@alga-psa/users/components/settings/PasswordChangeForm';
+import UserAvatarUpload from '@alga-psa/users/components/profile/UserAvatarUpload';
+import SessionManagement from '@alga-psa/auth/components/settings/security/SessionManagement';
 import ApiKeysSetup from './ApiKeysSetup';
 import KeyboardShortcutsPanel from '@/components/keyboard-shortcuts/KeyboardShortcutsPanel';
 import { isCalendarEnterpriseEdition, resolveUserProfileTab } from '@alga-psa/integrations/lib/calendarAvailability';
@@ -37,8 +38,8 @@ import { validateContactName, validateEmailAddress, validatePhoneNumber } from '
 import SettingsTabSkeleton from '@alga-psa/ui/components/skeletons/SettingsTabSkeleton';
 import { LanguagePreference } from '@alga-psa/ui/components/LanguagePreference';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { getUserLocaleAction, updateUserLocaleAction } from '@alga-psa/user-composition/actions';
-import { getInheritedLocaleAction } from '@alga-psa/tenancy/actions';
+import { getUserLocaleAction, updateUserLocaleAction } from '@alga-psa/user-composition/actions/localeActions';
+import { getInheritedLocaleAction } from '@alga-psa/tenancy/actions/locale-actions/getInheritedLocale';
 import type { SupportedLocale } from '@alga-psa/core/i18n/config';
 
 function ConnectSsoLoading() {
@@ -184,7 +185,7 @@ export default function UserProfile({ userId }: UserProfileProps) {
 
       } catch (err) {
         console.error('Error initializing profile:', err);
-        setError(err instanceof Error ? err.message : t('profile.messages.error.loadFailed', {
+        setError(t('profile.messages.error.loadFailed', {
           defaultValue: 'Failed to load profile',
         }));
       } finally {
@@ -292,6 +293,8 @@ export default function UserProfile({ userId }: UserProfileProps) {
           EMAIL_ALREADY_EXISTS: 'profile.messages.error.emailAlreadyExists',
           REPORTS_TO_SELF: 'profile.messages.error.reportsToSelf',
           REPORTS_TO_CYCLE: 'profile.messages.error.reportsToCycle',
+          PERMISSION_DENIED: 'profile.messages.error.permissionDenied',
+          USER_UPDATE_FAILED: 'profile.messages.error.updateFailed',
         };
         toast.error(t(errorKeys[result.code], { defaultValue: result.error }));
         return;

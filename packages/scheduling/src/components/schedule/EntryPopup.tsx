@@ -31,11 +31,20 @@ import {
   IAppointmentRequest
 } from '@alga-psa/scheduling/actions';
 import toast from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { Label } from '@alga-psa/ui/components/Label';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 const EntryPopupContext = React.createContext<EntryPopupProps | null>(null);
+
+function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
+  return isActionMessageError(value) || isActionPermissionError(value);
+}
 
 interface EntryPopupProps {
   event: IScheduleEntry | null;
@@ -238,14 +247,20 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
           // For existing work items, fetch them
           if (selectedWorkItem && selectedWorkItem.work_item_id && selectedWorkItem.type && selectedWorkItem.type !== 'ad_hoc') {
             const items = await getWorkItemById(selectedWorkItem.work_item_id, selectedWorkItem.type);
-            if (items) {
+            if (isReturnedActionError(items)) {
+              toast.error(getErrorMessage(items));
+              setAvailableWorkItems([]);
+            } else if (items) {
               setAvailableWorkItems([items]);
             } else {
               setAvailableWorkItems([]);
             }
           } else if (entryData.work_item_id && entryData.work_item_type && entryData.work_item_type !== 'ad_hoc') {
             const items = await getWorkItemById(entryData.work_item_id, entryData.work_item_type);
-            if (items) {
+            if (isReturnedActionError(items)) {
+              toast.error(getErrorMessage(items));
+              setAvailableWorkItems([]);
+            } else if (items) {
               setAvailableWorkItems([items]);
             } else {
               setAvailableWorkItems([]);
@@ -291,9 +306,15 @@ const EntryPopup: React.FC<EntryPopupProps> = ({
         // Fetch work item information if editing an existing entry
         if (event.work_item_id && event.work_item_type !== 'ad_hoc') {
           getWorkItemById(event.work_item_id, event.work_item_type).then((workItem) => {
+            if (isReturnedActionError(workItem)) {
+              toast.error(getErrorMessage(workItem));
+              return;
+            }
             if (workItem) {
               setSelectedWorkItem(workItem);
             }
+          }).catch((error) => {
+            handleError(error, t('entryPopup.errors.loadWorkItem', { defaultValue: 'Failed to load work item.' }));
           });
         }
       } else if (slot) {

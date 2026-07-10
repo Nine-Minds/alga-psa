@@ -5,6 +5,7 @@ import { Card } from '@alga-psa/ui/components/Card';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getAssetCountsByType } from '../actions/assetStatisticsActions';
+import { getErrorMessage, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 interface AssetTypeBreakdownCardProps {
   /** Registry-aware label resolver shared with the asset list. */
@@ -34,6 +35,11 @@ export function AssetTypeBreakdownCard({
     let mounted = true;
     getAssetCountsByType()
       .then((next) => {
+        if (isActionPermissionError(next)) {
+          console.warn('Unable to load asset counts by type:', getErrorMessage(next));
+          if (mounted) setCounts({});
+          return;
+        }
         if (mounted) setCounts(next);
       })
       .catch((error) => {

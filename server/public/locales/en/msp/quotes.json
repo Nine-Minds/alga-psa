@@ -231,7 +231,8 @@
       "notFound": "Quote not found",
       "save": "Failed to save quote",
       "saveFailed": "Quote save failed",
-      "workflowAction": "Failed to {{action}}"
+      "workflowAction": "Failed to {{action}}",
+      "removeItem": "Failed to remove quote item"
     },
     "loading": "Loading quote form...",
     "notices": {
@@ -556,7 +557,10 @@
       "contact": "Contact",
       "internal": "Internal"
     },
-    "removeAriaLabel": "Remove {{email}}"
+    "removeAriaLabel": "Remove {{email}}",
+    "errors": {
+      "contactsLoadFailed": "Could not load client contacts."
+    }
   },
   "quoteConversion": {
     "title": "Convert Quote",

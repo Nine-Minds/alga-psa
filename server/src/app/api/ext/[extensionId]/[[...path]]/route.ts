@@ -392,7 +392,7 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ extensionId: st
       clearTimeout(timeout);
       console.error('[api/ext] runner execution failed', { error: err, requestId, tenantId, extensionId });
       return applyCorsHeaders(
-        NextResponse.json({ error: 'bad_gateway', detail: String(err) }, { status: 502 }),
+        NextResponse.json({ error: 'bad_gateway', requestId }, { status: 502 }),
         corsOrigin
       );
     }
@@ -411,7 +411,7 @@ async function handle(req: NextRequest, ctx: { params: Promise<{ extensionId: st
       stack: err instanceof Error ? err.stack : undefined,
     });
     return applyCorsHeaders(
-      NextResponse.json({ error: 'internal_error', detail: String(err) }, { status: 500 }),
+      NextResponse.json({ error: 'internal_error' }, { status: 500 }),
       corsOrigin
     );
   }

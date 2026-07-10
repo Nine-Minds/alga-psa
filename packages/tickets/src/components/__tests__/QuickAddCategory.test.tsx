@@ -57,8 +57,11 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
   ),
 }));
 
-vi.mock('@alga-psa/tickets/actions', () => ({
+vi.mock('../../actions/ticketCategoryActions', () => ({
   createCategory: (...args: unknown[]) => createCategoryMock(...args),
+}));
+
+vi.mock('../../actions/board-actions/boardActions', () => ({
   getAllBoards: (...args: unknown[]) => getAllBoardsMock(...args),
 }));
 

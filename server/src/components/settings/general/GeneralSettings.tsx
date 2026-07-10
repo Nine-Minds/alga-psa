@@ -9,13 +9,21 @@ import { Label } from "@alga-psa/ui/components/Label";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@alga-psa/ui/components/Table";
 import { Plus, Trash } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
-import { getTenantDetails, updateTenantName, addClientToTenant, removeClientFromTenant, setDefaultClient, getTenantTimezoneAuth, setTenantTimezone } from "@alga-psa/tenancy/actions";
-import { getAllClients } from "@alga-psa/clients/actions";
+import {
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+import { getTenantDetails, updateTenantName, addClientToTenant, removeClientFromTenant, setDefaultClient } from "@alga-psa/tenancy/actions/coreTenantActions";
+import { getTenantTimezoneAuth, setTenantTimezone } from "@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions";
+import { getAllClients } from "@alga-psa/clients/actions/queryActions";
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import TimezonePicker from '@alga-psa/ui/components/TimezonePicker';
 import { IClient } from "@alga-psa/types";
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 const GeneralSettings = () => {
   const { t } = useTranslation('msp/settings');
@@ -62,7 +70,11 @@ const GeneralSettings = () => {
   const handleSaveTimezone = async () => {
     try {
       if (tenantTimezone) {
-        await setTenantTimezone(tenantTimezone);
+        const result = await setTenantTimezone(tenantTimezone);
+        if (isReturnedActionError(result)) {
+          handleError(result, t('general.messages.error.updateTimezone'));
+          return;
+        }
         toast.success(t('general.messages.success.timezoneUpdated'));
       }
     } catch (error) {

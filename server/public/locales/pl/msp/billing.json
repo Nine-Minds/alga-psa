@@ -253,7 +253,8 @@
       "secondaryApproverRequired": "Wprowadź nazwę i adres e-mail dodatkowej osoby zatwierdzającej",
       "invalidVerificationCode": "Nieprawidłowy kod weryfikacyjny",
       "unknown": "Wystąpił nieznany błąd",
-      "reportNotFound": "Nie znaleziono raportu uzgodnienia. Raport mógł zostać usunięty lub nie masz uprawnień do jego przeglądania."
+      "reportNotFound": "Nie znaleziono raportu uzgodnienia. Raport mógł zostać usunięty lub nie masz uprawnień do jego przeglądania.",
+      "resolveFailed": "Failed to resolve reconciliation report."
     }
   },
   "discrepancy": {
@@ -334,7 +335,8 @@
       "resolveReport": "Rozwiąż raport"
     },
     "errors": {
-      "unknown": "Wystąpił nieznany błąd"
+      "unknown": "Wystąpił nieznany błąd",
+      "resolveFailed": "Failed to resolve reconciliation report. Please refresh and try again."
     }
   },
   "recommendedFix": {
@@ -387,7 +389,8 @@
     "errors": {
       "notesRequired": "Prosimy o przesłanie uwag wyjaśniających przyczynę tej korekty",
       "invalidAmount": "Proszę wprowadzić prawidłową kwotę",
-      "unknown": "Wystąpił nieznany błąd"
+      "unknown": "Wystąpił nieznany błąd",
+      "applyFailed": "Failed to apply reconciliation fix. Please refresh and try again."
     }
   },
   "usage": {

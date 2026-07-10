@@ -20,7 +20,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
 import MultiUserAndTeamPicker from '@alga-psa/ui/components/MultiUserAndTeamPicker';
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
-import { getTeams, getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
+import { getTeams, getTeamAvatarUrlsBatchAction, isTeamActionError } from '@alga-psa/teams/actions';
 import type { ITeam } from '@alga-psa/types';
 import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
@@ -202,6 +202,10 @@ export function TemplateTaskForm({
     const fetchTeams = async () => {
       try {
         const fetchedTeams = await getTeams();
+        if (isTeamActionError(fetchedTeams)) {
+          console.warn('Cannot load teams for template task assignment:', fetchedTeams);
+          return;
+        }
         setTeams(fetchedTeams);
       } catch (err) {
         console.error('Failed to fetch teams:', err);
@@ -431,7 +435,8 @@ export function TemplateTaskForm({
         }
       );
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('templates.taskForm.saveFailed', 'Failed to save task'));
+      console.error('Failed to save template task:', err);
+      setError(t('templates.taskForm.saveFailed', 'Failed to save task'));
     } finally {
       setIsSubmitting(false);
     }

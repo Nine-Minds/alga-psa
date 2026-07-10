@@ -68,14 +68,30 @@ export async function GET(request: NextRequest) {
       params.append('client_secret', clientSecret);
     }
 
-    const tokenResponse = await axios.post(imapConfig.oauth_token_url, params, {
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
-    });
+    let tokenResponse;
+    try {
+      tokenResponse = await axios.post(imapConfig.oauth_token_url, params, {
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+      });
+    } catch (tokenError) {
+      console.warn('IMAP OAuth token exchange failed:', tokenError);
+      return NextResponse.json(
+        { error: 'IMAP OAuth token exchange failed. Start the reconnect flow again.' },
+        { status: 400 }
+      );
+    }
 
     const accessToken = tokenResponse.data.access_token;
     const refreshToken = tokenResponse.data.refresh_token;
     const expiresIn = Number(tokenResponse.data.expires_in || 3600);
     const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
+
+    if (!accessToken) {
+      return NextResponse.json(
+        { error: 'IMAP OAuth did not return an access token. Start the reconnect flow again.' },
+        { status: 400 }
+      );
+    }
 
     if (refreshToken) {
       await secretProvider.setTenantSecret(tenant, `imap_refresh_token_${state.providerId}`, refreshToken);
@@ -121,6 +137,6 @@ export async function GET(request: NextRequest) {
       return toProductAccessDeniedResponse(error);
     }
     console.error('IMAP OAuth callback error:', error);
-    return NextResponse.json({ error: error.message || 'Failed to finalize IMAP OAuth' }, { status: 500 });
+    return NextResponse.json({ error: 'Failed to finalize IMAP OAuth. Please try again.' }, { status: 500 });
   }
 }

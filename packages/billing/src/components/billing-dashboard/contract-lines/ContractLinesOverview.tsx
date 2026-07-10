@@ -4,7 +4,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { Box, Card, Heading } from '@radix-ui/themes';
 import { toast } from 'react-hot-toast'; // Import toast
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { getErrorMessage, handleError, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { Button } from '@alga-psa/ui/components/Button';
 import { MoreVertical, Plus, Search, XCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -64,6 +64,11 @@ const ContractLinesOverview: React.FC = () => {
     setIsLoading(true);
     try {
       const presets = await getContractLinePresets();
+      if (isActionMessageError(presets) || isActionPermissionError(presets)) {
+        setError(getErrorMessage(presets));
+        setContractLines([]);
+        return;
+      }
       setContractLines(presets);
       setError(null);
     } catch (error) {
@@ -80,6 +85,11 @@ const ContractLinesOverview: React.FC = () => {
   const fetchAllServiceTypes = async () => {
     try {
       const types = await getServiceTypesForSelection();
+      if (isActionMessageError(types) || isActionPermissionError(types)) {
+        setError(getErrorMessage(types));
+        setAllServiceTypes([]);
+        return;
+      }
       setAllServiceTypes(types);
     } catch (error) {
       console.error('Error fetching service types:', error);
@@ -89,7 +99,11 @@ const ContractLinesOverview: React.FC = () => {
 
   const handleDeletePlan = async (presetId: string) => {
     try {
-      await deleteContractLinePreset(presetId);
+      const result = await deleteContractLinePreset(presetId);
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        handleError(result, getErrorMessage(result));
+        return;
+      }
       await fetchContractLines();
       toast.success(t('overview.toast.contractLinePresetDeletedSuccessfully', {
         defaultValue: 'Contract line preset deleted successfully',

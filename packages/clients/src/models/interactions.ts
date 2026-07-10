@@ -263,7 +263,7 @@ class InteractionModel {
 
       const fullInteraction = await this.getById(newInteraction.interaction_id, tenantId, db);
       if (!fullInteraction) {
-        throw new Error('Failed to fetch created interaction');
+        throw new Error('Created interaction could not be reloaded after insert.');
       }
 
       return fullInteraction;
@@ -302,9 +302,13 @@ class InteractionModel {
         .update(safeUpdateData)
         .returning('*');
 
+      if (!updatedInteraction) {
+        throw new Error('Interaction not found');
+      }
+
       const fullInteraction = await this.getById(updatedInteraction.interaction_id, tenantId);
       if (!fullInteraction) {
-        throw new Error('Failed to fetch updated interaction');
+        throw new Error('Updated interaction could not be reloaded after update.');
       }
 
       return fullInteraction;

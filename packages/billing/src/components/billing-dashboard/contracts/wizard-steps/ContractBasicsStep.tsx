@@ -12,6 +12,7 @@ import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { ContractWizardData } from '../ContractWizard';
 import { getAllClientsForBilling } from '@alga-psa/billing/actions/billingClientsActions';
 import { CURRENCY_OPTIONS, getCurrencySymbol } from '@alga-psa/core';
+import { isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import {
   Calendar,
   Building2,
@@ -91,6 +92,10 @@ export function ContractBasicsStep({
     const loadClients = async () => {
       try {
         const fetchedClients = await getAllClientsForBilling();
+        if (isActionMessageError(fetchedClients) || isActionPermissionError(fetchedClients)) {
+          setClients([]);
+          return;
+        }
         setClients(fetchedClients);
       } catch (error) {
         console.error('Error loading clients:', error);

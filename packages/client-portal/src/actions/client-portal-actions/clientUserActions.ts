@@ -8,7 +8,7 @@ import { revalidatePath } from 'next/cache';
 // Note: getUserClientId removed - was unused and caused nested withAuth issues
 import { uploadEntityImage, deleteEntityImage } from '@alga-psa/storage';
 import { hasPermission, withAuth, type AuthContext } from '@alga-psa/auth';
-import { getRoles, assignRoleToUser, removeRoleFromUser, getUserRoles } from '@alga-psa/auth/actions';
+import { getRoles, assignRoleToUser, removeRoleFromUser, getUserRoles } from '@alga-psa/auth/actions/policyActions';
 import {
   createPortalUserInDB,
   getClientPortalRoles as getClientPortalRolesFromDB,
@@ -16,6 +16,81 @@ import {
 } from '@shared/models/userModel';
 import { IUser, IRole } from '@shared/interfaces/user.interfaces';
 import type { IUserWithRoles } from '@alga-psa/types';
+
+export type ClientUserActionError =
+  | { readonly actionError: string }
+  | { readonly permissionError: string };
+
+function clientUserActionErrorFrom(error: unknown): ClientUserActionError | null {
+  if (error && typeof error === 'object') {
+    const candidate = error as { actionError?: unknown; permissionError?: unknown };
+    if (typeof candidate.permissionError === 'string') {
+      return { permissionError: candidate.permissionError };
+    }
+    if (typeof candidate.actionError === 'string') {
+      return { actionError: candidate.actionError };
+    }
+  }
+
+  if (!(error instanceof Error)) {
+    const dbError = error as { code?: string; constraint?: string; column?: string };
+    if (dbError?.code === '23505') {
+      return { actionError: 'A client user with this email already exists.' };
+    }
+    if (dbError?.code === '23503') {
+      return { actionError: 'The selected contact or role is no longer valid. Please refresh and try again.' };
+    }
+    if (dbError?.code === '23502') {
+      return { actionError: `Missing required client user field${dbError.column ? `: ${dbError.column}` : ''}.` };
+    }
+    if (dbError?.code === '22P02') {
+      return { actionError: 'Invalid client user data provided. Please refresh and try again.' };
+    }
+    return null;
+  }
+
+  if (error.message.includes('Permission denied')) {
+    return { permissionError: error.message };
+  }
+  if (error.message === 'User not found') {
+    return { actionError: 'Client user not found. It may have been deleted. Please refresh and try again.' };
+  }
+  if (error.message === 'Contact not found') {
+    return { actionError: 'Contact not found. It may have been deleted. Please refresh and try again.' };
+  }
+
+  const dbError = error as Error & { code?: string; constraint?: string; column?: string };
+  if (dbError.code === '23505') {
+    return { actionError: 'A client user with this email already exists.' };
+  }
+  if (dbError.code === '23503') {
+    return { actionError: 'The selected contact or role is no longer valid. Please refresh and try again.' };
+  }
+  if (dbError.code === '23502') {
+    return { actionError: `Missing required client user field${dbError.column ? `: ${dbError.column}` : ''}.` };
+  }
+  if (dbError.code === '22P02') {
+    return { actionError: 'Invalid client user data provided. Please refresh and try again.' };
+  }
+
+  return null;
+}
+
+function clientUserActionErrorMessage(error: unknown, fallback: string): string {
+  const mappedError = clientUserActionErrorFrom(error);
+  if (mappedError) {
+    return 'permissionError' in mappedError
+      ? mappedError.permissionError
+      : mappedError.actionError;
+  }
+
+  const message = error instanceof Error ? error.message : typeof error === 'string' ? error : '';
+  if (message === 'Contact not found') {
+    return message;
+  }
+
+  return fallback;
+}
 
 /**
  * Get available client portal roles
@@ -33,10 +108,17 @@ export const getClientPortalRoles = withAuth(async (_user: IUserWithRoles, { ten
 /**
  * Assign a role to a client user
  */
-export async function assignClientUserRole(userId: string, roleId: string): Promise<void> {
+export async function assignClientUserRole(userId: string, roleId: string): Promise<void | ClientUserActionError> {
   try {
-    await assignRoleToUser(userId, roleId);
+    const result = await assignRoleToUser(userId, roleId);
+    if (result && typeof result === 'object' && ('permissionError' in result || 'actionError' in result)) {
+      return result;
+    }
   } catch (error) {
+    const expected = clientUserActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
     console.error('Error assigning role to client user:', error);
     throw error;
   }
@@ -45,10 +127,17 @@ export async function assignClientUserRole(userId: string, roleId: string): Prom
 /**
  * Remove a role from a client user
  */
-export async function removeClientUserRole(userId: string, roleId: string): Promise<void> {
+export async function removeClientUserRole(userId: string, roleId: string): Promise<void | ClientUserActionError> {
   try {
-    await removeRoleFromUser(userId, roleId);
+    const result = await removeRoleFromUser(userId, roleId);
+    if (result && typeof result === 'object' && ('permissionError' in result || 'actionError' in result)) {
+      return result;
+    }
   } catch (error) {
+    const expected = clientUserActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
     console.error('Error removing role from client user:', error);
     throw error;
   }
@@ -139,7 +228,7 @@ export const updateClientUser = withAuth(async (
   { tenant }: AuthContext,
   userId: string,
   userData: Partial<IUser>
-): Promise<IUser | null> => {
+): Promise<IUser | null | ClientUserActionError> => {
   try {
     const { knex } = await createTenantKnex();
 
@@ -164,8 +253,15 @@ export const updateClientUser = withAuth(async (
         .returning('*');
     });
 
-    return (updatedUser as IUser | undefined) || null;
+    return (updatedUser as IUser | undefined) || { actionError: 'Client user not found' };
   } catch (error) {
+    if (error instanceof Error && error.message === 'User not found') {
+      return null;
+    }
+    const expected = clientUserActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
     console.error('Error updating client user:', error);
     throw error;
   }
@@ -201,7 +297,7 @@ export const resetClientUserPassword = withAuth(async (
     console.error('Error resetting client user password:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: clientUserActionErrorMessage(error, 'Failed to reset client user password')
     };
   }
 });
@@ -290,7 +386,7 @@ export const createClientUser = withAuth(async (
     console.error('Error creating client user:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
+      error: clientUserActionErrorMessage(error, 'Failed to create client user')
     };
   }
 });
@@ -403,7 +499,7 @@ export const uploadContactAvatar = withAuth(async (
       errorStack: error instanceof Error ? error.stack : undefined,
       errorName: error instanceof Error ? error.name : undefined
     });
-    const message = error instanceof Error ? error.message : 'Failed to upload contact avatar';
+    const message = clientUserActionErrorMessage(error, 'Failed to upload contact avatar');
     return { success: false, message };
   }
 });
@@ -518,7 +614,7 @@ export const deleteContactAvatar = withAuth(async (
       errorStack: error instanceof Error ? error.stack : undefined,
       errorName: error instanceof Error ? error.name : undefined
     });
-    const message = error instanceof Error ? error.message : 'Failed to delete contact avatar';
+    const message = clientUserActionErrorMessage(error, 'Failed to delete contact avatar');
     return { success: false, message };
   }
 });

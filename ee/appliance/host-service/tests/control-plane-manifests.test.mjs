@@ -32,6 +32,8 @@ test('T002 control-plane manifests define isolated namespace, workload, exposure
   assert.match(rbac, /customresourcedefinitions/);
   assert.match(rbac, /clusterrolebindings/);
   assert.match(rbac, /storageclasses/);
+  assert.match(rbac, /resources: \["pods\/exec", "pods\/portforward"\]/);
+  assert.match(rbac, /verbs: \["create"\]/);
   assert.doesNotMatch(rbac, /resources: \["\*"\]/);
   assert.doesNotMatch(rbac, /verbs: \["\*"\]/);
   assert.doesNotMatch(rbac, /host kubeconfig/);

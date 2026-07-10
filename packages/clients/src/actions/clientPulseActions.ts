@@ -5,6 +5,12 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { getContactAvatarUrlsBatchAsync } from '../lib/documentsHelpers';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import type {
   ClientAttentionFlag,
   ClientAttentionSeverity,
@@ -22,6 +28,20 @@ import type {
 } from '../lib/commandCenterTypes';
 
 type ClientPulseLocations = ClientPulse['locations'];
+type ClientPulseActionError = ActionMessageError | ActionPermissionError;
+
+function clientPulseActionErrorFrom(error: unknown): ClientPulseActionError | null {
+  if (!(error instanceof Error)) {
+    return null;
+  }
+  if (error.message.includes('Permission denied')) {
+    return permissionError(error.message);
+  }
+  if (error.message === 'Client not found') {
+    return actionError('Client not found');
+  }
+  return null;
+}
 
 const DAY_MS = 86_400_000;
 const DRAFT_INVOICE_PREVIEW_LIMIT = 5;
@@ -932,32 +952,33 @@ export const getClientPulse = withAuth(async (
   user,
   { tenant },
   clientId: string
-): Promise<ClientPulse> => {
-  if (!(await hasPermission(user, 'client', 'read'))) {
-    throw new Error('Permission denied: cannot read client');
-  }
+): Promise<ClientPulse | ClientPulseActionError> => {
+  try {
+    if (!(await hasPermission(user, 'client', 'read'))) {
+      throw new Error('Permission denied: cannot read client');
+    }
 
-  const [canReadTickets, canReadBilling, canReadInventory, canReadAssets, canReadDocuments] = await Promise.all([
-    hasPermission(user, 'ticket', 'read'),
-    hasPermission(user, 'billing', 'read'),
-    hasPermission(user, 'inventory', 'read'),
-    hasPermission(user, 'asset', 'read'),
-    hasPermission(user, 'document', 'read'),
-  ]);
+    const [canReadTickets, canReadBilling, canReadInventory, canReadAssets, canReadDocuments] = await Promise.all([
+      hasPermission(user, 'ticket', 'read'),
+      hasPermission(user, 'billing', 'read'),
+      hasPermission(user, 'inventory', 'read'),
+      hasPermission(user, 'asset', 'read'),
+      hasPermission(user, 'document', 'read'),
+    ]);
 
-  const permissions = {
-    tickets: canReadTickets,
-    billing: canReadBilling,
-    inventory: canReadInventory,
-    assets: canReadAssets,
-    documents: canReadDocuments,
-  };
+    const permissions = {
+      tickets: canReadTickets,
+      billing: canReadBilling,
+      inventory: canReadInventory,
+      assets: canReadAssets,
+      documents: canReadDocuments,
+    };
 
-  const nowMs = Date.now();
-  const generatedAt = new Date(nowMs).toISOString();
-  const { knex: db } = await createTenantKnex();
+    const nowMs = Date.now();
+    const generatedAt = new Date(nowMs).toISOString();
+    const { knex: db } = await createTenantKnex();
 
-  return withTransaction(db, async (trx: Knex.Transaction) => {
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
     const clientRow = await trx('clients as c')
       .leftJoin('users as u', function joinAccountManager() {
         this.on('c.account_manager_id', '=', 'u.user_id').andOn('c.tenant', '=', 'u.tenant');
@@ -1024,5 +1045,12 @@ export const getClientPulse = withAuth(async (
       notes,
       record,
     };
-  });
+    });
+  } catch (error) {
+    const expected = clientPulseActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
+  }
 });

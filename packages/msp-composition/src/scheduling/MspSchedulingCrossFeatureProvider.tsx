@@ -17,7 +17,12 @@ import { getConsolidatedTicketData } from '@alga-psa/tickets/actions/optimizedTi
 
 // Client imports
 import InteractionDetails from '@alga-psa/clients/components/interactions/InteractionDetails';
-import { getInteractionById } from '@alga-psa/clients/actions';
+import { getInteractionById } from '@alga-psa/clients/actions/queryActions';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 // Project imports
 import TaskEdit from '@alga-psa/projects/components/TaskEdit';
@@ -96,6 +101,13 @@ export function MspSchedulingCrossFeatureProvider({ children }: { children: Reac
     (props: SchedulingTaskEditRenderProps) => renderTaskEditRef.current!(props),
     []
   );
+  const getSchedulingInteractionById = useCallback(async (interactionId: string) => {
+    const result = await getInteractionById(interactionId);
+    if (isActionMessageError(result) || isActionPermissionError(result)) {
+      throw new Error(getErrorMessage(result));
+    }
+    return result;
+  }, []);
 
   const value = useMemo<SchedulingCrossFeatureCallbacks>(
     () => ({
@@ -103,13 +115,13 @@ export function MspSchedulingCrossFeatureProvider({ children }: { children: Reac
       renderInteractionDetails,
       renderTaskEdit,
       getConsolidatedTicketData,
-      getInteractionById,
+      getInteractionById: getSchedulingInteractionById,
       getTaskById,
       getProjectPhase,
       getProjectMetadata,
       getProjectTreeData,
     }),
-    [renderTicketDetails, renderInteractionDetails, renderTaskEdit]
+    [renderTicketDetails, renderInteractionDetails, renderTaskEdit, getSchedulingInteractionById]
   );
 
   return (

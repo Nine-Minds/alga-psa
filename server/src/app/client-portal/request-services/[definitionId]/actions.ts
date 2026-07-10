@@ -51,6 +51,30 @@ function buildRequestServiceCatalogRedirectUrl(
     : '/client-portal/request-services';
 }
 
+function requestServiceSubmitErrorMessage(error: unknown): string {
+  if (!(error instanceof Error)) {
+    return 'Unable to submit request. Please review the form and try again.';
+  }
+
+  if (error.message === 'Service request is not visible or not published') {
+    return 'This request form is no longer available.';
+  }
+
+  if (error.message.startsWith('Submission validation failed:')) {
+    return `Please fix the form: ${error.message.replace('Submission validation failed:', '').trim()}`;
+  }
+
+  if (error.message.startsWith('Submission attachments reference unknown files:')) {
+    return 'One or more attachments could not be found. Please upload them again.';
+  }
+
+  if (error.message.includes('Permission denied') || error.message.includes('Unauthorized')) {
+    return 'You do not have permission to submit this request.';
+  }
+
+  return 'Unable to submit request. Please review the form and try again.';
+}
+
 export const getRequestServiceDefinitionDetailAction = withAuth(async (
   currentUser: IUserWithRoles,
   { tenant }: AuthContext,
@@ -214,7 +238,7 @@ export const submitRequestServiceDefinitionAction = withAuth(async (
 
       return {
         status: 'error' as const,
-        message: error instanceof Error ? error.message : 'submit_failed',
+        message: requestServiceSubmitErrorMessage(error),
       };
     }
   });

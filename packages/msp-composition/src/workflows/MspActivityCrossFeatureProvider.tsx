@@ -19,7 +19,7 @@ import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
 import { getConsolidatedTicketData } from '@alga-psa/tickets/actions/optimizedTicketActions';
 
 // Client imports
-import { getAllClients, getAllContacts } from '@alga-psa/clients/actions';
+import { getAllClients, getAllContacts } from '@alga-psa/clients/actions/queryActions';
 
 // Project imports
 import TaskEdit from '@alga-psa/projects/components/TaskEdit';
@@ -28,7 +28,7 @@ import { getTaskWithDetails } from '@alga-psa/projects/actions/projectTaskAction
 import { getProjects, getProjectsWithPhases } from '@alga-psa/projects/actions/projectActions';
 
 // Scheduling imports
-import { getScheduleEntries } from '@alga-psa/scheduling/actions';
+import { getScheduleEntries } from '@alga-psa/scheduling/actions/scheduleActions';
 import { getTimeEntryById, saveTimeEntry } from '@alga-psa/scheduling/actions/timeEntryActions';
 import EntryPopup from '@alga-psa/scheduling/components/schedule/EntryPopup';
 import TimeEntryDialog from '@alga-psa/scheduling/components/time-management/time-entry/time-sheet/TimeEntryDialog';

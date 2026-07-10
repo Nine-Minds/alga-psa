@@ -28,7 +28,7 @@ describe('Contract Invoice Manual Credit', () => {
   }));
 
   vi.mock('@alga-psa/auth', async () => {
-  const { createAuthModuleMock } = await import('../../../../../test-utils/testMocks');
+  const { createAuthModuleMock } = await import('../../../../../test-utils/authModuleMock');
   return createAuthModuleMock();
 });
 

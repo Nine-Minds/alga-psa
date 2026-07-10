@@ -5,12 +5,12 @@ import type { TicketIntegrationContextType } from '@alga-psa/projects/context/Ti
 import { getTicketsForList, deleteTicket as deleteTicketAction } from '@alga-psa/tickets/actions/ticketActions';
 import { getConsolidatedTicketData } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { getTicketCategories } from '@alga-psa/tickets/actions/ticketCategoryActions';
-import { getAllBoards } from '@alga-psa/reference-data/actions';
+import { getAllBoards } from '@alga-psa/reference-data/actions/boardActions';
 import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
 import TicketDetails from '@alga-psa/tickets/components/ticket/TicketDetails';
 import CategoryPicker from '@alga-psa/tickets/components/CategoryPicker';
 import { PrioritySelect } from '@alga-psa/ui/components';
-import { getCurrentUser } from '@alga-psa/user-composition/actions';
+import { getCurrentUser } from '@alga-psa/user-composition/actions/userQueryActions';
 import { useDrawer } from '@alga-psa/ui';
 import { toast } from 'react-hot-toast';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';

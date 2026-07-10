@@ -744,6 +744,7 @@
     "addPurchaseOrder": "Ajouter un bon de commande",
     "allVendors": "Tous les fournisseurs",
     "amountOnOrder": "{{amount}} en commande",
+    "mixedCurrencyOnOrder": "{{count}} bons de commande en cours dans plusieurs devises",
     "cancelConfirm": "Êtes-vous sûr de vouloir annuler le bon de commande {{poNumber}} ? Cette action est irréversible.",
     "cancelFailed": "Impossible d'annuler le bon de commande.",
     "cancelTitle": "Annuler le bon de commande",
@@ -756,7 +757,7 @@
       "product": "Produit",
       "qty": "Qté",
       "received": "Réceptionné",
-      "unitCost": "Coût unitaire ($)",
+      "unitCost": "Coût unitaire",
       "vendor": "Fournisseur"
     },
     "count": "{{count}} bon de commande",
@@ -963,6 +964,15 @@
     "emailFailed": "Impossible d'envoyer la confirmation par e-mail.",
     "emailSuccess": "Confirmation envoyée par e-mail à {{recipients}}",
     "enterSerial": "Saisissez au moins un numéro de série.",
+    "errors": {
+      "documentGenerationFailed": "Impossible de générer le document",
+      "downloadPermissionDenied": "Autorisation refusée : impossible de télécharger les documents de commande client",
+      "emailConfirmationFailed": "Impossible d'envoyer la confirmation par e-mail",
+      "emailPermissionDenied": "Autorisation refusée : impossible d'envoyer les documents de commande client par e-mail",
+      "emailSendFailed": "L'e-mail n'a pas pu être envoyé.",
+      "noRecipientEmail": "Aucun e-mail de destinataire n'est enregistré pour ce client.",
+      "notFound": "Commande client introuvable"
+    },
     "fields": {
       "allocationMode": "Mode d'allocation",
       "clientPoNumber": "Client PO number",
@@ -979,7 +989,7 @@
       "selectService": "Select a service…",
       "service": "Service",
       "serviceId": "ID de service",
-      "unitPrice": "Prix unitaire ($)",
+      "unitPrice": "Prix unitaire",
       "unitPriceIn": "Unit price ({{currency}})"
     },
     "fromQuote": "Depuis le devis",
@@ -1056,7 +1066,8 @@
     "title": "Commandes client",
     "total": "Total",
     "unassignedBackorder": "{{count}} ligne(s) en reliquat n'ont pas de fournisseur préféré — créez ces PO manuellement.",
-    "unnamedService": "Unnamed"
+    "unnamedService": "Unnamed",
+    "notFound": "Sales order not found."
   },
   "stock": {
     "actions": {
@@ -1081,7 +1092,7 @@
     "fields": {
       "location": "Emplacement",
       "product": "Produit",
-      "unitCost": "Coût unitaire (USD)"
+      "unitCost": "Coût unitaire"
     },
     "filteredCount": "{{shown}} sur {{total}} produits",
     "levels": {
@@ -1136,7 +1147,9 @@
       "location": "Emplacement",
       "macAddress": "Adresse MAC",
       "serialNumber": "Numéro de série",
-      "warrantyExpires": "Expiration de la garantie"
+      "warrantyExpires": "Expiration de la garantie",
+      "product": "Produit",
+      "unitCost": "Coût unitaire"
     },
     "detail": {
       "delivered": "Livrée",
@@ -1144,7 +1157,8 @@
       "mac": "MAC",
       "received": "Réceptionnée",
       "serial": "Numéro de série",
-      "unitCost": "Coût unitaire"
+      "unitCost": "Coût unitaire",
+      "asset": "Actif"
     },
     "exportCsv": "Exporter CSV",
     "history": "Historique",
@@ -1176,7 +1190,28 @@
       "returned": "Retourné",
       "inRma": "En RMA",
       "retired": "Retiré"
-    }
+    },
+    "empty": {
+      "clearFilters": "Effacer les filtres",
+      "clearSearch": "Effacer la recherche",
+      "noFilterMatchTitle": "Aucune unité ne correspond à ce filtre",
+      "noMatchDescription": "Effacez la recherche et les filtres pour voir toutes les unités.",
+      "noMatchTitle": "Aucune unité ne correspond à « {{term}} »",
+      "noUnitsDescription": "Les unités sérialisées apparaissent ici dès qu'un stock est reçu pour un produit sérialisé.",
+      "noUnitsTitle": "Aucune unité en stock pour le moment"
+    },
+    "filter": {
+      "allClients": "Toutes les entreprises",
+      "allStatuses": "Tous les statuts",
+      "client": "Entreprise",
+      "status": "Statut"
+    },
+    "summary": {
+      "many": "{{n}} unités",
+      "one": "{{n}} unité",
+      "valueSuffix": " · {{value}} de valeur"
+    },
+    "viewAsset": "Voir l'actif"
   },
   "transfers": {
     "addLine": "Ajouter une ligne",
@@ -1234,6 +1269,7 @@
     "title": "Transferts",
     "toLocation": "Emplacement de destination",
     "vanLoadList": "Liste de chargement de la camionnette",
+    "vanLoadListReplenishment": "Réapprovisionnement de la liste de chargement de la camionnette",
     "status": {
       "dispatched": "Expédié",
       "received": "Réceptionné",
@@ -1322,7 +1358,7 @@
     "dialogTitle": "Liste de prix — {{name}}",
     "emptyState": "Aucune offre pour l'instant — ajoutez ci-dessous les références du fournisseur et les coûts contractuels.",
     "fields": {
-      "cost": "Coût ($)",
+      "cost": "Coût",
       "currency": "Devise",
       "leadTime": "Délai de livraison (jours)",
       "preferred": "Fournisseur préféré pour ce produit (détermine les suggestions de réapprovisionnement)",

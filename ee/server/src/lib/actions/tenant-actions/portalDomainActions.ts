@@ -21,6 +21,12 @@ import { getPortalDomainProvisioner } from '@ee/lib/portal-domains/provisioner';
 import { getPortalDomainLastSeen } from '@/lib/portal-domains/portalDomainSeen';
 import type { IUser } from 'server/src/interfaces/auth.interfaces';
 import { analytics } from '@/lib/analytics/posthog';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 // Grace period before an active appliance domain with no observed traffic is
 // flagged as "never seen on its Host" — long enough for DNS/proxy to be wired up.
@@ -29,6 +35,10 @@ const NEVER_SEEN_GRACE_MS = 10 * 60 * 1000;
 const REQUIRED_RESOURCE = 'settings';
 const READ_ACTION = 'read';
 const UPDATE_ACTION = 'update';
+
+type PortalDomainActionError = ActionMessageError | ActionPermissionError;
+export type PortalDomainStatusActionResult = PortalDomainStatusResponse | PortalDomainActionError;
+export type PortalDomainRegistrationActionResult = PortalDomainRegistrationResult | PortalDomainActionError;
 
 function toIsoString(value: Date | string | null | undefined): string | null {
   if (!value) {
@@ -77,45 +87,75 @@ async function checkPermission(
   user: IUser,
   action: typeof READ_ACTION | typeof UPDATE_ACTION,
   knex: Knex
-): Promise<void> {
+): Promise<PortalDomainActionError | null> {
   if (action === UPDATE_ACTION && user.user_type === 'client') {
-    throw new Error('Client portal users cannot manage custom domains.');
+    return permissionError('Client portal users cannot manage custom domains.');
   }
 
   const allowed = await hasPermission(user, REQUIRED_RESOURCE, action, knex);
   if (!allowed) {
-    throw new Error('You do not have permission to manage client portal settings.');
+    return permissionError('You do not have permission to manage client portal settings.');
   }
+
+  return null;
 }
 
-function validateRequestedDomain(rawDomain: string, canonicalHost: string): string {
-  if (!rawDomain) {
-    throw new Error('Domain is required.');
+function validateRequestedDomain(rawDomain: string, canonicalHost: string): string | ActionMessageError {
+  if (!rawDomain?.trim()) {
+    return actionError('Domain is required.');
   }
 
   const normalized = normalizeHostname(rawDomain);
 
   if (normalized.length < 3 || normalized.length > 253) {
-    throw new Error('Domain must be between 3 and 253 characters.');
+    return actionError('Domain must be between 3 and 253 characters.');
   }
 
   if (!/^[a-z0-9.-]+$/.test(normalized)) {
-    throw new Error('Domain may only include letters, numbers, hyphens, and dots.');
+    return actionError('Domain may only include letters, numbers, hyphens, and dots.');
   }
 
   if (!normalized.includes('.')) {
-    throw new Error('Domain must include at least one dot.');
+    return actionError('Domain must include at least one dot.');
   }
 
   if (normalized === canonicalHost) {
-    throw new Error('Please choose a domain other than the canonical host.');
+    return actionError('Please choose a domain other than the canonical host.');
   }
 
   if (normalized.startsWith('.') || normalized.endsWith('.')) {
-    throw new Error('Domain cannot start or end with a dot.');
+    return actionError('Domain cannot start or end with a dot.');
   }
 
   return normalized;
+}
+
+function getNextAuthHostname(): string | null {
+  const nextAuthUrl = process.env.NEXTAUTH_URL;
+  if (!nextAuthUrl) {
+    return null;
+  }
+
+  try {
+    return new URL(nextAuthUrl).hostname.toLowerCase();
+  } catch {
+    return null;
+  }
+}
+
+function validateDirectModeDomain(domain: string): ActionMessageError | null {
+  if (resolveDeploymentCapabilities().portalDomain.provisioner !== 'direct') {
+    return null;
+  }
+
+  const appHost = getNextAuthHostname();
+  if (appHost && domain === appHost) {
+    return actionError(
+      "Choose a domain other than this appliance's primary host. The custom portal domain must be a different hostname that your reverse proxy forwards here."
+    );
+  }
+
+  return null;
 }
 
 async function computeNeverSeenOnHost(record: PortalDomain | null): Promise<boolean> {
@@ -142,9 +182,13 @@ async function fetchStatus(knex: Knex, tenant: string): Promise<PortalDomainStat
   return response;
 }
 
-export const getPortalDomainStatusAction = withAuth(async (user, { tenant }): Promise<PortalDomainStatusResponse> => {
+export const getPortalDomainStatusAction = withAuth(async (user, { tenant }): Promise<PortalDomainStatusActionResult> => {
   const { knex } = await createTenantKnex();
-  await checkPermission(user, READ_ACTION, knex);
+  const permissionFailure = await checkPermission(user, READ_ACTION, knex);
+  if (permissionFailure) {
+    return permissionFailure;
+  }
+
   return fetchStatus(knex, tenant);
 });
 
@@ -152,13 +196,25 @@ export const requestPortalDomainRegistrationAction = withAuth(async (
   user,
   { tenant },
   request: PortalDomainRegistrationRequest
-): Promise<PortalDomainRegistrationResult> => {
+): Promise<PortalDomainRegistrationActionResult> => {
   const { knex } = await createTenantKnex();
-  await checkPermission(user, UPDATE_ACTION, knex);
+  const permissionFailure = await checkPermission(user, UPDATE_ACTION, knex);
+  if (permissionFailure) {
+    return permissionFailure;
+  }
 
   const canonicalHost = computeCanonicalHost(tenant);
   const existing = await getPortalDomain(knex, tenant);
   const normalizedDomain = validateRequestedDomain(request.domain, canonicalHost);
+  if (typeof normalizedDomain !== 'string') {
+    return normalizedDomain;
+  }
+
+  const directModeFailure = validateDirectModeDomain(normalizedDomain);
+  if (directModeFailure) {
+    return directModeFailure;
+  }
+
   const domainChanged = existing ? existing.domain !== normalizedDomain : false;
 
   const provisioner = getPortalDomainProvisioner();
@@ -183,9 +239,13 @@ export const requestPortalDomainRegistrationAction = withAuth(async (
   return { status };
 });
 
-export const refreshPortalDomainStatusAction = withAuth(async (user, { tenant }): Promise<PortalDomainStatusResponse> => {
+export const refreshPortalDomainStatusAction = withAuth(async (user, { tenant }): Promise<PortalDomainStatusActionResult> => {
   const { knex } = await createTenantKnex();
-  await checkPermission(user, READ_ACTION, knex);
+  const permissionFailure = await checkPermission(user, READ_ACTION, knex);
+  if (permissionFailure) {
+    return permissionFailure;
+  }
+
   const current = await getPortalDomain(knex, tenant);
 
   if (current) {
@@ -204,17 +264,21 @@ export const refreshPortalDomainStatusAction = withAuth(async (user, { tenant })
 
 const RETRYABLE_FAILURE_STATUSES: PortalDomainStatus[] = ['dns_failed', 'certificate_failed'];
 
-export const retryPortalDomainRegistrationAction = withAuth(async (user, { tenant }): Promise<PortalDomainStatusResponse> => {
+export const retryPortalDomainRegistrationAction = withAuth(async (user, { tenant }): Promise<PortalDomainStatusActionResult> => {
   const { knex } = await createTenantKnex();
-  await checkPermission(user, UPDATE_ACTION, knex);
+  const permissionFailure = await checkPermission(user, UPDATE_ACTION, knex);
+  if (permissionFailure) {
+    return permissionFailure;
+  }
+
   const current = await getPortalDomain(knex, tenant);
 
   if (!current || !current.domain) {
-    throw new Error('No failed custom domain registration to retry.');
+    return actionError('No failed custom domain registration to retry.');
   }
 
   if (!RETRYABLE_FAILURE_STATUSES.includes(current.status)) {
-    throw new Error('Retry is only available after a failed registration.');
+    return actionError('Retry is only available after a failed registration.');
   }
 
   await getPortalDomainProvisioner().retry({ knex, tenant, existing: current });
@@ -230,9 +294,13 @@ export const retryPortalDomainRegistrationAction = withAuth(async (user, { tenan
   return status;
 });
 
-export const disablePortalDomainAction = withAuth(async (user, { tenant }): Promise<PortalDomainStatusResponse> => {
+export const disablePortalDomainAction = withAuth(async (user, { tenant }): Promise<PortalDomainStatusActionResult> => {
   const { knex } = await createTenantKnex();
-  await checkPermission(user, UPDATE_ACTION, knex);
+  const permissionFailure = await checkPermission(user, UPDATE_ACTION, knex);
+  if (permissionFailure) {
+    return permissionFailure;
+  }
+
   const existing = await getPortalDomain(knex, tenant);
 
   if (!existing) {

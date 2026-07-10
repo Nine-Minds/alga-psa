@@ -744,6 +744,7 @@
     "addPurchaseOrder": "Dodaj zamówienie zakupu",
     "allVendors": "Wszyscy dostawcy",
     "amountOnOrder": "{{amount}} zamówione",
+    "mixedCurrencyOnOrder": "{{count}} zamówień zakupu w toku w wielu walutach",
     "cancelConfirm": "Czy na pewno chcesz anulować zamówienie zakupu {{poNumber}}? Tej operacji nie można cofnąć.",
     "cancelFailed": "Nie udało się anulować zamówienia zakupu.",
     "cancelTitle": "Anuluj zamówienie zakupu",
@@ -756,7 +757,7 @@
       "product": "Produkt",
       "qty": "Ilość",
       "received": "Przyjęto",
-      "unitCost": "Koszt jednostkowy ($)",
+      "unitCost": "Koszt jednostkowy",
       "vendor": "Dostawca"
     },
     "count": "{{count}} zamówienie zakupu",
@@ -963,6 +964,15 @@
     "emailFailed": "Nie udało się wysłać potwierdzenia e-mailem.",
     "emailSuccess": "Potwierdzenie wysłane e-mailem do {{recipients}}",
     "enterSerial": "Wprowadź co najmniej jeden numer seryjny.",
+    "errors": {
+      "documentGenerationFailed": "Nie udało się wygenerować dokumentu",
+      "downloadPermissionDenied": "Odmowa uprawnień: nie można pobrać dokumentów zamówienia sprzedaży",
+      "emailConfirmationFailed": "Nie udało się wysłać potwierdzenia e-mailem",
+      "emailPermissionDenied": "Odmowa uprawnień: nie można wysłać e-mailem dokumentów zamówienia sprzedaży",
+      "emailSendFailed": "Nie udało się wysłać e-maila.",
+      "noRecipientEmail": "Brak adresu e-mail odbiorcy dla tego klienta.",
+      "notFound": "Nie znaleziono zamówienia sprzedaży"
+    },
     "fields": {
       "allocationMode": "Tryb alokacji",
       "clientPoNumber": "Client PO number",
@@ -979,7 +989,7 @@
       "selectService": "Select a service…",
       "service": "Service",
       "serviceId": "ID usługi",
-      "unitPrice": "Cena jednostkowa ($)",
+      "unitPrice": "Cena jednostkowa",
       "unitPriceIn": "Unit price ({{currency}})"
     },
     "fromQuote": "Z oferty",
@@ -1056,7 +1066,8 @@
     "title": "Zamówienia sprzedaży",
     "total": "Total",
     "unassignedBackorder": "{{count}} zaległych linii nie ma preferowanego dostawcy — utwórz te PO ręcznie.",
-    "unnamedService": "Unnamed"
+    "unnamedService": "Unnamed",
+    "notFound": "Sales order not found."
   },
   "stock": {
     "actions": {
@@ -1081,7 +1092,7 @@
     "fields": {
       "location": "Lokalizacja",
       "product": "Produkt",
-      "unitCost": "Koszt jednostkowy (USD)"
+      "unitCost": "Koszt jednostkowy"
     },
     "filteredCount": "{{shown}} z {{total}} produktów",
     "levels": {
@@ -1136,7 +1147,9 @@
       "location": "Lokalizacja",
       "macAddress": "Adres MAC",
       "serialNumber": "Numer seryjny",
-      "warrantyExpires": "Gwarancja wygasa"
+      "warrantyExpires": "Gwarancja wygasa",
+      "product": "Produkt",
+      "unitCost": "Koszt jednostkowy"
     },
     "detail": {
       "delivered": "Dostarczono",
@@ -1144,7 +1157,8 @@
       "mac": "MAC",
       "received": "Przyjęto",
       "serial": "Nr seryjny",
-      "unitCost": "Koszt jednostkowy"
+      "unitCost": "Koszt jednostkowy",
+      "asset": "Zasób"
     },
     "exportCsv": "Eksportuj CSV",
     "history": "Historia",
@@ -1176,7 +1190,28 @@
       "returned": "Zwrócono",
       "inRma": "W RMA",
       "retired": "Wycofano"
-    }
+    },
+    "empty": {
+      "clearFilters": "Wyczyść filtry",
+      "clearSearch": "Wyczyść wyszukiwanie",
+      "noFilterMatchTitle": "Żadna jednostka nie pasuje do tego filtra",
+      "noMatchDescription": "Wyczyść wyszukiwanie i filtry, aby zobaczyć wszystkie jednostki.",
+      "noMatchTitle": "Żadna jednostka nie pasuje do „{{term}}”",
+      "noUnitsDescription": "Jednostki serializowane pojawią się tutaj po przyjęciu zapasu produktu serializowanego.",
+      "noUnitsTitle": "Brak jednostek magazynowych"
+    },
+    "filter": {
+      "allClients": "Wszyscy klienci",
+      "allStatuses": "Wszystkie statusy",
+      "client": "Klient",
+      "status": "Status"
+    },
+    "summary": {
+      "many": "{{n}} jednostek",
+      "one": "{{n}} jednostka",
+      "valueSuffix": " · wartość {{value}}"
+    },
+    "viewAsset": "Wyświetl zasób"
   },
   "transfers": {
     "addLine": "Dodaj linię",
@@ -1234,6 +1269,7 @@
     "title": "Transfery",
     "toLocation": "Lokalizacja docelowa",
     "vanLoadList": "Lista załadunku vana",
+    "vanLoadListReplenishment": "Uzupełnienie listy załadunku vana",
     "status": {
       "dispatched": "Wysłano",
       "received": "Odebrano",
@@ -1322,7 +1358,7 @@
     "dialogTitle": "Cennik — {{name}}",
     "emptyState": "Brak ofert — dodaj poniżej numery katalogowe i koszty kontraktowe dostawcy.",
     "fields": {
-      "cost": "Koszt ($)",
+      "cost": "Koszt",
       "currency": "Waluta",
       "leadTime": "Czas realizacji (dni)",
       "preferred": "Preferowany dostawca dla tego produktu (wpływa na sugestie ponownego zamawiania)",

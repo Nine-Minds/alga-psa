@@ -305,8 +305,8 @@ export async function POST(req: NextRequest) {
     uiContext = validateUiContext(bodyObj.uiContext);
     mentions = validateMentions(bodyObj.mentions);
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Invalid payload';
-    return new Response(JSON.stringify({ error: message }), {
+    console.warn('[chat-stream] invalid request payload', { error });
+    return new Response(JSON.stringify({ error: 'Invalid chat request payload.' }), {
       status: 400,
       headers: { 'Content-Type': 'application/json' },
     });

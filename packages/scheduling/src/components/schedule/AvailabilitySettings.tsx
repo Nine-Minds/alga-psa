@@ -38,7 +38,7 @@ import { getAllUsersBasic } from '@alga-psa/user-composition/actions';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import { getServices } from '@alga-psa/scheduling/actions';
 import { IService } from '@alga-psa/types';
-import { getTeams } from '@alga-psa/teams/actions';
+import { getTeams, isTeamActionError } from '@alga-psa/teams/actions';
 import { ITeam } from '@alga-psa/types';
 
 interface UserHoursSetting {
@@ -175,12 +175,16 @@ export default function AvailabilitySettings({ isOpen, onClose }: AvailabilitySe
       let userManagedTeams: ITeam[] = [];
       if (session?.user?.id) {
         const teams = await getTeams();
-        setAllTeams(teams);
-        userManagedTeams = teams.filter(team => team.manager_id === session.user.id);
+        if (isTeamActionError(teams)) {
+          console.warn('[AvailabilitySettings] Cannot load teams for manager check; defaulting to non-manager', teams);
+        } else {
+          setAllTeams(teams);
+          userManagedTeams = teams.filter(team => team.manager_id === session.user.id);
 
-        if (userManagedTeams.length > 0) {
-          setIsManager(true);
-          setManagedTeams(userManagedTeams);
+          if (userManagedTeams.length > 0) {
+            setIsManager(true);
+            setManagedTeams(userManagedTeams);
+          }
         }
       }
 

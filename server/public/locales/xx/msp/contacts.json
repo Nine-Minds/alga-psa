@@ -447,7 +447,8 @@
         "noLocationEmail": "11111",
         "noBaseUrl": "11111",
         "invitationNotFound": "11111"
-      }
+      },
+      "userNotFound": "11111"
     }
   },
   "quickAddContact": {
@@ -697,7 +698,8 @@
   "contactBento": {
     "toast": {
       "saved": "11111",
-      "saveFailed": "11111"
+      "saveFailed": "11111",
+      "saveFailedDescription": "11111"
     }
   }
 }

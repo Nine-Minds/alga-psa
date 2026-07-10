@@ -5,6 +5,8 @@ import { withAuth, hasPermission } from '@alga-psa/auth';
 import type { Knex } from 'knex';
 
 type DraftClipboardImageDeleteFailureReason =
+  | 'invalid_request'
+  | 'permission_denied'
   | 'missing_document'
   | 'not_ticket_attachment'
   | 'has_other_associations'
@@ -55,28 +57,50 @@ function tenantScopedTable<Row extends object = Record<string, unknown>>(
   return tenantDb(conn, tenant).table<Row>(table);
 }
 
+function requestFailure(
+  documentIds: string[],
+  reason: Extract<DraftClipboardImageDeleteFailureReason, 'invalid_request' | 'permission_denied'>,
+  detail: string
+): DeleteDraftClipboardImagesResult {
+  const uniqueDocumentIds = Array.from(new Set(documentIds.filter(Boolean)));
+  const failureIds = uniqueDocumentIds.length > 0 ? uniqueDocumentIds : ['request'];
+  return {
+    deletedDocumentIds: [],
+    failures: failureIds.map((documentId) => ({
+      documentId,
+      reason,
+      detail,
+    })),
+  };
+}
+
 export const deleteDraftClipboardImages = withAuth(
   async (
     user,
     { tenant },
     input: DeleteDraftClipboardImagesInput
   ): Promise<DeleteDraftClipboardImagesResult> => {
+    const requestedDocumentIds = Array.isArray(input?.documentIds) ? input.documentIds : [];
     if (!tenant) {
-      throw new Error('Tenant is required.');
+      return requestFailure(requestedDocumentIds, 'invalid_request', 'Tenant is required.');
     }
-    if (!input.ticketId) {
-      throw new Error('ticketId is required.');
+    if (!input?.ticketId) {
+      return requestFailure(requestedDocumentIds, 'invalid_request', 'ticketId is required.');
     }
-    if (!Array.isArray(input.documentIds) || input.documentIds.length === 0) {
+    if (requestedDocumentIds.length === 0) {
       return { deletedDocumentIds: [], failures: [] };
     }
 
     const hasDeletePermission = await hasPermission(user, 'document', 'delete');
     if (!hasDeletePermission) {
-      throw new Error('Permission denied: cannot delete document attachments.');
+      return requestFailure(
+        requestedDocumentIds,
+        'permission_denied',
+        'Permission denied: cannot delete document attachments.'
+      );
     }
 
-    const uniqueDocumentIds = Array.from(new Set(input.documentIds.filter(Boolean)));
+    const uniqueDocumentIds = Array.from(new Set(requestedDocumentIds.filter(Boolean)));
     const { knex } = await createTenantKnex();
 
     const evaluation = await withTransaction(knex, async (trx: Knex.Transaction) => {

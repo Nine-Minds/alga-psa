@@ -2,8 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { IUser, IUserWithRoles, IRole } from '@alga-psa/types';
-import { findUserById, getCurrentUser, getAllUsers, getUserRoles, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
-import { updateUser, adminChangeUserPassword, getRoles, assignRoleToUser, removeRoleFromUser } from '@alga-psa/users/actions';
+import { findUserById, getCurrentUser, getAllUsers, getUserRoles } from '@alga-psa/user-composition/actions/userQueryActions';
+import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions/avatarActions';
+import { updateUser, adminChangeUserPassword } from '@alga-psa/users/actions/user-actions/userActions';
+import { getRoles, assignRoleToUser, removeRoleFromUser } from '@alga-psa/users/lib/roleActions';
 import { useDrawer } from "@alga-psa/ui";
 import { Text, Flex } from '@radix-ui/themes';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -14,9 +16,14 @@ import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect
 import { Eye, EyeOff, ChevronDown, ChevronUp } from 'lucide-react';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import CollapsiblePasswordChangeForm from './CollapsiblePasswordChangeForm';
-import { getLicenseUsageAction } from '@alga-psa/licensing/actions';
+import { getLicenseUsageAction } from '@alga-psa/licensing/actions/license-actions';
 import toast from 'react-hot-toast';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 interface UserDetailsProps {
   userId: string;
@@ -39,6 +46,9 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { closeDrawer } = useDrawer();
+
+  const isReturnedActionError = (value: unknown) =>
+    isActionMessageError(value) || isActionPermissionError(value);
 
   // Admin password change states
   const [isAdmin, setIsAdmin] = useState(false);
@@ -182,7 +192,11 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
     if (!user || !selectedRole) return;
 
     try {
-      await assignRoleToUser(user.user_id, selectedRole);
+      const result = await assignRoleToUser(user.user_id, selectedRole);
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       const updatedRoles = await getUserRoles(user.user_id);
       setRoles(updatedRoles);
       setSelectedRole('');
@@ -200,7 +214,11 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
     if (!user) return;
 
     try {
-      await removeRoleFromUser(user.user_id, roleId);
+      const result = await removeRoleFromUser(user.user_id, roleId);
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       const updatedRoles = await getUserRoles(user.user_id);
       setRoles(updatedRoles);
       toast.success(t('userDetails.messages.success.roleRemoved'));
@@ -242,6 +260,8 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
             EMAIL_ALREADY_EXISTS: 'userDetails.messages.error.emailAlreadyExists',
             REPORTS_TO_SELF: 'userDetails.messages.error.reportsToSelf',
             REPORTS_TO_CYCLE: 'userDetails.messages.error.reportsToCycle',
+            PERMISSION_DENIED: 'userDetails.messages.error.permissionDenied',
+            USER_UPDATE_FAILED: 'userDetails.messages.error.updateFailed',
           };
           toast.error(t(errorKeys[result.code], { defaultValue: result.error }));
           return;

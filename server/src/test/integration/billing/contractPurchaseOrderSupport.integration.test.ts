@@ -282,7 +282,9 @@ describe('Contract Purchase Order Support', () => {
       round_up_to_nearest: undefined,
     });
 
-    await expect(() => generateInvoice(billingCycleId)).rejects.toThrow(/Purchase Order is required/i);
+    await expect(generateInvoice(billingCycleId)).resolves.toEqual({
+      actionError: 'Purchase Order is required for this contract but has not been provided. Please add a PO number to the contract before generating invoices.',
+    });
 
     void serviceTypeId;
     void serviceId;

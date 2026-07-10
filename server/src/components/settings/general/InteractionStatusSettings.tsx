@@ -5,10 +5,11 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Plus, MoreVertical } from "lucide-react";
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { getStatuses, deleteStatus, updateStatus } from '@alga-psa/reference-data/actions';
-import { importReferenceData, getAvailableReferenceData, checkImportConflicts, type ImportConflict } from '@alga-psa/reference-data/actions';
+import { getStatuses, deleteStatus, updateStatus } from '@alga-psa/reference-data/actions/status-actions/statusActions';
+import { isStatusActionError, statusActionErrorMessage } from '@alga-psa/reference-data/actions/status-actions/statusActionErrors';
+import { importReferenceData, getAvailableReferenceData, checkImportConflicts, type ImportConflict } from '@alga-psa/reference-data/actions/referenceDataActions';
 import { IStatus, IStandardStatus } from '@alga-psa/types';
-import { getCurrentUser } from '@alga-psa/user-composition/actions';
+import { getCurrentUser } from '@alga-psa/user-composition/actions/userQueryActions';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from '@alga-psa/types';
@@ -20,9 +21,9 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from '@alga-psa/ui/components/DropdownMenu';
-import { StatusDialog } from '@alga-psa/reference-data/components';
+import { StatusDialog } from '@alga-psa/reference-data/components/dialogs/StatusDialog';
 import { StatusImportDialog } from '@alga-psa/ui/components/settings/dialogs/StatusImportDialog';
-import { ConflictResolutionDialog } from '@alga-psa/reference-data/components';
+import { ConflictResolutionDialog } from '@alga-psa/reference-data/components/dialogs/ConflictResolutionDialog';
 import { DeleteConfirmationDialog } from '@alga-psa/ui/components/settings/dialogs/DeleteConfirmationDialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
@@ -99,7 +100,11 @@ const InteractionStatusSettings = (): React.JSX.Element => {
     }
 
     try {
-      await updateStatus(updatedStatus.status_id!, updatedStatus);
+      const result = await updateStatus(updatedStatus.status_id!, updatedStatus);
+      if (isStatusActionError(result)) {
+        toast.error(statusActionErrorMessage(result));
+        return;
+      }
       setStatuses(statuses.map((status): IStatus =>
         status.status_id === updatedStatus.status_id ? updatedStatus : status
       ));

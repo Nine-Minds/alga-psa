@@ -31,16 +31,54 @@ interface InitialJobData {
   [key: string]: unknown;
 }
 
+const INVOICE_ZIP_SCHEDULE_FAILURE = 'Failed to start invoice PDF generation. Please try again.';
+const INVOICE_EMAIL_SCHEDULE_FAILURE = 'Failed to start invoice email sending. Please try again.';
+const INVOICE_EMAIL_RECIPIENT_FAILURE = 'Failed to load recipient information for this invoice.';
+const INVOICE_EMAIL_SEND_FAILURE = 'Failed to send invoice email. Please try again.';
+
+export type InvoiceJobActionError =
+  | { readonly actionError: string }
+  | { readonly permissionError: string };
+
+export type ScheduleInvoiceJobResult =
+  | { jobId: string }
+  | InvoiceJobActionError;
+
+function actionError(message: string): InvoiceJobActionError {
+  return { actionError: message };
+}
+
+function permissionError(message: string): InvoiceJobActionError {
+  return { permissionError: message };
+}
+
+function isInvoiceJobActionError(value: unknown): value is InvoiceJobActionError {
+  return Boolean(
+    value &&
+      typeof value === 'object' &&
+      (
+        typeof (value as { actionError?: unknown }).actionError === 'string' ||
+        typeof (value as { permissionError?: unknown }).permissionError === 'string'
+      ),
+  );
+}
+
+function getInvoiceJobActionErrorMessage(error: InvoiceJobActionError): string {
+  return 'permissionError' in error ? error.permissionError : error.actionError;
+}
+
 export const scheduleInvoiceZipAction = withAuth(async (
   user,
   { tenant },
   invoiceIds: string[]
-) => {
+): Promise<ScheduleInvoiceJobResult> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    throw new Error('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required');
   }
-  const { knex } = await createTenantKnex();
 
+  if (!invoiceIds || invoiceIds.length === 0) {
+    return actionError('Select at least one invoice to generate PDFs.');
+  }
   const steps = [
     ...invoiceIds.map((id, index) => ({
       stepName: `Process Invoice ${index + 1}`,
@@ -70,7 +108,7 @@ export const scheduleInvoiceZipAction = withAuth(async (
   try {
     const { jobId, scheduledJobId } = await enqueueImmediateJob('invoice_zip', jobData);
     if (!scheduledJobId) {
-      throw new Error('Failed to schedule job - no job ID returned');
+      return actionError(INVOICE_ZIP_SCHEDULE_FAILURE);
     }
     return { jobId };
   } catch (error) {
@@ -80,8 +118,7 @@ export const scheduleInvoiceZipAction = withAuth(async (
       invoiceIds,
     });
 
-    const errorMessage = error instanceof Error ? error.message : 'Failed to schedule invoice zip job';
-    throw new Error(errorMessage);
+    return actionError(INVOICE_ZIP_SCHEDULE_FAILURE);
   }
 });
 
@@ -89,29 +126,35 @@ export const scheduleInvoiceEmailAction = withAuth(async (
   user,
   { tenant },
   invoiceIds: string[]
-) => {
+): Promise<ScheduleInvoiceJobResult> => {
   if (!await hasPermission(user, 'billing', 'create')) {
-    throw new Error('Permission denied: billing create required');
+    return permissionError('Permission denied: billing create required');
+  }
+
+  if (!invoiceIds || invoiceIds.length === 0) {
+    return actionError('Select at least one invoice to email.');
   }
   const { knex } = await createTenantKnex();
 
-  const invoiceDetails = await Promise.all(
-    invoiceIds.map(async (invoiceId) => {
-      const invoice = await getInvoiceForRendering(invoiceId);
-      if (!invoice) {
-        throw new Error(`Invoice ${invoiceId} not found`);
-      }
-      const client = await getClientById(knex, tenant, invoice.client_id);
-      if (!client) {
-        throw new Error(`Client not found for invoice ${invoice.invoice_number}`);
-      }
-      return {
-        invoiceId,
-        invoiceNumber: invoice.invoice_number,
-        clientName: client.client_name,
-      };
-    })
-  );
+  const invoiceDetails: Array<{ invoiceId: string; invoiceNumber: string; clientName: string }> = [];
+  for (const invoiceId of invoiceIds) {
+    const invoice = await getInvoiceForRendering(invoiceId);
+    if (isInvoiceJobActionError(invoice)) {
+      return invoice;
+    }
+    if (!invoice) {
+      return actionError(`Invoice ${invoiceId} was not found.`);
+    }
+    const client = await getClientById(knex, tenant, invoice.client_id);
+    if (!client) {
+      return actionError(`Client not found for invoice ${invoice.invoice_number}.`);
+    }
+    invoiceDetails.push({
+      invoiceId,
+      invoiceNumber: invoice.invoice_number,
+      clientName: client.client_name,
+    });
+  }
 
   const steps = invoiceDetails.flatMap(({ invoiceId, invoiceNumber, clientName }) => [
     {
@@ -141,14 +184,13 @@ export const scheduleInvoiceEmailAction = withAuth(async (
   try {
     const { jobId, scheduledJobId } = await enqueueImmediateJob('invoice_email', jobData);
     if (!scheduledJobId) {
-      throw new Error('Failed to schedule job - no job ID returned');
+      return actionError(INVOICE_EMAIL_SCHEDULE_FAILURE);
     }
 
     return { jobId };
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     logger.error('Failed to schedule invoice email job', {
-      error: errorMessage,
+      error,
       userId: user.user_id,
       invoiceIds,
       invoiceDetails: invoiceDetails?.map((d) => ({
@@ -156,7 +198,7 @@ export const scheduleInvoiceEmailAction = withAuth(async (
         clientName: d.clientName,
       })),
     });
-    throw new Error(errorMessage);
+    return actionError(INVOICE_EMAIL_SCHEDULE_FAILURE);
   }
 });
 
@@ -187,14 +229,14 @@ export const getInvoiceEmailRecipientAction = withAuth(async (
   user,
   { tenant },
   invoiceIds: string[]
-): Promise<GetInvoiceEmailRecipientsResult> => {
+): Promise<GetInvoiceEmailRecipientsResult | InvoiceJobActionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    throw new Error('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required');
   }
   const { knex } = await createTenantKnex();
 
   if (!invoiceIds || invoiceIds.length === 0) {
-    throw new Error('No invoice IDs provided');
+    return actionError('Select at least one invoice.');
   }
 
   const recipients: InvoiceEmailRecipientInfo[] = [];
@@ -208,6 +250,10 @@ export const getInvoiceEmailRecipientAction = withAuth(async (
   for (const invoiceId of invoiceIds) {
     try {
       const invoice = await getInvoiceForRendering(invoiceId);
+      if (isInvoiceJobActionError(invoice)) {
+        errors.push({ invoiceId, error: getInvoiceJobActionErrorMessage(invoice) });
+        continue;
+      }
       if (!invoice || !invoice.invoice_number) {
         errors.push({ invoiceId, error: `Invoice not found` });
         continue;
@@ -278,8 +324,12 @@ export const getInvoiceEmailRecipientAction = withAuth(async (
         fromEmail,
       });
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      errors.push({ invoiceId, error: errorMessage });
+      logger.error('Failed to resolve invoice email recipient', {
+        error,
+        userId: user.user_id,
+        invoiceId,
+      });
+      errors.push({ invoiceId, error: INVOICE_EMAIL_RECIPIENT_FAILURE });
     }
   }
 
@@ -384,19 +434,19 @@ export const sendInvoiceEmailAction = withAuth(async (
   { tenant },
   invoiceIds: string[],
   customMessage?: string
-): Promise<SendInvoiceEmailsResult> => {
+): Promise<SendInvoiceEmailsResult | InvoiceJobActionError> => {
   if (!await hasPermission(user, 'billing', 'create')) {
-    throw new Error('Permission denied: billing create required');
+    return permissionError('Permission denied: billing create required');
   }
   const { knex } = await createTenantKnex();
 
   if (!invoiceIds || invoiceIds.length === 0) {
-    throw new Error('No invoice IDs provided');
+    return actionError('Select at least one invoice to email.');
   }
 
   const emailProvider = await SystemEmailProviderFactory.createProvider();
   if (!emailProvider) {
-    throw new Error('Email is not configured. Please configure email settings in Settings before sending invoices.');
+    return actionError('Email is not configured. Please configure email settings in Settings before sending invoices.');
   }
 
   const pdfService = createPDFGenerationService(tenant);
@@ -411,6 +461,15 @@ export const sendInvoiceEmailAction = withAuth(async (
 
     try {
       const invoice = await getInvoiceForRendering(invoiceId);
+      if (isInvoiceJobActionError(invoice)) {
+        results.push({
+          success: false,
+          invoiceNumber: invoiceId,
+          recipientEmail: '',
+          error: getInvoiceJobActionErrorMessage(invoice),
+        });
+        continue;
+      }
       if (!invoice || !invoice.invoice_number) {
         results.push({
           success: false,
@@ -558,12 +617,16 @@ export const sendInvoiceEmailAction = withAuth(async (
         recipientEmail,
       });
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      logger.error('Failed to send invoice email', {
+        error,
+        userId: user.user_id,
+        invoiceId,
+      });
       results.push({
         success: false,
         invoiceNumber: invoiceId,
         recipientEmail: '',
-        error: errorMessage,
+        error: INVOICE_EMAIL_SEND_FAILURE,
       });
     } finally {
       if (tempPdfPath) {

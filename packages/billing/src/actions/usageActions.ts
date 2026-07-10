@@ -9,6 +9,14 @@ import { findOrCreateCurrentBucketUsageRecord, updateBucketUsageMinutes } from '
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getAnalyticsAsync } from '../lib/authHelpers';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+type UsageActionError = ActionMessageError | ActionPermissionError;
 
 function tenantScopedTable(
   conn: Knex | Knex.Transaction,
@@ -18,13 +26,45 @@ function tenantScopedTable(
   return tenantDb(conn, tenant).table(table);
 }
 
-export const createUsageRecord = withAuth(async (user, { tenant }, data: ICreateUsageRecord): Promise<IUsageRecord> => {
-  if (!await hasPermission(user, 'billing', 'create')) {
-    throw new Error('Permission denied: billing create required');
+function usageActionErrorFrom(error: unknown): UsageActionError | null {
+  if (error instanceof Error) {
+    const message = error.message;
+    if (message.startsWith('Permission denied:')) {
+      return permissionError(message);
+    }
+    if (message.includes('Usage record') && message.includes('not found')) {
+      return actionError('Usage record not found. It may have been deleted. Please refresh and try again.');
+    }
+    if (message.includes('Failed to update bucket usage') || message.includes('Bucket usage update failed')) {
+      return actionError('Unable to update bucket usage for this usage record. Please refresh and try again.');
+    }
   }
-  const { knex } = await createTenantKnex();
 
-  return await knex.transaction(async (trx) => {
+  const dbError = error as { code?: string; column?: string };
+  if (dbError?.code === '22P02') {
+    return actionError('The selected usage record, client, service, or contract line is invalid. Please refresh and try again.');
+  }
+  if (dbError?.code === '23502') {
+    return actionError(`Missing required usage field${dbError.column ? `: ${dbError.column}` : ''}.`);
+  }
+  if (dbError?.code === '23503') {
+    return actionError('The selected client, service, or contract line is no longer valid. Please refresh and try again.');
+  }
+  if (dbError?.code === '23505') {
+    return actionError('A conflicting usage record already exists. Please refresh and try again.');
+  }
+
+  return null;
+}
+
+export const createUsageRecord = withAuth(async (user, { tenant }, data: ICreateUsageRecord): Promise<IUsageRecord | UsageActionError> => {
+  if (!await hasPermission(user, 'billing', 'create')) {
+    return permissionError('Permission denied: billing create required');
+  }
+  try {
+    const { knex } = await createTenantKnex();
+
+    return await knex.transaction(async (trx) => {
     // If no contract line ID is provided, try to determine the default one
     let contractLineId = data.contract_line_id;
     if (!contractLineId && data.service_id && data.client_id) {
@@ -59,7 +99,7 @@ export const createUsageRecord = withAuth(async (user, { tenant }, data: ICreate
       .returning('*');
 
     if (!record) {
-      throw new Error('Failed to insert usage record.');
+      throw new Error('Usage record insert completed without returning a saved row.');
     }
 
     // --- Bucket Usage Update Logic ---
@@ -95,7 +135,7 @@ export const createUsageRecord = withAuth(async (user, { tenant }, data: ICreate
             console.log(`Successfully updated bucket usage for usage record ${record.usage_id}`);
           } catch (bucketError) {
             console.error(`Error updating bucket usage for usage record ${record.usage_id}:`, bucketError);
-            throw new Error(`Failed to update bucket usage: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
+            throw new Error(`Bucket usage update failed for usage record ${record.usage_id}: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
           }
         }
       }
@@ -107,16 +147,22 @@ export const createUsageRecord = withAuth(async (user, { tenant }, data: ICreate
     // Consider moving it after the transaction successfully commits if issues arise.
     revalidatePath('/msp/billing');
     return record;
-  });
+    });
+  } catch (error) {
+    const expected = usageActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 });
 
-export const updateUsageRecord = withAuth(async (user, { tenant }, data: IUpdateUsageRecord): Promise<IUsageRecord> => {
+export const updateUsageRecord = withAuth(async (user, { tenant }, data: IUpdateUsageRecord): Promise<IUsageRecord | UsageActionError> => {
   if (!await hasPermission(user, 'billing', 'update')) {
-    throw new Error('Permission denied: billing update required');
+    return permissionError('Permission denied: billing update required');
   }
-  const { knex } = await createTenantKnex();
+  try {
+    const { knex } = await createTenantKnex();
 
-  return await knex.transaction(async (trx) => {
+    return await knex.transaction(async (trx) => {
     // 1. Fetch the original record BEFORE update
     const originalRecord = await tenantScopedTable(trx, tenant, 'usage_tracking')
       .where({ usage_id: data.usage_id })
@@ -169,7 +215,7 @@ export const updateUsageRecord = withAuth(async (user, { tenant }, data: IUpdate
       .returning('*');
 
     if (!updatedRecord) {
-      throw new Error('Failed to update usage record.');
+      throw new Error(`Usage record with ID ${data.usage_id} not found.`);
     }
 
     // --- Bucket Usage Update Logic ---
@@ -211,7 +257,7 @@ export const updateUsageRecord = withAuth(async (user, { tenant }, data: IUpdate
             console.log(`Successfully updated bucket usage for usage record ${updatedRecord.usage_id}`);
           } catch (bucketError) {
             console.error(`Error updating bucket usage for usage record ${updatedRecord.usage_id}:`, bucketError);
-            throw new Error(`Failed to update bucket usage: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
+            throw new Error(`Bucket usage update failed for usage record ${updatedRecord.usage_id}: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
           }
         }
       }
@@ -222,16 +268,22 @@ export const updateUsageRecord = withAuth(async (user, { tenant }, data: IUpdate
 
     revalidatePath('/msp/billing');
     return updatedRecord;
-  });
+    });
+  } catch (error) {
+    const expected = usageActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 });
 
-export const deleteUsageRecord = withAuth(async (user, { tenant }, usageId: string): Promise<void> => {
+export const deleteUsageRecord = withAuth(async (user, { tenant }, usageId: string): Promise<void | UsageActionError> => {
   if (!await hasPermission(user, 'billing', 'delete')) {
-    throw new Error('Permission denied: billing delete required');
+    return permissionError('Permission denied: billing delete required');
   }
-  const { knex } = await createTenantKnex();
+  try {
+    const { knex } = await createTenantKnex();
 
-  await knex.transaction(async (trx) => {
+    const result = await knex.transaction(async (trx) => {
     // 1. Fetch the record BEFORE deleting
     const recordToDelete = await tenantScopedTable(trx, tenant, 'usage_tracking')
       .where({ usage_id: usageId })
@@ -239,7 +291,7 @@ export const deleteUsageRecord = withAuth(async (user, { tenant }, usageId: stri
 
     if (!recordToDelete) {
       console.warn(`Usage record ${usageId} not found for deletion.`);
-      return; // Nothing to delete or update
+      return actionError('Usage record not found. It may have already been deleted.');
     }
 
     // --- Bucket Usage Update Logic (Before Delete) ---
@@ -277,7 +329,7 @@ export const deleteUsageRecord = withAuth(async (user, { tenant }, usageId: stri
             console.log(`Successfully updated (decremented) bucket usage for deleted usage record ${usageId}`);
           } catch (bucketError) {
             console.error(`Error updating bucket usage before deleting usage record ${usageId}:`, bucketError);
-            throw new Error(`Failed to update bucket usage before delete: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
+            throw new Error(`Bucket usage update failed before deleting usage record ${usageId}: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
           }
         }
       }
@@ -295,45 +347,60 @@ export const deleteUsageRecord = withAuth(async (user, { tenant }, usageId: stri
          // Should not happen if fetch succeeded, but log defensively
          console.warn(`Attempted to delete usage record ${usageId}, but it was not found (possibly deleted concurrently).`);
      }
-  });
+    });
 
-  // Revalidate outside the transaction after commit
-  revalidatePath('/msp/billing');
+    if (result) {
+      return result;
+    }
+
+    // Revalidate outside the transaction after commit
+    revalidatePath('/msp/billing');
+  } catch (error) {
+    const expected = usageActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 });
 
-export const getUsageRecords = withAuth(async (user, { tenant }, filter?: IUsageFilter): Promise<IUsageRecord[]> => {
+export const getUsageRecords = withAuth(async (user, { tenant }, filter?: IUsageFilter): Promise<IUsageRecord[] | UsageActionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    throw new Error('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required');
   }
-  const { knex } = await createTenantKnex();
+  try {
+    const { knex } = await createTenantKnex();
 
-  const facade = tenantDb(knex, tenant);
-  let query = facade.table('usage_tracking')
-    .select(
-      'usage_tracking.*',
-      'clients.client_name',
-      'service_catalog.service_name'
-    );
-  facade.tenantJoin(query, 'clients', 'clients.client_id', 'usage_tracking.client_id');
-  facade.tenantJoin(query, 'service_catalog', 'service_catalog.service_id', 'usage_tracking.service_id');
+    const facade = tenantDb(knex, tenant);
+    let query = facade.table('usage_tracking')
+      .select(
+        'usage_tracking.*',
+        'clients.client_name',
+        'service_catalog.service_name'
+      );
+    facade.tenantJoin(query, 'clients', 'clients.client_id', 'usage_tracking.client_id');
+    facade.tenantJoin(query, 'service_catalog', 'service_catalog.service_id', 'usage_tracking.service_id');
 
-  if (filter?.client_id) {
-    query = query.where('usage_tracking.client_id', filter.client_id);
+    if (filter?.client_id) {
+      query = query.where('usage_tracking.client_id', filter.client_id);
+    }
+
+    if (filter?.service_id) {
+      query = query.where('usage_tracking.service_id', filter.service_id);
+    }
+
+    if (filter?.start_date) {
+      query = query.where('usage_tracking.usage_date', '>=', filter.start_date);
+    }
+
+    if (filter?.end_date) {
+      query = query.where('usage_tracking.usage_date', '<=', filter.end_date);
+    }
+
+    return await query.orderBy('usage_tracking.usage_date', 'desc') as unknown as IUsageRecord[];
+  } catch (error) {
+    const expected = usageActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
-
-  if (filter?.service_id) {
-    query = query.where('usage_tracking.service_id', filter.service_id);
-  }
-
-  if (filter?.start_date) {
-    query = query.where('usage_tracking.usage_date', '>=', filter.start_date);
-  }
-
-  if (filter?.end_date) {
-    query = query.where('usage_tracking.usage_date', '<=', filter.end_date);
-  }
-
-  return await query.orderBy('usage_tracking.usage_date', 'desc') as unknown as IUsageRecord[];
 });
 
 interface Client {

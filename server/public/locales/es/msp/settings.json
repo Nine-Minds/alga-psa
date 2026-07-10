@@ -1792,6 +1792,12 @@
       "title": "Inicio de sesión único",
       "description": "Cargando herramientas de asignación masiva de SSO..."
     },
+    "status": {
+      "title": "Sign-in providers",
+      "caption": "These providers are managed by the platform — no client IDs or DNS setup is required. Enable auto-link or assign users below.",
+      "available": "Available",
+      "notConfigured": "Not configured"
+    },
     "autoLink": {
       "title": "Configurar SSO automáticamente para nuevos usuarios internos",
       "description": "Active esta opción para aprovisionar cada nueva cuenta de personal con su proveedor SSO corporativo de inmediato, de modo que nunca necesiten un inicio de sesión basado en contraseña.",

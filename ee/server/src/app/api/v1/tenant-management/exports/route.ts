@@ -4,6 +4,7 @@ import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
 import { headObject, getBucket } from '@ee/lib/storage/s3-client';
+import { tenantManagementRouteError } from '../tenantManagementRouteErrors';
 
 const MASTER_BILLING_TENANT_ID = process.env.MASTER_BILLING_TENANT_ID;
 
@@ -158,11 +159,11 @@ export async function GET(req: NextRequest) {
       totalCount: availableExports.length,
     });
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const routeError = tenantManagementRouteError(error, 'Failed to load tenant exports.');
 
     return NextResponse.json({
       success: false,
-      error: errorMessage,
-    }, { status: 500 });
+      error: routeError.error,
+    }, { status: routeError.status });
   }
 }

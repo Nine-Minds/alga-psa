@@ -70,7 +70,8 @@
     "expirationPeriod": "Ablaufzeitraum:",
     "daysUnit": "{{count}} Tage",
     "notificationDays": "Benachrichtigungstage:",
-    "none": "Keine"
+    "none": "Keine",
+    "loadErrorPrefix": "Error loading credit expiration settings:"
   },
   "charts": {
     "expirationSummary": "Ablaufübersicht der Gutschriften",

@@ -24,14 +24,61 @@ import ContractLineFixedConfig from '../models/contractLineFixedConfig';
 import { ContractLineServiceConfigurationService } from '../services/contractLineServiceConfigurationService';
 import { IContractLineServiceConfiguration } from '@alga-psa/types';
 import { syncRecurringServicePeriodsForContractLine } from './recurringServicePeriodSync';
+import {
+    actionError,
+    permissionError,
+    type ActionMessageError,
+    type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
-export const getContractLinePresets = withAuth(async (user, { tenant }): Promise<IContractLinePreset[]> => {
+type ContractLinePresetActionError = ActionMessageError | ActionPermissionError;
+
+class ContractLinePresetDomainError extends Error {
+    constructor(message: string) {
+        super(message);
+        this.name = 'ContractLinePresetDomainError';
+    }
+}
+
+function contractLinePresetActionErrorFrom(error: unknown): ContractLinePresetActionError | null {
+    if (error instanceof ContractLinePresetDomainError) {
+        if (error.message.startsWith('Permission denied:')) {
+            return permissionError(error.message);
+        }
+        return actionError(error.message);
+    }
+
+    if (error instanceof Error && error.message.startsWith('Permission denied:')) {
+        return permissionError(error.message);
+    }
+
+    const dbError = error as { code?: string; column?: string; constraint?: string };
+    if (dbError?.code === '22P02') {
+        return actionError('One of the selected contract line preset values is invalid. Please refresh and try again.');
+    }
+    if (dbError?.code === '23502') {
+        return actionError(`Missing required contract line preset field${dbError.column ? `: ${dbError.column}` : ''}.`);
+    }
+    if (dbError?.code === '23503') {
+        return actionError('The selected contract line preset, contract, or service no longer exists. Please refresh and try again.');
+    }
+    if (dbError?.code === '23505') {
+        return actionError('This contract line preset change conflicts with an existing record. Please refresh and try again.');
+    }
+    if (dbError?.code === '23514') {
+        return actionError('One of the contract line preset values is not allowed. Please review the form and try again.');
+    }
+
+    return null;
+}
+
+export const getContractLinePresets = withAuth(async (user, { tenant }): Promise<IContractLinePreset[] | ContractLinePresetActionError> => {
     try {
         const { knex } = await createTenantKnex();
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
             if (!await hasPermission(user, 'billing', 'read')) {
-                throw new Error('Permission denied: Cannot read contract line presets');
+                throw new ContractLinePresetDomainError('Permission denied: Cannot read contract line presets');
             }
 
             const presets = await ContractLinePreset.getAll(trx, tenant);
@@ -39,20 +86,21 @@ export const getContractLinePresets = withAuth(async (user, { tenant }): Promise
         });
     } catch (error) {
         console.error('Error fetching contract line presets:', error);
-        if (error instanceof Error) {
-            throw error;
+        const expected = contractLinePresetActionErrorFrom(error);
+        if (expected) {
+            return expected;
         }
-        throw new Error(`Failed to fetch contract line presets: ${error}`);
+        throw error;
     }
 });
 
-export const getContractLinePresetById = withAuth(async (user, { tenant }, presetId: string): Promise<IContractLinePreset | null> => {
+export const getContractLinePresetById = withAuth(async (user, { tenant }, presetId: string): Promise<IContractLinePreset | ContractLinePresetActionError | null> => {
     try {
         const { knex } = await createTenantKnex();
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
             if (!await hasPermission(user, 'billing', 'read')) {
-                throw new Error('Permission denied: Cannot read contract line presets');
+                throw new ContractLinePresetDomainError('Permission denied: Cannot read contract line presets');
             }
 
             const preset = await ContractLinePreset.findById(trx, tenant, presetId);
@@ -60,13 +108,17 @@ export const getContractLinePresetById = withAuth(async (user, { tenant }, prese
         });
     } catch (error) {
         console.error(`Error fetching contract line preset with ID ${presetId}:`, error);
+        const expected = contractLinePresetActionErrorFrom(error);
+        if (expected) {
+            return expected;
+        }
         if (error instanceof Error) {
             if (error.message.includes('not found')) {
                 return null;
             }
             throw error;
         }
-        throw new Error(`Failed to fetch contract line preset ${presetId}: ${error}`);
+        throw error;
     }
 });
 
@@ -74,13 +126,13 @@ export const createContractLinePreset = withAuth(async (
     user,
     { tenant },
     presetData: Omit<IContractLinePreset, 'preset_id' | 'tenant' | 'created_at' | 'updated_at'>
-): Promise<IContractLinePreset> => {
+): Promise<IContractLinePreset | ContractLinePresetActionError> => {
     try {
         const { knex } = await createTenantKnex();
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
             if (!await hasPermission(user, 'billing', 'create')) {
-                throw new Error('Permission denied: Cannot create contract line presets');
+                throw new ContractLinePresetDomainError('Permission denied: Cannot create contract line presets');
             }
 
             const { tenant: _, ...safePresetData } = presetData as any;
@@ -100,10 +152,11 @@ export const createContractLinePreset = withAuth(async (
         });
     } catch (error) {
         console.error('Error creating contract line preset:', error);
-        if (error instanceof Error) {
-            throw error;
+        const expected = contractLinePresetActionErrorFrom(error);
+        if (expected) {
+            return expected;
         }
-        throw new Error(`Failed to create contract line preset: ${error}`);
+        throw error;
     }
 });
 
@@ -112,18 +165,18 @@ export const updateContractLinePreset = withAuth(async (
     { tenant },
     presetId: string,
     updateData: Partial<IContractLinePreset>
-): Promise<IContractLinePreset> => {
+): Promise<IContractLinePreset | ContractLinePresetActionError> => {
     try {
         const { knex } = await createTenantKnex();
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
             if (!await hasPermission(user, 'billing', 'update')) {
-                throw new Error('Permission denied: Cannot update contract line presets');
+                throw new ContractLinePresetDomainError('Permission denied: Cannot update contract line presets');
             }
 
             const existingPreset = await ContractLinePreset.findById(trx, tenant, presetId);
             if (!existingPreset) {
-                throw new Error(`Contract Line Preset with ID ${presetId} not found.`);
+                throw new ContractLinePresetDomainError(`Contract Line Preset with ID ${presetId} not found.`);
             }
 
             const { tenant: _, preset_id: __, ...safeUpdateData } = updateData as any;
@@ -143,46 +196,51 @@ export const updateContractLinePreset = withAuth(async (
         });
     } catch (error) {
         console.error('Error updating contract line preset:', error);
+        const expected = contractLinePresetActionErrorFrom(error);
+        if (expected) {
+            return expected;
+        }
         if (error instanceof Error) {
             if (error.message.includes('not found')) {
-                throw new Error(`Contract Line Preset with ID ${presetId} not found during update.`);
+                return actionError(`Contract Line Preset with ID ${presetId} not found during update.`);
             }
             throw error;
         }
-        throw new Error(`Failed to update contract line preset ${presetId}: ${error}`);
+        throw error;
     }
 });
 
-export const deleteContractLinePreset = withAuth(async (user, { tenant }, presetId: string): Promise<void> => {
+export const deleteContractLinePreset = withAuth(async (user, { tenant }, presetId: string): Promise<void | ContractLinePresetActionError> => {
     try {
         const { knex } = await createTenantKnex();
 
         await withTransaction(knex, async (trx: Knex.Transaction) => {
             if (!await hasPermission(user, 'billing', 'delete')) {
-                throw new Error('Permission denied: Cannot delete contract line presets');
+                throw new ContractLinePresetDomainError('Permission denied: Cannot delete contract line presets');
             }
 
             await ContractLinePreset.delete(trx, tenant, presetId);
         });
     } catch (error) {
         console.error('Error deleting contract line preset:', error);
-        if (error instanceof Error) {
-            throw error;
+        const expected = contractLinePresetActionErrorFrom(error);
+        if (expected) {
+            return expected;
         }
-        throw new Error(`Failed to delete contract line preset: ${error}`);
+        throw error;
     }
 });
 
 /**
  * Get services for a contract line preset
  */
-export const getContractLinePresetServices = withAuth(async (user, { tenant }, presetId: string): Promise<IContractLinePresetService[]> => {
+export const getContractLinePresetServices = withAuth(async (user, { tenant }, presetId: string): Promise<IContractLinePresetService[] | ContractLinePresetActionError> => {
     try {
         const { knex } = await createTenantKnex();
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
             if (!await hasPermission(user, 'billing', 'read')) {
-                throw new Error('Permission denied: Cannot read contract line preset services');
+                throw new ContractLinePresetDomainError('Permission denied: Cannot read contract line preset services');
             }
 
             const services = await ContractLinePresetService.getByPresetId(trx, presetId);
@@ -190,10 +248,11 @@ export const getContractLinePresetServices = withAuth(async (user, { tenant }, p
         });
     } catch (error) {
         console.error(`Error fetching services for preset ${presetId}:`, error);
-        if (error instanceof Error) {
-            throw error;
+        const expected = contractLinePresetActionErrorFrom(error);
+        if (expected) {
+            return expected;
         }
-        throw new Error(`Failed to fetch services for preset ${presetId}: ${error}`);
+        throw error;
     }
 });
 
@@ -205,13 +264,13 @@ export const updateContractLinePresetServices = withAuth(async (
     { tenant },
     presetId: string,
     services: Omit<IContractLinePresetService, 'tenant' | 'created_at' | 'updated_at'>[]
-): Promise<IContractLinePresetService[]> => {
+): Promise<IContractLinePresetService[] | ContractLinePresetActionError> => {
     try {
         const { knex } = await createTenantKnex();
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
             if (!await hasPermission(user, 'billing', 'update')) {
-                throw new Error('Permission denied: Cannot update contract line preset services');
+                throw new ContractLinePresetDomainError('Permission denied: Cannot update contract line preset services');
             }
 
             const updatedServices = await ContractLinePresetService.updateForPreset(trx, presetId, services);
@@ -219,23 +278,24 @@ export const updateContractLinePresetServices = withAuth(async (
         });
     } catch (error) {
         console.error(`Error updating services for preset ${presetId}:`, error);
-        if (error instanceof Error) {
-            throw error;
+        const expected = contractLinePresetActionErrorFrom(error);
+        if (expected) {
+            return expected;
         }
-        throw new Error(`Failed to update services for preset ${presetId}: ${error}`);
+        throw error;
     }
 });
 
 /**
  * Get fixed config for a contract line preset
  */
-export const getContractLinePresetFixedConfig = withAuth(async (user, { tenant }, presetId: string): Promise<IContractLinePresetFixedConfig | null> => {
+export const getContractLinePresetFixedConfig = withAuth(async (user, { tenant }, presetId: string): Promise<IContractLinePresetFixedConfig | ContractLinePresetActionError | null> => {
     try {
         const { knex } = await createTenantKnex();
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
             if (!await hasPermission(user, 'billing', 'read')) {
-                throw new Error('Permission denied: Cannot read contract line preset fixed config');
+                throw new ContractLinePresetDomainError('Permission denied: Cannot read contract line preset fixed config');
             }
 
             const config = await ContractLinePresetFixedConfig.getByPresetId(trx, presetId);
@@ -243,10 +303,11 @@ export const getContractLinePresetFixedConfig = withAuth(async (user, { tenant }
         });
     } catch (error) {
         console.error(`Error fetching fixed config for preset ${presetId}:`, error);
-        if (error instanceof Error) {
-            throw error;
+        const expected = contractLinePresetActionErrorFrom(error);
+        if (expected) {
+            return expected;
         }
-        throw new Error(`Failed to fetch fixed config for preset ${presetId}: ${error}`);
+        throw error;
     }
 });
 
@@ -258,13 +319,13 @@ export const updateContractLinePresetFixedConfig = withAuth(async (
     { tenant },
     presetId: string,
     configData: Omit<IContractLinePresetFixedConfig, 'preset_id' | 'tenant' | 'created_at' | 'updated_at'>
-): Promise<IContractLinePresetFixedConfig> => {
+): Promise<IContractLinePresetFixedConfig | ContractLinePresetActionError> => {
     try {
         const { knex } = await createTenantKnex();
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
             if (!await hasPermission(user, 'billing', 'update')) {
-                throw new Error('Permission denied: Cannot update contract line preset fixed config');
+                throw new ContractLinePresetDomainError('Permission denied: Cannot update contract line preset fixed config');
             }
 
             const config = await ContractLinePresetFixedConfig.upsert(trx, presetId, configData);
@@ -272,10 +333,11 @@ export const updateContractLinePresetFixedConfig = withAuth(async (
         });
     } catch (error) {
         console.error(`Error updating fixed config for preset ${presetId}:`, error);
-        if (error instanceof Error) {
-            throw error;
+        const expected = contractLinePresetActionErrorFrom(error);
+        if (expected) {
+            return expected;
         }
-        throw new Error(`Failed to update fixed config for preset ${presetId}: ${error}`);
+        throw error;
     }
 });
 
@@ -295,7 +357,7 @@ export const copyPresetToContractLine = withAuth(async (
         round_up_to_nearest?: number;
         cadence_owner?: CadenceOwner;
     }
-): Promise<string> => {
+): Promise<string | ContractLinePresetActionError> => {
     try {
         const { knex } = await createTenantKnex();
 
@@ -304,13 +366,13 @@ export const copyPresetToContractLine = withAuth(async (
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
             if (!await hasPermission(user, 'billing', 'create')) {
-                throw new Error('Permission denied: Cannot create contract lines from presets');
+                throw new ContractLinePresetDomainError('Permission denied: Cannot create contract lines from presets');
             }
 
             // 1. Fetch the preset
             const preset = await ContractLinePreset.findById(trx, tenant, presetId);
             if (!preset) {
-                throw new Error(`Contract line preset ${presetId} not found`);
+                throw new ContractLinePresetDomainError(`Contract line preset ${presetId} not found`);
             }
             console.log(`[copyPresetToContractLine] Preset data:`, {
                 preset_id: preset.preset_id,
@@ -362,7 +424,7 @@ export const copyPresetToContractLine = withAuth(async (
             const contractLine = await ContractLine.create(trx, contractLineData);
 
             if (!contractLine.contract_line_id) {
-                throw new Error('Failed to create contract line: missing contract_line_id');
+                throw new ContractLinePresetDomainError('Contract line creation completed without returning a contract_line_id.');
             }
 
             const contractLineId = contractLine.contract_line_id;
@@ -529,10 +591,11 @@ export const copyPresetToContractLine = withAuth(async (
         });
     } catch (error) {
         console.error(`Error copying preset ${presetId} to contract ${contractId}:`, error);
-        if (error instanceof Error) {
-            throw error;
+        const expected = contractLinePresetActionErrorFrom(error);
+        if (expected) {
+            return expected;
         }
-        throw new Error(`Failed to copy preset to contract line: ${error}`);
+        throw error;
     }
 });
 
@@ -579,7 +642,7 @@ export const createCustomContractLine = withAuth(async (
     { tenant },
     contractId: string,
     input: CreateCustomContractLineInput
-): Promise<string> => {
+): Promise<string | ContractLinePresetActionError> => {
     try {
         const { knex } = await createTenantKnex();
 
@@ -587,16 +650,16 @@ export const createCustomContractLine = withAuth(async (
 
         return await withTransaction(knex, async (trx: Knex.Transaction) => {
             if (!await hasPermission(user, 'billing', 'create')) {
-                throw new Error('Permission denied: Cannot create contract lines');
+                throw new ContractLinePresetDomainError('Permission denied: Cannot create contract lines');
             }
 
             // 1. Validate the input
             if (!input.contract_line_name?.trim()) {
-                throw new Error('Contract line name is required');
+                throw new ContractLinePresetDomainError('Contract line name is required');
             }
 
             if (!input.services || input.services.length === 0) {
-                throw new Error('At least one service is required');
+                throw new ContractLinePresetDomainError('At least one service is required');
             }
 
             // 2. Create the contract line
@@ -630,7 +693,7 @@ export const createCustomContractLine = withAuth(async (
             const contractLine = await ContractLine.create(trx, contractLineData);
 
             if (!contractLine.contract_line_id) {
-                throw new Error('Failed to create contract line: missing contract_line_id');
+                throw new ContractLinePresetDomainError('Contract line creation completed without returning a contract_line_id.');
             }
 
             const contractLineId = contractLine.contract_line_id;
@@ -759,9 +822,10 @@ export const createCustomContractLine = withAuth(async (
         });
     } catch (error) {
         console.error(`Error creating custom contract line for contract ${contractId}:`, error);
-        if (error instanceof Error) {
-            throw error;
+        const expected = contractLinePresetActionErrorFrom(error);
+        if (expected) {
+            return expected;
         }
-        throw new Error(`Failed to create custom contract line: ${error}`);
+        throw error;
     }
 });

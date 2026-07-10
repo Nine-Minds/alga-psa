@@ -109,10 +109,11 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     try {
       txPayload = await getTransactionInfo(parsed.originalTransactionId, config);
     } catch (e) {
+      console.warn('[mobile-iap-provision] Apple transaction verification failed:', e);
       return handleApiError(
         new ValidationError(
           'Unable to verify Apple transaction',
-          e instanceof Error ? [{ message: e.message, path: [] }] : undefined,
+          [{ message: 'transaction_unverified', path: [] }],
         ),
       );
     }
@@ -221,10 +222,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     });
 
     if (!workflowResult.available || !workflowResult.result) {
+      console.error('[mobile-iap-provision] Tenant creation workflow unavailable:', workflowResult.error);
       return handleApiError(
-        new ValidationError(
-          `Tenant creation unavailable: ${workflowResult.error ?? 'Temporal client not available'}`,
-        ),
+        new ValidationError('Tenant creation is temporarily unavailable. Please try again later.'),
       );
     }
 
@@ -233,8 +233,9 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     // can switch to a polling endpoint.
     const result = await workflowResult.result;
     if (!result.success || !result.tenantId || !result.adminUserId) {
+      console.error('[mobile-iap-provision] Tenant creation workflow failed:', result.error);
       return handleApiError(
-        new ValidationError(`Tenant creation failed: ${result.error ?? 'unknown error'}`),
+        new ValidationError('Tenant creation failed. Please try again later.'),
       );
     }
 

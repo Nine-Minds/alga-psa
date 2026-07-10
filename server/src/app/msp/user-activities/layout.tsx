@@ -1,4 +1,5 @@
 import { enforceServerProductRoute } from '@/lib/serverProductRouteGuard';
+import WorkspaceRouteLayout from '../_components/WorkspaceRouteLayout';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -10,5 +11,5 @@ export default async function Layout({ children }: Readonly<LayoutProps>) {
     return boundary;
   }
 
-  return children;
+  return <WorkspaceRouteLayout>{children}</WorkspaceRouteLayout>;
 }

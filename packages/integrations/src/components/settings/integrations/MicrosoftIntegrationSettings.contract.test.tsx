@@ -30,6 +30,18 @@ vi.mock('@alga-psa/integrations/actions', () => ({
     resetMicrosoftProvidersToDisconnectedMock(...args),
 }));
 
+vi.mock('../../../actions/integrations/microsoftActions', () => ({
+  getMicrosoftIntegrationStatus: (...args: unknown[]) => getMicrosoftIntegrationStatusMock(...args),
+  listMicrosoftConsumerBindings: (...args: unknown[]) => listMicrosoftConsumerBindingsMock(...args),
+  setMicrosoftConsumerBinding: (...args: unknown[]) => setMicrosoftConsumerBindingMock(...args),
+  createMicrosoftProfile: (...args: unknown[]) => createMicrosoftProfileMock(...args),
+  updateMicrosoftProfile: (...args: unknown[]) => updateMicrosoftProfileMock(...args),
+  archiveMicrosoftProfile: (...args: unknown[]) => archiveMicrosoftProfileMock(...args),
+  setDefaultMicrosoftProfile: (...args: unknown[]) => setDefaultMicrosoftProfileMock(...args),
+  resetMicrosoftProvidersToDisconnected: (...args: unknown[]) =>
+    resetMicrosoftProvidersToDisconnectedMock(...args),
+}));
+
 vi.mock('@alga-psa/ui/hooks/use-toast', () => ({
   useToast: () => ({ toast: toastMock }),
 }));
@@ -89,7 +101,7 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
         disabled={disabled}
         onChange={(event) => onValueChange(event.target.value)}
       >
-        <option value="">Select a profile</option>
+        <option value="">Select an app</option>
         {options.map((option: any) => (
           <option key={option.value} value={option.value}>
             {typeof option.label === 'string' ? option.label : option.value}
@@ -137,6 +149,7 @@ function buildStatus(overrides: Record<string, unknown> = {}) {
         clientSecretRef: 'microsoft_profile_profile-1_client_secret',
         isDefault: true,
         isArchived: false,
+        capabilities: ['msp_sso', 'email', 'calendar', 'teams'],
         readiness: {
           ready: true,
           clientIdConfigured: true,
@@ -158,6 +171,7 @@ function buildStatus(overrides: Record<string, unknown> = {}) {
         clientSecretRef: 'microsoft_profile_profile-2_client_secret',
         isDefault: false,
         isArchived: false,
+        capabilities: ['email', 'calendar'],
         readiness: {
           ready: true,
           clientIdConfigured: true,
@@ -179,6 +193,7 @@ function buildStatus(overrides: Record<string, unknown> = {}) {
         clientSecretRef: 'microsoft_profile_profile-archived_client_secret',
         isDefault: false,
         isArchived: true,
+        capabilities: ['msp_sso', 'email', 'calendar', 'teams'],
         readiness: {
           ready: false,
           clientIdConfigured: true,
@@ -284,26 +299,29 @@ describe('MicrosoftIntegrationSettings contracts', () => {
     }
   });
 
-  it('renders EE explicit binding controls and removes the legacy compatibility pane', async () => {
+  it('renders EE service binding controls and removes the legacy compatibility pane', async () => {
     render(<MicrosoftIntegrationSettings />);
 
     await waitFor(() => {
       expect(document.getElementById('microsoft-profile-profile-1')).not.toBeNull();
     });
-    expect(screen.getByText('Explicit consumer bindings')).toBeInTheDocument();
+    expect(screen.getByText('Which Microsoft app each service uses')).toBeInTheDocument();
     expect(screen.getByTestId('microsoft-binding-select-msp_sso')).toBeInTheDocument();
     expect(screen.getByTestId('microsoft-binding-select-email')).toBeInTheDocument();
     expect(screen.getByTestId('microsoft-binding-select-calendar')).toBeInTheDocument();
     expect(screen.getByTestId('microsoft-binding-select-teams')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Reset Microsoft Providers' })).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Open Teams Setup' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Disconnect Microsoft providers' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Open Teams Setup' })).not.toBeInTheDocument();
     expect(screen.queryByText('Legacy Microsoft consumers')).not.toBeInTheDocument();
     expect(screen.queryByText(/default active profile remains the compatibility source/i)).not.toBeInTheDocument();
     expect(screen.queryByText('Current consumers')).not.toBeInTheDocument();
     expect(screen.queryByText(/default profile\)/i)).not.toBeInTheDocument();
-    expect(screen.getAllByText('Email Guidance').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Calendar Guidance').length).toBeGreaterThan(0);
-    expect(screen.getAllByText('Teams Guidance').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Values to copy into Microsoft Entra').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Staff sign-in').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Outlook email').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Outlook Calendar').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Teams').length).toBeGreaterThan(0);
+    expect(screen.queryByText('MSP SSO')).not.toBeInTheDocument();
   });
 
   it('renders CE copy and bindings only for MSP SSO', async () => {
@@ -349,13 +367,13 @@ describe('MicrosoftIntegrationSettings contracts', () => {
       expect(document.getElementById('microsoft-profile-profile-1')).not.toBeNull();
     });
     expect(
-      screen.getByText('Manage tenant-owned Microsoft profiles for MSP SSO, Microsoft sign-in, and login-domain discovery.')
+      screen.getByText("Manage your company's Microsoft app registration for staff sign-in.")
     ).toBeInTheDocument();
     expect(screen.getByTestId('microsoft-binding-select-msp_sso')).toBeInTheDocument();
-    expect(screen.queryByText('Email Guidance')).not.toBeInTheDocument();
-    expect(screen.queryByText('Calendar Guidance')).not.toBeInTheDocument();
-    expect(screen.queryByText('Teams Guidance')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Reset Microsoft Providers' })).not.toBeInTheDocument();
+    expect(screen.queryByText('Inbound email redirect URI')).not.toBeInTheDocument();
+    expect(screen.queryByText('Calendar sync redirect URI')).not.toBeInTheDocument();
+    expect(screen.queryByText('Teams scopes')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Disconnect Microsoft providers' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Open Teams Setup' })).not.toBeInTheDocument();
     expect(screen.queryByTestId('microsoft-binding-select-email')).not.toBeInTheDocument();
     expect(screen.queryByTestId('microsoft-binding-select-calendar')).not.toBeInTheDocument();
@@ -375,6 +393,11 @@ describe('MicrosoftIntegrationSettings contracts', () => {
     expect(optionLabels).toContain('Primary Profile');
     expect(optionLabels).toContain('Secondary Profile');
     expect(optionLabels).not.toContain('Archived Profile');
+
+    const teamsSelect = screen.getByTestId('microsoft-binding-select-teams');
+    const teamsOptionLabels = within(teamsSelect).getAllByRole('option').map((option) => option.textContent);
+    expect(teamsOptionLabels).toContain('Primary Profile');
+    expect(teamsOptionLabels).not.toContain('Secondary Profile');
 
     await user.selectOptions(emailSelect, '');
     expect(setMicrosoftConsumerBindingMock).not.toHaveBeenCalled();
@@ -396,7 +419,7 @@ describe('MicrosoftIntegrationSettings contracts', () => {
       expect(document.getElementById('microsoft-profile-profile-1')).not.toBeNull();
     });
 
-    expect(screen.getByText('MSP SSO is bound to Primary Profile.')).toBeInTheDocument();
+    expect(screen.getAllByText('Current: Primary Profile.').length).toBeGreaterThan(0);
     expect(screen.queryByText('MSP SSO is bound to Primary Profile (default profile).')).not.toBeInTheDocument();
   });
 
@@ -435,9 +458,9 @@ describe('MicrosoftIntegrationSettings contracts', () => {
     await waitFor(() => {
       expect(toastMock).toHaveBeenCalledWith(
         expect.objectContaining({
-          title: 'Email binding updated',
+          title: 'Outlook email app choice updated',
           description: expect.stringContaining(
-            'Existing Outlook email connections may need re-authorization after changing the bound profile.'
+            'Existing Outlook email connections may need re-authorization after changing the Microsoft app.'
           ),
         })
       );
@@ -448,9 +471,9 @@ describe('MicrosoftIntegrationSettings contracts', () => {
     await waitFor(() => {
       expect(toastMock).toHaveBeenCalledWith(
         expect.objectContaining({
-          title: 'Calendar binding updated',
+          title: 'Outlook Calendar app choice updated',
           description: expect.stringContaining(
-            'Existing Microsoft calendar connections may need re-authorization after changing the bound profile.'
+            'Existing Outlook calendar connections may need re-authorization after changing the Microsoft app.'
           ),
         })
       );
@@ -464,18 +487,21 @@ describe('MicrosoftIntegrationSettings contracts', () => {
     await waitFor(() => {
       expect(document.getElementById('microsoft-profile-profile-1')).not.toBeNull();
     });
-    await user.click(screen.getByRole('button', { name: 'New Profile' }));
+    await user.click(screen.getByRole('button', { name: 'New app registration' }));
 
-    const createDialog = await screen.findByRole('dialog', { name: 'Create Microsoft Profile' });
+    const createDialog = await screen.findByRole('dialog', { name: 'Create Microsoft app registration' });
     expect(
       within(createDialog).getByText(
-        'Create a tenant-owned Microsoft profile, then bind it explicitly to the Microsoft consumers you want to use.'
+        'Create a Microsoft app registration, then choose which services can use it.'
       )
     ).toBeInTheDocument();
-    expect(within(createDialog).getByText('Set this profile as the default Microsoft profile')).toBeInTheDocument();
+    expect(within(createDialog).getByText('Set this as the default Microsoft app')).toBeInTheDocument();
+    expect(within(createDialog).getByText('Services this app can handle')).toBeInTheDocument();
+    expect(within(createDialog).getByLabelText('Outlook email')).toBeChecked();
+    expect(within(createDialog).getByLabelText('Outlook Calendar')).toBeChecked();
     expect(
       within(createDialog).getByText(
-        'Default profiles stay available for profile-management workflows and migration-safe metadata, not consumer routing.'
+        'Some setup flows still need a default app. Service choices above decide which app each service uses.'
       )
     ).toBeInTheDocument();
     expect(within(createDialog).queryByText(/compatibility profile/i)).not.toBeInTheDocument();
@@ -494,7 +520,7 @@ describe('MicrosoftIntegrationSettings contracts', () => {
     expect(secondaryCard).not.toBeNull();
 
     await user.click(within(primaryCard!).getByRole('button', { name: 'Edit' }));
-    const editDialog = await screen.findByRole('dialog', { name: 'Edit Microsoft Profile' });
+    const editDialog = await screen.findByRole('dialog', { name: 'Edit Microsoft app registration' });
     const displayNameInput = within(editDialog).getByDisplayValue('Primary Profile');
     await user.clear(displayNameInput);
     await user.type(displayNameInput, 'Primary Profile Updated');
@@ -507,12 +533,13 @@ describe('MicrosoftIntegrationSettings contracts', () => {
         clientId: 'primary-client-id',
         clientSecret: '',
         tenantId: 'tenant-guid-1',
+        capabilities: ['msp_sso', 'email', 'calendar', 'teams'],
       });
     });
 
     await user.click(within(secondaryCard!).getByRole('button', { name: 'Archive' }));
-    expect(await screen.findByText('Archive Microsoft profile?')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Archive Profile' }));
+    expect(await screen.findByText('Archive Microsoft app?')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Archive app' }));
 
     await waitFor(() => {
       expect(archiveMicrosoftProfileMock).toHaveBeenCalledWith('profile-2');

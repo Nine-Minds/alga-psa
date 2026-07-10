@@ -58,7 +58,7 @@ export const fetchActivities = withAuth(async (
     return await fetchUserActivities(filters, page, pageSize);
   } catch (error) {
     console.error(`Error fetching activities (page ${page}, size ${pageSize}):`, error);
-    throw new Error("Failed to fetch activities. Please try again later.");
+    throw error;
   }
 });
 
@@ -78,7 +78,7 @@ export const fetchScheduleActivities = withAuth(async (
     return await fetchScheduleActivitiesInternal(user.user_id, tenant, filters) as ScheduleActivity[];
   } catch (error) {
     console.error("Error fetching schedule activities:", error);
-    throw new Error("Failed to fetch schedule activities. Please try again later.");
+    throw error;
   }
 });
 
@@ -98,7 +98,7 @@ export const fetchProjectActivities = withAuth(async (
     return await fetchProjectActivitiesInternal(user.user_id, tenant, filters) as ProjectTaskActivity[];
   } catch (error) {
     console.error("Error fetching project activities:", error);
-    throw new Error("Failed to fetch project activities. Please try again later.");
+    throw error;
   }
 });
 
@@ -118,7 +118,7 @@ export const fetchTicketActivities = withAuth(async (
     return await fetchTicketActivitiesInternal(user.user_id, tenant, filters) as TicketActivity[];
   } catch (error) {
     console.error("Error fetching ticket activities:", error);
-    throw new Error("Failed to fetch ticket activities. Please try again later.");
+    throw error;
   }
 });
 
@@ -138,7 +138,7 @@ export const fetchTimeEntryActivities = withAuth(async (
     return await fetchTimeEntryActivitiesInternal(user.user_id, tenant, filters) as TimeEntryActivity[];
   } catch (error) {
     console.error("Error fetching time entry activities:", error);
-    throw new Error("Failed to fetch time entry activities. Please try again later.");
+    throw error;
   }
 });
 
@@ -158,7 +158,7 @@ export const fetchWorkflowTaskActivities = withAuth(async (
     return await fetchWorkflowTaskActivitiesInternal(user.user_id, tenant, filters) as WorkflowTaskActivity[];
   } catch (error) {
     console.error("Error fetching workflow task activities:", error);
-    throw new Error("Failed to fetch workflow task activities. Please try again later.");
+    throw error;
   }
 });
 
@@ -178,7 +178,7 @@ export const fetchNotificationActivities = withAuth(async (
     return await fetchNotificationActivitiesInternal(user.user_id, tenant, filters) as NotificationActivity[];
   } catch (error) {
     console.error("Error fetching notification activities:", error);
-    throw new Error("Failed to fetch notification activities. Please try again later.");
+    throw error;
   }
 });
 
@@ -227,7 +227,7 @@ export const fetchActivityById = withAuth(async (
     return activity || null;
   } catch (error) {
     console.error(`Error fetching activity by ID (${id}, ${type}):`, error);
-    throw new Error("Failed to fetch activity. Please try again later.");
+    throw error;
   }
 });
 
@@ -253,7 +253,7 @@ export const markActivityViewed = withAuth(async (
     revalidatePath('/activities');
   } catch (error) {
     console.error(`Error marking activity as viewed (${activityId}, ${activityType}):`, error);
-    throw new Error("Failed to mark activity as viewed. Please try again later.");
+    throw error;
   }
 });
 
@@ -327,7 +327,7 @@ export const fetchDashboardActivities = withAuth(async (
     };
   } catch (error) {
     console.error("Error fetching dashboard activities:", error);
-    throw new Error("Failed to fetch dashboard activities. Please try again later.");
+    throw error;
   }
 });
 

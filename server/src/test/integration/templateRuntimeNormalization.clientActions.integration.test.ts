@@ -398,9 +398,9 @@ describe('Template runtime normalization client action integration', () => {
         end_date: null,
         is_active: true,
       } as any),
-    ).rejects.toThrow(
-      `Client contract ${clientContractId} is missing template provenance (template_contract_id) required to clone template contract lines`,
-    );
+    ).resolves.toEqual({
+      actionError: `Client contract ${clientContractId} is missing template provenance (template_contract_id) required to clone template contract lines`,
+    });
 
     const targetLines = await db('contract_lines')
       .where({

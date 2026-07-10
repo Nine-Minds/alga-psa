@@ -744,6 +744,7 @@
     "addPurchaseOrder": "Añadir orden de compra",
     "allVendors": "Todos los proveedores",
     "amountOnOrder": "{{amount}} en pedido",
+    "mixedCurrencyOnOrder": "{{count}} órdenes de compra en pedido en varias monedas",
     "cancelConfirm": "¿Está seguro de que desea cancelar la orden de compra {{poNumber}}? Esta acción no se puede deshacer.",
     "cancelFailed": "No se pudo cancelar la orden de compra.",
     "cancelTitle": "Cancelar orden de compra",
@@ -756,7 +757,7 @@
       "product": "Producto",
       "qty": "Cant.",
       "received": "Recibido",
-      "unitCost": "Costo unitario ($)",
+      "unitCost": "Costo unitario",
       "vendor": "Proveedor"
     },
     "count": "{{count}} orden de compra",
@@ -963,6 +964,15 @@
     "emailFailed": "No se pudo enviar la confirmación por correo.",
     "emailSuccess": "Confirmación enviada por correo a {{recipients}}",
     "enterSerial": "Introduzca al menos un número de serie.",
+    "errors": {
+      "documentGenerationFailed": "No se pudo generar el documento",
+      "downloadPermissionDenied": "Permiso denegado: no se pueden descargar documentos de órdenes de venta",
+      "emailConfirmationFailed": "No se pudo enviar la confirmación por correo",
+      "emailPermissionDenied": "Permiso denegado: no se pueden enviar por correo documentos de órdenes de venta",
+      "emailSendFailed": "No se pudo enviar el correo.",
+      "noRecipientEmail": "No hay correo electrónico de destinatario registrado para este cliente.",
+      "notFound": "Orden de venta no encontrada"
+    },
     "fields": {
       "allocationMode": "Modo de asignación",
       "clientPoNumber": "Client PO number",
@@ -979,7 +989,7 @@
       "selectService": "Select a service…",
       "service": "Service",
       "serviceId": "ID de servicio",
-      "unitPrice": "Precio unitario ($)",
+      "unitPrice": "Precio unitario",
       "unitPriceIn": "Unit price ({{currency}})"
     },
     "fromQuote": "Desde cotización",
@@ -1056,7 +1066,8 @@
     "title": "Órdenes de venta",
     "total": "Total",
     "unassignedBackorder": "{{count}} línea(s) en pedido pendiente no tienen proveedor preferido — cree esas órdenes de compra manualmente.",
-    "unnamedService": "Unnamed"
+    "unnamedService": "Unnamed",
+    "notFound": "Sales order not found."
   },
   "stock": {
     "actions": {
@@ -1081,7 +1092,7 @@
     "fields": {
       "location": "Ubicación",
       "product": "Producto",
-      "unitCost": "Costo unitario (USD)"
+      "unitCost": "Costo unitario"
     },
     "filteredCount": "{{shown}} de {{total}} productos",
     "levels": {
@@ -1136,7 +1147,9 @@
       "location": "Ubicación",
       "macAddress": "Dirección MAC",
       "serialNumber": "Número de serie",
-      "warrantyExpires": "Vence la garantía"
+      "warrantyExpires": "Vence la garantía",
+      "product": "Producto",
+      "unitCost": "Costo unitario"
     },
     "detail": {
       "delivered": "Entregado",
@@ -1144,7 +1157,8 @@
       "mac": "MAC",
       "received": "Recibido",
       "serial": "Número de serie",
-      "unitCost": "Costo unitario"
+      "unitCost": "Costo unitario",
+      "asset": "Activo"
     },
     "exportCsv": "Exportar CSV",
     "history": "Historial",
@@ -1176,7 +1190,28 @@
       "returned": "Devuelto",
       "inRma": "En RMA",
       "retired": "Retirado"
-    }
+    },
+    "empty": {
+      "clearFilters": "Limpiar filtros",
+      "clearSearch": "Limpiar búsqueda",
+      "noFilterMatchTitle": "Ninguna unidad coincide con este filtro",
+      "noMatchDescription": "Limpia la búsqueda y los filtros para ver todas las unidades.",
+      "noMatchTitle": "Ninguna unidad coincide con «{{term}}»",
+      "noUnitsDescription": "Las unidades serializadas aparecen aquí cuando se recibe stock de un producto serializado.",
+      "noUnitsTitle": "Aún no hay unidades de existencias"
+    },
+    "filter": {
+      "allClients": "Todas las empresas",
+      "allStatuses": "Todos los estados",
+      "client": "Empresa",
+      "status": "Estado"
+    },
+    "summary": {
+      "many": "{{n}} unidades",
+      "one": "{{n}} unidad",
+      "valueSuffix": " · {{value}} de valor"
+    },
+    "viewAsset": "Ver activo"
   },
   "transfers": {
     "addLine": "Añadir línea",
@@ -1234,6 +1269,7 @@
     "title": "Transferencias",
     "toLocation": "Ubicación de destino",
     "vanLoadList": "Lista de carga de la furgoneta",
+    "vanLoadListReplenishment": "Reposición de lista de carga de la furgoneta",
     "status": {
       "dispatched": "Despachado",
       "received": "Recibido",
@@ -1322,7 +1358,7 @@
     "dialogTitle": "Lista de precios — {{name}}",
     "emptyState": "Aún no hay ofertas — añada abajo los números de pieza y los costos contractuales del proveedor.",
     "fields": {
-      "cost": "Costo ($)",
+      "cost": "Costo",
       "currency": "Moneda",
       "leadTime": "Plazo de entrega (días)",
       "preferred": "Proveedor preferido para este producto (impulsa las sugerencias de reposición)",

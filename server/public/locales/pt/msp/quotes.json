@@ -231,7 +231,8 @@
       "notFound": "Cotação não encontrada",
       "save": "Falha ao salvar cotação",
       "saveFailed": "Falha ao salvar cotação",
-      "workflowAction": "Falha ao {{action}}"
+      "workflowAction": "Falha ao {{action}}",
+      "removeItem": "Failed to remove quote item"
     },
     "loading": "Carregando formulário de cotação...",
     "notices": {
@@ -556,7 +557,10 @@
       "contact": "Contato",
       "internal": "Interno"
     },
-    "removeAriaLabel": "Remover {{email}}"
+    "removeAriaLabel": "Remover {{email}}",
+    "errors": {
+      "contactsLoadFailed": "Could not load client contacts."
+    }
   },
   "quoteConversion": {
     "title": "Converter cotação",

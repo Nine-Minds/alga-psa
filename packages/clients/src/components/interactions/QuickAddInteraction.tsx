@@ -41,6 +41,16 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useOptionalClientCrossFeature } from '../../context/ClientCrossFeatureContext';
 import QuickAddContact from '../contacts/QuickAddContact';
 import MeetingAttendeesPicker, { type MeetingAttendee, type DefaultMeetingAttendee } from './MeetingAttendeesPicker';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 interface QuickAddInteractionProps {
   id?: string; // Made optional to maintain backward compatibility
@@ -91,6 +101,7 @@ export function QuickAddInteraction({
   const clientCrossFeature = useOptionalClientCrossFeature();
   const [hasAttemptedSubmit, setHasAttemptedSubmit] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [loadErrors, setLoadErrors] = useState<string[]>([]);
   const [endTimeError, setEndTimeError] = useState('');
   const [teamsMeetingCapability, setTeamsMeetingCapability] = useState<{ available: boolean; reason?: string } | null>(null);
   const [createTeamsMeeting, setCreateTeamsMeeting] = useState(false);
@@ -238,12 +249,19 @@ export function QuickAddInteraction({
     
     const fetchData = async () => {
       try {
+        setLoadErrors([]);
         // Fetch interaction types (already sorted by display_order from the server)
         const types = await getAllInteractionTypes();
+        if (isReturnedActionError(types)) {
+          throw new Error(getErrorMessage(types));
+        }
         setInteractionTypes(types);
 
         // Fetch interaction statuses
         const statusList = await getInteractionStatuses();
+        if (isReturnedActionError(statusList)) {
+          throw new Error(getErrorMessage(statusList));
+        }
         setStatuses(statusList);
         
         // Fetch users, clients, and contacts for edit mode
@@ -268,6 +286,10 @@ export function QuickAddInteraction({
         }
       } catch (error) {
         console.error('Error fetching data:', error);
+        const message = error instanceof Error
+          ? error.message
+          : t('interactions.quickAdd.loadFailed', { defaultValue: 'Interaction options could not be loaded. Please try again.' });
+        setLoadErrors([message]);
       }
     };
 
@@ -629,7 +651,11 @@ export function QuickAddInteraction({
         // Update existing interaction
         console.log('Updating interaction with ID:', editingInteraction.interaction_id);
         console.log('Update data:', interactionData);
-        resultInteraction = await updateInteraction(editingInteraction.interaction_id!, interactionData);
+        const updateResult = await updateInteraction(editingInteraction.interaction_id!, interactionData);
+        if (isReturnedActionError(updateResult)) {
+          throw new Error(getErrorMessage(updateResult));
+        }
+        resultInteraction = updateResult;
         console.log('Updated interaction received:', resultInteraction);
       } else if (createTeamsMeeting && canCreateTeamsMeeting && startTime && endTime) {
         const scheduleResult = await clientCrossFeature.scheduleTeamsMeeting!({
@@ -651,12 +677,18 @@ export function QuickAddInteraction({
         console.log('Creating new interaction');
         console.log('Create data:', interactionData);
         const newInteraction = await addInteraction(interactionData as Omit<IInteraction, 'interaction_date'>);
+        if (isReturnedActionError(newInteraction)) {
+          throw new Error(getErrorMessage(newInteraction));
+        }
         console.log('New interaction received:', newInteraction);
         resultInteraction = newInteraction;
       }
       
       // Fetch the complete interaction data
       const fullInteraction = await getInteractionById(resultInteraction.interaction_id!);
+      if (isReturnedActionError(fullInteraction)) {
+        throw new Error(getErrorMessage(fullInteraction));
+      }
       
       onInteractionAdded(fullInteraction);
       setIsQuickAddContactOpen(false);
@@ -678,6 +710,7 @@ export function QuickAddInteraction({
         setIsNotesContentReady(false);
         setHasAttemptedSubmit(false);
         setValidationErrors([]);
+        setLoadErrors([]);
         setEndTimeError('');
         setTeamsMeetingCapability(null);
         setCreateTeamsMeeting(false);
@@ -688,7 +721,11 @@ export function QuickAddInteraction({
       }
     } catch (error) {
       console.error(`Error ${isEditMode ? 'updating' : 'adding'} interaction:`, error);
-      // Handle error (e.g., show error message to user)  
+      const message = error instanceof Error
+        ? error.message
+        : t('interactions.quickAdd.saveFailed', { defaultValue: 'The interaction could not be saved. Please try again.' });
+      setHasAttemptedSubmit(true);
+      setValidationErrors([message]);
     }
   };
 
@@ -711,7 +748,7 @@ export function QuickAddInteraction({
   );
 
   const footer = (
-    <div className="flex gap-2 w-full">
+          <div className="flex gap-2 w-full">
       <Button
         id="cancel-interaction-button"
         type="button"
@@ -720,6 +757,7 @@ export function QuickAddInteraction({
         onClick={() => {
           setHasAttemptedSubmit(false);
           setValidationErrors([]);
+          setLoadErrors([]);
           setEndTimeError('');
           onClose();
         }}
@@ -745,6 +783,7 @@ export function QuickAddInteraction({
         onClose={() => {
         setHasAttemptedSubmit(false);
         setValidationErrors([]);
+        setLoadErrors([]);
         setEndTimeError('');
         setIsQuickAddContactOpen(false);
         onClose();
@@ -756,6 +795,17 @@ export function QuickAddInteraction({
       >
         <DialogContent>
             <form id="quick-add-interaction-form" onSubmit={handleSubmit} className="space-y-4" noValidate>
+              {loadErrors.length > 0 && (
+                <Alert variant="destructive">
+                  <AlertDescription>
+                    <ul className="list-disc pl-5 text-sm">
+                      {loadErrors.map((err, index) => (
+                        <li key={index}>{err}</li>
+                      ))}
+                    </ul>
+                  </AlertDescription>
+                </Alert>
+              )}
               {hasAttemptedSubmit && validationErrors.length > 0 && (
                 <Alert variant="destructive">
                   <AlertDescription>

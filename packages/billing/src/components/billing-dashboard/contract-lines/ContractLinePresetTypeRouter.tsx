@@ -8,6 +8,14 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getContractLinePresetById } from '@alga-psa/billing/actions/contractLinePresetActions';
 import { IContractLinePreset } from '@alga-psa/types';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 // Import the specialized components
 import { FixedPresetConfiguration } from './FixedContractLinePresetConfiguration';
@@ -29,6 +37,10 @@ export function PresetTypeRouter({ presetId }: PresetTypeRouterProps) {
     setError(null);
     try {
       const preset = await getContractLinePresetById(presetId);
+      if (isReturnedActionError(preset)) {
+        setError(getErrorMessage(preset));
+        return;
+      }
       if (preset) {
         setPresetType(preset.contract_line_type);
       } else {

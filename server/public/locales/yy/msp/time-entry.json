@@ -448,7 +448,8 @@
     "taskUpdated": "55555",
     "saveChangesFailed": "55555",
     "changesSaved": "55555",
-    "workItemDeleted": "55555"
+    "workItemDeleted": "55555",
+    "submitFailed": "55555"
   },
   "bundleNotice": {
     "withNumber": "55555 {{number}} 55555",

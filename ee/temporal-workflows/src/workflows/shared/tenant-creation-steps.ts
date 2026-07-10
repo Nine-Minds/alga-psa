@@ -24,6 +24,7 @@ const activities = proxyActivities<{
   createTenant(input: {
     tenantName: string;
     email: string;
+    tenantId?: string;
     companyName?: string;
     clientName?: string;
     licenseCount?: number;
@@ -54,6 +55,7 @@ const activities = proxyActivities<{
     lastName: string;
     email: string;
     clientId?: string;
+    password?: string;
   }): Promise<CreateAdminUserActivityResult>;
   setupTenantData(input: {
     tenantId: string;
@@ -221,6 +223,7 @@ export async function runTenantCreationOrchestration(
     const tenantResult = await activities.createTenant({
       tenantName: input.tenantName,
       email: input.adminUser.email,
+      tenantId: input.tenantId,
       companyName: tenantCompanyName,
       clientName: tenantDefaultClientName,
       licenseCount: stripeDetails.licenseCount,
@@ -279,6 +282,7 @@ export async function runTenantCreationOrchestration(
       lastName: input.adminUser.lastName,
       email: input.adminUser.email,
       clientId: tenantResult.clientId,
+      password: input.adminUser.password,
     });
 
     userCreated = true;
@@ -311,7 +315,12 @@ export async function runTenantCreationOrchestration(
 
     log.info('Tenant data setup completed', { setupSteps: setupResult.setupSteps });
 
-    // Step 5: Create customer tracking records (optional, non-blocking)
+    // Step 5: Create customer tracking records (optional, non-blocking).
+    // Skipped on appliance installs: there is no nineminds management tenant
+    // to track the customer in.
+    if (input.skipCustomerTracking) {
+      log.info('Skipping customer tracking records (skipCustomerTracking=true)');
+    } else {
     try {
       workflowState.step = 'creating_customer_tracking';
       workflowState.progress = 85;
@@ -388,8 +397,10 @@ export async function runTenantCreationOrchestration(
         tenantName: input.tenantName,
       });
     }
+    }
 
-    // Step 6: Send welcome email
+    // Step 6: Send welcome email. Skipped on appliance installs: the operator
+    // set their own password during setup, so there is no credential to send.
     workflowState.step = 'sending_welcome_email';
     workflowState.progress = 95;
 
@@ -397,23 +408,27 @@ export async function runTenantCreationOrchestration(
       throw new Error(`Workflow cancelled: ${cancelReason}`);
     }
 
-    log.info('Sending welcome email to admin user');
-    const emailResult = await activities.sendWelcomeEmail({
-      tenantId: tenantResult.tenantId,
-      tenantName: input.tenantName,
-      adminUser: {
-        userId: userResult.userId,
-        firstName: input.adminUser.firstName,
-        lastName: input.adminUser.lastName,
-        email: input.adminUser.email,
-      },
-      temporaryPassword,
-      clientName: tenantDefaultClientName,
-      companyName: tenantCompanyName,
-      productCode: input.productCode,
-    });
+    if (input.skipWelcomeEmail) {
+      log.info('Skipping welcome email (skipWelcomeEmail=true)');
+    } else {
+      log.info('Sending welcome email to admin user');
+      const emailResult = await activities.sendWelcomeEmail({
+        tenantId: tenantResult.tenantId,
+        tenantName: input.tenantName,
+        adminUser: {
+          userId: userResult.userId,
+          firstName: input.adminUser.firstName,
+          lastName: input.adminUser.lastName,
+          email: input.adminUser.email,
+        },
+        temporaryPassword,
+        clientName: tenantDefaultClientName,
+        companyName: tenantCompanyName,
+        productCode: input.productCode,
+      });
 
-    emailSent = emailResult.emailSent;
+      emailSent = emailResult.emailSent;
+    }
     workflowState.emailSent = emailSent;
     workflowState.progress = 100;
     workflowState.step = 'completed';

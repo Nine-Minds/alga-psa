@@ -29,11 +29,21 @@ import { createBoardTicketStatus, updateBoardTicketStatus } from '@alga-psa/tick
 import { createCategory } from '@alga-psa/tickets/actions/ticketCategoryActions';
 import { createPriority } from '@alga-psa/reference-data/actions';
 import toast from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+
+const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 interface SectionState {
   numbering: boolean;
@@ -439,6 +449,13 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
             category_type: 'itil',
             priority_type: 'itil'
           });
+          if (isReturnedActionError(createdBoard)) {
+            allResults.skipped.push({
+              name: board.board_name,
+              reason: getErrorMessage(createdBoard)
+            });
+            continue;
+          }
 
           allResults.imported.push(createdBoard);
         } catch (createError) {
@@ -467,7 +484,10 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
         if (!hasDefaultBoard && !existingHasDefault) {
           const firstBoard: any = allResults.imported[0];
           // Update the board to be default
-          await updateBoard(firstBoard.board_id, { is_default: true });
+          const defaultBoardResult = await updateBoard(firstBoard.board_id, { is_default: true });
+          if (isReturnedActionError(defaultBoardResult)) {
+            throw new Error(getErrorMessage(defaultBoardResult));
+          }
           firstBoard.is_default = true;
           toast.success(t('ticketingConfigStep.boards.toasts.firstDefaultSet', {
             defaultValue: 'First board automatically set as default'
@@ -604,7 +624,10 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
         if (!hasDefaultStatus && !existingHasDefault) {
           const firstOpenStatus = result.imported.find((s: any) => !s.is_closed);
           if (firstOpenStatus) {
-            await updateBoardTicketStatus(activeBoardId, firstOpenStatus.status_id, { is_default: true });
+            const defaultStatusResult = await updateBoardTicketStatus(activeBoardId, firstOpenStatus.status_id, { is_default: true });
+            if (isReturnedActionError(defaultStatusResult)) {
+              throw new Error(getErrorMessage(defaultStatusResult));
+            }
             firstOpenStatus.is_default = true;
             toast.success(t('ticketingConfigStep.statuses.toasts.firstDefaultSet', {
               defaultValue: 'First open status automatically set as default'
@@ -724,6 +747,10 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
         parent_category: categoryForm.parentCategory || undefined,
         display_order: displayOrder
       });
+      if (isReturnedActionError(createdCategory)) {
+        toast.error(getErrorMessage(createdCategory));
+        return;
+      }
       
       // Update wizard data with the created category and sort by display_order
       const allCategories = [...data.categories, createdCategory].sort((a, b) => {
@@ -794,6 +821,10 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
         order_number: orderNumber,
         item_type: 'ticket',
       });
+      if (isReturnedActionError(createdPriority)) {
+        toast.error(getErrorMessage(createdPriority));
+        return;
+      }
       
       // Add full priority object to data and sort by order_number
       const allPriorities = [...data.priorities, createdPriority]
@@ -924,7 +955,11 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
       }
       
       // Set this board as default (this will automatically unset others)
-      await updateBoard(board.board_id, { is_default: true });
+      const result = await updateBoard(board.board_id, { is_default: true });
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       
       // Refresh data from server to get updated default states
       await loadExistingData();
@@ -1217,7 +1252,11 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
         }));
         return;
       }
-      await updateBoardTicketStatus(boardIdForStatus, statusId, { is_default: true });
+      const result = await updateBoardTicketStatus(boardIdForStatus, statusId, { is_default: true });
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       
       // Refresh data from server to get updated default states
       await loadExistingData();
@@ -1605,6 +1644,10 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                           category_type: boardForm.isItilCompliant ? 'itil' : 'custom',
                           priority_type: boardForm.isItilCompliant ? 'itil' : 'custom'
                         });
+                        if (isReturnedActionError(createdBoard)) {
+                          toast.error(getErrorMessage(createdBoard));
+                          return;
+                        }
                         
                         // Add to imported boards list and sort by display_order
                         setImportedBoards(prev => {
@@ -2735,6 +2778,10 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                           is_default: isDefault,
                           order_number: orderNumber
                         });
+                        if (isReturnedActionError(createdStatus)) {
+                          toast.error(getErrorMessage(createdStatus));
+                          return;
+                        }
                         
                         // Add to imported statuses list, sorted by order_number
                         setImportedStatuses(prev => {

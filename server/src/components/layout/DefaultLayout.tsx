@@ -8,24 +8,15 @@ import SidebarWithFeatureFlags from "./SidebarWithFeatureFlags";
 import Header, { QUICK_CREATE_OPEN_EVENT } from "./Header";
 import Body from "./Body";
 import RightSidebar from "./RightSidebar";
-import { DrawerProvider, DrawerOutlet } from "@alga-psa/ui";
+import { DrawerProvider } from "@alga-psa/ui";
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { ActivityDrawerProvider } from "@alga-psa/msp-composition/user-activities";
 import { savePreference } from '@alga-psa/ui/lib';
 import QuickAskOverlay from 'server/src/components/chat/QuickAskOverlay';
 import { QuickAskProvider } from './QuickAskContext';
 import { PlatformNotificationBanner } from './PlatformNotificationBanner';
 import VimNavigationLayer from './VimNavigationLayer';
-import { isExperimentalFeatureEnabled } from '@alga-psa/tenancy/actions';
-import { SchedulingProviderWithCallbacks } from '@alga-psa/scheduling/providers/SchedulingProviderWithCallbacks';
-import { MspTicketIntegrationProvider, MspClientIntegrationProvider } from '@alga-psa/msp-composition/projects';
-import { MspClientDrawerProvider, MspClientCrossFeatureProvider } from '@alga-psa/msp-composition/clients';
-import { QuickAddClientProviderWithCallbacks } from '@alga-psa/clients/providers/QuickAddClientProviderWithCallbacks';
-import { MspAssetCrossFeatureProvider } from '@alga-psa/msp-composition/assets';
-import { MspDocumentsCrossFeatureProvider } from '@alga-psa/msp-composition/documents';
-import { MspSchedulingCrossFeatureProvider } from '@alga-psa/msp-composition/scheduling/MspSchedulingCrossFeatureProvider';
-import { MspActivityCrossFeatureProvider } from '@alga-psa/msp-composition/workflows';
+import { isExperimentalFeatureEnabled } from '@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions';
 import { useTier } from 'server/src/context/TierContext';
 import {
   useCatalogShortcut,
@@ -454,67 +445,32 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
 
 
   return (
-    <SchedulingProviderWithCallbacks>
     <DrawerProvider>
-    <MspTicketIntegrationProvider>
-    <MspClientIntegrationProvider>
-      <ActivityDrawerProvider>
-      <MspClientDrawerProvider>
-      <MspClientCrossFeatureProvider>
-      <MspAssetCrossFeatureProvider>
-      <MspDocumentsCrossFeatureProvider>
-      <MspSchedulingCrossFeatureProvider>
-      <MspActivityCrossFeatureProvider>
-      <QuickAddClientProviderWithCallbacks>
-        <div className="flex h-screen overflow-hidden bg-gray-100">
-          <SidebarWithFeatureFlags
-            sidebarOpen={sidebarOpen}
-            setSidebarOpen={setSidebarOpen}
-            disableTransition={disableTransition}
-            mode={sidebarMode}
-            onBackToMain={handleBackToMain}
-            onMenuItemClick={handleMenuItemClick}
-          />
-          <div className="flex-1 flex flex-col overflow-hidden">
-            <QuickAskProvider value={quickAskContextValue}>
-              <Header
-                sidebarOpen={sidebarOpen}
-                setSidebarOpen={setSidebarOpen}
-                rightSidebarOpen={rightSidebarOpen}
-                setRightSidebarOpen={setRightSidebarOpen}
-              />
-              <PlatformNotificationBanner />
-              <main className={`flex-1 overflow-hidden flex ${sidebarMode !== 'main' ? 'pt-0 pl-0 pr-3' : 'pt-2 px-3'}`}>
-                <Body>{children}</Body>
-                {aiAssistantAvailable ? (
-                  <RightSidebar
-                    isOpen={rightSidebarOpen}
-                    setIsOpen={setRightSidebarOpen}
-                    onRequestClose={requestSidebarClose}
-                    clientUrl={clientUrl}
-                    accountId={accountId}
-                    messages={messages}
-                    userRole={userRole}
-                    userId={userId}
-                    selectedAccount={selectedAccount}
-                    handleSelectAccount={handleSelectAccount}
-                    auth_token={auth_token}
-                    setChatTitle={setChatTitle}
-                    isTitleLocked={isTitleLocked}
-                    handoffChatId={sidebarHandoff.chatId}
-                    handoffNonce={sidebarHandoff.nonce}
-                    onInterruptibleStateChange={setIsChatInterruptible}
-                    onRegisterCancelHandler={(cancelHandler) => {
-                      cancelActiveChatWorkRef.current = cancelHandler;
-                    }}
-                  />
-                ) : null}
-              </main>
+      <div className="flex h-screen overflow-hidden bg-gray-100">
+        <SidebarWithFeatureFlags
+          sidebarOpen={sidebarOpen}
+          setSidebarOpen={setSidebarOpen}
+          disableTransition={disableTransition}
+          mode={sidebarMode}
+          onBackToMain={handleBackToMain}
+          onMenuItemClick={handleMenuItemClick}
+        />
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <QuickAskProvider value={quickAskContextValue}>
+            <Header
+              sidebarOpen={sidebarOpen}
+              setSidebarOpen={setSidebarOpen}
+              rightSidebarOpen={rightSidebarOpen}
+              setRightSidebarOpen={setRightSidebarOpen}
+            />
+            <PlatformNotificationBanner />
+            <main className={`flex-1 overflow-hidden flex ${sidebarMode !== 'main' ? 'pt-0 pl-0 pr-3' : 'pt-2 px-3'}`}>
+              <Body>{children}</Body>
               {aiAssistantAvailable ? (
-                <QuickAskOverlay
-                  isOpen={quickAskOpen}
-                  onClose={handleQuickAskClose}
-                  onOpenInSidebar={handleOpenQuickAskInSidebar}
+                <RightSidebar
+                  isOpen={rightSidebarOpen}
+                  setIsOpen={setRightSidebarOpen}
+                  onRequestClose={requestSidebarClose}
                   clientUrl={clientUrl}
                   accountId={accountId}
                   messages={messages}
@@ -525,61 +481,73 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
                   auth_token={auth_token}
                   setChatTitle={setChatTitle}
                   isTitleLocked={isTitleLocked}
-                  hf={null}
+                  handoffChatId={sidebarHandoff.chatId}
+                  handoffNonce={sidebarHandoff.nonce}
+                  onInterruptibleStateChange={setIsChatInterruptible}
+                  onRegisterCancelHandler={(cancelHandler) => {
+                    cancelActiveChatWorkRef.current = cancelHandler;
+                  }}
                 />
               ) : null}
-              <VimNavigationLayer onOpenHelp={openShortcutsShortcut} />
-              <ShortcutHelpDialog isOpen={shortcutsHelpOpen} onClose={() => setShortcutsHelpOpen(false)} />
-              <ShortcutHintHud />
-            </QuickAskProvider>
-          </div>
+            </main>
+            {aiAssistantAvailable ? (
+              <QuickAskOverlay
+                isOpen={quickAskOpen}
+                onClose={handleQuickAskClose}
+                onOpenInSidebar={handleOpenQuickAskInSidebar}
+                clientUrl={clientUrl}
+                accountId={accountId}
+                messages={messages}
+                userRole={userRole}
+                userId={userId}
+                selectedAccount={selectedAccount}
+                handleSelectAccount={handleSelectAccount}
+                auth_token={auth_token}
+                setChatTitle={setChatTitle}
+                isTitleLocked={isTitleLocked}
+                hf={null}
+              />
+            ) : null}
+            <VimNavigationLayer onOpenHelp={openShortcutsShortcut} />
+            <ShortcutHelpDialog isOpen={shortcutsHelpOpen} onClose={() => setShortcutsHelpOpen(false)} />
+            <ShortcutHintHud />
+          </QuickAskProvider>
         </div>
-        {pendingInterruptKind !== null && (
-          <ConfirmationDialog
-            id="default-layout-ai-interrupt-confirmation"
-            isOpen={true}
-            onClose={closeInterruptDialog}
-            onConfirm={confirmInterruptAction}
-            title={
-              pendingInterruptKind === 'navigate'
-                ? t('dialogs.aiInterrupt.navigate.title', { defaultValue: 'Leave page and cancel AI response?' })
-                : t('dialogs.aiInterrupt.closeChat.title', { defaultValue: 'Close chat and cancel AI response?' })
-            }
-            message={
-              pendingInterruptKind === 'navigate'
-                ? t('dialogs.aiInterrupt.navigate.message', {
-                    defaultValue:
-                      'An AI response or tool action is still in progress. Leaving this page now will cancel it.',
-                  })
-                : t('dialogs.aiInterrupt.closeChat.message', {
-                    defaultValue:
-                      'An AI response or tool action is still in progress. Closing the chat now will cancel it.',
-                  })
-            }
-            confirmLabel={
-              pendingInterruptKind === 'navigate'
-                ? t('dialogs.aiInterrupt.navigate.confirm', { defaultValue: 'Leave page' })
-                : t('dialogs.aiInterrupt.closeChat.confirm', { defaultValue: 'Close chat' })
-            }
-            cancelLabel={
-              pendingInterruptKind === 'navigate'
-                ? t('dialogs.aiInterrupt.navigate.cancel', { defaultValue: 'Stay on page' })
-                : t('dialogs.aiInterrupt.closeChat.cancel', { defaultValue: 'Keep chat open' })
-            }
-          />
-        )}
-        <DrawerOutlet />
-      </QuickAddClientProviderWithCallbacks>
-      </MspActivityCrossFeatureProvider>
-      </MspSchedulingCrossFeatureProvider>
-      </MspDocumentsCrossFeatureProvider>
-      </MspAssetCrossFeatureProvider>
-      </MspClientCrossFeatureProvider>
-      </MspClientDrawerProvider>
-      </ActivityDrawerProvider>
-    </MspClientIntegrationProvider>
-    </MspTicketIntegrationProvider>
+      </div>
+      {pendingInterruptKind !== null && (
+        <ConfirmationDialog
+          id="default-layout-ai-interrupt-confirmation"
+          isOpen={true}
+          onClose={closeInterruptDialog}
+          onConfirm={confirmInterruptAction}
+          title={
+            pendingInterruptKind === 'navigate'
+              ? t('dialogs.aiInterrupt.navigate.title', { defaultValue: 'Leave page and cancel AI response?' })
+              : t('dialogs.aiInterrupt.closeChat.title', { defaultValue: 'Close chat and cancel AI response?' })
+          }
+          message={
+            pendingInterruptKind === 'navigate'
+              ? t('dialogs.aiInterrupt.navigate.message', {
+                  defaultValue:
+                    'An AI response or tool action is still in progress. Leaving this page now will cancel it.',
+                })
+              : t('dialogs.aiInterrupt.closeChat.message', {
+                  defaultValue:
+                    'An AI response or tool action is still in progress. Closing the chat now will cancel it.',
+                })
+          }
+          confirmLabel={
+            pendingInterruptKind === 'navigate'
+              ? t('dialogs.aiInterrupt.navigate.confirm', { defaultValue: 'Leave page' })
+              : t('dialogs.aiInterrupt.closeChat.confirm', { defaultValue: 'Close chat' })
+          }
+          cancelLabel={
+            pendingInterruptKind === 'navigate'
+              ? t('dialogs.aiInterrupt.navigate.cancel', { defaultValue: 'Stay on page' })
+              : t('dialogs.aiInterrupt.closeChat.cancel', { defaultValue: 'Keep chat open' })
+          }
+        />
+      )}
     </DrawerProvider>
-    </SchedulingProviderWithCallbacks>
   );
 }

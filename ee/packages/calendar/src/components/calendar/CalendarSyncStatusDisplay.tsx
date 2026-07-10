@@ -42,8 +42,9 @@ export function CalendarSyncStatusDisplay({ entryId, compact = false }: Calendar
       } else {
         setError(result.error || null);
       }
-    } catch (err: any) {
-      setError(err.message || t('calendar.sync.loadError', { defaultValue: 'Failed to load sync status' }));
+    } catch (err) {
+      console.error('Failed to load calendar sync status:', err);
+      setError(t('calendar.sync.loadError', { defaultValue: 'Failed to load sync status' }));
     } finally {
       setLoading(false);
     }

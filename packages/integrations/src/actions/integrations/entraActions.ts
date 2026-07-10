@@ -110,6 +110,22 @@ function isClientPortalUser(user: unknown): boolean {
   return (user as { user_type?: string } | undefined)?.user_type === 'client';
 }
 
+function entraRouteStatusError(status: number): string {
+  if (status === 401 || status === 403) {
+    return 'Permission denied: Cannot manage Microsoft Entra integration.';
+  }
+
+  if (status === 404) {
+    return 'Microsoft Entra resource not found.';
+  }
+
+  if (status >= 400 && status < 500) {
+    return 'Microsoft Entra request was invalid.';
+  }
+
+  return 'Microsoft Entra request failed. Please try again.';
+}
+
 async function callEeRoute<T>(params: {
   importFn: any;
   method: 'GET' | 'POST';
@@ -161,7 +177,7 @@ async function callEeRoute<T>(params: {
     }
 
     const fallbackError =
-      payload?.error || `Entra route failed with status ${response.status}`;
+      payload?.error || entraRouteStatusError(response.status);
 
     return {
       success: false,
@@ -170,7 +186,7 @@ async function callEeRoute<T>(params: {
   } catch (error: unknown) {
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to call Entra route',
+      error: 'Microsoft Entra request failed. Please try again.',
     };
   }
 }

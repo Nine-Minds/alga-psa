@@ -48,7 +48,7 @@ import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomat
 import { useIntervalTracking, useRangeSelection } from '@alga-psa/ui/hooks';
 import type { TicketingDisplaySettings } from '../actions/ticketDisplaySettings';
 import { toast } from 'react-hot-toast';
-import { handleError, isActionMessageError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
+import { handleError, isActionMessageError, isActionPermissionError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
 import { createTicketColumns, TICKET_COLUMNS } from '@alga-psa/tickets/lib';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { ShortcutActiveRegion, usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
@@ -659,6 +659,10 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     ) {
       try {
         const children = await fetchBundleChildrenForMaster(masterTicketId);
+        if (isActionMessageError(children) || isActionPermissionError(children)) {
+          handleError(getErrorMessage(children), t('errors.loadBundledTickets', 'Failed to load bundled tickets'));
+          return;
+        }
         if (children.length > 0) {
           setTickets(prev => {
             const existing = new Set(prev.map(t => t.ticket_id).filter((id): id is string => !!id));
@@ -860,6 +864,12 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         bundleView,
       };
       const allIds = await getAllMatchingTicketIds(filters);
+      if (isActionMessageError(allIds) || isActionPermissionError(allIds)) {
+        toast.error(getErrorMessage(allIds));
+        setSelectedTicketIds(new Set(selectableTicketIds));
+        setAllMatchingMode(true);
+        return;
+      }
       setSelectedTicketIds(new Set(allIds));
       setAllMatchingMode(true);
     } catch (error) {
@@ -888,6 +898,10 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     setIsLoadingDestinationStatuses(true);
     try {
       const statuses = await getBoardTicketStatuses(boardId);
+      if (isActionMessageError(statuses) || isActionPermissionError(statuses)) {
+        setDestinationStatusError(getErrorMessage(statuses));
+        return;
+      }
       const boardStatusOptions = statuses.map((status) => ({
         value: status.status_id as string,
         label: status.name,
@@ -996,7 +1010,12 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     (async () => {
       let resolved: Array<{ ticket_id: string; board_id: string | null }> = [];
       try {
-        resolved = await getTicketBoardIds(unresolvedBoardTicketIds);
+        const result = await getTicketBoardIds(unresolvedBoardTicketIds);
+        if (isActionMessageError(result) || isActionPermissionError(result)) {
+          console.warn('[TicketingDashboard] Failed to resolve selected ticket boards:', getErrorMessage(result));
+        } else {
+          resolved = result;
+        }
       } catch (error) {
         console.error('[TicketingDashboard] Failed to resolve selected ticket boards:', error);
       }
@@ -1344,8 +1363,14 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     setIsLoadingBundleMasterStatus(true);
     (async () => {
       try {
-        const { masterTicketIds } = await getBundleMasterStatusAction({ ticketIds: selectedTicketIdsArray });
+        const masterStatus = await getBundleMasterStatusAction({ ticketIds: selectedTicketIdsArray });
         if (cancelled) return;
+        if (isActionMessageError(masterStatus) || isActionPermissionError(masterStatus)) {
+          setBundleExistingMasterIds(new Set());
+          setBundleError(getErrorMessage(masterStatus));
+          return;
+        }
+        const { masterTicketIds } = masterStatus;
         const masterSet = new Set(masterTicketIds);
         setBundleExistingMasterIds(masterSet);
         if (masterSet.size === 1) {
@@ -1402,7 +1427,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         mode: bundleSyncUpdates ? 'sync_updates' : 'link_only',
       });
 
-      if (isActionMessageError(result)) {
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
         const message = getErrorMessage(result);
         setBundleError(message);
         toast.error(message);
@@ -1581,6 +1606,11 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       TICKET_PRINT_FALLBACK_PAGE_SIZE
     );
     const result = await fetchTicketsWithPagination(exportFilters, 1, printPageSize);
+    if (isActionMessageError(result) || isActionPermissionError(result)) {
+      toast.error(getErrorMessage(result));
+      setPrintTickets([]);
+      return;
+    }
     ticketTagsRef.current = {
       ...ticketTagsRef.current,
       ...result.metadata.ticketTags,

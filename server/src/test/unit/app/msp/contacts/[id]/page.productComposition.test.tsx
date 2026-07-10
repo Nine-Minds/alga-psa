@@ -48,6 +48,7 @@ vi.mock('@alga-psa/documents/actions/documentActions', () => ({
 
 vi.mock('@alga-psa/tags/actions', () => ({
   findTagsByEntityIds: findTagsByEntityIdsMock,
+  isTagActionError: (value: unknown) => Boolean(value && typeof value === 'object' && 'error' in value),
 }));
 
 vi.mock('@alga-psa/tickets/lib/createTicketRoute', () => ({

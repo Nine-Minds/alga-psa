@@ -29,6 +29,17 @@ function permissionDenied(error = 'Permission denied') {
   return { success: false as const, error };
 }
 
+function appleIapBillingActionMessage(error: AppleIapBillingError): string {
+  switch (error.code) {
+    case 'iap_upgrade_requires_transition':
+      return 'Plan changes require moving this Apple-managed subscription to direct billing first.';
+    case 'iap_addons_unavailable':
+      return 'Add-ons are not available while your subscription is managed by Apple.';
+    case 'iap_seat_changes_unavailable':
+      return 'Seat changes are not available while your subscription is managed by Apple.';
+  }
+}
+
 /**
  * Server action to get the current license usage for the session tenant
  * @returns License usage information or error
@@ -58,7 +69,7 @@ export async function getLicenseUsageAction(): Promise<{
     console.error('Error getting license usage:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to get license usage',
+      error: 'Failed to get license usage',
     };
   }
 }
@@ -137,7 +148,7 @@ export async function getInvoicePreviewAction(
     logger.error('[getInvoicePreviewAction] Error getting invoice preview:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to get invoice preview',
+      error: 'Failed to get invoice preview',
     };
   }
 }
@@ -242,7 +253,7 @@ export async function createLicenseCheckoutSessionAction(
       } else if (error.message.includes('insufficient')) {
         errorMessage = 'Payment failed due to insufficient funds. Please try a different payment method.';
       } else {
-        errorMessage = error.message;
+        errorMessage = 'Failed to process license update. Please try again.';
       }
     }
 
@@ -347,7 +358,7 @@ export async function getLicensePricingAction(): Promise<{
     logger.error('[getLicensePricingAction] Error getting license pricing:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to get license pricing',
+      error: 'Failed to get license pricing',
     };
   }
 }
@@ -422,7 +433,7 @@ export async function getSubscriptionInfoAction(): Promise<IGetSubscriptionInfoR
     logger.error('[getSubscriptionInfoAction] Error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to get subscription info',
+      error: 'Failed to get subscription info',
     };
   }
 }
@@ -506,7 +517,7 @@ export async function getPaymentMethodInfoAction(): Promise<IGetPaymentMethodRes
     logger.error('[getPaymentMethodInfoAction] Error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to get payment method',
+      error: 'Failed to get payment method',
     };
   }
 }
@@ -587,7 +598,7 @@ export async function getRecentInvoicesAction(limit: number = 10): Promise<IGetI
     logger.error('[getRecentInvoicesAction] Error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to get invoices',
+      error: 'Failed to get invoices',
     };
   }
 }
@@ -649,7 +660,7 @@ export async function createCustomerPortalSessionAction(): Promise<IUpdatePaymen
     logger.error('[createCustomerPortalSessionAction] Error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to create portal session',
+      error: 'Failed to create portal session',
     };
   }
 }
@@ -735,7 +746,7 @@ export async function sendCancellationFeedbackAction(
     logger.error('[sendCancellationFeedbackAction] Error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to send cancellation feedback',
+      error: 'Failed to send cancellation feedback',
     };
   }
 }
@@ -867,7 +878,7 @@ export async function cancelSubscriptionAction(): Promise<ICancelSubscriptionRes
     logger.error('[cancelSubscriptionAction] Error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to cancel subscription',
+      error: 'Failed to cancel subscription',
     };
   }
 }
@@ -1016,7 +1027,7 @@ export async function reduceLicenseCount(
     logger.error('[reduceLicenseCount] Error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to reduce license count',
+      error: 'Failed to reduce license count',
     };
   }
 }
@@ -1065,7 +1076,7 @@ export async function reduceLicenseCountAction(
     logger.error('[reduceLicenseCountAction] Error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to reduce license count',
+      error: 'Failed to reduce license count',
     };
   }
 }
@@ -1127,7 +1138,7 @@ export async function getScheduledLicenseChangesAction(): Promise<{
     logger.error('[getScheduledLicenseChangesAction] Error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to get scheduled license changes',
+      error: 'Failed to get scheduled license changes',
     };
   }
 }
@@ -1164,7 +1175,7 @@ export async function upgradeTierAction(
       if (err instanceof AppleIapBillingError) {
         // UI should have routed to startIapUpgradeAction in this case, but
         // surface a clear error if someone clicked the wrong button.
-        return { success: false, error: err.message };
+        return { success: false, error: appleIapBillingActionMessage(err) };
       }
       throw err;
     }
@@ -1172,7 +1183,7 @@ export async function upgradeTierAction(
     logger.error('[upgradeTierAction] Error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to upgrade plan',
+      error: 'Failed to upgrade plan',
     };
   }
 }
@@ -1206,7 +1217,7 @@ export async function downgradeTierAction(
     logger.error('[downgradeTierAction] Error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to downgrade plan',
+      error: 'Failed to downgrade plan',
     };
   }
 }
@@ -1260,7 +1271,7 @@ export async function purchaseAddOnAction(
     logger.error('[purchaseAddOnAction] Error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to purchase add-on',
+      error: 'Failed to purchase add-on',
     };
   }
 }
@@ -1293,7 +1304,7 @@ export async function cancelAddOnAction(
     logger.error('[cancelAddOnAction] Error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to cancel add-on',
+      error: 'Failed to cancel add-on',
     };
   }
 }
@@ -1334,7 +1345,7 @@ export async function getUpgradePreviewAction(
     logger.error('[getUpgradePreviewAction] Error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to get upgrade preview',
+      error: 'Failed to get upgrade preview',
     };
   }
 }
@@ -1366,7 +1377,7 @@ export async function switchBillingIntervalAction(
     logger.error('[switchBillingIntervalAction] Error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to switch billing interval',
+      error: 'Failed to switch billing interval',
     };
   }
 }
@@ -1403,7 +1414,7 @@ export async function getIntervalSwitchPreviewAction(
     logger.error('[getIntervalSwitchPreviewAction] Error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to get interval switch preview',
+      error: 'Failed to get interval switch preview',
     };
   }
 }
@@ -1438,7 +1449,7 @@ export async function startPremiumTrialAction(
     logger.error('[startPremiumTrialAction] Error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to start Premium trial',
+      error: 'Failed to start Premium trial',
     };
   }
 }
@@ -1494,7 +1505,7 @@ export async function startSelfServicePremiumTrialAction(): Promise<{ success: b
     logger.error('[startSelfServicePremiumTrialAction] Error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to start Premium trial',
+      error: 'Failed to start Premium trial',
     };
   }
 }
@@ -1525,7 +1536,7 @@ export async function startSoloProTrialAction(): Promise<{ success: boolean; err
     logger.error('[startSoloProTrialAction] Error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to start Pro trial',
+      error: 'Failed to start Pro trial',
     };
   }
 }
@@ -1559,7 +1570,7 @@ export async function confirmPremiumTrialAction(
     logger.error('[confirmPremiumTrialAction] Error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to confirm Premium upgrade',
+      error: 'Failed to confirm Premium upgrade',
     };
   }
 }
@@ -1590,7 +1601,7 @@ export async function revertPremiumTrialAction(): Promise<{ success: boolean; er
     logger.error('[revertPremiumTrialAction] Error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to cancel Premium trial',
+      error: 'Failed to cancel Premium trial',
     };
   }
 }
@@ -1636,7 +1647,7 @@ export async function sendPremiumTrialRequestAction(
     logger.error('[sendPremiumTrialRequestAction] Error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to send trial request',
+      error: 'Failed to send trial request',
     };
   }
 }
@@ -1719,7 +1730,7 @@ export async function getIapBillingContextAction(): Promise<{
     logger.error('[getIapBillingContextAction] Error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to get billing context',
+      error: 'Failed to get billing context',
     };
   }
 }
@@ -1791,7 +1802,7 @@ export async function startIapUpgradeAction(
     logger.error('[startIapUpgradeAction] Error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to start Apple upgrade',
+      error: 'Failed to start Apple upgrade',
     };
   }
 }
@@ -1825,7 +1836,7 @@ export async function cancelIapTransitionAction(): Promise<{
     logger.error('[cancelIapTransitionAction] Error:', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to cancel transition',
+      error: 'Failed to cancel transition',
     };
   }
 }

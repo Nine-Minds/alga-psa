@@ -2,7 +2,10 @@
 
 import { Suspense, useState, useCallback, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
-import { NotificationSettings, EmailTemplates, NotificationCategories, InternalNotificationCategories } from "@alga-psa/notifications/components";
+import { NotificationSettings } from "@alga-psa/notifications/components/settings/NotificationSettings";
+import { EmailTemplates } from "@alga-psa/notifications/components/settings/EmailTemplates";
+import { NotificationCategories } from "@alga-psa/notifications/components/settings/NotificationCategories";
+import { InternalNotificationCategories } from "@alga-psa/notifications/components/settings/InternalNotificationCategories";
 import { CustomTabs } from "@alga-psa/ui/components/CustomTabs";
 import ViewSwitcher, { ViewSwitcherOption } from "@alga-psa/ui/components/ViewSwitcher";
 import { Card } from "@alga-psa/ui/components/Card";

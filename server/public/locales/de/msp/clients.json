@@ -333,7 +333,8 @@
     "created": "\"{{name}}\" wurde erstellt. Fügen Sie unten einen weiteren Kunden hinzu.",
     "createAndAddAnother": "Erstellen + Weiteren hinzufügen",
     "createAndView": "Erstellen + Kunde anzeigen",
-    "additionalDetails": "Zusätzliche Details"
+    "additionalDetails": "Zusätzliche Details",
+    "createFailed": "Failed to create client. Please try again."
   },
   "clientCreatedDialog": {
     "title": "Kunde erstellt",
@@ -451,7 +452,8 @@
     "formattingError": "Formatierungsfehler",
     "removeAssignmentTitle": "Vertragspositionszuordnung entfernen",
     "removeAssignmentMessage": "Sind Sie sicher, dass Sie diese Vertragszeilenzuweisung vom Kunden entfernen möchten? Die Vertragszeile selbst wird nicht gelöscht.",
-    "contracts": "Verträge"
+    "contracts": "Verträge",
+    "taxRatesLoadError": "Failed to load tax rate configuration."
   },
   "clientBillingSchedule": {
     "title": "Abrechnungsplan",
@@ -599,7 +601,8 @@
     "startDate": "Startdatum",
     "startDateRequired": "Startdatum ist erforderlich",
     "updateAssignment": "Zuweisung aktualisieren",
-    "useTenantRenewalDefaults": "Standardeinstellungen für Mandantenverlängerung verwenden"
+    "useTenantRenewalDefaults": "Standardeinstellungen für Mandantenverlängerung verwenden",
+    "saveError": "Failed to save contract. Please try again."
   },
   "clientContractLineDashboard": {
     "title": "Nutzungsmetriken (letzte 30 Tage)",
@@ -908,7 +911,10 @@
     "skippedExistingMessage": "{{count}} Clients wurden übersprungen, da sie bereits existieren. Aktivieren Sie „Bestehende Clients aktualisieren“, um sie zu überschreiben.",
     "error": "Fehler",
     "updateExistingTitle": "Bestehende Clients aktualisieren",
-    "updateExistingMessage": "{{count}} Clients sind bereits vorhanden. Möchten Sie sie mit den neuen Daten aktualisieren?"
+    "updateExistingMessage": "{{count}} Clients sind bereits vorhanden. Möchten Sie sie mit den neuen Daten aktualisieren?",
+    "invalidRowsBlocked": "Fix {{count}} invalid rows or enable \"Skip invalid records\" before importing.",
+    "noValidRows": "There are no valid client rows to import.",
+    "serverFailures": "{{failed}} of {{total}} clients failed to import. Review the row issues below."
   },
   "clientsList": {
     "name": "Name",
@@ -1065,7 +1071,8 @@
     "retry": "Wiederholen",
     "loadError": "Notizen konnten nicht geladen werden",
     "unknownError": "Unbekannter Fehler",
-    "loadErrorTitle": "Notizen konnten nicht geladen werden"
+    "loadErrorTitle": "Notizen konnten nicht geladen werden",
+    "loadErrorDescription": "Could not load notes. Please try again."
   },
   "actions": {
     "cancel": "Abbrechen",
@@ -1229,7 +1236,9 @@
         "endRequired": "Zum Erstellen einer Teams-Besprechung ist eine Endzeit erforderlich",
         "startRequired": "Zum Erstellen einer Teams-Besprechung ist eine Startzeit erforderlich",
         "unavailable": "Die Erstellung von Teams-Besprechungen ist für diesen Mandanten nicht verfügbar."
-      }
+      },
+      "loadFailed": "Interaction options could not be loaded. Please try again.",
+      "saveFailed": "The interaction could not be saved. Please try again."
     },
     "feed": {
       "addInteraction": "Interaktion hinzufügen",
@@ -1242,7 +1251,9 @@
       "searchPlaceholder": "Interaktionen suchen",
       "startDate": "Startdatum",
       "title": "Interaktionen",
-      "typePlaceholder": "Interaktionstyp"
+      "typePlaceholder": "Interaktionstyp",
+      "loadFailed": "Interactions could not be loaded. Please try again.",
+      "typesLoadFailed": "Interaction types could not be loaded. Please try again."
     },
     "overall": {
       "allContacts": "Alle Kontakte",
@@ -1259,7 +1270,8 @@
       "startTimeLabel": "Startzeit der Interaktion",
       "startTimePlaceholder": "Ab dieser Startzeit filtern",
       "statusPlaceholder": "Status",
-      "title": "Letzte Interaktionen"
+      "title": "Letzte Interaktionen",
+      "statusesLoadFailed": "Interaction statuses could not be loaded. Please try again."
     }
   },
   "clientDrawer": {

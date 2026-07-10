@@ -10,7 +10,12 @@ import {
   sendInvoiceEmailAction
 } from '@alga-psa/billing/actions/invoiceJobActions';
 import toast from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from 'react-i18next';
 
 interface SendInvoiceEmailDialogProps {
@@ -57,13 +62,17 @@ export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
     setLoading(true);
     try {
       const result = await getInvoiceEmailRecipientAction(invoiceIds);
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        setRecipients([]);
+        setErrors([{ invoiceId: 'unknown', error: getErrorMessage(result) }]);
+        return;
+      }
       setRecipients(result.recipients);
       setErrors(result.errors);
     } catch (error) {
       const fallbackError = t('sendEmail.errors.loadRecipients', { defaultValue: 'Failed to load recipient info' });
-      const errorMessage = error instanceof Error ? error.message : fallbackError;
       handleError(error, fallbackError);
-      setErrors([{ invoiceId: 'unknown', error: errorMessage }]);
+      setErrors([{ invoiceId: 'unknown', error: fallbackError }]);
     } finally {
       setLoading(false);
     }
@@ -90,6 +99,10 @@ export const SendInvoiceEmailDialog: React.FC<SendInvoiceEmailDialogProps> = ({
         validRecipients.map(r => r.invoiceId),
         customMessage.trim() || undefined
       );
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        toast.error(getErrorMessage(result), { id: toastId });
+        return;
+      }
 
       if (result.failureCount === 0) {
         toast.success(t('sendEmail.toasts.sentSuccess', {

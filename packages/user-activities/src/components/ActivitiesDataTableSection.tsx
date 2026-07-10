@@ -53,7 +53,7 @@ import { ScheduleActivity } from '@alga-psa/types';
 import { ActivitiesTableSkeleton } from './ActivitiesTableSkeleton';
 import { getAllPriorities, getStatuses } from '@alga-psa/reference-data/actions';
 import { getAllBoards } from '@alga-psa/reference-data/actions';
-import { findAllTagsByType } from '@alga-psa/tags/actions';
+import { findAllTagsByType, isTagActionError } from '@alga-psa/tags/actions';
 import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { DEFAULT_TABLE_TYPES } from './constants';
@@ -321,8 +321,18 @@ function formatActivityPrintDate(dateString?: string): string {
       findAllTagsByType('project_task' as TaggedEntityType),
     ])
       .then(([tt, pt]) => {
-        setTicketTags(tt || []);
-        setProjectTaskTags(pt || []);
+        if (isTagActionError(tt)) {
+          console.error('Error loading ticket tags:', tt);
+          setTicketTags([]);
+        } else {
+          setTicketTags(tt || []);
+        }
+        if (isTagActionError(pt)) {
+          console.error('Error loading project task tags:', pt);
+          setProjectTaskTags([]);
+        } else {
+          setProjectTaskTags(pt || []);
+        }
       })
       .catch((err) => console.error('Error loading tags:', err));
   }, []);

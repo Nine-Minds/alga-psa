@@ -5,7 +5,6 @@ import type {
   IClient,
   IContact,
   ITaxRate,
-  IClientTaxRate,
   IClientTaxRateAssociation,
 } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -14,6 +13,7 @@ import {
   getClientTaxRates,
   addClientTaxRate,
   updateDefaultClientTaxRate,
+  type ClientTaxRateDetails,
 } from '@alga-psa/clients/actions';
 import {
   getTaxRatesAsync,
@@ -26,7 +26,12 @@ import ClientCreditExpirationSettings from './ClientCreditExpirationSettings';
 import ClientContractAssignment from './ClientContractAssignment';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { ClientBillingSchedule } from './ClientBillingSchedule';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
@@ -35,6 +40,9 @@ interface BillingConfigurationProps {
     onSave: (updatedClient: Partial<IClient>) => void;
     contacts?: IContact[];
 }
+
+const isReturnedActionError = (value: unknown) =>
+    isActionMessageError(value) || isActionPermissionError(value);
 
 const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onSave, contacts = [] }) => {
     const { t } = useTranslation('msp/clients');
@@ -55,18 +63,33 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
     const [errorMessage, setErrorMessage] = useState<string | null>(null);
     const [isSavingBillingConfig, setIsSavingBillingConfig] = useState(false);
     const [taxRates, setTaxRates] = useState<ITaxRate[]>([]);
-    const [clientTaxRates, setClientTaxRates] = useState<IClientTaxRate[]>([]);
+    const [clientTaxRates, setClientTaxRates] = useState<ClientTaxRateDetails[]>([]);
 
     React.useEffect(() => {
         const fetchData = async () => {
-            const fetchedTaxRates = await getTaxRatesAsync();
-            setTaxRates(fetchedTaxRates);
+            try {
+                const fetchedTaxRates = await getTaxRatesAsync();
+                setTaxRates(fetchedTaxRates);
 
-            const fetchedClientTaxRates = await getClientTaxRates(client.client_id);
-            setClientTaxRates(fetchedClientTaxRates);
+                const fetchedClientTaxRates = await getClientTaxRates(client.client_id);
+                if (isReturnedActionError(fetchedClientTaxRates)) {
+                    const message = getErrorMessage(fetchedClientTaxRates);
+                    setErrorMessage(message);
+                    setClientTaxRates([]);
+                    handleError(fetchedClientTaxRates);
+                    return;
+                }
+
+                setClientTaxRates(fetchedClientTaxRates);
+                setErrorMessage(null);
+            } catch (error) {
+                const message = t('billingConfiguration.taxRatesLoadError', { defaultValue: 'Failed to load tax rate configuration.' });
+                setErrorMessage(message);
+                handleError(error, message);
+            }
         };
         fetchData();
-    }, [client.client_id]);
+    }, [client.client_id, t]);
 
     const handleSelectChange = (name: string) => async (value: string) => {
         setBillingConfig(prev => ({ ...prev, [name]: value }));
@@ -123,15 +146,25 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
                 client_id: client.client_id,
                 tax_rate_id: taxRateId
             };
-            await addClientTaxRate(newClientTaxRateData);
+            const assignResult = await addClientTaxRate(newClientTaxRateData);
+            if (isReturnedActionError(assignResult)) {
+                throw assignResult;
+            }
+
             const updatedClientTaxRates = await getClientTaxRates(client.client_id);
+            if (isReturnedActionError(updatedClientTaxRates)) {
+                throw updatedClientTaxRates;
+            }
+
             setClientTaxRates(updatedClientTaxRates);
             setErrorMessage(null);
             toast.success(t('billingConfiguration.defaultTaxAssignedSuccess', { defaultValue: 'Default tax rate assigned successfully' }));
-        } catch (error: any) {
-            const message = error.message || t('billingConfiguration.defaultTaxAssignError', { defaultValue: 'Failed to assign default tax rate. Please try again.' });
+        } catch (error) {
+            const fallbackMessage = t('billingConfiguration.defaultTaxAssignError', { defaultValue: 'Failed to assign default tax rate. Please try again.' });
+            const errorMessage = getErrorMessage(error);
+            const message = errorMessage === 'An unexpected error occurred' ? fallbackMessage : errorMessage;
             setErrorMessage(message);
-            handleError(error, t('billingConfiguration.defaultTaxAssignError', { defaultValue: 'Failed to assign default tax rate' }));
+            handleError(error, isReturnedActionError(error) ? undefined : fallbackMessage);
             throw error;
         }
     };
@@ -139,15 +172,25 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
     const handleChangeDefaultTaxRate = async (newTaxRateId: string) => {
         if (!newTaxRateId) return;
         try {
-            await updateDefaultClientTaxRate(client.client_id, newTaxRateId);
+            const updateResult = await updateDefaultClientTaxRate(client.client_id, newTaxRateId);
+            if (isReturnedActionError(updateResult)) {
+                throw updateResult;
+            }
+
             const updatedClientTaxRates = await getClientTaxRates(client.client_id);
+            if (isReturnedActionError(updatedClientTaxRates)) {
+                throw updatedClientTaxRates;
+            }
+
             setClientTaxRates(updatedClientTaxRates);
             setErrorMessage(null);
             toast.success(t('billingConfiguration.defaultTaxChangedSuccess', { defaultValue: 'Default tax rate changed successfully' }));
-        } catch (error: any) {
-            const message = error.message || t('billingConfiguration.defaultTaxChangeError', { defaultValue: 'Failed to change default tax rate. Please try again.' });
+        } catch (error) {
+            const fallbackMessage = t('billingConfiguration.defaultTaxChangeError', { defaultValue: 'Failed to change default tax rate. Please try again.' });
+            const errorMessage = getErrorMessage(error);
+            const message = errorMessage === 'An unexpected error occurred' ? fallbackMessage : errorMessage;
             setErrorMessage(message);
-            handleError(error, t('billingConfiguration.defaultTaxChangeError', { defaultValue: 'Failed to change default tax rate' }));
+            handleError(error, isReturnedActionError(error) ? undefined : fallbackMessage);
             throw error;
         }
     };

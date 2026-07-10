@@ -12,6 +12,11 @@ import {
 } from '@alga-psa/integrations/actions';
 import type { TaxImportPreviewResult, TaxImportResult } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 interface XeroCsvTaxImportPanelProps {
   onImportComplete?: (result: { successCount: number; totalTaxImported: number }) => void;
@@ -75,8 +80,13 @@ export function XeroCsvTaxImportPanel({ onImportComplete }: XeroCsvTaxImportPane
 
     try {
       const result = await previewXeroCsvTaxImport(csvContent);
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
       setPreviewResult(result);
     } catch (err) {
+      console.error('Failed to validate Xero CSV tax import:', err);
       setError(t('integrations.csv.taxImport.errors.validationFailed', { defaultValue: 'Validation failed' }));
     } finally {
       setIsValidating(false);
@@ -94,6 +104,10 @@ export function XeroCsvTaxImportPanel({ onImportComplete }: XeroCsvTaxImportPane
 
     try {
       const result = await executeXeroCsvTaxImport(csvContent);
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
       setImportResult(result);
 
       if (result.success || result.successCount > 0) {
@@ -103,6 +117,7 @@ export function XeroCsvTaxImportPanel({ onImportComplete }: XeroCsvTaxImportPane
         });
       }
     } catch (err) {
+      console.error('Failed to import Xero CSV tax data:', err);
       setError(t('integrations.csv.taxImport.errors.importFailed', { defaultValue: 'Import failed' }));
     } finally {
       setIsImporting(false);

@@ -36,6 +36,10 @@ import {
 } from './timeEntryChangeRequestActions';
 import { attachTimeEntryChangeRequests } from '../lib/timeEntryChangeRequests';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
+import {
+  timeSheetActionErrorFrom,
+  type TimeSheetActionError,
+} from './timeSheetActionErrors';
 
 function captureAnalytics(_event: string, _properties?: Record<string, any>, _userId?: string): void {
   // Intentionally no-op: avoid pulling analytics (and its tenancy/client-portal deps) into scheduling.
@@ -90,9 +94,10 @@ export const fetchTimeEntriesForTimeSheet = withAuth(async (
   user,
   { tenant },
   timeSheetId: string
-): Promise<ITimeEntryWithWorkItem[]> => {
-  const {knex: db} = await createTenantKnex();
-  const tenantScopedDb = tenantDb(db, tenant) as any;
+): Promise<ITimeEntryWithWorkItem[] | TimeSheetActionError> => {
+  try {
+    const {knex: db} = await createTenantKnex();
+    const tenantScopedDb = tenantDb(db, tenant) as any;
 
   // Check permission for time entry reading
   if (!await hasPermission(user, 'timeentry', 'read', db)) {
@@ -276,17 +281,24 @@ export const fetchTimeEntriesForTimeSheet = withAuth(async (
     };
   });
 
-  return attachTimeEntryChangeRequests(entriesWithWorkItems, changeRequestsByEntryId);
+    return attachTimeEntryChangeRequests(entriesWithWorkItems, changeRequestsByEntryId);
+  } catch (error) {
+    console.error('Error fetching time entries for time sheet:', error);
+    const expected = timeSheetActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 });
 
 export const saveTimeEntry = withAuth(async (
   user,
   { tenant },
   timeEntry: Omit<ITimeEntry, 'tenant'>
-): Promise<ITimeEntryWithWorkItem> => {
+): Promise<ITimeEntryWithWorkItem | TimeSheetActionError> => {
   const {knex: db} = await createTenantKnex();
   const tenantScopedDb = tenantDb(db, tenant) as any;
 
+  try {
   // Check permission based on whether this is a create or update operation
   if (timeEntry.entry_id) {
     // Update operation
@@ -310,7 +322,6 @@ export const saveTimeEntry = withAuth(async (
   const actorUserId = user.user_id;
   let timeEntryUserId = validatedTimeEntry.user_id || actorUserId;
 
-  try {
     if (validatedTimeEntry.entry_id) {
       const existing = await tenantScopedDb.table('time_entries')
         .where({ entry_id: validatedTimeEntry.entry_id })
@@ -505,7 +516,7 @@ export const saveTimeEntry = withAuth(async (
           .returning('*');
 
         if (!updated) {
-          throw new Error('Failed to update time entry');
+          throw new Error('Time entry not found');
         }
 
         resultingEntry = updated;
@@ -562,7 +573,7 @@ export const saveTimeEntry = withAuth(async (
           .returning('*');
 
         if (!inserted) {
-          throw new Error('Failed to insert time entry');
+          throw new Error('Time entry insert completed without returning a saved row.');
         }
 
         resultingEntry = inserted;
@@ -731,7 +742,7 @@ export const saveTimeEntry = withAuth(async (
               } catch (bucketError) {
                 console.error(`Error updating bucket usage for time entry ${resultingEntry.entry_id}:`, bucketError);
                 // Re-throwing ensures data consistency.
-                throw new Error(`Failed to update bucket usage: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
+                throw new Error(`Bucket usage update failed for time entry ${resultingEntry.entry_id}: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
               }
             } else {
                console.log(`No duration change for time entry ${resultingEntry.entry_id}, skipping bucket update.`);
@@ -749,13 +760,13 @@ export const saveTimeEntry = withAuth(async (
     });
 
     if (!resultingEntry) {
-      throw new Error('Failed to save time entry: No entry was created or updated');
+      throw new Error('Time entry save completed without creating or updating a row.');
     }
 
     // Ensure resultingEntry is treated as ITimeEntry
     const entry = resultingEntry as ITimeEntry;
     if (!entry.entry_id) {
-      throw new Error('Failed to save time entry: Saved entry is missing an ID');
+      throw new Error('Time entry save returned a row without an entry ID.');
     }
 
     await publishTimeEntrySearchEvent(entry_id ? 'TIME_ENTRY_UPDATED' : 'TIME_ENTRY_CREATED', {
@@ -897,10 +908,9 @@ export const saveTimeEntry = withAuth(async (
 
   } catch (error) {
     console.error('Error saving time entry:', error);
-    if (error instanceof Error) {
-      throw error;
-    }
-    throw new Error('Failed to save time entry');
+    const expected = timeSheetActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 });
 
@@ -912,120 +922,127 @@ export const updateTimeEntryApprovalStatus = withAuth(async (
     approvalStatus: ITimeEntry['approval_status'];
     changeRequestComment?: string;
   }
-): Promise<void> => {
+): Promise<void | TimeSheetActionError> => {
   const { knex: db } = await createTenantKnex();
   const tenantScopedDb = tenantDb(db, tenant) as any;
 
-  if (!await hasPermission(user, 'timesheet', 'approve', db)) {
-    throw new Error('Permission denied: Cannot update time entry approval status');
-  }
+  try {
+    if (!await hasPermission(user, 'timesheet', 'approve', db)) {
+      throw new Error('Permission denied: Cannot update time entry approval status');
+    }
 
-  const validatedParams = validateData<UpdateTimeEntryApprovalStatusParams>(
-    updateTimeEntryApprovalStatusParamsSchema,
-    params,
-  );
+    const validatedParams = validateData<UpdateTimeEntryApprovalStatusParams>(
+      updateTimeEntryApprovalStatusParamsSchema,
+      params,
+    );
 
-  const existingEntry = await tenantScopedDb.table('time_entries')
-    .where({
-      entry_id: validatedParams.entryId,
-    })
-    .select('entry_id', 'user_id', 'invoiced', 'time_sheet_id', 'work_item_id', 'work_item_type')
-    .first();
-
-  if (!existingEntry) {
-    throw new Error('Time entry not found');
-  }
-
-  if (validatedParams.approvalStatus === 'APPROVED') {
-    await assertCanApproveSubject(user, tenant, existingEntry.user_id, db);
-  } else {
-    await assertCanActOnBehalf(user, tenant, existingEntry.user_id, db);
-  }
-
-  if (existingEntry.invoiced) {
-    throw new Error('This time entry has already been invoiced and cannot be modified.');
-  }
-
-  await db.transaction(async (trx) => {
-    const trxTenantDb = tenantDb(trx, tenant) as any;
-
-    await trxTenantDb.table('time_entries')
+    const existingEntry = await tenantScopedDb.table('time_entries')
       .where({
         entry_id: validatedParams.entryId,
       })
-      .update({
-        approval_status: validatedParams.approvalStatus,
-        updated_at: new Date(),
-        updated_by: user.user_id,
-      });
+      .select('entry_id', 'user_id', 'invoiced', 'time_sheet_id', 'work_item_id', 'work_item_type')
+      .first();
 
-    if (
-      validatedParams.approvalStatus === 'CHANGES_REQUESTED' &&
-      existingEntry.time_sheet_id
-    ) {
-      await trxTenantDb.table('time_sheets')
+    if (!existingEntry) {
+      throw new Error('Time entry not found');
+    }
+
+    if (validatedParams.approvalStatus === 'APPROVED') {
+      await assertCanApproveSubject(user, tenant, existingEntry.user_id, db);
+    } else {
+      await assertCanActOnBehalf(user, tenant, existingEntry.user_id, db);
+    }
+
+    if (existingEntry.invoiced) {
+      throw new Error('This time entry has already been invoiced and cannot be modified.');
+    }
+
+    await db.transaction(async (trx) => {
+      const trxTenantDb = tenantDb(trx, tenant) as any;
+
+      await trxTenantDb.table('time_entries')
         .where({
-          id: existingEntry.time_sheet_id,
+          entry_id: validatedParams.entryId,
         })
         .update({
-          approval_status: 'CHANGES_REQUESTED',
-          approved_at: null,
-          approved_by: null,
+          approval_status: validatedParams.approvalStatus,
+          updated_at: new Date(),
+          updated_by: user.user_id,
         });
-    }
 
-    if (
-      validatedParams.approvalStatus === 'CHANGES_REQUESTED' &&
-      validatedParams.changeRequestComment &&
-      existingEntry.time_sheet_id
-    ) {
-      await createTimeEntryChangeRequestRecord(trx, {
-        tenant,
-        timeEntryId: validatedParams.entryId,
-        timeSheetId: existingEntry.time_sheet_id,
-        comment: validatedParams.changeRequestComment,
-        createdBy: user.user_id,
-      });
-    }
-  });
+      if (
+        validatedParams.approvalStatus === 'CHANGES_REQUESTED' &&
+        existingEntry.time_sheet_id
+      ) {
+        await trxTenantDb.table('time_sheets')
+          .where({
+            id: existingEntry.time_sheet_id,
+          })
+          .update({
+            approval_status: 'CHANGES_REQUESTED',
+            approved_at: null,
+            approved_by: null,
+          });
+      }
 
-  const eventType =
-    validatedParams.approvalStatus === 'APPROVED'
-      ? 'TIME_ENTRY_APPROVED'
-      : validatedParams.approvalStatus === 'CHANGES_REQUESTED'
-        ? 'TIME_ENTRY_CHANGES_REQUESTED'
-        : validatedParams.approvalStatus === 'SUBMITTED'
-          ? 'TIME_ENTRY_SUBMITTED'
-          : 'TIME_ENTRY_UPDATED';
+      if (
+        validatedParams.approvalStatus === 'CHANGES_REQUESTED' &&
+        validatedParams.changeRequestComment &&
+        existingEntry.time_sheet_id
+      ) {
+        await createTimeEntryChangeRequestRecord(trx, {
+          tenant,
+          timeEntryId: validatedParams.entryId,
+          timeSheetId: existingEntry.time_sheet_id,
+          comment: validatedParams.changeRequestComment,
+          createdBy: user.user_id,
+        });
+      }
+    });
 
-  await publishTimeEntrySearchEvent(eventType, {
-    tenantId: tenant,
-    timeEntryId: validatedParams.entryId,
-    userId: existingEntry.user_id,
-    workItemId: existingEntry.work_item_id,
-    workItemType: existingEntry.work_item_type,
-    approvedBy: validatedParams.approvalStatus === 'APPROVED' ? user.user_id : undefined,
-    requestedBy: validatedParams.approvalStatus === 'CHANGES_REQUESTED' ? user.user_id : undefined,
-    reason: validatedParams.changeRequestComment,
-    changes: {
-      approvalStatus: validatedParams.approvalStatus,
-    },
-  });
+    const eventType =
+      validatedParams.approvalStatus === 'APPROVED'
+        ? 'TIME_ENTRY_APPROVED'
+        : validatedParams.approvalStatus === 'CHANGES_REQUESTED'
+          ? 'TIME_ENTRY_CHANGES_REQUESTED'
+          : validatedParams.approvalStatus === 'SUBMITTED'
+            ? 'TIME_ENTRY_SUBMITTED'
+            : 'TIME_ENTRY_UPDATED';
+
+    await publishTimeEntrySearchEvent(eventType, {
+      tenantId: tenant,
+      timeEntryId: validatedParams.entryId,
+      userId: existingEntry.user_id,
+      workItemId: existingEntry.work_item_id,
+      workItemType: existingEntry.work_item_type,
+      approvedBy: validatedParams.approvalStatus === 'APPROVED' ? user.user_id : undefined,
+      requestedBy: validatedParams.approvalStatus === 'CHANGES_REQUESTED' ? user.user_id : undefined,
+      reason: validatedParams.changeRequestComment,
+      changes: {
+        approvalStatus: validatedParams.approvalStatus,
+      },
+    });
+  } catch (error) {
+    console.error('Error updating time entry approval status:', error);
+    const expected = timeSheetActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 });
 
 export const deleteTimeEntry = withAuth(async (
   user,
   { tenant },
   entryId: string
-): Promise<void> => {
+): Promise<void | TimeSheetActionError> => {
   const {knex: db} = await createTenantKnex();
 
+  try {
   // Check permission for time entry deletion
   if (!await hasPermission(user, 'timeentry', 'delete', db)) {
     throw new Error('Permission denied: Cannot delete time entries');
   }
 
-  try {
     const deletedTimeEntry = await db.transaction(async (trx) => {
       const trxTenantDb = tenantDb(trx, tenant) as any;
       // Get the time entry to be deleted
@@ -1084,7 +1101,7 @@ export const deleteTimeEntry = withAuth(async (
               } catch (bucketError) {
                 console.error(`Error updating bucket usage for deleted time entry ${entryId}:`, bucketError);
                 // Re-throwing ensures data consistency.
-                throw new Error(`Failed to update bucket usage for delete: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
+                throw new Error(`Bucket usage update failed while deleting time entry ${entryId}: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
               }
             }
           }
@@ -1144,7 +1161,7 @@ export const deleteTimeEntry = withAuth(async (
     });
 
     if (!deletedTimeEntry.entry_id) {
-      throw new Error('Failed to delete time entry: Deleted entry is missing an ID');
+      throw new Error('Time entry delete returned a row without an entry ID.');
     }
 
     await publishTimeEntrySearchEvent('TIME_ENTRY_DELETED', {
@@ -1156,10 +1173,9 @@ export const deleteTimeEntry = withAuth(async (
     });
   } catch (error) {
     console.error('Error deleting time entry:', error);
-    if (error instanceof Error) {
-      throw error;
-    }
-    throw new Error('Failed to delete time entry');
+    const expected = timeSheetActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 });
 
@@ -1172,16 +1188,16 @@ export const getTimeEntryById = withAuth(async (
   user,
   { tenant },
   entryId: string
-): Promise<ITimeEntryWithWorkItem | null> => {
+): Promise<ITimeEntryWithWorkItem | null | TimeSheetActionError> => {
   const { knex: db } = await createTenantKnex();
   const tenantScopedDb = tenantDb(db, tenant) as any;
 
+  try {
   // Check permission for time entry reading
   if (!await hasPermission(user, 'timeentry', 'read', db)) {
     throw new Error('Permission denied: Cannot read time entries');
   }
 
-    try {
       const entry = await tenantScopedDb.table('time_entries')
         .where({ entry_id: entryId })
         .first();
@@ -1311,6 +1327,8 @@ export const getTimeEntryById = withAuth(async (
 
   } catch (error) {
     console.error(`Error fetching time entry by ID ${entryId}:`, error);
-    throw new Error(`Failed to fetch time entry: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    const expected = timeSheetActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 });

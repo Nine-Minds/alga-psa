@@ -29,6 +29,11 @@ import type {
   TemplateWizardData,
 } from '../../types/templateWizard';
 import { useTranslation } from 'react-i18next';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 export type {
   TemplateChecklistItem,
@@ -37,6 +42,10 @@ export type {
   TemplateTask,
   TemplateWizardData,
 } from '../../types/templateWizard';
+
+function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
+  return isActionMessageError(value) || isActionPermissionError(value);
+}
 
 const REQUIRED_STEPS = [0, 5]; // Basics and Review are required
 
@@ -112,21 +121,36 @@ export function TemplateCreationWizard({
           getServices(1, 999), // Load all services
         ]);
         console.log('[TemplateCreationWizard] Loaded statuses:', statuses);
-        setAvailableStatuses(
-          statuses.map((s) => ({
-            status_id: s.status_id,
-            name: s.name,
-            color: s.color || undefined,
-            is_closed: s.is_closed,
-          }))
-        );
-        setTaskTypes(
-          types.map((t) => ({
-            type_key: t.type_key,
-            type_name: t.type_name,
-            color: t.color,
-          }))
-        );
+        if (isReturnedActionError(statuses)) {
+          setErrors((prev) => ({
+            ...prev,
+            [1]: getErrorMessage(statuses),
+          }));
+          setAvailableStatuses([]);
+        } else {
+          setAvailableStatuses(
+            statuses.map((s) => ({
+              status_id: s.status_id,
+              name: s.name,
+              color: s.color || undefined,
+              is_closed: s.is_closed,
+            }))
+          );
+        }
+        if (isReturnedActionError(types)) {
+          setErrors((prev) => ({
+            ...prev,
+            [0]: getErrorMessage(types),
+          }));
+        } else {
+          setTaskTypes(
+            types.map((t) => ({
+              type_key: t.type_key,
+              type_name: t.type_name,
+              color: t.color,
+            }))
+          );
+        }
         const mappedPriorities = priorities.map((p) => ({
           priority_id: p.priority_id,
           priority_name: p.priority_name,
@@ -271,6 +295,13 @@ export function TemplateCreationWizard({
     setIsLoading(true);
     try {
       const templateId = await createTemplateFromWizard(wizardData);
+      if (isReturnedActionError(templateId)) {
+        setErrors((prev) => ({
+          ...prev,
+          [currentStep]: getErrorMessage(templateId),
+        }));
+        return;
+      }
       onComplete?.(templateId);
       onOpenChange(false);
     } catch (error) {

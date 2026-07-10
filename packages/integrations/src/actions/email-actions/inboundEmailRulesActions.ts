@@ -16,6 +16,12 @@ import type {
   InboundEmailRuleCondition,
   InboundEmailRuleEvaluation,
 } from '@alga-psa/shared/services/email/inboundEmailRules/types';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 export interface InboundEmailRuleRecord {
   id: string;
@@ -47,13 +53,42 @@ const RULE_COLUMNS = [
   'updated_at',
 ] as const;
 
+type InboundEmailRulesActionError = ActionMessageError | ActionPermissionError;
+
+class ExpectedInboundEmailRuleError extends Error {
+  constructor(
+    message: string,
+    readonly kind: 'action' | 'permission' = 'action'
+  ) {
+    super(message);
+    this.name = 'ExpectedInboundEmailRuleError';
+  }
+}
+
+function throwInboundEmailRulePermissionError(message: string): never {
+  throw new ExpectedInboundEmailRuleError(message, 'permission');
+}
+
+function throwInboundEmailRuleActionError(message: string): never {
+  throw new ExpectedInboundEmailRuleError(message, 'action');
+}
+
+function toInboundEmailRuleActionError(error: unknown): InboundEmailRulesActionError | null {
+  if (!(error instanceof ExpectedInboundEmailRuleError)) {
+    return null;
+  }
+  return error.kind === 'permission'
+    ? permissionError(error.message)
+    : actionError(error.message);
+}
+
 async function assertEmailSettingsPermission(
   user: unknown,
   action: 'read' | 'create' | 'update' | 'delete'
 ): Promise<void> {
   const permitted = await hasPermission(user as any, 'system_settings', action);
   if (!permitted) {
-    throw new Error('Permission denied: Cannot manage inbound email rules');
+    throwInboundEmailRulePermissionError('Permission denied: Cannot manage inbound email rules');
   }
 }
 
@@ -62,7 +97,7 @@ function parseRuleInput(data: unknown): InboundEmailRuleInput {
   if (!result.success) {
     const issue = result.error.issues[0];
     const path = issue?.path?.length ? ` (${issue.path.join('.')})` : '';
-    throw new Error(`Invalid rule: ${issue?.message ?? 'validation failed'}${path}`);
+    throwInboundEmailRuleActionError(`Invalid rule: ${issue?.message ?? 'validation failed'}${path}`);
   }
   return result.data;
 }
@@ -92,7 +127,7 @@ async function assertReferencedDefaultsExist(
   const found = new Set(rows.map((row: { id: string }) => row.id));
   for (const id of referencedIds) {
     if (!found.has(id)) {
-      throw new Error('Referenced ticket defaults set does not exist or is inactive');
+      throwInboundEmailRuleActionError('Referenced ticket defaults set does not exist or is inactive');
     }
   }
 }
@@ -100,54 +135,66 @@ async function assertReferencedDefaultsExist(
 export const getInboundEmailRules = withAuth(async (
   user,
   { tenant }
-): Promise<{ rules: InboundEmailRuleRecord[] }> => {
-  await assertEmailSettingsPermission(user, 'read');
-  const { knex } = await createTenantKnex();
+): Promise<{ rules: InboundEmailRuleRecord[] } | InboundEmailRulesActionError> => {
+  try {
+    await assertEmailSettingsPermission(user, 'read');
+    const { knex } = await createTenantKnex();
 
-  const rules = await tenantDb(knex, tenant).table('inbound_email_rules')
-    .orderBy('position', 'asc')
-    .orderBy('id', 'asc')
-    .select(...RULE_COLUMNS);
+    const rules = await tenantDb(knex, tenant).table('inbound_email_rules')
+      .orderBy('position', 'asc')
+      .orderBy('id', 'asc')
+      .select(...RULE_COLUMNS);
 
-  return { rules };
+    return { rules };
+  } catch (error) {
+    const expected = toInboundEmailRuleActionError(error);
+    if (expected) return expected;
+    throw error;
+  }
 });
 
 export const createInboundEmailRule = withAuth(async (
   user,
   { tenant },
   data: unknown
-): Promise<{ rule: InboundEmailRuleRecord }> => {
-  await assertEmailSettingsPermission(user, 'create');
-  const input = parseRuleInput(data);
-  const { knex } = await createTenantKnex();
+): Promise<{ rule: InboundEmailRuleRecord } | InboundEmailRulesActionError> => {
+  try {
+    await assertEmailSettingsPermission(user, 'create');
+    const input = parseRuleInput(data);
+    const { knex } = await createTenantKnex();
 
-  const rule = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    await assertReferencedDefaultsExist(trx, tenant, input);
-    const db = tenantDb(trx, tenant);
+    const rule = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      await assertReferencedDefaultsExist(trx, tenant, input);
+      const db = tenantDb(trx, tenant);
 
-    const maxRow = await db.table('inbound_email_rules')
-      .max('position as max')
-      .first();
-    const nextPosition = (Number((maxRow as any)?.max) || 0) + 1;
+      const maxRow = await db.table('inbound_email_rules')
+        .max('position as max')
+        .first();
+      const nextPosition = (Number((maxRow as any)?.max) || 0) + 1;
 
-    const [row] = await db.table('inbound_email_rules')
-      .insert({
-        tenant,
-        name: input.name,
-        is_active: input.is_active,
-        position: nextPosition,
-        provider_ids: input.provider_ids ? JSON.stringify(input.provider_ids) : null,
-        conditions: JSON.stringify(input.conditions),
-        action_type: input.action_type,
-        action_config: JSON.stringify(input.action_config),
-        on_no_match: input.on_no_match,
-        fallback_inbound_ticket_defaults_id: input.fallback_inbound_ticket_defaults_id,
-      })
-      .returning([...RULE_COLUMNS]);
-    return row;
-  });
+      const [row] = await db.table('inbound_email_rules')
+        .insert({
+          tenant,
+          name: input.name,
+          is_active: input.is_active,
+          position: nextPosition,
+          provider_ids: input.provider_ids ? JSON.stringify(input.provider_ids) : null,
+          conditions: JSON.stringify(input.conditions),
+          action_type: input.action_type,
+          action_config: JSON.stringify(input.action_config),
+          on_no_match: input.on_no_match,
+          fallback_inbound_ticket_defaults_id: input.fallback_inbound_ticket_defaults_id,
+        })
+        .returning([...RULE_COLUMNS]);
+      return row;
+    });
 
-  return { rule };
+    return { rule };
+  } catch (error) {
+    const expected = toInboundEmailRuleActionError(error);
+    if (expected) return expected;
+    throw error;
+  }
 });
 
 export const updateInboundEmailRule = withAuth(async (
@@ -155,36 +202,42 @@ export const updateInboundEmailRule = withAuth(async (
   { tenant },
   id: string,
   data: unknown
-): Promise<{ rule: InboundEmailRuleRecord }> => {
-  await assertEmailSettingsPermission(user, 'update');
-  const input = parseRuleInput(data);
-  const { knex } = await createTenantKnex();
+): Promise<{ rule: InboundEmailRuleRecord } | InboundEmailRulesActionError> => {
+  try {
+    await assertEmailSettingsPermission(user, 'update');
+    const input = parseRuleInput(data);
+    const { knex } = await createTenantKnex();
 
-  const rule = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    await assertReferencedDefaultsExist(trx, tenant, input);
+    const rule = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      await assertReferencedDefaultsExist(trx, tenant, input);
 
-    const [row] = await tenantDb(trx, tenant).table('inbound_email_rules')
-      .where({ id })
-      .update({
-        name: input.name,
-        is_active: input.is_active,
-        provider_ids: input.provider_ids ? JSON.stringify(input.provider_ids) : null,
-        conditions: JSON.stringify(input.conditions),
-        action_type: input.action_type,
-        action_config: JSON.stringify(input.action_config),
-        on_no_match: input.on_no_match,
-        fallback_inbound_ticket_defaults_id: input.fallback_inbound_ticket_defaults_id,
-        updated_at: trx.fn.now(),
-      })
-      .returning([...RULE_COLUMNS]);
+      const [row] = await tenantDb(trx, tenant).table('inbound_email_rules')
+        .where({ id })
+        .update({
+          name: input.name,
+          is_active: input.is_active,
+          provider_ids: input.provider_ids ? JSON.stringify(input.provider_ids) : null,
+          conditions: JSON.stringify(input.conditions),
+          action_type: input.action_type,
+          action_config: JSON.stringify(input.action_config),
+          on_no_match: input.on_no_match,
+          fallback_inbound_ticket_defaults_id: input.fallback_inbound_ticket_defaults_id,
+          updated_at: trx.fn.now(),
+        })
+        .returning([...RULE_COLUMNS]);
 
-    if (!row) {
-      throw new Error('Inbound email rule not found');
-    }
-    return row;
-  });
+      if (!row) {
+        throwInboundEmailRuleActionError('Inbound email rule not found');
+      }
+      return row;
+    });
 
-  return { rule };
+    return { rule };
+  } catch (error) {
+    const expected = toInboundEmailRuleActionError(error);
+    if (expected) return expected;
+    throw error;
+  }
 });
 
 export const setInboundEmailRuleActive = withAuth(async (
@@ -192,67 +245,85 @@ export const setInboundEmailRuleActive = withAuth(async (
   { tenant },
   id: string,
   isActive: boolean
-): Promise<{ rule: InboundEmailRuleRecord }> => {
-  await assertEmailSettingsPermission(user, 'update');
-  const { knex } = await createTenantKnex();
+): Promise<{ rule: InboundEmailRuleRecord } | InboundEmailRulesActionError> => {
+  try {
+    await assertEmailSettingsPermission(user, 'update');
+    const { knex } = await createTenantKnex();
 
-  const [rule] = await tenantDb(knex, tenant).table('inbound_email_rules')
-    .where({ id })
-    .update({ is_active: isActive, updated_at: knex.fn.now() })
-    .returning([...RULE_COLUMNS]);
+    const [rule] = await tenantDb(knex, tenant).table('inbound_email_rules')
+      .where({ id })
+      .update({ is_active: isActive, updated_at: knex.fn.now() })
+      .returning([...RULE_COLUMNS]);
 
-  if (!rule) {
-    throw new Error('Inbound email rule not found');
+    if (!rule) {
+      return actionError('Inbound email rule not found');
+    }
+    return { rule };
+  } catch (error) {
+    const expected = toInboundEmailRuleActionError(error);
+    if (expected) return expected;
+    throw error;
   }
-  return { rule };
 });
 
 export const deleteInboundEmailRule = withAuth(async (
   user,
   { tenant },
   id: string
-): Promise<{ success: true }> => {
-  await assertEmailSettingsPermission(user, 'delete');
-  const { knex } = await createTenantKnex();
+): Promise<{ success: true } | InboundEmailRulesActionError> => {
+  try {
+    await assertEmailSettingsPermission(user, 'delete');
+    const { knex } = await createTenantKnex();
 
-  const deleted = await tenantDb(knex, tenant).table('inbound_email_rules').where({ id }).delete();
-  if (!deleted) {
-    throw new Error('Inbound email rule not found');
+    const deleted = await tenantDb(knex, tenant).table('inbound_email_rules').where({ id }).delete();
+    if (!deleted) {
+      return actionError('Inbound email rule not found');
+    }
+    return { success: true };
+  } catch (error) {
+    const expected = toInboundEmailRuleActionError(error);
+    if (expected) return expected;
+    throw error;
   }
-  return { success: true };
 });
 
 export const reorderInboundEmailRules = withAuth(async (
   user,
   { tenant },
   orderedIds: string[]
-): Promise<{ rules: InboundEmailRuleRecord[] }> => {
-  await assertEmailSettingsPermission(user, 'update');
-  if (!Array.isArray(orderedIds) || orderedIds.some((id) => typeof id !== 'string')) {
-    throw new Error('Invalid rule ordering payload');
+): Promise<{ rules: InboundEmailRuleRecord[] } | InboundEmailRulesActionError> => {
+  try {
+    await assertEmailSettingsPermission(user, 'update');
+    if (!Array.isArray(orderedIds) || orderedIds.some((id) => typeof id !== 'string')) {
+      return actionError('Invalid rule ordering payload');
+    }
+    const { knex } = await createTenantKnex();
+
+    const rules = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const db = tenantDb(trx, tenant);
+      const existing = await db.table('inbound_email_rules').select('id');
+      const existingIds = new Set(existing.map((row: { id: string }) => row.id));
+      if (existingIds.size !== orderedIds.length || orderedIds.some((id) => !existingIds.has(id))) {
+        throwInboundEmailRuleActionError('Rule ordering payload does not match the current rule set');
+      }
+
+      for (let index = 0; index < orderedIds.length; index += 1) {
+        await db.table('inbound_email_rules')
+          .where({ id: orderedIds[index] })
+          .update({ position: index + 1, updated_at: trx.fn.now() });
+      }
+
+      return db.table('inbound_email_rules')
+        .orderBy('position', 'asc')
+        .select(...RULE_COLUMNS);
+    });
+
+    return { rules };
+  } catch (error) {
+    const expected = toInboundEmailRuleActionError(error);
+    if (expected) return expected;
+    throw error;
   }
-  const { knex } = await createTenantKnex();
-
-  const rules = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const db = tenantDb(trx, tenant);
-    const existing = await db.table('inbound_email_rules').select('id');
-    const existingIds = new Set(existing.map((row: { id: string }) => row.id));
-    if (existingIds.size !== orderedIds.length || orderedIds.some((id) => !existingIds.has(id))) {
-      throw new Error('Rule ordering payload does not match the current rule set');
-    }
-
-    for (let index = 0; index < orderedIds.length; index += 1) {
-      await db.table('inbound_email_rules')
-        .where({ id: orderedIds[index] })
-        .update({ position: index + 1, updated_at: trx.fn.now() });
-    }
-
-    return db.table('inbound_email_rules')
-      .orderBy('position', 'asc')
-      .select(...RULE_COLUMNS);
-  });
-
-  return { rules };
 });
 
 /**
@@ -262,31 +333,37 @@ export const reorderInboundEmailRules = withAuth(async (
 export const getInboundEmailRuleAiAvailability = withAuth(async (
   user,
   { tenant }
-): Promise<{ enterprise: boolean; aiAddonActive: boolean }> => {
-  await assertEmailSettingsPermission(user, 'read');
-
-  const { isEnterprise } = await import('@alga-psa/core/features');
-  if (!isEnterprise) {
-    return { enterprise: false, aiAddonActive: false };
-  }
-
+): Promise<{ enterprise: boolean; aiAddonActive: boolean } | InboundEmailRulesActionError> => {
   try {
-    const { ADD_ONS, tenantHasAddOn } = await import('@alga-psa/types');
-    const { knex } = await createTenantKnex();
-    const rows = await tenantDb(knex, tenant)
-      .table<{ addon_key: string; expires_at: string | Date | null }>('tenant_addons')
-      .select('addon_key', 'expires_at');
+    await assertEmailSettingsPermission(user, 'read');
 
-    const now = Date.now();
-    const knownAddOns = new Set<string>(Object.values(ADD_ONS));
-    const active = rows
-      .filter((row) => !row.expires_at || new Date(row.expires_at).getTime() > now)
-      .map((row) => row.addon_key)
-      .filter((value): value is Parameters<typeof tenantHasAddOn>[1] => knownAddOns.has(value));
+    const { isEnterprise } = await import('@alga-psa/core/features');
+    if (!isEnterprise) {
+      return { enterprise: false, aiAddonActive: false };
+    }
 
-    return { enterprise: true, aiAddonActive: tenantHasAddOn(active as any, ADD_ONS.AI_ASSISTANT) };
-  } catch {
-    return { enterprise: true, aiAddonActive: false };
+    try {
+      const { ADD_ONS, tenantHasAddOn } = await import('@alga-psa/types');
+      const { knex } = await createTenantKnex();
+      const rows = await tenantDb(knex, tenant)
+        .table<{ addon_key: string; expires_at: string | Date | null }>('tenant_addons')
+        .select('addon_key', 'expires_at');
+
+      const now = Date.now();
+      const knownAddOns = new Set<string>(Object.values(ADD_ONS));
+      const active = rows
+        .filter((row) => !row.expires_at || new Date(row.expires_at).getTime() > now)
+        .map((row) => row.addon_key)
+        .filter((value): value is Parameters<typeof tenantHasAddOn>[1] => knownAddOns.has(value));
+
+      return { enterprise: true, aiAddonActive: tenantHasAddOn(active as any, ADD_ONS.AI_ASSISTANT) };
+    } catch {
+      return { enterprise: true, aiAddonActive: false };
+    }
+  } catch (error) {
+    const expected = toInboundEmailRuleActionError(error);
+    if (expected) return expected;
+    throw error;
   }
 });
 
@@ -299,47 +376,53 @@ export const addClientNameAliasFromRuleTester = withAuth(async (
   { tenant },
   clientId: string,
   rawAlias: string
-): Promise<{ success: true }> => {
-  await assertEmailSettingsPermission(user, 'update');
+): Promise<{ success: true } | InboundEmailRulesActionError> => {
+  try {
+    await assertEmailSettingsPermission(user, 'update');
 
-  const alias = String(rawAlias ?? '').replace(/\s+/g, ' ').trim();
-  if (!alias) {
-    throw new Error('Alias is required');
-  }
-  if (alias.length > 255) {
-    throw new Error('Alias is too long');
-  }
-  if (typeof clientId !== 'string' || !clientId) {
-    throw new Error('Client is required');
-  }
-
-  const { knex } = await createTenantKnex();
-  await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const client = await tenantDb(trx, tenant)
-      .table('clients')
-      .select('client_id')
-      .where({ client_id: clientId })
-      .first();
-    if (!client) {
-      throw new Error('Client not found');
+    const alias = String(rawAlias ?? '').replace(/\s+/g, ' ').trim();
+    if (!alias) {
+      return actionError('Alias is required');
+    }
+    if (alias.length > 255) {
+      return actionError('Alias is too long');
+    }
+    if (typeof clientId !== 'string' || !clientId) {
+      return actionError('Client is required');
     }
 
-    try {
-      await tenantDb(trx, tenant).table('client_name_aliases').insert({
-        tenant,
-        id: trx.raw('gen_random_uuid()'),
-        client_id: clientId,
-        alias,
-      });
-    } catch (e: any) {
-      if (String(e?.code ?? '') === '23505') {
-        throw new Error(`Alias "${alias}" is already assigned to a client.`);
+    const { knex } = await createTenantKnex();
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const client = await tenantDb(trx, tenant)
+        .table('clients')
+        .select('client_id')
+        .where({ client_id: clientId })
+        .first();
+      if (!client) {
+        throwInboundEmailRuleActionError('Client not found');
       }
-      throw e;
-    }
-  });
 
-  return { success: true };
+      try {
+        await tenantDb(trx, tenant).table('client_name_aliases').insert({
+          tenant,
+          id: trx.raw('gen_random_uuid()'),
+          client_id: clientId,
+          alias,
+        });
+      } catch (e: any) {
+        if (String(e?.code ?? '') === '23505') {
+          throwInboundEmailRuleActionError(`Alias "${alias}" is already assigned to a client.`);
+        }
+        throw e;
+      }
+    });
+
+    return { success: true };
+  } catch (error) {
+    const expected = toInboundEmailRuleActionError(error);
+    if (expected) return expected;
+    throw error;
+  }
 });
 
 /**
@@ -351,49 +434,55 @@ export const testInboundEmailRule = withAuth(async (
   user,
   { tenant },
   data: { rule: unknown; sample: unknown }
-): Promise<{ evaluation: InboundEmailRuleEvaluation }> => {
-  await assertEmailSettingsPermission(user, 'read');
-  const ruleInput = parseRuleInput(data.rule);
+): Promise<{ evaluation: InboundEmailRuleEvaluation } | InboundEmailRulesActionError> => {
+  try {
+    await assertEmailSettingsPermission(user, 'read');
+    const ruleInput = parseRuleInput(data.rule);
 
-  const sampleResult = inboundEmailRuleTestSampleSchema.safeParse(data.sample ?? {});
-  if (!sampleResult.success) {
-    throw new Error('Invalid sample email');
+    const sampleResult = inboundEmailRuleTestSampleSchema.safeParse(data.sample ?? {});
+    if (!sampleResult.success) {
+      return actionError('Invalid sample email');
+    }
+    const sample: InboundEmailRuleTestSample = sampleResult.data;
+
+    const draftRule: InboundEmailRule = {
+      tenant,
+      id: 'draft-rule',
+      name: ruleInput.name,
+      is_active: true,
+      position: 1,
+      // The tester has no receiving mailbox; provider filtering is not part of
+      // what it exercises.
+      provider_ids: null,
+      // Cast: zod's inferred object type loses required-ness under consumers
+      // compiled with strict: false (e.g. ee/server), though the parsed value
+      // always has every field.
+      conditions: ruleInput.conditions as InboundEmailRuleCondition[],
+      action_type: ruleInput.action_type,
+      action_config: ruleInput.action_config,
+      on_no_match: ruleInput.on_no_match,
+      fallback_inbound_ticket_defaults_id: ruleInput.fallback_inbound_ticket_defaults_id,
+    };
+
+    const evaluation = await evaluateInboundEmailRules({
+      tenantId: tenant,
+      providerId: 'rule-tester',
+      emailData: {
+        id: 'rule-tester-sample',
+        from: { email: sample.from },
+        to: sample.to ? [{ email: sample.to }] : [],
+        subject: sample.subject,
+        body: { text: sample.bodyText },
+      },
+      deps: {
+        loadRules: async () => [draftRule],
+      },
+    });
+
+    return { evaluation };
+  } catch (error) {
+    const expected = toInboundEmailRuleActionError(error);
+    if (expected) return expected;
+    throw error;
   }
-  const sample: InboundEmailRuleTestSample = sampleResult.data;
-
-  const draftRule: InboundEmailRule = {
-    tenant,
-    id: 'draft-rule',
-    name: ruleInput.name,
-    is_active: true,
-    position: 1,
-    // The tester has no receiving mailbox; provider filtering is not part of
-    // what it exercises.
-    provider_ids: null,
-    // Cast: zod's inferred object type loses required-ness under consumers
-    // compiled with strict: false (e.g. ee/server), though the parsed value
-    // always has every field.
-    conditions: ruleInput.conditions as InboundEmailRuleCondition[],
-    action_type: ruleInput.action_type,
-    action_config: ruleInput.action_config,
-    on_no_match: ruleInput.on_no_match,
-    fallback_inbound_ticket_defaults_id: ruleInput.fallback_inbound_ticket_defaults_id,
-  };
-
-  const evaluation = await evaluateInboundEmailRules({
-    tenantId: tenant,
-    providerId: 'rule-tester',
-    emailData: {
-      id: 'rule-tester-sample',
-      from: { email: sample.from },
-      to: sample.to ? [{ email: sample.to }] : [],
-      subject: sample.subject,
-      body: { text: sample.bodyText },
-    },
-    deps: {
-      loadRules: async () => [draftRule],
-    },
-  });
-
-  return { evaluation };
 });

@@ -3,6 +3,7 @@ import { NextRequest } from 'next/server';
 import { v4 as uuid } from 'uuid';
 
 import { getAssetDetailBundle } from '@alga-psa/assets/actions/assetActions';
+import { isAssetActionError } from '@alga-psa/assets/actions/assetActionErrors';
 import { getClientById, getContactByContactNameId } from '@alga-psa/clients/actions';
 import { getProject } from '@alga-psa/projects/actions/projectActions';
 import { getTicketById } from '@alga-psa/tickets/actions/ticketActions';
@@ -2447,6 +2448,9 @@ export class ChatCompletionsService {
         }
         case 'asset': {
           const bundle = await getAssetDetailBundle(record.id);
+          if (isAssetActionError(bundle)) {
+            return null;
+          }
           if (!bundle.asset) {
             return null;
           }
@@ -2625,6 +2629,7 @@ export class ChatCompletionsService {
           }
           case 'asset': {
             const bundle = await getAssetDetailBundle(mention.id);
+            if (isAssetActionError(bundle)) return null;
             if (!bundle.asset) return null;
             const asset = bundle.asset as any;
             const lines: string[] = [];

@@ -12,7 +12,7 @@ import { LOCALE_CONFIG, filterPseudoLocales, type SupportedLocale } from '@alga-
 import {
   getTenantLocaleSettingsAction,
   updateTenantDefaultLocaleAction,
-} from '@alga-psa/tenancy/actions';
+} from '@alga-psa/tenancy/actions/tenant-actions/tenantLocaleActions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 const MspLanguageSettings = () => {

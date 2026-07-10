@@ -87,9 +87,9 @@ describe('DraftInvoiceDetailsCard', () => {
   });
 
   it('surfaces duplicate invoice number errors inline', async () => {
-    updateDraftInvoicePropertiesMock.mockRejectedValue(
-      new Error('Invoice number already exists. Choose a different number.')
-    );
+    updateDraftInvoicePropertiesMock.mockResolvedValue({
+      actionError: 'Invoice number already exists. Choose a different number.',
+    });
 
     render(<DraftInvoiceDetailsCard invoice={draftInvoice as any} />);
 

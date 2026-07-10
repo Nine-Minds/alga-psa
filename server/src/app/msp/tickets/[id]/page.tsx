@@ -27,9 +27,10 @@ import type { TicketScreenBootstrap } from '@alga-psa/tickets/lib/ticketScreenBo
 import { getAdjacentTicketIds } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { parseReturnFilters, DEFAULT_TICKET_LIST_FILTERS } from '@alga-psa/tickets/lib/ticketFilterUtils';
 import { listEntityAssets } from '@alga-psa/assets/actions/assetActions';
+import { unwrapAssetActionResult } from '@alga-psa/assets/actions/assetActionErrors';
 import { getLinkedTasksForTicketAction } from '@alga-psa/projects/actions/projectTaskActions';
-import { findTagsByEntityId } from '@alga-psa/tags/actions';
-import { getTeams } from '@alga-psa/teams/actions';
+import { findTagsByEntityId, isTagActionError } from '@alga-psa/tags/actions';
+import { getTeams, isTeamActionError } from '@alga-psa/teams/actions';
 import { fetchTimeEntriesForTicket } from '@alga-psa/scheduling/actions/timeEntryTicketActions';
 import { AIChatContextBoundary } from '@product/chat/context';
 import { getCurrentTenantProduct } from '@/lib/productAccess';
@@ -37,6 +38,24 @@ import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import type { Metadata } from 'next';
 
 const getCachedTicket = cache((id: string) => getTicketById(id));
+
+function getActionErrorMessage(value: unknown): string | null {
+  if (typeof value !== 'object' || value === null) {
+    return null;
+  }
+  const candidate = value as { actionError?: unknown; permissionError?: unknown };
+  if (typeof candidate.permissionError === 'string') {
+    return candidate.permissionError;
+  }
+  if (typeof candidate.actionError === 'string') {
+    return candidate.actionError;
+  }
+  return null;
+}
+
+function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
+  return getActionErrorMessage(value) !== null;
+}
 
 export async function generateMetadata({ params }: TicketDetailsPageProps): Promise<Metadata> {
   try {
@@ -103,6 +122,17 @@ export default async function TicketDetailsPage({ params, searchParams }: Ticket
       findTagsByEntityId(id, 'ticket').catch(() => null),
     ]);
 
+    const ticketDataError = getActionErrorMessage(ticketData);
+    if (ticketDataError) {
+      return <div id="ticket-error-message">{ticketDataError}</div>;
+    }
+    const safeLayoutPreference = isReturnedActionError(layoutPreference) ? null : layoutPreference;
+    const safeTeams = isTeamActionError(teams) ? null : teams;
+    const safeTags = isTagActionError(tags) ? [] : tags;
+    if (isTagActionError(tags)) {
+      console.error('[TicketDetailsPage] Failed to load tags:', tags);
+    }
+
     // Slower per-tile queries are STARTED here but not awaited: the promises
     // stream to the client where each tile resolves its own via React `use()`
     // behind a <Suspense> skeleton. Rejections are normalized server-side so a
@@ -111,30 +141,36 @@ export default async function TicketDetailsPage({ params, searchParams }: Ticket
       .map((comment: { comment_id?: string | null }) => comment.comment_id)
       .filter((commentId: string | null | undefined): commentId is string => Boolean(commentId));
     const bootstrap: TicketScreenBootstrap = {
-      layoutPreference,
+      layoutPreference: safeLayoutPreference,
       checklistItems,
       autoCloseState,
       canViewCommentMetadataDebug: permissions ? hasAdminSettingsViewAccess(permissions) : null,
-      teams,
+      teams: safeTeams,
       displaySettings,
-      tags,
+      tags: safeTags,
       streams: {
         timelineEntries: getTicketTimelineEntries(id, {
           order: 'asc',
           includeTimeEntries: true,
           includeAlerts: true,
         })
-          .then((entries) => entries.filter((entry) => entry.type !== 'comment'))
+          .then((entries) => isReturnedActionError(entries) ? [] : entries.filter((entry) => entry.type !== 'comment'))
           .catch(() => []),
         commentReactions: (commentIds.length
           ? getCommentsReactionsBatch(commentIds)
           : Promise.resolve({ reactions: {}, userNames: {} })
         ).catch(() => ({ reactions: {}, userNames: {} })),
-        scheduleEntries: (isAlgaDesk ? Promise.resolve([]) : getTicketScheduleEntries(id)).catch(() => []),
-        interactions: getTicketInteractions(id, { limit: 5 }).catch(() => []),
-        billingRollup: (isAlgaDesk ? Promise.resolve(null) : getTicketBillingRollup(id)).catch(() => null),
+        scheduleEntries: (isAlgaDesk ? Promise.resolve([]) : getTicketScheduleEntries(id))
+          .then((entries) => isReturnedActionError(entries) ? [] : entries)
+          .catch(() => []),
+        interactions: getTicketInteractions(id, { limit: 5 })
+          .then((interactions) => isReturnedActionError(interactions) ? [] : interactions)
+          .catch(() => []),
+        billingRollup: (isAlgaDesk ? Promise.resolve(null) : getTicketBillingRollup(id))
+          .then((rollup) => isReturnedActionError(rollup) ? null : rollup)
+          .catch(() => null),
         slaPolicyName: (ticketData.ticket?.sla_policy_id
-          ? getTicketSlaPolicyName(id).then((result) => result.policyName ?? null)
+          ? getTicketSlaPolicyName(id).then((result) => isReturnedActionError(result) ? null : result.policyName ?? null)
           : Promise.resolve(null)
         ).catch(() => null),
         timeEntries: fetchTimeEntriesForTicket(id).catch(() => null),
@@ -147,7 +183,7 @@ export default async function TicketDetailsPage({ params, searchParams }: Ticket
     };
 
     // Streams consumed OUTSIDE the TicketDetails tree (page-level slots).
-    const associatedAssetsStream = listEntityAssets(id, 'ticket').catch(() => []);
+    const associatedAssetsStream = listEntityAssets(id, 'ticket').then(unwrapAssetActionResult).catch(() => []);
     const linkedTasksStream = isAlgaDesk ? undefined : getLinkedTasksForTicketAction(id).catch(() => []);
 
     const associatedAssets =

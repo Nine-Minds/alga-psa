@@ -5,13 +5,18 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Button } from '@alga-psa/ui/components/Button';
-import { getCurrentUser, getUserRolesWithPermissions, getUserClientId } from '@alga-psa/user-composition/actions';
-import { getClientById } from '@alga-psa/clients/actions';
-import { updateClient, uploadClientLogo, deleteClientLogo } from '@alga-psa/clients/actions';
+import { getCurrentUser, getUserRolesWithPermissions, getUserClientId } from '@alga-psa/user-composition/actions/userQueryActions';
+import { getClientById } from '@alga-psa/clients/actions/queryActions';
+import { updateClient, uploadClientLogo, deleteClientLogo } from '@alga-psa/clients/actions/clientActions';
 import { IClient } from '@alga-psa/types';
 import { IPermission } from '@alga-psa/types';
 import EntityImageUpload from '@alga-psa/ui/components/EntityImageUpload';
@@ -20,6 +25,9 @@ import { Text, Flex } from '@radix-ui/themes';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import { FormFieldComponent } from '@alga-psa/ui/ui-reflection/types';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
+
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 const TextDetailItem: React.FC<{
   label: string;
@@ -166,6 +174,11 @@ export function ClientDetailsSettings() {
           annual_revenue: clientDetails.properties?.annual_revenue
         }
       });
+      if (isReturnedActionError(updatedClient)) {
+        handleError(updatedClient);
+        return;
+      }
+
       setClientDetails(updatedClient);
       setHasUnsavedChanges(false);
       toast.success(tProfile('clientSettings.messages.updateSuccess'));

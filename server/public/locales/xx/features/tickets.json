@@ -295,7 +295,9 @@
     "addCommentFailed": "11111",
     "deleteTimeEntryFailed": "11111",
     "timeEntryDeleted": "11111",
-    "closeFailed": "11111"
+    "closeFailed": "11111",
+    "loadCommentsFailed": "11111",
+    "updateTicketFailed": "11111"
   },
   "conversation": {
     "comments": "11111",

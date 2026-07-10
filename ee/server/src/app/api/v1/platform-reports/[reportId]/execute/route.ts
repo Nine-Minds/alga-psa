@@ -133,21 +133,21 @@ export async function POST(
         error.message.includes('Authentication')
       ) {
         return NextResponse.json(
-          { success: false, error: error.message },
+          { success: false, error: 'Access denied to platform reports.' },
           { status: 403 }
         );
       }
 
       if (error.message.includes('not found')) {
         return NextResponse.json(
-          { success: false, error: error.message },
+          { success: false, error: 'Platform report not found.' },
           { status: 404 }
         );
       }
 
       if (error.message.includes('inactive')) {
         return NextResponse.json(
-          { success: false, error: error.message },
+          { success: false, error: 'Platform report is inactive.' },
           { status: 400 }
         );
       }
@@ -155,7 +155,7 @@ export async function POST(
       // Report permission errors (blocklist violations)
       if (error.name === 'ReportPermissionError') {
         return NextResponse.json(
-          { success: false, error: error.message },
+          { success: false, error: 'Report execution was blocked by the report security policy.' },
           { status: 400 }
         );
       }
@@ -163,7 +163,7 @@ export async function POST(
       // Report execution errors
       if (error.name === 'ReportExecutionError') {
         return NextResponse.json(
-          { success: false, error: error.message },
+          { success: false, error: 'Report execution failed. Please review the report parameters and try again.' },
           { status: 500 }
         );
       }

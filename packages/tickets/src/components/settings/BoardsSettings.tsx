@@ -22,19 +22,30 @@ import {
   createBoardAutoCloseRule,
   updateBoardAutoCloseRule,
   deleteBoardAutoCloseRule,
-} from '@alga-psa/tickets/actions';
-import type { IBoardAutoCloseRule, BoardListStats } from '@alga-psa/tickets/actions';
+} from '../../actions/close-rules/closeRuleActions';
+import type { IBoardAutoCloseRule } from '../../actions/close-rules/closeRuleActions';
+import type { BoardListStats } from '../../actions/board-actions/boardActions';
 import { CLOSE_RULE_REQUIRED_FIELDS, CLOSE_RULE_REQUIRED_FIELD_LABELS } from '@alga-psa/tickets/lib';
-import { getAvailableReferenceData, importReferenceData, checkImportConflicts, ImportConflict } from '@alga-psa/reference-data/actions';
-import { getAllPriorities } from '@alga-psa/reference-data/actions';
-import { getAllUsers, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
+import { getAvailableReferenceData, importReferenceData, checkImportConflicts, ImportConflict } from '@alga-psa/reference-data/actions/referenceDataActions';
+import { getAllPriorities } from '@alga-psa/reference-data/actions/priorityActions';
+import { getAllUsers } from '@alga-psa/user-composition/actions/userQueryActions';
+import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions/avatarActions';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
-import { getTeams, getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
+import { getTeams } from '@alga-psa/teams/actions/team-actions/teamActions';
+import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions/team-actions/avatarActions';
+import { isTeamActionError } from '@alga-psa/teams/actions/team-actions/teamActionErrors';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
@@ -56,6 +67,10 @@ import {
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 type TicketStatusSeedMode = 'copy_existing' | 'create_inline';
+
+const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
+  isActionMessageError(value) || isActionPermissionError(value);
+
 type ManagedTicketStatus = {
   status_id?: string;
   temp_id: string;
@@ -514,6 +529,11 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
   const fetchTeams = async () => {
     try {
       const allTeams = await getTeams();
+      if (isTeamActionError(allTeams)) {
+        console.warn('Cannot load teams for board settings:', allTeams);
+        setTeams([]);
+        return;
+      }
       setTeams(allTeams);
     } catch (error) {
       console.error('Error fetching teams:', error);
@@ -547,6 +567,10 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
 
     try {
       const boardStatuses = await getBoardTicketStatuses(boardId);
+      if (isReturnedActionError(boardStatuses)) {
+        setDialogError(getErrorMessage(boardStatuses));
+        return;
+      }
       setFormData((prev) => ({
         ...prev,
         ticket_statuses: mapBoardStatusesToManagedStatuses(boardStatuses),
@@ -868,7 +892,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
       }
 
       if (editingBoard) {
-        await updateBoard(editingBoard.board_id!, {
+        const updatedBoard = await updateBoard(editingBoard.board_id!, {
           board_name: formData.board_name,
           description: formData.description,
           display_order: formData.display_order,
@@ -888,11 +912,23 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
           enable_live_ticket_timer: formData.enable_live_ticket_timer,
           ticket_statuses: normalizedTicketStatuses,
         });
+        if (isReturnedActionError(updatedBoard)) {
+          setDialogError(getErrorMessage(updatedBoard));
+          return;
+        }
 
-        await upsertBoardCloseRules(editingBoard.board_id!, closeRulesForm);
+        const closeRulesResult = await upsertBoardCloseRules(editingBoard.board_id!, closeRulesForm);
+        if (isReturnedActionError(closeRulesResult)) {
+          failInSection('automation', getErrorMessage(closeRulesResult));
+          return;
+        }
 
         for (const ruleId of removedAutoCloseRuleIds) {
-          await deleteBoardAutoCloseRule(ruleId);
+          const deleteRuleResult = await deleteBoardAutoCloseRule(ruleId);
+          if (isReturnedActionError(deleteRuleResult)) {
+            failInSection('automation', getErrorMessage(deleteRuleResult));
+            return;
+          }
         }
         for (const rule of autoCloseRulesForm) {
           const payload = {
@@ -903,9 +939,17 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
             is_enabled: rule.is_enabled,
           };
           if (rule.rule_id) {
-            await updateBoardAutoCloseRule(rule.rule_id, payload);
+            const updateRuleResult = await updateBoardAutoCloseRule(rule.rule_id, payload);
+            if (isReturnedActionError(updateRuleResult)) {
+              failInSection('automation', getErrorMessage(updateRuleResult));
+              return;
+            }
           } else {
-            await createBoardAutoCloseRule(editingBoard.board_id!, payload);
+            const createRuleResult = await createBoardAutoCloseRule(editingBoard.board_id!, payload);
+            if (isReturnedActionError(createRuleResult)) {
+              failInSection('automation', getErrorMessage(createRuleResult));
+              return;
+            }
           }
         }
 
@@ -920,7 +964,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
         await reloadBoardEditorData(editingBoard);
         return;
       } else {
-        await createBoard({
+        const createdBoard = await createBoard({
           board_name: formData.board_name,
           description: formData.description,
           display_order: formData.display_order,
@@ -946,6 +990,10 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
             : null,
           ticket_statuses: shouldPersistManagedStatuses ? normalizedTicketStatuses : undefined,
         });
+        if (isReturnedActionError(createdBoard)) {
+          setDialogError(getErrorMessage(createdBoard));
+          return;
+        }
         toast.success(t('ticketing.boards.messages.success.created'));
       }
 
@@ -1006,7 +1054,7 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
           const boardName = resolution?.newName || board.board_name;
           const displayOrder = resolution?.newOrder || board.display_order;
 
-          await createBoard({
+          const createdBoard = await createBoard({
             board_name: boardName,
             description: board.description || '',
             display_order: displayOrder,
@@ -1015,6 +1063,13 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
             priority_type: 'itil',
             enable_live_ticket_timer: true,
           });
+          if (isReturnedActionError(createdBoard)) {
+            allResults.skipped.push({
+              name: board.board_name,
+              reason: getErrorMessage(createdBoard)
+            });
+            continue;
+          }
 
           allResults.imported.push({
             board_name: boardName,

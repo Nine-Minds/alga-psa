@@ -668,7 +668,8 @@
           "resetProviders": "Google-providers resetten",
           "resetting": "Resetten…",
           "save": "Opslaan",
-          "saving": "Opslaan…"
+          "saving": "Opslaan…",
+          "disconnectProviders": "Disconnect Google providers"
         },
         "afterSaveNotice": "Ga na het opslaan naar de integraties voor inkomende e-mail en agenda en autoriseer de providers opnieuw. Bestaande Google-providers worden niet gemigreerd.",
         "consoleLink": "Google Cloud Console",
@@ -693,7 +694,8 @@
           "sectionTitle": "OAuth-app",
           "shareApp": "Dezelfde OAuth-app gebruiken voor Gmail en Calendar",
           "shareAppHelp": "Aanbevolen. U kunt nog steeds afzonderlijke Google-accounts per integratie autoriseren.",
-          "storedSecret": "Opgeslagen secret: {{secret}}"
+          "storedSecret": "Opgeslagen secret: {{secret}}",
+          "locationHelp": "Google Cloud: APIs & Services > Credentials > OAuth 2.0 Client IDs."
         },
         "redirectUrisLabel": "Redirect-URI's (kopiëren naar de Google OAuth-client)",
         "scopes": "Scopes",
@@ -702,7 +704,8 @@
         "serviceAccount": {
           "alreadyStored": "Er is al een service-accountsleutel opgeslagen (niet weergegeven).",
           "description": "Plak de JSON-sleutel van het tenant-eigen service account dat wordt gebruikt om Pub/Sub te provisioneren.",
-          "title": "Pub/Sub-service-account (vereist voor Gmail)"
+          "title": "Pub/Sub-service-account (vereist voor Gmail)",
+          "locationHelp": "Google Cloud: IAM & Admin > Service Accounts > Keys > Add key > JSON."
         },
         "setupGuide": "Installatiehandleiding",
         "title": "Google",
@@ -714,7 +717,16 @@
           "savedDescription": "De Google-configuratie van de tenant is succesvol bijgewerkt.",
           "savedTitle": "Google-instellingen opgeslagen",
           "unknownError": "Onbekende fout"
-        }
+        },
+        "disconnectDialog": {
+          "cancel": "Keep providers connected",
+          "message": "Existing Gmail and Google Calendar provider connections will be marked disconnected and must be re-authorized. Stored Google credentials stay in place.",
+          "title": "Disconnect Google providers?"
+        },
+        "oauthValues": {
+          "title": "Google OAuth app values"
+        },
+        "redirectUrisHelp": "Staff sign-in uses the OAuth client saved below. Add the listed Gmail and Calendar callback URLs in Google Cloud."
       }
     },
     "hudu": {
@@ -1049,7 +1061,8 @@
           "openTeamsSetup": "Teams-installatie openen",
           "refresh": "Vernieuwen",
           "resetProviders": "Microsoft-providers resetten",
-          "resetting": "Resetten…"
+          "resetting": "Resetten…",
+          "disconnectProviders": "Disconnect Microsoft providers"
         },
         "archiveDialog": {
           "archiving": "Archiveren…",
@@ -1065,19 +1078,21 @@
           "needsAttention": "Vereist aandacht",
           "saving": "Opslaan…",
           "selectProfile": "Selecteer een profiel",
-          "unbound": "Niet gekoppeld"
+          "unbound": "Niet gekoppeld",
+          "noCapablePlaceholder": "No enabled profile"
         },
         "bindings": {
-          "summaryBound": "{{consumer}} is gekoppeld aan {{profile}}.",
+          "summaryBound": "Current: {{profile}}.",
           "summaryNone": "Momenteel is er geen Microsoft-profiel gekoppeld aan {{consumer}}.",
           "summaryUnavailable": "{{consumer}} is gekoppeld aan een niet-beschikbaar profiel.",
-          "warningArchived": "{{consumer}} is nog steeds gekoppeld aan een gearchiveerd profiel. Koppel opnieuw aan een actief profiel.",
+          "warningArchived": "{{profile}} is archived. Choose an active Microsoft app.",
           "warningNoBinding": "Er is nog geen {{consumer}}-binding geconfigureerd.",
           "warningNotReady": "{{consumer}} is gekoppeld aan {{profile}}, maar dat profiel moet nog worden geconfigureerd.",
-          "warningProfileMissing": "{{consumer}} is gekoppeld aan een profiel dat niet meer beschikbaar is. Koppel opnieuw aan een actief profiel."
+          "warningProfileMissing": "{{consumer}} is gekoppeld aan een profiel dat niet meer beschikbaar is. Koppel opnieuw aan een actief profiel.",
+          "warningMissingCapability": "{{profile}} is selected, but it cannot handle {{consumer}} yet. Edit the app and turn on {{consumer}}, or choose another app.",
+          "warningNoApps": "Create a Microsoft app, turn on {{consumer}}, then choose it here.",
+          "warningNoCapable": "No app can handle {{consumer}} yet. Edit a Microsoft app and turn on {{consumer}}, then choose it here."
         },
-        "bindingsAlertCe": "Expliciete bindingen zijn de bron van waarheid voor de selectie van het MSP SSO-profiel. Configureer aanmeldingsdomeinen apart na het kiezen van het gekoppelde profiel.",
-        "bindingsAlertEe": "Expliciete bindingen zijn de bron van waarheid voor de selectie van MSP SSO-, e-mail-, agenda- en Teams-profielen.",
         "consumerBindings": {
           "descriptionCe": "Koppel één Microsoft-profiel aan MSP SSO voor aanmelding en gebruik van aanmeldingsdomein.",
           "descriptionEe": "Koppel één Microsoft-profiel per ondersteunde consumer. Het opnieuw toewijzen van één consumer wijzigt de andere niet.",
@@ -1123,7 +1138,9 @@
           "setDefault": "Dit profiel instellen als standaard Microsoft-profiel",
           "setDefaultHelp": "Standaardprofielen blijven beschikbaar voor profielbeheer-workflows en migratieveilige metadata, niet voor consumer-routing.",
           "storedSecretHint": "Opgeslagen secret: {{secret}}. Laat dit veld leeg om het ongewijzigd te houden.",
-          "tenantId": "Tenant ID"
+          "tenantId": "Tenant ID",
+          "capabilities": "Enabled capabilities",
+          "capabilitiesHelp": "Only enabled capabilities can bind to this Microsoft app."
         },
         "empty": {
           "createButton": "Microsoft-profiel aanmaken",
@@ -1177,7 +1194,9 @@
           "storedSecret": "Opgeslagen secret",
           "teamsAppIdUri": "Teams Application ID URI",
           "tenantIdLabel": "Tenant ID:",
-          "updating": "Bijwerken…"
+          "updating": "Bijwerken…",
+          "enabledCapabilities": "Enabled capabilities",
+          "noEnabledCapabilities": "No enabled capabilities"
         },
         "providerReconnect": {
           "description": "Gebruik dit als u inloggegevens roteert of opzettelijk Outlook-e-mail of de agenda aan een ander Microsoft-profiel koppelt.",
@@ -1220,6 +1239,15 @@
           "clientSecretRequired": "Microsoft OAuth Client Secret is verplicht",
           "displayNameRequired": "Weergavenaam van Microsoft-profiel is verplicht",
           "tenantIdRequired": "Microsoft Tenant ID is verplicht"
+        },
+        "disconnectDialog": {
+          "cancel": "Keep providers connected",
+          "message": "Existing Outlook email and calendar provider connections will be marked disconnected and must be re-authorized. Microsoft profiles and service bindings stay in place.",
+          "title": "Disconnect Microsoft providers?"
+        },
+        "profileLibrary": {
+          "description": "Named Microsoft app registrations that services can bind to.",
+          "title": "Profile library"
         }
       }
     },
@@ -1336,7 +1364,8 @@
         "makeDefault": "Als standaard instellen",
         "noDefault": "Geen standaard",
         "saving": "Opslaan…",
-        "undepositedFunds": "Niet-gestorte middelen (standaard)"
+        "undepositedFunds": "Niet-gestorte middelen (standaard)",
+        "catalogLoadError": "Failed to load QuickBooks sync configuration options."
       }
     },
     "rmm": {
@@ -1864,6 +1893,11 @@
         },
         "descriptionCe": "Registreer adviesdomeinen voor de detectie van MSP-aanmeldings-SSO. Eigendomsverificatie wordt niet afgedwongen in Community Edition, en onbeheerde domeinen vallen terug op providers op applicatieniveau van Nine Minds.",
         "descriptionEe": "Beheer de levenscyclus van domeinclaims voor de detectie van MSP-aanmeldings-SSO-providers. Niet-geclaimde of niet-geschikte domeinen vallen terug op providers op applicatieniveau van Nine Minds.",
+        "moved": {
+          "title": "MSP SSO Login Domains",
+          "body": "Single sign-on settings, including login-domain claims, have moved to Security → Single Sign-On.",
+          "cta": "Open Single Sign-On settings"
+        },
         "dnsHost": "Host:",
         "dnsInstructions": "Voeg het DNS TXT-record toe en klik vervolgens op Verifiëren:",
         "dnsValue": "Waarde:",
@@ -2647,6 +2681,29 @@
         "secretKeyFormat": "Secret key moet beginnen met sk_",
         "publishableKeyFormat": "Publishable key moet beginnen met pk_"
       }
+    },
+    "providersWorkbench": {
+      "badges": {
+        "loading": "Loading",
+        "needsAttention": "Needs attention",
+        "needsSetup": "Needs setup",
+        "notConfigured": "Not configured",
+        "ready": "Ready"
+      },
+      "descriptionCe": "Set up the provider path your tenant uses. Configure both only when email or SSO workflows require both ecosystems.",
+      "descriptionEe": "Set up the provider path your tenant uses. Configure both only when email, calendar, SSO, or Teams workflows require both ecosystems.",
+      "eyebrow": "Provider setup",
+      "google": {
+        "description": "Gmail inbound email and Google Calendar.",
+        "label": "Google"
+      },
+      "microsoft": {
+        "descriptionCe": "MSP SSO, Microsoft sign-in, and login-domain discovery.",
+        "descriptionEe": "MSP SSO, Outlook email, calendar sync, and Teams.",
+        "label": "Microsoft"
+      },
+      "selectorLabel": "Provider credential paths",
+      "title": "Provider Credentials"
     }
   }
 }

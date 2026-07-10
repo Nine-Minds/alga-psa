@@ -18,6 +18,14 @@ import { TextEditor } from '@alga-psa/ui/editor';
 import { parseTicketRichTextContent, serializeTicketRichTextContent } from '@alga-psa/tickets/lib';
 import type { PartialBlock } from '@blocknote/core';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 function blockNoteHasText(blocks: PartialBlock[]): boolean {
   for (const block of blocks) {
@@ -138,6 +146,20 @@ export function ClientAddTicket({
     return validationErrors;
   };
 
+  const mapCreateTicketError = (message: string) => {
+    const errorMap: Record<string, string> = {
+      'Failed to create ticket': t('messages.failedToCreateTicket'),
+      'Contact not associated with a client': t('messages.contactNotAssociatedWithClient'),
+      'User not associated with a contact': t('messages.userNotAssociatedWithContact'),
+      'Not authenticated': t('messages.notAuthenticated'),
+      'User ID not found in session': t('messages.userNotFound'),
+      'Tenant not found in session. Please log out and log back in.': t('messages.tenantNotFound'),
+      'Selected visibility group does not allow any boards': noBoardsAvailableMessage,
+    };
+
+    return errorMap[message] || message;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsSubmitting(true);
@@ -160,7 +182,12 @@ export function ClientAddTicket({
         formData.append('asset_id', assetId);
       }
 
-      await createClientTicket(formData);
+      const result = await createClientTicket(formData);
+      if (isReturnedActionError(result)) {
+        setError(mapCreateTicketError(getErrorMessage(result)));
+        return;
+      }
+
       resetForm();
       onOpenChange(false);
       onTicketAdded?.();
@@ -169,16 +196,7 @@ export function ClientAddTicket({
       // Map backend error messages to translation keys
       let errorMessage = t('create.errors.createFailed');
       if (error instanceof Error) {
-        const errorMap: Record<string, string> = {
-          'Failed to create ticket': t('messages.failedToCreateTicket'),
-          'Contact not associated with a client': t('messages.contactNotAssociatedWithClient'),
-          'User not associated with a contact': t('messages.userNotAssociatedWithContact'),
-          'Not authenticated': t('messages.notAuthenticated'),
-          'User ID not found in session': t('messages.userNotFound'),
-          'Tenant not found in session. Please log out and log back in.': t('messages.tenantNotFound'),
-          'Selected visibility group does not allow any boards': noBoardsAvailableMessage,
-        };
-        errorMessage = errorMap[error.message] || error.message;
+        errorMessage = mapCreateTicketError(error.message);
       }
       setError(errorMessage);
     } finally {

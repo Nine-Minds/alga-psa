@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
 import '../../../../../test-utils/nextApiMock';
+import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { tenantDb } from '@alga-psa/db';
 import { TestContext } from '../../../../../test-utils/testContext';
 import {
@@ -14,7 +15,6 @@ import { generateManualInvoice } from '@alga-psa/billing/actions';
 import { finalizeInvoice } from '@alga-psa/billing/actions/invoiceModification';
 import { BillingEngine } from '@alga-psa/billing/services';
 import { TextEncoder as NodeTextEncoder } from 'util';
-import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { v4 as uuidv4 } from 'uuid';
 import { Temporal } from '@js-temporal/polyfill';
 import type { IClient } from 'server/src/interfaces/client.interfaces';
@@ -22,7 +22,7 @@ import type { IBillingCharge, IBillingResult } from 'server/src/interfaces/billi
 
 
 vi.mock('@alga-psa/auth', async () => {
-  const { createAuthModuleMock } = await import('../../../../../test-utils/testMocks');
+  const { createAuthModuleMock } = await import('../../../../../test-utils/authModuleMock');
   return createAuthModuleMock();
 });
 
@@ -53,7 +53,8 @@ vi.mock('@alga-psa/core/logger', () => ({
   }
 }));
 
-vi.mock('@alga-psa/core/secrets', () => ({
+vi.mock('@alga-psa/core/secrets', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   getSecretProviderInstance: () => ({
     getSecret: async () => undefined,
     getAppSecret: async () => undefined,
@@ -63,7 +64,8 @@ vi.mock('@alga-psa/core/secrets', () => ({
   })
 }));
 
-vi.mock('@alga-psa/core', () => ({
+vi.mock('@alga-psa/core', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   getSecretProviderInstance: () => ({
     getSecret: async () => undefined,
     getAppSecret: async () => undefined,

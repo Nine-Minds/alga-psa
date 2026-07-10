@@ -20,7 +20,7 @@ import {
 } from '@alga-psa/billing/actions/contractWizardActions';
 import { getDefaultBillingSettings } from '@alga-psa/billing/actions/billingSettingsActions';
 import { getClientByIdForBilling } from '@alga-psa/billing/actions/billingClientsActions';
-import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { getErrorMessage, handleError, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import {
   getUnsupportedRecurringAuthoringCombination,
   getUnsupportedRecurringAuthoringCombinationMessage,
@@ -299,6 +299,11 @@ export function ContractWizard({
     setTemplateError(null);
     listContractTemplatesForWizard()
       .then((options) => {
+        if (isActionMessageError(options) || isActionPermissionError(options)) {
+          setTemplates([]);
+          setTemplateError(getErrorMessage(options));
+          return;
+        }
         setTemplates(options);
       })
       .catch((error) => {
@@ -319,6 +324,9 @@ export function ContractWizard({
     if (!editingContract && initialClientId) {
       getClientByIdForBilling(initialClientId)
         .then(async (client) => {
+          if (isActionMessageError(client) || isActionPermissionError(client)) {
+            return;
+          }
           let currency = client?.default_currency_code || '';
           if (!currency) {
             const settings = await getDefaultBillingSettings();
@@ -389,6 +397,10 @@ export function ContractWizard({
     startTemplateTransition(async () => {
       try {
         const snapshot = await getContractTemplateSnapshotForClientWizard(templateId);
+        if (isActionMessageError(snapshot) || isActionPermissionError(snapshot)) {
+          setTemplateError(getErrorMessage(snapshot));
+          return;
+        }
         applyTemplateSnapshot(snapshot, templateId);
       } catch (error) {
         console.error('Failed to load template snapshot', error);
@@ -715,6 +727,13 @@ export function ContractWizard({
         handleError(result.permissionError);
         return;
       }
+      if (isActionMessageError(result)) {
+        setErrors((prev) => ({
+          ...prev,
+          [currentStep]: getErrorMessage(result),
+        }));
+        return;
+      }
 
       const completedData: ContractWizardData = {
         ...wizardData,
@@ -768,6 +787,13 @@ export function ContractWizard({
 
       if (isActionPermissionError(result)) {
         handleError(result.permissionError);
+        return;
+      }
+      if (isActionMessageError(result)) {
+        setErrors((prev) => ({
+          ...prev,
+          [currentStep]: getErrorMessage(result),
+        }));
         return;
       }
 

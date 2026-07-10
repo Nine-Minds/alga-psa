@@ -10,7 +10,7 @@ import { Edit2, Info } from 'lucide-react';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { EntityType } from '@alga-psa/shared/services/numberingService';
-import { getNumberSettings, updateNumberSettings, canEditNumberingSettings, type NumberSettings } from '@alga-psa/reference-data/actions';
+import { getNumberSettings, updateNumberSettings, canEditNumberingSettings, type NumberSettings } from '../../actions/number-actions/numberingActions';
 
 interface NumberingSettingsProps {
   entityType: EntityType;
@@ -104,8 +104,8 @@ const NumberingSettings = ({ entityType }: NumberingSettingsProps): React.JSX.El
         throw new Error(result.error || t('numbering.errors.save'));
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('numbering.errors.save'));
       console.error(err);
+      setError(t('numbering.errors.save'));
     }
   };
 

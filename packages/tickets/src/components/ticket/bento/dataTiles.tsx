@@ -8,6 +8,13 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
 import { BentoTile, BentoTileEmpty } from '@alga-psa/ui/components/bento/BentoTile';
 import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+import {
   getTicketScheduleEntries,
   getTicketInteractions,
   getTicketBillingRollup,
@@ -18,6 +25,12 @@ import {
   type TicketAppointmentRequestSummary,
 } from '../../../actions/ticketBentoActions';
 
+type TileActionError = ActionMessageError | ActionPermissionError;
+type TileDataResult<T> = T | TileActionError;
+
+const isTileActionError = (value: unknown): value is TileActionError =>
+  isActionMessageError(value) || isActionPermissionError(value);
+
 /**
  * Tile data source. When `initial` (a server-started promise from the RSC
  * page) is provided, the FIRST paint resolves it via React `use()` — the tile
@@ -27,10 +40,10 @@ import {
  * the legacy fetch-on-mount.
  */
 function useTileData<T>(
-  load: () => Promise<T>,
+  load: () => Promise<TileDataResult<T>>,
   deps: React.DependencyList,
   t: (key: string, defaultValue: string) => string,
-  initial?: Promise<T>,
+  initial?: Promise<TileDataResult<T>>,
 ): {
   data: T | null;
   error: string | null;
@@ -38,9 +51,12 @@ function useTileData<T>(
 } {
   // Conditional use() is allowed by React; a resolved streamed promise
   // returns synchronously on re-renders.
-  const initialData = initial ? use(initial) : null;
+  const initialResult = initial ? use(initial) : null;
+  const initialData = initialResult && !isTileActionError(initialResult) ? initialResult : null;
   const [data, setData] = useState<T | null>(initialData);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(
+    initialResult && isTileActionError(initialResult) ? getErrorMessage(initialResult) : null,
+  );
   const [loading, setLoading] = useState(!initial);
   const skipFirstLoad = useRef(Boolean(initial));
 
@@ -54,10 +70,17 @@ function useTileData<T>(
     setError(null);
     load()
       .then((result) => {
-        if (!cancelled) setData(result);
+        if (cancelled) return;
+        if (isTileActionError(result)) {
+          setData(null);
+          setError(getErrorMessage(result));
+          return;
+        }
+        setData(result);
       })
       .catch((err: unknown) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : t('bento.tiles.couldNotLoad', 'Could not load this tile'));
+        console.error('Failed to load ticket bento tile:', err);
+        if (!cancelled) setError(t('bento.tiles.couldNotLoad', 'Could not load this tile'));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);

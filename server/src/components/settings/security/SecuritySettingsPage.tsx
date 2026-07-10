@@ -89,6 +89,11 @@ const SsoBulkAssignment = dynamic(
   },
 );
 
+const MspSsoAdvancedSection = dynamic(
+  () => import('./MspSsoAdvancedSection'),
+  { ssr: false },
+);
+
 function SessionsLoading() {
   const { t } = useTranslation('msp/profile');
   return <SettingsTabSkeleton title={t('security.tabs.sessions', { defaultValue: 'Sessions' })} description={t('security.loading.sessions', { defaultValue: 'Loading active sessions...' })} showTable={true} />;
@@ -150,9 +155,12 @@ const SecuritySettingsPage = (): React.JSX.Element => {
       id: 'single-sign-on',
       label: t('security.tabs.sso', { defaultValue: 'Single Sign-On' }),
       content: (
-        <Suspense fallback={<SsoLoading />}>
-          <SsoBulkAssignment />
-        </Suspense>
+        <>
+          <Suspense fallback={<SsoLoading />}>
+            <SsoBulkAssignment />
+          </Suspense>
+          <MspSsoAdvancedSection />
+        </>
       ),
     },
     {

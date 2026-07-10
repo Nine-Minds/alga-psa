@@ -22,6 +22,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import BackNav from '@alga-psa/ui/components/BackNav';
 import { AlertCircle, CheckCircle, XCircle, ArrowLeft } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 interface ClientInfo {
   id: string;
@@ -190,6 +191,11 @@ const DiscrepancyDetail: React.FC = () => {
         report.report_id,
         resolutionNotes
       );
+      if (isActionMessageError(resolvedReport) || isActionPermissionError(resolvedReport)) {
+        setResolutionError(getErrorMessage(resolvedReport));
+        setIsResolvingReport(false);
+        return;
+      }
 
       // Update the report state with the resolved report
       setReport(resolvedReport);
@@ -198,7 +204,7 @@ const DiscrepancyDetail: React.FC = () => {
       setIsResolvingReport(false);
     } catch (error) {
       console.error('Error resolving report:', error);
-      setResolutionError(error instanceof Error ? error.message : t('discrepancy.errors.unknown', { defaultValue: 'An unknown error occurred' }));
+      setResolutionError(t('discrepancy.errors.resolveFailed', { defaultValue: 'Failed to resolve reconciliation report. Please refresh and try again.' }));
       setIsResolvingReport(false);
     }
   };
@@ -217,6 +223,9 @@ const DiscrepancyDetail: React.FC = () => {
         notes,
         customData
       );
+      if (isActionMessageError(resolvedReport) || isActionPermissionError(resolvedReport)) {
+        throw new Error(getErrorMessage(resolvedReport));
+      }
 
       // Update the report state with the resolved report
       setReport(resolvedReport);

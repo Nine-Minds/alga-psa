@@ -84,7 +84,9 @@ describe('roleActions authorization', () => {
 
       const { assignRoleToUser } = await import('./roleActions');
 
-      await expect(assignRoleToUser('target-1', 'role-admin')).rejects.toThrow('Permission denied');
+      await expect(assignRoleToUser('target-1', 'role-admin')).resolves.toEqual({
+        permissionError: 'Permission denied: You do not have permission to change user roles.',
+      });
       expect(insertSpy).not.toHaveBeenCalled();
     });
 
@@ -125,7 +127,9 @@ describe('roleActions authorization', () => {
 
       const { removeRoleFromUser } = await import('./roleActions');
 
-      await expect(removeRoleFromUser('target-1', 'role-admin')).rejects.toThrow('Permission denied');
+      await expect(removeRoleFromUser('target-1', 'role-admin')).resolves.toEqual({
+        permissionError: 'Permission denied: You do not have permission to change user roles.',
+      });
       expect(delSpy).not.toHaveBeenCalled();
     });
 

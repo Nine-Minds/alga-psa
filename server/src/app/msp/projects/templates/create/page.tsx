@@ -5,7 +5,16 @@ import type { IProject } from '@alga-psa/types';
 import { getProjects } from '@alga-psa/projects/actions/projectActions';
 import { getTemplateCategories } from '@alga-psa/projects/actions/projectTemplateActions';
 import CreateTemplateForm from '@alga-psa/projects/components/project-templates/CreateTemplateForm';
-import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
+  return isActionMessageError(value) || isActionPermissionError(value);
+}
 
 export default function CreateTemplatePage() {
   const [projects, setProjects] = useState<IProject[]>([]);
@@ -22,6 +31,10 @@ export default function CreateTemplatePage() {
 
         if (isActionPermissionError(projectsData)) {
           handleError(projectsData.permissionError);
+          return;
+        }
+        if (isReturnedActionError(categoriesData)) {
+          handleError(getErrorMessage(categoriesData));
           return;
         }
         setProjects(projectsData);

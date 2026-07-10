@@ -207,7 +207,7 @@ describe('Workflow event launcher routing', () => {
       payloadSchemaRef: TEST_SCHEMA_REF
     })).rejects.toMatchObject({
       status: 500,
-      details: expect.objectContaining({ error: expect.stringContaining('signal failed') })
+      details: expect.objectContaining({ error: 'Workflow event was recorded but delivery failed.' })
     });
 
     expect(workflowEvents.update).not.toHaveBeenCalledWith(
@@ -219,7 +219,7 @@ describe('Workflow event launcher routing', () => {
     expect(workflowEvents.update).toHaveBeenCalledWith(
       knexMock,
       'event-1',
-      expect.objectContaining({ error_message: expect.stringContaining('signal failed') }),
+      expect.objectContaining({ error_message: 'Workflow event was recorded but delivery failed.' }),
       'tenant-1'
     );
   });
@@ -234,14 +234,14 @@ describe('Workflow event launcher routing', () => {
       payloadSchemaRef: TEST_SCHEMA_REF
     })).rejects.toMatchObject({
       status: 500,
-      details: expect.objectContaining({ error: expect.stringContaining('temporal unavailable') })
+      details: expect.objectContaining({ error: 'Workflow event was recorded but delivery failed.' })
     });
 
     expect(workflowEvents.update).toHaveBeenCalledWith(
       knexMock,
       'event-1',
       expect.objectContaining({
-        error_message: expect.stringContaining('temporal unavailable')
+        error_message: 'Workflow event was recorded but delivery failed.'
       }),
       'tenant-1'
     );

@@ -141,7 +141,7 @@ await scheduler.scheduleRecurringJob('daily-report', '0 0 * * *', {});
 ## Registered Job Handlers
 
 | Job Name | Description | Timeout |
-|----------|-------------|---------|
+|----------|-------------|--------|
 | `generate-invoice` | Generate invoices for billing cycles | 5 min |
 | `invoice_zip` | Create ZIP archives of invoices | 10 min |
 | `invoice_email` | Send invoice emails | default |
@@ -237,6 +237,20 @@ A recurring Temporal schedule bakes one `jobId` into its workflow action args at
 4. Logs a `WARN`-level entry in the Temporal worker log so the repair is visible.
 
 Without this self-healing, every subsequent schedule fire would fail at bookkeeping before the handler ran, generating orphan `pending` rows (~13k rows/day in a busy installation) while appearing COMPLETED in Temporal.
+
+### Schedule teardown on tenant deletion
+
+When a tenant is deleted via `tenantDeletionWorkflow`, the workflow executes a `deleteTenantSchedules` activity as **step 10a, before** `deleteTenantData` drops the `jobs` table. The activity:
+
+1. Lists every schedule in the Temporal namespace.
+2. Describes each schedule and inspects `args[0]` of its workflow action. Schedules whose first argument carries a `tenantId` matching the deleted tenant are deleted; global maintenance schedules (such as `maintenanceJobWorkflow` schedules, which carry no per-tenant `tenantId`) are left untouched.
+3. Logs a summary of the deleted schedule IDs on completion.
+
+**Why this ordering matters:** without explicit teardown, a recurring Temporal schedule keeps firing `genericJobWorkflow` against parent rows that no longer exist. Each fire fails its FK bookkeeping on every invocation, generating error log noise indefinitely. Running schedule teardown before data deletion closes this window.
+
+The step is **non-blocking**: if `deleteTenantSchedules` throws unexpectedly, the error is logged and `tenantDeletionWorkflow` proceeds to data deletion. A lingering schedule is recoverable via a manual sweep in the Temporal UI; a cleanup failure must not strand the tenant deletion. The activity is **idempotent**: a retry re-lists all schedules and silently skips any that were already deleted or have since disappeared.
+
+> **Note on schedule ID matching:** `TemporalJobRunner`-created schedules often use IDs of the form `workflow-schedule:<workflowId>:<scheduleId>` that carry no embedded tenant identifier. Matching is therefore done by inspecting the `tenantId` baked into `args[0]` of each schedule's workflow action — not by parsing the schedule ID string.
 
 ### Job handler failures surface as FAILED in Temporal
 

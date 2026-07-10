@@ -5,6 +5,7 @@ import { getAdminConnection } from '@alga-psa/db/admin';
 import { observabilityLogger } from '@/lib/observability/logging';
 import { ApiKeyServiceForApi } from '@/lib/services/apiKeyServiceForApi';
 import { ADD_ON_DESCRIPTIONS, ADD_ON_LABELS, ADD_ONS } from '@alga-psa/types';
+import { tenantManagementRouteError } from '../tenantManagementRouteErrors';
 
 const MASTER_BILLING_TENANT_ID = process.env.MASTER_BILLING_TENANT_ID;
 
@@ -195,13 +196,15 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({ success: true, data });
   } catch (error) {
+    const routeError = tenantManagementRouteError(error, 'Failed to load tenants.');
+
     observabilityLogger.error('Failed to list tenants', error, {
       event_type: 'tenant_management_error',
     });
 
     return NextResponse.json({
       success: false,
-      error: error instanceof Error ? error.message : 'Unknown error',
-    }, { status: 500 });
+      error: routeError.error,
+    }, { status: routeError.status });
   }
 }

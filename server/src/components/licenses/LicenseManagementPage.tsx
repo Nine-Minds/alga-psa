@@ -31,6 +31,10 @@ import {
   refreshLicenseNow,
 } from "@/lib/actions/licenseManagementActions";
 import type { LicenseStatus } from "@/lib/actions/licenseManagementActions";
+import {
+  getErrorMessage,
+  isActionPermissionError,
+} from "@alga-psa/ui/lib/errorHandling";
 
 type Tone = "neutral" | "success" | "warning" | "danger" | "premium";
 
@@ -192,10 +196,20 @@ export default function LicenseManagementPage() {
   const { update: updateSession } = useSession();
 
   useEffect(() => {
-    getLicenseStatus().then((s) => {
-      setStatus(s);
-      setLoading(false);
-    });
+    getLicenseStatus()
+      .then((s) => {
+        if (isActionPermissionError(s)) {
+          setError(getErrorMessage(s));
+          return;
+        }
+        setStatus(s);
+      })
+      .catch(() => {
+        setError("Failed to load license status.");
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }, []);
 
   async function refresh(newStatus: LicenseStatus) {

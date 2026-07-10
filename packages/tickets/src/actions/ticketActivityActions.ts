@@ -11,6 +11,7 @@ import {
   type TicketActivityRow,
   type TicketTimelineEntry,
 } from '@alga-psa/shared/lib/ticketActivity';
+import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErrors';
 
 function tenantScopedTable(
   conn: Knex | Knex.Transaction,
@@ -32,7 +33,8 @@ export const getTicketTimelineEntries = withAuth(
     { tenant },
     ticketId: string,
     opts?: { order?: 'asc' | 'desc'; includeTimeEntries?: boolean; includeAlerts?: boolean },
-  ): Promise<TicketTimelineEntry[]> => {
+  ): Promise<TicketTimelineEntry[] | TicketActionError> => {
+    try {
     if (!tenant) {
       throw new Error('Tenant required');
     }
@@ -71,6 +73,11 @@ export const getTicketTimelineEntries = withAuth(
         includeAlerts: opts?.includeAlerts ?? false,
       });
     });
+    } catch (error) {
+      const expected = ticketActionErrorFrom(error);
+      if (expected) return expected;
+      throw error;
+    }
   },
 );
 
@@ -83,7 +90,8 @@ export const getTicketActivityRows = withAuth(
     user,
     { tenant },
     ticketId: string,
-  ): Promise<TicketActivityRow[]> => {
+  ): Promise<TicketActivityRow[] | TicketActionError> => {
+    try {
     if (!tenant) throw new Error('Tenant required');
     if (!ticketId) throw new Error('ticketId required');
 
@@ -99,5 +107,10 @@ export const getTicketActivityRows = withAuth(
       }
       return readTicketActivity(trx, tenant, ticketId);
     });
+    } catch (error) {
+      const expected = ticketActionErrorFrom(error);
+      if (expected) return expected;
+      throw error;
+    }
   },
 );

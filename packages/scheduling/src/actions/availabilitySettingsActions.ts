@@ -67,6 +67,23 @@ export interface TeamsMeetingOrganizerVerification {
   reason?: 'ee_disabled' | 'addon_required' | 'not_configured' | 'user_not_found' | 'policy_missing' | 'graph_error';
 }
 
+function availabilityActionErrorMessage(error: unknown, fallback: string): string {
+  const message = error instanceof Error ? error.message : typeof error === 'string' ? error : '';
+
+  if (error instanceof Error && error.name === 'ZodError') {
+    return 'Availability settings contain invalid fields. Check required fields and time ranges.';
+  }
+
+  if (
+    message === 'Availability setting not found' ||
+    message === 'Availability exception not found'
+  ) {
+    return message;
+  }
+
+  return fallback;
+}
+
 async function tenantHasTeamsAddOn(db: any, tenant: string): Promise<boolean> {
   const scopedDb = tenantDb(db, tenant);
   const row = await scopedDb.table('tenant_addons')
@@ -112,7 +129,7 @@ export const getTeamsMeetingsTabState = withAuth(async (
     };
   } catch (error) {
     console.error('Error loading Teams meetings tab state:', error);
-    const message = error instanceof Error ? error.message : 'Failed to load Teams meetings tab state';
+    const message = availabilityActionErrorMessage(error, 'Failed to load Teams meetings tab state');
     return { success: false, error: message };
   }
 });
@@ -163,7 +180,7 @@ export const setDefaultMeetingOrganizer = withAuth(async (
     };
   } catch (error) {
     console.error('Error saving Teams meeting organizer:', error);
-    const message = error instanceof Error ? error.message : 'Failed to save Teams meeting organizer';
+    const message = availabilityActionErrorMessage(error, 'Failed to save Teams meeting organizer');
     return { success: false, error: message };
   }
 });
@@ -206,7 +223,7 @@ export const verifyMeetingOrganizer = withAuth(async (
     return { success: true, data: result };
   } catch (error) {
     console.error('Error verifying Teams meeting organizer:', error);
-    const message = error instanceof Error ? error.message : 'Failed to verify Teams meeting organizer';
+    const message = availabilityActionErrorMessage(error, 'Failed to verify Teams meeting organizer');
     return { success: false, error: message };
   }
 });
@@ -344,7 +361,7 @@ export const createOrUpdateAvailabilitySetting = withAuth(async (
     return { success: true, data: result };
   } catch (error) {
     console.error('Error creating/updating availability setting:', error);
-    const message = error instanceof Error ? error.message : 'Failed to create/update availability setting';
+    const message = availabilityActionErrorMessage(error, 'Failed to create/update availability setting');
     return { success: false, error: message };
   }
 });
@@ -392,7 +409,7 @@ export const getAvailabilitySettings = withAuth(async (
     return { success: true, data: settings as IAvailabilitySetting[] };
   } catch (error) {
     console.error('Error fetching availability settings:', error);
-    const message = error instanceof Error ? error.message : 'Failed to fetch availability settings';
+    const message = availabilityActionErrorMessage(error, 'Failed to fetch availability settings');
     return { success: false, error: message };
   }
 });
@@ -438,7 +455,7 @@ export const deleteAvailabilitySetting = withAuth(async (
     return { success: true };
   } catch (error) {
     console.error('Error deleting availability setting:', error);
-    const message = error instanceof Error ? error.message : 'Failed to delete availability setting';
+    const message = availabilityActionErrorMessage(error, 'Failed to delete availability setting');
     return { success: false, error: message };
   }
 });
@@ -530,7 +547,7 @@ export const addAvailabilityException = withAuth(async (
     return { success: true, data: exception };
   } catch (error) {
     console.error('Error adding availability exception:', error);
-    const message = error instanceof Error ? error.message : 'Failed to add availability exception';
+    const message = availabilityActionErrorMessage(error, 'Failed to add availability exception');
     return { success: false, error: message };
   }
 });
@@ -572,7 +589,7 @@ export const getAvailabilityExceptions = withAuth(async (
     return { success: true, data: exceptions as IAvailabilityException[] };
   } catch (error) {
     console.error('Error fetching availability exceptions:', error);
-    const message = error instanceof Error ? error.message : 'Failed to fetch availability exceptions';
+    const message = availabilityActionErrorMessage(error, 'Failed to fetch availability exceptions');
     return { success: false, error: message };
   }
 });
@@ -618,7 +635,7 @@ export const deleteAvailabilityException = withAuth(async (
     return { success: true };
   } catch (error) {
     console.error('Error deleting availability exception:', error);
-    const message = error instanceof Error ? error.message : 'Failed to delete availability exception';
+    const message = availabilityActionErrorMessage(error, 'Failed to delete availability exception');
     return { success: false, error: message };
   }
 });

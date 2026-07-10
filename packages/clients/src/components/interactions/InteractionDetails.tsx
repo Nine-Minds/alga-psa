@@ -21,7 +21,11 @@ import { deleteInteraction } from '@alga-psa/clients/actions';
 import { Text, Flex, Heading } from '@radix-ui/themes';
 import { RichTextViewer } from '@alga-psa/ui/editor';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { findUserByIdAsync, getCurrentUserAsync } from '../../lib/usersHelpers';
 import { buildInteractionTimeEntryContext } from '../../lib/timeEntryContext';
 import InteractionIcon from '@alga-psa/ui/components/InteractionIcon';
@@ -33,6 +37,8 @@ interface InteractionDetailsProps {
   onInteractionUpdated?: (updatedInteraction: IInteraction) => void; // Callback when interaction is updated
   isInDrawer?: boolean; // Whether this component is displayed in a drawer
 }
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 // Helper to format duration from total minutes to "Xh Ym" format
 const formatDuration = (totalMinutes: number): string => {
@@ -260,7 +266,11 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
 
   const handleDeleteInteraction = async () => {
     try {
-      await deleteInteraction(interaction.interaction_id);
+      const result = await deleteInteraction(interaction.interaction_id);
+      if (isReturnedActionError(result)) {
+        handleError(result);
+        return;
+      }
       setIsDeleteDialogOpen(false);
       
       // Call the callback to notify parent that interaction was deleted
@@ -296,6 +306,10 @@ const InteractionDetails: React.FC<InteractionDetailsProps> = ({ interaction: in
     setIsRefreshingRecordings(true);
     try {
       const onlineMeeting = await refreshMeetingRecordings(interaction.online_meeting.meeting_id);
+      if (isReturnedActionError(onlineMeeting)) {
+        handleError(onlineMeeting);
+        return;
+      }
       const updatedInteraction = {
         ...interaction,
         online_meeting: onlineMeeting,

@@ -29,6 +29,14 @@ import {
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import ProfitabilityReport from './ProfitabilityReport';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 const ContractReports: React.FC = () => {
   const { t } = useTranslation('msp/reports');
@@ -64,6 +72,11 @@ const ContractReports: React.FC = () => {
           getBucketUsageReport(),
           getContractReportSummary()
         ]);
+        const expectedLoadError = [revenue, expiration, bucketUsage, summaryData].find(isReturnedActionError);
+        if (expectedLoadError) {
+          setError(getErrorMessage(expectedLoadError));
+          return;
+        }
 
         setRevenueData(revenue);
         setExpirationData(expiration);

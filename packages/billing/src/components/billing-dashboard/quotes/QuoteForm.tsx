@@ -21,7 +21,7 @@ import {
 import { ArrowLeft, ChevronDown, ChevronRight, MoreVertical } from 'lucide-react';
 import { CURRENCY_OPTIONS } from '@alga-psa/core';
 import type { IClient, IContact, IQuote, IQuoteDocumentTemplate, IQuoteListItem, QuoteConversionPreview, QuoteStatus } from '@alga-psa/types';
-import { isActionPermissionError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
+import { isActionMessageError, isActionPermissionError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
 import { getDefaultBillingSettings } from '@alga-psa/billing/actions';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
 import { getAllClientsForBilling } from '../../../actions/billingClientsActions';
@@ -92,6 +92,9 @@ const formatRelativeMinutes = (iso?: string | null): string | null => {
   if (hrs < 24) return `${hrs} hr ago`;
   return when.toLocaleString();
 };
+
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = false, onCancel, onSaved }) => {
   const { t } = useTranslation('msp/quotes');
@@ -170,6 +173,10 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
       }
       try {
         const locations = await getActiveClientLocationsForBilling(form.client_id);
+        if (isActionPermissionError(locations) || isActionMessageError(locations)) {
+          if (!cancelled) setClientLocations([]);
+          return;
+        }
         if (cancelled) return;
         setClientLocations(locations);
       } catch (locationError) {
@@ -246,6 +253,12 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
       ]);
 
       setApprovalRequired(!isActionPermissionError(approvalSettings) && approvalSettings.approvalRequired === true);
+      if (isActionPermissionError(fetchedContacts) || isActionMessageError(fetchedContacts)) {
+        throw new Error(getErrorMessage(fetchedContacts));
+      }
+      if (isActionPermissionError(fetchedClients) || isActionMessageError(fetchedClients)) {
+        throw new Error(getErrorMessage(fetchedClients));
+      }
 
       setClients(fetchedClients);
       setContacts(fetchedContacts);
@@ -440,7 +453,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
         result = await createQuote(payload as any);
       }
 
-      if (!result || isActionPermissionError(result)) {
+      if (!result || isReturnedActionError(result)) {
         throw new Error(
           result
             ? getErrorMessage(result)
@@ -490,8 +503,8 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
 
           if (item.quote_item_id) {
             const updatedItem = await updateQuoteItem(item.quote_item_id, sharedPayload);
-            if ('permissionError' in updatedItem) {
-              throw new Error(updatedItem.permissionError);
+            if (isReturnedActionError(updatedItem)) {
+              throw new Error(getErrorMessage(updatedItem));
             }
 
             nextLineItems = nextLineItems.map((draftItem) => draftItem.local_id === item.local_id ? {
@@ -508,8 +521,8 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
             ...sharedPayload,
           });
 
-          if ('permissionError' in createdItem) {
-            throw new Error(createdItem.permissionError);
+          if (isReturnedActionError(createdItem)) {
+            throw new Error(getErrorMessage(createdItem));
           }
 
           nextLineItems = nextLineItems.map((draftItem) => {
@@ -544,15 +557,18 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
         const removedQuoteItemIds = persistedQuoteItemIds.filter((itemId) => !currentQuoteItemIds.includes(itemId));
         for (const removedQuoteItemId of removedQuoteItemIds) {
           const removalResult = await removeQuoteItem(removedQuoteItemId);
+          if (isReturnedActionError(removalResult)) {
+            throw new Error(getErrorMessage(removalResult));
+          }
           if (typeof removalResult !== 'boolean') {
-            throw new Error(removalResult.permissionError);
+            throw new Error(t('quoteForm.errors.removeItem', { defaultValue: 'Failed to remove quote item' }));
           }
         }
 
         if (currentQuoteItemIds.length > 0) {
           const reorderedItems = await reorderQuoteItems(result.quote_id, currentQuoteItemIds);
-          if ('permissionError' in reorderedItems) {
-            throw new Error(reorderedItems.permissionError);
+          if (isReturnedActionError(reorderedItems)) {
+            throw new Error(getErrorMessage(reorderedItems));
           }
           nextLineItems = reorderedItems.map(createDraftQuoteItemFromQuoteItem);
         }
@@ -587,8 +603,8 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
       setError(null);
       setNotice(null);
       const result = await action();
-      if (result && typeof result === 'object' && 'permissionError' in result) {
-        throw new Error((result as { permissionError: string }).permissionError);
+      if (isReturnedActionError(result)) {
+        throw new Error(getErrorMessage(result));
       }
       setQuote(result as IQuote);
       return result;
@@ -729,7 +745,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
       setIsWorking(true);
       setError(null);
       const result = await createQuoteRevision(quote.quote_id);
-      if ('permissionError' in result) throw new Error(result.permissionError);
+      if (isReturnedActionError(result)) throw new Error(getErrorMessage(result));
       onSaved(result.quote_id);
     } catch (actionError) {
       setError(
@@ -750,7 +766,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
       setIsWorking(true);
       setError(null);
       const result = await duplicateQuote(quote.quote_id);
-      if ('permissionError' in result) throw new Error(result.permissionError);
+      if (isReturnedActionError(result)) throw new Error(getErrorMessage(result));
       onSaved(result.quote_id);
     } catch (actionError) {
       setError(
@@ -769,7 +785,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
       setIsWorking(true);
       setError(null);
       const result = await downloadQuotePdf(quote.quote_id);
-      if (result && typeof result === 'object' && 'permissionError' in result) throw new Error(result.permissionError);
+      if (isReturnedActionError(result)) throw new Error(getErrorMessage(result));
       const { pdfData, quoteNumber } = result as { pdfData: number[]; quoteNumber: string };
       const blob = new Blob([new Uint8Array(pdfData)], { type: 'application/pdf' });
       const blobUrl = window.URL.createObjectURL(blob);
@@ -823,7 +839,9 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
       setError(null);
       setConversionMode(mode);
       const preview = await getQuoteConversionPreview(quote.quote_id);
-      if ('permissionError' in preview) throw new Error(preview.permissionError);
+      if (isActionMessageError(preview) || isActionPermissionError(preview)) {
+        throw new Error(getErrorMessage(preview));
+      }
       setConversionPreview(preview);
       setIsConversionDialogOpen(true);
     } catch (previewError) {
@@ -846,7 +864,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
       setError(null);
       if (conversionMode === 'contract') {
         const result = await convertQuoteToContract(quote.quote_id);
-        if ('permissionError' in result) throw new Error(result.permissionError);
+        if (isActionMessageError(result) || isActionPermissionError(result)) throw new Error(getErrorMessage(result));
         setQuote(result.quote);
         setNotice(
           t('quoteForm.notices.createdDraftContract', {
@@ -856,7 +874,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
         );
       } else if (conversionMode === 'invoice') {
         const result = await convertQuoteToInvoice(quote.quote_id);
-        if ('permissionError' in result) throw new Error(result.permissionError);
+        if (isActionMessageError(result) || isActionPermissionError(result)) throw new Error(getErrorMessage(result));
         setQuote(result.quote);
         setNotice(
           t('quoteForm.notices.createdDraftInvoice', {
@@ -866,7 +884,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
         );
       } else if (conversionMode === 'sales_order') {
         const result = await convertQuoteToSalesOrder(quote.quote_id);
-        if ('permissionError' in result) throw new Error(result.permissionError);
+        if (isActionMessageError(result) || isActionPermissionError(result)) throw new Error(getErrorMessage(result));
         setQuote(result.quote);
         setNotice(
           t('quoteDetail.notices.createdSalesOrder', {
@@ -876,7 +894,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
         );
       } else {
         const result = await convertQuoteToBoth(quote.quote_id);
-        if ('permissionError' in result) throw new Error(result.permissionError);
+        if (isActionMessageError(result) || isActionPermissionError(result)) throw new Error(getErrorMessage(result));
         setQuote(result.quote);
         setNotice(
           t('quoteForm.notices.createdDraftContractAndInvoice', {

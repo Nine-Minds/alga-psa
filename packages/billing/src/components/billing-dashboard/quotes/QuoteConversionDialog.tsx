@@ -12,6 +12,7 @@ import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Ale
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { RadioGroup } from '@alga-psa/ui/components/RadioGroup';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { IQuote, QuoteConversionPreview } from '@alga-psa/types';
 import {
   getQuoteConversionPreview,
@@ -89,8 +90,8 @@ const QuoteConversionDialog: React.FC<QuoteConversionDialogProps> = ({
       setError(null);
       const result = await getQuoteConversionPreview(quote.quote_id);
 
-      if (result && typeof result === 'object' && 'permissionError' in result) {
-        throw new Error(result.permissionError);
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        throw new Error(getErrorMessage(result));
       }
 
       const previewResult = result as QuoteConversionPreview;
@@ -129,8 +130,8 @@ const QuoteConversionDialog: React.FC<QuoteConversionDialogProps> = ({
           break;
       }
 
-      if (result && typeof result === 'object' && 'permissionError' in result) {
-        throw new Error((result as { permissionError: string }).permissionError);
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        throw new Error(getErrorMessage(result));
       }
 
       if (selectedMode === 'sales_order') {

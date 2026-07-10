@@ -16,6 +16,14 @@ import { BucketOverlayFields } from './BucketOverlayFields';
 import { BucketOverlayInput } from './ContractWizard';
 import { ServiceCatalogPicker } from './ServiceCatalogPicker';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 type PlanType = 'Fixed' | 'Hourly' | 'Usage';
 
@@ -244,7 +252,11 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
         } : {}),
       };
 
-      await createCustomContractLine(contractId, input);
+      const result = await createCustomContractLine(contractId, input);
+      if (isReturnedActionError(result)) {
+        setValidationErrors([getErrorMessage(result)]);
+        return;
+      }
       await onCreated();
       onClose();
     } catch (error) {

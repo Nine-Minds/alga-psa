@@ -1800,6 +1800,12 @@
       "title": "Single Sign-On",
       "description": "Ładowanie narzędzi do masowego przypisywania SSO..."
     },
+    "status": {
+      "title": "Sign-in providers",
+      "caption": "These providers are managed by the platform — no client IDs or DNS setup is required. Enable auto-link or assign users below.",
+      "available": "Available",
+      "notConfigured": "Not configured"
+    },
     "autoLink": {
       "title": "Automatyczne konfigurowanie SSO dla nowych użytkowników wewnętrznych",
       "description": "Włącz tę opcję, aby każde nowe konto pracownika było natychmiast udostępniane Państwa korporacyjnemu dostawcy SSO, dzięki czemu nigdy nie będzie wymagane logowanie hasłem.",

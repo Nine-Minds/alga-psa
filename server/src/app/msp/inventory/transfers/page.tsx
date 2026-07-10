@@ -1,6 +1,7 @@
 import { listTransfers, listStockLocations } from '@alga-psa/inventory/actions';
 import { TransfersManager } from '@alga-psa/inventory/components';
 import { getSession } from '@alga-psa/auth';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { redirect } from 'next/navigation';
 import type { IStockTransfer, IStockLocation } from '@alga-psa/types';
 import type { Metadata } from 'next';
@@ -24,12 +25,22 @@ export default async function TransfersPage() {
   let initialTransfers: IStockTransfer[] = [];
   let initialLocations: IStockLocation[] = [];
   try {
-    initialTransfers = await listTransfers({});
+    const result = await listTransfers({});
+    if (isActionMessageError(result) || isActionPermissionError(result)) {
+      console.error('Failed to load transfers:', getErrorMessage(result));
+    } else {
+      initialTransfers = result;
+    }
   } catch (error) {
     console.error('Failed to load transfers:', error);
   }
   try {
-    initialLocations = await listStockLocations({ includeInactive: false });
+    const result = await listStockLocations({ includeInactive: false });
+    if (isActionMessageError(result) || isActionPermissionError(result)) {
+      console.error('Failed to load stock locations:', getErrorMessage(result));
+    } else {
+      initialLocations = result;
+    }
   } catch (error) {
     console.error('Failed to load stock locations:', error);
   }

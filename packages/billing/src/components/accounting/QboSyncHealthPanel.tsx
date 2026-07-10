@@ -10,6 +10,11 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+import {
   getAccountingSyncHealth,
   updateAccountingSyncSettingsAction,
   runAccountingSyncNow,
@@ -35,7 +40,10 @@ export default function QboSyncHealthPanel() {
   const [classes, setClasses] = React.useState<QboClass[]>([]);
   const [departments, setDepartments] = React.useState<QboDepartment[]>([]);
   const [catalogLoaded, setCatalogLoaded] = React.useState(false);
+  const [catalogError, setCatalogError] = React.useState<string | null>(null);
   const [savingRef, setSavingRef] = React.useState<string | null>(null);
+  const isReturnedActionError = (value: unknown) =>
+    isActionMessageError(value) || isActionPermissionError(value);
 
   const loadHealth = React.useCallback(async () => {
     if (healthHidden) return;
@@ -54,17 +62,26 @@ export default function QboSyncHealthPanel() {
 
   React.useEffect(() => {
     if (!health?.connected || catalogLoaded) return;
+    setCatalogError(null);
     Promise.all([
-      getQboAccounts().catch(() => []),
-      getQboClasses().catch(() => []),
-      getQboDepartments().catch(() => [])
+      getQboAccounts(),
+      getQboClasses(),
+      getQboDepartments()
     ]).then(([accts, cls, deps]) => {
-      setAccounts(accts);
-      setClasses(cls);
-      setDepartments(deps);
+      const errors = [accts, cls, deps]
+        .filter(isReturnedActionError)
+        .map(getErrorMessage);
+
+      setAccounts(isReturnedActionError(accts) ? [] : accts);
+      setClasses(isReturnedActionError(cls) ? [] : cls);
+      setDepartments(isReturnedActionError(deps) ? [] : deps);
+      setCatalogError(errors.length > 0 ? errors.join(' ') : null);
+      setCatalogLoaded(true);
+    }).catch(() => {
+      setCatalogError(t('integrations.qbo.sync.catalogLoadError', { defaultValue: 'Failed to load QuickBooks sync configuration options.' }));
       setCatalogLoaded(true);
     });
-  }, [health?.connected, catalogLoaded]);
+  }, [health?.connected, catalogLoaded, t]);
 
   if (healthHidden || !health) {
     return null;
@@ -85,6 +102,12 @@ export default function QboSyncHealthPanel() {
         {syncNowFeedback && (
           <Alert variant={syncNowFeedback.type === 'success' ? 'success' : 'destructive'}>
             <AlertDescription>{syncNowFeedback.message}</AlertDescription>
+          </Alert>
+        )}
+
+        {catalogError && (
+          <Alert variant="destructive">
+            <AlertDescription>{catalogError}</AlertDescription>
           </Alert>
         )}
 

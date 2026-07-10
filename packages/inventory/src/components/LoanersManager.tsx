@@ -4,10 +4,13 @@ import React, { useState, useCallback, useEffect } from 'react';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
+import { CurrencyInput } from '@alga-psa/ui/components/CurrencyInput';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { toast } from 'react-hot-toast';
+import { toMinorUnits } from '@alga-psa/core';
 import type { ColumnDefinition, IStockLocation } from '@alga-psa/types';
 import {
   loanOut,
@@ -24,7 +27,15 @@ function formatDue(value: string | Date | null): string {
   return Number.isNaN(d.getTime()) ? String(value) : d.toLocaleDateString();
 }
 
-export function LoanersManager({ initialLoaners }: { initialLoaners: LoanerOutRow[] }) {
+const isReturnedActionError = (value: unknown) => isActionMessageError(value) || isActionPermissionError(value);
+
+export function LoanersManager({
+  initialLoaners,
+  defaultCurrencyCode = 'USD',
+}: {
+  initialLoaners: LoanerOutRow[];
+  defaultCurrencyCode?: string;
+}) {
   const { t } = useTranslation('features/inventory');
   const [rows, setRows] = useState<LoanerOutRow[]>(initialLoaners || []);
   const [locations, setLocations] = useState<IStockLocation[]>([]);
@@ -54,7 +65,13 @@ export function LoanersManager({ initialLoaners }: { initialLoaners: LoanerOutRo
 
   const reload = useCallback(async () => {
     try {
-      setRows(await loanersOutReport());
+      const result = await loanersOutReport();
+      if (isReturnedActionError(result)) {
+        setRows([]);
+        toast.error(getErrorMessage(result));
+        return;
+      }
+      setRows(result);
     } catch (e: any) {
       console.error(e);
       toast.error(e?.message || t('loaners.loadFailed', 'Failed to load loaners'));
@@ -63,7 +80,13 @@ export function LoanersManager({ initialLoaners }: { initialLoaners: LoanerOutRo
 
   const loadLocations = useCallback(async () => {
     try {
-      setLocations(await listStockLocations({ includeInactive: false }));
+      const result = await listStockLocations({ includeInactive: false });
+      if (isReturnedActionError(result)) {
+        setLocations([]);
+        toast.error(getErrorMessage(result));
+        return;
+      }
+      setLocations(result);
     } catch (e: any) {
       console.error(e);
       toast.error(e?.message || t('loaners.loadLocationsFailed', "Couldn't load stock locations"));
@@ -90,10 +113,14 @@ export function LoanersManager({ initialLoaners }: { initialLoaners: LoanerOutRo
     }
     setSaving(true);
     try {
-      await loanOut(loanForm.unit_id.trim(), {
+      const result = await loanOut(loanForm.unit_id.trim(), {
         client_id: loanForm.client_id.trim(),
         loan_due_at: loanForm.loan_due_at ? loanForm.loan_due_at : null,
       });
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       toast.success(t('loaners.loanedOut', 'Unit loaned out'));
       setLoanOpen(false);
       await reload();
@@ -118,7 +145,11 @@ export function LoanersManager({ initialLoaners }: { initialLoaners: LoanerOutRo
     }
     setSaving(true);
     try {
-      await loanReturn(returnUnit.unit_id, { location_id: returnLocationId });
+      const result = await loanReturn(returnUnit.unit_id, { location_id: returnLocationId });
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       toast.success(t('loaners.returned', 'Loaner returned'));
       setReturnOpen(false);
       await reload();
@@ -147,15 +178,19 @@ export function LoanersManager({ initialLoaners }: { initialLoaners: LoanerOutRo
         toast.error(t('loaners.restockFeeInvalid', 'Restocking fee must be a non-negative amount'));
         return;
       }
-      restocking_fee_cents = Math.round(parsed * 100);
+      restocking_fee_cents = toMinorUnits(parsed, undefined, defaultCurrencyCode);
     }
     setSaving(true);
     try {
-      await restockReturn({
+      const result = await restockReturn({
         unit_id: restockForm.unit_id.trim(),
         location_id: restockForm.location_id || undefined,
         restocking_fee_cents,
       });
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       toast.success(t('loaners.restocked', 'Unit restocked to sellable'));
       setRestockOpen(false);
       await reload();
@@ -297,14 +332,12 @@ export function LoanersManager({ initialLoaners }: { initialLoaners: LoanerOutRo
             ]}
             onValueChange={(v: string) => setRestockForm({ ...restockForm, location_id: v })}
           />
-          <Input
+          <CurrencyInput
             id="loaner-restock-fee"
             label={t('loaners.fields.restockingFee', 'Restocking fee (optional)')}
-            type="number"
-            min="0"
-            step="0.01"
-            value={restockForm.restocking_fee}
-            onChange={(e) => setRestockForm({ ...restockForm, restocking_fee: e.target.value })}
+            currencyCode={defaultCurrencyCode}
+            value={restockForm.restocking_fee ? Number(restockForm.restocking_fee) : undefined}
+            onChange={(value) => setRestockForm({ ...restockForm, restocking_fee: value == null ? '' : String(value) })}
           />
           <div className="flex justify-end gap-2 pt-2">
             <Button id="loaner-restock-cancel" variant="outline" onClick={() => setRestockOpen(false)}>

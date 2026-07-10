@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
 import '../../../../../test-utils/nextApiMock';
+import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { TestContext } from '../../../../../test-utils/testContext';
 import { createPrepaymentInvoice, applyCreditToInvoice } from '@alga-psa/billing/actions/creditActions';
 import { finalizeInvoice } from '@alga-psa/billing/actions/invoiceModification';
@@ -14,7 +15,6 @@ import { createTestDate, createTestDateISO } from '../../../test-utils/dateUtils
 import { expiredCreditsHandler } from '@alga-psa/jobs/handlers/expiredCreditsHandler';
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
 import { createClient } from '../../../../../test-utils/testDataFactory';
-import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 
 
 vi.mock('server/src/lib/analytics/posthog', () => ({
@@ -36,7 +36,7 @@ vi.mock('@alga-psa/db', async (importOriginal) => {
 });
 
 vi.mock('@alga-psa/auth', async () => {
-  const { createAuthModuleMock } = await import('../../../../../test-utils/testMocks');
+  const { createAuthModuleMock } = await import('../../../../../test-utils/authModuleMock');
   return createAuthModuleMock();
 });
 

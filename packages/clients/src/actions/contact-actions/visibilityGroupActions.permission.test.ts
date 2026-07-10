@@ -95,7 +95,7 @@ describe('contactActions visibility group assignment/delete guardrails', () => {
 
     await expect(
       assignClientPortalVisibilityGroupToContact('contact-1', 'group-cross-client')
-    ).rejects.toThrow('Assigned visibility group is invalid for this contact');
+    ).resolves.toEqual({ actionError: 'Assigned visibility group is invalid for this contact' });
 
     expect(contactsWhereMock).toHaveBeenCalled();
     expect(groupWhereMock).toHaveBeenCalled();
@@ -146,7 +146,7 @@ describe('contactActions visibility group assignment/delete guardrails', () => {
 
     await expect(
       deleteClientPortalVisibilityGroupForContact('contact-1', 'group-1')
-    ).rejects.toThrow('Cannot delete visibility group while it is assigned to contacts');
+    ).resolves.toEqual({ actionError: 'Cannot delete visibility group while it is assigned to contacts' });
 
     expect(groupWhereMock).toHaveBeenCalled();
     expect(contactsWhereMock).toHaveBeenCalled();

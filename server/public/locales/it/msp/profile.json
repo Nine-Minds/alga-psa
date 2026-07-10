@@ -103,6 +103,13 @@
       "sso": "Caricamento strumenti di gestione SSO...",
       "sessions": "Caricamento sessioni attive..."
     },
+    "sso": {
+      "advanced": {
+        "title": "Advanced: custom identity provider routing",
+        "description": "Route MSP login SSO to your own identity provider using verified login domains. Only needed on custom or on-premise installations.",
+        "inertNotice": "No tenant identity provider credentials are configured, so domain claims currently have no effect. Users sign in with the hosted Google / Microsoft providers. Tenant credentials are provisioned on custom and on-premise installations."
+      }
+    },
     "userRoles": {
       "title": "Assegna ruoli agli utenti",
       "description": {
@@ -576,7 +583,8 @@
         "description": "Descrizione",
         "descriptionPlaceholder": "es. Chiave API di sviluppo",
         "expiration": "Data di scadenza (facoltativa)",
-        "submit": "Genera nuova chiave API"
+        "submit": "Genera nuova chiave API",
+        "createFailed": "Failed to create API key"
       },
       "list": {
         "title": "Le tue chiavi API",
@@ -602,7 +610,8 @@
           "active": "Attiva",
           "inactive": "Inattiva"
         },
-        "deactivate": "Disattiva"
+        "deactivate": "Disattiva",
+        "deactivateFailed": "Failed to deactivate API key"
       },
       "newKeyDialog": {
         "title": "Chiave API generata",

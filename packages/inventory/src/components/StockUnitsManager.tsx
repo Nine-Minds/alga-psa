@@ -11,7 +11,9 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { ClientNameCell } from '@alga-psa/ui/components/ClientNameCell';
 import { EmptyState } from '@alga-psa/ui/components/EmptyState';
 import { PackageSearch } from 'lucide-react';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { toast } from 'react-hot-toast';
 import type { ColumnDefinition, IStockLocation, IStockMovement, IStockUnit } from '@alga-psa/types';
 import {
@@ -24,6 +26,7 @@ import {
 
 type SearchMode = 'serial' | 'mac';
 type UnitDetail = { unit: IStockUnit; movements: IStockMovement[] };
+const isReturnedActionError = (value: unknown) => isActionMessageError(value) || isActionPermissionError(value);
 
 function fmtDate(v?: string | Date | null): string {
   if (!v) return '';
@@ -37,12 +40,6 @@ function fmtDateTime(v?: string | Date | null): string {
   return isNaN(d.getTime()) ? '' : d.toLocaleString();
 }
 
-function fmtCents(v?: number | string | null): string {
-  if (v === null || v === undefined || v === '') return '';
-  const n = Number(v); // pg returns bigint columns as strings
-  return Number.isFinite(n) ? `$${(n / 100).toFixed(2)}` : '';
-}
-
 /** Normalize a MAC to canonical upper-case, colon-grouped form for display. */
 function fmtMac(v?: string | null): string {
   if (!v) return '';
@@ -50,6 +47,7 @@ function fmtMac(v?: string | null): string {
   if (hex.length !== 12) return v.toUpperCase(); // leave unexpected shapes as-is
   return hex.match(/.{2}/g)!.join(':');
 }
+
 
 function csvValue(v: unknown): string {
   if (v === null || v === undefined) return '';
@@ -93,6 +91,19 @@ function statusVariant(v?: string | null) {
 export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[] }) {
   const { t } = useTranslation('features/inventory');
   const router = useRouter();
+  const { money } = useCurrencyFormat();
+
+  // Render blank — not a misleading "$0.00" — when a unit has no recorded cost.
+  // pg returns bigint columns as strings, so coerce before handing minor units
+  // to `money`, which applies the tenant locale and the unit's own currency.
+  const fmtCost = useCallback(
+    (v?: number | string | null, currency?: string | null): string => {
+      if (v === null || v === undefined || v === '') return '';
+      const n = Number(v);
+      return Number.isFinite(n) ? money(n, currency ?? undefined) : '';
+    },
+    [money],
+  );
 
   const SEARCH_MODE_OPTIONS = [
     { value: 'serial', label: t('stockUnits.searchMode.serial', 'Serial number') },
@@ -179,7 +190,13 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
   const reload = useCallback(async () => {
     setLoading(true);
     try {
-      setUnits(await listStockUnits({}));
+      const result = await listStockUnits({});
+      if (isReturnedActionError(result)) {
+        setUnits([]);
+        toast.error(getErrorMessage(result));
+        return;
+      }
+      setUnits(result);
     } catch (e: any) {
       console.error(e);
       toast.error(e?.message || t('stockUnits.loadFailed', "Couldn't load stock units. Try Refresh."));
@@ -200,6 +217,11 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
         searchMode === 'serial'
           ? await searchUnitsBySerial(term)
           : await searchUnitsByMac(term);
+      if (isReturnedActionError(results)) {
+        setUnits([]);
+        toast.error(getErrorMessage(results));
+        return;
+      }
       setUnits(results);
     } catch (e: any) {
       console.error(e);
@@ -229,11 +251,19 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
           getUnitDetail(unitId),
           locations === null ? listStockLocations() : Promise.resolve(locations),
         ]);
+        if (isReturnedActionError(detail)) {
+          toast.error(getErrorMessage(detail));
+          return;
+        }
         if (!detail) {
           toast.error(t('stockUnits.historyNotFound', 'No history recorded for this unit yet.'));
           return;
         }
         if (locations === null) {
+          if (isReturnedActionError(loadedLocations)) {
+            toast.error(getErrorMessage(loadedLocations));
+            return;
+          }
           setLocations(loadedLocations);
         }
         setHistoryDetail(detail);
@@ -268,7 +298,7 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
       unit.location_name,
       unit.client_name,
       fmtDate(unit.warranty_expires_at),
-      fmtCents(unit.unit_cost),
+      fmtCost(unit.unit_cost, unit.cost_currency),
     ]);
     const csv = [headers, ...rows].map((row) => row.map(csvEscape).join(',')).join('\n');
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }));
@@ -280,7 +310,7 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
     link.click();
     link.remove();
     URL.revokeObjectURL(url);
-  }, [visibleUnits, t]);
+  }, [visibleUnits, t, fmtCost]);
 
   const emptyCell = <span className="text-[rgb(var(--color-text-400))]">{t('common.emptyValue', '—')}</span>;
 
@@ -340,8 +370,8 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
       dataIndex: 'unit_cost',
       headerClassName: 'text-right',
       cellClassName: 'text-right tabular-nums',
-      render: (value: number | string | null | undefined) => {
-        const c = fmtCents(value);
+      render: (value: number | string | null | undefined, record: IStockUnit) => {
+        const c = fmtCost(value, record.cost_currency);
         return c ? <span className="font-mono">{c}</span> : emptyCell;
       },
     },
@@ -387,7 +417,7 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
               ? t('stockUnits.summary.one', '{{n}} unit', { n: visibleUnits.length })
               : t('stockUnits.summary.many', '{{n}} units', { n: visibleUnits.length })}
             {totalValueCents > 0 && (
-              <span>{t('stockUnits.summary.valueSuffix', ' · {{value}} value', { value: fmtCents(totalValueCents) })}</span>
+              <span>{t('stockUnits.summary.valueSuffix', ' · {{value}} value', { value: fmtCost(totalValueCents) })}</span>
             )}
           </p>
         </div>
@@ -508,7 +538,11 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
                 </div>
                 <div>
                   <div className="text-xs text-gray-500">{t('stockUnits.detail.unitCost', 'Unit cost')}</div>
-                  <div className="font-mono">{fmtCents(historyDetail.unit.unit_cost) || t('common.emptyValue', '—')}</div>
+                  <div className="font-mono">
+                    {historyDetail.unit.unit_cost == null
+                      ? t('common.emptyValue', '—')
+                      : money(Number(historyDetail.unit.unit_cost), historyDetail.unit.cost_currency ?? undefined)}
+                  </div>
                 </div>
                 {historyDetail.unit.received_at && (
                   <div>

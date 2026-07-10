@@ -6,6 +6,12 @@ const createTenantKnexMock = vi.fn();
 const withTransactionMock = vi.fn();
 const revalidatePathMock = vi.fn();
 const updateTicketWithCacheMock = vi.fn();
+const updateTicketInTransactionMock = vi.fn();
+const hasPermissionMock = vi.fn();
+const createTagsForEntityWithTransactionMock = vi.fn();
+const findTagsByEntityIdsMock = vi.fn();
+const assignTeamToTicketMock = vi.fn();
+const removeTeamFromTicketMock = vi.fn();
 
 const getDefaultStatusIdMock = vi.fn();
 const validateStatusBelongsToBoardMock = vi.fn();
@@ -17,6 +23,10 @@ vi.mock('@alga-psa/auth', () => ({
 
 vi.mock('@alga-psa/auth/actions', () => ({
   getTicketAttributes: vi.fn(),
+}));
+
+vi.mock('@alga-psa/auth/rbac', () => ({
+  hasPermission: (...args: any[]) => hasPermissionMock(...args),
 }));
 
 vi.mock('@alga-psa/db', () => ({
@@ -41,6 +51,7 @@ vi.mock('next/cache', () => ({
 
 vi.mock('./optimizedTicketActions', () => ({
   updateTicketWithCache: (...args: any[]) => updateTicketWithCacheMock(...args),
+  updateTicketInTransaction: (...args: any[]) => updateTicketInTransactionMock(...args),
 }));
 
 vi.mock('../models/ticket', () => ({
@@ -56,13 +67,13 @@ vi.mock('@alga-psa/tags/lib/tagCleanup', () => ({
 }));
 
 vi.mock('@alga-psa/tags/actions', () => ({
-  createTagsForEntityWithTransaction: vi.fn(),
-  findTagsByEntityIds: vi.fn(),
+  createTagsForEntityWithTransaction: (...args: any[]) => createTagsForEntityWithTransactionMock(...args),
+  findTagsByEntityIds: (...args: any[]) => findTagsByEntityIdsMock(...args),
 }));
 
 vi.mock('./teamAssignmentActions', () => ({
-  assignTeamToTicket: vi.fn(),
-  removeTeamFromTicket: vi.fn(),
+  assignTeamToTicket: (...args: any[]) => assignTeamToTicketMock(...args),
+  removeTeamFromTicket: (...args: any[]) => removeTeamFromTicketMock(...args),
 }));
 
 vi.mock('@alga-psa/validation', () => ({
@@ -157,6 +168,7 @@ describe('ticketActions moveTicketsToBoard', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     createTenantKnexMock.mockResolvedValue({ knex: {} });
+    hasPermissionMock.mockResolvedValue(true);
     getDefaultStatusIdMock.mockReset();
     validateStatusBelongsToBoardMock.mockReset();
     updateTicketWithCacheMock.mockReset();
@@ -280,5 +292,56 @@ describe('ticketActions moveTicketsToBoard', () => {
       { ticketId: 'ticket-8', message: 'Permission denied: Cannot update ticket' },
     ]);
     expect(result.movedIds).toEqual(['ticket-7']);
+  });
+});
+
+describe('ticketActions bulk update permission handling', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    createTenantKnexMock.mockResolvedValue({ knex: {} });
+    hasPermissionMock.mockResolvedValue(false);
+  });
+
+  it('returns per-ticket failures instead of throwing when bulk update permission is denied', async () => {
+    const {
+      bulkAddTagsToTickets,
+      bulkAssignTickets,
+      bulkUpdateTicketDueDate,
+      bulkUpdateTicketPriority,
+      bulkUpdateTicketStatus,
+    } = await import('./ticketActions');
+
+    const ticketIds = ['ticket-1', 'ticket-1', 'ticket-2'];
+    const expectedFailures = [
+      { ticketId: 'ticket-1', message: 'Permission denied: Cannot update tickets' },
+      { ticketId: 'ticket-2', message: 'Permission denied: Cannot update tickets' },
+    ];
+
+    await expect(bulkAssignTickets(ticketIds, { kind: 'user', userId: 'user-1' })).resolves.toEqual({
+      updatedIds: [],
+      failed: expectedFailures,
+    });
+    await expect(bulkAddTagsToTickets(ticketIds, ['urgent'])).resolves.toEqual({
+      updatedIds: [],
+      failed: expectedFailures,
+    });
+    await expect(bulkUpdateTicketDueDate(ticketIds, '2026-07-08T12:00:00.000Z')).resolves.toEqual({
+      updatedIds: [],
+      failed: expectedFailures,
+    });
+    await expect(bulkUpdateTicketStatus(ticketIds, 'status-1')).resolves.toEqual({
+      updatedIds: [],
+      failed: expectedFailures,
+    });
+    await expect(bulkUpdateTicketPriority(ticketIds, 'priority-1')).resolves.toEqual({
+      updatedIds: [],
+      failed: expectedFailures,
+    });
+
+    expect(assignTeamToTicketMock).not.toHaveBeenCalled();
+    expect(removeTeamFromTicketMock).not.toHaveBeenCalled();
+    expect(createTagsForEntityWithTransactionMock).not.toHaveBeenCalled();
+    expect(updateTicketInTransactionMock).not.toHaveBeenCalled();
+    expect(revalidatePathMock).not.toHaveBeenCalled();
   });
 });

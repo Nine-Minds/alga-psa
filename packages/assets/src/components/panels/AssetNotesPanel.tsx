@@ -70,9 +70,7 @@ export const AssetNotesPanel: React.FC<AssetNotesPanelProps> = ({
               <AlertDescription>
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-sm">
-                    {error instanceof Error
-                      ? error.message
-                      : t('assetNotesPanel.errors.unknown', { defaultValue: 'Unknown error' })}
+                    {t('assetNotesPanel.errors.loadDescription', { defaultValue: 'Could not load notes. Please try again.' })}
                   </span>
                   <Button
                     id="retry-asset-notes-btn"

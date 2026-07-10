@@ -32,6 +32,7 @@ import {
 import { authorizeApiResourceRead, buildAuthorizationPrincipalSubject } from './authorizationKernel';
 import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination';
 import {
+  ConflictError,
   ForbiddenError,
   NotFoundError,
   ValidationError,
@@ -576,7 +577,7 @@ export class ApiQuoteController extends ApiBaseController {
           const existingQuote = await this.assertQuoteReadAllowed(apiRequest, id, knex);
 
           if (existingQuote.status !== 'pending_approval') {
-            throw new ForbiddenError('Only quotes pending approval can be approved');
+            throw new ConflictError('Only quotes pending approval can be approved');
           }
 
           await this.assertQuoteApproveAllowed(apiRequest, existingQuote as Record<string, any>);
@@ -605,7 +606,7 @@ export class ApiQuoteController extends ApiBaseController {
           const existingQuote = await this.assertQuoteReadAllowed(apiRequest, id, knex);
 
           if (existingQuote.status !== 'pending_approval') {
-            throw new ForbiddenError('Only quotes pending approval can be sent back for changes');
+            throw new ConflictError('Only quotes pending approval can be sent back for changes');
           }
 
           const quote = await this.quoteService.requestChanges(id, data.reason, apiRequest.context);

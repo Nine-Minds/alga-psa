@@ -217,9 +217,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ file
         return await downloadDocument(document.file_id);
       } catch (error) {
         logger.error(`Error in standard download route for document ${lookupId}:`, error);
-        // Ensure a standard Response object is returned on error
-        const errorMessage = error instanceof Error ? error.message : 'Internal Server Error';
-        return new Response(JSON.stringify({ error: errorMessage }), {
+        return new Response(JSON.stringify({ error: 'Failed to download document.' }), {
           status: 500,
           headers: { 'Content-Type': 'application/json' }
         });

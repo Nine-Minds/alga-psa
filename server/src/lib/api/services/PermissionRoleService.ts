@@ -60,6 +60,7 @@ import {
 import User from '@alga-psa/db/models/user';
 import { hasPermission, checkMultiplePermissions } from '../../auth/rbac';
 import logger from '@alga-psa/core/logger';
+import { ConflictError, NotFoundError, ValidationError } from '../middleware/apiMiddleware';
 
 export interface HateoasLink {
   rel: string;
@@ -201,7 +202,7 @@ export class PermissionRoleService extends BaseService<IRole> {
         .first();
       
       if (existing) {
-        throw new Error(`Permission already exists for resource '${data.resource}' and action '${data.action}'`);
+        throw new ConflictError(`Permission already exists for resource '${data.resource}' and action '${data.action}'`);
       }
 
       // Permissions table only has permission_id, resource, action, and tenant
@@ -243,7 +244,7 @@ export class PermissionRoleService extends BaseService<IRole> {
         .first();
       
       if (!existing) {
-        throw new Error('Permission not found');
+        throw new NotFoundError('Permission not found');
       }
 
       // Check for duplicate if resource/action is being changed
@@ -258,7 +259,7 @@ export class PermissionRoleService extends BaseService<IRole> {
           .first();
         
         if (duplicate) {
-          throw new Error(`Permission already exists for resource '${newResource}' and action '${newAction}'`);
+          throw new ConflictError(`Permission already exists for resource '${newResource}' and action '${newAction}'`);
         }
       }
 
@@ -298,7 +299,7 @@ export class PermissionRoleService extends BaseService<IRole> {
         .first();
       
       if (!permission) {
-        throw new Error('Permission not found');
+        throw new NotFoundError('Permission not found');
       }
 
       // Check if permission is in use
@@ -308,7 +309,7 @@ export class PermissionRoleService extends BaseService<IRole> {
         .first();
       
       if (parseInt(roleCount?.count as string) > 0) {
-        throw new Error('Cannot delete permission: it is currently assigned to one or more roles');
+        throw new ConflictError('Cannot delete permission: it is currently assigned to one or more roles');
       }
 
       // Delete the permission
@@ -552,7 +553,7 @@ export class PermissionRoleService extends BaseService<IRole> {
         .first();
       
       if (existing) {
-        throw new Error(`Role with name '${data.role_name}' already exists`);
+        throw new ConflictError(`Role with name '${data.role_name}' already exists`);
       }
 
       let roleData: any = {
@@ -568,7 +569,7 @@ export class PermissionRoleService extends BaseService<IRole> {
           .first();
         
         if (!sourceRole) {
-          throw new Error('Source role not found for cloning');
+          throw new NotFoundError('Source role not found for cloning');
         }
 
         if (!data.description) {
@@ -639,7 +640,7 @@ export class PermissionRoleService extends BaseService<IRole> {
         .first();
       
       if (!existing) {
-        throw new Error('Role not found');
+        throw new NotFoundError('Role not found');
       }
 
       // Check for duplicate name if changing
@@ -650,7 +651,7 @@ export class PermissionRoleService extends BaseService<IRole> {
           .first();
         
         if (duplicate) {
-          throw new Error(`Role with name '${data.role_name}' already exists`);
+          throw new ConflictError(`Role with name '${data.role_name}' already exists`);
         }
       }
 
@@ -699,7 +700,7 @@ export class PermissionRoleService extends BaseService<IRole> {
         .first();
       
       if (!role) {
-        throw new Error('Role not found');
+        throw new NotFoundError('Role not found');
       }
 
       // Check if role is in use
@@ -709,7 +710,7 @@ export class PermissionRoleService extends BaseService<IRole> {
         .first();
       
       if (parseInt(userCount?.count as string) > 0) {
-        throw new Error('Cannot delete role: it is currently assigned to one or more users');
+        throw new ConflictError('Cannot delete role: it is currently assigned to one or more users');
       }
 
       // Delete role permissions first
@@ -773,7 +774,7 @@ export class PermissionRoleService extends BaseService<IRole> {
         .first();
       
       if (!role) {
-        throw new Error('Role not found');
+        throw new NotFoundError('Role not found');
       }
 
       // Verify all permissions exist
@@ -783,7 +784,7 @@ export class PermissionRoleService extends BaseService<IRole> {
       
       const missingPermissions = permissionIds.filter(id => !existingPermissions.includes(id));
       if (missingPermissions.length > 0) {
-        throw new Error(`Permissions not found: ${missingPermissions.join(', ')}`);
+        throw new ValidationError(`Permissions not found: ${missingPermissions.join(', ')}`);
       }
 
       // Get current permissions to avoid duplicates
@@ -853,7 +854,7 @@ export class PermissionRoleService extends BaseService<IRole> {
         .first();
       
       if (!role) {
-        throw new Error('Role not found');
+        throw new NotFoundError('Role not found');
       }
 
       // Remove the permissions
@@ -901,7 +902,7 @@ export class PermissionRoleService extends BaseService<IRole> {
         .first();
       
       if (!role) {
-        throw new Error('Role not found');
+        throw new NotFoundError('Role not found');
       }
 
       // If permissionIds is not empty, verify all permissions exist
@@ -912,7 +913,7 @@ export class PermissionRoleService extends BaseService<IRole> {
         
         const missingPermissions = permissionIds.filter(id => !existingPermissions.includes(id));
         if (missingPermissions.length > 0) {
-          throw new Error(`Permissions not found: ${missingPermissions.join(', ')}`);
+          throw new ValidationError(`Permissions not found: ${missingPermissions.join(', ')}`);
         }
       }
 
@@ -1050,7 +1051,7 @@ export class PermissionRoleService extends BaseService<IRole> {
         .first();
       
       if (!user) {
-        throw new Error('User not found');
+        throw new NotFoundError('User not found');
       }
 
       // Verify all roles exist
@@ -1060,7 +1061,7 @@ export class PermissionRoleService extends BaseService<IRole> {
       
       const missingRoles = roleIds.filter(id => !existingRoles.includes(id));
       if (missingRoles.length > 0) {
-        throw new Error(`Roles not found: ${missingRoles.join(', ')}`);
+        throw new ValidationError(`Roles not found: ${missingRoles.join(', ')}`);
       }
 
       // Get current roles to avoid duplicates
@@ -1124,7 +1125,7 @@ export class PermissionRoleService extends BaseService<IRole> {
         .first();
       
       if (!user) {
-        throw new Error('User not found');
+        throw new NotFoundError('User not found');
       }
 
       // Remove the roles
@@ -1180,7 +1181,7 @@ export class PermissionRoleService extends BaseService<IRole> {
         .first();
       
       if (!user) {
-        throw new Error('User not found');
+        throw new NotFoundError('User not found');
       }
 
       // Verify all roles exist if roleIds is not empty
@@ -1191,7 +1192,7 @@ export class PermissionRoleService extends BaseService<IRole> {
         
         const missingRoles = roleIds.filter(id => !existingRoles.includes(id));
         if (missingRoles.length > 0) {
-          throw new Error(`Roles not found: ${missingRoles.join(', ')}`);
+          throw new ValidationError(`Roles not found: ${missingRoles.join(', ')}`);
         }
       }
 
@@ -1543,7 +1544,7 @@ export class PermissionRoleService extends BaseService<IRole> {
           results.push(role);
         } catch (error) {
           logger.error(`Error creating role ${roleData.role_name}:`, error);
-          throw new Error(`Failed to create role ${roleData.role_name}: ${error instanceof Error ? error.message : String(error)}`);
+          throw new ConflictError(`Failed to create role ${roleData.role_name}. Check the role details and try again.`);
         }
       }
       
@@ -1566,7 +1567,7 @@ export class PermissionRoleService extends BaseService<IRole> {
           results.push(role);
         } catch (error) {
           logger.error(`Error updating role ${update.role_id}:`, error);
-          throw new Error(`Failed to update role ${update.role_id}: ${error instanceof Error ? error.message : String(error)}`);
+          throw new ConflictError(`Failed to update role ${update.role_id}. Check the role details and try again.`);
         }
       }
       
@@ -1590,12 +1591,12 @@ export class PermissionRoleService extends BaseService<IRole> {
           deletedCount++;
         } catch (error) {
           logger.error(`Error deleting role ${roleId}:`, error);
-          errors.push(`${roleId}: ${error instanceof Error ? error.message : String(error)}`);
+          errors.push(`${roleId}: Failed to delete role.`);
         }
       }
       
       if (errors.length > 0) {
-        throw new Error(`Some roles could not be deleted: ${errors.join(', ')}`);
+        throw new ConflictError(`Some roles could not be deleted: ${errors.join(', ')}`);
       }
       
       return {

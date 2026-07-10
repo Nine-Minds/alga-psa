@@ -14,13 +14,14 @@ import type {
 import { TICKET_ORIGINS } from '@alga-psa/types';
 import Ticket from '../models/ticket';
 import { safeRevalidatePath as revalidatePath } from '../lib/safeRevalidate';
-import { getTicketAttributes } from '@alga-psa/auth/actions';
+import { getTicketAttributes } from '@alga-psa/auth/actions/policyActions';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, tenantDb, withTransaction, registerAfterCommit } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { deleteTicketChildRecords } from '../lib/deleteTicketChildRecords';
-import { createTagsForEntityWithTransaction, findTagsByEntityIds } from '@alga-psa/tags/actions';
+import { createTagsForEntityWithTransaction, findTagsByEntityIds } from '@alga-psa/tags/actions/tagActions';
+import { isTagActionError } from '@alga-psa/tags/actions/tagActionErrors';
 import { assignTeamToTicket, removeTeamFromTicket } from './teamAssignmentActions';
 import type { DeletionValidationResult } from '@alga-psa/types';
 import {
@@ -77,11 +78,40 @@ import {
   parseTicketStatusFilterValue,
   shouldApplyOpenOnlyStatusFilter,
 } from '../lib/ticketStatusFilter';
+import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErrors';
 // SLA cancellation is injected by the composition layer to avoid tickets→sla cross-package violation
 let _cancelSlaFn: ((tenantId: string, ticketId: string) => Promise<void>) | null = null;
 
 export async function registerSlaCancellation(fn: (tenantId: string, ticketId: string) => Promise<void>): Promise<void> {
   _cancelSlaFn = fn;
+}
+
+function ticketBulkFailureMessage(error: unknown, fallback: string): string {
+  const expected = ticketActionErrorFrom(error);
+  if (expected) {
+    const candidate = expected as unknown as { actionError?: unknown; permissionError?: unknown };
+    return typeof candidate.actionError === 'string'
+      ? candidate.actionError
+      : String(candidate.permissionError ?? fallback);
+  }
+
+  return fallback;
+}
+
+function isTicketActionError(value: unknown): value is TicketActionError {
+  const candidate = value as Record<string, unknown>;
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    (
+      typeof candidate.actionError === 'string' ||
+      typeof candidate.permissionError === 'string'
+    )
+  );
+}
+
+function ticketBulkFailuresForAll(ticketIds: string[], message: string): Array<{ ticketId: string; message: string }> {
+  return ticketIds.map((ticketId) => ({ ticketId, message }));
 }
 
 // Email event channel constant - inlined to avoid circular dependency with notifications
@@ -274,7 +304,7 @@ interface CreateTicketFromAssetData {
     client_id: string;
 }
 
-export const createTicketFromAsset = withAuth(async (user, { tenant }, data: CreateTicketFromAssetData): Promise<ITicket> => {
+export const createTicketFromAsset = withAuth(async (user, { tenant }, data: CreateTicketFromAssetData): Promise<ITicket | TicketActionError> => {
     try {
         const {knex: db} = await createTenantKnex();
 
@@ -316,7 +346,7 @@ export const createTicketFromAsset = withAuth(async (user, { tenant }, data: Cre
                 .first();
 
             if (!fullTicket) {
-                throw new Error('Failed to retrieve created ticket');
+                throw new Error('Created ticket could not be reloaded after insert.');
             }
 
             const enteredSlaEvent = buildTicketResolutionSlaStageEnteredEvent({
@@ -352,13 +382,17 @@ export const createTicketFromAsset = withAuth(async (user, { tenant }, data: Cre
 
         return result;
     } catch (error) {
+        const expected = ticketActionErrorFrom(error);
+        if (expected) {
+            return expected;
+        }
         console.error('Error creating ticket from asset:', error);
-        throw new Error('Failed to create ticket from asset');
+        throw error;
     }
 });
 
 
-export const addTicket = withAuth(async (user, { tenant }, data: FormData): Promise<ITicket|undefined> => {
+export const addTicket = withAuth(async (user, { tenant }, data: FormData): Promise<ITicket | TicketActionError | undefined> => {
   try {
     const {knex: db} = await createTenantKnex();
 
@@ -477,7 +511,7 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
         .first();
 
       if (!fullTicket) {
-        throw new Error('Failed to retrieve created ticket');
+        throw new Error('Created ticket could not be reloaded after insert.');
       }
 
       // Write activity-timeline entry for ticket creation. The details
@@ -542,6 +576,10 @@ export const addTicket = withAuth(async (user, { tenant }, data: FormData): Prom
       return convertDates(fullTicket);
     });
   } catch (error) {
+    const expected = ticketActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
     console.error('Error in addTicket:', error);
     throw error;
   }
@@ -579,6 +617,16 @@ export const fetchTicketAttributes = withAuth(async (user, { tenant }, ticketId:
 
     return result;
   } catch (error) {
+    const expected = ticketActionErrorFrom(error);
+    if (expected) {
+      const candidate = expected as unknown as { actionError?: unknown; permissionError?: unknown };
+      return {
+        success: false,
+        error: typeof candidate.permissionError === 'string'
+          ? candidate.permissionError
+          : String(candidate.actionError ?? 'Failed to fetch ticket attributes'),
+      };
+    }
     console.error(error);
     return { success: false, error: 'Failed to fetch ticket attributes' };
   }
@@ -590,7 +638,7 @@ export interface UpdateTicketOptions {
   overrideCloseRulesReason?: string | null;
 }
 
-export const updateTicket = withAuth(async (user, { tenant }, id: string, data: Partial<ITicket>, options?: UpdateTicketOptions) => {
+export const updateTicket = withAuth(async (user, { tenant }, id: string, data: Partial<ITicket>, options?: UpdateTicketOptions): Promise<'success' | TicketActionError> => {
   try {
     // Validate update data
     const validatedData = validateData(ticketUpdateSchema, data);
@@ -1125,17 +1173,16 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
 
     return 'success';
   } catch (error) {
-    console.error(error);
-    // Close-rule failures carry the user-facing explanation of what's unmet —
-    // don't flatten them into the generic message.
-    if (error instanceof TicketCloseValidationError) {
-      throw error;
+    const expected = ticketActionErrorFrom(error);
+    if (expected) {
+      return expected;
     }
-    throw new Error('Failed to update ticket');
+    console.error(error);
+    throw error;
   }
 });
 
-export const getTickets = withAuth(async (user, { tenant }): Promise<ITicket[]> => {
+export const getTickets = withAuth(async (user, { tenant }): Promise<ITicket[] | TicketActionError> => {
   try {
     const {knex} = await createTenantKnex();
 
@@ -1174,12 +1221,16 @@ export const getTickets = withAuth(async (user, { tenant }): Promise<ITicket[]> 
 
     return result;
   } catch (error) {
+    const expected = ticketActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
     console.error('Failed to fetch tickets:', error);
-    throw new Error('Failed to fetch tickets');
+    throw error;
   }
 });
 
-export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITicketListFilters): Promise<ITicketListItem[]> => {
+export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITicketListFilters): Promise<ITicketListItem[] | TicketActionError> => {
   try {
     const validatedFilters = validateData(ticketListFiltersSchema, filters) as ITicketListFilters;
     const parsedStatusFilter = parseTicketStatusFilterValue(validatedFilters.statusId);
@@ -1407,12 +1458,16 @@ export const getTicketsForList = withAuth(async (user, { tenant }, filters: ITic
 
     return result;
   } catch (error) {
+    const expected = ticketActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
     console.error('Failed to fetch tickets:', error);
-    throw new Error('Failed to fetch tickets');
+    throw error;
   }
 });
 
-export const addTicketComment = withAuth(async (user, { tenant }, ticketId: string, comment: string, isInternal: boolean): Promise<void> => {
+export const addTicketComment = withAuth(async (user, { tenant }, ticketId: string, comment: string, isInternal: boolean): Promise<void | TicketActionError> => {
   try {
     const {knex: db} = await createTenantKnex();
 
@@ -1440,7 +1495,7 @@ export const addTicketComment = withAuth(async (user, { tenant }, ticketId: stri
         | { comment_id: string; thread_id: string }
         | undefined;
       if (!generatedIds?.comment_id || !generatedIds?.thread_id) {
-        throw new Error('Failed to generate comment/thread identifiers');
+        throw new Error('Database UUID generation did not return comment/thread identifiers.');
       }
       const nowIso = new Date().toISOString();
 
@@ -1516,8 +1571,12 @@ export const addTicketComment = withAuth(async (user, { tenant }, ticketId: stri
       }
     });
   } catch (error) {
+    const expected = ticketActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
     console.error('Failed to add ticket comment:', error);
-    throw new Error('Failed to add ticket comment');
+    throw error;
   }
 });
 
@@ -1600,7 +1659,7 @@ export const deleteTicket = withAuth(async (
       success: false,
       canDelete: false,
       code: 'VALIDATION_FAILED',
-      message: error instanceof Error ? error.message : 'Failed to delete ticket',
+      message: ticketBulkFailureMessage(error, 'Failed to delete ticket'),
       dependencies: [],
       alternatives: []
     };
@@ -1646,7 +1705,7 @@ export const deleteTickets = withAuth(async (user, { tenant }, ticketIds: string
       console.error(`Failed to delete ticket ${ticketId}:`, error);
       failed.push({
         ticketId,
-        message: error instanceof Error ? error.message : 'Failed to delete ticket'
+        message: ticketBulkFailureMessage(error, 'Failed to delete ticket')
       });
     }
   }
@@ -1706,7 +1765,7 @@ export const moveTicketsToBoard = withAuth(async (
       return destinationStatusId;
     });
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Destination board or status is invalid';
+    const message = ticketBulkFailureMessage(error, 'Destination board or status is invalid');
     return {
       movedIds: [],
       failed: uniqueIds.map((ticketId) => ({ ticketId, message })),
@@ -1741,7 +1800,7 @@ export const moveTicketsToBoard = withAuth(async (
     } catch (error: unknown) {
       failed.push({
         ticketId,
-        message: error instanceof Error ? error.message : 'Failed to move ticket',
+        message: ticketBulkFailureMessage(error, 'Failed to move ticket'),
       });
     }
   }
@@ -1773,10 +1832,13 @@ export const bulkAssignTickets = withAuth(async (
   }
 
   // Authorize once up front. The team helpers and the per-ticket update each still
-  // verify permission internally, but this entry check fails fast before any mutation.
+  // verify permission internally, but this entry check avoids any mutation.
   const { knex } = await createTenantKnex();
   if (!(await hasPermission(user, 'ticket', 'update', knex))) {
-    throw new Error('Permission denied: Cannot update tickets');
+    return {
+      updatedIds: [],
+      failed: ticketBulkFailuresForAll(uniqueIds, 'Permission denied: Cannot update tickets'),
+    };
   }
 
   const updatedIds: string[] = [];
@@ -1787,11 +1849,17 @@ export const bulkAssignTickets = withAuth(async (
       if (selection.kind === 'team') {
         // Canonical team flow: sets assigned_team_id + the team lead as primary assignee and
         // records team members as `team_member` resources, so the team badge/filter persists.
-        await assignTeamToTicket(ticketId, selection.teamId);
+        const result = await assignTeamToTicket(ticketId, selection.teamId);
+        if (isTicketActionError(result)) {
+          throw result;
+        }
       } else {
         // Assigning to a single user clears any team assignment (and its team_member resources)
         // first so a stale assigned_team_id / team badge isn't left behind.
-        await removeTeamFromTicket(ticketId, { mode: 'remove_all' });
+        const result = await removeTeamFromTicket(ticketId, { mode: 'remove_all' });
+        if (isTicketActionError(result)) {
+          throw result;
+        }
         await withTransaction(knex, (trx: Knex.Transaction) =>
           updateTicketInTransaction(trx, user as IUserWithRoles, tenant, ticketId, { assigned_to: selection.userId }),
         );
@@ -1800,7 +1868,7 @@ export const bulkAssignTickets = withAuth(async (
     } catch (error: unknown) {
       failed.push({
         ticketId,
-        message: error instanceof Error ? error.message : 'Failed to assign ticket',
+        message: ticketBulkFailureMessage(error, 'Failed to assign ticket'),
       });
     }
   }
@@ -1833,16 +1901,23 @@ export const bulkAddTagsToTickets = withAuth(async (
   // Tag writes don't go through updateTicketWithCache, so authorize explicitly here.
   const { knex: authKnex } = await createTenantKnex();
   if (!(await hasPermission(user, 'ticket', 'update', authKnex))) {
-    throw new Error('Permission denied: Cannot update tickets');
+    return {
+      updatedIds: [],
+      failed: ticketBulkFailuresForAll(uniqueIds, 'Permission denied: Cannot update tickets'),
+    };
   }
 
   const existingByTicket = new Map<string, Set<string>>();
   try {
     const existing = await findTagsByEntityIds(uniqueIds, 'ticket');
-    for (const tag of existing) {
-      const set = existingByTicket.get(tag.tagged_id) ?? new Set<string>();
-      set.add(tag.tag_text.toLowerCase());
-      existingByTicket.set(tag.tagged_id, set);
+    if (isTagActionError(existing)) {
+      console.warn('[bulkAddTagsToTickets] Failed to load existing tags for dedupe:', existing);
+    } else {
+      for (const tag of existing) {
+        const set = existingByTicket.get(tag.tagged_id) ?? new Set<string>();
+        set.add(tag.tag_text.toLowerCase());
+        existingByTicket.set(tag.tagged_id, set);
+      }
     }
   } catch (error) {
     console.warn('[bulkAddTagsToTickets] Failed to load existing tags for dedupe:', error);
@@ -1873,7 +1948,7 @@ export const bulkAddTagsToTickets = withAuth(async (
     } catch (error: unknown) {
       failed.push({
         ticketId,
-        message: error instanceof Error ? error.message : 'Failed to add tags to ticket',
+        message: ticketBulkFailureMessage(error, 'Failed to add tags to ticket'),
       });
     }
   }
@@ -1903,7 +1978,10 @@ export const bulkUpdateTicketDueDate = withAuth(async (
   // Authorize once up front instead of paying a permission lookup per ticket.
   const { knex } = await createTenantKnex();
   if (!(await hasPermission(user, 'ticket', 'update', knex))) {
-    throw new Error('Permission denied: Cannot update tickets');
+    return {
+      updatedIds: [],
+      failed: ticketBulkFailuresForAll(uniqueIds, 'Permission denied: Cannot update tickets'),
+    };
   }
 
   const updatedIds: string[] = [];
@@ -1919,7 +1997,7 @@ export const bulkUpdateTicketDueDate = withAuth(async (
     } catch (error: unknown) {
       failed.push({
         ticketId,
-        message: error instanceof Error ? error.message : 'Failed to update due date',
+        message: ticketBulkFailureMessage(error, 'Failed to update due date'),
       });
     }
   }
@@ -1949,7 +2027,10 @@ export const bulkUpdateTicketStatus = withAuth(async (
   // Authorize once up front instead of paying a permission lookup per ticket.
   const { knex } = await createTenantKnex();
   if (!(await hasPermission(user, 'ticket', 'update', knex))) {
-    throw new Error('Permission denied: Cannot update tickets');
+    return {
+      updatedIds: [],
+      failed: ticketBulkFailuresForAll(uniqueIds, 'Permission denied: Cannot update tickets'),
+    };
   }
 
   const updatedIds: string[] = [];
@@ -1965,7 +2046,9 @@ export const bulkUpdateTicketStatus = withAuth(async (
     } catch (error: unknown) {
       failed.push({
         ticketId,
-        message: error instanceof Error ? error.message : 'Failed to update status',
+        message: error instanceof TicketCloseValidationError
+          ? error.message
+          : ticketBulkFailureMessage(error, 'Failed to update status'),
         closeRuleFailures: error instanceof TicketCloseValidationError ? error.failures : undefined,
       });
     }
@@ -1996,7 +2079,10 @@ export const bulkUpdateTicketPriority = withAuth(async (
   // Authorize once up front instead of paying a permission lookup per ticket.
   const { knex } = await createTenantKnex();
   if (!(await hasPermission(user, 'ticket', 'update', knex))) {
-    throw new Error('Permission denied: Cannot update tickets');
+    return {
+      updatedIds: [],
+      failed: ticketBulkFailuresForAll(uniqueIds, 'Permission denied: Cannot update tickets'),
+    };
   }
 
   const updatedIds: string[] = [];
@@ -2012,7 +2098,7 @@ export const bulkUpdateTicketPriority = withAuth(async (
     } catch (error: unknown) {
       failed.push({
         ticketId,
-        message: error instanceof Error ? error.message : 'Failed to update priority',
+        message: ticketBulkFailureMessage(error, 'Failed to update priority'),
       });
     }
   }
@@ -2024,7 +2110,7 @@ export const bulkUpdateTicketPriority = withAuth(async (
   return { updatedIds, failed };
 });
 
-export const getScheduledHoursForTicket = withAuth(async (user, { tenant }, ticketId: string): Promise<IAgentSchedule[]> => {
+export const getScheduledHoursForTicket = withAuth(async (user, { tenant }, ticketId: string): Promise<IAgentSchedule[] | TicketActionError> => {
   try {
     const {knex: db} = await createTenantKnex();
 
@@ -2084,12 +2170,12 @@ export const getScheduledHoursForTicket = withAuth(async (user, { tenant }, tick
 
     return result;
   } catch (error) {
-    console.error('Error fetching scheduled hours:', error);
-    // Provide more detailed error information
-    if (error instanceof Error) {
-      throw new Error(`Failed to fetch scheduled hours: ${error.message}`);
+    const expected = ticketActionErrorFrom(error);
+    if (expected) {
+      return expected;
     }
-    throw new Error('Failed to fetch scheduled hours');
+    console.error('Error fetching scheduled hours:', error);
+    throw error;
   }
 });
 
@@ -2258,8 +2344,12 @@ export const getTicketById = withAuth(async (user, { tenant }, id: string): Prom
 
     return result;
   } catch (error) {
+    const expected = ticketActionErrorFrom(error);
+    if (expected) {
+      return expected as never;
+    }
     console.error('Failed to fetch ticket:', error);
-    throw new Error('Failed to fetch ticket');
+    throw error;
   }
 });
 
@@ -2300,8 +2390,17 @@ export const getTicketAppointmentRequests = withAuth(async (
 
     return { success: true, data: requests };
   } catch (error) {
+    const expected = ticketActionErrorFrom(error);
+    if (expected) {
+      const candidate = expected as unknown as { actionError?: unknown; permissionError?: unknown };
+      return {
+        success: false,
+        error: typeof candidate.permissionError === 'string'
+          ? candidate.permissionError
+          : String(candidate.actionError ?? 'Failed to fetch appointment requests.'),
+      };
+    }
     console.error('Error fetching ticket appointment requests:', error);
-    const message = error instanceof Error ? error.message : 'Failed to fetch appointment requests';
-    return { success: false, error: message };
+    return { success: false, error: 'Failed to fetch appointment requests.' };
   }
 });

@@ -1,9 +1,9 @@
 'use server'
 
 import type { IUser, IBoard, ITicketStatus, IPriority, IClient, IContact } from '@alga-psa/types';
-import { getAllUsers } from '@alga-psa/user-composition/actions';
+import { getAllUsers } from '@alga-psa/user-composition/actions/userQueryActions';
 import { getAllBoards } from './board-actions';
-import { getAllPriorities, getPrioritiesByBoardType } from '@alga-psa/reference-data/actions';
+import { getAllPriorities, getPrioritiesByBoardType } from '@alga-psa/reference-data/actions/priorityActions';
 import { getAllClients, getClientById, getContactsByClient } from './clientLookupActions';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';

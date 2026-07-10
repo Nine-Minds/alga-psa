@@ -133,8 +133,7 @@ describe('client inbound webhook actions', () => {
     const { getAction } = await loadClientInboundActions();
     const action = getAction('upsertClientByExternalId');
 
-    await expect(
-      action?.handle(
+    await expect(action?.handle(
         {
           tenant: 'tenant-a',
           webhookSlug: 'rmm-alerts',
@@ -469,10 +468,19 @@ describe('client inbound webhook actions', () => {
           email: 'jane@example.com',
           client_external_id: 'missing-company',
         },
-      ),
-    ).rejects.toThrow(
-      'VALIDATION_ERROR: upsertContactByExternalId requires client_id or resolvable client_external_id when creating a contact',
-    );
+      )
+    ).resolves.toEqual({
+      success: false,
+      entityType: 'contact',
+      externalId: 'contact-42',
+      message:
+        'VALIDATION_ERROR: upsertContactByExternalId requires client_id or resolvable client_external_id when creating a contact',
+      metadata: {
+        code: 'VALIDATION_ERROR',
+        field: 'client_id',
+        client_external_id: 'missing-company',
+      },
+    });
 
     expect(mocks.lookupAlgaEntityByExternalId).toHaveBeenCalledWith(
       'tenant-a',

@@ -25,4 +25,15 @@ describe('microsoft consumer schema contracts', () => {
     expect(bindingsMigration).not.toContain('default compatibility');
     expect(bindingsMigration).not.toContain('compatibility source');
   });
+
+  it('tracks Microsoft profile capabilities on the tenant-owned profile row', () => {
+    const capabilitiesMigration = fs.readFileSync(
+      repoPath('server/migrations/20260708110000_add_microsoft_profiles_capabilities.cjs'),
+      'utf8'
+    );
+
+    expect(capabilitiesMigration).toContain("jsonb('capabilities')");
+    expect(capabilitiesMigration).toContain('["msp_sso","email","calendar","teams"]');
+    expect(capabilitiesMigration).toContain('dropColumn(\'capabilities\')');
+  });
 });

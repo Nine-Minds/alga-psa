@@ -127,7 +127,7 @@ const NinjaOneIntegrationSettings: React.FC = () => {
           await loadCredentialsStatus(); // Refresh to show masked status
         } else {
           console.error('NinjaOne save credentials failed:', result.error);
-          setError(t('integrations.rmm.ninjaOne.errors.saveCredentials', { defaultValue: 'Failed to save credentials.' }));
+          setError(result.error ?? t('integrations.rmm.ninjaOne.errors.saveCredentials', { defaultValue: 'Failed to save credentials.' }));
         }
       } catch (err) {
         console.error('NinjaOne save credentials error:', err);
@@ -184,8 +184,13 @@ const NinjaOneIntegrationSettings: React.FC = () => {
     setError(null);
     try {
       const connectUrl = await getNinjaOneConnectUrl(selectedRegion);
+      if (!connectUrl.success || !connectUrl.url) {
+        setError(connectUrl.error ?? t('integrations.rmm.ninjaOne.errors.connect', { defaultValue: 'Failed to initiate NinjaOne connection.' }));
+        return;
+      }
+
       if (typeof window !== 'undefined') {
-        window.location.href = connectUrl;
+        window.location.href = connectUrl.url;
       }
     } catch (err) {
       console.error('NinjaOne connect error:', err);
@@ -204,7 +209,7 @@ const NinjaOneIntegrationSettings: React.FC = () => {
           setSuccessMessage(t('integrations.rmm.ninjaOne.toasts.disconnectSuccess', { defaultValue: 'NinjaOne connection successfully disconnected.' }));
         } else {
           console.error('NinjaOne disconnect failed:', result.error);
-          setError(t('integrations.rmm.ninjaOne.errors.disconnect', { defaultValue: 'Failed to disconnect NinjaOne.' }));
+          setError(result.error ?? t('integrations.rmm.ninjaOne.errors.disconnect', { defaultValue: 'Failed to disconnect NinjaOne.' }));
         }
       } catch (err) {
         console.error('NinjaOne disconnect error:', err);
@@ -233,7 +238,7 @@ const NinjaOneIntegrationSettings: React.FC = () => {
           setOrgMappingsRefreshKey((prev) => prev + 1);
         } else {
           console.error('NinjaOne org sync failed:', result.errors);
-          setError(t('integrations.rmm.ninjaOne.errors.orgSyncFailed', { defaultValue: 'Organization sync failed.' }));
+          setError(result.errors?.join('; ') || t('integrations.rmm.ninjaOne.errors.orgSyncFailed', { defaultValue: 'Organization sync failed.' }));
         }
       } catch (err) {
         console.error('NinjaOne org sync error:', err);
@@ -261,7 +266,7 @@ const NinjaOneIntegrationSettings: React.FC = () => {
           setFleetComplianceRefreshKey((prev) => prev + 1);
         } else {
           console.error('NinjaOne device sync failed:', result.errors);
-          setError(t('integrations.rmm.ninjaOne.errors.deviceSyncFailed', { defaultValue: 'Device sync failed.' }));
+          setError(result.errors?.join('; ') || t('integrations.rmm.ninjaOne.errors.deviceSyncFailed', { defaultValue: 'Device sync failed.' }));
         }
       } catch (err) {
         console.error('NinjaOne device sync error:', err);

@@ -11,6 +11,7 @@ const hoisted = vi.hoisted(() => {
     client_id: string;
     tenant_id: string;
     client_secret_ref: string;
+    capabilities?: string[] | string | null;
     is_default: boolean;
     is_archived: boolean;
     archived_at: string | Date | null;
@@ -239,6 +240,7 @@ type MicrosoftProfileRecord = {
   client_id: string;
   tenant_id: string;
   client_secret_ref: string;
+  capabilities?: string[] | string | null;
   is_default: boolean;
   is_archived: boolean;
   archived_at: string | Date | null;
@@ -376,6 +378,7 @@ describe('Microsoft integration actions', () => {
       display_name: 'Ops Profile',
       client_id: 'ops-client-id',
       tenant_id: 'ops-tenant-guid',
+      capabilities: JSON.stringify(['msp_sso', 'email', 'calendar', 'teams']),
       is_default: true,
       is_archived: false,
     });
@@ -391,6 +394,7 @@ describe('Microsoft integration actions', () => {
       clientId: 'ops-client-id',
       tenantId: 'ops-tenant-guid',
       clientSecretConfigured: true,
+      capabilities: ['msp_sso', 'email', 'calendar', 'teams'],
       status: 'ready',
       consumers: ['MSP SSO'],
     });
@@ -402,6 +406,29 @@ describe('Microsoft integration actions', () => {
       tenantIdConfigured: true,
       active: true,
     });
+  });
+
+  it('persists and updates Microsoft profile capabilities', async () => {
+    const created = await createMicrosoftProfile({
+      displayName: 'Teams Profile',
+      clientId: 'teams-client-id',
+      clientSecret: 'teams-secret',
+      tenantId: 'teams-tenant-guid',
+      capabilities: ['teams'],
+    });
+
+    expect(created.success).toBe(true);
+    expect(created.profile?.capabilities).toEqual(['teams']);
+    expect(microsoftProfiles[0].capabilities).toBe(JSON.stringify(['teams']));
+
+    const updated = await updateMicrosoftProfile({
+      profileId: created.profile!.profileId,
+      capabilities: ['teams', 'calendar'],
+    });
+
+    expect(updated.success).toBe(true);
+    expect(updated.profile?.capabilities).toEqual(['teams', 'calendar']);
+    expect(microsoftProfiles[0].capabilities).toBe(JSON.stringify(['teams', 'calendar']));
   });
 
   it('T005/T006: profile names are unique within a tenant but reusable across tenants', async () => {

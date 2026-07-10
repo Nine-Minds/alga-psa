@@ -668,7 +668,8 @@
           "resetProviders": "Restablecer proveedores de Google",
           "resetting": "Restableciendo…",
           "save": "Guardar",
-          "saving": "Guardando…"
+          "saving": "Guardando…",
+          "disconnectProviders": "Disconnect Google providers"
         },
         "afterSaveNotice": "Después de guardar, vaya a las integraciones de correo entrante y calendario y vuelva a autorizar los proveedores. Los proveedores de Google existentes no se migran.",
         "consoleLink": "Google Cloud Console",
@@ -693,7 +694,8 @@
           "sectionTitle": "Aplicación OAuth",
           "shareApp": "Usar la misma aplicación OAuth para Gmail y Calendar",
           "shareAppHelp": "Recomendado. Aún puede autorizar cuentas de Google distintas por integración.",
-          "storedSecret": "Secret almacenado: {{secret}}"
+          "storedSecret": "Secret almacenado: {{secret}}",
+          "locationHelp": "Google Cloud: APIs & Services > Credentials > OAuth 2.0 Client IDs."
         },
         "redirectUrisLabel": "URIs de redirección (copie en el cliente OAuth de Google)",
         "scopes": "Scopes",
@@ -702,7 +704,8 @@
         "serviceAccount": {
           "alreadyStored": "Ya hay una clave de cuenta de servicio almacenada (no se muestra).",
           "description": "Pegue el JSON de la clave de la cuenta de servicio propia del inquilino utilizada para aprovisionar Pub/Sub.",
-          "title": "Cuenta de servicio de Pub/Sub (requerido para Gmail)"
+          "title": "Cuenta de servicio de Pub/Sub (requerido para Gmail)",
+          "locationHelp": "Google Cloud: IAM & Admin > Service Accounts > Keys > Add key > JSON."
         },
         "setupGuide": "Guía de configuración",
         "title": "Google",
@@ -714,7 +717,16 @@
           "savedDescription": "La configuración de Google del inquilino se actualizó correctamente.",
           "savedTitle": "Configuración de Google guardada",
           "unknownError": "Error desconocido"
-        }
+        },
+        "disconnectDialog": {
+          "cancel": "Keep providers connected",
+          "message": "Existing Gmail and Google Calendar provider connections will be marked disconnected and must be re-authorized. Stored Google credentials stay in place.",
+          "title": "Disconnect Google providers?"
+        },
+        "oauthValues": {
+          "title": "Google OAuth app values"
+        },
+        "redirectUrisHelp": "Staff sign-in uses the OAuth client saved below. Add the listed Gmail and Calendar callback URLs in Google Cloud."
       }
     },
     "hudu": {
@@ -1049,7 +1061,8 @@
           "openTeamsSetup": "Abrir configuración de Teams",
           "refresh": "Actualizar",
           "resetProviders": "Restablecer proveedores de Microsoft",
-          "resetting": "Restableciendo…"
+          "resetting": "Restableciendo…",
+          "disconnectProviders": "Disconnect Microsoft providers"
         },
         "archiveDialog": {
           "archiving": "Archivando…",
@@ -1065,19 +1078,21 @@
           "needsAttention": "Requiere atención",
           "saving": "Guardando…",
           "selectProfile": "Seleccionar un perfil",
-          "unbound": "Sin enlazar"
+          "unbound": "Sin enlazar",
+          "noCapablePlaceholder": "No enabled profile"
         },
         "bindings": {
-          "summaryBound": "{{consumer}} está enlazado a {{profile}}.",
+          "summaryBound": "Current: {{profile}}.",
           "summaryNone": "Actualmente no hay ningún perfil de Microsoft enlazado a {{consumer}}.",
           "summaryUnavailable": "{{consumer}} está enlazado a un perfil no disponible.",
-          "warningArchived": "{{consumer}} sigue enlazado a un perfil archivado. Vuelva a enlazarlo a un perfil activo.",
+          "warningArchived": "{{profile}} is archived. Choose an active Microsoft app.",
           "warningNoBinding": "Aún no se ha configurado ningún enlace de {{consumer}}.",
           "warningNotReady": "{{consumer}} está enlazado a {{profile}}, pero ese perfil aún necesita configuración.",
-          "warningProfileMissing": "{{consumer}} está enlazado a un perfil que ya no está disponible. Vuelva a enlazarlo a un perfil activo."
+          "warningProfileMissing": "{{consumer}} está enlazado a un perfil que ya no está disponible. Vuelva a enlazarlo a un perfil activo.",
+          "warningMissingCapability": "{{profile}} is selected, but it cannot handle {{consumer}} yet. Edit the app and turn on {{consumer}}, or choose another app.",
+          "warningNoApps": "Create a Microsoft app, turn on {{consumer}}, then choose it here.",
+          "warningNoCapable": "No app can handle {{consumer}} yet. Edit a Microsoft app and turn on {{consumer}}, then choose it here."
         },
-        "bindingsAlertCe": "Los enlaces explícitos son la fuente de verdad para la selección de perfil de MSP SSO. Configure los dominios de inicio de sesión por separado después de elegir el perfil enlazado.",
-        "bindingsAlertEe": "Los enlaces explícitos son la fuente de verdad para la selección de perfiles de MSP SSO, correo, calendario y Teams.",
         "consumerBindings": {
           "descriptionCe": "Enlace un perfil de Microsoft a MSP SSO para el inicio de sesión y el uso del dominio de inicio de sesión.",
           "descriptionEe": "Enlace un perfil de Microsoft por cada consumidor compatible. Reasignar un consumidor no cambia los demás.",
@@ -1123,7 +1138,9 @@
           "setDefault": "Establecer este perfil como perfil de Microsoft predeterminado",
           "setDefaultHelp": "Los perfiles predeterminados siguen disponibles para los flujos de gestión de perfiles y los metadatos seguros en la migración, no para el enrutamiento de consumidores.",
           "storedSecretHint": "Secret almacenado: {{secret}}. Deje este campo vacío para mantenerlo sin cambios.",
-          "tenantId": "Tenant ID"
+          "tenantId": "Tenant ID",
+          "capabilities": "Enabled capabilities",
+          "capabilitiesHelp": "Only enabled capabilities can bind to this Microsoft app."
         },
         "empty": {
           "createButton": "Crear perfil de Microsoft",
@@ -1177,7 +1194,9 @@
           "storedSecret": "Secret almacenado",
           "teamsAppIdUri": "Application ID URI de Teams",
           "tenantIdLabel": "Tenant ID:",
-          "updating": "Actualizando…"
+          "updating": "Actualizando…",
+          "enabledCapabilities": "Enabled capabilities",
+          "noEnabledCapabilities": "No enabled capabilities"
         },
         "providerReconnect": {
           "description": "Utilice esto si rota credenciales o enlaza intencionalmente el correo de Outlook o el calendario a un perfil de Microsoft diferente.",
@@ -1220,6 +1239,15 @@
           "clientSecretRequired": "El Microsoft OAuth Client Secret es obligatorio",
           "displayNameRequired": "El nombre visible del perfil de Microsoft es obligatorio",
           "tenantIdRequired": "El Microsoft Tenant ID es obligatorio"
+        },
+        "disconnectDialog": {
+          "cancel": "Keep providers connected",
+          "message": "Existing Outlook email and calendar provider connections will be marked disconnected and must be re-authorized. Microsoft profiles and service bindings stay in place.",
+          "title": "Disconnect Microsoft providers?"
+        },
+        "profileLibrary": {
+          "description": "Named Microsoft app registrations that services can bind to.",
+          "title": "Profile library"
         }
       }
     },
@@ -1336,7 +1364,8 @@
         "makeDefault": "Establecer como predeterminado",
         "noDefault": "Sin valor predeterminado",
         "saving": "Guardando…",
-        "undepositedFunds": "Fondos sin depositar (predeterminado)"
+        "undepositedFunds": "Fondos sin depositar (predeterminado)",
+        "catalogLoadError": "Failed to load QuickBooks sync configuration options."
       }
     },
     "rmm": {
@@ -1864,6 +1893,11 @@
         },
         "descriptionCe": "Registre dominios consultivos para el descubrimiento de SSO de inicio de sesión de MSP. La verificación de propiedad no se aplica en Community Edition, y los dominios no gestionados recurren a los proveedores de aplicación de Nine Minds.",
         "descriptionEe": "Gestione el ciclo de vida de las reclamaciones de dominio para el descubrimiento de proveedores de SSO de inicio de sesión de MSP. Los dominios no reclamados o no elegibles recurren a los proveedores de aplicación de Nine Minds.",
+        "moved": {
+          "title": "MSP SSO Login Domains",
+          "body": "Single sign-on settings, including login-domain claims, have moved to Security → Single Sign-On.",
+          "cta": "Open Single Sign-On settings"
+        },
         "dnsHost": "Host:",
         "dnsInstructions": "Añada el registro DNS TXT y luego haga clic en Verificar:",
         "dnsValue": "Valor:",
@@ -2647,6 +2681,29 @@
         "secretKeyFormat": "Secret key should start with sk_",
         "publishableKeyFormat": "Publishable key should start with pk_"
       }
+    },
+    "providersWorkbench": {
+      "badges": {
+        "loading": "Loading",
+        "needsAttention": "Needs attention",
+        "needsSetup": "Needs setup",
+        "notConfigured": "Not configured",
+        "ready": "Ready"
+      },
+      "descriptionCe": "Set up the provider path your tenant uses. Configure both only when email or SSO workflows require both ecosystems.",
+      "descriptionEe": "Set up the provider path your tenant uses. Configure both only when email, calendar, SSO, or Teams workflows require both ecosystems.",
+      "eyebrow": "Provider setup",
+      "google": {
+        "description": "Gmail inbound email and Google Calendar.",
+        "label": "Google"
+      },
+      "microsoft": {
+        "descriptionCe": "MSP SSO, Microsoft sign-in, and login-domain discovery.",
+        "descriptionEe": "MSP SSO, Outlook email, calendar sync, and Teams.",
+        "label": "Microsoft"
+      },
+      "selectorLabel": "Provider credential paths",
+      "title": "Provider Credentials"
     }
   }
 }

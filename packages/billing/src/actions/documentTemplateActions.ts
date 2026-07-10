@@ -7,6 +7,12 @@ import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import type { TemplateAst } from '@alga-psa/types';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 import {
   isDocumentType,
@@ -29,19 +35,34 @@ import { renderTemplateAstHtmlDocument } from '../lib/invoice-template-ast/serve
  * registered document type (sales-order today); the management UI passes the document_type through.
  */
 
-function assertDocumentType(documentType: string): DocumentType {
+type DocumentTemplateActionError = ActionMessageError | ActionPermissionError;
+type SaveDocumentTemplateResult =
+  | { success: true; template_id: string }
+  | { success: false; error: string }
+  | DocumentTemplateActionError;
+type SuccessResult = { success: true } | DocumentTemplateActionError;
+type DeleteDocumentTemplateResult =
+  | { success: true }
+  | { success: false; error: string }
+  | DocumentTemplateActionError;
+type PreviewDocumentTemplateResult = { html: string } | DocumentTemplateActionError;
+
+function resolveDocumentType(documentType: string): DocumentType | ActionMessageError {
   if (!isDocumentType(documentType)) {
-    throw new Error(`Unknown document type: ${documentType}`);
+    return actionError(`Unknown document type: ${documentType}`);
   }
   return documentType;
 }
 
 export const getDocumentTemplates = withAuth(
-  async (user, { tenant }, documentType: string): Promise<DocumentTemplateListItem[]> => {
+  async (user, { tenant }, documentType: string): Promise<DocumentTemplateListItem[] | DocumentTemplateActionError> => {
     if (!(await hasPermission(user as any, 'billing', 'read'))) {
-      throw new Error('Permission denied: cannot read document templates');
+      return permissionError('Permission denied: cannot read document templates');
     }
-    const type = assertDocumentType(documentType);
+    const type = resolveDocumentType(documentType);
+    if (typeof type !== 'string') {
+      return type;
+    }
     const { knex } = await createTenantKnex();
     return listDocumentTemplates(knex, tenant, type);
   },
@@ -53,11 +74,14 @@ export const saveDocumentTemplate = withAuth(
     { tenant },
     documentType: string,
     input: { template_id?: string; name: string; templateAst: TemplateAst; version?: number; isClone?: boolean },
-  ): Promise<{ success: boolean; template_id?: string; error?: string }> => {
+  ): Promise<SaveDocumentTemplateResult> => {
     if (!(await hasPermission(user as any, 'billing', 'update'))) {
-      throw new Error('Permission denied: cannot modify document templates');
+      return permissionError('Permission denied: cannot modify document templates');
     }
-    const type = assertDocumentType(documentType);
+    const type = resolveDocumentType(documentType);
+    if (typeof type !== 'string') {
+      return type;
+    }
     if (!input.name?.trim()) return { success: false, error: 'Template name is required.' };
     if (!input.templateAst) return { success: false, error: 'Template is required.' };
 
@@ -84,11 +108,14 @@ export const setDefaultDocumentTemplate = withAuth(
     documentType: string,
     payload: SetDefaultDocumentTemplatePayload,
     opts?: { clientId?: string | null },
-  ): Promise<{ success: boolean }> => {
+  ): Promise<SuccessResult> => {
     if (!(await hasPermission(user as any, 'billing', 'update'))) {
-      throw new Error('Permission denied: cannot set default document template');
+      return permissionError('Permission denied: cannot set default document template');
     }
-    const type = assertDocumentType(documentType);
+    const type = resolveDocumentType(documentType);
+    if (typeof type !== 'string') {
+      return type;
+    }
     const { knex } = await createTenantKnex();
     const scope = opts?.clientId
       ? ({ scopeType: 'client', scopeId: opts.clientId } as const)
@@ -114,11 +141,14 @@ export const setDefaultDocumentTemplate = withAuth(
  * default (or standard). Completes the client-override lifecycle (F200).
  */
 export const clearClientDocumentTemplate = withAuth(
-  async (user, { tenant }, documentType: string, clientId: string): Promise<{ success: boolean }> => {
+  async (user, { tenant }, documentType: string, clientId: string): Promise<SuccessResult> => {
     if (!(await hasPermission(user as any, 'billing', 'update'))) {
-      throw new Error('Permission denied: cannot clear document template override');
+      return permissionError('Permission denied: cannot clear document template override');
     }
-    const type = assertDocumentType(documentType);
+    const type = resolveDocumentType(documentType);
+    if (typeof type !== 'string') {
+      return type;
+    }
     const { knex } = await createTenantKnex();
     await knex('document_template_assignments')
       .where({ tenant, document_type: type, scope_type: 'client', scope_id: clientId })
@@ -128,11 +158,14 @@ export const clearClientDocumentTemplate = withAuth(
 );
 
 export const deleteDocumentTemplate = withAuth(
-  async (user, { tenant }, documentType: string, templateId: string): Promise<{ success: boolean; error?: string }> => {
+  async (user, { tenant }, documentType: string, templateId: string): Promise<DeleteDocumentTemplateResult> => {
     if (!(await hasPermission(user as any, 'billing', 'delete'))) {
-      throw new Error('Permission denied: cannot delete document templates');
+      return permissionError('Permission denied: cannot delete document templates');
     }
-    const type = assertDocumentType(documentType);
+    const type = resolveDocumentType(documentType);
+    if (typeof type !== 'string') {
+      return type;
+    }
     const { knex } = await createTenantKnex();
     const existing = await getCustomDocumentTemplate(knex, tenant, type, templateId);
     if (!existing) return { success: false, error: 'Template not found.' };
@@ -152,11 +185,14 @@ export const deleteDocumentTemplate = withAuth(
  * the editor shows (same evaluate + render path as the live document).
  */
 export const runAuthoritativeTemplatePreview = withAuth(
-  async (user, { tenant: _tenant }, documentType: string, templateAst: TemplateAst): Promise<{ html: string }> => {
+  async (user, { tenant: _tenant }, documentType: string, templateAst: TemplateAst): Promise<PreviewDocumentTemplateResult> => {
     if (!(await hasPermission(user as any, 'billing', 'read'))) {
-      throw new Error('Permission denied: cannot preview document templates');
+      return permissionError('Permission denied: cannot preview document templates');
     }
-    const type = assertDocumentType(documentType);
+    const type = resolveDocumentType(documentType);
+    if (typeof type !== 'string') {
+      return type;
+    }
     const sample = getDocumentTypeRegistryEntry(type).buildSampleViewModel();
     const { knex } = await createTenantKnex();
     const evaluation = evaluateTemplateAst(templateAst, sample);

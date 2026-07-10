@@ -6,7 +6,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Flex, Text } from '@radix-ui/themes';
 import { Button } from '@alga-psa/ui/components/Button';
 import { DeleteEntityDialog } from '@alga-psa/ui';
-import { createRole, updateRole, deleteRole, getRoles } from '@alga-psa/auth/actions';
+import { createRole, updateRole, deleteRole, getRoles } from '../../../actions/policyActions';
 import { IRole, DeletionValidationResult } from '@alga-psa/types';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from '@alga-psa/types';
@@ -18,6 +18,14 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';
+import {
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 export default function RoleManagement() {
   const [roles, setRoles] = useState<IRole[]>([]);
@@ -55,22 +63,38 @@ export default function RoleManagement() {
   };
 
   const handleCreateRole = async () => {
-    await createRole(newRole.role_name, newRole.description, newRole.msp, newRole.client);
-    setNewRole({ 
-      role_name: '', 
-      description: '',
-      msp: true,
-      client: false
-    });
-    setIsCreateDialogOpen(false);
-    fetchRoles();
+    try {
+      const result = await createRole(newRole.role_name, newRole.description, newRole.msp, newRole.client);
+      if (isReturnedActionError(result)) {
+        handleError(result);
+        return;
+      }
+      setNewRole({
+        role_name: '',
+        description: '',
+        msp: true,
+        client: false
+      });
+      setIsCreateDialogOpen(false);
+      fetchRoles();
+    } catch (error) {
+      handleError(error, 'Failed to create role');
+    }
   };
 
   const handleUpdateRole = async () => {
     if (editingRole) {
-      await updateRole(editingRole.role_id, editingRole.role_name);
-      setEditingRole(null);
-      fetchRoles();
+      try {
+        const result = await updateRole(editingRole.role_id, editingRole.role_name);
+        if (isReturnedActionError(result)) {
+          handleError(result);
+          return;
+        }
+        setEditingRole(null);
+        fetchRoles();
+      } catch (error) {
+        handleError(error, 'Failed to update role');
+      }
     }
   };
 

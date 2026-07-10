@@ -2,6 +2,7 @@
 
 import dynamic from 'next/dynamic';
 import React from 'react';
+import { FeaturePlaceholder } from '@alga-psa/ui/components/feature-flags/FeaturePlaceholder';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 function ExtensionSettingsLoading() {
@@ -16,11 +17,6 @@ const ExtensionSettings = dynamic(
     loading: () => <ExtensionSettingsLoading />,
     ssr: false
   }
-);
-
-const FeaturePlaceholder = dynamic(
-  () => import('@alga-psa/ui/components/feature-flags/FeaturePlaceholder').then(mod => mod.FeaturePlaceholder),
-  { ssr: false }
 );
 
 export default function ExtensionSettingsPage() {

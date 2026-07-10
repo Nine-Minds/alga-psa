@@ -9,22 +9,26 @@ import React from 'react';
  * Next.js strips thrown error messages during serialization, so permission
  * errors must be returned as plain objects to reach the client intact.
  */
-export interface ActionPermissionError {
+export type ActionPermissionErrorShape = {
   readonly permissionError: string;
-}
+};
+
+export type ActionPermissionError = never;
 
 /**
  * Represents a user-safe error returned from a server action.
  * Use this for expected business-rule failures that should reach the client intact.
  */
-export interface ActionMessageError {
+export type ActionMessageErrorShape = {
   readonly actionError: string;
-}
+};
+
+export type ActionMessageError = never;
 
 /**
  * Type guard: checks if a server action result is a permission error.
  */
-export function isActionPermissionError(value: unknown): value is ActionPermissionError {
+export function isActionPermissionError(value: unknown): value is ActionPermissionErrorShape {
   const candidate = value as Record<string, unknown>;
   return (
     typeof value === 'object' &&
@@ -37,7 +41,7 @@ export function isActionPermissionError(value: unknown): value is ActionPermissi
 /**
  * Type guard: checks if a server action result is a user-safe action error.
  */
-export function isActionMessageError(value: unknown): value is ActionMessageError {
+export function isActionMessageError(value: unknown): value is ActionMessageErrorShape {
   const candidate = value as Record<string, unknown>;
   return (
     typeof value === 'object' &&
@@ -52,14 +56,14 @@ export function isActionMessageError(value: unknown): value is ActionMessageErro
  * Use instead of `throw new Error('Permission denied: ...')`.
  */
 export function permissionError(message: string): ActionPermissionError {
-  return { permissionError: message };
+  return { permissionError: message } as ActionPermissionError;
 }
 
 /**
  * Creates a user-safe error return value for server actions.
  */
 export function actionError(message: string): ActionMessageError {
-  return { actionError: message };
+  return { actionError: message } as ActionMessageError;
 }
 
 // --- Error detection utilities ---

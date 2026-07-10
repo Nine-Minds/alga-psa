@@ -1004,7 +1004,8 @@
     "description": "Rich-text notitiepaneel voor asset-specifieke notities en snelle operationele context",
     "errors": {
       "loadTitle": "Notities kunnen niet worden geladen",
-      "unknown": "Onbekende fout"
+      "unknown": "Onbekende fout",
+      "loadDescription": "Could not load notes. Please try again."
     },
     "lastUpdated": "Laatst bijgewerkt: {{value}}"
   },

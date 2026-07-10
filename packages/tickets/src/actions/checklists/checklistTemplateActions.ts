@@ -3,6 +3,7 @@
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { Knex } from 'knex';
+import { checklistActionErrorFrom, type ChecklistActionError } from './checklistActionErrors';
 
 /**
  * Admin-managed checklist templates, their items, and auto-apply matcher
@@ -98,129 +99,199 @@ export const getChecklistTemplates = withAuth(
 );
 
 export const createChecklistTemplate = withAuth(
-  async (user, { tenant }, input: ChecklistTemplateInput): Promise<IChecklistTemplate> => {
-    await requireSettingsPermission(user);
-    if (!input.name?.trim()) throw new Error('Template name is required');
+  async (user, { tenant }, input: ChecklistTemplateInput): Promise<IChecklistTemplate | ChecklistActionError> => {
+    try {
+      await requireSettingsPermission(user);
+      if (!input.name?.trim()) throw new Error('Template name is required');
 
-    const { knex: db } = await createTenantKnex();
-    const [row] = await tenantScopedTable(db, 'checklist_templates', tenant)
-      .insert({
-        tenant,
-        name: input.name.trim(),
-        description: input.description ?? null,
-        is_active: input.is_active ?? true,
-      })
-      .returning('*');
-    return row;
+      const { knex: db } = await createTenantKnex();
+      const [row] = await tenantScopedTable(db, 'checklist_templates', tenant)
+        .insert({
+          tenant,
+          name: input.name.trim(),
+          description: input.description ?? null,
+          is_active: input.is_active ?? true,
+        })
+        .returning('*');
+      return row;
+    } catch (error) {
+      const expected = checklistActionErrorFrom(error);
+      if (expected) {
+        return expected;
+      }
+      throw error;
+    }
   }
 );
 
 export const updateChecklistTemplate = withAuth(
-  async (user, { tenant }, templateId: string, input: Partial<ChecklistTemplateInput>): Promise<IChecklistTemplate> => {
-    await requireSettingsPermission(user);
+  async (user, { tenant }, templateId: string, input: Partial<ChecklistTemplateInput>): Promise<IChecklistTemplate | ChecklistActionError> => {
+    try {
+      await requireSettingsPermission(user);
 
-    const { knex: db } = await createTenantKnex();
-    const updates: Record<string, unknown> = { updated_at: db.fn.now() };
-    if (input.name !== undefined) {
-      if (!input.name.trim()) throw new Error('Template name is required');
-      updates.name = input.name.trim();
+      const { knex: db } = await createTenantKnex();
+      const updates: Record<string, unknown> = { updated_at: db.fn.now() };
+      if (input.name !== undefined) {
+        if (!input.name.trim()) throw new Error('Template name is required');
+        updates.name = input.name.trim();
+      }
+      if (input.description !== undefined) updates.description = input.description;
+      if (input.is_active !== undefined) updates.is_active = input.is_active;
+
+      const [row] = await tenantScopedTable(db, 'checklist_templates', tenant)
+        .where({ template_id: templateId })
+        .update(updates)
+        .returning('*');
+      if (!row) throw new Error('Checklist template not found');
+      return row;
+    } catch (error) {
+      const expected = checklistActionErrorFrom(error);
+      if (expected) {
+        return expected;
+      }
+      throw error;
     }
-    if (input.description !== undefined) updates.description = input.description;
-    if (input.is_active !== undefined) updates.is_active = input.is_active;
-
-    const [row] = await tenantScopedTable(db, 'checklist_templates', tenant)
-      .where({ template_id: templateId })
-      .update(updates)
-      .returning('*');
-    if (!row) throw new Error('Checklist template not found');
-    return row;
   }
 );
 
 export const deleteChecklistTemplate = withAuth(
-  async (user, { tenant }, templateId: string): Promise<void> => {
-    await requireSettingsPermission(user);
-    const { knex: db } = await createTenantKnex();
-    // Items and apply rules cascade; ticket_checklist_items keep their copies
-    // (template_id is provenance only, no FK).
-    await tenantScopedTable(db, 'checklist_templates', tenant).where({ template_id: templateId }).del();
+  async (user, { tenant }, templateId: string): Promise<void | ChecklistActionError> => {
+    try {
+      await requireSettingsPermission(user);
+      const { knex: db } = await createTenantKnex();
+      // Items and apply rules cascade; ticket_checklist_items keep their copies
+      // (template_id is provenance only, no FK).
+      const deleted = await tenantScopedTable(db, 'checklist_templates', tenant).where({ template_id: templateId }).del();
+      if (!deleted) {
+        throw new Error('Checklist template not found');
+      }
+    } catch (error) {
+      const expected = checklistActionErrorFrom(error);
+      if (expected) {
+        return expected;
+      }
+      throw error;
+    }
   }
 );
 
 export const addChecklistTemplateItem = withAuth(
-  async (user, { tenant }, templateId: string, input: ChecklistTemplateItemInput): Promise<IChecklistTemplateItem> => {
-    await requireSettingsPermission(user);
-    if (!input.item_name?.trim()) throw new Error('Item name is required');
+  async (user, { tenant }, templateId: string, input: ChecklistTemplateItemInput): Promise<IChecklistTemplateItem | ChecklistActionError> => {
+    try {
+      await requireSettingsPermission(user);
+      if (!input.item_name?.trim()) throw new Error('Item name is required');
 
-    const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
-      const template = await tenantScopedTable(trx, 'checklist_templates', tenant)
-        .where({ template_id: templateId })
-        .first();
-      if (!template) throw new Error('Checklist template not found');
+      const { knex: db } = await createTenantKnex();
+      return await withTransaction(db, async (trx: Knex.Transaction) => {
+        const template = await tenantScopedTable(trx, 'checklist_templates', tenant)
+          .where({ template_id: templateId })
+          .first();
+        if (!template) throw new Error('Checklist template not found');
 
-      const maxOrder = await tenantScopedTable(trx, 'checklist_template_items', tenant)
-        .where({ template_id: templateId })
-        .max('order_number as max')
-        .first();
+        const maxOrder = await tenantScopedTable(trx, 'checklist_template_items', tenant)
+          .where({ template_id: templateId })
+          .max('order_number as max')
+          .first();
 
-      const [row] = await tenantScopedTable(trx, 'checklist_template_items', tenant)
-        .insert({
-          tenant,
-          template_id: templateId,
-          item_name: input.item_name.trim(),
-          description: input.description ?? null,
-          is_required: input.is_required ?? true,
-          order_number: (maxOrder?.max ?? -1) + 1,
-        })
-        .returning('*');
-      return row;
-    });
+        const [row] = await tenantScopedTable(trx, 'checklist_template_items', tenant)
+          .insert({
+            tenant,
+            template_id: templateId,
+            item_name: input.item_name.trim(),
+            description: input.description ?? null,
+            is_required: input.is_required ?? true,
+            order_number: (maxOrder?.max ?? -1) + 1,
+          })
+          .returning('*');
+        return row;
+      });
+    } catch (error) {
+      const expected = checklistActionErrorFrom(error);
+      if (expected) {
+        return expected;
+      }
+      throw error;
+    }
   }
 );
 
 export const updateChecklistTemplateItem = withAuth(
-  async (user, { tenant }, templateItemId: string, input: Partial<ChecklistTemplateItemInput>): Promise<IChecklistTemplateItem> => {
-    await requireSettingsPermission(user);
+  async (user, { tenant }, templateItemId: string, input: Partial<ChecklistTemplateItemInput>): Promise<IChecklistTemplateItem | ChecklistActionError> => {
+    try {
+      await requireSettingsPermission(user);
 
-    const { knex: db } = await createTenantKnex();
-    const updates: Record<string, unknown> = { updated_at: db.fn.now() };
-    if (input.item_name !== undefined) {
-      if (!input.item_name.trim()) throw new Error('Item name is required');
-      updates.item_name = input.item_name.trim();
+      const { knex: db } = await createTenantKnex();
+      const updates: Record<string, unknown> = { updated_at: db.fn.now() };
+      if (input.item_name !== undefined) {
+        if (!input.item_name.trim()) throw new Error('Item name is required');
+        updates.item_name = input.item_name.trim();
+      }
+      if (input.description !== undefined) updates.description = input.description;
+      if (input.is_required !== undefined) updates.is_required = input.is_required;
+
+      const [row] = await tenantScopedTable(db, 'checklist_template_items', tenant)
+        .where({ template_item_id: templateItemId })
+        .update(updates)
+        .returning('*');
+      if (!row) throw new Error('Template item not found');
+      return row;
+    } catch (error) {
+      const expected = checklistActionErrorFrom(error);
+      if (expected) {
+        return expected;
+      }
+      throw error;
     }
-    if (input.description !== undefined) updates.description = input.description;
-    if (input.is_required !== undefined) updates.is_required = input.is_required;
-
-    const [row] = await tenantScopedTable(db, 'checklist_template_items', tenant)
-      .where({ template_item_id: templateItemId })
-      .update(updates)
-      .returning('*');
-    if (!row) throw new Error('Template item not found');
-    return row;
   }
 );
 
 export const deleteChecklistTemplateItem = withAuth(
-  async (user, { tenant }, templateItemId: string): Promise<void> => {
-    await requireSettingsPermission(user);
-    const { knex: db } = await createTenantKnex();
-    await tenantScopedTable(db, 'checklist_template_items', tenant).where({ template_item_id: templateItemId }).del();
+  async (user, { tenant }, templateItemId: string): Promise<void | ChecklistActionError> => {
+    try {
+      await requireSettingsPermission(user);
+      const { knex: db } = await createTenantKnex();
+      const deleted = await tenantScopedTable(db, 'checklist_template_items', tenant).where({ template_item_id: templateItemId }).del();
+      if (!deleted) {
+        throw new Error('Template item not found');
+      }
+    } catch (error) {
+      const expected = checklistActionErrorFrom(error);
+      if (expected) {
+        return expected;
+      }
+      throw error;
+    }
   }
 );
 
 export const reorderChecklistTemplateItems = withAuth(
-  async (user, { tenant }, templateId: string, orderedItemIds: string[]): Promise<void> => {
-    await requireSettingsPermission(user);
+  async (user, { tenant }, templateId: string, orderedItemIds: string[]): Promise<void | ChecklistActionError> => {
+    try {
+      await requireSettingsPermission(user);
 
-    const { knex: db } = await createTenantKnex();
-    await withTransaction(db, async (trx: Knex.Transaction) => {
-      for (let i = 0; i < orderedItemIds.length; i++) {
-        await tenantScopedTable(trx, 'checklist_template_items', tenant)
-          .where({ template_id: templateId, template_item_id: orderedItemIds[i] })
-          .update({ order_number: i, updated_at: trx.fn.now() });
+      const { knex: db } = await createTenantKnex();
+      await withTransaction(db, async (trx: Knex.Transaction) => {
+        const template = await tenantScopedTable(trx, 'checklist_templates', tenant)
+          .where({ template_id: templateId })
+          .first();
+        if (!template) throw new Error('Checklist template not found');
+
+        for (let i = 0; i < orderedItemIds.length; i++) {
+          const updated = await tenantScopedTable(trx, 'checklist_template_items', tenant)
+            .where({ template_id: templateId, template_item_id: orderedItemIds[i] })
+            .update({ order_number: i, updated_at: trx.fn.now() });
+          if (!updated) {
+            throw new Error('Template item not found');
+          }
+        }
+      });
+    } catch (error) {
+      const expected = checklistActionErrorFrom(error);
+      if (expected) {
+        return expected;
       }
-    });
+      throw error;
+    }
   }
 );
 
@@ -245,57 +316,84 @@ export const getChecklistTemplateApplyRules = withAuth(
 );
 
 export const createChecklistTemplateApplyRule = withAuth(
-  async (user, { tenant }, templateId: string, input: ChecklistTemplateApplyRuleInput): Promise<IChecklistTemplateApplyRule> => {
-    await requireSettingsPermission(user);
+  async (user, { tenant }, templateId: string, input: ChecklistTemplateApplyRuleInput): Promise<IChecklistTemplateApplyRule | ChecklistActionError> => {
+    try {
+      await requireSettingsPermission(user);
 
-    const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
-      const template = await tenantScopedTable(trx, 'checklist_templates', tenant)
-        .where({ template_id: templateId })
-        .first();
-      if (!template) throw new Error('Checklist template not found');
+      const { knex: db } = await createTenantKnex();
+      return await withTransaction(db, async (trx: Knex.Transaction) => {
+        const template = await tenantScopedTable(trx, 'checklist_templates', tenant)
+          .where({ template_id: templateId })
+          .first();
+        if (!template) throw new Error('Checklist template not found');
 
-      const [row] = await tenantScopedTable(trx, 'checklist_template_apply_rules', tenant)
-        .insert({
-          tenant,
-          template_id: templateId,
+        const [row] = await tenantScopedTable(trx, 'checklist_template_apply_rules', tenant)
+          .insert({
+            tenant,
+            template_id: templateId,
+            board_id: input.board_id || null,
+            category_id: input.category_id || null,
+            subcategory_id: input.subcategory_id || null,
+            priority_id: input.priority_id || null,
+            is_enabled: input.is_enabled ?? true,
+          })
+          .returning('*');
+        return row;
+      });
+    } catch (error) {
+      const expected = checklistActionErrorFrom(error);
+      if (expected) {
+        return expected;
+      }
+      throw error;
+    }
+  }
+);
+
+export const updateChecklistTemplateApplyRule = withAuth(
+  async (user, { tenant }, applyRuleId: string, input: ChecklistTemplateApplyRuleInput): Promise<IChecklistTemplateApplyRule | ChecklistActionError> => {
+    try {
+      await requireSettingsPermission(user);
+
+      const { knex: db } = await createTenantKnex();
+      const [row] = await tenantScopedTable(db, 'checklist_template_apply_rules', tenant)
+        .where({ apply_rule_id: applyRuleId })
+        .update({
           board_id: input.board_id || null,
           category_id: input.category_id || null,
           subcategory_id: input.subcategory_id || null,
           priority_id: input.priority_id || null,
           is_enabled: input.is_enabled ?? true,
+          updated_at: db.fn.now(),
         })
         .returning('*');
+      if (!row) throw new Error('Apply rule not found');
       return row;
-    });
-  }
-);
-
-export const updateChecklistTemplateApplyRule = withAuth(
-  async (user, { tenant }, applyRuleId: string, input: ChecklistTemplateApplyRuleInput): Promise<IChecklistTemplateApplyRule> => {
-    await requireSettingsPermission(user);
-
-    const { knex: db } = await createTenantKnex();
-    const [row] = await tenantScopedTable(db, 'checklist_template_apply_rules', tenant)
-      .where({ apply_rule_id: applyRuleId })
-      .update({
-        board_id: input.board_id || null,
-        category_id: input.category_id || null,
-        subcategory_id: input.subcategory_id || null,
-        priority_id: input.priority_id || null,
-        is_enabled: input.is_enabled ?? true,
-        updated_at: db.fn.now(),
-      })
-      .returning('*');
-    if (!row) throw new Error('Apply rule not found');
-    return row;
+    } catch (error) {
+      const expected = checklistActionErrorFrom(error);
+      if (expected) {
+        return expected;
+      }
+      throw error;
+    }
   }
 );
 
 export const deleteChecklistTemplateApplyRule = withAuth(
-  async (user, { tenant }, applyRuleId: string): Promise<void> => {
-    await requireSettingsPermission(user);
-    const { knex: db } = await createTenantKnex();
-    await tenantScopedTable(db, 'checklist_template_apply_rules', tenant).where({ apply_rule_id: applyRuleId }).del();
+  async (user, { tenant }, applyRuleId: string): Promise<void | ChecklistActionError> => {
+    try {
+      await requireSettingsPermission(user);
+      const { knex: db } = await createTenantKnex();
+      const deleted = await tenantScopedTable(db, 'checklist_template_apply_rules', tenant).where({ apply_rule_id: applyRuleId }).del();
+      if (!deleted) {
+        throw new Error('Apply rule not found');
+      }
+    } catch (error) {
+      const expected = checklistActionErrorFrom(error);
+      if (expected) {
+        return expected;
+      }
+      throw error;
+    }
   }
 );

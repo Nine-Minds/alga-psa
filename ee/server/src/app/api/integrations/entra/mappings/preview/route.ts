@@ -1,6 +1,7 @@
 import { badRequest, dynamic, ok, runtime } from '../../_responses';
 import { requireEntraUiFlagEnabled } from '../../_guards';
 import { buildEntraMappingPreview } from '@enterprise/lib/integrations/entra/mapping/mappingPreviewService';
+import { entraRouteErrorMessage } from '../../_errors';
 
 export { dynamic, runtime };
 
@@ -14,7 +15,7 @@ export async function GET(): Promise<Response> {
     const preview = await buildEntraMappingPreview(flagGate.tenantId);
     return ok(preview);
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'Failed to build Entra mapping preview.';
+    const message = entraRouteErrorMessage(error, 'Failed to build Entra mapping preview.');
     return badRequest(message);
   }
 }

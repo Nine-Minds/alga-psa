@@ -11,6 +11,35 @@ import type {
   TemplateTask,
   TemplateWizardData,
 } from '@alga-psa/projects/types/templateWizard';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+type ProjectTemplateWizardActionError = ActionMessageError | ActionPermissionError;
+
+function projectTemplateWizardActionErrorFrom(error: unknown): ProjectTemplateWizardActionError | null {
+  if (!(error instanceof Error)) {
+    return null;
+  }
+
+  if (error.message.includes('Permission denied')) {
+    return permissionError(error.message);
+  }
+
+  if (
+    error.message === 'Template name is required' ||
+    error.message === 'New template name is required' ||
+    error.message === 'Template not found' ||
+    error.message === 'Source template not found'
+  ) {
+    return actionError(error.message);
+  }
+
+  return null;
+}
 
 type SourceTemplateStatusMappingRow = {
   status_id?: string | null;
@@ -58,7 +87,8 @@ function tenantScopedTable(
 /**
  * Create a template from wizard data
  */
-export const createTemplateFromWizard = withAuth(async (user, { tenant }, data: TemplateWizardData): Promise<string> => {
+export const createTemplateFromWizard = withAuth(async (user, { tenant }, data: TemplateWizardData): Promise<string | ProjectTemplateWizardActionError> => {
+  try {
   // Validate required fields
   if (!data.template_name?.trim()) {
     throw new Error('Template name is required');
@@ -220,12 +250,20 @@ export const createTemplateFromWizard = withAuth(async (user, { tenant }, data: 
 
     return template.template_id;
   });
+  } catch (error) {
+    const expected = projectTemplateWizardActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
+  }
 });
 
 /**
  * Update an existing template with full wizard data (for editor save)
  */
-export const updateTemplateFromEditor = withAuth(async (user, { tenant }, templateId: string, data: TemplateWizardData): Promise<void> => {
+export const updateTemplateFromEditor = withAuth(async (user, { tenant }, templateId: string, data: TemplateWizardData): Promise<void | ProjectTemplateWizardActionError> => {
+  try {
   // Validate required fields
   if (!data.template_name?.trim()) {
     throw new Error('Template name is required');
@@ -401,12 +439,20 @@ export const updateTemplateFromEditor = withAuth(async (user, { tenant }, templa
     }
 
   });
+  } catch (error) {
+    const expected = projectTemplateWizardActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
+  }
 });
 
 /**
  * Save a copy of a template as a new template (Save As functionality)
  */
-export const saveTemplateAsNew = withAuth(async (user, { tenant }, sourceTemplateId: string, newTemplateName: string): Promise<string> => {
+export const saveTemplateAsNew = withAuth(async (user, { tenant }, sourceTemplateId: string, newTemplateName: string): Promise<string | ProjectTemplateWizardActionError> => {
+  try {
   if (!newTemplateName?.trim()) {
     throw new Error('New template name is required');
   }
@@ -556,4 +602,11 @@ export const saveTemplateAsNew = withAuth(async (user, { tenant }, sourceTemplat
     // Publish event
     return newTemplate.template_id;
   });
+  } catch (error) {
+    const expected = projectTemplateWizardActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
+  }
 });

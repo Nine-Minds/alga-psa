@@ -41,6 +41,7 @@ export * from './manualInvoiceActions';
 export * from './salesOrderInvoicingActions';
 export * from './rmaChargeActions';
 export * from './salesOrderDocumentActions';
+export * from '../lib/salesOrderDocumentError';
 export * from './documentTemplateActions';
 export * from './materialActions';
 export * from './paymentActions';

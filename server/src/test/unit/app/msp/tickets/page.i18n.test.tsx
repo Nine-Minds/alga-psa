@@ -269,6 +269,7 @@ vi.mock('@alga-psa/tickets/actions/ticketDisplaySettings', () => ({
 
 vi.mock('@alga-psa/teams/actions', () => ({
   getTeams: (...args: unknown[]) => getTeamsMock(...args),
+  isTeamActionError: (value: unknown) => Boolean(value && typeof value === 'object' && 'error' in value),
 }));
 
 vi.mock('@alga-psa/msp-composition/tickets/MspTicketsPageClient', async () => {

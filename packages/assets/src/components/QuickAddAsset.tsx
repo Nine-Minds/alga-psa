@@ -7,6 +7,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import { createAsset } from '../actions/assetActions';
+import { unwrapAssetActionResult } from '../actions/assetActionErrors';
 import { formatClientLocation } from '../lib/formatClientLocation';
 import { pickSchemaAttributes, validateAttributesAgainstSchema } from '../lib/assetTypeAttributes';
 import { buildAssetTypeOptions, findCustomAssetType, useAssetTypeRegistry } from './shared/useAssetTypeOptions';
@@ -331,7 +332,7 @@ export function QuickAddAsset({ clientId, onAssetAdded, onClose, defaultOpen = f
           break;
       }
 
-      await createAsset(assetData);
+      unwrapAssetActionResult(await createAsset(assetData));
       onAssetAdded();
       handleClose();
       // Reset form

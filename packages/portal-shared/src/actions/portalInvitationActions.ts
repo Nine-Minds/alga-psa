@@ -18,6 +18,7 @@ import type {
   InvitationHistoryItem,
   CreateClientPortalUserParams,
   PortalInvitationErrorCode,
+  ClientUserActionError,
 } from '../types';
 
 class PortalInvitationError extends Error {
@@ -44,12 +45,66 @@ function normalizeCreateClientPortalUserError(
 
   if (error instanceof Error) {
     const message = error.message.trim();
-    if (message) {
+    if (message === 'Tenant is required') {
+      return { message: 'Tenant context is required', errorCode: 'TENANT_CONTEXT_REQUIRED' };
+    }
+    if (message === 'Contact not found. Provide contact details to create a new contact.') {
+      return { message, errorCode: 'CONTACT_NOT_FOUND' };
+    }
+    if (message === 'A user account already exists for this contact') {
+      return { message, errorCode: 'USER_EXISTS_FOR_CONTACT' };
+    }
+    if (
+      message === 'A user with this email already exists in this organization' ||
+      message === 'A user with this username already exists in this organization'
+    ) {
+      return { message, errorCode: 'PORTAL_USER_ALREADY_EXISTS' };
+    }
+    if (
+      message === 'A user with this email address already exists' ||
+      message === 'A user with this username already exists for this user type' ||
+      message === 'One or more invalid role IDs provided' ||
+      message.startsWith('Password must be') ||
+      message.startsWith('Username must be') ||
+      message === 'Valid email is required'
+    ) {
       return { message, errorCode: 'CREATE_USER_FAILED' };
     }
   }
 
   return { message: 'Failed to create client portal user', errorCode: 'CREATE_USER_FAILED' };
+}
+
+function normalizeSendPortalInvitationError(
+  error: unknown
+): { message?: string; errorCode: PortalInvitationErrorCode } {
+  if (error instanceof PortalInvitationError) {
+    return { message: error.message.trim() || undefined, errorCode: error.errorCode };
+  }
+
+  if (error instanceof Error) {
+    const message = error.message.trim();
+    if (message === 'Unauthorized') {
+      return {
+        message: 'Permission denied: Cannot invite users',
+        errorCode: 'PERMISSION_DENIED_INVITE'
+      };
+    }
+    if (message === 'Tenant is required') {
+      return { message: 'Tenant context is required', errorCode: 'TENANT_CONTEXT_REQUIRED' };
+    }
+    if (message === 'Contact not found') {
+      return { message, errorCode: 'CONTACT_NOT_FOUND' };
+    }
+    if (message.startsWith('Too many attempts.')) {
+      return { message, errorCode: 'INVITATION_FAILED' };
+    }
+    if (message === 'Failed to create invitation') {
+      return { errorCode: 'INVITATION_FAILED' };
+    }
+  }
+
+  return { errorCode: 'INVITATION_FAILED' };
 }
 
 type DbConnection = Knex | Knex.Transaction;
@@ -509,7 +564,10 @@ export const sendPortalInvitation = withAuth(async (
       // Create invitation within transaction
       const invitationResult = await PortalInvitationService.createInvitationWithTransaction(contactId, trx);
       if (!invitationResult.success) {
-        throw new Error(invitationResult.error || 'Failed to create invitation');
+        throw new PortalInvitationError(
+          invitationResult.error || 'Portal invitation could not be created. Please try again.',
+          'INVITATION_FAILED'
+        );
       }
 
       // Get the tenant's default client (MSP client) for reply-to email
@@ -617,15 +675,11 @@ export const sendPortalInvitation = withAuth(async (
       };
     }).catch((error) => {
       console.error('Transaction failed:', error);
-      const errorCode: PortalInvitationErrorCode =
-        error instanceof PortalInvitationError ? error.errorCode : 'INVITATION_FAILED';
-      // Leave `error` unset when there is no specific message so clients fall
-      // back to their localized generic string instead of hardcoded English.
-      const message = error instanceof Error ? error.message.trim() : '';
+      const normalized = normalizeSendPortalInvitationError(error);
       return {
         success: false,
-        error: message || undefined,
-        errorCode
+        error: normalized.message,
+        errorCode: normalized.errorCode
       };
     });
 
@@ -633,10 +687,8 @@ export const sendPortalInvitation = withAuth(async (
 
   } catch (error) {
     console.error('Error sending portal invitation:', error);
-    const errorCode: PortalInvitationErrorCode =
-      error instanceof PortalInvitationError ? error.errorCode : 'INVITATION_FAILED';
-    const message = error instanceof Error ? error.message.trim() : '';
-    return { success: false, error: message || undefined, errorCode };
+    const normalized = normalizeSendPortalInvitationError(error);
+    return { success: false, error: normalized.message, errorCode: normalized.errorCode };
   }
 });
 
@@ -793,17 +845,21 @@ export async function completePortalSetup(
           }, systemContext);
 
           if (!user || !user.user_id) {
-            throw new Error('Failed to create user account');
+            throw new PortalInvitationError(
+              'Client portal user account could not be created. Please try again.',
+              'CREATE_USER_FAILED'
+            );
           }
 
           return user;
         });
       } catch (error) {
         console.error('Error creating user account:', error);
+        const normalized = normalizeCreateClientPortalUserError(error);
         return {
           success: false,
-          error: error instanceof Error ? error.message : 'Failed to create user account',
-          errorCode: 'CREATE_USER_FAILED'
+          error: normalized.message,
+          errorCode: normalized.errorCode
         } as CompleteSetupResult;
       }
 
@@ -950,8 +1006,7 @@ export const revokePortalInvitation = withAuth(async (
 
   } catch (error) {
     console.error('Error revoking portal invitation:', error);
-    const message = error instanceof Error ? error.message.trim() : '';
-    return { success: false, error: message || undefined, errorCode: 'REVOKE_FAILED' };
+    return { success: false, errorCode: 'REVOKE_FAILED' };
   }
 });
 
@@ -964,7 +1019,7 @@ export const updateClientUser = withAuth(async (
   { tenant }: AuthContext,
   userId: string,
   userData: Partial<IUser>
-): Promise<IUser | null> => {
+): Promise<IUser | null | ClientUserActionError> => {
   try {
     const { knex } = await createTenantKnex();
     const targetClientId = await resolveClientUserTargetClientId(knex, tenant, userId);
@@ -973,7 +1028,7 @@ export const updateClientUser = withAuth(async (
     }
 
     if (!await canManageClientPortalTargetClient(user, tenant, knex, 'update', targetClientId)) {
-      throw new Error('Permission denied: Cannot update client users');
+      return { permissionError: 'Permission denied: Cannot update client users' };
     }
 
     const allowedUpdates: Partial<IUser> = {};
@@ -989,7 +1044,7 @@ export const updateClientUser = withAuth(async (
       })
       .returning('*') as IUser[];
 
-    return updatedUser || null;
+    return updatedUser || { actionError: 'Client user not found' };
   } catch (error) {
     console.error('Error updating client user:', error);
     throw error;

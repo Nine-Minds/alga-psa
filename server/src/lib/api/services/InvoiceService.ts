@@ -14,6 +14,7 @@ import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { hasPermission } from '../../auth/rbac';
 import { auditLog } from '../../logging/auditLog';
 import { publishEvent, publishWorkflowEvent } from '../../eventBus/publishers';
+import { BadRequestError, ConflictError, ForbiddenError, NotFoundError, NotImplementedError, ValidationError } from '../middleware/apiMiddleware';
 import {
   buildInvoiceDueDateChangedPayload,
   buildInvoiceOverduePayload,
@@ -89,6 +90,84 @@ async function publishDeferredEvents(events: DeferredEvent[]): Promise<void> {
   for (const publish of events) {
     await publish();
   }
+}
+
+function throwRecurringInvoiceApiError(error: unknown): never {
+  if (!(error instanceof Error)) {
+    throw error;
+  }
+
+  const message = error.message;
+
+  if (message === 'Permission denied: invoice create or generate required') {
+    throw new ForbiddenError(message);
+  }
+
+  if (message === 'Invoice already exists for this recurring execution window') {
+    throw new ConflictError(message, {
+      code: (error as { code?: unknown }).code,
+      executionIdentityKey: (error as { executionIdentityKey?: unknown }).executionIdentityKey,
+      invoiceId: (error as { invoiceId?: unknown }).invoiceId,
+    });
+  }
+
+  if (
+    message === 'No billing settings found' ||
+    message === 'Nothing to bill' ||
+    message === 'No active contract lines found for this client in the selected billing period.' ||
+    message.startsWith('Recurring service periods were not materialized') ||
+    message.startsWith('Cannot generate invoice: No billing email address for ') ||
+    message.startsWith('Blocked until approval: ') ||
+    /^Service ".+" has an undefined rate$/.test(message) ||
+    /^Client '.+' does not have a default tax region configured\. Please set one before generating invoices\.$/.test(message) ||
+    message === 'Purchase Order is required for this contract but has not been provided. Please add a PO number to the contract before generating invoices.'
+  ) {
+    throw new ConflictError(message);
+  }
+
+  if (
+    message === 'Recurring selector input execution window kind is not supported.' ||
+    message === 'Recurring selector input is missing client-cadence assignment identity (schedule key).' ||
+    message === 'Recurring selector input is missing contract-cadence assignment identity (contract line).' ||
+    message === 'No recurring execution windows selected' ||
+    message === 'Grouped recurring selection inputs must share the same client and invoice window.' ||
+    message === 'Invalid billing cycle dates'
+  ) {
+    throw new ValidationError(message);
+  }
+
+  if (/^Billing cycle .+ not found for client .+$/.test(message)) {
+    throw new NotFoundError('Billing cycle not found');
+  }
+
+  if (/^Billing cycle .+ has invalid dates/.test(message)) {
+    throw new ValidationError('Billing cycle has invalid dates');
+  }
+
+  if (/^Client .+ not found in tenant .+$/.test(message)) {
+    throw new NotFoundError('Client not found');
+  }
+
+  if (/^Billing Error: Client .+ has active contracts in multiple currencies \(.+\)\. Mixed currency billing is not supported\.$/.test(message)) {
+    throw new ConflictError('This client has active contracts in multiple currencies. Mixed currency billing is not supported.');
+  }
+
+  throw error;
+}
+
+function isReturnedActionError(value: unknown): value is { readonly actionError: string } | { readonly permissionError: string } {
+  return Boolean(
+    value &&
+      typeof value === 'object' &&
+      (
+        typeof (value as { actionError?: unknown }).actionError === 'string' ||
+        typeof (value as { permissionError?: unknown }).permissionError === 'string'
+      ),
+  );
+}
+
+function throwReturnedActionError(error: { readonly actionError: string } | { readonly permissionError: string }): never {
+  throwRecurringInvoiceApiError(new Error('permissionError' in error ? error.permissionError : error.actionError));
 }
 
 export interface InvoiceServiceContext extends ServiceContext {
@@ -521,12 +600,12 @@ export class InvoiceService extends BaseService<IInvoice> {
         .first();
 
       if (!existing) {
-        throw new Error('Invoice not found');
+        throw new NotFoundError('Invoice not found');
       }
 
       // Validate business rules
       if (existing.status === 'paid' && data.status && data.status !== 'paid') {
-        throw new Error('Cannot modify paid invoice status');
+        throw new ConflictError('Cannot modify paid invoice status');
       }
 
       // Prepare update data
@@ -735,7 +814,7 @@ export class InvoiceService extends BaseService<IInvoice> {
         .first();
 
       if (!invoice) {
-        throw new Error('Invoice not found');
+        throw new NotFoundError('Invoice not found');
       }
 
       const recurringProvenance = await this.getInvoiceRecurringProvenance(trx, context.tenant, id);
@@ -840,11 +919,11 @@ export class InvoiceService extends BaseService<IInvoice> {
         .first();
 
       if (!invoice) {
-        throw new Error('Invoice not found');
+        throw new NotFoundError('Invoice not found');
       }
 
       if (invoice.status !== 'draft') {
-        throw new Error('Only draft invoices can be finalized');
+        throw new ConflictError('Only draft invoices can be finalized');
       }
 
       // Validate invoice has required data
@@ -855,7 +934,7 @@ export class InvoiceService extends BaseService<IInvoice> {
           .where({ invoice_id: data.invoice_id });
 
       if (!lineItems.length) {
-        throw new Error('Invoice must have line items to be finalized');
+        throw new ConflictError('Invoice must have line items to be finalized');
       }
 
       // Calculate final amounts
@@ -946,11 +1025,11 @@ export class InvoiceService extends BaseService<IInvoice> {
         .first();
 
       if (!invoice) {
-        throw new Error('Invoice not found');
+        throw new NotFoundError('Invoice not found');
       }
 
       if (!['sent', 'draft'].includes(invoice.status)) {
-        throw new Error('Only draft invoices can be sent');
+        throw new ConflictError('Only draft invoices can be sent');
       }
 
       // Generate PDF if requested
@@ -1062,11 +1141,11 @@ export class InvoiceService extends BaseService<IInvoice> {
         .first();
 
       if (!invoice) {
-        throw new Error('Invoice not found');
+        throw new NotFoundError('Invoice not found');
       }
 
       if (invoice.status === 'cancelled') {
-        throw new Error('Cannot record payment for cancelled invoice');
+        throw new ConflictError('Cannot record payment for cancelled invoice');
       }
 
       // Insert payment record
@@ -1220,16 +1299,16 @@ export class InvoiceService extends BaseService<IInvoice> {
         .first();
 
       if (!invoice) {
-        throw new Error('Invoice not found');
+        throw new NotFoundError('Invoice not found');
       }
 
       // Validate credit amount
       if (data.credit_amount <= 0) {
-        throw new Error('Credit amount must be positive');
+        throw new BadRequestError('Credit amount must be positive');
       }
 
       if (data.credit_amount > invoice.total_amount - (invoice.credit_applied ?? 0)) {
-        throw new Error('Credit amount cannot exceed invoice balance due');
+        throw new BadRequestError('Credit amount cannot exceed invoice balance due');
       }
 
       // Insert credit record
@@ -1358,12 +1437,12 @@ export class InvoiceService extends BaseService<IInvoice> {
         .first();
 
       if (!invoice) {
-        throw new Error('Invoice not found');
+        throw new NotFoundError('Invoice not found');
       }
 
       // Validate refund amount
       if (data.refund_amount <= 0) {
-        throw new Error('Refund amount must be positive');
+        throw new BadRequestError('Refund amount must be positive');
       }
 
       // Calculate current payments
@@ -1373,7 +1452,7 @@ export class InvoiceService extends BaseService<IInvoice> {
       const totalPayments = Number((payments as Array<{ total_paid: string }>)[0]?.total_paid || 0);
 
       if (data.refund_amount > totalPayments) {
-        throw new Error('Refund amount cannot exceed total payments');
+        throw new BadRequestError('Refund amount cannot exceed total payments');
       }
 
       // Insert refund as negative payment
@@ -1632,9 +1711,8 @@ export class InvoiceService extends BaseService<IInvoice> {
 	            }
 	          }
 
-	        } catch (error) {
-	          const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-	          results.errors.push(`Error updating invoice ${invoiceId}: ${errorMessage}`);
+	        } catch {
+	          results.errors.push(`Error updating invoice ${invoiceId}: update failed.`);
 	        }
       }
 
@@ -1676,9 +1754,8 @@ export class InvoiceService extends BaseService<IInvoice> {
         }, context);
 
         results.sent_count++;
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        results.errors.push(`Error sending invoice ${invoiceId}: ${errorMessage}`);
+      } catch {
+        results.errors.push(`Error sending invoice ${invoiceId}: send failed.`);
       }
     }
 
@@ -1697,9 +1774,8 @@ export class InvoiceService extends BaseService<IInvoice> {
       try {
         await this.delete(invoiceId, context);
         results.deleted_count++;
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-        results.errors.push(`Error deleting invoice ${invoiceId}: ${errorMessage}`);
+      } catch {
+        results.errors.push(`Error deleting invoice ${invoiceId}: delete failed.`);
       }
     }
 
@@ -1788,7 +1864,7 @@ export class InvoiceService extends BaseService<IInvoice> {
     action: 'generate' | 'preview',
   ) {
     if (!data.selector_input) {
-      throw new Error(`Recurring invoice ${action} requires selector_input.`);
+      throw new ValidationError(`Recurring invoice ${action} requires selector_input.`);
     }
 
     return data.selector_input;
@@ -1798,10 +1874,13 @@ export class InvoiceService extends BaseService<IInvoice> {
     await this.validatePermissions(context, 'invoice', 'create');
 
     const selectorInput = this.requireRecurringSelectorInput(data, 'generate');
-    const invoice = await generateInvoiceForSelectionInput(selectorInput);
+    const invoice = await generateInvoiceForSelectionInput(selectorInput).catch(throwRecurringInvoiceApiError);
+    if (isReturnedActionError(invoice)) {
+      throwReturnedActionError(invoice);
+    }
 
     if (!invoice) {
-      throw new Error('Failed to generate invoice');
+      throw new ConflictError('No invoice was generated for the selected recurring period. Zero-dollar invoices may be suppressed by billing settings.');
     }
 
     return invoice as unknown as IInvoice;
@@ -1819,132 +1898,149 @@ export class InvoiceService extends BaseService<IInvoice> {
 
     let createdInvoice: InvoiceViewModel | null = null;
 
-    await withTransaction(knex, async (trx) => {
-      const client = await getClientDetails(trx, tenant, data.clientId);
-      const computedDueDate = await this.computeDueDate(trx, tenant, data.clientId, currentDate);
+    try {
+      await withTransaction(knex, async (trx) => {
+        const client = await getClientDetails(trx, tenant, data.clientId);
+        const computedDueDate = await this.computeDueDate(trx, tenant, data.clientId, currentDate);
 
-      await tenantDb(trx, tenant).table('invoices').insert({
-        invoice_id: invoiceId,
-        tenant,
-        client_id: data.clientId,
-        invoice_number: invoiceNumber,
-        invoice_date: currentDate,
-        due_date: computedDueDate,
-        status: 'draft',
-        subtotal: 0,
-        tax: 0,
-        total_amount: 0,
-        credit_applied: 0,
-        is_manual: true,
-        is_prepayment: data.isPrepayment ?? false
-      });
-
-      await persistManualInvoiceCharges(
-        trx,
-        invoiceId,
-        data.items.map((item) => ({
-          ...item,
-          rate: Math.round(item.rate)
-        })),
-        client,
-        sessionLike as any,
-        tenant
-      );
-
-      await calculateAndDistributeTax(trx, invoiceId, client, this.taxService, tenant);
-
-      await updateInvoiceTotalsAndRecordTransaction(
-        trx,
-        invoiceId,
-        client,
-        tenant,
-        invoiceNumber,
-        data.expirationDate,
-        {
-          transactionType: 'invoice_generated',
-          description: `Generated manual invoice ${invoiceNumber}`
-        }
-      );
-
-      const invoiceRecord = await tenantDb(trx, tenant).table('invoices')
-        .where({ invoice_id: invoiceId })
-        .first();
-
-      const updatedItems = await tenantDb(trx, tenant).table('invoice_charges')
-        .where({ invoice_id: invoiceId })
-        .orderBy('created_at', 'asc');
-
-      if (!invoiceRecord) {
-        throw new Error('Failed to load created invoice record');
-      }
-
-      const invoiceDate = typeof invoiceRecord.invoice_date === 'string'
-        ? Temporal.PlainDate.from(invoiceRecord.invoice_date)
-        : Temporal.PlainDate.from(invoiceRecord.invoice_date.toISOString().split('T')[0]);
-
-      const dueDate = typeof invoiceRecord.due_date === 'string'
-        ? Temporal.PlainDate.from(invoiceRecord.due_date)
-        : Temporal.PlainDate.from(invoiceRecord.due_date.toISOString().split('T')[0]);
-
-      createdInvoice = {
-        invoice_id: invoiceId,
-        invoice_number: invoiceNumber,
-        client_id: data.clientId,
-        client: {
-          name: client.client_name,
-          logo: client.logoUrl || '',
-          address: client.location_address || ''
-        },
-        contact: {
-          name: '',
-          address: ''
-        },
-        invoice_date: invoiceDate,
-        due_date: dueDate,
-        status: invoiceRecord.status,
-        subtotal: Number(invoiceRecord.subtotal ?? 0),
-        tax: Number(invoiceRecord.tax ?? 0),
-        total: Number(invoiceRecord.total_amount ?? 0),
-        total_amount: Number(invoiceRecord.total_amount ?? 0),
-        currencyCode: invoiceRecord.currency_code || 'USD',
-        invoice_charges: updatedItems.map((item: any): IInvoiceCharge => ({
-          item_id: item.item_id,
+        await tenantDb(trx, tenant).table('invoices').insert({
           invoice_id: invoiceId,
-          service_id: item.service_id,
-          description: item.description,
-          quantity: Number(item.quantity),
-          unit_price: Number(item.unit_price),
-          total_price: Number(item.total_price),
-          tax_amount: Number(item.tax_amount),
-          net_amount: Number(item.net_amount),
           tenant,
+          client_id: data.clientId,
+          invoice_number: invoiceNumber,
+          invoice_date: currentDate,
+          due_date: computedDueDate,
+          status: 'draft',
+          subtotal: 0,
+          tax: 0,
+          total_amount: 0,
+          credit_applied: 0,
           is_manual: true,
-          is_discount: item.is_discount || false,
-          discount_type: item.discount_type,
-          applies_to_item_id: item.applies_to_item_id,
-          applies_to_service_id: item.applies_to_service_id,
-          created_by: item.created_by,
-          created_at: item.created_at,
-          rate: Number(item.unit_price)
-        })),
-        credit_applied: Number(invoiceRecord.credit_applied ?? 0),
-        is_manual: true
-      };
-    });
+          is_prepayment: data.isPrepayment ?? false
+        });
+
+        await persistManualInvoiceCharges(
+          trx,
+          invoiceId,
+          data.items.map((item) => ({
+            ...item,
+            rate: Math.round(item.rate)
+          })),
+          client,
+          sessionLike as any,
+          tenant
+        );
+
+        await calculateAndDistributeTax(trx, invoiceId, client, this.taxService, tenant);
+
+        await updateInvoiceTotalsAndRecordTransaction(
+          trx,
+          invoiceId,
+          client,
+          tenant,
+          invoiceNumber,
+          data.expirationDate,
+          {
+            transactionType: 'invoice_generated',
+            description: `Generated manual invoice ${invoiceNumber}`
+          }
+        );
+
+        const invoiceRecord = await tenantDb(trx, tenant).table('invoices')
+          .where({ invoice_id: invoiceId })
+          .first();
+
+        const updatedItems = await tenantDb(trx, tenant).table('invoice_charges')
+          .where({ invoice_id: invoiceId })
+          .orderBy('created_at', 'asc');
+
+        if (!invoiceRecord) {
+          throw new Error('Created invoice could not be reloaded after insert.');
+        }
+
+        const invoiceDate = typeof invoiceRecord.invoice_date === 'string'
+          ? Temporal.PlainDate.from(invoiceRecord.invoice_date)
+          : Temporal.PlainDate.from(invoiceRecord.invoice_date.toISOString().split('T')[0]);
+
+        const dueDate = typeof invoiceRecord.due_date === 'string'
+          ? Temporal.PlainDate.from(invoiceRecord.due_date)
+          : Temporal.PlainDate.from(invoiceRecord.due_date.toISOString().split('T')[0]);
+
+        createdInvoice = {
+          invoice_id: invoiceId,
+          invoice_number: invoiceNumber,
+          client_id: data.clientId,
+          client: {
+            name: client.client_name,
+            logo: client.logoUrl || '',
+            address: client.location_address || ''
+          },
+          contact: {
+            name: '',
+            address: ''
+          },
+          invoice_date: invoiceDate,
+          due_date: dueDate,
+          status: invoiceRecord.status,
+          subtotal: Number(invoiceRecord.subtotal ?? 0),
+          tax: Number(invoiceRecord.tax ?? 0),
+          total: Number(invoiceRecord.total_amount ?? 0),
+          total_amount: Number(invoiceRecord.total_amount ?? 0),
+          currencyCode: invoiceRecord.currency_code || 'USD',
+          invoice_charges: updatedItems.map((item: any): IInvoiceCharge => ({
+            item_id: item.item_id,
+            invoice_id: invoiceId,
+            service_id: item.service_id,
+            description: item.description,
+            quantity: Number(item.quantity),
+            unit_price: Number(item.unit_price),
+            total_price: Number(item.total_price),
+            tax_amount: Number(item.tax_amount),
+            net_amount: Number(item.net_amount),
+            tenant,
+            is_manual: true,
+            is_discount: item.is_discount || false,
+            discount_type: item.discount_type,
+            applies_to_item_id: item.applies_to_item_id,
+            applies_to_service_id: item.applies_to_service_id,
+            created_by: item.created_by,
+            created_at: item.created_at,
+            rate: Number(item.unit_price)
+          })),
+          credit_applied: Number(invoiceRecord.credit_applied ?? 0),
+          is_manual: true
+        };
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '';
+      if (message.startsWith('Client not found')) {
+        throw new NotFoundError('Client not found');
+      }
+      if (message.startsWith('Service not found:')) {
+        throw new NotFoundError('Service not found');
+      }
+      if (message.startsWith('Could not find invoice item for service:')) {
+        throw new ValidationError('Discount applies_to_service_id must reference an invoice item');
+      }
+      if (message === 'Quantity must be greater than 0') {
+        throw new ValidationError('Quantity must be greater than 0');
+      }
+      throw error;
+    }
 
     if (!createdInvoice) {
-      throw new Error('Failed to create manual invoice');
+      throw new Error('Manual invoice creation completed without returning an invoice.');
     }
 
     return createdInvoice;
   }
 
   async approve(id: string, context: InvoiceServiceContext, executionId?: string): Promise<IInvoice> {
-    throw new Error('approve not yet implemented');
+    throw new NotImplementedError('approve not yet implemented');
   }
 
   async reject(id: string, reason: string, context: InvoiceServiceContext, executionId?: string): Promise<IInvoice> {
-    throw new Error('reject not yet implemented');
+    throw new NotImplementedError('reject not yet implemented');
   }
 
   async generatePDF(id: string, context: InvoiceServiceContext): Promise<any> {
@@ -1957,7 +2053,7 @@ export class InvoiceService extends BaseService<IInvoice> {
       .first();
 
     if (!invoice) {
-      throw new Error('Invoice not found');
+      throw new NotFoundError('Invoice not found');
     }
 
     const buffer = await this.getPdfService(context.tenant).generatePDF({
@@ -1976,11 +2072,11 @@ export class InvoiceService extends BaseService<IInvoice> {
   }
 
   async search(query: any, context: InvoiceServiceContext, options?: any): Promise<{ data: IInvoice[]; total: number }> {
-    throw new Error('search not yet implemented');
+    throw new NotImplementedError('search not yet implemented');
   }
 
   async createRecurringTemplate(data: CreateRecurringInvoiceTemplate, context: InvoiceServiceContext): Promise<RecurringInvoiceTemplate> {
-    throw new Error('createRecurringTemplate not yet implemented');
+    throw new NotImplementedError('createRecurringTemplate not yet implemented');
   }
 
   // ============================================================================
@@ -2131,7 +2227,7 @@ export class InvoiceService extends BaseService<IInvoice> {
     // Permission validation would typically be handled at the middleware level
     // For now, we'll do a basic check that the user ID exists
     if (!context.userId) {
-      throw new Error(`Permission denied: ${action} - No user ID provided`);
+      throw new ForbiddenError(`Permission denied: ${action} - No user ID provided`);
     }
     // TODO: Implement proper permission checking when user object is available in context
   }
@@ -2171,7 +2267,7 @@ export class InvoiceService extends BaseService<IInvoice> {
         .first();
 
       if (!exists) {
-        throw new Error('Invoice not found');
+        throw new NotFoundError('Invoice not found');
       }
 
       return InvoiceModel.getInvoiceCharges(trx, context.tenant, invoiceId);
@@ -2231,7 +2327,7 @@ export class InvoiceService extends BaseService<IInvoice> {
         .first();
 
       if (!exists) {
-        throw new Error('Invoice not found');
+        throw new NotFoundError('Invoice not found');
       }
 
       const [payments, credits] = await Promise.all([
@@ -2402,7 +2498,7 @@ export class InvoiceService extends BaseService<IInvoice> {
   // ============================================================================
 
   async bulkDelete(ids: string[], context: ServiceContext): Promise<void> {
-    throw new Error('bulkDelete not yet implemented');
+    throw new NotImplementedError('bulkDelete not yet implemented');
   }
 
 

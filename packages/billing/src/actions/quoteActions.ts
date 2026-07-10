@@ -7,8 +7,8 @@ import type { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth/withAuth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { TenantEmailService } from '@alga-psa/email';
-import { permissionError } from '@alga-psa/ui/lib/errorHandling';
-import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
+import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { IContract, IInvoice, TemplateAst, IQuote, IQuoteItem, IQuoteListItem, PaginatedResult, QuoteConversionPreview } from '@alga-psa/types';
 import Quote, { type QuoteListOptions } from '../models/quote';
 import QuoteActivity from '../models/quoteActivity';
@@ -113,6 +113,79 @@ const requireQuoteApprovePermission = async (user: unknown): Promise<ActionPermi
 
   return null;
 };
+
+export type QuoteActionError = ActionPermissionError | ActionMessageError;
+
+function quoteActionErrorFrom(error: unknown): QuoteActionError | null {
+  if (error instanceof Error) {
+    if (error.message.startsWith('Permission denied') || error.message === 'user is not logged in') {
+      return permissionError(error.message);
+    }
+    if (error.name === 'ZodError') {
+      return actionError('Quote form contains invalid values. Please review and try again.');
+    }
+    if (error.message.startsWith('Quote item ') && error.message.includes(' not found in tenant ')) {
+      return actionError('Quote item not found. It may have been updated or deleted. Please refresh and try again.');
+    }
+    if (error.message.startsWith('Quote template ') && error.message.includes(' not found in tenant ')) {
+      return actionError('Quote template not found. It may have been updated or deleted. Please refresh and try again.');
+    }
+    if (error.message.startsWith('Quote ') && error.message.includes(' not found in tenant ')) {
+      return actionError('Quote not found. It may have been updated or deleted. Please refresh and try again.');
+    }
+
+    const expectedMessages = new Set([
+      'Quote item updates cannot move items across quotes.',
+      'Use createQuoteFromTemplate for business templates',
+      'Quote is already a template',
+      'Quote templates cannot be submitted for approval',
+      'Only draft quotes can be submitted for approval',
+      'Only quotes pending approval can be approved',
+      'A comment is required when requesting quote changes',
+      'Only quotes pending approval can be sent back for changes',
+      'Quote templates cannot be sent to clients',
+      'Only approved quotes can be sent when quote approval is required',
+      'Only draft or approved quotes can be sent',
+      'Quote templates cannot be resent to clients',
+      'Only sent quotes can be resent',
+      'Quote templates cannot receive reminders',
+      'Only sent quotes can receive reminders',
+    ]);
+
+    if (expectedMessages.has(error.message) || /^Quote .+ is not a template$/.test(error.message)) {
+      return actionError(error.message);
+    }
+  }
+
+  const dbError = error as { code?: string; column?: string };
+  if (dbError?.code === '22P02') {
+    return actionError('One of the selected quote values is invalid. Please refresh and try again.');
+  }
+  if (dbError?.code === '23502') {
+    return actionError(`Missing required quote field${dbError.column ? `: ${dbError.column}` : ''}.`);
+  }
+  if (dbError?.code === '23503') {
+    return actionError('The selected quote, client, contact, or service no longer exists. Please refresh and try again.');
+  }
+  if (dbError?.code === '23505') {
+    return actionError('This quote change conflicts with an existing record. Please refresh and try again.');
+  }
+  if (dbError?.code === '23514') {
+    return actionError('One of the quote values is not allowed. Please review the form and try again.');
+  }
+
+  return null;
+}
+
+async function withQuoteActionErrors<T>(work: () => Promise<T>): Promise<T | QuoteActionError> {
+  try {
+    return await work();
+  } catch (error) {
+    const expected = quoteActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
+}
 
 const getActorUserId = (user: unknown): string | null => {
   if (!user || typeof user !== 'object') {
@@ -444,7 +517,8 @@ const sendQuoteEmailWithAttachment = async ({
   });
 };
 
-export const createQuote = withAuth(async (user, { tenant }, input: CreateQuoteInput): Promise<IQuote | ActionPermissionError> => {
+export const createQuote = withAuth(async (user, { tenant }, input: CreateQuoteInput): Promise<IQuote | QuoteActionError> => {
+  return withQuoteActionErrors(async () => {
   const denied = await requireBillingCreatePermission(user);
   if (denied) {
     return denied;
@@ -488,6 +562,7 @@ export const createQuote = withAuth(async (user, { tenant }, input: CreateQuoteI
     total_amount: input.total_amount ?? 0,
   } as any);
   return await Quote.getById(knex, tenant, createdQuote.quote_id) as IQuote;
+  });
 });
 
 export const updateQuote = withAuth(async (
@@ -495,7 +570,8 @@ export const updateQuote = withAuth(async (
   { tenant },
   quoteId: string,
   input: Partial<IQuote>
-): Promise<IQuote | ActionPermissionError> => {
+): Promise<IQuote | QuoteActionError> => {
+  return withQuoteActionErrors(async () => {
   const denied = await requireBillingUpdatePermission(user);
   if (denied) {
     return denied;
@@ -516,6 +592,7 @@ export const updateQuote = withAuth(async (
 
   const updatedQuote = await Quote.update(knex, tenant, quoteId, parsedInput as Partial<IQuote>);
   return await Quote.getById(knex, tenant, updatedQuote.quote_id) as IQuote;
+  });
 });
 
 export const getQuote = withAuth(async (
@@ -644,7 +721,8 @@ export const deleteQuote = withAuth(async (
   user,
   { tenant },
   quoteId: string
-): Promise<Awaited<ReturnType<typeof Quote.delete>> | ActionPermissionError> => {
+): Promise<Awaited<ReturnType<typeof Quote.delete>> | QuoteActionError> => {
+  return withQuoteActionErrors(async () => {
   const denied = await requireBillingDeletePermission(user);
   if (denied) {
     return denied;
@@ -659,13 +737,15 @@ export const deleteQuote = withAuth(async (
     'Permission denied: Cannot delete quote'
   );
   return await Quote.delete(knex, tenant, quoteId);
+  });
 });
 
 export const addQuoteItem = withAuth(async (
   user,
   { tenant },
   input: CreateQuoteItemInput
-): Promise<IQuoteItem | ActionPermissionError> => {
+): Promise<IQuoteItem | QuoteActionError> => {
+  return withQuoteActionErrors(async () => {
   const denied = await requireBillingUpdatePermission(user);
   if (denied) {
     return denied;
@@ -685,6 +765,7 @@ export const addQuoteItem = withAuth(async (
   );
 
   return await QuoteItem.create(knex, tenant, parsedInput as any);
+  });
 });
 
 export const updateQuoteItem = withAuth(async (
@@ -692,7 +773,8 @@ export const updateQuoteItem = withAuth(async (
   { tenant },
   quoteItemId: string,
   input: UpdateQuoteItemInput
-): Promise<IQuoteItem | ActionPermissionError> => {
+): Promise<IQuoteItem | QuoteActionError> => {
+  return withQuoteActionErrors(async () => {
   const denied = await requireBillingUpdatePermission(user);
   if (denied) {
     return denied;
@@ -721,13 +803,15 @@ export const updateQuoteItem = withAuth(async (
   );
 
   return await QuoteItem.update(knex, tenant, quoteItemId, parsedInput);
+  });
 });
 
 export const removeQuoteItem = withAuth(async (
   user,
   { tenant },
   quoteItemId: string
-): Promise<boolean | ActionPermissionError> => {
+): Promise<boolean | QuoteActionError> => {
+  return withQuoteActionErrors(async () => {
   const denied = await requireBillingUpdatePermission(user);
   if (denied) {
     return denied;
@@ -748,6 +832,7 @@ export const removeQuoteItem = withAuth(async (
     'Permission denied: Cannot update quote'
   );
   return await QuoteItem.delete(knex, tenant, quoteItemId);
+  });
 });
 
 export const reorderQuoteItems = withAuth(async (
@@ -755,7 +840,8 @@ export const reorderQuoteItems = withAuth(async (
   { tenant },
   quoteId: string,
   orderedQuoteItemIds: string[]
-): Promise<IQuoteItem[] | ActionPermissionError> => {
+): Promise<IQuoteItem[] | QuoteActionError> => {
+  return withQuoteActionErrors(async () => {
   const denied = await requireBillingUpdatePermission(user);
   if (denied) {
     return denied;
@@ -770,6 +856,7 @@ export const reorderQuoteItems = withAuth(async (
     'Permission denied: Cannot update quote'
   );
   return await QuoteItem.reorder(knex, tenant, quoteId, orderedQuoteItemIds);
+  });
 });
 
 export const createQuoteFromTemplate = withAuth(async (
@@ -777,7 +864,8 @@ export const createQuoteFromTemplate = withAuth(async (
   { tenant },
   templateQuoteId: string,
   input: CreateQuoteFromTemplateInput
-): Promise<IQuote | ActionPermissionError> => {
+): Promise<IQuote | QuoteActionError> => {
+  return withQuoteActionErrors(async () => {
   const denied = await requireBillingCreatePermission(user);
   if (denied) {
     return denied;
@@ -859,13 +947,15 @@ export const createQuoteFromTemplate = withAuth(async (
 
     return await Quote.getById(trx, tenant, createdQuote.quote_id) as IQuote;
   });
+  });
 });
 
 export const duplicateQuote = withAuth(async (
   user,
   { tenant },
   quoteId: string
-): Promise<IQuote | ActionPermissionError> => {
+): Promise<IQuote | QuoteActionError> => {
+  return withQuoteActionErrors(async () => {
   const denied = await requireBillingCreatePermission(user);
   if (denied) {
     return denied;
@@ -952,13 +1042,15 @@ export const duplicateQuote = withAuth(async (
 
     return await Quote.getById(trx, tenant, duplicatedQuote.quote_id) as IQuote;
   });
+  });
 });
 
 export const saveQuoteAsTemplate = withAuth(async (
   user,
   { tenant },
   quoteId: string
-): Promise<IQuote | ActionPermissionError> => {
+): Promise<IQuote | QuoteActionError> => {
+  return withQuoteActionErrors(async () => {
   if ((user as any).user_type === 'client') {
     throw new Error('Permission denied: operation not available in client portal');
   }
@@ -1049,13 +1141,15 @@ export const saveQuoteAsTemplate = withAuth(async (
 
     return await Quote.getById(trx, tenant, templateQuote.quote_id) as IQuote;
   });
+  });
 });
 
 export const createQuoteRevision = withAuth(async (
   user,
   { tenant },
   quoteId: string
-): Promise<IQuote | ActionPermissionError> => {
+): Promise<IQuote | QuoteActionError> => {
+  return withQuoteActionErrors(async () => {
   const denied = await requireBillingUpdatePermission(user);
   if (denied) {
     return denied;
@@ -1070,13 +1164,15 @@ export const createQuoteRevision = withAuth(async (
     'Permission denied: Cannot update quote'
   );
   return await knex.transaction((trx) => Quote.createRevision(trx, tenant, quoteId, getActorUserId(user)));
+  });
 });
 
 export const submitQuoteForApproval = withAuth(async (
   user,
   { tenant },
   quoteId: string
-): Promise<IQuote | ActionPermissionError> => {
+): Promise<IQuote | QuoteActionError> => {
+  return withQuoteActionErrors(async () => {
   if ((user as any).user_type === 'client') {
     throw new Error('Permission denied: operation not available in client portal');
   }
@@ -1106,6 +1202,7 @@ export const submitQuoteForApproval = withAuth(async (
   return await Quote.update(knex, tenant, quoteId, {
     status: 'pending_approval',
     updated_by: getActorUserId(user),
+  });
   });
 });
 
@@ -1144,7 +1241,8 @@ export const updateQuoteApprovalSettings = withAuth(async (
   user,
   { tenant },
   approvalRequired: boolean
-): Promise<QuoteApprovalWorkflowSettings | ActionPermissionError> => {
+): Promise<QuoteApprovalWorkflowSettings | QuoteActionError> => {
+  return withQuoteActionErrors(async () => {
   if ((user as any).user_type === 'client') {
     throw new Error('Permission denied: operation not available in client portal');
   }
@@ -1155,6 +1253,7 @@ export const updateQuoteApprovalSettings = withAuth(async (
 
   const { knex } = await createTenantKnex();
   return await persistQuoteApprovalWorkflowRequired(knex, tenant, approvalRequired);
+  });
 });
 
 export const approveQuote = withAuth(async (
@@ -1162,7 +1261,8 @@ export const approveQuote = withAuth(async (
   { tenant },
   quoteId: string,
   comment?: string
-): Promise<IQuote | ActionPermissionError> => {
+): Promise<IQuote | QuoteActionError> => {
+  return withQuoteActionErrors(async () => {
   const denied = await requireQuoteApprovePermission(user);
   if (denied) {
     return denied;
@@ -1216,6 +1316,7 @@ export const approveQuote = withAuth(async (
   });
 
   return updatedQuote;
+  });
 });
 
 export const requestQuoteApprovalChanges = withAuth(async (
@@ -1223,7 +1324,8 @@ export const requestQuoteApprovalChanges = withAuth(async (
   { tenant },
   quoteId: string,
   comment: string
-): Promise<IQuote | ActionPermissionError> => {
+): Promise<IQuote | QuoteActionError> => {
+  return withQuoteActionErrors(async () => {
   const denied = await requireQuoteApprovePermission(user);
   if (denied) {
     return denied;
@@ -1261,6 +1363,7 @@ export const requestQuoteApprovalChanges = withAuth(async (
   });
 
   return updatedQuote;
+  });
 });
 
 export const sendQuote = withAuth(async (
@@ -1268,7 +1371,8 @@ export const sendQuote = withAuth(async (
   { tenant },
   quoteId: string,
   input: SendQuoteInput = {}
-): Promise<IQuote | ActionPermissionError> => {
+): Promise<IQuote | QuoteActionError> => {
+  return withQuoteActionErrors(async () => {
   if ((user as any).user_type === 'client') {
     throw new Error('Permission denied: operation not available in client portal');
   }
@@ -1376,6 +1480,7 @@ export const sendQuote = withAuth(async (
   });
 
   return await Quote.getById(knex, tenant, quoteId) as IQuote;
+  });
 });
 
 export const resendQuote = withAuth(async (
@@ -1383,7 +1488,8 @@ export const resendQuote = withAuth(async (
   { tenant },
   quoteId: string,
   input: SendQuoteInput = {}
-): Promise<IQuote | ActionPermissionError> => {
+): Promise<IQuote | QuoteActionError> => {
+  return withQuoteActionErrors(async () => {
   if ((user as any).user_type === 'client') {
     throw new Error('Permission denied: operation not available in client portal');
   }
@@ -1465,6 +1571,7 @@ export const resendQuote = withAuth(async (
   });
 
   return await Quote.getById(knex, tenant, quoteId) as IQuote;
+  });
 });
 
 export const sendQuoteReminder = withAuth(async (
@@ -1472,7 +1579,8 @@ export const sendQuoteReminder = withAuth(async (
   { tenant },
   quoteId: string,
   input: SendQuoteInput = {}
-): Promise<IQuote | ActionPermissionError> => {
+): Promise<IQuote | QuoteActionError> => {
+  return withQuoteActionErrors(async () => {
   if ((user as any).user_type === 'client') {
     throw new Error('Permission denied: operation not available in client portal');
   }
@@ -1554,17 +1662,58 @@ export const sendQuoteReminder = withAuth(async (
   });
 
   return await Quote.getById(knex, tenant, quoteId) as IQuote;
+  });
 });
+
+export type QuoteConversionActionError = ActionPermissionError | ActionMessageError;
+
+function quoteConversionActionErrorFrom(error: unknown): QuoteConversionActionError | null {
+  if (!(error instanceof Error)) return null;
+
+  if (error.message.startsWith('Permission denied') || error.message === 'user is not logged in') {
+    return permissionError(error.message);
+  }
+
+  if (error.message.startsWith('Quote ') && error.message.includes(' not found in tenant ')) {
+    return actionError('Quote not found. It may have been updated or deleted. Please refresh and try again.');
+  }
+
+  if (
+    error.message.startsWith('Quote templates cannot be converted') ||
+    error.message.startsWith('Only accepted quotes can be converted') ||
+    error.message.startsWith('Quote does not contain') ||
+    error.message.startsWith('Quotes must be linked to a client') ||
+    error.message.startsWith('Quote already has a converted invoice') ||
+    error.message.startsWith('Product quote item ') ||
+    error.message === 'Quote has already started conversion and cannot be converted to both again' ||
+    error.message === 'Quote must contain both recurring and one-time items to convert to both records'
+  ) {
+    return actionError(error.message);
+  }
+
+  return null;
+}
+
+async function withQuoteConversionActionErrors<T>(work: () => Promise<T>): Promise<T | QuoteConversionActionError> {
+  try {
+    return await work();
+  } catch (error) {
+    const expected = quoteConversionActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
+}
 
 export const convertQuoteToContract = withAuth(async (
   user,
   { tenant },
   quoteId: string,
-): Promise<{ quote: IQuote; contract: IContract } | ActionPermissionError> => {
+): Promise<{ quote: IQuote; contract: IContract } | QuoteConversionActionError> => {
   if ((user as any).user_type === 'client') {
-    throw new Error('Permission denied: operation not available in client portal');
+    return permissionError('Permission denied: operation not available in client portal');
   }
 
+  return withQuoteConversionActionErrors(async () => {
   const createDenied = await requireBillingCreatePermission(user);
   if (createDenied) {
     return createDenied;
@@ -1587,6 +1736,7 @@ export const convertQuoteToContract = withAuth(async (
   return await knex.transaction(async (trx) => {
     return convertQuoteToDraftContract(trx, tenant, quoteId, getActorUserId(user));
   });
+  });
 });
 
 /**
@@ -1599,11 +1749,12 @@ export const convertQuoteToSalesOrder = withAuth(async (
   user,
   { tenant },
   quoteId: string,
-): Promise<{ quote: IQuote; so_id: string; so_number: string } | ActionPermissionError> => {
+): Promise<{ quote: IQuote; so_id: string; so_number: string } | QuoteConversionActionError> => {
   if ((user as any).user_type === 'client') {
-    throw new Error('Permission denied: operation not available in client portal');
+    return permissionError('Permission denied: operation not available in client portal');
   }
 
+  return withQuoteConversionActionErrors(async () => {
   const createDenied = await requireBillingCreatePermission(user);
   if (createDenied) {
     return createDenied;
@@ -1631,17 +1782,19 @@ export const convertQuoteToSalesOrder = withAuth(async (
       so_number: result.salesOrder.so_number,
     };
   });
+  });
 });
 
 export const convertQuoteToInvoice = withAuth(async (
   user,
   { tenant },
   quoteId: string,
-): Promise<{ quote: IQuote; invoice: IInvoice } | ActionPermissionError> => {
+): Promise<{ quote: IQuote; invoice: IInvoice } | QuoteConversionActionError> => {
   if ((user as any).user_type === 'client') {
-    throw new Error('Permission denied: operation not available in client portal');
+    return permissionError('Permission denied: operation not available in client portal');
   }
 
+  return withQuoteConversionActionErrors(async () => {
   const createDenied = await requireBillingCreatePermission(user);
   if (createDenied) {
     return createDenied;
@@ -1664,17 +1817,19 @@ export const convertQuoteToInvoice = withAuth(async (
   return await knex.transaction(async (trx) => {
     return convertQuoteToDraftInvoice(trx, tenant, quoteId, getActorUserId(user));
   });
+  });
 });
 
 export const convertQuoteToBoth = withAuth(async (
   user,
   { tenant },
   quoteId: string,
-): Promise<{ quote: IQuote; contract: IContract; invoice: IInvoice } | ActionPermissionError> => {
+): Promise<{ quote: IQuote; contract: IContract; invoice: IInvoice } | QuoteConversionActionError> => {
   if ((user as any).user_type === 'client') {
-    throw new Error('Permission denied: operation not available in client portal');
+    return permissionError('Permission denied: operation not available in client portal');
   }
 
+  return withQuoteConversionActionErrors(async () => {
   const createDenied = await requireBillingCreatePermission(user);
   if (createDenied) {
     return createDenied;
@@ -1702,13 +1857,15 @@ export const convertQuoteToBoth = withAuth(async (
       invoice: result.invoice,
     };
   });
+  });
 });
 
 export const getQuoteConversionPreview = withAuth(async (
   user,
   { tenant },
   quoteId: string,
-): Promise<QuoteConversionPreview | ActionPermissionError> => {
+): Promise<QuoteConversionPreview | QuoteConversionActionError> => {
+  return withQuoteConversionActionErrors(async () => {
   const denied = await requireBillingReadPermission(user);
   if (denied) {
     return denied;
@@ -1721,6 +1878,7 @@ export const getQuoteConversionPreview = withAuth(async (
   }
 
   return buildQuoteConversionPreview(quote, knex, tenant);
+  });
 });
 
 export const getQuoteByConvertedContractId = withAuth(async (
@@ -1811,7 +1969,8 @@ export const regenerateQuotePdf = withAuth(async (
   user,
   { tenant },
   quoteId: string,
-): Promise<string | ActionPermissionError> => {
+): Promise<string | QuoteActionError> => {
+  return withQuoteActionErrors(async () => {
   const denied = await requireBillingUpdatePermission(user);
   if (denied) {
     return denied;
@@ -1829,13 +1988,15 @@ export const regenerateQuotePdf = withAuth(async (
   const actorUserId = getActorUserId(user) ?? quote.created_by ?? 'system';
   const fileId = await storeQuotePdf(knex, tenant, quote, actorUserId);
   return fileId;
+  });
 });
 
 export const downloadQuotePdf = withAuth(async (
   user,
   { tenant },
   quoteId: string,
-): Promise<{ pdfData: number[]; quoteNumber: string } | ActionPermissionError> => {
+): Promise<{ pdfData: number[]; quoteNumber: string } | QuoteActionError> => {
+  return withQuoteActionErrors(async () => {
   const denied = await requireBillingReadPermission(user);
   if (denied) {
     return denied;
@@ -1854,6 +2015,7 @@ export const downloadQuotePdf = withAuth(async (
     pdfData: Array.from(pdfBuffer),
     quoteNumber: quote.quote_number ?? quote.quote_id,
   };
+  });
 });
 
 export const renderQuotePreview = withAuth(async (
@@ -1861,7 +2023,8 @@ export const renderQuotePreview = withAuth(async (
   { tenant },
   quoteId: string,
   templateId?: string,
-): Promise<{ html: string; css: string } | ActionPermissionError> => {
+): Promise<{ html: string; css: string } | QuoteActionError> => {
+  return withQuoteActionErrors(async () => {
   const denied = await requireBillingReadPermission(user);
   if (denied) {
     return denied;
@@ -1886,4 +2049,5 @@ export const renderQuotePreview = withAuth(async (
   const service = createPDFGenerationService(tenant);
   const preview = await service.renderQuotePreview({ quoteId: quote.quote_id, templateAst });
   return { html: preview.html, css: preview.css };
+  });
 });

@@ -10,7 +10,12 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { IProjectTemplate } from '@alga-psa/types';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { ColumnDefinition } from '@alga-psa/types';
 import { getTemplates, getTemplateCategories, deleteTemplate } from '../../actions/projectTemplateActions';
@@ -31,6 +36,10 @@ const PROJECT_TEMPLATES_PAGE_SIZE_KEY = 'project_templates_page_size';
 interface ProjectTemplatesListProps {
   initialTemplates: IProjectTemplate[];
   initialCategories: string[];
+}
+
+function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
+  return isActionMessageError(value) || isActionPermissionError(value);
 }
 
 export default function ProjectTemplatesList({ initialTemplates, initialCategories }: ProjectTemplatesListProps) {
@@ -73,6 +82,10 @@ export default function ProjectTemplatesList({ initialTemplates, initialCategori
         category: selectedCategory || undefined,
         search: searchTerm || undefined
       });
+      if (isReturnedActionError(templatesData)) {
+        handleError(getErrorMessage(templatesData));
+        return;
+      }
 
       setTemplates(templatesData);
     } catch (error) {
@@ -85,7 +98,11 @@ export default function ProjectTemplatesList({ initialTemplates, initialCategori
   async function handleDelete() {
     if (!deleteConfirmation) return;
     try {
-      await deleteTemplate(deleteConfirmation.templateId);
+      const result = await deleteTemplate(deleteConfirmation.templateId);
+      if (isReturnedActionError(result)) {
+        handleError(getErrorMessage(result));
+        return;
+      }
       toast.success(t('templates.list.deletedSuccess', 'Template deleted successfully'));
       loadData();
     } catch (error) {

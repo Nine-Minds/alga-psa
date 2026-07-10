@@ -6,6 +6,7 @@ import type { IInvoice } from '@alga-psa/types';
 import { z } from 'zod';
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
+import { reportingActionErrorFrom, type ReportingActionError } from './reportingActionErrors';
 // Removed safe-action import as it's not the standard pattern here
 // Define the schema for the input parameters
 const InputSchema = z.object({
@@ -30,12 +31,11 @@ export const getRecentClientInvoices = withAuth(async (
   _user,
   { tenant },
   input: { clientId: string; limit?: number }
-): Promise<RecentInvoice[]> => {
+): Promise<RecentInvoice[] | ReportingActionError> => {
   // Validate input
   const validationResult = InputSchema.safeParse(input);
   if (!validationResult.success) {
-    const errorMessages = validationResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
-    throw new Error(`Validation Error: ${errorMessages}`);
+    return reportingActionErrorFrom(validationResult.error)!;
   }
   const { clientId, limit } = validationResult.data;
 
@@ -94,7 +94,9 @@ export const getRecentClientInvoices = withAuth(async (
     console.log(`Found ${invoices.length} recent invoices for client ${clientId}`);
     return invoices;
   } catch (error) {
+    const expected = reportingActionErrorFrom(error);
+    if (expected) return expected;
     console.error(`Error fetching recent invoices for client ${clientId} in tenant ${tenant}:`, error);
-    throw new Error(`Failed to fetch recent invoices: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw error;
   }
 });

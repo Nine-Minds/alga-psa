@@ -477,11 +477,7 @@ export async function GET(request: NextRequest) {
     const errorCode = axios.isAxiosError(error) && error.response?.data?.error
       ? error.response.data.error
       : 'callback_processing_error';
-    const errorMessage = axios.isAxiosError(error) && error.response?.data?.error_description
-      ? error.response.data.error_description
-      : error instanceof Error
-        ? error.message
-        : 'An unexpected error occurred during the callback process.';
+    const errorMessage = 'NinjaOne connection failed. Check the integration settings and try again.';
 
     return failureRedirect(errorCode, errorMessage);
   }

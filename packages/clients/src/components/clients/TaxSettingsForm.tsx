@@ -177,7 +177,8 @@ const TaxSettingsForm: React.FC<TaxSettingsFormProps> = ({ clientId }) => {
 
       setSuccessMessage(t('taxSettingsForm.saveSuccess', { defaultValue: 'Tax settings updated successfully' }));
     } catch (err) {
-      setError(err instanceof Error ? err.message : t('taxSettingsForm.saveError', { defaultValue: 'Failed to update tax settings' }));
+      console.error('Failed to update tax settings:', err);
+      setError(t('taxSettingsForm.saveError', { defaultValue: 'Failed to update tax settings' }));
       setIsTaxExempt(originalTaxExempt);
       setTaxExemptionCertificate(originalCertificate);
       if (originalSettings) {

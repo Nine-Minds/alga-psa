@@ -11,7 +11,8 @@
       "resyncing": "Ponowna synchronizacja {{providerName}}...",
       "resyncError": "Nie udało się ponownie zsynchronizować dostawcy IMAP",
       "resyncStarted": "Rozpoczęto ponowną synchronizację dla {{providerName}}.",
-      "enterpriseOnly": "Przychodząca poczta e-mail usługi Microsoft 365 jest dostępna tylko w wersji Enterprise."
+      "enterpriseOnly": "Przychodząca poczta e-mail usługi Microsoft 365 jest dostępna tylko w wersji Enterprise.",
+      "loadProvidersError": "Failed to load email providers"
     },
     "editDrawer": {
       "title": "Edytuj dostawcę poczty e-mail",
@@ -293,7 +294,8 @@
         "popupBlocked": "Nie udało się otworzyć wyskakującego okienka OAuth. Zezwól na wyświetlanie wyskakujących okienek w tej witrynie.",
         "closedEarly": "Okno autoryzacji zostało zamknięte przed zakończeniem.",
         "authorizationFailed": "Autoryzacja nie powiodła się",
-        "popupFailed": "Wyskakujące okienko OAuth nie powiodło się"
+        "popupFailed": "Wyskakujące okienko OAuth nie powiodło się",
+        "configureFailed": "Failed to configure Gmail provider"
       },
       "messages": {
         "setupIncomplete": "Dostawca zapisany, ale konfiguracja niekompletna: {{error}}",

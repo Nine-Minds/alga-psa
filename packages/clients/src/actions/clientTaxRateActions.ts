@@ -7,6 +7,44 @@ import type { IClientTaxRateAssociation } from '@alga-psa/types';
 import { getClientDefaultTaxRegionCode as getClientDefaultTaxRegionCodeShared } from '@alga-psa/shared/billingClients';
 import { withAuth } from '@alga-psa/auth';
 import { assertMspPermission } from '../lib/authHelpers';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+type ClientTaxRateActionError = ActionMessageError | ActionPermissionError;
+
+function clientTaxRateActionErrorFrom(error: unknown): ClientTaxRateActionError | null {
+  if (error instanceof Error) {
+    if (error.message.includes('Permission denied')) {
+      return permissionError(error.message);
+    }
+    if (/unauthorized|not authenticated|must sign in/i.test(error.message)) {
+      return permissionError('You must be signed in to update client tax rates.');
+    }
+    if (error.message === 'A default tax rate already exists for this client. Only one default rate is allowed.') {
+      return actionError(error.message);
+    }
+  }
+
+  const dbError = error as { code?: string; column?: string };
+  if (dbError?.code === '22P02') {
+    return actionError('The selected client or tax rate is invalid. Please refresh and try again.');
+  }
+  if (dbError?.code === '23502') {
+    return actionError(`Missing required client tax-rate field${dbError.column ? `: ${dbError.column}` : ''}.`);
+  }
+  if (dbError?.code === '23503') {
+    return actionError('The selected client or tax rate no longer exists. Please refresh and try again.');
+  }
+  if (dbError?.code === '23505') {
+    return actionError('This tax rate is already associated with the client.');
+  }
+
+  return null;
+}
 
 const assertCanReadClientTaxRates = (user: any) =>
   assertMspPermission(
@@ -36,27 +74,39 @@ export const getClientTaxRates = withAuth(async (
   user,
   { tenant },
   clientId: string
-): Promise<ClientTaxRateDetails[]> => {
-  await assertCanReadClientTaxRates(user);
+): Promise<ClientTaxRateDetails[] | ClientTaxRateActionError> => {
+  try {
+    await assertCanReadClientTaxRates(user);
+  } catch (error) {
+    const expected = clientTaxRateActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 
-  const { knex } = await createTenantKnex();
-  return await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const db = tenantDb(trx, tenant);
-    const query = db.table<ClientTaxRateDetails>('client_tax_rates');
-    db.tenantJoin(query, 'tax_rates', 'client_tax_rates.tax_rate_id', 'tax_rates.tax_rate_id');
+  try {
+    const { knex } = await createTenantKnex();
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const db = tenantDb(trx, tenant);
+      const query = db.table<ClientTaxRateDetails>('client_tax_rates');
+      db.tenantJoin(query, 'tax_rates', 'client_tax_rates.tax_rate_id', 'tax_rates.tax_rate_id');
 
-    return await query
-      .where('client_tax_rates.client_id', clientId)
-      .select(
-        'client_tax_rates.*',
-        'tax_rates.tax_percentage',
-       // 'tax_rates.name', // Removed as 'name' column does not exist on tax_rates table
-        'tax_rates.tax_type',
-        'tax_rates.country_code'
-        // Removed region_code and description as they are not in ITaxRate base definition
-        // Add them back if they are needed and present in ITaxRate
-      );
-  });
+      return await query
+        .where('client_tax_rates.client_id', clientId)
+        .select(
+          'client_tax_rates.*',
+          'tax_rates.tax_percentage',
+         // 'tax_rates.name', // Removed as 'name' column does not exist on tax_rates table
+          'tax_rates.tax_type',
+          'tax_rates.country_code'
+          // Removed region_code and description as they are not in ITaxRate base definition
+          // Add them back if they are needed and present in ITaxRate
+        );
+    });
+  } catch (error) {
+    const expected = clientTaxRateActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 });
 
 // Phase 1: Only allow adding a single default rate per client.
@@ -65,75 +115,87 @@ export const addClientTaxRate = withAuth(async (
   user,
   { tenant },
   clientTaxRateData: Pick<IClientTaxRateAssociation, 'client_id' | 'tax_rate_id'>
-): Promise<IClientTaxRateAssociation> => {
-  await assertCanUpdateClientTaxRates(user);
+): Promise<IClientTaxRateAssociation | ClientTaxRateActionError> => {
+  try {
+    await assertCanUpdateClientTaxRates(user);
+  } catch (error) {
+    const expected = clientTaxRateActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 
   const { knex } = await createTenantKnex();
   const { client_id, tax_rate_id } = clientTaxRateData; // Destructure for clarity
 
-  return await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const db = tenantDb(trx, tenant);
+  try {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const db = tenantDb(trx, tenant);
 
     // 1. Phase 1 Constraint: Check if a default rate already exists
-    const existingDefault = await db.table<IClientTaxRateAssociation>('client_tax_rates')
-      .where({
-        client_id: client_id,
-        is_default: true
-      })
-      // Exclude the rate we are trying to set as default, in case it already exists but is not default
-      .andWhereNot('tax_rate_id', tax_rate_id)
-      .first();
+      const existingDefault = await db.table<IClientTaxRateAssociation>('client_tax_rates')
+        .where({
+          client_id: client_id,
+          is_default: true
+        })
+        // Exclude the rate we are trying to set as default, in case it already exists but is not default
+        .andWhereNot('tax_rate_id', tax_rate_id)
+        .first();
 
-    if (existingDefault) {
-      // If a *different* rate is already default, prevent adding another one in Phase 1
-      throw new Error('A default tax rate already exists for this client. Only one default rate is allowed.');
-    }
+      if (existingDefault) {
+        // If a *different* rate is already default, prevent adding another one in Phase 1
+        throw new Error('A default tax rate already exists for this client. Only one default rate is allowed.');
+      }
 
     // 2. Check if the specific association already exists (even if not default)
-    let association = await db.table<IClientTaxRateAssociation>('client_tax_rates')
-      .where({
-        client_id: client_id,
-        tax_rate_id: tax_rate_id,
-      })
-      .first();
-
-    if (association) {
-      // 3a. If it exists, update it to be the default
-      if (association.is_default) {
-        // If it's already the default, just return it (no change needed)
-        return association;
-      }
-      const [updatedAssociation] = await db.table<IClientTaxRateAssociation>('client_tax_rates')
-        .where('client_tax_rates_id', association.client_tax_rates_id)
-        .update({
-          is_default: true,
-          location_id: null, // Ensure location_id is null for default in Phase 1
-          updated_at: knex.fn.now()
+      let association = await db.table<IClientTaxRateAssociation>('client_tax_rates')
+        .where({
+          client_id: client_id,
+          tax_rate_id: tax_rate_id,
         })
-        .returning('*');
-      association = updatedAssociation;
-    } else {
+        .first();
+
+      if (association) {
+      // 3a. If it exists, update it to be the default
+        if (association.is_default) {
+        // If it's already the default, just return it (no change needed)
+          return association;
+        }
+        const [updatedAssociation] = await db.table<IClientTaxRateAssociation>('client_tax_rates')
+          .where('client_tax_rates_id', association.client_tax_rates_id)
+          .update({
+            is_default: true,
+            location_id: null, // Ensure location_id is null for default in Phase 1
+            updated_at: knex.fn.now()
+          })
+          .returning('*');
+        association = updatedAssociation;
+      } else {
       // 3b. If it doesn't exist, insert a new record as the default
       // Corrected Omit type to use plural 'rates' id
-      const dataToInsert: Omit<IClientTaxRateAssociation, 'client_tax_rates_id' | 'created_at' | 'updated_at'> = {
-        client_id: client_id,
-        tax_rate_id: tax_rate_id,
-        tenant: tenant!,
-        is_default: true,
-        location_id: null // Ensure location_id is null for default in Phase 1
-      };
-      const [createdAssociation] = await db.table<IClientTaxRateAssociation>('client_tax_rates')
-        .insert(dataToInsert)
-        .returning('*');
-      association = createdAssociation;
-    }
+        const dataToInsert: Omit<IClientTaxRateAssociation, 'client_tax_rates_id' | 'created_at' | 'updated_at'> = {
+          client_id: client_id,
+          tax_rate_id: tax_rate_id,
+          tenant: tenant!,
+          is_default: true,
+          location_id: null // Ensure location_id is null for default in Phase 1
+        };
+        const [createdAssociation] = await db.table<IClientTaxRateAssociation>('client_tax_rates')
+          .insert(dataToInsert)
+          .returning('*');
+        association = createdAssociation;
+      }
 
-    if (!association) {
-        throw new Error('Failed to assign the default tax rate association.');
-    }
+      if (!association) {
+        throw new Error('Default client tax-rate association write completed without returning a record.');
+      }
 
-    return association;
-  });
+      return association;
+    });
+  } catch (error) {
+    const expected = clientTaxRateActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 });
 
 export const removeClientTaxRate = withAuth(async (
@@ -141,18 +203,36 @@ export const removeClientTaxRate = withAuth(async (
   { tenant },
   clientId: string,
   taxRateId: string
-): Promise<void> => {
-  await assertCanUpdateClientTaxRates(user);
+): Promise<{ success: true } | ClientTaxRateActionError> => {
+  try {
+    await assertCanUpdateClientTaxRates(user);
+  } catch (error) {
+    const expected = clientTaxRateActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 
-  const { knex } = await createTenantKnex();
-  await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await tenantDb(trx, tenant).table<IClientTaxRateAssociation>('client_tax_rates')
-      .where({
-        client_id: clientId,
-        tax_rate_id: taxRateId,
-      })
-      .del();
-  });
+  try {
+    const { knex } = await createTenantKnex();
+    const deletedCount = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await tenantDb(trx, tenant).table<IClientTaxRateAssociation>('client_tax_rates')
+        .where({
+          client_id: clientId,
+          tax_rate_id: taxRateId,
+        })
+        .del();
+    });
+
+    if (deletedCount === 0) {
+      return actionError('Client tax rate association not found.');
+    }
+
+    return { success: true };
+  } catch (error) {
+    const expected = clientTaxRateActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 });
 
 // Phase 1: Update the default tax rate for a client
@@ -161,23 +241,30 @@ export const updateDefaultClientTaxRate = withAuth(async (
   { tenant },
   clientId: string,
   newTaxRateId: string
-): Promise<IClientTaxRateAssociation> => {
-  await assertCanUpdateClientTaxRates(user);
+): Promise<IClientTaxRateAssociation | ClientTaxRateActionError> => {
+  try {
+    await assertCanUpdateClientTaxRates(user);
+  } catch (error) {
+    const expected = clientTaxRateActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 
   const { knex } = await createTenantKnex();
 
-  // Validate that the newTaxRateId exists for this tenant (optional but good practice)
-  const newRateExists = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await tenantDb(trx, tenant).table('tax_rates')
-      .where({ tax_rate_id: newTaxRateId })
-      .first();
-  });
-  if (!newRateExists) {
-    throw new Error(`Tax rate with ID ${newTaxRateId} not found.`);
-  }
+  try {
+    // Validate that the newTaxRateId exists for this tenant (optional but good practice)
+    const newRateExists = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await tenantDb(trx, tenant).table('tax_rates')
+        .where({ tax_rate_id: newTaxRateId })
+        .first();
+    });
+    if (!newRateExists) {
+      return actionError(`Tax rate with ID ${newTaxRateId} not found.`);
+    }
 
-  return await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const db = tenantDb(trx, tenant);
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const db = tenantDb(trx, tenant);
 
     // 1. Find the current default rate ID (if one exists)
     const currentDefaultResult = await db.table<IClientTaxRateAssociation>('client_tax_rates')
@@ -195,7 +282,10 @@ export const updateDefaultClientTaxRate = withAuth(async (
       // If the selected rate is already the default, fetch and return the full record
       console.log('Selected rate is already the default. No change needed.');
       const fullCurrentDefault = await db.table<IClientTaxRateAssociation>('client_tax_rates').where({ client_tax_rates_id: currentDefaultRatesId }).first(); // Corrected column name
-      return fullCurrentDefault || Promise.reject('Failed to retrieve current default record.'); // Should not happen if ID exists
+      if (!fullCurrentDefault) {
+        throw new Error('Current default client tax-rate association could not be reloaded.');
+      }
+      return fullCurrentDefault;
     }
 
     // 2. Unset the current default if it exists
@@ -242,11 +332,16 @@ export const updateDefaultClientTaxRate = withAuth(async (
 
     if (!newDefaultAssociation) {
       // This case should ideally not happen if the transaction logic is correct
-      throw new Error('Failed to set the new default tax rate association.');
+      throw new Error('Default client tax-rate association update completed without returning a record.');
     }
 
     return newDefaultAssociation;
-  });
+    });
+  } catch (error) {
+    const expected = clientTaxRateActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 });
 
 /**
@@ -259,17 +354,24 @@ export const getClientDefaultTaxRegionCode = withAuth(async (
   user,
   { tenant },
   clientId: string
-): Promise<string | null> => {
-  await assertCanReadClientTaxRates(user);
-
-  const { knex } = await createTenantKnex();
+): Promise<string | null | ClientTaxRateActionError> => {
+  try {
+    await assertCanReadClientTaxRates(user);
+  } catch (error) {
+    const expected = clientTaxRateActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 
   try {
+    const { knex } = await createTenantKnex();
+
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
       return getClientDefaultTaxRegionCodeShared(trx, tenant, clientId);
     });
   } catch (error) {
-    console.error(`[getClientDefaultTaxRegionCode] Error fetching default tax region for client ${clientId}:`, error);
-    return null;
+    const expected = clientTaxRateActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 });

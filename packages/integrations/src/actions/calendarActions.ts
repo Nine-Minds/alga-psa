@@ -3,6 +3,10 @@
 import logger from '@alga-psa/core/logger';
 import { withAuth } from '@alga-psa/auth';
 import { isCalendarEnterpriseEdition } from '../lib/calendarAvailability';
+import {
+  actionError,
+  type ActionMessageError,
+} from '@alga-psa/ui/lib/errorHandling';
 import type {
   CalendarProviderConfig,
   CalendarSyncStatus,
@@ -144,10 +148,10 @@ export async function getGoogleAuthUrl(params: {
   calendarProviderId?: string;
   redirectUri?: string;
   isPopup?: boolean;
-} = {}): Promise<string> {
+} = {}): Promise<string | ActionMessageError> {
   const result = await initiateCalendarOAuth({ provider: 'google', ...params });
   if (result.success === false) {
-    throw new Error(result.error);
+    return actionError(result.error);
   }
   return result.authUrl;
 }
@@ -156,10 +160,10 @@ export async function getMicrosoftAuthUrl(params: {
   calendarProviderId?: string;
   redirectUri?: string;
   isPopup?: boolean;
-} = {}): Promise<string> {
+} = {}): Promise<string | ActionMessageError> {
   const result = await initiateCalendarOAuth({ provider: 'microsoft', ...params });
   if (result.success === false) {
-    throw new Error(result.error);
+    return actionError(result.error);
   }
   return result.authUrl;
 }

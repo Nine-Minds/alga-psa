@@ -4,6 +4,12 @@ import { Knex } from 'knex';
 import { withTransaction, createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { createAndLinkDeliveredAsset, PendingAssetLink } from '../lib/assetLink';
 import {
   IPurchaseOrder,
@@ -15,6 +21,60 @@ import {
   PurchaseOrderStatus,
 } from '@alga-psa/types';
 import { publishInventoryEvent, recordStockMovement, timestampPayload } from '../lib';
+import { resolveTenantCurrency } from '../lib';
+
+export type InventoryActionError = ActionMessageError | ActionPermissionError;
+
+function dropShipActionErrorFrom(error: unknown): InventoryActionError | null {
+  if (error instanceof Error) {
+    if (error.message.startsWith('Permission denied') || error.message === 'user is not logged in') {
+      return permissionError(error.message);
+    }
+
+    switch (error.message) {
+      case 'vendor_id is required':
+        return actionError('Select a vendor before creating the drop-ship purchase order.');
+      case 'Sales order line not found':
+        return actionError('Sales order line not found. It may have been deleted. Please refresh and try again.');
+      case 'Sales order line is not a drop-ship line':
+        return actionError('This sales order line is not configured for drop-ship fulfillment.');
+      case 'Sales order not found':
+        return actionError('Sales order not found. It may have been deleted. Please refresh and try again.');
+      case 'Vendor not found':
+        return actionError('Vendor not found. It may have been deleted. Please choose another vendor.');
+      case 'A po_line_id or so_line_id is required':
+        return actionError('Select a drop-ship line before confirming the vendor shipment.');
+      case 'Drop-ship purchase order line not found':
+        return actionError('Create the drop-ship purchase order before confirming the vendor shipment.');
+      case 'Purchase order line is not linked to a sales order line':
+        return actionError('This purchase order line is not linked to a sales order line.');
+      case 'Purchase order not found':
+        return actionError('Purchase order not found. It may have been deleted. Please refresh and try again.');
+      case 'Purchase order is not a drop-ship order':
+        return actionError('This purchase order is not configured for drop-ship fulfillment.');
+      case 'Serialized drop-ship requires at least one serial':
+        return actionError('Enter at least one serial number for this serialized drop-ship shipment.');
+      case 'Each serial requires a serial_number':
+        return actionError('Each serialized unit needs a serial number.');
+      case 'Sales order line is already fully fulfilled':
+        return actionError('This sales order line is already fully fulfilled.');
+      default:
+        if (error.message.startsWith('Shipment of ')) {
+          return actionError(error.message);
+        }
+    }
+  }
+
+  const dbError = error as { code?: string };
+  if (dbError?.code === '23503') {
+    return actionError('One of the selected drop-ship records no longer exists. Please refresh and try again.');
+  }
+  if (dbError?.code === '23505') {
+    return actionError('This drop-ship shipment conflicts with an existing record. Please refresh and try again.');
+  }
+
+  return null;
+}
 
 /**
  * Drop-ship: vendor ships straight to the client, the stock never touches one of
@@ -42,6 +102,7 @@ async function resolveCost(
   serviceId: string,
   fallbackCurrency: string,
 ): Promise<{ unitCost: number; costCurrency: string }> {
+  const defaultCurrency = fallbackCurrency || await resolveTenantCurrency(trx, tenant);
   const pis = await trx('product_inventory_settings')
     .where({ tenant, service_id: serviceId })
     .select('average_cost', 'cost_currency')
@@ -52,7 +113,7 @@ async function resolveCost(
     .first();
   return {
     unitCost: Number(pis?.average_cost ?? sc?.cost ?? 0),
-    costCurrency: pis?.cost_currency ?? sc?.cost_currency ?? fallbackCurrency ?? 'USD',
+    costCurrency: pis?.cost_currency ?? sc?.cost_currency ?? defaultCurrency,
   };
 }
 
@@ -65,6 +126,8 @@ export interface DropShipPurchaseOrder extends IPurchaseOrder {
   lines: IPurchaseOrderLine[];
 }
 
+export type CreateDropShipForSoLineResult = DropShipPurchaseOrder | InventoryActionError;
+
 /**
  * Create a drop-ship purchase order for a `drop_ship` sales-order line. The PO is
  * flagged `is_drop_ship`, carries the SO client + address, and its single line links
@@ -76,73 +139,81 @@ export const createDropShipForSoLine = withAuth(
     { tenant },
     soLineId: string,
     input: CreateDropShipForSoLineInput,
-  ): Promise<DropShipPurchaseOrder> => {
-    await requireSoPerm(user, 'create');
-    if (!input?.vendor_id) throw new Error('vendor_id is required');
+  ): Promise<CreateDropShipForSoLineResult> => {
+    try {
+      await requireSoPerm(user, 'create');
+      if (!input?.vendor_id) throw new Error('vendor_id is required');
 
-    const { knex: db } = await createTenantKnex();
-    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
-      const soLine = (await trx('sales_order_lines')
-        .where({ tenant, so_line_id: soLineId })
-        .first()) as ISalesOrderLine | undefined;
-      if (!soLine) throw new Error('Sales order line not found');
-      if (soLine.fulfillment_type !== 'drop_ship') {
-        throw new Error('Sales order line is not a drop-ship line');
+      const { knex: db } = await createTenantKnex();
+      const result = await withTransaction(db, async (trx: Knex.Transaction) => {
+        const soLine = (await trx('sales_order_lines')
+          .where({ tenant, so_line_id: soLineId })
+          .first()) as ISalesOrderLine | undefined;
+        if (!soLine) throw new Error('Sales order line not found');
+        if (soLine.fulfillment_type !== 'drop_ship') {
+          throw new Error('Sales order line is not a drop-ship line');
+        }
+
+        const so = (await trx('sales_orders')
+          .where({ tenant, so_id: soLine.so_id })
+          .first()) as ISalesOrder | undefined;
+        if (!so) throw new Error('Sales order not found');
+
+        const vendor = await trx('vendors').where({ tenant, vendor_id: input.vendor_id }).first();
+        if (!vendor) throw new Error('Vendor not found');
+
+        const currencyCode = so.currency_code || await resolveTenantCurrency(trx, tenant);
+        const numRes = await trx.raw('SELECT generate_next_number(?::uuid, ?) as number', [tenant, 'PURCHASE_ORDER']);
+        const poNumber = numRes.rows[0].number;
+
+        const [po] = await trx('purchase_orders')
+          .insert({
+            tenant,
+            po_number: poNumber,
+            vendor_id: input.vendor_id,
+            status: 'open' as PurchaseOrderStatus,
+            order_date: trx.fn.now(),
+            is_drop_ship: true,
+            drop_ship_client_id: so.client_id,
+            drop_ship_address: input.drop_ship_address ?? null,
+            currency_code: currencyCode,
+            notes: `Drop-ship for sales order ${so.so_number}`,
+            created_by: user.user_id,
+          })
+          .returning('*');
+
+        const { unitCost, costCurrency } = await resolveCost(trx, tenant, soLine.service_id, currencyCode);
+
+        const [line] = await trx('purchase_order_lines')
+          .insert({
+            tenant,
+            po_id: (po as IPurchaseOrder).po_id,
+            service_id: soLine.service_id,
+            quantity_ordered: soLine.quantity_ordered,
+            quantity_received: 0,
+            unit_cost: unitCost,
+            cost_currency: costCurrency,
+            source_so_line_id: soLineId,
+          })
+          .returning('*');
+
+        return { ...(po as IPurchaseOrder), lines: [line as IPurchaseOrderLine] };
+      });
+
+      await publishInventoryEvent('INVENTORY_PURCHASE_ORDER_CREATED', timestampPayload({
+        tenant,
+        po_id: result.po_id,
+        user_id: user.user_id,
+      }));
+
+      return result;
+    } catch (error) {
+      const expectedError = dropShipActionErrorFrom(error);
+      if (expectedError) {
+        return expectedError;
       }
-
-      const so = (await trx('sales_orders')
-        .where({ tenant, so_id: soLine.so_id })
-        .first()) as ISalesOrder | undefined;
-      if (!so) throw new Error('Sales order not found');
-
-      const vendor = await trx('vendors').where({ tenant, vendor_id: input.vendor_id }).first();
-      if (!vendor) throw new Error('Vendor not found');
-
-      const currencyCode = so.currency_code ?? 'USD';
-      const numRes = await trx.raw('SELECT generate_next_number(?::uuid, ?) as number', [tenant, 'PURCHASE_ORDER']);
-      const poNumber = numRes.rows[0].number;
-
-      const [po] = await trx('purchase_orders')
-        .insert({
-          tenant,
-          po_number: poNumber,
-          vendor_id: input.vendor_id,
-          status: 'open' as PurchaseOrderStatus,
-          order_date: trx.fn.now(),
-          is_drop_ship: true,
-          drop_ship_client_id: so.client_id,
-          drop_ship_address: input.drop_ship_address ?? null,
-          currency_code: currencyCode,
-          notes: `Drop-ship for sales order ${so.so_number}`,
-          created_by: user.user_id,
-        })
-        .returning('*');
-
-      const { unitCost, costCurrency } = await resolveCost(trx, tenant, soLine.service_id, currencyCode);
-
-      const [line] = await trx('purchase_order_lines')
-        .insert({
-          tenant,
-          po_id: (po as IPurchaseOrder).po_id,
-          service_id: soLine.service_id,
-          quantity_ordered: soLine.quantity_ordered,
-          quantity_received: 0,
-          unit_cost: unitCost,
-          cost_currency: costCurrency,
-          source_so_line_id: soLineId,
-        })
-        .returning('*');
-
-      return { ...(po as IPurchaseOrder), lines: [line as IPurchaseOrderLine] };
-    });
-
-    await publishInventoryEvent('INVENTORY_PURCHASE_ORDER_CREATED', timestampPayload({
-      tenant,
-      po_id: result.po_id,
-      user_id: user.user_id,
-    }));
-
-    return result;
+      throw error;
+    }
   },
 );
 
@@ -174,6 +245,8 @@ export interface ConfirmDropShipShipmentResult {
   warnings: string[];
 }
 
+export type ConfirmDropShipShipmentActionResult = ConfirmDropShipShipmentResult | InventoryActionError;
+
 /**
  * Combined receipt+delivery on vendor shipment confirmation. Never touches on-hand:
  * the consume movement carries no from/to location, so `stock_levels` are unchanged.
@@ -184,14 +257,15 @@ export const confirmDropShipShipment = withAuth(
     { tenant },
     ref: DropShipLineRef,
     input?: ConfirmDropShipShipmentInput,
-  ): Promise<ConfirmDropShipShipmentResult> => {
-    await requireSoPerm(user, 'update');
-    if (!ref?.po_line_id && !ref?.so_line_id) {
-      throw new Error('A po_line_id or so_line_id is required');
-    }
+  ): Promise<ConfirmDropShipShipmentActionResult> => {
+    try {
+      await requireSoPerm(user, 'update');
+      if (!ref?.po_line_id && !ref?.so_line_id) {
+        throw new Error('A po_line_id or so_line_id is required');
+      }
 
-    const { knex: db } = await createTenantKnex();
-    const core = await withTransaction(db, async (trx: Knex.Transaction) => {
+      const { knex: db } = await createTenantKnex();
+      const core = await withTransaction(db, async (trx: Knex.Transaction) => {
       // Resolve the drop-ship PO line from whichever id was supplied (probe, no lock).
       let poLineProbe: IPurchaseOrderLine | undefined;
       if (ref.po_line_id) {
@@ -253,7 +327,7 @@ export const confirmDropShipShipment = withAuth(
         trx,
         tenant,
         soLine.service_id,
-        po.currency_code ?? 'USD',
+        po.currency_code || await resolveTenantCurrency(trx, tenant),
       );
 
       const serials = input?.serials ?? [];
@@ -421,10 +495,14 @@ export const confirmDropShipShipment = withAuth(
           if (delivered) delivered.asset_id = assetId;
         }
       } catch (e) {
+        console.warn('[dropShipActions] Failed to create linked asset for delivered unit', {
+          tenant,
+          unitId: p.unit.unit_id,
+          serialNumber: p.unit.serial_number,
+          error: e,
+        });
         warnings.push(
-          `Asset creation failed for unit ${p.unit.serial_number ?? p.unit.unit_id}: ${
-            e instanceof Error ? e.message : String(e)
-          }. The delivery succeeded — create and link the asset manually.`,
+          `Asset creation failed for unit ${p.unit.serial_number ?? p.unit.unit_id}. The delivery succeeded; create and link the asset manually.`,
         );
       }
     }
@@ -450,7 +528,14 @@ export const confirmDropShipShipment = withAuth(
       }));
     }
 
-    const { pendingAssets: _pending, so_fulfilled_event: _soFulfilledEvent, ...rest } = core;
-    return { ...rest, warnings };
+      const { pendingAssets: _pending, so_fulfilled_event: _soFulfilledEvent, ...rest } = core;
+      return { ...rest, warnings };
+    } catch (error) {
+      const expectedError = dropShipActionErrorFrom(error);
+      if (expectedError) {
+        return expectedError;
+      }
+      throw error;
+    }
   },
 );

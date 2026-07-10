@@ -89,6 +89,10 @@
     "./user-activities": {
       "import": "./src/user-activities/index.ts",
       "types": "./src/user-activities/index.ts"
+    },
+    "./user-activities/ActivityDrawerProvider": {
+      "import": "./src/user-activities/ActivityDrawerProvider.ts",
+      "types": "./src/user-activities/ActivityDrawerProvider.ts"
     }
   },
   "dependencies": {

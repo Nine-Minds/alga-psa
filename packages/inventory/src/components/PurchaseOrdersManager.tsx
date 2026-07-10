@@ -7,11 +7,21 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { SearchInput } from '@alga-psa/ui/components/SearchInput';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
+import { CurrencyInput } from '@alga-psa/ui/components/CurrencyInput';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { EmptyState } from '@alga-psa/ui/components/EmptyState';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { CURRENCY_OPTIONS, toMinorUnits } from '@alga-psa/core';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { toast } from 'react-hot-toast';
 import { PoLandedCostDialog } from './PoLandedCostDialog';
 import type {
@@ -56,9 +66,9 @@ interface FormState {
 
 const emptyLine = (): LineForm => ({ service_id: '', quantity_ordered: '1', unit_cost: '0' });
 
-const emptyForm = (): FormState => ({
+const emptyForm = (currencyCode: string): FormState => ({
   vendor_id: '',
-  currency_code: 'USD',
+  currency_code: currencyCode,
   expected_date: '',
   lines: [emptyLine()],
 });
@@ -78,21 +88,18 @@ function formatDate(value?: string | Date | null): string {
   return Number.isNaN(d.getTime()) ? String(value) : d.toLocaleDateString();
 }
 
-/** Integer cents → a localized currency string in the PO's currency. */
-function money(cents: number, currency = 'USD'): string {
-  try {
-    return (cents / 100).toLocaleString('en-US', { style: 'currency', currency });
-  } catch {
-    return `$${(cents / 100).toFixed(2)}`;
-  }
-}
-
 const NUM_HEADER = 'text-right';
 const NUM_CELL = 'text-right tabular-nums';
 
 /** Operator-facing message from an unknown error, with a plain-language fallback. */
 function errMessage(e: unknown, fallback: string): string {
   return e instanceof Error && e.message ? e.message : fallback;
+}
+
+type ReturnedActionError = ActionMessageError | ActionPermissionError;
+
+function isReturnedActionError(value: unknown): value is ReturnedActionError {
+  return isActionMessageError(value) || isActionPermissionError(value);
 }
 
 /** Turn a raw enum value ("partially_received") into a sentence-case label ("Partially received"). */
@@ -126,18 +133,16 @@ const OUTSTANDING_STATUSES = new Set(['open', 'partially_received']);
 export function PurchaseOrdersManager({
   initialPos,
   loadError = false,
+  loadErrorMessage,
+  defaultCurrencyCode = 'USD',
 }: {
   initialPos: PurchaseOrderListRow[];
   loadError?: boolean;
+  loadErrorMessage?: string;
+  defaultCurrencyCode?: string;
 }) {
   const { t } = useTranslation('features/inventory');
-  // Closed currency set — the create form picks from these instead of free-typing a code.
-  const CURRENCY_OPTIONS = [
-    { value: 'USD', label: t('purchaseOrders.currency.usd', 'USD — US Dollar') },
-    { value: 'CAD', label: t('purchaseOrders.currency.cad', 'CAD — Canadian Dollar') },
-    { value: 'EUR', label: t('purchaseOrders.currency.eur', 'EUR — Euro') },
-    { value: 'GBP', label: t('purchaseOrders.currency.gbp', 'GBP — British Pound') },
-  ];
+  const { money } = useCurrencyFormat();
   const STATUS_FILTER_OPTIONS = [
     { value: '', label: t('purchaseOrders.status.allStatuses', 'All statuses') },
     { value: 'draft', label: t('purchaseOrders.status.draft', 'Draft') },
@@ -166,7 +171,7 @@ export function PurchaseOrdersManager({
   const [statusFilter, setStatusFilter] = useState('');
   const [vendorFilter, setVendorFilter] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [form, setForm] = useState<FormState>(emptyForm());
+  const [form, setForm] = useState<FormState>(emptyForm(defaultCurrencyCode));
   const [saving, setSaving] = useState(false);
   const [pendingCancel, setPendingCancel] = useState<IPurchaseOrder | null>(null);
   const [landedCostPo, setLandedCostPo] = useState<IPurchaseOrder | null>(null);
@@ -180,7 +185,14 @@ export function PurchaseOrdersManager({
 
   const reload = useCallback(async () => {
     try {
-      setPos(await listPurchaseOrders({}));
+      const result = await listPurchaseOrders({});
+      if (isReturnedActionError(result)) {
+        setPos([]);
+        setLoadFailed(true);
+        toast.error(getErrorMessage(result));
+        return;
+      }
+      setPos(result);
       setLoadFailed(false);
     } catch (e) {
       console.error(e);
@@ -191,7 +203,13 @@ export function PurchaseOrdersManager({
 
   const loadVendors = useCallback(async () => {
     try {
-      setVendors(await listVendors({}));
+      const result = await listVendors({});
+      if (isReturnedActionError(result)) {
+        setVendors([]);
+        toast.error(getErrorMessage(result));
+        return;
+      }
+      setVendors(result);
     } catch (e) {
       console.error(e);
       toast.error(t('purchaseOrders.vendorsLoadError', "Couldn't load vendors."));
@@ -200,7 +218,13 @@ export function PurchaseOrdersManager({
 
   const loadProducts = useCallback(async () => {
     try {
-      setProducts((await listInventoryProducts()) as ProductOption[]);
+      const result = await listInventoryProducts();
+      if (isReturnedActionError(result)) {
+        setProducts([]);
+        toast.error(getErrorMessage(result));
+        return;
+      }
+      setProducts(result as ProductOption[]);
     } catch (e) {
       console.error(e);
       toast.error(t('purchaseOrders.productsLoadError', "Couldn't load products."));
@@ -233,7 +257,7 @@ export function PurchaseOrdersManager({
   }));
 
   const openCreate = () => {
-    setForm(emptyForm());
+    setForm(emptyForm(defaultCurrencyCode));
     setDialogOpen(true);
   };
 
@@ -263,8 +287,7 @@ export function PurchaseOrdersManager({
       .map((l) => ({
         service_id: l.service_id.trim(),
         quantity_ordered: Number(l.quantity_ordered),
-        // Money is integer cents: convert the dollar input to cents.
-        unit_cost: Math.round(Number(l.unit_cost) * 100),
+        unit_cost: toMinorUnits(Number(l.unit_cost || 0), undefined, form.currency_code),
       }));
     for (const l of lines) {
       if (!(l.quantity_ordered > 0)) {
@@ -274,12 +297,16 @@ export function PurchaseOrdersManager({
     }
     setSaving(true);
     try {
-      await createPurchaseOrder({
+      const result = await createPurchaseOrder({
         vendor_id: form.vendor_id,
         currency_code: form.currency_code.trim(),
         expected_date: form.expected_date || null,
         lines,
       });
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       toast.success(t('purchaseOrders.created', 'Purchase order created.'));
       setDialogOpen(false);
       await reload();
@@ -292,7 +319,12 @@ export function PurchaseOrdersManager({
 
   const submit = async (po: IPurchaseOrder) => {
     try {
-      await submitPurchaseOrder(po.po_id);
+      const result = await submitPurchaseOrder(po.po_id);
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        await reload();
+        return;
+      }
       toast.success(t('purchaseOrders.submitted', 'Purchase order submitted.'));
       await reload();
     } catch (e) {
@@ -302,7 +334,12 @@ export function PurchaseOrdersManager({
 
   const cancel = async (po: IPurchaseOrder) => {
     try {
-      await cancelPurchaseOrder(po.po_id);
+      const result = await cancelPurchaseOrder(po.po_id);
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        await reload();
+        return;
+      }
       toast.success(t('purchaseOrders.cancelled', 'Purchase order cancelled.'));
       await reload();
     } catch (e) {
@@ -319,8 +356,18 @@ export function PurchaseOrdersManager({
         getPurchaseOrder(po.po_id),
         listStockLocations({ includeInactive: false }),
       ]);
+      if (isReturnedActionError(full)) {
+        toast.error(getErrorMessage(full));
+        setReceiveOpen(false);
+        return;
+      }
       if (!full) {
         toast.error(t('purchaseOrders.notFound', 'Purchase order not found'));
+        setReceiveOpen(false);
+        return;
+      }
+      if (isReturnedActionError(locs)) {
+        toast.error(getErrorMessage(locs));
         setReceiveOpen(false);
         return;
       }
@@ -374,6 +421,11 @@ export function PurchaseOrdersManager({
         quantity,
         serials,
       });
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        await reload();
+        return;
+      }
       if (result.over_receipt) {
         toast(t('purchaseOrders.overReceived', "Received {{quantity}}. You've now received more than was ordered.", { quantity }), { icon: '⚠️' });
       } else {
@@ -381,6 +433,12 @@ export function PurchaseOrdersManager({
       }
       // Refresh the open dialog and the list.
       const full = await getPurchaseOrder(line.po_id);
+      if (isReturnedActionError(full)) {
+        toast.error(getErrorMessage(full));
+        setReceivePo(null);
+        await reload();
+        return;
+      }
       if (full) {
         setReceivePo(full);
         setReceiveForms((prev) => {
@@ -511,8 +569,12 @@ export function PurchaseOrdersManager({
 
   // Money currently on order — the at-a-glance number for "what's outstanding".
   const outstanding = pos.filter((p) => OUTSTANDING_STATUSES.has(p.status));
-  const openTotal = outstanding.reduce((sum, p) => sum + Number(p.total_amount ?? 0), 0);
-  const openCurrency = outstanding[0]?.currency_code ?? 'USD';
+  const outstandingCurrencies = new Set(outstanding.map((p) => p.currency_code || defaultCurrencyCode));
+  const canShowOpenTotal = outstandingCurrencies.size <= 1;
+  const openCurrency = outstanding[0]?.currency_code ?? defaultCurrencyCode;
+  const openTotal = canShowOpenTotal
+    ? outstanding.reduce((sum, p) => sum + Number(p.total_amount ?? 0), 0)
+    : 0;
   const filtersActive = Boolean(q || statusFilter || vendorFilter);
 
   const vendorFilterOptions = [
@@ -537,7 +599,12 @@ export function PurchaseOrdersManager({
                 ? t('purchaseOrders.count', '{{count}} purchase order', { count: pos.length })
                 : t('purchaseOrders.countPlural', '{{count}} purchase orders', { count: pos.length })}
               {outstanding.length > 0 && (
-                <span className="font-medium text-gray-700"> · {t('purchaseOrders.amountOnOrder', '{{amount}} on order', { amount: money(openTotal, openCurrency) })}</span>
+                <span className="font-medium text-gray-700">
+                  {' '}
+                  · {canShowOpenTotal
+                    ? t('purchaseOrders.amountOnOrder', '{{amount}} on order', { amount: money(openTotal, openCurrency) })
+                    : t('purchaseOrders.mixedCurrencyOnOrder', '{{count}} purchase orders on order across multiple currencies', { count: outstanding.length })}
+                </span>
               )}
             </p>
           )}
@@ -587,7 +654,7 @@ export function PurchaseOrdersManager({
       {loadFailed ? (
         <EmptyState
           title={t('purchaseOrders.loadErrorTitle', "Couldn't load purchase orders")}
-          description={t('purchaseOrders.loadErrorDescription', 'Something went wrong loading this page. Try again.')}
+          description={loadErrorMessage ?? t('purchaseOrders.loadErrorDescription', 'Something went wrong loading this page. Try again.')}
           action={
             <Button id="purchase-orders-retry" onClick={reload}>
               {t('common.retry', 'Retry')}
@@ -641,7 +708,7 @@ export function PurchaseOrdersManager({
               required
               value={form.currency_code}
               onValueChange={(value) => setForm({ ...form, currency_code: value })}
-              options={CURRENCY_OPTIONS}
+              options={CURRENCY_OPTIONS.map((option) => ({ value: option.value, label: option.label }))}
             />
             <Input
               id="purchase-order-expected-date"
@@ -664,7 +731,7 @@ export function PurchaseOrdersManager({
             <div className="flex gap-2 items-center text-xs font-medium text-gray-600">
               <div className="flex-1">{t('purchaseOrders.columns.product', 'Product')}</div>
               <div className="w-24 text-right">{t('purchaseOrders.columns.qty', 'Qty')}</div>
-              <div className="w-32 text-right">{t('purchaseOrders.columns.unitCost', 'Unit cost ($)')}</div>
+              <div className="w-32 text-right">{t('purchaseOrders.columns.unitCost', 'Unit cost')}</div>
               <div className="w-20" />
             </div>
             {form.lines.map((line, idx) => (
@@ -690,14 +757,12 @@ export function PurchaseOrdersManager({
                   />
                 </div>
                 <div className="w-32">
-                  <Input
+                  <CurrencyInput
                     id={`purchase-order-line-cost-${idx}`}
-                    type="number"
-                    min="0"
-                    step="0.01"
+                    currencyCode={form.currency_code}
                     className="text-right tabular-nums"
-                    value={line.unit_cost}
-                    onChange={(e) => updateLine(idx, { unit_cost: e.target.value })}
+                    value={Number(line.unit_cost || 0)}
+                    onChange={(value) => updateLine(idx, { unit_cost: value == null ? '' : String(value) })}
                   />
                 </div>
                 <Button

@@ -2,10 +2,14 @@ import React, { Suspense } from 'react';
 import BillingPageClient from './BillingPageClient';
 import { getServices } from '@alga-psa/billing/actions';
 import { getDocumentsByContractId } from '@alga-psa/documents/actions/documentActions';
-import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import type { IDocument } from '@alga-psa/types';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import type { Metadata } from 'next';
 import { enforceServerProductRoute } from '@/lib/serverProductRouteGuard';
 
@@ -60,6 +64,13 @@ const BillingPage = async ({ searchParams }: BillingPageProps) => {
 
   // Fetch services (always needed)
   const servicesResponse = await getServices();
+  if (isActionMessageError(servicesResponse) || isActionPermissionError(servicesResponse)) {
+    return (
+      <div className="p-4 text-sm text-red-600">
+        {getErrorMessage(servicesResponse)}
+      </div>
+    );
+  }
   const services = Array.isArray(servicesResponse)
     ? servicesResponse
     : (servicesResponse.services || []);
@@ -72,7 +83,7 @@ const BillingPage = async ({ searchParams }: BillingPageProps) => {
       getDocumentsByContractId(contractId),
       getCurrentUser()
     ]);
-    contractDocuments = isActionPermissionError(documents) ? [] : (documents || []);
+    contractDocuments = Array.isArray(documents) ? documents : [];
     currentUserId = user?.user_id || null;
   }
 

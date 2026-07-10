@@ -1,6 +1,7 @@
 import { listRmaCases, deadUnitsOwedReport } from '@alga-psa/inventory/actions';
 import { RmaManager } from '@alga-psa/inventory/components';
 import { getSession } from '@alga-psa/auth';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { redirect } from 'next/navigation';
 import type { IRmaCase } from '@alga-psa/types';
 import type { DeadUnitOwedRow } from '@alga-psa/inventory/actions';
@@ -25,12 +26,22 @@ export default async function RmaPage() {
   let initialCases: IRmaCase[] = [];
   let initialDeadOwed: DeadUnitOwedRow[] = [];
   try {
-    initialCases = await listRmaCases({});
+    const result = await listRmaCases({});
+    if (isActionMessageError(result) || isActionPermissionError(result)) {
+      console.error('Failed to load RMA cases:', getErrorMessage(result));
+    } else {
+      initialCases = result;
+    }
   } catch (error) {
     console.error('Failed to load RMA cases:', error);
   }
   try {
-    initialDeadOwed = await deadUnitsOwedReport();
+    const result = await deadUnitsOwedReport();
+    if (isActionMessageError(result) || isActionPermissionError(result)) {
+      console.error('Failed to load dead units owed report:', getErrorMessage(result));
+    } else {
+      initialDeadOwed = result;
+    }
   } catch (error) {
     console.error('Failed to load dead units owed report:', error);
   }

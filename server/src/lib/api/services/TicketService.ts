@@ -71,6 +71,67 @@ const TICKET_LIST_FIELD_ALLOWLIST = new Set<string>([
   'mobile_list',
 ]);
 
+function ticketUploadValidationMessage(error: unknown): string | null {
+  if (!(error instanceof Error)) {
+    return null;
+  }
+
+  if (error.message.startsWith('File size exceeds limit') || error.message === 'File type not allowed') {
+    return error.message;
+  }
+
+  return null;
+}
+
+function throwTicketModelCreateApiError(error: unknown): never {
+  if (!(error instanceof Error)) {
+    throw error;
+  }
+
+  const message = error.message;
+  if (message.startsWith('Input validation failed:')) {
+    throw new ValidationError('Validation failed', [
+      { path: [], message: message.replace(/^Input validation failed:\s*/, '') },
+    ]);
+  }
+
+  if (message.startsWith('Invalid location:')) {
+    throw new ValidationError('Validation failed', [
+      { path: ['location_id'], message },
+    ]);
+  }
+
+  if (message.startsWith('Invalid category combination:')) {
+    throw new ValidationError('Validation failed', [
+      { path: ['subcategory_id'], message },
+    ]);
+  }
+
+  if (message.startsWith('Invalid status:')) {
+    throw new ValidationError('Validation failed', [
+      { path: ['status_id'], message },
+    ]);
+  }
+
+  if (message === 'No default ticket status configured for the selected board') {
+    throw new ConflictError('No default ticket status configured for the selected board');
+  }
+
+  if (message === 'Validation failed: status_id is required') {
+    throw new ValidationError('Validation failed', [
+      { path: ['status_id'], message: 'status_id is required' },
+    ]);
+  }
+
+  if (message === 'Validation failed: priority_id is required for all tickets') {
+    throw new ValidationError('Validation failed', [
+      { path: ['priority_id'], message: 'priority_id is required for all tickets' },
+    ]);
+  }
+
+  throw error;
+}
+
 function applyDefaultContactPhoneJoin(
   query: Knex.QueryBuilder,
   knex: Knex,
@@ -631,7 +692,17 @@ export class TicketService extends BaseService<ITicket> {
     }
 
     const mimeType = file.type || 'application/octet-stream';
-    await StorageService.validateFileUpload(context.tenant, mimeType, file.size);
+    try {
+      await StorageService.validateFileUpload(context.tenant, mimeType, file.size);
+    } catch (error) {
+      const message = ticketUploadValidationMessage(error);
+      if (message) {
+        throw new ValidationError('Validation failed', [
+          { path: ['file'], message },
+        ]);
+      }
+      throw error;
+    }
 
     const buffer = Buffer.from(await file.arrayBuffer());
     const uploadResult = await StorageService.uploadFile(context.tenant, buffer, file.name, {
@@ -961,7 +1032,7 @@ export class TicketService extends BaseService<ITicket> {
       .first();
 
     if (!unknownType) {
-      throw new Error('Unknown document type not found in shared document types');
+      throw new ConflictError('Unknown document type not found in shared document types');
     }
 
     return { typeId: unknownType.type_id, isShared: true };
@@ -982,7 +1053,7 @@ export class TicketService extends BaseService<ITicket> {
     async create(data: CreateTicketData | Partial<ITicket>, context: ServiceContext): Promise<ITicket> {
       // Ensure we have required fields for CreateTicketData
       if (!data.client_id || !data.title || !data.board_id || !data.status_id || !data.priority_id) {
-        throw new Error('Required ticket fields missing: client_id, title, board_id, status_id, priority_id');
+        throw new ValidationError('Required ticket fields missing: client_id, title, board_id, status_id, priority_id');
       }
       return this.createTicket(data as CreateTicketData, context);
     }
@@ -995,7 +1066,7 @@ export class TicketService extends BaseService<ITicket> {
     async create(data: CreateTicketData | Partial<ITicket>, context: ServiceContext): Promise<ITicket> {
       // Ensure we have required fields for CreateTicketData
       if (!data.client_id || !data.title || !data.board_id || !data.status_id || !data.priority_id) {
-        throw new Error('Required ticket fields missing: client_id, title, board_id, status_id, priority_id');
+        throw new ValidationError('Required ticket fields missing: client_id, title, board_id, status_id, priority_id');
       }
       return this.createTicket(data as CreateTicketData, context);
     }
@@ -1050,7 +1121,7 @@ export class TicketService extends BaseService<ITicket> {
           analyticsTracker,
           context.userId,
           3 // max retries
-        );
+        ).catch(throwTicketModelCreateApiError);
 
         // Handle tags if provided (API service specific functionality)
         if (data.tags && data.tags.length > 0) {
@@ -1063,7 +1134,7 @@ export class TicketService extends BaseService<ITicket> {
           .first();
 
         if (!fullTicket) {
-          throw new Error('Failed to retrieve created ticket');
+          throw new Error('Created ticket could not be reloaded after insert.');
         }
 
         // Add tags to returned object if provided (temporary until proper tag system)
@@ -1426,7 +1497,7 @@ export class TicketService extends BaseService<ITicket> {
         .first();
 
       if (!fullTicket) {
-        throw new Error('Failed to retrieve created ticket');
+        throw new Error('Created ticket could not be reloaded after insert.');
       }
 
       return fullTicket as ITicket;
@@ -1625,7 +1696,7 @@ export class TicketService extends BaseService<ITicket> {
         const replyIds = await trx.raw('SELECT gen_random_uuid() AS comment_id');
         const replyGeneratedId = replyIds.rows?.[0]?.comment_id as string | undefined;
         if (!replyGeneratedId) {
-          throw new Error('Failed to generate comment identifier');
+          throw new Error('Database UUID generation did not return a comment identifier.');
         }
 
         apiCommentId = replyGeneratedId;
@@ -1640,7 +1711,7 @@ export class TicketService extends BaseService<ITicket> {
           | { comment_id: string; thread_id: string }
           | undefined;
         if (!apiGeneratedIds?.comment_id || !apiGeneratedIds?.thread_id) {
-          throw new Error('Failed to generate comment/thread identifiers');
+          throw new Error('Database UUID generation did not return comment/thread identifiers.');
         }
 
         apiCommentId = apiGeneratedIds.comment_id;

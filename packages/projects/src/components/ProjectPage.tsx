@@ -8,7 +8,12 @@ import { TaskSelectionProvider } from './TaskSelectionContext';
 import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams, usePathname } from 'next/navigation';
 import type { IClient, IProject, IProjectPhase, IProjectTask, IProjectTicketLinkWithDetails, ITag, IUserWithRoles, ProjectStatus } from '@alga-psa/types';
-import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from 'react-i18next';
 
 interface ProjectMetadata {
@@ -19,6 +24,10 @@ interface ProjectMetadata {
   contact?: { full_name: string };
   assignedUser?: IUserWithRoles | null;
   clients: IClient[];
+}
+
+function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
+  return isActionMessageError(value) || isActionPermissionError(value);
 }
 
 export default function ProjectPage({ params }: { params: Promise<{ id: string }> }) {
@@ -45,8 +54,8 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
 
     const fetchProjectMetadata = async () => {
       const metadata = await getProjectMetadata(projectId);
-      if (isActionPermissionError(metadata)) {
-        handleError(metadata.permissionError);
+      if (isReturnedActionError(metadata)) {
+        handleError(getErrorMessage(metadata));
         return;
       }
       setProjectMetadata(metadata);
@@ -61,14 +70,14 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
       const result = await updateProject(projectId, {
         assigned_to: userId
       });
-      if (isActionPermissionError(result)) {
-        handleError(result.permissionError);
+      if (isReturnedActionError(result)) {
+        handleError(getErrorMessage(result));
         return;
       }
       // Refresh project metadata after update
       const updatedMetadata = await getProjectMetadata(projectId);
-      if (isActionPermissionError(updatedMetadata)) {
-        handleError(updatedMetadata.permissionError);
+      if (isReturnedActionError(updatedMetadata)) {
+        handleError(getErrorMessage(updatedMetadata));
         return;
       }
       setProjectMetadata(updatedMetadata);
@@ -84,14 +93,14 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
       const result = await updateProject(projectId, {
         contact_name_id: contactId
       });
-      if (isActionPermissionError(result)) {
-        handleError(result.permissionError);
+      if (isReturnedActionError(result)) {
+        handleError(getErrorMessage(result));
         return;
       }
       // Refresh project metadata after update
       const updatedMetadata = await getProjectMetadata(projectId);
-      if (isActionPermissionError(updatedMetadata)) {
-        handleError(updatedMetadata.permissionError);
+      if (isReturnedActionError(updatedMetadata)) {
+        handleError(getErrorMessage(updatedMetadata));
         return;
       }
       setProjectMetadata(updatedMetadata);
@@ -105,14 +114,14 @@ export default function ProjectPage({ params }: { params: Promise<{ id: string }
 
     try {
       const result = await updateProject(projectId, updatedProject);
-      if (isActionPermissionError(result)) {
-        handleError(result.permissionError);
+      if (isReturnedActionError(result)) {
+        handleError(getErrorMessage(result));
         return;
       }
       // Refresh project metadata after update
       const updatedMetadata = await getProjectMetadata(projectId);
-      if (isActionPermissionError(updatedMetadata)) {
-        handleError(updatedMetadata.permissionError);
+      if (isReturnedActionError(updatedMetadata)) {
+        handleError(getErrorMessage(updatedMetadata));
         return;
       }
       setProjectMetadata(updatedMetadata);

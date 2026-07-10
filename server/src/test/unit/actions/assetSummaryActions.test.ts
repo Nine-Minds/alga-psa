@@ -159,7 +159,9 @@ describe('Asset Summary Actions', () => {
 
       await expect(
         getAssetSummaryMetrics(TEST_ASSET_ID)
-      ).rejects.toThrow('Failed to get asset summary metrics');
+      ).resolves.toEqual({
+        actionError: 'Asset not found. It may have been deleted. Please refresh and try again.',
+      });
     });
 
     it('should return healthy status for online agent', async () => {

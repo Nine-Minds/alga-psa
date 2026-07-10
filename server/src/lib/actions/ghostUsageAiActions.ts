@@ -4,6 +4,12 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import { ADD_ONS, tenantHasAddOn } from '@alga-psa/types';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import type { Knex } from 'knex';
 import { isEnterprise } from '../features';
 import { getActiveAddOns } from '../tier-gating/getActiveAddOns';
@@ -34,6 +40,7 @@ import type {
 const RUN_LIMIT_DEFAULT = 25;
 const RUN_LIMIT_MAX = 100;
 const CLASSIFY_CONCURRENCY = 3;
+type GhostUsageActionError = ActionMessageError | ActionPermissionError;
 
 async function computeAiStatus(knex: Knex, tenant: string): Promise<GhostUsageAiStatus> {
   const edition_ok = isEnterprise;
@@ -48,9 +55,9 @@ async function computeAiStatus(knex: Knex, tenant: string): Promise<GhostUsageAi
 export const getGhostUsageAiStatus = withAuth(async (
   user,
   { tenant },
-): Promise<GhostUsageAiStatus> => {
+): Promise<GhostUsageAiStatus | GhostUsageActionError> => {
   if (!(await hasPermission(user, 'inventory', 'read'))) {
-    throw new Error('Permission denied: inventory:read required');
+    return permissionError('Permission denied: inventory:read required');
   }
   const { knex } = await createTenantKnex();
   return computeAiStatus(knex, tenant);
@@ -60,15 +67,15 @@ export const setGhostUsageAiEnabled = withAuth(async (
   user,
   { tenant },
   enabled: boolean,
-): Promise<GhostUsageAiStatus> => {
+): Promise<GhostUsageAiStatus | GhostUsageActionError> => {
   if (!(await hasPermission(user, 'settings', 'update'))) {
-    throw new Error('Permission denied: settings:update required');
+    return permissionError('Permission denied: settings:update required');
   }
   const { knex } = await createTenantKnex();
   const status = await computeAiStatus(knex, tenant);
   // Enabling requires the feature to actually exist here; disabling is always allowed.
   if (enabled && !status.available) {
-    throw new Error('AI triage requires Enterprise Edition and the AI Assistant add-on.');
+    return actionError('AI triage requires Enterprise Edition and the AI Assistant add-on.');
   }
   await setGhostUsageAiEnabledSetting(knex, tenant, enabled);
   return { ...status, enabled, can_run: status.available && enabled };
@@ -79,9 +86,9 @@ export const runGhostUsageClassification = withAuth(async (
   { tenant },
   filters: GhostUsageFilters = {},
   opts: { limit?: number } = {},
-): Promise<GhostRunResult> => {
+): Promise<GhostRunResult | GhostUsageActionError> => {
   if (!(await hasPermission(user, 'inventory', 'update'))) {
-    throw new Error('Permission denied: inventory:update required');
+    return permissionError('Permission denied: inventory:update required');
   }
 
   const zero = { classified: 0, unclear: 0, failed: 0, remaining_unclassified: 0 };

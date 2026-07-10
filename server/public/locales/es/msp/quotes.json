@@ -231,7 +231,8 @@
       "notFound": "Cita no encontrada",
       "save": "No se pudo guardar la cotización",
       "saveFailed": "Error al guardar la cotización",
-      "workflowAction": "No se pudo {{action}}"
+      "workflowAction": "No se pudo {{action}}",
+      "removeItem": "Failed to remove quote item"
     },
     "loading": "Cargando formulario de cotización...",
     "notices": {
@@ -556,7 +557,10 @@
       "contact": "Contacto",
       "internal": "Interno"
     },
-    "removeAriaLabel": "Eliminar {{email}}"
+    "removeAriaLabel": "Eliminar {{email}}",
+    "errors": {
+      "contactsLoadFailed": "Could not load client contacts."
+    }
   },
   "quoteConversion": {
     "title": "Convertir cotización",

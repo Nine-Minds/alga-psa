@@ -5,7 +5,13 @@ import { withTransaction, createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { ICountSession, ICountLine, IStockUnit } from '@alga-psa/types';
-import { recordStockMovement, recomputeSerializedOnHand, assertLocationWritable, ensureStockLevel } from '../lib';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+import { recordStockMovement, recomputeSerializedOnHand, assertLocationWritable, ensureStockLevel, resolveTenantCurrency } from '../lib';
 
 // NOTE: 'use server' file — export ONLY async functions (+ erased types).
 
@@ -27,6 +33,65 @@ import { recordStockMovement, recomputeSerializedOnHand, assertLocationWritable,
 async function requireCountPerm(user: any, action: 'create' | 'read' | 'update' | 'delete' | 'approve'): Promise<void> {
   if (!(await hasPermission(user, 'cycle_count', action))) {
     throw new Error(`Permission denied: cycle_count ${action} required`);
+  }
+}
+
+export type CycleCountActionError = ActionMessageError | ActionPermissionError;
+
+function cycleCountActionErrorFrom(error: unknown): CycleCountActionError | null {
+  if (error instanceof Error) {
+    if (error.message.startsWith('Permission denied') || error.message === 'user is not logged in') {
+      return permissionError(error.message);
+    }
+
+    switch (error.message) {
+      case 'Count session not found':
+        return actionError('Count session not found. It may have been updated or deleted. Please refresh and try again.');
+      case 'location_id is required':
+        return actionError('Pick a location to count.');
+      case 'Stock location not found':
+        return actionError('Stock location not found. It may have been updated or deleted. Please refresh and try again.');
+      case 'This location already has an open count session':
+        return actionError('This location already has an open count session.');
+      case 'This product is not part of the count session':
+        return actionError('This product is not part of the count session. Refresh the session and try again.');
+      case 'counted_qty must be a non-negative integer':
+        return actionError('Count must be a non-negative whole number.');
+      case 'An approved session cannot be cancelled':
+        return actionError('An approved count session cannot be cancelled.');
+      case 'Four-eyes: you counted in this session, so a different approver must sign it off':
+        return actionError('A different approver must sign off because you counted in this session.');
+      default:
+        if (
+          error.message.startsWith('Counts can only be recorded ') ||
+          error.message.startsWith('Only an in-progress session ') ||
+          error.message.startsWith('Only a session in review ') ||
+          error.message.startsWith('Unexpected serial(s) ') ||
+          error.message.startsWith('Serial number already exists:')
+        ) {
+          return actionError(error.message);
+        }
+    }
+  }
+
+  const dbError = error as { code?: string };
+  if (dbError?.code === '23503') {
+    return actionError('One of the selected count records is no longer valid. Please refresh and try again.');
+  }
+  if (dbError?.code === '23505') {
+    return actionError('This count update conflicts with an existing record. Please refresh and try again.');
+  }
+
+  return null;
+}
+
+async function withCycleCountActionErrors<T>(work: () => Promise<T>): Promise<T | CycleCountActionError> {
+  try {
+    return await work();
+  } catch (error) {
+    const expected = cycleCountActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 }
 
@@ -72,6 +137,8 @@ export interface CountLineView extends ICountLine {
   variance?: number | null;
   /** Variance valued at the product's average cost, cents (approvers only). */
   variance_value_cents?: number | null;
+  /** Currency for the average cost used to value variance. */
+  cost_currency?: string | null;
 }
 
 export interface CountSessionView extends ICountSession {
@@ -88,7 +155,8 @@ export interface CountSessionView extends ICountSession {
  * their own van).
  */
 export const startCountSession = withAuth(
-  async (user, { tenant }, locationId: string, notes?: string | null): Promise<ICountSession> => {
+  async (user, { tenant }, locationId: string, notes?: string | null): Promise<ICountSession | CycleCountActionError> => {
+    return withCycleCountActionErrors(async () => {
     await requireCountPerm(user, 'create');
     if (!locationId) throw new Error('location_id is required');
     const { knex: db } = await createTenantKnex();
@@ -140,6 +208,7 @@ export const startCountSession = withAuth(
 
       return session as ICountSession;
     });
+    });
   },
 );
 
@@ -148,7 +217,8 @@ export const listCountSessions = withAuth(
     user,
     { tenant },
     filter?: { location_id?: string; status?: ICountSession['status'] },
-  ): Promise<Array<ICountSession & { location_name: string | null; line_count: number; counted_count: number }>> => {
+  ): Promise<Array<ICountSession & { location_name: string | null; line_count: number; counted_count: number }> | CycleCountActionError> => {
+    return withCycleCountActionErrors(async () => {
     await requireCountPerm(user, 'read');
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
@@ -183,6 +253,7 @@ export const listCountSessions = withAuth(
         counted_count: Number(r.counted_count),
       }));
     });
+    });
   },
 );
 
@@ -191,7 +262,8 @@ export const listCountSessions = withAuth(
  * callers holding cycle_count:approve — counters stay blind (F062).
  */
 export const getCountSession = withAuth(
-  async (user, { tenant }, sessionId: string): Promise<CountSessionView> => {
+  async (user, { tenant }, sessionId: string): Promise<CountSessionView | CycleCountActionError> => {
+    return withCycleCountActionErrors(async () => {
     await requireCountPerm(user, 'read');
     const reviewer = await canApprove(user);
     const { knex: db } = await createTenantKnex();
@@ -216,6 +288,7 @@ export const getCountSession = withAuth(
           'sc.sku',
           trx.raw('COALESCE(pis.is_serialized, false) as is_serialized'),
           'pis.average_cost',
+          'pis.cost_currency',
         )) as any[];
 
       const out: CountLineView[] = [];
@@ -255,6 +328,7 @@ export const getCountSession = withAuth(
         can_review: reviewer,
       };
     });
+    });
   },
 );
 
@@ -266,7 +340,8 @@ export const recordCount = withAuth(
     sessionId: string,
     serviceId: string,
     input: { counted_qty?: number; serials?: string[] },
-  ): Promise<{ recorded: boolean }> => {
+  ): Promise<{ recorded: boolean } | CycleCountActionError> => {
+    return withCycleCountActionErrors(async () => {
     await requireCountPerm(user, 'update');
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
@@ -301,11 +376,13 @@ export const recordCount = withAuth(
         });
       return { recorded: true };
     });
+    });
   },
 );
 
 export const submitCountForReview = withAuth(
-  async (user, { tenant }, sessionId: string): Promise<ICountSession> => {
+  async (user, { tenant }, sessionId: string): Promise<ICountSession | CycleCountActionError> => {
+    return withCycleCountActionErrors(async () => {
     await requireCountPerm(user, 'update');
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
@@ -319,11 +396,13 @@ export const submitCountForReview = withAuth(
         .returning('*');
       return row as ICountSession;
     });
+    });
   },
 );
 
 export const cancelCountSession = withAuth(
-  async (user, { tenant }, sessionId: string): Promise<ICountSession> => {
+  async (user, { tenant }, sessionId: string): Promise<ICountSession | CycleCountActionError> => {
+    return withCycleCountActionErrors(async () => {
     await requireCountPerm(user, 'update');
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
@@ -335,6 +414,7 @@ export const cancelCountSession = withAuth(
         .update({ status: 'cancelled', updated_at: trx.fn.now() })
         .returning('*');
       return row as ICountSession;
+    });
     });
   },
 );
@@ -369,7 +449,8 @@ export const approveCountSession = withAuth(
     { tenant },
     sessionId: string,
     dispositions?: UnexpectedSerialDisposition[],
-  ): Promise<ApproveCountResult> => {
+  ): Promise<ApproveCountResult | CycleCountActionError> => {
+    return withCycleCountActionErrors(async () => {
     await requireCountPerm(user, 'approve');
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
@@ -422,6 +503,7 @@ export const approveCountSession = withAuth(
         })
         .where({ 'cl.tenant': tenant, 'cl.session_id': sessionId })
         .select('cl.*', trx.raw('COALESCE(pis.is_serialized, false) as is_serialized'), 'pis.average_cost', 'pis.cost_currency')) as any[];
+      const defaultCurrency = await resolveTenantCurrency(trx, tenant);
 
       const result: ApproveCountResult = {
         session,
@@ -502,7 +584,7 @@ export const approveCountSession = withAuth(
                 status: 'in_stock',
                 location_id: locationId,
                 unit_cost: line.average_cost ?? null,
-                cost_currency: line.cost_currency ?? 'USD',
+                cost_currency: line.cost_currency ?? defaultCurrency,
                 received_at: trx.fn.now(),
                 notes: `Found via ${reason}`,
               })
@@ -553,6 +635,7 @@ export const approveCountSession = withAuth(
         .returning('*');
       result.session = updated as ICountSession;
       return result;
+    });
     });
   },
 );

@@ -23,7 +23,7 @@ import { getServiceTypesForSelection } from '@alga-psa/billing/actions';
 import { DeletionValidationResult, IContractLine, IContractLineService, IService } from '@alga-psa/types';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { getErrorMessage, handleError, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from '@alga-psa/types';
 import {
@@ -37,6 +37,9 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 interface ContractLinesProps {
   initialServices: IService[];
 }
+
+const isReturnedActionError = (value: unknown): boolean =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
   const { t } = useTranslation('msp/contract-lines');
@@ -69,6 +72,11 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
   const fetchAllServiceTypes = async () => {
     try {
       const types = await getServiceTypesForSelection();
+      if (isActionMessageError(types) || isActionPermissionError(types)) {
+        setError(getErrorMessage(types));
+        setAllServiceTypes([]);
+        return;
+      }
       setAllServiceTypes(types);
     } catch (fetchError) {
       console.error('Error fetching service types:', fetchError);
@@ -101,6 +109,11 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
   const fetchContractLines = async () => {
     try {
       const plans = await getContractLines();
+      if (isReturnedActionError(plans)) {
+        setError(getErrorMessage(plans));
+        setContractLines([]);
+        return;
+      }
       setContractLines(plans);
       setError(null);
     } catch (error) {
@@ -171,6 +184,11 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
   const fetchPlanServices = async (planId: string) => {
     try {
       const services = await getContractLineServices(planId);
+      if (isReturnedActionError(services)) {
+        setError(getErrorMessage(services));
+        setPlanServices([]);
+        return;
+      }
       setPlanServices(services);
       setError(null);
     } catch (error) {
@@ -193,12 +211,16 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
           custom_rate: addedService.default_rate,
           tenant: tenant!
         };
-        await addServiceToContractLine(
+        const result = await addServiceToContractLine(
           selectedPlan,
           serviceId,
           newPlanService.quantity,
           newPlanService.custom_rate
         );
+        if (isReturnedActionError(result)) {
+          setError(getErrorMessage(result));
+          return;
+        }
         // setPlanServices(prevServices => [...prevServices, newPlanService]); // Remove optimistic update
         fetchPlanServices(selectedPlan); // Re-fetch the list from the server
         setError(null);
@@ -214,7 +236,11 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
   const handleUpdatePlanService = async (serviceId: string, quantity: number, customRate: number | undefined) => {
     if (!selectedPlan) return;
     try {
-      await updateContractLineService(selectedPlan, serviceId, { quantity, customRate });
+      const result = await updateContractLineService(selectedPlan, serviceId, { quantity, customRate });
+      if (isReturnedActionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
       fetchPlanServices(selectedPlan);
       setError(null);
     } catch (error) {
@@ -228,7 +254,11 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
   const handleRemovePlanService = async (serviceId: string) => {
     if (!selectedPlan) return;
     try {
-      await removeServiceFromContractLine(selectedPlan, serviceId);
+      const result = await removeServiceFromContractLine(selectedPlan, serviceId);
+      if (isReturnedActionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
       fetchPlanServices(selectedPlan);
       setError(null);
     } catch (error) {
@@ -426,6 +456,10 @@ const ContractLines: React.FC<ContractLinesProps> = ({ initialServices }) => {
                       // Fetch the newly created plan and navigate to its configuration page
                       try {
                         const newPlan = await getContractLineById(newPlanId);
+                        if (isReturnedActionError(newPlan)) {
+                          setError(getErrorMessage(newPlan));
+                          return;
+                        }
                         if (newPlan) {
                           // Navigate to the appropriate configuration page based on plan type
                           router.push(`/msp/billing?tab=contract-lines&contractLineId=${newPlanId}`);

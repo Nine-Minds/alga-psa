@@ -12,6 +12,11 @@ import { toast } from 'react-hot-toast';
 import type { ColumnDefinition, IVendor } from '@alga-psa/types';
 import { listVendors, createVendor, updateVendor, deactivateVendor } from '../actions';
 import { VendorPriceList } from './VendorPriceList';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 interface FormState {
   vendor_name: string;
@@ -31,7 +36,17 @@ const EMPTY_FORM: FormState = {
   account_number: '',
 };
 
-export function VendorsManager({ initialVendors }: { initialVendors: IVendor[] }) {
+const isReturnedActionError = (result: unknown) => (
+  isActionMessageError(result) || isActionPermissionError(result)
+);
+
+export function VendorsManager({
+  initialVendors,
+  defaultCurrencyCode = 'USD',
+}: {
+  initialVendors: IVendor[];
+  defaultCurrencyCode?: string;
+}) {
   const { t } = useTranslation('features/inventory');
   const [priceListVendor, setPriceListVendor] = useState<IVendor | null>(null);
   const [vendors, setVendors] = useState<IVendor[]>(initialVendors || []);
@@ -43,7 +58,13 @@ export function VendorsManager({ initialVendors }: { initialVendors: IVendor[] }
 
   const reload = useCallback(async () => {
     try {
-      setVendors(await listVendors({}));
+      const result = await listVendors({});
+      if (isReturnedActionError(result)) {
+        setVendors([]);
+        toast.error(getErrorMessage(result));
+        return;
+      }
+      setVendors(result);
     } catch (e) {
       console.error(e);
       toast.error(t('vendors.loadError', 'Failed to load vendors'));
@@ -85,10 +106,18 @@ export function VendorsManager({ initialVendors }: { initialVendors: IVendor[] }
         account_number: form.account_number.trim() || null,
       };
       if (editing) {
-        await updateVendor(editing.vendor_id, payload);
+        const result = await updateVendor(editing.vendor_id, payload);
+        if (isReturnedActionError(result)) {
+          toast.error(getErrorMessage(result));
+          return;
+        }
         toast.success(t('vendors.updated', 'Vendor updated'));
       } else {
-        await createVendor(payload);
+        const result = await createVendor(payload);
+        if (isReturnedActionError(result)) {
+          toast.error(getErrorMessage(result));
+          return;
+        }
         toast.success(t('vendors.created', 'Vendor created'));
       }
       setDialogOpen(false);
@@ -102,7 +131,11 @@ export function VendorsManager({ initialVendors }: { initialVendors: IVendor[] }
 
   const deactivate = async (vendor: IVendor) => {
     try {
-      await deactivateVendor(vendor.vendor_id);
+      const result = await deactivateVendor(vendor.vendor_id);
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       toast.success(t('vendors.deactivated', 'Vendor deactivated'));
       await reload();
     } catch (e: any) {
@@ -167,7 +200,11 @@ export function VendorsManager({ initialVendors }: { initialVendors: IVendor[] }
 
       <DataTable id="vendors-table" data={vendors} columns={columns} onRowClick={openEdit} />
 
-      <VendorPriceList vendor={priceListVendor} onClose={() => setPriceListVendor(null)} />
+      <VendorPriceList
+        vendor={priceListVendor}
+        onClose={() => setPriceListVendor(null)}
+        defaultCurrencyCode={defaultCurrencyCode}
+      />
 
       <Dialog
         isOpen={dialogOpen}

@@ -133,6 +133,8 @@ export {
   refreshMspSsoDomainClaimChallenge,
   verifyMspSsoDomainClaimOwnership,
   revokeMspSsoDomainClaim,
+  getMspSsoTenantCredentialStatus,
+  type MspSsoTenantCredentialStatusResult,
 } from './integrations/mspSsoDomainActions';
 export {
   getTeamsIntegrationStatus,

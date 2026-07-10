@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import type { Asset, AssetAssociation, AssetListResponse } from '@alga-psa/types';
 import { listEntityAssets, createAssetAssociation, removeAssetAssociation, listAssets } from '../actions/assetActions';
+import { unwrapAssetActionResult } from '../actions/assetActionErrors';
 import { loadAssetDetailDrawerData } from '../actions/assetDrawerActions';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
@@ -108,7 +109,7 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
     const loadAssociatedAssets = useCallback(async () => {
         try {
             setIsLoading(true);
-            const assets = await listEntityAssets(entityId, entityType);
+            const assets = unwrapAssetActionResult(await listEntityAssets(entityId, entityType));
 
             // Track associated asset IDs to filter them from available list
             setAssociatedAssetIds(new Set(assets.map(a => a.asset_id)));
@@ -143,9 +144,10 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
         let cancelled = false;
         initialAssets.then((assets) => {
             if (cancelled) return;
+            const expectedAssets = unwrapAssetActionResult(assets);
             // Same shaping as loadAssociatedAssets, minus the network round-trip.
-            setAssociatedAssetIds(new Set(assets.map((a) => a.asset_id)));
-            setAssociatedAssets(assets.map((asset): AssetAssociation => ({
+            setAssociatedAssetIds(new Set(expectedAssets.map((a) => a.asset_id)));
+            setAssociatedAssets(expectedAssets.map((asset): AssetAssociation => ({
                 tenant: asset.tenant,
                 asset_id: asset.asset_id,
                 entity_id: entityId,
@@ -155,6 +157,14 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                 created_at: new Date().toISOString(),
                 asset,
             })));
+            setIsLoading(false);
+        }).catch((error) => {
+            if (cancelled) return;
+            handleError(error, t('associatedAssets.errors.loadAssociatedAssets', {
+                defaultValue: 'Failed to load associated assets'
+            }));
+            setAssociatedAssetIds(new Set());
+            setAssociatedAssets([]);
             setIsLoading(false);
         });
         return () => { cancelled = true; };
@@ -171,12 +181,12 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
     const loadAvailableAssets = useCallback(async () => {
         try {
             setIsLoadingAssets(true);
-            const response: AssetListResponse = await listAssets({
+            const response: AssetListResponse = unwrapAssetActionResult(await listAssets({
                 client_id: clientId,
                 page: currentPage,
                 limit: pageSize,
                 search: searchTerm || undefined
-            });
+            }));
             // Filter out already-associated assets
             const filteredAssets = response.assets.filter(
                 asset => !associatedAssetIds.has(asset.asset_id)
@@ -288,7 +298,7 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
                         entity_id: entityId,
                         entity_type: entityType,
                         relationship_type: relationshipType
-                    })
+                    }).then(unwrapAssetActionResult)
                 )
             );
 
@@ -323,7 +333,7 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
 
     const handleRemoveAsset = async (assetId: string) => {
         try {
-            await removeAssetAssociation(assetId, entityId, entityType);
+            unwrapAssetActionResult(await removeAssetAssociation(assetId, entityId, entityType));
             toast.success(t('associatedAssets.success.removed', {
                 defaultValue: 'Asset association removed'
             }));

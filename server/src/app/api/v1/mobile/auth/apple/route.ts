@@ -195,7 +195,8 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     }
     // Signature / JWKS failures land here — treat as unauthorized, not 500.
     if (error instanceof Error && /apple identity token|apple signing key|audience|issuer|jwt/i.test(error.message)) {
-      return handleApiError(new UnauthorizedError(error.message));
+      console.warn('[mobile-auth-apple] Apple token verification failed:', error);
+      return handleApiError(new UnauthorizedError('Invalid Apple identity token'));
     }
     return handleApiError(error);
   }

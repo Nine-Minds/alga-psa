@@ -49,6 +49,10 @@ import {
     formatApprovalBlockedReason,
     type RecurringApprovalBlockerCounts,
 } from './recurringApprovalBlockers';
+import {
+    permissionError,
+    type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 // Types for paginated billing periods
 export interface BillingPeriodWithMeta extends IClientContractLineCycle {
@@ -1313,9 +1317,9 @@ export const getClientTaxRate = withAuth(async (
     { tenant },
     taxRegion: string,
     date: ISO8601String
-): Promise<number> => {
+): Promise<number | ActionPermissionError> => {
     if (!await hasPermission(user as any, 'billing', 'read')) {
-        throw new Error('Permission denied');
+        return permissionError('Permission denied: billing read required');
     }
 
     const { knex } = await createTenantKnex();
@@ -1342,9 +1346,9 @@ export const getAvailableBillingPeriods = withAuth(async (
     user,
     { tenant },
     options: FetchBillingPeriodsOptions = {}
-): Promise<PaginatedBillingPeriodsResult> => {
+): Promise<PaginatedBillingPeriodsResult | ActionPermissionError> => {
     if (!await hasPermission(user as any, 'billing', 'read')) {
-        throw new Error('Permission denied');
+        return permissionError('Permission denied: billing read required');
     }
 
     const {
@@ -1480,9 +1484,9 @@ export const getAvailableRecurringDueWork = withAuth(async (
     user,
     { tenant },
     options: FetchRecurringDueWorkOptions = {},
-): Promise<PaginatedRecurringDueWorkResult> => {
+): Promise<PaginatedRecurringDueWorkResult | ActionPermissionError> => {
     if (!await hasPermission(user as any, 'billing', 'read')) {
-        throw new Error('Permission denied');
+        return permissionError('Permission denied: billing read required');
     }
 
     const {
@@ -1644,9 +1648,9 @@ export const getDueDate = withAuth(async (
     { tenant },
     clientId: string,
     invoiceDate: ISO8601String
-): Promise<ISO8601String> => {
+): Promise<ISO8601String | ActionPermissionError> => {
     if (!await hasPermission(user as any, 'billing', 'read')) {
-        throw new Error('Permission denied');
+        return permissionError('Permission denied: billing read required');
     }
 
     const { knex } = await createTenantKnex();
@@ -1681,9 +1685,9 @@ export const getNextBillingDate = withAuth(async (
     { tenant },
     clientId: string,
     currentEndDate: ISO8601String
-): Promise<ISO8601String> => {
+): Promise<ISO8601String | ActionPermissionError> => {
     if (!await hasPermission(user as any, 'billing', 'read')) {
-        throw new Error('Permission denied');
+        return permissionError('Permission denied: billing read required');
     }
 
     const { knex } = await createTenantKnex();

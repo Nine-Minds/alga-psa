@@ -668,7 +668,8 @@
           "resetProviders": "11111",
           "resetting": "11111",
           "save": "11111",
-          "saving": "11111"
+          "saving": "11111",
+          "disconnectProviders": "Disconnect Google providers"
         },
         "afterSaveNotice": "11111",
         "consoleLink": "11111",
@@ -693,7 +694,8 @@
           "sectionTitle": "11111",
           "shareApp": "11111",
           "shareAppHelp": "11111",
-          "storedSecret": "11111 {{secret}} 11111"
+          "storedSecret": "11111 {{secret}} 11111",
+          "locationHelp": "Google Cloud: APIs & Services > Credentials > OAuth 2.0 Client IDs."
         },
         "redirectUrisLabel": "11111",
         "scopes": "11111",
@@ -702,7 +704,8 @@
         "serviceAccount": {
           "alreadyStored": "11111",
           "description": "11111",
-          "title": "11111"
+          "title": "11111",
+          "locationHelp": "Google Cloud: IAM & Admin > Service Accounts > Keys > Add key > JSON."
         },
         "setupGuide": "11111",
         "title": "11111",
@@ -714,7 +717,16 @@
           "savedDescription": "11111",
           "savedTitle": "11111",
           "unknownError": "11111"
-        }
+        },
+        "disconnectDialog": {
+          "cancel": "Keep providers connected",
+          "message": "Existing Gmail and Google Calendar provider connections will be marked disconnected and must be re-authorized. Stored Google credentials stay in place.",
+          "title": "Disconnect Google providers?"
+        },
+        "oauthValues": {
+          "title": "Google OAuth app values"
+        },
+        "redirectUrisHelp": "Staff sign-in uses the OAuth client saved below. Add the listed Gmail and Calendar callback URLs in Google Cloud."
       }
     },
     "hudu": {
@@ -1049,7 +1061,8 @@
           "openTeamsSetup": "11111",
           "refresh": "11111",
           "resetProviders": "11111",
-          "resetting": "11111"
+          "resetting": "11111",
+          "disconnectProviders": "Disconnect Microsoft providers"
         },
         "archiveDialog": {
           "archiving": "11111",
@@ -1065,19 +1078,21 @@
           "needsAttention": "11111",
           "saving": "11111",
           "selectProfile": "11111",
-          "unbound": "11111"
+          "unbound": "11111",
+          "noCapablePlaceholder": "No enabled profile"
         },
         "bindings": {
-          "summaryBound": "11111 {{consumer}} 11111 {{profile}} 11111",
+          "summaryBound": "Current: {{profile}}.",
           "summaryNone": "11111 {{consumer}} 11111",
           "summaryUnavailable": "11111 {{consumer}} 11111",
-          "warningArchived": "11111 {{consumer}} 11111",
+          "warningArchived": "{{profile}} is archived. Choose an active Microsoft app.",
           "warningNoBinding": "11111 {{consumer}} 11111",
           "warningNotReady": "11111 {{consumer}} 11111 {{profile}} 11111",
-          "warningProfileMissing": "11111 {{consumer}} 11111"
+          "warningProfileMissing": "11111 {{consumer}} 11111",
+          "warningMissingCapability": "{{profile}} is selected, but it cannot handle {{consumer}} yet. Edit the app and turn on {{consumer}}, or choose another app.",
+          "warningNoApps": "Create a Microsoft app, turn on {{consumer}}, then choose it here.",
+          "warningNoCapable": "No app can handle {{consumer}} yet. Edit a Microsoft app and turn on {{consumer}}, then choose it here."
         },
-        "bindingsAlertCe": "11111",
-        "bindingsAlertEe": "11111",
         "consumerBindings": {
           "descriptionCe": "11111",
           "descriptionEe": "11111",
@@ -1123,7 +1138,9 @@
           "setDefault": "11111",
           "setDefaultHelp": "11111",
           "storedSecretHint": "11111 {{secret}} 11111",
-          "tenantId": "11111"
+          "tenantId": "11111",
+          "capabilities": "Enabled capabilities",
+          "capabilitiesHelp": "Only enabled capabilities can bind to this Microsoft app."
         },
         "empty": {
           "createButton": "11111",
@@ -1177,7 +1194,9 @@
           "storedSecret": "11111",
           "teamsAppIdUri": "11111",
           "tenantIdLabel": "11111",
-          "updating": "11111"
+          "updating": "11111",
+          "enabledCapabilities": "Enabled capabilities",
+          "noEnabledCapabilities": "No enabled capabilities"
         },
         "providerReconnect": {
           "description": "11111",
@@ -1220,6 +1239,15 @@
           "clientSecretRequired": "11111",
           "displayNameRequired": "11111",
           "tenantIdRequired": "11111"
+        },
+        "disconnectDialog": {
+          "cancel": "Keep providers connected",
+          "message": "Existing Outlook email and calendar provider connections will be marked disconnected and must be re-authorized. Microsoft profiles and service bindings stay in place.",
+          "title": "Disconnect Microsoft providers?"
+        },
+        "profileLibrary": {
+          "description": "Named Microsoft app registrations that services can bind to.",
+          "title": "Profile library"
         }
       }
     },
@@ -1336,7 +1364,8 @@
         "makeDefault": "11111",
         "noDefault": "11111",
         "saving": "11111",
-        "undepositedFunds": "11111"
+        "undepositedFunds": "11111",
+        "catalogLoadError": "11111"
       }
     },
     "rmm": {
@@ -1864,6 +1893,11 @@
         },
         "descriptionCe": "11111",
         "descriptionEe": "11111",
+        "moved": {
+          "title": "MSP SSO Login Domains",
+          "body": "Single sign-on settings, including login-domain claims, have moved to Security → Single Sign-On.",
+          "cta": "Open Single Sign-On settings"
+        },
         "dnsHost": "11111",
         "dnsInstructions": "11111",
         "dnsValue": "11111",
@@ -2647,6 +2681,29 @@
         "secretKeyFormat": "11111",
         "publishableKeyFormat": "11111"
       }
+    },
+    "providersWorkbench": {
+      "badges": {
+        "loading": "Loading",
+        "needsAttention": "Needs attention",
+        "needsSetup": "Needs setup",
+        "notConfigured": "Not configured",
+        "ready": "Ready"
+      },
+      "descriptionCe": "Set up the provider path your tenant uses. Configure both only when email or SSO workflows require both ecosystems.",
+      "descriptionEe": "Set up the provider path your tenant uses. Configure both only when email, calendar, SSO, or Teams workflows require both ecosystems.",
+      "eyebrow": "Provider setup",
+      "google": {
+        "description": "Gmail inbound email and Google Calendar.",
+        "label": "Google"
+      },
+      "microsoft": {
+        "descriptionCe": "MSP SSO, Microsoft sign-in, and login-domain discovery.",
+        "descriptionEe": "MSP SSO, Outlook email, calendar sync, and Teams.",
+        "label": "Microsoft"
+      },
+      "selectorLabel": "Provider credential paths",
+      "title": "Provider Credentials"
     }
   }
 }

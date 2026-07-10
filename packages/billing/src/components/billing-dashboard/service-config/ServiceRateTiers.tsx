@@ -9,6 +9,11 @@ import { PlusCircle, Trash2 } from 'lucide-react';
 import { IService } from '@alga-psa/types';
 import { getServiceRateTiers, updateServiceRateTiers } from '@alga-psa/billing/actions';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 // Define the rate tier interface
 interface RateTier {
@@ -23,6 +28,10 @@ interface ServiceRateTiersProps {
   service: IService;
   onUpdate?: () => void;
 }
+
+const isReturnedActionError = (result: unknown) => (
+  isActionMessageError(result) || isActionPermissionError(result)
+);
 
 export function ServiceRateTiers({ service, onUpdate }: ServiceRateTiersProps) {
   const { t } = useTranslation('msp/service-catalog');
@@ -41,6 +50,19 @@ export function ServiceRateTiers({ service, onUpdate }: ServiceRateTiersProps) {
         setError(null);
         
         const serviceTiers = await getServiceRateTiers(service.service_id);
+        if (isReturnedActionError(serviceTiers)) {
+          setError(getErrorMessage(serviceTiers));
+          setTiers([
+            {
+              id: `tier-${Date.now()}`,
+              minQuantity: 1,
+              maxQuantity: null,
+              rate: service.default_rate,
+              isNew: true
+            }
+          ]);
+          return;
+        }
         
         if (serviceTiers.length > 0) {
           // Convert from IServiceRateTier to RateTier format
@@ -237,7 +259,11 @@ export function ServiceRateTiers({ service, onUpdate }: ServiceRateTiersProps) {
       }));
 
       // Save tiers to the database
-      await updateServiceRateTiers(service.service_id, tierData);
+      const result = await updateServiceRateTiers(service.service_id, tierData);
+      if (isReturnedActionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
       
       // Mark all tiers as not new
       setTiers(tiers.map(tier => ({ ...tier, isNew: false })));

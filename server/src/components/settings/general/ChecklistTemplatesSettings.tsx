@@ -27,9 +27,16 @@ import {
   IChecklistTemplateItem,
   IChecklistTemplateApplyRule,
 } from '@alga-psa/tickets/actions/checklists/checklistTemplateActions';
-import { getAllPriorities } from '@alga-psa/reference-data/actions';
+import { getAllPriorities } from '@alga-psa/reference-data/actions/priorityActions';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
@@ -45,6 +52,9 @@ import {
   DropdownMenuItem,
 } from '@alga-psa/ui/components/DropdownMenu';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+
+const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 const ChecklistTemplatesSettings: React.FC = () => {
   const { t } = useTranslation('msp/settings');
@@ -109,6 +119,11 @@ const ChecklistTemplatesSettings: React.FC = () => {
   const fetchCategories = async () => {
     try {
       const allCategories = await getTicketCategories();
+      if (isReturnedActionError(allCategories)) {
+        toast.error(getErrorMessage(allCategories));
+        setCategories([]);
+        return;
+      }
       setCategories(allCategories);
     } catch (error) {
       console.error('Error fetching categories:', error);
@@ -177,11 +192,15 @@ const ChecklistTemplatesSettings: React.FC = () => {
       }
 
       if (editingTemplate) {
-        await updateChecklistTemplate(editingTemplate.template_id, {
+        const result = await updateChecklistTemplate(editingTemplate.template_id, {
           name: formData.name,
           description: formData.description || null,
           is_active: formData.is_active,
         });
+        if (isReturnedActionError(result)) {
+          setDialogError(getErrorMessage(result));
+          return;
+        }
         toast.success(t('ticketing.checklistTemplates.messages.success.updated'));
         closeDialog();
       } else {
@@ -190,6 +209,10 @@ const ChecklistTemplatesSettings: React.FC = () => {
           description: formData.description || null,
           is_active: formData.is_active,
         });
+        if (isReturnedActionError(created)) {
+          setDialogError(getErrorMessage(created));
+          return;
+        }
         toast.success(t('ticketing.checklistTemplates.messages.success.created'));
         // Keep the dialog open in edit mode so items and rules can be added
         setEditingTemplate(created);
@@ -205,7 +228,12 @@ const ChecklistTemplatesSettings: React.FC = () => {
 
   const handleDeleteTemplate = async () => {
     try {
-      await deleteChecklistTemplate(deleteDialog.templateId);
+      const result = await deleteChecklistTemplate(deleteDialog.templateId);
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        setDeleteDialog({ isOpen: false, templateId: '', templateName: '' });
+        return;
+      }
       toast.success(t('ticketing.checklistTemplates.messages.success.deleted'));
       setDeleteDialog({ isOpen: false, templateId: '', templateName: '' });
       await fetchTemplates();
@@ -223,6 +251,10 @@ const ChecklistTemplatesSettings: React.FC = () => {
       const created = await addChecklistTemplateItem(editingTemplate.template_id, {
         item_name: newItemName,
       });
+      if (isReturnedActionError(created)) {
+        toast.error(getErrorMessage(created));
+        return;
+      }
       setItems((prev) => [...prev, created]);
       setNewItemName('');
       await fetchTemplates();
@@ -240,7 +272,11 @@ const ChecklistTemplatesSettings: React.FC = () => {
   const persistItemName = async (item: IChecklistTemplateItem) => {
     if (!item.item_name.trim()) return;
     try {
-      await updateChecklistTemplateItem(item.template_item_id, { item_name: item.item_name });
+      const result = await updateChecklistTemplateItem(item.template_item_id, { item_name: item.item_name });
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       await fetchTemplates();
     } catch (error) {
       handleError(error, t('ticketing.checklistTemplates.messages.error.itemSaveFailed'));
@@ -250,7 +286,12 @@ const ChecklistTemplatesSettings: React.FC = () => {
   const handleToggleItemRequired = async (item: IChecklistTemplateItem, isRequired: boolean) => {
     updateLocalItem(item.template_item_id, { is_required: isRequired });
     try {
-      await updateChecklistTemplateItem(item.template_item_id, { is_required: isRequired });
+      const result = await updateChecklistTemplateItem(item.template_item_id, { is_required: isRequired });
+      if (isReturnedActionError(result)) {
+        updateLocalItem(item.template_item_id, { is_required: !isRequired });
+        toast.error(getErrorMessage(result));
+        return;
+      }
       await fetchTemplates();
     } catch (error) {
       updateLocalItem(item.template_item_id, { is_required: !isRequired });
@@ -260,7 +301,11 @@ const ChecklistTemplatesSettings: React.FC = () => {
 
   const handleDeleteItem = async (templateItemId: string) => {
     try {
-      await deleteChecklistTemplateItem(templateItemId);
+      const result = await deleteChecklistTemplateItem(templateItemId);
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       setItems((prev) => prev.filter((item) => item.template_item_id !== templateItemId));
       await fetchTemplates();
     } catch (error) {
@@ -283,10 +328,15 @@ const ChecklistTemplatesSettings: React.FC = () => {
     setItems(nextItems);
 
     try {
-      await reorderChecklistTemplateItems(
+      const result = await reorderChecklistTemplateItems(
         editingTemplate.template_id,
         nextItems.map((item) => item.template_item_id)
       );
+      if (isReturnedActionError(result)) {
+        setItems(items);
+        toast.error(getErrorMessage(result));
+        return;
+      }
       await fetchTemplates();
     } catch (error) {
       setItems(items);
@@ -300,6 +350,10 @@ const ChecklistTemplatesSettings: React.FC = () => {
     if (!editingTemplate) return;
     try {
       const created = await createChecklistTemplateApplyRule(editingTemplate.template_id, {});
+      if (isReturnedActionError(created)) {
+        toast.error(getErrorMessage(created));
+        return;
+      }
       setApplyRules((prev) => [...prev, created]);
     } catch (error) {
       handleError(error, t('ticketing.checklistTemplates.messages.error.ruleSaveFailed'));
@@ -320,13 +374,20 @@ const ChecklistTemplatesSettings: React.FC = () => {
     ));
 
     try {
-      await updateChecklistTemplateApplyRule(rule.apply_rule_id, {
+      const result = await updateChecklistTemplateApplyRule(rule.apply_rule_id, {
         board_id: nextRule.board_id,
         category_id: nextRule.category_id,
         subcategory_id: nextRule.subcategory_id,
         priority_id: nextRule.priority_id,
         is_enabled: nextRule.is_enabled,
       });
+      if (isReturnedActionError(result)) {
+        setApplyRules((prev) => prev.map((r) =>
+          r.apply_rule_id === rule.apply_rule_id ? rule : r
+        ));
+        toast.error(getErrorMessage(result));
+        return;
+      }
     } catch (error) {
       setApplyRules((prev) => prev.map((r) =>
         r.apply_rule_id === rule.apply_rule_id ? rule : r
@@ -337,7 +398,11 @@ const ChecklistTemplatesSettings: React.FC = () => {
 
   const handleDeleteRule = async (applyRuleId: string) => {
     try {
-      await deleteChecklistTemplateApplyRule(applyRuleId);
+      const result = await deleteChecklistTemplateApplyRule(applyRuleId);
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       setApplyRules((prev) => prev.filter((rule) => rule.apply_rule_id !== applyRuleId));
     } catch (error) {
       handleError(error, t('ticketing.checklistTemplates.messages.error.ruleSaveFailed'));
@@ -427,7 +492,11 @@ const ChecklistTemplatesSettings: React.FC = () => {
             checked={value}
             onCheckedChange={async (checked) => {
               try {
-                await updateChecklistTemplate(record.template_id, { is_active: checked });
+                const result = await updateChecklistTemplate(record.template_id, { is_active: checked });
+                if (isReturnedActionError(result)) {
+                  toast.error(getErrorMessage(result));
+                  return;
+                }
                 await fetchTemplates();
               } catch (error) {
                 handleError(error, t('ticketing.checklistTemplates.messages.error.updateStatusFailed'));

@@ -10,6 +10,12 @@ import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { notifyQboConnectionChanged } from '../lib/qbo/qboConnectionChangeProvider';
 import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+import {
   QboClientService,
   QBO_CLIENT_ID_SECRET_NAME,
   QBO_CLIENT_SECRET_SECRET_NAME,
@@ -59,7 +65,11 @@ export interface QboConnectionStatus {
   environment: QboEnvironment;
   credentials: QboCredentialStatus;
   error?: string;
+  errorCode?: 'FORBIDDEN' | 'ENTERPRISE_REQUIRED';
 }
+
+type QboCatalogActionError = ActionMessageError | ActionPermissionError;
+type QboCatalogResult<T> = Promise<T[] | QboCatalogActionError>;
 
 function isEnterpriseEdition(): boolean {
   return (
@@ -68,16 +78,104 @@ function isEnterpriseEdition(): boolean {
   );
 }
 
-function assertEnterpriseEdition(): void {
-  if (!isEnterpriseEdition()) {
-    throw new Error('QuickBooks Online integration is only available in Enterprise Edition.');
-  }
-}
-
 function maskSecret(value: string): string {
   if (!value) return '';
   if (value.length <= 4) return '•'.repeat(value.length);
   return `${'•'.repeat(Math.max(0, value.length - 4))}${value.slice(-4)}`;
+}
+
+function qboConnectionStatusError(
+  error: string,
+  errorCode: NonNullable<QboConnectionStatus['errorCode']>
+): QboConnectionStatus {
+  return {
+    connected: false,
+    connections: [],
+    redirectUri: '',
+    scopes: getQboOAuthScopes(),
+    environment: getQboEnvironment(),
+    credentials: {
+      clientIdConfigured: false,
+      clientSecretConfigured: false,
+      ready: false,
+    },
+    error,
+    errorCode,
+  };
+}
+
+function qboCatalogNotConnected(catalogName: string): QboCatalogActionError {
+  return actionError(`Connect QuickBooks before loading ${catalogName}.`);
+}
+
+function isQboReconnectError(error: unknown): boolean {
+  const message = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+  return (
+    message.includes('re-authentic') ||
+    message.includes('refresh token') ||
+    message.includes('invalid_grant') ||
+    message.includes('unauthorized') ||
+    message.includes('expired') ||
+    message.includes('401')
+  );
+}
+
+function qboErrorCode(error: unknown): string | null {
+  if (!error || typeof error !== 'object') {
+    return null;
+  }
+
+  const code = (error as { code?: unknown }).code;
+  return typeof code === 'string' ? code : null;
+}
+
+function qboConnectionStatusMessage(error: unknown): string {
+  const code = qboErrorCode(error);
+
+  if (code === 'QBO_CONFIG_MISSING') {
+    return 'QuickBooks client credentials are not configured. Add credentials and reconnect QuickBooks.';
+  }
+
+  if (code === 'QBO_SETUP_INCOMPLETE') {
+    return 'No QuickBooks company is connected yet. Click Connect QuickBooks to authorize one.';
+  }
+
+  if (code === 'QBO_AUTH_ERROR' || isQboReconnectError(error)) {
+    return 'Your QuickBooks connection has expired. Reconnect QuickBooks to continue.';
+  }
+
+  if (code === 'QBO_REFRESH_FAILED') {
+    return 'QuickBooks token refresh failed. Reconnect QuickBooks if the problem persists.';
+  }
+
+  if (code === 'QBO_INIT_FAILED') {
+    return 'Failed to initialize the QuickBooks connection. Reconnect QuickBooks and try again.';
+  }
+
+  return 'Could not check QuickBooks connection status. Try again, or reconnect QuickBooks if the problem persists.';
+}
+
+function qboCatalogFetchError(catalogName: string, errors: unknown[]): QboCatalogActionError {
+  if (errors.some(isQboReconnectError)) {
+    return actionError(`Reconnect QuickBooks before loading ${catalogName}.`);
+  }
+
+  return actionError(
+    `Could not load ${catalogName}. Try again, or reconnect QuickBooks if the problem persists.`
+  );
+}
+
+async function getQboUpdateAccessError(user: IUserWithRoles): Promise<string | null> {
+  if (!isEnterpriseEdition()) {
+    return 'QuickBooks Online integration is only available in Enterprise Edition.';
+  }
+
+  const allowed = await hasPermission(user, 'billing_settings', 'update');
+  if (!allowed) {
+    return 'Forbidden: You do not have permission to manage QuickBooks integration settings.';
+  }
+
+  return null;
 }
 
 // --- Helper Functions using ISecretProvider ---
@@ -222,11 +320,17 @@ async function checkBillingReadAccess(user: IUserWithRoles): Promise<void> {
   }
 }
 
-async function checkBillingUpdateAccess(user: IUserWithRoles): Promise<void> {
-  const allowed = await hasPermission(user, 'billing_settings', 'update');
-  if (!allowed) {
-    throw new Error('Forbidden: You do not have permission to manage QuickBooks integration settings.');
+async function getQboCatalogAccessError(user: IUserWithRoles): Promise<QboCatalogActionError | null> {
+  if (!isEnterpriseEdition()) {
+    return actionError('QuickBooks Online integration is only available in Enterprise Edition.');
   }
+
+  const allowed = await hasPermission(user, 'billing_settings', 'read');
+  if (!allowed) {
+    return permissionError('Forbidden: You do not have permission to view QuickBooks integration settings.');
+  }
+
+  return null;
 }
 
 async function getTenantCredentialMap(tenantId: string): Promise<QboCredentialsMap> {
@@ -461,9 +565,10 @@ export const getQboAccounts = withAuth(async (
   user,
   { tenant },
   options: { realmId?: string | null } = {}
-): Promise<QboAccount[]> => {
-  assertEnterpriseEdition();
-  await checkBillingReadAccess(user);
+): QboCatalogResult<QboAccount> => {
+  const accessError = await getQboCatalogAccessError(user);
+  if (accessError) return accessError;
+
   const targetRealm = options.realmId ?? null;
   const cacheKey = buildCacheKey(tenant, targetRealm, 'accounts');
   const cached = getCachedValue(accountCache, cacheKey);
@@ -476,9 +581,10 @@ export const getQboAccounts = withAuth(async (
 
   if (candidateRealmIds.length === 0) {
     logger.warn('Unable to load QBO accounts: no credential entries found', { tenantId: tenant });
-    return [];
+    return qboCatalogNotConnected('QuickBooks accounts');
   }
 
+  const errors: unknown[] = [];
   for (const realmId of candidateRealmIds) {
     try {
       logger.debug('Fetching QBO accounts', { tenantId: tenant, realmId });
@@ -490,13 +596,14 @@ export const getQboAccounts = withAuth(async (
       setCachedValue(accountCache, buildCacheKey(tenant, realmId, 'accounts'), filtered);
       return [...filtered];
     } catch (error) {
+      errors.push(error);
       logger.warn('Failed to fetch QBO accounts', { tenantId: tenant, realmId, error });
       continue;
     }
   }
 
   logger.warn('Unable to fetch QBO accounts for any realm', { tenantId: tenant });
-  return [];
+  return qboCatalogFetchError('QuickBooks accounts', errors);
 });
 
 /**
@@ -507,9 +614,10 @@ export const getQboClasses = withAuth(async (
   user,
   { tenant },
   options: { realmId?: string | null } = {}
-): Promise<QboClass[]> => {
-  assertEnterpriseEdition();
-  await checkBillingReadAccess(user);
+): QboCatalogResult<QboClass> => {
+  const accessError = await getQboCatalogAccessError(user);
+  if (accessError) return accessError;
+
   const targetRealm = options.realmId ?? null;
   const cacheKey = buildCacheKey(tenant, targetRealm, 'classes');
   const cached = getCachedValue(classCache, cacheKey);
@@ -522,9 +630,10 @@ export const getQboClasses = withAuth(async (
 
   if (candidateRealmIds.length === 0) {
     logger.warn('Unable to load QBO classes: no credential entries found', { tenantId: tenant });
-    return [];
+    return qboCatalogNotConnected('QuickBooks classes');
   }
 
+  const errors: unknown[] = [];
   for (const realmId of candidateRealmIds) {
     try {
       logger.debug('Fetching QBO classes', { tenantId: tenant, realmId });
@@ -536,13 +645,14 @@ export const getQboClasses = withAuth(async (
       setCachedValue(classCache, buildCacheKey(tenant, realmId, 'classes'), mapped);
       return [...mapped];
     } catch (error) {
+      errors.push(error);
       logger.warn('Failed to fetch QBO classes', { tenantId: tenant, realmId, error });
       continue;
     }
   }
 
   logger.warn('Unable to fetch QBO classes for any realm', { tenantId: tenant });
-  return [];
+  return qboCatalogFetchError('QuickBooks classes', errors);
 });
 
 /**
@@ -553,9 +663,10 @@ export const getQboDepartments = withAuth(async (
   user,
   { tenant },
   options: { realmId?: string | null } = {}
-): Promise<QboDepartment[]> => {
-  assertEnterpriseEdition();
-  await checkBillingReadAccess(user);
+): QboCatalogResult<QboDepartment> => {
+  const accessError = await getQboCatalogAccessError(user);
+  if (accessError) return accessError;
+
   const targetRealm = options.realmId ?? null;
   const cacheKey = buildCacheKey(tenant, targetRealm, 'departments');
   const cached = getCachedValue(departmentCache, cacheKey);
@@ -568,9 +679,10 @@ export const getQboDepartments = withAuth(async (
 
   if (candidateRealmIds.length === 0) {
     logger.warn('Unable to load QBO departments: no credential entries found', { tenantId: tenant });
-    return [];
+    return qboCatalogNotConnected('QuickBooks departments');
   }
 
+  const errors: unknown[] = [];
   for (const realmId of candidateRealmIds) {
     try {
       logger.debug('Fetching QBO departments', { tenantId: tenant, realmId });
@@ -580,13 +692,14 @@ export const getQboDepartments = withAuth(async (
       setCachedValue(departmentCache, buildCacheKey(tenant, realmId, 'departments'), mapped);
       return [...mapped];
     } catch (error) {
+      errors.push(error);
       logger.warn('Failed to fetch QBO departments', { tenantId: tenant, realmId, error });
       continue;
     }
   }
 
   logger.warn('Unable to fetch QBO departments for any realm', { tenantId: tenant });
-  return [];
+  return qboCatalogFetchError('QuickBooks departments', errors);
 });
 
 /**
@@ -598,9 +711,10 @@ export const getQboItems = withAuth(async (
   user,
   { tenant },
   options: { realmId?: string | null } = {}
-): Promise<QboItem[]> => {
-  assertEnterpriseEdition();
-  await checkBillingReadAccess(user);
+): QboCatalogResult<QboItem> => {
+  const accessError = await getQboCatalogAccessError(user);
+  if (accessError) return accessError;
+
   const targetRealm = options.realmId ?? null;
   const cacheKey = buildCacheKey(tenant, targetRealm, 'items');
   const cached = getCachedValue(itemCache, cacheKey);
@@ -613,9 +727,10 @@ export const getQboItems = withAuth(async (
 
   if (candidateRealmIds.length === 0) {
     logger.warn('Unable to load QBO items: no credential entries found', { tenantId: tenant });
-    return [];
+    return qboCatalogNotConnected('QuickBooks items');
   }
 
+  const errors: unknown[] = [];
   for (const realmId of candidateRealmIds) {
     try {
       logger.debug('Fetching QBO items', { tenantId: tenant, realmId });
@@ -625,13 +740,14 @@ export const getQboItems = withAuth(async (
       setCachedValue(itemCache, buildCacheKey(tenant, realmId, 'items'), mappedItems);
       return [...mappedItems];
     } catch (error) {
+      errors.push(error);
       logger.warn('Failed to fetch QBO items', { tenantId: tenant, realmId, error });
       continue;
     }
   }
 
   logger.warn('Unable to fetch QBO items for any realm', { tenantId: tenant });
-  return [];
+  return qboCatalogFetchError('QuickBooks items', errors);
 });
 
 /**
@@ -643,8 +759,21 @@ export const getQboConnectionStatus = withAuth(async (
   user,
   { tenant }
 ): Promise<QboConnectionStatus> => {
-  assertEnterpriseEdition();
-  await checkBillingReadAccess(user);
+  if (!isEnterpriseEdition()) {
+    return qboConnectionStatusError(
+      'QuickBooks Online integration is only available in Enterprise Edition.',
+      'ENTERPRISE_REQUIRED',
+    );
+  }
+
+  try {
+    await checkBillingReadAccess(user);
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith('Forbidden')) {
+      return qboConnectionStatusError(error.message, 'FORBIDDEN');
+    }
+    throw error;
+  }
 
   const secretProvider = await getSecretProviderInstance();
   const [storedClientId, storedClientSecret, redirectUri, resolvedCredentials] = await Promise.all([
@@ -718,16 +847,9 @@ export const getQboConnectionStatus = withAuth(async (
           defaultRealmId = realmId;
         }
       } catch (rawError) {
-        const message =
-          rawError instanceof Error
-            ? rawError.message
-            : 'Failed to validate QuickBooks connection.';
+        const message = qboConnectionStatusMessage(rawError);
         summaryError = message;
-        const lowerCaseMessage = message.toLowerCase();
-        const treatedAsAuthError =
-          lowerCaseMessage.includes('re-authentic') ||
-          lowerCaseMessage.includes('refresh token') ||
-          lowerCaseMessage.includes('expired');
+        const treatedAsAuthError = isQboReconnectError(rawError);
 
         status = treatedAsAuthError ? 'expired' : 'error';
         if (!aggregatedError) {
@@ -766,10 +888,7 @@ export const getQboConnectionStatus = withAuth(async (
         : aggregatedError ?? 'QuickBooks connections require attention. Please reconnect.'
     };
   } catch (error) {
-    const message =
-      error instanceof Error
-        ? error.message
-        : 'An unexpected error occurred while checking the QuickBooks connection status.';
+    const message = qboConnectionStatusMessage(error);
     logger.error('QuickBooks connection status check failed', { tenantId: tenant, error });
     return {
       ...baseStatus,
@@ -791,8 +910,10 @@ export const saveQboCredentials = withAuth(async (
   input: { clientId: string; clientSecret: string }
 ): Promise<{ success: boolean; error?: string }> => {
   try {
-    assertEnterpriseEdition();
-    await checkBillingUpdateAccess(user);
+    const accessError = await getQboUpdateAccessError(user);
+    if (accessError) {
+      return { success: false, error: accessError };
+    }
 
     const clientId = input.clientId?.trim();
     if (!clientId) {
@@ -817,13 +938,14 @@ export const saveQboCredentials = withAuth(async (
     revalidatePath('/msp/settings');
     return { success: true };
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : 'An unexpected error occurred while saving QuickBooks credentials.';
     logger.error('Failed to save tenant-owned QuickBooks OAuth credentials', {
       tenantId: tenant,
       error
     });
-    return { success: false, error: message };
+    return {
+      success: false,
+      error: 'Failed to save QuickBooks credentials. Please try again.'
+    };
   }
 });
 
@@ -839,8 +961,10 @@ export const disconnectQbo = withAuth(async (
   const secretProvider = await getSecretProviderInstance();
 
   try {
-    assertEnterpriseEdition();
-    await checkBillingUpdateAccess(user);
+    const accessError = await getQboUpdateAccessError(user);
+    if (accessError) {
+      return { success: false, error: accessError };
+    }
 
     logger.info('Disconnecting QuickBooks integration', { tenantId: tenant });
 
@@ -857,11 +981,10 @@ export const disconnectQbo = withAuth(async (
 
     return { success: true };
   } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : 'An unexpected error occurred during disconnection.';
     logger.error('QuickBooks disconnect failed', { tenantId: tenant, error });
     return {
       success: false,
-      error: message
+      error: 'Failed to disconnect QuickBooks. Please try again.'
     };
   }
 });
@@ -875,9 +998,10 @@ export const getQboTaxCodes = withAuth(async (
   user,
   { tenant },
   options: { realmId?: string | null } = {}
-): Promise<QboTaxCode[]> => {
-  assertEnterpriseEdition();
-  await checkBillingReadAccess(user);
+): QboCatalogResult<QboTaxCode> => {
+  const accessError = await getQboCatalogAccessError(user);
+  if (accessError) return accessError;
+
   const targetRealm = options.realmId ?? null;
   const cacheKey = buildCacheKey(tenant, targetRealm, 'tax-codes');
   const cached = getCachedValue(taxCodeCache, cacheKey);
@@ -890,9 +1014,10 @@ export const getQboTaxCodes = withAuth(async (
 
   if (candidateRealmIds.length === 0) {
     logger.warn('Unable to load QBO tax codes: no credential entries found', { tenantId: tenant });
-    return [];
+    return qboCatalogNotConnected('QuickBooks tax codes');
   }
 
+  const errors: unknown[] = [];
   for (const realmId of candidateRealmIds) {
     try {
       logger.debug('Fetching QBO tax codes', { tenantId: tenant, realmId });
@@ -902,13 +1027,14 @@ export const getQboTaxCodes = withAuth(async (
       setCachedValue(taxCodeCache, buildCacheKey(tenant, realmId, 'tax-codes'), mappedTaxCodes);
       return [...mappedTaxCodes];
     } catch (error) {
+      errors.push(error);
       logger.warn('Failed to fetch QBO tax codes', { tenantId: tenant, realmId, error });
       continue;
     }
   }
 
   logger.warn('Unable to fetch QBO tax codes for any realm', { tenantId: tenant });
-  return [];
+  return qboCatalogFetchError('QuickBooks tax codes', errors);
 });
 
 /**
@@ -925,9 +1051,10 @@ export const getQboCustomers = withAuth(async (
   user,
   { tenant },
   options: { realmId?: string | null } = {}
-): Promise<QboCustomer[]> => {
-  assertEnterpriseEdition();
-  await checkBillingReadAccess(user);
+): QboCatalogResult<QboCustomer> => {
+  const accessError = await getQboCatalogAccessError(user);
+  if (accessError) return accessError;
+
   const targetRealm = options.realmId ?? null;
   const cacheKey = buildCacheKey(tenant, targetRealm, 'customers');
   const cached = getCachedValue(customerCache, cacheKey);
@@ -940,9 +1067,10 @@ export const getQboCustomers = withAuth(async (
 
   if (candidateRealmIds.length === 0) {
     logger.warn('Unable to load QBO customers: no credential entries found', { tenantId: tenant });
-    return [];
+    return qboCatalogNotConnected('QuickBooks customers');
   }
 
+  const errors: unknown[] = [];
   for (const realmId of candidateRealmIds) {
     try {
       logger.debug('Fetching QBO customers', { tenantId: tenant, realmId });
@@ -964,22 +1092,24 @@ export const getQboCustomers = withAuth(async (
       setCachedValue(customerCache, buildCacheKey(tenant, realmId, 'customers'), allCustomers);
       return [...allCustomers];
     } catch (error) {
+      errors.push(error);
       logger.warn('Failed to fetch QBO customers', { tenantId: tenant, realmId, error });
       continue;
     }
   }
 
   logger.warn('Unable to fetch QBO customers for any realm', { tenantId: tenant });
-  return [];
+  return qboCatalogFetchError('QuickBooks customers', errors);
 });
 
 export const getQboTerms = withAuth(async (
   user,
   { tenant },
   options: { realmId?: string | null } = {}
-): Promise<QboTerm[]> => {
-  assertEnterpriseEdition();
-  await checkBillingReadAccess(user);
+): QboCatalogResult<QboTerm> => {
+  const accessError = await getQboCatalogAccessError(user);
+  if (accessError) return accessError;
+
   const targetRealm = options.realmId ?? null;
   const cacheKey = buildCacheKey(tenant, targetRealm, 'terms');
   const cached = getCachedValue(termCache, cacheKey);
@@ -992,9 +1122,10 @@ export const getQboTerms = withAuth(async (
 
   if (candidateRealmIds.length === 0) {
     logger.warn('Unable to load QBO terms: no credential entries found', { tenantId: tenant });
-    return [];
+    return qboCatalogNotConnected('QuickBooks payment terms');
   }
 
+  const errors: unknown[] = [];
   for (const realmId of candidateRealmIds) {
     try {
       logger.debug('Fetching QBO terms', { tenantId: tenant, realmId });
@@ -1004,11 +1135,12 @@ export const getQboTerms = withAuth(async (
       setCachedValue(termCache, buildCacheKey(tenant, realmId, 'terms'), mappedTerms);
       return [...mappedTerms];
     } catch (error) {
+      errors.push(error);
       logger.warn('Failed to fetch QBO terms', { tenantId: tenant, realmId, error });
       continue;
     }
   }
 
   logger.warn('Unable to fetch QBO terms for any realm', { tenantId: tenant });
-  return [];
+  return qboCatalogFetchError('QuickBooks payment terms', errors);
 });

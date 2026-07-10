@@ -4,6 +4,10 @@ import React, { useCallback, useRef } from 'react';
 import AsyncSearchableSelect, { SelectOption } from '@alga-psa/ui/components/AsyncSearchableSelect';
 import { getServiceById, searchServiceCatalogForPicker, CatalogPickerItem } from '@alga-psa/billing/actions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 type BillingMethod = 'fixed' | 'hourly' | 'usage';
 type ItemKind = 'service' | 'product';
@@ -161,6 +165,9 @@ export function ServiceCatalogPicker({
       }
 
       const item = await getServiceById(nextValue);
+      if (isActionMessageError(item) || isActionPermissionError(item)) {
+        return;
+      }
       if (item) {
         onSelect({
           service_id: item.service_id,

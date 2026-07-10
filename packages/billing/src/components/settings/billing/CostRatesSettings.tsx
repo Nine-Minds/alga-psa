@@ -18,10 +18,11 @@ import {
   deleteCostRate,
   listCostRates,
   upsertCostRate,
+  type CostRateActionError,
   type CostRateUserRow,
   type ListCostRatesResult,
   type UpsertCostRateActionInput,
-} from '@alga-psa/billing/actions';
+} from '../../../actions/costRateActions';
 import type { ColumnDefinition, IUserCostRate } from '@alga-psa/types';
 import toast from 'react-hot-toast';
 
@@ -40,6 +41,16 @@ type PendingOperation =
 type CostRateRow = IUserCostRate & { scope_label?: string; status: RateStatus };
 
 const DEFAULT_USER_ID = 'default';
+
+function isCostRateActionError(value: unknown): value is CostRateActionError {
+  return (
+    typeof value === 'object' &&
+    value !== null &&
+    'code' in value &&
+    'message' in value &&
+    typeof (value as { message?: unknown }).message === 'string'
+  );
+}
 
 function centsToCurrency(cents: number | null | undefined): string {
   if (cents === null || cents === undefined) {
@@ -127,7 +138,11 @@ export default function CostRatesSettings(): React.JSX.Element {
   const loadRates = React.useCallback(async () => {
     try {
       setLoading(true);
-      setData(await listCostRates());
+      const result = await listCostRates();
+      if (isCostRateActionError(result)) {
+        throw new Error(result.message);
+      }
+      setData(result);
     } catch (error) {
       handleError(error, t('costRates.errors.load', { defaultValue: 'Failed to load cost rates' }));
     } finally {
@@ -199,7 +214,10 @@ export default function CostRatesSettings(): React.JSX.Element {
   const performSave = async (state: RateFormState) => {
     try {
       setSaving(true);
-      await upsertCostRate(toActionInput(state));
+      const result = await upsertCostRate(toActionInput(state));
+      if (isCostRateActionError(result)) {
+        throw new Error(result.message);
+      }
       toast.success(t('costRates.toast.saved', { defaultValue: 'Cost rate saved.' }));
       setIsRateDialogOpen(false);
       setPendingOperation(null);
@@ -220,6 +238,9 @@ export default function CostRatesSettings(): React.JSX.Element {
           effective_from: existing.effective_from,
           effective_to: existing.effective_to,
         });
+        if (isCostRateActionError(impact)) {
+          throw new Error(impact.message);
+        }
         if (impact.covers_worked_time) {
           setPendingOperation({ type: 'save', form });
           setIsWarningDialogOpen(true);
@@ -238,6 +259,9 @@ export default function CostRatesSettings(): React.JSX.Element {
         effective_from: rate.effective_from,
         effective_to: rate.effective_to,
       });
+      if (isCostRateActionError(impact)) {
+        throw new Error(impact.message);
+      }
       setPendingOperation({ type: 'delete', rate });
       setIsWarningDialogOpen(impact.covers_worked_time);
       if (!impact.covers_worked_time) {
@@ -251,7 +275,10 @@ export default function CostRatesSettings(): React.JSX.Element {
   const performDelete = async (rate: IUserCostRate) => {
     try {
       setSaving(true);
-      await deleteCostRate(rate.rate_id);
+      const result = await deleteCostRate(rate.rate_id);
+      if (isCostRateActionError(result)) {
+        throw new Error(result.message);
+      }
       toast.success(t('costRates.toast.deleted', { defaultValue: 'Cost rate deleted.' }));
       setPendingOperation(null);
       await loadRates();

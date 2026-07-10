@@ -21,7 +21,14 @@ import ProjectTaskModel from '../models/projectTask';
 import { SharedNumberingService } from '@shared/services/numberingService';
 import { getProjectStatuses } from './projectActions';
 import type { IUser } from '@alga-psa/types';
-import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  actionError,
+  isActionMessageError,
+  isActionPermissionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { validateData } from '@alga-psa/validation';
 import {
   createTemplateSchema,
@@ -31,6 +38,60 @@ import {
 import { OrderingService } from '../lib/orderingUtils';
 import { getTemplateDefaultStatusMappings } from '../lib/templateStatusMappingUtils';
 import { generateKeyBetween } from 'fractional-indexing';
+
+type ProjectTemplateActionError = ActionMessageError | ActionPermissionError;
+
+const EXPECTED_TEMPLATE_ACTION_MESSAGES = [
+  'Project not found',
+  'Template not found',
+  'No project statuses found',
+  'Invalid task IDs',
+  'A task cannot depend on itself',
+  'This dependency already exists',
+  'Dependency not found',
+  'Phase not found',
+  'Task not found',
+  'Status mapping not found',
+  'Checklist item not found',
+];
+
+function projectTemplateActionErrorFrom(error: unknown): ProjectTemplateActionError | null {
+  if (isActionPermissionError(error) || isActionMessageError(error)) {
+    return error as ProjectTemplateActionError;
+  }
+
+  const issues = (error as { issues?: unknown })?.issues;
+  if (Array.isArray(issues) && issues.length > 0) {
+    return actionError('Template validation failed. Please review the template details and try again.');
+  }
+
+  const dbError = error as { code?: string };
+  if (dbError?.code === '22P02') {
+    return actionError('Template request contains an invalid UUID');
+  }
+
+  if (error instanceof Error) {
+    if (error.message.startsWith('Permission denied')) {
+      return permissionError(error.message);
+    }
+    if (
+      EXPECTED_TEMPLATE_ACTION_MESSAGES.some((message) => error.message === message) ||
+      error.message.startsWith('Failed to create custom status')
+    ) {
+      return actionError(error.message);
+    }
+  }
+
+  return null;
+}
+
+function returnExpectedTemplateActionError(error: unknown): ProjectTemplateActionError {
+  const expected = projectTemplateActionErrorFrom(error);
+  if (expected) {
+    return expected;
+  }
+  throw error;
+}
 
 async function checkPermission(
   user: IUser,
@@ -109,20 +170,21 @@ export const createTemplateFromProject = withAuth(async (
     copyChecklists?: boolean;
     copyServices?: boolean;
   }
-): Promise<string> => {
-  // Default all options to true if not specified
-  const copyOptions = {
-    copyPhases: options?.copyPhases ?? true,
-    copyStatuses: options?.copyStatuses ?? true,
-    copyTasks: options?.copyTasks ?? true,
-    copyAssignments: options?.copyAssignments ?? false,
-    copyChecklists: options?.copyChecklists ?? true,
-    copyServices: options?.copyServices ?? true
-  };
+): Promise<string | ProjectTemplateActionError> => {
+  try {
+    // Default all options to true if not specified
+    const copyOptions = {
+      copyPhases: options?.copyPhases ?? true,
+      copyStatuses: options?.copyStatuses ?? true,
+      copyTasks: options?.copyTasks ?? true,
+      copyAssignments: options?.copyAssignments ?? false,
+      copyChecklists: options?.copyChecklists ?? true,
+      copyServices: options?.copyServices ?? true
+    };
 
-  const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex();
 
-  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(user, 'project', 'create', trx);
 
     // Verify project exists and user has access
@@ -344,8 +406,15 @@ export const createTemplateFromProject = withAuth(async (
       }
     }
 
-    return template.template_id;
-  });
+      return template.template_id;
+    });
+  } catch (error) {
+    const expected = projectTemplateActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
+  }
 });
 
 /**
@@ -371,26 +440,27 @@ export const applyTemplate = withAuth(async (
       assignmentOption?: 'none' | 'primary' | 'all';
     };
   }
-): Promise<string> => {
-  const validatedData = validateData(applyTemplateSchema, {
-    template_id: templateId,
-    ...projectData
-  });
+): Promise<string | ProjectTemplateActionError> => {
+  try {
+    const validatedData = validateData(applyTemplateSchema, {
+      template_id: templateId,
+      ...projectData
+    });
 
-  // Set default options if not provided
-  const options = {
-    copyPhases: validatedData.options?.copyPhases ?? true,
-    copyStatuses: validatedData.options?.copyStatuses ?? true,
-    copyTasks: validatedData.options?.copyTasks ?? true,
-    copyDependencies: validatedData.options?.copyDependencies ?? true,
-    copyChecklists: validatedData.options?.copyChecklists ?? true,
-    copyServices: validatedData.options?.copyServices ?? true,
-    assignmentOption: validatedData.options?.assignmentOption ?? 'primary'
-  };
+    // Set default options if not provided
+    const options = {
+      copyPhases: validatedData.options?.copyPhases ?? true,
+      copyStatuses: validatedData.options?.copyStatuses ?? true,
+      copyTasks: validatedData.options?.copyTasks ?? true,
+      copyDependencies: validatedData.options?.copyDependencies ?? true,
+      copyChecklists: validatedData.options?.copyChecklists ?? true,
+      copyServices: validatedData.options?.copyServices ?? true,
+      assignmentOption: validatedData.options?.assignmentOption ?? 'primary'
+    };
 
-  const { knex } = await createTenantKnex();
+    const { knex } = await createTenantKnex();
 
-  const projectId = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const projectId = await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(user, 'project', 'create', trx);
 
     // Verify template exists
@@ -580,7 +650,7 @@ export const applyTemplate = withAuth(async (
                 .returning('*');
 
               if (!insertResult || insertResult.length === 0) {
-                throw new Error(`Failed to create custom status "${templateStatus.custom_status_name}" - insert returned empty result`);
+                throw new Error(`Custom status insert for "${templateStatus.custom_status_name}" completed without returning a row.`);
               }
 
               const newStatus = insertResult[0];
@@ -859,7 +929,14 @@ export const applyTemplate = withAuth(async (
     }
   });
 
-  return projectId;
+    return projectId;
+  } catch (error) {
+    const expected = projectTemplateActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
+  }
 });
 
 /**
@@ -1043,11 +1120,12 @@ export const updateTemplate = withAuth(async (
     category?: string;
     client_portal_config?: import('@alga-psa/types').IClientPortalConfig;
   }
-): Promise<IProjectTemplate> => {
-  const validatedData = validateData(updateTemplateSchema, data);
-  const { knex } = await createTenantKnex();
+): Promise<IProjectTemplate | ProjectTemplateActionError> => {
+  try {
+    const validatedData = validateData(updateTemplateSchema, data);
+    const { knex } = await createTenantKnex();
 
-  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(user, 'project', 'update', trx);
 
     // Handle client_portal_config JSON serialization
@@ -1069,8 +1147,15 @@ export const updateTemplate = withAuth(async (
       throw new Error('Template not found');
     }
 
-    return updated;
-  });
+      return updated;
+    });
+  } catch (error) {
+    const expected = projectTemplateActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
+  }
 });
 
 /**
@@ -1080,10 +1165,11 @@ export const deleteTemplate = withAuth(async (
   user,
   { tenant },
   templateId: string
-): Promise<void> => {
-  const { knex } = await createTenantKnex();
+): Promise<void | ProjectTemplateActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
 
-  await withTransaction(knex, async (trx: Knex.Transaction) => {
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(user, 'project', 'delete', trx);
 
     // Cascade delete handled by FK constraints
@@ -1094,7 +1180,14 @@ export const deleteTemplate = withAuth(async (
     if (deleted === 0) {
       throw new Error('Template not found');
     }
-  });
+    });
+  } catch (error) {
+    const expected = projectTemplateActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
+  }
 });
 
 /**
@@ -1106,10 +1199,11 @@ export const duplicateTemplate = withAuth(async (
   user,
   { tenant },
   templateId: string
-): Promise<string> => {
-  const { knex } = await createTenantKnex();
+): Promise<string | ProjectTemplateActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
 
-  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(user, 'project', 'create', trx);
 
     const originalTemplate = await tenantScopedTable(trx, 'project_templates', tenant)
@@ -1248,8 +1342,15 @@ export const duplicateTemplate = withAuth(async (
         });
     }
 
-    return newTemplate.template_id;
-  });
+      return newTemplate.template_id;
+    });
+  } catch (error) {
+    const expected = projectTemplateActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
+  }
 });
 
 /**
@@ -1258,10 +1359,17 @@ export const duplicateTemplate = withAuth(async (
 export const getTemplateCategories = withAuth(async (
   user,
   { tenant }
-): Promise<string[]> => {
+): Promise<string[] | ActionPermissionError> => {
   const { knex } = await createTenantKnex();
 
-  await checkPermission(user, 'project', 'read', knex);
+  try {
+    await checkPermission(user, 'project', 'read', knex);
+  } catch (error) {
+    if (error instanceof Error && error.message.startsWith('Permission denied')) {
+      return permissionError(error.message);
+    }
+    throw error;
+  }
 
   const results = await tenantScopedTable(knex, 'project_templates', tenant)
     .whereNotNull('category')
@@ -1289,10 +1397,11 @@ export const addTemplateDependency = withAuth(async (
   dependencyType: DependencyType,
   leadLagDays: number = 0,
   notes?: string
-): Promise<IProjectTemplateDependency> => {
-  const { knex: db } = await createTenantKnex();
+): Promise<IProjectTemplateDependency | ProjectTemplateActionError> => {
+  try {
+    const { knex: db } = await createTenantKnex();
 
-  return await withTransaction(db, async (trx) => {
+    return await withTransaction(db, async (trx) => {
     await checkPermission(user, 'project', 'update', trx);
 
     // Validate that both tasks belong to the template
@@ -1333,8 +1442,11 @@ export const addTemplateDependency = withAuth(async (
       })
       .returning('*');
 
-    return dependency;
-  });
+      return dependency;
+    });
+  } catch (error) {
+    return returnExpectedTemplateActionError(error);
+  }
 });
 
 /**
@@ -1349,10 +1461,11 @@ export const updateTemplateDependency = withAuth(async (
     lead_lag_days?: number;
     notes?: string;
   }
-): Promise<IProjectTemplateDependency> => {
-  const { knex: db } = await createTenantKnex();
+): Promise<IProjectTemplateDependency | ProjectTemplateActionError> => {
+  try {
+    const { knex: db } = await createTenantKnex();
 
-  return await withTransaction(db, async (trx) => {
+    return await withTransaction(db, async (trx) => {
     await checkPermission(user, 'project', 'update', trx);
 
     const [dependency] = await tenantScopedTable(trx, 'project_template_dependencies', tenant)
@@ -1364,8 +1477,11 @@ export const updateTemplateDependency = withAuth(async (
       throw new Error('Dependency not found');
     }
 
-    return dependency;
-  });
+      return dependency;
+    });
+  } catch (error) {
+    return returnExpectedTemplateActionError(error);
+  }
 });
 
 /**
@@ -1375,10 +1491,11 @@ export const removeTemplateDependency = withAuth(async (
   user,
   { tenant },
   dependencyId: string
-): Promise<void> => {
-  const { knex: db } = await createTenantKnex();
+): Promise<void | ProjectTemplateActionError> => {
+  try {
+    const { knex: db } = await createTenantKnex();
 
-  return await withTransaction(db, async (trx) => {
+    return await withTransaction(db, async (trx) => {
     await checkPermission(user, 'project', 'update', trx);
 
     const deleted = await tenantScopedTable(trx, 'project_template_dependencies', tenant)
@@ -1388,7 +1505,10 @@ export const removeTemplateDependency = withAuth(async (
     if (!deleted) {
       throw new Error('Dependency not found');
     }
-  });
+    });
+  } catch (error) {
+    return returnExpectedTemplateActionError(error);
+  }
 });
 
 /**
@@ -1459,10 +1579,11 @@ export const addTemplatePhase = withAuth(async (
     start_offset_days?: number;
   },
   afterPhaseId?: string | null
-): Promise<IProjectTemplatePhase> => {
-  const { knex } = await createTenantKnex();
+): Promise<IProjectTemplatePhase | ProjectTemplateActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
 
-  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(user, 'project', 'update', trx);
 
     // Verify template exists
@@ -1508,8 +1629,11 @@ export const addTemplatePhase = withAuth(async (
       .where({ template_id: templateId })
       .update({ updated_at: trx.fn.now() });
 
-    return newPhase;
-  });
+      return newPhase;
+    });
+  } catch (error) {
+    return returnExpectedTemplateActionError(error);
+  }
 });
 
 /**
@@ -1525,10 +1649,11 @@ export const updateTemplatePhase = withAuth(async (
     duration_days?: number;
     start_offset_days?: number;
   }
-): Promise<IProjectTemplatePhase> => {
-  const { knex } = await createTenantKnex();
+): Promise<IProjectTemplatePhase | ProjectTemplateActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
 
-  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(user, 'project', 'update', trx);
 
     const [updated] = await tenantScopedTable(trx, 'project_template_phases', tenant)
@@ -1545,8 +1670,11 @@ export const updateTemplatePhase = withAuth(async (
       .where({ template_id: updated.template_id })
       .update({ updated_at: trx.fn.now() });
 
-    return updated;
-  });
+      return updated;
+    });
+  } catch (error) {
+    return returnExpectedTemplateActionError(error);
+  }
 });
 
 /**
@@ -1556,10 +1684,11 @@ export const deleteTemplatePhase = withAuth(async (
   user,
   { tenant },
   phaseId: string
-): Promise<void> => {
-  const { knex } = await createTenantKnex();
+): Promise<void | ProjectTemplateActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
 
-  await withTransaction(knex, async (trx: Knex.Transaction) => {
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(user, 'project', 'update', trx);
 
     const phase = await tenantScopedTable(trx, 'project_template_phases', tenant)
@@ -1579,7 +1708,10 @@ export const deleteTemplatePhase = withAuth(async (
     await tenantScopedTable(trx, 'project_templates', tenant)
       .where({ template_id: phase.template_id })
       .update({ updated_at: trx.fn.now() });
-  });
+    });
+  } catch (error) {
+    return returnExpectedTemplateActionError(error);
+  }
 });
 
 /**
@@ -1591,10 +1723,11 @@ export const reorderTemplatePhase = withAuth(async (
   phaseId: string,
   beforePhaseId: string | null,
   afterPhaseId: string | null
-): Promise<IProjectTemplatePhase> => {
-  const { knex } = await createTenantKnex();
+): Promise<IProjectTemplatePhase | ProjectTemplateActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
 
-  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(user, 'project', 'update', trx);
 
     const phase = await tenantScopedTable(trx, 'project_template_phases', tenant)
@@ -1635,8 +1768,11 @@ export const reorderTemplatePhase = withAuth(async (
       .where({ template_id: phase.template_id })
       .update({ updated_at: trx.fn.now() });
 
-    return updated;
-  });
+      return updated;
+    });
+  } catch (error) {
+    return returnExpectedTemplateActionError(error);
+  }
 });
 
 /**
@@ -1659,10 +1795,11 @@ export const addTemplateTask = withAuth(async (
     service_id?: string | null;
   },
   afterTaskId?: string | null
-): Promise<IProjectTemplateTask> => {
-  const { knex } = await createTenantKnex();
+): Promise<IProjectTemplateTask | ProjectTemplateActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
 
-  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(user, 'project', 'update', trx);
 
     // Verify phase exists
@@ -1714,8 +1851,11 @@ export const addTemplateTask = withAuth(async (
       .where({ template_id: phase.template_id })
       .update({ updated_at: trx.fn.now() });
 
-    return newTask;
-  });
+      return newTask;
+    });
+  } catch (error) {
+    return returnExpectedTemplateActionError(error);
+  }
 });
 
 /**
@@ -1740,10 +1880,11 @@ export const updateTemplateTask = withAuth(async (
     order_key?: string;
     service_id?: string | null;
   }
-): Promise<IProjectTemplateTask> => {
-  const { knex } = await createTenantKnex();
+): Promise<IProjectTemplateTask | ProjectTemplateActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
 
-  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(user, 'project', 'update', trx);
 
     const [updated] = await tenantScopedTable(trx, 'project_template_tasks', tenant)
@@ -1766,8 +1907,11 @@ export const updateTemplateTask = withAuth(async (
         .update({ updated_at: trx.fn.now() });
     }
 
-    return updated;
-  });
+      return updated;
+    });
+  } catch (error) {
+    return returnExpectedTemplateActionError(error);
+  }
 });
 
 /**
@@ -1777,10 +1921,11 @@ export const deleteTemplateTask = withAuth(async (
   user,
   { tenant },
   taskId: string
-): Promise<void> => {
-  const { knex } = await createTenantKnex();
+): Promise<void | ProjectTemplateActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
 
-  await withTransaction(knex, async (trx: Knex.Transaction) => {
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(user, 'project', 'update', trx);
 
     const task = await tenantScopedTable(trx, 'project_template_tasks', tenant)
@@ -1807,7 +1952,10 @@ export const deleteTemplateTask = withAuth(async (
         .where({ template_id: phase.template_id })
         .update({ updated_at: trx.fn.now() });
     }
-  });
+    });
+  } catch (error) {
+    return returnExpectedTemplateActionError(error);
+  }
 });
 
 /**
@@ -1821,10 +1969,11 @@ export const moveTemplateTask = withAuth(async (
   targetStatusMappingId?: string | null,
   beforeTaskId?: string | null,
   afterTaskId?: string | null
-): Promise<IProjectTemplateTask> => {
-  const { knex } = await createTenantKnex();
+): Promise<IProjectTemplateTask | ProjectTemplateActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
 
-  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(user, 'project', 'update', trx);
 
     const task = await tenantScopedTable(trx, 'project_template_tasks', tenant)
@@ -1881,8 +2030,11 @@ export const moveTemplateTask = withAuth(async (
         .update({ updated_at: trx.fn.now() });
     }
 
-    return updated;
-  });
+      return updated;
+    });
+  } catch (error) {
+    return returnExpectedTemplateActionError(error);
+  }
 });
 
 /**
@@ -1895,10 +2047,11 @@ export const updateTemplateTaskStatus = withAuth(async (
   statusMappingId: string,
   beforeTaskId?: string | null,
   afterTaskId?: string | null
-): Promise<IProjectTemplateTask> => {
-  const { knex } = await createTenantKnex();
+): Promise<IProjectTemplateTask | ProjectTemplateActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
 
-  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(user, 'project', 'update', trx);
 
     const task = await tenantScopedTable(trx, 'project_template_tasks', tenant)
@@ -1948,8 +2101,11 @@ export const updateTemplateTaskStatus = withAuth(async (
         .update({ updated_at: trx.fn.now() });
     }
 
-    return updated;
-  });
+      return updated;
+    });
+  } catch (error) {
+    return returnExpectedTemplateActionError(error);
+  }
 });
 
 /**
@@ -1963,10 +2119,11 @@ export const addTemplateStatusMapping = withAuth(async (
     status_id: string;
   },
   templatePhaseId?: string | null
-): Promise<any> => {
-  const { knex } = await createTenantKnex();
+): Promise<any | ProjectTemplateActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
 
-  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(user, 'project', 'update', trx);
 
     // Get existing mappings to determine display_order
@@ -2000,13 +2157,16 @@ export const addTemplateStatusMapping = withAuth(async (
       .where({ template_id: templateId })
       .update({ updated_at: trx.fn.now() });
 
-    return {
-      ...newMapping,
-      status_name: status?.name,
-      color: status?.color || '#6B7280',
-      is_closed: status?.is_closed
-    };
-  });
+      return {
+        ...newMapping,
+        status_name: status?.name,
+        color: status?.color || '#6B7280',
+        is_closed: status?.is_closed
+      };
+    });
+  } catch (error) {
+    return returnExpectedTemplateActionError(error);
+  }
 });
 
 /**
@@ -2016,10 +2176,11 @@ export const removeTemplateStatusMapping = withAuth(async (
   user,
   { tenant },
   mappingId: string
-): Promise<void> => {
-  const { knex } = await createTenantKnex();
+): Promise<void | ProjectTemplateActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
 
-  await withTransaction(knex, async (trx: Knex.Transaction) => {
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(user, 'project', 'update', trx);
 
     const mapping = await tenantScopedTable(trx, 'project_template_status_mappings', tenant)
@@ -2043,7 +2204,10 @@ export const removeTemplateStatusMapping = withAuth(async (
     await tenantScopedTable(trx, 'project_templates', tenant)
       .where({ template_id: mapping.template_id })
       .update({ updated_at: trx.fn.now() });
-  });
+    });
+  } catch (error) {
+    return returnExpectedTemplateActionError(error);
+  }
 });
 
 /**
@@ -2055,10 +2219,11 @@ export const reorderTemplateStatusMappings = withAuth(async (
   templateId: string,
   orderedMappingIds: string[],
   templatePhaseId?: string | null
-): Promise<void> => {
-  const { knex } = await createTenantKnex();
+): Promise<void | ProjectTemplateActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
 
-  await withTransaction(knex, async (trx: Knex.Transaction) => {
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(user, 'project', 'update', trx);
 
     const scopedMappings = await getScopedTemplateStatusMappings(
@@ -2085,7 +2250,10 @@ export const reorderTemplateStatusMappings = withAuth(async (
     await tenantScopedTable(trx, 'project_templates', tenant)
       .where({ template_id: templateId })
       .update({ updated_at: trx.fn.now() });
-  });
+    });
+  } catch (error) {
+    return returnExpectedTemplateActionError(error);
+  }
 });
 
 export const copyTemplateStatusesToPhase = withAuth(async (
@@ -2093,10 +2261,11 @@ export const copyTemplateStatusesToPhase = withAuth(async (
   { tenant },
   templateId: string,
   templatePhaseId: string
-): Promise<any[]> => {
-  const { knex } = await createTenantKnex();
+): Promise<any[] | ProjectTemplateActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
 
-  return withTransaction(knex, async (trx: Knex.Transaction) => {
+    return withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(user, 'project', 'update', trx);
 
     const existingPhaseMappings = await getScopedTemplateStatusMappings(
@@ -2140,8 +2309,11 @@ export const copyTemplateStatusesToPhase = withAuth(async (
       .where({ template_id: templateId })
       .update({ updated_at: trx.fn.now() });
 
-    return copiedMappings;
-  });
+      return copiedMappings;
+    });
+  } catch (error) {
+    return returnExpectedTemplateActionError(error);
+  }
 });
 
 export const removeTemplatePhaseStatuses = withAuth(async (
@@ -2149,10 +2321,11 @@ export const removeTemplatePhaseStatuses = withAuth(async (
   { tenant },
   templateId: string,
   templatePhaseId: string
-): Promise<void> => {
-  const { knex } = await createTenantKnex();
+): Promise<void | ProjectTemplateActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
 
-  await withTransaction(knex, async (trx: Knex.Transaction) => {
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(user, 'project', 'update', trx);
 
     await tenantScopedTable(trx, 'project_template_status_mappings', tenant)
@@ -2165,7 +2338,10 @@ export const removeTemplatePhaseStatuses = withAuth(async (
     await tenantScopedTable(trx, 'project_templates', tenant)
       .where({ template_id: templateId })
       .update({ updated_at: trx.fn.now() });
-  });
+    });
+  } catch (error) {
+    return returnExpectedTemplateActionError(error);
+  }
 });
 
 // ============================================================
@@ -2199,10 +2375,11 @@ export const setTaskAdditionalAgents = withAuth(async (
   { tenant },
   taskId: string,
   userIds: string[]
-): Promise<void> => {
-  const { knex } = await createTenantKnex();
+): Promise<void | ProjectTemplateActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
 
-  await withTransaction(knex, async (trx: Knex.Transaction) => {
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(user, 'project', 'update', trx);
 
     // Verify task exists
@@ -2239,7 +2416,10 @@ export const setTaskAdditionalAgents = withAuth(async (
         .where({ template_id: phase.template_id })
         .update({ updated_at: trx.fn.now() });
     }
-  });
+    });
+  } catch (error) {
+    return returnExpectedTemplateActionError(error);
+  }
 });
 
 /**
@@ -2362,10 +2542,11 @@ export const addTemplateChecklistItem = withAuth(async (
     completed?: boolean;
     order_number?: number;
   }
-): Promise<IProjectTemplateChecklistItem> => {
-  const { knex } = await createTenantKnex();
+): Promise<IProjectTemplateChecklistItem | ProjectTemplateActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
 
-  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(user, 'project', 'update', trx);
 
     // Verify task exists
@@ -2410,8 +2591,11 @@ export const addTemplateChecklistItem = withAuth(async (
         .update({ updated_at: trx.fn.now() });
     }
 
-    return item;
-  });
+      return item;
+    });
+  } catch (error) {
+    return returnExpectedTemplateActionError(error);
+  }
 });
 
 /**
@@ -2427,10 +2611,11 @@ export const updateTemplateChecklistItem = withAuth(async (
     order_number?: number;
     completed?: boolean;
   }
-): Promise<IProjectTemplateChecklistItem> => {
-  const { knex } = await createTenantKnex();
+): Promise<IProjectTemplateChecklistItem | ProjectTemplateActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
 
-  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(user, 'project', 'update', trx);
 
     const [updated] = await tenantScopedTable(trx, 'project_template_checklist_items', tenant)
@@ -2464,8 +2649,11 @@ export const updateTemplateChecklistItem = withAuth(async (
       }
     }
 
-    return updated;
-  });
+      return updated;
+    });
+  } catch (error) {
+    return returnExpectedTemplateActionError(error);
+  }
 });
 
 /**
@@ -2475,10 +2663,11 @@ export const deleteTemplateChecklistItem = withAuth(async (
   user,
   { tenant },
   checklistId: string
-): Promise<void> => {
-  const { knex } = await createTenantKnex();
+): Promise<void | ProjectTemplateActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
 
-  await withTransaction(knex, async (trx: Knex.Transaction) => {
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(user, 'project', 'update', trx);
 
     // Get item first to find task for timestamp update
@@ -2511,7 +2700,10 @@ export const deleteTemplateChecklistItem = withAuth(async (
           .update({ updated_at: trx.fn.now() });
       }
     }
-  });
+    });
+  } catch (error) {
+    return returnExpectedTemplateActionError(error);
+  }
 });
 
 /**
@@ -2533,10 +2725,11 @@ export const saveTemplateChecklistItems = withAuth(async (
     completed: boolean;
     order_number: number;
   }>
-): Promise<IProjectTemplateChecklistItem[]> => {
-  const { knex } = await createTenantKnex();
+): Promise<IProjectTemplateChecklistItem[] | ProjectTemplateActionError> => {
+  try {
+    const { knex } = await createTenantKnex();
 
-  return await withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
     await checkPermission(user, 'project', 'update', trx);
 
     // Verify task exists
@@ -2612,6 +2805,9 @@ export const saveTemplateChecklistItems = withAuth(async (
         .update({ updated_at: trx.fn.now() });
     }
 
-    return savedItems;
-  });
+      return savedItems;
+    });
+  } catch (error) {
+    return returnExpectedTemplateActionError(error);
+  }
 });

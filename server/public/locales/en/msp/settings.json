@@ -1792,6 +1792,12 @@
       "title": "Single Sign-On",
       "description": "Loading SSO bulk assignment tools..."
     },
+    "status": {
+      "title": "Sign-in providers",
+      "caption": "These providers are managed by the platform — no client IDs or DNS setup is required. Enable auto-link or assign users below.",
+      "available": "Available",
+      "notConfigured": "Not configured"
+    },
     "autoLink": {
       "title": "Automatically set up SSO for new internal users",
       "description": "Turn this on to provision every new staff account with your corporate SSO provider right away, so they never need a password-based sign-in.",
@@ -1997,8 +2003,8 @@
       "providers": {
         "label": "Providers",
         "description": {
-          "ee": "Configure shared provider credentials used by email, calendar, MSP SSO, and other integrations.",
-          "oss": "Configure shared provider credentials used by email, MSP SSO, and other integrations."
+          "ee": "Set up Google or Microsoft for staff sign-in, email, calendar, and other integrations.",
+          "oss": "Set up Google or Microsoft for staff sign-in, email, and other integrations."
         }
       },
       "identity": {
@@ -2041,13 +2047,13 @@
       "google": {
         "name": "Google",
         "description": {
-          "ee": "Tenant-owned Google Cloud credentials for Gmail and Calendar",
-          "oss": "Tenant-owned Google Cloud credentials for Gmail and MSP SSO support flows"
+          "ee": "Google OAuth credentials for staff sign-in, Gmail, and Calendar",
+          "oss": "Google OAuth credentials for staff sign-in and Gmail"
         },
-        "cardTitle": "Provider Credentials",
+        "cardTitle": "Google or Microsoft setup",
         "cardDescription": {
-          "ee": "Configure Google and Microsoft first, then connect provider accounts from the Inbound Email and Calendar integration screens. MSP SSO domain discovery uses these provider credentials with tenant login-domain mappings.",
-          "oss": "Configure Google and Microsoft first, then connect provider accounts from the Inbound Email integration screen. MSP SSO domain discovery uses these provider credentials with tenant login-domain mappings."
+          "ee": "Set up Google or Microsoft first. Then connect mailbox and calendar accounts from their integration screens. Staff sign-in uses the OAuth credentials saved here.",
+          "oss": "Set up Google or Microsoft first. Then connect mailbox accounts from Inbound Email. Staff sign-in uses the OAuth credentials saved here."
         }
       },
       "entra": {

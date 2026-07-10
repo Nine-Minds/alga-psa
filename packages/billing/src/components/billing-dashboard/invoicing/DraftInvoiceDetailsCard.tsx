@@ -17,8 +17,14 @@ import { formatCurrencyFromMinorUnits, toPlainDate } from '@alga-psa/core';
 import type { DateValue, InvoiceViewModel as DbInvoiceViewModel } from '@alga-psa/types';
 import {
   updateDraftInvoiceProperties,
+  type DraftInvoicePropertiesUpdateActionResult,
   type DraftInvoicePropertiesUpdateResult,
 } from '@alga-psa/billing/actions/invoiceModification';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 export interface DraftInvoiceDetailsSummary extends Pick<
   DbInvoiceViewModel,
@@ -57,6 +63,12 @@ const buildFormState = (invoice: DraftInvoiceDetailsSummary): DraftInvoiceDetail
   invoiceDate: normalizeDateInputValue(invoice.invoice_date),
   dueDate: normalizeDateInputValue(invoice.due_date),
 });
+
+const isDraftInvoiceDetailsError = (
+  result: DraftInvoicePropertiesUpdateActionResult
+): result is Exclude<DraftInvoicePropertiesUpdateActionResult, DraftInvoicePropertiesUpdateResult> => (
+  isActionMessageError(result) || isActionPermissionError(result)
+);
 
 const DraftInvoiceDetailsCard: React.FC<DraftInvoiceDetailsCardProps> = ({
   invoice,
@@ -132,6 +144,22 @@ const DraftInvoiceDetailsCard: React.FC<DraftInvoiceDetailsCardProps> = ({
         dueDate: formState.dueDate || null,
       });
 
+      if (isDraftInvoiceDetailsError(updated)) {
+        const message = getErrorMessage(updated);
+
+        if (
+          message === 'Invoice number is required' ||
+          message === 'Invoice number must be unique' ||
+          message === 'Invoice number already exists. Choose a different number.'
+        ) {
+          setInvoiceNumberError(message === 'Invoice number is required' ? 'Invoice number is required.' : message);
+          setFormError(null);
+        } else {
+          setFormError(message);
+        }
+        return;
+      }
+
       const nextSavedState: DraftInvoiceDetailsFormState = {
         invoiceNumber: updated.invoiceNumber,
         invoiceDate: updated.invoiceDate,
@@ -147,7 +175,7 @@ const DraftInvoiceDetailsCard: React.FC<DraftInvoiceDetailsCardProps> = ({
         console.error('Draft invoice details saved, but refresh failed:', refreshError);
       }
     } catch (error) {
-      const message = error instanceof Error ? error.message : 'Failed to save invoice details.';
+      const message = getErrorMessage(error);
 
       if (
         message === 'Invoice number is required' ||
