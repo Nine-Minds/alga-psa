@@ -274,22 +274,24 @@ describe('createClientContractFromWizard', () => {
     const clientId = await insertClient(db, tenantId, 'Fixed Rejection Client');
     createdIds.clientId = clientId;
 
-    await expect(
-      createClientContractFromWizard({
-        contract_name: 'Fixed Product Rejection Contract',
-        description: 'reject product in fixed services',
-        client_id: clientId,
-        start_date: '2025-10-01',
-        end_date: null,
-        billing_frequency: 'monthly',
-        enable_proration: true,
-        fixed_base_rate: 4200,
-        fixed_services: [{ service_id: productId, quantity: 1 }],
-        hourly_services: [],
-        usage_services: [],
-        po_required: false,
-      })
-    ).rejects.toThrow('must be a service to be added to fixed fee contract lines');
+    const result = await createClientContractFromWizard({
+      contract_name: 'Fixed Product Rejection Contract',
+      description: 'reject product in fixed services',
+      client_id: clientId,
+      start_date: '2025-10-01',
+      end_date: null,
+      billing_frequency: 'monthly',
+      enable_proration: true,
+      fixed_base_rate: 4200,
+      fixed_services: [{ service_id: productId, quantity: 1 }],
+      hourly_services: [],
+      usage_services: [],
+      po_required: false,
+    });
+
+    expect(result).toMatchObject({
+      actionError: 'Catalog item "Fixed Line Product" must be a service to be added to fixed fee contract lines.',
+    });
   });
 
   it('T015: accepts hourly services even when catalog billing_method is non-hourly', async () => {
@@ -349,23 +351,25 @@ describe('createClientContractFromWizard', () => {
     const clientId = await insertClient(db, tenantId, 'Hourly Rejection Client');
     createdIds.clientId = clientId;
 
-    await expect(
-      createClientContractFromWizard({
-        contract_name: 'Hourly Product Rejection Contract',
-        description: 'reject product in hourly services',
-        client_id: clientId,
-        start_date: '2025-10-01',
-        end_date: null,
-        billing_frequency: 'monthly',
-        enable_proration: false,
-        fixed_services: [],
-        hourly_services: [{ service_id: productId, hourly_rate: 3500 }],
-        usage_services: [],
-        minimum_billable_time: 15,
-        round_up_to_nearest: 15,
-        po_required: false,
-      })
-    ).rejects.toThrow('must be a service to be added to hourly contract lines');
+    const result = await createClientContractFromWizard({
+      contract_name: 'Hourly Product Rejection Contract',
+      description: 'reject product in hourly services',
+      client_id: clientId,
+      start_date: '2025-10-01',
+      end_date: null,
+      billing_frequency: 'monthly',
+      enable_proration: false,
+      fixed_services: [],
+      hourly_services: [{ service_id: productId, hourly_rate: 3500 }],
+      usage_services: [],
+      minimum_billable_time: 15,
+      round_up_to_nearest: 15,
+      po_required: false,
+    });
+
+    expect(result).toMatchObject({
+      actionError: 'Catalog item "Hourly Line Product" must be a service to be added to hourly contract lines.',
+    });
   });
 
   it('T017: accepts usage services even when catalog billing_method is non-usage', async () => {
@@ -423,21 +427,23 @@ describe('createClientContractFromWizard', () => {
     const clientId = await insertClient(db, tenantId, 'Usage Rejection Client');
     createdIds.clientId = clientId;
 
-    await expect(
-      createClientContractFromWizard({
-        contract_name: 'Usage Product Rejection Contract',
-        description: 'reject product in usage services',
-        client_id: clientId,
-        start_date: '2025-10-01',
-        end_date: null,
-        billing_frequency: 'monthly',
-        enable_proration: false,
-        fixed_services: [],
-        hourly_services: [],
-        usage_services: [{ service_id: productId, unit_rate: 1800, unit_of_measure: 'unit' }],
-        po_required: false,
-      })
-    ).rejects.toThrow('must be a service to be added to usage contract lines');
+    const result = await createClientContractFromWizard({
+      contract_name: 'Usage Product Rejection Contract',
+      description: 'reject product in usage services',
+      client_id: clientId,
+      start_date: '2025-10-01',
+      end_date: null,
+      billing_frequency: 'monthly',
+      enable_proration: false,
+      fixed_services: [],
+      hourly_services: [],
+      usage_services: [{ service_id: productId, unit_rate: 1800, unit_of_measure: 'unit' }],
+      po_required: false,
+    });
+
+    expect(result).toMatchObject({
+      actionError: 'Catalog item "Usage Line Product" must be a service to be added to usage contract lines.',
+    });
   });
 
   it('T021: resolves fixed-mode prefill from service+mode+currency defaults when no fixed override is provided', async () => {

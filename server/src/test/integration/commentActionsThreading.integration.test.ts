@@ -243,14 +243,17 @@ describe('ticket comment threading actions', () => {
         .first();
       threadId = root.thread_id;
 
-      await expect(createComment({
+      const deniedInternalReply = await createComment({
         ticket_id: context.ticket_id,
         user_id: clientUser.user_id,
         note: blockNote('Invalid internal reply from client user'),
         is_internal: true,
         is_resolution: false,
         parent_comment_id: rootCommentId,
-      })).rejects.toThrow('Failed to create comment');
+      });
+      expect(deniedInternalReply).toMatchObject({
+        actionError: 'Only MSP users can create internal comments',
+      });
 
       const invalidReply = await scopedDb(context.tenant).table('comments')
         .select('comment_id')
@@ -391,23 +394,29 @@ describe('ticket comment threading actions', () => {
         parent_comment_id: clientVisibleRootId,
       });
 
-      await expect(createComment({
+      const deniedInternalThreadReply = await createComment({
         ticket_id: context.ticket_id,
         user_id: ids.client_user_id,
         note: blockNote('T078 denied internal-thread reply'),
         is_internal: false,
         is_resolution: false,
         parent_comment_id: internalRootId,
-      })).rejects.toThrow('Failed to create comment');
+      });
+      expect(deniedInternalThreadReply).toMatchObject({
+        actionError: 'Reply visibility must match the thread root visibility',
+      });
 
-      await expect(createComment({
+      const deniedInaccessibleReply = await createComment({
         ticket_id: ids.other_ticket_id,
         user_id: ids.client_user_id,
         note: blockNote('T078 denied inaccessible ticket reply'),
         is_internal: false,
         is_resolution: false,
         parent_comment_id: inaccessibleRootId,
-      })).rejects.toThrow('Failed to create comment');
+      });
+      expect(deniedInaccessibleReply).toMatchObject({
+        actionError: 'Client user cannot access this ticket',
+      });
     } finally {
       userRef.user = originalUser;
       await scopedDb(context.tenant).table('comments')

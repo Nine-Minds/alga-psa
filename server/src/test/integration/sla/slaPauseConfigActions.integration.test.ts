@@ -301,9 +301,10 @@ describe('SLA Pause Config Actions Integration Tests', () => {
         created_by: context.userId
       });
 
-      await expect(setStatusSlaPauseConfig(legacyStatusId, true)).rejects.toThrow(
-        'board-owned ticket status'
-      );
+      const result = await setStatusSlaPauseConfig(legacyStatusId, true);
+      expect(result).toMatchObject({
+        actionError: 'SLA pause configuration requires a board-owned ticket status.',
+      });
     });
 
     it('filters legacy tenant-global ticket configs out of returned config lists', async () => {

@@ -101,6 +101,7 @@ async function cleanupTenant(tenantId: string): Promise<void> {
   await tenantTable(tenantId, 'survey_triggers').del();
   await tenantTable(tenantId, 'survey_templates').del();
   await tenantTable(tenantId, 'client_contracts').del();
+  await tenantTable(tenantId, 'contracts').del();
   await tenantTable(tenantId, 'default_billing_settings').del();
   await tenantTable(tenantId, 'inbound_ticket_defaults').del();
   await tenantTable(tenantId, 'statuses').del();
@@ -314,11 +315,20 @@ async function seedBoardContextStatusReferences(fixture: LegacyFixture) {
     ...(hasColumn(defaultBillingSettingsColumns, 'updated_at') ? { updated_at: db.fn.now() } : {}),
   });
 
+  // client_contracts.contract_id has a composite FK to contracts (real since
+  // 20251008000003 was fixed to create it on plain Postgres) — create the row.
+  const contractRowId = uuidv4();
+  await tenantTable(fixture.tenantId, 'contracts').insert({
+    tenant: fixture.tenantId,
+    contract_id: contractRowId,
+    contract_name: `Contract ${contractRowId.slice(0, 8)}`,
+  });
+
   await tenantTable(fixture.tenantId, 'client_contracts').insert({
     tenant: fixture.tenantId,
     client_contract_id: clientContractId,
     client_id: fixture.clientId,
-    contract_id: uuidv4(),
+    contract_id: contractRowId,
     start_date: new Date('2026-03-01T00:00:00.000Z'),
     renewal_ticket_board_id: boardA,
     renewal_ticket_status_id: legacyClosedStatusId,

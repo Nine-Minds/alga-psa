@@ -503,8 +503,10 @@ describe('project task comment threading model', () => {
         .first();
       expect(ownReply).toBeUndefined();
 
-      await expect(deleteTaskComment(generated.other_reply_id))
-        .rejects.toThrow('You can only delete your own comments');
+      const deniedDeleteResult = await deleteTaskComment(generated.other_reply_id);
+      expect(deniedDeleteResult).toMatchObject({
+        actionError: 'You can only delete your own comments',
+      });
 
       const otherReply = await scopedDb(context.tenant).table('project_task_comments')
         .select('task_comment_id')
