@@ -121,6 +121,15 @@ const billingCycleAlignmentPostInventoryRefs = new Set([
   'shared/workflow/runtime/actions/businessOperations/crmWorkerDal.ts',
 ]);
 
+// Files whose billing_cycle_alignment references were removed after the pass-0
+// inventory snapshot was taken (the infra-suite repair replaced the legacy
+// contract_lines fixture in creditApplication with the shared
+// createFixedPlanAssignment helper); the snapshot remains an accurate record
+// of its point in time.
+const billingCycleAlignmentPostInventoryRemovals = new Set([
+  'server/src/test/infrastructure/billing/credits/creditApplication.test.ts',
+]);
+
 // Files that began referencing persisted service-period fields after the
 // pass-0 inventory snapshot was taken (recurring service-period ledger work
 // landed after the inventory was captured).
@@ -183,7 +192,12 @@ describe('service-period-first billing plan artifacts', () => {
   });
 
   it('T002: inventory captures every live billing_cycle_alignment reference in runtime, schemas, UI, and tests', () => {
-    expect(inventory.timingControls.billingCycleAlignmentRefs.slice().sort()).toEqual(
+    expect(
+      inventory.timingControls.billingCycleAlignmentRefs
+        .filter((file) => !billingCycleAlignmentPostInventoryRemovals.has(file))
+        .slice()
+        .sort()
+    ).toEqual(
       rgList('billing_cycle_alignment', 'packages', 'server', 'shared').filter(
         (file) => !billingCycleAlignmentPostInventoryRefs.has(file)
       )
