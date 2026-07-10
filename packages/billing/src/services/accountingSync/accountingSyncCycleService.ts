@@ -482,7 +482,9 @@ async function drainExportVendorBillOps(deps: DrainDeps): Promise<void> {
         : undefined;
 
     for (const op of remaining) {
-      const nextStatus = await deps.ops.markFailed(deps.tenantId, op.op_id, message);
+      const nextStatus = isValidationFailure
+        ? await deps.ops.markFailedTerminal(deps.tenantId, op.op_id, message)
+        : await deps.ops.markFailed(deps.tenantId, op.op_id, message);
       deps.stats.opsFailed += 1;
 
       if (isValidationFailure || nextStatus === 'skipped') {

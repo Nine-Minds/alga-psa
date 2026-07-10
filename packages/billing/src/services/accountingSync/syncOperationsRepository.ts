@@ -116,6 +116,23 @@ export class SyncOperationsRepository {
     return nextStatus;
   }
 
+  async markFailedTerminal(tenant: string, opId: string, error: string): Promise<'failed'> {
+    const row = await this.table<AccountingSyncOperation>(tenant)
+      .where({ op_id: opId })
+      .first();
+
+    await this.table(tenant)
+      .where({ op_id: opId })
+      .update({
+        status: 'failed',
+        attempts: (row?.attempts ?? 0) + 1,
+        last_error: error,
+        processed_at: this.knex.fn.now()
+      });
+
+    return 'failed';
+  }
+
   /**
    * Mark pending ops done because the work happened elsewhere (e.g. a manual
    * export batch covered queued invoice exports). Returns affected count.

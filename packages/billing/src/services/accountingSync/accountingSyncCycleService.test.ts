@@ -843,7 +843,7 @@ describe('runAccountingSyncCycle', () => {
     const creditMemoOp = { op_id: 'op-cm-10', alga_entity_id: 'inv-cm-10', attempts: 0 };
 
     // listPending is called once per outbound operation type; only invoice/credit-memo have ops here.
-    const listPending = vi.fn(async () => [])
+    const listPending = vi.fn(async () => [] as any[])
       .mockResolvedValueOnce([invoiceOp])      // export_invoice call
       .mockResolvedValueOnce([creditMemoOp]);  // export_credit_memo call
 

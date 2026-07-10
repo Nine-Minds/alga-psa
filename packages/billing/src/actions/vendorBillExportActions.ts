@@ -91,13 +91,17 @@ function pendingStatusFromExportRow(row: ExportStatusRow): VendorBillExportStatu
   const lineStatus = row.line_status ?? '';
   const batchStatus = row.batch_status ?? '';
   const externalRef = row.external_document_ref ?? null;
+  const batchIsActive = batchStatus === 'pending' || batchStatus === 'validating' || batchStatus === 'ready';
 
   if (
-    lineStatus === 'pending' ||
-    lineStatus === 'ready' ||
-    batchStatus === 'pending' ||
-    batchStatus === 'validating' ||
-    batchStatus === 'ready'
+    batchIsActive &&
+    (
+      lineStatus === 'pending' ||
+      lineStatus === 'ready' ||
+      batchStatus === 'pending' ||
+      batchStatus === 'validating' ||
+      batchStatus === 'ready'
+    )
   ) {
     return {
       bill_id: row.bill_id,
