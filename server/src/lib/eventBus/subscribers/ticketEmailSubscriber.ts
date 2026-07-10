@@ -159,13 +159,20 @@ function shouldSendTicketClosedWatcherEmail(
 function resolveAccumulatedTicketNotificationSuppression(
   accumulatedEvents: AccumulatedTicketEvent[]
 ): TicketNotificationSuppression {
+  // Suppress the accumulated send only when every event in the batch asked
+  // for it — one silent update must not swallow a later loud update that
+  // landed in the same accumulation window.
   return {
-    suppressContactNotifications: accumulatedEvents.some(
-      (accumulatedEvent) => accumulatedEvent.payload?.suppressContactNotifications === true
-    ),
-    suppressInternalNotifications: accumulatedEvents.some(
-      (accumulatedEvent) => accumulatedEvent.payload?.suppressInternalNotifications === true
-    ),
+    suppressContactNotifications:
+      accumulatedEvents.length > 0 &&
+      accumulatedEvents.every(
+        (accumulatedEvent) => accumulatedEvent.payload?.suppressContactNotifications === true
+      ),
+    suppressInternalNotifications:
+      accumulatedEvents.length > 0 &&
+      accumulatedEvents.every(
+        (accumulatedEvent) => accumulatedEvent.payload?.suppressInternalNotifications === true
+      ),
   };
 }
 

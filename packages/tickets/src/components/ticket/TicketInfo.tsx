@@ -94,7 +94,7 @@ interface TicketInfoProps {
   additionalAgents?: { user_id: string; name: string }[];
   responseStateTrackingEnabled?: boolean;
   teams?: ITeam[];
-  onAssignTeam?: (teamId: string) => Promise<void>;
+  onAssignTeam?: (teamId: string, options?: TicketNotificationSuppressionValue) => Promise<void>;
   onRemoveTeamAssignment?: () => Promise<void>;
   onClipboardImageUploaded?: () => Promise<void> | void;
   uploadTicketAttachmentAction?: (
@@ -930,9 +930,13 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
         }
       }
 
+      const saveOptions = notificationSuppression.suppressContactNotifications
+        ? notificationSuppression
+        : undefined;
+
       // Assign team if pending (fires server action for member expansion)
       if (pendingTeamId && onAssignTeam) {
-        await onAssignTeam(pendingTeamId);
+        await onAssignTeam(pendingTeamId, saveOptions);
         setPendingTeamId(null);
       }
 
@@ -943,9 +947,6 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
       }
 
       if (onSaveChanges) {
-        const saveOptions = notificationSuppression.suppressContactNotifications
-          ? notificationSuppression
-          : undefined;
         const success = saveOptions
           ? await onSaveChanges(allChanges, saveOptions)
           : await onSaveChanges(allChanges);

@@ -3002,14 +3002,9 @@ export async function updateTicketInTransaction(
         const childPublishes = childTickets
           .map((childTicket: Record<string, unknown>) => ({
             ticketId: childTicket.ticket_id as string,
-            previousValues: childTicket,
             updatedFields: diffTicketFields(childTicket, propagateFields),
           }))
-          .filter((childPublish: {
-            ticketId: string;
-            previousValues: Record<string, unknown>;
-            updatedFields: ReturnType<typeof diffTicketFields>;
-          }) =>
+          .filter((childPublish: { ticketId: string; updatedFields: ReturnType<typeof diffTicketFields> }) =>
             childPublish.updatedFields.length > 0);
 
         const propagate: Record<string, any> = { ...propagateFields };
@@ -3033,42 +3028,12 @@ export async function updateTicketInTransaction(
             }),
             `ticket-live-update ticket=${childPublish.ticketId}`
           );
-
-          if (
-            suppressContactNotifications &&
-            newStatus?.is_closed &&
-            !oldStatus?.is_closed &&
-            Object.prototype.hasOwnProperty.call(propagateFields, 'status_id') &&
-            childPublish.updatedFields.includes('status_id')
-          ) {
-            const previousChildStatusId = childPublish.previousValues.status_id ?? null;
-            registerAfterCommit(trx, () =>
-              publishWorkflowEvent({
-                eventType: 'TICKET_CLOSED',
-                payload: {
-                  ticketId: childPublish.ticketId,
-                  ...(isSystemActor
-                    ? {}
-                    : { userId: user.user_id, closedByUserId: user.user_id }),
-                  closedAt: occurredAt,
-                  changes: {
-                    status_id: {
-                      old: previousChildStatusId,
-                      new: propagateFields.status_id,
-                    },
-                  },
-                  suppressContactNotifications,
-                  suppressInternalNotifications,
-                },
-                ctx: workflowCtx,
-                eventName: 'Ticket Closed',
-                fromState: previousChildStatusId == null ? undefined : String(previousChildStatusId),
-                toState: propagateFields.status_id == null ? undefined : String(propagateFields.status_id),
-              }),
-              `TICKET_CLOSED bundled-child ticket=${childPublish.ticketId}`
-            );
-          }
         }
+        // Child closes publish no TICKET_CLOSED of their own — silent or not.
+        // The master's TICKET_CLOSED carries the suppression flags, and the
+        // close subscriber both emails and (when suppressed) skips child
+        // requesters from that single event. Publishing per-child events only
+        // on silent closes made the silent path noisier than a normal close.
       }
     }
 

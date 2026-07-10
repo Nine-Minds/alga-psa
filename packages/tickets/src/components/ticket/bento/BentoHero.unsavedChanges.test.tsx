@@ -295,6 +295,54 @@ describe('BentoHero unsaved change model', () => {
     });
   });
 
+  it('re-selecting the original board clears the staged board-scoped nulls (no unsaveable diff)', async () => {
+    const onBatchSelectChange = vi.fn().mockResolvedValue(true);
+    const onLiveDirtyFieldsChange = vi.fn();
+    renderHero({ onBatchSelectChange, onLiveDirtyFieldsChange });
+
+    await waitFor(() => expect(getTicketCategoriesByBoardMock).toHaveBeenCalledWith('board-a'));
+
+    fireEvent.change(screen.getByTestId('bento-hero-board-select'), {
+      target: { value: 'board-b' },
+    });
+    expect(screen.getByRole('button', { name: /Save Changes/i })).toBeDisabled();
+
+    await waitFor(() => expect(getTicketStatusesMock).toHaveBeenCalledWith('board-b'));
+    await waitFor(() => expect(getTicketCategoriesByBoardMock).toHaveBeenCalledWith('board-b'));
+
+    fireEvent.change(screen.getByTestId('bento-hero-board-select'), {
+      target: { value: 'board-a' },
+    });
+
+    // Returning to the saved board restores status/category/priority, so the
+    // pending diff self-cleans: no save bar, no warning, no {status_id: null}.
+    await waitFor(() => {
+      expect(screen.queryByRole('button', { name: /Save Changes/i })).not.toBeInTheDocument();
+    });
+    await waitFor(() => {
+      expect(onLiveDirtyFieldsChange).toHaveBeenLastCalledWith([]);
+    });
+    expect(screen.queryByText('Select a status for the new board before saving.')).not.toBeInTheDocument();
+    expect(screen.getByTestId('bento-hero-status-select')).toHaveValue('status-a');
+  });
+
+  it('keeps the ticket\'s current status selectable when the board fetch omits it', async () => {
+    getTicketStatusesMock.mockImplementation(async () => [
+      { status_id: 'status-x', name: 'Board-only status', is_closed: false },
+    ]);
+    renderHero({});
+
+    await waitFor(() => expect(getTicketStatusesMock).toHaveBeenCalledWith('board-a'));
+
+    // The saved status (a global/legacy status the board fetch doesn't return)
+    // must not vanish from the select — a blank status control reads as data loss.
+    await waitFor(() => {
+      expect(screen.getByTestId('bento-hero-status-select')).toHaveValue('status-a');
+    });
+    expect(screen.getByRole('option', { name: 'Open' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Board-only status' })).toBeInTheDocument();
+  });
+
   it('T057/T066: registers the nav guard, reports dirty fields, and wires the save shortcut', async () => {
     const onLiveDirtyFieldsChange = vi.fn();
     renderHero({ onLiveDirtyFieldsChange });

@@ -303,7 +303,25 @@ export const updateBoardAutoCloseRule = withAuth(
           throw new Error('Auto-close rule not found');
         }
 
-        await validateAutoCloseRule(trx, tenant, existing.board_id, input, ruleId);
+        // Validate the values that will actually be persisted: a partial input
+        // merged with the existing row can violate internal ⇒ contact even when
+        // the raw input alone looks fine (and vice versa).
+        const suppressContactNotifications =
+          input.suppress_contact_notifications ?? existing.suppress_contact_notifications ?? false;
+        const suppressInternalNotifications =
+          input.suppress_internal_notifications ?? existing.suppress_internal_notifications ?? false;
+
+        await validateAutoCloseRule(
+          trx,
+          tenant,
+          existing.board_id,
+          {
+            ...input,
+            suppress_contact_notifications: suppressContactNotifications,
+            suppress_internal_notifications: suppressInternalNotifications,
+          },
+          ruleId
+        );
 
         const [row] = await tenantScopedTable(trx, 'board_auto_close_rules', tenant)
           .where({ rule_id: ruleId })
@@ -313,8 +331,8 @@ export const updateBoardAutoCloseRule = withAuth(
             warning_days_before: input.warning_days_before ?? null,
             close_to_status_id: input.close_to_status_id,
             is_enabled: input.is_enabled ?? existing.is_enabled,
-            suppress_contact_notifications: input.suppress_contact_notifications ?? existing.suppress_contact_notifications ?? false,
-            suppress_internal_notifications: input.suppress_internal_notifications ?? existing.suppress_internal_notifications ?? false,
+            suppress_contact_notifications: suppressContactNotifications,
+            suppress_internal_notifications: suppressInternalNotifications,
             updated_at: trx.fn.now(),
           })
           .returning('*');

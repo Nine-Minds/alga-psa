@@ -66,8 +66,34 @@ describe('ticketEmailSubscriber suppression policy', () => {
     expect(shouldSendContactFacingTicketEmail(suppression)).toBe(false);
   });
 
-  it('T027: accumulated ticket updates preserve contact suppression through the flush policy', () => {
-    const suppression = resolveAccumulatedTicketNotificationSuppression([
+  it('T027: accumulated ticket updates suppress the client email only when every event is silent', () => {
+    const allSilent = resolveAccumulatedTicketNotificationSuppression([
+      {
+        timestamp: '2026-07-09T12:00:00.000Z',
+        userId: 'user-1',
+        eventType: 'TICKET_UPDATED',
+        payload: {
+          suppressContactNotifications: true,
+          suppressInternalNotifications: false,
+        },
+      },
+      {
+        timestamp: '2026-07-09T12:00:01.000Z',
+        userId: 'user-2',
+        eventType: 'TICKET_UPDATED',
+        payload: {
+          suppressContactNotifications: true,
+          suppressInternalNotifications: false,
+        },
+      },
+    ]);
+
+    expect(shouldSendContactFacingTicketEmail(allSilent)).toBe(false);
+    expect(shouldSendInternalTicketEmail(allSilent)).toBe(true);
+
+    // A loud update inside the accumulation window makes the batch loud —
+    // an earlier silent update must not swallow it.
+    const mixed = resolveAccumulatedTicketNotificationSuppression([
       {
         timestamp: '2026-07-09T12:00:00.000Z',
         userId: 'user-1',
@@ -85,8 +111,8 @@ describe('ticketEmailSubscriber suppression policy', () => {
       },
     ]);
 
-    expect(shouldSendContactFacingTicketEmail(suppression)).toBe(false);
-    expect(shouldSendInternalTicketEmail(suppression)).toBe(true);
+    expect(shouldSendContactFacingTicketEmail(mixed)).toBe(true);
+    expect(shouldSendInternalTicketEmail(mixed)).toBe(true);
   });
 
   it('T028: update watcher sends keep internal recipients on contact-only silence and drop all recipients on full silence', () => {

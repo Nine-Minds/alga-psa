@@ -1,3 +1,5 @@
+import { readFileSync } from 'fs';
+import { resolve } from 'path';
 import { describe, expect, it } from 'vitest';
 
 import { internalNotificationSubscriberTestHarness } from '../internalNotificationSubscriber';
@@ -28,6 +30,18 @@ describe('internalNotificationSubscriber ticket suppression policy', () => {
 
     expect(shouldCreateStaffTicketNotification(contactOnly)).toBe(true);
     expect(shouldCreateStaffTicketNotification(full)).toBe(false);
+  });
+
+  it('handleTicketAssigned wires both suppression gates (assignment must honor silent updates)', () => {
+    const source = readFileSync(resolve(__dirname, '../internalNotificationSubscriber.ts'), 'utf8');
+    const section = source.slice(
+      source.indexOf('async function handleTicketAssigned'),
+      source.indexOf('async function handleTicketAdditionalAgentAssigned'),
+    );
+
+    expect(section).toContain('resolveTicketNotificationSuppression(event.payload)');
+    expect(section).toContain('shouldCreateStaffTicketNotification(suppression)');
+    expect(section).toContain('shouldCreateContactPortalTicketNotification(suppression)');
   });
 
   it('T031: update notifications use the same contact and internal gating policy', () => {

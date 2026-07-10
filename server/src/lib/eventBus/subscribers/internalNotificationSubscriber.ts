@@ -262,6 +262,7 @@ async function getAllTaskAssignees(
  */
 async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
   const { tenantId, ticketId, userId, assignedByUserId } = event.payload;
+  const suppression = resolveTicketNotificationSuppression(event.payload);
 
   try {
     const db = await getConnection(tenantId);
@@ -312,21 +313,28 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
     });
 
     // Notify the primary assigned user
-    await createNotificationFromTemplateInternal(db, {
-      tenant: tenantId,
-      user_id: userId,
-      template_name: 'ticket-assigned',
-      type: 'info',
-      category: 'tickets',
-      link: internalUrl,
-      data: {
-        ticketId: ticket.ticket_number,
-        ticketNumber: ticket.ticket_number,
-        ticketTitle: ticket.title,
-        priority: ticket.priority,
-        performedByName
-      }
-    });
+    if (!shouldCreateStaffTicketNotification(suppression)) {
+      logger.debug('[InternalNotificationSubscriber] Skipped ticket assigned staff notification due to suppression', {
+        ticketId,
+        tenantId
+      });
+    } else {
+      await createNotificationFromTemplateInternal(db, {
+        tenant: tenantId,
+        user_id: userId,
+        template_name: 'ticket-assigned',
+        type: 'info',
+        category: 'tickets',
+        link: internalUrl,
+        data: {
+          ticketId: ticket.ticket_number,
+          ticketNumber: ticket.ticket_number,
+          ticketTitle: ticket.title,
+          priority: ticket.priority,
+          performedByName
+        }
+      });
+    }
 
     // Client-portal in-app notification — mirror the email-side rules in
     // ticketEmailSubscriber.handleTicketAssigned: fire only for first
@@ -340,7 +348,12 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
     const CREATION_WINDOW_MS = 30_000;
     const isCreationTimeAssignment = enteredAtMs > 0 && (Date.now() - enteredAtMs) <= CREATION_WINDOW_MS;
 
-    if (
+    if (!shouldCreateContactPortalTicketNotification(suppression)) {
+      logger.debug('[InternalNotificationSubscriber] Skipped ticket assigned client portal notification due to suppression', {
+        ticketId,
+        tenantId
+      });
+    } else if (
       !assignedTeamIdCheck &&
       ticket.contact_name_id &&
       portalUrl &&
@@ -387,7 +400,7 @@ async function handleTicketAssigned(event: TicketAssignedEvent): Promise<void> {
 
     // If this is a team assignment, notify team members (excluding primary assignee)
     const assignedTeamId = (event.payload as any).changes?.assigned_team_id as string | undefined;
-    if (assignedTeamId) {
+    if (assignedTeamId && shouldCreateStaffTicketNotification(suppression)) {
       const team = await tenantScopedTable(db, 'teams', tenantId)
         .select('team_name')
         .where({ team_id: assignedTeamId })
@@ -2843,6 +2856,7 @@ export const internalNotificationSubscriberTestHarness = {
   resolveTicketNotificationSuppression,
   shouldCreateContactPortalTicketNotification,
   shouldCreateStaffTicketNotification,
+  handleTicketAssigned,
   handleTicketUpdated,
   handleTicketClosed,
   handleInternalNotificationEvent,

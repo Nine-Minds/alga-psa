@@ -18,13 +18,27 @@ describe('auto-close notification suppression contract', () => {
     expect(actionsSource).toContain("'suppress_internal_notifications'");
     expect(actionsSource).toContain('suppress_contact_notifications: input.suppress_contact_notifications ?? false');
     expect(actionsSource).toContain('suppress_internal_notifications: input.suppress_internal_notifications ?? false');
-    expect(actionsSource).toContain('suppress_contact_notifications: input.suppress_contact_notifications ?? existing.suppress_contact_notifications ?? false');
-    expect(actionsSource).toContain('suppress_internal_notifications: input.suppress_internal_notifications ?? existing.suppress_internal_notifications ?? false');
+    expect(actionsSource).toContain(
+      'input.suppress_contact_notifications ?? existing.suppress_contact_notifications ?? false'
+    );
+    expect(actionsSource).toContain(
+      'input.suppress_internal_notifications ?? existing.suppress_internal_notifications ?? false'
+    );
   });
 
   it('validates internal suppression requires contact suppression', () => {
     expect(actionsSource).toContain('input.suppress_internal_notifications && !input.suppress_contact_notifications');
     expect(actionsSource).toContain('suppress_internal_notifications requires suppress_contact_notifications');
+  });
+
+  it('validates the merged (input over existing) suppression pair on update, not the raw input', () => {
+    const updateSection = actionsSource.slice(
+      actionsSource.indexOf('export const updateBoardAutoCloseRule'),
+      actionsSource.indexOf('export const deleteBoardAutoCloseRule'),
+    );
+    const validateCall = updateSection.slice(updateSection.indexOf('await validateAutoCloseRule'));
+    expect(validateCall).toContain('suppress_contact_notifications: suppressContactNotifications');
+    expect(validateCall).toContain('suppress_internal_notifications: suppressInternalNotifications');
   });
 
   it('renders coupled auto-close suppression controls in board settings', () => {

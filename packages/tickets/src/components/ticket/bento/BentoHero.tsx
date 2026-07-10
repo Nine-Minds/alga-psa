@@ -81,9 +81,10 @@ interface BentoHeroProps {
   onAgentClick?: (userId: string) => void;
   onSelectChange: (field: keyof ITicket, newValue: string | null) => Promise<void> | void;
   /**
-   * Coalesced multi-field save. Hero edits are buffered and debounced, then
-   * flushed here as ONE combined update (one server write + one live broadcast
-   * + one timeline row). Falls back to per-field onSelectChange when absent.
+   * Coalesced multi-field save. Hero edits are buffered as a pending diff and
+   * flushed here on explicit Save as ONE combined update (one server write +
+   * one live broadcast + one timeline row). Falls back to per-field
+   * onSelectChange when absent.
    */
   onBatchSelectChange?: (
     changes: Record<string, string | null>,
@@ -130,8 +131,9 @@ function HeroField({ label, children }: { label: string; children: React.ReactNo
 
 /**
  * Grid layout hero band: the fields a technician touches constantly, editable
- * in place (each control persists immediately through the existing
- * handleSelectChange pipeline). Everything else lives behind "All fields".
+ * in place. Edits buffer into a pending diff and persist together via the
+ * Save Changes bar (mirroring the entry hero). Everything else lives behind
+ * "All fields".
  */
 export function BentoHero({
   id,
@@ -399,9 +401,17 @@ export function BentoHero({
     }
   }, [handlePendingChange, pendingBoardConfig, pendingChanges.board_id, savedBoardConfig]);
 
-  const scopedStatusOptions = boardScopedStatusOptions.length > 0
+  const displayedStatusId = displayValue('status_id');
+  const baseScopedStatusOptions = boardScopedStatusOptions.length > 0
     ? boardScopedStatusOptions
-    : statusOptions.filter((option) => option.board_id === effectiveBoardId || option.value === displayValue('status_id'));
+    : statusOptions.filter((option) => option.board_id === effectiveBoardId || option.value === displayedStatusId);
+  // The displayed status must stay in the list even when the board fetch
+  // returns only board-scoped rows (global/legacy statuses live on no board);
+  // otherwise the select renders blank for a perfectly valid ticket.
+  const scopedStatusOptions =
+    displayedStatusId && !baseScopedStatusOptions.some((option) => option.value === displayedStatusId)
+      ? [...baseScopedStatusOptions, ...statusOptions.filter((option) => option.value === displayedStatusId)]
+      : baseScopedStatusOptions;
 
   const categoryOptions = useMemo<SelectOption[]>(
     () =>
@@ -507,10 +517,29 @@ export function BentoHero({
   const handleBoardChange = useCallback((value: string) => {
     ignoredPriorityResetBoardRef.current = null;
     handlePendingChange('board_id', value);
-    handlePendingChange('status_id', null);
-    handlePendingChange('category_id', null);
-    handlePendingChange('subcategory_id', null);
-  }, [handlePendingChange]);
+    if (value === (originalTicketValues.board_id ?? null)) {
+      // Returning to the saved board: drop the board-driven overrides instead
+      // of leaving cleared values staged — {status_id: null} with no pending
+      // board would pass the destination-status gate yet always fail to save.
+      // Must read the latest staged state (not this render's closure): the
+      // async priority-type reset may have staged priority_id in a commit
+      // this handler's render never saw.
+      setPendingChanges((prev) => {
+        const next = { ...prev };
+        delete next.status_id;
+        delete next.category_id;
+        delete next.subcategory_id;
+        if (next.priority_id === null) {
+          delete next.priority_id;
+        }
+        return next;
+      });
+    } else {
+      handlePendingChange('status_id', null);
+      handlePendingChange('category_id', null);
+      handlePendingChange('subcategory_id', null);
+    }
+  }, [handlePendingChange, originalTicketValues]);
 
   const handleSaveChanges = useCallback(async () => {
     if (!hasUnsavedChanges || requiresDestinationStatusSelection || hasActiveLiveConflict) {

@@ -360,3 +360,19 @@ One `UpdateTicketInTransactionOptions` flag pair + one payload-schema extension 
   - `npm -w @alga-psa/tickets run typecheck`
   - `npm -w @alga-psa/jobs run typecheck`
   - `cd server && NODE_OPTIONS=--max-old-space-size=12288 npm run typecheck -- --pretty false`
+
+## 2026-07-09 — Post-Review Fix Round (10 confirmed findings from high-effort code review)
+
+- Suppression flags dropped on real paths (feature's core guarantee):
+  - `internalNotificationSubscriber.handleTicketAssigned` now resolves the suppression flags and gates the assignee staff notification, the client-portal assignment notification, and team-member notifications (previously ignored the flags entirely). Harness exports `handleTicketAssigned`; wiring guarded by a source-contract test.
+  - Team assignment from the entry hero save bar: `TicketInfo.handleSaveChanges` passes `saveOptions` into `onAssignTeam`; `TicketDetails.handleAssignTeam` forwards them to `assignTeamToTicket`.
+  - `TicketDetails.handleBatchSaveChanges` fallback (no `onBatchTicketUpdate`): when suppression is requested, non-ITIL fields now save through one `updateTicket` mirror call carrying the options instead of per-field `handleSelectChange` calls that dropped them.
+- Silent resolution-close: runs the `checkTicketClosure` pre-check like the non-silent path, opens the blocked-close dialog (which now carries the suppression choice into `submitCloseOverride`), and surfaces a failed batch save with a toast instead of resetting the composer as if closed.
+- BentoHero:
+  - Board re-select: returning to the saved board drops the board-driven overrides via a functional `setPendingChanges` (closure-read of `pendingChanges.priority_id` was racy against the async priority-type reset — caught as a 1-in-5 test flake, fixed by reading `prev`). Previously `{status_id: null}` stayed staged and Save always failed zod.
+  - Status options: the displayed status is force-included in `scopedStatusOptions` when the board fetch omits it (global/legacy statuses) so the select never renders blank.
+  - Stale docblocks describing the removed 700ms debounce model rewritten. Nav-guard parity with entry hero confirmed (`UnsavedChangesContext` handles beforeunload).
+- Accumulated update emails: `resolveAccumulatedTicketNotificationSuppression` switched `.some()` → `.every()` (guarded non-empty) — one silent update no longer swallows a later loud update in the same accumulation window. T027 updated to cover mixed batches.
+- Bundle closes: removed the suppressed-only per-child `TICKET_CLOSED` publish — it made silent closes fire child events (internal emails, staff notifications, webhooks, workflow runs) that loud closes never fire. The master event carries the flags and the close subscriber both sends and (when suppressed) skips child requesters from that single event. T024 updated: no per-child close events, live updates still per changed child.
+- `updateBoardAutoCloseRule` validates the merged (input over existing) suppression pair and persists the same values — partial updates can no longer pass raw-input validation yet violate the DB CHECK constraint (or be spuriously rejected).
+- New/updated tests: internalNotificationSubscriber wiring guard, T024, T027, closeRule merged-validation contract, BentoHero board re-select regression + status-retention regression.

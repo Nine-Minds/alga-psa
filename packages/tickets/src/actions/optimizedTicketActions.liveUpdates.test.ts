@@ -359,7 +359,7 @@ describe('updateTicketWithCache live updates', () => {
     expect(channels).not.toContain('alga-psa:ticket-updates:tenant-1:child-2');
   });
 
-  it('T024: suppressed bundled master close publishes child close events with suppression flags', async () => {
+  it('T024: suppressed bundled master close publishes no per-child close events (master event carries the flags)', async () => {
     withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) =>
       callback(
         buildTrx({
@@ -402,29 +402,21 @@ describe('updateTicketWithCache live updates', () => {
         }),
       })
     );
-    expect(publishWorkflowEventMock).toHaveBeenCalledWith(
-      expect.objectContaining({
-        eventType: 'TICKET_CLOSED',
-        payload: expect.objectContaining({
-          ticketId: 'child-1',
-          changes: {
-            status_id: {
-              old: 'status-1',
-              new: 'closed-status-1',
-            },
-          },
-          suppressContactNotifications: true,
-          suppressInternalNotifications: true,
-        }),
-        fromState: 'status-1',
-        toState: 'closed-status-1',
-      })
-    );
+    // Children never publish TICKET_CLOSED of their own — the master's event
+    // (with flags) drives child requester handling in the close subscriber.
+    // A silent close must not fan out events a normal close doesn't.
     expect(
       publishWorkflowEventMock.mock.calls.some(
-        ([event]) => event.eventType === 'TICKET_CLOSED' && event.payload?.ticketId === 'child-2'
+        ([event]) =>
+          event.eventType === 'TICKET_CLOSED' &&
+          (event.payload?.ticketId === 'child-1' || event.payload?.ticketId === 'child-2')
       )
     ).toBe(false);
+
+    // Child live UI updates still fire for the changed child only.
+    const channels = publishRedisMock.mock.calls.map((call) => call[0]);
+    expect(channels.filter((channel) => channel === 'alga-psa:ticket-updates:tenant-1:child-1')).toHaveLength(1);
+    expect(channels).not.toContain('alga-psa:ticket-updates:tenant-1:child-2');
   });
 
   it('T007: live-update kill switch skips Redis publish without blocking the ticket update', async () => {
