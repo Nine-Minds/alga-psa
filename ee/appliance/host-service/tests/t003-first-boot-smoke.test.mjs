@@ -137,6 +137,11 @@ test('T003 first-boot smoke: console banner and the token -> password -> session
     // Data endpoints are gated.
     const configNoAuth = await httpGet(`${base}/api/setup/config`);
     assert.equal(configNoAuth.statusCode, 401);
+    const resetNoAuth = await postJson(`${base}/api/admin-password-reset`, {
+      password: 'N3w!ApplicationPass',
+      passwordConfirm: 'N3w!ApplicationPass'
+    });
+    assert.equal(resetNoAuth.statusCode, 401);
 
     // Wrong token is rejected; correct token advances to set-password.
     const badToken = await postJson(`${base}/api/auth/redeem-token`, { token: 'nope' });
@@ -169,6 +174,14 @@ test('T003 first-boot smoke: console banner and the token -> password -> session
     assert.equal(configBody.mode, 'setup');
     assert.equal(configBody.defaults.channel, 'stable');
     assert.equal(configBody.defaults.appHostname, 'http://192.0.2.10:3000');
+
+    // The recovery route is management-session gated and validates credentials
+    // before attempting any Kubernetes operation.
+    const weakReset = await postJson(`${base}/api/admin-password-reset`, {
+      password: 'short',
+      passwordConfirm: 'short'
+    }, { Cookie: cookie });
+    assert.equal(weakReset.statusCode, 400);
 
     const submit = await postJson(`${base}/api/setup`, {
       channel: 'stable',
