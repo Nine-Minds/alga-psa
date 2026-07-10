@@ -20,7 +20,7 @@
   ],
   "scripts": {
     "install:ignore": "npm ci --ignore-scripts",
-    "postinstall": "node scripts/postinstall-patches.cjs",
+    "postinstall": "node -e \"const f='scripts/postinstall-patches.cjs';if(require('fs').existsSync(f))process.exit(require('child_process').spawnSync(process.execPath,[f],{stdio:'inherit'}).status??1)\"",
     "migrate": "knex migrate:latest",
     "seed": "knex seed:run",
     "test:local": "cd server && dotenv -e ../.env.localtest -- vitest \"$@\"",
