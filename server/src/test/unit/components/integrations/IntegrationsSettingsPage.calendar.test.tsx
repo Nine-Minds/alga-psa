@@ -226,9 +226,11 @@ describe('IntegrationsSettingsPage Calendar placement', () => {
 
     render(<IntegrationsSettingsPage />);
 
-    expect(screen.getByText('Providers Integrations')).toBeInTheDocument();
-    expect(screen.getByText('Configure shared provider credentials used by email, MSP SSO, and other integrations.')).toBeInTheDocument();
-    expect(screen.getByText('Configure Google and Microsoft first, then connect provider accounts from the Inbound Email integration screen. MSP SSO domain discovery uses these provider credentials with tenant login-domain mappings.')).toBeInTheDocument();
+    // The simplified Providers tab renders no category heading/description banner,
+    // so no shared Providers copy (Calendar guidance included) can appear.
+    expect(screen.queryByText('Providers Integrations')).not.toBeInTheDocument();
+    expect(screen.getByText('Google Integration Settings')).toBeInTheDocument();
+    expect(screen.getByText('Microsoft Integration Settings')).toBeInTheDocument();
     expect(screen.queryByText(/Calendar integration screens/i)).not.toBeInTheDocument();
   });
 });

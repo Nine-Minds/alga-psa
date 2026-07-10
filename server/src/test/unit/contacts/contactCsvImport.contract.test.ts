@@ -18,6 +18,8 @@ const testState = vi.hoisted(() => ({
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: any) => (...args: any[]) =>
     action({ user_id: testState.userId, tenant: testState.tenant }, { tenant: testState.tenant }, ...args),
+  withOptionalAuth: (action: any) => (...args: any[]) =>
+    action({ user_id: testState.userId, tenant: testState.tenant }, { tenant: testState.tenant }, ...args),
 }));
 
 // Grant the MSP permission gate so the CSV import logic under test actually runs.

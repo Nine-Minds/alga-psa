@@ -58,6 +58,7 @@ vi.mock('@alga-psa/ui/lib/i18n/client', async () => {
   });
 
   return {
+    detectClientLocale: () => 'de',
     I18nProvider: ({
       children,
       initialLocale = 'de',
@@ -123,6 +124,17 @@ vi.mock('@/components/layout/DefaultLayout', () => ({
   ),
 }));
 
+vi.mock('server/src/components/layout/DefaultLayout', () => ({
+  default: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="default-layout">{children}</div>
+  ),
+}));
+
+vi.mock('server/src/components/layout/Header', () => ({
+  QUICK_CREATE_OPEN_EVENT: 'alga:quick-create:open',
+  default: () => null,
+}));
+
 vi.mock('@alga-psa/tags/context', () => ({
   TagProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
@@ -172,6 +184,8 @@ vi.mock('@/hooks/useKeyboardShortcutPreferenceStorage', () => ({
 vi.mock('@alga-psa/ui/components/feature-flags/FeatureFlagPageWrapper', () => ({
   default: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
+
+vi.mock('@alga-psa/tickets/actions/ticketActions', () => ({}));
 
 vi.mock('server/src/app/msp/service-requests/ServiceRequestDefinitionEditorPage', async () => {
   const ReactModule = await import('react');

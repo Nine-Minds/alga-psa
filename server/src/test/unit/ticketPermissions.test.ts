@@ -15,6 +15,13 @@ vi.mock('@alga-psa/tickets/models/ticket', () => ({
   },
 }));
 
+vi.mock('@alga-psa/tickets/actions/ticketActions', () => ({
+  getTickets: vi.fn(),
+  updateTicket: vi.fn(),
+  addTicket: vi.fn(),
+  deleteTicket: vi.fn(),
+}));
+
 vi.mock('next/cache', () => ({
   revalidatePath: vi.fn(),
 }));

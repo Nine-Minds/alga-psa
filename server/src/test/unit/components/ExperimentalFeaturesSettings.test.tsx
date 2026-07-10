@@ -9,7 +9,7 @@ import { UIStateProvider } from '@alga-psa/ui/ui-reflection/UIStateContext';
 import { toast } from 'react-hot-toast';
 
 import ExperimentalFeaturesSettings from '../../../components/settings/general/ExperimentalFeaturesSettings';
-import { canEnableAiAssistant, getExperimentalFeatures, updateExperimentalFeatures } from '@alga-psa/tenancy/actions';
+import { canEnableAiAssistant, getExperimentalFeatures, updateExperimentalFeatures } from '@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions';
 
 const translationMap: Record<string, string> = {
   'experimentalFeatures.loading': 'Loading experimental features...',
@@ -31,7 +31,7 @@ const translationMap: Record<string, string> = {
 
 const translate = (key: string): string => translationMap[key] ?? key;
 
-vi.mock('@alga-psa/tenancy/actions', () => ({
+vi.mock('@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions', () => ({
   getExperimentalFeatures: vi.fn().mockResolvedValue({ aiAssistant: false }),
   canEnableAiAssistant: vi.fn().mockResolvedValue(true),
   updateExperimentalFeatures: vi.fn(),
@@ -41,6 +41,7 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({
     t: translate,
   }),
+  detectClientLocale: () => 'en',
 }));
 
 vi.mock('react-hot-toast', () => ({

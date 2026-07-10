@@ -22,14 +22,46 @@ const originalEdition = vi.hoisted(() => {
 const listMspSsoLoginDomainsMock = vi.hoisted(() => vi.fn());
 const saveMspSsoLoginDomainsMock = vi.hoisted(() => vi.fn());
 const toastMock = vi.hoisted(() => vi.fn());
+const i18nMock = vi.hoisted(() => {
+  const t = (_key: string, options?: Record<string, unknown>) => {
+    const template = typeof options?.defaultValue === 'string' ? options.defaultValue : _key;
+    return template.replace(/\{\{(\w+)\}\}/g, (match, name) =>
+      options && options[name] != null ? String(options[name]) : match,
+    );
+  };
 
-vi.mock('@alga-psa/integrations/actions', () => ({
+  return {
+    t,
+    translation: { t },
+  };
+});
+
+vi.mock('@alga-psa/integrations/actions/integrations/mspSsoDomainActions', () => ({
   listMspSsoLoginDomains: (...args: unknown[]) => listMspSsoLoginDomainsMock(...args),
   saveMspSsoLoginDomains: (...args: unknown[]) => saveMspSsoLoginDomainsMock(...args),
+  listMspSsoDomainClaims: vi.fn(),
+  refreshMspSsoDomainClaimChallenge: vi.fn(),
+  requestMspSsoDomainClaim: vi.fn(),
+  revokeMspSsoDomainClaim: vi.fn(),
+  verifyMspSsoDomainClaimOwnership: vi.fn(),
 }));
 
 vi.mock('@alga-psa/ui/hooks/use-toast', () => ({
   useToast: () => ({ toast: toastMock }),
+}));
+
+vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
+  useTranslation: () => i18nMock.translation,
+  useFormatters: () => ({
+    formatDate: (d: Date | string) => String(d),
+    formatNumber: (n: number) => String(n),
+    formatCurrency: (n: number) => String(n),
+    formatRelativeTime: (d: Date | string) => String(d),
+  }),
+  useI18n: () => ({ locale: 'en' }),
+  useOptionalI18n: () => ({ locale: 'en' }),
+  detectClientLocale: () => 'en',
+  I18nProvider: ({ children }: any) => children,
 }));
 
 import { MspSsoLoginDomainsSettings } from '@alga-psa/integrations/components/settings/integrations/MspSsoLoginDomainsSettings';
@@ -75,7 +107,7 @@ describe('MspSsoLoginDomainsSettings', () => {
       expect(screen.getByDisplayValue('acme.com')).toBeInTheDocument();
     });
 
-    await user.type(screen.getAllByRole('textbox')[0], 'beta.com');
+    await user.type(screen.getByDisplayValue(''), 'beta.com');
     await user.click(screen.getByRole('button', { name: 'Add' }));
     await user.click(screen.getByRole('button', { name: 'Save Domains' }));
 
@@ -182,7 +214,7 @@ describe('MspSsoLoginDomainsSettings', () => {
     });
 
     await user.click(screen.getByLabelText('Remove domain 2'));
-    await user.type(screen.getAllByRole('textbox')[0], 'beta.com');
+    await user.type(screen.getByDisplayValue(''), 'beta.com');
     await user.click(screen.getByRole('button', { name: 'Add' }));
     await user.click(screen.getByRole('button', { name: 'Save Domains' }));
 
