@@ -68,8 +68,6 @@ RUN npm run build
 
 WORKDIR /app/packages/db
 RUN npm run build
-RUN if [ -d dist/db/src ]; then cp -R dist/db/src/. dist/; fi \
-    && tsc-alias -p tsconfig.json -f --resolve-full-paths
 
 # Build event-schemas (imported at runtime by shared/workflow/streams)
 WORKDIR /app/packages/event-schemas
