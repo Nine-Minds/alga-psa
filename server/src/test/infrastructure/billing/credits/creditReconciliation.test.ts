@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
 import '../../../../../test-utils/nextApiMock';
+import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { TestContext } from '../../../../../test-utils/testContext';
 import { createPrepaymentInvoice, applyCreditToInvoice, validateCreditBalance } from '@alga-psa/billing/actions/creditActions';
 import { finalizeInvoice } from '@alga-psa/billing/actions/invoiceModification';
@@ -8,7 +9,6 @@ import {
   setupClientTaxConfiguration,
   assignServiceTaxRate
 } from '../../../../../test-utils/billingTestHelpers';
-import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { Temporal } from '@js-temporal/polyfill';
 import { ClientContractLine } from '@alga-psa/billing/models';
 import { createTestDate } from '../../../test-utils/dateUtils';
@@ -25,7 +25,7 @@ const {
 } = TestContext.createHelpers();
 
 vi.mock('@alga-psa/auth', async () => {
-  const { createAuthModuleMock } = await import('../../../../../test-utils/testMocks');
+  const { createAuthModuleMock } = await import('../../../../../test-utils/authModuleMock');
   return createAuthModuleMock();
 });
 
@@ -58,11 +58,6 @@ vi.mock('@alga-psa/db', async (importOriginal) => {
     withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
   };
 });
-
-vi.mock('@alga-psa/db', () => ({
-  withTransaction: vi.fn(async (knex, callback) => callback(knex)),
-  withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
-}));
 
 vi.setConfig({
   testTimeout: 120000,

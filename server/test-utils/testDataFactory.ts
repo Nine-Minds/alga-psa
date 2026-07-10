@@ -85,6 +85,16 @@ export async function createClient(
 
   await tenantDb(db, tenantId).table('clients').insert(client);
 
+  // Invoice generation validates that the client has a billing email on its
+  // billing/default location (invoiceService.getClientBillingEmail), so every
+  // factory client gets one. Tests exercising the missing-email failure path
+  // should create a bare client row directly instead of using this factory.
+  await createClientLocation(db, clientId, tenantId, {
+    is_billing_address: true,
+    is_default: true,
+    email: options.billing_email || 'billing@test-client.test'
+  });
+
   return clientId;
 }
 
@@ -117,6 +127,9 @@ export async function createClientLocation(
     country_code: options.country_code || 'US',
     country_name: options.country_name || 'United States',
     region_code: options.region_code || 'US-NY',
+    is_billing_address: options.is_billing_address ?? false,
+    is_default: options.is_default ?? false,
+    email: options.email,
     created_at: now.toISOString(),
     updated_at: now.toISOString()
   };

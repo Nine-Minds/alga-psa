@@ -64,15 +64,13 @@ describe('Time Periods Infrastructure', () => {
     vi.spyOn(tenantModule, 'getTenantForCurrentRequest').mockResolvedValue(tenantId);
   });
 
-  // Use cleanup hook for test isolation
-  const cleanup = createCleanupHook(context.db, [
-    'time_entries',
-    'time_sheets',
-    'time_periods',
-    'time_period_settings'
-  ]);
   afterEach(async () => {
-    cleanup();
+    await createCleanupHook(context.db, [
+      'time_entries',
+      'time_sheets',
+      'time_periods',
+      'time_period_settings'
+    ])();
     vi.clearAllMocks();
   });
 

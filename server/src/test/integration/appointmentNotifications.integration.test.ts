@@ -103,7 +103,7 @@ vi.mock('@alga-psa/db', async (importOriginal) => {
 vi.mock('@alga-psa/auth', async (importOriginal) => {
   const actual = await importOriginal<typeof import('@alga-psa/auth')>();
   const authMocks = async () => {
-    const { createAuthModuleMock } = await import('../../../test-utils/testMocks');
+    const { createAuthModuleMock } = await import('../../../test-utils/authModuleMock');
     return createAuthModuleMock();
   };
   const resolveTenant = async (user: any) => {

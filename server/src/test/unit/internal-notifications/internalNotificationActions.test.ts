@@ -763,7 +763,9 @@ describe('internalNotificationActions data access', () => {
           template_name: 'missing-template',
           data: {}
         })
-      ).rejects.toThrow("Template 'missing-template' not found");
+      ).resolves.toEqual({
+        actionError: 'Notification template not found. It may have been deleted. Please refresh and try again.',
+      });
       expect(currentDb!.tables.internal_notifications).toHaveLength(0);
       expect(broadcastNotificationMock).not.toHaveBeenCalled();
     });
@@ -982,7 +984,9 @@ describe('internalNotificationActions data access', () => {
     it('throws when notification is not found and does not broadcast', async () => {
       currentDb = createMockDb([]);
 
-      await expect(markAsReadAction('tenant-1', 'user-1', 'nonexistent-uuid')).rejects.toThrow('Notification not found');
+      await expect(markAsReadAction('tenant-1', 'user-1', 'nonexistent-uuid')).resolves.toEqual({
+        actionError: 'Notification not found. It may have already been updated or deleted.',
+      });
       expect(broadcastNotificationReadMock).not.toHaveBeenCalled();
     });
 
@@ -995,7 +999,9 @@ describe('internalNotificationActions data access', () => {
         })
       ]);
 
-      await expect(markAsReadAction('tenant-1', 'other-user', NOTIFICATION_UUID_1)).rejects.toThrow('Notification not found');
+      await expect(markAsReadAction('tenant-1', 'other-user', NOTIFICATION_UUID_1)).resolves.toEqual({
+        actionError: 'Notification not found. It may have already been updated or deleted.',
+      });
       expect(broadcastNotificationReadMock).not.toHaveBeenCalled();
       const row = currentDb.tables.internal_notifications[0];
       expect(row.is_read).toBe(false);

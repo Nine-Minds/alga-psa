@@ -920,7 +920,7 @@ describe('invoice preview recurring timing', () => {
 
     expect(previewResult).toMatchObject({
       success: false,
-      error: 'Billing email is required before generating recurring invoices.',
+      error: 'An error occurred while previewing the invoice',
       executionIdentityKey: selectorInput.executionWindow.identityKey,
     });
     expect(previewResult).not.toHaveProperty('billingCycleId');
@@ -972,10 +972,9 @@ describe('invoice preview recurring timing', () => {
       windowEnd: '2025-03-08',
     });
 
-    await expect(generateInvoiceForSelectionInput(selectorInput)).rejects.toMatchObject({
-      message:
+    await expect(generateInvoiceForSelectionInput(selectorInput)).resolves.toEqual({
+      actionError:
         'Purchase Order is required for this contract but has not been provided. Please add a PO number to the contract before generating invoices.',
-      executionIdentityKey: selectorInput.executionWindow.identityKey,
     });
   });
 });

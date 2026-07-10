@@ -1,15 +1,15 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
-import { v4 as uuidv4 } from 'uuid';
-import type { IProject } from '@alga-psa/types';
-import * as projectActions from '@alga-psa/projects/actions/projectActions';
-import * as auth from '@alga-psa/auth';
-import { TestContext } from '../../../../test-utils/testContext';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
 import {
   setupCommonMocks,
   mockNextHeaders,
   mockNextAuth,
   createMockUser
 } from '../../../../test-utils/testMocks';
+import { v4 as uuidv4 } from 'uuid';
+import type { IProject } from '@alga-psa/types';
+import * as projectActions from '@alga-psa/projects/actions/projectActions';
+import * as auth from '@alga-psa/auth';
+import { TestContext } from '../../../../test-utils/testContext';
 import {
   createTenant,
   createClient,
@@ -28,7 +28,7 @@ import {
 import { tenantDb } from '@alga-psa/db';
 
 vi.mock('@alga-psa/auth', async () => {
-  const { createAuthModuleMock } = await import('../../../../test-utils/testMocks');
+  const { createAuthModuleMock } = await import('../../../../test-utils/authModuleMock');
   return createAuthModuleMock();
 });
 
@@ -139,8 +139,9 @@ describe('Project Permissions Infrastructure', () => {
   });
 
   // Use cleanup hook for test isolation
-  const cleanup = createCleanupHook(context.db, ['projects', 'clients', 'users', 'roles', 'permissions']);
-  afterEach(cleanup);
+  afterEach(async () => {
+    await createCleanupHook(context.db, ['projects', 'clients', 'users', 'roles', 'permissions'])();
+  });
 
   it('should allow regular user to view projects', async () => {
     vi.mocked(auth.getCurrentUser).mockResolvedValue(regularUser);

@@ -319,7 +319,7 @@ describe('EmailProviderConfiguration', () => {
     render(<EmailProviderConfiguration />);
 
     await waitFor(() => {
-      expect(screen.getByText('Network error')).toBeInTheDocument();
+      expect(screen.getByText('Failed to load email providers')).toBeInTheDocument();
     });
   });
 

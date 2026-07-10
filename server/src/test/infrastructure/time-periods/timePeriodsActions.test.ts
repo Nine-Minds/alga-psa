@@ -1,16 +1,16 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
-import { v4 as uuidv4 } from 'uuid';
-import { tenantDb } from '@alga-psa/db';
-import { generateAndSaveTimePeriods, fetchAllTimePeriods } from '@alga-psa/scheduling/actions/timePeriodsActions';
-import { ITimePeriodSettings } from 'server/src/interfaces/timeEntry.interfaces';
-import { ISO8601String } from 'server/src/types/types.d';
-import { TestContext } from '../../../../test-utils/testContext';
 import {
   setupCommonMocks,
   mockNextHeaders,
   mockNextAuth,
   mockRBAC
 } from '../../../../test-utils/testMocks';
+import { v4 as uuidv4 } from 'uuid';
+import { tenantDb } from '@alga-psa/db';
+import { generateAndSaveTimePeriods, fetchAllTimePeriods } from '@alga-psa/scheduling/actions/timePeriodsActions';
+import { ITimePeriodSettings } from 'server/src/interfaces/timeEntry.interfaces';
+import { ISO8601String } from 'server/src/types/types.d';
+import { TestContext } from '../../../../test-utils/testContext';
 import {
   resetDatabase,
   createCleanupHook,
@@ -71,11 +71,12 @@ describe('Time Periods Actions', () => {
   });
 
   // Use cleanup hook for test isolation
-  const cleanup = createCleanupHook(context.db, [
-    'time_periods',
-    'time_period_settings'
-  ]);
-  afterEach(cleanup);
+  afterEach(async () => {
+    await createCleanupHook(context.db, [
+      'time_periods',
+      'time_period_settings'
+    ])();
+  });
 
   it('should generate and save time periods based on settings', async () => {
     // Arrange
