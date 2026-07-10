@@ -694,7 +694,8 @@
           "sectionTitle": "Aplicación OAuth",
           "shareApp": "Usar la misma aplicación OAuth para Gmail y Calendar",
           "shareAppHelp": "Recomendado. Aún puede autorizar cuentas de Google distintas por integración.",
-          "storedSecret": "Secret almacenado: {{secret}}"
+          "storedSecret": "Secret almacenado: {{secret}}",
+          "locationHelp": "Google Cloud: APIs & Services > Credentials > OAuth 2.0 Client IDs."
         },
         "redirectUrisLabel": "URIs de redirección (copie en el cliente OAuth de Google)",
         "scopes": "Scopes",
@@ -703,7 +704,8 @@
         "serviceAccount": {
           "alreadyStored": "Ya hay una clave de cuenta de servicio almacenada (no se muestra).",
           "description": "Pegue el JSON de la clave de la cuenta de servicio propia del inquilino utilizada para aprovisionar Pub/Sub.",
-          "title": "Cuenta de servicio de Pub/Sub (requerido para Gmail)"
+          "title": "Cuenta de servicio de Pub/Sub (requerido para Gmail)",
+          "locationHelp": "Google Cloud: IAM & Admin > Service Accounts > Keys > Add key > JSON."
         },
         "setupGuide": "Guía de configuración",
         "title": "Google",
@@ -723,7 +725,8 @@
         },
         "oauthValues": {
           "title": "Google OAuth app values"
-        }
+        },
+        "redirectUrisHelp": "Staff sign-in uses the OAuth client saved below. Add the listed Gmail and Calendar callback URLs in Google Cloud."
       }
     },
     "hudu": {
@@ -1076,22 +1079,20 @@
           "saving": "Guardando…",
           "selectProfile": "Seleccionar un perfil",
           "unbound": "Sin enlazar",
-          "noCapablePlaceholder": "No enabled profile",
-          "noCapableProfiles": "No Microsoft app is enabled for {{consumer}}. Edit a profile to enable it, or leave {{consumer}} unbound.",
-          "noEmailCapableProfiles": "No Microsoft app is enabled for Email. Edit a profile to enable it, or leave Email on the hosted app."
+          "noCapablePlaceholder": "No enabled profile"
         },
         "bindings": {
-          "summaryBound": "{{consumer}} está enlazado a {{profile}}.",
+          "summaryBound": "Current: {{profile}}.",
           "summaryNone": "Actualmente no hay ningún perfil de Microsoft enlazado a {{consumer}}.",
           "summaryUnavailable": "{{consumer}} está enlazado a un perfil no disponible.",
-          "warningArchived": "{{consumer}} sigue enlazado a un perfil archivado. Vuelva a enlazarlo a un perfil activo.",
+          "warningArchived": "{{profile}} is archived. Choose an active Microsoft app.",
           "warningNoBinding": "Aún no se ha configurado ningún enlace de {{consumer}}.",
           "warningNotReady": "{{consumer}} está enlazado a {{profile}}, pero ese perfil aún necesita configuración.",
           "warningProfileMissing": "{{consumer}} está enlazado a un perfil que ya no está disponible. Vuelva a enlazarlo a un perfil activo.",
-          "warningMissingCapability": "{{consumer}} is bound to a profile that is not enabled for {{consumer}}. Rebind it or edit the profile capabilities."
+          "warningMissingCapability": "{{profile}} is selected, but it cannot handle {{consumer}} yet. Edit the app and turn on {{consumer}}, or choose another app.",
+          "warningNoApps": "Create a Microsoft app, turn on {{consumer}}, then choose it here.",
+          "warningNoCapable": "No app can handle {{consumer}} yet. Edit a Microsoft app and turn on {{consumer}}, then choose it here."
         },
-        "bindingsAlertCe": "Los enlaces explícitos son la fuente de verdad para la selección de perfil de MSP SSO. Configure los dominios de inicio de sesión por separado después de elegir el perfil enlazado.",
-        "bindingsAlertEe": "Los enlaces explícitos son la fuente de verdad para la selección de perfiles de MSP SSO, correo, calendario y Teams.",
         "consumerBindings": {
           "descriptionCe": "Enlace un perfil de Microsoft a MSP SSO para el inicio de sesión y el uso del dominio de inicio de sesión.",
           "descriptionEe": "Enlace un perfil de Microsoft por cada consumidor compatible. Reasignar un consumidor no cambia los demás.",
@@ -2701,7 +2702,6 @@
         "descriptionEe": "MSP SSO, Outlook email, calendar sync, and Teams.",
         "label": "Microsoft"
       },
-      "selected": "Selected provider path",
       "selectorLabel": "Provider credential paths",
       "title": "Provider Credentials"
     }

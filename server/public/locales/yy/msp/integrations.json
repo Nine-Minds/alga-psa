@@ -694,7 +694,8 @@
           "sectionTitle": "55555",
           "shareApp": "55555",
           "shareAppHelp": "55555",
-          "storedSecret": "55555 {{secret}} 55555"
+          "storedSecret": "55555 {{secret}} 55555",
+          "locationHelp": "Google Cloud: APIs & Services > Credentials > OAuth 2.0 Client IDs."
         },
         "redirectUrisLabel": "55555",
         "scopes": "55555",
@@ -703,7 +704,8 @@
         "serviceAccount": {
           "alreadyStored": "55555",
           "description": "55555",
-          "title": "55555"
+          "title": "55555",
+          "locationHelp": "Google Cloud: IAM & Admin > Service Accounts > Keys > Add key > JSON."
         },
         "setupGuide": "55555",
         "title": "55555",
@@ -723,7 +725,8 @@
         },
         "oauthValues": {
           "title": "Google OAuth app values"
-        }
+        },
+        "redirectUrisHelp": "Staff sign-in uses the OAuth client saved below. Add the listed Gmail and Calendar callback URLs in Google Cloud."
       }
     },
     "hudu": {
@@ -1076,22 +1079,20 @@
           "saving": "55555",
           "selectProfile": "55555",
           "unbound": "55555",
-          "noCapablePlaceholder": "No enabled profile",
-          "noCapableProfiles": "No Microsoft app is enabled for {{consumer}}. Edit a profile to enable it, or leave {{consumer}} unbound.",
-          "noEmailCapableProfiles": "No Microsoft app is enabled for Email. Edit a profile to enable it, or leave Email on the hosted app."
+          "noCapablePlaceholder": "No enabled profile"
         },
         "bindings": {
-          "summaryBound": "55555 {{consumer}} 55555 {{profile}} 55555",
+          "summaryBound": "Current: {{profile}}.",
           "summaryNone": "55555 {{consumer}} 55555",
           "summaryUnavailable": "55555 {{consumer}} 55555",
-          "warningArchived": "55555 {{consumer}} 55555",
+          "warningArchived": "{{profile}} is archived. Choose an active Microsoft app.",
           "warningNoBinding": "55555 {{consumer}} 55555",
           "warningNotReady": "55555 {{consumer}} 55555 {{profile}} 55555",
           "warningProfileMissing": "55555 {{consumer}} 55555",
-          "warningMissingCapability": "{{consumer}} is bound to a profile that is not enabled for {{consumer}}. Rebind it or edit the profile capabilities."
+          "warningMissingCapability": "{{profile}} is selected, but it cannot handle {{consumer}} yet. Edit the app and turn on {{consumer}}, or choose another app.",
+          "warningNoApps": "Create a Microsoft app, turn on {{consumer}}, then choose it here.",
+          "warningNoCapable": "No app can handle {{consumer}} yet. Edit a Microsoft app and turn on {{consumer}}, then choose it here."
         },
-        "bindingsAlertCe": "55555",
-        "bindingsAlertEe": "55555",
         "consumerBindings": {
           "descriptionCe": "55555",
           "descriptionEe": "55555",
@@ -2701,7 +2702,6 @@
         "descriptionEe": "MSP SSO, Outlook email, calendar sync, and Teams.",
         "label": "Microsoft"
       },
-      "selected": "Selected provider path",
       "selectorLabel": "Provider credential paths",
       "title": "Provider Credentials"
     }

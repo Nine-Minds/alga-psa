@@ -694,7 +694,8 @@
           "sectionTitle": "OAuth-app",
           "shareApp": "Dezelfde OAuth-app gebruiken voor Gmail en Calendar",
           "shareAppHelp": "Aanbevolen. U kunt nog steeds afzonderlijke Google-accounts per integratie autoriseren.",
-          "storedSecret": "Opgeslagen secret: {{secret}}"
+          "storedSecret": "Opgeslagen secret: {{secret}}",
+          "locationHelp": "Google Cloud: APIs & Services > Credentials > OAuth 2.0 Client IDs."
         },
         "redirectUrisLabel": "Redirect-URI's (kopiëren naar de Google OAuth-client)",
         "scopes": "Scopes",
@@ -703,7 +704,8 @@
         "serviceAccount": {
           "alreadyStored": "Er is al een service-accountsleutel opgeslagen (niet weergegeven).",
           "description": "Plak de JSON-sleutel van het tenant-eigen service account dat wordt gebruikt om Pub/Sub te provisioneren.",
-          "title": "Pub/Sub-service-account (vereist voor Gmail)"
+          "title": "Pub/Sub-service-account (vereist voor Gmail)",
+          "locationHelp": "Google Cloud: IAM & Admin > Service Accounts > Keys > Add key > JSON."
         },
         "setupGuide": "Installatiehandleiding",
         "title": "Google",
@@ -723,7 +725,8 @@
         },
         "oauthValues": {
           "title": "Google OAuth app values"
-        }
+        },
+        "redirectUrisHelp": "Staff sign-in uses the OAuth client saved below. Add the listed Gmail and Calendar callback URLs in Google Cloud."
       }
     },
     "hudu": {
@@ -1076,22 +1079,20 @@
           "saving": "Opslaan…",
           "selectProfile": "Selecteer een profiel",
           "unbound": "Niet gekoppeld",
-          "noCapablePlaceholder": "No enabled profile",
-          "noCapableProfiles": "No Microsoft app is enabled for {{consumer}}. Edit a profile to enable it, or leave {{consumer}} unbound.",
-          "noEmailCapableProfiles": "No Microsoft app is enabled for Email. Edit a profile to enable it, or leave Email on the hosted app."
+          "noCapablePlaceholder": "No enabled profile"
         },
         "bindings": {
-          "summaryBound": "{{consumer}} is gekoppeld aan {{profile}}.",
+          "summaryBound": "Current: {{profile}}.",
           "summaryNone": "Momenteel is er geen Microsoft-profiel gekoppeld aan {{consumer}}.",
           "summaryUnavailable": "{{consumer}} is gekoppeld aan een niet-beschikbaar profiel.",
-          "warningArchived": "{{consumer}} is nog steeds gekoppeld aan een gearchiveerd profiel. Koppel opnieuw aan een actief profiel.",
+          "warningArchived": "{{profile}} is archived. Choose an active Microsoft app.",
           "warningNoBinding": "Er is nog geen {{consumer}}-binding geconfigureerd.",
           "warningNotReady": "{{consumer}} is gekoppeld aan {{profile}}, maar dat profiel moet nog worden geconfigureerd.",
           "warningProfileMissing": "{{consumer}} is gekoppeld aan een profiel dat niet meer beschikbaar is. Koppel opnieuw aan een actief profiel.",
-          "warningMissingCapability": "{{consumer}} is bound to a profile that is not enabled for {{consumer}}. Rebind it or edit the profile capabilities."
+          "warningMissingCapability": "{{profile}} is selected, but it cannot handle {{consumer}} yet. Edit the app and turn on {{consumer}}, or choose another app.",
+          "warningNoApps": "Create a Microsoft app, turn on {{consumer}}, then choose it here.",
+          "warningNoCapable": "No app can handle {{consumer}} yet. Edit a Microsoft app and turn on {{consumer}}, then choose it here."
         },
-        "bindingsAlertCe": "Expliciete bindingen zijn de bron van waarheid voor de selectie van het MSP SSO-profiel. Configureer aanmeldingsdomeinen apart na het kiezen van het gekoppelde profiel.",
-        "bindingsAlertEe": "Expliciete bindingen zijn de bron van waarheid voor de selectie van MSP SSO-, e-mail-, agenda- en Teams-profielen.",
         "consumerBindings": {
           "descriptionCe": "Koppel één Microsoft-profiel aan MSP SSO voor aanmelding en gebruik van aanmeldingsdomein.",
           "descriptionEe": "Koppel één Microsoft-profiel per ondersteunde consumer. Het opnieuw toewijzen van één consumer wijzigt de andere niet.",
@@ -2701,7 +2702,6 @@
         "descriptionEe": "MSP SSO, Outlook email, calendar sync, and Teams.",
         "label": "Microsoft"
       },
-      "selected": "Selected provider path",
       "selectorLabel": "Provider credential paths",
       "title": "Provider Credentials"
     }
