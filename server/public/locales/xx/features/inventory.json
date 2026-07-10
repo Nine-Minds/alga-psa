@@ -1494,8 +1494,6 @@
   },
   "vendorBills": {
     "actions": {
-      "export": "11111",
-      "exporting": "11111",
       "markPaid": "11111",
       "open": "11111",
       "void": "11111"
@@ -1536,7 +1534,9 @@
       "error": "11111",
       "exported": "11111",
       "notExported": "11111",
-      "pending": "11111"
+      "pending": "11111",
+      "retry": "11111",
+      "retrying": "11111"
     },
     "exportError": "11111",
     "exportFailed": "11111",

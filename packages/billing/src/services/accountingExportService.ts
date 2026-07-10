@@ -211,6 +211,16 @@ export class AccountingExportService {
     if (!adapter) {
       throw new Error(`No accounting adapter registered for type ${batch.adapter_type}`);
     }
+    if (!adapter.capabilities().supportedExportTypes.includes(batch.export_type)) {
+      throw new AppError(
+        'ACCOUNTING_EXPORT_UNSUPPORTED_TYPE',
+        `Adapter ${batch.adapter_type} does not support ${batch.export_type} exports`,
+        {
+          adapterType: batch.adapter_type,
+          exportType: batch.export_type
+        }
+      );
+    }
 
     const now = new Date().toISOString();
     await this.repository.updateBatchStatus(batchId, {
@@ -419,8 +429,8 @@ export class AccountingExportService {
 
     // Extract invoice IDs from the export lines
     const invoiceIds = lines
-      .filter(line => line.invoice_id)
-      .map(line => line.invoice_id)
+      .filter(line => line.document_id)
+      .map(line => line.document_id)
       .filter((id): id is string => Boolean(id));
 
     if (invoiceIds.length === 0) {
@@ -603,8 +613,8 @@ export class AccountingExportService {
     // Extract unique invoice IDs from the exported lines.
     const invoiceIds = [...new Set(
       context.lines
-        .filter(line => line.invoice_id)
-        .map(line => line.invoice_id as string)
+        .filter(line => line.document_id)
+        .map(line => line.document_id as string)
     )];
 
     if (invoiceIds.length === 0) {

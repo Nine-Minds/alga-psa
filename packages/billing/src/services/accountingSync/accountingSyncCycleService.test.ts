@@ -842,8 +842,8 @@ describe('runAccountingSyncCycle', () => {
     const invoiceOp = { op_id: 'op-inv-10', alga_entity_id: 'inv-10', attempts: 0 };
     const creditMemoOp = { op_id: 'op-cm-10', alga_entity_id: 'inv-cm-10', attempts: 0 };
 
-    // listPending is called twice (once per operation type); return each op from its call
-    const listPending = vi.fn()
+    // listPending is called once per outbound operation type; only invoice/credit-memo have ops here.
+    const listPending = vi.fn(async () => [])
       .mockResolvedValueOnce([invoiceOp])      // export_invoice call
       .mockResolvedValueOnce([creditMemoOp]);  // export_credit_memo call
 
@@ -956,4 +956,3 @@ describe('runAccountingSyncCycle', () => {
     expect(result.status).toBe('succeeded');
   });
 });
-

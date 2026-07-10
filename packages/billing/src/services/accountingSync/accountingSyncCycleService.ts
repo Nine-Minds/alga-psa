@@ -1,6 +1,7 @@
 import { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
 import { AppError } from '@alga-psa/core';
+import { tenantDb } from '@alga-psa/db';
 import type {
   AccountingChangeSet,
   AccountingExportAdapter,
@@ -10,6 +11,7 @@ import type {
 import {
   emptyCycleStats,
   MAPPING_SYNC_STATUS,
+  type AccountingSyncOperation,
   type AccountingSyncCycleStats
 } from './accountingSync.types';
 import { SyncCycleRepository } from './syncCycleRepository';
@@ -31,6 +33,7 @@ import { AccountingExportService } from '../accountingExportService';
 import { drainApplyCreditOps } from './creditApplicationApplier';
 import { drainVoidInvoiceOps } from './invoiceVoidApplier';
 import { drainRecordPaymentOps } from './paymentPushApplier';
+import { ADAPTER_EXPORT_CAPABILITIES } from '../../adapters/accounting/registry';
 
 /**
  * One accounting sync cycle for a tenant×realm:
@@ -49,6 +52,11 @@ import { drainRecordPaymentOps } from './paymentPushApplier';
 export const CURSOR_OVERLAP_MS = 5 * 60 * 1000;
 
 const AUTH_ERROR_CODES = new Set(['QBO_AUTH_ERROR', 'QBO_REFRESH_FAILED', 'QBO_SETUP_INCOMPLETE']);
+
+function adapterSupportsExportType(adapterType: string, exportType: string): boolean {
+  const capabilities = ADAPTER_EXPORT_CAPABILITIES as Record<string, readonly string[] | undefined>;
+  return Boolean(capabilities[adapterType]?.includes(exportType));
+}
 
 export interface RunCycleParams {
   knex: Knex;
@@ -196,6 +204,9 @@ export async function runAccountingSyncCycle(params: RunCycleParams): Promise<Ru
   // ── Outbound ───────────────────────────────────────────────────────────
   try {
     await drainExportInvoiceOps({ knex, tenantId, adapterType, targetRealm, ops, ledger, exceptions, stats });
+    if (adapterSupportsExportType(adapterType, 'vendor_bill')) {
+      await drainExportVendorBillOps({ knex, tenantId, adapterType, targetRealm, ops, ledger, exceptions, stats });
+    }
   } catch (error) {
     // Outbound problems never block the cursor; per-op state handles retries.
     logger.error('[accountingSync] Outbound drain error', {
@@ -397,6 +408,118 @@ async function drainExportInvoiceOps(deps: DrainDeps): Promise<void> {
   }
 }
 
+type VendorBillExportRow = {
+  bill_id: string;
+  bill_number: string;
+  total_amount: string | number | null;
+  currency_code: string | null;
+};
+
+async function drainExportVendorBillOps(deps: DrainDeps): Promise<void> {
+  const pending = await deps.ops.listPending(deps.tenantId, deps.adapterType, {
+    operation: 'export_vendor_bill',
+    targetRealm: deps.targetRealm
+  });
+
+  if (pending.length === 0) {
+    return;
+  }
+
+  for (const op of pending) {
+    await deps.ops.markInProgress(deps.tenantId, op.op_id);
+  }
+
+  const remaining: AccountingSyncOperation[] = [];
+  for (const op of pending) {
+    const mapping = await deps.ledger.findByAlgaId('vendor_bill', op.alga_entity_id);
+    if (mapping) {
+      await deps.ops.markDone(deps.tenantId, op.op_id);
+      deps.stats.opsProcessed += 1;
+      await deps.exceptions.resolve('accounting_sync_export_error', 'vendor_bill', op.alga_entity_id);
+      continue;
+    }
+    remaining.push(op);
+  }
+
+  if (remaining.length === 0) {
+    return;
+  }
+
+  const billIds = Array.from(new Set(remaining.map((op) => op.alga_entity_id)));
+  let batchId: string | null = null;
+
+  try {
+    const batch = await createScheduledVendorBillBatch(deps, billIds);
+    batchId = batch.batch_id;
+
+    const exportService = await AccountingExportService.createForTenant(deps.tenantId);
+    await exportService.executeBatch(batch.batch_id);
+
+    for (const op of remaining) {
+      await deps.ops.markDone(deps.tenantId, op.op_id);
+      deps.stats.opsProcessed += 1;
+      await deps.exceptions.resolve('accounting_sync_export_error', 'vendor_bill', op.alga_entity_id);
+    }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : 'scheduled vendor bill export failed';
+
+    if (error instanceof AppError && error.code === 'ACCOUNTING_EXPORT_EMPTY_BATCH') {
+      await cancelScheduledBatchIfBlocking(deps, batchId);
+      for (const op of remaining) {
+        await deps.ops.markDone(deps.tenantId, op.op_id);
+        deps.stats.opsProcessed += 1;
+      }
+      return;
+    }
+
+    await cancelScheduledBatchIfBlocking(deps, batchId);
+
+    const isValidationFailure =
+      error instanceof AppError && error.code === 'ACCOUNTING_EXPORT_VALIDATION_FAILED';
+    const validationErrors =
+      isValidationFailure && Array.isArray((error.details as any)?.validationErrors)
+        ? ((error.details as any).validationErrors as Array<{ code: string; message: string }>)
+        : undefined;
+
+    for (const op of remaining) {
+      const nextStatus = await deps.ops.markFailed(deps.tenantId, op.op_id, message);
+      deps.stats.opsFailed += 1;
+
+      if (isValidationFailure || nextStatus === 'skipped') {
+        const result = await deps.exceptions.createOrUpdate({
+          type: 'accounting_sync_export_error',
+          entityType: 'vendor_bill',
+          entityId: op.alga_entity_id,
+          title: isValidationFailure
+            ? 'Scheduled vendor bill export failed validation'
+            : 'Scheduled vendor bill export keeps failing',
+          context: {
+            alga_vendor_bill_id: op.alga_entity_id,
+            batch_id: batchId,
+            attempts: op.attempts + 1,
+            message,
+            details: validationErrors?.length
+              ? validationErrors.map((item) => `${item.code}: ${item.message}`).join('\n')
+              : message,
+            realm: deps.targetRealm
+          }
+        });
+        if (result.created) {
+          deps.stats.exceptionsCreated += 1;
+        }
+      }
+    }
+
+    logger.warn('[accountingSync] Scheduled vendor bill export batch failed', {
+      tenantId: deps.tenantId,
+      targetRealm: deps.targetRealm,
+      batchId,
+      billCount: billIds.length,
+      error: message
+    });
+  }
+}
+
 /**
  * Create the scheduled batch, recovering once from a wedged predecessor: if
  * the duplicate-selection guard points at an engine-owned scheduled batch
@@ -439,6 +562,69 @@ async function createScheduledBatch(deps: DrainDeps, invoiceIds: string[]): Prom
     const { batch } = await selector.createBatchFromFilters(createOptions);
     return batch;
   }
+}
+
+async function createScheduledVendorBillBatch(deps: DrainDeps, billIds: string[]): Promise<AccountingExportBatch> {
+  const db = tenantDb(deps.knex, deps.tenantId);
+  const bills = (await db.table<VendorBillExportRow>('vendor_bills')
+    .whereIn('bill_id', billIds)
+    .select('bill_id', 'bill_number', 'total_amount', 'currency_code')) as VendorBillExportRow[];
+
+  if (bills.length !== billIds.length) {
+    const found = new Set(bills.map((bill) => bill.bill_id));
+    const missing = billIds.filter((billId) => !found.has(billId));
+    throw new AppError('VENDOR_BILL_EXPORT_BILL_NOT_FOUND', 'One or more vendor bills no longer exist', {
+      missingBillIds: missing
+    });
+  }
+
+  const exportService = await AccountingExportService.createForTenant(deps.tenantId);
+  const createOptions = {
+    adapter_type: deps.adapterType,
+    target_realm: deps.targetRealm,
+    export_type: 'vendor_bill',
+    origin: 'scheduled' as const,
+    notes: 'Scheduled vendor bill accounting sync',
+    filters: {
+      billIds
+    }
+  };
+
+  let batch: AccountingExportBatch;
+  try {
+    batch = await exportService.createBatch(createOptions);
+  } catch (error) {
+    const staleBatchId =
+      error instanceof AppError && error.code === 'ACCOUNTING_EXPORT_DUPLICATE'
+        ? ((error.details as any)?.batchId as string | undefined)
+        : undefined;
+    if (!staleBatchId) {
+      throw error;
+    }
+
+    const cancelled = await cancelScheduledBatchIfBlocking(deps, staleBatchId);
+    if (!cancelled) {
+      throw error;
+    }
+    batch = await exportService.createBatch(createOptions);
+  }
+
+  await exportService.appendLines(batch.batch_id, {
+    lines: bills.map((bill) => ({
+      batch_id: batch.batch_id,
+      document_id: bill.bill_id,
+      document_line_id: null,
+      client_id: null,
+      amount_cents: Math.round(Number(bill.total_amount ?? 0)),
+      currency_code: bill.currency_code ?? 'USD',
+      payload: {
+        document_number: bill.bill_number,
+        document_kind: 'vendor_bill'
+      }
+    }))
+  });
+
+  return batch;
 }
 
 /**

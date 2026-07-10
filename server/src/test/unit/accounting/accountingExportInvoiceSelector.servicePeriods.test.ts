@@ -235,8 +235,8 @@ describe('AccountingExportInvoiceSelector service-period behavior', () => {
       expect(appendLines).toHaveBeenCalledWith('batch-1', {
         lines: [
           expect.objectContaining({
-            invoice_id: 'invoice-1',
-            invoice_charge_id: 'charge-canonical',
+            document_id: 'invoice-1',
+            document_line_id: 'charge-canonical',
             service_period_start: '2025-01-01T00:00:00.000Z',
             service_period_end: '2025-03-01T00:00:00.000Z',
             payload: expect.objectContaining({

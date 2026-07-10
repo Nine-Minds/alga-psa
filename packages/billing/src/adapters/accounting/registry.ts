@@ -5,6 +5,14 @@ import { QuickBooksCSVAdapter } from './quickBooksCSVAdapter';
 import { XeroAdapter } from './xeroAdapter';
 import { XeroCsvAdapter } from './xeroCsvAdapter';
 
+export const ADAPTER_EXPORT_CAPABILITIES = {
+  quickbooks_online: ['invoice', 'vendor_bill'],
+  quickbooks_desktop: ['invoice'],
+  quickbooks_csv: ['invoice'],
+  xero: ['invoice'],
+  xero_csv: ['invoice']
+} as const satisfies Record<string, readonly string[]>;
+
 export class AccountingAdapterRegistry {
   private readonly adapters = new Map<string, AccountingExportAdapter>();
 

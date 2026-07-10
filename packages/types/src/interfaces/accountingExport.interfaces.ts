@@ -52,6 +52,8 @@ export interface AccountingExportRecurringDetailPeriod {
 export interface AccountingExportLinePayload {
   invoice_number?: string;
   invoice_status?: string;
+  document_number?: string;
+  document_kind?: string;
   client_name?: string | null;
   /**
    * Authoritative explanation of how the top-level summary service-period fields were derived.
@@ -73,8 +75,8 @@ export interface AccountingExportLinePayload {
 export interface AccountingExportLine extends TenantEntity {
   line_id: string;
   batch_id: string;
-  invoice_id: string;
-  invoice_charge_id?: string | null;
+  document_id: string;
+  document_line_id?: string | null;
   client_id?: string | null;
   amount_cents: number;
   currency_code: string;

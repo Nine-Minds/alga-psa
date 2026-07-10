@@ -2,7 +2,11 @@ import { listVendorBills } from '@alga-psa/inventory/actions';
 import { VendorBillsManager } from '@alga-psa/inventory/components';
 // Inventory cannot import billing, so the export actions are injected from the page
 // (F047, ghost-usage props idiom); billing permissions are enforced inside the actions.
-import { exportVendorBillToAccounting, getVendorBillExportStatuses } from '@alga-psa/billing/actions';
+import {
+  getVendorBillExportContext,
+  getVendorBillExportStatuses,
+  retryVendorBillExport
+} from '@alga-psa/billing/actions';
 import { getSession } from '@alga-psa/auth';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { redirect } from 'next/navigation';
@@ -37,12 +41,18 @@ export default async function VendorBillsPage() {
     console.error('Failed to load vendor bills:', error);
   }
 
+  const exportContext = await getVendorBillExportContext().catch(() => ({
+    integration: null,
+    vendorBillsSupported: false,
+  }));
+
   return (
     <VendorBillsManager
       initialBills={initialBills}
       loadErrorMessage={loadErrorMessage}
-      exportBill={exportVendorBillToAccounting}
+      retryExportBill={retryVendorBillExport}
       getExportStatuses={getVendorBillExportStatuses}
+      exportContext={exportContext}
     />
   );
 }

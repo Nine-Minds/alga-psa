@@ -32,8 +32,8 @@ const CLIENT_ID = 'client-qbo-spec';
 type MinimalLine = {
   line_id: string;
   batch_id: string;
-  invoice_id: string;
-  invoice_charge_id: string;
+  document_id: string;
+  document_line_id: string;
   client_id: string;
   amount_cents: number;
   currency_code: string;
@@ -74,8 +74,8 @@ describe('QuickBooksOnlineAdapter service-period export policy', () => {
   const baseLine: MinimalLine = {
     line_id: 'line-qbo-1',
     batch_id: 'batch-qbo-spec',
-    invoice_id: INVOICE_ID,
-    invoice_charge_id: 'charge-qbo-1',
+    document_id: INVOICE_ID,
+    document_line_id: 'charge-qbo-1',
     client_id: CLIENT_ID,
     amount_cents: 12_345,
     currency_code: 'USD',
@@ -272,7 +272,7 @@ describe('QuickBooksOnlineAdapter service-period export policy', () => {
       {
         ...baseLine,
         line_id: 'line-qbo-client',
-        invoice_charge_id: 'charge-qbo-client',
+        document_line_id: 'charge-qbo-client',
         service_period_start: '2025-02-01T00:00:00.000Z',
         service_period_end: '2025-03-01T00:00:00.000Z',
         payload: {
@@ -283,7 +283,7 @@ describe('QuickBooksOnlineAdapter service-period export policy', () => {
       {
         ...baseLine,
         line_id: 'line-qbo-contract',
-        invoice_charge_id: 'charge-qbo-contract',
+        document_line_id: 'charge-qbo-contract',
         amount_cents: 8_765,
         service_period_start: '2025-02-08T00:00:00.000Z',
         service_period_end: '2025-03-08T00:00:00.000Z',
@@ -630,8 +630,8 @@ describe('QuickBooksOnlineAdapter credit-note (CreditMemo) transform', () => {
   const creditNoteLine: MinimalLine = {
     line_id: 'line-cn-1',
     batch_id: 'batch-qbo-spec',
-    invoice_id: 'inv-cn-1',
-    invoice_charge_id: 'charge-cn-1',
+    document_id: 'inv-cn-1',
+    document_line_id: 'charge-cn-1',
     client_id: CLIENT_ID,
     amount_cents: -5000,
     currency_code: 'USD',
@@ -902,8 +902,8 @@ describe('QuickBooksOnlineAdapter class/department transform', () => {
   const baseLine: MinimalLine = {
     line_id: 'line-cls-1',
     batch_id: 'batch-cls',
-    invoice_id: INVOICE_ID,
-    invoice_charge_id: 'charge-cls-1',
+    document_id: INVOICE_ID,
+    document_line_id: 'charge-cls-1',
     client_id: CLIENT_ID,
     amount_cents: 10_000,
     currency_code: 'USD',

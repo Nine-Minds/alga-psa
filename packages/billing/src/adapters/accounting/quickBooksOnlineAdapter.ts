@@ -185,6 +185,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
   capabilities(): AccountingExportAdapterCapabilities {
     return {
       deliveryMode: 'api',
+      supportedExportTypes: ['invoice', 'vendor_bill'],
       supportsPartialRetry: true,
       supportsInvoiceUpdates: true,
       supportsTaxDelegation: true,
@@ -227,7 +228,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
     const clientData = await this.loadClients(knex, tenantId, context, invoicesById);
     const resolver = await AccountingMappingResolver.create({ companySyncService });
 
-    const linesByInvoice = groupBy(context.lines, (line) => line.invoice_id);
+    const linesByInvoice = groupBy(context.lines, (line) => line.document_id);
     const documents: AccountingExportDocument[] = [];
     const taxCodeCache = new Map<string, string | null>();
     const paymentTermCache = new Map<string, string | null>();
@@ -298,12 +299,12 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
       const shouldIncludeAuthoritativeTax =
         !context.excludeTaxFromExport && context.taxDelegationMode !== 'delegate';
       for (const line of exportLines) {
-        if (!line.invoice_charge_id) {
+        if (!line.document_line_id) {
           throw new Error(`QuickBooks adapter: export line ${line.line_id} has no invoice_charge_id`);
         }
-        const charge = chargesById.get(line.invoice_charge_id);
+        const charge = chargesById.get(line.document_line_id);
         if (!charge) {
-          throw new Error(`QuickBooks adapter: charge ${line.invoice_charge_id} missing for invoice ${invoiceId}`);
+          throw new Error(`QuickBooks adapter: charge ${line.document_line_id} missing for invoice ${invoiceId}`);
         }
         if (!charge.service_id) {
           throw new Error(`QuickBooks adapter: charge ${charge.item_id} missing service_id for invoice ${invoiceId}`);
@@ -402,7 +403,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
           Description: charge.description ?? undefined,
           SalesItemLineDetail: salesDetail
         });
-        chargeIds.push(line.invoice_charge_id);
+        chargeIds.push(line.document_line_id);
       }
 
       if (qboLines.length === 0) {
@@ -597,13 +598,13 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
     }
 
     const tenantDefaultClassRef = syncSettings?.defaultClassRef ?? null;
-    const billIds = Array.from(new Set(context.lines.map((line) => line.invoice_id).filter(Boolean)));
+    const billIds = Array.from(new Set(context.lines.map((line) => line.document_id).filter(Boolean)));
     const [billsById, linesByBillId] = await Promise.all([
       this.loadVendorBills(knex, tenantId, billIds),
       this.loadVendorBillLines(knex, tenantId, billIds)
     ]);
 
-    const exportLinesByBill = groupBy(context.lines, (line) => line.invoice_id);
+    const exportLinesByBill = groupBy(context.lines, (line) => line.document_id);
     const documents: AccountingExportDocument[] = [];
 
     for (const [billId, exportLines] of exportLinesByBill.entries()) {
@@ -1046,7 +1047,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
     tenantId: string,
     context: AccountingExportAdapterContext
   ): Promise<Map<string, DbInvoice>> {
-    const invoiceIds = Array.from(new Set(context.lines.map((line) => line.invoice_id)));
+    const invoiceIds = Array.from(new Set(context.lines.map((line) => line.document_id)));
     if (invoiceIds.length === 0) {
       return new Map();
     }
@@ -1075,7 +1076,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
     context: AccountingExportAdapterContext
   ): Promise<Map<string, DbCharge>> {
     const chargeIds = context.lines
-      .map((line) => line.invoice_charge_id)
+      .map((line) => line.document_line_id)
       .filter((id): id is string => Boolean(id));
 
     if (chargeIds.length === 0) {
@@ -1431,7 +1432,7 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
     lineId: string
   ): string | undefined {
     const line = context.lines.find(l => l.line_id === lineId);
-    return line?.invoice_id;
+    return line?.document_id;
   }
 }
 

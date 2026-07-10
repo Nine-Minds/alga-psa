@@ -141,6 +141,7 @@ export class XeroCsvAdapter implements AccountingExportAdapter {
   capabilities(): AccountingExportAdapterCapabilities {
     return {
       deliveryMode: 'file',
+      supportedExportTypes: ['invoice'],
       supportsPartialRetry: false,
       supportsInvoiceUpdates: false,
       supportsTaxDelegation: true,
@@ -162,7 +163,7 @@ export class XeroCsvAdapter implements AccountingExportAdapter {
     const chargesById = await this.loadCharges(knex, tenantId, context);
     const clientData = await this.loadClients(knex, tenantId, context, invoicesById);
 
-    const linesByInvoice = groupBy(context.lines, (line) => line.invoice_id);
+    const linesByInvoice = groupBy(context.lines, (line) => line.document_id);
     const documents: AccountingExportDocument[] = [];
     const allCsvRows: XeroCsvRow[] = [];
 
@@ -198,13 +199,13 @@ export class XeroCsvAdapter implements AccountingExportAdapter {
       let isFirstLine = true;
 
       for (const line of exportLines) {
-        if (!line.invoice_charge_id) {
+        if (!line.document_line_id) {
           throw new AppError('XERO_CSV_LINE_MISSING_CHARGE', `Export line ${line.line_id} missing invoice_charge_id`);
         }
 
-        const charge = chargesById.get(line.invoice_charge_id);
+        const charge = chargesById.get(line.document_line_id);
         if (!charge) {
-          throw new AppError('XERO_CSV_CHARGE_NOT_FOUND', `Charge ${line.invoice_charge_id} missing for invoice ${invoiceId}`);
+          throw new AppError('XERO_CSV_CHARGE_NOT_FOUND', `Charge ${line.document_line_id} missing for invoice ${invoiceId}`);
         }
 
         // Resolve service mapping for item code and account code
@@ -458,7 +459,7 @@ export class XeroCsvAdapter implements AccountingExportAdapter {
     tenantId: string,
     context: AccountingExportAdapterContext
   ): Promise<Map<string, DbInvoice>> {
-    const invoiceIds = Array.from(new Set(context.lines.map((line) => line.invoice_id)));
+    const invoiceIds = Array.from(new Set(context.lines.map((line) => line.document_id)));
     if (invoiceIds.length === 0) {
       return new Map();
     }
@@ -484,7 +485,7 @@ export class XeroCsvAdapter implements AccountingExportAdapter {
     context: AccountingExportAdapterContext
   ): Promise<Map<string, DbCharge>> {
     const chargeIds = context.lines
-      .map((line) => line.invoice_charge_id)
+      .map((line) => line.document_line_id)
       .filter((id): id is string => Boolean(id));
 
     if (chargeIds.length === 0) {

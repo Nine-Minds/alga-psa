@@ -28,6 +28,7 @@ class StubQuickBooksAdapter implements AccountingExportAdapter {
   capabilities(): AccountingExportAdapterCapabilities {
     return {
       deliveryMode: 'api',
+      supportedExportTypes: ['invoice'],
       supportsPartialRetry: true,
       supportsInvoiceUpdates: true
     };
@@ -36,10 +37,10 @@ class StubQuickBooksAdapter implements AccountingExportAdapter {
   async transform(context: AccountingExportAdapterContext): Promise<AccountingExportTransformResult> {
     return {
       documents: context.lines.map((line) => ({
-        documentId: `invoice-${line.invoice_id}`,
+        documentId: `invoice-${line.document_id}`,
         lineIds: [line.line_id],
         payload: {
-          invoiceId: line.invoice_id,
+          invoiceId: line.document_id,
           amountCents: line.amount_cents
         }
       }))
@@ -50,7 +51,7 @@ class StubQuickBooksAdapter implements AccountingExportAdapter {
     return {
       deliveredLines: context.lines.map((line) => ({
         lineId: line.line_id,
-        externalDocumentRef: `QB-${line.invoice_id}`
+        externalDocumentRef: `QB-${line.document_id}`
       }))
     };
   }
@@ -208,8 +209,8 @@ describe('Accounting export batch lifecycle integration', () => {
       lines: [
         {
           batch_id: batch.batch_id,
-          invoice_id: invoiceId,
-          invoice_charge_id: chargeId,
+          document_id: invoiceId,
+          document_line_id: chargeId,
           client_id: ctx.clientId,
           amount_cents: 5000,
           currency_code: 'USD',

@@ -153,13 +153,13 @@ export class AccountingExportValidation {
 
     for (const line of lines) {
       lineById.set(line.line_id, line);
-      if (line.invoice_charge_id) {
-        chargeIds.add(line.invoice_charge_id);
+      if (line.document_line_id) {
+        chargeIds.add(line.document_line_id);
       }
-      if (line.invoice_id) {
-        invoiceIds.add(line.invoice_id);
-        if (!firstLineByInvoice.has(line.invoice_id)) {
-          firstLineByInvoice.set(line.invoice_id, line.line_id);
+      if (line.document_id) {
+        invoiceIds.add(line.document_id);
+        if (!firstLineByInvoice.has(line.document_id)) {
+          firstLineByInvoice.set(line.document_id, line.line_id);
         }
       }
     }
@@ -259,7 +259,7 @@ export class AccountingExportValidation {
     );
 
     for (const line of lines) {
-      if (!line.invoice_charge_id) {
+      if (!line.document_line_id) {
         await repo.addError({
           batch_id: batchId,
           line_id: line.line_id,
@@ -270,19 +270,19 @@ export class AccountingExportValidation {
         continue;
       }
 
-      const charge = chargesById.get(line.invoice_charge_id);
+      const charge = chargesById.get(line.document_line_id);
       if (!charge?.service_id) {
         await repo.addError({
           batch_id: batchId,
           line_id: line.line_id,
           code: 'missing_service',
-          message: `Charge ${line.invoice_charge_id} missing associated service`,
+          message: `Charge ${line.document_line_id} missing associated service`,
           metadata: mergeErrorMetadata(line)
         });
         continue;
       }
 
-      const canonicalPeriods = canonicalPeriodsByChargeId.get(line.invoice_charge_id) ?? [];
+      const canonicalPeriods = canonicalPeriodsByChargeId.get(line.document_line_id) ?? [];
       const exportSource = normalizeExportLineServicePeriodSource(line.payload);
       const exportSummaryStart = normalizeIsoString(line.service_period_start);
       const exportSummaryEnd = normalizeIsoString(line.service_period_end);
@@ -309,7 +309,7 @@ export class AccountingExportValidation {
             code: 'service_period_projection_mismatch',
             message: 'Export line service periods do not match canonical invoice charge details',
             metadata: {
-              invoice_charge_id: line.invoice_charge_id,
+              invoice_charge_id: line.document_line_id,
               expected_summary: {
                 service_period_start: expectedSummaryStart,
                 service_period_end: expectedSummaryEnd
@@ -338,7 +338,7 @@ export class AccountingExportValidation {
             code: 'service_period_projection_mismatch',
             message: 'Historical or financial export lines must not claim canonical recurring detail periods',
             metadata: {
-              invoice_charge_id: line.invoice_charge_id,
+              invoice_charge_id: line.document_line_id,
               expected_source: expectedSource,
               actual_source: exportSource ?? null,
               expected_detail_periods: [],
@@ -381,7 +381,7 @@ export class AccountingExportValidation {
         checkedServiceMappings.add(serviceMappingKey);
       }
 
-      const invoiceTaxSource = line.invoice_id ? invoiceTaxSourceById.get(line.invoice_id) : null;
+      const invoiceTaxSource = line.document_id ? invoiceTaxSourceById.get(line.document_id) : null;
       const invoiceDelegatesTax =
         invoiceTaxSource === 'external' || invoiceTaxSource === 'pending_external';
 

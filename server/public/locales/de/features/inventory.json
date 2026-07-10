@@ -1494,8 +1494,6 @@
   },
   "vendorBills": {
     "actions": {
-      "export": "Exportieren",
-      "exporting": "Wird exportiert…",
       "markPaid": "Als bezahlt markieren",
       "open": "Öffnen",
       "void": "Stornieren"
@@ -1536,7 +1534,9 @@
       "error": "Export fehlgeschlagen",
       "exported": "Exportiert",
       "notExported": "Nicht exportiert",
-      "pending": "Export ausstehend"
+      "pending": "Export ausstehend",
+      "retry": "Wiederholen",
+      "retrying": "Erneut versuchen…"
     },
     "exportError": "Die Rechnung konnte nicht exportiert werden.",
     "exportFailed": "Export fehlgeschlagen.",

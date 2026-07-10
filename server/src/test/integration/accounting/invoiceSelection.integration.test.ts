@@ -599,10 +599,10 @@ describe('Accounting export invoice selection integration', () => {
     });
 
     const storedLines = await repository.listLines(batch.batch_id);
-    const invoiceLines = storedLines.filter((line) => line.invoice_id === invoiceId);
+    const invoiceLines = storedLines.filter((line) => line.document_id === invoiceId);
     expect(invoiceLines).toHaveLength(2);
 
-    const lineByChargeId = new Map(invoiceLines.map((line) => [line.invoice_charge_id, line]));
+    const lineByChargeId = new Map(invoiceLines.map((line) => [line.document_line_id, line]));
     expect(lineByChargeId.get(clientChargeId)).toMatchObject({
       service_period_start: '2025-02-01T00:00:00.000Z',
       service_period_end: '2025-03-01T00:00:00.000Z',
@@ -813,9 +813,9 @@ describe('Accounting export invoice selection integration', () => {
     const storedLines = await repository.listLines(batch.batch_id);
     expect(storedLines).toHaveLength(3);
 
-    const historicalExportLine = storedLines.find((line) => line.invoice_charge_id === historicalChargeId);
+    const historicalExportLine = storedLines.find((line) => line.document_line_id === historicalChargeId);
     expect(historicalExportLine).toMatchObject({
-      invoice_id: historicalInvoiceId,
+      document_id: historicalInvoiceId,
       service_period_start: null,
       service_period_end: null,
       payload: {
@@ -826,9 +826,9 @@ describe('Accounting export invoice selection integration', () => {
       }
     });
 
-    const clientExportLine = storedLines.find((line) => line.invoice_charge_id === clientChargeId);
+    const clientExportLine = storedLines.find((line) => line.document_line_id === clientChargeId);
     expect(clientExportLine).toMatchObject({
-      invoice_id: canonicalInvoiceId,
+      document_id: canonicalInvoiceId,
       service_period_start: '2025-02-01T00:00:00.000Z',
       service_period_end: '2025-03-01T00:00:00.000Z',
       payload: {
@@ -845,9 +845,9 @@ describe('Accounting export invoice selection integration', () => {
       }
     });
 
-    const contractExportLine = storedLines.find((line) => line.invoice_charge_id === contractChargeId);
+    const contractExportLine = storedLines.find((line) => line.document_line_id === contractChargeId);
     expect(contractExportLine).toMatchObject({
-      invoice_id: canonicalInvoiceId,
+      document_id: canonicalInvoiceId,
       service_period_start: '2025-02-08T00:00:00.000Z',
       service_period_end: '2025-03-08T00:00:00.000Z',
       payload: {
@@ -954,7 +954,7 @@ describe('Accounting export invoice selection integration', () => {
     };
 
     for (const line of storedLines) {
-      const expected = expectedByChargeId[line.invoice_charge_id!];
+      const expected = expectedByChargeId[line.document_line_id!];
       expect(expected).toBeDefined();
 
       const payload = line.payload as Record<string, any> | null;
@@ -962,7 +962,7 @@ describe('Accounting export invoice selection integration', () => {
       expect(Array.isArray(payload?.transaction_ids)).toBe(true);
       expect(payload?.transaction_ids).toContain(expected.transactionId);
 
-      if (line.invoice_charge_id === seeded.multiPeriod.chargeId) {
+      if (line.document_line_id === seeded.multiPeriod.chargeId) {
         expect(line.service_period_start).toBe('2025-01-01T00:00:00.000Z');
         expect(line.service_period_end).toBe('2025-02-01T00:00:00.000Z');
         expect(payload?.service_period_source).toBe('canonical_detail_periods');
@@ -975,7 +975,7 @@ describe('Accounting export invoice selection integration', () => {
         ]);
       }
 
-      if (line.invoice_charge_id === seeded.manual.chargeId) {
+      if (line.document_line_id === seeded.manual.chargeId) {
         expect(line.service_period_start).toBeNull();
         expect(line.service_period_end).toBeNull();
         expect(payload?.service_period_source).toBe('financial_document_fallback');
@@ -1021,6 +1021,6 @@ describe('Accounting export invoice selection integration', () => {
 
     const storedLines = await repository.listLines(batch.batch_id);
     expect(storedLines).toHaveLength(3);
-    expect(storedLines.map((line) => line.invoice_id)).not.toContain(seeded.manual.invoiceId);
+    expect(storedLines.map((line) => line.document_id)).not.toContain(seeded.manual.invoiceId);
   }, HOOK_TIMEOUT);
 });

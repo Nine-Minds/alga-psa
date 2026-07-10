@@ -35,7 +35,7 @@ function makeLine(lineId: string, invoiceId: string): AccountingExportLine {
     line_id: lineId,
     batch_id: BATCH_ID,
     tenant: TENANT,
-    invoice_id: invoiceId,
+    document_id: invoiceId,
     amount_cents: 15000,
     currency_code: 'USD',
     status: 'ready',
@@ -56,6 +56,7 @@ class PartialFailureAdapter implements AccountingExportAdapter {
   capabilities(): AccountingExportAdapterCapabilities {
     return {
       deliveryMode: 'api',
+      supportedExportTypes: ['invoice'],
       supportsPartialRetry: true,
       supportsInvoiceUpdates: true,
     };
@@ -64,7 +65,7 @@ class PartialFailureAdapter implements AccountingExportAdapter {
   async transform(context: AccountingExportAdapterContext): Promise<AccountingExportTransformResult> {
     return {
       documents: context.lines.map((line) => ({
-        documentId: line.invoice_id,
+        documentId: line.document_id,
         lineIds: [line.line_id],
         payload: {},
       })),
@@ -123,7 +124,7 @@ function makeHarness(lines: AccountingExportLine[], adapter: AccountingExportAda
       return { ...line! };
     }),
     getInvoicesTaxSource: vi.fn(async () =>
-      lines.map((line) => ({ invoice_id: line.invoice_id, tax_source: 'internal' }))
+      lines.map((line) => ({ invoice_id: line.document_id, tax_source: 'internal' }))
     ),
     attachTransactionsToBatch: vi.fn(async () => 0),
     addError: vi.fn(async (input: Record<string, any>) => {
@@ -140,6 +141,28 @@ function makeHarness(lines: AccountingExportLine[], adapter: AccountingExportAda
 }
 
 describe('AccountingExportService partial delivery handling', () => {
+  it('rejects batches whose export_type is unsupported by the adapter', async () => {
+    const line = makeLine(
+      '33333333-3333-4333-8333-333333333333',
+      '44444444-4444-4444-8444-444444444444'
+    );
+    const adapter = new PartialFailureAdapter(new Set([line.document_id]));
+    const { batch, repository, adapterRegistry } = makeHarness([line], adapter);
+    batch.export_type = 'vendor_bill';
+
+    const validationSpy = vi.spyOn(AccountingExportValidation, 'ensureMappingsForBatch');
+
+    try {
+      const service = new AccountingExportService(repository, adapterRegistry);
+      await expect(service.executeBatch(BATCH_ID)).rejects.toMatchObject({
+        code: 'ACCOUNTING_EXPORT_UNSUPPORTED_TYPE',
+      });
+      expect(validationSpy).not.toHaveBeenCalled();
+    } finally {
+      validationSpy.mockRestore();
+    }
+  });
+
   it('marks failed documents, records errors, and flags the batch needs_attention when some invoices deliver', async () => {
     const deliveredLine = makeLine(
       '33333333-3333-4333-8333-333333333333',
@@ -149,7 +172,7 @@ describe('AccountingExportService partial delivery handling', () => {
       '55555555-5555-4555-8555-555555555555',
       '66666666-6666-4666-8666-666666666666'
     );
-    const adapter = new PartialFailureAdapter(new Set([deliveredLine.invoice_id]));
+    const adapter = new PartialFailureAdapter(new Set([deliveredLine.document_id]));
     const { batch, repository, adapterRegistry, addedErrors } = makeHarness(
       [deliveredLine, failedLine],
       adapter
@@ -171,7 +194,7 @@ describe('AccountingExportService partial delivery handling', () => {
       expect(result.failedDocuments).toHaveLength(1);
 
       expect(deliveredLine.status).toBe('delivered');
-      expect(deliveredLine.external_document_ref).toBe(`QB-${deliveredLine.invoice_id}`);
+      expect(deliveredLine.external_document_ref).toBe(`QB-${deliveredLine.document_id}`);
 
       expect(failedLine.status).toBe('failed');
       expect(failedLine.notes).toContain('Business Validation Error');
