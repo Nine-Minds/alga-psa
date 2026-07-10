@@ -6,8 +6,6 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { IStockMovement, IStockUnit } from '@alga-psa/types';
 import {
-  actionError,
-  permissionError,
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
@@ -18,6 +16,7 @@ import {
   publishInventoryEvent,
   timestampPayload,
 } from '../lib';
+import { loanerActionErrorFrom, normalizeDueDate } from './loanerRestockErrors';
 
 async function requireInvPerm(user: any, action: 'create' | 'read' | 'update' | 'delete'): Promise<void> {
   if (!(await hasPermission(user, 'inventory', action))) {
@@ -26,81 +25,6 @@ async function requireInvPerm(user: any, action: 'create' | 'read' | 'update' | 
 }
 
 export type LoanerActionError = ActionMessageError | ActionPermissionError;
-
-// Human labels for the 8 raw unit statuses, so a status-guard error reads like a
-// sentence and never leaks a snake_case enum value into a toast.
-const STATUS_LABELS: Record<string, string> = {
-  in_stock: 'In stock',
-  allocated: 'Allocated',
-  in_transit: 'In transit',
-  on_loan: 'On loan',
-  delivered: 'Delivered',
-  returned: 'Returned',
-  in_rma: 'In RMA',
-  retired: 'Retired',
-};
-
-function humanStatus(raw: string): string {
-  return STATUS_LABELS[raw] ?? raw.replace(/_/g, ' ');
-}
-
-/** Pull the `(current status: X)` the guard messages embed, so the mapper can humanize it. */
-function currentStatusOf(message: string): string | null {
-  const m = message.match(/\(current status: ([^)]+)\)/);
-  return m ? m[1] : null;
-}
-
-function loanerActionErrorFrom(error: unknown): LoanerActionError | null {
-  if (error instanceof Error) {
-    if (error.message.startsWith('Permission denied') || error.message === 'user is not logged in') {
-      return permissionError(error.message);
-    }
-
-    switch (error.message) {
-      case 'client_id is required to loan out a unit':
-        return actionError('Choose a client before loaning out the unit.');
-      case 'location_id is required to return a loaner':
-        return actionError('Choose a return location.');
-      case 'loan_due_at must be a valid date':
-        return actionError('Choose a valid due date.');
-      case 'Stock unit not found':
-        return actionError('Stock unit not found. It may have been updated or deleted. Refresh and try again.');
-    }
-
-    // Status guards throw with the raw enum embedded; translate to a sentence here.
-    if (error.message.startsWith('Unit must be in_stock ')) {
-      const status = currentStatusOf(error.message);
-      return actionError(
-        status
-          ? `This unit can't be loaned out — it's currently ${humanStatus(status)}.`
-          : "This unit can't be loaned out.",
-      );
-    }
-    if (error.message.startsWith('Unit must be on_loan ')) {
-      const status = currentStatusOf(error.message);
-      return actionError(
-        status
-          ? `This unit isn't out on loan — it's currently ${humanStatus(status)}.`
-          : "This unit isn't out on loan.",
-      );
-    }
-  }
-
-  const dbError = error as { code?: string };
-  // A serial/MAC typed where a UUID is expected casts to `22P02`; without pickers this
-  // is defense-in-depth, but the raw Knex SQL text must never reach a toast.
-  if (dbError?.code === '22P02') {
-    return actionError("That doesn't look like a valid record reference. Pick the unit and client from the lists.");
-  }
-  if (dbError?.code === '23503') {
-    return actionError('One of the selected loaner records is no longer valid. Refresh and try again.');
-  }
-  if (dbError?.code === '23505') {
-    return actionError('This loaner update conflicts with an existing record. Refresh and try again.');
-  }
-
-  return null;
-}
 
 async function withLoanerActionErrors<T>(work: () => Promise<T>): Promise<T | LoanerActionError> {
   try {
@@ -126,14 +50,6 @@ async function publishStockUnitUpdated(
     user_id: userId,
     changed_fields: changedFields,
   }));
-}
-
-/** Reject a `loan_due_at` we can't store as a real timestamp before it hits the DB. */
-function normalizeDueDate(value: string | Date | null | undefined): string | Date | null {
-  if (value == null || value === '') return null;
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) throw new Error('loan_due_at must be a valid date');
-  return value;
 }
 
 /**
