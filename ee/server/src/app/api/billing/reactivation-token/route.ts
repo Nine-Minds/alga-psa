@@ -80,5 +80,6 @@ export async function POST(req: NextRequest) {
     priorSubscriptionExternalId: pendingDeletion.subscriptionExternalId,
     planCode: 'algapsa',
     billingInterval: 'month',
+    licenseCount: reservation.licenseCount,
   });
 }

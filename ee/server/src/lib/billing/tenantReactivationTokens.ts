@@ -8,6 +8,7 @@ type KnexLike = Awaited<ReturnType<typeof getAdminConnection>>;
 export interface CreateTenantReactivationTokenInput {
   tenantId: string;
   deletionId: string;
+  licenseCount: number;
   expiresAt?: Date;
   knex?: KnexLike;
 }
@@ -23,12 +24,14 @@ export interface TenantReactivationTokenPayload {
   deletion_id: string;
   exp: number;
   nonce: string;
+  license_count: number;
 }
 
 export interface ReservedTenantReactivationToken {
   tenantId: string;
   deletionId: string;
   tokenHash: string;
+  licenseCount: number;
 }
 
 function base64UrlEncode(value: Buffer | string): string {
@@ -64,6 +67,13 @@ async function getKnex(knex?: KnexLike): Promise<KnexLike> {
 
 function tenantReactivationTokens(knex: KnexLike, tenantId: string) {
   return tenantDb(knex, tenantId).table('tenant_reactivation_tokens');
+}
+
+export function isValidReactivationLicenseCount(value: unknown): value is number {
+  return typeof value === 'number'
+    && Number.isInteger(value)
+    && value >= 1
+    && value <= 1000;
 }
 
 export function hashTenantReactivationToken(token: string): string {
@@ -105,7 +115,8 @@ export function verifyTenantReactivationToken(token: string): TenantReactivation
       typeof payload?.tenant_id !== 'string' ||
       typeof payload?.deletion_id !== 'string' ||
       typeof payload?.exp !== 'number' ||
-      typeof payload?.nonce !== 'string'
+      typeof payload?.nonce !== 'string' ||
+      !isValidReactivationLicenseCount(payload?.license_count)
     ) {
       return null;
     }
@@ -123,11 +134,16 @@ export function verifyTenantReactivationToken(token: string): TenantReactivation
 export async function createTenantReactivationToken(
   input: CreateTenantReactivationTokenInput,
 ): Promise<CreatedTenantReactivationToken> {
+  if (!isValidReactivationLicenseCount(input.licenseCount)) {
+    throw new Error('License count must be an integer from 1 through 1000');
+  }
+
   const expiresAt = input.expiresAt ?? defaultTokenExpiry();
   const nonce = base64UrlEncode(crypto.randomBytes(24));
   const token = signTenantReactivationTokenPayload({
     tenant_id: input.tenantId,
     deletion_id: input.deletionId,
+    license_count: input.licenseCount,
     exp: Math.floor(expiresAt.getTime() / 1000),
     nonce,
   });
@@ -184,6 +200,7 @@ export async function reserveTenantReactivationToken(
     tenantId: row.tenant,
     deletionId: row.deletion_id,
     tokenHash,
+    licenseCount: payload.license_count,
   };
 }
 

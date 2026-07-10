@@ -98,7 +98,12 @@ describeDb('reactivation token ledger (real DB)', () => {
       scheduledDeletionDate: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
     });
 
-    const created = await createTenantReactivationToken({ tenantId, deletionId, knex: db });
+    const created = await createTenantReactivationToken({
+      tenantId,
+      deletionId,
+      licenseCount: 5,
+      knex: db,
+    });
 
     const row = await db('tenant_reactivation_tokens')
       .where({ token_hash: created.tokenHash, tenant: tenantId })
@@ -109,7 +114,7 @@ describeDb('reactivation token ledger (real DB)', () => {
     expect(row.deletion_id).toBe(deletionId);
 
     const first = await reserveTenantReactivationToken(created.token, db);
-    expect(first).toMatchObject({ tenantId, deletionId });
+    expect(first).toMatchObject({ tenantId, deletionId, licenseCount: 5 });
 
     // Single-use: a replay of the same token cannot reserve again.
     const second = await reserveTenantReactivationToken(created.token, db);
@@ -133,6 +138,7 @@ describeDb('reactivation token ledger (real DB)', () => {
     const created = await createTenantReactivationToken({
       tenantId,
       deletionId,
+      licenseCount: 1,
       expiresAt: new Date(Date.now() - 60 * 1000),
       knex: db,
     });
@@ -147,7 +153,12 @@ describeDb('reactivation token ledger (real DB)', () => {
       scheduledDeletionDate: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
     });
 
-    const created = await createTenantReactivationToken({ tenantId, deletionId, knex: db });
+    const created = await createTenantReactivationToken({
+      tenantId,
+      deletionId,
+      licenseCount: 1,
+      knex: db,
+    });
     const tampered = `${created.token.slice(0, -2)}${created.token.endsWith('a') ? 'b' : 'a'}`;
 
     expect(await reserveTenantReactivationToken(tampered, db)).toBeNull();
@@ -162,7 +173,12 @@ describeDb('reactivation token ledger (real DB)', () => {
       scheduledDeletionDate: new Date(Date.now() + 60 * 24 * 60 * 60 * 1000),
     });
 
-    const created = await createTenantReactivationToken({ tenantId, deletionId, knex: db });
+    const created = await createTenantReactivationToken({
+      tenantId,
+      deletionId,
+      licenseCount: 1,
+      knex: db,
+    });
 
     const results = await Promise.all([
       reserveTenantReactivationToken(created.token, db),

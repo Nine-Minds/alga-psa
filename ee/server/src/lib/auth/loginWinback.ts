@@ -52,6 +52,7 @@ export async function handleInactiveLoginWinback(input: {
   const token = await createTenantReactivationToken({
     tenantId: input.tenantId,
     deletionId: row.deletion_id,
+    licenseCount: 1,
     knex,
   });
 

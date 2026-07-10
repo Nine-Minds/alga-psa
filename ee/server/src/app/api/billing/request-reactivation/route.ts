@@ -7,7 +7,10 @@ import {
   resolveReactivationContactEmail,
   resolveTenantAndAdminEmailByEmail,
 } from '@enterprise/lib/billing/tenantReactivationDetection';
-import { createTenantReactivationToken } from '@enterprise/lib/billing/tenantReactivationTokens';
+import {
+  createTenantReactivationToken,
+  isValidReactivationLicenseCount,
+} from '@enterprise/lib/billing/tenantReactivationTokens';
 import {
   buildReactivationCheckoutUrl,
   sendReactivationInviteEmail,
@@ -19,6 +22,7 @@ export const dynamic = 'force-dynamic';
 function verifyWebhookSignature(
   signature: string | null,
   email: string,
+  licenseCount: number,
   timestamp: string | null,
 ): boolean {
   if (!signature || !timestamp) return false;
@@ -34,7 +38,7 @@ function verifyWebhookSignature(
     return false;
   }
 
-  const payload = `${email}:${timestamp}`;
+  const payload = `${email}:${licenseCount}:${timestamp}`;
   const expectedSignature = crypto
     .createHmac('sha256', secret)
     .update(payload)
@@ -47,10 +51,11 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json().catch(() => null);
     const email = typeof body?.email === 'string' ? body.email.trim() : '';
+    const licenseCount = body?.licenseCount;
 
-    if (!email) {
+    if (!email || !isValidReactivationLicenseCount(licenseCount)) {
       return NextResponse.json(
-        { error: 'Email is required' },
+        { error: 'Email and a valid license count are required' },
         { status: 400 },
       );
     }
@@ -58,7 +63,7 @@ export async function POST(req: NextRequest) {
     const signature = req.headers.get('x-webhook-signature');
     const timestamp = req.headers.get('x-timestamp');
 
-    if (!verifyWebhookSignature(signature, email, timestamp)) {
+    if (!verifyWebhookSignature(signature, email, licenseCount, timestamp)) {
       console.error('[request-reactivation] Invalid webhook signature');
       return NextResponse.json(
         { error: 'Unauthorized' },
@@ -89,6 +94,7 @@ export async function POST(req: NextRequest) {
     const reactivationToken = await createTenantReactivationToken({
       tenantId: tenant.tenantId,
       deletionId: pendingDeletion.deletionId,
+      licenseCount,
       knex,
     });
 
