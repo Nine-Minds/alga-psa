@@ -711,13 +711,17 @@
         "inactivityDaysLabel": "55555",
         "warningDaysLabel": "55555",
         "warningDaysPlaceholder": "55555",
+        "suppressContactNotificationsLabel": "55555",
+        "suppressContactNotificationsHelp": "55555",
+        "suppressInternalNotificationsLabel": "55555",
         "ruleEnabledLabel": "55555",
         "removeRule": "55555",
         "messages": {
           "fetchFailed": "55555",
           "autoCloseStatusRequired": "55555",
           "autoCloseDaysInvalid": "55555",
-          "autoCloseWarningInvalid": "55555"
+          "autoCloseWarningInvalid": "55555",
+          "autoCloseSuppressionInvalid": "55555"
         }
       },
       "editor": {
@@ -1793,10 +1797,10 @@
       "description": "55555"
     },
     "status": {
-      "title": "Sign-in providers",
-      "caption": "These providers are managed by the platform — no client IDs or DNS setup is required. Enable auto-link or assign users below.",
-      "available": "Available",
-      "notConfigured": "Not configured"
+      "title": "55555",
+      "caption": "55555",
+      "available": "55555",
+      "notConfigured": "55555"
     },
     "autoLink": {
       "title": "55555",

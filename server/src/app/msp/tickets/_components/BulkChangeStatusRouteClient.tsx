@@ -3,7 +3,10 @@
 import { useEffect, useState } from 'react';
 import type { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import BulkChangeStatusDialog from '@alga-psa/tickets/components/BulkChangeStatusDialog';
-import { bulkUpdateTicketStatus } from '@alga-psa/tickets/actions/ticketActions';
+import {
+  bulkUpdateTicketStatus,
+  type TicketNotificationSuppressionOptions,
+} from '@alga-psa/tickets/actions/ticketActions';
 import { getBoardTicketStatuses } from '@alga-psa/tickets/actions/board-actions/boardTicketStatusActions';
 import {
   getErrorMessage,
@@ -76,14 +79,16 @@ export default function BulkChangeStatusRouteClient({ closeMode }: BulkChangeSta
     };
   }, [handleError, isResolvingSelectedBoards, selectedTicketsSharedBoardId]);
 
-  const handleConfirm = async (statusId: string) => {
+  const handleConfirm = async (statusId: string, options?: TicketNotificationSuppressionOptions) => {
     if (selectedTicketIdsArray.length === 0) return;
 
     setIsSubmitting(true);
     setFailed([]);
 
     try {
-      const result = await bulkUpdateTicketStatus(selectedTicketIdsArray, statusId);
+      const result = options
+        ? await bulkUpdateTicketStatus(selectedTicketIdsArray, statusId, options)
+        : await bulkUpdateTicketStatus(selectedTicketIdsArray, statusId);
 
       if (result.updatedIds.length > 0) {
         refreshList();

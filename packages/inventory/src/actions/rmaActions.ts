@@ -800,10 +800,41 @@ export const listRmaCases = withAuth(
       await requireInvPerm(user, 'read');
       const { knex: db } = await createTenantKnex();
       return withTransaction(db, async (trx: Knex.Transaction) => {
-        const query = trx('rma_cases').where({ tenant });
-        if (filter?.status) query.andWhere({ status: filter.status });
-        if (filter?.rma_type) query.andWhere({ rma_type: filter.rma_type });
-        return (await query.orderBy('opened_at', 'desc')) as IRmaCase[];
+        const query = trx('rma_cases as r')
+          .leftJoin('clients as c', function () {
+            this.on('r.client_id', '=', 'c.client_id').andOn('r.tenant', '=', 'c.tenant');
+          })
+          .leftJoin('vendors as v', function () {
+            this.on('r.vendor_id', '=', 'v.vendor_id').andOn('r.tenant', '=', 'v.tenant');
+          })
+          .leftJoin('service_catalog as sc', function () {
+            this.on('r.service_id', '=', 'sc.service_id').andOn('r.tenant', '=', 'sc.tenant');
+          })
+          .leftJoin('stock_units as su', function () {
+            this.on('r.returned_unit_id', '=', 'su.unit_id').andOn('r.tenant', '=', 'su.tenant');
+          })
+          .where({ 'r.tenant': tenant })
+          .select(
+            'r.*',
+            'c.client_name',
+            'v.vendor_name',
+            'sc.service_name',
+            'sc.sku as service_sku',
+            'su.serial_number as returned_serial_number',
+            'su.mac_address as returned_mac_address',
+            'su.unit_cost as returned_unit_cost',
+            'su.cost_currency as returned_unit_cost_currency',
+            trx.raw(`CASE
+              WHEN r.status = 'sent_to_vendor' THEN GREATEST(
+                0,
+                FLOOR(EXTRACT(EPOCH FROM (now() - COALESCE(r.updated_at, r.opened_at, now()))) / 86400)
+              )::int
+              ELSE NULL
+            END as age_days`),
+          );
+        if (filter?.status) query.andWhere({ 'r.status': filter.status });
+        if (filter?.rma_type) query.andWhere({ 'r.rma_type': filter.rma_type });
+        return (await query.orderBy('r.opened_at', 'desc')) as IRmaCase[];
       });
     });
   },
@@ -817,9 +848,32 @@ export const deadUnitsOwedReport = withAuth(async (user, { tenant }): Promise<De
     await requireInvPerm(user, 'read');
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
-      const rows = (await trx('rma_cases')
-        .where({ tenant, status: 'dead_unit_owed' })
-        .orderBy('dead_unit_due_date', 'asc')) as IRmaCase[];
+      const rows = (await trx('rma_cases as r')
+        .leftJoin('clients as c', function () {
+          this.on('r.client_id', '=', 'c.client_id').andOn('r.tenant', '=', 'c.tenant');
+        })
+        .leftJoin('vendors as v', function () {
+          this.on('r.vendor_id', '=', 'v.vendor_id').andOn('r.tenant', '=', 'v.tenant');
+        })
+        .leftJoin('service_catalog as sc', function () {
+          this.on('r.service_id', '=', 'sc.service_id').andOn('r.tenant', '=', 'sc.tenant');
+        })
+        .leftJoin('stock_units as su', function () {
+          this.on('r.returned_unit_id', '=', 'su.unit_id').andOn('r.tenant', '=', 'su.tenant');
+        })
+        .where({ 'r.tenant': tenant, 'r.status': 'dead_unit_owed' })
+        .select(
+          'r.*',
+          'c.client_name',
+          'v.vendor_name',
+          'sc.service_name',
+          'sc.sku as service_sku',
+          'su.serial_number as returned_serial_number',
+          'su.mac_address as returned_mac_address',
+          'su.unit_cost as returned_unit_cost',
+          'su.cost_currency as returned_unit_cost_currency',
+        )
+        .orderBy('r.dead_unit_due_date', 'asc')) as IRmaCase[];
       const now = Date.now();
       return rows.map((r) => ({
         ...r,

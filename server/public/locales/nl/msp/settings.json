@@ -717,8 +717,12 @@
           "fetchFailed": "Kan sluitregels voor dit bord niet laden",
           "autoCloseStatusRequired": "Elke automatisch-sluitenregel vereist een triggerstatus en een gesloten doelstatus",
           "autoCloseDaysInvalid": "Inactiviteitsdagen voor automatisch sluiten moeten een positief geheel getal zijn",
-          "autoCloseWarningInvalid": "De waarschuwingstermijn moet kleiner zijn dan het aantal inactiviteitsdagen"
-        }
+          "autoCloseWarningInvalid": "De waarschuwingstermijn moet kleiner zijn dan het aantal inactiviteitsdagen",
+          "autoCloseSuppressionInvalid": "Meldingen aan agenten en volgers kunnen alleen worden overgeslagen als klantmeldingen worden overgeslagen."
+        },
+        "suppressContactNotificationsLabel": "Klant niet informeren",
+        "suppressContactNotificationsHelp": "Slaat de waarschuwingsmail, de sluitingsmail, de enquête-uitnodiging en de klantportaalmelding over.",
+        "suppressInternalNotificationsLabel": "Ook agenten en volgers niet informeren"
       },
       "editor": {
         "sections": {

@@ -9,7 +9,8 @@ import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getErrorMessage, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
-import { getAllUsersBasic, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
+import { getAllUsersBasic } from '@alga-psa/user-composition/actions/userQueryActions';
+import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions/avatarActions';
 import { getQuoteRecipientContacts } from '../../../actions/quoteRecipientActions';
 import type { IContact, IUser } from '@alga-psa/types';
 

@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { CustomTabs } from '@alga-psa/ui/components/CustomTabs';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
@@ -31,13 +31,20 @@ const InvoicingHub: React.FC<InvoicingHubProps> = ({ initialServices }) => {
   const activeSubTab = requestedSubtab && INVOICING_SUBTABS.includes(requestedSubtab as InvoicingSubTab)
     ? (requestedSubtab as InvoicingSubTab)
     : 'generate';
+  const sourceSalesOrderId = searchParams?.get('salesOrderId') ?? searchParams?.get('soId');
 
   // Trigger for refreshing data across tabs
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
   // Invoice type lives here (not in GenerateTab) so the selector can ride inline
   // on the tab-bar row — data-first chrome, matching the invoicing mockup.
-  const [invoiceType, setInvoiceType] = useState<InvoiceType>('automatic');
+  const [invoiceType, setInvoiceType] = useState<InvoiceType>(sourceSalesOrderId ? 'manual' : 'automatic');
+
+  useEffect(() => {
+    if (activeSubTab === 'generate' && sourceSalesOrderId) {
+      setInvoiceType('manual');
+    }
+  }, [activeSubTab, sourceSalesOrderId]);
 
   const invoiceTypeOptions = useMemo(() => {
     const options = [
@@ -125,6 +132,7 @@ const InvoicingHub: React.FC<InvoicingHubProps> = ({ initialServices }) => {
                 invoiceType={invoiceType}
                 onGenerateSuccess={handleRefreshData}
                 refreshTrigger={refreshTrigger}
+                sourceSalesOrderId={sourceSalesOrderId}
               />
             )
           },

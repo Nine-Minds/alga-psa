@@ -10,6 +10,7 @@ import { DrawerProvider, DrawerOutlet } from '@alga-psa/ui';
 import GlobalShortcutLayer from './GlobalShortcutLayer';
 import { MspDocumentsCrossFeatureProvider } from '@alga-psa/msp-composition/documents/MspDocumentsCrossFeatureProvider';
 import { AlgaDeskClientCrossFeatureProvider } from '@alga-psa/msp-composition/clients/AlgaDeskClientCrossFeatureProvider';
+import { MspClientTagsProvider } from '@alga-psa/msp-composition/clients/MspClientTagsProvider';
 
 interface AlgaDeskMspShellProps {
   children: React.ReactNode;
@@ -62,6 +63,7 @@ export default function AlgaDeskMspShell({
     <DrawerProvider>
       <MspDocumentsCrossFeatureProvider>
         <AlgaDeskClientCrossFeatureProvider>
+          <MspClientTagsProvider>
       <div className="flex h-screen overflow-hidden bg-gray-100" data-product-shell="algadesk">
         <SidebarWithFeatureFlags
           sidebarOpen={sidebarOpen}
@@ -85,6 +87,7 @@ export default function AlgaDeskMspShell({
       </div>
       <DrawerOutlet />
       <GlobalShortcutLayer navAssetsEnabled={false} />
+          </MspClientTagsProvider>
         </AlgaDeskClientCrossFeatureProvider>
       </MspDocumentsCrossFeatureProvider>
     </DrawerProvider>

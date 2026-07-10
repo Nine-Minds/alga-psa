@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -15,6 +16,7 @@ import {
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { toast } from 'react-hot-toast';
+import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 import type { ColumnDefinition, IRmaCase, IStockLocation, IVendor, RmaType } from '@alga-psa/types';
 import {
   listRmaCases,
@@ -37,6 +39,26 @@ const STATUS_VARIANT: Record<string, 'secondary' | 'info' | 'warning' | 'success
   charged: 'error',
 };
 
+const RMA_STATUS_FILTERS = new Set([
+  'open',
+  'awaiting_return',
+  'returned',
+  'sent_to_vendor',
+  'replacement_received',
+  'replacement_deployed',
+  'dead_unit_owed',
+  'dead_unit_returned',
+  'replaced',
+  'credited',
+  'charged',
+  'closed',
+]);
+
+const shortId = (id?: string | null): string => (id ? id.slice(0, 8) : '—');
+
+const money = (cents?: number | string | null, currency?: string | null): string =>
+  cents == null ? '—' : formatCurrencyFromMinorUnits(Number(cents), 'en-US', currency || 'USD');
+
 interface OpenFormState {
   rma_type: RmaType;
   returned_unit_id: string;
@@ -50,7 +72,11 @@ export function RmaManager({
   initialCases: IRmaCase[];
   initialDeadOwed: DeadUnitOwedRow[];
 }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { t } = useTranslation('features/inventory');
+  const statusParam = searchParams?.get('status') ?? '';
+  const statusFilter = RMA_STATUS_FILTERS.has(statusParam) ? statusParam : '';
   const [cases, setCases] = useState<IRmaCase[]>(initialCases || []);
   const [deadOwed, setDeadOwed] = useState<DeadUnitOwedRow[]>(initialDeadOwed || []);
   const [locations, setLocations] = useState<IStockLocation[]>([]);
@@ -244,16 +270,57 @@ export function RmaManager({
     setVendorRef('');
   };
 
+  const unitLabel = (rma: IRmaCase): string => {
+    const product = rma.service_name || rma.service_sku || '';
+    const serial = rma.returned_serial_number ? `SN ${rma.returned_serial_number}` : '';
+    const mac = !serial && rma.returned_mac_address ? rma.returned_mac_address : '';
+    const identifier = serial || mac || shortId(rma.returned_unit_id);
+    return product ? `${product} · ${identifier}` : identifier;
+  };
+
+  const visibleCases = React.useMemo(
+    () => cases.filter((rma) => !statusFilter || rma.status === statusFilter),
+    [cases, statusFilter],
+  );
+
+  const clearStatusFilter = () => {
+    router.push('/msp/inventory/rma');
+  };
+
   const caseColumns: ColumnDefinition<IRmaCase>[] = [
+    {
+      title: t('rma.columns.rmaNumber', 'RMA #'),
+      dataIndex: 'rma_reference',
+      render: (_: any, rec: IRmaCase) => rec.rma_reference || shortId(rec.rma_id),
+    },
     { title: t('rma.columns.type', 'Type'), dataIndex: 'rma_type', render: (v: any) => typeLabel(v) },
     {
       title: t('common.status', 'Status'),
       dataIndex: 'status',
       render: (v: any) => <Badge variant={STATUS_VARIANT[v] ?? 'secondary'} size="sm">{statusLabel(v)}</Badge>,
     },
-    { title: t('rma.columns.returnedUnit', 'Returned unit'), dataIndex: 'returned_unit_id', render: (v: any) => v || t('common.emptyValue', '—') },
-    { title: t('rma.columns.client', 'Client'), dataIndex: 'client_id', render: (v: any) => v || t('common.emptyValue', '—') },
-    { title: t('rma.columns.reason', 'Reason'), dataIndex: 'reason', render: (v: any) => v || t('common.emptyValue', '—') },
+    { title: t('rma.columns.vendor', 'Vendor'), dataIndex: 'vendor_name', render: (_: any, rec: IRmaCase) => rec.vendor_name || rec.vendor_id || t('common.emptyValue', '—') },
+    { title: t('rma.columns.returnedUnit', 'Returned unit'), dataIndex: 'returned_unit_id', render: (_: any, rec: IRmaCase) => unitLabel(rec) },
+    { title: t('rma.columns.client', 'Client'), dataIndex: 'client_name', render: (_: any, rec: IRmaCase) => rec.client_name || rec.client_id || t('common.emptyValue', '—') },
+    {
+      title: t('rma.columns.creditAtStake', 'Credit at stake'),
+      dataIndex: 'returned_unit_cost',
+      headerClassName: 'text-right',
+      cellClassName: 'text-right tabular-nums',
+      render: (_: any, rec: IRmaCase) =>
+        (
+          <div className="space-y-0.5">
+            <div className="font-medium text-gray-900">
+              {money(rec.returned_unit_cost, rec.returned_unit_cost_currency)}
+            </div>
+            {rec.status === 'sent_to_vendor' && rec.age_days != null && (
+              <div className="text-xs text-gray-500">
+                {t('rma.ageAtVendor', '{{days}}d at vendor', { days: rec.age_days })}
+              </div>
+            )}
+          </div>
+        ),
+    },
     {
       title: t('common.actions', 'Actions'),
       dataIndex: 'rma_id',
@@ -284,9 +351,21 @@ export function RmaManager({
   ];
 
   const deadColumns: ColumnDefinition<DeadUnitOwedRow>[] = [
-    { title: t('rma.columns.returnedUnit', 'Returned unit'), dataIndex: 'returned_unit_id', render: (v: any) => v || t('common.emptyValue', '—') },
-    { title: t('rma.columns.client', 'Client'), dataIndex: 'client_id', render: (v: any) => v || t('common.emptyValue', '—') },
-    { title: t('rma.columns.vendor', 'Vendor'), dataIndex: 'vendor_id', render: (v: any) => v || t('common.emptyValue', '—') },
+    {
+      title: t('rma.columns.rmaNumber', 'RMA #'),
+      dataIndex: 'rma_reference',
+      render: (_: any, rec: DeadUnitOwedRow) => rec.rma_reference || shortId(rec.rma_id),
+    },
+    { title: t('rma.columns.returnedUnit', 'Returned unit'), dataIndex: 'returned_unit_id', render: (_: any, rec: DeadUnitOwedRow) => unitLabel(rec) },
+    { title: t('rma.columns.client', 'Client'), dataIndex: 'client_name', render: (_: any, rec: DeadUnitOwedRow) => rec.client_name || rec.client_id || t('common.emptyValue', '—') },
+    { title: t('rma.columns.vendor', 'Vendor'), dataIndex: 'vendor_name', render: (_: any, rec: DeadUnitOwedRow) => rec.vendor_name || rec.vendor_id || t('common.emptyValue', '—') },
+    {
+      title: t('rma.columns.creditAtStake', 'Credit at stake'),
+      dataIndex: 'returned_unit_cost',
+      headerClassName: 'text-right',
+      cellClassName: 'text-right tabular-nums',
+      render: (_: any, rec: DeadUnitOwedRow) => money(rec.returned_unit_cost, rec.returned_unit_cost_currency),
+    },
     {
       title: t('rma.columns.dueDate', 'Due date'),
       dataIndex: 'dead_unit_due_date',
@@ -310,7 +389,18 @@ export function RmaManager({
         </Button>
       </div>
 
-      <DataTable id="rma-cases-table" data={cases} columns={caseColumns} />
+      {statusFilter && (
+        <div className="flex items-center gap-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2">
+          <span className="text-sm text-amber-900">
+            {t('rma.filters.statusActive', 'Showing {{status}} RMA cases.', { status: statusLabel(statusFilter) })}
+          </span>
+          <Button id="rma-clear-status-filter" variant="link" size="sm" onClick={clearStatusFilter}>
+            {t('common.clear', 'Clear')}
+          </Button>
+        </div>
+      )}
+
+      <DataTable id="rma-cases-table" data={visibleCases} columns={caseColumns} />
 
       <div className="space-y-2">
         <h2 className="text-lg font-semibold">{t('rma.deadUnitsOwed', 'Dead units owed')}</h2>

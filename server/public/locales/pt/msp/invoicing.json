@@ -289,11 +289,15 @@
     "fields": {
       "client": "Cliente",
       "invoiceNumber": "Número da fatura",
-      "invoiceNumberOptional": "Número da fatura (opcional)"
+      "invoiceNumberOptional": "Número da fatura (opcional)",
+      "sourceSalesOrder": "Source sales order (optional)"
     },
     "placeholders": {
       "selectClient": "Selecione um cliente",
-      "invoiceNumberOptional": "Deixe em branco para gerar automaticamente"
+      "invoiceNumberOptional": "Deixe em branco para gerar automaticamente",
+      "sourceSalesOrder": "Select a fulfilled or manually billable sales order",
+      "searchSalesOrders": "Search sales orders...",
+      "noInvoiceableSalesOrders": "No invoiceable sales orders found."
     },
     "automatedItems": {
       "title": "Itens de linha automatizados",
@@ -310,7 +314,9 @@
       "addDiscount": "Adicionar desconto",
       "generate": "Gerar fatura",
       "saveChanges": "Salvar alterações",
-      "processing": "Processamento..."
+      "processing": "Processamento...",
+      "generateSalesOrderInvoice": "Generate Sales Order Invoice",
+      "clearSalesOrderSource": "Clear sales order source"
     },
     "labels": {
       "total": "Total"
@@ -332,11 +338,17 @@
       "loadItems": "Erro ao carregar itens da fatura",
       "refresh": "Ocorreu um erro ao atualizar os dados da fatura.",
       "updateFailed": "Erro ao atualizar fatura",
-      "generateFailed": "Erro ao gerar fatura"
+      "generateFailed": "Erro ao gerar fatura",
+      "salesOrderGenerateFailed": "Could not generate the sales order invoice.",
+      "salesOrderNothingToInvoice": "Nothing remains to invoice for this sales order.",
+      "salesOrderNotInvoiceable": "That sales order is no longer available to invoice."
     },
     "errorFallback": {
       "title": "Algo deu errado",
       "retry": "Tente novamente"
+    },
+    "salesOrderContext": {
+      "summary": "{{quantity}} item(s) ready to invoice from {{lineCount}} line(s). This draft will be linked back to the sales order."
     }
   },
   "draftsTab": {

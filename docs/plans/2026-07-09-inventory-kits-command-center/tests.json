@@ -1,0 +1,62 @@
+[
+  {
+    "id": "T001",
+    "description": "DB-backed kit summary/detail test covers no-BOM, ready, low-stock, fixed-price, sum-price, and non-stocked component cases.",
+    "implemented": true,
+    "featureIds": ["F001", "F002", "F009", "F012"]
+  },
+  {
+    "id": "T002",
+    "description": "Action test proves create-kit creates a catalog product and inventory settings with is_kit=true.",
+    "implemented": true,
+    "featureIds": ["F003"]
+  },
+  {
+    "id": "T003",
+    "description": "Action test proves update-kit persists identity, pricing mode, and fixed price validation.",
+    "implemented": true,
+    "featureIds": ["F004", "F012"]
+  },
+  {
+    "id": "T004",
+    "description": "BOM mutation test covers add, duplicate update quantity, positive-integer validation, and remove.",
+    "implemented": true,
+    "featureIds": ["F010", "F011"]
+  },
+  {
+    "id": "T005",
+    "description": "Sales-order regression proves kit explosion still creates one priced parent line and zero-dollar child component lines.",
+    "implemented": true,
+    "featureIds": ["F014"]
+  },
+  {
+    "id": "T006",
+    "description": "Alga Dev browser smoke covers create kit, no-BOM state, add BOM, readiness/margin, variable sales-order preview, search, status filter, kit preselection, and usage filtering; rendered component coverage verifies load-error, empty-page, and no-results states.",
+    "implemented": true,
+    "featureIds": ["F005", "F006", "F007", "F008", "F009", "F013", "F015", "F028", "F029"]
+  },
+  {
+    "id": "T007",
+    "description": "Pricing tests prove sum mode uses the exact BOM component selling-price sum with no catalog-rate fallback, fixed mode uses the configured amount, and incomplete or mixed-currency costs suppress margin.",
+    "implemented": true,
+    "featureIds": ["F016", "F017", "F018", "F022", "F023", "F027"]
+  },
+  {
+    "id": "T008",
+    "description": "DB-backed sales-order test proves a kit parent defaults to the canonical resolved price, re-resolves after a component price change, rejects a silent currency mismatch, and preserves an explicit one-order override.",
+    "implemented": true,
+    "featureIds": ["F014", "F016", "F020", "F021", "F026"]
+  },
+  {
+    "id": "T009",
+    "description": "Component/UI test proves sum mode has no editable kit-price field, fixed mode has exactly one, Create kit requests price only for fixed mode, and a changed sales-order kit price shows override and reset controls.",
+    "implemented": true,
+    "featureIds": ["F017", "F018", "F019", "F021", "F022", "F023", "F024", "F025"]
+  },
+  {
+    "id": "T010",
+    "description": "Rendered workflow and DB-backed tests prove preview quantity multiplication, selected-kit sales-order preselection, usage-filter messaging, and server-side sales-order filtering by kit.",
+    "implemented": true,
+    "featureIds": ["F007", "F028", "F029"]
+  }
+]

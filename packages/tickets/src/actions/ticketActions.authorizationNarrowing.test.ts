@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 // collection phase instead of counting against the 5s timeout of whichever
 // test happens to run first. vi.mock factories below are hoisted above this
 // import by vitest.
-import { getTicketById, getTicketsForList } from './ticketActions';
+import { getTicketById, getTicketsForList, updateTicket } from './ticketActions';
 
 let currentUser: any;
 let currentBundleRules: Array<Record<string, unknown>> = [];
@@ -286,6 +286,15 @@ function buildTrx(params: {
       };
     }
 
+    if (table === 'statuses') {
+      const builder: any = {
+        select: vi.fn(() => builder),
+        whereRaw: vi.fn(() => builder),
+        andWhere: vi.fn(() => builder),
+      };
+      return builder;
+    }
+
     if (table === 'users') {
       return {
         orderBy: vi.fn().mockResolvedValue([]),
@@ -505,5 +514,17 @@ describe('ticket authorization narrowing for migrated list/detail paths', () => 
     }
 
     expect(apiAllowedIds.sort()).toEqual(uiAllowedIds);
+  });
+
+  it('rejects internal notification suppression unless contact suppression is set on the mirror update path', async () => {
+    await expect(
+      updateTicket(
+        'ticket-1',
+        { title: 'Invalid silent update' } as any,
+        { suppressInternalNotifications: true }
+      )
+    ).rejects.toThrow('suppressInternalNotifications requires suppressContactNotifications');
+
+    expect(createTenantKnexMock).not.toHaveBeenCalled();
   });
 });

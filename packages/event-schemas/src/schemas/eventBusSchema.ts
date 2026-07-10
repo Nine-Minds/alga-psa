@@ -485,6 +485,11 @@ export const BasePayloadSchema = z.object({
   tenantId: z.string().uuid(),
 });
 
+const TicketNotificationSuppressionSchema = {
+  suppressContactNotifications: z.boolean().optional().default(false),
+  suppressInternalNotifications: z.boolean().optional().default(false),
+};
+
 // Base event schema
 export const BaseEventSchema = z.object({
   id: z.string().uuid(),
@@ -499,6 +504,7 @@ export const TicketEventPayloadSchema = BasePayloadSchema.extend({
   userId: z.string().uuid(), // The user being assigned to the ticket
   assignedByUserId: z.string().uuid().optional(), // The user who performed the action
   changes: z.record(z.unknown()).optional(),
+  ...TicketNotificationSuppressionSchema,
   comment: z.object({
     id: z.string().uuid(),
     content: z.string(),

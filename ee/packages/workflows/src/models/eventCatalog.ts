@@ -275,7 +275,9 @@ export class EventCatalogModel extends BaseModel {
             tenantId: { type: 'string', format: 'uuid' },
             ticketId: { type: 'string', format: 'uuid' },
             userId: { type: 'string', format: 'uuid' },
-            changes: { type: 'object' }
+            changes: { type: 'object' },
+            suppressContactNotifications: { type: 'boolean', default: false },
+            suppressInternalNotifications: { type: 'boolean', default: false }
           },
           required: ['tenantId', 'ticketId', 'userId']
         },
@@ -292,6 +294,8 @@ export class EventCatalogModel extends BaseModel {
             tenantId: { type: 'string', format: 'uuid' },
             ticketId: { type: 'string', format: 'uuid' },
             userId: { type: 'string', format: 'uuid' },
+            suppressContactNotifications: { type: 'boolean', default: false },
+            suppressInternalNotifications: { type: 'boolean', default: false },
             changes: { 
               type: 'object',
               properties: {

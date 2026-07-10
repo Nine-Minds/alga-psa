@@ -4,7 +4,8 @@ import React, { useState, useEffect } from 'react'
 import { Button } from '@alga-psa/ui/components/Button'
 import { Input } from '@alga-psa/ui/components/Input'
 import CustomSelect from '@alga-psa/ui/components/CustomSelect'
-import { createService, getServiceTypesForSelection, getDefaultBillingSettings } from '@alga-psa/billing/actions'
+import { createService, getServiceTypesForSelection } from '@alga-psa/billing/actions/serviceActions';
+import { getDefaultBillingSettings } from '@alga-psa/billing/actions/billingSettingsActions';
 import { getActiveTaxRegions, getTaxRates } from '@alga-psa/billing/actions/taxSettingsActions'; // Added getTaxRates
 import { ITaxRate, ITaxRegion } from '@alga-psa/types';
 import { UnitOfMeasureInput } from '@alga-psa/ui/components/UnitOfMeasureInput';

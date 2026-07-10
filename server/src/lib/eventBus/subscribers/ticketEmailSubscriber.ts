@@ -25,6 +25,7 @@ import { TenantEmailService } from '@alga-psa/email';
 import {
   NotificationAccumulator,
   PendingNotification,
+  AccumulatedTicketEvent,
   AccumulatedChange,
   RetryableAccumulatorError,
 } from '../../notifications/NotificationAccumulator';
@@ -115,6 +116,65 @@ type PortalLinkContext = {
   isActiveVanityDomain: boolean;
   tenantSlug: string;
 };
+
+type TicketNotificationSuppression = {
+  suppressContactNotifications: boolean;
+  suppressInternalNotifications: boolean;
+};
+
+function resolveTicketNotificationSuppression(payload: {
+  suppressContactNotifications?: boolean;
+  suppressInternalNotifications?: boolean;
+}): TicketNotificationSuppression {
+  return {
+    suppressContactNotifications: payload.suppressContactNotifications === true,
+    suppressInternalNotifications: payload.suppressInternalNotifications === true,
+  };
+}
+
+function shouldSendContactFacingTicketEmail(suppression: TicketNotificationSuppression): boolean {
+  return !suppression.suppressContactNotifications;
+}
+
+function shouldSendInternalTicketEmail(suppression: TicketNotificationSuppression): boolean {
+  return !suppression.suppressInternalNotifications;
+}
+
+function shouldSendTicketWatcherEmail(
+  suppression: TicketNotificationSuppression,
+  isInternalWatcher: boolean
+): boolean {
+  return isInternalWatcher
+    ? shouldSendInternalTicketEmail(suppression)
+    : shouldSendContactFacingTicketEmail(suppression);
+}
+
+function shouldSendTicketClosedWatcherEmail(
+  suppression: TicketNotificationSuppression,
+  isInternalWatcher: boolean
+): boolean {
+  return shouldSendTicketWatcherEmail(suppression, isInternalWatcher);
+}
+
+function resolveAccumulatedTicketNotificationSuppression(
+  accumulatedEvents: AccumulatedTicketEvent[]
+): TicketNotificationSuppression {
+  // Suppress the accumulated send only when every event in the batch asked
+  // for it — one silent update must not swallow a later loud update that
+  // landed in the same accumulation window.
+  return {
+    suppressContactNotifications:
+      accumulatedEvents.length > 0 &&
+      accumulatedEvents.every(
+        (accumulatedEvent) => accumulatedEvent.payload?.suppressContactNotifications === true
+      ),
+    suppressInternalNotifications:
+      accumulatedEvents.length > 0 &&
+      accumulatedEvents.every(
+        (accumulatedEvent) => accumulatedEvent.payload?.suppressInternalNotifications === true
+      ),
+  };
+}
 
 /**
  * Resolve the tenant-level portal-domain context once per handler invocation.
@@ -1188,6 +1248,7 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
 
   const { payload } = event;
   const { tenantId } = payload;
+  const suppression = resolveTicketNotificationSuppression(payload);
   // Resolve userId from domain-specific field (updatedByUserId) or base field (actorUserId),
   // falling back to legacy userId for backward compatibility
   const updaterUserId = (payload as any).updatedByUserId || payload.actorUserId || (payload as any).userId;
@@ -1414,7 +1475,13 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
     };
 
     // Send to primary recipient (contact or client) - external user, no userId
-    if (isValidEmail(primaryEmail)) {
+    if (!shouldSendContactFacingTicketEmail(suppression)) {
+      logger.debug('[TicketEmailSubscriber] Skipped ticket updated contact notification due to suppression', {
+        eventId: event.id,
+        ticketId: payload.ticketId,
+        tenantId,
+      });
+    } else if (isValidEmail(primaryEmail)) {
       await sendIfUnique({
         tenantId,
         ...emailEntityContext,
@@ -1432,7 +1499,13 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
     }
 
     // Send to assigned user if different from primary recipient
-    if (isValidEmail(assignedEmail) && assignedEmail !== primaryEmail) {
+    if (!shouldSendInternalTicketEmail(suppression)) {
+      logger.debug('[TicketEmailSubscriber] Skipped ticket updated internal email notifications due to suppression', {
+        eventId: event.id,
+        ticketId: payload.ticketId,
+        tenantId,
+      });
+    } else if (isValidEmail(assignedEmail) && assignedEmail !== primaryEmail) {
       await sendIfUnique({
         tenantId,
         ...emailEntityContext,
@@ -1451,22 +1524,24 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
     // Get and notify all additional resources
     const additionalResources = await fetchAdditionalTicketResources(db, tenantId, payload.ticketId);
 
-    // Send to all additional resources
-    for (const resource of additionalResources) {
-      if (isValidEmail(resource.email)) {
-        await sendIfUnique({
-          tenantId,
-          ...emailEntityContext,
-          to: resource.email ?? '',
-          subject: `Ticket Updated: ${ticket.title}`,
-          template: 'ticket-updated',
-          context: buildContext(internalUrl),
-          replyContext: {
-            ticketId: ticket.ticket_id || payload.ticketId,
-            threadId: ticket.email_metadata?.threadId
-          },
-          from: ticketingFromAddress
-        }, 'Ticket Updated', resource.user_id);
+    if (shouldSendInternalTicketEmail(suppression)) {
+      // Send to all additional resources
+      for (const resource of additionalResources) {
+        if (isValidEmail(resource.email)) {
+          await sendIfUnique({
+            tenantId,
+            ...emailEntityContext,
+            to: resource.email ?? '',
+            subject: `Ticket Updated: ${ticket.title}`,
+            template: 'ticket-updated',
+            context: buildContext(internalUrl),
+            replyContext: {
+              ticketId: ticket.ticket_id || payload.ticketId,
+              threadId: ticket.email_metadata?.threadId
+            },
+            from: ticketingFromAddress
+          }, 'Ticket Updated', resource.user_id);
+        }
       }
     }
 
@@ -1475,6 +1550,16 @@ async function handleTicketUpdated(event: TicketUpdatedEvent): Promise<void> {
       activeWatcherEmails,
       async (watcherEmail) => {
         const isInternalWatcher = internalWatcherEmails.has(normalizeRecipientEmail(watcherEmail));
+        if (!shouldSendTicketWatcherEmail(suppression, isInternalWatcher)) {
+          logger.debug('[TicketEmailSubscriber] Skipped ticket updated watcher email due to suppression', {
+            eventId: event.id,
+            ticketId: payload.ticketId,
+            tenantId,
+            watcherType: isInternalWatcher ? 'internal' : 'external',
+          });
+          return;
+        }
+
         await sendIfUnique({
           tenantId,
           ...emailEntityContext,
@@ -1598,6 +1683,7 @@ export async function handleAccumulatedTicketUpdates(notification: PendingNotifi
       return;
     }
 
+    const suppression = resolveAccumulatedTicketNotificationSuppression(accumulatedEvents);
     const db = await getConnection(tenantId);
 
     // Get current ticket details (may have changed since accumulation started)
@@ -1817,7 +1903,12 @@ export async function handleAccumulatedTicketUpdates(notification: PendingNotifi
     // Build subject line indicating multiple updates if applicable
     const subjectSuffix = accumulatedChanges.length > 1 ? ` (${accumulatedChanges.length} updates)` : '';
 
-    if (isValidEmail(primaryEmail)) {
+    if (!shouldSendContactFacingTicketEmail(suppression)) {
+      logger.debug('[TicketEmailSubscriber] Skipped accumulated ticket updated contact notification due to suppression', {
+        ticketId,
+        tenantId,
+      });
+    } else if (isValidEmail(primaryEmail)) {
       await sendIfUnique({
         tenantId,
         ...emailEntityContext,
@@ -1834,7 +1925,12 @@ export async function handleAccumulatedTicketUpdates(notification: PendingNotifi
       }, 'Ticket Updated Client');
     }
 
-    if (isValidEmail(assignedEmail) && assignedEmail !== primaryEmail) {
+    if (!shouldSendInternalTicketEmail(suppression)) {
+      logger.debug('[TicketEmailSubscriber] Skipped accumulated ticket updated internal email notifications due to suppression', {
+        ticketId,
+        tenantId,
+      });
+    } else if (isValidEmail(assignedEmail) && assignedEmail !== primaryEmail) {
       await sendIfUnique({
         tenantId,
         ...emailEntityContext,
@@ -1852,21 +1948,23 @@ export async function handleAccumulatedTicketUpdates(notification: PendingNotifi
 
     const additionalResources = await fetchAdditionalTicketResources(db, tenantId, ticketId);
 
-    for (const resource of additionalResources) {
-      if (isValidEmail(resource.email)) {
-        await sendIfUnique({
-          tenantId,
-          ...emailEntityContext,
-          to: resource.email ?? '',
-          subject: `Ticket Updated: ${ticket.title}${subjectSuffix}`,
-          template: 'ticket-updated',
-          context: buildContext(internalUrl),
-          replyContext: {
-            ticketId: ticket.ticket_id || ticketId,
-            threadId: ticket.email_metadata?.threadId
-          },
-          from: ticketingFromAddress
-        }, 'Ticket Updated', resource.user_id);
+    if (shouldSendInternalTicketEmail(suppression)) {
+      for (const resource of additionalResources) {
+        if (isValidEmail(resource.email)) {
+          await sendIfUnique({
+            tenantId,
+            ...emailEntityContext,
+            to: resource.email ?? '',
+            subject: `Ticket Updated: ${ticket.title}${subjectSuffix}`,
+            template: 'ticket-updated',
+            context: buildContext(internalUrl),
+            replyContext: {
+              ticketId: ticket.ticket_id || ticketId,
+              threadId: ticket.email_metadata?.threadId
+            },
+            from: ticketingFromAddress
+          }, 'Ticket Updated', resource.user_id);
+        }
       }
     }
 
@@ -1875,6 +1973,15 @@ export async function handleAccumulatedTicketUpdates(notification: PendingNotifi
       activeWatcherEmails,
       async (watcherEmail) => {
         const isInternalWatcher = internalWatcherEmails.has(normalizeRecipientEmail(watcherEmail));
+        if (!shouldSendTicketWatcherEmail(suppression, isInternalWatcher)) {
+          logger.debug('[TicketEmailSubscriber] Skipped accumulated ticket updated watcher email due to suppression', {
+            ticketId,
+            tenantId,
+            watcherType: isInternalWatcher ? 'internal' : 'external',
+          });
+          return;
+        }
+
         await sendIfUnique({
           tenantId,
           ...emailEntityContext,
@@ -1923,6 +2030,7 @@ async function sendTicketAssignedNotifications(
   payload: TicketAssignedEvent['payload']
 ): Promise<void> {
   const { tenantId } = payload;
+  const suppression = resolveTicketNotificationSuppression(payload);
   const assignerUserId = (payload as any).assignedByUserId || payload.actorUserId || (payload as any).userId;
 
   try {
@@ -2105,7 +2213,13 @@ async function sendTicketAssignedNotifications(
     };
 
     // Send to assigned user
-    if (isValidEmail(ticket.assigned_to_email)) {
+    if (!shouldSendInternalTicketEmail(suppression)) {
+      logger.debug('[TicketEmailSubscriber] Skipped ticket assigned internal email notifications due to suppression', {
+        eventId,
+        ticketId: payload.ticketId,
+        tenantId,
+      });
+    } else if (isValidEmail(ticket.assigned_to_email)) {
       await sendIfUnique({
         tenantId,
         ...emailEntityContext,
@@ -2133,7 +2247,13 @@ async function sendTicketAssignedNotifications(
       teamName = team?.team_name;
     }
 
-    if (isValidEmail(primaryEmail) && teamName) {
+    if (!shouldSendContactFacingTicketEmail(suppression)) {
+      logger.debug('[TicketEmailSubscriber] Skipped ticket assigned contact notification due to suppression', {
+        eventId,
+        ticketId: payload.ticketId,
+        tenantId,
+      });
+    } else if (isValidEmail(primaryEmail) && teamName) {
       // Team assignment: notify the client with the client-facing
       // ticket-team-assigned template.
       const teamContext = {
@@ -2209,18 +2329,20 @@ async function sendTicketAssignedNotifications(
     // Get all additional resources
     const additionalResources = await fetchAdditionalTicketResources(db, tenantId, payload.ticketId);
 
-    // Send to all additional resources
-    for (const resource of additionalResources) {
-      if (isValidEmail(resource.email)) {
-        await sendIfUnique({
-          tenantId,
-          ...emailEntityContext,
-          to: resource.email ?? '',
-          subject: `You have been added as additional resource to ticket: ${ticket.title}`,
-          template: 'ticket-assigned',
-          context: buildContext(internalUrl),
-          replyContext
-        }, 'Ticket Assigned', resource.user_id);
+    if (shouldSendInternalTicketEmail(suppression)) {
+      // Send to all additional resources
+      for (const resource of additionalResources) {
+        if (isValidEmail(resource.email)) {
+          await sendIfUnique({
+            tenantId,
+            ...emailEntityContext,
+            to: resource.email ?? '',
+            subject: `You have been added as additional resource to ticket: ${ticket.title}`,
+            template: 'ticket-assigned',
+            context: buildContext(internalUrl),
+            replyContext
+          }, 'Ticket Assigned', resource.user_id);
+        }
       }
     }
 
@@ -2229,7 +2351,7 @@ async function sendTicketAssignedNotifications(
     // agent assignment, watchers will still be informed via subsequent
     // ticket-updated / comment-added events, so we skip the assignment-time
     // email rather than sending the assignee-perspective ticket-assigned copy.
-    if (teamName) {
+    if (teamName && shouldSendContactFacingTicketEmail(suppression)) {
       const watcherTeamContext = {
         ticket: {
           ...baseTicketContext,
@@ -2254,6 +2376,12 @@ async function sendTicketAssignedNotifications(
           excludeEmails: sentEmails,
         }
       );
+    } else if (teamName) {
+      logger.debug('[TicketEmailSubscriber] Skipped ticket assigned watcher team emails due to suppression', {
+        eventId,
+        ticketId: payload.ticketId,
+        tenantId,
+      });
     }
 
   } catch (error) {
@@ -2774,6 +2902,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
 async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
   const { payload } = event;
   const { tenantId } = payload;
+  const suppression = resolveTicketNotificationSuppression(payload);
   // Resolve userId from domain-specific field or base field, falling back to legacy
   const closerUserId = (payload as any).closedByUserId || payload.actorUserId || (payload as any).userId;
 
@@ -2986,7 +3115,13 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
       await sendNotificationIfEnabled(params, subtypeName, recipientUserId ?? undefined);
     };
 
-    if (!primaryEmail) {
+    if (!shouldSendContactFacingTicketEmail(suppression)) {
+      logger.debug('[TicketEmailSubscriber] Skipped ticket closed contact notification due to suppression', {
+        eventId: event.id,
+        ticketId: payload.ticketId,
+        tenantId,
+      });
+    } else if (!primaryEmail) {
       logger.warn('Could not send ticket closed email - missing contact and client email:', {
         eventId: event.id,
         ticketId: payload.ticketId
@@ -3010,56 +3145,70 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
     }
 
     // If this ticket is a bundle master, default behavior is to notify all child requesters on closure.
-    const bundleChildren = await fetchBundleChildTicketsForEmail(db, tenantId, payload.ticketId);
+    if (!shouldSendContactFacingTicketEmail(suppression)) {
+      logger.debug('[TicketEmailSubscriber] Skipped bundle child requester close notifications due to suppression', {
+        eventId: event.id,
+        ticketId: payload.ticketId,
+        tenantId,
+      });
+    } else {
+      const bundleChildren = await fetchBundleChildTicketsForEmail(db, tenantId, payload.ticketId);
 
-    if (bundleChildren.length > 0) {
-      const bundlePortalCtx = await resolvePortalLinkContext(db, tenantId);
-      for (const child of bundleChildren) {
-        const childPrimaryEmail = safeString(child.contact_email) || safeString(child.client_email);
-        if (!childPrimaryEmail) continue;
+      if (bundleChildren.length > 0) {
+        const bundlePortalCtx = await resolvePortalLinkContext(db, tenantId);
+        for (const child of bundleChildren) {
+          const childPrimaryEmail = safeString(child.contact_email) || safeString(child.client_email);
+          if (!childPrimaryEmail) continue;
 
-        const childMeta = child.email_metadata || {};
-        const childMessageId = childMeta.messageId;
-        const headers: Record<string, string> = {};
-        if (childMessageId) {
-          headers['In-Reply-To'] = childMessageId;
-          const refs = Array.isArray(childMeta.references) ? childMeta.references : [];
-          headers['References'] = [...refs, childMessageId].join(' ');
+          const childMeta = child.email_metadata || {};
+          const childMessageId = childMeta.messageId;
+          const headers: Record<string, string> = {};
+          if (childMessageId) {
+            headers['In-Reply-To'] = childMessageId;
+            const refs = Array.isArray(childMeta.references) ? childMeta.references : [];
+            headers['References'] = [...refs, childMessageId].join(' ');
+          }
+
+          const { portalUrl: childPortalUrl } = buildTicketLinks(bundlePortalCtx, child.ticket_id);
+
+          await sendIfUnique({
+            tenantId,
+            entityType: 'ticket',
+            entityId: child.ticket_id,
+            to: childPrimaryEmail,
+            subject: `Ticket Closed: ${ticket.title}`,
+            template: 'ticket-closed',
+            context: {
+              ticket: {
+                ...baseTicketContext,
+                id: child.ticket_number,
+                clientName: safeString(child.client_name) || baseTicketContext.clientName,
+                requesterName: safeString(child.contact_name) || baseTicketContext.requesterName,
+                requesterEmail: safeString(child.contact_email) || safeString(child.client_email) || baseTicketContext.requesterEmail,
+                requesterPhone: safeString(child.contact_phone) || baseTicketContext.requesterPhone,
+                url: childPortalUrl
+              }
+            },
+            replyContext: {
+              ticketId: child.ticket_id,
+              threadId: childMeta.threadId
+            },
+            headers: Object.keys(headers).length > 0 ? headers : undefined,
+            from: fromAddress,
+            recipientClientId: child.client_id || undefined
+          }, 'Ticket Closed (Bundled Child)');
         }
-
-        const { portalUrl: childPortalUrl } = buildTicketLinks(bundlePortalCtx, child.ticket_id);
-
-        await sendIfUnique({
-          tenantId,
-          entityType: 'ticket',
-          entityId: child.ticket_id,
-          to: childPrimaryEmail,
-          subject: `Ticket Closed: ${ticket.title}`,
-          template: 'ticket-closed',
-          context: {
-            ticket: {
-              ...baseTicketContext,
-              id: child.ticket_number,
-              clientName: safeString(child.client_name) || baseTicketContext.clientName,
-              requesterName: safeString(child.contact_name) || baseTicketContext.requesterName,
-              requesterEmail: safeString(child.contact_email) || safeString(child.client_email) || baseTicketContext.requesterEmail,
-              requesterPhone: safeString(child.contact_phone) || baseTicketContext.requesterPhone,
-              url: childPortalUrl
-            }
-          },
-          replyContext: {
-            ticketId: child.ticket_id,
-            threadId: childMeta.threadId
-          },
-          headers: Object.keys(headers).length > 0 ? headers : undefined,
-          from: fromAddress,
-          recipientClientId: child.client_id || undefined
-        }, 'Ticket Closed (Bundled Child)');
       }
     }
 
     // Send to assigned user if different from primary email
-    if (assignedEmail && assignedEmail !== primaryEmail) {
+    if (!shouldSendInternalTicketEmail(suppression)) {
+      logger.debug('[TicketEmailSubscriber] Skipped ticket closed internal email notifications due to suppression', {
+        eventId: event.id,
+        ticketId: payload.ticketId,
+        tenantId,
+      });
+    } else if (assignedEmail && assignedEmail !== primaryEmail) {
       await sendIfUnique({
         tenantId,
         ...emailEntityContext,
@@ -3078,22 +3227,24 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
     // Get and notify all additional resources
     const additionalResources = await fetchAdditionalTicketResources(db, tenantId, payload.ticketId);
 
-    // Send to all additional resources
-    for (const resource of additionalResources) {
-      if (isValidEmail(resource.email)) {
-        await sendIfUnique({
-          tenantId,
-          ...emailEntityContext,
-          to: resource.email ?? '',
-          subject: `Ticket Closed: ${ticket.title}`,
-          template: 'ticket-closed',
-          context: internalContext,
-          replyContext: {
-            ticketId: ticket.ticket_id || payload.ticketId,
-            threadId: ticket.email_metadata?.threadId
-          },
-          from: fromAddress
-        }, 'Ticket Closed', resource.user_id);
+    if (shouldSendInternalTicketEmail(suppression)) {
+      // Send to all additional resources
+      for (const resource of additionalResources) {
+        if (isValidEmail(resource.email)) {
+          await sendIfUnique({
+            tenantId,
+            ...emailEntityContext,
+            to: resource.email ?? '',
+            subject: `Ticket Closed: ${ticket.title}`,
+            template: 'ticket-closed',
+            context: internalContext,
+            replyContext: {
+              ticketId: ticket.ticket_id || payload.ticketId,
+              threadId: ticket.email_metadata?.threadId
+            },
+            from: fromAddress
+          }, 'Ticket Closed', resource.user_id);
+        }
       }
     }
 
@@ -3101,7 +3252,18 @@ async function handleTicketClosed(event: TicketClosedEvent): Promise<void> {
     await sendOneEmailPerWatcher(
       activeWatcherEmails,
       async (watcherEmail) => {
-        const watcherContext = internalWatcherEmails.has(normalizeRecipientEmail(watcherEmail))
+        const isInternalWatcher = internalWatcherEmails.has(normalizeRecipientEmail(watcherEmail));
+        if (!shouldSendTicketClosedWatcherEmail(suppression, isInternalWatcher)) {
+          logger.debug('[TicketEmailSubscriber] Skipped ticket closed watcher email due to suppression', {
+            eventId: event.id,
+            ticketId: payload.ticketId,
+            tenantId,
+            watcherType: isInternalWatcher ? 'internal' : 'external',
+          });
+          return;
+        }
+
+        const watcherContext = isInternalWatcher
           ? internalContext
           : externalContext;
         await sendIfUnique({
@@ -3179,6 +3341,12 @@ export async function handleTicketEvent(event: BaseEvent): Promise<void> {
 }
 
 export const ticketEmailSubscriberTestHarness = {
+  resolveTicketNotificationSuppression,
+  resolveAccumulatedTicketNotificationSuppression,
+  shouldSendContactFacingTicketEmail,
+  shouldSendInternalTicketEmail,
+  shouldSendTicketWatcherEmail,
+  shouldSendTicketClosedWatcherEmail,
   handleTicketCreated,
   handleTicketUpdated,
   handleTicketAssigned,

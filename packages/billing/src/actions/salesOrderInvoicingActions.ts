@@ -26,6 +26,124 @@ import { generateManualInvoice } from './manualInvoiceActions';
 import { TaxService } from '../services/taxService';
 import * as invoiceService from '../services/invoiceService';
 
+export interface InvoiceableSalesOrderForBilling {
+  so_id: string;
+  so_number: string;
+  client_id: string;
+  client_name: string | null;
+  status: string;
+  invoice_mode: string;
+  currency_code: string;
+  total_amount: number;
+  billable_amount: number;
+  quantity_ordered_total: number;
+  quantity_fulfilled_total: number;
+  quantity_invoiced_total: number;
+  billable_quantity_total: number;
+  line_count: number;
+  drop_ship_line_count: number;
+  created_at?: string | Date | null;
+}
+
+/**
+ * Billing/Invoicing needs a source picker for sales-order-backed manual invoices.
+ * The billable calculation intentionally matches generateInvoiceForSalesOrder:
+ * manual-mode orders bill ordered minus invoiced, while on-fulfillment orders bill
+ * fulfilled minus invoiced, capped by ordered quantity.
+ */
+export const listInvoiceableSalesOrdersForBilling = withAuth(
+  async (
+    user,
+    { tenant },
+    input?: { clientId?: string | null },
+  ): Promise<InvoiceableSalesOrderForBilling[]> => {
+    if (!(await hasPermission(user, 'sales_order', 'read'))) {
+      throw new Error('Permission denied: sales_order read required');
+    }
+
+    const { knex: db } = await createTenantKnex();
+    const billableQtyExpr = `
+      CASE
+        WHEN so.invoice_mode = 'manual'
+          THEN GREATEST(COALESCE(sol.quantity_ordered, 0) - COALESCE(sol.quantity_invoiced, 0), 0)
+        ELSE GREATEST(
+          LEAST(COALESCE(sol.quantity_fulfilled, 0), COALESCE(sol.quantity_ordered, 0))
+          - COALESCE(sol.quantity_invoiced, 0),
+          0
+        )
+      END
+    `;
+
+    return withTransaction(db, async (trx: Knex.Transaction) => {
+      const query = trx('sales_orders as so')
+        .leftJoin('clients as c', function () {
+          this.on('c.client_id', '=', 'so.client_id').andOn('c.tenant', '=', 'so.tenant');
+        })
+        .join('sales_order_lines as sol', function () {
+          this.on('sol.so_id', '=', 'so.so_id').andOn('sol.tenant', '=', 'so.tenant');
+        })
+        .where('so.tenant', tenant)
+        .whereNotIn('so.status', ['draft', 'cancelled'])
+        .groupBy(
+          'so.tenant',
+          'so.so_id',
+          'so.so_number',
+          'so.client_id',
+          'c.client_name',
+          'so.status',
+          'so.invoice_mode',
+          'so.currency_code',
+          'so.created_at',
+        )
+        .havingRaw(`COALESCE(SUM((${billableQtyExpr}) * sol.unit_price), 0) > 0`)
+        .orderByRaw(`COALESCE(SUM((${billableQtyExpr}) * sol.unit_price), 0) DESC`)
+        .orderBy('so.created_at', 'desc')
+        .select(
+          'so.so_id',
+          'so.so_number',
+          'so.client_id',
+          'c.client_name',
+          'so.status',
+          'so.invoice_mode',
+          'so.currency_code',
+          'so.created_at',
+          trx.raw('COALESCE(SUM(sol.quantity_ordered * sol.unit_price), 0)::bigint as total_amount'),
+          trx.raw(`COALESCE(SUM((${billableQtyExpr}) * sol.unit_price), 0)::bigint as billable_amount`),
+          trx.raw('COALESCE(SUM(sol.quantity_ordered), 0)::int as quantity_ordered_total'),
+          trx.raw('COALESCE(SUM(sol.quantity_fulfilled), 0)::int as quantity_fulfilled_total'),
+          trx.raw('COALESCE(SUM(sol.quantity_invoiced), 0)::int as quantity_invoiced_total'),
+          trx.raw(`COALESCE(SUM(${billableQtyExpr}), 0)::int as billable_quantity_total`),
+          trx.raw('COUNT(*)::int as line_count'),
+          trx.raw("COUNT(*) FILTER (WHERE sol.fulfillment_type = 'drop_ship')::int as drop_ship_line_count"),
+        );
+
+      if (input?.clientId) {
+        query.andWhere('so.client_id', input.clientId);
+      }
+
+      const rows = await query;
+      return rows.map((row: any) => ({
+        so_id: row.so_id,
+        so_number: row.so_number,
+        client_id: row.client_id,
+        client_name: row.client_name ?? null,
+        status: row.status,
+        invoice_mode: row.invoice_mode,
+        currency_code: row.currency_code,
+        total_amount: Number(row.total_amount ?? 0),
+        billable_amount: Number(row.billable_amount ?? 0),
+        quantity_ordered_total: Number(row.quantity_ordered_total ?? 0),
+        quantity_fulfilled_total: Number(row.quantity_fulfilled_total ?? 0),
+        quantity_invoiced_total: Number(row.quantity_invoiced_total ?? 0),
+        billable_quantity_total: Number(row.billable_quantity_total ?? 0),
+        line_count: Number(row.line_count ?? 0),
+        drop_ship_line_count: Number(row.drop_ship_line_count ?? 0),
+        created_at: row.created_at,
+      }));
+    });
+  },
+);
+
 /**
  * Sales-order invoicing — bridges sales_order_lines into the existing manual-invoice
  * path (which owns invoice numbering / tax / totals). Lives in billing to avoid a

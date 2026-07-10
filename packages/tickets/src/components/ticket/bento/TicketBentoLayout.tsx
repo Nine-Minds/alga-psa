@@ -46,6 +46,7 @@ import { TimeLoggedSummary } from './TimeLoggedSummary';
 import { useTeamAvatarUrl } from './useTeamAvatarUrl';
 import type { TicketSlaFields } from './slaClocks';
 import type { TicketLiveConflictState } from '../ticketLiveFields';
+import type { TicketNotificationSuppressionValue } from '../TicketNotificationSuppressionControl';
 
 function formatElapsed(totalSeconds: number): string {
   const hours = Math.floor(totalSeconds / 3600);
@@ -72,8 +73,11 @@ export interface TicketBentoLayoutProps {
   boardOptions: { value: string; label: string }[];
   agentOptions: { value: string; label: string }[];
   onSelectChange: (field: keyof ITicket, newValue: string | null) => Promise<void> | void;
-  /** Coalesced multi-field hero save (debounced batch); forwarded to BentoHero. */
-  onBatchSelectChange?: (changes: Record<string, string | null>) => Promise<void> | void;
+  /** Coalesced multi-field hero save; forwarded to BentoHero. */
+  onBatchSelectChange?: (
+    changes: Record<string, string | null>,
+    options?: TicketNotificationSuppressionValue
+  ) => Promise<boolean | void> | boolean | void;
   responseStateTrackingEnabled?: boolean;
   hideSlaStatus?: boolean;
   /** Hides the billing rollup tile (AlgaDesk has no billing surface). */
@@ -92,6 +96,7 @@ export interface TicketBentoLayoutProps {
   onTakeLiveConflict?: (field: string) => void;
   liveEditingUsers?: Partial<Record<string, string[]>>;
   onLiveEditingFieldChange?: (field: string | null) => void;
+  onLiveDirtyFieldsChange?: (fields: string[]) => void;
   /** Opens the agent schedule drawer (global drawer system). */
   onAgentClick?: (userId: string) => void;
   /** Client locations for resolving the ticket's location display line. */
@@ -109,7 +114,13 @@ export interface TicketBentoLayoutProps {
   editorKey: number;
   isSubmitting?: boolean;
   onNewCommentContentChange: (content: PartialBlock[]) => void;
-  onAddNewComment: (isInternal: boolean, isResolution: boolean) => Promise<boolean>;
+  onAddNewComment: (
+    isInternal: boolean,
+    isResolution: boolean,
+    closeStatusId?: string | null,
+    options?: TicketNotificationSuppressionValue
+  ) => Promise<boolean>;
+  closedStatusOptions?: { value: string; label: string }[];
   // Comment affordances on timeline nodes (reactions, edit, delete).
   currentUser?: { id: string; name: string; email?: string } | null;
   isEditing: boolean;
@@ -907,6 +918,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
           onTakeLiveConflict={props.onTakeLiveConflict}
           liveEditingUsers={props.liveEditingUsers}
           onLiveEditingFieldChange={props.onLiveEditingFieldChange}
+          onLiveDirtyFieldsChange={props.onLiveDirtyFieldsChange}
         />
       </div>
       {/* Mobile: timeline first, then state tiles (SLA/checklist lead the right
@@ -938,6 +950,7 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
             isSubmitting={props.isSubmitting}
             onNewCommentContentChange={props.onNewCommentContentChange}
             onAddNewComment={props.onAddNewComment}
+            closedStatusOptions={props.closedStatusOptions}
             onAddReplyComment={props.onAddReplyComment}
             currentUser={props.currentUser}
             isEditing={props.isEditing}

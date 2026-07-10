@@ -717,8 +717,12 @@
           "fetchFailed": "Falha ao carregar regras de fechamento para este quadro",
           "autoCloseStatusRequired": "Cada regra de fechamento automático precisa de um status de gatilho e um status de destino fechado",
           "autoCloseDaysInvalid": "Os dias de inatividade com fechamento automático precisam ser um número inteiro positivo",
-          "autoCloseWarningInvalid": "O prazo de aviso deve ser menor que os dias de inatividade"
-        }
+          "autoCloseWarningInvalid": "O prazo de aviso deve ser menor que os dias de inatividade",
+          "autoCloseSuppressionInvalid": "As notificações de agentes e observadores só podem ser ignoradas quando as notificações do cliente forem ignoradas."
+        },
+        "suppressContactNotificationsLabel": "Não notificar o cliente",
+        "suppressContactNotificationsHelp": "Ignora o e-mail de aviso, o e-mail de fechamento, o convite de pesquisa e a notificação do portal do cliente.",
+        "suppressInternalNotificationsLabel": "Também não notificar agentes e observadores"
       },
       "editor": {
         "sections": {
@@ -1691,7 +1695,7 @@
     "tabs": {
       "roles": "Funções",
       "sessions": "Sessões",
-      "sso": "Logon único",
+      "sso": "Login único",
       "permissions": "Permissões",
       "userRoles": "Funções de usuário",
       "policies": "Políticas",
@@ -1789,7 +1793,7 @@
   },
   "ssoBulk": {
     "loading": {
-      "title": "Logon único",
+      "title": "Login único",
       "description": "Carregando ferramentas de atribuição em massa de SSO..."
     },
     "status": {
@@ -1806,7 +1810,7 @@
       "disabledInfo": "Ative esta alternância para permitir que funcionários novos e existentes ignorem o fluxo “Conectar SSO” quando seus e-mails já corresponderem a um provedor configurado. Ainda registraremos todos os links automáticos."
     },
     "bulk": {
-      "title": "Atribuição de logon único em massa",
+      "title": "Atribuição de login único em massa",
       "description": "Selecione usuários internos na lista abaixo e vincule-os a um provedor Google ou Microsoft configurado. Use a visualização para verificar o impacto antes de executar.",
       "noProviders": "Nenhum provedor de SSO está configurado ainda. Adicione credenciais OAuth para continuar com atribuições em massa."
     },
@@ -1899,7 +1903,7 @@
     "tabs": {
       "profile": "Perfil",
       "security": "Segurança",
-      "sso": "Logon único",
+      "sso": "Login único",
       "apiKeys": "Chaves de API",
       "notifications": "Notificações",
       "calendar": "Calendário"

@@ -22,13 +22,13 @@ import { ArrowLeft, ChevronDown, ChevronRight, MoreVertical } from 'lucide-react
 import { CURRENCY_OPTIONS } from '@alga-psa/core';
 import type { IClient, IContact, IQuote, IQuoteDocumentTemplate, IQuoteListItem, QuoteConversionPreview, QuoteStatus } from '@alga-psa/types';
 import { isActionMessageError, isActionPermissionError, getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
-import { getDefaultBillingSettings } from '@alga-psa/billing/actions';
+import { getDefaultBillingSettings } from '@alga-psa/billing/actions/billingSettingsActions';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
 import { getAllClientsForBilling } from '../../../actions/billingClientsActions';
 import { getActiveClientLocationsForBilling, type BillingLocationSummary } from '../../../actions/billingClientLocationActions';
 import { addQuoteItem, approveQuote, convertQuoteToBoth, convertQuoteToContract, convertQuoteToInvoice, convertQuoteToSalesOrder, createQuote, createQuoteFromTemplate, createQuoteRevision, downloadQuotePdf, duplicateQuote, getQuote, getQuoteApprovalSettings, getQuoteConversionPreview, listQuotes, removeQuoteItem, reorderQuoteItems, requestQuoteApprovalChanges, resendQuote, sendQuote, sendQuoteReminder, submitQuoteForApproval, updateQuote, updateQuoteItem } from '../../../actions/quoteActions';
 import { getQuoteDocumentTemplates } from '../../../actions/quoteDocumentTemplates';
-import { getContactsForPicker } from '@alga-psa/user-composition/actions';
+import { getContactsForPicker } from '@alga-psa/user-composition/actions/contactQueryActions';
 import QuoteLineItemsEditor from './QuoteLineItemsEditor';
 import {
   pickDefaultLocation,

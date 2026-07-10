@@ -78,3 +78,21 @@ test('EE application image requires onboarding seed runtime package exports', ()
   assert.match(dockerignore, /!packages\/core\/dist\/\*\*/);
   assert.match(dockerignore, /!packages\/db\/dist\/\*\*/);
 });
+
+test('appliance temporal-worker hashing matches the appliance app without changing hosted defaults', () => {
+  const applianceValues = read('ee/appliance/flux/profiles/single-node/values/temporal-worker.single-node.yaml');
+  const workerDefaults = read('ee/helm/temporal-worker/values.yaml');
+  const appDefaults = read('helm/values.yaml');
+
+  assert.match(applianceValues, /encryption:[\s\S]*iterations: "1000"/);
+  assert.match(workerDefaults, /encryption:[\s\S]*iterations: "10000"/);
+  assert.match(appDefaults, /crypto:[\s\S]*iteration: 1000/);
+});
+
+test('app images package the production appliance admin reset entrypoint', () => {
+  const prebuilt = read('ee/server/Dockerfile');
+  const built = read('ee/server/Dockerfile.build');
+  assert.match(prebuilt, /COPY \.\/server\/scripts\/ \.\/server\/scripts\//);
+  assert.match(built, /COPY --from=builder \/app\/server\/scripts\/ \.\/server\/scripts\//);
+  assert.match(read('server/scripts/appliance-reset-admin-password.mjs'), /resetInitialAdminPassword/);
+});

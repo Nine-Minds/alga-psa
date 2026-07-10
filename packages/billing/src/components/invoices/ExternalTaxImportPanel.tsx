@@ -12,11 +12,7 @@ import { useTranslation } from 'react-i18next';
 import { useFormatters } from '@alga-psa/ui/lib/i18n/client';
 
 import { TaxSource } from '@alga-psa/types';
-import {
-  importExternalTaxForInvoice,
-  getExternalTaxImportHistory,
-  getInvoiceTaxReconciliation
-} from '@alga-psa/billing/actions';
+import { importExternalTaxForInvoice, getExternalTaxImportHistory, getInvoiceTaxReconciliation } from '@alga-psa/billing/actions/externalTaxImportActions';
 
 interface ExternalTaxImportPanelProps {
   invoiceId: string;

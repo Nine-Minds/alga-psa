@@ -12,11 +12,7 @@ import {
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { Cloud } from 'lucide-react';
-import {
-  dismissTaxDelegationNudge,
-  getTaxDelegationNudgeState,
-  updateTenantTaxSettings,
-} from '@alga-psa/billing/actions';
+import { dismissTaxDelegationNudge, getTaxDelegationNudgeState, updateTenantTaxSettings } from '@alga-psa/billing/actions/taxSettingsActions';
 
 type ReturnedActionError = ActionMessageError | ActionPermissionError;
 

@@ -884,7 +884,9 @@
     "noActiveTimePeriodMessage": "Kein aktiver Zeitraum gefunden. Zeiträume müssen im Abrechnungs-Dashboard eingerichtet werden, bevor Zeiteinträge hinzugefügt werden können.",
     "goToTimePeriodsSetup": "Zur Einrichtung der Zeiträume",
     "emailNotificationLogs": "E-Mail-Benachrichtigungsprotokolle",
-    "ticketActivity": "Ticket-Aktivität"
+    "ticketActivity": "Ticket-Aktivität",
+    "discardChanges": "Änderungen verwerfen",
+    "saved": "Gespeichert"
   },
   "properties": {
     "timeEntry": "Zeiteintrag",
@@ -1457,7 +1459,9 @@
       "responseWaitingOnClient": "Warten auf Kunde",
       "responseNone": "Keine Antwort erforderlich",
       "additionalAgentsTooltip": "Weitere Bearbeiter:",
-      "unknownAgent": "Unbekannter Bearbeiter"
+      "unknownAgent": "Unbekannter Bearbeiter",
+      "category": "Kategorie",
+      "selectDestinationStatus": "Wähle vor dem Speichern einen Status für das neue Board aus."
     },
     "layout": {
       "grid": "Raster",
@@ -1641,7 +1645,17 @@
         "close_rules_overridden": "schließregeln außer kraft gesetzt",
         "close_rules_bypassed": "schließregeln umgangen",
         "auto_close_warning_sent": "automatische schließwarnung gesendet"
-      }
+      },
+      "closeStatus": "Close status",
+      "noStatusChange": "Do not change status"
+    }
+  },
+  "notifications": {
+    "suppression": {
+      "contactLabel": "Kunden nicht benachrichtigen",
+      "contactHelper": "Überspringt die E-Mail an den Kunden, die Umfrage-Einladung und die Kundenportal-Benachrichtigung",
+      "internalLabel": "Auch Agenten und Beobachter nicht benachrichtigen",
+      "internalHelper": "Überspringt auch deren E-Mails und In-App-Benachrichtigungen"
     }
   }
 }

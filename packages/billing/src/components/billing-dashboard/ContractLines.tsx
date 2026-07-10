@@ -19,7 +19,7 @@ import { UnitOfMeasureInput } from '@alga-psa/ui/components/UnitOfMeasureInput';
 import { getContractLines, getContractLineById, updateContractLine, deleteContractLine } from '@alga-psa/billing/actions/contractLineAction';
 import { getContractLineServices, addServiceToContractLine, updateContractLineService, removeServiceFromContractLine } from '@alga-psa/billing/actions/contractLineServiceActions';
 // Import new action and type
-import { getServiceTypesForSelection } from '@alga-psa/billing/actions';
+import { getServiceTypesForSelection } from '@alga-psa/billing/actions/serviceActions';
 import { DeletionValidationResult, IContractLine, IContractLineService, IService } from '@alga-psa/types';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import { toast } from 'react-hot-toast';

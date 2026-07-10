@@ -22,9 +22,9 @@ import {
 } from '../../actions/accountingSyncActions';
 import type { AccountingSyncHealth } from '../../actions/accountingSyncActions';
 // eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- billing-owned panel is slot-injected into the integrations settings page and reads the QBO catalogs directly (same bridge as the accounting export adapter)
-import { getQboAccounts, getQboClasses, getQboDepartments } from '@alga-psa/integrations/actions';
+import { getQboAccounts, getQboClasses, getQboDepartments } from '@alga-psa/integrations/actions/qboActions';
 // eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- type-only import for the QBO catalog shapes above
-import type { QboAccount, QboClass, QboDepartment } from '@alga-psa/integrations/actions';
+import type { QboAccount, QboClass, QboDepartment } from '@alga-psa/integrations/actions/qboActions';
 
 export default function QboSyncHealthPanel() {
   const { t } = useTranslation('msp/integrations');

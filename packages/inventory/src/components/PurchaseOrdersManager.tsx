@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -142,6 +143,8 @@ export function PurchaseOrdersManager({
   loadErrorMessage?: string;
   defaultCurrencyCode?: string;
 }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { t } = useTranslation('features/inventory');
   const { money } = useCurrencyFormat();
   const STATUS_FILTER_OPTIONS = [
@@ -163,13 +166,17 @@ export function PurchaseOrdersManager({
   };
   const statusLabel = (status?: string | null): string =>
     (status && PO_STATUS_LABELS[status]) || humanize(status);
+  const statusParam = searchParams?.get('status') ?? '';
+  const initialStatusFilter = STATUS_FILTER_OPTIONS.some((option) => option.value === statusParam)
+    ? statusParam
+    : '';
   const [pos, setPos] = useState<PurchaseOrderListRow[]>(initialPos || []);
   // Seeded from the server: a failed SSR load must read as an error, not as "no POs".
   const [loadFailed, setLoadFailed] = useState(loadError);
   const [vendors, setVendors] = useState<IVendor[]>([]);
   const [products, setProducts] = useState<ProductOption[]>([]);
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState(initialStatusFilter);
   const [vendorFilter, setVendorFilter] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState<FormState>(emptyForm(defaultCurrencyCode));
@@ -236,6 +243,10 @@ export function PurchaseOrdersManager({
     void loadVendors();
     void loadProducts();
   }, [loadVendors, loadProducts]);
+
+  useEffect(() => {
+    setStatusFilter(initialStatusFilter);
+  }, [initialStatusFilter]);
 
   const vendorName = useCallback(
     (vendorId: string) => vendors.find((v) => v.vendor_id === vendorId)?.vendor_name || vendorId,
@@ -592,6 +603,7 @@ export function PurchaseOrdersManager({
     setSearch('');
     setStatusFilter('');
     setVendorFilter('');
+    if (statusParam) router.push('/msp/inventory/purchase-orders');
   };
 
   return (

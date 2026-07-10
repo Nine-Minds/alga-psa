@@ -32,7 +32,7 @@ import { toPlainDate } from '@alga-psa/core';
 import { useBillingFrequencyOptions } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 import { CURRENCY_OPTIONS } from '@alga-psa/core';
 import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
-import { getDefaultBillingSettings } from '@alga-psa/billing/actions';
+import { getDefaultBillingSettings } from '@alga-psa/billing/actions/billingSettingsActions';
 import GenericPlanServicesList from '../contract-lines/GenericContractLineServicesList';
 import { ContractLineEditDialog } from './ContractLineEditDialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';

@@ -69,7 +69,11 @@ import { buildTicketTransitionWorkflowEvents } from '../lib/workflowTicketTransi
 import { buildTicketCommunicationWorkflowEvents } from '../lib/workflowTicketCommunicationEvents';
 import { getTicketOrigin, type ResolvedTicketOrigin } from '../lib/ticketOrigin';
 import { getClientContactVisibilityContext } from '../lib/clientPortalVisibility.server';
-import { updateTicketWithCache, updateTicketInTransaction } from './optimizedTicketActions';
+import {
+  updateTicketWithCache,
+  updateTicketInTransaction,
+  type UpdateTicketInTransactionOptions,
+} from './optimizedTicketActions';
 import {
   buildTicketResolutionSlaStageCompletionEvent,
   buildTicketResolutionSlaStageEnteredEvent,
@@ -120,6 +124,11 @@ const EMAIL_EVENT_CHANNEL = 'emailservice::v7';
 function getEmailEventChannel(): string {
   return EMAIL_EVENT_CHANNEL;
 }
+
+export type TicketNotificationSuppressionOptions = Pick<
+  UpdateTicketInTransactionOptions,
+  'suppressContactNotifications' | 'suppressInternalNotifications'
+>;
 
 function tenantScopedTable(
   conn: Knex | Knex.Transaction,
@@ -636,12 +645,22 @@ export interface UpdateTicketOptions {
   /** Close despite unmet close rules; honored only with ticket:close_override. */
   overrideCloseRules?: boolean;
   overrideCloseRulesReason?: string | null;
+  /** Skip customer-facing ticket notifications for this update operation. */
+  suppressContactNotifications?: boolean;
+  /** Also skip internal staff notifications; requires suppressContactNotifications. */
+  suppressInternalNotifications?: boolean;
 }
 
 export const updateTicket = withAuth(async (user, { tenant }, id: string, data: Partial<ITicket>, options?: UpdateTicketOptions): Promise<'success' | TicketActionError> => {
   try {
     // Validate update data
     const validatedData = validateData(ticketUpdateSchema, data);
+    const suppressContactNotifications = options?.suppressContactNotifications === true;
+    const suppressInternalNotifications = options?.suppressInternalNotifications === true;
+
+    if (suppressInternalNotifications && !suppressContactNotifications) {
+      throw new Error('suppressInternalNotifications requires suppressContactNotifications');
+    }
 
     const {knex: db} = await createTenantKnex();
 
@@ -1088,6 +1107,8 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
             closedByUserId: user.user_id,
             closedAt: occurredAt,
             changes: structuredChanges,
+            suppressContactNotifications,
+            suppressInternalNotifications,
           },
           ctx: workflowCtx,
           eventName: 'Ticket Closed',
@@ -1133,6 +1154,8 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
             newAssigneeType: 'user',
             assignedAt: occurredAt,
             changes: structuredChanges,
+            suppressContactNotifications,
+            suppressInternalNotifications,
           },
           ctx: workflowCtx,
           eventName: 'Ticket Assigned',
@@ -1153,6 +1176,8 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
             userId: user.user_id,
             updatedByUserId: user.user_id,
             changes: structuredChanges,
+            suppressContactNotifications,
+            suppressInternalNotifications,
           },
           ctx: workflowCtx,
           eventName: 'Ticket Updated',
@@ -1173,6 +1198,9 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
 
     return 'success';
   } catch (error) {
+    if (error instanceof Error && error.message === 'suppressInternalNotifications requires suppressContactNotifications') {
+      throw error;
+    }
     const expected = ticketActionErrorFrom(error);
     if (expected) {
       return expected;
@@ -1722,7 +1750,8 @@ export const moveTicketsToBoard = withAuth(async (
   { tenant },
   ticketIds: string[],
   destinationBoardId: string,
-  destinationStatusId: string
+  destinationStatusId: string,
+  options: TicketNotificationSuppressionOptions = {}
 ): Promise<{
   movedIds: string[];
   failed: Array<{ ticketId: string; message: string }>;
@@ -1794,7 +1823,7 @@ export const moveTicketsToBoard = withAuth(async (
         updateData.subcategory_id = null;
       }
 
-      await updateTicketWithCache(ticketId, updateData);
+      await updateTicketWithCache(ticketId, updateData, options);
 
       movedIds.push(ticketId);
     } catch (error: unknown) {
@@ -1821,6 +1850,7 @@ export const bulkAssignTickets = withAuth(async (
   { tenant },
   ticketIds: string[],
   selection: BulkTicketAssignSelection,
+  options: TicketNotificationSuppressionOptions = {},
 ): Promise<{
   updatedIds: string[];
   failed: Array<{ ticketId: string; message: string }>;
@@ -1849,7 +1879,7 @@ export const bulkAssignTickets = withAuth(async (
       if (selection.kind === 'team') {
         // Canonical team flow: sets assigned_team_id + the team lead as primary assignee and
         // records team members as `team_member` resources, so the team badge/filter persists.
-        const result = await assignTeamToTicket(ticketId, selection.teamId);
+        const result = await assignTeamToTicket(ticketId, selection.teamId, options);
         if (isTicketActionError(result)) {
           throw result;
         }
@@ -1861,7 +1891,7 @@ export const bulkAssignTickets = withAuth(async (
           throw result;
         }
         await withTransaction(knex, (trx: Knex.Transaction) =>
-          updateTicketInTransaction(trx, user as IUserWithRoles, tenant, ticketId, { assigned_to: selection.userId }),
+          updateTicketInTransaction(trx, user as IUserWithRoles, tenant, ticketId, { assigned_to: selection.userId }, options),
         );
       }
       updatedIds.push(ticketId);
@@ -1965,6 +1995,7 @@ export const bulkUpdateTicketDueDate = withAuth(async (
   { tenant },
   ticketIds: string[],
   dueDate: string | null,
+  options: TicketNotificationSuppressionOptions = {},
 ): Promise<{
   updatedIds: string[];
   failed: Array<{ ticketId: string; message: string }>;
@@ -1991,7 +2022,7 @@ export const bulkUpdateTicketDueDate = withAuth(async (
   for (const ticketId of uniqueIds) {
     try {
       await withTransaction(knex, (trx: Knex.Transaction) =>
-        updateTicketInTransaction(trx, user as IUserWithRoles, tenant, ticketId, { due_date: dueDate } as Partial<ITicket>),
+        updateTicketInTransaction(trx, user as IUserWithRoles, tenant, ticketId, { due_date: dueDate } as Partial<ITicket>, options),
       );
       updatedIds.push(ticketId);
     } catch (error: unknown) {
@@ -2014,6 +2045,7 @@ export const bulkUpdateTicketStatus = withAuth(async (
   { tenant },
   ticketIds: string[],
   statusId: string,
+  options: TicketNotificationSuppressionOptions = {},
 ): Promise<{
   updatedIds: string[];
   failed: Array<{ ticketId: string; message: string; closeRuleFailures?: CloseRuleFailure[] }>;
@@ -2040,7 +2072,7 @@ export const bulkUpdateTicketStatus = withAuth(async (
   for (const ticketId of uniqueIds) {
     try {
       await withTransaction(knex, (trx: Knex.Transaction) =>
-        updateTicketInTransaction(trx, user as IUserWithRoles, tenant, ticketId, { status_id: statusId }),
+        updateTicketInTransaction(trx, user as IUserWithRoles, tenant, ticketId, { status_id: statusId }, options),
       );
       updatedIds.push(ticketId);
     } catch (error: unknown) {
@@ -2066,6 +2098,7 @@ export const bulkUpdateTicketPriority = withAuth(async (
   { tenant },
   ticketIds: string[],
   priorityId: string,
+  options: TicketNotificationSuppressionOptions = {},
 ): Promise<{
   updatedIds: string[];
   failed: Array<{ ticketId: string; message: string }>;
@@ -2092,7 +2125,7 @@ export const bulkUpdateTicketPriority = withAuth(async (
   for (const ticketId of uniqueIds) {
     try {
       await withTransaction(knex, (trx: Knex.Transaction) =>
-        updateTicketInTransaction(trx, user as IUserWithRoles, tenant, ticketId, { priority_id: priorityId }),
+        updateTicketInTransaction(trx, user as IUserWithRoles, tenant, ticketId, { priority_id: priorityId }, options),
       );
       updatedIds.push(ticketId);
     } catch (error: unknown) {

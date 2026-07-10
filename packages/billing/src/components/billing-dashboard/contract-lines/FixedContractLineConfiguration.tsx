@@ -12,7 +12,7 @@ import { RadioGroup } from '@alga-psa/ui/components/RadioGroup';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import Spinner from '@alga-psa/ui/components/Spinner';
-import { getServices } from '@alga-psa/billing/actions';
+import { getServices } from '@alga-psa/billing/actions/serviceActions';
 import {
   getContractLineById,
   updateContractLine,

@@ -2369,6 +2369,10 @@ export interface UpdateTicketInTransactionOptions {
   /** Close despite unmet close rules; honored only with ticket:close_override. */
   overrideCloseRules?: boolean;
   overrideCloseRulesReason?: string | null;
+  /** Skip customer-facing ticket notifications for this update operation. */
+  suppressContactNotifications?: boolean;
+  /** Also skip internal staff notifications; requires suppressContactNotifications. */
+  suppressInternalNotifications?: boolean;
   /** Automation exemption from close rules (workflow/import/auto-close/portal); audit-logged. */
   bypassCloseRules?: { source: CloseRuleBypassSource };
   /**
@@ -2391,6 +2395,12 @@ export async function updateTicketInTransaction(
     try {
       // Validate update data
       const validatedData = validateData(ticketUpdateSchema, data);
+      const suppressContactNotifications = options?.suppressContactNotifications === true;
+      const suppressInternalNotifications = options?.suppressInternalNotifications === true;
+
+      if (suppressInternalNotifications && !suppressContactNotifications) {
+        throw new Error('suppressInternalNotifications requires suppressContactNotifications');
+      }
 
     // Get current ticket state before update
     const currentTicket = await tenantScopedTable(trx, 'tickets', tenant)
@@ -2799,6 +2809,8 @@ export async function updateTicketInTransaction(
               : { userId: user.user_id, closedByUserId: user.user_id }),
             closedAt: occurredAt,
             changes: structuredChanges,
+            suppressContactNotifications,
+            suppressInternalNotifications,
           },
           ctx: workflowCtx,
           eventName: 'Ticket Closed',
@@ -2841,6 +2853,8 @@ export async function updateTicketInTransaction(
             newAssigneeType: 'user',
             assignedAt: occurredAt,
             changes: structuredChanges,
+            suppressContactNotifications,
+            suppressInternalNotifications,
           },
           ctx: workflowCtx,
           eventName: 'Ticket Assigned',
@@ -2857,6 +2871,8 @@ export async function updateTicketInTransaction(
             userId: user.user_id,
             updatedByUserId: user.user_id,
             changes: structuredChanges,
+            suppressContactNotifications,
+            suppressInternalNotifications,
           },
           ctx: workflowCtx,
           eventName: 'Ticket Updated',
@@ -2894,6 +2910,14 @@ export async function updateTicketInTransaction(
           userId: user.user_id,
           displayName: formatLiveUpdateDisplayName(user),
         };
+    const notificationSuppressionDetails = suppressContactNotifications
+      ? {
+          notification_suppression: {
+            suppress_contact_notifications: true,
+            suppress_internal_notifications: suppressInternalNotifications,
+          },
+        }
+      : undefined;
     const curated = await buildCuratedTicketDiffWithLabels(
       trx,
       tenant,
@@ -2935,6 +2959,7 @@ export async function updateTicketInTransaction(
         source: isSystemActor ? TICKET_ACTIVITY_SOURCE.SYSTEM : TICKET_ACTIVITY_SOURCE.UI,
         occurredAt,
         changes: curated,
+        details: notificationSuppressionDetails,
       });
     }
 
@@ -3004,6 +3029,11 @@ export async function updateTicketInTransaction(
             `ticket-live-update ticket=${childPublish.ticketId}`
           );
         }
+        // Child closes publish no TICKET_CLOSED of their own — silent or not.
+        // The master's TICKET_CLOSED carries the suppression flags, and the
+        // close subscriber both emails and (when suppressed) skips child
+        // requesters from that single event. Publishing per-child events only
+        // on silent closes made the silent path noisier than a normal close.
       }
     }
 
@@ -3026,7 +3056,13 @@ export const updateTicketWithCache = withAuth(async (
   { tenant },
   id: string,
   data: Partial<ITicket>,
-  options?: Pick<UpdateTicketInTransactionOptions, 'overrideCloseRules' | 'overrideCloseRulesReason'>,
+  options?: Pick<
+    UpdateTicketInTransactionOptions,
+    | 'overrideCloseRules'
+    | 'overrideCloseRulesReason'
+    | 'suppressContactNotifications'
+    | 'suppressInternalNotifications'
+  >,
 ): Promise<'success' | TicketActionError> => {
   try {
     const { knex: db } = await createTenantKnex();

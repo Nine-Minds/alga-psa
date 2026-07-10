@@ -638,6 +638,8 @@ export interface UpdateTicketRequest {
   status?: 'open' | 'in-progress' | 'resolved' | 'closed';
   priority?: 'low' | 'medium' | 'high' | 'urgent';
   assignee_id?: string;
+  suppressContactNotifications?: boolean;
+  suppressInternalNotifications?: boolean;
 }
 
 export interface CreateUserRequest {

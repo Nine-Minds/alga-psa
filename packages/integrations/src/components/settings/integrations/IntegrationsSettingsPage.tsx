@@ -383,7 +383,7 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
           if (category) {
             setSelectedCategory(category.id);
             const currentSearchParams = new URLSearchParams(window.location.search);
-            currentSearchParams.set('tab', 'integrations');
+            currentSearchParams.delete('tab');
             currentSearchParams.set('category', category.id);
             const newUrl = `${window.location.pathname}?${currentSearchParams.toString()}`;
             window.history.pushState({}, '', newUrl);

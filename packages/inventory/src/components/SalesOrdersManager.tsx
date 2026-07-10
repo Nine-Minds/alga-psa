@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -20,7 +20,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@alga-psa/ui/components/DropdownMenu';
-import { ChevronDown, Trash2 } from 'lucide-react';
+import { ChevronDown, MoreHorizontal, RotateCcw, Trash2 } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { usePageCreateShortcut, useDialogSubmitShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 import {
@@ -114,11 +114,24 @@ const STATUS_VARIANTS: Record<string, BadgeVariant> = {
   cancelled: 'error',
 };
 
+const NUM_HEADER = 'text-right';
+const NUM_CELL = 'text-right tabular-nums';
+
+const asNumber = (value: unknown): number => Number(value ?? 0);
+
+const money = (cents: unknown, currency?: string | null): string =>
+  formatCurrencyFromMinorUnits(asNumber(cents), 'en-US', currency || 'USD');
+
 interface LineForm {
   service_id: string;
   quantity_ordered: string;
   unit_price: string; // major units (e.g. dollars), converted to minor units on save
   fulfillment_type: SalesOrderLineFulfillmentType;
+  is_kit: boolean;
+  kit_pricing_mode: 'sum' | 'fixed' | null;
+  kit_currency: string | null;
+  resolved_unit_price: string | null;
+  price_overridden: boolean;
 }
 
 interface FormState {
@@ -143,6 +156,10 @@ export interface SalesOrderServiceOption {
   service_name: string | null;
   sku: string | null;
   default_rate: number | null;
+  is_kit?: boolean;
+  kit_pricing_mode?: 'sum' | 'fixed' | null;
+  resolved_kit_price?: number | null;
+  kit_currency?: string | null;
 }
 
 const emptyLine = (): LineForm => ({
@@ -150,6 +167,11 @@ const emptyLine = (): LineForm => ({
   quantity_ordered: '1',
   unit_price: '',
   fulfillment_type: 'from_stock',
+  is_kit: false,
+  kit_pricing_mode: null,
+  kit_currency: null,
+  resolved_unit_price: null,
+  price_overridden: false,
 });
 
 const emptyForm = (): FormState => ({
@@ -196,7 +218,12 @@ export function SalesOrdersManager({
   defaultCurrencyCode = 'USD',
 }: SalesOrdersManagerProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { t } = useTranslation('features/inventory');
+  const attentionFilter = searchParams?.get('attention');
+  const showInvoiceableOnly = attentionFilter === 'invoiceable';
+  const requestedServiceId = searchParams?.get('service_id') || null;
+  const createRequested = searchParams?.get('create') === '1';
   const INVOICE_MODE_OPTIONS: { value: SalesOrderInvoiceMode; label: string }[] = [
     { value: 'on_fulfillment', label: t('salesOrders.invoiceMode.onFulfillment', 'On fulfillment') },
     { value: 'manual', label: t('salesOrders.invoiceMode.manual', 'Manual') },
@@ -219,6 +246,7 @@ export function SalesOrdersManager({
     () => new Map(services.map((s) => [s.service_id, s])),
     [services],
   );
+  const requestedService = requestedServiceId ? serviceById.get(requestedServiceId) : undefined;
   const documentLabels: Record<string, string> = {
     'sales-order': t('salesOrders.documents.salesOrder', 'Order Confirmation'),
     'packing-slip': t('salesOrders.documents.packingSlip', 'Packing Slip'),
@@ -288,10 +316,27 @@ export function SalesOrdersManager({
   // client and render it read-only (falling back to the tenant default when the client has none).
   const onClientSelect = (clientId: string | null) => {
     const picked = clientId ? clients.find((c) => c.client_id === clientId) : undefined;
+    const nextCurrency = picked?.default_currency_code || (clientId ? defaultCurrencyCode : '');
     setForm((f) => ({
       ...f,
       client_id: clientId ?? '',
-      currency_code: picked?.default_currency_code || (clientId ? defaultCurrencyCode : ''),
+      currency_code: nextCurrency,
+      lines: f.lines.map((line) => {
+        if (!line.is_kit || !line.service_id || !nextCurrency) return line;
+        const service = serviceById.get(line.service_id);
+        const currencyMismatch = Boolean(
+          service?.kit_currency && service.kit_currency.toUpperCase() !== nextCurrency.toUpperCase(),
+        );
+        const resolved = !currencyMismatch && service?.resolved_kit_price != null
+          ? String(service.resolved_kit_price / Math.pow(10, currencyFractionDigits(nextCurrency)))
+          : null;
+        return {
+          ...line,
+          unit_price: resolved ?? '',
+          resolved_unit_price: resolved,
+          price_overridden: false,
+        };
+      }),
     }));
   };
 
@@ -302,17 +347,46 @@ export function SalesOrdersManager({
     }));
   };
 
-  // Picking a service both binds a real service_id (a picker can't yield a non-existent one) and
-  // seeds the editable unit price from its catalog default_rate (stored in minor units).
-  const onServicePicked = (idx: number, serviceId: string) => {
+  const lineForService = useCallback((serviceId: string, requestedCurrency?: string): LineForm => {
     const svc = serviceById.get(serviceId);
-    const currency = form.currency_code || defaultCurrencyCode;
+    const currency = requestedCurrency || svc?.kit_currency || defaultCurrencyCode;
+    const kitCurrencyMismatch = Boolean(
+      svc?.is_kit && svc.kit_currency && svc.kit_currency.toUpperCase() !== currency.toUpperCase(),
+    );
+    const priceMinor = svc?.is_kit
+      ? kitCurrencyMismatch ? null : svc.resolved_kit_price
+      : svc?.default_rate;
     const seededPrice =
-      svc?.default_rate != null
-        ? String(svc.default_rate / Math.pow(10, currencyFractionDigits(currency)))
+      priceMinor != null
+        ? String(priceMinor / Math.pow(10, currencyFractionDigits(currency)))
         : undefined;
-    setLine(idx, { service_id: serviceId, ...(seededPrice !== undefined ? { unit_price: seededPrice } : {}) });
+    return {
+      ...emptyLine(),
+      service_id: serviceId,
+      unit_price: seededPrice ?? '',
+      is_kit: Boolean(svc?.is_kit),
+      kit_pricing_mode: svc?.kit_pricing_mode ?? null,
+      kit_currency: svc?.kit_currency ?? null,
+      resolved_unit_price: svc?.is_kit ? seededPrice ?? null : null,
+      price_overridden: false,
+    };
+  }, [serviceById]);
+
+  // The browser shows the current resolved kit price, but an untouched kit line is resolved again
+  // inside the write transaction. That prevents a stale picker value from becoming an accidental
+  // override when component prices change before save.
+  const onServicePicked = (idx: number, serviceId: string) => {
+    setLine(idx, lineForService(serviceId, form.currency_code || undefined));
   };
+
+  React.useEffect(() => {
+    if (!createRequested || !requestedServiceId || !serviceById.has(requestedServiceId)) return;
+    setForm({
+      ...emptyForm(),
+      lines: [lineForService(requestedServiceId)],
+    });
+    setDialogOpen(true);
+  }, [createRequested, lineForService, requestedServiceId, serviceById]);
 
   const addLine = () => setForm((f) => ({ ...f, lines: [...f.lines, emptyLine()] }));
   const removeLine = (idx: number) =>
@@ -329,7 +403,12 @@ export function SalesOrdersManager({
   }, 0);
   // A line is "priced" once a service is picked with a positive quantity. Save needs a client and
   // at least one such line; individual invalid lines are marked inline rather than via a toast.
-  const lineIsValid = (l: LineForm) => Boolean(l.service_id) && Number(l.quantity_ordered) > 0;
+  const lineIsValid = (l: LineForm) =>
+    Boolean(l.service_id) &&
+    Number(l.quantity_ordered) > 0 &&
+    l.unit_price.trim() !== '' &&
+    Number.isFinite(Number(l.unit_price)) &&
+    Number(l.unit_price) >= 0;
   const canSave = Boolean(form.client_id) && form.lines.some(lineIsValid) && !saving;
 
   const save = async () => {
@@ -343,13 +422,18 @@ export function SalesOrdersManager({
     }
     const lines = form.lines
       .filter((l) => l.service_id.trim())
-      .map((l) => ({
-        service_id: l.service_id.trim(),
-        quantity_ordered: Number(l.quantity_ordered),
-        // Convert the major-unit price to the currency's integer minor units (JPY ×1, USD ×100).
-        unit_price: toMinorUnits(Number(l.unit_price || 0), undefined, form.currency_code),
-        fulfillment_type: l.fulfillment_type,
-      }));
+      .map((l) => {
+        const unitPrice = toMinorUnits(Number(l.unit_price || 0), undefined, form.currency_code);
+        return {
+          service_id: l.service_id.trim(),
+          quantity_ordered: Number(l.quantity_ordered),
+          // A kit price is omitted unless the user deliberately changed this order line. The
+          // server then resolves untouched kit lines again inside the create transaction.
+          unit_price: l.is_kit ? undefined : unitPrice,
+          kit_unit_price_override: l.is_kit && l.price_overridden ? unitPrice : undefined,
+          fulfillment_type: l.fulfillment_type,
+        };
+      });
     for (const l of lines) {
       if (!(l.quantity_ordered > 0)) {
         toast.error(t('salesOrders.lineQtyPositive', 'Each line quantity must be greater than 0'));
@@ -453,6 +537,15 @@ export function SalesOrdersManager({
     }
   };
 
+  const visibleSos = React.useMemo(
+    () => sos.filter((so) => !showInvoiceableOnly || asNumber(so.invoiceable_amount) > 0),
+    [sos, showInvoiceableOnly],
+  );
+
+  const clearAttentionFilter = () => {
+    router.push('/msp/inventory/sales-orders');
+  };
+
   const columns: ColumnDefinition<ISalesOrder>[] = [
     {
       title: t('salesOrders.columns.soNumber', 'SO Number'),
@@ -474,6 +567,52 @@ export function SalesOrdersManager({
       render: (_: any, rec: ISalesOrder) => rec.client_name?.trim() || rec.client_id,
     },
     {
+      title: t('salesOrders.columns.amount', 'Amount'),
+      dataIndex: 'total_amount',
+      headerClassName: NUM_HEADER,
+      cellClassName: `${NUM_CELL} font-medium text-gray-900`,
+      render: (_: any, rec: ISalesOrder) => money(rec.total_amount, rec.currency_code),
+    },
+    {
+      title: t('salesOrders.columns.fulfillment', 'Fulfillment'),
+      dataIndex: 'quantity_fulfilled_total',
+      headerClassName: NUM_HEADER,
+      cellClassName: NUM_CELL,
+      render: (_: any, rec: ISalesOrder) => {
+        const ordered = asNumber(rec.quantity_ordered_total);
+        const fulfilled = asNumber(rec.quantity_fulfilled_total);
+        if (ordered <= 0) return t('common.emptyValue', '—');
+        return (
+          <div className="flex items-center justify-end gap-2">
+            <span>{fulfilled} / {ordered}</span>
+            {asNumber(rec.drop_ship_line_count) > 0 && (
+              <Badge variant="info" size="sm">
+                {t('salesOrders.badges.dropShip', 'Drop-ship')}
+              </Badge>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      title: t('salesOrders.columns.invoiceable', 'Invoiceable'),
+      dataIndex: 'invoiceable_amount',
+      headerClassName: NUM_HEADER,
+      cellClassName: NUM_CELL,
+      render: (_: any, rec: ISalesOrder) => {
+        const amount = asNumber(rec.invoiceable_amount);
+        if (amount <= 0) return t('common.emptyValue', '—');
+        return (
+          <div className="flex items-center justify-end gap-2">
+            <span className="font-medium text-gray-900">{money(amount, rec.currency_code)}</span>
+            <Badge variant="success" size="sm">
+              {t('salesOrders.badges.readyToInvoice', 'Ready')}
+            </Badge>
+          </div>
+        );
+      },
+    },
+    {
       title: t('common.status', 'Status'),
       dataIndex: 'status',
       render: (value: any) => {
@@ -490,7 +629,7 @@ export function SalesOrdersManager({
     {
       title: t('common.actions', 'Actions'),
       dataIndex: 'so_id',
-      width: '260px',
+      width: '300px',
       render: (_: any, rec: ISalesOrder) => (
         <div className="flex gap-2">
           <Button
@@ -516,7 +655,7 @@ export function SalesOrdersManager({
                 disabled={rec.status === 'cancelled'}
                 className="gap-1"
               >
-                {t('salesOrders.actions.document', 'Document')}
+                {t('salesOrders.actions.orderPdfs', 'Order PDFs')}
                 <ChevronDown className="h-3.5 w-3.5" />
               </Button>
             </DropdownMenuTrigger>
@@ -546,15 +685,29 @@ export function SalesOrdersManager({
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-          <Button
-            id={`cancel-so-${rec.so_id}`}
-            variant="ghost"
-            size="sm"
-            onClick={() => setCancelTarget(rec)}
-            disabled={rec.status === 'cancelled' || busy !== null}
-          >
-            {t('common.cancel', 'Cancel')}
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                id={`more-so-${rec.so_id}`}
+                variant="ghost"
+                size="sm"
+                aria-label={t('salesOrders.actions.moreActions', 'More actions')}
+                disabled={busy !== null}
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem
+                id={`cancel-so-${rec.so_id}`}
+                disabled={rec.status === 'cancelled' || busy !== null}
+                onClick={() => setCancelTarget(rec)}
+                className="text-red-600 focus:text-red-700"
+              >
+                {t('salesOrders.actions.cancelSalesOrder', 'Cancel sales order')}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       ),
     },
@@ -569,7 +722,31 @@ export function SalesOrdersManager({
         </Button>
       </div>
 
-      <DataTable id="sales-orders-table" data={sos} columns={columns} />
+      {showInvoiceableOnly && (
+        <div className="flex items-center gap-3 rounded-md border border-amber-200 bg-amber-50 px-3 py-2">
+          <span className="text-sm text-amber-900">
+            {t('salesOrders.filters.invoiceableActive', 'Showing sales orders with fulfilled, uninvoiced items.')}
+          </span>
+          <Button id="sales-orders-clear-attention-filter" variant="link" size="sm" onClick={clearAttentionFilter}>
+            {t('common.clear', 'Clear')}
+          </Button>
+        </div>
+      )}
+
+      {requestedServiceId && !createRequested && (
+        <div className="flex items-center gap-3 rounded-md border border-[rgb(var(--color-primary-200))] bg-[rgb(var(--color-primary-50))] px-3 py-2">
+          <span className="text-sm text-[rgb(var(--color-text-800))]">
+            {t('salesOrders.filters.kitUsageActive', 'Showing sales orders using {{kit}}.', {
+              kit: requestedService?.service_name || requestedServiceId,
+            })}
+          </span>
+          <Button id="sales-orders-clear-service-filter" variant="link" size="sm" onClick={clearAttentionFilter}>
+            {t('common.clear', 'Clear')}
+          </Button>
+        </div>
+      )}
+
+      <DataTable id="sales-orders-table" data={visibleSos} columns={columns} />
 
       <Dialog
         isOpen={dialogOpen}
@@ -634,7 +811,7 @@ export function SalesOrdersManager({
               <div className="flex-1">{t('salesOrders.fields.service', 'Service')}</div>
               <div className="w-32">{t('salesOrders.fields.fulfillment', 'Fulfillment')}</div>
               <div className="w-20 text-right">{t('salesOrders.fields.qty', 'Qty')}</div>
-              <div className="w-32 text-right">
+              <div className="w-56 text-right">
                 {t('salesOrders.fields.unitPriceIn', 'Unit price ({{currency}})', { currency })}
               </div>
               <div className="w-8" />
@@ -690,14 +867,56 @@ export function SalesOrdersManager({
                         </p>
                       )}
                     </div>
-                    <div className="w-32">
+                    {/* Wider than the usual w-32 money cell: kit lines render an override hint beneath. */}
+                    <div className="w-56">
                       <CurrencyInput
                         id={`sales-order-line-price-${idx}`}
                         currencyCode={currency}
                         className="text-right tabular-nums"
                         value={line.unit_price ? Number(line.unit_price) : undefined}
-                        onChange={(value) => setLine(idx, { unit_price: value == null ? '' : String(value) })}
+                        onChange={(value) => setLine(idx, {
+                          unit_price: value == null ? '' : String(value),
+                          price_overridden: line.is_kit ? true : line.price_overridden,
+                        })}
                       />
+                      {line.is_kit && (
+                        <div className="mt-1 flex items-start justify-between gap-2 text-xs">
+                          <span className={line.price_overridden ? 'text-[rgb(var(--color-accent-600))]' : 'text-[rgb(var(--color-text-500))]'}>
+                            {line.kit_currency && line.kit_currency.toUpperCase() !== currency.toUpperCase() && !line.price_overridden
+                              ? t('salesOrders.kitPrice.currencyMismatch', 'Kit price is configured in {{kitCurrency}}. Enter a {{orderCurrency}} price for this sales order.', {
+                                  kitCurrency: line.kit_currency,
+                                  orderCurrency: currency,
+                                })
+                              : line.price_overridden && line.resolved_unit_price === null
+                                ? t('salesOrders.kitPrice.currencyOverride', 'Order-specific {{currency}} price', { currency })
+                              : line.price_overridden && line.resolved_unit_price !== null
+                              ? t('salesOrders.kitPrice.overridden', 'Overridden from {{price}} for this sales order', {
+                                  price: money(
+                                    toMinorUnits(Number(line.resolved_unit_price), undefined, currency),
+                                    currency,
+                                  ),
+                                })
+                              : line.kit_pricing_mode === 'fixed'
+                                ? t('salesOrders.kitPrice.configured', 'Configured kit price')
+                                : t('salesOrders.kitPrice.calculated', 'Calculated from components')}
+                          </span>
+                          {line.price_overridden && line.resolved_unit_price !== null && (
+                            <Button
+                              id={`sales-order-line-price-reset-${idx}`}
+                              variant="ghost"
+                              size="sm"
+                              className="h-auto shrink-0 px-1 py-0 text-xs"
+                              onClick={() => setLine(idx, {
+                                unit_price: line.resolved_unit_price ?? '',
+                                price_overridden: false,
+                              })}
+                            >
+                              <RotateCcw className="mr-1 h-3 w-3" />
+                              {t('salesOrders.kitPrice.reset', 'Reset to kit price')}
+                            </Button>
+                          )}
+                        </div>
+                      )}
                     </div>
                     <div className="w-8 flex justify-center pt-2">
                       <Button

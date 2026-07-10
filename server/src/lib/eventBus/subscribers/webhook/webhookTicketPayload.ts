@@ -57,6 +57,8 @@ export type TicketWebhookPayload = {
   due_date: string | null;
   tags: string[];
   url: string;
+  suppress_contact_notifications: boolean;
+  suppress_internal_notifications: boolean;
   previous_status_id?: string | null;
   previous_status_name?: string | null;
   changes?: Record<string, NormalizedWebhookChange>;
@@ -68,7 +70,10 @@ export type TicketWebhookPayload = {
   comments?: TicketWebhookCommentsEntry[];
 };
 
-type CachedTicketWebhookPayload = Omit<TicketWebhookPayload, 'changes' | 'comment'>;
+type CachedTicketWebhookPayload = Omit<
+  TicketWebhookPayload,
+  'changes' | 'comment' | 'suppress_contact_notifications' | 'suppress_internal_notifications'
+>;
 
 type TicketWebhookRow = {
   ticket_id: string;
@@ -130,6 +135,8 @@ export async function buildTicketWebhookPayload(
   const payload: TicketWebhookPayload = {
     ...basePayload,
     tags: [...basePayload.tags],
+    suppress_contact_notifications: internalEvent.payload.suppressContactNotifications === true,
+    suppress_internal_notifications: internalEvent.payload.suppressInternalNotifications === true,
   };
 
   if (internalEvent.eventType === 'TICKET_STATUS_CHANGED') {

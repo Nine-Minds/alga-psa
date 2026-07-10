@@ -12,12 +12,7 @@ import { ColumnDefinition } from '@alga-psa/types';
 import { useTranslation } from 'react-i18next';
 import { useFormatters } from '@alga-psa/ui/lib/i18n/client';
 
-import {
-  getPendingExternalTaxCount,
-  getInvoicesPendingExternalTax,
-  batchImportExternalTaxes,
-  importExternalTaxForInvoice
-} from '@alga-psa/billing/actions';
+import { getPendingExternalTaxCount, getInvoicesPendingExternalTax, batchImportExternalTaxes, importExternalTaxForInvoice } from '@alga-psa/billing/actions/externalTaxImportActions';
 
 interface PendingInvoice {
   invoice_id: string;

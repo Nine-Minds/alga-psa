@@ -35,6 +35,14 @@
   },
   "title": "11111",
   "subtitle": "11111",
+  "notifications": {
+    "suppression": {
+      "contactLabel": "11111",
+      "contactHelper": "11111",
+      "internalLabel": "11111",
+      "internalHelper": "11111"
+    }
+  },
   "backToTickets": "11111",
   "createNew": "11111",
   "createButton": "11111",
@@ -884,7 +892,9 @@
     "noActiveTimePeriodMessage": "11111",
     "goToTimePeriodsSetup": "11111",
     "emailNotificationLogs": "11111",
-    "ticketActivity": "11111"
+    "ticketActivity": "11111",
+    "discardChanges": "11111",
+    "saved": "11111"
   },
   "properties": {
     "timeEntry": "11111",
@@ -1457,7 +1467,9 @@
       "resolutionSla": "11111",
       "responseWaitingOnUs": "11111",
       "responseWaitingOnClient": "11111",
-      "responseNone": "11111"
+      "responseNone": "11111",
+      "category": "11111",
+      "selectDestinationStatus": "11111"
     },
     "layout": {
       "grid": "11111",
@@ -1641,7 +1653,9 @@
       "logged": "11111",
       "monitoringActor": "11111",
       "occurrence": "11111 {{count}} 11111",
-      "loadError": "11111"
+      "loadError": "11111",
+      "closeStatus": "11111",
+      "noStatusChange": "11111"
     }
   }
 }

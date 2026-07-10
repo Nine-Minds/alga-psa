@@ -17,6 +17,16 @@ temporal:
   # a workflow. Re-add this queue only if a future profile provisions domains via Temporal.
   taskQueue: tenant-workflows,email-domain-workflows
 
+# Password hashes do not encode their PBKDF2 parameters. The appliance app
+# verifies its existing users with 1,000 iterations, so tenant creation on an
+# appliance must hash with the same value. Hosted temporal-worker deployments
+# keep the chart default (10,000).
+encryption:
+  saltBytes: "12"
+  iterations: "1000"
+  keyLength: "64"
+  algorithm: sha512
+
 db:
   host: pgbouncer.msp.svc.cluster.local
   port: "6432"

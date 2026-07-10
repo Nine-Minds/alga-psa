@@ -56,6 +56,9 @@ import {
 import { buildTicketThreadTabState } from './ticketConversationThreadTabs';
 import { toggleCommentReaction, getCommentsReactionsBatch } from '../../actions/comment-actions/commentReactionActions';
 import type { IAggregatedReaction } from '@alga-psa/types';
+import TicketNotificationSuppressionControl, {
+  type TicketNotificationSuppressionValue,
+} from './TicketNotificationSuppressionControl';
 
 interface TicketConversationProps {
   id?: string;
@@ -70,7 +73,12 @@ interface TicketConversationProps {
   currentComment: IComment | null;
   editorKey: number;
   onNewCommentContentChange: (content: PartialBlock[]) => void;
-  onAddNewComment: (isInternal: boolean, isResolution: boolean, closeStatusId?: string | null) => Promise<boolean>;
+  onAddNewComment: (
+    isInternal: boolean,
+    isResolution: boolean,
+    closeStatusId?: string | null,
+    options?: TicketNotificationSuppressionValue
+  ) => Promise<boolean>;
   onAddReplyComment?: (content: PartialBlock[], parentCommentId: string, isInternal: boolean) => Promise<boolean>;
   onTabChange: (tab: string) => void;
   onEdit: (conversation: IComment) => void;
@@ -102,6 +110,12 @@ const ALL_COMMENTS_TAB_ID = 'all-comments';
 const CLIENT_TAB_ID = 'client';
 const INTERNAL_TAB_ID = 'internal';
 const RESOLUTION_TAB_ID = 'resolution';
+const NO_STATUS_CHANGE = '__no_status_change__';
+
+const defaultNotificationSuppression = (): TicketNotificationSuppressionValue => ({
+  suppressContactNotifications: false,
+  suppressInternalNotifications: false,
+});
 
 const TicketConversation: React.FC<TicketConversationProps> = ({
   id,
@@ -146,8 +160,10 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   const [reverseOrder, setReverseOrder] = useState(defaultNewestFirst);
   const [isInternalToggle, setIsInternalToggle] = useState(false);
   const [isResolutionToggle, setIsResolutionToggle] = useState(false);
-  const NO_STATUS_CHANGE = '__no_status_change__';
   const [resolutionCloseStatusId, setResolutionCloseStatusId] = useState<string>(NO_STATUS_CHANGE);
+  const [notificationSuppression, setNotificationSuppression] = useState<TicketNotificationSuppressionValue>(
+    defaultNotificationSuppression
+  );
   const [contactAvatarUrls, setContactAvatarUrls] = useState<Record<string, string | null>>({});
   const [reactionsMap, setReactionsMap] = useState<Record<string, IAggregatedReaction[]>>({});
   const [reactionUserNames, setReactionUserNames] = useState<Record<string, string>>({});
@@ -251,11 +267,21 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
           isResolutionToggle && resolutionCloseStatusId !== NO_STATUS_CHANGE
             ? resolutionCloseStatusId
             : null;
-        success = await onAddNewComment(isInternalToggle, isResolutionToggle, closeStatusId);
+        const suppressionOptions =
+          closeStatusId && notificationSuppression.suppressContactNotifications
+            ? notificationSuppression
+            : undefined;
+        success = await onAddNewComment(
+          isInternalToggle,
+          isResolutionToggle,
+          closeStatusId,
+          suppressionOptions
+        );
         if (success) {
           setIsInternalToggle(false);
           setIsResolutionToggle(false);
           setResolutionCloseStatusId(NO_STATUS_CHANGE);
+          setNotificationSuppression(defaultNotificationSuppression());
         }
       }
       
@@ -293,7 +319,18 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
     if (hideInternalTab) {
       await onAddNewComment(false, isResolutionToggle);
     } else {
-      await onAddNewComment(isInternalToggle, isResolutionToggle);
+      const closeStatusId =
+        isResolutionToggle && resolutionCloseStatusId !== NO_STATUS_CHANGE
+          ? resolutionCloseStatusId
+          : null;
+      await onAddNewComment(
+        isInternalToggle,
+        isResolutionToggle,
+        closeStatusId,
+        closeStatusId && notificationSuppression.suppressContactNotifications
+          ? notificationSuppression
+          : undefined
+      );
     }
   };
 
@@ -311,6 +348,7 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
   useEffect(() => {
     if (!showEditor || !isResolutionToggle) {
       setResolutionCloseStatusId(NO_STATUS_CHANGE);
+      setNotificationSuppression(defaultNotificationSuppression());
     }
   }, [showEditor, isResolutionToggle]);
 
@@ -698,23 +736,31 @@ const TicketConversation: React.FC<TicketConversationProps> = ({
                   </div>
 
                   {!hideInternalTab && isResolutionToggle && (
-                    <div className="flex items-center gap-2">
-                      <Label htmlFor={`${compId}-resolution-close-status-select`}>
-                        {t('tickets.conversation.closeStatus', 'Close status')}
-                      </Label>
-                      <CustomSelect
-                        id={`${compId}-resolution-close-status-select`}
-                        value={resolutionCloseStatusId}
-                        options={[
-                          {
-                            value: NO_STATUS_CHANGE,
-                            label: t('tickets.conversation.noStatusChange', 'Do not change status'),
-                          },
-                          ...closedStatusOptions,
-                        ]}
-                        onValueChange={setResolutionCloseStatusId}
-                        className="!w-64"
-                        disabled={closedStatusOptions.length === 0}
+                    <div className="flex flex-wrap items-start gap-3">
+                      <div className="flex items-center gap-2">
+                        <Label htmlFor={`${compId}-resolution-close-status-select`}>
+                          {t('tickets.conversation.closeStatus', 'Close status')}
+                        </Label>
+                        <CustomSelect
+                          id={`${compId}-resolution-close-status-select`}
+                          value={resolutionCloseStatusId}
+                          options={[
+                            {
+                              value: NO_STATUS_CHANGE,
+                              label: t('tickets.conversation.noStatusChange', 'Do not change status'),
+                            },
+                            ...closedStatusOptions,
+                          ]}
+                          onValueChange={setResolutionCloseStatusId}
+                          className="!w-64"
+                          disabled={closedStatusOptions.length === 0}
+                        />
+                      </div>
+                      <TicketNotificationSuppressionControl
+                        idPrefix={`${compId}-resolution-notification-suppression`}
+                        value={notificationSuppression}
+                        onChange={setNotificationSuppression}
+                        disabled={resolutionCloseStatusId === NO_STATUS_CHANGE}
                       />
                     </div>
                   )}

@@ -47,6 +47,7 @@ interface FormattedEntry {
   occurredAt: string;
   icon: React.ReactElement;
   title: string;
+  annotation?: string;
   subtitle?: string;
   source: string;
   actor: string;
@@ -155,14 +156,34 @@ function eventIcon(eventType: string): React.ReactElement {
   }
 }
 
-function describeActivity(activity: TicketActivityRow): { title: string; subtitle?: string } {
+function notificationSuppressionAnnotation(activity: TicketActivityRow): string | undefined {
+  const suppression = (activity.details as {
+    notification_suppression?: {
+      suppress_contact_notifications?: unknown;
+      suppress_internal_notifications?: unknown;
+    };
+  }).notification_suppression;
+
+  if (suppression?.suppress_internal_notifications === true) {
+    return 'silent — no notifications';
+  }
+
+  if (suppression?.suppress_contact_notifications === true) {
+    return 'silent — contact not notified';
+  }
+
+  return undefined;
+}
+
+function describeActivity(activity: TicketActivityRow): { title: string; annotation?: string; subtitle?: string } {
   const actor = actorLabel(activity);
+  const annotation = notificationSuppressionAnnotation(activity);
 
   switch (activity.event_type) {
     case 'TICKET_CREATED':
       return { title: `${actor} created the ticket` };
     case 'TICKET_CLOSED':
-      return { title: `${actor} closed the ticket` };
+      return { title: `${actor} closed the ticket`, annotation };
     case 'TICKET_REOPENED':
       return {
         title: `${actor} reopened the ticket`,
@@ -179,17 +200,18 @@ function describeActivity(activity: TicketActivityRow): { title: string; subtitl
     case 'TICKET_STATUS_CHANGED': {
       const c = activity.changes?.status_id;
       const detail = c ? changeLine('status_id', c) : 'Status changed';
-      return { title: `${actor} changed the status`, subtitle: detail };
+      return { title: `${actor} changed the status`, annotation, subtitle: detail };
     }
     case 'TICKET_PRIORITY_CHANGED': {
       const c = activity.changes?.priority_id;
       const detail = c ? changeLine('priority_id', c) : 'Priority changed';
-      return { title: `${actor} changed the priority`, subtitle: detail };
+      return { title: `${actor} changed the priority`, annotation, subtitle: detail };
     }
     case 'TICKET_ASSIGNED': {
       const c = activity.changes?.assigned_to;
       return {
         title: `${actor} assigned the ticket`,
+        annotation,
         subtitle: c ? changeLine('assigned_to', c) : undefined,
       };
     }
@@ -199,6 +221,7 @@ function describeActivity(activity: TicketActivityRow): { title: string; subtitl
       const c = activity.changes?.board_id;
       return {
         title: `${actor} moved the ticket to another board`,
+        annotation,
         subtitle: c ? changeLine('board_id', c) : undefined,
       };
     }
@@ -206,6 +229,7 @@ function describeActivity(activity: TicketActivityRow): { title: string; subtitl
       const c = activity.changes?.response_state;
       return {
         title: `${actor} updated the response state`,
+        annotation,
         subtitle: c ? changeLine('response_state', c) : undefined,
       };
     }
@@ -246,6 +270,7 @@ function describeActivity(activity: TicketActivityRow): { title: string; subtitl
       const fields = Object.keys(activity.changes ?? {});
       return {
         title: `${actor} updated the ticket`,
+        annotation,
         subtitle: fields.length > 0 ? fields.map(fieldLabel).join(', ') : undefined,
       };
     }
@@ -254,7 +279,7 @@ function describeActivity(activity: TicketActivityRow): { title: string; subtitl
   }
 }
 
-function formatEntries(entries: TicketTimelineEntry[]): FormattedEntry[] {
+export function formatEntries(entries: TicketTimelineEntry[]): FormattedEntry[] {
   return entries.map((entry) => {
     if (entry.type === 'activity' && entry.activity) {
       const desc = describeActivity(entry.activity);
@@ -263,6 +288,7 @@ function formatEntries(entries: TicketTimelineEntry[]): FormattedEntry[] {
         occurredAt: entry.occurredAt,
         icon: eventIcon(entry.activity.event_type),
         title: desc.title,
+        annotation: desc.annotation,
         subtitle: desc.subtitle,
         source: entry.activity.source,
         actor: actorLabel(entry.activity),
@@ -477,7 +503,14 @@ export function TicketActivityTimeline({ ticketId, refreshKey = 0 }: TicketActiv
               {record.icon}
             </span>
             <div className="min-w-0">
-              <div className="font-medium text-[rgb(var(--color-text-900))]">{record.title}</div>
+              <div className="flex flex-wrap items-center gap-1.5 font-medium text-[rgb(var(--color-text-900))]">
+                <span>{record.title}</span>
+                {record.annotation ? (
+                  <span className="rounded-full bg-[rgb(var(--color-border-100))] px-1.5 py-0.5 text-[11px] font-normal text-[rgb(var(--color-text-500))]">
+                    {record.annotation}
+                  </span>
+                ) : null}
+              </div>
               {record.subtitle ? (
                 <div className="text-xs text-[rgb(var(--color-text-700))]">{record.subtitle}</div>
               ) : null}

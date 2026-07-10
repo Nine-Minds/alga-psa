@@ -26,6 +26,19 @@ describe('page action shortcut wiring', () => {
     }
   });
 
+  it('registers comment shortcuts on both ticket comment surfaces', () => {
+    const commentSurfaces = [
+      'packages/tickets/src/components/ticket/TicketConversation.tsx',
+      'packages/tickets/src/components/ticket/bento/BentoTimelineTile.tsx',
+    ];
+
+    for (const path of commentSurfaces) {
+      const source = read(path);
+      expect(source, path).toContain('usePageCreateShortcut');
+      expect(source, path).toContain('useDialogSubmitShortcut');
+    }
+  });
+
   it('registers page.save on editable detail surfaces with primary Save controls', () => {
     expect(read('packages/clients/src/components/clients/ClientDetails.tsx')).toContain('usePageSaveShortcut(handleSave');
     expect(read('packages/tickets/src/components/ticket/TicketInfo.tsx')).toContain('usePageSaveShortcut(handleSaveChanges');
@@ -89,6 +102,6 @@ describe('page action shortcut wiring', () => {
 
   it('mounts the shared global shortcut layer in both MSP shells', () => {
     expect(read('server/src/components/layout/DefaultLayout.tsx')).toContain('<GlobalShortcutLayer />');
-    expect(read('server/src/components/layout/AlgaDeskMspShell.tsx')).toContain('<GlobalShortcutLayer />');
+    expect(read('server/src/components/layout/AlgaDeskMspShell.tsx')).toContain('<GlobalShortcutLayer navAssetsEnabled={false} />');
   });
 });

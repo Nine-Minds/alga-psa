@@ -884,7 +884,9 @@
     "noActiveTimePeriodMessage": "Geen actieve periode gevonden. Periodes moeten worden ingesteld in het facturatiedashboard voordat je tijdregistraties kunt toevoegen.",
     "goToTimePeriodsSetup": "Naar instellingen voor periodes",
     "emailNotificationLogs": "Logboek e-mailmeldingen",
-    "ticketActivity": "Ticketactiviteit"
+    "ticketActivity": "Ticketactiviteit",
+    "discardChanges": "Wijzigingen verwerpen",
+    "saved": "Opgeslagen"
   },
   "properties": {
     "timeEntry": "Tijdregistratie",
@@ -1457,7 +1459,9 @@
       "responseWaitingOnClient": "Wacht op klant",
       "responseNone": "Geen antwoord nodig",
       "additionalAgentsTooltip": "Extra medewerkers:",
-      "unknownAgent": "Onbekende medewerker"
+      "unknownAgent": "Onbekende medewerker",
+      "category": "Categorie",
+      "selectDestinationStatus": "Selecteer een status voor het nieuwe bord voordat je opslaat."
     },
     "layout": {
       "grid": "Raster",
@@ -1641,7 +1645,17 @@
         "close_rules_overridden": "afsluitregels overschreven",
         "close_rules_bypassed": "afsluitregels omzeild",
         "auto_close_warning_sent": "waarschuwing voor automatisch afsluiten verzonden"
-      }
+      },
+      "closeStatus": "Close status",
+      "noStatusChange": "Do not change status"
+    }
+  },
+  "notifications": {
+    "suppression": {
+      "contactLabel": "Klant niet informeren",
+      "contactHelper": "Slaat de e-mail aan de klant, de enquête-uitnodiging en de klantportaalmelding over",
+      "internalLabel": "Ook agenten en volgers niet informeren",
+      "internalHelper": "Slaat ook hun e-mails en in-app-meldingen over"
     }
   }
 }

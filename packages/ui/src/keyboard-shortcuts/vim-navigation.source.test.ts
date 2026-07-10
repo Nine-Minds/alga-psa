@@ -17,7 +17,7 @@ describe('vim navigation shortcut wiring', () => {
     expect(layer).toContain("import VimNavigationLayer from './VimNavigationLayer'");
     expect(layer).toContain('<VimNavigationLayer onOpenHelp={openHelp} />');
     expect(read('server/src/components/layout/DefaultLayout.tsx')).toContain('<GlobalShortcutLayer />');
-    expect(read('server/src/components/layout/AlgaDeskMspShell.tsx')).toContain('<GlobalShortcutLayer />');
+    expect(read('server/src/components/layout/AlgaDeskMspShell.tsx')).toContain('<GlobalShortcutLayer navAssetsEnabled={false} />');
   });
 
   it('registers vim-style scroll, table, hint, macro, and navigation actions', () => {

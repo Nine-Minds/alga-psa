@@ -5,10 +5,30 @@
  *
  * Run: (cd packages/inventory && npx vitest run src/lib/kitmisc.test.ts)
  */
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import fs from 'node:fs';
 import path from 'node:path';
+import { randomUUID } from 'node:crypto';
 import knexLib, { Knex } from 'knex';
+import { explodeKitOntoSalesOrder } from '../actions/kitActions';
+import { resolveKitPriceInTransaction } from './kitPricing';
+import { resolveKitSalesOrderUnitPrice } from '../actions/salesOrderActions';
+
+vi.mock('@alga-psa/auth', () => ({
+  withAuth: (fn: any) => fn,
+}));
+
+vi.mock('@alga-psa/auth/rbac', () => ({
+  hasPermission: vi.fn(async () => true),
+}));
+
+vi.mock('next/cache', () => ({
+  revalidatePath: vi.fn(),
+}));
+
+vi.mock('@alga-psa/event-bus/publishers', () => ({
+  publishEvent: vi.fn(),
+}));
 
 function readEnv(): Record<string, string> {
   const p = path.resolve(__dirname, '../../../../server/.env.local');
@@ -25,6 +45,7 @@ let TENANT: string;
 let KIT_SERVICE: string;
 let COMP_A: string;
 let COMP_B: string;
+let CLIENT: string;
 
 beforeAll(async () => {
   const e = readEnv();
@@ -38,6 +59,7 @@ beforeAll(async () => {
   KIT_SERVICE = svcs[0].service_id;
   COMP_A = svcs[1].service_id;
   COMP_B = svcs[2].service_id;
+  CLIENT = (await knex('clients').where({ tenant: TENANT }).first()).client_id;
 });
 
 afterAll(async () => {
@@ -54,6 +76,142 @@ async function inTx(fn: (trx: Knex.Transaction) => Promise<void>) {
 }
 
 describe('kit explosion + contract no-consume (real server DB, rolled back)', () => {
+  it('T007: resolves sum pricing from component selling prices without a kit catalog fallback', async () => {
+    await inTx(async (trx) => {
+      await trx('kit_components').where({ tenant: TENANT, kit_service_id: KIT_SERVICE }).del();
+      await trx('product_inventory_settings')
+        .insert({
+          tenant: TENANT,
+          service_id: KIT_SERVICE,
+          track_stock: true,
+          is_serialized: false,
+          is_kit: true,
+          kit_pricing_mode: 'sum',
+          kit_fixed_price: null,
+          cost_currency: 'USD',
+        })
+        .onConflict(['tenant', 'service_id'])
+        .merge({ is_kit: true, kit_pricing_mode: 'sum', kit_fixed_price: null });
+      await trx('service_catalog').where({ tenant: TENANT, service_id: KIT_SERVICE }).update({ default_rate: 99999 });
+      await trx('service_catalog').where({ tenant: TENANT, service_id: COMP_A }).update({ default_rate: 1250 });
+      await trx('service_catalog').where({ tenant: TENANT, service_id: COMP_B }).update({ default_rate: 300 });
+      await trx('kit_components').insert([
+        { tenant: TENANT, kit_service_id: KIT_SERVICE, component_service_id: COMP_A, quantity: 2 },
+        { tenant: TENANT, kit_service_id: KIT_SERVICE, component_service_id: COMP_B, quantity: 3 },
+      ]);
+
+      expect(await resolveKitPriceInTransaction(trx, TENANT, KIT_SERVICE)).toBe(3400);
+    });
+  });
+
+  it('T007: resolves fixed pricing from the configured fixed amount', async () => {
+    await inTx(async (trx) => {
+      await trx('product_inventory_settings')
+        .insert({
+          tenant: TENANT,
+          service_id: KIT_SERVICE,
+          track_stock: true,
+          is_serialized: false,
+          is_kit: true,
+          kit_pricing_mode: 'fixed',
+          kit_fixed_price: 42500,
+          cost_currency: 'USD',
+        })
+        .onConflict(['tenant', 'service_id'])
+        .merge({ is_kit: true, kit_pricing_mode: 'fixed', kit_fixed_price: 42500 });
+      await trx('service_catalog').where({ tenant: TENANT, service_id: KIT_SERVICE }).update({ default_rate: 99999 });
+
+      expect(await resolveKitPriceInTransaction(trx, TENANT, KIT_SERVICE)).toBe(42500);
+    });
+  });
+
+  it('T008: re-resolves an untouched order line in the transaction and preserves an explicit override', async () => {
+    await inTx(async (trx) => {
+      await trx('kit_components').where({ tenant: TENANT, kit_service_id: KIT_SERVICE }).del();
+      await trx('product_inventory_settings')
+        .insert({
+          tenant: TENANT,
+          service_id: KIT_SERVICE,
+          track_stock: true,
+          is_serialized: false,
+          is_kit: true,
+          kit_pricing_mode: 'sum',
+          kit_fixed_price: null,
+          cost_currency: 'USD',
+        })
+        .onConflict(['tenant', 'service_id'])
+        .merge({ is_kit: true, kit_pricing_mode: 'sum', kit_fixed_price: null });
+      await trx('service_catalog').where({ tenant: TENANT, service_id: COMP_A }).update({ default_rate: 1250 });
+      await trx('service_catalog').where({ tenant: TENANT, service_id: COMP_B }).update({ default_rate: 300 });
+      await trx('kit_components').insert([
+        { tenant: TENANT, kit_service_id: KIT_SERVICE, component_service_id: COMP_A, quantity: 2 },
+        { tenant: TENANT, kit_service_id: KIT_SERVICE, component_service_id: COMP_B, quantity: 3 },
+      ]);
+
+      expect(await resolveKitSalesOrderUnitPrice(trx, TENANT, KIT_SERVICE, undefined, 'USD')).toBe(3400);
+
+      // Simulate a component price changing after the browser loaded but before order save.
+      await trx('service_catalog').where({ tenant: TENANT, service_id: COMP_A }).update({ default_rate: 2000 });
+      expect(await resolveKitSalesOrderUnitPrice(trx, TENANT, KIT_SERVICE, undefined, 'USD')).toBe(4900);
+      await expect(resolveKitSalesOrderUnitPrice(trx, TENANT, KIT_SERVICE, undefined, 'EUR'))
+        .rejects.toThrow('Kit pricing is configured in USD');
+      expect(await resolveKitSalesOrderUnitPrice(trx, TENANT, KIT_SERVICE, 7777, 'EUR')).toBe(7777);
+
+      const settings = await trx('product_inventory_settings')
+        .where({ tenant: TENANT, service_id: KIT_SERVICE })
+        .select('kit_pricing_mode', 'kit_fixed_price')
+        .first();
+      expect(settings.kit_pricing_mode).toBe('sum');
+      expect(settings.kit_fixed_price).toBeNull();
+    });
+  });
+
+  it('T020: actual sales-order kit explosion creates one priced parent and zero-dollar child lines', async () => {
+    await inTx(async (trx) => {
+      await trx('product_inventory_settings')
+        .insert({
+          tenant: TENANT,
+          service_id: KIT_SERVICE,
+          track_stock: true,
+          is_serialized: false,
+          is_kit: true,
+          cost_currency: 'USD',
+        })
+        .onConflict(['tenant', 'service_id'])
+        .merge({ track_stock: true, is_kit: true });
+      await trx('kit_components').insert([
+        { tenant: TENANT, kit_service_id: KIT_SERVICE, component_service_id: COMP_A, quantity: 2 },
+        { tenant: TENANT, kit_service_id: KIT_SERVICE, component_service_id: COMP_B, quantity: 3 },
+      ]);
+      const [so] = await trx('sales_orders')
+        .insert({
+          tenant: TENANT,
+          so_number: `SO-KIT-${randomUUID().slice(0, 8)}`,
+          client_id: CLIENT,
+          status: 'draft',
+          currency_code: 'USD',
+          invoice_mode: 'manual',
+          allocation_mode: 'soft',
+        })
+        .returning('so_id');
+
+      const exploded = await explodeKitOntoSalesOrder(trx, TENANT, so.so_id, KIT_SERVICE, 2, 42500);
+
+      expect(Number(exploded.parentLine.unit_price)).toBe(42500);
+      expect(Number(exploded.parentLine.quantity_ordered)).toBe(2);
+      expect(exploded.parentLine.parent_so_line_id).toBeNull();
+      expect(exploded.componentLines).toHaveLength(2);
+      expect(exploded.componentLines.every((line) => Number(line.unit_price) === 0)).toBe(true);
+      expect(exploded.componentLines.every((line) => line.parent_so_line_id === exploded.parentLine.so_line_id)).toBe(true);
+
+      const childQtyByService = Object.fromEntries(
+        exploded.componentLines.map((line) => [line.service_id, Number(line.quantity_ordered)]),
+      );
+      expect(childQtyByService[COMP_A]).toBe(4);
+      expect(childQtyByService[COMP_B]).toBe(6);
+    });
+  });
+
   it('T020: exploding a kit yields per-component quantity = component qty x kit qty', async () => {
     await inTx(async (trx) => {
       // A kit made of: 2x COMP_A and 3x COMP_B per kit.

@@ -543,7 +543,9 @@
     "componentsHeading": "Composants — {{name}}",
     "fields": {
       "component": "Composant",
-      "componentPlaceholder": "Sélectionnez un produit…"
+      "componentPlaceholder": "Sélectionnez un produit…",
+      "sku": "SKU",
+      "unit": "Unit"
     },
     "loadComponentsFailed": "Échec du chargement des composants",
     "loadKitsFailed": "Échec du chargement des kits",
@@ -552,7 +554,128 @@
     "removeConfirm": "Retirer {{name}} de ce kit ?",
     "removeFailed": "Échec du retrait",
     "removeTitle": "Retirer le composant",
-    "title": "Kits"
+    "title": "Kits",
+    "actions": {
+      "addComponent": "Add component",
+      "createKit": "Create kit",
+      "createSalesOrder": "Create sales order",
+      "productSettings": "Open product settings",
+      "updateQuantity": "Update quantity",
+      "viewSalesOrders": "View sales orders"
+    },
+    "bom": {
+      "componentCount": "{{count}} components",
+      "componentCountShort": "Components",
+      "emptyBody": "Componentless kits cannot be used on sales orders because there is nothing to allocate or fulfill.",
+      "emptyTitle": "Add at least one BOM component",
+      "qtyPerKit": "Qty per kit",
+      "title": "Bill of materials"
+    },
+    "create": {
+      "created": "Kit created.",
+      "fields": {
+        "name": "Kit name",
+        "productType": "Product type"
+      },
+      "noServiceTypes": "Create a product type in Billing before creating a kit.",
+      "title": "Create kit",
+      "validation": {
+        "costInvalid": "Kit cost must be a valid amount.",
+        "nameRequired": "Kit name is required.",
+        "priceRequired": "Kit price must be greater than 0.",
+        "typeRequired": "Product type is required."
+      }
+    },
+    "detail": {
+      "loadFailedTitle": "Could not load this kit",
+      "notFound": "This kit could not be found.",
+      "pickKit": "Select a kit to manage its bill of materials."
+    },
+    "empty": {
+      "body": "Create a sellable kit, then add its bill of materials.",
+      "noResults": "No kits match those filters.",
+      "title": "No inventory kits yet"
+    },
+    "filters": {
+      "all": "All"
+    },
+    "list": {
+      "label": "Kit list"
+    },
+    "pricing": {
+      "addComponentsToCalculate": "Add components to calculate a price.",
+      "calculatedBasis": "Component selling prices × quantity",
+      "calculatedPrice": "Calculated kit price",
+      "componentCost": "Component cost",
+      "createSumHint": "Price will be calculated after components are added.",
+      "currency": "Currency",
+      "each": "each",
+      "extCost": "Ext. cost",
+      "extended": "extended",
+      "fixed": "Fixed price",
+      "fixedAmount": "Fixed kit price",
+      "grossMargin": "Gross margin",
+      "grossProfit": "Gross profit",
+      "kitCostOptional": "Kit cost (optional)",
+      "kitPrice": "Kit price",
+      "kitPriceWithCurrency": "Kit price ({{currency}})",
+      "margin": "Margin",
+      "marginUnavailable": "Add component costs in the kit currency to calculate margin.",
+      "mode": "Pricing mode",
+      "salesOrderPrice": "Sales-order kit price",
+      "save": "Save pricing",
+      "saved": "Pricing saved.",
+      "sellingPrice": "Selling price",
+      "sum": "Sum of component prices",
+      "title": "Pricing and margin",
+      "unitCost": "Unit cost",
+      "unsaved": "Save pricing before creating a sales order.",
+      "validation": {
+        "fixedRequired": "Fixed kit price must be greater than 0.",
+        "priceRequired": "Kit price must be greater than 0."
+      }
+    },
+    "salesOrder": {
+      "componentLines": "Component lines",
+      "componentLinesValue": "Explode as child lines",
+      "parentLine": "Parent kit line",
+      "parentLineValue": "Priced at {{price}}",
+      "preview": "Sales-order preview",
+      "previewQuantity": "Kit quantity",
+      "previewQuantityInvalid": "Enter a positive whole number.",
+      "stockEffect": "Stock effect",
+      "stockEffectValue": "Components allocate and fulfill stock",
+      "title": "Sales-order behavior"
+    },
+    "searchPlaceholder": "Search kits or SKUs",
+    "status": {
+      "incomplete": "Incomplete",
+      "lowStock": "Low stock",
+      "noBom": "No BOM",
+      "ready": "Ready"
+    },
+    "stock": {
+      "available": "Available",
+      "canBuildLabel": "Can build",
+      "noStockLimit": "No stock limit",
+      "noStockLimitShort": "n/a",
+      "nonStocked": "Non-stocked",
+      "serialized": "Serialized",
+      "shortComponents": "Short components",
+      "shortWarning": "At least one stocked component cannot cover one complete kit from available stock.",
+      "stocked": "Stocked",
+      "stockedComponents": "Stocked components",
+      "title": "Stock readiness"
+    },
+    "summary": {
+      "attention": "{{count}} need attention",
+      "ready": "{{count}} ready",
+      "total": "{{count}} kits"
+    },
+    "usage": {
+      "usedOnSalesOrders": "Used on sales orders"
+    },
+    "componentUpdated": "Component quantity updated."
   },
   "loaners": {
     "clientIdRequired": "L'ID client est requis",
@@ -830,7 +953,9 @@
       "reason": "Motif",
       "returnedUnit": "Unité retournée",
       "type": "Type",
-      "vendor": "Fournisseur"
+      "vendor": "Fournisseur",
+      "creditAtStake": "Credit at stake",
+      "rmaNumber": "RMA #"
     },
     "deadUnitsOwed": "Unités défectueuses dues",
     "fields": {
@@ -876,6 +1001,10 @@
       "credited": "Crédité",
       "charged": "Facturé",
       "closed": "Fermé"
+    },
+    "ageAtVendor": "{{days}}d at vendor",
+    "filters": {
+      "statusActive": "Showing {{status}} RMA cases."
     }
   },
   "salesOrders": {
@@ -895,7 +1024,10 @@
       "invoicing": "Facturation…",
       "manageLayouts": "Gérer les mises en page",
       "reopenToDraft": "Rouvrir en brouillon",
-      "reopening": "Réouverture…"
+      "reopening": "Réouverture…",
+      "cancelSalesOrder": "Cancel sales order",
+      "moreActions": "More actions",
+      "orderPdfs": "Order PDFs"
     },
     "addSalesOrder": "Ajouter une commande client",
     "allocationMode": {
@@ -920,7 +1052,10 @@
       "client": "Client",
       "currency": "Devise",
       "invoiceMode": "Mode de facturation",
-      "soNumber": "Numéro de SO"
+      "soNumber": "Numéro de SO",
+      "amount": "Amount",
+      "fulfillment": "Fulfillment",
+      "invoiceable": "Invoiceable"
     },
     "confirmFailed": "Échec de la confirmation",
     "confirmShipmentError": "Impossible de confirmer l'expédition.",
@@ -992,6 +1127,10 @@
       "unitPrice": "Prix unitaire",
       "unitPriceIn": "Unit price ({{currency}})"
     },
+    "filters": {
+      "kitUsageActive": "Showing sales orders using {{kit}}.",
+      "invoiceableActive": "Showing sales orders with fulfilled, uninvoiced items."
+    },
     "fromQuote": "Depuis le devis",
     "fulfillDialog": {
       "allocatedToThis": "Alloué à cette commande",
@@ -1023,6 +1162,14 @@
     "invoiceMode": {
       "manual": "Manuel",
       "onFulfillment": "À la livraison"
+    },
+    "kitPrice": {
+      "calculated": "Calculated from components",
+      "configured": "Configured kit price",
+      "currencyMismatch": "Kit price is configured in {{kitCurrency}}. Enter a {{orderCurrency}} price for this sales order.",
+      "currencyOverride": "Order-specific {{currency}} price",
+      "overridden": "Overridden from {{price}} for this sales order",
+      "reset": "Reset to kit price"
     },
     "invoiceModeHelp": "On fulfillment bills as items ship; Manual leaves invoicing to you.",
     "invoicedItems": "{{count}} article(s) facturé(s).",
@@ -1067,7 +1214,11 @@
     "total": "Total",
     "unassignedBackorder": "{{count}} ligne(s) en reliquat n'ont pas de fournisseur préféré — créez ces PO manuellement.",
     "unnamedService": "Unnamed",
-    "notFound": "Sales order not found."
+    "notFound": "Sales order not found.",
+    "badges": {
+      "dropShip": "Drop-ship",
+      "readyToInvoice": "Ready"
+    }
   },
   "stock": {
     "actions": {
@@ -1147,7 +1298,9 @@
       "location": "Emplacement",
       "macAddress": "Adresse MAC",
       "serialNumber": "Numéro de série",
-      "warrantyExpires": "Expiration de la garantie"
+      "warrantyExpires": "Expiration de la garantie",
+      "product": "Produit",
+      "unitCost": "Coût unitaire"
     },
     "detail": {
       "delivered": "Livrée",
@@ -1155,7 +1308,8 @@
       "mac": "MAC",
       "received": "Réceptionnée",
       "serial": "Numéro de série",
-      "unitCost": "Coût unitaire"
+      "unitCost": "Coût unitaire",
+      "asset": "Actif"
     },
     "exportCsv": "Exporter CSV",
     "history": "Historique",
@@ -1187,7 +1341,28 @@
       "returned": "Retourné",
       "inRma": "En RMA",
       "retired": "Retiré"
-    }
+    },
+    "empty": {
+      "clearFilters": "Effacer les filtres",
+      "clearSearch": "Effacer la recherche",
+      "noFilterMatchTitle": "Aucune unité ne correspond à ce filtre",
+      "noMatchDescription": "Effacez la recherche et les filtres pour voir toutes les unités.",
+      "noMatchTitle": "Aucune unité ne correspond à « {{term}} »",
+      "noUnitsDescription": "Les unités sérialisées apparaissent ici dès qu'un stock est reçu pour un produit sérialisé.",
+      "noUnitsTitle": "Aucune unité en stock pour le moment"
+    },
+    "filter": {
+      "allClients": "Toutes les entreprises",
+      "allStatuses": "Tous les statuts",
+      "client": "Entreprise",
+      "status": "Statut"
+    },
+    "summary": {
+      "many": "{{n}} unités",
+      "one": "{{n}} unité",
+      "valueSuffix": " · {{value}} de valeur"
+    },
+    "viewAsset": "Voir l'actif"
   },
   "transfers": {
     "addLine": "Ajouter une ligne",
