@@ -7,17 +7,24 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { SearchInput } from '@alga-psa/ui/components/SearchInput';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
+import { Input } from '@alga-psa/ui/components/Input';
+import { CurrencyInput } from '@alga-psa/ui/components/CurrencyInput';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { ClientNameCell } from '@alga-psa/ui/components/ClientNameCell';
+import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { EmptyState } from '@alga-psa/ui/components/EmptyState';
+import { AsyncSearchableSelect, type SelectOption } from '@alga-psa/ui/components/AsyncSearchableSelect';
 import { PackageSearch } from 'lucide-react';
+import { UnitHistoryDialog, type UnitDetail } from './UnitHistoryDialog';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { getErrorMessage, isActionMessageError, isActionPermissionError, type ActionMessageError, type ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { toast } from 'react-hot-toast';
-import type { ColumnDefinition, IStockLocation, IStockMovement, IStockUnit } from '@alga-psa/types';
+import { toMinorUnits } from '@alga-psa/core';
+import type { ColumnDefinition, IClient, IStockLocation, IStockMovement, IStockUnit } from '@alga-psa/types';
 import {
   getUnitDetail,
+  listInventoryProducts,
   listStockLocations,
   listStockUnits,
   searchUnitsByMac,
@@ -25,19 +32,37 @@ import {
 } from '../actions';
 
 type SearchMode = 'serial' | 'mac';
-type UnitDetail = { unit: IStockUnit; movements: IStockMovement[] };
 const isReturnedActionError = (value: unknown) => isActionMessageError(value) || isActionPermissionError(value);
+
+// Restock-to-sellable + restocking-fee is a billing composite (billing → inventory), so the
+// inventory component can't import it. The page passes it in as a typed prop (plan §W3).
+export interface RestockReturnWithFeeResult {
+  movement: IStockMovement;
+  restocking_fee_cents: number | null;
+  fee_invoice?: { invoice_id: string; invoice_number: string | null };
+  fee_invoice_error?: string;
+}
+export type RestockReturnWithFeeAction = (input: {
+  unit_id?: string;
+  service_id?: string;
+  location_id?: string;
+  quantity?: number;
+  restocking_fee_cents?: number | null;
+  client_id?: string;
+}) => Promise<RestockReturnWithFeeResult | ActionMessageError | ActionPermissionError>;
+
+type RestockMode = 'unit' | 'quantity';
+interface InventoryProduct {
+  service_id: string;
+  service_name: string | null;
+  sku: string | null;
+  is_serialized?: boolean;
+}
 
 function fmtDate(v?: string | Date | null): string {
   if (!v) return '';
   const d = new Date(v);
   return isNaN(d.getTime()) ? '' : d.toLocaleDateString();
-}
-
-function fmtDateTime(v?: string | Date | null): string {
-  if (!v) return '';
-  const d = new Date(v);
-  return isNaN(d.getTime()) ? '' : d.toLocaleString();
 }
 
 /** Normalize a MAC to canonical upper-case, colon-grouped form for display. */
@@ -88,7 +113,17 @@ function statusVariant(v?: string | null) {
   }
 }
 
-export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[] }) {
+export function StockUnitsManager({
+  initialUnits,
+  clients = [],
+  defaultCurrencyCode = 'USD',
+  restockReturnWithFee,
+}: {
+  initialUnits: IStockUnit[];
+  clients?: IClient[];
+  defaultCurrencyCode?: string;
+  restockReturnWithFee?: RestockReturnWithFeeAction;
+}) {
   const { t } = useTranslation('features/inventory');
   const router = useRouter();
   const { money } = useCurrencyFormat();
@@ -142,21 +177,20 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
   const [historyDetail, setHistoryDetail] = useState<UnitDetail | null>(null);
   const [historyLoadingUnitId, setHistoryLoadingUnitId] = useState<string | null>(null);
 
-  const locationMap = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const loc of locations || []) {
-      map.set(loc.location_id, loc.name);
-    }
-    return map;
-  }, [locations]);
-
-  const locationName = useCallback(
-    (locationId?: string | null) => {
-      if (!locationId) return t('common.emptyValue', '—');
-      return locationMap.get(locationId) || locationId;
-    },
-    [locationMap, t],
-  );
+  // Restock-a-return dialog (returns opened-but-unused good stock to sellable, with fee).
+  const [restockOpen, setRestockOpen] = useState(false);
+  const [restockMode, setRestockMode] = useState<RestockMode>('unit');
+  const [restockUnitId, setRestockUnitId] = useState('');
+  const [restockUnitLabel, setRestockUnitLabel] = useState('');
+  const [restockServiceId, setRestockServiceId] = useState('');
+  const [restockLocationId, setRestockLocationId] = useState('');
+  const [restockQuantity, setRestockQuantity] = useState('');
+  const [restockFee, setRestockFee] = useState<string>('');
+  const [restockClientId, setRestockClientId] = useState<string | null>(null);
+  const [restockClientFilter, setRestockClientFilter] = useState<'all' | 'active' | 'inactive'>('active');
+  const [restockClientType, setRestockClientType] = useState<'all' | 'company' | 'individual'>('all');
+  const [restockSaving, setRestockSaving] = useState(false);
+  const [products, setProducts] = useState<InventoryProduct[]>([]);
 
   // Status/client filters apply client-side over the loaded set (the reader
   // loads all units for the tenant, so this narrows without another round-trip).
@@ -277,6 +311,180 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
     [locations, t],
   );
 
+  // Locations are loaded lazily (history/restock both need them); load once on demand.
+  const ensureLocations = useCallback(async () => {
+    if (locations !== null) return;
+    const loaded = await listStockLocations();
+    if (isReturnedActionError(loaded)) {
+      toast.error(getErrorMessage(loaded));
+      return;
+    }
+    setLocations(loaded);
+  }, [locations]);
+
+  const loadProducts = useCallback(async () => {
+    const result = await listInventoryProducts();
+    if (isReturnedActionError(result)) {
+      toast.error(getErrorMessage(result));
+      return;
+    }
+    // Non-serialized products only — serialized stock is restocked by unit, not quantity.
+    setProducts((result as InventoryProduct[]).filter((p) => !p.is_serialized));
+  }, []);
+
+  const resetRestockForm = useCallback(() => {
+    setRestockUnitId('');
+    setRestockUnitLabel('');
+    setRestockServiceId('');
+    setRestockLocationId('');
+    setRestockQuantity('');
+    setRestockFee('');
+    setRestockClientId(null);
+    setRestockClientFilter('active');
+    setRestockClientType('all');
+    setRestockSaving(false);
+  }, []);
+
+  // Header entry: pick any delivered/returned unit (or a product quantity) to restock.
+  const openRestock = useCallback(() => {
+    resetRestockForm();
+    setRestockMode('unit');
+    setRestockOpen(true);
+    void ensureLocations();
+    void loadProducts();
+  }, [resetRestockForm, ensureLocations, loadProducts]);
+
+  // Row entry: the unit is already known, so prefill it and skip the lookup.
+  const openRestockForUnit = useCallback(
+    (unit: IStockUnit) => {
+      resetRestockForm();
+      setRestockMode('unit');
+      setRestockUnitId(unit.unit_id);
+      setRestockUnitLabel(unit.serial_number || unit.unit_id);
+      setRestockOpen(true);
+      void ensureLocations();
+    },
+    [resetRestockForm, ensureLocations],
+  );
+
+  // Typeahead for the serialized restock path: only delivered/returned units qualify.
+  const loadRestockUnitOptions = useCallback(
+    async ({ search }: { search: string; page: number; limit: number }): Promise<{ options: SelectOption[]; total: number }> => {
+      const term = search.trim();
+      if (!term) return { options: [], total: 0 };
+      const bySerial = await searchUnitsBySerial(term);
+      const serialUnits = isReturnedActionError(bySerial) ? [] : bySerial;
+      const byMac = await searchUnitsByMac(term);
+      const macUnits = isReturnedActionError(byMac) ? [] : byMac;
+      const merged = new Map<string, IStockUnit>();
+      for (const u of [...serialUnits, ...macUnits]) {
+        if (u.status === 'delivered' || u.status === 'returned') merged.set(u.unit_id, u);
+      }
+      const options: SelectOption[] = Array.from(merged.values()).map((u) => ({
+        value: u.unit_id,
+        label: u.product_name ? `${u.serial_number} — ${u.product_name}` : u.serial_number,
+      }));
+      return { options, total: options.length };
+    },
+    [],
+  );
+
+  const submitRestock = useCallback(async () => {
+    if (!restockReturnWithFee) return;
+    // Parse the optional fee (dollars → integer minor units in the tenant currency).
+    const feeText = restockFee.trim();
+    let feeCents: number | null = null;
+    if (feeText) {
+      const parsed = Number(feeText);
+      if (!Number.isFinite(parsed) || parsed < 0) {
+        toast.error(t('stockUnits.restock.feeInvalid', 'Restocking fee must be a non-negative amount.'));
+        return;
+      }
+      feeCents = toMinorUnits(parsed, undefined, defaultCurrencyCode);
+    }
+
+    const input: Parameters<RestockReturnWithFeeAction>[0] = { restocking_fee_cents: feeCents };
+    if (restockMode === 'unit') {
+      if (!restockUnitId) {
+        toast.error(t('stockUnits.restock.chooseUnit', 'Choose a unit to restock.'));
+        return;
+      }
+      input.unit_id = restockUnitId;
+      // Empty = use the unit's current location (a meaningful default, not arbitrary).
+      if (restockLocationId) input.location_id = restockLocationId;
+    } else {
+      if (!restockServiceId) {
+        toast.error(t('stockUnits.restock.chooseProduct', 'Choose a product to restock.'));
+        return;
+      }
+      if (!restockLocationId) {
+        toast.error(t('stockUnits.restock.chooseLocation', 'Choose a location to restock into.'));
+        return;
+      }
+      const qty = Number(restockQuantity);
+      if (!Number.isFinite(qty) || qty <= 0) {
+        toast.error(t('stockUnits.restock.quantityInvalid', 'Enter a quantity greater than zero.'));
+        return;
+      }
+      input.service_id = restockServiceId;
+      input.location_id = restockLocationId;
+      input.quantity = qty;
+      // A non-serialized fee needs a client to bill — the serialized path derives it from the unit.
+      if (feeCents && feeCents > 0) {
+        if (!restockClientId) {
+          toast.error(t('stockUnits.restock.chooseClient', 'Choose the client to bill the restocking fee to.'));
+          return;
+        }
+        input.client_id = restockClientId;
+      }
+    }
+
+    setRestockSaving(true);
+    try {
+      const result = await restockReturnWithFee(input);
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
+      // Never silent about money: report the fee invoice, or exactly why it wasn't created.
+      const productName =
+        restockMode === 'quantity'
+          ? products.find((p) => p.service_id === restockServiceId)?.service_name ?? t('stockUnits.restock.theProduct', 'the product')
+          : restockUnitLabel;
+      if (result.fee_invoice) {
+        const amount = feeCents != null ? money(feeCents, defaultCurrencyCode) : '';
+        toast.success(
+          t('stockUnits.restock.doneWithInvoice', 'Unit restocked. Draft invoice {{number}} created for the {{amount}} restocking fee.', {
+            number: result.fee_invoice.invoice_number ?? result.fee_invoice.invoice_id,
+            amount,
+          }),
+        );
+      } else if (result.fee_invoice_error) {
+        toast(
+          t('stockUnits.restock.doneFeeFailed', 'Unit restocked, but the restocking fee wasn\'t billed: {{reason}} Create it manually.', {
+            reason: result.fee_invoice_error,
+          }),
+          { icon: '⚠️' },
+        );
+      } else if (restockMode === 'quantity') {
+        toast.success(
+          t('stockUnits.restock.doneQuantity', '{{qty}} × {{product}} restocked.', { qty: restockQuantity, product: productName }),
+        );
+      } else {
+        toast.success(t('stockUnits.restock.done', 'Unit restocked.'));
+      }
+      setRestockOpen(false);
+      await reload();
+    } catch (e: any) {
+      toast.error(e?.message || t('stockUnits.restock.failed', "Couldn't restock the return."));
+    } finally {
+      setRestockSaving(false);
+    }
+  }, [
+    restockReturnWithFee, restockFee, restockMode, restockUnitId, restockUnitLabel, restockServiceId,
+    restockLocationId, restockQuantity, restockClientId, products, defaultCurrencyCode, money, reload, t,
+  ]);
+
   const exportCsv = useCallback(() => {
     // Export exactly what the table shows: resolved names, humanized status —
     // not raw FK UUIDs or enum values.
@@ -378,11 +586,21 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
     {
       title: t('common.actions', 'Actions'),
       dataIndex: 'unit_id',
-      width: '200px',
+      width: '300px',
       headerClassName: 'text-right',
       sortable: false,
       render: (_value: unknown, rec: IStockUnit) => (
         <div className="flex justify-end gap-1">
+          {restockReturnWithFee && (rec.status === 'delivered' || rec.status === 'returned') && (
+            <Button
+              id={`unit-restock-${rec.unit_id}`}
+              variant="outline"
+              size="sm"
+              onClick={() => openRestockForUnit(rec)}
+            >
+              {t('stockUnits.restock.action', 'Restock')}
+            </Button>
+          )}
           {rec.asset_id && (
             <Button
               id={`unit-asset-${rec.unit_id}`}
@@ -421,9 +639,16 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
             )}
           </p>
         </div>
-        <Button id="stock-units-refresh-button" variant="outline" onClick={reload} disabled={loading}>
-          {t('common.refresh', 'Refresh')}
-        </Button>
+        <div className="flex gap-2">
+          {restockReturnWithFee && (
+            <Button id="stock-units-restock-button" variant="outline" onClick={openRestock}>
+              {t('stockUnits.restock.headerAction', 'Restock a return')}
+            </Button>
+          )}
+          <Button id="stock-units-refresh-button" variant="outline" onClick={reload} disabled={loading}>
+            {t('common.refresh', 'Refresh')}
+          </Button>
+        </div>
       </div>
 
       <div className="flex items-end gap-2">
@@ -503,107 +728,129 @@ export function StockUnitsManager({ initialUnits }: { initialUnits: IStockUnit[]
         <DataTable id="stock-units-table" data={visibleUnits} columns={columns} />
       )}
 
-      <Dialog
-        isOpen={historyDetail !== null}
-        onClose={() => setHistoryDetail(null)}
-        title={
-          historyDetail
-            ? t('stockUnits.unitTitle', 'Unit {{id}}', { id: historyDetail.unit.serial_number || historyDetail.unit.unit_id })
-            : t('stockUnits.unitHistoryTitle', 'Unit history')
-        }
-        id="unit-history-dialog"
-        className="max-w-3xl"
-      >
-        {historyDetail && (
+      {restockReturnWithFee && (
+        <Dialog
+          isOpen={restockOpen}
+          onClose={() => setRestockOpen(false)}
+          title={t('stockUnits.restock.dialogTitle', 'Restock a returned unit')}
+          id="stock-units-restock-dialog"
+        >
           <div className="space-y-4 p-1">
-            <div className="rounded border bg-gray-50 p-3">
-              <div className="grid gap-3 text-sm sm:grid-cols-2 lg:grid-cols-3">
-                <div>
-                  <div className="text-xs text-gray-500">{t('stockUnits.detail.serial', 'Serial')}</div>
-                  <div className="font-mono">{historyDetail.unit.serial_number || t('common.emptyValue', '—')}</div>
-                </div>
-                {historyDetail.unit.mac_address && (
-                  <div>
-                    <div className="text-xs text-gray-500">{t('stockUnits.detail.mac', 'MAC')}</div>
-                    <div className="font-mono">{fmtMac(historyDetail.unit.mac_address)}</div>
-                  </div>
-                )}
-                <div>
-                  <div className="text-xs text-gray-500">{t('common.status', 'Status')}</div>
-                  <div>{humanizeStatus(historyDetail.unit.status)}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-gray-500">{t('stockUnits.detail.location', 'Location')}</div>
-                  <div>{locationName(historyDetail.unit.location_id)}</div>
-                </div>
-                <div>
-                  <div className="text-xs text-gray-500">{t('stockUnits.detail.unitCost', 'Unit cost')}</div>
-                  <div className="font-mono">
-                    {historyDetail.unit.unit_cost == null
-                      ? t('common.emptyValue', '—')
-                      : money(Number(historyDetail.unit.unit_cost), historyDetail.unit.cost_currency ?? undefined)}
-                  </div>
-                </div>
-                {historyDetail.unit.received_at && (
-                  <div>
-                    <div className="text-xs text-gray-500">{t('stockUnits.detail.received', 'Received')}</div>
-                    <div className="font-mono">{fmtDate(historyDetail.unit.received_at)}</div>
-                  </div>
-                )}
-                {historyDetail.unit.delivered_at && (
-                  <div>
-                    <div className="text-xs text-gray-500">{t('stockUnits.detail.delivered', 'Delivered')}</div>
-                    <div className="font-mono">{fmtDate(historyDetail.unit.delivered_at)}</div>
-                  </div>
-                )}
-                {historyDetail.unit.asset_id && (
-                  <div>
-                    <div className="text-xs text-gray-500">{t('stockUnits.detail.asset', 'Asset')}</div>
-                    <Button
-                      id="unit-detail-view-asset"
-                      variant="link"
-                      size="sm"
-                      className="h-auto p-0"
-                      onClick={() => router.push(`/msp/assets/${historyDetail.unit.asset_id}`)}
-                    >
-                      {t('stockUnits.viewAsset', 'View asset')}
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </div>
+            <CustomSelect
+              id="restock-mode"
+              label={t('stockUnits.restock.mode', 'What are you restocking?')}
+              options={[
+                { value: 'unit', label: t('stockUnits.restock.modeUnit', 'A specific returned unit') },
+                { value: 'quantity', label: t('stockUnits.restock.modeQuantity', 'A quantity of a product') },
+              ]}
+              value={restockMode}
+              onValueChange={(v) => setRestockMode(v as RestockMode)}
+            />
 
-            {historyDetail.movements.length === 0 ? (
-              <p className="text-sm text-gray-500">{t('stockUnits.noMovements', 'No movements yet')}</p>
+            {restockMode === 'unit' ? (
+              <>
+                <AsyncSearchableSelect
+                  id="restock-unit"
+                  label={t('stockUnits.restock.unit', 'Unit')}
+                  required
+                  value={restockUnitId}
+                  selectedLabel={restockUnitLabel || undefined}
+                  loadOptions={loadRestockUnitOptions}
+                  dropdownMode="overlay"
+                  placeholder={t('stockUnits.restock.unitPlaceholder', 'Search a delivered or returned unit…')}
+                  emptyMessage={t('stockUnits.restock.noUnits', 'No delivered or returned units match')}
+                  onChange={(value, option) => {
+                    setRestockUnitId(value);
+                    setRestockUnitLabel(option?.label ?? '');
+                  }}
+                />
+                <CustomSelect
+                  id="restock-unit-location"
+                  label={t('stockUnits.restock.location', 'Restock to location')}
+                  value={restockLocationId}
+                  options={[
+                    { value: '', label: t('stockUnits.restock.useCurrentLocation', "Use unit's current location") },
+                    ...(locations || []).map((loc) => ({ value: loc.location_id, label: loc.name })),
+                  ]}
+                  onValueChange={(v) => setRestockLocationId(v)}
+                />
+              </>
             ) : (
-              <div className="space-y-3 border-l border-gray-200 pl-4">
-                {historyDetail.movements.map((movement) => (
-                  <div key={movement.movement_id} className="relative">
-                    <div className="absolute -left-[21px] top-1.5 h-2 w-2 rounded-full bg-gray-400" />
-                    <div className="flex flex-wrap items-baseline justify-between gap-2">
-                      <div className="text-sm font-medium">{movement.movement_type}</div>
-                      <div className="font-mono text-xs text-gray-500">
-                        {fmtDateTime(movement.created_at) || t('common.emptyValue', '—')}
-                      </div>
-                    </div>
-                    <div className="mt-1 flex flex-wrap gap-x-2 gap-y-1 text-xs text-gray-600">
-                      <span>
-                        {t('stockUnits.qty', 'Qty')} <span className="font-mono">{movement.quantity}</span>
-                      </span>
-                      <span className="font-mono text-gray-500">
-                        {locationName(movement.from_location_id)} → {locationName(movement.to_location_id)}
-                      </span>
-                    </div>
-                    {movement.reason && (
-                      <div className="mt-1 text-xs text-gray-500">{movement.reason}</div>
-                    )}
-                  </div>
-                ))}
+              <>
+                <CustomSelect
+                  id="restock-product"
+                  label={t('stockUnits.restock.product', 'Product')}
+                  required
+                  value={restockServiceId}
+                  placeholder={t('stockUnits.restock.productPlaceholder', 'Select a product…')}
+                  options={products.map((p) => ({
+                    value: p.service_id,
+                    label: p.sku ? `${p.service_name ?? p.service_id} · ${p.sku}` : p.service_name ?? p.service_id,
+                  }))}
+                  onValueChange={(v) => setRestockServiceId(v)}
+                />
+                <CustomSelect
+                  id="restock-quantity-location"
+                  label={t('stockUnits.restock.location', 'Restock to location')}
+                  required
+                  value={restockLocationId}
+                  placeholder={t('stockUnits.restock.locationPlaceholder', 'Select a location…')}
+                  options={(locations || []).map((loc) => ({ value: loc.location_id, label: loc.name }))}
+                  onValueChange={(v) => setRestockLocationId(v)}
+                />
+                <Input
+                  id="restock-quantity"
+                  label={t('stockUnits.restock.quantity', 'Quantity')}
+                  type="number"
+                  min={1}
+                  value={restockQuantity}
+                  onChange={(e) => setRestockQuantity(e.target.value)}
+                />
+              </>
+            )}
+
+            <CurrencyInput
+              id="restock-fee"
+              label={t('stockUnits.restock.fee', 'Restocking fee')}
+              currencyCode={defaultCurrencyCode}
+              value={restockFee ? Number(restockFee) : undefined}
+              onChange={(value) => setRestockFee(value == null ? '' : String(value))}
+            />
+
+            {/* A non-serialized fee needs a client to bill; the serialized path derives it from the unit. */}
+            {restockMode === 'quantity' && restockFee.trim() !== '' && Number(restockFee) > 0 && (
+              <div className="space-y-1">
+                <label className="block text-sm font-medium">{t('stockUnits.restock.feeClient', 'Bill restocking fee to')}</label>
+                <ClientPicker
+                  id="restock-client"
+                  clients={clients}
+                  selectedClientId={restockClientId}
+                  onSelect={(id) => setRestockClientId(id)}
+                  filterState={restockClientFilter}
+                  onFilterStateChange={setRestockClientFilter}
+                  clientTypeFilter={restockClientType}
+                  onClientTypeFilterChange={setRestockClientType}
+                />
               </div>
             )}
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button id="restock-cancel" variant="outline" onClick={() => setRestockOpen(false)}>
+                {t('common.cancel', 'Cancel')}
+              </Button>
+              <Button id="restock-save" onClick={submitRestock} disabled={restockSaving}>
+                {restockSaving ? t('stockUnits.restock.restocking', 'Restocking…') : t('stockUnits.restock.submit', 'Restock')}
+              </Button>
+            </div>
           </div>
-        )}
-      </Dialog>
+        </Dialog>
+      )}
+
+      <UnitHistoryDialog
+        detail={historyDetail}
+        onClose={() => setHistoryDetail(null)}
+        locations={locations || []}
+      />
     </div>
   );
 }
