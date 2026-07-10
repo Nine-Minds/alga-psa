@@ -2,7 +2,8 @@
 
 import { useMemo, type ReactNode } from 'react';
 import { ClientTagsProvider, type ClientTagsCallbacks } from '@alga-psa/ui/context';
-import { findTagsByEntityIds, isTagActionError } from '@alga-psa/tags/actions';
+import { findTagsByEntityIds } from '@alga-psa/tags/actions/tagActions';
+import { isTagActionError } from '@alga-psa/tags/actions/tagActionErrors';
 
 export function MspClientTagsProvider({ children }: { children: ReactNode }) {
   const value = useMemo<ClientTagsCallbacks>(
