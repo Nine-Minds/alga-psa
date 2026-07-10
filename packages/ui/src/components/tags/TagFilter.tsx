@@ -20,6 +20,9 @@ interface TagFilterProps {
   triggerLabel?: string;
   selectedLabel?: string;
   triggerClassName?: string;
+  contentClassName?: string;
+  modal?: boolean;
+  align?: 'start' | 'center' | 'end';
 }
 
 export function TagFilter({
@@ -32,6 +35,9 @@ export function TagFilter({
   triggerLabel,
   selectedLabel,
   triggerClassName = '',
+  contentClassName = '',
+  modal = false,
+  align = 'center',
 }: TagFilterProps) {
   const { t } = useTranslation();
   const resolvedPlaceholder = placeholder ?? t('tagFilter.placeholder', { defaultValue: 'Filter by tags...' });
@@ -41,7 +47,7 @@ export function TagFilter({
   const filteredTags = filterTagsByText(tags, searchQuery);
 
   return (
-    <Popover.Root open={isOpen} onOpenChange={setIsOpen}>
+    <Popover.Root open={isOpen} onOpenChange={setIsOpen} modal={modal}>
       <Popover.Trigger asChild>
         <Button id={`${id}-trigger`} variant="outline" className={`h-9 gap-2 whitespace-nowrap ${triggerClassName}`}>
           <TagIcon className="h-4 w-4" />
@@ -54,8 +60,9 @@ export function TagFilter({
       </Popover.Trigger>
       <Popover.Portal>
         <Popover.Content
-          className="w-[300px] p-4 bg-white rounded-lg shadow-lg border border-gray-200 z-50"
+          className={`w-[300px] p-4 bg-white rounded-lg shadow-lg border border-gray-200 z-50 ${contentClassName}`}
           sideOffset={5}
+          align={align}
         >
           <div className="space-y-4">
             <Input

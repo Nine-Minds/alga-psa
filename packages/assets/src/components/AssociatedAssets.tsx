@@ -142,7 +142,9 @@ export default function AssociatedAssets({ id, entityId, entityType, clientId, d
     useEffect(() => {
         if (!initialAssets) return;
         let cancelled = false;
-        initialAssets.then((assets) => {
+        // initialAssets may be a React Flight thenable (RSC-streamed) whose
+        // .then() returns undefined; normalize to a real, chainable Promise.
+        Promise.resolve(initialAssets).then((assets) => {
             if (cancelled) return;
             const expectedAssets = unwrapAssetActionResult(assets);
             // Same shaping as loadAssociatedAssets, minus the network round-trip.

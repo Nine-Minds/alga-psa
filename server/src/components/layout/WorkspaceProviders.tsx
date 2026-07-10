@@ -12,6 +12,7 @@ import { MspClientIntegrationProvider } from '@alga-psa/msp-composition/projects
 import { MspClientDrawerProvider } from '@alga-psa/msp-composition/clients/MspClientDrawerProvider';
 import { MspClientCrossFeatureProvider } from '@alga-psa/msp-composition/clients/MspClientCrossFeatureProvider';
 import { QuickAddClientProviderWithCallbacks } from '@alga-psa/clients/providers/QuickAddClientProviderWithCallbacks';
+import { MspClientTagsProvider } from '@alga-psa/msp-composition/clients/MspClientTagsProvider';
 import { MspAssetCrossFeatureProvider } from '@alga-psa/msp-composition/assets/MspAssetCrossFeatureProvider';
 import { MspDocumentsCrossFeatureProvider } from '@alga-psa/msp-composition/documents/MspDocumentsCrossFeatureProvider';
 import { MspSchedulingCrossFeatureProvider } from '@alga-psa/msp-composition/scheduling/MspSchedulingCrossFeatureProvider';
@@ -45,8 +46,10 @@ export default function WorkspaceProviders({ children }: WorkspaceProvidersProps
                     <MspSchedulingCrossFeatureProvider>
                       <MspActivityCrossFeatureProvider>
                         <QuickAddClientProviderWithCallbacks>
-                          {children}
-                          <DrawerOutlet />
+                          <MspClientTagsProvider>
+                            {children}
+                            <DrawerOutlet />
+                          </MspClientTagsProvider>
                         </QuickAddClientProviderWithCallbacks>
                       </MspActivityCrossFeatureProvider>
                     </MspSchedulingCrossFeatureProvider>

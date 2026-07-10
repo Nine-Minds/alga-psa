@@ -30,6 +30,8 @@ interface DatePickerBaseProps {
   minDate?: Date;
   /** Latest selectable date (inclusive). Days after this are disabled, including the "Today" shortcut. */
   maxDate?: Date;
+  /** Collapse to an icon-only trigger while the component is narrower than 10rem (makes the wrapper a CSS container) */
+  collapsible?: boolean;
   /** Ref for the component */
   ref?: React.Ref<HTMLDivElement>;
 }
@@ -61,6 +63,7 @@ export function DatePicker({
   displayFormat,
   minDate,
   maxDate,
+  collapsible = false,
   ref
 }: DatePickerProps) {
   const [open, setOpen] = React.useState(false);
@@ -120,13 +123,18 @@ export function DatePicker({
     }
   }, [value, disabled, required, updateMetadata]);
 
+  const displayText = value
+    ? format(value, displayFormat ?? 'P', { locale: dateFnsLocale })
+    : placeholder;
+
   return (
     <Popover.Root open={open} onOpenChange={setOpen}>
-      <div className={className} ref={ref}>
+      <div className={`${collapsible ? '@container ' : ''}${className ?? ''}`} ref={ref}>
         <Popover.Trigger
           {...automationIdProps}
           disabled={disabled}
           aria-label={label || placeholder}
+          title={collapsible ? displayText : undefined}
           onKeyDown={handleKeyDown}
           className={`
             flex h-9 w-full rounded-lg border border-border bg-[rgb(var(--color-card))] px-3 py-1.5 text-sm
@@ -138,8 +146,8 @@ export function DatePicker({
             ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}
           `}
         >
-          <span className="flex-1 min-w-0 text-left truncate">
-            {value ? format(value, displayFormat ?? 'P', { locale: dateFnsLocale }) : placeholder}
+          <span className={`flex-1 min-w-0 text-left truncate ${collapsible ? 'hidden @[10rem]:block' : ''}`}>
+            {displayText}
           </span>
           {clearValue && value && !disabled && (
             <span
@@ -157,12 +165,14 @@ export function DatePicker({
                   clearValue();
                 }
               }}
-              className="mr-2 text-[rgb(var(--color-text-400))] hover:text-[rgb(var(--color-text-600))] cursor-pointer"
+              className={`mr-2 text-[rgb(var(--color-text-400))] hover:text-[rgb(var(--color-text-600))] cursor-pointer ${collapsible ? 'hidden @[10rem]:inline' : ''}`}
             >
               <X className="h-4 w-4" />
             </span>
           )}
-          <CalendarIcon className="h-4 w-4 ml-2 opacity-50 shrink-0" />
+          <CalendarIcon
+            className={`h-4 w-4 opacity-50 shrink-0 ${collapsible ? 'mx-auto @[10rem]:mx-0 @[10rem]:ml-2' : 'ml-2'}`}
+          />
         </Popover.Trigger>
 
         <Popover.Portal>
