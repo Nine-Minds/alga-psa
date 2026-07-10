@@ -24,6 +24,14 @@ import {
   useFormatBillingFrequency,
   useFormatContractLineType,
 } from '@alga-psa/billing/hooks/useBillingEnumOptions';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 interface ContractLinePresetServiceWithName extends IContractLinePresetService {
   service_name?: string;
@@ -108,6 +116,10 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
     setError(null);
     try {
       const presets = await getContractLinePresets();
+      if (isReturnedActionError(presets)) {
+        setError(getErrorMessage(presets));
+        return;
+      }
       setAvailablePresets(presets);
 
       // Load service counts for each preset
@@ -117,6 +129,10 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
           if (preset.preset_id) {
             try {
               const services = await getContractLinePresetServices(preset.preset_id);
+              if (isReturnedActionError(services)) {
+                counts[preset.preset_id] = 0;
+                return;
+              }
               counts[preset.preset_id] = services.length;
             } catch (error) {
               console.error(`Error loading service count for preset ${preset.preset_id}:`, error);
@@ -203,6 +219,10 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
       try {
         // Load services
         const services = await getContractLinePresetServices(presetId);
+        if (isReturnedActionError(services)) {
+          setError(getErrorMessage(services));
+          return;
+        }
 
         // Load all service details to get names and rates
         const allServices = await getServices(1, 999, { item_kind: 'any' });
@@ -252,6 +272,10 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
 
         if (preset?.contract_line_type === 'Fixed') {
           const fixedConfig = await getContractLinePresetFixedConfig(presetId);
+          if (isReturnedActionError(fixedConfig)) {
+            setError(getErrorMessage(fixedConfig));
+            return;
+          }
           setPresetFixedConfigs(prev => ({
             ...prev,
             [presetId]: fixedConfig
@@ -306,7 +330,7 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
     setError(null);
     try {
       // Add each selected preset to the contract
-      await Promise.all(
+      const results = await Promise.all(
         Array.from(selectedPresetIds).map(presetId => {
           const overrides: {
             base_rate?: number | null;
@@ -346,6 +370,11 @@ export const AddContractLinesDialog: React.FC<AddContractLinesDialogProps> = ({
           return copyPresetToContractLine(contractId, presetId, Object.keys(overrides).length > 0 ? overrides : undefined);
         })
       );
+      const expectedError = results.find(isReturnedActionError);
+      if (expectedError) {
+        setError(getErrorMessage(expectedError));
+        return;
+      }
 
       await onAdd();
       onClose();

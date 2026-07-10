@@ -19,11 +19,21 @@ import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
+import {
+  type ActionMessageError,
+  type ActionPermissionError,
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 interface SlaPolicyListProps {
   onEditPolicy?: (policy: ISlaPolicy) => void;
   onAddPolicy?: () => void;
 }
+
+const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 export function SlaPolicyList({ onEditPolicy, onAddPolicy }: SlaPolicyListProps) {
   const [policies, setPolicies] = useState<ISlaPolicy[]>([]);
@@ -66,7 +76,12 @@ export function SlaPolicyList({ onEditPolicy, onAddPolicy }: SlaPolicyListProps)
 
   const handleSetDefault = async (policy: ISlaPolicy) => {
     try {
-      await setDefaultSlaPolicy(policy.sla_policy_id);
+      const result = await setDefaultSlaPolicy(policy.sla_policy_id);
+      if (isReturnedActionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
+
       await fetchPolicies();
     } catch (err) {
       console.error('Error setting default policy:', err);
@@ -94,7 +109,12 @@ export function SlaPolicyList({ onEditPolicy, onAddPolicy }: SlaPolicyListProps)
 
     try {
       setIsDeleting(true);
-      await deleteSlaPolicy(policyToDelete.sla_policy_id);
+      const result = await deleteSlaPolicy(policyToDelete.sla_policy_id);
+      if (isReturnedActionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
+
       await fetchPolicies();
       setPolicyToDelete(null);
     } catch (err) {

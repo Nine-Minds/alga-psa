@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { toast } from 'react-hot-toast';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { getCurrentTimePeriod } from '../actions/timePeriodsActions';
 import { fetchOrCreateTimeSheet, saveTimeEntry, getTimeEntryById } from '../actions/timeEntryActions';
@@ -66,6 +67,10 @@ export async function launchTimeEntryForWorkItem({ openDrawer, closeDrawer, cont
     let existingEntry: ITimeEntryWithWorkItem | null = null;
     if (existingEntryId) {
       existingEntry = await getTimeEntryById(existingEntryId);
+      if (isActionMessageError(existingEntry) || isActionPermissionError(existingEntry)) {
+        toast.error(getErrorMessage(existingEntry));
+        return;
+      }
       if (!existingEntry) {
         toast.error('Time entry not found.');
         return;
@@ -73,13 +78,24 @@ export async function launchTimeEntryForWorkItem({ openDrawer, closeDrawer, cont
     }
 
     const currentTimePeriod = await getCurrentTimePeriod();
+    if (isActionMessageError(currentTimePeriod) || isActionPermissionError(currentTimePeriod)) {
+      toast.error(getErrorMessage(currentTimePeriod));
+      return;
+    }
     if (!currentTimePeriod) {
       toast.error('No active time period found. Please configure time periods before entering time.');
       return;
     }
 
-    const timeSheetId = existingEntry?.time_sheet_id
-      ?? (await fetchOrCreateTimeSheet(user.user_id, currentTimePeriod.period_id)).id;
+    let timeSheetId = existingEntry?.time_sheet_id;
+    if (!timeSheetId) {
+      const timeSheet = await fetchOrCreateTimeSheet(user.user_id, currentTimePeriod.period_id);
+      if (isActionMessageError(timeSheet) || isActionPermissionError(timeSheet)) {
+        toast.error(getErrorMessage(timeSheet));
+        return;
+      }
+      timeSheetId = timeSheet.id;
+    }
 
     const workItem = buildWorkItem(context);
     const { defaultStartTime, defaultEndTime } = deriveDefaultTimes(context);
@@ -93,12 +109,16 @@ export async function launchTimeEntryForWorkItem({ openDrawer, closeDrawer, cont
         onClose={closeDrawer}
         onSave={async (timeEntry) => {
           try {
-            await saveTimeEntry(timeEntry);
+            const savedEntry = await saveTimeEntry(timeEntry);
+            if (isActionMessageError(savedEntry) || isActionPermissionError(savedEntry)) {
+              toast.error(getErrorMessage(savedEntry));
+              return;
+            }
             closeDrawer();
             if (onComplete) onComplete();
           } catch (error) {
             console.error('Failed to save time entry:', error);
-            toast.error('Failed to save time entry. Please try again.');
+            toast.error(getErrorMessage(error));
           }
         }}
         workItem={workItem}

@@ -8,6 +8,7 @@ import type {
   ITicketCategory,
   IBoard,
 } from '@alga-psa/types';
+import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 export interface QuickAddTicketRenderProps {
   open: boolean;
@@ -42,7 +43,7 @@ export interface PrioritySelectRenderProps {
 
 export interface TicketIntegrationContextType {
   // Data fetching
-  getTicketsForList: (filters: ITicketListFilters) => Promise<ITicketListItem[]>;
+  getTicketsForList: (filters: ITicketListFilters) => Promise<ITicketListItem[] | ActionMessageError | ActionPermissionError>;
   getConsolidatedTicketData: (ticketId: string) => Promise<any>;
   getTicketCategories: () => Promise<ITicketCategory[]>;
   getAllBoards: () => Promise<IBoard[]>;

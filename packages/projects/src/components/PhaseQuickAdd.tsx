@@ -6,7 +6,7 @@ import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
-import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { handleError, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { addProjectPhase } from '../actions/projectActions';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useTranslation } from 'react-i18next';
@@ -18,6 +18,9 @@ interface PhaseQuickAddProps {
   onCancel: () => void;
 }
 
+function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
+  return isActionMessageError(value) || isActionPermissionError(value);
+}
 
 const PhaseQuickAdd: React.FC<PhaseQuickAddProps> = ({ 
   projectId,
@@ -53,8 +56,8 @@ const PhaseQuickAdd: React.FC<PhaseQuickAddProps> = ({
       };
 
       const newPhase = await addProjectPhase(phaseData);
-      if (isActionPermissionError(newPhase)) {
-        handleError(newPhase.permissionError);
+      if (isReturnedActionError(newPhase)) {
+        handleError(newPhase);
         return;
       }
       onPhaseAdded(newPhase);

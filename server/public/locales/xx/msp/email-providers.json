@@ -11,7 +11,8 @@
       "resyncing": "11111 {{providerName}} 11111",
       "resyncError": "11111",
       "resyncStarted": "11111 {{providerName}} 11111",
-      "enterpriseOnly": "11111"
+      "enterpriseOnly": "11111",
+      "loadProvidersError": "11111"
     },
     "editDrawer": {
       "title": "11111",
@@ -293,7 +294,8 @@
         "popupBlocked": "11111",
         "closedEarly": "11111",
         "authorizationFailed": "11111",
-        "popupFailed": "11111"
+        "popupFailed": "11111",
+        "configureFailed": "11111"
       },
       "messages": {
         "setupIncomplete": "11111 {{error}} 11111",

@@ -226,7 +226,7 @@ export async function configureGmailProvider({
           stack: watchError instanceof Error ? watchError.stack : undefined
         });
         // Record the error but don't throw - provider is saved, Pub/Sub may still work
-        result.warnings.push(`Failed to register Gmail watch: ${errorMessage}`);
+        result.warnings.push('Gmail watch registration failed. Reconnect the mailbox or retry setup after verifying Google permissions.');
         // If Pub/Sub was configured, we're partially successful
         result.success = result.pubsubConfigured;
       }
@@ -241,7 +241,7 @@ export async function configureGmailProvider({
       stack: pubsubError instanceof Error ? pubsubError.stack : undefined
     });
     // This is a critical failure - Pub/Sub setup failed
-    result.error = `Failed to configure Gmail Pub/Sub: ${errorMessage}`;
+    result.error = errorMessage || 'Unable to configure Gmail Pub/Sub.';
     result.success = false;
   }
 

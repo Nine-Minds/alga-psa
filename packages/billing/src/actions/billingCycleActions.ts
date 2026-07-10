@@ -13,15 +13,64 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { toPlainDate } from '@alga-psa/core';
 import { applyClientCadenceChange } from '@alga-psa/shared/billingClients';
 import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
+import {
+  actionError,
+  permissionError,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
+type BillingCycleActionError = ActionMessageError | ActionPermissionError;
+type BillingCycleMutationResult = { success: true } | BillingCycleActionError;
+type NextBillingCycleStatus = {
+  canCreate: boolean;
+  isEarly: boolean;
+  periodEndDate?: string;
+};
+
+class BillingCycleDomainError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'BillingCycleDomainError';
+  }
+}
+
+function isBillingCycleActionError(result: unknown): result is BillingCycleActionError {
+  return isActionMessageError(result) || isActionPermissionError(result);
+}
+
+function billingCycleActionErrorFrom(error: unknown): BillingCycleActionError | null {
+  if (error instanceof BillingCycleDomainError) {
+    if (error.message.startsWith('Permission denied:')) {
+      return permissionError(error.message);
+    }
+    return actionError(error.message);
+  }
+
+  if (error instanceof Error && error.message.startsWith('Permission denied:')) {
+    return permissionError(error.message);
+  }
+
+  return null;
+}
+
+async function hardDeleteInvoiceForBillingCycle(invoiceId: string): Promise<BillingCycleActionError | null> {
+  const result = await hardDeleteInvoice(invoiceId);
+  if (isBillingCycleActionError(result)) {
+    return result;
+  }
+  return null;
+}
 
 export const getBillingCycle = withAuth(async (
   user,
   { tenant },
   clientId: string
-): Promise<BillingCycleType> => {
+): Promise<BillingCycleType | BillingCycleActionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    throw new Error('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required');
   }
   const { knex: conn } = await createTenantKnex();
 
@@ -43,9 +92,9 @@ export const updateBillingCycle = withAuth(async (
   { tenant },
   clientId: string,
   billingCycle: BillingCycleType
-): Promise<void> => {
+): Promise<void | BillingCycleActionError> => {
   if (!await hasPermission(user, 'billing', 'update')) {
-    throw new Error('Permission denied: billing update required');
+    return permissionError('Permission denied: billing update required');
   }
   const { knex: conn } = await createTenantKnex();
 
@@ -85,13 +134,9 @@ export const canCreateNextBillingCycle = withAuth(async (
   user,
   { tenant },
   clientId: string
-): Promise<{
-  canCreate: boolean;
-  isEarly: boolean;
-  periodEndDate?: string;
-}> => {
+): Promise<NextBillingCycleStatus | BillingCycleActionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    throw new Error('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required');
   }
   const { knex: conn } = await createTenantKnex();
 
@@ -106,7 +151,7 @@ export const canCreateNextBillingCycle = withAuth(async (
   });
 
   if (!client) {
-    throw new Error('Client not found');
+    return actionError('Client not found');
   }
 
   // Get the latest billing cycle
@@ -145,14 +190,10 @@ export const getNextBillingCycleStatusForClients = withAuth(async (
   { tenant },
   clientIds: string[]
 ): Promise<{
-  [clientId: string]: {
-    canCreate: boolean;
-    isEarly: boolean;
-    periodEndDate?: string;
-  };
-}> => {
+  [clientId: string]: NextBillingCycleStatus;
+} | BillingCycleActionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    throw new Error('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required');
   }
   if (clientIds.length === 0) {
     return {};
@@ -216,9 +257,9 @@ export const createNextBillingCycle = withAuth(async (
   { tenant },
   clientId: string,
   effectiveDate?: string
-): Promise<BillingCycleCreationResult> => {
+): Promise<BillingCycleCreationResult | BillingCycleActionError> => {
   if (!await hasPermission(user, 'billing', 'create')) {
-    throw new Error('Permission denied: billing create required');
+    return permissionError('Permission denied: billing create required');
   }
   const { knex: conn } = await createTenantKnex();
 
@@ -232,12 +273,15 @@ export const createNextBillingCycle = withAuth(async (
   });
 
   if (!client) {
-    throw new Error('Client not found');
+    return actionError('Client not found');
   }
 
   const canCreate = await canCreateNextBillingCycle(clientId);
+  if (isBillingCycleActionError(canCreate)) {
+    return canCreate;
+  }
   if (!canCreate.canCreate) {
-    throw new Error('Cannot create next billing cycle at this time');
+    return actionError('Cannot create next billing cycle at this time');
   }
 
   return await createClientContractLineCycles(conn, client, {
@@ -269,7 +313,7 @@ async function deactivateBillingCycleRecord(
   const billingCycle = await getBillingCycleRecord(knex, tenant, cycleId);
 
   if (!billingCycle) {
-    throw new Error('Billing cycle not found');
+    throw new BillingCycleDomainError('Billing cycle not found');
   }
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -288,9 +332,14 @@ async function deactivateBillingCycleRecord(
     billingCycle.client_id,
     new Date().toISOString()
   );
+  if (isActionMessageError(nextBillingDate) || isActionPermissionError(nextBillingDate)) {
+    throw new BillingCycleDomainError(
+      'permissionError' in nextBillingDate ? nextBillingDate.permissionError : nextBillingDate.actionError,
+    );
+  }
 
   if (!nextBillingDate) {
-    throw new Error('Failed to verify future billing periods');
+    throw new BillingCycleDomainError('Future billing periods could not be verified after removing the billing cycle');
   }
 }
 
@@ -302,7 +351,7 @@ async function permanentlyDeleteBillingCycleRecord(
   const billingCycle = await getBillingCycleRecord(knex, tenant, cycleId);
 
   if (!billingCycle) {
-    throw new Error('Billing cycle not found');
+    throw new BillingCycleDomainError('Billing cycle not found');
   }
 
   const deletedCount = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -326,27 +375,39 @@ export const removeBillingCycle = withAuth(async (
   user,
   { tenant },
   cycleId: string
-): Promise<void> => {
+): Promise<BillingCycleMutationResult> => {
   if (!await hasPermission(user, 'billing', 'delete')) {
-    throw new Error('Permission denied: billing delete required');
+    return permissionError('Permission denied: billing delete required');
   }
   const { knex } = await createTenantKnex();
 
-  // Check for existing invoices
-  const invoice = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await tenantDb(trx, tenant).table('invoices')
-      .where({
-        billing_cycle_id: cycleId,
-        tenant
-      })
-      .first();
-  });
+  try {
+    // Check for existing invoices
+    const invoice = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await tenantDb(trx, tenant).table('invoices')
+        .where({
+          billing_cycle_id: cycleId,
+          tenant
+        })
+        .first();
+    });
 
-  if (invoice) {
-    await hardDeleteInvoice(invoice.invoice_id);
+    if (invoice) {
+      const invoiceDeleteError = await hardDeleteInvoiceForBillingCycle(invoice.invoice_id);
+      if (invoiceDeleteError) {
+        return invoiceDeleteError;
+      }
+    }
+
+    await deactivateBillingCycleRecord(knex, tenant, cycleId);
+    return { success: true };
+  } catch (error) {
+    const expected = billingCycleActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
   }
-
-  await deactivateBillingCycleRecord(knex, tenant, cycleId);
 });
 
 // function for hard delete (delete cycle and invoice)
@@ -354,27 +415,39 @@ export const hardDeleteBillingCycle = withAuth(async (
   user,
   { tenant },
   cycleId: string
-): Promise<void> => {
+): Promise<BillingCycleMutationResult> => {
   if (!await hasPermission(user, 'billing', 'delete')) {
-    throw new Error('Permission denied: billing delete required');
+    return permissionError('Permission denied: billing delete required');
   }
   const { knex } = await createTenantKnex();
 
-  // Check for existing invoices
-  const invoice = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await tenantDb(trx, tenant).table('invoices')
-      .where({
-        billing_cycle_id: cycleId,
-        tenant
-      })
-      .first();
-  });
+  try {
+    // Check for existing invoices
+    const invoice = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await tenantDb(trx, tenant).table('invoices')
+        .where({
+          billing_cycle_id: cycleId,
+          tenant
+        })
+        .first();
+    });
 
-  if (invoice) {
-    await hardDeleteInvoice(invoice.invoice_id);
+    if (invoice) {
+      const invoiceDeleteError = await hardDeleteInvoiceForBillingCycle(invoice.invoice_id);
+      if (invoiceDeleteError) {
+        return invoiceDeleteError;
+      }
+    }
+
+    await permanentlyDeleteBillingCycleRecord(knex, tenant, cycleId);
+    return { success: true };
+  } catch (error) {
+    const expected = billingCycleActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
   }
-
-  await permanentlyDeleteBillingCycleRecord(knex, tenant, cycleId);
 });
 
 export interface RecurringInvoiceHistoryRow {
@@ -629,22 +702,30 @@ export const reverseRecurringInvoice = withAuth(async (
   user,
   { tenant },
   params: { invoiceId: string; billingCycleId?: string | null }
-): Promise<void> => {
+): Promise<BillingCycleMutationResult> => {
   if (!await hasPermission(user, 'billing', 'delete')) {
-    throw new Error('Permission denied: billing delete required');
+    return permissionError('Permission denied: billing delete required');
   }
-  await hardDeleteInvoice(params.invoiceId);
+  const invoiceDeleteError = await hardDeleteInvoiceForBillingCycle(params.invoiceId);
+  if (invoiceDeleteError) {
+    return invoiceDeleteError;
+  }
+  return { success: true };
 });
 
 export const hardDeleteRecurringInvoice = withAuth(async (
   user,
   { tenant },
   params: { invoiceId: string; billingCycleId?: string | null }
-): Promise<void> => {
+): Promise<BillingCycleMutationResult> => {
   if (!await hasPermission(user, 'billing', 'delete')) {
-    throw new Error('Permission denied: billing delete required');
+    return permissionError('Permission denied: billing delete required');
   }
-  await hardDeleteInvoice(params.invoiceId);
+  const invoiceDeleteError = await hardDeleteInvoiceForBillingCycle(params.invoiceId);
+  if (invoiceDeleteError) {
+    return invoiceDeleteError;
+  }
+  return { success: true };
 });
 
 type InvoicedBillingCycleRow = IClientContractLineCycle & {
@@ -656,9 +737,9 @@ type InvoicedBillingCycleRow = IClientContractLineCycle & {
 export const getInvoicedBillingCycles = withAuth(async (
   user,
   { tenant }
-): Promise<InvoicedBillingCycleRow[]> => {
+): Promise<InvoicedBillingCycleRow[] | BillingCycleActionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    throw new Error('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required');
   }
   const { knex: conn } = await createTenantKnex();
 
@@ -853,9 +934,9 @@ export const getRecurringInvoiceHistoryPaginated = withAuth(async (
   user,
   { tenant },
   options: FetchRecurringInvoiceHistoryOptions = {}
-): Promise<PaginatedRecurringInvoiceHistoryResult> => {
+): Promise<PaginatedRecurringInvoiceHistoryResult | BillingCycleActionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    throw new Error('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required');
   }
   return fetchRecurringInvoiceHistoryPage(tenant, options);
 });
@@ -867,9 +948,9 @@ export const getInvoicedBillingCyclesPaginated = withAuth(async (
   user,
   { tenant },
   options: FetchInvoicedCyclesOptions = {}
-): Promise<PaginatedInvoicedCyclesResult> => {
+): Promise<PaginatedInvoicedCyclesResult | BillingCycleActionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    throw new Error('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required');
   }
   const result = await fetchRecurringInvoiceHistoryPage(tenant, options);
   return {
@@ -884,9 +965,9 @@ export const getInvoicedBillingCyclesPaginated = withAuth(async (
 export const getAllBillingCycles = withAuth(async (
   user,
   { tenant }
-): Promise<{ [clientId: string]: BillingCycleType }> => {
+): Promise<{ [clientId: string]: BillingCycleType } | BillingCycleActionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    throw new Error('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required');
   }
   const { knex: conn } = await createTenantKnex();
 

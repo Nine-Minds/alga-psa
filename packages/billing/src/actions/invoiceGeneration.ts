@@ -64,8 +64,34 @@ import {
   detectRecurringApprovalBlockers,
   formatApprovalBlockedReason,
 } from './recurringApprovalBlockers';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 // TODO: Move these type guards to billingAndTax.ts or a shared utility file
 const POSTGRES_UNDEFINED_TABLE = '42P01';
+type InvoiceGenerationActionError = ActionMessageError | ActionPermissionError;
+
+function isReturnedActionError(value: unknown): value is InvoiceGenerationActionError {
+  return Boolean(
+    value &&
+      typeof value === 'object' &&
+      (
+        typeof (value as { actionError?: unknown }).actionError === 'string' ||
+        typeof (value as { permissionError?: unknown }).permissionError === 'string'
+      )
+  );
+}
+
+function unwrapBillingHelperResult<T>(value: T | InvoiceGenerationActionError): T {
+  if (isReturnedActionError(value)) {
+    throw new Error('permissionError' in value ? value.permissionError : value.actionError);
+  }
+
+  return value;
+}
 
 function isMissingRelationError(error: unknown): boolean {
   return Boolean(
@@ -262,6 +288,112 @@ function buildPreviewInvoiceFailure(
     error,
     ...buildRecurringWindowErrorContext(selectorInput),
   };
+}
+
+function previewInvoiceErrorMessage(error: unknown): string {
+  if (!(error instanceof Error)) {
+    return 'An error occurred while previewing the invoice';
+  }
+
+  const { message } = error;
+  if (message.startsWith('Permission denied:')) {
+    return message;
+  }
+
+  if (message.startsWith('Recurring service periods were not materialized')) {
+    return message;
+  }
+
+  if (/^Billing cycle .+ not found for client .+$/.test(message)) {
+    return 'Billing cycle not found';
+  }
+
+  if (/^Billing cycle .+ has invalid dates/.test(message)) {
+    return 'Billing cycle has invalid dates';
+  }
+
+  if (/^Billing Error: Client .+ has active contracts in multiple currencies \(.+\)\. Mixed currency billing is not supported\.$/.test(message)) {
+    return 'This client has active contracts in multiple currencies. Mixed currency billing is not supported.';
+  }
+
+  if (/^Client .+ not found in tenant .+$/.test(message)) {
+    return 'Client not found';
+  }
+
+  const expectedMessages = new Set([
+    'Grouped recurring selection inputs must share the same client and invoice window.',
+    'Invalid billing cycle dates',
+    'Invoice period cannot span billing cycle change',
+    'No active contract lines found for this client in the selected billing period.',
+    'No recurring execution windows selected',
+    'No recurring selections were provided for preview.',
+    'Recurring selector input execution window kind is not supported.',
+    'Recurring selector input is missing client-cadence assignment identity (schedule key).',
+    'Recurring selector input is missing contract-cadence assignment identity (contract line).',
+  ]);
+
+  return expectedMessages.has(message)
+    ? message
+    : 'An error occurred while previewing the invoice';
+}
+
+function invoiceGenerationActionErrorFrom(error: unknown): InvoiceGenerationActionError | null {
+  if (error instanceof Error) {
+    if (error.message.startsWith('Permission denied')) {
+      return permissionError(error.message);
+    }
+
+    if (error.message === 'Billing cycle not found') {
+      return actionError('Billing cycle not found. It may have been updated or deleted. Please refresh and try again.');
+    }
+    if (error.message === 'Invoice not found') {
+      return actionError('Invoice not found. It may have been updated or deleted. Please refresh and try again.');
+    }
+    if (error.message === 'Invalid billing cycle dates') {
+      return actionError('Billing cycle has invalid dates. Please review the cycle and try again.');
+    }
+    if (
+      error.message === 'No recurring execution windows selected' ||
+      error.message === 'No billing settings found' ||
+      error.message === 'Nothing to bill' ||
+      error.message === 'Recurring selector input execution window kind is not supported.' ||
+      error.message === 'Unable to generate a unique invoice number after multiple attempts.' ||
+      error.message.startsWith('Purchase Order is required') ||
+      error.message.startsWith('Client ') ||
+      error.message.startsWith('Service "') ||
+      error.message.startsWith('Invoice already exists for this recurring execution window') ||
+      error.message.startsWith('Recurring service periods were not materialized') ||
+      error.message.includes('Mixed currency billing is not supported')
+    ) {
+      return actionError(error.message);
+    }
+  }
+
+  const dbError = error as { code?: string; column?: string };
+  if (dbError?.code === '22P02') {
+    return actionError('One of the selected invoice values is invalid. Please refresh and try again.');
+  }
+  if (dbError?.code === '23502') {
+    return actionError(`Missing required invoice field${dbError.column ? `: ${dbError.column}` : ''}.`);
+  }
+  if (dbError?.code === '23503') {
+    return actionError('The selected invoice, client, contract, or billing record no longer exists. Please refresh and try again.');
+  }
+  if (dbError?.code === '23505') {
+    return actionError('A conflicting invoice already exists. Please refresh and try again.');
+  }
+
+  return null;
+}
+
+async function withInvoiceGenerationActionErrors<T>(work: () => Promise<T>): Promise<T | InvoiceGenerationActionError> {
+  try {
+    return await work();
+  } catch (error) {
+    const expected = invoiceGenerationActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 }
 
 function buildDuplicateRecurringInvoiceError(input: {
@@ -1055,7 +1187,8 @@ export const getPurchaseOrderOverageForSelectionInput = withAuth(async (
   user,
   { tenant },
   selectorInput: IRecurringDueSelectionInput,
-): Promise<PurchaseOrderOverageResult | null> => {
+): Promise<PurchaseOrderOverageResult | null | InvoiceGenerationActionError> => {
+  return withInvoiceGenerationActionErrors(async () => {
   const { knex } = await createTenantKnex();
 
   if (!await hasPermission(user, 'invoice', 'create') && !await hasPermission(user, 'invoice', 'generate')) {
@@ -1067,13 +1200,15 @@ export const getPurchaseOrderOverageForSelectionInput = withAuth(async (
     tenant,
     selectorInput,
   });
+  });
 });
 
 export const getPurchaseOrderOverageForBillingCycle = withAuth(async (
   user,
   { tenant },
   billing_cycle_id: string
-): Promise<PurchaseOrderOverageResult | null> => {
+): Promise<PurchaseOrderOverageResult | null | InvoiceGenerationActionError> => {
+  return withInvoiceGenerationActionErrors(async () => {
   const { knex } = await createTenantKnex();
 
   const billingCycle = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -1101,7 +1236,7 @@ export const getPurchaseOrderOverageForBillingCycle = withAuth(async (
   } else if (effective_date) {
     const effectiveDateUTC = toISOTimestamp(toPlainDate(effective_date));
     cycleStart = effectiveDateUTC;
-    cycleEnd = await getNextBillingDate(client_id, effectiveDateUTC);
+    cycleEnd = unwrapBillingHelperResult(await getNextBillingDate(client_id, effectiveDateUTC));
   } else {
     throw new Error('Invalid billing cycle dates');
   }
@@ -1116,6 +1251,7 @@ export const getPurchaseOrderOverageForBillingCycle = withAuth(async (
       windowStart: cycleStart,
       windowEnd: cycleEnd,
     }),
+  });
   });
 });
 
@@ -1300,7 +1436,7 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
 
   const client = await getClientDetails(knex, tenant, client_id);
   const previewInvoiceDate = Temporal.Now.plainDateISO().toString();
-  const due_date = await getDueDate(client_id, previewInvoiceDate);
+  const due_date = unwrapBillingHelperResult(await getDueDate(client_id, previewInvoiceDate));
   const chargesByContractGroup: { [key: string]: IBillingCharge[] } = {};
   const nonContractAssociatedCharges: IBillingCharge[] = [];
 
@@ -1521,11 +1657,11 @@ export const previewGroupedInvoicesForSelectionInputs = withAuth(async (
     return fallbackSelectorInput
       ? buildPreviewInvoiceFailure(
           fallbackSelectorInput,
-          error instanceof Error ? error.message : 'An error occurred while previewing the invoice',
+          previewInvoiceErrorMessage(error),
         )
       : {
           success: false,
-          error: error instanceof Error ? error.message : 'An error occurred while previewing the invoice',
+          error: previewInvoiceErrorMessage(error),
         };
   }
 });
@@ -1558,7 +1694,7 @@ export const previewInvoiceForSelectionInput = withAuth(async (
   } catch (error) {
     return buildPreviewInvoiceFailure(
       normalizedSelectorInput,
-      error instanceof Error ? error.message : 'An error occurred while previewing the invoice',
+      previewInvoiceErrorMessage(error),
     );
   }
 });
@@ -1602,7 +1738,7 @@ export const previewInvoice = withAuth(async (
     } else if (effective_date) {
       cycleStart = normalizeRecurringWindowDate(effective_date);
       cycleEnd = normalizeRecurringWindowDate(
-        await getNextBillingDate(client_id, cycleStart),
+        unwrapBillingHelperResult(await getNextBillingDate(client_id, cycleStart)),
       );
     } else {
       throw new Error('Invalid billing cycle dates');
@@ -1628,11 +1764,11 @@ export const previewInvoice = withAuth(async (
     return selectorInput
       ? buildPreviewInvoiceFailure(
           selectorInput,
-          error instanceof Error ? error.message : 'An error occurred while previewing the invoice',
+          previewInvoiceErrorMessage(error),
         )
       : {
           success: false,
-          error: error instanceof Error ? error.message : 'An error occurred while previewing the invoice'
+          error: previewInvoiceErrorMessage(error)
         };
   }
 });
@@ -1643,7 +1779,8 @@ export const generateInvoice = withAuth(async (
   { tenant },
   billing_cycle_id: string,
   options: { allowPoOverage?: boolean } = {}
-): Promise<InvoiceViewModel | null> => {
+): Promise<InvoiceViewModel | null | InvoiceGenerationActionError> => {
+  return withInvoiceGenerationActionErrors(async () => {
   // Get billing cycle details
   const { knex } = await createTenantKnex();
 
@@ -1675,7 +1812,7 @@ export const generateInvoice = withAuth(async (
   } else if (effective_date) {
     cycleStart = normalizeRecurringWindowDate(effective_date);
     cycleEnd = normalizeRecurringWindowDate(
-      await getNextBillingDate(client_id, cycleStart),
+      unwrapBillingHelperResult(await getNextBillingDate(client_id, cycleStart)),
     );
   } else {
     throw new Error('Invalid billing cycle dates');
@@ -1721,6 +1858,7 @@ export const generateInvoice = withAuth(async (
     options,
     bridgeMetadata: { billingCycleId: billing_cycle_id },
   });
+  });
 });
 
 export const generateInvoiceForSelectionInput = withAuth(async (
@@ -1729,7 +1867,8 @@ export const generateInvoiceForSelectionInput = withAuth(async (
   selectorInput: IRecurringDueSelectionInput,
   options: { allowPoOverage?: boolean } = {},
   bridgeMetadata?: RecurringBridgeMetadata,
-): Promise<InvoiceViewModel | null> => {
+): Promise<InvoiceViewModel | null | InvoiceGenerationActionError> => {
+  return withInvoiceGenerationActionErrors(async () => {
   if (!await hasPermission(user, 'invoice', 'create') && !await hasPermission(user, 'invoice', 'generate')) {
     throw new Error('Permission denied: invoice create or generate required');
   }
@@ -1759,6 +1898,7 @@ export const generateInvoiceForSelectionInput = withAuth(async (
     normalizedSelectorInputs: [normalizedSelectorInput],
     options,
     bridgeMetadata,
+  });
   });
 });
 
@@ -1931,7 +2071,8 @@ export const generateInvoiceForSelectionInputs = withAuth(async (
   selectorInputs: IRecurringDueSelectionInput[],
   options: { allowPoOverage?: boolean } = {},
   bridgeMetadata?: RecurringBridgeMetadata,
-): Promise<InvoiceViewModel | null> => {
+): Promise<InvoiceViewModel | null | InvoiceGenerationActionError> => {
+  return withInvoiceGenerationActionErrors(async () => {
   if (!await hasPermission(user, 'invoice', 'create') && !await hasPermission(user, 'invoice', 'generate')) {
     throw new Error('Permission denied: invoice create or generate required');
   }
@@ -1969,6 +2110,7 @@ export const generateInvoiceForSelectionInputs = withAuth(async (
     options,
     bridgeMetadata,
   });
+  });
 });
 
 export const generateInvoiceNumber = withAuth(async (
@@ -1992,7 +2134,8 @@ export const generateInvoicePDF = withAuth(async (
   user,
   { tenant },
   invoiceId: string
-): Promise<{ file_id: string }> => {
+): Promise<{ file_id: string } | InvoiceGenerationActionError> => {
+  return withInvoiceGenerationActionErrors(async () => {
   const { knex } = await createTenantKnex();
 
   // Check permissions
@@ -2020,6 +2163,7 @@ export const generateInvoicePDF = withAuth(async (
   });
 
   return { file_id: fileRecord.file_id };
+  });
 });
 
 export const downloadInvoicePDF = withAuth(async (
@@ -2027,7 +2171,8 @@ export const downloadInvoicePDF = withAuth(async (
   { tenant },
   invoiceId: string,
   templateId?: string | null
-): Promise<{ pdfData: number[]; invoiceNumber: string }> => {
+): Promise<{ pdfData: number[]; invoiceNumber: string } | InvoiceGenerationActionError> => {
+  return withInvoiceGenerationActionErrors(async () => {
   try {
     console.log('[downloadInvoicePDF] Called with invoiceId:', invoiceId, 'templateId:', templateId);
 
@@ -2070,6 +2215,7 @@ export const downloadInvoicePDF = withAuth(async (
     console.error('[downloadInvoicePDF] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
     throw error;
   }
+  });
 });
 
 export const createInvoiceFromBillingResult = withAuth(async (
@@ -2108,7 +2254,7 @@ export const createInvoiceFromBillingResult = withAuth(async (
     throw new Error(`Client '${client.client_name}' does not have a default tax region configured. Please set one before generating invoices.`);
   }
   const currentDate = Temporal.Now.plainDateISO().toString();
-  const due_date = await getDueDate(clientId, currentDate);
+  const due_date = unwrapBillingHelperResult(await getDueDate(clientId, currentDate));
   // taxService initialized above
   // let subtotal = 0; // Subtotal will be calculated by persistInvoiceCharges
 
@@ -2173,7 +2319,7 @@ export const createInvoiceFromBillingResult = withAuth(async (
         error.constraint === 'unique_invoice_number_per_tenant') {
         retryCount++;
         if (retryCount >= maxRetries) {
-          throw new Error('Failed to generate unique invoice number after multiple attempts');
+          throw new Error('Unable to generate a unique invoice number after multiple attempts.');
         }
       } else {
         throw error;
@@ -2182,7 +2328,7 @@ export const createInvoiceFromBillingResult = withAuth(async (
   }
 
   if (!newInvoice) {
-    throw new Error('Failed to create invoice');
+    throw new Error('Invoice creation completed without returning an invoice.');
   }
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {

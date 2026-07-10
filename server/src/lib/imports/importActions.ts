@@ -391,7 +391,7 @@ export async function approveImport(importJobId: string) {
     );
 
     if (!jobRecord.id) {
-      throw new Error('Failed to create job record');
+      throw new Error('Asset import job scheduling completed without returning a job id.');
     }
 
     await importManager.attachBackgroundJob(tenant, importJobId, jobRecord.id, 'validating');

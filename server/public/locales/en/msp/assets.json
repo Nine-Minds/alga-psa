@@ -1004,7 +1004,8 @@
     "description": "Rich-text notes panel for asset-specific notes and quick operational context",
     "errors": {
       "loadTitle": "Notes failed to load",
-      "unknown": "Unknown error"
+      "unknown": "Unknown error",
+      "loadDescription": "Could not load notes. Please try again."
     },
     "lastUpdated": "Last updated: {{value}}"
   },

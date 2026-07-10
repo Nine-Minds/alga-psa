@@ -2510,7 +2510,9 @@ it('T104: generation blocks partially materialized client-cadence windows when e
 
   await expect(
     generateInvoiceForSelectionInput(blockedMember!.selectorInput),
-  ).rejects.toThrow('Recurring service periods were not materialized for this recurring execution window.');
+  ).resolves.toEqual({
+    actionError: 'Recurring service periods were not materialized for this recurring execution window.',
+  });
 }, HOOK_TIMEOUT);
 
 it('T033/T078: reversing a client-cadence recurring invoice repairs service-period linkage without mutating a billing-cycle primary object', async () => {

@@ -3,7 +3,7 @@
 
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { Activity, ActivityFilters, ActivityResponse, ActivityType } from '@alga-psa/types';
-import { fetchActivities } from '@alga-psa/user-activities/actions';
+import { fetchActivities } from '../actions/activityServerActions';
 
 type CacheKey = string;
 

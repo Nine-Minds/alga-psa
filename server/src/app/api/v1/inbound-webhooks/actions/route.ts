@@ -6,11 +6,18 @@
 import { NextResponse } from 'next/server';
 
 import { listInboundWebhookActions } from '@/lib/actions/inboundWebhookActions';
-import { handleApiError } from 'server/src/lib/api/middleware/apiMiddleware';
+import {
+  createServerActionErrorResponse,
+  handleApiError,
+  isServerActionErrorResult,
+} from 'server/src/lib/api/middleware/apiMiddleware';
 
 export async function GET() {
   try {
     const actions = await listInboundWebhookActions();
+    if (isServerActionErrorResult(actions)) {
+      return createServerActionErrorResponse(actions);
+    }
     return NextResponse.json({ data: actions });
   } catch (error) {
     return handleApiError(error);

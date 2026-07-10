@@ -32,6 +32,7 @@ import {
 } from '@alga-psa/ui/components/DropdownMenu';
 import type { Asset, AssetListResponse, AssetQueryParams, ClientMaintenanceSummary, ColumnDefinition, IClient, IClientLocation } from '@alga-psa/types';
 import { bulkDeleteAssets, bulkUpdateAssets, getClientMaintenanceSummaries, listAssets } from '../actions/assetActions';
+import { unwrapAssetActionResult } from '../actions/assetActionErrors';
 import { loadAssetDetailDrawerData } from '../actions/assetDrawerActions';
 import { getAllClientsForAssets, getClientLocationsForAssets } from '../actions/clientLookupActions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -344,7 +345,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
         if (clientIds.length === 0) {
           setMaintenanceSummaries({});
         } else {
-          const summaries = await getClientMaintenanceSummaries(clientIds);
+          const summaries = unwrapAssetActionResult(await getClientMaintenanceSummaries(clientIds));
           setMaintenanceSummaries(summaries);
         }
       } catch (error) {
@@ -504,10 +505,10 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
       }
     }
 
-    const response = await listAssets(getAssetListParams({
+    const response = unwrapAssetActionResult(await listAssets(getAssetListParams({
       page: 1,
       limit: Math.max(totalAssets, pageSize, ASSETS_PRINT_PAGE_SIZE),
-    }));
+    })));
 
     setPrintAssets(selectedAssetIds.length > 0
       ? response.assets.filter((asset) => selectedAssetSet.has(asset.asset_id))
@@ -544,10 +545,10 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
     setAssetsLoading(true);
     (async () => {
       try {
-        const response = await listAssets(getAssetListParams({
-          page: currentPage,
-          limit: pageSize,
-        }));
+          const response = unwrapAssetActionResult(await listAssets(getAssetListParams({
+            page: currentPage,
+            limit: pageSize,
+          })));
 
         if (lastAssetsRequestIdRef.current !== requestId) {
           return;
@@ -669,7 +670,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
   const handleBulkStatusUpdate = useCallback(async () => {
     setBulkActionLoading(true);
     try {
-      const response = await bulkUpdateAssets(selectedAssetIds, { status: bulkStatusValue });
+      const response = unwrapAssetActionResult(await bulkUpdateAssets(selectedAssetIds, { status: bulkStatusValue }));
       summarizeBulkResult(
         t('assetDashboardClient.bulk.actions.updateStatus', { defaultValue: 'Status update' }),
         response.succeeded,
@@ -698,7 +699,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
             ? { location_id: null, location: '' }
             : { location_id: null, location: bulkCustomLocation.trim() };
 
-      const response = await bulkUpdateAssets(selectedAssetIds, payload);
+      const response = unwrapAssetActionResult(await bulkUpdateAssets(selectedAssetIds, payload));
       summarizeBulkResult(
         t('assetDashboardClient.bulk.actions.updateLocation', { defaultValue: 'Location update' }),
         response.succeeded,
@@ -720,7 +721,7 @@ export default function AssetDashboardClient({ initialAssets }: AssetDashboardCl
   const handleBulkDelete = useCallback(async () => {
     setBulkActionLoading(true);
     try {
-      const response = await bulkDeleteAssets(selectedAssetIds);
+      const response = unwrapAssetActionResult(await bulkDeleteAssets(selectedAssetIds));
       summarizeBulkResult(
         t('assetDashboardClient.bulk.actions.deleteAssets', { defaultValue: 'Delete' }),
         response.succeeded,

@@ -25,6 +25,7 @@ import { useBillingFrequencyOptions } from '@alga-psa/billing/hooks/useBillingEn
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import { resolveBillingCycleAlignmentForCompatibility } from '@alga-psa/shared/billingClients/billingCycleAlignmentCompatibility';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 interface FixedPlanConfigurationProps {
   contractLineId: string;
@@ -65,6 +66,9 @@ const CADENCE_OWNER_OPTIONS = [
   },
 ];
 
+const isReturnedActionError = (value: unknown): boolean =>
+  isActionMessageError(value) || isActionPermissionError(value);
+
 export function FixedPlanConfiguration({
   contractLineId,
   className = '',
@@ -101,6 +105,10 @@ export function FixedPlanConfiguration({
     try {
       // Fetch the basic contract line data
       const fetchedPlan = await getContractLineById(contractLineId);
+      if (isReturnedActionError(fetchedPlan)) {
+        setError(getErrorMessage(fetchedPlan));
+        return;
+      }
       if (fetchedPlan && fetchedPlan.contract_line_type === 'Fixed') {
         setPlan(fetchedPlan);
 
@@ -115,6 +123,10 @@ export function FixedPlanConfiguration({
         // Fetch fixed config
         if (fetchedPlan.contract_line_id) {
           const cfg = await getContractLineFixedConfig(fetchedPlan.contract_line_id);
+          if (isReturnedActionError(cfg)) {
+            setError(getErrorMessage(cfg));
+            return;
+          }
           if (cfg) {
             setBaseRate(cfg.base_rate ?? undefined);
             if (cfg.base_rate !== undefined && cfg.base_rate !== null) {
@@ -197,10 +209,14 @@ export function FixedPlanConfiguration({
       };
 
       if (plan?.contract_line_id) {
-        await updateContractLine(plan.contract_line_id, planData);
+        const updateResult = await updateContractLine(plan.contract_line_id, planData);
+        if (isReturnedActionError(updateResult)) {
+          setValidationErrors([getErrorMessage(updateResult)]);
+          return;
+        }
 
         if (planType === 'Fixed') {
-          await updateContractLineFixedConfig(plan.contract_line_id, {
+          const fixedConfigResult = await updateContractLineFixedConfig(plan.contract_line_id, {
             base_rate: baseRate ?? null,
             enable_proration: enableProration,
             billing_cycle_alignment: resolveBillingCycleAlignmentForCompatibility({
@@ -208,6 +224,10 @@ export function FixedPlanConfiguration({
               enableProration: enableProration,
             }),
           });
+          if (isReturnedActionError(fixedConfigResult)) {
+            setValidationErrors([getErrorMessage(fixedConfigResult)]);
+            return;
+          }
         }
       }
 

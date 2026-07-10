@@ -11,7 +11,7 @@ import UserPicker from '@alga-psa/ui/components/UserPicker';
 import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
 import { BoardPicker } from '@alga-psa/ui/components/settings/general/BoardPicker';
 import { getAllUsersBasic, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
-import { getTeamAvatarUrlsBatchAction, getTeamsBasic } from '@alga-psa/teams/actions';
+import { getTeamAvatarUrlsBatchAction, getTeamsBasic, isTeamActionError } from '@alga-psa/teams/actions';
 import type {
   IBoard,
   IClient,
@@ -622,11 +622,12 @@ const loadWorkflowPickerData = async (
         getAllUsersBasic(true, 'internal'),
         getTeamsBasic(),
       ]);
+      const safeTeams = isTeamActionError(teams) ? [] : teams;
 
       return {
         ...EMPTY_PICKER_DATA,
         users,
-        teams: teams.map((team) => ({
+        teams: safeTeams.map((team) => ({
           ...team,
           members: [],
         })),

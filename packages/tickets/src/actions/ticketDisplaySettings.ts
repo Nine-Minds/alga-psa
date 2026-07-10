@@ -3,6 +3,7 @@
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { withAuth } from '@alga-psa/auth';
+import { permissionError, type ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { resolveTicketColumnVisibility, type TicketListColumnKey } from '../lib/ticketColumnCatalog';
 
 export type TicketListSettings = {
@@ -53,12 +54,12 @@ export const getTicketingDisplaySettings = withAuth(async (_user, { tenant }): P
   }
 });
 
-export const updateTicketingDisplaySettings = withAuth(async (user, { tenant }, updated: TicketingDisplaySettings): Promise<{ success: boolean }> => {
+export const updateTicketingDisplaySettings = withAuth(async (user, { tenant }, updated: TicketingDisplaySettings): Promise<{ success: boolean } | ActionPermissionError> => {
   const { knex } = await createTenantKnex();
 
   // Check if user has permission to update ticket settings
   if (!await hasPermission(user, 'ticket_settings', 'update', knex)) {
-    throw new Error('Permission denied: Cannot update ticket settings');
+    return permissionError('Permission denied: Cannot update ticket settings');
   }
 
   // Read existing values for both the dedicated column and the legacy nested settings path.

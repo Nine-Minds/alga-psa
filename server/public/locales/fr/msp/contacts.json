@@ -447,7 +447,8 @@
         "noLocationEmail": "L'emplacement du client par défaut doit avoir une adresse e-mail de contact configurée.",
         "noBaseUrl": "L'URL de base n'est pas configurée pour les invitations au portail.",
         "invitationNotFound": "Invitation introuvable ou déjà utilisée."
-      }
+      },
+      "userNotFound": "Client user not found"
     }
   },
   "quickAddContact": {
@@ -697,7 +698,8 @@
   "contactBento": {
     "toast": {
       "saved": "Contact mis a jour",
-      "saveFailed": "Impossible de mettre a jour le contact"
+      "saveFailed": "Impossible de mettre a jour le contact",
+      "saveFailedDescription": "The contact could not be updated. Please try again."
     }
   }
 }

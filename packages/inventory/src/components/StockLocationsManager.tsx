@@ -14,6 +14,13 @@ import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import { SearchInput } from '@alga-psa/ui/components/SearchInput';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { toast } from 'react-hot-toast';
 import type { ColumnDefinition, IStockLocation, IUser, StockLocationType } from '@alga-psa/types';
 import {
@@ -35,6 +42,11 @@ function userDisplayName(users: IUser[], userId: string | null | undefined): str
 }
 
 const LOCATION_TYPES: StockLocationType[] = ['warehouse', 'van', 'office', 'other'];
+
+type ReturnedActionError = ActionMessageError | ActionPermissionError;
+
+const isReturnedActionError = (value: unknown): value is ReturnedActionError =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 interface FormState {
   name: string;
@@ -121,7 +133,13 @@ export function StockLocationsManager({
     setStockLoading(true);
     getStockAtLocation(stockTarget.location_id)
       .then((rows) => {
-        if (!cancelled) setStockRows(rows);
+        if (cancelled) return;
+        if (isReturnedActionError(rows)) {
+          setStockRows([]);
+          toast.error(getErrorMessage(rows));
+          return;
+        }
+        setStockRows(rows);
       })
       .catch(() => {
         if (!cancelled) toast.error(t('locations.stock.loadFailed', "Couldn't load the location's stock."));
@@ -136,7 +154,14 @@ export function StockLocationsManager({
 
   const reload = useCallback(async () => {
     try {
-      setLocations(await listStockLocations({ includeInactive: true, includeStock: true }));
+      const result = await listStockLocations({ includeInactive: true, includeStock: true });
+      if (isReturnedActionError(result)) {
+        setLocations([]);
+        setLoadFailed(true);
+        toast.error(getErrorMessage(result));
+        return;
+      }
+      setLocations(result);
       setLoadFailed(false);
     } catch (e) {
       console.error(e);
@@ -176,10 +201,18 @@ export function StockLocationsManager({
     setSaving(true);
     try {
       if (editing) {
-        await updateStockLocation(editing.location_id, form);
+        const result = await updateStockLocation(editing.location_id, form);
+        if (isReturnedActionError(result)) {
+          toast.error(getErrorMessage(result));
+          return;
+        }
         toast.success(t('locations.updated', 'Location updated.'));
       } else {
-        await createStockLocation(form);
+        const result = await createStockLocation(form);
+        if (isReturnedActionError(result)) {
+          toast.error(getErrorMessage(result));
+          return;
+        }
         toast.success(t('locations.created', 'Location created.'));
       }
       setDialogOpen(false);
@@ -193,7 +226,12 @@ export function StockLocationsManager({
 
   const deactivate = async (loc: IStockLocation) => {
     try {
-      await deactivateStockLocation(loc.location_id);
+      const result = await deactivateStockLocation(loc.location_id);
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        await reload();
+        return;
+      }
       toast.success(t('locations.deactivated', 'Location deactivated.'));
       await reload();
     } catch (e: any) {
@@ -203,7 +241,12 @@ export function StockLocationsManager({
 
   const reactivate = async (loc: IStockLocation) => {
     try {
-      await updateStockLocation(loc.location_id, { is_active: true });
+      const result = await updateStockLocation(loc.location_id, { is_active: true });
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        await reload();
+        return;
+      }
       toast.success(t('locations.reactivated', 'Location reactivated.'));
       await reload();
     } catch (e: any) {
@@ -215,7 +258,12 @@ export function StockLocationsManager({
   // so this replaces it without a separate Edit → check → Save detour.
   const setDefault = async (loc: IStockLocation) => {
     try {
-      await updateStockLocation(loc.location_id, { is_default: true });
+      const result = await updateStockLocation(loc.location_id, { is_default: true });
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        await reload();
+        return;
+      }
       toast.success(t('locations.setDefaultSuccess', '"{{name}}" is now the default location.', { name: loc.name }));
       await reload();
     } catch (e: any) {

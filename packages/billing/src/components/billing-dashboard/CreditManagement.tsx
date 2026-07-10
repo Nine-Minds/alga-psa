@@ -28,6 +28,18 @@ import {
   Legend
 } from 'recharts';
 
+function getReturnedActionError(value: unknown): string | null {
+  if (typeof value !== 'object' || value === null) {
+    return null;
+  }
+  const candidate = value as { actionError?: unknown; permissionError?: unknown };
+  return typeof candidate.permissionError === 'string'
+    ? candidate.permissionError
+    : typeof candidate.actionError === 'string'
+      ? candidate.actionError
+      : null;
+}
+
 function formatCreditServicePeriod(
   start?: string | null,
   end?: string | null
@@ -349,9 +361,17 @@ const CreditManagement: React.FC = () => {
         
         // Fetch active credits (non-expired)
         const activeCreditsResult = await listClientCredits(clientId, false, 1, 100);
+        const activeCreditsError = getReturnedActionError(activeCreditsResult);
+        if (activeCreditsError) {
+          throw new Error(activeCreditsError);
+        }
         
         // Fetch expired credits
         const expiredCreditsResult = await listClientCredits(clientId, true, 1, 100);
+        const expiredCreditsError = getReturnedActionError(expiredCreditsResult);
+        if (expiredCreditsError) {
+          throw new Error(expiredCreditsError);
+        }
         
         // Filter out the expired credits from the active credits result
         const activeCreditsFiltered = activeCreditsResult.credits.filter(credit => !credit.is_expired);

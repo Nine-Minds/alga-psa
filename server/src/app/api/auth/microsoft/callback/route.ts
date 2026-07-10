@@ -146,7 +146,7 @@ export async function GET(request: NextRequest) {
         provider: 'microsoft',
         success: false,
         error,
-        errorDescription: errorDescription || ''
+        errorDescription: 'Microsoft authorization failed. Please try again.'
       });
     }
 
@@ -445,7 +445,7 @@ export async function GET(request: NextRequest) {
         provider: 'microsoft',
         success: false,
         error: errorCode,
-        errorDescription: errorMessage
+        errorDescription: 'Microsoft authorization failed. Please try again.'
       });
     }
   } catch (error: any) {
@@ -457,7 +457,7 @@ export async function GET(request: NextRequest) {
           provider: 'microsoft',
           success: false,
           error: 'unexpected_error',
-          errorDescription: error?.message || 'Unexpected error'
+          errorDescription: 'Microsoft authorization failed. Please try again.'
         })).toString('base64');
         return `<!DOCTYPE html>
         <html>

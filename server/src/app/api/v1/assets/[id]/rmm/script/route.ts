@@ -10,6 +10,7 @@
 
 import { NextResponse } from 'next/server';
 import { triggerRmmScript } from '@/lib/actions/asset-actions/rmmActions';
+import { rmmErrorResponse, rmmRouteErrorFrom } from '../rmmRouteErrors';
 
 export async function POST(
   request: Request,
@@ -21,8 +22,14 @@ export async function POST(
       return NextResponse.json({ error: 'Missing asset ID' }, { status: 400 });
     }
 
-    const body = await request.json();
-    const { scriptId } = body;
+    let body: { scriptId?: unknown };
+    try {
+      body = await request.json();
+    } catch {
+      return NextResponse.json({ error: 'Request body must be valid JSON' }, { status: 400 });
+    }
+
+    const scriptId = typeof body.scriptId === 'string' ? body.scriptId.trim() : '';
 
     if (!scriptId) {
       return NextResponse.json(
@@ -34,12 +41,13 @@ export async function POST(
     const result = await triggerRmmScript(id, scriptId);
 
     if (!result.success) {
+      const expectedError = rmmRouteErrorFrom(result.message);
       return NextResponse.json(
         {
           success: false,
           message: result.message,
         },
-        { status: 400 }
+        { status: expectedError?.status ?? 400 }
       );
     }
 
@@ -55,6 +63,10 @@ export async function POST(
     });
   } catch (error) {
     console.error('Failed to run script:', error);
+    const expectedError = rmmRouteErrorFrom(error);
+    if (expectedError) {
+      return rmmErrorResponse(expectedError);
+    }
     return NextResponse.json(
       { error: 'Failed to run script' },
       { status: 500 }

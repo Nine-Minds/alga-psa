@@ -21,6 +21,13 @@ import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { toast } from 'react-hot-toast';
 import type {
   KitComponentCandidate,
@@ -86,21 +93,15 @@ function isPositiveIntegerText(value: string): boolean {
   return /^[1-9]\d*$/.test(value.trim());
 }
 
-function mapKitError(error: unknown): string {
-  const message = error instanceof Error ? error.message : String((error as any)?.message || error || '');
-  if (message.includes('Kit has no components defined')) {
-    return 'Add at least one BOM component before using this kit on a sales order.';
-  }
-  if (message.includes('A kit cannot contain another kit')) {
-    return 'Nested kits are not supported. Choose a non-kit product.';
-  }
-  if (message.includes('Component quantity must be a positive integer')) {
-    return 'Qty per kit must be a positive whole number.';
-  }
-  if (message.includes('service_catalog_product_sku_unique') || message.includes('already exists')) {
-    return 'A product with this SKU already exists. Use a different SKU or edit the existing product.';
-  }
-  return message || 'Something went wrong.';
+/**
+ * Kit server actions report expected failures by *returning* an error shape — Next.js strips
+ * thrown messages during serialization, so a `catch` here would only ever see a generic error.
+ * The user-facing wording lives in `lib/kitActionErrors`, not in this component.
+ */
+type ReturnedActionError = ActionMessageError | ActionPermissionError;
+
+function isReturnedActionError(value: unknown): value is ReturnedActionError {
+  return isActionMessageError(value) || isActionPermissionError(value);
 }
 
 export function KitManager({ initialKits, serviceTypes, componentCandidates: initialCandidates }: KitManagerProps) {
@@ -167,6 +168,10 @@ export function KitManager({ initialKits, serviceTypes, componentCandidates: ini
       listKitSummaries(),
       listKitComponentCandidates(),
     ]);
+    if (isReturnedActionError(nextKits) || isReturnedActionError(nextCandidates)) {
+      toast.error(getErrorMessage(isReturnedActionError(nextKits) ? nextKits : nextCandidates));
+      return;
+    }
     setKits(nextKits);
     setCandidates(nextCandidates);
     if (!selectedKitId && nextKits[0]) setSelectedKitId(nextKits[0].service_id);
@@ -181,6 +186,10 @@ export function KitManager({ initialKits, serviceTypes, componentCandidates: ini
     setPreviewQuantity('1');
     try {
       const loaded = await getKitDetail(kitId);
+      if (isReturnedActionError(loaded)) {
+        setDetailError(getErrorMessage(loaded));
+        return;
+      }
       if (!loaded) {
         setDetailError(t('kits.detail.notFound', { defaultValue: 'This kit could not be found.' }));
         return;
@@ -189,7 +198,7 @@ export function KitManager({ initialKits, serviceTypes, componentCandidates: ini
       setPricingMode(loaded.kit_pricing_mode);
       setFixedPriceInput(centsToInput(loaded.kit_fixed_price));
     } catch (error) {
-      setDetailError(mapKitError(error));
+      setDetailError(getErrorMessage(error));
     } finally {
       setDetailLoading(false);
     }
@@ -282,13 +291,17 @@ export function KitManager({ initialKits, serviceTypes, componentCandidates: ini
         kit_pricing_mode: createDraft.kit_pricing_mode,
         kit_fixed_price: fixedPrice,
       });
+      if (isReturnedActionError(created)) {
+        setCreateError(getErrorMessage(created));
+        return;
+      }
       closeCreateDialog();
       await refreshKits();
       setSelectedKitId(created.service_id);
       setDetail(created);
       toast.success(t('kits.create.created', { defaultValue: 'Kit created.' }));
     } catch (error) {
-      setCreateError(mapKitError(error));
+      setCreateError(getErrorMessage(error));
     } finally {
       setCreating(false);
     }
@@ -309,13 +322,17 @@ export function KitManager({ initialKits, serviceTypes, componentCandidates: ini
         kit_pricing_mode: pricingMode,
         kit_fixed_price: fixedPrice,
       });
+      if (isReturnedActionError(updated)) {
+        toast.error(getErrorMessage(updated));
+        return;
+      }
       setDetail(updated);
       setPricingMode(updated.kit_pricing_mode);
       setFixedPriceInput(centsToInput(updated.kit_fixed_price));
       await refreshKits();
       toast.success(t('kits.pricing.saved', { defaultValue: 'Pricing saved.' }));
     } catch (error) {
-      toast.error(mapKitError(error));
+      toast.error(getErrorMessage(error));
     } finally {
       setSavingPricing(false);
     }
@@ -333,7 +350,11 @@ export function KitManager({ initialKits, serviceTypes, componentCandidates: ini
     }
     setSavingComponent(true);
     try {
-      await addKitComponent(detail.service_id, componentServiceId, Number(quantity));
+      const added = await addKitComponent(detail.service_id, componentServiceId, Number(quantity));
+      if (isReturnedActionError(added)) {
+        toast.error(getErrorMessage(added));
+        return;
+      }
       await Promise.all([loadDetail(detail.service_id), refreshKits()]);
       setComponentServiceId('');
       setQuantity('1');
@@ -343,7 +364,7 @@ export function KitManager({ initialKits, serviceTypes, componentCandidates: ini
           : t('kits.componentAdded', { defaultValue: 'Component added.' }),
       );
     } catch (error) {
-      toast.error(mapKitError(error));
+      toast.error(getErrorMessage(error));
     } finally {
       setSavingComponent(false);
     }
@@ -352,11 +373,15 @@ export function KitManager({ initialKits, serviceTypes, componentCandidates: ini
   const handleRemoveComponent = async (component: KitComponentDetail) => {
     if (!detail) return;
     try {
-      await removeKitComponent(detail.service_id, component.component_service_id);
+      const removed = await removeKitComponent(detail.service_id, component.component_service_id);
+      if (isReturnedActionError(removed)) {
+        toast.error(getErrorMessage(removed));
+        return;
+      }
       await Promise.all([loadDetail(detail.service_id), refreshKits()]);
       toast.success(t('kits.componentRemoved', { defaultValue: 'Component removed.' }));
     } catch (error) {
-      toast.error(mapKitError(error));
+      toast.error(getErrorMessage(error));
     } finally {
       setPendingRemove(null);
     }

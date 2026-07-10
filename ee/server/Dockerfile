@@ -56,6 +56,12 @@ COPY ./shared/ ./shared/
 # Copy packages directory for webpack aliases
 COPY ./packages/ ./packages/
 
+# Appliance onboarding seeds execute in this image after Temporal creates the
+# tenant. Fail the build if the runtime exports those seeds import were not
+# included by the pre-build pipeline.
+RUN test -f /app/packages/core/dist/index.js \
+    && test -f /app/packages/db/dist/index.js
+
 # Copy pre-built Next.js artifacts (must exist locally with EE features)
 # server/dist is no longer required here; workflow-worker is built/deployed separately
 COPY ./server/.next ./server/.next

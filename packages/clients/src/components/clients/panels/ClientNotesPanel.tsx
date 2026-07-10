@@ -83,7 +83,7 @@ export const ClientNotesPanel: React.FC<ClientNotesPanelProps> = ({
               <AlertDescription>
                 <div className="flex items-center justify-between gap-3">
                   <span className="text-sm">
-                    {error instanceof Error ? error.message : t('clientNotesPanel.unknownError', { defaultValue: 'Unknown error' })}
+                    {t('clientNotesPanel.loadErrorDescription', { defaultValue: 'Could not load notes. Please try again.' })}
                   </span>
                   <Button
                     id="retry-client-notes-btn"

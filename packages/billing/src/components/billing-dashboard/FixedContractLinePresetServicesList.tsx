@@ -25,8 +25,16 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AlertCircle } from 'lucide-react';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 interface FixedContractLinePresetServicesListProps {
   planId: string; // This is actually the presetId
@@ -77,6 +85,10 @@ const FixedContractLinePresetServicesList: React.FC<FixedContractLinePresetServi
     try {
       // Fetch preset services
       const presetServicesData = await getContractLinePresetServices(planId);
+      if (isReturnedActionError(presetServicesData)) {
+        setError(getErrorMessage(presetServicesData));
+        return;
+      }
 
       // Fetch all available services
       const servicesResponse = await getServices(1, 999, { item_kind: 'any' });
@@ -221,7 +233,11 @@ const FixedContractLinePresetServicesList: React.FC<FixedContractLinePresetServi
         quantity: s.quantity || 1
       }));
 
-      await updateContractLinePresetServices(planId, servicesToSave);
+      const result = await updateContractLinePresetServices(planId, servicesToSave);
+      if (isReturnedActionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
       await fetchData();
 
       toast.success(t('presetServices.toast.saveSuccess', {

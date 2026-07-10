@@ -3,6 +3,7 @@ import { IProjectMaterial, IServicePrice, IStockUnit, ITicketMaterial } from '@a
 import { recordStockConsumption, reverseStockConsumption } from './consume';
 import { publishInventoryEvent } from './inventoryEvents';
 import { collectDefaultLocationStockLowSignalAfterConsume } from './stockLowSignal';
+import { resolveTenantCurrency } from './tenantCurrency';
 
 /**
  * Lib-layer transaction helper (this file must stay importable without the
@@ -153,7 +154,7 @@ export async function addMaterial(
         service_id: input.service_id,
         quantity,
         rate,
-        currency_code: input.currency_code || 'USD',
+        currency_code: input.currency_code || await resolveTenantCurrency(trx, tenant),
         description: input.description ?? null,
         is_billed: false,
       })

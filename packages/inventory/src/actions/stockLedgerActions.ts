@@ -9,6 +9,12 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { IStockLevel, IStockMovement, IStockUnit, IProductInventorySettings } from '@alga-psa/types';
 import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+import {
   assertLocationWritable,
   availableQuantity,
   ensureStockLevel,
@@ -27,6 +33,64 @@ import {
 async function requireInvPerm(user: any, action: 'create' | 'read' | 'update' | 'delete'): Promise<void> {
   if (!(await hasPermission(user, 'inventory', action))) {
     throw new Error(`Permission denied: inventory ${action} required`);
+  }
+}
+
+export type StockLedgerActionError = ActionMessageError | ActionPermissionError;
+
+function stockLedgerActionErrorFrom(error: unknown): StockLedgerActionError | null {
+  if (error instanceof Error) {
+    if (error.message.startsWith('Permission denied') || error.message === 'user is not logged in') {
+      return permissionError(error.message);
+    }
+
+    switch (error.message) {
+      case 'service_id is required':
+        return actionError('Select a product before receiving stock.');
+      case 'location_id is required':
+        return actionError('Select a location before receiving stock.');
+      case 'quantity must be a positive integer':
+        return actionError('Quantity must be a positive whole number.');
+      case 'unit_cost must be a non-negative integer (cents)':
+        return actionError("Unit cost can't be negative.");
+      case 'Inventory not enabled for this product':
+        return actionError('Inventory is not enabled for this product.');
+      case 'Stock tracking is disabled for this product':
+        return actionError('Stock tracking is disabled for this product.');
+      case 'Each serialized unit requires a serial_number':
+        return actionError('Each serialized unit needs a serial number.');
+    }
+
+    if (
+      error.message.startsWith('Currency mismatch:') ||
+      error.message.startsWith('Serialized receipt requires exactly') ||
+      error.message.startsWith('Duplicate serial in batch:') ||
+      error.message.startsWith('Duplicate MAC in batch:') ||
+      error.message.startsWith('Serial already exists for this product:') ||
+      error.message.startsWith('MAC address already exists:')
+    ) {
+      return actionError(error.message);
+    }
+  }
+
+  const dbError = error as { code?: string };
+  if (dbError?.code === '23503') {
+    return actionError('The selected product or location is no longer valid. Please refresh and try again.');
+  }
+  if (dbError?.code === '23505') {
+    return actionError('A stock unit with the same serial number or MAC address already exists.');
+  }
+
+  return null;
+}
+
+async function withStockLedgerActionErrors<T>(work: () => Promise<T>): Promise<T | StockLedgerActionError> {
+  try {
+    return await work();
+  } catch (error) {
+    const expected = stockLedgerActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 }
 
@@ -103,135 +167,143 @@ export const receiveStockManual = withAuth(
         warranty_term?: string | null;
       }>;
     },
-  ): Promise<ReceiveStockResult> => {
-    await requireInvPerm(user, 'create');
-    if (!input?.service_id) throw new Error('service_id is required');
-    if (!input?.location_id) throw new Error('location_id is required');
-    const quantity = input.quantity;
-    if (!Number.isInteger(quantity) || quantity <= 0) throw new Error('quantity must be a positive integer');
-    const unitCost = input.unit_cost;
-    if (!Number.isInteger(unitCost) || unitCost < 0) {
-      throw new Error('unit_cost must be a non-negative integer (cents)');
-    }
-
-    const { knex: db } = await createTenantKnex();
-    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
-      // A tech can't receive into another tech's van (F032).
-      await assertLocationWritable(trx, tenant, (user as any)?.user_id, input.location_id);
-      const settings = await loadTrackedSettings(trx, tenant, input.service_id);
-      const costCurrency = input.cost_currency ?? settings.cost_currency;
-      if (input.cost_currency && input.cost_currency !== settings.cost_currency) {
-        throw new Error(
-          `Currency mismatch: receipt is ${input.cost_currency} but product cost currency is ${settings.cost_currency}`,
-        );
+  ): Promise<ReceiveStockResult | StockLedgerActionError> => {
+    try {
+      await requireInvPerm(user, 'create');
+      if (!input?.service_id) throw new Error('service_id is required');
+      if (!input?.location_id) throw new Error('location_id is required');
+      const quantity = input.quantity;
+      if (!Number.isInteger(quantity) || quantity <= 0) throw new Error('quantity must be a positive integer');
+      const unitCost = input.unit_cost;
+      if (!Number.isInteger(unitCost) || unitCost < 0) {
+        throw new Error('unit_cost must be a non-negative integer (cents)');
       }
 
-      await ensureStockLevel(trx, tenant, input.service_id, input.location_id);
-      const movements: IStockMovement[] = [];
-      const unitIds: string[] = [];
+      const { knex: db } = await createTenantKnex();
+      const result = await withTransaction(db, async (trx: Knex.Transaction) => {
+        // A tech can't receive into another tech's van (F032).
+        await assertLocationWritable(trx, tenant, (user as any)?.user_id, input.location_id);
+        const settings = await loadTrackedSettings(trx, tenant, input.service_id);
+        const costCurrency = input.cost_currency ?? settings.cost_currency;
+        if (input.cost_currency && input.cost_currency !== settings.cost_currency) {
+          throw new Error(
+            `Currency mismatch: receipt is ${input.cost_currency} but product cost currency is ${settings.cost_currency}`,
+          );
+        }
 
-      if (settings.is_serialized) {
-        const serials = input.serials ?? [];
-        if (serials.length !== quantity) {
-          throw new Error(`Serialized receipt requires exactly ${quantity} serial(s); got ${serials.length}`);
-        }
-        // Enforce serial + MAC uniqueness within the batch and against existing units.
-        const seenSerials = new Set<string>();
-        const seenMacs = new Set<string>();
-        for (const s of serials) {
-          const serial = (s.serial_number ?? '').trim();
-          if (!serial) throw new Error('Each serialized unit requires a serial_number');
-          if (seenSerials.has(serial.toLowerCase())) throw new Error(`Duplicate serial in batch: ${serial}`);
-          seenSerials.add(serial.toLowerCase());
-          const mac = s.mac_address ? String(s.mac_address).trim() : null;
-          if (mac) {
-            if (seenMacs.has(mac.toLowerCase())) throw new Error(`Duplicate MAC in batch: ${mac}`);
-            seenMacs.add(mac.toLowerCase());
+        await ensureStockLevel(trx, tenant, input.service_id, input.location_id);
+        const movements: IStockMovement[] = [];
+        const unitIds: string[] = [];
+
+        if (settings.is_serialized) {
+          const serials = input.serials ?? [];
+          if (serials.length !== quantity) {
+            throw new Error(`Serialized receipt requires exactly ${quantity} serial(s); got ${serials.length}`);
           }
-        }
-        for (const s of serials) {
-          const serial = s.serial_number.trim();
-          const mac = s.mac_address ? String(s.mac_address).trim() : null;
-          const existingSerial = await trx('stock_units')
-            .where({ tenant, service_id: input.service_id })
-            .whereRaw('LOWER(serial_number) = LOWER(?)', [serial])
-            .first();
-          if (existingSerial) throw new Error(`Serial already exists for this product: ${serial}`);
-          if (mac) {
-            const existingMac = await trx('stock_units')
-              .where({ tenant })
-              .whereRaw('LOWER(mac_address) = LOWER(?)', [mac])
+          // Enforce serial + MAC uniqueness within the batch and against existing units.
+          const seenSerials = new Set<string>();
+          const seenMacs = new Set<string>();
+          for (const s of serials) {
+            const serial = (s.serial_number ?? '').trim();
+            if (!serial) throw new Error('Each serialized unit requires a serial_number');
+            if (seenSerials.has(serial.toLowerCase())) throw new Error(`Duplicate serial in batch: ${serial}`);
+            seenSerials.add(serial.toLowerCase());
+            const mac = s.mac_address ? String(s.mac_address).trim() : null;
+            if (mac) {
+              if (seenMacs.has(mac.toLowerCase())) throw new Error(`Duplicate MAC in batch: ${mac}`);
+              seenMacs.add(mac.toLowerCase());
+            }
+          }
+          for (const s of serials) {
+            const serial = s.serial_number.trim();
+            const mac = s.mac_address ? String(s.mac_address).trim() : null;
+            const existingSerial = await trx('stock_units')
+              .where({ tenant, service_id: input.service_id })
+              .whereRaw('LOWER(serial_number) = LOWER(?)', [serial])
               .first();
-            if (existingMac) throw new Error(`MAC address already exists: ${mac}`);
-          }
-          // Insert the in_stock unit FIRST, then record the per-unit receipt movement.
-          const [unit] = (await trx('stock_units')
-            .insert({
-              tenant,
+            if (existingSerial) throw new Error(`Serial already exists for this product: ${serial}`);
+            if (mac) {
+              const existingMac = await trx('stock_units')
+                .where({ tenant })
+                .whereRaw('LOWER(mac_address) = LOWER(?)', [mac])
+                .first();
+              if (existingMac) throw new Error(`MAC address already exists: ${mac}`);
+            }
+            // Insert the in_stock unit FIRST, then record the per-unit receipt movement.
+            const [unit] = (await trx('stock_units')
+              .insert({
+                tenant,
+                service_id: input.service_id,
+                serial_number: serial,
+                mac_address: mac,
+                status: 'in_stock',
+                location_id: input.location_id,
+                warranty_expires_at: s.warranty_expires_at ?? null,
+                warranty_term: s.warranty_term ?? null,
+                unit_cost: unitCost,
+                cost_currency: costCurrency,
+                received_at: trx.fn.now(),
+              })
+              .returning('*')) as IStockUnit[];
+            unitIds.push(unit.unit_id);
+            const movement = await recordStockMovement(trx, tenant, {
+              movement_type: 'receipt',
               service_id: input.service_id,
-              serial_number: serial,
-              mac_address: mac,
-              status: 'in_stock',
-              location_id: input.location_id,
-              warranty_expires_at: s.warranty_expires_at ?? null,
-              warranty_term: s.warranty_term ?? null,
+              quantity: 1,
+              unit_id: unit.unit_id,
+              to_location_id: input.location_id,
               unit_cost: unitCost,
               cost_currency: costCurrency,
-              received_at: trx.fn.now(),
-            })
-            .returning('*')) as IStockUnit[];
-          unitIds.push(unit.unit_id);
-          const movement = await recordStockMovement(trx, tenant, {
-            movement_type: 'receipt',
-            service_id: input.service_id,
-            quantity: 1,
-            unit_id: unit.unit_id,
-            to_location_id: input.location_id,
-            unit_cost: unitCost,
-            cost_currency: costCurrency,
-            source_doc_type: 'manual',
-            performed_by: user.user_id,
-          });
-          movements.push(movement);
+              source_doc_type: 'manual',
+              performed_by: user.user_id,
+            });
+            movements.push(movement);
+          }
+          // Serialized units carry exact per-unit costs; no moving-average maintained.
+          return { movements, unit_ids: unitIds, average_cost: settings.average_cost ?? null, warnings: [] };
         }
-        // Serialized units carry exact per-unit costs; no moving-average maintained.
-        return { movements, unit_ids: unitIds, average_cost: settings.average_cost ?? null, warnings: [] };
+
+        // Non-serialized: one batch receipt + moving-average recompute (base qty BEFORE receipt).
+        const oldQty = await totalOnHand(trx, tenant, input.service_id);
+        const oldAvg = settings.average_cost ?? 0;
+        const movement = await recordStockMovement(trx, tenant, {
+          movement_type: 'receipt',
+          service_id: input.service_id,
+          quantity,
+          to_location_id: input.location_id,
+          unit_cost: unitCost,
+          cost_currency: costCurrency,
+          source_doc_type: 'manual',
+          performed_by: user.user_id,
+        });
+        movements.push(movement);
+
+        const denom = oldQty + quantity;
+        const newAvg = denom > 0 ? Math.round((oldQty * oldAvg + quantity * unitCost) / denom) : unitCost;
+        await trx('product_inventory_settings')
+          .where({ tenant, service_id: input.service_id })
+          .update({ average_cost: newAvg, updated_at: trx.fn.now() });
+
+        return { movements, unit_ids: unitIds, average_cost: newAvg, warnings: [] };
+      });
+
+      for (const unitId of result.unit_ids) {
+        await publishInventoryEvent('INVENTORY_STOCK_UNIT_CREATED', timestampPayload({
+          tenant,
+          unit_id: unitId,
+          service_id: input.service_id,
+          user_id: user.user_id,
+        }));
       }
 
-      // Non-serialized: one batch receipt + moving-average recompute (base qty BEFORE receipt).
-      const oldQty = await totalOnHand(trx, tenant, input.service_id);
-      const oldAvg = settings.average_cost ?? 0;
-      const movement = await recordStockMovement(trx, tenant, {
-        movement_type: 'receipt',
-        service_id: input.service_id,
-        quantity,
-        to_location_id: input.location_id,
-        unit_cost: unitCost,
-        cost_currency: costCurrency,
-        source_doc_type: 'manual',
-        performed_by: user.user_id,
-      });
-      movements.push(movement);
-
-      const denom = oldQty + quantity;
-      const newAvg = denom > 0 ? Math.round((oldQty * oldAvg + quantity * unitCost) / denom) : unitCost;
-      await trx('product_inventory_settings')
-        .where({ tenant, service_id: input.service_id })
-        .update({ average_cost: newAvg, updated_at: trx.fn.now() });
-
-      return { movements, unit_ids: unitIds, average_cost: newAvg, warnings: [] };
-    });
-
-    for (const unitId of result.unit_ids) {
-      await publishInventoryEvent('INVENTORY_STOCK_UNIT_CREATED', timestampPayload({
-        tenant,
-        unit_id: unitId,
-        service_id: input.service_id,
-        user_id: user.user_id,
-      }));
+      return result;
+    } catch (error) {
+      const expected = stockLedgerActionErrorFrom(error);
+      if (expected) {
+        return expected;
+      }
+      throw error;
     }
-
-    return result;
   },
 );
 
@@ -575,18 +647,20 @@ export interface StockLevelRow extends IStockLevel {
 
 /** On-hand balances for a product across every location, with derived available qty (design §6.F). */
 export const getStockLevelsForProduct = withAuth(
-  async (user, { tenant }, serviceId: string): Promise<StockLevelRow[]> => {
-    await requireInvPerm(user, 'read');
-    const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
-      const rows = (await trx('stock_levels as sl')
-        .leftJoin('stock_locations as loc', function () {
-          this.on('sl.location_id', '=', 'loc.location_id').andOn('sl.tenant', '=', 'loc.tenant');
-        })
-        .where({ 'sl.tenant': tenant, 'sl.service_id': serviceId })
-        .select('sl.*', 'loc.name as location_name')
-        .orderBy('loc.name', 'asc')) as Array<IStockLevel & { location_name: string | null }>;
-      return rows.map((r) => ({ ...r, available: availableQuantity(r) }));
+  async (user, { tenant }, serviceId: string): Promise<StockLevelRow[] | StockLedgerActionError> => {
+    return withStockLedgerActionErrors(async () => {
+      await requireInvPerm(user, 'read');
+      const { knex: db } = await createTenantKnex();
+      return withTransaction(db, async (trx: Knex.Transaction) => {
+        const rows = (await trx('stock_levels as sl')
+          .leftJoin('stock_locations as loc', function () {
+            this.on('sl.location_id', '=', 'loc.location_id').andOn('sl.tenant', '=', 'loc.tenant');
+          })
+          .where({ 'sl.tenant': tenant, 'sl.service_id': serviceId })
+          .select('sl.*', 'loc.name as location_name')
+          .orderBy('loc.name', 'asc')) as Array<IStockLevel & { location_name: string | null }>;
+        return rows.map((r) => ({ ...r, available: availableQuantity(r) }));
+      });
     });
   },
 );
@@ -600,18 +674,20 @@ export interface LocationStockRow extends IStockLevel {
 
 /** On-hand balances for every product at a location, with derived available qty. */
 export const getStockAtLocation = withAuth(
-  async (user, { tenant }, locationId: string): Promise<LocationStockRow[]> => {
-    await requireInvPerm(user, 'read');
-    const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
-      const rows = (await trx('stock_levels as sl')
-        .leftJoin('service_catalog as sc', function () {
-          this.on('sl.service_id', '=', 'sc.service_id').andOn('sl.tenant', '=', 'sc.tenant');
-        })
-        .where({ 'sl.tenant': tenant, 'sl.location_id': locationId })
-        .select('sl.*', 'sc.service_name', 'sc.sku')
-        .orderBy('sc.service_name', 'asc')) as Array<IStockLevel & { service_name: string | null; sku: string | null }>;
-      return rows.map((r) => ({ ...r, available: availableQuantity(r) }));
+  async (user, { tenant }, locationId: string): Promise<LocationStockRow[] | StockLedgerActionError> => {
+    return withStockLedgerActionErrors(async () => {
+      await requireInvPerm(user, 'read');
+      const { knex: db } = await createTenantKnex();
+      return withTransaction(db, async (trx: Knex.Transaction) => {
+        const rows = (await trx('stock_levels as sl')
+          .leftJoin('service_catalog as sc', function () {
+            this.on('sl.service_id', '=', 'sc.service_id').andOn('sl.tenant', '=', 'sc.tenant');
+          })
+          .where({ 'sl.tenant': tenant, 'sl.location_id': locationId })
+          .select('sl.*', 'sc.service_name', 'sc.sku')
+          .orderBy('sc.service_name', 'asc')) as Array<IStockLevel & { service_name: string | null; sku: string | null }>;
+        return rows.map((r) => ({ ...r, available: availableQuantity(r) }));
+      });
     });
   },
 );

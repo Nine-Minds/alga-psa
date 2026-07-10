@@ -4,7 +4,13 @@ import { getClientProjectDetails } from '@alga-psa/client-portal/actions';
 import { ProjectDetailsContainer } from '@alga-psa/client-portal/components';
 import logger from '@alga-psa/core/logger';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { Metadata } from 'next';
+
+const isReturnedActionError = (
+  value: unknown
+): value is { readonly actionError: string } | { readonly permissionError: string } =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 const getCachedProject = cache((id: string) => getClientProjectDetails(id));
 
@@ -18,6 +24,9 @@ export async function generateMetadata({ params }: ProjectPageProps): Promise<Me
   try {
     const { projectId } = await params;
     const project = await getCachedProject(projectId);
+    if (isReturnedActionError(project)) {
+      return { title: 'Project Details' };
+    }
     if (project) {
       return { title: project.project_name };
     }
@@ -34,6 +43,13 @@ export default async function ProjectPage({ params }: ProjectPageProps) {
   try {
     // Fetch project details server-side (uses React.cache — deduped with generateMetadata)
     const project = await getCachedProject(projectId);
+    if (isReturnedActionError(project)) {
+      return (
+        <Alert id="project-error-message" variant="destructive">
+          <AlertDescription>{getErrorMessage(project)}</AlertDescription>
+        </Alert>
+      );
+    }
 
     if (!project) {
       return (

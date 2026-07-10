@@ -5,6 +5,12 @@ import { withTransaction, createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+import {
   IProductInventorySettings,
   ISalesOrder,
   ISalesOrderLine,
@@ -25,6 +31,65 @@ import { createAndLinkDeliveredAsset, PendingAssetLink } from '../lib/assetLink'
 async function requireSoPerm(user: any, action: 'create' | 'read' | 'update' | 'delete'): Promise<void> {
   if (!(await hasPermission(user, 'sales_order', action))) {
     throw new Error(`Permission denied: sales_order ${action} required`);
+  }
+}
+
+export type FulfillmentActionError = ActionMessageError | ActionPermissionError;
+
+function fulfillmentActionErrorFrom(error: unknown): FulfillmentActionError | null {
+  if (error instanceof Error) {
+    if (error.message.startsWith('Permission denied') || error.message === 'user is not logged in') {
+      return permissionError(error.message);
+    }
+
+    switch (error.message) {
+      case 'Sales order line not found':
+        return actionError('Sales order line not found. It may have been updated or deleted. Please refresh and try again.');
+      case 'Sales order not found':
+        return actionError('Sales order not found. It may have been updated or deleted. Please refresh and try again.');
+      case 'Drop-ship lines are fulfilled through the drop-ship receipt flow, not from stock':
+        return actionError('Use the drop-ship receipt flow to fulfill this line.');
+      case 'Inventory is not enabled for this product':
+        return actionError('Inventory tracking is not enabled for this product.');
+      case 'Sales order line is already fully fulfilled':
+        return actionError('This sales order line is already fully fulfilled.');
+      case 'No serialized units available to fulfill this line':
+        return actionError('No serialized units are available to fulfill this line.');
+      case 'quantity is required to fulfill a non-serialized line':
+        return actionError('Enter a quantity to fulfill this non-serialized line.');
+      case 'A source location is required to fulfill a non-serialized line':
+        return actionError('Choose a source location before fulfilling this line.');
+      case 'Fulfillment would exceed the ordered quantity; nothing was fulfilled':
+        return actionError('Fulfillment would exceed the ordered quantity. Refresh the order and try again.');
+      default:
+        if (
+          error.message.startsWith('Cannot fulfill a ') ||
+          error.message.startsWith('Unit ') ||
+          error.message.startsWith('Only ')
+        ) {
+          return actionError(error.message);
+        }
+    }
+  }
+
+  const dbError = error as { code?: string };
+  if (dbError?.code === '23503') {
+    return actionError('One of the selected fulfillment records is no longer valid. Please refresh and try again.');
+  }
+  if (dbError?.code === '23505') {
+    return actionError('This fulfillment conflicts with an existing record. Please refresh and try again.');
+  }
+
+  return null;
+}
+
+async function withFulfillmentActionErrors<T>(work: () => Promise<T>): Promise<T | FulfillmentActionError> {
+  try {
+    return await work();
+  } catch (error) {
+    const expected = fulfillmentActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 }
 
@@ -149,35 +214,37 @@ export interface FulfillmentCandidateUnit {
  * exclude them, and foreign soft allocations are labeled rather than hidden (F004).
  */
 export const listFulfillmentCandidateUnits = withAuth(
-  async (user, { tenant }, soLineId: string): Promise<FulfillmentCandidateUnit[]> => {
-    await requireSoPerm(user, 'read');
-    const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
-      const line = (await trx('sales_order_lines')
-        .where({ tenant, so_line_id: soLineId })
-        .first()) as ISalesOrderLine | undefined;
-      if (!line) throw new Error('Sales order line not found');
+  async (user, { tenant }, soLineId: string): Promise<FulfillmentCandidateUnit[] | FulfillmentActionError> => {
+    return withFulfillmentActionErrors(async () => {
+      await requireSoPerm(user, 'read');
+      const { knex: db } = await createTenantKnex();
+      return withTransaction(db, async (trx: Knex.Transaction) => {
+        const line = (await trx('sales_order_lines')
+          .where({ tenant, so_line_id: soLineId })
+          .first()) as ISalesOrderLine | undefined;
+        if (!line) throw new Error('Sales order line not found');
 
-      const candidates = await loadCandidateUnits(trx, tenant, line.service_id, soLineId, { lock: false });
-      const locationIds = [...new Set(candidates.map((u) => u.location_id).filter(Boolean))] as string[];
-      const locations = locationIds.length
-        ? await trx('stock_locations').where({ tenant }).whereIn('location_id', locationIds).select('location_id', 'name')
-        : [];
-      const locationName = new Map(locations.map((l: any) => [l.location_id, l.name as string]));
+        const candidates = await loadCandidateUnits(trx, tenant, line.service_id, soLineId, { lock: false });
+        const locationIds = [...new Set(candidates.map((u) => u.location_id).filter(Boolean))] as string[];
+        const locations = locationIds.length
+          ? await trx('stock_locations').where({ tenant }).whereIn('location_id', locationIds).select('location_id', 'name')
+          : [];
+        const locationName = new Map(locations.map((l: any) => [l.location_id, l.name as string]));
 
-      return candidates.map((u) => ({
-        unit_id: u.unit_id,
-        serial_number: u.serial_number ?? null,
-        mac_address: u.mac_address ?? null,
-        location_id: u.location_id ?? null,
-        location_name: u.location_id ? locationName.get(u.location_id) ?? null : null,
-        received_at: u.received_at ?? null,
-        foreign_hard_hold: Boolean(u.foreign_hard_hold),
-        allocated_to_this_line: u.allocated_so_line_id === soLineId,
-        foreign_soft_allocated: Boolean(
-          u.allocated_so_line_id && u.allocated_so_line_id !== soLineId && !u.foreign_hard_hold,
-        ),
-      }));
+        return candidates.map((u) => ({
+          unit_id: u.unit_id,
+          serial_number: u.serial_number ?? null,
+          mac_address: u.mac_address ?? null,
+          location_id: u.location_id ?? null,
+          location_name: u.location_id ? locationName.get(u.location_id) ?? null : null,
+          received_at: u.received_at ?? null,
+          foreign_hard_hold: Boolean(u.foreign_hard_hold),
+          allocated_to_this_line: u.allocated_so_line_id === soLineId,
+          foreign_soft_allocated: Boolean(
+            u.allocated_so_line_id && u.allocated_so_line_id !== soLineId && !u.foreign_hard_hold,
+          ),
+        }));
+      });
     });
   },
 );
@@ -200,7 +267,8 @@ export const fulfillSalesOrderLine = withAuth(
     { tenant },
     soLineId: string,
     input?: FulfillSalesOrderLineInput,
-  ): Promise<FulfillSalesOrderLineResult> => {
+  ): Promise<FulfillSalesOrderLineResult | FulfillmentActionError> => {
+    return withFulfillmentActionErrors(async () => {
     await requireSoPerm(user, 'update');
     const { knex: db } = await createTenantKnex();
     return withTransaction(db, async (trx: Knex.Transaction) => {
@@ -449,10 +517,9 @@ export const fulfillSalesOrderLine = withAuth(
           const id = await createAndLinkDeliveredAsset(db, tenant, p);
           if (id) assetIds.push(id);
         } catch (e) {
+          console.warn('Asset creation failed after delivery succeeded:', e);
           core.warnings.push(
-            `Asset creation failed for unit ${p.unit.serial_number ?? p.unit.unit_id}: ${
-              e instanceof Error ? e.message : String(e)
-            }. The delivery succeeded — create and link the asset manually.`,
+            `Asset creation failed for unit ${p.unit.serial_number ?? p.unit.unit_id}. The delivery succeeded; create and link the asset manually.`,
           );
         }
       }
@@ -482,6 +549,7 @@ export const fulfillSalesOrderLine = withAuth(
         ...rest
       } = core;
       return { ...rest, asset_ids: assetIds };
+    });
     });
   },
 );

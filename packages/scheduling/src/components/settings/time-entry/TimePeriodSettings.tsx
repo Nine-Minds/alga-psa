@@ -8,10 +8,17 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert'
 import { ITimePeriodSettings } from '@alga-psa/types';
-import { getActiveTimePeriodSettings, updateTimePeriodSettings, createTimePeriodSettings, deleteTimePeriodSettings } from '@alga-psa/scheduling/actions';
+import { getActiveTimePeriodSettings, updateTimePeriodSettings, createTimePeriodSettings, deleteTimePeriodSettings } from '../../../actions/time-period-settings-actions/timePeriodSettingsActions';
 import { ISO8601String } from '@alga-psa/types';
 import { formatISO, parseISO } from 'date-fns';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 type FrequencyUnit = 'day' | 'week' | 'month' | 'year';
 
@@ -47,6 +54,10 @@ const getMonthName = (monthNumber: number): string => monthNames[monthNumber - 1
 
 const defaultFrequencyUnit: FrequencyUnit = 'month';
 
+function isReturnedActionError(value: unknown): value is ActionMessageError | ActionPermissionError {
+  return isActionMessageError(value) || isActionPermissionError(value);
+}
+
 const TimePeriodSettings: React.FC = () => {
   const [settings, setSettings] = useState<ITimePeriodSettings[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -70,6 +81,11 @@ const TimePeriodSettings: React.FC = () => {
   const fetchSettings = async () => {
     try {
       const activeSettings = await getActiveTimePeriodSettings();
+      if (isReturnedActionError(activeSettings)) {
+        setError(getErrorMessage(activeSettings));
+        setSettings([]);
+        return;
+      }
       setSettings(activeSettings);
     } catch (err) {
       setError('Failed to fetch time period settings');
@@ -115,6 +131,10 @@ const TimePeriodSettings: React.FC = () => {
       setError(null);
       setValidationErrors([]);
       const createdSetting = await createTimePeriodSettings(newSetting);
+      if (isReturnedActionError(createdSetting)) {
+        setError(getErrorMessage(createdSetting));
+        return;
+      }
       setSettings([...settings, createdSetting]);
       setNewSetting({
         start_day: 1,
@@ -139,7 +159,11 @@ const TimePeriodSettings: React.FC = () => {
   const handleUpdateSetting = async (updatedSetting: ITimePeriodSettings) => {
     try {
       setError(null); // Clear previous error before attempting to update
-      await updateTimePeriodSettings(updatedSetting);
+      const result = await updateTimePeriodSettings(updatedSetting);
+      if (isReturnedActionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
       await fetchSettings();
     } catch (error) {
       console.error('Error updating time period setting:', error);
@@ -149,7 +173,11 @@ const TimePeriodSettings: React.FC = () => {
 
   const handleDeleteSetting = async (settingId: string) => {
     try {
-      await deleteTimePeriodSettings(settingId);
+      const result = await deleteTimePeriodSettings(settingId);
+      if (isReturnedActionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
       setSettings(settings.filter(s => s.time_period_settings_id !== settingId));
     } catch (error) {
       console.error('Error deleting time period setting:', error);

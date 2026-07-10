@@ -12,6 +12,7 @@ import {
   resolveKitPriceInTransaction,
   resolveKitPricePolicy,
 } from '../lib/kitPricing';
+import { kitActionErrorFrom, type KitActionError } from '../lib/kitActionErrors';
 
 /**
  * Kit (bundle) management — single-level bill of materials (F102).
@@ -96,6 +97,16 @@ async function publishServiceCatalogSearchEvent(
     });
   } catch (eventError) {
     console.error(`[kitActions] Failed to publish ${eventType} search event:`, eventError);
+  }
+}
+
+async function withKitActionErrors<T>(work: () => Promise<T>): Promise<T | KitActionError> {
+  try {
+    return await work();
+  } catch (error) {
+    const expected = kitActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 }
 
@@ -424,80 +435,94 @@ function summarizeKit(row: KitBaseRow, components: KitComponentDetail[]): KitSum
   };
 }
 
-export const listKitServiceTypes = withAuth(async (user, { tenant }): Promise<KitServiceTypeOption[]> => {
-  await requireServicePerm(user, 'read');
-  const { knex: db } = await createTenantKnex();
-  return withTransaction(db, async (trx: Knex.Transaction) => {
-    const rows = await trx('service_types')
-      .where({ tenant, is_active: true })
-      .select('id', 'name')
-      .orderBy('name', 'asc');
-    return rows.map((row: any) => ({ id: row.id, name: row.name, is_standard: false }));
+export const listKitServiceTypes = withAuth(
+  async (user, { tenant }): Promise<KitServiceTypeOption[] | KitActionError> => {
+    return withKitActionErrors(async () => {
+      await requireServicePerm(user, 'read');
+      const { knex: db } = await createTenantKnex();
+      return withTransaction(db, async (trx: Knex.Transaction) => {
+        const rows = await trx('service_types')
+          .where({ tenant, is_active: true })
+          .select('id', 'name')
+          .orderBy('name', 'asc');
+        return rows.map((row: any) => ({ id: row.id, name: row.name, is_standard: false }));
+      });
+    });
+  },
+);
+
+export const listKitComponentCandidates = withAuth(
+  async (user, { tenant }): Promise<KitComponentCandidate[] | KitActionError> => {
+    return withKitActionErrors(async () => {
+      await requireInvPerm(user, 'read');
+      const { knex: db } = await createTenantKnex();
+      return withTransaction(db, async (trx: Knex.Transaction) => {
+        const stockTotals = trx('stock_levels')
+          .where({ tenant })
+          .groupBy('service_id')
+          .select('service_id')
+          .select(trx.raw('COALESCE(SUM(quantity_on_hand), 0)::int as on_hand'))
+          .select(trx.raw('COALESCE(SUM(quantity_on_hand - reserved_quantity - held_quantity), 0)::int as available'))
+          .as('stock_totals');
+
+        const rows = await trx('service_catalog as sc')
+          .leftJoin('product_inventory_settings as pis', function () {
+            this.on('pis.service_id', '=', 'sc.service_id').andOn('pis.tenant', '=', 'sc.tenant');
+          })
+          .leftJoin(stockTotals, 'stock_totals.service_id', 'sc.service_id')
+          .where({ 'sc.tenant': tenant, 'sc.item_kind': 'product' })
+          .andWhereRaw('COALESCE(pis.is_kit, false) = false')
+          .select(
+            'sc.service_id',
+            'sc.service_name',
+            'sc.sku',
+            'sc.default_rate',
+            'sc.cost',
+            'sc.cost_currency',
+            trx.raw('COALESCE(pis.track_stock, false) as track_stock'),
+            trx.raw('COALESCE(pis.is_serialized, false) as is_serialized'),
+            'pis.average_cost',
+            trx.raw('COALESCE(stock_totals.on_hand, 0)::int as on_hand'),
+            trx.raw('COALESCE(stock_totals.available, 0)::int as available'),
+          )
+          .orderBy('sc.service_name', 'asc');
+
+        return rows.map((row: any) => ({
+          service_id: row.service_id,
+          service_name: row.service_name,
+          sku: row.sku ?? null,
+          track_stock: Boolean(row.track_stock),
+          is_serialized: Boolean(row.is_serialized),
+          default_rate: asNumber(row.default_rate),
+          cost: row.cost == null ? null : asNumber(row.cost),
+          average_cost: row.average_cost == null ? null : asNumber(row.average_cost),
+          cost_currency: row.cost_currency ?? null,
+          on_hand: asNumber(row.on_hand),
+          available: asNumber(row.available),
+        }));
+      });
+    });
+  },
+);
+
+export const listKitSummaries = withAuth(async (user, { tenant }): Promise<KitSummary[] | KitActionError> => {
+  return withKitActionErrors(async () => {
+    await requireInvPerm(user, 'read');
+    const { knex: db } = await createTenantKnex();
+    return withTransaction(db, async (trx: Knex.Transaction) => {
+      const rows = await queryKitBaseRows(trx, tenant);
+      const componentsByKit = await queryKitComponents(trx, tenant, rows.map((row) => row.service_id));
+      return rows.map((row) => summarizeKit(row, componentsByKit.get(row.service_id) ?? []));
+    });
   });
 });
 
-export const listKitComponentCandidates = withAuth(async (user, { tenant }): Promise<KitComponentCandidate[]> => {
-  await requireInvPerm(user, 'read');
-  const { knex: db } = await createTenantKnex();
-  return withTransaction(db, async (trx: Knex.Transaction) => {
-    const stockTotals = trx('stock_levels')
-      .where({ tenant })
-      .groupBy('service_id')
-      .select('service_id')
-      .select(trx.raw('COALESCE(SUM(quantity_on_hand), 0)::int as on_hand'))
-      .select(trx.raw('COALESCE(SUM(quantity_on_hand - reserved_quantity - held_quantity), 0)::int as available'))
-      .as('stock_totals');
-
-    const rows = await trx('service_catalog as sc')
-      .leftJoin('product_inventory_settings as pis', function () {
-        this.on('pis.service_id', '=', 'sc.service_id').andOn('pis.tenant', '=', 'sc.tenant');
-      })
-      .leftJoin(stockTotals, 'stock_totals.service_id', 'sc.service_id')
-      .where({ 'sc.tenant': tenant, 'sc.item_kind': 'product' })
-      .andWhereRaw('COALESCE(pis.is_kit, false) = false')
-      .select(
-        'sc.service_id',
-        'sc.service_name',
-        'sc.sku',
-        'sc.default_rate',
-        'sc.cost',
-        'sc.cost_currency',
-        trx.raw('COALESCE(pis.track_stock, false) as track_stock'),
-        trx.raw('COALESCE(pis.is_serialized, false) as is_serialized'),
-        'pis.average_cost',
-        trx.raw('COALESCE(stock_totals.on_hand, 0)::int as on_hand'),
-        trx.raw('COALESCE(stock_totals.available, 0)::int as available'),
-      )
-      .orderBy('sc.service_name', 'asc');
-
-    return rows.map((row: any) => ({
-      service_id: row.service_id,
-      service_name: row.service_name,
-      sku: row.sku ?? null,
-      track_stock: Boolean(row.track_stock),
-      is_serialized: Boolean(row.is_serialized),
-      default_rate: asNumber(row.default_rate),
-      cost: row.cost == null ? null : asNumber(row.cost),
-      average_cost: row.average_cost == null ? null : asNumber(row.average_cost),
-      cost_currency: row.cost_currency ?? null,
-      on_hand: asNumber(row.on_hand),
-      available: asNumber(row.available),
-    }));
-  });
-});
-
-export const listKitSummaries = withAuth(async (user, { tenant }): Promise<KitSummary[]> => {
-  await requireInvPerm(user, 'read');
-  const { knex: db } = await createTenantKnex();
-  return withTransaction(db, async (trx: Knex.Transaction) => {
-    const rows = await queryKitBaseRows(trx, tenant);
-    const componentsByKit = await queryKitComponents(trx, tenant, rows.map((row) => row.service_id));
-    return rows.map((row) => summarizeKit(row, componentsByKit.get(row.service_id) ?? []));
-  });
-});
-
-export const getKitDetail = withAuth(async (user, { tenant }, kitServiceId: string): Promise<KitDetail | null> => {
-  await requireInvPerm(user, 'read');
+/**
+ * Internal kit-detail loader. Kept separate from the `getKitDetail` server action so
+ * create/update can reuse it without going through the action's error-return contract
+ * (an action returning `KitActionError` is not a `KitDetail`).
+ */
+async function loadKitDetail(tenant: string, kitServiceId: string): Promise<KitDetail | null> {
   const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     const [row] = await queryKitBaseRows(trx, tenant, kitServiceId);
@@ -518,192 +543,211 @@ export const getKitDetail = withAuth(async (user, { tenant }, kitServiceId: stri
       },
     };
   });
-});
+}
 
-export const createKitProduct = withAuth(
-  async (user, { tenant }, input: CreateKitProductInput): Promise<KitDetail> => {
-    await requireServicePerm(user, 'create');
-    await requireInvPerm(user, 'create');
-
-    const serviceName = (input.service_name ?? '').trim();
-    if (!serviceName) throw new Error('Kit name is required');
-    if (!input.custom_service_type_id) throw new Error('Product type is required');
-    const currency = normalizeCurrency(input.currency_code);
-    const cost = input.cost == null ? null : normalizeMoney(input.cost, 'Kit cost');
-    const mode = normalizeKitPricingMode(input.kit_pricing_mode);
-    const fixedPrice = mode === 'fixed'
-      ? normalizeMoney(input.kit_fixed_price, 'Fixed kit price', { requiredPositive: true })
-      : null;
-    const catalogProjection = fixedPrice ?? 0;
-
-    const { knex: db } = await createTenantKnex();
-    const serviceId = await withTransaction(db, async (trx: Knex.Transaction) => {
-      const type = await trx('service_types')
-        .where({ tenant, id: input.custom_service_type_id })
-        .first();
-      if (!type) throw new Error('Product type not found');
-
-      const [service] = await trx('service_catalog')
-        .insert({
-          tenant,
-          service_name: serviceName,
-          custom_service_type_id: input.custom_service_type_id,
-          billing_method: 'usage',
-          default_rate: catalogProjection,
-          unit_of_measure: normalizeOptionalText(input.unit_of_measure) ?? 'kit',
-          category_id: null,
-          tax_rate_id: null,
-          description: input.description ?? '',
-          item_kind: 'product',
-          is_active: true,
-          sku: normalizeOptionalText(input.sku),
-          cost,
-          cost_currency: currency,
-          vendor: null,
-          manufacturer: null,
-          product_category: null,
-          is_license: false,
-          license_term: null,
-          license_billing_cadence: null,
-        })
-        .returning('*');
-
-      await trx('service_prices')
-        .insert({
-          tenant,
-          service_id: service.service_id,
-          currency_code: currency,
-          rate: catalogProjection,
-        })
-        .onConflict(['tenant', 'service_id', 'currency_code'])
-        .merge({ rate: catalogProjection, updated_at: trx.fn.now() });
-
-      await trx('product_inventory_settings')
-        .insert({
-          tenant,
-          service_id: service.service_id,
-          track_stock: true,
-          is_serialized: false,
-          is_kit: true,
-          creates_asset_on_delivery: false,
-          cost_currency: currency,
-          kit_pricing_mode: mode,
-          kit_fixed_price: fixedPrice,
-        });
-
-      return service.service_id as string;
+export const getKitDetail = withAuth(
+  async (user, { tenant }, kitServiceId: string): Promise<KitDetail | null | KitActionError> => {
+    return withKitActionErrors(async () => {
+      await requireInvPerm(user, 'read');
+      return loadKitDetail(tenant, kitServiceId);
     });
-
-    await publishServiceCatalogSearchEvent('SERVICE_CATALOG_CREATED', tenant, serviceId, {
-      userId: user.user_id,
-      changedFields: ['service_name', 'sku', 'default_rate', 'item_kind', 'is_kit'],
-    });
-    safeRevalidate('/msp/inventory/kits');
-    safeRevalidate('/msp/settings/billing');
-    const detail = await getKitDetail(serviceId);
-    if (!detail) throw new Error('Kit was created but could not be loaded');
-    return detail;
   },
 );
 
-export const updateKitProduct = withAuth(
-  async (user, { tenant }, kitServiceId: string, input: UpdateKitProductInput): Promise<KitDetail> => {
-    await requireServicePerm(user, 'update');
-    await requireInvPerm(user, 'update');
+export const createKitProduct = withAuth(
+  async (user, { tenant }, input: CreateKitProductInput): Promise<KitDetail | KitActionError> => {
+    return withKitActionErrors(async () => {
+      await requireServicePerm(user, 'create');
+      await requireInvPerm(user, 'create');
 
-    const { knex: db } = await createTenantKnex();
-    await withTransaction(db, async (trx: Knex.Transaction) => {
-      await assertIsKit(trx, tenant, kitServiceId);
-      const current = await trx('service_catalog as sc')
-        .join('product_inventory_settings as pis', function () {
-          this.on('pis.service_id', '=', 'sc.service_id').andOn('pis.tenant', '=', 'sc.tenant');
-        })
-        .where({ 'sc.tenant': tenant, 'sc.service_id': kitServiceId })
-        .select('sc.*', 'pis.kit_pricing_mode', 'pis.kit_fixed_price')
-        .first();
-      if (!current) throw new Error('Kit not found');
-
-      const currency = input.currency_code !== undefined ? normalizeCurrency(input.currency_code) : current.cost_currency ?? 'USD';
-      const cost = input.cost === undefined ? current.cost : input.cost === null ? null : normalizeMoney(input.cost, 'Kit cost');
-      const mode = normalizeKitPricingMode(input.kit_pricing_mode ?? current.kit_pricing_mode);
-      const fixedPrice =
-        mode === 'fixed'
-          ? normalizeMoney(input.kit_fixed_price ?? current.kit_fixed_price, 'Fixed kit price', { requiredPositive: true })
-          : null;
+      const serviceName = (input.service_name ?? '').trim();
+      if (!serviceName) throw new Error('Kit name is required');
+      if (!input.custom_service_type_id) throw new Error('Product type is required');
+      const currency = normalizeCurrency(input.currency_code);
+      const cost = input.cost == null ? null : normalizeMoney(input.cost, 'Kit cost');
+      const mode = normalizeKitPricingMode(input.kit_pricing_mode);
+      const fixedPrice = mode === 'fixed'
+        ? normalizeMoney(input.kit_fixed_price, 'Fixed kit price', { requiredPositive: true })
+        : null;
       const catalogProjection = fixedPrice ?? 0;
 
-      if (input.custom_service_type_id) {
+      const { knex: db } = await createTenantKnex();
+      const serviceId = await withTransaction(db, async (trx: Knex.Transaction) => {
         const type = await trx('service_types')
           .where({ tenant, id: input.custom_service_type_id })
           .first();
         if (!type) throw new Error('Product type not found');
-      }
 
-      const serviceUpdate: Record<string, unknown> = {};
-      if (input.service_name !== undefined) {
-        const serviceName = input.service_name.trim();
-        if (!serviceName) throw new Error('Kit name is required');
-        serviceUpdate.service_name = serviceName;
-      }
-      if (input.sku !== undefined) serviceUpdate.sku = normalizeOptionalText(input.sku);
-      if (input.custom_service_type_id !== undefined && input.custom_service_type_id) {
-        serviceUpdate.custom_service_type_id = input.custom_service_type_id;
-      }
-      if (input.unit_of_measure !== undefined) serviceUpdate.unit_of_measure = normalizeOptionalText(input.unit_of_measure) ?? 'kit';
-      if (input.description !== undefined) serviceUpdate.description = input.description ?? '';
-      serviceUpdate.default_rate = catalogProjection;
-      if (input.cost !== undefined) serviceUpdate.cost = cost;
-      if (input.currency_code !== undefined) serviceUpdate.cost_currency = currency;
+        const [service] = await trx('service_catalog')
+          .insert({
+            tenant,
+            service_name: serviceName,
+            custom_service_type_id: input.custom_service_type_id,
+            billing_method: 'usage',
+            default_rate: catalogProjection,
+            unit_of_measure: normalizeOptionalText(input.unit_of_measure) ?? 'kit',
+            category_id: null,
+            tax_rate_id: null,
+            description: input.description ?? '',
+            item_kind: 'product',
+            is_active: true,
+            sku: normalizeOptionalText(input.sku),
+            cost,
+            cost_currency: currency,
+            vendor: null,
+            manufacturer: null,
+            product_category: null,
+            is_license: false,
+            license_term: null,
+            license_billing_cadence: null,
+          })
+          .returning('*');
 
-      await trx('service_catalog')
-        .where({ tenant, service_id: kitServiceId })
-        .update(serviceUpdate);
+        await trx('service_prices')
+          .insert({
+            tenant,
+            service_id: service.service_id,
+            currency_code: currency,
+            rate: catalogProjection,
+          })
+          .onConflict(['tenant', 'service_id', 'currency_code'])
+          .merge({ rate: catalogProjection, updated_at: trx.fn.now() });
 
-      await trx('service_prices')
-        .insert({
-          tenant,
-          service_id: kitServiceId,
-          currency_code: currency,
-          rate: catalogProjection,
-        })
-        .onConflict(['tenant', 'service_id', 'currency_code'])
-        .merge({ rate: catalogProjection, updated_at: trx.fn.now() });
+        await trx('product_inventory_settings')
+          .insert({
+            tenant,
+            service_id: service.service_id,
+            track_stock: true,
+            is_serialized: false,
+            is_kit: true,
+            creates_asset_on_delivery: false,
+            cost_currency: currency,
+            kit_pricing_mode: mode,
+            kit_fixed_price: fixedPrice,
+          });
 
-      await trx('product_inventory_settings')
-        .where({ tenant, service_id: kitServiceId })
-        .update({
-          kit_pricing_mode: mode,
-          kit_fixed_price: fixedPrice,
-          cost_currency: currency,
-          updated_at: trx.fn.now(),
-        });
+        return service.service_id as string;
+      });
+
+      await publishServiceCatalogSearchEvent('SERVICE_CATALOG_CREATED', tenant, serviceId, {
+        userId: user.user_id,
+        changedFields: ['service_name', 'sku', 'default_rate', 'item_kind', 'is_kit'],
+      });
+      safeRevalidate('/msp/inventory/kits');
+      safeRevalidate('/msp/settings/billing');
+      const detail = await loadKitDetail(tenant, serviceId);
+      if (!detail) throw new Error('Kit was created but could not be loaded');
+      return detail;
     });
+  },
+);
 
-    await publishServiceCatalogSearchEvent('SERVICE_CATALOG_UPDATED', tenant, kitServiceId, {
-      userId: user.user_id,
-      changedFields: Object.keys(input),
+export const updateKitProduct = withAuth(
+  async (user, { tenant }, kitServiceId: string, input: UpdateKitProductInput): Promise<KitDetail | KitActionError> => {
+    return withKitActionErrors(async () => {
+      await requireServicePerm(user, 'update');
+      await requireInvPerm(user, 'update');
+
+      const { knex: db } = await createTenantKnex();
+      await withTransaction(db, async (trx: Knex.Transaction) => {
+        await assertIsKit(trx, tenant, kitServiceId);
+        const current = await trx('service_catalog as sc')
+          .join('product_inventory_settings as pis', function () {
+            this.on('pis.service_id', '=', 'sc.service_id').andOn('pis.tenant', '=', 'sc.tenant');
+          })
+          .where({ 'sc.tenant': tenant, 'sc.service_id': kitServiceId })
+          .select('sc.*', 'pis.kit_pricing_mode', 'pis.kit_fixed_price')
+          .first();
+        if (!current) throw new Error('Kit not found');
+
+        const currency = input.currency_code !== undefined ? normalizeCurrency(input.currency_code) : current.cost_currency ?? 'USD';
+        const cost = input.cost === undefined ? current.cost : input.cost === null ? null : normalizeMoney(input.cost, 'Kit cost');
+        const mode = normalizeKitPricingMode(input.kit_pricing_mode ?? current.kit_pricing_mode);
+        const fixedPrice =
+          mode === 'fixed'
+            ? normalizeMoney(input.kit_fixed_price ?? current.kit_fixed_price, 'Fixed kit price', { requiredPositive: true })
+            : null;
+        const catalogProjection = fixedPrice ?? 0;
+
+        if (input.custom_service_type_id) {
+          const type = await trx('service_types')
+            .where({ tenant, id: input.custom_service_type_id })
+            .first();
+          if (!type) throw new Error('Product type not found');
+        }
+
+        const serviceUpdate: Record<string, unknown> = {};
+        if (input.service_name !== undefined) {
+          const serviceName = input.service_name.trim();
+          if (!serviceName) throw new Error('Kit name is required');
+          serviceUpdate.service_name = serviceName;
+        }
+        if (input.sku !== undefined) serviceUpdate.sku = normalizeOptionalText(input.sku);
+        if (input.custom_service_type_id !== undefined && input.custom_service_type_id) {
+          serviceUpdate.custom_service_type_id = input.custom_service_type_id;
+        }
+        if (input.unit_of_measure !== undefined) serviceUpdate.unit_of_measure = normalizeOptionalText(input.unit_of_measure) ?? 'kit';
+        if (input.description !== undefined) serviceUpdate.description = input.description ?? '';
+        serviceUpdate.default_rate = catalogProjection;
+        if (input.cost !== undefined) serviceUpdate.cost = cost;
+        if (input.currency_code !== undefined) serviceUpdate.cost_currency = currency;
+
+        await trx('service_catalog')
+          .where({ tenant, service_id: kitServiceId })
+          .update(serviceUpdate);
+
+        await trx('service_prices')
+          .insert({
+            tenant,
+            service_id: kitServiceId,
+            currency_code: currency,
+            rate: catalogProjection,
+          })
+          .onConflict(['tenant', 'service_id', 'currency_code'])
+          .merge({ rate: catalogProjection, updated_at: trx.fn.now() });
+
+        await trx('product_inventory_settings')
+          .where({ tenant, service_id: kitServiceId })
+          .update({
+            kit_pricing_mode: mode,
+            kit_fixed_price: fixedPrice,
+            cost_currency: currency,
+            updated_at: trx.fn.now(),
+          });
+      });
+
+      await publishServiceCatalogSearchEvent('SERVICE_CATALOG_UPDATED', tenant, kitServiceId, {
+        userId: user.user_id,
+        changedFields: Object.keys(input),
+      });
+      safeRevalidate('/msp/inventory/kits');
+      safeRevalidate('/msp/settings/billing');
+      const detail = await loadKitDetail(tenant, kitServiceId);
+      if (!detail) throw new Error('Kit was updated but could not be loaded');
+      return detail;
     });
-    safeRevalidate('/msp/inventory/kits');
-    safeRevalidate('/msp/settings/billing');
-    const detail = await getKitDetail(kitServiceId);
-    if (!detail) throw new Error('Kit was updated but could not be loaded');
-    return detail;
   },
 );
 
 /** List a kit's components, merged with catalog name/sku for display. */
 export const listKitComponents = withAuth(
-  async (user, { tenant }, kitServiceId: string): Promise<Array<IKitComponent & { service_name?: string; sku?: string | null }>> => {
-    await requireInvPerm(user, 'read');
-    const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
-      return trx('kit_components as kc')
-        .join('service_catalog as sc', function () {
-          this.on('kc.component_service_id', '=', 'sc.service_id').andOn('kc.tenant', '=', 'sc.tenant');
-        })
-        .where({ 'kc.tenant': tenant, 'kc.kit_service_id': kitServiceId })
-        .select('kc.*', 'sc.service_name', 'sc.sku')
-        .orderBy('sc.service_name', 'asc') as any;
+  async (
+    user,
+    { tenant },
+    kitServiceId: string,
+  ): Promise<Array<IKitComponent & { service_name?: string; sku?: string | null }> | KitActionError> => {
+    return withKitActionErrors(async () => {
+      await requireInvPerm(user, 'read');
+      const { knex: db } = await createTenantKnex();
+      return withTransaction(db, async (trx: Knex.Transaction) => {
+        return trx('kit_components as kc')
+          .join('service_catalog as sc', function () {
+            this.on('kc.component_service_id', '=', 'sc.service_id').andOn('kc.tenant', '=', 'sc.tenant');
+          })
+          .where({ 'kc.tenant': tenant, 'kc.kit_service_id': kitServiceId })
+          .select('kc.*', 'sc.service_name', 'sc.sku')
+          .orderBy('sc.service_name', 'asc') as any;
+      });
     });
   },
 );
@@ -718,70 +762,76 @@ export const setKitComponents = withAuth(
     { tenant },
     kitServiceId: string,
     components: Array<{ component_service_id: string; quantity: number }>,
-  ): Promise<IKitComponent[]> => {
-    await requireInvPerm(user, 'update');
-    const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
-      await assertIsKit(trx, tenant, kitServiceId);
+  ): Promise<IKitComponent[] | KitActionError> => {
+    return withKitActionErrors(async () => {
+      await requireInvPerm(user, 'update');
+      const { knex: db } = await createTenantKnex();
+      return withTransaction(db, async (trx: Knex.Transaction) => {
+        await assertIsKit(trx, tenant, kitServiceId);
 
-      // Collapse duplicate component ids (summing quantities) and validate each.
-      const merged = new Map<string, number>();
-      for (const c of components ?? []) {
-        const qty = normalizeQuantity(c.quantity);
-        merged.set(c.component_service_id, (merged.get(c.component_service_id) ?? 0) + qty);
-      }
-      for (const componentServiceId of merged.keys()) {
-        await assertComponentAllowed(trx, tenant, kitServiceId, componentServiceId);
-      }
+        // Collapse duplicate component ids (summing quantities) and validate each.
+        const merged = new Map<string, number>();
+        for (const c of components ?? []) {
+          const qty = normalizeQuantity(c.quantity);
+          merged.set(c.component_service_id, (merged.get(c.component_service_id) ?? 0) + qty);
+        }
+        for (const componentServiceId of merged.keys()) {
+          await assertComponentAllowed(trx, tenant, kitServiceId, componentServiceId);
+        }
 
-      await trx('kit_components').where({ tenant, kit_service_id: kitServiceId }).del();
+        await trx('kit_components').where({ tenant, kit_service_id: kitServiceId }).del();
 
-      const rows = Array.from(merged.entries()).map(([componentServiceId, quantity]) => ({
-        tenant,
-        kit_service_id: kitServiceId,
-        component_service_id: componentServiceId,
-        quantity,
-      }));
-      if (rows.length === 0) return [];
-      const inserted = await trx('kit_components').insert(rows).returning('*');
-      return inserted as IKitComponent[];
+        const rows = Array.from(merged.entries()).map(([componentServiceId, quantity]) => ({
+          tenant,
+          kit_service_id: kitServiceId,
+          component_service_id: componentServiceId,
+          quantity,
+        }));
+        if (rows.length === 0) return [];
+        const inserted = await trx('kit_components').insert(rows).returning('*');
+        return inserted as IKitComponent[];
+      });
     });
   },
 );
 
 /** Add (or update the quantity of) a single component on a kit. */
 export const addKitComponent = withAuth(
-  async (user, { tenant }, kitServiceId: string, componentServiceId: string, quantity: number): Promise<IKitComponent> => {
-    await requireInvPerm(user, 'update');
-    const qty = normalizeQuantity(quantity);
-    const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
-      await assertIsKit(trx, tenant, kitServiceId);
-      await assertComponentAllowed(trx, tenant, kitServiceId, componentServiceId);
-      const [row] = await trx('kit_components')
-        .insert({
-          tenant,
-          kit_service_id: kitServiceId,
-          component_service_id: componentServiceId,
-          quantity: qty,
-        })
-        .onConflict(['tenant', 'kit_service_id', 'component_service_id'])
-        .merge({ quantity: qty, updated_at: trx.fn.now() })
-        .returning('*');
-      return row as IKitComponent;
+  async (user, { tenant }, kitServiceId: string, componentServiceId: string, quantity: number): Promise<IKitComponent | KitActionError> => {
+    return withKitActionErrors(async () => {
+      await requireInvPerm(user, 'update');
+      const qty = normalizeQuantity(quantity);
+      const { knex: db } = await createTenantKnex();
+      return withTransaction(db, async (trx: Knex.Transaction) => {
+        await assertIsKit(trx, tenant, kitServiceId);
+        await assertComponentAllowed(trx, tenant, kitServiceId, componentServiceId);
+        const [row] = await trx('kit_components')
+          .insert({
+            tenant,
+            kit_service_id: kitServiceId,
+            component_service_id: componentServiceId,
+            quantity: qty,
+          })
+          .onConflict(['tenant', 'kit_service_id', 'component_service_id'])
+          .merge({ quantity: qty, updated_at: trx.fn.now() })
+          .returning('*');
+        return row as IKitComponent;
+      });
     });
   },
 );
 
 /** Remove a single component from a kit. */
 export const removeKitComponent = withAuth(
-  async (user, { tenant }, kitServiceId: string, componentServiceId: string): Promise<void> => {
-    await requireInvPerm(user, 'update');
-    const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
-      await trx('kit_components')
-        .where({ tenant, kit_service_id: kitServiceId, component_service_id: componentServiceId })
-        .del();
+  async (user, { tenant }, kitServiceId: string, componentServiceId: string): Promise<void | KitActionError> => {
+    return withKitActionErrors(async () => {
+      await requireInvPerm(user, 'update');
+      const { knex: db } = await createTenantKnex();
+      return withTransaction(db, async (trx: Knex.Transaction) => {
+        await trx('kit_components')
+          .where({ tenant, kit_service_id: kitServiceId, component_service_id: componentServiceId })
+          .del();
+      });
     });
   },
 );
@@ -848,40 +898,42 @@ export async function explodeKitOntoSalesOrder(
  * kit's bill of materials (component.quantity × newKitQty).
  */
 export const scaleKitLineQuantity = withAuth(
-  async (user, { tenant }, parentSoLineId: string, newKitQty: number): Promise<ExplodedKitLines> => {
-    await requireInvPerm(user, 'update');
-    const qty = normalizeQuantity(newKitQty);
-    const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
-      const parent = await trx('sales_order_lines')
-        .where({ tenant, so_line_id: parentSoLineId })
-        .first();
-      if (!parent) throw new Error('Parent sales order line not found');
-      if (parent.parent_so_line_id) throw new Error('Line is itself a kit component; pass the parent kit line');
+  async (user, { tenant }, parentSoLineId: string, newKitQty: number): Promise<ExplodedKitLines | KitActionError> => {
+    return withKitActionErrors(async () => {
+      await requireInvPerm(user, 'update');
+      const qty = normalizeQuantity(newKitQty);
+      const { knex: db } = await createTenantKnex();
+      return withTransaction(db, async (trx: Knex.Transaction) => {
+        const parent = await trx('sales_order_lines')
+          .where({ tenant, so_line_id: parentSoLineId })
+          .first();
+        if (!parent) throw new Error('Parent sales order line not found');
+        if (parent.parent_so_line_id) throw new Error('Line is itself a kit component; pass the parent kit line');
 
-      const components = (await trx('kit_components')
-        .where({ tenant, kit_service_id: parent.service_id })) as IKitComponent[];
-      const perComponent = new Map(components.map((c) => [c.component_service_id, c.quantity]));
+        const components = (await trx('kit_components')
+          .where({ tenant, kit_service_id: parent.service_id })) as IKitComponent[];
+        const perComponent = new Map(components.map((c) => [c.component_service_id, c.quantity]));
 
-      const [updatedParent] = await trx('sales_order_lines')
-        .where({ tenant, so_line_id: parentSoLineId })
-        .update({ quantity_ordered: qty, updated_at: trx.fn.now() })
-        .returning('*');
-
-      const childLines = (await trx('sales_order_lines')
-        .where({ tenant, parent_so_line_id: parentSoLineId })) as ISalesOrderLine[];
-      const updatedChildren: ISalesOrderLine[] = [];
-      for (const child of childLines) {
-        const unit = perComponent.get(child.service_id);
-        if (unit === undefined) continue; // component no longer in BOM; leave as-is
-        const [row] = await trx('sales_order_lines')
-          .where({ tenant, so_line_id: child.so_line_id })
-          .update({ quantity_ordered: unit * qty, updated_at: trx.fn.now() })
+        const [updatedParent] = await trx('sales_order_lines')
+          .where({ tenant, so_line_id: parentSoLineId })
+          .update({ quantity_ordered: qty, updated_at: trx.fn.now() })
           .returning('*');
-        updatedChildren.push(row as ISalesOrderLine);
-      }
 
-      return { parentLine: updatedParent as ISalesOrderLine, componentLines: updatedChildren };
+        const childLines = (await trx('sales_order_lines')
+          .where({ tenant, parent_so_line_id: parentSoLineId })) as ISalesOrderLine[];
+        const updatedChildren: ISalesOrderLine[] = [];
+        for (const child of childLines) {
+          const unit = perComponent.get(child.service_id);
+          if (unit === undefined) continue; // component no longer in BOM; leave as-is
+          const [row] = await trx('sales_order_lines')
+            .where({ tenant, so_line_id: child.so_line_id })
+            .update({ quantity_ordered: unit * qty, updated_at: trx.fn.now() })
+            .returning('*');
+          updatedChildren.push(row as ISalesOrderLine);
+        }
+
+        return { parentLine: updatedParent as ISalesOrderLine, componentLines: updatedChildren };
+      });
     });
   },
 );
@@ -892,9 +944,11 @@ export const scaleKitLineQuantity = withAuth(
  * - `kit_pricing_mode = 'fixed'`→ `product_inventory_settings.kit_fixed_price`
  */
 export const computeKitPrice = withAuth(
-  async (user, { tenant }, kitServiceId: string, _currency?: string): Promise<number> => {
-    await requireInvPerm(user, 'read');
-    const { knex: db } = await createTenantKnex();
-    return withTransaction(db, (trx: Knex.Transaction) => resolveKitPriceInTransaction(trx, tenant, kitServiceId));
+  async (user, { tenant }, kitServiceId: string, _currency?: string): Promise<number | KitActionError> => {
+    return withKitActionErrors(async () => {
+      await requireInvPerm(user, 'read');
+      const { knex: db } = await createTenantKnex();
+      return withTransaction(db, (trx: Knex.Transaction) => resolveKitPriceInTransaction(trx, tenant, kitServiceId));
+    });
   },
 );

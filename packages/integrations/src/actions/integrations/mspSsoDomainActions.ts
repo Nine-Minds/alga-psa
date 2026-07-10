@@ -20,6 +20,8 @@ const MSP_SSO_LOGIN_DOMAIN_TABLE = 'msp_sso_tenant_login_domains';
 const MSP_SSO_DOMAIN_VERIFICATION_CHALLENGE_TABLE =
   'msp_sso_domain_verification_challenges';
 const MSP_SSO_DOMAIN_CONFLICT_DISCOVERY_CONTEXT = 'msp-sso-domain-conflict-discovery';
+const MSP_SSO_DOMAIN_PERMISSION_DENIED =
+  'Permission denied: You do not have permission to manage MSP SSO login domains.';
 
 export interface MspSsoLoginDomain {
   id: string;
@@ -114,6 +116,10 @@ function normalizeDomain(value: string): string {
 
 function validateDomain(domain: string): string | null {
   return validateMspSsoDomain(domain);
+}
+
+function logMspSsoDomainActionFailure(operation: string, error: unknown): void {
+  console.error(`[MspSsoDomainActions] ${operation} failed`, error);
 }
 
 function uniqueSorted(values: string[]): string[] {
@@ -355,16 +361,17 @@ export const listMspSsoLoginDomains = withAuth(async (
 ): Promise<ListMspSsoLoginDomainsResult> => {
   try {
     if (!(await canManageDomains(user))) {
-      return { success: false, error: 'Forbidden' };
+      return { success: false, error: MSP_SSO_DOMAIN_PERMISSION_DENIED };
     }
 
     const { knex } = await createTenantKnex();
     const domains = await listActiveTenantDomains(knex as Knex, tenant);
     return { success: true, domains };
   } catch (error: unknown) {
+    logMspSsoDomainActionFailure('list login domains', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to load MSP SSO login domains',
+      error: 'Unable to load MSP SSO login domains.',
     };
   }
 });
@@ -375,16 +382,17 @@ export const listMspSsoDomainClaims = withAuth(async (
 ): Promise<ListMspSsoDomainClaimsResult> => {
   try {
     if (!(await canManageDomains(user))) {
-      return { success: false, error: 'Forbidden' };
+      return { success: false, error: MSP_SSO_DOMAIN_PERMISSION_DENIED };
     }
 
     const { knex } = await createTenantKnex();
     const claims = await listActiveTenantDomainClaims(knex as Knex, tenant);
     return { success: true, claims };
   } catch (error: unknown) {
+    logMspSsoDomainActionFailure('list domain claims', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to load MSP SSO domain claims',
+      error: 'Unable to load MSP SSO domain claims.',
     };
   }
 });
@@ -396,7 +404,7 @@ export const requestMspSsoDomainClaim = withAuth(async (
 ): Promise<RequestMspSsoDomainClaimResult> => {
   try {
     if (!(await canManageDomains(user))) {
-      return { success: false, error: 'Forbidden' };
+      return { success: false, error: MSP_SSO_DOMAIN_PERMISSION_DENIED };
     }
 
     const normalizedDomain = normalizeDomain(input?.domain ?? '');
@@ -514,9 +522,10 @@ export const requestMspSsoDomainClaim = withAuth(async (
       idempotent: result.idempotent ?? false,
     };
   } catch (error: unknown) {
+    logMspSsoDomainActionFailure('request domain claim', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to request MSP SSO domain claim',
+      error: 'Unable to request MSP SSO domain claim.',
     };
   }
 });
@@ -528,7 +537,7 @@ export const refreshMspSsoDomainClaimChallenge = withAuth(async (
 ): Promise<RefreshMspSsoDomainClaimChallengeResult> => {
   try {
     if (!(await canManageDomains(user))) {
-      return { success: false, error: 'Forbidden' };
+      return { success: false, error: MSP_SSO_DOMAIN_PERMISSION_DENIED };
     }
 
     const claimId = String(input?.claimId ?? '').trim();
@@ -612,9 +621,10 @@ export const refreshMspSsoDomainClaimChallenge = withAuth(async (
       challenge: result.challenge,
     };
   } catch (error: unknown) {
+    logMspSsoDomainActionFailure('refresh domain claim challenge', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to refresh MSP SSO claim challenge',
+      error: 'Unable to refresh MSP SSO domain challenge.',
     };
   }
 });
@@ -626,7 +636,7 @@ export const verifyMspSsoDomainClaimOwnership = withAuth(async (
 ): Promise<VerifyMspSsoDomainClaimResult> => {
   try {
     if (!(await canManageDomains(user))) {
-      return { success: false, error: 'Forbidden' };
+      return { success: false, error: MSP_SSO_DOMAIN_PERMISSION_DENIED };
     }
 
     const claimId = String(input?.claimId ?? '').trim();
@@ -727,9 +737,10 @@ export const verifyMspSsoDomainClaimOwnership = withAuth(async (
       claim: result.claim ?? undefined,
     };
   } catch (error: unknown) {
+    logMspSsoDomainActionFailure('verify domain claim', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to verify MSP SSO domain claim',
+      error: 'Unable to verify MSP SSO domain claim.',
     };
   }
 });
@@ -741,7 +752,7 @@ export const revokeMspSsoDomainClaim = withAuth(async (
 ): Promise<RevokeMspSsoDomainClaimResult> => {
   try {
     if (!(await canManageDomains(user))) {
-      return { success: false, error: 'Forbidden' };
+      return { success: false, error: MSP_SSO_DOMAIN_PERMISSION_DENIED };
     }
 
     const claimId = String(input?.claimId ?? '').trim();
@@ -792,9 +803,10 @@ export const revokeMspSsoDomainClaim = withAuth(async (
       claim: result,
     };
   } catch (error: unknown) {
+    logMspSsoDomainActionFailure('revoke domain claim', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to revoke MSP SSO domain claim',
+      error: 'Unable to revoke MSP SSO domain claim.',
     };
   }
 });
@@ -806,7 +818,7 @@ export const saveMspSsoLoginDomains = withAuth(async (
 ): Promise<SaveMspSsoLoginDomainsResult> => {
   try {
     if (!(await canManageDomains(user))) {
-      return { success: false, error: 'Forbidden' };
+      return { success: false, error: MSP_SSO_DOMAIN_PERMISSION_DENIED };
     }
 
     const rawDomains = Array.isArray(input?.domains) ? input.domains : [];
@@ -922,9 +934,10 @@ export const saveMspSsoLoginDomains = withAuth(async (
     const domains = await listActiveTenantDomains(knex as Knex, tenant);
     return { success: true, domains };
   } catch (error: unknown) {
+    logMspSsoDomainActionFailure('save login domains', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to save MSP SSO login domains',
+      error: 'Unable to save MSP SSO login domains.',
     };
   }
 });

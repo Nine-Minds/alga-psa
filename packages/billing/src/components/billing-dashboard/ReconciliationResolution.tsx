@@ -18,6 +18,7 @@ import { AlertCircle, CheckCircle, XCircle, ArrowLeft, AlertTriangle, Info } fro
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 // Define the threshold for requiring four-eyes approval
 const FOUR_EYES_THRESHOLD = 1000; // $1000
@@ -384,6 +385,11 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
         report.report_id,
         approval.notes
       );
+      if (isActionMessageError(resolvedReport) || isActionPermissionError(resolvedReport)) {
+        setError(getErrorMessage(resolvedReport));
+        setIsProcessing(false);
+        return;
+      }
       
       // Update the report state with the resolved report
       setReport(resolvedReport);
@@ -391,7 +397,7 @@ const ReconciliationResolution: React.FC<ReconciliationResolutionProps> = ({
       setIsConfirmationDialogOpen(true);
     } catch (error) {
       console.error('Error resolving report:', error);
-      setError(error instanceof Error ? error.message : t('reconciliation.errors.unknown', { defaultValue: 'An unknown error occurred' }));
+      setError(t('reconciliation.errors.resolveFailed', { defaultValue: 'Failed to resolve reconciliation report.' }));
       setIsProcessing(false);
     }
   };

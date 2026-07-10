@@ -12,6 +12,16 @@ import { getAllBoards } from '../actions/board-actions/boardActions';
 import { createCategory } from '../actions/ticketCategoryActions';
 import type { IBoard, ITicketCategory } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 export interface QuickAddCategoryProps {
   isOpen: boolean;
@@ -173,12 +183,17 @@ export default function QuickAddCategory({
         board_id: boardId,
         parent_category: formData.parent_category || undefined,
       });
+      if (isReturnedActionError(createdCategory)) {
+        setError(getErrorMessage(createdCategory));
+        return;
+      }
+
       toast.success(t('settings.categories.createSuccess', 'Category created successfully'));
       onCategoryCreated(createdCategory);
       handleClose();
     } catch (submitError) {
       console.error('Error creating category:', submitError);
-      setError(submitError instanceof Error ? submitError.message : t('errors.createCategoryFailed', 'Failed to create category'));
+      setError(t('errors.createCategoryFailed', 'Failed to create category'));
     } finally {
       setIsSubmitting(false);
     }

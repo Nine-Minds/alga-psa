@@ -68,7 +68,7 @@ export const uploadTeamAvatar = withAuth(async (
       errorStack: error?.stack,
       errorName: error?.name
     });
-    return { success: false, error: error?.message || 'An unexpected error occurred while uploading the avatar.' };
+    return { success: false, error: 'An unexpected error occurred while uploading the avatar.' };
   }
 });
 
@@ -110,7 +110,7 @@ export const deleteTeamAvatar = withAuth(async (
       errorStack: error?.stack,
       errorName: error?.name
     });
-    return { success: false, error: error?.message || 'An unexpected error occurred while deleting the avatar.' };
+    return { success: false, error: 'An unexpected error occurred while deleting the avatar.' };
   }
 });
 

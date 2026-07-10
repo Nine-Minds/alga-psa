@@ -867,6 +867,7 @@
     "addPurchaseOrder": "Adicionar Pedido de Compra",
     "allVendors": "Todos os fornecedores",
     "amountOnOrder": "{{amount}} em pedido",
+    "mixedCurrencyOnOrder": "{{count}} pedidos de compra em aberto em várias moedas",
     "cancelConfirm": "Tem certeza de que deseja cancelar o pedido de compra {{poNumber}}? Isso não pode ser desfeito.",
     "cancelFailed": "Não foi possível cancelar o pedido de compra.",
     "cancelTitle": "Cancelar pedido de compra",
@@ -879,7 +880,7 @@
       "product": "Produto",
       "qty": "Qtd",
       "received": "Recebido",
-      "unitCost": "Custo unitário ($)",
+      "unitCost": "Custo unitário",
       "vendor": "Fornecedor"
     },
     "count": "{{count}} pedido de compra",
@@ -1111,7 +1112,7 @@
       "selectService": "Select a service…",
       "service": "Service",
       "serviceId": "ID do serviço",
-      "unitPrice": "Preço Unitário ($)",
+      "unitPrice": "Preço Unitário",
       "unitPriceIn": "Unit price ({{currency}})"
     },
     "filters": {
@@ -1199,7 +1200,8 @@
     "title": "Pedidos de Venda",
     "total": "Total",
     "unassignedBackorder": "{{count}} linha(s) em pendência não têm fornecedor preferencial — crie esses POs manualmente.",
-    "unnamedService": "Unnamed"
+    "unnamedService": "Unnamed",
+    "notFound": "Sales order not found."
   },
   "stock": {
     "actions": {
@@ -1224,7 +1226,7 @@
     "fields": {
       "location": "Localização",
       "product": "Produto",
-      "unitCost": "Custo unitário (USD)"
+      "unitCost": "Custo unitário"
     },
     "filteredCount": "{{shown}} de {{total}} produtos",
     "levels": {
@@ -1466,7 +1468,7 @@
     "dialogTitle": "Lista de preços — {{name}}",
     "emptyState": "Ainda não há ofertas — adicione os números de peça e os custos contratuais do fornecedor abaixo.",
     "fields": {
-      "cost": "Custo ($)",
+      "cost": "Custo",
       "currency": "Moeda",
       "leadTime": "Prazo de entrega (dias)",
       "preferred": "Fornecedor preferencial para este produto (orienta sugestões de reposição)",

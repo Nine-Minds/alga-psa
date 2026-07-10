@@ -17,8 +17,59 @@ import { normalizeLiveRecurringStorage } from '@alga-psa/shared/billingClients/r
 
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
+import { actionError, permissionError } from '@alga-psa/ui/lib/errorHandling';
+import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 type TenantScopedKnex = Knex | Knex.Transaction;
+export type ContractLineMappingActionError = ActionMessageError | ActionPermissionError;
+
+class ContractLineMappingDomainError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ContractLineMappingDomainError';
+  }
+}
+
+function contractLineMappingActionErrorFrom(error: unknown): ContractLineMappingActionError | null {
+  if (error instanceof ContractLineMappingDomainError) {
+    if (error.message.startsWith('Permission denied:')) {
+      return permissionError(error.message);
+    }
+    return actionError(error.message);
+  }
+
+  if (error instanceof Error && error.message.startsWith('Permission denied:')) {
+    return permissionError(error.message);
+  }
+
+  if (error instanceof Error) {
+    if (error.message.startsWith('Base contract line') && error.message.includes('not found')) {
+      return actionError('The selected contract line is no longer available. Please refresh and try again.');
+    }
+    if (error.message.startsWith('Template contract line') && error.message.includes('not found')) {
+      return actionError('The selected template line is no longer available. Please refresh and try again.');
+    }
+  }
+
+  const dbError = error as { code?: string; column?: string };
+  if (dbError?.code === '22P02') {
+    return actionError('One of the selected contract line values is invalid. Please refresh and try again.');
+  }
+  if (dbError?.code === '23502') {
+    return actionError(`Missing required contract line field${dbError.column ? `: ${dbError.column}` : ''}.`);
+  }
+  if (dbError?.code === '23503') {
+    return actionError('The selected contract or contract line no longer exists. Please refresh and try again.');
+  }
+  if (dbError?.code === '23505') {
+    return actionError('This contract line is already associated with the selected contract.');
+  }
+  if (dbError?.code === '23514') {
+    return actionError('One of the contract line values is not allowed. Please review the form and try again.');
+  }
+
+  return null;
+}
 
 function tenantScopedTable(
   conn: TenantScopedKnex,
@@ -44,7 +95,7 @@ async function assertContractIsAuthorable(
     .where({ contract_id: contractId })
     .first('is_system_managed_default');
   if (contract?.is_system_managed_default === true) {
-    throw new Error('System-managed default contracts are attribution-only; contract-line authoring is disabled.');
+    throw new ContractLineMappingDomainError('System-managed default contracts are attribution-only; contract-line authoring is disabled.');
   }
 }
 
@@ -83,7 +134,7 @@ export async function ensureTemplateLineSnapshot(
     .first();
 
   if (!contractLine) {
-    throw new Error(`Base contract line ${contractLineId} not found for tenant ${tenant}`);
+    throw new ContractLineMappingDomainError(`Base contract line ${contractLineId} not found for tenant ${tenant}`);
   }
 
   const now = new Date().toISOString();
@@ -338,13 +389,13 @@ export async function ensureTemplateLineSnapshot(
  * Retrieve all contract line mappings for a contract.
  * After migration 20251028090000, data is stored directly in contract_lines/contract_template_lines.
  */
-export const getContractLineMappings = withAuth(async (user, { tenant }, contractId: string): Promise<IContractLineMapping[]> => {
+export const getContractLineMappings = withAuth(async (user, { tenant }, contractId: string): Promise<IContractLineMapping[] | ContractLineMappingActionError> => {
   try {
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx) => {
       if (!await hasPermission(user, 'billing', 'read')) {
-        throw new Error('Permission denied: Cannot read contract line mappings');
+        throw new ContractLineMappingDomainError('Permission denied: Cannot read contract line mappings');
       }
 
       const template = await isTemplateContract(trx, tenant, contractId);
@@ -370,10 +421,11 @@ export const getContractLineMappings = withAuth(async (user, { tenant }, contrac
     });
   } catch (error) {
     console.error(`Error fetching contract line mappings for contract ${contractId}:`, error);
-    if (error instanceof Error) {
-      throw error; // Preserve specific error messages
+    const expected = contractLineMappingActionErrorFrom(error);
+    if (expected) {
+      return expected;
     }
-    throw new Error(`Failed to fetch contract line mappings: ${error}`);
+    throw error;
   }
 });
 
@@ -381,13 +433,13 @@ export const getContractLineMappings = withAuth(async (user, { tenant }, contrac
  * Retrieve detailed contract line mappings for a contract.
  * After migration 20251028090000, data is stored directly in contract_lines/contract_template_lines.
  */
-export const getDetailedContractLines = withAuth(async (user, { tenant }, contractId: string): Promise<any[]> => {
+export const getDetailedContractLines = withAuth(async (user, { tenant }, contractId: string): Promise<any[] | ContractLineMappingActionError> => {
   try {
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx) => {
       if (!await hasPermission(user, 'billing', 'read')) {
-        throw new Error('Permission denied: Cannot read detailed contract lines');
+        throw new ContractLineMappingDomainError('Permission denied: Cannot read detailed contract lines');
       }
 
       const template = await isTemplateContract(trx, tenant, contractId);
@@ -428,10 +480,11 @@ export const getDetailedContractLines = withAuth(async (user, { tenant }, contra
     });
   } catch (error) {
     console.error(`Error fetching detailed contract line mappings for contract ${contractId}:`, error);
-    if (error instanceof Error) {
-      throw error; // Preserve specific error messages
+    const expected = contractLineMappingActionErrorFrom(error);
+    if (expected) {
+      return expected;
     }
-    throw new Error(`Failed to fetch detailed contract line mappings: ${error}`);
+    throw error;
   }
 });
 
@@ -445,13 +498,13 @@ export const addContractLine = withAuth(async (
   contractId: string,
   contractLineId: string,
   customRate?: number
-): Promise<IContractLineMapping> => {
+): Promise<IContractLineMapping | ContractLineMappingActionError> => {
   try {
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx) => {
       if (!await hasPermission(user, 'billing', 'create')) {
-        throw new Error('Permission denied: Cannot add contract lines');
+        throw new ContractLineMappingDomainError('Permission denied: Cannot add contract lines');
       }
 
       const template = await isTemplateContract(trx, tenant, contractId);
@@ -490,6 +543,9 @@ export const addContractLine = withAuth(async (
             template_line_id: contractLineId,
           })
           .first();
+        if (!row) {
+          throw new ContractLineMappingDomainError('The selected contract line could not be added. Please refresh and try again.');
+        }
 
         return {
           tenant,
@@ -510,10 +566,11 @@ export const addContractLine = withAuth(async (
     });
   } catch (error) {
     console.error(`Error adding contract line ${contractLineId} to contract ${contractId}:`, error);
-    if (error instanceof Error) {
-      throw error; // Preserve specific error messages
+    const expected = contractLineMappingActionErrorFrom(error);
+    if (expected) {
+      return expected;
     }
-    throw new Error(`Failed to add contract line to contract: ${error}`);
+    throw error;
   }
 });
 
@@ -521,13 +578,13 @@ export const addContractLine = withAuth(async (
  * Remove a contract line association.
  * After migration 20251028090000, data is stored directly in contract_lines/contract_template_lines.
  */
-export const removeContractLine = withAuth(async (user, { tenant }, contractId: string, contractLineId: string): Promise<void> => {
+export const removeContractLine = withAuth(async (user, { tenant }, contractId: string, contractLineId: string): Promise<void | ContractLineMappingActionError> => {
   try {
     const { knex } = await createTenantKnex();
 
     await withTransaction(knex, async (trx) => {
       if (!await hasPermission(user, 'billing', 'delete')) {
-        throw new Error('Permission denied: Cannot remove contract lines');
+        throw new ContractLineMappingDomainError('Permission denied: Cannot remove contract lines');
       }
 
       const template = await isTemplateContract(trx, tenant, contractId);
@@ -551,10 +608,11 @@ export const removeContractLine = withAuth(async (user, { tenant }, contractId: 
     });
   } catch (error) {
     console.error(`Error removing contract line ${contractLineId} from contract ${contractId}:`, error);
-    if (error instanceof Error) {
-      throw error; // Preserve specific error messages including "Cannot remove contract line from contract as it is currently assigned to clients"
+    const expected = contractLineMappingActionErrorFrom(error);
+    if (expected) {
+      return expected;
     }
-    throw new Error(`Failed to remove contract line from contract: ${error}`);
+    throw error;
   }
 });
 
@@ -568,13 +626,13 @@ export const updateContractLineAssociation = withAuth(async (
   contractId: string,
   contractLineId: string,
   updateData: Partial<IContractLineMapping>
-): Promise<IContractLineMapping> => {
+): Promise<IContractLineMapping | ContractLineMappingActionError> => {
   try {
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx) => {
       if (!await hasPermission(user, 'billing', 'update')) {
-        throw new Error('Permission denied: Cannot update contract line associations');
+        throw new ContractLineMappingDomainError('Permission denied: Cannot update contract line associations');
       }
 
       // Prepare data specifically for the database update
@@ -623,6 +681,9 @@ export const updateContractLineAssociation = withAuth(async (
             template_line_id: contractLineId,
           })
           .first();
+        if (!row) {
+          throw new ContractLineMappingDomainError('The selected contract line is no longer attached to this contract. Please refresh and try again.');
+        }
 
         return {
           tenant,
@@ -644,32 +705,34 @@ export const updateContractLineAssociation = withAuth(async (
     });
   } catch (error) {
     console.error(`Error updating contract line ${contractLineId} for contract ${contractId}:`, error);
-    if (error instanceof Error) {
-      throw error; // Preserve specific error messages
+    const expected = contractLineMappingActionErrorFrom(error);
+    if (expected) {
+      return expected;
     }
-    throw new Error(`Failed to update contract line association: ${error}`);
+    throw error;
   }
 });
 
 /**
  * Determine whether a contract line is already associated with a contract.
  */
-export const isContractLineAttached = withAuth(async (user, { tenant }, contractId: string, contractLineId: string): Promise<boolean> => {
+export const isContractLineAttached = withAuth(async (user, { tenant }, contractId: string, contractLineId: string): Promise<boolean | ContractLineMappingActionError> => {
   try {
     const { knex } = await createTenantKnex();
 
     return await withTransaction(knex, async (trx) => {
       if (!await hasPermission(user, 'billing', 'read')) {
-        throw new Error('Permission denied: Cannot check contract line associations');
+        throw new ContractLineMappingDomainError('Permission denied: Cannot check contract line associations');
       }
 
       return await ContractLineMapping.isContractLineAttached(contractId, contractLineId);
     });
   } catch (error) {
     console.error(`Error checking if contract line ${contractLineId} is associated with contract ${contractId}:`, error);
-    if (error instanceof Error) {
-      throw error; // Preserve specific error messages
+    const expected = contractLineMappingActionErrorFrom(error);
+    if (expected) {
+      return expected;
     }
-    throw new Error(`Failed to check contract line association: ${error}`);
+    throw error;
   }
 });

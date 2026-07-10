@@ -122,7 +122,7 @@ export async function GET(
         error.message.includes('Authentication')
       ) {
         return NextResponse.json(
-          { success: false, error: error.message },
+          { success: false, error: 'Access denied to platform notifications.' },
           { status: 403 }
         );
       }
@@ -183,7 +183,7 @@ async function handlePut(
         error.message.includes('Authentication')
       ) {
         return NextResponse.json(
-          { success: false, error: error.message },
+          { success: false, error: 'Access denied to platform notifications.' },
           { status: 403 }
         );
       }
@@ -296,7 +296,7 @@ async function handleDelete(
         error.message.includes('Authentication')
       ) {
         return NextResponse.json(
-          { success: false, error: error.message },
+          { success: false, error: 'Access denied to platform notifications.' },
           { status: 403 }
         );
       }

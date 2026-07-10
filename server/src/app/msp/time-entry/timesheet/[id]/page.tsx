@@ -11,10 +11,19 @@ import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { hasPermission } from '@alga-psa/auth';
 import { assertCanActOnBehalf, isManagerOfSubject } from '@alga-psa/scheduling/actions/timeEntryDelegationAuth';
 import type { Metadata } from 'next';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 export const metadata: Metadata = {
   title: 'Timesheet',
 };
+
+function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
+  return isActionMessageError(value) || isActionPermissionError(value);
+}
 
 export default async function TimeSheetPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -29,6 +38,10 @@ export default async function TimeSheetPage({ params }: { params: Promise<{ id: 
 
   try {
     const timeSheet = await fetchTimeSheet(id);
+    if (isReturnedActionError(timeSheet)) {
+      return <div className="p-6 text-sm text-red-600">{getErrorMessage(timeSheet)}</div>;
+    }
+
     if (!timeSheet.tenant || !timeSheet.user_id) {
       return notFound();
     }
@@ -60,6 +73,14 @@ export default async function TimeSheetPage({ params }: { params: Promise<{ id: 
       fetchWorkItemsForTimeSheet(timeSheet.id),
       timeSheet.approval_status !== 'DRAFT' ? fetchTimeSheetComments(timeSheet.id) : Promise.resolve([]),
     ]);
+    const initialLoadError =
+      isReturnedActionError(initialEntries) ? getErrorMessage(initialEntries) :
+      isReturnedActionError(initialWorkItems) ? getErrorMessage(initialWorkItems) :
+      isReturnedActionError(initialComments) ? getErrorMessage(initialComments) :
+      null;
+    if (initialLoadError) {
+      return <div className="p-6 text-sm text-red-600">{initialLoadError}</div>;
+    }
 
     return (
       <TimeSheetClient

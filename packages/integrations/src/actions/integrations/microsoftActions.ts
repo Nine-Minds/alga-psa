@@ -30,6 +30,29 @@ const MICROSOFT_CLIENT_SECRET_SECRET = 'microsoft_client_secret';
 const MICROSOFT_TENANT_ID_SECRET = 'microsoft_tenant_id';
 const DEFAULT_MICROSOFT_PROFILE_NAME = 'Default Microsoft Profile';
 
+function microsoftActionErrorMessage(error: unknown, fallback: string): string {
+  const message = error instanceof Error ? error.message : '';
+  if (message === 'Forbidden' || message.includes('Permission denied')) {
+    return 'Forbidden';
+  }
+
+  const dbError = error as { code?: string; constraint?: string };
+  if (dbError?.code === '23505') {
+    if (dbError.constraint?.includes('microsoft_profiles')) {
+      return 'A Microsoft profile with these details already exists.';
+    }
+    if (dbError.constraint?.includes('microsoft_profile_consumer_bindings')) {
+      return 'This Microsoft integration binding already exists.';
+    }
+    return 'A Microsoft configuration with these details already exists.';
+  }
+  if (dbError?.code === '23503') {
+    return 'The selected Microsoft profile or binding no longer exists.';
+  }
+
+  return fallback;
+}
+
 interface MicrosoftProfileRow {
   tenant: string;
   profile_id: string;
@@ -845,7 +868,7 @@ async function createMicrosoftProfileInternal(
       profile: await buildMicrosoftProfileSummary(tenant, row, secretProvider),
     };
   } catch (err: any) {
-    return { success: false, error: err?.message || 'Failed to create Microsoft profile' };
+    return { success: false, error: microsoftActionErrorMessage(err, 'Failed to create Microsoft profile') };
   }
 }
 
@@ -927,7 +950,7 @@ async function updateMicrosoftProfileInternal(
       profile: await buildMicrosoftProfileSummary(tenant, updated, secretProvider),
     };
   } catch (err: any) {
-    return { success: false, error: err?.message || 'Failed to update Microsoft profile' };
+    return { success: false, error: microsoftActionErrorMessage(err, 'Failed to update Microsoft profile') };
   }
 }
 
@@ -971,7 +994,7 @@ async function archiveMicrosoftProfileInternal(
 
     return { success: true };
   } catch (err: any) {
-    return { success: false, error: err?.message || 'Failed to archive Microsoft profile' };
+    return { success: false, error: microsoftActionErrorMessage(err, 'Failed to archive Microsoft profile') };
   }
 }
 
@@ -1015,7 +1038,7 @@ async function deleteMicrosoftProfileInternal(
 
     return { success: true };
   } catch (err: any) {
-    return { success: false, error: err?.message || 'Failed to delete Microsoft profile' };
+    return { success: false, error: microsoftActionErrorMessage(err, 'Failed to delete Microsoft profile') };
   }
 }
 
@@ -1065,7 +1088,7 @@ async function setDefaultMicrosoftProfileInternal(
       profile: await buildMicrosoftProfileSummary(tenant, updated, secretProvider),
     };
   } catch (err: any) {
-    return { success: false, error: err?.message || 'Failed to set default Microsoft profile' };
+    return { success: false, error: microsoftActionErrorMessage(err, 'Failed to set default Microsoft profile') };
   }
 }
 
@@ -1081,7 +1104,7 @@ export const listMicrosoftProfiles = withAuth(async (
       profiles: await listMicrosoftProfilesForTenant(tenant, (user as any)?.user_id),
     };
   } catch (err: any) {
-    return { success: false, error: err?.message || 'Failed to list Microsoft profiles' };
+    return { success: false, error: microsoftActionErrorMessage(err, 'Failed to list Microsoft profiles') };
   }
 });
 
@@ -1147,7 +1170,7 @@ export const listMicrosoftConsumerBindings = withAuth(async (
       }),
     };
   } catch (err: any) {
-    return { success: false, error: err?.message || 'Failed to list Microsoft consumer bindings' };
+    return { success: false, error: microsoftActionErrorMessage(err, 'Failed to list Microsoft consumer bindings') };
   }
 });
 
@@ -1236,7 +1259,7 @@ export const setMicrosoftConsumerBinding = withAuth(async (
       },
     };
   } catch (err: any) {
-    return { success: false, error: err?.message || 'Failed to save Microsoft consumer binding' };
+    return { success: false, error: microsoftActionErrorMessage(err, 'Failed to save Microsoft consumer binding') };
   }
 });
 
@@ -1315,7 +1338,7 @@ export const getMicrosoftConsumerSetupStatus = withAuth(async (
         : `${consumerLabel} is bound to ${profile.displayName}, but that profile still needs configuration.`,
     };
   } catch (err: any) {
-    return { success: false, error: err?.message || 'Failed to load Microsoft consumer setup status' };
+    return { success: false, error: microsoftActionErrorMessage(err, 'Failed to load Microsoft consumer setup status') };
   }
 });
 
@@ -1349,7 +1372,7 @@ export const getMicrosoftIntegrationStatus = withAuth(async (
       profiles: visibleProfiles,
     };
   } catch (err: any) {
-    return { success: false, error: err?.message || 'Failed to load Microsoft integration status' };
+    return { success: false, error: microsoftActionErrorMessage(err, 'Failed to load Microsoft integration status') };
   }
 });
 
@@ -1400,7 +1423,7 @@ export const saveMicrosoftIntegrationSettings = withAuth(async (
 
     return result.success ? { success: true } : { success: false, error: result.error };
   } catch (err: any) {
-    return { success: false, error: err?.message || 'Failed to save Microsoft integration settings' };
+    return { success: false, error: microsoftActionErrorMessage(err, 'Failed to save Microsoft integration settings') };
   }
 });
 
@@ -1460,6 +1483,6 @@ export const resetMicrosoftProvidersToDisconnected = withAuth(async (
 
     return { success: true };
   } catch (err: any) {
-    return { success: false, error: err?.message || 'Failed to reset Microsoft providers' };
+    return { success: false, error: microsoftActionErrorMessage(err, 'Failed to reset Microsoft providers') };
   }
 });

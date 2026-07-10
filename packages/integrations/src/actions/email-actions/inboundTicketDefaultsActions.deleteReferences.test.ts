@@ -88,7 +88,7 @@ describe('deleteInboundTicketDefaults reference clearing', () => {
     knexImpl = knex;
 
     const { deleteInboundTicketDefaults } = await import('./inboundTicketDefaultsActions');
-    await deleteInboundTicketDefaults('defaults-1');
+    await expect(deleteInboundTicketDefaults('defaults-1')).resolves.toEqual({ success: true });
 
     expect(calls).toEqual(
       expect.arrayContaining([
@@ -116,7 +116,7 @@ describe('deleteInboundTicketDefaults reference clearing', () => {
     );
   });
 
-  it('throws when defaults row is not found after reference clearing', async () => {
+  it('returns an action error when defaults row is not found after reference clearing', async () => {
     const { knex } = createDeleteHarness({
       hasClientsDestinationColumn: true,
       hasContactsDestinationColumn: true,
@@ -125,8 +125,8 @@ describe('deleteInboundTicketDefaults reference clearing', () => {
     knexImpl = knex;
 
     const { deleteInboundTicketDefaults } = await import('./inboundTicketDefaultsActions');
-    await expect(
-      deleteInboundTicketDefaults('missing-defaults')
-    ).rejects.toThrow('Defaults configuration not found');
+    await expect(deleteInboundTicketDefaults('missing-defaults')).resolves.toEqual({
+      actionError: 'Defaults configuration not found',
+    });
   });
 });

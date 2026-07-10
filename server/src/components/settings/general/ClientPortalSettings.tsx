@@ -10,10 +10,14 @@ import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect
 import {
   getTenantBrandingAction,
   updateTenantBrandingAction,
+} from '@alga-psa/tenancy/actions/tenant-actions/tenantBrandingActions';
+import {
   getTenantLocaleSettingsAction,
+} from '@alga-psa/tenancy/actions/tenant-actions/tenantLocaleActions';
+import {
   getTenantClientPortalLocaleAction,
   updateTenantClientPortalLocaleAction,
-} from '@alga-psa/tenancy/actions';
+} from '@alga-psa/tenancy/actions/tenant-actions/tenantClientPortalLocaleActions';
 import { toast } from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -21,12 +25,12 @@ import { Input } from '@alga-psa/ui/components/Input';
 import EntityImageUpload from '@alga-psa/ui/components/EntityImageUpload';
 import ColorPicker from '@alga-psa/ui/components/ColorPicker';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
-import { deleteTenantLogo, uploadTenantLogo } from '@alga-psa/tenancy/actions';
-import { getCurrentUser } from '@alga-psa/user-composition/actions';
-import { useBranding } from '@alga-psa/tenancy/components';
+import { deleteTenantLogo, uploadTenantLogo } from '@alga-psa/tenancy/actions/tenant-actions/tenantLogoActions';
+import { getCurrentUser } from '@alga-psa/user-composition/actions/userQueryActions';
+import { useBranding } from '@alga-psa/tenancy/components/providers/BrandingProvider';
 import ClientPortalDomainSettings from '@alga-psa/client-portal/domain-settings/entry';
 import SignInPagePreview from './SignInPagePreview';
-import { getPortalDomainStatusAction } from '@alga-psa/tenancy/actions';
+import { getPortalDomainStatusAction } from '@alga-psa/tenancy/actions/tenant-actions/portalDomainActions';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 

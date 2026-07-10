@@ -185,7 +185,7 @@ export function ActivityActionMenu({ activity, onActionComplete, onViewDetails }
         await crossFeature.dismissTask?.(activity.id);
       } catch (error: any) {
         console.error(`Error dismissing task:`, error);
-        alert(t('drawer.menu.dismissError', { defaultValue: 'Failed to dismiss task: {{message}}', message: error.message }));
+        alert(t('drawer.menu.dismissError', { defaultValue: 'Failed to dismiss task. Please try again.' }));
       }
     } else {
       console.warn('Dismiss action is only supported for workflow tasks');

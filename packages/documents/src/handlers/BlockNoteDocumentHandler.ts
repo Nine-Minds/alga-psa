@@ -1,5 +1,6 @@
 import type { IDocument, PreviewResponse } from '@alga-psa/types';
 import { BaseDocumentHandler } from './BaseDocumentHandler';
+import { documentPreviewErrorMessage } from './previewErrors';
 import { convertBlockContentToHTML } from '@alga-psa/formatting/blocknoteUtils';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
@@ -92,7 +93,7 @@ export class BlockNoteDocumentHandler extends BaseDocumentHandler {
       console.error(`[BlockNoteDocumentHandler] Error generating preview for document ${document.document_id}:`, error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to generate BlockNote document preview'
+        error: documentPreviewErrorMessage(error, 'Failed to generate BlockNote document preview')
       };
     }
   }

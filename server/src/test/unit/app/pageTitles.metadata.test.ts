@@ -71,7 +71,9 @@ function collectPages(rootRelativePath: string): string[] {
   }
 
   walk(rootPath);
-  return pagePaths.sort();
+  return pagePaths
+    .filter((relativePath) => !relativePath.includes('/@modal/'))
+    .sort();
 }
 
 describe('route title metadata coverage', () => {

@@ -11,8 +11,77 @@ import * as planServiceConfigActions from './contractLineServiceConfigurationAct
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import {
+  actionError,
+  isActionMessageError,
+  isActionPermissionError,
+  permissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 type TenantScopedKnex = Knex | Knex.Transaction;
+export type ContractLineServiceActionError = ActionMessageError | ActionPermissionError;
+
+type ContractLineServiceWithConfiguration = {
+  service: IService & { service_type_name?: string };
+  configuration: IContractLineServiceConfiguration;
+  typeConfig: IContractLineServiceFixedConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | IContractLineServiceBucketConfig | null;
+  userTypeRates?: IUserTypeRate[];
+  bucketConfig?: IContractLineServiceBucketConfig | null;
+};
+
+type TemplateLineServiceWithConfiguration = {
+  service: IService & { service_type_name?: string };
+  configuration: IContractLineServiceConfiguration;
+  typeConfig: IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | IContractLineServiceBucketConfig | null;
+  bucketConfig?: IContractLineServiceBucketConfig | null;
+};
+
+function isReturnedActionError(value: unknown): value is ContractLineServiceActionError {
+  return isActionMessageError(value) || isActionPermissionError(value);
+}
+
+function contractLineServiceActionErrorFrom(error: unknown): ContractLineServiceActionError | null {
+  if (error instanceof Error && error.message.startsWith('Permission denied:')) {
+    return permissionError(error.message);
+  }
+
+  if (error instanceof Error) {
+    if (
+      error.message === 'Service management for template lines currently supports fixed fee lines only.' ||
+      error.message === 'Products can only be added to fixed-fee contract lines.' ||
+      error.message.includes('cannot be attached to contract lines') ||
+      error.message.includes('does not have') ||
+      error.message.includes('requires an hourly rate') ||
+      error.message.includes('must be a numeric value') ||
+      error.message.includes('Configuration type')
+    ) {
+      return actionError(error.message);
+    }
+    if (error.message.includes('not found')) {
+      return actionError('The selected contract line service is no longer available. Please refresh and try again.');
+    }
+  }
+
+  const dbError = error as { code?: string; column?: string };
+  if (dbError?.code === '22P02') {
+    return actionError('One of the selected service values is invalid. Please refresh and try again.');
+  }
+  if (dbError?.code === '23502') {
+    return actionError(`Missing required service field${dbError.column ? `: ${dbError.column}` : ''}.`);
+  }
+  if (dbError?.code === '23503') {
+    return actionError('The selected contract line or service no longer exists. Please refresh and try again.');
+  }
+  if (dbError?.code === '23505') {
+    return actionError('This service is already associated with the selected contract line.');
+  }
+  if (dbError?.code === '23514') {
+    return actionError('One of the service values is not allowed. Please review the form and try again.');
+  }
+
+  return null;
+}
 
 function tenantScopedTable(
   conn: TenantScopedKnex,
@@ -49,34 +118,43 @@ export const getContractLineServices = withAuth(async (
   user,
   { tenant },
   contractLineId: string
-): Promise<IContractLineService[]> => {
-  if (!await hasPermission(user, 'billing', 'read')) {
-    throw new Error('Permission denied: billing read required');
-  }
-  const { knex: db } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('tenant context not found');
-  }
-  return withTransaction(db, async (trx: Knex.Transaction) => {
-    const templateLine = await findTemplateLine(trx, tenant, contractLineId);
-    if (templateLine) {
-      const services = await tenantScopedTable(trx, tenant, 'contract_template_line_services')
+): Promise<IContractLineService[] | ContractLineServiceActionError> => {
+  try {
+    if (!await hasPermission(user, 'billing', 'read')) {
+      return permissionError('Permission denied: billing read required');
+    }
+    const { knex: db } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('tenant context not found');
+    }
+    return withTransaction(db, async (trx: Knex.Transaction) => {
+      const templateLine = await findTemplateLine(trx, tenant, contractLineId);
+      if (templateLine) {
+        const services = await tenantScopedTable(trx, tenant, 'contract_template_line_services')
+          .where({
+            template_line_id: contractLineId,
+          })
+          .select('*');
+
+        return services.map(mapTemplateServiceRow);
+      }
+
+      const services = await tenantScopedTable(trx, tenant, 'contract_line_services')
         .where({
-          template_line_id: contractLineId,
+          contract_line_id: contractLineId,
         })
         .select('*');
 
-      return services.map(mapTemplateServiceRow);
+      return services as Array<IContractLineService & { service_name?: string }>;
+    });
+  } catch (error) {
+    console.error(`Error fetching services for contract line ${contractLineId}:`, error);
+    const expected = contractLineServiceActionErrorFrom(error);
+    if (expected) {
+      return expected;
     }
-
-    const services = await tenantScopedTable(trx, tenant, 'contract_line_services')
-      .where({
-        contract_line_id: contractLineId,
-      })
-      .select('*');
-
-    return services as Array<IContractLineService & { service_name?: string }>;
-  });
+    throw error;
+  }
 });
 
 /**
@@ -86,27 +164,36 @@ export const getContractLineServicesWithNames = withAuth(async (
   user,
   { tenant },
   contractLineId: string
-): Promise<Array<IContractLineService & { service_name?: string }>> => {
-  if (!await hasPermission(user, 'billing', 'read')) {
-    throw new Error('Permission denied: billing read required');
+): Promise<Array<IContractLineService & { service_name?: string }> | ContractLineServiceActionError> => {
+  try {
+    if (!await hasPermission(user, 'billing', 'read')) {
+      return permissionError('Permission denied: billing read required');
+    }
+    const { knex: db } = await createTenantKnex();
+    return withTransaction(db, async (trx: Knex.Transaction) => {
+      const facade = tenantDb(trx, tenant);
+      const query = facade.table('contract_line_services as cls');
+      facade.tenantJoin(query, 'service_catalog as sc', 'cls.service_id', 'sc.service_id', { type: 'left' });
+
+      const services = await query
+        .where({
+          'cls.contract_line_id': contractLineId,
+        })
+        .select(
+          'cls.*',
+          'sc.service_name'
+        );
+
+      return services as unknown as Array<IContractLineService & { service_name?: string }>;
+    });
+  } catch (error) {
+    console.error(`Error fetching named services for contract line ${contractLineId}:`, error);
+    const expected = contractLineServiceActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
   }
-  const { knex: db } = await createTenantKnex();
-  return withTransaction(db, async (trx: Knex.Transaction) => {
-    const facade = tenantDb(trx, tenant);
-    const query = facade.table('contract_line_services as cls');
-    facade.tenantJoin(query, 'service_catalog as sc', 'cls.service_id', 'sc.service_id', { type: 'left' });
-
-    const services = await query
-      .where({
-        'cls.contract_line_id': contractLineId,
-      })
-      .select(
-        'cls.*',
-        'sc.service_name'
-      );
-
-    return services as unknown as Array<IContractLineService & { service_name?: string }>;
-  });
 });
 
 /**
@@ -117,36 +204,45 @@ export const getContractLineService = withAuth(async (
   { tenant },
   contractLineId: string,
   serviceId: string
-): Promise<IContractLineService | null> => {
-  if (!await hasPermission(user, 'billing', 'read')) {
-    throw new Error('Permission denied: billing read required');
-  }
-  const { knex: db } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('tenant context not found');
-  }
-  return withTransaction(db, async (trx: Knex.Transaction) => {
-    const templateLine = await findTemplateLine(trx, tenant, contractLineId);
-    if (templateLine) {
-      const service = await tenantScopedTable(trx, tenant, 'contract_template_line_services')
+): Promise<IContractLineService | ContractLineServiceActionError | null> => {
+  try {
+    if (!await hasPermission(user, 'billing', 'read')) {
+      return permissionError('Permission denied: billing read required');
+    }
+    const { knex: db } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('tenant context not found');
+    }
+    return withTransaction(db, async (trx: Knex.Transaction) => {
+      const templateLine = await findTemplateLine(trx, tenant, contractLineId);
+      if (templateLine) {
+        const service = await tenantScopedTable(trx, tenant, 'contract_template_line_services')
+          .where({
+            template_line_id: contractLineId,
+            service_id: serviceId,
+          })
+          .first();
+
+        return service ? mapTemplateServiceRow(service) : null;
+      }
+
+      const service = await tenantScopedTable(trx, tenant, 'contract_line_services')
         .where({
-          template_line_id: contractLineId,
+          contract_line_id: contractLineId,
           service_id: serviceId,
         })
         .first();
 
-      return service ? mapTemplateServiceRow(service) : null;
+      return service || null;
+    });
+  } catch (error) {
+    console.error(`Error fetching service ${serviceId} for contract line ${contractLineId}:`, error);
+    const expected = contractLineServiceActionErrorFrom(error);
+    if (expected) {
+      return expected;
     }
-
-    const service = await tenantScopedTable(trx, tenant, 'contract_line_services')
-      .where({
-        contract_line_id: contractLineId,
-        service_id: serviceId,
-      })
-      .first();
-
-    return service || null;
-  });
+    throw error;
+  }
 });
 
 async function addServiceToTemplateLine(
@@ -246,209 +342,220 @@ export const addServiceToContractLine = withAuth(async (
   customRate?: number,
   configType?: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket',
   typeConfig?: Partial<IContractLineServiceFixedConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | IContractLineServiceBucketConfig>
-): Promise<string> => {
-  if (!await hasPermission(user, 'billing', 'create')) {
-    throw new Error('Permission denied: billing create required');
-  }
-  const { knex: db } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('tenant context not found');
-  }
-  return withTransaction(db, async (trx: Knex.Transaction) => {
-    const templateLine = await findTemplateLine(trx, tenant, contractLineId);
-    if (templateLine) {
-      return addServiceToTemplateLine(trx, tenant, templateLine, serviceId, quantity, customRate);
+): Promise<string | ContractLineServiceActionError> => {
+  try {
+    if (!await hasPermission(user, 'billing', 'create')) {
+      return permissionError('Permission denied: billing create required');
     }
-
-  const service = await tenantScopedTable(trx, tenant, 'service_catalog')
-    .where({
-      service_id: serviceId,
-    })
-    .first() as IService | undefined;
-
-  if (!service) {
-    throw new Error(`Service ${serviceId} not found`);
-  }
-
-  // Get plan details
-  const plan = await tenantScopedTable(trx, tenant, 'contract_lines')
-    .where({
-      contract_line_id: contractLineId,
-    })
-    .first();
-
-  if (!plan) {
-    throw new Error(`Contract line ${contractLineId} not found`);
-  }
-
-  // --- BEGIN SERVER-SIDE VALIDATION ---
-  // Prevent attaching inactive catalog items to new/updated contract lines.
-  if (service.is_active === false) {
-    throw new Error(`"${service.service_name}" is inactive and cannot be attached to contract lines.`);
-  }
-
-  // Products (per-unit items) are only supported on Fixed contract lines in V1.
-  if (service.item_kind === 'product') {
-    if (plan.contract_line_type !== 'Fixed') {
-      throw new Error(`Products can only be added to fixed-fee contract lines.`);
+    const { knex: db } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('tenant context not found');
     }
+    return withTransaction(db, async (trx: Knex.Transaction) => {
+      const templateLine = await findTemplateLine(trx, tenant, contractLineId);
+      if (templateLine) {
+        return addServiceToTemplateLine(trx, tenant, templateLine, serviceId, quantity, customRate);
+      }
 
-    // Validate that the product has pricing in the contract currency unless an override is provided.
-    const contract = plan.contract_id
-      ? await tenantScopedTable(trx, tenant, 'contracts').where({ contract_id: plan.contract_id }).select('currency_code').first()
-      : null;
-    const currencyCode = contract?.currency_code ?? 'USD';
-
-    const hasOverride = customRate !== undefined && customRate !== null;
-    if (!hasOverride) {
-      const priceRow = await tenantScopedTable(trx, tenant, 'service_prices')
+      const service = await tenantScopedTable(trx, tenant, 'service_catalog')
         .where({
           service_id: serviceId,
-          currency_code: currencyCode
         })
-        .select('price_id')
+        .first() as IService | undefined;
+
+      if (!service) {
+        throw new Error(`Service ${serviceId} not found`);
+      }
+
+      const plan = await tenantScopedTable(trx, tenant, 'contract_lines')
+        .where({
+          contract_line_id: contractLineId,
+        })
         .first();
 
-      if (!priceRow) {
-        throw new Error(
-          `Product "${service.service_name}" does not have ${currencyCode} pricing. Add a price in the catalog or enter a custom rate.`
-        );
+      if (!plan) {
+        throw new Error(`Contract line ${contractLineId} not found`);
       }
-    }
-  }
 
-  const allowedConfigTypesByPlan: Record<'Fixed' | 'Hourly' | 'Usage', Array<'Fixed' | 'Hourly' | 'Usage' | 'Bucket'>> = {
-    Fixed: ['Fixed', 'Bucket'],
-    Hourly: ['Hourly', 'Bucket'],
-    Usage: ['Usage', 'Bucket'],
-  };
+      if (service.is_active === false) {
+        throw new Error(`"${service.service_name}" is inactive and cannot be attached to contract lines.`);
+      }
 
-  if (configType) {
-    const allowedConfigTypes = allowedConfigTypesByPlan[plan.contract_line_type as 'Fixed' | 'Hourly' | 'Usage'] ?? ['Fixed'];
-    if (!allowedConfigTypes.includes(configType)) {
-      throw new Error(
-        `Configuration type ${configType} is not valid for ${plan.contract_line_type} contract lines. Allowed: ${allowedConfigTypes.join(', ')}.`
-      );
-    }
-  }
-  // --- END SERVER-SIDE VALIDATION ---
+      if (service.item_kind === 'product') {
+        if (plan.contract_line_type !== 'Fixed') {
+          throw new Error(`Products can only be added to fixed-fee contract lines.`);
+        }
 
-  // Determine configuration type from explicit override first, otherwise from target contract-line context.
-  const determinedConfigType: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket' = configType
-    ?? (
-      plan.contract_line_type === 'Hourly'
-        ? 'Hourly'
-        : plan.contract_line_type === 'Usage'
-          ? 'Usage'
-          : 'Fixed'
-    );
+        const contract = plan.contract_id
+          ? await tenantScopedTable(trx, tenant, 'contracts').where({ contract_id: plan.contract_id }).select('currency_code').first()
+          : null;
+        const currencyCode = contract?.currency_code ?? 'USD';
 
-  const configurationType = determinedConfigType;
-  let hourlyConfigPayload: Partial<IContractLineServiceHourlyConfig> | undefined;
+        const hasOverride = customRate !== undefined && customRate !== null;
+        if (!hasOverride) {
+          const priceRow = await tenantScopedTable(trx, tenant, 'service_prices')
+            .where({
+              service_id: serviceId,
+              currency_code: currencyCode
+            })
+            .select('price_id')
+            .first();
 
-  // If this is a Bucket configuration and overage_rate is not provided, set it to the service's default_rate
-  if (configurationType === 'Bucket') {
-    typeConfig = typeConfig || {};
-    if ((typeConfig as Partial<IContractLineServiceBucketConfig>)?.overage_rate === undefined) {
-      (typeConfig as Partial<IContractLineServiceBucketConfig>).overage_rate = service.default_rate;
-    }
-  } else if (configurationType === 'Hourly') {
-    const providedHourly = (typeConfig as Partial<IContractLineServiceHourlyConfig>) || {};
-    const resolvedHourlyRate =
-      typeof providedHourly.hourly_rate !== 'undefined'
-        ? providedHourly.hourly_rate
-        : service.default_rate;
+          if (!priceRow) {
+            throw new Error(
+              `Product "${service.service_name}" does not have ${currencyCode} pricing. Add a price in the catalog or enter a custom rate.`
+            );
+          }
+        }
+      }
 
-    if (resolvedHourlyRate === undefined || resolvedHourlyRate === null) {
-      throw new Error(`Service ${service.service_name} requires an hourly rate before it can be added to an hourly contract line.`);
-    }
+      const allowedConfigTypesByPlan: Record<'Fixed' | 'Hourly' | 'Usage', Array<'Fixed' | 'Hourly' | 'Usage' | 'Bucket'>> = {
+        Fixed: ['Fixed', 'Bucket'],
+        Hourly: ['Hourly', 'Bucket'],
+        Usage: ['Usage', 'Bucket'],
+      };
 
-    const normalizedHourlyRate = Number(resolvedHourlyRate);
-    if (Number.isNaN(normalizedHourlyRate)) {
-      throw new Error(`Hourly rate for service ${service.service_name} must be a numeric value.`);
-    }
+      if (configType) {
+        const allowedConfigTypes = allowedConfigTypesByPlan[plan.contract_line_type as 'Fixed' | 'Hourly' | 'Usage'] ?? ['Fixed'];
+        if (!allowedConfigTypes.includes(configType)) {
+          throw new Error(
+            `Configuration type ${configType} is not valid for ${plan.contract_line_type} contract lines. Allowed: ${allowedConfigTypes.join(', ')}.`
+          );
+        }
+      }
 
-    const minimumBillableCandidate = Number(
-      typeof providedHourly.minimum_billable_time !== 'undefined'
-        ? providedHourly.minimum_billable_time
-        : 15
-    );
-    const roundUpCandidate = Number(
-      typeof providedHourly.round_up_to_nearest !== 'undefined'
-        ? providedHourly.round_up_to_nearest
-        : 15
-    );
+      const determinedConfigType: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket' = configType
+        ?? (
+          plan.contract_line_type === 'Hourly'
+            ? 'Hourly'
+            : plan.contract_line_type === 'Usage'
+              ? 'Usage'
+              : 'Fixed'
+        );
 
-    const minimumBillableTime = Number.isFinite(minimumBillableCandidate) && minimumBillableCandidate > 0
-      ? minimumBillableCandidate
-      : 15;
-    const roundUpToNearest = Number.isFinite(roundUpCandidate) && roundUpCandidate > 0
-      ? roundUpCandidate
-      : 15;
+      const configurationType = determinedConfigType;
+      let hourlyConfigPayload: Partial<IContractLineServiceHourlyConfig> | undefined;
 
-    hourlyConfigPayload = {
-      hourly_rate: normalizedHourlyRate,
-      minimum_billable_time: minimumBillableTime,
-      round_up_to_nearest: roundUpToNearest,
-    };
+      if (configurationType === 'Bucket') {
+        typeConfig = typeConfig || {};
+        if ((typeConfig as Partial<IContractLineServiceBucketConfig>)?.overage_rate === undefined) {
+          (typeConfig as Partial<IContractLineServiceBucketConfig>).overage_rate = service.default_rate;
+        }
+      } else if (configurationType === 'Hourly') {
+        const providedHourly = (typeConfig as Partial<IContractLineServiceHourlyConfig>) || {};
+        const resolvedHourlyRate =
+          typeof providedHourly.hourly_rate !== 'undefined'
+            ? providedHourly.hourly_rate
+            : service.default_rate;
 
-    typeConfig = hourlyConfigPayload;
-  }
+        if (resolvedHourlyRate === undefined || resolvedHourlyRate === null) {
+          throw new Error(`Service ${service.service_name} requires an hourly rate before it can be added to an hourly contract line.`);
+        }
 
-  // Check if the service is already in the plan
-  const existingPlanService = await getContractLineService(contractLineId, serviceId);
+        const normalizedHourlyRate = Number(resolvedHourlyRate);
+        if (Number.isNaN(normalizedHourlyRate)) {
+          throw new Error(`Hourly rate for service ${service.service_name} must be a numeric value.`);
+        }
 
-  // If not, add it to the contract_line_services table
-  if (!existingPlanService) {
-    await tenantScopedTable(trx, tenant, 'contract_line_services').insert({
-      contract_line_id: contractLineId,
-      service_id: serviceId,
-      tenant: tenant
+        const minimumBillableCandidate = Number(
+          typeof providedHourly.minimum_billable_time !== 'undefined'
+            ? providedHourly.minimum_billable_time
+            : 15
+        );
+        const roundUpCandidate = Number(
+          typeof providedHourly.round_up_to_nearest !== 'undefined'
+            ? providedHourly.round_up_to_nearest
+            : 15
+        );
+
+        const minimumBillableTime = Number.isFinite(minimumBillableCandidate) && minimumBillableCandidate > 0
+          ? minimumBillableCandidate
+          : 15;
+        const roundUpToNearest = Number.isFinite(roundUpCandidate) && roundUpCandidate > 0
+          ? roundUpCandidate
+          : 15;
+
+        hourlyConfigPayload = {
+          hourly_rate: normalizedHourlyRate,
+          minimum_billable_time: minimumBillableTime,
+          round_up_to_nearest: roundUpToNearest,
+        };
+
+        typeConfig = hourlyConfigPayload;
+      }
+
+      const existingPlanService = await getContractLineService(contractLineId, serviceId);
+      if (isReturnedActionError(existingPlanService)) {
+        return existingPlanService;
+      }
+
+      if (!existingPlanService) {
+        await tenantScopedTable(trx, tenant, 'contract_line_services').insert({
+          contract_line_id: contractLineId,
+          service_id: serviceId,
+          tenant: tenant
+        });
+      }
+
+      const existingConfig = await planServiceConfigActions.getConfigurationForService(contractLineId, serviceId);
+      if (isReturnedActionError(existingConfig)) {
+        return existingConfig;
+      }
+
+      let configId: string | ContractLineServiceActionError;
+
+      if (existingConfig) {
+        const updateResult = await planServiceConfigActions.updateConfiguration(
+          existingConfig.config_id,
+          {
+            configuration_type: configurationType,
+            custom_rate: customRate,
+            quantity: quantity || 1
+          },
+          typeConfig || {}
+        );
+        if (isReturnedActionError(updateResult)) {
+          return updateResult;
+        }
+        configId = existingConfig.config_id;
+      } else {
+        configId = await planServiceConfigActions.createConfiguration(
+          {
+            contract_line_id: contractLineId,
+            service_id: serviceId,
+            configuration_type: configurationType,
+            custom_rate: customRate,
+            quantity: quantity || 1,
+            tenant: tenant!
+          },
+          typeConfig || {}
+        );
+        if (isReturnedActionError(configId)) {
+          return configId;
+        }
+      }
+
+      if (configurationType === 'Hourly' && hourlyConfigPayload) {
+        const hourlyResult = await planServiceConfigActions.upsertPlanServiceHourlyConfiguration(
+          contractLineId,
+          serviceId,
+          hourlyConfigPayload
+        );
+        if (isReturnedActionError(hourlyResult)) {
+          return hourlyResult;
+        }
+      }
+
+      return configId;
     });
+  } catch (error) {
+    console.error(`Error adding service ${serviceId} to contract line ${contractLineId}:`, error);
+    const expected = contractLineServiceActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
   }
-
-  // Check if a configuration already exists for this plan-service combination
-  const existingConfig = await planServiceConfigActions.getConfigurationForService(contractLineId, serviceId);
-
-  let configId: string;
-
-  if (existingConfig) {
-    // Update existing configuration instead of creating a new one
-    await planServiceConfigActions.updateConfiguration(
-      existingConfig.config_id,
-      {
-        configuration_type: configurationType,
-        custom_rate: customRate,
-        quantity: quantity || 1
-      },
-      typeConfig || {}
-    );
-    configId = existingConfig.config_id;
-  } else {
-    // Create new configuration if one doesn't exist
-    configId = await planServiceConfigActions.createConfiguration(
-      {
-        contract_line_id: contractLineId,
-        service_id: serviceId,
-        configuration_type: configurationType,
-        custom_rate: customRate,
-        quantity: quantity || 1,
-        tenant: tenant!
-      },
-      typeConfig || {}
-    );
-  }
-
-  if (configurationType === 'Hourly' && hourlyConfigPayload) {
-    await planServiceConfigActions.upsertPlanServiceHourlyConfiguration(
-      contractLineId,
-      serviceId,
-      hourlyConfigPayload
-    );
-  }
-
-    return configId;
-  });
 });
 
 /**
@@ -465,57 +572,71 @@ export const updateContractLineService = withAuth(async (
     typeConfig?: Partial<IContractLineServiceFixedConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | IContractLineServiceBucketConfig>;
   },
   rateTiers?: IContractLineServiceRateTier[] // Add rateTiers here
-): Promise<boolean> => {
-  if (!await hasPermission(user, 'billing', 'update')) {
-    throw new Error('Permission denied: billing update required');
+): Promise<boolean | ContractLineServiceActionError> => {
+  try {
+    if (!await hasPermission(user, 'billing', 'update')) {
+      return permissionError('Permission denied: billing update required');
+    }
+    const { knex: db } = await createTenantKnex();
+    return withTransaction(db, async (trx: Knex.Transaction) => {
+      const config = await planServiceConfigActions.getConfigurationForService(contractLineId, serviceId);
+      if (isReturnedActionError(config)) {
+        return config;
+      }
+
+      if (!config) {
+        throw new Error(`Configuration for service ${serviceId} in contract line ${contractLineId} not found`);
+      }
+
+      const baseUpdates: Partial<IContractLineServiceConfiguration> = {};
+      if (updates.quantity !== undefined) {
+        baseUpdates.quantity = updates.quantity;
+      }
+      if (updates.customRate !== undefined) {
+        baseUpdates.custom_rate = updates.customRate;
+      }
+
+      const updateResult = await planServiceConfigActions.updateConfiguration(
+        config.config_id,
+        Object.keys(baseUpdates).length > 0 ? baseUpdates : undefined,
+        updates.typeConfig,
+        rateTiers
+      );
+      if (isReturnedActionError(updateResult)) {
+        return updateResult;
+      }
+
+      if (
+        config.configuration_type === 'Hourly' &&
+        updates.typeConfig &&
+        typeof (updates.typeConfig as IContractLineServiceHourlyConfig).hourly_rate !== 'undefined'
+      ) {
+        const hourlyPayload: Partial<IContractLineServiceHourlyConfig> = {
+          hourly_rate: (updates.typeConfig as IContractLineServiceHourlyConfig).hourly_rate,
+          minimum_billable_time: (updates.typeConfig as IContractLineServiceHourlyConfig).minimum_billable_time,
+          round_up_to_nearest: (updates.typeConfig as IContractLineServiceHourlyConfig).round_up_to_nearest,
+        };
+
+        const hourlyResult = await planServiceConfigActions.upsertPlanServiceHourlyConfiguration(
+          contractLineId,
+          serviceId,
+          hourlyPayload
+        );
+        if (isReturnedActionError(hourlyResult)) {
+          return hourlyResult;
+        }
+      }
+
+      return true;
+    });
+  } catch (error) {
+    console.error(`Error updating service ${serviceId} for contract line ${contractLineId}:`, error);
+    const expected = contractLineServiceActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
   }
-  const { knex: db } = await createTenantKnex();
-  return withTransaction(db, async (trx: Knex.Transaction) => {
-
-  // Get configuration ID
-  const config = await planServiceConfigActions.getConfigurationForService(contractLineId, serviceId);
-
-  if (!config) {
-    throw new Error(`Configuration for service ${serviceId} in contract line ${contractLineId} not found`);
-  }
-
-  // Update configuration
-  const baseUpdates: Partial<IContractLineServiceConfiguration> = {};
-  if (updates.quantity !== undefined) {
-    baseUpdates.quantity = updates.quantity;
-  }
-  if (updates.customRate !== undefined) {
-    baseUpdates.custom_rate = updates.customRate;
-  }
-
-  await planServiceConfigActions.updateConfiguration(
-    config.config_id,
-    Object.keys(baseUpdates).length > 0 ? baseUpdates : undefined,
-    updates.typeConfig,
-      // Pass rateTiers if they exist
-      rateTiers // Pass the rateTiers variable directly
-    );
-
-  if (
-    config.configuration_type === 'Hourly' &&
-    updates.typeConfig &&
-    typeof (updates.typeConfig as IContractLineServiceHourlyConfig).hourly_rate !== 'undefined'
-  ) {
-    const hourlyPayload: Partial<IContractLineServiceHourlyConfig> = {
-      hourly_rate: (updates.typeConfig as IContractLineServiceHourlyConfig).hourly_rate,
-      minimum_billable_time: (updates.typeConfig as IContractLineServiceHourlyConfig).minimum_billable_time,
-      round_up_to_nearest: (updates.typeConfig as IContractLineServiceHourlyConfig).round_up_to_nearest,
-    };
-
-    await planServiceConfigActions.upsertPlanServiceHourlyConfiguration(
-      contractLineId,
-      serviceId,
-      hourlyPayload
-    );
-  }
-
-    return true;
-  });
 });
 
 /**
@@ -526,72 +647,84 @@ export const removeServiceFromContractLine = withAuth(async (
   { tenant },
   contractLineId: string,
   serviceId: string
-): Promise<boolean> => {
-  if (!await hasPermission(user, 'billing', 'delete')) {
-    throw new Error('Permission denied: billing delete required');
-  }
-  const { knex: db } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('tenant context not found');
-  }
-  return withTransaction(db, async (trx: Knex.Transaction) => {
-    const templateLine = await findTemplateLine(trx, tenant, contractLineId);
-    if (templateLine) {
-      const templateConfigs = await tenantScopedTable(trx, tenant, 'contract_template_line_service_configuration')
-        .where({
-          template_line_id: contractLineId,
-          service_id: serviceId,
-        })
-        .select('config_id');
+): Promise<boolean | ContractLineServiceActionError> => {
+  try {
+    if (!await hasPermission(user, 'billing', 'delete')) {
+      return permissionError('Permission denied: billing delete required');
+    }
+    const { knex: db } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('tenant context not found');
+    }
+    return withTransaction(db, async (trx: Knex.Transaction) => {
+      const templateLine = await findTemplateLine(trx, tenant, contractLineId);
+      if (templateLine) {
+        const templateConfigs = await tenantScopedTable(trx, tenant, 'contract_template_line_service_configuration')
+          .where({
+            template_line_id: contractLineId,
+            service_id: serviceId,
+          })
+          .select('config_id');
 
-      if (templateConfigs.length > 0) {
-        const configIds = (templateConfigs as any[]).map((config: any) => config.config_id);
+        if (templateConfigs.length > 0) {
+          const configIds = (templateConfigs as any[]).map((config: any) => config.config_id);
 
-        await tenantScopedTable(trx, tenant, 'contract_template_line_service_hourly_config')
-          .whereIn('config_id', configIds)
+          await tenantScopedTable(trx, tenant, 'contract_template_line_service_hourly_config')
+            .whereIn('config_id', configIds)
+            .delete();
+
+          await tenantScopedTable(trx, tenant, 'contract_template_line_service_usage_config')
+            .whereIn('config_id', configIds)
+            .delete();
+
+          await tenantScopedTable(trx, tenant, 'contract_template_line_service_bucket_config')
+            .whereIn('config_id', configIds)
+            .delete();
+
+          await tenantScopedTable(trx, tenant, 'contract_template_line_service_configuration')
+            .whereIn('config_id', configIds)
+            .delete();
+        }
+
+        await tenantScopedTable(trx, tenant, 'contract_template_line_services')
+          .where({
+            template_line_id: contractLineId,
+            service_id: serviceId,
+          })
           .delete();
 
-        await tenantScopedTable(trx, tenant, 'contract_template_line_service_usage_config')
-          .whereIn('config_id', configIds)
-          .delete();
-
-        await tenantScopedTable(trx, tenant, 'contract_template_line_service_bucket_config')
-          .whereIn('config_id', configIds)
-          .delete();
-
-        await tenantScopedTable(trx, tenant, 'contract_template_line_service_configuration')
-          .whereIn('config_id', configIds)
-          .delete();
+        return true;
       }
 
-      await tenantScopedTable(trx, tenant, 'contract_template_line_services')
+      const config = await planServiceConfigActions.getConfigurationForService(contractLineId, serviceId);
+      if (isReturnedActionError(config)) {
+        return config;
+      }
+
+      if (config) {
+        const deleteResult = await planServiceConfigActions.deleteConfiguration(config.config_id);
+        if (isReturnedActionError(deleteResult)) {
+          return deleteResult;
+        }
+      }
+
+      await tenantScopedTable(trx, tenant, 'contract_line_services')
         .where({
-          template_line_id: contractLineId,
+          contract_line_id: contractLineId,
           service_id: serviceId,
         })
         .delete();
 
       return true;
+    });
+  } catch (error) {
+    console.error(`Error removing service ${serviceId} from contract line ${contractLineId}:`, error);
+    const expected = contractLineServiceActionErrorFrom(error);
+    if (expected) {
+      return expected;
     }
-
-  // Get configuration ID
-  const config = await planServiceConfigActions.getConfigurationForService(contractLineId, serviceId);
-
-  // Remove configuration if it exists
-  if (config) {
-    await planServiceConfigActions.deleteConfiguration(config.config_id);
+    throw error;
   }
-
-  // Remove the service from the contract_line_services table
-  await tenantScopedTable(trx, tenant, 'contract_line_services')
-    .where({
-      contract_line_id: contractLineId,
-      service_id: serviceId,
-    })
-      .delete();
-
-    return true;
-  });
 });
 
 /**
@@ -602,21 +735,16 @@ export const getContractLineServicesWithConfigurations = withAuth(async (
   user,
   { tenant },
   contractLineId: string
-): Promise<{
-  service: IService & { service_type_name?: string };
-  configuration: IContractLineServiceConfiguration;
-  typeConfig: IContractLineServiceFixedConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | IContractLineServiceBucketConfig | null;
-  userTypeRates?: IUserTypeRate[];
-  bucketConfig?: IContractLineServiceBucketConfig | null; // Add bucketConfig to the return type
-}[]> => {
-  if (!await hasPermission(user, 'billing', 'read')) {
-    throw new Error('Permission denied: billing read required');
-  }
-  const { knex: db } = await createTenantKnex();
-  if (!tenant) {
-    throw new Error('tenant context not found');
-  }
-  return withTransaction(db, async (trx: Knex.Transaction) => {
+): Promise<ContractLineServiceWithConfiguration[] | ContractLineServiceActionError> => {
+  try {
+    if (!await hasPermission(user, 'billing', 'read')) {
+      return permissionError('Permission denied: billing read required');
+    }
+    const { knex: db } = await createTenantKnex();
+    if (!tenant) {
+      throw new Error('tenant context not found');
+    }
+    return withTransaction(db, async (trx: Knex.Transaction) => {
     const templateLine = await findTemplateLine(trx, tenant, contractLineId);
     if (templateLine) {
       const configurations = await tenantScopedTable(trx, tenant, 'contract_template_line_service_configuration')
@@ -625,12 +753,7 @@ export const getContractLineServicesWithConfigurations = withAuth(async (
         })
         .select('*');
 
-      const results: Array<{
-        service: IService & { service_type_name?: string };
-        configuration: IContractLineServiceConfiguration;
-        typeConfig: IContractLineServiceFixedConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | IContractLineServiceBucketConfig | null;
-        userTypeRates?: IUserTypeRate[];
-      }> = [];
+      const results: ContractLineServiceWithConfiguration[] = [];
 
       for (const config of configurations) {
         const facade = tenantDb(trx, tenant);
@@ -680,6 +803,9 @@ export const getContractLineServicesWithConfigurations = withAuth(async (
 
   // Get all configurations for the plan
   const configurations = await planServiceConfigActions.getConfigurationsForPlan(contractLineId);
+  if (isReturnedActionError(configurations)) {
+    return configurations;
+  }
 
   // Group configurations by service_id to merge bucket configs
   const configsByService = new Map<string, IContractLineServiceConfiguration[]>();
@@ -691,13 +817,7 @@ export const getContractLineServicesWithConfigurations = withAuth(async (
   }
 
   // Build result with merged bucket configs
-  const result: Array<{
-    service: IService & { service_type_name?: string };
-    configuration: IContractLineServiceConfiguration;
-    typeConfig: IContractLineServiceFixedConfig | IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | IContractLineServiceBucketConfig | null;
-    userTypeRates?: IUserTypeRate[];
-    bucketConfig?: IContractLineServiceBucketConfig | null;
-  }> = [];
+  const result: ContractLineServiceWithConfiguration[] = [];
 
   for (const [serviceId, serviceConfigs] of configsByService.entries()) {
     // Find primary config (Hourly, Usage, or Fixed) and bucket config
@@ -728,6 +848,9 @@ export const getContractLineServicesWithConfigurations = withAuth(async (
     }
 
     const configDetails = await planServiceConfigActions.getConfigurationWithDetails(configToUse.config_id);
+    if (isReturnedActionError(configDetails)) {
+      return configDetails;
+    }
 
     let userTypeRates: IUserTypeRate[] | undefined = undefined;
 
@@ -741,6 +864,9 @@ export const getContractLineServicesWithConfigurations = withAuth(async (
     let bucketConfigDetails: IContractLineServiceBucketConfig | null = null;
     if (bucketConfigRecord) {
       const bucketDetails = await planServiceConfigActions.getConfigurationWithDetails(bucketConfigRecord.config_id);
+      if (isReturnedActionError(bucketDetails)) {
+        return bucketDetails;
+      }
       bucketConfigDetails = bucketDetails.typeConfig as IContractLineServiceBucketConfig;
     }
 
@@ -754,24 +880,28 @@ export const getContractLineServicesWithConfigurations = withAuth(async (
     }
 
     return result;
-  });
+    });
+  } catch (error) {
+    console.error(`Error fetching services with configurations for contract line ${contractLineId}:`, error);
+    const expected = contractLineServiceActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
+  }
 });
 
 export const getTemplateLineServicesWithConfigurations = withAuth(async (
   user,
   { tenant },
   templateLineId: string
-): Promise<{
-  service: IService & { service_type_name?: string };
-  configuration: IContractLineServiceConfiguration;
-  typeConfig: IContractLineServiceHourlyConfig | IContractLineServiceUsageConfig | IContractLineServiceBucketConfig | null;
-  bucketConfig?: IContractLineServiceBucketConfig | null; // Add bucketConfig to the return type
-}[]> => {
-  if (!await hasPermission(user, 'billing', 'read')) {
-    throw new Error('Permission denied: billing read required');
-  }
-  const { knex: db } = await createTenantKnex();
-  return withTransaction(db, async (trx: Knex.Transaction) => {
+): Promise<TemplateLineServiceWithConfiguration[] | ContractLineServiceActionError> => {
+  try {
+    if (!await hasPermission(user, 'billing', 'read')) {
+      return permissionError('Permission denied: billing read required');
+    }
+    const { knex: db } = await createTenantKnex();
+    return withTransaction(db, async (trx: Knex.Transaction) => {
     const configurations = await tenantScopedTable(trx, tenant, 'contract_template_line_service_configuration')
       .where({
         template_line_id: templateLineId,
@@ -787,16 +917,7 @@ export const getTemplateLineServicesWithConfigurations = withAuth(async (
       configsByService.get(config.service_id)!.push(config);
     }
 
-    const results: Array<{
-      service: IService & { service_type_name?: string };
-      configuration: IContractLineServiceConfiguration;
-      typeConfig:
-        | IContractLineServiceHourlyConfig
-        | IContractLineServiceUsageConfig
-        | IContractLineServiceBucketConfig
-        | null;
-      bucketConfig?: IContractLineServiceBucketConfig | null;
-    }> = [];
+    const results: TemplateLineServiceWithConfiguration[] = [];
 
     for (const [serviceId, serviceConfigs] of configsByService.entries()) {
       // Find primary config (Hourly, Usage, or Fixed) and bucket config
@@ -877,5 +998,13 @@ export const getTemplateLineServicesWithConfigurations = withAuth(async (
     }
 
     return results;
-  });
+    });
+  } catch (error) {
+    console.error(`Error fetching services with configurations for template line ${templateLineId}:`, error);
+    const expected = contractLineServiceActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
+  }
 });

@@ -15,6 +15,10 @@ import {
   buildCsatAlertTriggeredPayload,
   buildSurveyResponseReceivedPayload,
 } from '@alga-psa/workflow-streams';
+import {
+  actionError,
+  type ActionMessageError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 const SURVEY_INVITATIONS_TABLE = 'survey_invitations';
 const SURVEY_RESPONSES_TABLE = 'survey_responses';
@@ -38,6 +42,8 @@ export type SubmitSurveyResponseInput = z.input<typeof submitResponseSchema>;
 export type SubmitSurveyResponseResult = {
   responseId: string;
 };
+
+export type SurveyResponseActionError = ActionMessageError;
 
 export type SurveyInvitationView = {
   invitationId: string;
@@ -86,6 +92,58 @@ type TicketRow = {
   contact_name?: string | null;
 };
 
+function isSurveyResponseActionError(value: unknown): value is SurveyResponseActionError {
+  return Boolean(
+    value &&
+    typeof value === 'object' &&
+    typeof (value as { actionError?: unknown }).actionError === 'string'
+  );
+}
+
+function surveyResponseActionErrorFrom(error: unknown): SurveyResponseActionError | null {
+  if (isSurveyResponseActionError(error)) {
+    return error;
+  }
+
+  if (error instanceof z.ZodError) {
+    const firstIssue = error.issues[0];
+    return actionError(firstIssue?.message || 'Survey response data is invalid. Please review your feedback and try again.');
+  }
+
+  if (error instanceof Error) {
+    const message = error.message;
+    if (
+      message === 'Survey token is required.' ||
+      message === 'Invalid or expired survey token.' ||
+      message === 'Survey token has expired.' ||
+      message === 'Survey already completed.' ||
+      message === 'Survey has already been completed' ||
+      message === 'Survey invitation not found for token'
+    ) {
+      return actionError('This feedback link is no longer valid or has already been used.');
+    }
+    if (message === 'Rating is outside the allowed range for this survey') {
+      return actionError('Select a rating from the choices shown before submitting.');
+    }
+  }
+
+  const dbError = error as { code?: string; column?: string };
+  if (dbError?.code === '22P02') {
+    return actionError('This feedback link is invalid or expired.');
+  }
+  if (dbError?.code === '23502') {
+    return actionError(`Missing required feedback field${dbError.column ? `: ${dbError.column}` : ''}.`);
+  }
+  if (dbError?.code === '23503') {
+    return actionError('This feedback link is no longer connected to an active ticket. Please contact your technician.');
+  }
+  if (dbError?.code === '23505') {
+    return actionError('This survey has already been completed.');
+  }
+
+  return null;
+}
+
 export async function getSurveyInvitationForToken(token: string): Promise<SurveyInvitationView> {
   const { tenant, invitation } = await resolveSurveyTenantFromToken(token);
 
@@ -112,7 +170,17 @@ export async function getSurveyInvitationForToken(token: string): Promise<Survey
   };
 }
 
-export async function submitSurveyResponse(input: SubmitSurveyResponseInput): Promise<SubmitSurveyResponseResult> {
+export async function submitSurveyResponse(input: SubmitSurveyResponseInput): Promise<SubmitSurveyResponseResult | SurveyResponseActionError> {
+  try {
+    return await submitSurveyResponseInternal(input);
+  } catch (error) {
+    const expected = surveyResponseActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
+}
+
+async function submitSurveyResponseInternal(input: SubmitSurveyResponseInput): Promise<SubmitSurveyResponseResult> {
   const parsed = submitResponseSchema.parse(input);
   const trimmedComment = parsed.comment?.trim();
   const comment = trimmedComment && trimmedComment.length > 0 ? trimmedComment : null;
@@ -165,7 +233,7 @@ export async function submitSurveyResponse(input: SubmitSurveyResponseInput): Pr
         .returning('*');
 
       if (!responseRow) {
-        throw new Error('Failed to save survey response');
+        throw new Error('Survey response insert completed without returning a record.');
       }
 
       await db.table(SURVEY_INVITATIONS_TABLE)

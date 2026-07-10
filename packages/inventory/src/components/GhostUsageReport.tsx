@@ -11,6 +11,13 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { toast } from 'react-hot-toast';
 import type { ColumnDefinition } from '@alga-psa/types';
 import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+import {
   getGhostUsageReport,
   setGhostUsageDisposition,
   type GhostUsageFilters,
@@ -32,6 +39,10 @@ import {
 
 const DEFAULT_WINDOW_DAYS = 90;
 const CLASSIFY_BATCH = 25;
+type GhostUsageActionError = ActionMessageError | ActionPermissionError;
+
+const isGhostUsageActionError = (value: unknown): value is GhostUsageActionError =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 const isoDaysAgo = (days: number): string => {
   const d = new Date();
@@ -54,9 +65,9 @@ export function GhostUsageReport({
   setAiEnabled,
   runAiClassification,
 }: {
-  getAiStatus: () => Promise<GhostUsageAiStatus>;
-  setAiEnabled: (enabled: boolean) => Promise<GhostUsageAiStatus>;
-  runAiClassification: (filters?: GhostUsageFilters, opts?: { limit?: number }) => Promise<GhostRunResult>;
+  getAiStatus: () => Promise<GhostUsageAiStatus | GhostUsageActionError>;
+  setAiEnabled: (enabled: boolean) => Promise<GhostUsageAiStatus | GhostUsageActionError>;
+  runAiClassification: (filters?: GhostUsageFilters, opts?: { limit?: number }) => Promise<GhostRunResult | GhostUsageActionError>;
 }) {
   const { t } = useTranslation('features/inventory');
   const shortDate = (iso: string | null): string =>
@@ -81,7 +92,12 @@ export function GhostUsageReport({
   const runReport = async (filters: GhostUsageFilters) => {
     setLoading(true);
     try {
-      setReport(await getGhostUsageReport(filters));
+      const result = await getGhostUsageReport(filters);
+      if (isGhostUsageActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
+      setReport(result);
     } catch (e: any) {
       toast.error(e?.message || t('ghostUsage.runFailed', "Couldn't run the ghost-usage report."));
     } finally {
@@ -91,7 +107,8 @@ export function GhostUsageReport({
 
   const loadAiStatus = async () => {
     try {
-      setAiStatus(await getAiStatus());
+      const status = await getAiStatus();
+      setAiStatus(isGhostUsageActionError(status) ? AI_UNAVAILABLE : status);
     } catch {
       setAiStatus(AI_UNAVAILABLE); // AI probe failing must never break the CE report
     }
@@ -113,6 +130,10 @@ export function GhostUsageReport({
     setAiBusy(true);
     try {
       const status = await setAiEnabled(next);
+      if (isGhostUsageActionError(status)) {
+        toast.error(getErrorMessage(status));
+        return;
+      }
       setAiStatus(status);
       toast.success(status.enabled ? t('ghostUsage.ai.toggledOn', 'AI triage on.') : t('ghostUsage.ai.toggledOff', 'AI triage off.'));
     } catch (e: any) {
@@ -126,6 +147,10 @@ export function GhostUsageReport({
     setAiBusy(true);
     try {
       const r = await runAiClassification(currentFilters(), { limit: CLASSIFY_BATCH });
+      if (isGhostUsageActionError(r)) {
+        toast.error(getErrorMessage(r));
+        return;
+      }
       if (!r.attempted) {
         const reason = r.reason ? ` (${r.reason})` : '';
         toast.error(t('ghostUsage.ai.didNotRun', "AI triage didn't run{{reason}}.", { reason }));
@@ -150,7 +175,11 @@ export function GhostUsageReport({
   const disposition = async (reviewId: string, next: GhostDisposition) => {
     setBusyRows((prev) => new Set(prev).add(reviewId));
     try {
-      await setGhostUsageDisposition({ review_id: reviewId, disposition: next });
+      const result = await setGhostUsageDisposition({ review_id: reviewId, disposition: next });
+      if (isGhostUsageActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       toast.success(
         next === 'confirmed'
           ? t('ghostUsage.disposition.confirmed', 'Confirmed — moved to the worklist.')

@@ -20,6 +20,62 @@ import {
   IBoardEscalationConfig,
   SlaNotificationChannel
 } from '../types';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+type EscalationManagerActionError = ActionMessageError | ActionPermissionError;
+
+function escalationManagerActionErrorFrom(error: unknown): EscalationManagerActionError | null {
+  if (error && typeof error === 'object') {
+    const candidate = error as { actionError?: unknown; permissionError?: unknown };
+    if (typeof candidate.permissionError === 'string') {
+      return permissionError(candidate.permissionError);
+    }
+    if (typeof candidate.actionError === 'string') {
+      return actionError(candidate.actionError);
+    }
+  }
+
+  if (error instanceof Error) {
+    const message = error.message;
+    if (
+      message.includes('Permission denied') ||
+      message.startsWith('Unauthorized') ||
+      message === 'user is not logged in'
+    ) {
+      return permissionError(message);
+    }
+    if (/^Board .+ not found$/.test(message)) {
+      return actionError('Board not found. It may have been deleted. Please refresh and try again.');
+    }
+    if (/^User .+ not found$/.test(message)) {
+      return actionError('Selected escalation manager user not found. Please refresh and choose another user.');
+    }
+    if (/^Escalation manager configuration .+ not found$/.test(message)) {
+      return actionError('Escalation manager configuration not found. It may have already been deleted.');
+    }
+  }
+
+  const dbError = error as { code?: string; column?: string };
+  if (dbError?.code === '22P02') {
+    return actionError('One of the selected escalation manager records is invalid. Please refresh and try again.');
+  }
+  if (dbError?.code === '23502') {
+    return actionError(`Missing required escalation manager field${dbError.column ? `: ${dbError.column}` : ''}.`);
+  }
+  if (dbError?.code === '23503') {
+    return actionError('The selected board or user no longer exists. Please refresh and try again.');
+  }
+  if (dbError?.code === '23505') {
+    return actionError('An escalation manager is already configured for this board and level.');
+  }
+
+  return null;
+}
 
 // ============================================================================
 // Escalation Manager CRUD Operations
@@ -28,7 +84,7 @@ import {
 /**
  * Get all escalation manager configurations for the current tenant.
  */
-export const getEscalationManagers = withAuth(async (_user, { tenant }): Promise<IEscalationManagerWithUser[]> => {
+export const getEscalationManagers = withAuth(async (_user, { tenant }): Promise<IEscalationManagerWithUser[] | EscalationManagerActionError> => {
   const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
@@ -48,8 +104,10 @@ export const getEscalationManagers = withAuth(async (_user, { tenant }): Promise
 
       return configs as IEscalationManagerWithUser[];
     } catch (error) {
+      const expected = escalationManagerActionErrorFrom(error);
+      if (expected) return expected;
       console.error(`Error fetching escalation managers for tenant ${tenant}:`, error);
-      throw new Error(`Failed to fetch escalation managers for tenant ${tenant}`);
+      throw error;
     }
   });
 });
@@ -61,7 +119,7 @@ export const getEscalationManagersForBoard = withAuth(async (
   _user,
   { tenant },
   boardId: string
-): Promise<IEscalationManagerWithUser[]> => {
+): Promise<IEscalationManagerWithUser[] | EscalationManagerActionError> => {
   const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
@@ -82,8 +140,10 @@ export const getEscalationManagersForBoard = withAuth(async (
 
       return configs as IEscalationManagerWithUser[];
     } catch (error) {
+      const expected = escalationManagerActionErrorFrom(error);
+      if (expected) return expected;
       console.error(`Error fetching escalation managers for board ${boardId}, tenant ${tenant}:`, error);
-      throw new Error(`Failed to fetch escalation managers for board ${boardId}`);
+      throw error;
     }
   });
 });
@@ -96,7 +156,7 @@ export const getEscalationManagerForLevel = withAuth(async (
   { tenant },
   boardId: string,
   level: 1 | 2 | 3
-): Promise<IEscalationManagerWithUser | null> => {
+): Promise<IEscalationManagerWithUser | null | EscalationManagerActionError> => {
   const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
@@ -118,8 +178,10 @@ export const getEscalationManagerForLevel = withAuth(async (
 
       return config || null;
     } catch (error) {
+      const expected = escalationManagerActionErrorFrom(error);
+      if (expected) return expected;
       console.error(`Error fetching escalation manager for board ${boardId}, level ${level}, tenant ${tenant}:`, error);
-      throw new Error(`Failed to fetch escalation manager for board ${boardId}, level ${level}`);
+      throw error;
     }
   });
 });
@@ -132,7 +194,7 @@ export const setEscalationManager = withAuth(async (
   _user,
   { tenant },
   input: IEscalationManagerInput
-): Promise<IEscalationManager | null> => {
+): Promise<IEscalationManager | null | EscalationManagerActionError> => {
   const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
@@ -213,8 +275,10 @@ export const setEscalationManager = withAuth(async (
         return inserted as IEscalationManager;
       }
     } catch (error) {
+      const expected = escalationManagerActionErrorFrom(error);
+      if (expected) return expected;
       console.error(`Error setting escalation manager for board ${input.board_id}, level ${input.escalation_level}:`, error);
-      throw new Error(error instanceof Error ? error.message : 'Failed to set escalation manager');
+      throw error;
     }
   });
 });
@@ -226,7 +290,7 @@ export const deleteEscalationManager = withAuth(async (
   _user,
   { tenant },
   configId: string
-): Promise<void> => {
+): Promise<void | EscalationManagerActionError> => {
   const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
@@ -239,8 +303,10 @@ export const deleteEscalationManager = withAuth(async (
         throw new Error(`Escalation manager configuration ${configId} not found`);
       }
     } catch (error) {
+      const expected = escalationManagerActionErrorFrom(error);
+      if (expected) return expected;
       console.error(`Error deleting escalation manager ${configId}, tenant ${tenant}:`, error);
-      throw new Error(error instanceof Error ? error.message : 'Failed to delete escalation manager');
+      throw error;
     }
   });
 });
@@ -249,7 +315,7 @@ export const deleteEscalationManager = withAuth(async (
  * Get escalation configurations for all boards (for admin UI).
  * Returns a list of boards with their escalation manager configurations.
  */
-export const getBoardEscalationConfigs = withAuth(async (_user, { tenant }): Promise<IBoardEscalationConfig[]> => {
+export const getBoardEscalationConfigs = withAuth(async (_user, { tenant }): Promise<IBoardEscalationConfig[] | EscalationManagerActionError> => {
   const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
@@ -294,8 +360,10 @@ export const getBoardEscalationConfigs = withAuth(async (_user, { tenant }): Pro
 
       return result;
     } catch (error) {
+      const expected = escalationManagerActionErrorFrom(error);
+      if (expected) return expected;
       console.error(`Error fetching board escalation configs for tenant ${tenant}:`, error);
-      throw new Error(`Failed to fetch board escalation configs`);
+      throw error;
     }
   });
 });
@@ -313,7 +381,7 @@ export const setBoardEscalationManagers = withAuth(async (
     level_2?: { user_id: string | null; notify_via?: SlaNotificationChannel[] };
     level_3?: { user_id: string | null; notify_via?: SlaNotificationChannel[] };
   }
-): Promise<void> => {
+): Promise<void | EscalationManagerActionError> => {
   const { knex: db } = await createTenantKnex();
 
   return withTransaction(db, async (trx: Knex.Transaction) => {
@@ -383,8 +451,10 @@ export const setBoardEscalationManagers = withAuth(async (
         }
       }
     } catch (error) {
+      const expected = escalationManagerActionErrorFrom(error);
+      if (expected) return expected;
       console.error(`Error setting escalation managers for board ${boardId}:`, error);
-      throw new Error(error instanceof Error ? error.message : 'Failed to set escalation managers');
+      throw error;
     }
   });
 });

@@ -1,12 +1,12 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
 import '../../../../../test-utils/nextApiMock';
+import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { TestContext } from '../../../../../test-utils/testContext';
 import { TaxService } from '@alga-psa/billing/services/taxService';
 import { Temporal } from '@js-temporal/polyfill';
 import { IClient } from 'server/src/interfaces/client.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 import { TextEncoder as NodeTextEncoder } from 'util';
-import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import {
   setupClientTaxConfiguration,
   assignServiceTaxRate
@@ -18,7 +18,7 @@ process.env.DB_HOST = process.env.DB_HOST === 'pgbouncer' ? 'localhost' : proces
 
 
 vi.mock('@alga-psa/auth', async () => {
-  const { createAuthModuleMock } = await import('../../../../../test-utils/testMocks');
+  const { createAuthModuleMock } = await import('../../../../../test-utils/authModuleMock');
   return createAuthModuleMock();
 });
 

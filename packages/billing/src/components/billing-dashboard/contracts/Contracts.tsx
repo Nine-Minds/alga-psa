@@ -23,7 +23,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { ColumnDefinition } from '@alga-psa/types';
 import { IContract, IContractWithClient } from '@alga-psa/types';
 import { toast } from 'react-hot-toast';
-import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { getErrorMessage, handleError, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import {
   deleteContract,
   getDraftContracts,
@@ -144,6 +144,13 @@ const Contracts: React.FC = () => {
         getContractsWithClients(),
         getDraftContracts(),
       ]);
+      const expectedLoadError = [fetchedTemplates, fetchedAssignments, fetchedDrafts].find(
+        (result) => isActionMessageError(result) || isActionPermissionError(result)
+      );
+      if (expectedLoadError) {
+        setError(getErrorMessage(expectedLoadError));
+        return;
+      }
       setTemplateContracts(fetchedTemplates);
       setClientContracts(fetchedAssignments.filter((assignment) => Boolean(assignment.client_id)));
       setDraftContracts(fetchedDrafts);
@@ -172,8 +179,8 @@ const Contracts: React.FC = () => {
     setIsDeletingContract(true);
     try {
       const result = await deleteContract(contractToDelete.contractId);
-      if (isActionPermissionError(result)) {
-        handleError(result.permissionError);
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        handleError(getErrorMessage(result));
         setContractToDelete(null);
         return;
       }
@@ -197,6 +204,10 @@ const Contracts: React.FC = () => {
         handleError(draftData.permissionError);
         return;
       }
+      if (isActionMessageError(draftData)) {
+        toast.error(getErrorMessage(draftData));
+        return;
+      }
       setDraftToResume(draftData);
       setShowClientWizard(true);
     } catch (err) {
@@ -214,8 +225,8 @@ const Contracts: React.FC = () => {
     setIsDiscardingDraft(true);
     try {
       const result = await deleteContract(draftToDiscard.contractId);
-      if (isActionPermissionError(result)) {
-        handleError(result.permissionError);
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        handleError(getErrorMessage(result));
         return;
       }
       await fetchContracts();
@@ -233,7 +244,11 @@ const Contracts: React.FC = () => {
       if (!clientContractId) {
         throw new Error('Missing client contract identifier');
       }
-      await updateClientContractForBilling(clientContractId, { is_active: false });
+      const result = await updateClientContractForBilling(clientContractId, { is_active: false });
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       await fetchContracts();
     } catch (err) {
       const message = err instanceof Error
@@ -248,7 +263,11 @@ const Contracts: React.FC = () => {
       if (!clientContractId) {
         throw new Error('Missing client contract identifier');
       }
-      await updateClientContractForBilling(clientContractId, { is_active: true });
+      const result = await updateClientContractForBilling(clientContractId, { is_active: true });
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       await fetchContracts();
     } catch (err) {
       const message = err instanceof Error
@@ -263,7 +282,11 @@ const Contracts: React.FC = () => {
       if (!clientContractId) {
         throw new Error('Missing client contract identifier');
       }
-      await updateClientContractForBilling(clientContractId, { is_active: true });
+      const result = await updateClientContractForBilling(clientContractId, { is_active: true });
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       await fetchContracts();
     } catch (err) {
       const message = err instanceof Error

@@ -126,7 +126,7 @@ export function ClientProfile() {
 
       } catch (err) {
         console.error('Error initializing profile:', err);
-        setError(err instanceof Error ? err.message : tProfile('profile.messages.loadError', 'Failed to load profile'));
+        setError(tProfile('profile.messages.loadError', 'Failed to load profile'));
       } finally {
         setLoading(false);
       }
@@ -156,6 +156,8 @@ export function ClientProfile() {
           EMAIL_ALREADY_EXISTS: 'profile.messages.emailAlreadyExists',
           REPORTS_TO_SELF: 'profile.messages.reportsToSelf',
           REPORTS_TO_CYCLE: 'profile.messages.reportsToCycle',
+          PERMISSION_DENIED: 'profile.messages.permissionDenied',
+          USER_UPDATE_FAILED: 'profile.messages.updateFailed',
         };
         toast.error(tProfile(errorKeys[result.code], { defaultValue: result.error }));
         return;

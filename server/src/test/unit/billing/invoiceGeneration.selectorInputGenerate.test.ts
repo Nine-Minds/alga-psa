@@ -560,10 +560,9 @@ describe('selector-input recurring generation', () => {
       windowEnd: '2025-03-08',
     });
 
-    await expect(generateInvoiceForSelectionInput(selectorInput)).rejects.toMatchObject({
-      message:
+    await expect(generateInvoiceForSelectionInput(selectorInput)).resolves.toEqual({
+      actionError:
         'Recurring service periods were not materialized for this recurring execution window.',
-      executionIdentityKey: selectorInput.executionWindow.identityKey,
     });
     expect(mocks.calculateBillingForExecutionWindow).not.toHaveBeenCalled();
   });
@@ -608,11 +607,8 @@ describe('selector-input recurring generation', () => {
       invoice_id: 'invoice-existing',
     });
 
-    await expect(generateInvoiceForSelectionInput(selectorInput)).rejects.toMatchObject({
-      message: 'Invoice already exists for this recurring execution window',
-      code: DUPLICATE_RECURRING_INVOICE_CODE,
-      executionIdentityKey: selectorInput.executionWindow.identityKey,
-      invoiceId: 'invoice-existing',
+    await expect(generateInvoiceForSelectionInput(selectorInput)).resolves.toEqual({
+      actionError: 'Invoice already exists for this recurring execution window',
     });
   });
 

@@ -26,7 +26,7 @@ type MspTicketDetailsContainerClientProps = Omit<
   surveySummary?: SurveyTicketSatisfactionSummary | null;
   isAlgaDeskMode?: boolean;
   /** Server-started linked-tasks promise for the TicketLinkedTasksBadge. */
-  linkedTasksStream?: Promise<ITicketLinkedTask[]>;
+  linkedTasksStream?: Promise<ITicketLinkedTask[] | { actionError: string } | { permissionError: string }>;
 };
 
 export default function MspTicketDetailsContainerClient({

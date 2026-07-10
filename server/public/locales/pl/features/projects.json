@@ -1532,5 +1532,6 @@
     "done": "Gotowe",
     "edit": "Edytuj",
     "save": "Zapisz"
-  }
+  },
+  "loadError": "Failed to load projects"
 }

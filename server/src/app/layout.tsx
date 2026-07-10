@@ -3,7 +3,10 @@ import "./globals.css";
 import "./print.css";
 // Global vendor CSS for react-big-calendar is added via a <link> tag below
 import { ThemedToaster } from '@alga-psa/ui/components/ThemedToaster';
-import { getCurrentTenant, getTenantBrandingByDomain } from '@alga-psa/tenancy/actions';
+// Granular action imports: the /actions barrel would pull every tenancy 'use server'
+// file into every route's server-reference manifest (dev OOM — see package-build-system.md).
+import { getCurrentTenant } from '@alga-psa/tenancy/actions/coreTenantActions';
+import { getTenantBrandingByDomain } from '@alga-psa/tenancy/actions/tenant-actions/getTenantBrandingByDomain';
 import { TenantProvider } from '@alga-psa/ui/components/providers/TenantProvider';
 import { DynamicExtensionProvider } from '@alga-psa/ui/components/providers/DynamicExtensionProvider';
 import { PostHogProvider } from '@/components/providers/PostHogProvider';

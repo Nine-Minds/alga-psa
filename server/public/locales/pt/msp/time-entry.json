@@ -448,7 +448,8 @@
     "taskUpdated": "Tarefa atualizada com sucesso",
     "saveChangesFailed": "Falha ao salvar as alterações",
     "changesSaved": "Alterações salvas com sucesso",
-    "workItemDeleted": "Item de trabalho excluído com sucesso"
+    "workItemDeleted": "Item de trabalho excluído com sucesso",
+    "submitFailed": "Failed to submit time sheet"
   },
   "bundleNotice": {
     "withNumber": "Este ticket está agrupado em {{number}}. O tempo do pacote geralmente é registrado no ticket mestre.",

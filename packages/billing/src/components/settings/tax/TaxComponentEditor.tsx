@@ -5,7 +5,13 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import toast from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { MoreVertical, PlusCircle, Info } from 'lucide-react';
 
 import { Button } from '@alga-psa/ui/components/Button';
@@ -32,7 +38,7 @@ import {
   createTaxComponent,
   updateTaxComponent,
   deleteTaxComponent,
-} from '@alga-psa/billing/actions';
+} from '../../../actions/taxSettingsActions';
 
 // Zod schema for form validation
 const taxComponentSchema = z.object({
@@ -45,6 +51,11 @@ const taxComponentSchema = z.object({
 });
 
 type TaxComponentFormData = z.infer<typeof taxComponentSchema>;
+
+type ReturnedActionError = ActionMessageError | ActionPermissionError;
+
+const isReturnedActionError = (value: unknown): value is ReturnedActionError =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 interface TaxComponentEditorProps {
   taxRateId: string;
@@ -87,6 +98,11 @@ export function TaxComponentEditor({ taxRateId, isReadOnly = false }: TaxCompone
     setIsLoading(true);
     try {
       const fetchedComponents = await getTaxComponentsByTaxRate(taxRateId);
+      if (isReturnedActionError(fetchedComponents)) {
+        setComponents([]);
+        handleError(fetchedComponents, t('tax.components.errors.load', { defaultValue: 'Failed to load tax components.' }));
+        return;
+      }
       setComponents(fetchedComponents);
     } catch (error) {
       handleError(error, t('tax.components.errors.load', { defaultValue: 'Failed to load tax components.' }));
@@ -155,25 +171,27 @@ export function TaxComponentEditor({ taxRateId, isReadOnly = false }: TaxCompone
       : t('tax.components.errors.create', { defaultValue: 'Failed to create tax component.' });
 
     try {
-      if (isEditing) {
-        await updateTaxComponent(editingComponent.tax_component_id, {
-          name: data.name,
-          rate: data.rate,
-          sequence: data.sequence,
-          is_compound: data.is_compound,
-          start_date: data.start_date || undefined,
-          end_date: data.end_date || undefined,
-        });
-      } else {
-        await createTaxComponent({
-          tax_rate_id: taxRateId,
-          name: data.name,
-          rate: data.rate,
-          sequence: data.sequence,
-          is_compound: data.is_compound,
-          start_date: data.start_date || undefined,
-          end_date: data.end_date || undefined,
-        });
+      const result = editingComponent
+        ? await updateTaxComponent(editingComponent.tax_component_id, {
+            name: data.name,
+            rate: data.rate,
+            sequence: data.sequence,
+            is_compound: data.is_compound,
+            start_date: data.start_date || undefined,
+            end_date: data.end_date || undefined,
+          })
+        : await createTaxComponent({
+            tax_rate_id: taxRateId,
+            name: data.name,
+            rate: data.rate,
+            sequence: data.sequence,
+            is_compound: data.is_compound,
+            start_date: data.start_date || undefined,
+            end_date: data.end_date || undefined,
+          });
+      if (isReturnedActionError(result)) {
+        handleError(result);
+        return;
       }
       toast.success(successMessage);
       await fetchComponents();
@@ -190,7 +208,11 @@ export function TaxComponentEditor({ taxRateId, isReadOnly = false }: TaxCompone
     setIsSubmitting(true);
 
     try {
-      await deleteTaxComponent(componentToDelete.tax_component_id);
+      const result = await deleteTaxComponent(componentToDelete.tax_component_id);
+      if (isReturnedActionError(result)) {
+        handleError(result);
+        return;
+      }
       toast.success(t('tax.components.toast.deleted', { defaultValue: 'Tax component deleted successfully.' }));
       await fetchComponents();
       handleCloseDeleteDialog();

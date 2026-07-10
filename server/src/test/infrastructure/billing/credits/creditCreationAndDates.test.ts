@@ -22,7 +22,7 @@ process.env.DB_HOST = process.env.DB_HOST === 'pgbouncer' ? 'localhost' : proces
 process.env.DB_NAME_SERVER = process.env.DB_NAME_SERVER || 'credit_creation_tests';
 
 vi.mock('@alga-psa/auth', async () => {
-  const { createAuthModuleMock } = await import('../../../../../test-utils/testMocks');
+  const { createAuthModuleMock } = await import('../../../../../test-utils/authModuleMock');
   return createAuthModuleMock();
 });
 
@@ -35,17 +35,11 @@ vi.mock('server/src/lib/analytics/posthog', () => ({
   }
 }));
 
-async function mockSharedDb() {
-  const actual = await import('@alga-psa/db');
-  return {
-    ...actual,
-    withTransaction: vi.fn(async (knex, callback) => callback(knex)),
-    withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
-  };
-}
-
-vi.mock('@alga-psa/db', mockSharedDb);
-vi.mock('@alga-psa/db', mockSharedDb);
+vi.mock('@alga-psa/db', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/db')>()),
+  withTransaction: vi.fn(async (knex, callback) => callback(knex)),
+  withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
+}));
 
 vi.mock('@alga-psa/core/logger', () => ({
   default: {

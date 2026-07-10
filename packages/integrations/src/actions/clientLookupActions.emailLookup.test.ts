@@ -147,6 +147,30 @@ describe('integration contact email lookup helpers', () => {
     expect(createContactMock).not.toHaveBeenCalled();
   });
 
+  it('returns a user-safe action error when an existing email belongs to another client', async () => {
+    getContactByEmailMock.mockResolvedValue({
+      contact_name_id: 'contact-1',
+      full_name: 'Ada Lovelace',
+      email: 'ada@example.com',
+      client_id: 'client-2',
+      role: 'Engineer',
+      default_phone_number: null,
+      phone_numbers: [],
+      additional_email_addresses: [],
+    });
+
+    const { createOrFindIntegrationContactByEmail } = await import('./clientLookupActions');
+    const result = await createOrFindIntegrationContactByEmail({
+      email: 'ada@example.com',
+      clientId: 'client-1',
+    });
+
+    expect(result).toEqual({
+      actionError: 'This email is already associated with Acme Corp',
+    });
+    expect(createContactMock).not.toHaveBeenCalled();
+  });
+
   it('integration email actions inherit additional-email lookup support through the client lookup helper', async () => {
     getContactByEmailMock.mockResolvedValue({
       contact_name_id: 'contact-1',

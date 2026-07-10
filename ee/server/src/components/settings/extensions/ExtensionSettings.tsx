@@ -221,8 +221,7 @@ export default function ExtensionSettings() {
           }
         } catch (scheduleErr) {
           console.warn('Failed to load extension schedules', scheduleErr);
-          const msg = scheduleErr instanceof Error ? scheduleErr.message : String(scheduleErr);
-          setSchedulesError(msg || 'Failed to load schedules');
+          setSchedulesError('Failed to load extension schedules');
         } finally {
           setSchedulesLoading(false);
         }
@@ -249,9 +248,8 @@ export default function ExtensionSettings() {
       setSchedules(scheduleRows);
     } catch (e) {
       console.error('Failed to refresh schedules', e);
-      const msg = e instanceof Error ? e.message : String(e);
-      setSchedulesError(msg || 'Failed to refresh schedules');
-      toast.error(msg || t('messages.refreshSchedulesFailed'));
+      setSchedulesError('Failed to refresh schedules');
+      toast.error(t('messages.refreshSchedulesFailed'));
     } finally {
       setSchedulesLoading(false);
     }

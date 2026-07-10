@@ -1,10 +1,11 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
+import { CurrencyInput } from '@alga-psa/ui/components/CurrencyInput';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
@@ -21,6 +22,13 @@ import {
 } from '@alga-psa/ui/components/DropdownMenu';
 import { ChevronDown, MoreHorizontal, RotateCcw, Trash2 } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { toast } from 'react-hot-toast';
 import { formatCurrencyFromMinorUnits, toMinorUnits, currencyFractionDigits } from '@alga-psa/core';
 import type {
@@ -178,6 +186,7 @@ const emptyForm = (): FormState => ({
 
 export interface SalesOrdersManagerProps {
   initialSos: ISalesOrder[];
+  loadErrorMessage?: string;
   /** Active stock locations for the fulfill dialog's source selector. */
   locations?: IStockLocation[];
   /** Clients for the create-SO client picker. */
@@ -188,16 +197,24 @@ export interface SalesOrdersManagerProps {
   fulfillAndInvoice: FulfillAndInvoiceFn;
   generateInvoice: GenerateInvoiceFn;
   confirmDropShip: ConfirmDropShipFn;
+  defaultCurrencyCode?: string;
 }
+
+type ReturnedActionError = ActionMessageError | ActionPermissionError;
+
+const isReturnedActionError = (value: unknown): value is ReturnedActionError =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 export function SalesOrdersManager({
   initialSos,
+  loadErrorMessage,
   locations = [],
   clients = [],
   services = [],
   fulfillAndInvoice,
   generateInvoice,
   confirmDropShip,
+  defaultCurrencyCode = 'USD',
 }: SalesOrdersManagerProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -270,12 +287,23 @@ export function SalesOrdersManager({
 
   const reload = useCallback(async () => {
     try {
-      setSos(await listSalesOrders({}));
+      const result = await listSalesOrders({});
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
+      setSos(result);
     } catch (e) {
       console.error(e);
       toast.error(t('salesOrders.loadError', 'Failed to load sales orders'));
     }
   }, [t]);
+
+  useEffect(() => {
+    if (loadErrorMessage) {
+      toast.error(loadErrorMessage);
+    }
+  }, [loadErrorMessage]);
 
   const openCreate = () => {
     setForm(emptyForm());
@@ -283,10 +311,10 @@ export function SalesOrdersManager({
   };
 
   // Currency is a property of who you bill, not a per-order choice: derive it from the picked
-  // client and render it read-only (falling back to USD only when the client has none).
+  // client and render it read-only (falling back to the tenant default when the client has none).
   const onClientSelect = (clientId: string | null) => {
     const picked = clientId ? clients.find((c) => c.client_id === clientId) : undefined;
-    const nextCurrency = picked?.default_currency_code || (clientId ? 'USD' : '');
+    const nextCurrency = picked?.default_currency_code || (clientId ? defaultCurrencyCode : '');
     setForm((f) => ({
       ...f,
       client_id: clientId ?? '',
@@ -319,7 +347,7 @@ export function SalesOrdersManager({
 
   const lineForService = useCallback((serviceId: string, requestedCurrency?: string): LineForm => {
     const svc = serviceById.get(serviceId);
-    const currency = requestedCurrency || svc?.kit_currency || 'USD';
+    const currency = requestedCurrency || svc?.kit_currency || defaultCurrencyCode;
     const kitCurrencyMismatch = Boolean(
       svc?.is_kit && svc.kit_currency && svc.kit_currency.toUpperCase() !== currency.toUpperCase(),
     );
@@ -362,7 +390,7 @@ export function SalesOrdersManager({
   const removeLine = (idx: number) =>
     setForm((f) => ({ ...f, lines: f.lines.filter((_, i) => i !== idx) }));
 
-  const currency = form.currency_code || 'USD';
+  const currency = form.currency_code || defaultCurrencyCode;
   // Running total: Σ quantity × unit price, in the resolved currency's minor units. Lines without
   // a picked service or a positive quantity don't contribute.
   const totalMinor = form.lines.reduce((sum, l) => {
@@ -412,7 +440,7 @@ export function SalesOrdersManager({
     }
     setSaving(true);
     try {
-      await createSalesOrder({
+      const result = await createSalesOrder({
         client_id: form.client_id.trim(),
         currency_code: form.currency_code.trim(),
         invoice_mode: form.invoice_mode,
@@ -422,6 +450,10 @@ export function SalesOrdersManager({
         notes: form.notes.trim() || null,
         lines,
       });
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       toast.success(t('salesOrders.created', 'Sales order created'));
       setDialogOpen(false);
       await reload();
@@ -436,7 +468,12 @@ export function SalesOrdersManager({
     if (busy) return;
     setBusy(`confirm:${so.so_id}`);
     try {
-      await confirmSalesOrder(so.so_id);
+      const result = await confirmSalesOrder(so.so_id);
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        await reload();
+        return;
+      }
       toast.success(t('salesOrders.confirmed', 'Sales order confirmed'));
       await reload();
     } catch (e: any) {
@@ -450,7 +487,12 @@ export function SalesOrdersManager({
     if (busy) return;
     setBusy(`cancel:${so.so_id}`);
     try {
-      await cancelSalesOrder(so.so_id);
+      const result = await cancelSalesOrder(so.so_id);
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        await reload();
+        return;
+      }
       toast.success(t('salesOrders.cancelled', 'Sales order cancelled'));
       await reload();
     } catch (e: any) {
@@ -819,16 +861,15 @@ export function SalesOrdersManager({
                         </p>
                       )}
                     </div>
+                    {/* Wider than the usual w-32 money cell: kit lines render an override hint beneath. */}
                     <div className="w-56">
-                      <Input
+                      <CurrencyInput
                         id={`sales-order-line-price-${idx}`}
-                        type="number"
-                        min="0"
-                        step="0.01"
+                        currencyCode={currency}
                         className="text-right tabular-nums"
-                        value={line.unit_price}
-                        onChange={(e) => setLine(idx, {
-                          unit_price: e.target.value,
+                        value={line.unit_price ? Number(line.unit_price) : undefined}
+                        onChange={(value) => setLine(idx, {
+                          unit_price: value == null ? '' : String(value),
                           price_overridden: line.is_kit ? true : line.price_overridden,
                         })}
                       />

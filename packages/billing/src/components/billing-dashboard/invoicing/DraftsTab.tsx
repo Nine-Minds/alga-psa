@@ -31,6 +31,11 @@ import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useRangeSelection } from '@alga-psa/ui/hooks';
 import { InvoiceSyncBadge } from '../../invoices/InvoiceSyncBadge';
 import { useInvoiceSyncStatuses } from '../../invoices/useInvoiceSyncStatuses';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 interface DraftsTabProps {
   onRefreshNeeded: () => void;
@@ -74,6 +79,10 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
 
   const selectedInvoiceId = searchParams?.get('invoiceId') ?? null;
   const selectedTemplateId = searchParams?.get('templateId') ?? null;
+
+  const isInvoiceActionError = (result: unknown) => (
+    isActionMessageError(result) || isActionPermissionError(result)
+  );
 
   // Debounce search term
   useEffect(() => {
@@ -127,6 +136,18 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
         }),
         getInvoiceTemplates()
       ]);
+
+      if (isInvoiceActionError(paginatedResult)) {
+        setError(getErrorMessage(paginatedResult));
+        setInvoices([]);
+        setTotalInvoices(0);
+        return;
+      }
+      if (isInvoiceActionError(fetchedTemplates)) {
+        setError(getErrorMessage(fetchedTemplates));
+        setTemplates([]);
+        return;
+      }
 
       setInvoices(paginatedResult.invoices);
       setTotalInvoices(paginatedResult.total);
@@ -211,6 +232,10 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
       // errors are masked in production, so we rely on this returned shape instead of the
       // exception text below.
       const validation = await validateInvoiceFinalization(invoiceId);
+      if (isInvoiceActionError(validation)) {
+        setError(getErrorMessage(validation));
+        return;
+      }
       if (!validation.canFinalize) {
         if (validation.code === 'pending_external_tax') {
           // Offer the escape hatch (switch to internal tax) rather than a dead-end message.
@@ -224,7 +249,12 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
         return;
       }
 
-      await finalizeInvoice(invoiceId);
+      const finalizeResult = await finalizeInvoice(invoiceId);
+      if (isInvoiceActionError(finalizeResult)) {
+        setError(getErrorMessage(finalizeResult));
+        return;
+      }
+
       await loadData();
       onRefreshNeeded();
       setSelectedInvoices(prev => {
@@ -254,13 +284,22 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
     setFinalizeNotice(null);
     try {
       const result = await updateInvoiceTaxSource(invoiceId, 'internal');
+      if (isInvoiceActionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
       if (!result.success) {
         setError(result.error ?? t('draftsTab.errors.finalizeFailed', {
           defaultValue: 'Failed to finalize invoice. Please try again.',
         }));
         return;
       }
-      await finalizeInvoice(invoiceId);
+      const finalizeResult = await finalizeInvoice(invoiceId);
+      if (isInvoiceActionError(finalizeResult)) {
+        setError(getErrorMessage(finalizeResult));
+        return;
+      }
+
       await loadData();
       onRefreshNeeded();
       setSelectedInvoices(prev => {
@@ -304,6 +343,7 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
       // skipped with an accurate explanation rather than aborting the whole batch.
       let blockedByPendingTax = 0;
       let otherBlocked = 0;
+      let firstFinalizeError: string | null = null;
       for (const invoiceId of selectedInvoices) {
         const validation = await validateInvoiceFinalization(invoiceId);
         if (!validation.canFinalize) {
@@ -314,7 +354,11 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
           }
           continue;
         }
-        await finalizeInvoice(invoiceId);
+        const finalizeResult = await finalizeInvoice(invoiceId);
+        if (isInvoiceActionError(finalizeResult)) {
+          otherBlocked += 1;
+          firstFinalizeError ??= getErrorMessage(finalizeResult);
+        }
       }
       setSelectedInvoices(new Set());
       await loadData();
@@ -327,7 +371,7 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
           defaultValue: `${blockedByPendingTax} invoice(s) were skipped because they are awaiting external tax import. Import the tax from your accounting system, or switch them to internal tax, then finalize them individually.`,
         }));
       } else if (otherBlocked > 0) {
-        setFinalizeNotice(t('draftsTab.errors.bulkFinalizeSkipped', {
+        setFinalizeNotice(firstFinalizeError ?? t('draftsTab.errors.bulkFinalizeSkipped', {
           count: otherBlocked,
           defaultValue: `${otherBlocked} invoice(s) could not be finalized and were skipped.`,
         }));
@@ -349,7 +393,12 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
     if (!selectedInvoice) return;
     setError(null);
     try {
-      const { pdfData, invoiceNumber } = await downloadInvoicePDF(selectedInvoice.invoice_id, selectedTemplateId);
+      const result = await downloadInvoicePDF(selectedInvoice.invoice_id, selectedTemplateId);
+      if (isInvoiceActionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
+      const { pdfData, invoiceNumber } = result;
 
       const blob = new Blob([new Uint8Array(pdfData)], { type: 'application/pdf' });
       const blobUrl = window.URL.createObjectURL(blob);
@@ -473,7 +522,12 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
               <DropdownMenuItem
                 onClick={async () => {
                   try {
-                    const { pdfData, invoiceNumber } = await downloadInvoicePDF(record.invoice_id);
+                    const result = await downloadInvoicePDF(record.invoice_id);
+                    if (isInvoiceActionError(result)) {
+                      setError(getErrorMessage(result));
+                      return;
+                    }
+                    const { pdfData, invoiceNumber } = result;
                     const blob = new Blob([new Uint8Array(pdfData)], { type: 'application/pdf' });
                     const blobUrl = window.URL.createObjectURL(blob);
                     const link = document.createElement('a');
@@ -667,7 +721,10 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
 
           try {
             for (const invoiceId of invoiceIds) {
-              await hardDeleteInvoice(invoiceId);
+              const deleteResult = await hardDeleteInvoice(invoiceId);
+              if (isInvoiceActionError(deleteResult)) {
+                throw new Error(getErrorMessage(deleteResult));
+              }
             }
 
             setSelectedInvoices(prev => {
@@ -686,9 +743,8 @@ const DraftsTab: React.FC<DraftsTabProps> = ({
           } catch (err) {
             console.error('Failed to reverse draft invoice(s):', err);
             setError(
-              err instanceof Error
-                ? err.message
-                : t('draftsTab.errors.reverseFailed', {
+              getErrorMessage(err) ||
+                t('draftsTab.errors.reverseFailed', {
                   defaultValue: 'Failed to reverse draft invoice(s). Please try again.',
                 }),
             );

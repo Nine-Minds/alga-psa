@@ -8,7 +8,9 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { toast } from 'react-hot-toast';
 import type { ColumnDefinition, ICountSession, IStockLocation } from '@alga-psa/types';
 import {
@@ -26,16 +28,19 @@ import {
 
 type SessionRow = ICountSession & { location_name: string | null; line_count: number; counted_count: number };
 
-const dollars = (cents: number): string => `$${(cents / 100).toFixed(2)}`;
+const isReturnedActionError = (value: unknown) => isActionMessageError(value) || isActionPermissionError(value);
 
 export function CycleCountsManager({
   initialSessions,
   locations,
+  defaultCurrencyCode = 'USD',
 }: {
   initialSessions: SessionRow[];
   locations: IStockLocation[];
+  defaultCurrencyCode?: string;
 }) {
   const { t } = useTranslation('features/inventory');
+  const { money } = useCurrencyFormat();
   const [sessions, setSessions] = useState<SessionRow[]>(initialSessions || []);
   const [startOpen, setStartOpen] = useState(false);
   const [startLocation, setStartLocation] = useState('');
@@ -57,7 +62,13 @@ export function CycleCountsManager({
 
   const reload = useCallback(async () => {
     try {
-      setSessions(await listCountSessions());
+      const result = await listCountSessions();
+      if (isReturnedActionError(result)) {
+        setSessions([]);
+        toast.error(getErrorMessage(result));
+        return;
+      }
+      setSessions(result);
     } catch (e: any) {
       toast.error(e?.message || t('counts.loadSessionsFailed', "Couldn't load count sessions."));
     }
@@ -66,6 +77,11 @@ export function CycleCountsManager({
   const openDetail = async (sessionId: string) => {
     try {
       const view = await getCountSession(sessionId);
+      if (isReturnedActionError(view)) {
+        setDetail(null);
+        toast.error(getErrorMessage(view));
+        return;
+      }
       setDetail(view);
       const draft: Record<string, string> = {};
       for (const l of view.lines) {
@@ -102,6 +118,10 @@ export function CycleCountsManager({
     setBusy('start');
     try {
       const session = await startCountSession(startLocation);
+      if (isReturnedActionError(session)) {
+        toast.error(getErrorMessage(session));
+        return;
+      }
       toast.success(t('counts.started', 'Count started — expected quantities were snapshotted.'));
       setStartOpen(false);
       setStartLocation('');
@@ -119,16 +139,21 @@ export function CycleCountsManager({
     const raw = entries[line.service_id] ?? '';
     setBusy(`line:${line.service_id}`);
     try {
+      let result;
       if (line.is_serialized) {
         const serials = raw.split('\n').map((s) => s.trim()).filter(Boolean);
-        await recordCount(detail.session_id, line.service_id, { serials });
+        result = await recordCount(detail.session_id, line.service_id, { serials });
       } else {
         const qty = Number(raw);
         if (!Number.isInteger(qty) || qty < 0) {
           toast.error(t('counts.qtyInvalid', 'Count must be a non-negative whole number.'));
           return;
         }
-        await recordCount(detail.session_id, line.service_id, { counted_qty: qty });
+        result = await recordCount(detail.session_id, line.service_id, { counted_qty: qty });
+      }
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
       }
       toast.success(t('counts.recorded', 'Count recorded.'));
       await openDetail(detail.session_id);
@@ -143,7 +168,11 @@ export function CycleCountsManager({
     if (!detail) return;
     setBusy('submit');
     try {
-      await submitCountForReview(detail.session_id);
+      const result = await submitCountForReview(detail.session_id);
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       toast.success(t('counts.submitted', 'Submitted for review.'));
       await reload();
       await openDetail(detail.session_id);
@@ -162,6 +191,10 @@ export function CycleCountsManager({
     setBusy('approve');
     try {
       const result = await approveCountSession(detail.session_id, dispositionList);
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       const parts = [
         t('counts.adjustments', '{{count}} adjustment(s)', { count: result.adjustments.length }),
         result.retired_serials.length ? t('counts.unitsRetired', '{{count}} unit(s) retired', { count: result.retired_serials.length }) : null,
@@ -187,7 +220,11 @@ export function CycleCountsManager({
     if (!detail) return;
     setBusy('cancel');
     try {
-      await cancelCountSession(detail.session_id);
+      const result = await cancelCountSession(detail.session_id);
+      if (isReturnedActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       toast.success(t('counts.cancelledDone', 'Count cancelled — no stock was touched.'));
       setDetail(null);
       await reload();
@@ -340,7 +377,7 @@ export function CycleCountsManager({
                               <span className={line.variance === 0 ? 'text-gray-500' : line.variance > 0 ? 'text-green-700' : 'text-red-700'}>
                                 {' '}{t('counts.varianceLabel', '· variance')} {line.variance > 0 ? '+' : ''}
                                 {line.variance}
-                                {line.variance_value_cents != null && line.variance !== 0 && ` (${dollars(line.variance_value_cents)})`}
+                                {line.variance_value_cents != null && line.variance !== 0 && ` (${money(line.variance_value_cents, line.cost_currency ?? defaultCurrencyCode)})`}
                               </span>
                             )}
                           </span>

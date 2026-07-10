@@ -1,10 +1,9 @@
 import { cookies } from "next/headers.js";
 import { redirect } from "next/navigation";
 import { getSession, getSessionWithRevocationCheck } from "@alga-psa/auth";
-import { getTenantSettings } from "@alga-psa/tenancy/actions";
-import { getHierarchicalLocaleAction } from "@alga-psa/tenancy/actions";
+import { getTenantSettings } from "@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions";
+import { getHierarchicalLocaleAction } from "@alga-psa/tenancy/actions/locale-actions/getHierarchicalLocale";
 import { MspLayoutClient } from "./MspLayoutClient";
-import { registerSlaIntegration } from "@alga-psa/msp-composition/tickets/registerSlaIntegration";
 import { getCurrentTenantProduct } from "@/lib/productAccess";
 import { preloadLocaleResources } from "@/lib/i18n/preloadLocaleResources";
 import { isSelfHostLicensing } from "@alga-psa/licensing";
@@ -68,11 +67,6 @@ export default async function MspLayout({
   // Only self-host installs carry a license_state row; gate the trial/expiry
   // banner here so it never mounts (or calls getLicenseStatus) on hosted/SaaS.
   const selfHostLicensing = await isSelfHostLicensing();
-
-  if (productCode === 'psa') {
-    // Keep PSA-only integrations out of AlgaDesk composition.
-    registerSlaIntegration();
-  }
 
   return (
     <MspLayoutClient

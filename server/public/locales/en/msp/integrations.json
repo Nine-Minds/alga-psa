@@ -664,22 +664,28 @@
     "google": {
       "settings": {
         "actions": {
+          "disconnectProviders": "Disconnect Google providers",
           "refresh": "Refresh",
-          "resetProviders": "Reset Google Providers",
+          "resetProviders": "Disconnect Google providers",
           "resetting": "Resetting…",
           "save": "Save",
           "saving": "Saving…"
         },
-        "afterSaveNotice": "After saving, go to Inbound Email and Calendar integrations and re-authorize providers. Existing Google providers are not migrated.",
+        "afterSaveNotice": "After saving, re-authorize Gmail and Calendar from their integration screens. Existing Google email and calendar connections are not migrated. Staff sign-in uses the saved Google OAuth client and secret.",
         "consoleLink": "Google Cloud Console",
-        "description": "Configure tenant-owned Google Cloud credentials for Gmail inbound email and Google Calendar.",
+        "description": "Enter your company's Google OAuth app credentials for staff sign-in, Gmail inbound email, and Google Calendar.",
+        "disconnectDialog": {
+          "cancel": "Keep providers connected",
+          "message": "Existing Gmail and Google Calendar provider connections will be marked disconnected and must be re-authorized. Stored Google credentials stay in place.",
+          "title": "Disconnect Google providers?"
+        },
         "errors": {
           "loadFailed": "Failed to load Google settings",
           "resetFailed": "Failed to reset Google providers",
           "saveFailed": "Failed to save Google settings"
         },
         "fields": {
-          "projectIdHelp": "Used for Gmail Pub/Sub provisioning (tenant-owned service account).",
+          "projectIdHelp": "Required for inbound Gmail notifications. Find it in the project picker at the top of Google Cloud.",
           "projectIdLabel": "Google Cloud project ID",
           "projectIdPlaceholder": "my-project-id"
         },
@@ -688,21 +694,27 @@
           "calendarClientId": "Calendar OAuth Client ID",
           "calendarClientSecret": "Calendar OAuth Client Secret",
           "enterSecret": "Enter client secret",
-          "gmailClientId": "Gmail OAuth Client ID",
-          "gmailClientSecret": "Gmail OAuth Client Secret",
+          "gmailClientId": "Google OAuth Client ID for staff sign-in and Gmail",
+          "gmailClientSecret": "Google OAuth Client Secret for staff sign-in and Gmail",
+          "locationHelp": "Google Cloud: APIs & Services > Credentials > OAuth 2.0 Client IDs.",
           "sectionTitle": "OAuth app",
-          "shareApp": "Use the same OAuth app for Gmail + Calendar",
-          "shareAppHelp": "Recommended. You can still authorize separate Google accounts per integration.",
+          "shareApp": "Use the Google OAuth client for Calendar too",
+          "shareAppHelp": "Staff sign-in and Gmail always use the OAuth client below. Turn this on to share it with Calendar; turn it off to enter separate Calendar credentials.",
           "storedSecret": "Stored secret: {{secret}}"
         },
-        "redirectUrisLabel": "Redirect URIs (copy into Google OAuth client)",
+        "oauthValues": {
+          "title": "Google OAuth app values"
+        },
+        "redirectUrisHelp": "Staff sign-in uses the OAuth client saved below. Add the listed Gmail and Calendar callback URLs in Google Cloud.",
+        "redirectUrisLabel": "Gmail and Calendar redirect URIs",
         "scopes": "Scopes",
         "scopesCalendar": "Calendar: {{scopes}}",
         "scopesGmail": "Gmail: {{scopes}}",
         "serviceAccount": {
           "alreadyStored": "A service account key is already stored (not shown).",
-          "description": "Paste the service account key JSON for the tenant-owned service account used to provision Pub/Sub.",
-          "title": "Pub/Sub service account (required for Gmail)"
+          "description": "Required for inbound Gmail notifications. Not used for staff sign-in.",
+          "locationHelp": "Google Cloud: IAM & Admin > Service Accounts > Keys > Add key > JSON.",
+          "title": "Gmail notification service account"
         },
         "setupGuide": "Setup guide",
         "title": "Google",
@@ -1044,117 +1056,121 @@
     "microsoft": {
       "settings": {
         "actions": {
+          "disconnectProviders": "Disconnect Microsoft providers",
           "entraLink": "Microsoft Entra",
-          "newProfile": "New Profile",
-          "openTeamsSetup": "Open Teams Setup",
+          "newProfile": "New app registration",
+          "openTeamsSetup": "Open Teams integration",
           "refresh": "Refresh",
-          "resetProviders": "Reset Microsoft Providers",
+          "resetProviders": "Disconnect Microsoft providers",
           "resetting": "Resetting…"
         },
         "archiveDialog": {
           "archiving": "Archiving…",
-          "cancel": "Keep Profile",
-          "confirm": "Archive Profile",
-          "message": "Archive {{name}}? Existing historical references stay intact, but the profile will no longer be available for new bindings.",
-          "title": "Archive Microsoft profile?"
+          "cancel": "Keep app",
+          "confirm": "Archive app",
+          "message": "Archive {{name}}? Existing history stays intact. This app will no longer be available for new service choices.",
+          "title": "Archive Microsoft app?"
         },
         "binding": {
           "bound": "Bound",
-          "boundProfileLabel": "Bound profile",
-          "createFirst": "Create a profile first",
-          "needsAttention": "Needs attention",
+          "boundProfileLabel": "Microsoft app",
+          "createFirst": "Create an app first",
+          "needsAttention": "Needs setup",
           "saving": "Saving…",
-          "selectProfile": "Select a profile",
+          "selectProfile": "Select an app",
           "unbound": "Unbound",
-          "noCapablePlaceholder": "No enabled profile",
-          "noCapableProfiles": "No Microsoft app is enabled for {{consumer}}. Edit a profile to enable it, or leave {{consumer}} unbound.",
-          "noEmailCapableProfiles": "No Microsoft app is enabled for Email. Edit a profile to enable it, or leave Email on the hosted app."
+          "noCapablePlaceholder": "No enabled app"
         },
         "bindings": {
-          "summaryBound": "{{consumer}} is bound to {{profile}}.",
-          "summaryNone": "No Microsoft profile is currently bound to {{consumer}}.",
-          "summaryUnavailable": "{{consumer}} is bound to an unavailable profile.",
-          "warningArchived": "{{consumer}} is still bound to an archived profile. Rebind it to an active profile.",
-          "warningNoBinding": "No {{consumer}} binding is configured yet.",
-          "warningNotReady": "{{consumer}} is bound to {{profile}}, but that profile still needs configuration.",
-          "warningProfileMissing": "{{consumer}} is bound to a profile that is no longer available. Rebind it to an active profile.",
-          "warningMissingCapability": "{{consumer}} is bound to a profile that is not enabled for {{consumer}}. Rebind it or edit the profile capabilities."
+          "summaryBound": "Current: {{profile}}.",
+          "summaryNone": "No {{consumer}} app selected.",
+          "summaryUnavailable": "Selected app unavailable.",
+          "warningArchived": "{{profile}} is archived. Choose an active Microsoft app.",
+          "warningNoApps": "Create a Microsoft app, turn on {{consumer}}, then choose it here.",
+          "warningNoBinding": "Choose a Microsoft app for {{consumer}}.",
+          "warningNoCapable": "No app can handle {{consumer}} yet. Edit a Microsoft app and turn on {{consumer}}, then choose it here.",
+          "warningNotReady": "{{profile}} is missing required setup. Open the app below and add the missing values before {{consumer}} can use it.",
+          "warningProfileMissing": "The selected Microsoft app is no longer available. Choose another app.",
+          "warningMissingCapability": "{{profile}} is selected, but it cannot handle {{consumer}} yet. Edit the app and turn on {{consumer}}, or choose another app."
         },
-        "bindingsAlertCe": "Explicit bindings are the source of truth for MSP SSO profile selection. Configure login domains separately after choosing the bound profile.",
-        "bindingsAlertEe": "Explicit bindings are the source of truth for MSP SSO, email, calendar, and Teams profile selection.",
         "consumerBindings": {
-          "descriptionCe": "Bind one Microsoft profile to MSP SSO for sign-in and login-domain usage.",
-          "descriptionEe": "Bind one Microsoft profile per supported consumer. Reassigning one consumer does not change the others.",
-          "title": "Explicit consumer bindings"
+          "descriptionCe": "This does not affect Google sign-in.",
+          "descriptionEe": "Changing Outlook email will not change staff sign-in, Calendar, or Teams.",
+          "title": "Which Microsoft app each service uses"
         },
         "consumers": {
           "calendar": {
-            "description": "Choose which Microsoft profile Outlook calendar sync should use.",
-            "label": "Calendar",
-            "reconnect": "Existing Microsoft calendar connections may need re-authorization after changing the bound profile."
+            "description": "Choose the Microsoft app for Outlook calendar sync.",
+            "label": "Outlook Calendar",
+            "reconnect": "Existing Outlook calendar connections may need re-authorization after changing the Microsoft app."
           },
           "email": {
-            "description": "Choose which Microsoft profile Outlook inbound email should use.",
-            "label": "Email",
-            "reconnect": "Existing Outlook email connections may need re-authorization after changing the bound profile."
+            "description": "Choose the Microsoft app for Outlook inbound email.",
+            "label": "Outlook email",
+            "reconnect": "Existing Outlook email connections may need re-authorization after changing the Microsoft app."
           },
           "mspSso": {
-            "description": "Choose which Microsoft profile backs MSP SSO login domains, Microsoft sign-in, and tenant discovery.",
-            "label": "MSP SSO"
+            "description": "Choose the Microsoft app for staff sign-in and login-domain discovery.",
+            "label": "Staff sign-in"
           },
           "teams": {
-            "description": "Choose which Microsoft profile Microsoft Teams installation and auth flows should use.",
+            "description": "Choose the Microsoft app for Teams installation and auth flows.",
             "label": "Teams"
           }
         },
-        "descriptionCe": "Manage tenant-owned Microsoft profiles for MSP SSO, Microsoft sign-in, and login-domain discovery.",
-        "descriptionEe": "Manage tenant-owned Microsoft profiles for MSP SSO, Outlook email, calendar sync, and Microsoft Teams.",
+        "descriptionCe": "Manage your company's Microsoft app registration for staff sign-in.",
+        "descriptionEe": "Manage your company's Microsoft app registrations for staff sign-in, Outlook email, calendar sync, and Teams.",
+        "disconnectDialog": {
+          "cancel": "Keep providers connected",
+          "message": "Existing Outlook email and calendar provider connections will be marked disconnected and must be re-authorized. Microsoft app registrations and service choices stay in place.",
+          "title": "Disconnect Microsoft providers?"
+        },
         "dialog": {
           "cancel": "Cancel",
           "clientId": "Client ID",
           "clientSecret": "Client secret",
           "clientSecretPlaceholder": "Enter client secret",
           "clientSecretPlaceholderEdit": "Leave blank to keep the current secret",
-          "createProfile": "Create Profile",
-          "createTitle": "Create Microsoft Profile",
-          "descriptionCreate": "Create a tenant-owned Microsoft profile, then bind it explicitly to the Microsoft consumers you want to use.",
-          "descriptionEdit": "Update the selected Microsoft profile. Leave the secret blank to keep the existing value.",
+          "createProfile": "Create app registration",
+          "createTitle": "Create Microsoft app registration",
+          "descriptionCreate": "Create a Microsoft app registration, then choose which services can use it.",
+          "descriptionEdit": "Update this Microsoft app registration. Leave the secret blank to keep the existing value.",
           "displayName": "Display name",
-          "displayNamePlaceholder": "Acme production tenant",
-          "editTitle": "Edit Microsoft Profile",
+          "displayNamePlaceholder": "Acme production app",
+          "editTitle": "Edit Microsoft app registration",
           "saveChanges": "Save Changes",
           "saving": "Saving…",
-          "setDefault": "Set this profile as the default Microsoft profile",
-          "setDefaultHelp": "Default profiles stay available for profile-management workflows and migration-safe metadata, not consumer routing.",
+          "setDefault": "Set this as the default Microsoft app",
+          "setDefaultHelp": "Some setup flows still need a default app. Service choices above decide which app each service uses.",
           "storedSecretHint": "Stored secret: {{secret}}. Leave this field empty to keep it unchanged.",
           "tenantId": "Tenant ID",
-          "capabilities": "Enabled capabilities",
-          "capabilitiesHelp": "Only enabled capabilities can bind to this Microsoft app."
+          "capabilities": "Services this app can handle",
+          "capabilitiesHelp": "Only checked services can use this Microsoft app."
         },
         "empty": {
-          "createButton": "Create Microsoft Profile",
-          "descriptionCe": "Create a named profile first, then bind it explicitly to MSP SSO and login-domain sign-in flows.",
-          "descriptionEe": "Create a named profile first, then bind it explicitly to MSP SSO, Outlook email, calendar sync, and Teams.",
-          "title": "No Microsoft profiles yet"
+          "createButton": "Create Microsoft app",
+          "descriptionCe": "Create a Microsoft app registration for staff sign-in.",
+          "descriptionEe": "Create a Microsoft app registration, then choose which services can use it.",
+          "title": "No Microsoft apps yet"
         },
         "errors": {
-          "archive": "Failed to archive Microsoft profile",
-          "loadBindings": "Failed to load Microsoft bindings",
+          "archive": "Failed to archive Microsoft app",
+          "loadBindings": "Failed to load Microsoft service choices",
           "loadStatus": "Failed to load Microsoft settings",
           "resetProviders": "Failed to reset Microsoft providers",
-          "saveProfile": "Failed to save Microsoft profile",
-          "setDefault": "Failed to set default Microsoft profile",
-          "updateBinding": "Failed to update Microsoft binding"
+          "saveProfile": "Failed to save Microsoft app",
+          "setDefault": "Failed to set default Microsoft app",
+          "updateBinding": "Failed to update Microsoft service choice"
         },
         "guidance": {
           "applicationIdUri": "Application ID URI",
           "calendarRedirect": "Calendar sync redirect URI",
-          "calendarTitle": "Calendar Guidance",
+          "calendarTitle": "Calendar",
           "clientId": "Client ID",
-          "currentProfileTitle": "Current Profile Values",
+          "currentProfileTitle": "Saved app values",
           "emailRedirect": "Inbound email redirect URI",
-          "emailTitle": "Email Guidance",
-          "mspSsoTitle": "MSP SSO Guidance",
+          "emailTitle": "Email",
+          "mspSsoTitle": "Staff sign-in",
           "notConfigured": "Not configured",
           "redirectUri": "Redirect URI",
           "requiresBaseUrl": "Requires base URL and client ID",
@@ -1163,73 +1179,100 @@
           "teamsMessageRedirect": "Message extension redirect URI",
           "teamsScopes": "Teams scopes",
           "teamsTabRedirect": "Personal tab redirect URI",
-          "teamsTitle": "Teams Guidance",
+          "teamsTitle": "Teams",
           "tenantId": "Tenant ID",
           "unavailable": "Unavailable"
         },
         "profileCard": {
-          "activeBindings": "Active bindings",
+          "activeBindings": "Used by",
           "archive": "Archive",
           "clientId": "Client ID",
           "defaultBadge": "Default",
           "edit": "Edit",
-          "guidanceSummary": "Microsoft app registration guidance",
-          "noVisibleBindings": "No visible consumer bindings",
-          "readinessTitle": "Profile readiness",
-          "readyCe": "This profile is ready for MSP SSO binding and login-domain sign-in flows.",
-          "readyEe": "This profile is ready for MSP SSO, Outlook email, and calendar bindings.",
-          "readyEeTeams": "This profile is ready for MSP SSO, Outlook email, calendar sync, and Teams bindings.",
-          "setDefault": "Set Default",
+          "guidanceSummary": "Values to copy into Microsoft Entra",
+          "noVisibleBindings": "Not used yet",
+          "readinessTitle": "Setup needed",
+          "readyCe": "This app is ready for staff sign-in.",
+          "readyEe": "This app is ready for staff sign-in, Outlook email, and calendar sync.",
+          "readyEeTeams": "This app is ready for staff sign-in, Outlook email, calendar sync, and Teams.",
+          "setDefault": "Set default",
           "storedSecret": "Stored secret",
           "teamsAppIdUri": "Teams application ID URI",
           "tenantIdLabel": "Tenant ID:",
           "updating": "Updating…",
-          "enabledCapabilities": "Enabled capabilities",
-          "noEnabledCapabilities": "No enabled capabilities"
+          "enabledCapabilities": "Services this app can handle",
+          "noEnabledCapabilities": "No services turned on"
         },
         "providerReconnect": {
-          "description": "Use this if you rotate credentials or intentionally rebind Outlook email or calendar to a different Microsoft profile.",
-          "title": "Provider reconnection"
+          "description": "Use after rotating Microsoft credentials or moving Outlook email/calendar to another Microsoft app.",
+          "title": "Reconnect Microsoft services"
+        },
+        "profileLibrary": {
+          "description": "Create or edit the Microsoft apps used by sign-in, Outlook, Calendar, and Teams.",
+          "title": "Microsoft app registrations"
         },
         "readiness": {
-          "archived": "Archived profiles cannot be used for new Microsoft bindings.",
-          "clientIdMissing": "Client ID is missing.",
-          "clientSecretMissing": "Client secret has not been configured.",
-          "tenantIdMissing": "Tenant ID is missing."
+          "archived": "Archived apps cannot be selected for Microsoft services.",
+          "clientIdMissing": "Add a client ID.",
+          "clientSecretMissing": "Add a client secret.",
+          "tenantIdMissing": "Add a tenant ID."
         },
         "statusBadges": {
           "archived": "Archived",
-          "needsAttention": "Needs Attention",
+          "needsAttention": "Needs setup",
           "ready": "Ready"
         },
         "title": "Microsoft",
         "toasts": {
-          "archiveFailedTitle": "Unable to archive Microsoft profile",
+          "archiveFailedTitle": "Unable to archive Microsoft app",
           "archivedDescription": "{{name}} was archived successfully.",
-          "archivedTitle": "Microsoft profile archived",
-          "bindingFailedTitle": "Unable to update {{consumer}} binding",
+          "archivedTitle": "Microsoft app archived",
+          "bindingFailedTitle": "Unable to update {{consumer}} app choice",
           "bindingUpdatedDescription": "{{consumer}} now uses {{profile}}.",
-          "bindingUpdatedTitle": "{{consumer}} binding updated",
-          "defaultUpdatedDescription": "{{name}} is now the default Microsoft profile record.",
-          "defaultUpdatedTitle": "Default Microsoft profile updated",
-          "profileCreated": "Microsoft profile created",
-          "profileCreatedDescription": "The Microsoft profile is ready to be bound to visible Microsoft consumers.",
-          "profileUpdated": "Microsoft profile updated",
-          "profileUpdatedDescription": "The Microsoft profile changes were saved successfully.",
+          "bindingUpdatedTitle": "{{consumer}} app choice updated",
+          "defaultUpdatedDescription": "{{name}} is now the default Microsoft app.",
+          "defaultUpdatedTitle": "Default Microsoft app updated",
+          "profileCreated": "Microsoft app created",
+          "profileCreatedDescription": "Choose which services can use this Microsoft app.",
+          "profileUpdated": "Microsoft app updated",
+          "profileUpdatedDescription": "Microsoft app changes saved.",
           "resetDescription": "Existing Outlook email and calendar connections now require re-authorization.",
           "resetFailedTitle": "Reset failed",
           "resetTitle": "Microsoft providers reset",
-          "saveFailedTitle": "Unable to save Microsoft profile",
-          "selectedProfile": "the selected profile",
-          "setDefaultFailedTitle": "Unable to set default profile"
+          "saveFailedTitle": "Unable to save Microsoft app",
+          "selectedProfile": "the selected app",
+          "setDefaultFailedTitle": "Unable to set default app"
         },
         "validation": {
           "clientIdRequired": "Microsoft OAuth Client ID is required",
           "clientSecretRequired": "Microsoft OAuth Client Secret is required",
-          "displayNameRequired": "Microsoft profile display name is required",
+          "displayNameRequired": "Microsoft app display name is required",
           "tenantIdRequired": "Microsoft Tenant ID is required"
         }
       }
+    },
+    "providersWorkbench": {
+      "badges": {
+        "loading": "Loading",
+        "needsAttention": "Needs attention",
+        "needsSetup": "Needs setup",
+        "notConfigured": "Not configured",
+        "ready": "Ready"
+      },
+      "descriptionCe": "Most companies set up one: Google or Microsoft. Set up both only if your company uses both.",
+      "descriptionEe": "Most companies set up one: Google or Microsoft. Set up both only if your company uses both.",
+      "eyebrow": "Provider setup",
+      "google": {
+        "description": "Staff sign-in with Google, Gmail inbound email, and Google Calendar.",
+        "label": "Google"
+      },
+      "microsoft": {
+        "descriptionCe": "Staff sign-in with Microsoft.",
+        "descriptionEe": "Staff sign-in with Microsoft, Outlook email, Outlook calendar sync, and Teams.",
+        "label": "Microsoft"
+      },
+      "selectorLabel": "Google or Microsoft setup options",
+      "title": "Google or Microsoft setup"
     },
     "qbo": {
       "live": {
@@ -1344,7 +1387,8 @@
         "makeDefault": "Make default",
         "noDefault": "No default",
         "saving": "Saving…",
-        "undepositedFunds": "Undeposited Funds (default)"
+        "undepositedFunds": "Undeposited Funds (default)",
+        "catalogLoadError": "Failed to load QuickBooks sync configuration options."
       }
     },
     "rmm": {
@@ -1875,7 +1919,7 @@
         "moved": {
           "title": "MSP SSO Login Domains",
           "body": "Single sign-on settings, including login-domain claims, have moved to Security → Single Sign-On.",
-          "cta": "Open Single Sign-On settings"
+          "cta": "Open Single Sign-On"
         },
         "dnsHost": "Host:",
         "dnsInstructions": "Add DNS TXT record, then click Verify:",

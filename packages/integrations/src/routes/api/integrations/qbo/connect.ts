@@ -103,6 +103,9 @@ export async function GET(): Promise<NextResponse> {
       tenantId: tenant,
       error: message
     });
-    return NextResponse.json({ error: message }, { status: 400 });
+    return NextResponse.json(
+      { error: 'QuickBooks connection is not configured for this workspace.' },
+      { status: 400 }
+    );
   }
 }

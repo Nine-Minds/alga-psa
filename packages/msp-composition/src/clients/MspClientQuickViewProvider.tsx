@@ -8,7 +8,7 @@ import type {
   QuickAddTicketRenderProps,
   TicketFormOptions,
 } from '@alga-psa/clients/context/ClientCrossFeatureContext';
-import { getSlaPolicies } from '@alga-psa/sla/actions';
+import { getSlaPolicies } from '@alga-psa/sla/actions/slaActions';
 import { buildCreateTicketHref } from '@alga-psa/tickets/lib/createTicketRoute';
 
 // Lightweight cross-feature provider for the read-only client quick-view drawer

@@ -11,6 +11,10 @@ import { ContactModel } from '@alga-psa/shared/models/contactModel';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import type { IClient, IContact } from '@alga-psa/types';
 import type { Knex } from 'knex';
+import {
+  actionError,
+  type ActionMessageError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 function maybeUserActor(currentUser: unknown) {
   const userId = (currentUser as { user_id?: string } | undefined)?.user_id;
@@ -133,7 +137,7 @@ export const createOrFindIntegrationContactByEmail = withAuth(async (
     phone?: string;
     title?: string;
   }
-): Promise<{ contact: IContact & { client_name: string }; isNew: boolean }> => {
+): Promise<{ contact: IContact & { client_name: string }; isNew: boolean } | ActionMessageError> => {
   const { knex } = await createTenantKnex();
 
   return withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -144,9 +148,9 @@ export const createOrFindIntegrationContactByEmail = withAuth(async (
 
       if (existingBaseContact.client_id !== input.clientId) {
         if (!existingBaseContact.client_id) {
-          throw new Error('EMAIL_EXISTS: A contact with this email address already exists in the system without a client assignment');
+          return actionError('A contact with this email address already exists in the system without a client assignment');
         }
-        throw new Error(`EMAIL_EXISTS: This email is already associated with ${existingClientName || 'another client'}`);
+        return actionError(`This email is already associated with ${existingClientName || 'another client'}`);
       }
 
       return {
@@ -189,7 +193,7 @@ export const createIntegrationClient = withAuth(async (
 ): Promise<{ success: true; data: IClient } | { success: false; error: string }> => {
   const canCreate = await hasPermission(user as any, 'client', 'create');
   if (!canCreate) {
-    throw new Error('Permission denied: Cannot create clients');
+    return { success: false, error: 'Permission denied: Cannot create clients' };
   }
 
   const { knex } = await createTenantKnex();
@@ -223,7 +227,10 @@ export const createIntegrationClient = withAuth(async (
     });
 
     if (!createdClient) {
-      throw new Error('Failed to create client');
+      return {
+        success: false,
+        error: 'Client could not be created. Please try again.'
+      };
     }
 
     const createdAt = createdClient.created_at ?? new Date().toISOString();
@@ -265,10 +272,6 @@ export const createIntegrationClient = withAuth(async (
       return { success: false, error: 'Referenced data not found. Please check account manager selection.' };
     }
 
-    if (error.message && !error.code) {
-      throw error;
-    }
-
-    throw new Error('Failed to create client. Please try again.');
+    throw error;
   }
 });

@@ -121,8 +121,8 @@ const NinjaOneComplianceDashboard: React.FC<NinjaOneComplianceDashboardProps> = 
         setSummary(null);
       }
     } catch (err) {
-      const message = err instanceof Error ? err.message : t('integrations.rmm.ninjaOne.compliance.summaryError');
-      setError(message);
+      console.error('Failed to load NinjaOne compliance summary:', err);
+      setError(t('integrations.rmm.ninjaOne.compliance.summaryError'));
       setSummary(null);
     } finally {
       setIsLoading(false);
@@ -150,10 +150,15 @@ const NinjaOneComplianceDashboard: React.FC<NinjaOneComplianceDashboardProps> = 
   const handleSyncPatches = () => {
     startPatchSync(async () => {
       try {
-        await triggerPatchStatusSync();
+        const result = await triggerPatchStatusSync();
+        if (!result.success) {
+          setError(result.error ?? t('integrations.rmm.ninjaOne.compliance.summaryError'));
+          return;
+        }
         await fetchSummary();
       } catch (err) {
         console.error('Patch sync failed:', err);
+        setError(t('integrations.rmm.ninjaOne.compliance.summaryError'));
       }
     });
   };
@@ -161,10 +166,15 @@ const NinjaOneComplianceDashboard: React.FC<NinjaOneComplianceDashboardProps> = 
   const handleSyncSoftware = () => {
     startSoftwareSync(async () => {
       try {
-        await triggerSoftwareInventorySync({ trackChanges: true });
+        const result = await triggerSoftwareInventorySync({ trackChanges: true });
+        if (!result.success) {
+          setError(result.error ?? t('integrations.rmm.ninjaOne.compliance.summaryError'));
+          return;
+        }
         await fetchSummary();
       } catch (err) {
         console.error('Software sync failed:', err);
+        setError(t('integrations.rmm.ninjaOne.compliance.summaryError'));
       }
     });
   };

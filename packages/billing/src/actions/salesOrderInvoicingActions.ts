@@ -10,11 +10,18 @@ import {
   fulfillSalesOrderLine,
   FulfillSalesOrderLineInput,
   FulfillSalesOrderLineResult,
+} from '@alga-psa/inventory/actions/fulfillmentActions';
+import {
   confirmDropShipShipment,
   ConfirmDropShipShipmentInput,
   ConfirmDropShipShipmentResult,
   DropShipLineRef,
-} from '@alga-psa/inventory/actions';
+  type InventoryActionError,
+} from '@alga-psa/inventory/actions/dropShipActions';
+import {
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { generateManualInvoice } from './manualInvoiceActions';
 import { TaxService } from '../services/taxService';
 import * as invoiceService from '../services/invoiceService';
@@ -149,6 +156,27 @@ export const listInvoiceableSalesOrdersForBilling = withAuth(
  * - mode 'fulfilled' (default for invoice_mode='on_fulfillment'): bills quantity_fulfilled − quantity_invoiced
  * - mode 'ordered'   (default for invoice_mode='manual'):         bills quantity_ordered  − quantity_invoiced
  */
+
+function expectedSalesOrderInvoiceErrorMessage(error: unknown): string | null {
+  if (!(error instanceof Error)) return null;
+
+  if (
+    error.message === 'Unauthorized' ||
+    error.message === 'No tenant found' ||
+    error.message === 'Quantity must be greater than 0' ||
+    error.message.startsWith('Client not found') ||
+    error.message.startsWith('Service not found:')
+  ) {
+    return error.message;
+  }
+
+  return null;
+}
+
+function isInventoryActionError(value: unknown): value is InventoryActionError {
+  return isActionMessageError(value) || isActionPermissionError(value);
+}
+
 export const generateInvoiceForSalesOrder = withAuth(
   async (
     user,
@@ -157,14 +185,18 @@ export const generateInvoiceForSalesOrder = withAuth(
     opts?: { mode?: 'fulfilled' | 'ordered' },
   ): Promise<{ success: boolean; invoiced: number; invoiceId?: string; error?: string }> => {
     if (!(await hasPermission(user, 'sales_order', 'update'))) {
-      throw new Error('Permission denied: sales_order update required');
+      return { success: false, invoiced: 0, error: 'Permission denied: sales_order update required' };
     }
     const { knex: db } = await createTenantKnex();
 
-    const { so, billable } = await withTransaction(db, async (trx: Knex.Transaction) => {
+    const invoiceTarget = await withTransaction(db, async (trx: Knex.Transaction) => {
       const so = await trx('sales_orders').where({ tenant, so_id: soId }).first();
-      if (!so) throw new Error('Sales order not found');
-      if (so.status === 'cancelled') throw new Error('Cannot invoice a cancelled sales order');
+      if (!so) {
+        return { so: null, billable: [], error: 'Sales order not found' };
+      }
+      if (so.status === 'cancelled') {
+        return { so, billable: [], error: 'Cannot invoice a cancelled sales order' };
+      }
       const lines = await trx('sales_order_lines').where({ tenant, so_id: soId });
       const mode = opts?.mode ?? (so.invoice_mode === 'manual' ? 'ordered' : 'fulfilled');
       const billable = lines
@@ -176,6 +208,11 @@ export const generateInvoiceForSalesOrder = withAuth(
         .filter((x: any) => x.qty > 0);
       return { so, billable };
     });
+
+    if ('error' in invoiceTarget) {
+      return { success: false, invoiced: 0, error: invoiceTarget.error };
+    }
+    const { so, billable } = invoiceTarget;
 
     if (!billable.length) return { success: true, invoiced: 0 };
 
@@ -216,61 +253,69 @@ export const generateInvoiceForSalesOrder = withAuth(
     );
 
     let invoiceId: string | undefined;
-    if (existingDraft) {
-      const { session, knex } = await invoiceService.validateSessionAndTenant();
-      const client = await invoiceService.getClientDetails(knex, tenant, so.client_id);
-      const totalBefore = Math.round(Number(existingDraft.total_amount ?? 0));
-      await knex.transaction(async (trx) => {
-        await invoiceService.persistManualInvoiceCharges(
-          trx,
-          existingDraft.invoice_id,
-          items as any,
-          client,
-          session,
-          tenant,
-        );
-        const taxService = new TaxService();
-        await invoiceService.calculateAndDistributeTax(trx, existingDraft.invoice_id, client, taxService, tenant);
+    try {
+      if (existingDraft) {
+        const { session, knex } = await invoiceService.validateSessionAndTenant();
+        const client = await invoiceService.getClientDetails(knex, tenant, so.client_id);
+        const totalBefore = Math.round(Number(existingDraft.total_amount ?? 0));
+        await knex.transaction(async (trx) => {
+          await invoiceService.persistManualInvoiceCharges(
+            trx,
+            existingDraft.invoice_id,
+            items as any,
+            client,
+            session,
+            tenant,
+          );
+          const taxService = new TaxService();
+          await invoiceService.calculateAndDistributeTax(trx, existingDraft.invoice_id, client, taxService, tenant);
 
-        // Totals like updateInvoiceTotalsAndRecordTransaction, but the transaction row
-        // records only the DELTA — re-recording the full total would double the balance.
-        const finalItems = await trx('invoice_charges').where({ invoice_id: existingDraft.invoice_id, tenant });
-        const subtotal = finalItems.reduce((s: number, it: any) => s + Number(it.net_amount), 0);
-        const tax = finalItems.reduce((s: number, it: any) => s + Number(it.tax_amount), 0);
-        const total = Math.round(subtotal + tax);
-        await trx('invoices')
-          .where({ invoice_id: existingDraft.invoice_id, tenant })
-          .update({ subtotal: Math.round(subtotal), tax: Math.round(tax), total_amount: total });
-        const currentBalance = await trx('transactions')
-          .where({ client_id: so.client_id, tenant })
-          .orderBy('created_at', 'desc')
-          .first()
-          .then((lastTx: any) => lastTx?.balance_after || 0);
-        await trx('transactions').insert({
-          transaction_id: uuidv4(),
-          client_id: so.client_id,
-          invoice_id: existingDraft.invoice_id,
-          amount: total - totalBefore,
-          type: 'invoice_adjustment',
-          status: 'completed',
-          description: `Added sales-order items from ${so.so_number} to invoice ${existingDraft.invoice_number}`,
-          created_at: Temporal.Now.instant().toString(),
-          tenant,
-          balance_after: currentBalance + (total - totalBefore),
+          // Totals like updateInvoiceTotalsAndRecordTransaction, but the transaction row
+          // records only the DELTA — re-recording the full total would double the balance.
+          const finalItems = await trx('invoice_charges').where({ invoice_id: existingDraft.invoice_id, tenant });
+          const subtotal = finalItems.reduce((s: number, it: any) => s + Number(it.net_amount), 0);
+          const tax = finalItems.reduce((s: number, it: any) => s + Number(it.tax_amount), 0);
+          const total = Math.round(subtotal + tax);
+          await trx('invoices')
+            .where({ invoice_id: existingDraft.invoice_id, tenant })
+            .update({ subtotal: Math.round(subtotal), tax: Math.round(tax), total_amount: total });
+          const currentBalance = await trx('transactions')
+            .where({ client_id: so.client_id, tenant })
+            .orderBy('created_at', 'desc')
+            .first()
+            .then((lastTx: any) => lastTx?.balance_after || 0);
+          await trx('transactions').insert({
+            transaction_id: uuidv4(),
+            client_id: so.client_id,
+            invoice_id: existingDraft.invoice_id,
+            amount: total - totalBefore,
+            type: 'invoice_adjustment',
+            status: 'completed',
+            description: `Added sales-order items from ${so.so_number} to invoice ${existingDraft.invoice_number}`,
+            created_at: Temporal.Now.instant().toString(),
+            tenant,
+            balance_after: currentBalance + (total - totalBefore),
+          });
         });
-      });
-      invoiceId = existingDraft.invoice_id;
-    } else {
-      const result: any = await generateManualInvoice({
-        clientId: so.client_id,
-        currency_code: so.currency_code,
-        items,
-      } as any);
+        invoiceId = existingDraft.invoice_id;
+      } else {
+        const result: any = await generateManualInvoice({
+          clientId: so.client_id,
+          currency_code: so.currency_code,
+          items,
+        } as any);
 
-      if (result && result.success === false) {
-        return { success: false, invoiced: 0, error: result.error };
+        if (result && result.success === false) {
+          return { success: false, invoiced: 0, error: result.error };
+        }
+        invoiceId = result?.invoice?.invoice_id ?? result?.invoiceId;
       }
-      invoiceId = result?.invoice?.invoice_id ?? result?.invoiceId;
+    } catch (error) {
+      const expected = expectedSalesOrderInvoiceErrorMessage(error);
+      if (expected) {
+        return { success: false, invoiced: 0, error: expected };
+      }
+      throw error;
     }
 
     // Record what was invoiced (capped at ordered) and advance SO status.
@@ -304,6 +349,8 @@ export interface FulfillAndInvoiceResult {
   invoice: { success: boolean; invoiced: number; invoiceId?: string; error?: string } | null;
 }
 
+export type FulfillAndInvoiceActionResult = FulfillAndInvoiceResult | InventoryActionError;
+
 /**
  * Fulfill an SO line and, when the order's invoice_mode is 'on_fulfillment' (the
  * default), immediately bill the newly fulfilled quantity (F008/F009). Lives in
@@ -319,9 +366,12 @@ export const fulfillAndInvoiceSoLine = withAuth(
     { tenant },
     soLineId: string,
     input?: FulfillSalesOrderLineInput,
-  ): Promise<FulfillAndInvoiceResult> => {
+  ): Promise<FulfillAndInvoiceActionResult> => {
     // Both composed actions enforce their own permissions (sales_order update).
     const fulfillment = await fulfillSalesOrderLine(soLineId, input);
+    if (isInventoryActionError(fulfillment)) {
+      return fulfillment;
+    }
 
     const { knex: db } = await createTenantKnex();
     const so = await withTransaction(db, async (trx: Knex.Transaction) =>
@@ -335,9 +385,10 @@ export const fulfillAndInvoiceSoLine = withAuth(
       const invoice = await generateInvoiceForSalesOrder(fulfillment.so_id, { mode: 'fulfilled' });
       return { fulfillment, invoice };
     } catch (e) {
+      console.error('Failed to generate invoice after sales order fulfillment:', e);
       return {
         fulfillment,
-        invoice: { success: false, invoiced: 0, error: e instanceof Error ? e.message : String(e) },
+        invoice: { success: false, invoiced: 0, error: 'Fulfillment was saved, but invoice generation failed. Generate the invoice manually from the sales order.' },
       };
     }
   },
@@ -348,6 +399,8 @@ export interface ConfirmDropShipAndInvoiceResult {
   /** Invoice outcome when the SO's invoice_mode is 'on_fulfillment'; null for manual mode. */
   invoice: { success: boolean; invoiced: number; invoiceId?: string; error?: string } | null;
 }
+
+export type ConfirmDropShipAndInvoiceActionResult = ConfirmDropShipAndInvoiceResult | InventoryActionError;
 
 /**
  * Confirm a drop-ship vendor shipment and bill it under the same rule as from-stock
@@ -364,9 +417,12 @@ export const confirmDropShipAndInvoice = withAuth(
     { tenant },
     ref: DropShipLineRef,
     input?: ConfirmDropShipShipmentInput,
-  ): Promise<ConfirmDropShipAndInvoiceResult> => {
+  ): Promise<ConfirmDropShipAndInvoiceActionResult> => {
     // Both composed actions enforce their own permissions (sales_order update).
     const shipment = await confirmDropShipShipment(ref, input);
+    if (isInventoryActionError(shipment)) {
+      return shipment;
+    }
 
     const soId = shipment.so_line.so_id;
     const { knex: db } = await createTenantKnex();
@@ -381,9 +437,10 @@ export const confirmDropShipAndInvoice = withAuth(
       const invoice = await generateInvoiceForSalesOrder(soId, { mode: 'fulfilled' });
       return { shipment, invoice };
     } catch (e) {
+      console.error('Failed to generate invoice after drop-ship confirmation:', e);
       return {
         shipment,
-        invoice: { success: false, invoiced: 0, error: e instanceof Error ? e.message : String(e) },
+        invoice: { success: false, invoiced: 0, error: 'Shipment was confirmed, but invoice generation failed. Generate the invoice manually from the sales order.' },
       };
     }
   },

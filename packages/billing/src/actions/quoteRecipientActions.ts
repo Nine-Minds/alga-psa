@@ -7,15 +7,16 @@ import type { ContactFilterStatus } from '@alga-psa/shared/ticketClients/types';
 import { getContactsByClient as getContactsByClientModel } from '@alga-psa/shared/ticketClients/contacts';
 import { withAuth } from '@alga-psa/auth/withAuth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import { permissionError, type ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 export const getQuoteRecipientContacts = withAuth(async (
   user,
   { tenant },
   clientId: string,
   status: ContactFilterStatus = 'active',
-): Promise<IContact[]> => {
+): Promise<IContact[] | ActionPermissionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    throw new Error('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required');
   }
   const { knex } = await createTenantKnex();
 

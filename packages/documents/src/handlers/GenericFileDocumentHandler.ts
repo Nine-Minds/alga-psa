@@ -1,6 +1,7 @@
 import type { IDocument, PreviewResponse } from '@alga-psa/types';
 import { BaseDocumentHandler } from './BaseDocumentHandler';
 import { StorageService } from '@alga-psa/storage/StorageService';
+import { documentPreviewErrorMessage } from './previewErrors';
 import path from 'path';
 
 /**
@@ -72,7 +73,7 @@ export class GenericFileDocumentHandler extends BaseDocumentHandler {
       console.error(`[GenericFileDocumentHandler] Error generating preview for document ${document.document_id}:`, error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Failed to generate document preview'
+        error: documentPreviewErrorMessage(error, 'Failed to generate document preview')
       };
     }
   }

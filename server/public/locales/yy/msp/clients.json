@@ -333,7 +333,8 @@
     "created": "55555 {{name}} 55555",
     "createAndAddAnother": "55555",
     "createAndView": "55555",
-    "additionalDetails": "55555"
+    "additionalDetails": "55555",
+    "createFailed": "55555"
   },
   "clientCreatedDialog": {
     "title": "55555",
@@ -451,7 +452,8 @@
     "formattingError": "55555",
     "removeAssignmentTitle": "55555",
     "removeAssignmentMessage": "55555",
-    "contracts": "55555"
+    "contracts": "55555",
+    "taxRatesLoadError": "55555"
   },
   "clientBillingSchedule": {
     "title": "55555",
@@ -599,7 +601,8 @@
     "startDate": "55555",
     "startDateRequired": "55555",
     "updateAssignment": "55555",
-    "useTenantRenewalDefaults": "55555"
+    "useTenantRenewalDefaults": "55555",
+    "saveError": "55555"
   },
   "clientContractLineDashboard": {
     "title": "55555",
@@ -904,11 +907,14 @@
     "clientName": "55555",
     "importCompleteMessage": "55555 {{count}} 55555",
     "importCompleteWithErrors": "55555",
-    "importResultSummary": "{{created}} 55555, {{updated}} 55555, {{skipped}} 55555, {{failed}} 55555",
-    "skippedExistingMessage": "{{count}} 55555",
+    "importResultSummary": "55555 {{created}} 55555 {{updated}} 55555 {{skipped}} 55555 {{failed}} 55555",
+    "skippedExistingMessage": "55555 {{count}} 55555",
     "error": "55555",
     "updateExistingTitle": "55555",
-    "updateExistingMessage": "55555 {{count}} 55555"
+    "updateExistingMessage": "55555 {{count}} 55555",
+    "invalidRowsBlocked": "55555 {{count}} 55555",
+    "noValidRows": "55555",
+    "serverFailures": "55555 {{failed}} 55555 {{total}} 55555"
   },
   "clientsList": {
     "name": "55555",
@@ -1065,7 +1071,8 @@
     "retry": "55555",
     "loadError": "55555",
     "unknownError": "55555",
-    "loadErrorTitle": "55555"
+    "loadErrorTitle": "55555",
+    "loadErrorDescription": "55555"
   },
   "actions": {
     "cancel": "55555",
@@ -1229,7 +1236,9 @@
         "endRequired": "55555",
         "startRequired": "55555",
         "unavailable": "55555"
-      }
+      },
+      "loadFailed": "55555",
+      "saveFailed": "55555"
     },
     "feed": {
       "addInteraction": "55555",
@@ -1242,7 +1251,9 @@
       "searchPlaceholder": "55555",
       "startDate": "55555",
       "title": "55555",
-      "typePlaceholder": "55555"
+      "typePlaceholder": "55555",
+      "loadFailed": "55555",
+      "typesLoadFailed": "55555"
     },
     "overall": {
       "allContacts": "55555",
@@ -1259,7 +1270,8 @@
       "startTimeLabel": "55555",
       "startTimePlaceholder": "55555",
       "statusPlaceholder": "55555",
-      "title": "55555"
+      "title": "55555",
+      "statusesLoadFailed": "55555"
     }
   },
   "clientDrawer": {

@@ -27,7 +27,14 @@ import { Plus, Link, FileText, Edit3, Download, Grid, List as ListIcon, FolderPl
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { downloadDocument, getDocumentDownloadUrl } from '@alga-psa/documents/lib/documentUtils';
 import toast from 'react-hot-toast';
-import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -78,6 +85,9 @@ type DocumentsNamespace = 'common' | 'features/documents';
 type CollabConnectionStatus = 'connecting' | 'connected' | 'disconnected';
 type ProseMirrorDoc = { type: 'doc'; content: Record<string, unknown>[] };
 type DocumentContent = PartialBlock[] | ProseMirrorDoc;
+
+const isDocumentActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
+  isActionPermissionError(value) || isActionMessageError(value);
 
 interface DocumentsProps {
   id?: string;
@@ -310,7 +320,11 @@ const Documents = ({
   // In entity mode, ensure default folders are created on first visit
   useEffect(() => {
     if (entityId && entityType) {
-      void ensureEntityFolders(entityId, entityType);
+      void ensureEntityFolders(entityId, entityType).then((result) => {
+        if (isDocumentActionError(result)) {
+          console.error('[Documents] Failed to ensure entity folders:', getErrorMessage(result));
+        }
+      });
     }
   }, [entityId, entityType]);
 
@@ -393,9 +407,9 @@ const Documents = ({
 
         const response = await getDocumentsByFolder(folderToFetch, includeSubfolders, currentPage, pageSize, filters);
 
-        if (isActionPermissionError(response)) {
+        if (isDocumentActionError(response)) {
           if (!cancelled) {
-            handleError(response.permissionError);
+            handleError(response, getErrorMessage(response));
             setDocumentsToDisplay([]);
             setTotalPages(1);
           }
@@ -449,8 +463,8 @@ const Documents = ({
         const includeSubfolders = filters?.showAllDocuments || false;
         const folderToFetch = filters?.showAllDocuments ? null : currentFolder;
         const response = await getDocumentsByFolder(folderToFetch, includeSubfolders, currentPage, pageSize, filters);
-        if (isActionPermissionError(response)) {
-          handleError(response.permissionError);
+        if (isDocumentActionError(response)) {
+          handleError(response, getErrorMessage(response));
           return;
         }
         setDocumentsToDisplay(response.documents);
@@ -465,8 +479,8 @@ const Documents = ({
       if (entityId && entityType) {
         try {
           const response = await getDocumentsByEntity(entityId, entityType, filters, currentPage, pageSize);
-          if (isActionPermissionError(response)) {
-            handleError(response.permissionError);
+          if (isDocumentActionError(response)) {
+            handleError(response, getErrorMessage(response));
             return;
           }
           setDocumentsToDisplay(response.documents);
@@ -531,7 +545,13 @@ const Documents = ({
   const handleFolderCreated = async (folderPath: string) => {
     try {
       // Create the folder in the database
-      await createFolder(folderPath);
+      const result = await createFolder(folderPath);
+      if (isDocumentActionError(result)) {
+        const message = getErrorMessage(result);
+        handleError(result, message);
+        setError(message);
+        return;
+      }
 
       // Show success toast
       toast.success(
@@ -561,10 +581,16 @@ const Documents = ({
     if (selectedDocumentsForMove.size === 0) return;
 
     try {
-      await moveDocumentsToFolder(
+      const result = await moveDocumentsToFolder(
         Array.from(selectedDocumentsForMove),
         targetFolder
       );
+      if (isDocumentActionError(result)) {
+        const message = getErrorMessage(result);
+        handleError(result, message);
+        setError(message);
+        return;
+      }
 
       const count = selectedDocumentsForMove.size;
       const folderName =
@@ -622,8 +648,8 @@ const Documents = ({
         folder_path: folderPath
       });
 
-      if (isActionPermissionError(result)) {
-        setDrawerError(result.permissionError);
+      if (isDocumentActionError(result)) {
+        setDrawerError(getErrorMessage(result));
         return;
       }
 
@@ -767,7 +793,11 @@ const Documents = ({
     if (!entityId || !entityType) return;
 
     try {
-      await removeDocumentAssociations(entityId, entityType, [document.document_id]);
+      const result = await removeDocumentAssociations(entityId, entityType, [document.document_id]);
+      if (isDocumentActionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
       setDocumentsToDisplay(prev => prev.filter(d => d.document_id !== document.document_id));
       if (inFolderMode) {
         setFolderTreeKey(prev => prev + 1);
@@ -792,7 +822,13 @@ const Documents = ({
     if (!documentToMove) return;
 
     try {
-      await moveDocumentsToFolder([documentToMove.document_id], folderPath);
+      const result = await moveDocumentsToFolder([documentToMove.document_id], folderPath);
+      if (isDocumentActionError(result)) {
+        const message = getErrorMessage(result);
+        handleError(result, message);
+        setError(message);
+        return;
+      }
 
       toast.success(
         tDoc('messages.moveDocumentSuccess', {
@@ -832,18 +868,26 @@ const Documents = ({
       if (preCreatedDocIdRef.current) {
         // Update the pre-created document with final name and content
         const docId = preCreatedDocIdRef.current;
-        await updateDocument(docId, {
+        const updateResult = await updateDocument(docId, {
           document_name: finalName,
           edited_by: userId
         });
-        await updateBlockContent(docId, {
+        if (isDocumentActionError(updateResult)) {
+          setDrawerError(getErrorMessage(updateResult));
+          return;
+        }
+        const contentResult = await updateBlockContent(docId, {
           block_data: JSON.stringify(currentContent),
           user_id: userId
         });
+        if (isDocumentActionError(contentResult)) {
+          setDrawerError(getErrorMessage(contentResult));
+          return;
+        }
         preCreatedDocIdRef.current = null;
       } else {
         // Fallback: create new if pre-creation didn't happen
-        await createBlockDocument({
+        const createResult = await createBlockDocument({
           document_name: finalName,
           user_id: userId,
           block_data: JSON.stringify(currentContent),
@@ -851,6 +895,10 @@ const Documents = ({
           entityType,
           folder_path: documentFolderPath
         });
+        if (isDocumentActionError(createResult)) {
+          setDrawerError(getErrorMessage(createResult));
+          return;
+        }
       }
 
       // Refresh the document list (triggers router.refresh() in entity mode)
@@ -881,17 +929,25 @@ const Documents = ({
       setIsSaving(true);
 
       // Update document name
-      await updateDocument(selectedDocument.document_id, {
+      const updateResult = await updateDocument(selectedDocument.document_id, {
         document_name: documentName,
         edited_by: userId
       });
+      if (isDocumentActionError(updateResult)) {
+        setDrawerError(getErrorMessage(updateResult));
+        return;
+      }
 
       // Update content if changed
       if (hasContentChanged) {
-        await updateBlockContent(selectedDocument.document_id, {
+        const contentResult = await updateBlockContent(selectedDocument.document_id, {
           block_data: JSON.stringify(currentContent),
           user_id: userId
         });
+        if (isDocumentActionError(contentResult)) {
+          setDrawerError(getErrorMessage(contentResult));
+          return;
+        }
       }
 
       // Trigger preview refresh for only the edited document
@@ -924,10 +980,14 @@ const Documents = ({
         : documentName;
 
       if (finalName !== selectedDocument.document_name) {
-        await updateDocument(selectedDocument.document_id, {
+        const updateResult = await updateDocument(selectedDocument.document_id, {
           document_name: finalName,
           edited_by: userId
         });
+        if (isDocumentActionError(updateResult)) {
+          setDrawerError(getErrorMessage(updateResult));
+          return;
+        }
       }
 
       const result = await syncCollabSnapshot(selectedDocument.document_id);
@@ -935,10 +995,14 @@ const Documents = ({
         // Fallback: save content directly from the client-side editor
         const editorJson = collabEditorRef.current?.getJSON();
         if (editorJson) {
-          await updateBlockContent(selectedDocument.document_id, {
+          const contentResult = await updateBlockContent(selectedDocument.document_id, {
             block_data: JSON.stringify(editorJson),
             user_id: userId
           });
+          if (isDocumentActionError(contentResult)) {
+            setDrawerError(getErrorMessage(contentResult));
+            return;
+          }
         } else {
           setDrawerError(result.message || tDoc('messages.saveFailed', 'Failed to save document'));
           return;
@@ -978,20 +1042,28 @@ const Documents = ({
         : documentName;
 
       if (finalName !== selectedDocument.document_name) {
-        await updateDocument(selectedDocument.document_id, {
+        const updateResult = await updateDocument(selectedDocument.document_id, {
           document_name: finalName,
           edited_by: userId
         });
+        if (isDocumentActionError(updateResult)) {
+          setDrawerError(getErrorMessage(updateResult));
+          return;
+        }
       }
 
       const content = fallbackEditorRef.current?.getJSON()
         || fallbackContent
         || { type: 'doc', content: [{ type: 'paragraph' }] };
 
-      await updateBlockContent(selectedDocument.document_id, {
+      const contentResult = await updateBlockContent(selectedDocument.document_id, {
         block_data: JSON.stringify(content),
         user_id: currentUserId || userId
       });
+      if (isDocumentActionError(contentResult)) {
+        setDrawerError(getErrorMessage(contentResult));
+        return;
+      }
 
       preCreatedDocIdRef.current = null;
       setEditedDocumentId(selectedDocument.document_id);
@@ -1023,7 +1095,10 @@ const Documents = ({
         setIsLoadingContent(true);
         try {
           const content = await getBlockContent(selectedDocument.document_id);
-          if (content && !isActionPermissionError(content) && content.block_data) {
+          if (isDocumentActionError(content)) {
+            setError(getErrorMessage(content));
+            setCurrentContent(DEFAULT_BLOCKS);
+          } else if (content && content.block_data) {
             try {
               const parsedContent = typeof content.block_data === 'string'
                 ? JSON.parse(content.block_data)
@@ -1121,8 +1196,8 @@ const Documents = ({
         const result = await getDocument(docId);
         if (cancelled) return;
         if (!result) return;
-        if (isActionPermissionError(result)) {
-          handleError(result.permissionError);
+        if (isDocumentActionError(result)) {
+          handleError(result, getErrorMessage(result));
           return;
         }
         await handleDocumentClickRef.current(result as IDocument);
@@ -1194,8 +1269,8 @@ const Documents = ({
     try {
       const result = await toggleDocumentVisibility([document.document_id], nextValue);
 
-      if (isActionPermissionError(result)) {
-        handleError(result.permissionError);
+      if (isDocumentActionError(result)) {
+        handleError(result, getErrorMessage(result));
         setDocumentsToDisplay((previousDocuments) =>
           previousDocuments.map((item) =>
             item.document_id === document.document_id

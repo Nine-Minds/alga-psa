@@ -15,16 +15,37 @@ import {
   createBlockDocument,
   getBlockContent,
   updateBlockContent,
-} from '@alga-psa/block-content/actions';
+} from '@alga-psa/block-content/actions/blockContentActions';
 import type { IDocument } from '@alga-psa/types';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';
 import { buildNoteCreatedPayload } from '@alga-psa/workflow-streams';
 import { assertMspPermission } from '../../lib/authHelpers';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 export interface ContactNoteContent {
   document: IDocument | null;
   blockData: unknown | null;
   lastUpdated: string | null;
+}
+
+type ContactNoteActionError = ActionMessageError | ActionPermissionError;
+
+function contactNoteActionErrorFrom(error: unknown): ContactNoteActionError | null {
+  if (!(error instanceof Error)) {
+    return null;
+  }
+  if (error.message.includes('Permission denied')) {
+    return permissionError(error.message);
+  }
+  if (error.message === 'Contact not found') {
+    return actionError('Contact not found');
+  }
+  return null;
 }
 
 /**
@@ -35,8 +56,14 @@ export const getContactNoteContent = withAuth(async (
   user,
   { tenant },
   contactId: string
-): Promise<ContactNoteContent> => {
-  await assertMspPermission(user, 'contact', 'read', 'Permission denied: Cannot read contacts');
+): Promise<ContactNoteContent | ContactNoteActionError> => {
+  try {
+    await assertMspPermission(user, 'contact', 'read', 'Permission denied: Cannot read contacts');
+  } catch (error) {
+    const expected = contactNoteActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 
   const { knex } = await createTenantKnex();
 
@@ -97,7 +124,9 @@ export const getContactNoteContent = withAuth(async (
     };
   } catch (error) {
     console.error('Error getting contact note content:', error);
-    throw new Error('Failed to get contact note content');
+    const expected = contactNoteActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 });
 
@@ -110,8 +139,14 @@ export const saveContactNote = withAuth(async (
   { tenant },
   contactId: string,
   blockData: unknown
-): Promise<{ document_id: string }> => {
-  await assertMspPermission(user, 'contact', 'update', 'Permission denied: Cannot update contacts');
+): Promise<{ document_id: string } | ContactNoteActionError> => {
+  try {
+    await assertMspPermission(user, 'contact', 'update', 'Permission denied: Cannot update contacts');
+  } catch (error) {
+    const expected = contactNoteActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 
   const { knex } = await createTenantKnex();
 
@@ -172,7 +207,9 @@ export const saveContactNote = withAuth(async (
     }
   } catch (error) {
     console.error('Error saving contact note:', error);
-    throw new Error('Failed to save contact note');
+    const expected = contactNoteActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 });
 
@@ -185,8 +222,14 @@ export const deleteContactNote = withAuth(async (
   { tenant },
   contactId: string,
   deleteDocument: boolean = false
-): Promise<void> => {
-  await assertMspPermission(user, 'contact', 'update', 'Permission denied: Cannot update contacts');
+): Promise<void | ContactNoteActionError> => {
+  try {
+    await assertMspPermission(user, 'contact', 'update', 'Permission denied: Cannot update contacts');
+  } catch (error) {
+    const expected = contactNoteActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 
   const { knex } = await createTenantKnex();
 
@@ -230,6 +273,8 @@ export const deleteContactNote = withAuth(async (
     });
   } catch (error) {
     console.error('Error deleting contact note:', error);
-    throw new Error('Failed to delete contact note');
+    const expected = contactNoteActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 });

@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
   } catch (error: any) {
     console.error('Test webhook error:', error);
     return NextResponse.json(
-      { error: error.message || 'Failed to publish test event' },
+      { error: 'Failed to publish test event.' },
       { status: 500 }
     );
   }

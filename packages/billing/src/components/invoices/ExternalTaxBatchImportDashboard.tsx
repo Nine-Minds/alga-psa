@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import toast from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { getErrorMessage, handleError, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { Card, CardHeader, CardTitle, CardContent, CardDescription } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -41,6 +41,9 @@ const ADAPTER_NAME_KEYS: Record<string, 'quickbooks' | 'xero' | 'sage'> = {
   xero: 'xero',
   sage: 'sage',
 };
+
+const isExternalTaxActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 export function ExternalTaxBatchImportDashboard() {
   const { t } = useTranslation('msp/invoicing');
@@ -83,6 +86,12 @@ export function ExternalTaxBatchImportDashboard() {
         getPendingExternalTaxCount(),
         getInvoicesPendingExternalTax()
       ]);
+      if (isExternalTaxActionError(invoices)) {
+        toast.error(getErrorMessage(invoices));
+        setPendingCount(0);
+        setPendingInvoices([]);
+        return;
+      }
       setPendingCount(count);
       setPendingInvoices(invoices);
     } catch (error) {
@@ -112,6 +121,11 @@ export function ExternalTaxBatchImportDashboard() {
 
     try {
       const result = await batchImportExternalTaxes();
+      if (isExternalTaxActionError(result)) {
+        toast.error(getErrorMessage(result));
+        setProgress(prev => ({ ...prev, isRunning: false }));
+        return;
+      }
 
       setProgress({
         total: result.totalProcessed,
@@ -156,6 +170,10 @@ export function ExternalTaxBatchImportDashboard() {
   const handleSingleImport = async (invoiceId: string) => {
     try {
       const result = await importExternalTaxForInvoice(invoiceId);
+      if (isExternalTaxActionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
 
       if (result.success) {
         toast.success(t('externalTax.toasts.taxImportedSuccessfully', { defaultValue: 'Tax imported successfully' }));

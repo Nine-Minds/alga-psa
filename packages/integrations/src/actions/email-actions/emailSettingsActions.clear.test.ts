@@ -72,6 +72,8 @@ describe('updateEmailSettings clear behavior', () => {
       ticketing_from_email: null,
       default_from_domain: 'acme.com',
     }));
+    expect('actionError' in updated).toBe(false);
+    if ('actionError' in updated) return;
     expect(updated.ticketingFromEmail).toBeNull();
   });
 
@@ -124,6 +126,8 @@ describe('updateEmailSettings clear behavior', () => {
       ticketing_from_email: 'support@acme.com',
       ticketing_from_name: 'Support Team',
     }));
+    expect('actionError' in updated).toBe(false);
+    if ('actionError' in updated) return;
     expect(updated.ticketingFromName).toBe('Support Team');
   });
 });

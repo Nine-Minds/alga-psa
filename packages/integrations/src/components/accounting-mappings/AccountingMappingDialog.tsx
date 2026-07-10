@@ -8,6 +8,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import type { ExternalEntityMapping } from '@alga-psa/integrations/actions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
 import type {
   AccountingMappingContext,
   AccountingMappingEntityOption,
@@ -147,9 +148,7 @@ export function AccountingMappingDialog({
       });
       onClose();
     } catch (submitError) {
-      const message =
-        t('integrations.accounting.dialog.errors.saveFailed', { defaultValue: 'Failed to save mapping.' });
-      setError(message);
+      setError(getErrorMessage(submitError));
     } finally {
       setIsSaving(false);
     }

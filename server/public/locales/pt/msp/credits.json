@@ -70,7 +70,8 @@
     "expirationPeriod": "Período de expiração:",
     "daysUnit": "{{count}} dias",
     "notificationDays": "Dias de notificação:",
-    "none": "Nenhum"
+    "none": "Nenhum",
+    "loadErrorPrefix": "Error loading credit expiration settings:"
   },
   "charts": {
     "expirationSummary": "Resumo de expiração de crédito",

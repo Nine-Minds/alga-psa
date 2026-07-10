@@ -80,7 +80,7 @@ describe('Entra add-on guard (T103)', () => {
     expect((result as Response).status).toBe(403);
     await expect((result as Response).json()).resolves.toMatchObject({
       success: false,
-      error: expect.stringContaining('add-on'),
+      error: 'Microsoft Entra integration is not available for this workspace.',
     });
   });
 

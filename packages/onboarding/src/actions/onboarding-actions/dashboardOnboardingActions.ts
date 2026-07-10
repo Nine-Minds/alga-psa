@@ -3,7 +3,7 @@
 import { revalidatePath } from 'next/cache';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
-import { getTenantSettings, updateTenantSettings } from '@alga-psa/tenancy/actions';
+import { getTenantSettings, updateTenantSettings } from '@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions';
 import type { OnboardingStepId } from '../onboarding-progress';
 import type { OnboardingActionResult } from './onboardingActions';
 import {
@@ -37,6 +37,10 @@ async function saveDismissedStepIds(nextDismissedStepIds: OnboardingStepId[]): P
   revalidatePath('/msp/dashboard');
 }
 
+function dashboardOnboardingActionErrorMessage(_error: unknown, fallback: string): string {
+  return fallback;
+}
+
 export const dismissDashboardOnboardingStep = withAuth(async (
   _user: IUserWithRoles,
   _context: AuthContext,
@@ -59,7 +63,7 @@ export const dismissDashboardOnboardingStep = withAuth(async (
     return { success: true, data: { dismissedStepIds: nextDismissedStepIds } };
   } catch (error) {
     console.error('Error dismissing dashboard onboarding step:', error);
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    return { success: false, error: dashboardOnboardingActionErrorMessage(error, 'Failed to dismiss onboarding step') };
   }
 });
 
@@ -85,7 +89,7 @@ export const restoreDashboardOnboardingStep = withAuth(async (
     return { success: true, data: { dismissedStepIds: nextDismissedStepIds } };
   } catch (error) {
     console.error('Error restoring dashboard onboarding step:', error);
-    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+    return { success: false, error: dashboardOnboardingActionErrorMessage(error, 'Failed to restore onboarding step') };
   }
 });
 

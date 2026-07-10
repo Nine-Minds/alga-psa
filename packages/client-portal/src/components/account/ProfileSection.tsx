@@ -7,6 +7,7 @@ import { Button } from "@alga-psa/ui/components/Button";
 import { useState, useEffect } from 'react';
 import { getClientProfile, updateClientProfile, type IClientProfile } from "@alga-psa/client-portal/actions";
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 interface ValidationErrors {
   name?: string;
@@ -14,6 +15,11 @@ interface ValidationErrors {
   phone?: string;
   address?: string;
 }
+
+const isReturnedActionError = (
+  value: unknown
+): value is { readonly actionError: string } | { readonly permissionError: string } =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 export default function ProfileSection() {
   const { t: tProfile } = useTranslation('client-portal');
@@ -35,9 +41,14 @@ export default function ProfileSection() {
     const loadProfile = async () => {
       try {
         const data = await getClientProfile();
+        if (isReturnedActionError(data)) {
+          setError(getErrorMessage(data));
+          return;
+        }
         setProfile(data);
       } catch (err) {
-        setError(err instanceof Error ? err.message : tProfile('profile.messages.loadError', 'Failed to load profile'));
+        console.error('Failed to load profile:', err);
+        setError(tProfile('profile.messages.loadError', 'Failed to load profile'));
       } finally {
         setIsLoading(false);
       }
@@ -125,11 +136,16 @@ export default function ProfileSection() {
         notes: sanitizeInput(profile.notes)
       };
 
-      await updateClientProfile(sanitizedProfile);
+      const result = await updateClientProfile(sanitizedProfile);
+      if (isReturnedActionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
       setSuccessMessage(tProfile('profile.messages.updateSuccess', 'Profile updated successfully'));
       setProfile(sanitizedProfile);
     } catch (err) {
-      setError(err instanceof Error ? err.message : tProfile('profile.messages.updateError', 'Failed to update profile'));
+      console.error('Failed to update profile:', err);
+      setError(tProfile('profile.messages.updateError', 'Failed to update profile'));
     } finally {
       setIsSaving(false);
     }

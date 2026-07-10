@@ -7,6 +7,10 @@ import type {
   TimeEntryWorkItemContext,
   TicketTimeEntriesSummary,
 } from '@alga-psa/types';
+import type {
+  ActionMessageError,
+  ActionPermissionError,
+} from '../lib/errorHandling';
 
 export type OpenDrawerFn = (
   content: React.ReactNode,
@@ -41,7 +45,7 @@ export interface SchedulingCallbacks {
     onComplete?: () => void;
   }) => Promise<void>;
   fetchTimeEntriesForTicket: (ticketId: string) => Promise<TicketTimeEntriesSummary>;
-  deleteTimeEntry: (entryId: string) => Promise<void>;
+  deleteTimeEntry: (entryId: string) => Promise<void | ActionMessageError | ActionPermissionError>;
 }
 
 const defaultSchedulingCallbacks: SchedulingCallbacks = {

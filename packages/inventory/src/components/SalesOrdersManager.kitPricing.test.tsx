@@ -27,7 +27,8 @@ vi.mock('react-hot-toast', () => ({
 vi.mock('@alga-psa/ui/lib/i18n/client', () => {
   const t = (_key: string, fallback?: string, values?: Record<string, unknown>) =>
     (fallback ?? _key).replace(/{{(\w+)}}/g, (_match, name) => String(values?.[name] ?? ''));
-  return { useTranslation: () => ({ t }) };
+  // CurrencyInput (used for the kit line price) reads the locale via useOptionalI18n.
+  return { useTranslation: () => ({ t }), useOptionalI18n: () => null };
 });
 
 vi.mock('@alga-psa/ui/components/DataTable', () => ({ DataTable: () => <div /> }));
@@ -115,7 +116,8 @@ describe('SalesOrdersManager kit price override', () => {
     const service = document.querySelector('#sales-order-line-service-0') as HTMLSelectElement;
     const price = document.querySelector('#sales-order-line-price-0') as HTMLInputElement;
     expect(service.value).toBe('kit-1');
-    expect(price.value).toBe('500');
+    // CurrencyInput renders the seeded major-unit price formatted to the currency's precision.
+    expect(price.value).toBe('500.00');
     expect(screen.getByText('Calculated from components')).toBeTruthy();
   });
 
@@ -133,14 +135,14 @@ describe('SalesOrdersManager kit price override', () => {
     fireEvent.change(document.querySelector('#sales-order-line-service-0')!, { target: { value: 'kit-1' } });
 
     const price = document.querySelector('#sales-order-line-price-0') as HTMLInputElement;
-    expect(price.value).toBe('500');
+    expect(price.value).toBe('500.00');
     expect(screen.getByText('Calculated from components')).toBeTruthy();
 
     fireEvent.change(price, { target: { value: '450' } });
     expect(await screen.findByText('Overridden from $500.00 for this sales order')).toBeTruthy();
 
     fireEvent.click(document.querySelector('#sales-order-line-price-reset-0')!);
-    await waitFor(() => expect(price.value).toBe('500'));
+    await waitFor(() => expect(price.value).toBe('500.00'));
     expect(screen.getByText('Calculated from components')).toBeTruthy();
 
     fireEvent.click(document.querySelector('#sales-order-save')!);

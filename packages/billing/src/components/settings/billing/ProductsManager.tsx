@@ -24,16 +24,21 @@ import {
   checkProductCanBeDeleted,
   deleteProductPermanently,
   ProductAssociationCheck
-} from '@alga-psa/billing/actions';
+} from '../../../actions/serviceActions';
 import { QuickAddProduct } from './QuickAddProduct';
 
-import { getTaxRates } from '@alga-psa/billing/actions';
+import { getTaxRates } from '../../../actions/taxRateActions';
 import { ITaxRate } from '@alga-psa/types';
 import { IService, IServicePrice } from '@alga-psa/types';
 import { getCurrencySymbol } from '@alga-psa/core';
-import { getServiceCategories } from '@alga-psa/billing/actions';
+import { getServiceCategories } from '../../../actions/categoryActions';
 import { IServiceCategory } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 const ProductsManager: React.FC = () => {
   const { t } = useTranslation('msp/billing-settings');
@@ -88,6 +93,11 @@ const ProductsManager: React.FC = () => {
 
   const fetchServiceTypes = async () => {
     const types = await getServiceTypesForSelection();
+    if (isActionMessageError(types) || isActionPermissionError(types)) {
+      setError(getErrorMessage(types));
+      setAllServiceTypes([]);
+      return;
+    }
     setAllServiceTypes(types);
   };
 
@@ -95,6 +105,11 @@ const ProductsManager: React.FC = () => {
     setIsLoadingTaxRates(true);
     try {
       const rates = await getTaxRates();
+      if (isActionMessageError(rates) || isActionPermissionError(rates)) {
+        setError(getErrorMessage(rates));
+        setTaxRates([]);
+        return;
+      }
       setTaxRates(rates);
     } finally {
       setIsLoadingTaxRates(false);
@@ -105,7 +120,12 @@ const ProductsManager: React.FC = () => {
     setIsLoadingCategories(true);
     try {
       const cats = await getServiceCategories();
-      setCategories(Array.isArray(cats) ? cats : []);
+      if (isActionMessageError(cats) || isActionPermissionError(cats)) {
+        setError(getErrorMessage(cats));
+        setCategories([]);
+        return;
+      }
+      setCategories(cats);
     } finally {
       setIsLoadingCategories(false);
     }
@@ -131,6 +151,12 @@ const ProductsManager: React.FC = () => {
         sort: 'service_name',
         order: 'asc'
       });
+      if (isActionMessageError(response) || isActionPermissionError(response)) {
+        setProducts([]);
+        setTotalCount(0);
+        setError(getErrorMessage(response));
+        return;
+      }
 
       setProducts(response.services);
       setTotalCount(response.totalCount);
@@ -345,6 +371,17 @@ const ProductsManager: React.FC = () => {
 
     try {
       const check = await checkProductCanBeDeleted(product.service_id);
+      if (isActionMessageError(check) || isActionPermissionError(check)) {
+        setPermanentDeleteCheck({
+          canDelete: false,
+          associations: [{
+            type: 'error',
+            count: 0,
+            description: getErrorMessage(check)
+          }]
+        });
+        return;
+      }
       setPermanentDeleteCheck(check);
     } catch (e) {
       console.error('[ProductsManager] Failed to check product associations:', e);
@@ -367,7 +404,11 @@ const ProductsManager: React.FC = () => {
     if (!productToPermanentDelete || !permanentDeleteCheck?.canDelete) return;
 
     try {
-      await deleteProductPermanently(productToPermanentDelete.service_id);
+      const result = await deleteProductPermanently(productToPermanentDelete.service_id);
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
       setIsPermanentDeleteOpen(false);
       setProductToPermanentDelete(null);
       setPermanentDeleteCheck(null);

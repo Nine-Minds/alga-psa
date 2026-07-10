@@ -20,7 +20,13 @@ import {
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
 import { useRegisterUnsavedChanges } from '@alga-psa/ui/context';
-import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { EditorToolbar } from './EditorToolbar';
 import styles from './DocumentEditor.module.css';
 
@@ -35,6 +41,9 @@ interface DocumentEditorProps {
   /** Pre-loaded block_data. When provided (even as null), skips the getBlockContent fetch. */
   initialContent?: unknown;
 }
+
+const isDocumentActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
+  isActionPermissionError(value) || isActionMessageError(value);
 
 export function DocumentEditor({
   documentId,
@@ -137,7 +146,12 @@ export function DocumentEditor({
           blockData = initialContentRef.current;
         } else {
           const content = await getBlockContent(documentId);
-          blockData = content && !isActionPermissionError(content) ? content.block_data : null;
+          if (isDocumentActionError(content)) {
+            setError(getErrorMessage(content));
+            blockData = null;
+          } else {
+            blockData = content ? content.block_data : null;
+          }
         }
 
         if (blockData) {
@@ -161,7 +175,8 @@ export function DocumentEditor({
           }
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to load document content');
+        console.error('Failed to load document content:', err);
+        setError('Failed to load document content');
       } finally {
         setIsLoading(false);
         // Mark content as loaded so future edits are tracked as unsaved changes
@@ -183,14 +198,19 @@ export function DocumentEditor({
       // Get the current editor content as JSON
       const content = editor.getJSON();
 
-      await updateBlockContent(documentId, {
+      const result = await updateBlockContent(documentId, {
         block_data: JSON.stringify(content),
         user_id: userId
       });
+      if (isDocumentActionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
       setHasUnsavedChanges(false);
       onUnsavedChangesChange?.(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to save document');
+      console.error('Failed to save document:', err);
+      setError('Failed to save document');
     } finally {
       setIsSaving(false);
     }

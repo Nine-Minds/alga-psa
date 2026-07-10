@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useRouter } from 'next/navigation';
+import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { getLicenseStatus } from '@/lib/actions/licenseManagementActions';
 import type { LicenseStatus } from '@/lib/actions/licenseManagementActions';
 
@@ -23,7 +24,13 @@ export default function LicenseBanner() {
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
-    getLicenseStatus().then(setStatus).catch(() => {});
+    getLicenseStatus()
+      .then((result) => {
+        if (!isActionPermissionError(result)) {
+          setStatus(result);
+        }
+      })
+      .catch(() => {});
   }, []);
 
   if (!status?.selfHostMode || dismissed) return null;

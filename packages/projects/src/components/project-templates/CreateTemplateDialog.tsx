@@ -9,7 +9,12 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import type { IProject } from '@alga-psa/types';
 import { toast } from 'react-hot-toast';
-import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { createTemplateFromProject, getTemplateCategories } from '../../actions/projectTemplateActions';
 import { getProjects } from '../../actions/projectActions';
 import { useTranslation } from 'react-i18next';
@@ -18,6 +23,10 @@ interface CreateTemplateDialogProps {
   onClose: () => void;
   onTemplateCreated?: (templateId: string) => void;
   initialProjectId?: string;
+}
+
+function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
+  return isActionMessageError(value) || isActionPermissionError(value);
 }
 
 const CreateTemplateDialog: React.FC<CreateTemplateDialogProps> = ({ onClose, onTemplateCreated, initialProjectId }) => {
@@ -55,6 +64,10 @@ const CreateTemplateDialog: React.FC<CreateTemplateDialogProps> = ({ onClose, on
           handleError(projectsResult.permissionError);
           return;
         }
+        if (isReturnedActionError(categoriesData)) {
+          handleError(getErrorMessage(categoriesData));
+          return;
+        }
         console.log('Projects loaded:', projectsResult.length);
         console.log('Categories loaded:', categoriesData.length);
         setProjects(projectsResult);
@@ -86,6 +99,10 @@ const CreateTemplateDialog: React.FC<CreateTemplateDialogProps> = ({ onClose, on
         },
         copyOptions
       );
+      if (isReturnedActionError(templateId)) {
+        handleError(getErrorMessage(templateId));
+        return;
+      }
 
       toast.success(t('templates.create.createdSuccess', 'Template created successfully'));
 

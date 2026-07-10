@@ -7,6 +7,11 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+import {
   getCustomerMatchCandidates,
   linkClientToQboCustomer,
   bulkLinkExactCustomerMatches,
@@ -17,6 +22,8 @@ import { getQboCustomers } from '@alga-psa/integrations/actions';
 
 type QboCustomer = { id: string; name: string; active: boolean };
 type Candidate = Awaited<ReturnType<typeof getCustomerMatchCandidates>>['rows'][number];
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 interface RowActionProps {
   row: Candidate;
@@ -266,10 +273,19 @@ export function QboCustomerMappingPanel() {
         getCustomerMatchCandidates(),
         getQboCustomers(),
       ]);
+      if (candidates.error) {
+        setError(candidates.error);
+      }
+      if (isReturnedActionError(customers)) {
+        setError(getErrorMessage(customers));
+        setQboCustomers([]);
+      } else {
+        setQboCustomers(customers);
+      }
       setRows(candidates.rows);
-      setQboCustomers(customers);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load customer mappings.');
+      console.error('Failed to load customer mappings:', err);
+      setError('Failed to load customer mappings.');
     } finally {
       setLoading(false);
     }

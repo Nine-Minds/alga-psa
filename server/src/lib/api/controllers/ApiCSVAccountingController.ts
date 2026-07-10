@@ -9,7 +9,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { ApiBaseController } from './ApiBaseController';
 import { runWithTenant } from '../../db';
-import { handleApiError, ForbiddenError, UnauthorizedError } from '../middleware/apiMiddleware';
+import { handleApiError, ForbiddenError, NotImplementedError, UnauthorizedError } from '../middleware/apiMiddleware';
 import { BaseService, ListOptions } from './types';
 import { getCSVTaxImportService } from '@alga-psa/integrations/services';
 import { AccountingExportInvoiceSelector, AccountingExportService, QuickBooksCSVAdapter } from '@alga-psa/billing/services';
@@ -22,19 +22,19 @@ type CSVAccountingPermission = 'export' | 'import';
 
 const noopService: BaseService = {
   async list(_options: ListOptions): Promise<{ data: any[]; total: number }> {
-    throw new Error('CSV accounting controller does not use base list service');
+    throw new NotImplementedError('CSV accounting controller does not support base list operations');
   },
   async getById(): Promise<any> {
-    throw new Error('CSV accounting controller does not use base get service');
+    throw new NotImplementedError('CSV accounting controller does not support base get operations');
   },
   async create(): Promise<any> {
-    throw new Error('CSV accounting controller does not use base create service');
+    throw new NotImplementedError('CSV accounting controller does not support base create operations');
   },
   async update(): Promise<any> {
-    throw new Error('CSV accounting controller does not use base update service');
+    throw new NotImplementedError('CSV accounting controller does not support base update operations');
   },
   async delete(): Promise<void> {
-    throw new Error('CSV accounting controller does not use base delete service');
+    throw new NotImplementedError('CSV accounting controller does not support base delete operations');
   }
 };
 

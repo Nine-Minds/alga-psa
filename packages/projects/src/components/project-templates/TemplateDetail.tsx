@@ -11,7 +11,12 @@ import { ArrowLeft, Circle, Trash, FileText, MoreVertical, Rocket } from 'lucide
 import { IProjectTemplateWithDetails, IProjectTemplateTask, IProjectTemplatePhase } from '@alga-psa/types';
 import { deleteTemplate } from '../../actions/projectTemplateActions';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import {
   DropdownMenu,
@@ -27,6 +32,10 @@ import { useTranslation } from 'react-i18next';
 interface TemplateDetailProps {
   template: IProjectTemplateWithDetails;
   onTemplateUpdated: () => void;
+}
+
+function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
+  return isActionMessageError(value) || isActionPermissionError(value);
 }
 
 export default function TemplateDetail({ template, onTemplateUpdated }: TemplateDetailProps) {
@@ -46,7 +55,11 @@ export default function TemplateDetail({ template, onTemplateUpdated }: Template
   async function handleDelete() {
     try {
       setIsDeleting(true);
-      await deleteTemplate(template.template_id);
+      const result = await deleteTemplate(template.template_id);
+      if (isReturnedActionError(result)) {
+        handleError(getErrorMessage(result));
+        return;
+      }
       toast.success(t('templates.detail.deletedSuccess', 'Template deleted successfully'));
       router.push('/msp/projects/templates');
     } catch (error) {

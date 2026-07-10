@@ -59,7 +59,11 @@ export async function GET(request: NextRequest) {
   const oauthErrorDescription = request.nextUrl.searchParams.get('error_description');
 
   if (oauthError) {
-    return failureRedirect(oauthError, oauthErrorDescription || undefined);
+    console.error('[Entra OAuth] Provider returned an OAuth error', {
+      error: oauthError,
+      errorDescription: oauthErrorDescription,
+    });
+    return failureRedirect(oauthError, 'Unable to complete Microsoft Entra connection.');
   }
 
   if (!code || !stateRaw) {
@@ -161,8 +165,7 @@ export async function GET(request: NextRequest) {
 
     return successRedirect();
   } catch (error: unknown) {
-    const message =
-      error instanceof Error ? error.message : 'Failed to complete Microsoft Entra OAuth callback.';
-    return failureRedirect('callback_error', message);
+    console.error('[Entra OAuth] Failed to complete callback:', error);
+    return failureRedirect('callback_error', 'Unable to complete Microsoft Entra connection.');
   }
 }

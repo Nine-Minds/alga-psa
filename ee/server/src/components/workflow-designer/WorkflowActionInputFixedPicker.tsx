@@ -13,7 +13,7 @@ import { BoardPicker } from '@alga-psa/ui/components/settings/general/BoardPicke
 import { getAllContacts, getContactsByClient } from '@alga-psa/clients/actions';
 import { getAvailableStatuses, getTicketFieldOptions } from '@alga-psa/integrations/actions';
 import { getAllUsersBasic, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
-import { getTeamAvatarUrlsBatchAction, getTeamsBasic } from '@alga-psa/teams/actions';
+import { getTeamAvatarUrlsBatchAction, getTeamsBasic, isTeamActionError } from '@alga-psa/teams/actions';
 import { getTicketById, getTicketsForList } from '@alga-psa/tickets/actions/ticketActions';
 import { getProjectsWithPhases } from '@alga-psa/projects/actions/projectActions';
 import { getProjectTaskData } from '@alga-psa/projects/actions/projectTaskActions';
@@ -629,11 +629,12 @@ const loadWorkflowPickerData = async (
         getAllUsersBasic(true, 'internal'),
         getTeamsBasic(),
       ]);
+      const safeTeams = isTeamActionError(teams) ? [] : teams;
 
       return {
         ...EMPTY_PICKER_DATA,
         users,
-        teams: teams.map((team) => ({
+        teams: safeTeams.map((team) => ({
           ...team,
           members: [],
         })),

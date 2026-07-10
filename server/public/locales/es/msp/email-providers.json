@@ -11,7 +11,8 @@
       "resyncing": "Resincronizando {{providerName}}...",
       "resyncError": "No se pudo resincronizar el proveedor IMAP",
       "resyncStarted": "Se inició la resincronización para {{providerName}}.",
-      "enterpriseOnly": "El correo electrónico entrante de Microsoft 365 solo está disponible en Enterprise Edition."
+      "enterpriseOnly": "El correo electrónico entrante de Microsoft 365 solo está disponible en Enterprise Edition.",
+      "loadProvidersError": "Failed to load email providers"
     },
     "editDrawer": {
       "title": "Editar proveedor de correo electrónico",
@@ -293,7 +294,8 @@
         "popupBlocked": "No se pudo abrir la ventana emergente de OAuth. Permita ventanas emergentes para este sitio.",
         "closedEarly": "La ventana de autorización se cerró antes de completarse.",
         "authorizationFailed": "Autorización fallida",
-        "popupFailed": "Error en la ventana emergente de OAuth"
+        "popupFailed": "Error en la ventana emergente de OAuth",
+        "configureFailed": "Failed to configure Gmail provider"
       },
       "messages": {
         "setupIncomplete": "Proveedor guardado pero configuración incompleta: {{error}}",

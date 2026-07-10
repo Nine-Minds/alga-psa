@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { getJobProgressAction, type JobProgressData } from '@alga-psa/jobs/actions';
+import { getErrorMessage, isActionMessageError } from '@alga-psa/ui/lib/errorHandling';
 
 export const useJobMonitor = (jobId: string) => {
   const [job, setJob] = useState<JobProgressData | null>(null);
@@ -19,13 +20,22 @@ export const useJobMonitor = (jobId: string) => {
 
       try {
         const jobProgress = await getJobProgressAction(jobId);
+        if (isActionMessageError(jobProgress)) {
+          if (isMounted) {
+            setError(getErrorMessage(jobProgress));
+            setJob(null);
+          }
+          return;
+        }
+
         if (isMounted) {
           setJob(jobProgress);
           setError(null);
         }
       } catch (error) {
         if (isMounted) {
-          setError(error instanceof Error ? error.message : 'Failed to fetch job');
+          console.error('Failed to fetch job:', error);
+          setError('Failed to fetch job');
           setJob(null);
         }
       }
@@ -42,4 +52,3 @@ export const useJobMonitor = (jobId: string) => {
 
   return { job, error };
 };
-

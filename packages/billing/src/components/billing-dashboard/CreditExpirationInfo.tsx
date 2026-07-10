@@ -14,6 +14,18 @@ interface CreditExpirationInfoProps {
   invoiceId: string;
 }
 
+function getReturnedActionError(value: unknown): string | null {
+  if (typeof value !== 'object' || value === null) {
+    return null;
+  }
+  const candidate = value as { actionError?: unknown; permissionError?: unknown };
+  return typeof candidate.permissionError === 'string'
+    ? candidate.permissionError
+    : typeof candidate.actionError === 'string'
+      ? candidate.actionError
+      : null;
+}
+
 const CreditExpirationInfo: React.FC<CreditExpirationInfoProps> = ({ creditApplied, invoiceId }) => {
   const { t } = useTranslation('msp/credits');
   const [creditDetails, setCreditDetails] = React.useState<ICreditTracking[]>([]);
@@ -41,6 +53,10 @@ const CreditExpirationInfo: React.FC<CreditExpirationInfoProps> = ({ creditAppli
         // Fetch details for each credit
         const creditDetailsPromises = allocations.map(async (allocation: { credit_id: string, amount: number }) => {
           const creditDetail = await getCreditDetails(allocation.credit_id);
+          const returnedError = getReturnedActionError(creditDetail);
+          if (returnedError) {
+            throw new Error(returnedError);
+          }
           return creditDetail.credit;
         });
         

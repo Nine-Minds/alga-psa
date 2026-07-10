@@ -231,7 +231,8 @@
       "notFound": "Nie znaleziono wyceny",
       "save": "Nie udało się zapisać wyceny",
       "saveFailed": "Zapisanie wyceny nie powiodło się",
-      "workflowAction": "Nie udało się {{action}}"
+      "workflowAction": "Nie udało się {{action}}",
+      "removeItem": "Failed to remove quote item"
     },
     "loading": "Ładowanie formularza wyceny...",
     "notices": {
@@ -556,7 +557,10 @@
       "contact": "Kontakt",
       "internal": "Wewnętrzny"
     },
-    "removeAriaLabel": "Usuń {{email}}"
+    "removeAriaLabel": "Usuń {{email}}",
+    "errors": {
+      "contactsLoadFailed": "Could not load client contacts."
+    }
   },
   "quoteConversion": {
     "title": "Konwertuj wycenę",

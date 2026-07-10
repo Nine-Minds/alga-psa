@@ -867,6 +867,7 @@
     "addPurchaseOrder": "Aggiungi ordine di acquisto",
     "allVendors": "Tutti i fornitori",
     "amountOnOrder": "{{amount}} in ordine",
+    "mixedCurrencyOnOrder": "{{count}} ordini di acquisto in ordine in più valute",
     "cancelConfirm": "Sei sicuro di voler annullare l'ordine di acquisto {{poNumber}}? L'operazione non può essere annullata.",
     "cancelFailed": "Impossibile annullare l'ordine di acquisto.",
     "cancelTitle": "Annulla ordine di acquisto",
@@ -879,7 +880,7 @@
       "product": "Prodotto",
       "qty": "Qtà",
       "received": "Ricevuto",
-      "unitCost": "Costo unitario ($)",
+      "unitCost": "Costo unitario",
       "vendor": "Fornitore"
     },
     "count": "{{count}} ordine di acquisto",
@@ -1111,7 +1112,7 @@
       "selectService": "Select a service…",
       "service": "Service",
       "serviceId": "ID servizio",
-      "unitPrice": "Prezzo unitario ($)",
+      "unitPrice": "Prezzo unitario",
       "unitPriceIn": "Unit price ({{currency}})"
     },
     "filters": {
@@ -1199,7 +1200,8 @@
     "title": "Ordini di vendita",
     "total": "Total",
     "unassignedBackorder": "{{count}} riga/righe in arretrato non hanno un fornitore preferito — crea quei PO manualmente.",
-    "unnamedService": "Unnamed"
+    "unnamedService": "Unnamed",
+    "notFound": "Sales order not found."
   },
   "stock": {
     "actions": {
@@ -1224,7 +1226,7 @@
     "fields": {
       "location": "Ubicazione",
       "product": "Prodotto",
-      "unitCost": "Costo unitario (USD)"
+      "unitCost": "Costo unitario"
     },
     "filteredCount": "{{shown}} di {{total}} prodotti",
     "levels": {
@@ -1466,7 +1468,7 @@
     "dialogTitle": "Listino prezzi — {{name}}",
     "emptyState": "Ancora nessuna offerta — aggiungi qui sotto i codici articolo del fornitore e i costi contrattuali.",
     "fields": {
-      "cost": "Costo ($)",
+      "cost": "Costo",
       "currency": "Valuta",
       "leadTime": "Tempo di consegna (giorni)",
       "preferred": "Fornitore preferito per questo prodotto (guida i suggerimenti di riordino)",

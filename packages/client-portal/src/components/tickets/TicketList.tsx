@@ -4,7 +4,12 @@
 
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import toast from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { useSearchParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
@@ -44,6 +49,9 @@ import {
   daysUntil,
   formatCategoryLabel,
 } from '@alga-psa/tickets/lib';
+
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 const useDebounce = <T,>(value: T, delay: number): T => {
   const [debouncedValue, setDebouncedValue] = useState<T>(value);
@@ -170,6 +178,11 @@ export function TicketList() {
           getTicketCategories()
         ]);
 
+        if (isReturnedActionError(categories)) {
+          setError(getErrorMessage(categories));
+          return;
+        }
+
         setRawStatusOptions(
           statuses.map((status: IStatus): TicketStatusFilterOption => ({
             value: status.status_id!,
@@ -279,6 +292,12 @@ export function TicketList() {
     setLoading(true);
     try {
       const result = await getClientTickets(selectedStatus);
+      if (isReturnedActionError(result)) {
+        setTickets([]);
+        setError(getErrorMessage(result));
+        setLoading(false);
+        return;
+      }
 
       let filteredTickets = [...result];
 
@@ -356,6 +375,7 @@ export function TicketList() {
       });
 
       setTickets(sortedTickets);
+      setError(null);
     } catch (error) {
       console.error('Failed to load tickets:', error);
       setError(t('messages.loadingError', 'Failed to load tickets. Please try again.'));
@@ -388,7 +408,11 @@ export function TicketList() {
     const newStatusLabel = rawStatusOptions.find(s => s.value === newStatus)?.label || 'Unknown Status';
 
     try {
-      await updateTicketStatus(ticketId, newStatus);
+      const result = await updateTicketStatus(ticketId, newStatus);
+      if (isReturnedActionError(result)) {
+        handleError(result, getErrorMessage(result));
+        return;
+      }
 
       toast.success(t('messages.statusUpdateSuccess', 'Ticket status successfully updated to "{{status}}".', { status: newStatusLabel }));
 

@@ -585,7 +585,8 @@
         "description": "Opis",
         "descriptionPlaceholder": "np. Klucz API do rozwoju",
         "expiration": "Data wygaśnięcia (opcjonalnie)",
-        "submit": "Wygeneruj nowy klucz API"
+        "submit": "Wygeneruj nowy klucz API",
+        "createFailed": "Failed to create API key"
       },
       "list": {
         "title": "Twoje klucze API",
@@ -611,7 +612,8 @@
           "active": "Aktywny",
           "inactive": "Nieaktywny"
         },
-        "deactivate": "Dezaktywuj"
+        "deactivate": "Dezaktywuj",
+        "deactivateFailed": "Failed to deactivate API key"
       },
       "newKeyDialog": {
         "title": "Klucz API wygenerowany",

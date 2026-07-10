@@ -23,6 +23,18 @@ interface PrepaymentInvoicesProps {
 
 const CREDIT_MEMOS_UNSUPPORTED_ERROR = 'credit_memos_unsupported';
 
+function getReturnedActionError(value: unknown): string | null {
+  if (typeof value !== 'object' || value === null) {
+    return null;
+  }
+  const candidate = value as { actionError?: unknown; permissionError?: unknown };
+  return typeof candidate.permissionError === 'string'
+    ? candidate.permissionError
+    : typeof candidate.actionError === 'string'
+      ? candidate.actionError
+      : null;
+}
+
 const PrepaymentInvoices: React.FC<PrepaymentInvoicesProps> = ({ clients, onGenerateSuccess }) => {
   const { t } = useTranslation('msp/invoicing');
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
@@ -55,7 +67,12 @@ const PrepaymentInvoices: React.FC<PrepaymentInvoicesProps> = ({ clients, onGene
         throw new Error(CREDIT_MEMOS_UNSUPPORTED_ERROR);
       }
 
-      await createPrepaymentInvoice(selectedClient || '', numericAmount);
+      const result = await createPrepaymentInvoice(selectedClient || '', numericAmount);
+      const returnedError = getReturnedActionError(result);
+      if (returnedError) {
+        setError(returnedError);
+        return;
+      }
       
       // Clear form
       setSelectedClient(null);

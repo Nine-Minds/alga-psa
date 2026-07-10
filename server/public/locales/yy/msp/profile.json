@@ -105,9 +105,9 @@
     },
     "sso": {
       "advanced": {
-        "title": "Advanced: custom identity provider routing",
-        "description": "Route MSP login SSO to your own identity provider using verified login domains. Only needed on custom or on-premise installations.",
-        "inertNotice": "No tenant identity provider credentials are configured, so domain claims currently have no effect. Users sign in with the hosted Google / Microsoft providers. Tenant credentials are provisioned on custom and on-premise installations."
+        "title": "55555",
+        "description": "55555",
+        "inertNotice": "55555"
       }
     },
     "userRoles": {
@@ -583,7 +583,8 @@
         "description": "55555",
         "descriptionPlaceholder": "55555",
         "expiration": "55555",
-        "submit": "55555"
+        "submit": "55555",
+        "createFailed": "55555"
       },
       "list": {
         "title": "55555",
@@ -609,7 +610,8 @@
           "active": "55555",
           "inactive": "55555"
         },
-        "deactivate": "55555"
+        "deactivate": "55555",
+        "deactivateFailed": "55555"
       },
       "newKeyDialog": {
         "title": "55555",

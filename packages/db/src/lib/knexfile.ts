@@ -9,13 +9,16 @@ import type { Knex } from 'knex';
 import { setTypeParser } from 'pg-types';
 import { validate as uuidValidate } from 'uuid';
 import { getSecret } from '@alga-psa/core/secrets';
+import * as dotenv from 'dotenv';
 
 type Function = (err: Error | null, connection: Knex.Client) => void;
 
-// Load test environment variables if we're in a test environment
+// Load test environment variables if we're in a test environment.
+// Static dotenv import (not `await import`): top-level await makes this module
+// ESM-only, and the appliance bootstrap loads it through a CJS require chain
+// (tsx create-tenant.ts -> require(tenant-creation) -> @alga-psa/db source).
 if (typeof process !== 'undefined' && process.env?.NODE_ENV === 'test') {
   try {
-    const dotenv = await import('dotenv');
     const result = dotenv.config({ path: '.env.localtest' });
     if (result.parsed?.DB_NAME_SERVER) {
       (process.env as any).DB_NAME_SERVER = result.parsed.DB_NAME_SERVER;

@@ -1004,7 +1004,8 @@
     "description": "Rich-Text-Notizbereich für anlagenspezifische Notizen und schnellen betrieblichen Kontext",
     "errors": {
       "loadTitle": "Notizen konnten nicht geladen werden",
-      "unknown": "Unbekannter Fehler"
+      "unknown": "Unbekannter Fehler",
+      "loadDescription": "Could not load notes. Please try again."
     },
     "lastUpdated": "Letzte Aktualisierung: {{value}}"
   },

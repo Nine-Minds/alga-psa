@@ -132,11 +132,12 @@ describe('Client contract overlap validation ([start, end) semantics)', () => {
     );
 
     // Overlaps: [2026-01-15, ...] starts before invoiced end and has no end => overlap.
-    await expect(
-      updateClientContract('cc-1', {
+    await expect(updateClientContract('cc-1', {
         start_date: '2026-01-15T00:00:00Z',
       } as any)
-    ).rejects.toThrow(/overlap/i);
+    ).resolves.toEqual({
+      actionError: 'Cannot change assignment dates as they overlap with an already invoiced period.',
+    });
   });
 
   it('allows mid-cycle termination on the last billed service day when canonical detail periods cover only part of the invoice window', async () => {
@@ -166,12 +167,12 @@ describe('Client contract overlap validation ([start, end) semantics)', () => {
       '../../../../packages/clients/src/actions/clientContractActions.ts'
     );
 
-    await expect(
-      updateClientContract('cc-1', {
+    await expect(updateClientContract('cc-1', {
         end_date: '2026-01-18T00:00:00Z',
       } as any)
-    ).rejects.toThrow(
-      'Cannot shorten contract end date before 2026-01-19 because recurring service periods are already billed through that day.'
-    );
+    ).resolves.toEqual({
+      actionError:
+        'Cannot shorten contract end date before 2026-01-19 because recurring service periods are already billed through that day.',
+    });
   });
 });

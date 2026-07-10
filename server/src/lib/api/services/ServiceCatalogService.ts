@@ -2,6 +2,7 @@ import type { IService } from '@/interfaces/billing.interfaces';
 import { BaseService, ServiceContext, ListResult, tenantDb } from '@alga-psa/db';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { ListOptions } from '../controllers/types';
+import { NotFoundError, ValidationError } from '../middleware/apiMiddleware';
 
 type SortField = 'service_name' | 'billing_method' | 'default_rate';
 
@@ -225,7 +226,7 @@ export class ServiceCatalogService extends BaseService<IService> {
         .where('id', custom_service_type_id)
         .first();
       if (!serviceType) {
-        throw new Error(`ServiceType ID '${custom_service_type_id}' not found for tenant '${tenant}'.`);
+        throw new ValidationError(`ServiceType ID '${custom_service_type_id}' not found for tenant '${tenant}'.`);
       }
     }
 
@@ -277,7 +278,7 @@ export class ServiceCatalogService extends BaseService<IService> {
       .returning('*');
 
     if (!updated) {
-      throw new Error('Resource not found or permission denied');
+      throw new NotFoundError('Resource not found or permission denied');
     }
 
     await publishServiceCatalogSearchEvent('SERVICE_CATALOG_UPDATED', tenant, id, {

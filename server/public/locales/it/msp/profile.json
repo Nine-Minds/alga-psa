@@ -583,7 +583,8 @@
         "description": "Descrizione",
         "descriptionPlaceholder": "es. Chiave API di sviluppo",
         "expiration": "Data di scadenza (facoltativa)",
-        "submit": "Genera nuova chiave API"
+        "submit": "Genera nuova chiave API",
+        "createFailed": "Failed to create API key"
       },
       "list": {
         "title": "Le tue chiavi API",
@@ -609,7 +610,8 @@
           "active": "Attiva",
           "inactive": "Inattiva"
         },
-        "deactivate": "Disattiva"
+        "deactivate": "Disattiva",
+        "deactivateFailed": "Failed to deactivate API key"
       },
       "newKeyDialog": {
         "title": "Chiave API generata",

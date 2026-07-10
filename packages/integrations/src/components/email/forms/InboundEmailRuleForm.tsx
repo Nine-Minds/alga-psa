@@ -22,6 +22,11 @@ import {
   type InboundEmailRuleRecord,
 } from '../../../actions/email-actions/inboundEmailRulesActions';
 import { getEmailProviders, getInboundTicketDefaults, getTicketFieldOptions } from '@alga-psa/integrations/actions';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 type ConditionField = 'from_address' | 'from_domain' | 'to_address' | 'subject' | 'body_text';
 type ConditionOperator = 'equals' | 'contains' | 'starts_with' | 'ends_with' | 'matches_regex';
@@ -122,6 +127,8 @@ export function InboundEmailRuleForm({ rule, onSuccess, onCancel }: InboundEmail
   const [aliasClientId, setAliasClientId] = useState('');
   const [aliasSaving, setAliasSaving] = useState(false);
   const [aliasNotice, setAliasNotice] = useState<string | null>(null);
+  const isReturnedActionError = (value: unknown) =>
+    isActionMessageError(value) || isActionPermissionError(value);
 
   useEffect(() => {
     const load = async () => {
@@ -132,6 +139,31 @@ export function InboundEmailRuleForm({ rule, onSuccess, onCancel }: InboundEmail
           getInboundEmailRuleAiAvailability(),
           getTicketFieldOptions(),
         ]);
+        if (isReturnedActionError(providerData)) {
+          setError(getErrorMessage(providerData));
+          setAiAvailability({ enterprise: false, aiAddonActive: false });
+          return;
+        }
+        if (isReturnedActionError(defaultsData)) {
+          setError(getErrorMessage(defaultsData));
+          setAiAvailability({ enterprise: false, aiAddonActive: false });
+          return;
+        }
+        if (defaultsData.error) {
+          setError(defaultsData.error);
+          setAiAvailability({ enterprise: false, aiAddonActive: false });
+          return;
+        }
+        if (isReturnedActionError(availability)) {
+          setError(getErrorMessage(availability));
+          setAiAvailability({ enterprise: false, aiAddonActive: false });
+          return;
+        }
+        if (isReturnedActionError(fieldOptions)) {
+          setError(getErrorMessage(fieldOptions));
+          setAiAvailability({ enterprise: false, aiAddonActive: false });
+          return;
+        }
         setProviders(
           (providerData.providers ?? []).map((p: any) => ({
             id: p.id,
@@ -252,9 +284,13 @@ export function InboundEmailRuleForm({ rule, onSuccess, onCancel }: InboundEmail
       const result = rule
         ? await updateInboundEmailRule(rule.id, payload)
         : await createInboundEmailRule(payload);
+      if (isReturnedActionError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
       onSuccess(result.rule);
     } catch (err: any) {
-      setError(err?.message ?? t('inboundRules.errors.save', { defaultValue: 'Failed to save rule' }));
+      setError(getErrorMessage(err) ?? t('inboundRules.errors.save', { defaultValue: 'Failed to save rule' }));
     } finally {
       setSaving(false);
     }
@@ -265,7 +301,7 @@ export function InboundEmailRuleForm({ rule, onSuccess, onCancel }: InboundEmail
     setAliasNotice(null);
     setTesting(true);
     try {
-      const { evaluation } = await testInboundEmailRule({
+      const result = await testInboundEmailRule({
         rule: buildRulePayload(),
         sample: {
           from: sampleFrom,
@@ -274,10 +310,16 @@ export function InboundEmailRuleForm({ rule, onSuccess, onCancel }: InboundEmail
           bodyText: sampleBody,
         },
       });
+      if (isReturnedActionError(result)) {
+        setTestEvaluation(null);
+        setTestError(getErrorMessage(result));
+        return;
+      }
+      const { evaluation } = result;
       setTestEvaluation(evaluation);
     } catch (err: any) {
       setTestEvaluation(null);
-      setTestError(err?.message ?? t('inboundRules.errors.test', { defaultValue: 'Failed to test rule' }));
+      setTestError(getErrorMessage(err) ?? t('inboundRules.errors.test', { defaultValue: 'Failed to test rule' }));
     } finally {
       setTesting(false);
     }
@@ -298,14 +340,18 @@ export function InboundEmailRuleForm({ rule, onSuccess, onCancel }: InboundEmail
     setAliasSaving(true);
     setAliasNotice(null);
     try {
-      await addClientNameAliasFromRuleTester(aliasClientId, String(testTrace.extractedValue));
+      const result = await addClientNameAliasFromRuleTester(aliasClientId, String(testTrace.extractedValue));
+      if (isReturnedActionError(result)) {
+        setAliasNotice(getErrorMessage(result));
+        return;
+      }
       setAliasNotice(
         t('inboundRules.tester.aliasAdded', {
           defaultValue: 'Alias added. Run the test again to see it match.',
         })
       );
     } catch (err: any) {
-      setAliasNotice(err?.message ?? t('inboundRules.errors.aliasAdd', { defaultValue: 'Failed to add alias' }));
+      setAliasNotice(getErrorMessage(err) ?? t('inboundRules.errors.aliasAdd', { defaultValue: 'Failed to add alias' }));
     } finally {
       setAliasSaving(false);
     }

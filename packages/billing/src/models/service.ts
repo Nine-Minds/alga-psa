@@ -134,24 +134,29 @@ export type ServiceSchemaType = z.infer<typeof serviceSchema>;
 type ServiceReadRow = { service_id: string; billing_method?: string | null };
 
 /**
- * Validate service_catalog rows for the read/list path, tolerating one bad row
- * instead of aborting the entire load.
+ * The single legacy `billing_method` that billing's `IService` cannot represent.
  *
  * `serviceSchema.billing_method` is deliberately the canonical billing vocabulary
- * (`fixed | hourly | usage`) — the T013 hard cutover purged `per_unit` from
- * billing's `IService` contract (guarded by billingInterfacesCutover.static.test).
- * But inventory legitimately stores products as `service_catalog` rows with
- * `billing_method = 'per_unit'` (see packages/inventory materials/tests). A plain
- * `.map(schema.parse(...))` therefore throws on the first per_unit row and takes
- * down every consumer of getServices (Sales Order line picker, Manual Invoice
- * client+service load). We validate per-row with `safeParse` and drop rows billing
- * can't represent so the canonical services still load.
+ * (`fixed | hourly | usage`) — the T013 hard cutover purged `per_unit` from billing's
+ * `IService` contract (guarded by billingInterfacesCutover.static.test). Migration
+ * 20260323120000_normalize_per_unit_to_usage rewrote existing `service_catalog` rows,
+ * but it added no CHECK constraint there, so pre-migration or externally-written rows
+ * can still carry `per_unit`.
+ */
+const UNREPRESENTABLE_BILLING_METHOD = 'per_unit';
+
+/**
+ * Validate service_catalog rows for the read/list path.
  *
- * Skipped rows are logged (not silently swallowed): a `per_unit` product will not
- * appear in billing-sourced service pickers by design, and the log makes that
- * discoverable rather than a mystery. Surfacing per_unit products for sale is a
- * separate inventory concern (an inventory-owned product reader), not a widening
- * of billing's per_unit-free contract.
+ * A single `per_unit` row used to throw from `.map(schema.parse(...))` and take down every
+ * consumer of getServices (Sales Order line picker, Manual Invoice client+service load).
+ * Such rows are skipped — and *only* such rows: every other validation failure is a real
+ * data defect and still throws, per the repo's fail-fast standard. Widening the skip to any
+ * `safeParse` failure would let a malformed row silently vanish from a billing list.
+ *
+ * Skipped rows are logged, not silently swallowed: a `per_unit` product will not appear in
+ * billing-sourced service pickers by design. Surfacing those products for sale is a separate
+ * inventory concern (an inventory-owned product reader), not a widening of billing's contract.
  */
 export function parseServiceReadRows(
   rows: ServiceReadRow[],
@@ -161,23 +166,25 @@ export function parseServiceReadRows(
   const skipped: string[] = [];
 
   for (const service of rows) {
-    const result = serviceSchema.safeParse({
-      ...service,
-      prices: pricesByService[service.service_id] || []
-    });
-
-    if (result.success) {
-      validatedServices.push(result.data as IService);
-    } else {
+    if (service.billing_method === UNREPRESENTABLE_BILLING_METHOD) {
       skipped.push(service.service_id);
+      continue;
     }
+
+    // Anything else that fails validation is a genuine defect: let it throw.
+    validatedServices.push(
+      serviceSchema.parse({
+        ...service,
+        prices: pricesByService[service.service_id] || []
+      }) as IService
+    );
   }
 
   if (skipped.length > 0) {
     log.warn(
-      `[parseServiceReadRows] Skipped ${skipped.length} service_catalog row(s) not representable as a billing IService ` +
-        `(e.g. per_unit inventory products); they are excluded from billing-sourced service lists. ` +
-        `service_ids: ${skipped.join(', ')}`
+      `[parseServiceReadRows] Skipped ${skipped.length} service_catalog row(s) with ` +
+        `billing_method='${UNREPRESENTABLE_BILLING_METHOD}', which billing's IService cannot represent; ` +
+        `they are excluded from billing-sourced service lists. service_ids: ${skipped.join(', ')}`
     );
   }
 

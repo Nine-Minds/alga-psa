@@ -4,15 +4,77 @@ import { ApiKeyService } from '@alga-psa/auth';
 import { getUserRoles } from '@alga-psa/auth/actions';
 import { IRole } from '@alga-psa/types';
 import { withAuth } from '@alga-psa/auth/withAuth';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+type ApiKeyActionError = ActionMessageError | ActionPermissionError;
+
+interface ApiKeyCreateView {
+  api_key_id: string;
+  api_key: string;
+  description: string | null;
+  created_at: Date;
+  expires_at: Date | null;
+  purpose: string | null;
+  metadata: Record<string, unknown> | null;
+  usage_limit: number | null;
+  usage_count: number;
+}
+
+interface ApiKeyListView {
+  api_key_id: string;
+  description: string | null;
+  created_at: Date;
+  last_used_at: Date | null;
+  expires_at: Date | null;
+  purpose: string | null;
+  metadata: Record<string, unknown> | null;
+  usage_limit: number | null;
+  usage_count: number;
+  active: boolean;
+}
+
+interface AdminApiKeyListView extends ApiKeyListView {
+  username: string;
+  first_name: string | null;
+  last_name: string | null;
+}
+
+async function isTenantAdmin(userId: string): Promise<boolean> {
+  const userRoles = await getUserRoles(userId);
+  return userRoles.some((role: IRole) => role.role_name.toLowerCase() === 'admin');
+}
+
+async function requireTenantAdmin(userId: string): Promise<ActionPermissionError | null> {
+  if (await isTenantAdmin(userId)) {
+    return null;
+  }
+
+  return permissionError('Permission denied: Admin access required');
+}
 
 /**
  * Create a new API key for the current user
  */
-export const createApiKey = withAuth(async (user, { tenant }, description?: string, expiresAt?: string) => {
+export const createApiKey = withAuth(async (
+  user,
+  { tenant },
+  description?: string,
+  expiresAt?: string,
+): Promise<ApiKeyCreateView | ApiKeyActionError> => {
+  const expiresOn = expiresAt ? new Date(expiresAt) : undefined;
+  if (expiresAt && Number.isNaN(expiresOn?.getTime())) {
+    return actionError('Choose a valid expiration date for this API key.');
+  }
+
   const apiKey = await ApiKeyService.createApiKey(
     user.user_id,
     description,
-    expiresAt ? new Date(expiresAt) : undefined,
+    expiresOn,
     { tenantId: tenant }
   );
 
@@ -33,7 +95,7 @@ export const createApiKey = withAuth(async (user, { tenant }, description?: stri
 /**
  * List all API keys for the current user
  */
-export const listApiKeys = withAuth(async (user, { tenant }) => {
+export const listApiKeys = withAuth(async (user, { tenant }): Promise<ApiKeyListView[]> => {
   const apiKeys = await ApiKeyService.listUserApiKeys(user.user_id, tenant);
 
   // Remove sensitive information from the response
@@ -54,28 +116,34 @@ export const listApiKeys = withAuth(async (user, { tenant }) => {
 /**
  * Deactivate an API key
  */
-export const deactivateApiKey = withAuth(async (user, { tenant }, apiKeyId: string) => {
+export const deactivateApiKey = withAuth(async (
+  user,
+  { tenant },
+  apiKeyId: string,
+): Promise<{ deactivated: true } | ApiKeyActionError> => {
   // Verify the API key exists and belongs to the user
   const apiKeys = await ApiKeyService.listUserApiKeys(user.user_id, tenant);
   const keyExists = apiKeys.some(key => key.api_key_id === apiKeyId);
 
   if (!keyExists) {
-    throw new Error('API key not found');
+    return actionError('API key not found.');
   }
 
   await ApiKeyService.deactivateApiKey(apiKeyId, tenant);
+  return { deactivated: true };
 });
 
 /**
  * List all API keys across users (admin only)
  */
-export const adminListApiKeys = withAuth(async (user, { tenant }) => {
+export const adminListApiKeys = withAuth(async (
+  user,
+  { tenant },
+): Promise<AdminApiKeyListView[] | ApiKeyActionError> => {
   // Check if user has admin role
-  const userRoles = await getUserRoles(user.user_id);
-  const isAdmin = userRoles.some((role: IRole) => role.role_name.toLowerCase() === 'admin');
-
-  if (!isAdmin) {
-    throw new Error('Forbidden: Admin access required');
+  const adminError = await requireTenantAdmin(user.user_id);
+  if (adminError) {
+    return adminError;
   }
 
   const apiKeys = await ApiKeyService.listAllApiKeys(tenant);
@@ -101,14 +169,24 @@ export const adminListApiKeys = withAuth(async (user, { tenant }) => {
 /**
  * Admin deactivate any API key
  */
-export const adminDeactivateApiKey = withAuth(async (user, { tenant }, apiKeyId: string) => {
+export const adminDeactivateApiKey = withAuth(async (
+  user,
+  { tenant },
+  apiKeyId: string,
+): Promise<{ deactivated: true } | ApiKeyActionError> => {
   // Check if user has admin role
-  const userRoles = await getUserRoles(user.user_id);
-  const isAdmin = userRoles.some((role: IRole) => role.role_name.toLowerCase() === 'admin');
-
-  if (!isAdmin) {
-    throw new Error('Forbidden: Admin access required');
+  const adminError = await requireTenantAdmin(user.user_id);
+  if (adminError) {
+    return adminError;
   }
 
-  await ApiKeyService.adminDeactivateApiKey(apiKeyId, tenant);
+  try {
+    await ApiKeyService.adminDeactivateApiKey(apiKeyId, tenant);
+    return { deactivated: true };
+  } catch (error) {
+    if (error instanceof Error && error.message.includes('not found')) {
+      return actionError('API key not found.');
+    }
+    throw error;
+  }
 });

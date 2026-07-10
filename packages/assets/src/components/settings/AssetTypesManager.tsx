@@ -19,6 +19,10 @@ import {
 import { IconPicker, getIconComponent } from '@alga-psa/ui/components/IconPicker';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import type { AssetTypeRegistryEntry, ColumnDefinition } from '@alga-psa/types';
 import {
   createAssetTypeAction,
@@ -108,6 +112,11 @@ const AssetTypesManager: React.FC = () => {
     try {
       setLoading(true);
       const entries = await getAssetTypes();
+      if (isActionPermissionError(entries)) {
+        setTypes([]);
+        setListError(getErrorMessage(entries));
+        return;
+      }
       setTypes(entries);
       setListError(null);
     } catch (error) {
@@ -175,6 +184,10 @@ const AssetTypesManager: React.FC = () => {
           name: trimmedName,
           icon: icon || null,
         });
+        if (isActionPermissionError(result)) {
+          setSaveError(getErrorMessage(result));
+          return;
+        }
         if (result.success) {
           toast.success(t('settings.assetTypes.messages.updated', { defaultValue: 'Asset type updated' }));
           closeDialog();
@@ -220,6 +233,10 @@ const AssetTypesManager: React.FC = () => {
             fields_schema: validation.fields,
             display_order: displayOrder,
           });
+      if (isActionPermissionError(result)) {
+        setSaveError(getErrorMessage(result));
+        return;
+      }
       if (result.success) {
         toast.success(
           editingType
@@ -256,6 +273,10 @@ const AssetTypesManager: React.FC = () => {
     setDeleteError(null);
     try {
       const result = await deleteAssetTypeAction(deleteTarget.slug);
+      if (isActionPermissionError(result)) {
+        setDeleteError(getErrorMessage(result));
+        return;
+      }
       if (result.success) {
         toast.success(t('settings.assetTypes.messages.deleted', { defaultValue: 'Asset type deleted' }));
         resetDelete();

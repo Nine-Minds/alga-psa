@@ -36,6 +36,14 @@ import { getDefaultBillingSettings } from '@alga-psa/billing/actions';
 import GenericPlanServicesList from '../contract-lines/GenericContractLineServicesList';
 import { ContractLineEditDialog } from './ContractLineEditDialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 type TemplateMetadataService = {
   service_id?: string;
@@ -291,6 +299,9 @@ const ContractTemplateDetail: React.FC = () => {
         const servicesWithConfig = isTemplateContext
           ? await getTemplateLineServicesWithConfigurations(contractLineId)
           : await getContractLineServicesWithConfigurations(contractLineId);
+        if (isReturnedActionError(servicesWithConfig)) {
+          throw new Error(getErrorMessage(servicesWithConfig));
+        }
         const serviceMap = new Map<string, TemplateLineService>();
 
         servicesWithConfig.forEach(({ service, configuration, typeConfig, bucketConfig }) => {
@@ -350,12 +361,23 @@ const ContractTemplateDetail: React.FC = () => {
       setError(null);
 
       try {
-        const [contractData, summaryDataRaw, detailedLinesRaw, assignmentRows] = (await Promise.all([
+        const templateResults = await Promise.all([
           getContractById(id),
           getContractSummary(id),
           getDetailedContractLines(id),
           getContractAssignments(id),
-        ])) as [IContract | null, RawContractSummary, DetailedContractLine[], IContractAssignmentSummary[]];
+        ]);
+        const expectedLoadError = templateResults.find(isReturnedActionError);
+        if (expectedLoadError) {
+          setContract(null);
+          setTemplateLines([]);
+          setSummary(null);
+          setAssignments([]);
+          setError(getErrorMessage(expectedLoadError));
+          return;
+        }
+        const [contractData, summaryDataRaw, detailedLinesRaw, assignmentRows] =
+          templateResults as [IContract | null, RawContractSummary, DetailedContractLine[], IContractAssignmentSummary[]];
 
         if (!contractData) {
           setContract(null);
@@ -460,7 +482,7 @@ const ContractTemplateDetail: React.FC = () => {
       setIsSavingBasics(true);
       setBasicsError(null);
 
-      await updateContract(contract.contract_id, {
+      const result = await updateContract(contract.contract_id, {
         contract_name: basicsForm.contract_name.trim(),
         contract_description: basicsForm.contract_description.trim()
           ? basicsForm.contract_description.trim()
@@ -468,6 +490,10 @@ const ContractTemplateDetail: React.FC = () => {
         billing_frequency: basicsForm.billing_frequency,
         currency_code: basicsForm.currency_code,
       });
+      if (isReturnedActionError(result)) {
+        setBasicsError(getErrorMessage(result));
+        return;
+      }
 
       if (contract.contract_id) {
         await loadTemplate(contract.contract_id);
@@ -528,7 +554,11 @@ const ContractTemplateDetail: React.FC = () => {
         delete nextMetadata.tags;
       }
 
-      await updateContract(contract.contract_id, { template_metadata: nextMetadata });
+      const result = await updateContract(contract.contract_id, { template_metadata: nextMetadata });
+      if (isReturnedActionError(result)) {
+        setGuidanceError(getErrorMessage(result));
+        return;
+      }
 
       if (contract.contract_id) {
         await loadTemplate(contract.contract_id);
@@ -1418,7 +1448,10 @@ const TemplateServicesManager: React.FC<TemplateServicesManagerProps> = ({
     billingTiming: 'arrears' | 'advance'
   ) => {
     try {
-      await updateContractLineRate(contractId, contractLineId, rateCents, billingTiming);
+      const result = await updateContractLineRate(contractId, contractLineId, rateCents, billingTiming);
+      if (isReturnedActionError(result)) {
+        throw new Error(getErrorMessage(result));
+      }
       setEditingLine(null);
       onServicesChanged();
     } catch (error) {

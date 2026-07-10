@@ -15,6 +15,14 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { CURRENCY_OPTIONS } from '@alga-psa/core';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useBillingFrequencyOptions } from '@alga-psa/billing/hooks/useBillingEnumOptions';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+const isReturnedActionError = (value: unknown) =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 interface ContractFormProps {
   contract: IContract;
@@ -75,7 +83,11 @@ const ContractForm: React.FC<ContractFormProps> = ({ contract, onContractUpdated
         updatePayload.status = status;
       }
 
-      await updateContract(contract.contract_id, updatePayload);
+      const result = await updateContract(contract.contract_id, updatePayload);
+      if (isReturnedActionError(result)) {
+        setValidationErrors([getErrorMessage(result)]);
+        return;
+      }
 
       onContractUpdated();
     } catch (error) {

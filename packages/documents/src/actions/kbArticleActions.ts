@@ -1463,6 +1463,19 @@ export interface IImportResult {
  * Imports KB articles from markdown/HTML file contents.
  * Each file becomes one article. Filename → title, content → BlockNote blocks.
  */
+function kbArticleImportErrorMessage(error: unknown): string {
+  const message = error instanceof Error ? error.message : typeof error === 'string' ? error : '';
+
+  if (
+    message === 'Title is required' ||
+    message === 'An article with this slug already exists'
+  ) {
+    return message;
+  }
+
+  return 'Failed to import article';
+}
+
 export const importArticles = withAuth(
   async (
     user,
@@ -1509,7 +1522,7 @@ export const importArticles = withAuth(
       } catch (err) {
         result.failed.push({
           filename: file.filename,
-          error: err instanceof Error ? err.message : 'Unknown error',
+          error: kbArticleImportErrorMessage(err),
         });
       }
     }

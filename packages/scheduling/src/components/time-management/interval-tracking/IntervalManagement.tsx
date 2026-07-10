@@ -16,7 +16,7 @@ import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dia
 import TimeEntryDialog from '../time-entry/time-sheet/TimeEntryDialog';
 import { saveTimeEntry } from '../../../actions/timeEntryActions';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { getErrorMessage, handleError, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { getCurrentTimePeriod } from '../../../actions/timePeriodsActions';
 import { fetchOrCreateTimeSheet } from '../../../actions/timeEntryActions';
 
@@ -160,6 +160,10 @@ export function IntervalManagement({
     try {
       // Get current time period
       const timePeriod = await getCurrentTimePeriod();
+      if (isActionMessageError(timePeriod) || isActionPermissionError(timePeriod)) {
+        toast.error(getErrorMessage(timePeriod));
+        return;
+      }
       if (!timePeriod) {
         toast.error(t('intervals.messages.noActivePeriod', { defaultValue: 'No active time period found' }));
         return;
@@ -168,6 +172,10 @@ export function IntervalManagement({
       
       // Create or fetch time sheet
       const timeSheet = await fetchOrCreateTimeSheet(userId, timePeriod.period_id);
+      if (isActionMessageError(timeSheet) || isActionPermissionError(timeSheet)) {
+        toast.error(getErrorMessage(timeSheet));
+        return;
+      }
       if (!timeSheet) {
         toast.error(t('intervals.messages.failedFetchTimeSheet', { defaultValue: 'Failed to create or fetch time sheet' }));
         return;
@@ -226,6 +234,10 @@ export function IntervalManagement({
     try {
       // Get current time period
       const currentTimePeriod = await getCurrentTimePeriod();
+      if (isActionMessageError(currentTimePeriod) || isActionPermissionError(currentTimePeriod)) {
+        toast.error(getErrorMessage(currentTimePeriod));
+        return;
+      }
       if (!currentTimePeriod) {
         toast.error(t('intervals.messages.noActivePeriod', { defaultValue: 'No active time period found' }));
         return;
@@ -233,13 +245,17 @@ export function IntervalManagement({
 
       // Create or fetch time sheet
       const timeSheet = await fetchOrCreateTimeSheet(userId, currentTimePeriod.period_id);
+      if (isActionMessageError(timeSheet) || isActionPermissionError(timeSheet)) {
+        toast.error(getErrorMessage(timeSheet));
+        return;
+      }
       if (!timeSheet) {
         toast.error(t('intervals.messages.failedFetchTimeSheet', { defaultValue: 'Failed to create or fetch time sheet' }));
         return;
       }
 
       // Save the time entry directly
-      await saveTimeEntry({
+      const savedEntry = await saveTimeEntry({
         ...timeEntry,
         time_sheet_id: timeSheet.id,
         user_id: userId,
@@ -249,6 +265,11 @@ export function IntervalManagement({
         work_item_type: 'ticket',
         work_item_id: ticketId
       });
+
+      if (isActionMessageError(savedEntry) || isActionPermissionError(savedEntry)) {
+        toast.error(getErrorMessage(savedEntry));
+        return;
+      }
       
       // Delete the intervals that were converted
       await intervalService.deleteIntervals(selectedIntervalIds);

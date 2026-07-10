@@ -59,6 +59,16 @@ WORKDIR /app
 RUN npm install --ignore-scripts --workspaces=false --legacy-peer-deps \
     && npm install --no-save --workspaces=false openai@^4.104.0
 
+# Onboarding seeds are loaded dynamically at runtime and import @alga-psa/db
+# through its package exports. Build the package and its runtime dependency so
+# those exports exist in the production image; the Temporal TypeScript build
+# cannot discover this dynamic import on its own.
+WORKDIR /app/packages/core
+RUN npm run build
+
+WORKDIR /app/packages/db
+RUN npm run build
+
 # Build event-schemas (imported at runtime by shared/workflow/streams)
 WORKDIR /app/packages/event-schemas
 
@@ -72,6 +82,22 @@ RUN npx tsup
 # required at runtime by the job + maintenance-fanout activities)
 WORKDIR /app/packages/jobs
 RUN npx tsup
+
+# Build @alga-psa/core and @alga-psa/db. The worker's own TS compiles to
+# self-contained relative imports (tsc-alias), but the onboarding seeds
+# dynamic-import '@alga-psa/db' per seed file, resolving it through the
+# node_modules symlink -> /app/packages/db — so its dist/ must exist (missing
+# db/dist broke tenant provisioning in prod: run_onboarding_seeds
+# ERR_MODULE_NOT_FOUND). core builds first: db's dist imports
+# @alga-psa/core/secrets and /logger at runtime.
+# Known-latent, deliberately NOT built here (never hit in prod traffic): the
+# shared/dist and @alga-psa/workflows runtime bundles also carry lazy bare
+# imports of @alga-psa/{event-bus,authorization,types,storage}. If one of
+# those paths ever fires ERR_MODULE_NOT_FOUND, add the same two lines for it.
+WORKDIR /app/packages/core
+RUN npm install --ignore-scripts && npm run build
+WORKDIR /app/packages/db
+RUN npm install --ignore-scripts && npm run build
 
 WORKDIR /app/ee/temporal-workflows
 RUN npm run build
@@ -107,6 +133,11 @@ RUN mkdir -p /app/node_modules/@alga-psa \
 
 RUN ls -la /app/ee/temporal-workflows/dist/seeds/onboarding || echo "Seeds directory not found in prebuilt production stage"
 
+# Same runtime-resolution guard as the production stage: the prebuilt path
+# relies on packages/*/dist arriving via the build context (.dockerignore
+# whitelist) — fail the build here rather than in prod if they didn't.
+RUN cd /app/ee/temporal-workflows && node --input-type=module -e "const m = await import('@alga-psa/db'); if (typeof m.tenantDb !== 'function') throw new Error('@alga-psa/db loaded but tenantDb missing')"
+
 RUN groupadd -r temporal && useradd -r -g temporal temporal
 RUN chown -R temporal:temporal /app
 USER temporal
@@ -130,8 +161,15 @@ COPY --from=development /app/shared /app/shared
 COPY --from=development /app/ee/temporal-workflows/dist /app/ee/temporal-workflows/dist
 COPY --from=development /app/ee/temporal-workflows/node_modules /app/ee/temporal-workflows/node_modules
 COPY --from=development /app/ee/packages/workflows /app/ee/packages/workflows
+# Copy package exports used by dynamically loaded onboarding seeds.
+COPY --from=development /app/packages/core/dist /app/packages/core/dist
+COPY --from=development /app/packages/db/dist /app/packages/db/dist
 # Copy event-schemas dist (runtime dependency of shared/workflow/streams)
 COPY --from=development /app/packages/event-schemas/dist /app/packages/event-schemas/dist
+# Copy the runtime-resolved @alga-psa package dists built above (base-stage
+# packages/ came from the build context, where .dockerignore strips **/dist)
+COPY --from=development /app/packages/core/dist /app/packages/core/dist
+COPY --from=development /app/packages/db/dist /app/packages/db/dist
 # Copy integrations node_modules to both locations for module resolution
 COPY --from=development /app/packages/integrations/node_modules /app/packages/integrations/node_modules
 COPY --from=development /app/packages/integrations/node_modules /app/ee/temporal-workflows/dist/packages/integrations/node_modules
@@ -147,6 +185,11 @@ RUN mkdir -p /app/node_modules/@alga-psa /app/ee/temporal-workflows/node_modules
 
 # Verify seeds are present in production stage
 RUN ls -la /app/ee/temporal-workflows/dist/seeds/onboarding || echo "Seeds directory not found in production stage"
+
+# Fail the build if the runtime-resolved db package can't load the way the
+# onboarding seeds load it (dynamic import from node_modules). Missing
+# packages/db/dist shipped silently and broke prod tenant provisioning.
+RUN cd /app/ee/temporal-workflows && node --input-type=module -e "const m = await import('@alga-psa/db'); if (typeof m.tenantDb !== 'function') throw new Error('@alga-psa/db loaded but tenantDb missing')"
 
 # Create non-root user
 RUN groupadd -r temporal && useradd -r -g temporal temporal

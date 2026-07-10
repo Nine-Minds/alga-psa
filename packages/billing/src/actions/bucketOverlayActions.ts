@@ -8,6 +8,12 @@ import { withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getAnalyticsAsync } from '../lib/authHelpers';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 
 // Bucket overlay input type - matches the structure used in wizard
@@ -24,6 +30,45 @@ type BucketOverlayConfigRow = {
   allow_rollover: boolean | null;
   billing_period: 'weekly' | 'monthly';
 };
+
+export type BucketOverlayActionError = ActionMessageError | ActionPermissionError;
+
+function bucketOverlayActionErrorFrom(error: unknown): BucketOverlayActionError | null {
+  if (error instanceof Error) {
+    if (error.message.startsWith('Permission denied') || error.message === 'user is not logged in') {
+      return permissionError(error.message);
+    }
+  }
+
+  const dbError = error as { code?: string; column?: string };
+  if (dbError?.code === '22P02') {
+    return actionError('One of the selected bucket overlay values is invalid. Please refresh and try again.');
+  }
+  if (dbError?.code === '23502') {
+    return actionError(`Missing required bucket overlay field${dbError.column ? `: ${dbError.column}` : ''}.`);
+  }
+  if (dbError?.code === '23503') {
+    return actionError('One of the selected bucket overlay records is no longer valid. Please refresh and try again.');
+  }
+  if (dbError?.code === '23505') {
+    return actionError('A bucket overlay for this service already exists.');
+  }
+  if (dbError?.code === '23514') {
+    return actionError('One of the bucket overlay values is not allowed. Please review the form and try again.');
+  }
+
+  return null;
+}
+
+async function withBucketOverlayActionErrors<T>(work: () => Promise<T>): Promise<T | BucketOverlayActionError> {
+  try {
+    return await work();
+  } catch (error) {
+    const expected = bucketOverlayActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
+}
 
 /**
  * Upsert a bucket overlay configuration for a service on a contract line.
@@ -44,7 +89,8 @@ export const upsertBucketOverlay = withAuth(async (
   overlay: BucketOverlayInput,
   quantity?: number | null,
   customRate?: number | null
-): Promise<void> => {
+): Promise<void | BucketOverlayActionError> => {
+  return withBucketOverlayActionErrors(async () => {
   const { knex } = await createTenantKnex();
 
   await withTransaction(knex, async (trx) => {
@@ -61,6 +107,7 @@ export const upsertBucketOverlay = withAuth(async (
       quantity,
       customRate
     );
+  });
   });
 });
 
@@ -162,7 +209,8 @@ export const deleteBucketOverlay = withAuth(async (
   { tenant },
   contractLineId: string,
   serviceId: string
-): Promise<void> => {
+): Promise<void | BucketOverlayActionError> => {
+  return withBucketOverlayActionErrors(async () => {
   const { knex } = await createTenantKnex();
 
   await withTransaction(knex, async (trx) => {
@@ -171,6 +219,7 @@ export const deleteBucketOverlay = withAuth(async (
     }
 
     await deleteBucketOverlayInTransaction(trx, tenant, contractLineId, serviceId);
+  });
   });
 });
 
@@ -228,7 +277,8 @@ export const getBucketOverlay = withAuth(async (
   { tenant },
   contractLineId: string,
   serviceId: string
-): Promise<BucketOverlayInput | null> => {
+): Promise<BucketOverlayInput | null | BucketOverlayActionError> => {
+  return withBucketOverlayActionErrors(async () => {
   const { knex } = await createTenantKnex();
 
   return await withTransaction(knex, async (trx) => {
@@ -270,5 +320,6 @@ export const getBucketOverlay = withAuth(async (
       allow_rollover: result.allow_rollover ?? false,
       billing_period: result.billing_period as 'weekly' | 'monthly',
     };
+  });
   });
 });

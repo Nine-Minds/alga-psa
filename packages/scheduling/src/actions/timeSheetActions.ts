@@ -25,6 +25,10 @@ import { validateArray, validateData } from '@alga-psa/validation';
 import { Temporal } from '@js-temporal/polyfill';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { assertCanActOnBehalf, assertCanApproveSubject, resolveManagedSubjectUserIds } from './timeEntryDelegationAuth';
+import {
+  timeSheetActionErrorFrom,
+  type TimeSheetActionError,
+} from './timeSheetActionErrors';
 
 function captureAnalytics(_event: string, _properties?: Record<string, any>, _userId?: string): void {
   // Intentionally no-op: avoid pulling analytics (and its tenancy/client-portal deps) into scheduling.
@@ -63,7 +67,7 @@ function toTimePeriod(dbPeriod: Pick<DbTimePeriod, 'period_id' | 'start_date' | 
   const endDate = toPlainDate(dbPeriod.end_date);
 
   if (!(startDate instanceof Temporal.PlainDate) || !(endDate instanceof Temporal.PlainDate)) {
-    throw new Error('Failed to convert dates to Temporal.PlainDate');
+    throw new Error('Database time period dates could not be converted to Temporal.PlainDate.');
   }
 
   const timePeriod: ITimePeriod = {
@@ -111,7 +115,7 @@ export const fetchTimeSheetsForApproval = withAuth(async (
   user,
   { tenant },
   includeApproved: boolean = false
-): Promise<ITimeSheetApprovalView[]> => {
+): Promise<ITimeSheetApprovalView[] | TimeSheetActionError> => {
   try {
     const { knex: db } = await createTenantKnex();
     const scopedDb = tenantDb(db, tenant) as any;
@@ -171,7 +175,9 @@ export const fetchTimeSheetsForApproval = withAuth(async (
     return validateArray(timeSheetApprovalViewSchema, timeSheetApprovals) as ITimeSheetApprovalView[];
   } catch (error) {
     console.error('Error fetching time sheets for approval:', error);
-    throw new Error('Failed to fetch time sheets for approval');
+    const expected = timeSheetActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 });
 
@@ -182,7 +188,7 @@ export const addCommentToTimeSheet = withAuth(async (
   userId: string,
   comment: string,
   isApprover: boolean
-): Promise<ITimeSheetComment> => {
+): Promise<ITimeSheetComment | TimeSheetActionError> => {
   try {
     const { knex: db } = await createTenantKnex();
     const scopedDb = tenantDb(db, tenant) as any;
@@ -226,11 +232,13 @@ export const addCommentToTimeSheet = withAuth(async (
     return validateData(timeSheetCommentSchema, formattedComment) as ITimeSheetComment;
   } catch (error) {
     console.error('Failed to add comment to time sheet:', error);
-    throw new Error('Failed to add comment to time sheet');
+    const expected = timeSheetActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 });
 
-export const bulkApproveTimeSheets = withAuth(async (user, { tenant }, timeSheetIds: string[], managerId: string) => {
+export const bulkApproveTimeSheets = withAuth(async (user, { tenant }, timeSheetIds: string[], managerId: string): Promise<{ success: true } | TimeSheetActionError> => {
   try {
     const { knex: db } = await createTenantKnex();
 
@@ -316,11 +324,13 @@ export const bulkApproveTimeSheets = withAuth(async (user, { tenant }, timeSheet
     return { success: true };
   } catch (error) {
     console.error('Error bulk approving time sheets:', error);
-    throw new Error('Failed to bulk approve time sheets');
+    const expected = timeSheetActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 });
 
-export const fetchTimeSheet = withAuth(async (user, { tenant }, timeSheetId: string): Promise<ITimeSheetView> => {
+export const fetchTimeSheet = withAuth(async (user, { tenant }, timeSheetId: string): Promise<ITimeSheetView | TimeSheetActionError> => {
   try {
     const { knex: db } = await createTenantKnex();
     const scopedDb = tenantDb(db, tenant) as any;
@@ -359,11 +369,13 @@ export const fetchTimeSheet = withAuth(async (user, { tenant }, timeSheetId: str
     return validateData(timeSheetViewSchema, result) as ITimeSheetView;
   } catch (error) {
     console.error('Error fetching time sheet:', error);
-    throw new Error('Failed to fetch time sheet');
+    const expected = timeSheetActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 });
 
-export const fetchTimeEntriesForTimeSheet = withAuth(async (user, { tenant }, timeSheetId: string): Promise<ITimeEntry[]> => {
+export const fetchTimeEntriesForTimeSheet = withAuth(async (user, { tenant }, timeSheetId: string): Promise<ITimeEntry[] | TimeSheetActionError> => {
   try {
     const { knex: db } = await createTenantKnex();
     const scopedDb = tenantDb(db, tenant) as any;
@@ -422,11 +434,13 @@ export const fetchTimeEntriesForTimeSheet = withAuth(async (user, { tenant }, ti
     return validateArray(timeEntrySchema, formattedEntries) as ITimeEntry[];
   } catch (error) {
     console.error('Error fetching time entries for time sheet:', error);
-    throw new Error('Failed to fetch time entries for time sheet');
+    const expected = timeSheetActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 });
 
-export const fetchTimeSheetComments = withAuth(async (user, { tenant }, timeSheetId: string): Promise<ITimeSheetComment[]> => {
+export const fetchTimeSheetComments = withAuth(async (user, { tenant }, timeSheetId: string): Promise<ITimeSheetComment[] | TimeSheetActionError> => {
   try {
     const { knex: db } = await createTenantKnex();
     const scopedDb = tenantDb(db, tenant) as any;
@@ -484,11 +498,13 @@ export const fetchTimeSheetComments = withAuth(async (user, { tenant }, timeShee
   } catch (error) {
     console.error('Error fetching time sheet comments:', error);
     console.error('Stack trace:', error instanceof Error ? error.stack : 'No stack trace available');
+    const expected = timeSheetActionErrorFrom(error);
+    if (expected) return expected;
     throw error;
   }
 });
 
-export const approveTimeSheet = withAuth(async (user, { tenant }, timeSheetId: string, approverId: string): Promise<void> => {
+export const approveTimeSheet = withAuth(async (user, { tenant }, timeSheetId: string, approverId: string): Promise<void | TimeSheetActionError> => {
   try {
     const { knex: db } = await createTenantKnex();
 
@@ -573,11 +589,13 @@ export const approveTimeSheet = withAuth(async (user, { tenant }, timeSheetId: s
     }, approverId);
   } catch (error) {
     console.error('Error approving time sheet:', error);
-    throw new Error('Failed to approve time sheet');
+    const expected = timeSheetActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 });
 
-export const requestChangesForTimeSheet = withAuth(async (user, { tenant }, timeSheetId: string, approverId: string): Promise<void> => {
+export const requestChangesForTimeSheet = withAuth(async (user, { tenant }, timeSheetId: string, approverId: string): Promise<void | TimeSheetActionError> => {
   try {
     const { knex: db } = await createTenantKnex();
 
@@ -626,7 +644,9 @@ export const requestChangesForTimeSheet = withAuth(async (user, { tenant }, time
     });
   } catch (error) {
     console.error('Error requesting changes for time sheet:', error);
-    throw new Error('Failed to request changes for time sheet');
+    const expected = timeSheetActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 });
 
@@ -636,7 +656,7 @@ export const reverseTimeSheetApproval = withAuth(async (
   timeSheetId: string,
   approverId: string,
   reason: string
-): Promise<void> => {
+): Promise<void | TimeSheetActionError> => {
   try {
     const { knex: db } = await createTenantKnex();
 
@@ -713,6 +733,8 @@ export const reverseTimeSheetApproval = withAuth(async (
     });
   } catch (error) {
     console.error('Error reversing time sheet approval:', error);
+    const expected = timeSheetActionErrorFrom(error);
+    if (expected) return expected;
     throw error;
   }
 });

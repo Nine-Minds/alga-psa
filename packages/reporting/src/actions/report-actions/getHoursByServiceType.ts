@@ -9,6 +9,7 @@ import type {
   ITimeEntry,
 } from '@alga-psa/types';
 import { withAuth } from '@alga-psa/auth';
+import { reportingActionErrorFrom, type ReportingActionError } from './reportingActionErrors';
 
 // Define the schema for the input parameters
 const InputSchema = z.object({
@@ -42,12 +43,11 @@ export const getHoursByServiceType = withAuth(async (
   _user,
   { tenant },
   input: z.infer<typeof InputSchema>
-): Promise<HoursByServiceResult[]> => {
+): Promise<HoursByServiceResult[] | ReportingActionError> => {
   // Validate input
   const validationResult = InputSchema.safeParse(input);
   if (!validationResult.success) {
-    const errorMessages = validationResult.error.errors.map(e => `${e.path.join('.')}: ${e.message}`).join(', ');
-    throw new Error(`Validation Error: ${errorMessages}`);
+    return reportingActionErrorFrom(validationResult.error)!;
   }
   const { clientId, startDate, endDate, groupByServiceType } = validationResult.data;
 
@@ -132,7 +132,9 @@ export const getHoursByServiceType = withAuth(async (
     return results;
 
   } catch (error) {
+    const expected = reportingActionErrorFrom(error);
+    if (expected) return expected;
     console.error(`Error fetching hours by service for client ${clientId} in tenant ${tenant}:`, error);
-    throw new Error(`Failed to fetch hours by service: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    throw error;
   }
 });

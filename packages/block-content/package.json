@@ -13,6 +13,10 @@
     "./actions": {
       "import": "./src/actions/blockContentActions.ts",
       "types": "./src/actions/blockContentActions.ts"
+    },
+    "./actions/*": {
+      "import": "./src/actions/*.ts",
+      "types": "./src/actions/*.ts"
     }
   },
   "scripts": {

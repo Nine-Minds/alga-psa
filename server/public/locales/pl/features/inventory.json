@@ -867,6 +867,7 @@
     "addPurchaseOrder": "Dodaj zamówienie zakupu",
     "allVendors": "Wszyscy dostawcy",
     "amountOnOrder": "{{amount}} zamówione",
+    "mixedCurrencyOnOrder": "{{count}} zamówień zakupu w toku w wielu walutach",
     "cancelConfirm": "Czy na pewno chcesz anulować zamówienie zakupu {{poNumber}}? Tej operacji nie można cofnąć.",
     "cancelFailed": "Nie udało się anulować zamówienia zakupu.",
     "cancelTitle": "Anuluj zamówienie zakupu",
@@ -879,7 +880,7 @@
       "product": "Produkt",
       "qty": "Ilość",
       "received": "Przyjęto",
-      "unitCost": "Koszt jednostkowy ($)",
+      "unitCost": "Koszt jednostkowy",
       "vendor": "Dostawca"
     },
     "count": "{{count}} zamówienie zakupu",
@@ -1111,7 +1112,7 @@
       "selectService": "Select a service…",
       "service": "Service",
       "serviceId": "ID usługi",
-      "unitPrice": "Cena jednostkowa ($)",
+      "unitPrice": "Cena jednostkowa",
       "unitPriceIn": "Unit price ({{currency}})"
     },
     "filters": {
@@ -1199,7 +1200,8 @@
     "title": "Zamówienia sprzedaży",
     "total": "Total",
     "unassignedBackorder": "{{count}} zaległych linii nie ma preferowanego dostawcy — utwórz te PO ręcznie.",
-    "unnamedService": "Unnamed"
+    "unnamedService": "Unnamed",
+    "notFound": "Sales order not found."
   },
   "stock": {
     "actions": {
@@ -1224,7 +1226,7 @@
     "fields": {
       "location": "Lokalizacja",
       "product": "Produkt",
-      "unitCost": "Koszt jednostkowy (USD)"
+      "unitCost": "Koszt jednostkowy"
     },
     "filteredCount": "{{shown}} z {{total}} produktów",
     "levels": {
@@ -1466,7 +1468,7 @@
     "dialogTitle": "Cennik — {{name}}",
     "emptyState": "Brak ofert — dodaj poniżej numery katalogowe i koszty kontraktowe dostawcy.",
     "fields": {
-      "cost": "Koszt ($)",
+      "cost": "Koszt",
       "currency": "Waluta",
       "leadTime": "Czas realizacji (dni)",
       "preferred": "Preferowany dostawca dla tego produktu (wpływa na sugestie ponownego zamawiania)",

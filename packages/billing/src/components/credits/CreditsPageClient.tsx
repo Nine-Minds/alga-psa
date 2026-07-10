@@ -6,6 +6,11 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { formatCurrency } from '@alga-psa/core';
 import type { ColumnDefinition, ICreditExpirationSettings, ICreditTracking } from '@alga-psa/types';
 import AddCreditButton from './AddCreditButton';
@@ -26,10 +31,15 @@ interface CreditsListResult {
 }
 
 interface CreditsPageClientProps {
-  settings: ICreditExpirationSettings;
+  settings: ICreditExpirationSettings | { actionError: string } | { permissionError: string };
   activeCreditsResult: CreditsListResult;
   allCreditsResult: CreditsListResult;
 }
+
+const isCreditExpirationSettingsError = (
+  settings: CreditsPageClientProps['settings'],
+): settings is { actionError: string } | { permissionError: string } =>
+  isActionMessageError(settings) || isActionPermissionError(settings);
 
 function getStatusLabel(
   t: ReturnType<typeof useTranslation>['t'],
@@ -234,6 +244,8 @@ export default function CreditsPageClient({
   const columns = createColumns(t);
   const allCredits = allCreditsResult.data?.credits ?? [];
   const expiredCredits = allCredits.filter((credit) => credit.is_expired);
+  const settingsError = isCreditExpirationSettingsError(settings);
+  const creditExpirationEnabled = !settingsError && settings.enable_credit_expiration;
 
   const tabs = [
     {
@@ -260,7 +272,7 @@ export default function CreditsPageClient({
     },
   ];
 
-  if (settings.enable_credit_expiration) {
+  if (creditExpirationEnabled) {
     tabs.push({
       id: 'expired',
       label: t('tabs.expiredCredits', { defaultValue: 'Expired Credits' }),
@@ -297,7 +309,7 @@ export default function CreditsPageClient({
         <CardHeader>
           <CardTitle>{t('page.creditsOverview', { defaultValue: 'Credits Overview' })}</CardTitle>
           <CardDescription>
-            {settings.enable_credit_expiration
+            {creditExpirationEnabled
               ? t('page.overviewDescriptionWithExpiration', {
                   defaultValue: 'Manage your client credits, including expiration dates, and transfers',
                 })
@@ -307,13 +319,22 @@ export default function CreditsPageClient({
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <CreditExpirationSettingsPanel settings={settings} />
+          {settingsError ? (
+            <Alert variant="destructive" className="mb-4">
+              <AlertDescription>
+                {t('settings.loadErrorPrefix', { defaultValue: 'Error loading credit expiration settings:' })}{' '}
+                {getErrorMessage(settings)}
+              </AlertDescription>
+            </Alert>
+          ) : (
+            <CreditExpirationSettingsPanel settings={settings} />
+          )}
           <CreditsTabs tabs={tabs} />
         </CardContent>
       </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {settings.enable_credit_expiration && (
+        {creditExpirationEnabled && (
           <Card>
             <CardHeader>
               <CardTitle>

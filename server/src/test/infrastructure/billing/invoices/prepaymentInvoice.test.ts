@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
 import '../../../../../test-utils/nextApiMock';
+import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { generateInvoice, createInvoiceFromBillingResult } from '@alga-psa/billing/actions/invoiceGeneration';
 import { finalizeInvoice } from '@alga-psa/billing/actions/invoiceModification';
 import { createPrepaymentInvoice, applyCreditToInvoice } from '@alga-psa/billing/actions/creditActions';
@@ -7,7 +8,6 @@ import { v4 as uuidv4 } from 'uuid';
 import { TextEncoder as NodeTextEncoder } from 'util';
 import { TestContext } from '../../../../../test-utils/testContext';
 import { tenantDb } from '@alga-psa/db';
-import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { expectError, expectNotFound } from '../../../../../test-utils/errorUtils';
 import { createTestDate, createTestDateISO, dateHelpers } from '../../../../../test-utils/dateUtils';
 import { ClientContractLine } from '@alga-psa/billing/models';
@@ -31,7 +31,7 @@ process.env.DB_HOST = process.env.DB_HOST === 'pgbouncer' ? 'localhost' : proces
 let activeKnex: any;
 
 vi.mock('@alga-psa/auth', async () => {
-  const { createAuthModuleMock } = await import('../../../../../test-utils/testMocks');
+  const { createAuthModuleMock } = await import('../../../../../test-utils/authModuleMock');
   return createAuthModuleMock();
 });
 
@@ -44,33 +44,9 @@ vi.mock('server/src/lib/analytics/posthog', () => ({
   }
 }));
 
-vi.mock('@alga-psa/db', () => ({
+vi.mock('@alga-psa/db', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/db')>()),
   createTenantKnex: vi.fn(async () => ({ knex: activeKnex })),
-  tenantDb: (conn: any, tenant: string) => {
-    const aliasFor = (table: string) => table.match(/\s+as\s+([^\s]+)$/i)?.[1] ?? table.split(/\s+/).pop() ?? table;
-    const qualifierFor = (column: string) => column.match(/^([^.\s]+)\./)?.[1];
-
-    return {
-      table: (table: string) => conn(table).where(`${aliasFor(table)}.tenant`, tenant),
-      tenantJoin: (query: any, table: string, left: string, right: string, options: any = {}) => {
-        const joinAlias = aliasFor(table);
-        const leftQualifier = qualifierFor(left);
-        const rightQualifier = qualifierFor(right);
-        const rootQualifier = leftQualifier === joinAlias ? rightQualifier : leftQualifier;
-        const joinMethod = options.type === 'left' ? 'leftJoin' : 'join';
-
-        return query[joinMethod](table, function (this: any) {
-          this.on(left, '=', right);
-          if (options.tenantPredicate === 'literal') {
-            this.andOn(`${joinAlias}.tenant`, '=', conn.raw('?', [tenant]));
-          } else {
-            this.andOn(`${joinAlias}.tenant`, '=', options.rootTenantColumn ?? `${rootQualifier}.tenant`);
-          }
-          options.on?.(this);
-        });
-      }
-    };
-  },
   runWithTenant: vi.fn(async (_tenant: string, callback: () => Promise<unknown>) => callback()),
   withTransaction: vi.fn(async (knex, callback) => {
     try {
@@ -109,7 +85,8 @@ vi.mock('server/src/lib/eventBus', () => ({
   })
 }));
 
-vi.mock('@alga-psa/core/secrets', () => ({
+vi.mock('@alga-psa/core/secrets', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   getSecret: async () => undefined,
   getSecretProviderInstance: () => ({
     getSecret: async () => undefined,
@@ -120,7 +97,8 @@ vi.mock('@alga-psa/core/secrets', () => ({
   }),
 }));
 
-vi.mock('@alga-psa/core', () => ({
+vi.mock('@alga-psa/core', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   getSecret: async () => undefined,
   getSecretProviderInstance: () => ({
     getSecret: async () => undefined,

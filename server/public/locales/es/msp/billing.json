@@ -253,7 +253,8 @@
       "secondaryApproverRequired": "Introduzca el nombre y el correo electrónico del aprobador secundario.",
       "invalidVerificationCode": "Código de verificación no válido",
       "unknown": "Se produjo un error desconocido",
-      "reportNotFound": "No se encontró el informe de conciliación. Es posible que el informe se haya eliminado o que no tenga permiso para verlo."
+      "reportNotFound": "No se encontró el informe de conciliación. Es posible que el informe se haya eliminado o que no tenga permiso para verlo.",
+      "resolveFailed": "Failed to resolve reconciliation report."
     }
   },
   "discrepancy": {
@@ -334,7 +335,8 @@
       "resolveReport": "Resolver informe"
     },
     "errors": {
-      "unknown": "Se produjo un error desconocido"
+      "unknown": "Se produjo un error desconocido",
+      "resolveFailed": "Failed to resolve reconciliation report. Please refresh and try again."
     }
   },
   "recommendedFix": {
@@ -387,7 +389,8 @@
     "errors": {
       "notesRequired": "Proporcione notas que expliquen el motivo de esta corrección.",
       "invalidAmount": "Por favor ingresa una cantidad válida",
-      "unknown": "Se produjo un error desconocido"
+      "unknown": "Se produjo un error desconocido",
+      "applyFailed": "Failed to apply reconciliation fix. Please refresh and try again."
     }
   },
   "usage": {

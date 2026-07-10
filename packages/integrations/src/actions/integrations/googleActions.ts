@@ -130,8 +130,8 @@ export const getGoogleIntegrationStatus = withAuth(async (
         usingSharedOAuthApp: Boolean(gmailClientId && gmailClientSecret && !calendarClientId && !calendarClientSecret)
       }
     };
-  } catch (err: any) {
-    return { success: false, error: err?.message || 'Failed to load Google integration status' };
+  } catch {
+    return { success: false, error: 'Failed to load Google integration status' };
   }
 });
 
@@ -156,17 +156,17 @@ export const saveGoogleIntegrationSettings = withAuth(async (
     if (!projectId) return { success: false, error: 'Google Cloud project ID is required' };
 
     const gmailClientId = normalizeGoogleClientId(input.gmailClientId ?? '');
-    if (!gmailClientId) return { success: false, error: 'Gmail OAuth Client ID is required' };
+    if (!gmailClientId) return { success: false, error: 'Google OAuth Client ID for staff sign-in and Gmail is required' };
     if (!isLikelyGoogleClientId(gmailClientId)) {
-      return { success: false, error: 'Gmail OAuth Client ID does not look valid' };
+      return { success: false, error: 'Google OAuth Client ID for staff sign-in and Gmail does not look valid' };
     }
 
     const gmailClientSecret = input.gmailClientSecret?.trim();
-    if (!gmailClientSecret) return { success: false, error: 'Gmail OAuth Client Secret is required' };
+    if (!gmailClientSecret) return { success: false, error: 'Google OAuth Client Secret for staff sign-in and Gmail is required' };
 
     const serviceAccountKeyJson = input.serviceAccountKeyJson?.trim();
     if (!serviceAccountKeyJson) {
-      return { success: false, error: 'Service account key JSON is required for Pub/Sub provisioning' };
+      return { success: false, error: 'Service account key JSON is required for inbound Gmail notifications' };
     }
 
     let parsedKey: any;
@@ -203,8 +203,8 @@ export const saveGoogleIntegrationSettings = withAuth(async (
     }
 
     return { success: true };
-  } catch (err: any) {
-    return { success: false, error: err?.message || 'Failed to save Google integration settings' };
+  } catch {
+    return { success: false, error: 'Failed to save Google integration settings' };
   }
 });
 
@@ -266,7 +266,7 @@ export const resetGoogleProvidersToDisconnected = withAuth(async (
       });
 
     return { success: true };
-  } catch (err: any) {
-    return { success: false, error: err?.message || 'Failed to reset Google providers' };
+  } catch {
+    return { success: false, error: 'Failed to reset Google providers' };
   }
 });

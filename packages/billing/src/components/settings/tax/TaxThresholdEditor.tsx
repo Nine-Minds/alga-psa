@@ -5,7 +5,13 @@ import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import toast from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { MoreVertical, PlusCircle, Info, AlertTriangle } from 'lucide-react';
 
 import { Button } from '@alga-psa/ui/components/Button';
@@ -31,7 +37,7 @@ import {
   createTaxRateThreshold,
   updateTaxRateThreshold,
   deleteTaxRateThreshold,
-} from '@alga-psa/billing/actions';
+} from '../../../actions/taxSettingsActions';
 
 // Zod schema for form validation
 const taxThresholdSchema = z.object({
@@ -52,6 +58,11 @@ const taxThresholdSchema = z.object({
 );
 
 type TaxThresholdFormData = z.infer<typeof taxThresholdSchema>;
+
+type ReturnedActionError = ActionMessageError | ActionPermissionError;
+
+const isReturnedActionError = (value: unknown): value is ReturnedActionError =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 interface TaxThresholdEditorProps {
   taxRateId: string;
@@ -93,6 +104,11 @@ export function TaxThresholdEditor({ taxRateId, currency = '$', isReadOnly = fal
     setIsLoading(true);
     try {
       const fetchedThresholds = await getTaxRateThresholdsByTaxRate(taxRateId);
+      if (isReturnedActionError(fetchedThresholds)) {
+        setThresholds([]);
+        handleError(fetchedThresholds, t('tax.thresholds.errors.load', { defaultValue: 'Failed to load tax brackets.' }));
+        return;
+      }
       setThresholds(fetchedThresholds);
     } catch (error) {
       handleError(error, t('tax.thresholds.errors.load', { defaultValue: 'Failed to load tax brackets.' }));
@@ -192,19 +208,21 @@ export function TaxThresholdEditor({ taxRateId, currency = '$', isReadOnly = fal
       : t('tax.thresholds.errors.create', { defaultValue: 'Failed to create tax bracket.' });
 
     try {
-      if (isEditing) {
-        await updateTaxRateThreshold(editingThreshold.tax_rate_threshold_id, {
-          min_amount: data.min_amount,
-          max_amount: data.max_amount ?? undefined,
-          rate: data.rate,
-        });
-      } else {
-        await createTaxRateThreshold({
-          tax_rate_id: taxRateId,
-          min_amount: data.min_amount,
-          max_amount: data.max_amount ?? undefined,
-          rate: data.rate,
-        });
+      const result = editingThreshold
+        ? await updateTaxRateThreshold(editingThreshold.tax_rate_threshold_id, {
+            min_amount: data.min_amount,
+            max_amount: data.max_amount ?? undefined,
+            rate: data.rate,
+          })
+        : await createTaxRateThreshold({
+            tax_rate_id: taxRateId,
+            min_amount: data.min_amount,
+            max_amount: data.max_amount ?? undefined,
+            rate: data.rate,
+          });
+      if (isReturnedActionError(result)) {
+        handleError(result);
+        return;
       }
       toast.success(successMessage);
       await fetchThresholds();
@@ -221,7 +239,11 @@ export function TaxThresholdEditor({ taxRateId, currency = '$', isReadOnly = fal
     setIsSubmitting(true);
 
     try {
-      await deleteTaxRateThreshold(thresholdToDelete.tax_rate_threshold_id);
+      const result = await deleteTaxRateThreshold(thresholdToDelete.tax_rate_threshold_id);
+      if (isReturnedActionError(result)) {
+        handleError(result);
+        return;
+      }
       toast.success(t('tax.thresholds.toast.deleted', { defaultValue: 'Tax bracket deleted successfully.' }));
       await fetchThresholds();
       handleCloseDeleteDialog();

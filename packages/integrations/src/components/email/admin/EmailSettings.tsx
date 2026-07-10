@@ -32,6 +32,10 @@ import {
 } from '../../../actions/email-actions/emailDomainActions';
 import { EmailProviderConfiguration } from '../EmailProviderConfiguration';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
+import {
+  getErrorMessage,
+  isActionMessageError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 interface EmailSettingsProps {
   // Remove tenantId prop since we'll use the tenant context
@@ -83,6 +87,10 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
   const loadEmailSettings = async () => {
     try {
       const data = await getEmailSettings();
+      if (isActionMessageError(data)) {
+        setError(getErrorMessage(data));
+        return;
+      }
       setSettings(data);
     } catch (err: any) {
       setError(t('email.errors.loadEmailSettings', { defaultValue: 'Failed to load email settings' }));
@@ -94,6 +102,10 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
   const loadDomains = async () => {
     try {
       const data = await getEmailDomains();
+      if (isActionMessageError(data)) {
+        setError(getErrorMessage(data));
+        return;
+      }
       setDomains(data);
     } catch (err: any) {
       console.error('Failed to load domains:', err);
@@ -105,11 +117,17 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
 
     setSaving(true);
     try {
-      await updateEmailSettings(settings);
+      const result = await updateEmailSettings(settings);
+      if (isActionMessageError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
+      setSettings(result);
       setError(null);
       // Show success message
     } catch (err: any) {
-      setError(err.message || t('email.errors.saveSettings', { defaultValue: 'Failed to save settings' }));
+      console.error('Failed to save email settings:', err);
+      setError(t('email.errors.saveSettings', { defaultValue: 'Failed to save settings' }));
     } finally {
       setSaving(false);
     }
@@ -123,13 +141,22 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
     try {
       // Persist current edits first so the test reflects what's on screen.
       // The masked password ('***') is resolved to the stored secret server-side.
-      await updateEmailSettings(settings);
+      const saveResult = await updateEmailSettings(settings);
+      if (isActionMessageError(saveResult)) {
+        setTestResult({
+          success: false,
+          error: getErrorMessage(saveResult)
+        });
+        return;
+      }
+      setSettings(saveResult);
       const result = await testOutboundEmail(testRecipient.trim() || undefined);
       setTestResult(result);
     } catch (err: any) {
+      console.error('Failed to test outbound email:', err);
       setTestResult({
         success: false,
-        error: err?.message || t('email.errors.testOutbound', { defaultValue: 'Failed to test outbound email' })
+        error: t('email.errors.testOutbound', { defaultValue: 'Failed to test outbound email' })
       });
     } finally {
       setTesting(false);
@@ -140,20 +167,30 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
     if (!newDomain.trim()) return;
 
     try {
-      await addEmailDomain(newDomain.trim());
+      const result = await addEmailDomain(newDomain.trim());
+      if (isActionMessageError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
       setNewDomain('');
       await loadDomains();
     } catch (err: any) {
-      setError(err.message || t('email.errors.addDomain', { defaultValue: 'Failed to add domain' }));
+      console.error('Failed to add email domain:', err);
+      setError(t('email.errors.addDomain', { defaultValue: 'Failed to add domain' }));
     }
   };
 
   const verifyDomain = async (domain: string) => {
     try {
-      await verifyEmailDomain(domain);
+      const result = await verifyEmailDomain(domain);
+      if (isActionMessageError(result)) {
+        setError(getErrorMessage(result));
+        return;
+      }
       await loadDomains();
     } catch (err: any) {
-      setError(err.message || t('email.errors.verifyDomain', { defaultValue: 'Failed to verify domain' }));
+      console.error('Failed to verify email domain:', err);
+      setError(t('email.errors.verifyDomain', { defaultValue: 'Failed to verify domain' }));
     }
   };
 

@@ -27,6 +27,15 @@ import { enqueueInvoiceAutoExport } from '../services/accountingSync/syncProduce
 import { withAuth } from '@alga-psa/auth';
 import { getSession } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import {
+  actionError,
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 function tenantScopedTable<Row extends object = Record<string, unknown>>(
   conn: Knex | Knex.Transaction,
@@ -140,23 +149,47 @@ export interface DraftInvoicePropertiesUpdateResult {
   dueDate: string | null;
 }
 
+class ExpectedInvoiceActionError extends Error {}
+
+type InvoiceActionError = ActionMessageError | ActionPermissionError;
+type InvoiceActionSuccess = { success: true };
+
+export type DraftInvoicePropertiesUpdateActionResult =
+  | DraftInvoicePropertiesUpdateResult
+  | InvoiceActionError;
+
+export type InvoiceMutationActionResult = InvoiceActionSuccess | InvoiceActionError;
+export type InvoiceManualItemsUpdateActionResult = InvoiceViewModel | InvoiceActionError;
+
+function expectedInvoiceActionError(message: string): ExpectedInvoiceActionError {
+  return new ExpectedInvoiceActionError(message);
+}
+
+function toInvoiceActionError(error: unknown): InvoiceActionError | null {
+  if (error instanceof ExpectedInvoiceActionError) {
+    return actionError(error.message);
+  }
+
+  return null;
+}
+
 export const updateDraftInvoiceProperties = withAuth(async (
   user,
   { tenant },
   invoiceId: string,
   input: DraftInvoicePropertiesUpdateInput
-): Promise<DraftInvoicePropertiesUpdateResult> => {
+): Promise<DraftInvoicePropertiesUpdateActionResult> => {
   if (!await hasPermission(user, 'invoice', 'update')) {
-    throw new Error('Permission denied: invoice update required');
+    return permissionError('Permission denied: invoice update required');
   }
   const trimmedInvoiceNumber = input.invoiceNumber?.trim();
 
   if (!trimmedInvoiceNumber) {
-    throw new Error('Invoice number is required');
+    return actionError('Invoice number is required');
   }
 
   if (!input.invoiceDate) {
-    throw new Error('Invoice date is required');
+    return actionError('Invoice date is required');
   }
 
   let normalizedInvoiceDate: string;
@@ -165,19 +198,20 @@ export const updateDraftInvoiceProperties = withAuth(async (
   try {
     normalizedInvoiceDate = toISODate(Temporal.PlainDate.from(input.invoiceDate));
   } catch {
-    throw new Error('Invoice date is invalid');
+    return actionError('Invoice date is invalid');
   }
 
   if (input.dueDate) {
     try {
       normalizedDueDate = toISODate(Temporal.PlainDate.from(input.dueDate));
     } catch {
-      throw new Error('Due date is invalid');
+      return actionError('Due date is invalid');
     }
   }
 
   const currentDate = Temporal.Now.plainDateISO().toString();
   const { knex } = await createTenantKnex();
+  let expectedError: InvoiceActionError | null = null;
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     const invoice = await tenantScopedTable(trx, tenant, 'invoices')
@@ -188,11 +222,13 @@ export const updateDraftInvoiceProperties = withAuth(async (
       .first();
 
     if (!invoice) {
-      throw new Error('Invoice not found');
+      expectedError = actionError('Invoice not found');
+      return;
     }
 
     if (invoice.finalized_at || invoice.status !== 'draft') {
-      throw new Error('Only draft invoices can be edited');
+      expectedError = actionError('Only draft invoices can be edited');
+      return;
     }
 
     const duplicateInvoice = await tenantScopedTable(trx, tenant, 'invoices')
@@ -204,7 +240,8 @@ export const updateDraftInvoiceProperties = withAuth(async (
       .first('invoice_id');
 
     if (duplicateInvoice) {
-      throw new Error('Invoice number already exists. Choose a different number.');
+      expectedError = actionError('Invoice number already exists. Choose a different number.');
+      return;
     }
 
     try {
@@ -228,12 +265,17 @@ export const updateDraftInvoiceProperties = withAuth(async (
         'constraint' in error &&
         error.constraint === 'unique_invoice_number_per_tenant'
       ) {
-        throw new Error('Invoice number already exists. Choose a different number.');
+        expectedError = actionError('Invoice number already exists. Choose a different number.');
+        return;
       }
 
       throw error;
     }
   });
+
+  if (expectedError) {
+    return expectedError;
+  }
 
   return {
     invoiceId,
@@ -247,13 +289,24 @@ export const finalizeInvoice = withAuth(async (
   user,
   { tenant },
   invoiceId: string
-): Promise<void> => {
+): Promise<InvoiceMutationActionResult> => {
   if (!await hasPermission(user, 'invoice', 'update')) {
-    throw new Error('Permission denied: invoice update required');
+    return permissionError('Permission denied: invoice update required');
   }
   const { knex } = await createTenantKnex();
 
-  await finalizeInvoiceWithKnex(invoiceId, knex, tenant, user.user_id);
+  try {
+    await finalizeInvoiceWithKnex(invoiceId, knex, tenant, user.user_id);
+  } catch (error) {
+    const expectedError = toInvoiceActionError(error);
+    if (expectedError) {
+      return expectedError;
+    }
+
+    throw error;
+  }
+
+  return { success: true };
 });
 
 export async function finalizeInvoiceWithKnex(
@@ -281,8 +334,11 @@ export async function finalizeInvoiceWithKnex(
 
   // Validate tax source before finalization
   const taxValidation = await validateInvoiceFinalization(invoiceId);
+  if (isActionMessageError(taxValidation) || isActionPermissionError(taxValidation)) {
+    throw expectedInvoiceActionError(getErrorMessage(taxValidation));
+  }
   if (!taxValidation.canFinalize) {
-    throw new Error(taxValidation.error || 'Invoice cannot be finalized');
+    throw expectedInvoiceActionError(taxValidation.error || 'Invoice cannot be finalized');
   }
 
   // First transaction to update invoice status
@@ -296,11 +352,11 @@ export async function finalizeInvoiceWithKnex(
       .first();
 
     if (!invoice) {
-      throw new Error('Invoice not found');
+      throw expectedInvoiceActionError('Invoice not found');
     }
 
     if (invoice.finalized_at) {
-      throw new Error('Invoice is already finalized');
+      throw expectedInvoiceActionError('Invoice is already finalized');
     }
 
     // Financial-document identity is fixed at finalization: negative-total
@@ -507,7 +563,21 @@ export async function finalizeInvoiceWithKnex(
 
         if (creditToApply > 0) {
           // Apply credit to the invoice
-          await applyCreditToInvoice(invoice.client_id, invoiceId, creditToApply);
+          const creditResult = await applyCreditToInvoice(invoice.client_id, invoiceId, creditToApply);
+          if (
+            typeof creditResult === 'object' &&
+            creditResult !== null &&
+            (
+              typeof (creditResult as { actionError?: unknown }).actionError === 'string' ||
+              typeof (creditResult as { permissionError?: unknown }).permissionError === 'string'
+            )
+          ) {
+            throw new Error(
+              'permissionError' in creditResult
+                ? creditResult.permissionError
+                : creditResult.actionError
+            );
+          }
         }
       }
     }
@@ -576,11 +646,13 @@ export const unfinalizeInvoice = withAuth(async (
   user,
   { tenant },
   invoiceId: string
-): Promise<void> => {
+): Promise<InvoiceMutationActionResult> => {
   if (!await hasPermission(user, 'invoice', 'update')) {
-    throw new Error('Permission denied: invoice update required');
+    return permissionError('Permission denied: invoice update required');
   }
   const { knex } = await createTenantKnex();
+
+  let expectedError: InvoiceActionError | null = null;
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Check if invoice exists and is finalized
@@ -589,14 +661,16 @@ export const unfinalizeInvoice = withAuth(async (
       .first();
 
     if (!invoice) {
-      throw new Error('Invoice not found');
+      expectedError = actionError('Invoice not found');
+      return;
     }
 
     const normalizedStatus = invoice.status ? invoice.status.toLowerCase() : null;
     const isFinalized = Boolean(invoice.finalized_at) || (normalizedStatus && normalizedStatus !== 'draft');
 
     if (!isFinalized) {
-      throw new Error('Invoice is not finalized');
+      expectedError = actionError('Invoice is not finalized');
+      return;
     }
 
     // When unfinalizing make sure the invoice returns to draft status even if some
@@ -632,6 +706,12 @@ export const unfinalizeInvoice = withAuth(async (
     //   }
     // );
   });
+
+  if (expectedError) {
+    return expectedError;
+  }
+
+  return { success: true };
 });
 
 export const updateInvoiceManualItems = withAuth(async (
@@ -639,9 +719,9 @@ export const updateInvoiceManualItems = withAuth(async (
   { tenant },
   invoiceId: string,
   changes: ManualItemsUpdate
-): Promise<InvoiceViewModel> => {
+): Promise<InvoiceManualItemsUpdateActionResult> => {
   if (!await hasPermission(user, 'invoice', 'update')) {
-    throw new Error('Permission denied: invoice update required');
+    return permissionError('Permission denied: invoice update required');
   }
   const session = await getSession();
   const billingEngine = new BillingEngine();
@@ -649,7 +729,7 @@ export const updateInvoiceManualItems = withAuth(async (
   console.log('[updateInvoiceManualItems] session:', session);
 
   if (!session?.user?.id) {
-    throw new Error('Unauthorized');
+    return permissionError('Unauthorized: No authenticated user found');
   }
 
   const { knex } = await createTenantKnex();
@@ -662,11 +742,11 @@ export const updateInvoiceManualItems = withAuth(async (
   });
 
   if (!invoice) {
-    throw new Error('Invoice not found');
+    return actionError('Invoice not found');
   }
 
   if (['paid', 'cancelled'].includes(invoice.status)) {
-    throw new Error('Cannot modify a paid or cancelled invoice');
+    return actionError('Cannot modify a paid or cancelled invoice');
   }
 
   const client = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -676,12 +756,20 @@ export const updateInvoiceManualItems = withAuth(async (
   });
 
   if (!client) {
-    throw new Error('Client not found');
+    return actionError('Client not found');
   }
 
   const currentDate = Temporal.Now.plainDateISO().toString();
 
-  await updateManualInvoiceItemsInternal(invoiceId, changes, session!, tenant); // Renamed internal call
+  try {
+    await updateManualInvoiceItemsInternal(invoiceId, changes, session!, tenant); // Renamed internal call
+  } catch (error) {
+    const expectedError = toInvoiceActionError(error);
+    if (expectedError) {
+      return expectedError;
+    }
+    throw error;
+  }
   return await Invoice.getFullInvoiceById(knex, tenant, invoiceId);
 });
 
@@ -703,11 +791,11 @@ async function updateManualInvoiceItemsInternal(
   });
 
   if (!invoice) {
-    throw new Error('Invoice not found');
+    throw expectedInvoiceActionError('Invoice not found');
   }
 
   if (['paid', 'cancelled'].includes(invoice.status)) {
-    throw new Error('Cannot modify a paid or cancelled invoice');
+    throw expectedInvoiceActionError('Cannot modify a paid or cancelled invoice');
   }
 
   const client = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -717,7 +805,7 @@ async function updateManualInvoiceItemsInternal(
   });
 
   if (!client) {
-    throw new Error('Client not found');
+    throw expectedInvoiceActionError('Client not found');
   }
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -743,12 +831,12 @@ async function updateManualInvoiceItemsInternal(
       if (nonManualTargets.length > 0) {
         const touchesRecurringDetailBackedCharge = nonManualTargets.some((row: any) => Boolean(row.item_detail_id));
         if (touchesRecurringDetailBackedCharge) {
-          throw new Error(
+          throw expectedInvoiceActionError(
             'Cannot manually edit recurring invoice charges once canonical detail periods exist. Add an adjustment as a manual item or cancel and regenerate the invoice instead.'
           );
         }
 
-        throw new Error(
+        throw expectedInvoiceActionError(
           'Cannot manually edit non-manual invoice charges. Add an adjustment as a manual item instead.'
         );
       }
@@ -884,8 +972,8 @@ async function updateManualInvoiceItemsInternal(
           'code' in error &&
           error.code === '23505' &&
           'constraint' in error &&
-          error.constraint === 'unique_invoice_number_per_tenant') {
-          throw new Error('Invoice number must be unique');
+              error.constraint === 'unique_invoice_number_per_tenant') {
+          throw expectedInvoiceActionError('Invoice number must be unique');
         }
         throw error;
       }
@@ -908,14 +996,14 @@ export const addManualItemsToInvoice = withAuth(async (
   { tenant },
   invoiceId: string,
   items: IInvoiceCharge[]
-): Promise<InvoiceViewModel> => {
+): Promise<InvoiceManualItemsUpdateActionResult> => {
   if (!await hasPermission(user, 'invoice', 'update')) {
-    throw new Error('Permission denied: invoice update required');
+    return permissionError('Permission denied: invoice update required');
   }
   const session = await getSession();
 
   if (!session?.user?.id) {
-    throw new Error('Unauthorized');
+    return permissionError('Unauthorized: No authenticated user found');
   }
 
   const { knex } = await createTenantKnex();
@@ -931,11 +1019,11 @@ export const addManualItemsToInvoice = withAuth(async (
   });
 
   if (!invoice) {
-    throw new Error('Invoice not found');
+    return actionError('Invoice not found');
   }
 
   if (['paid', 'cancelled'].includes(invoice.status)) {
-    throw new Error('Cannot modify a paid or cancelled invoice');
+    return actionError('Cannot modify a paid or cancelled invoice');
   }
 
   const client = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -948,10 +1036,18 @@ export const addManualItemsToInvoice = withAuth(async (
   });
 
   if (!client) {
-    throw new Error('Client not found');
+    return actionError('Client not found');
   }
 
-  await addManualInvoiceItemsInternal(invoiceId, items, session!, tenant); // Renamed internal call
+  try {
+    await addManualInvoiceItemsInternal(invoiceId, items, session!, tenant); // Renamed internal call
+  } catch (error) {
+    const expectedError = toInvoiceActionError(error);
+    if (expectedError) {
+      return expectedError;
+    }
+    throw error;
+  }
   return await Invoice.getFullInvoiceById(knex, tenant, invoiceId);
 });
 
@@ -971,11 +1067,11 @@ async function addManualInvoiceItemsInternal(
   });
 
   if (!invoice) {
-    throw new Error('Invoice not found');
+    throw expectedInvoiceActionError('Invoice not found');
   }
 
   if (['paid', 'cancelled'].includes(invoice.status)) {
-    throw new Error('Cannot modify a paid or cancelled invoice');
+    throw expectedInvoiceActionError('Cannot modify a paid or cancelled invoice');
   }
 
   const client = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -985,7 +1081,7 @@ async function addManualInvoiceItemsInternal(
   });
 
   if (!client) {
-    throw new Error('Client not found');
+    throw expectedInvoiceActionError('Client not found');
   }
 
   await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -1027,24 +1123,25 @@ export const hardDeleteInvoice = withAuth(async (
   user,
   { tenant },
   invoiceId: string
-) => {
+): Promise<InvoiceMutationActionResult> => {
   if (!await hasPermission(user, 'invoice', 'delete')) {
-    throw new Error('Permission denied: invoice delete required');
+    return permissionError('Permission denied: invoice delete required');
   }
   const { knex } = await createTenantKnex();
 
-  // Guard: block deletion if invoice is already exported to an accounting system
-  const existingMapping = await tenantScopedTable(knex, tenant, 'tenant_external_entity_mappings')
-    .where({
-      tenant: tenant,
-      integration_type: 'quickbooks_online',
-      alga_entity_type: 'invoice',
-      alga_entity_id: invoiceId
-    })
-    .first('id');
-  if (existingMapping) {
-    throw new Error('This invoice is synced to an accounting system — void it instead of deleting.');
-  }
+  try {
+    // Guard: block deletion if invoice is already exported to an accounting system
+    const existingMapping = await tenantScopedTable(knex, tenant, 'tenant_external_entity_mappings')
+      .where({
+        tenant: tenant,
+        integration_type: 'quickbooks_online',
+        alga_entity_type: 'invoice',
+        alga_entity_id: invoiceId
+      })
+      .first('id');
+    if (existingMapping) {
+      return actionError('This invoice is synced to an accounting system — void it instead of deleting.');
+    }
 
   let voidedCreditNotes: Array<{
     creditNoteId: string;
@@ -1085,7 +1182,7 @@ export const hardDeleteInvoice = withAuth(async (
       await hasCanonicalRecurringDetailPeriodsForInvoice(trx, tenant, invoiceId)
       && !hasLinkedRecurringServicePeriods
     ) {
-      throw new Error(
+      throw expectedInvoiceActionError(
         `Cannot delete invoice ${invoiceId}: canonical recurring detail periods already exist. Cancel the invoice instead of deleting it.`
       );
     }
@@ -1182,7 +1279,7 @@ export const hardDeleteInvoice = withAuth(async (
                 // Option 1: Throw error - prevent deletion if issued credit was used.
                 // Option 2: Allow deletion but log a warning/create adjustment.
                 // Option 3: Attempt to reverse the usage (very complex).
-                throw new Error(`Cannot delete invoice ${invoiceId}: Credit issued by this invoice has already been used.`);
+                throw expectedInvoiceActionError(`Cannot delete invoice ${invoiceId}: Credit issued by this invoice has already been used.`);
             } else {
                 // Credit was issued but not used, safe to delete tracking and transaction
                 voidedCreditNotes.push({
@@ -1382,4 +1479,15 @@ export const hardDeleteInvoice = withAuth(async (
       idempotencyKey: `invoice_deleted:${invoiceId}:${occurredAt}`,
     });
   }
+
+  } catch (error) {
+    const expectedError = toInvoiceActionError(error);
+    if (expectedError) {
+      return expectedError;
+    }
+
+    throw error;
+  }
+
+  return { success: true };
 });

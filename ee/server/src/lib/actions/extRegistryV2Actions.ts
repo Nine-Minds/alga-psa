@@ -473,7 +473,7 @@ export const installExtensionForCurrentTenantV2 = withOptionalAuth(async (user, 
     const id: string | undefined = Array.isArray(upserted) && upserted.length > 0 ? (upserted[0] as any).id : undefined;
 
     if (!id) {
-      throw new Error('Failed to upsert extension install record');
+      throw new Error('Extension install upsert completed without returning an install id.');
     }
 
     // Upsert install config within the same transaction

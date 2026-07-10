@@ -6,7 +6,12 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { toast } from 'react-hot-toast';
-import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  handleError,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getTicketingDisplaySettings,
@@ -102,7 +107,7 @@ const DisplaySettings = (): React.JSX.Element => {
   const handleSaveDisplaySettings = async (): Promise<void> => {
     try {
       setIsSavingDisplay(true);
-      await updateTicketingDisplaySettings({
+      const result = await updateTicketingDisplaySettings({
         dateTimeFormat,
         responseStateTrackingEnabled,
         list: {
@@ -110,6 +115,10 @@ const DisplaySettings = (): React.JSX.Element => {
           tagsInlineUnderTitle,
         },
       });
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       toast.success(t('settings.display.saveSuccess', 'Ticket display settings saved'));
 
       // Update original settings after successful save

@@ -21,6 +21,16 @@ import {
   type RatingType,
 } from '../shared/RatingDisplay';
 import SurveyPreviewPanel from './SurveyPreviewPanel';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+const isSurveyActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
+  isActionMessageError(value) || isActionPermissionError(value);
 
 interface TemplateFormProps {
   template?: SurveyTemplate;
@@ -164,13 +174,21 @@ export function TemplateForm({ template, onSuccess, onDeleteSuccess, onCancel }:
 
       let result: SurveyTemplate;
       if (template) {
-        result = await updateSurveyTemplate(template.templateId, payload);
+        const updated = await updateSurveyTemplate(template.templateId, payload);
+        if (isSurveyActionError(updated)) {
+          throw new Error(getErrorMessage(updated));
+        }
+        result = updated;
         toast({
           title: t('settings.templateList.toasts.updated', { defaultValue: 'Template updated' }),
           description: payload.templateName,
         });
       } else {
-        result = await createSurveyTemplate(payload);
+        const created = await createSurveyTemplate(payload);
+        if (isSurveyActionError(created)) {
+          throw new Error(getErrorMessage(created));
+        }
+        result = created;
         toast({
           title: t('settings.templateList.toasts.created', { defaultValue: 'Template created' }),
           description: payload.templateName,

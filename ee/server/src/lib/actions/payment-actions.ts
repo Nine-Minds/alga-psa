@@ -740,7 +740,10 @@ export const retryStripeWebhookConfigurationAction = withAuth(async (user, { ten
       return { success: false, error: 'Invalid API key - please reconnect Stripe' };
     }
 
-    return { success: false, error: error.message || 'Failed to configure webhook' };
+    return {
+      success: false,
+      error: 'Unable to configure the Stripe webhook. Verify the Stripe account permissions and try again.',
+    };
   }
 });
 

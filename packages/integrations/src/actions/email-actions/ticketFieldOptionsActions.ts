@@ -4,6 +4,12 @@ import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import type { TicketFieldOptions } from '@alga-psa/types';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 type BoardOptionRow = { id: string; name: string; is_default: boolean | null };
 type StatusOptionRow = { id: string; name: string; is_default: boolean | null };
@@ -12,20 +18,29 @@ type CategoryOptionRow = { id: string; name: string; parent_id: string | null; b
 type ClientOptionRow = { id: string; name: string };
 type UserOptionRow = { id: string; name: string | null; username: string };
 type LocationOptionRow = { id: string; name: string; client_id: string };
+type TicketFieldOptionsActionError = ActionMessageError | ActionPermissionError;
 
 function rowsAs<Row>(rows: unknown): Row[] {
   return rows as Row[];
 }
 
+function ticketFieldOptionsPermissionError(): TicketFieldOptionsActionError {
+  return permissionError('Permission denied: Cannot read ticket field options');
+}
+
+function ticketFieldOptionsLoadError(label: string): TicketFieldOptionsActionError {
+  return actionError(`Failed to load ${label}. Please try again.`);
+}
+
 export const getTicketFieldOptions = withAuth(async (
   user,
   { tenant }
-): Promise<{ options: TicketFieldOptions }> => {
+): Promise<{ options: TicketFieldOptions } | TicketFieldOptionsActionError> => {
   const { knex } = await createTenantKnex();
   // RBAC: require ticket settings read permission
   const permitted = await hasPermission(user, 'ticket_settings', 'read', knex);
   if (!permitted) {
-    throw new Error('Unauthorized');
+    return ticketFieldOptionsPermissionError();
   }
 
   try {
@@ -131,28 +146,18 @@ export const getTicketFieldOptions = withAuth(async (
     };
   } catch (error) {
     console.error('Failed to load ticket field options:', error);
-    return {
-      options: {
-        boards: [],
-        statuses: [],
-        priorities: [],
-        categories: [],
-        clients: [],
-        users: [],
-        locations: []
-      }
-    };
+    return ticketFieldOptionsLoadError('ticket field options');
   }
 });
 
 export const getAvailableBoards = withAuth(async (
   user,
   { tenant }
-): Promise<{ boards: TicketFieldOptions['boards'] }> => {
+): Promise<{ boards: TicketFieldOptions['boards'] } | TicketFieldOptionsActionError> => {
   const { knex } = await createTenantKnex();
   const permitted = await hasPermission(user, 'ticket_settings', 'read', knex);
   if (!permitted) {
-    throw new Error('Unauthorized');
+    return ticketFieldOptionsPermissionError();
   }
 
   try {
@@ -168,7 +173,7 @@ export const getAvailableBoards = withAuth(async (
     return { boards };
   } catch (error) {
     console.error('Failed to load boards:', error);
-    return { boards: [] };
+    return ticketFieldOptionsLoadError('boards');
   }
 });
 
@@ -176,11 +181,11 @@ export const getAvailableStatuses = withAuth(async (
   user,
   { tenant },
   boardId: string | null
-): Promise<{ statuses: TicketFieldOptions['statuses'] }> => {
+): Promise<{ statuses: TicketFieldOptions['statuses'] } | TicketFieldOptionsActionError> => {
   const { knex } = await createTenantKnex();
   const permitted = await hasPermission(user, 'ticket_settings', 'read', knex);
   if (!permitted) {
-    throw new Error('Unauthorized');
+    return ticketFieldOptionsPermissionError();
   }
 
   try {
@@ -202,18 +207,18 @@ export const getAvailableStatuses = withAuth(async (
     return { statuses };
   } catch (error) {
     console.error('Failed to load statuses:', error);
-    return { statuses: [] };
+    return ticketFieldOptionsLoadError('statuses');
   }
 });
 
 export const getAvailablePriorities = withAuth(async (
   user,
   { tenant }
-): Promise<{ priorities: TicketFieldOptions['priorities'] }> => {
+): Promise<{ priorities: TicketFieldOptions['priorities'] } | TicketFieldOptionsActionError> => {
   const { knex } = await createTenantKnex();
   const permitted = await hasPermission(user, 'ticket_settings', 'read', knex);
   if (!permitted) {
-    throw new Error('Unauthorized');
+    return ticketFieldOptionsPermissionError();
   }
 
   try {
@@ -230,18 +235,18 @@ export const getAvailablePriorities = withAuth(async (
     return { priorities };
   } catch (error) {
     console.error('Failed to load priorities:', error);
-    return { priorities: [] };
+    return ticketFieldOptionsLoadError('priorities');
   }
 });
 
 export const getAvailableCategories = withAuth(async (
   user,
   { tenant }
-): Promise<{ categories: TicketFieldOptions['categories'] }> => {
+): Promise<{ categories: TicketFieldOptions['categories'] } | TicketFieldOptionsActionError> => {
   const { knex } = await createTenantKnex();
   const permitted = await hasPermission(user, 'ticket_settings', 'read', knex);
   if (!permitted) {
-    throw new Error('Unauthorized');
+    return ticketFieldOptionsPermissionError();
   }
 
   try {
@@ -259,7 +264,7 @@ export const getAvailableCategories = withAuth(async (
     return { categories };
   } catch (error) {
     console.error('Failed to load categories:', error);
-    return { categories: [] };
+    return ticketFieldOptionsLoadError('categories');
   }
 });
 
@@ -268,11 +273,11 @@ export const getCategoriesByBoard = withAuth(async (
   user,
   { tenant },
   boardId: string | null
-): Promise<{ categories: TicketFieldOptions['categories'] }> => {
+): Promise<{ categories: TicketFieldOptions['categories'] } | TicketFieldOptionsActionError> => {
   const { knex } = await createTenantKnex();
   const permitted = await hasPermission(user, 'ticket_settings', 'read', knex);
   if (!permitted) {
-    throw new Error('Unauthorized');
+    return ticketFieldOptionsPermissionError();
   }
 
   try {
@@ -322,18 +327,18 @@ export const getCategoriesByBoard = withAuth(async (
       boardId,
       error
     });
-    return { categories: [] };
+    return ticketFieldOptionsLoadError('categories');
   }
 });
 
 export const getAvailableClients = withAuth(async (
   user,
   { tenant }
-): Promise<{ clients: TicketFieldOptions['clients'] }> => {
+): Promise<{ clients: TicketFieldOptions['clients'] } | TicketFieldOptionsActionError> => {
   const { knex } = await createTenantKnex();
   const permitted = await hasPermission(user, 'ticket_settings', 'read', knex);
   if (!permitted) {
-    throw new Error('Unauthorized');
+    return ticketFieldOptionsPermissionError();
   }
 
   try {
@@ -348,18 +353,18 @@ export const getAvailableClients = withAuth(async (
     return { clients };
   } catch (error) {
     console.error('Failed to load clients:', error);
-    return { clients: [] };
+    return ticketFieldOptionsLoadError('clients');
   }
 });
 
 export const getAvailableUsers = withAuth(async (
   user,
   { tenant }
-): Promise<{ users: TicketFieldOptions['users'] }> => {
+): Promise<{ users: TicketFieldOptions['users'] } | TicketFieldOptionsActionError> => {
   const { knex } = await createTenantKnex();
   const permitted = await hasPermission(user, 'ticket_settings', 'read', knex);
   if (!permitted) {
-    throw new Error('Unauthorized');
+    return ticketFieldOptionsPermissionError();
   }
 
   try {
@@ -377,6 +382,6 @@ export const getAvailableUsers = withAuth(async (
     return { users };
   } catch (error) {
     console.error('Failed to load users:', error);
-    return { users: [] };
+    return ticketFieldOptionsLoadError('users');
   }
 });

@@ -2,6 +2,7 @@ import { listStockLocations } from '@alga-psa/inventory/actions';
 import { StockLocationsManager } from '@alga-psa/inventory/components';
 import { getAllUsersBasic } from '@alga-psa/user-composition/actions';
 import { getSession } from '@alga-psa/auth';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { redirect } from 'next/navigation';
 import type { IStockLocation, IUser } from '@alga-psa/types';
 import type { Metadata } from 'next';
@@ -28,7 +29,13 @@ export default async function StockLocationsPage() {
     // Load inactive too; the client hides them behind a "Show inactive" toggle so a deactivated
     // location stays reachable (and reactivatable) instead of vanishing. includeStock attaches the
     // on-hand occupancy so the list shows what each location holds (and gates deactivation).
-    initialLocations = await listStockLocations({ includeInactive: true, includeStock: true });
+    const result = await listStockLocations({ includeInactive: true, includeStock: true });
+    if (isActionMessageError(result) || isActionPermissionError(result)) {
+      console.error('Failed to load stock locations:', getErrorMessage(result));
+      loadError = true;
+    } else {
+      initialLocations = result;
+    }
   } catch (error) {
     console.error('Failed to load stock locations:', error);
     loadError = true;

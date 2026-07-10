@@ -5,6 +5,12 @@ import { withTransaction, createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+import {
   ISalesOrder,
   ISalesOrderLine,
   IPurchaseOrder,
@@ -20,6 +26,7 @@ import {
   recomputeSerializedOnHand,
   timestampPayload,
 } from '../lib';
+import { kitActionErrorFrom } from '../lib/kitActionErrors';
 import { explodeKitOntoSalesOrder } from './kitActions';
 import { resolveKitPriceInTransaction } from '../lib/kitPricing';
 
@@ -80,6 +87,86 @@ export async function resolveKitSalesOrderUnitPrice(
 async function requireSoPerm(user: any, action: 'create' | 'read' | 'update' | 'delete'): Promise<void> {
   if (!(await hasPermission(user, 'sales_order', action))) {
     throw new Error(`Permission denied: sales_order ${action} required`);
+  }
+}
+
+type SalesOrderActionError = ActionMessageError | ActionPermissionError;
+
+function salesOrderActionErrorFrom(error: unknown): SalesOrderActionError | null {
+  if (error instanceof Error) {
+    if (error.message.startsWith('Permission denied') || error.message === 'user is not logged in') {
+      return permissionError(error.message);
+    }
+
+    switch (error.message) {
+      case 'Sales order not found':
+        return actionError('Sales order not found. It may have been updated or deleted. Please refresh and try again.');
+      case 'Sales order line not found':
+        return actionError('Sales order line not found. It may have been updated or deleted. Please refresh and try again.');
+      case 'client_id is required':
+        return actionError('Select a client before creating the sales order.');
+      case 'currency_code is required':
+        return actionError('Select a currency before creating the sales order.');
+      case 'quantity_ordered must be greater than 0':
+        return actionError('Each line quantity must be greater than 0.');
+      case 'Cannot reopen a sales order with fulfilled lines':
+        return actionError('This sales order has fulfilled lines and cannot be reopened.');
+      case 'Cannot reopen a sales order with invoiced lines':
+        return actionError('This sales order has invoiced lines and cannot be reopened.');
+      case 'Cannot cancel a sales order with fulfilled lines':
+        return actionError('This sales order has fulfilled lines and cannot be cancelled.');
+      case 'Cannot cancel a sales order with invoiced lines':
+        return actionError('This sales order has invoiced lines and cannot be cancelled.');
+      default:
+        if (
+          error.message.startsWith('Invalid invoice_mode:') ||
+          error.message.startsWith('Invalid allocation_mode:') ||
+          error.message.startsWith('Invalid fulfillment_type:') ||
+          error.message.startsWith('Line currency') ||
+          error.message.startsWith('Cannot add a line to a ') ||
+          error.message.startsWith('Cannot edit a line on a ') ||
+          error.message.startsWith('Cannot remove a line from a ') ||
+          error.message.startsWith('Only draft sales orders can be confirmed') ||
+          error.message.startsWith('Only confirmed sales orders can be reopened')
+        ) {
+          return actionError(error.message);
+        }
+    }
+
+    const expectedKitError = kitActionErrorFrom(error);
+    if (expectedKitError) return expectedKitError;
+  }
+
+  const dbError = error as { code?: string };
+  if (dbError?.code === '22P02') {
+    return actionError('One of the selected sales order values is invalid. Please refresh and try again.');
+  }
+  if (dbError?.code === '22007' || dbError?.code === '22008') {
+    return actionError('Choose a valid sales order date.');
+  }
+  if (dbError?.code === '23502') {
+    return actionError('Missing required sales order data. Please review the form and try again.');
+  }
+  if (dbError?.code === '23503') {
+    return actionError('One of the selected sales order records is no longer valid. Please refresh and try again.');
+  }
+  if (dbError?.code === '23505') {
+    return actionError('This sales order update conflicts with an existing record. Please refresh and try again.');
+  }
+  if (dbError?.code === '23514') {
+    return actionError('One of the sales order values is not allowed. Please review the form and try again.');
+  }
+
+  return null;
+}
+
+async function withSalesOrderActionErrors<T>(work: () => Promise<T>): Promise<T | SalesOrderActionError> {
+  try {
+    return await work();
+  } catch (error) {
+    const expected = salesOrderActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
   }
 }
 
@@ -303,107 +390,115 @@ export interface SalesOrderLineDetail extends ISalesOrderLine {
 export type SalesOrderWithDetail = Omit<ISalesOrder, 'lines'> & { lines: SalesOrderLineDetail[] };
 
 export const getSalesOrder = withAuth(
-  async (user, { tenant }, soId: string): Promise<SalesOrderWithDetail | null> => {
-    await requireSoPerm(user, 'read');
-    const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
-      const row = await trx('sales_orders as so')
-        .leftJoin('clients as c', function () {
-          this.on('c.client_id', '=', 'so.client_id').andOn('c.tenant', '=', 'so.tenant');
-        })
-        .where({ 'so.tenant': tenant, 'so.so_id': soId })
-        .select('so.*', 'c.client_name')
-        .first();
-      if (!row) return null;
-      const lines = (await trx('sales_order_lines as sol')
-        .leftJoin('service_catalog as sc', function () {
-          this.on('sc.service_id', '=', 'sol.service_id').andOn('sc.tenant', '=', 'sol.tenant');
-        })
-        .leftJoin('product_inventory_settings as pis', function () {
-          this.on('pis.service_id', '=', 'sol.service_id').andOn('pis.tenant', '=', 'sol.tenant');
-        })
-        .where('sol.tenant', tenant)
-        .andWhere('sol.so_id', soId)
-        .orderBy('sol.created_at', 'asc')
-        .select(
-          'sol.*',
-          'sc.service_name',
-          'sc.sku',
-          trx.raw('COALESCE(pis.is_serialized, false) as is_serialized'),
-          trx.raw('COALESCE(pis.track_stock, false) as track_stock'),
-          // Correlated (not a join): a backorder-suggested PO also links source_so_line_id,
-          // so filter to live drop-ship POs and take at most one.
-          trx.raw(`(
+  async (user, { tenant }, soId: string): Promise<SalesOrderWithDetail | null | SalesOrderActionError> => {
+    return withSalesOrderActionErrors(async () => {
+      await requireSoPerm(user, 'read');
+      const { knex: db } = await createTenantKnex();
+      return withTransaction(db, async (trx: Knex.Transaction) => {
+        const row = await trx('sales_orders as so')
+          .leftJoin('clients as c', function () {
+            this.on('c.client_id', '=', 'so.client_id').andOn('c.tenant', '=', 'so.tenant');
+          })
+          .where({ 'so.tenant': tenant, 'so.so_id': soId })
+          .select('so.*', 'c.client_name')
+          .first();
+        if (!row) return null;
+        const lines = (await trx('sales_order_lines as sol')
+          .leftJoin('service_catalog as sc', function () {
+            this.on('sc.service_id', '=', 'sol.service_id').andOn('sc.tenant', '=', 'sol.tenant');
+          })
+          .leftJoin('product_inventory_settings as pis', function () {
+            this.on('pis.service_id', '=', 'sol.service_id').andOn('pis.tenant', '=', 'sol.tenant');
+          })
+          .where('sol.tenant', tenant)
+          .andWhere('sol.so_id', soId)
+          .orderBy('sol.created_at', 'asc')
+          .select(
+            'sol.*',
+            'sc.service_name',
+            'sc.sku',
+            trx.raw('COALESCE(pis.is_serialized, false) as is_serialized'),
+            trx.raw('COALESCE(pis.track_stock, false) as track_stock'),
+            // Correlated (not a join): a backorder-suggested PO also links source_so_line_id,
+            // so filter to live drop-ship POs and take at most one.
+            trx.raw(`(
             SELECT po.po_number FROM purchase_order_lines pol
             JOIN purchase_orders po ON po.po_id = pol.po_id AND po.tenant = pol.tenant
             WHERE pol.tenant = sol.tenant AND pol.source_so_line_id = sol.so_line_id
               AND po.is_drop_ship AND po.status <> 'cancelled'
             ORDER BY po.order_date DESC LIMIT 1
           ) as drop_ship_po_number`),
-        )) as SalesOrderLineDetail[];
-      return { ...(row as ISalesOrder), lines };
+          )) as SalesOrderLineDetail[];
+        return { ...(row as ISalesOrder), lines };
+      });
     });
   },
 );
 
 export const listSalesOrders = withAuth(
-  async (user, { tenant }, input?: { includeCancelled?: boolean; serviceId?: string }): Promise<ISalesOrder[]> => {
-    await requireSoPerm(user, 'read');
-    const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
-      const lineMetrics = trx('sales_order_lines as sol')
-        .where({ 'sol.tenant': tenant })
-        .groupBy('sol.tenant', 'sol.so_id')
-        .select('sol.tenant', 'sol.so_id')
-        .select(
-          trx.raw('COALESCE(SUM(sol.quantity_ordered * sol.unit_price), 0)::bigint as total_amount'),
-          trx.raw(
-            `COALESCE(SUM(
-              GREATEST(COALESCE(sol.quantity_fulfilled, 0) - COALESCE(sol.quantity_invoiced, 0), 0)
-              * sol.unit_price
-            ), 0)::bigint as invoiceable_amount`,
-          ),
-          trx.raw('COALESCE(SUM(sol.quantity_ordered), 0)::int as quantity_ordered_total'),
-          trx.raw('COALESCE(SUM(sol.quantity_fulfilled), 0)::int as quantity_fulfilled_total'),
-          trx.raw('COALESCE(SUM(sol.quantity_invoiced), 0)::int as quantity_invoiced_total'),
-          trx.raw('COUNT(*)::int as line_count'),
-          trx.raw("COUNT(*) FILTER (WHERE sol.fulfillment_type = 'drop_ship')::int as drop_ship_line_count"),
-        )
-        .as('lm');
+  async (
+    user,
+    { tenant },
+    input?: { includeCancelled?: boolean; serviceId?: string },
+  ): Promise<ISalesOrder[] | SalesOrderActionError> => {
+    return withSalesOrderActionErrors(async () => {
+      await requireSoPerm(user, 'read');
+      const { knex: db } = await createTenantKnex();
+      return withTransaction(db, async (trx: Knex.Transaction) => {
+        const lineMetrics = trx('sales_order_lines as sol')
+          .where({ 'sol.tenant': tenant })
+          .groupBy('sol.tenant', 'sol.so_id')
+          .select('sol.tenant', 'sol.so_id')
+          .select(
+            trx.raw('COALESCE(SUM(sol.quantity_ordered * sol.unit_price), 0)::bigint as total_amount'),
+            trx.raw(
+              `COALESCE(SUM(
+                GREATEST(COALESCE(sol.quantity_fulfilled, 0) - COALESCE(sol.quantity_invoiced, 0), 0)
+                * sol.unit_price
+              ), 0)::bigint as invoiceable_amount`,
+            ),
+            trx.raw('COALESCE(SUM(sol.quantity_ordered), 0)::int as quantity_ordered_total'),
+            trx.raw('COALESCE(SUM(sol.quantity_fulfilled), 0)::int as quantity_fulfilled_total'),
+            trx.raw('COALESCE(SUM(sol.quantity_invoiced), 0)::int as quantity_invoiced_total'),
+            trx.raw('COUNT(*)::int as line_count'),
+            trx.raw("COUNT(*) FILTER (WHERE sol.fulfillment_type = 'drop_ship')::int as drop_ship_line_count"),
+          )
+          .as('lm');
 
-      // Join the client so the list can show a name, not a raw UUID.
-      const query = trx('sales_orders as so')
-        .leftJoin('clients as c', function () {
-          this.on('c.client_id', '=', 'so.client_id').andOn('c.tenant', '=', 'so.tenant');
-        })
-        .leftJoin(lineMetrics, function () {
-          this.on('lm.so_id', '=', 'so.so_id').andOn('lm.tenant', '=', 'so.tenant');
-        })
-        .where('so.tenant', tenant)
-        .orderBy('so.created_at', 'desc')
-        .select(
-          'so.*',
-          'c.client_name',
-          trx.raw('COALESCE(lm.total_amount, 0)::bigint as total_amount'),
-          trx.raw('COALESCE(lm.invoiceable_amount, 0)::bigint as invoiceable_amount'),
-          trx.raw('COALESCE(lm.quantity_ordered_total, 0)::int as quantity_ordered_total'),
-          trx.raw('COALESCE(lm.quantity_fulfilled_total, 0)::int as quantity_fulfilled_total'),
-          trx.raw('COALESCE(lm.quantity_invoiced_total, 0)::int as quantity_invoiced_total'),
-          trx.raw('COALESCE(lm.line_count, 0)::int as line_count'),
-          trx.raw('COALESCE(lm.drop_ship_line_count, 0)::int as drop_ship_line_count'),
-        );
+        // Join the client so the list can show a name, not a raw UUID.
+        const query = trx('sales_orders as so')
+          .leftJoin('clients as c', function () {
+            this.on('c.client_id', '=', 'so.client_id').andOn('c.tenant', '=', 'so.tenant');
+          })
+          .leftJoin(lineMetrics, function () {
+            this.on('lm.so_id', '=', 'so.so_id').andOn('lm.tenant', '=', 'so.tenant');
+          })
+          .where('so.tenant', tenant)
+          .orderBy('so.created_at', 'desc')
+          .select(
+            'so.*',
+            'c.client_name',
+            trx.raw('COALESCE(lm.total_amount, 0)::bigint as total_amount'),
+            trx.raw('COALESCE(lm.invoiceable_amount, 0)::bigint as invoiceable_amount'),
+            trx.raw('COALESCE(lm.quantity_ordered_total, 0)::int as quantity_ordered_total'),
+            trx.raw('COALESCE(lm.quantity_fulfilled_total, 0)::int as quantity_fulfilled_total'),
+            trx.raw('COALESCE(lm.quantity_invoiced_total, 0)::int as quantity_invoiced_total'),
+            trx.raw('COALESCE(lm.line_count, 0)::int as line_count'),
+            trx.raw('COALESCE(lm.drop_ship_line_count, 0)::int as drop_ship_line_count'),
+          );
 
-      if (input?.serviceId) {
-        query.whereExists(function () {
-          this.select(trx.raw('1'))
-            .from('sales_order_lines as usage_sol')
-            .whereRaw('usage_sol.tenant = so.tenant')
-            .whereRaw('usage_sol.so_id = so.so_id')
-            .where('usage_sol.service_id', input.serviceId);
-        });
-      }
+        if (input?.serviceId) {
+          query.whereExists(function () {
+            this.select(trx.raw('1'))
+              .from('sales_order_lines as usage_sol')
+              .whereRaw('usage_sol.tenant = so.tenant')
+              .whereRaw('usage_sol.so_id = so.so_id')
+              .where('usage_sol.service_id', input.serviceId);
+          });
+        }
 
-      return (await query) as ISalesOrder[];
+        return (await query) as ISalesOrder[];
+      });
     });
   },
 );
@@ -432,94 +527,96 @@ export const createSalesOrder = withAuth(
         currency_code?: string;
       }>;
     },
-  ): Promise<ISalesOrder & { lines: ISalesOrderLine[] }> => {
-    await requireSoPerm(user, 'create');
-    if (!input.client_id) throw new Error('client_id is required');
-    const currency = (input.currency_code ?? '').trim();
-    if (!currency) throw new Error('currency_code is required');
-    const invoiceMode: SalesOrderInvoiceMode = input.invoice_mode ?? 'on_fulfillment';
-    if (!INVOICE_MODES.includes(invoiceMode)) throw new Error(`Invalid invoice_mode: ${invoiceMode}`);
-    const allocationMode: SalesOrderAllocationMode = input.allocation_mode ?? 'soft';
-    if (!ALLOCATION_MODES.includes(allocationMode)) throw new Error(`Invalid allocation_mode: ${allocationMode}`);
+  ): Promise<(ISalesOrder & { lines: ISalesOrderLine[] }) | SalesOrderActionError> => {
+    return withSalesOrderActionErrors(async () => {
+      await requireSoPerm(user, 'create');
+      if (!input.client_id) throw new Error('client_id is required');
+      const currency = (input.currency_code ?? '').trim();
+      if (!currency) throw new Error('currency_code is required');
+      const invoiceMode: SalesOrderInvoiceMode = input.invoice_mode ?? 'on_fulfillment';
+      if (!INVOICE_MODES.includes(invoiceMode)) throw new Error(`Invalid invoice_mode: ${invoiceMode}`);
+      const allocationMode: SalesOrderAllocationMode = input.allocation_mode ?? 'soft';
+      if (!ALLOCATION_MODES.includes(allocationMode)) throw new Error(`Invalid allocation_mode: ${allocationMode}`);
 
-    const { knex: db } = await createTenantKnex();
-    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
-      const r = await trx.raw('SELECT generate_next_number(?::uuid, ?) as number', [tenant, 'SALES_ORDER']);
-      const soNumber: string = r.rows[0].number;
+      const { knex: db } = await createTenantKnex();
+      const result = await withTransaction(db, async (trx: Knex.Transaction) => {
+        const r = await trx.raw('SELECT generate_next_number(?::uuid, ?) as number', [tenant, 'SALES_ORDER']);
+        const soNumber: string = r.rows[0].number;
 
-      const [so] = await trx('sales_orders')
-        .insert({
-          tenant,
-          so_number: soNumber,
-          client_id: input.client_id,
-          status: 'draft',
-          order_date: input.order_date ?? trx.fn.now(),
-          expected_ship_date: input.expected_ship_date ?? null,
-          ship_to: input.ship_to ?? null,
-          currency_code: currency,
-          client_po_number: input.client_po_number ?? null,
-          invoice_mode: invoiceMode,
-          allocation_mode: allocationMode,
-          notes: input.notes ?? null,
-          created_by: user.user_id,
-        })
-        .returning('*');
-      const soId = (so as ISalesOrder).so_id;
-
-      for (const l of input.lines ?? []) {
-        if (!(Number(l.quantity_ordered) > 0)) throw new Error('quantity_ordered must be greater than 0');
-        // Currency guard: an explicit per-line currency must match the SO currency.
-        const lineCurrency = (l.currency_code ?? currency).trim();
-        if (lineCurrency !== currency) {
-          throw new Error(`Line currency (${lineCurrency}) must match sales order currency_code (${currency})`);
-        }
-        const fulfillmentType: SalesOrderLineFulfillmentType = l.fulfillment_type ?? 'from_stock';
-        if (!FULFILLMENT_TYPES.includes(fulfillmentType)) {
-          throw new Error(`Invalid fulfillment_type: ${fulfillmentType}`);
-        }
-
-        const meta = await getProductMeta(trx, tenant, l.service_id);
-        if (meta.is_kit) {
-          // Kit explosion is owned by kitActions — insert parent + component lines, don't duplicate it.
-          const kitUnitPrice = await resolveKitSalesOrderUnitPrice(
-            trx,
+        const [so] = await trx('sales_orders')
+          .insert({
             tenant,
-            l.service_id,
-            l.kit_unit_price_override,
-            currency,
-          );
-          await explodeKitOntoSalesOrder(trx, tenant, soId, l.service_id, l.quantity_ordered, kitUnitPrice);
-          continue;
+            so_number: soNumber,
+            client_id: input.client_id,
+            status: 'draft',
+            order_date: input.order_date ?? trx.fn.now(),
+            expected_ship_date: input.expected_ship_date ?? null,
+            ship_to: input.ship_to ?? null,
+            currency_code: currency,
+            client_po_number: input.client_po_number ?? null,
+            invoice_mode: invoiceMode,
+            allocation_mode: allocationMode,
+            notes: input.notes ?? null,
+            created_by: user.user_id,
+          })
+          .returning('*');
+        const soId = (so as ISalesOrder).so_id;
+
+        for (const l of input.lines ?? []) {
+          if (!(Number(l.quantity_ordered) > 0)) throw new Error('quantity_ordered must be greater than 0');
+          // Currency guard: an explicit per-line currency must match the SO currency.
+          const lineCurrency = (l.currency_code ?? currency).trim();
+          if (lineCurrency !== currency) {
+            throw new Error(`Line currency (${lineCurrency}) must match sales order currency_code (${currency})`);
+          }
+          const fulfillmentType: SalesOrderLineFulfillmentType = l.fulfillment_type ?? 'from_stock';
+          if (!FULFILLMENT_TYPES.includes(fulfillmentType)) {
+            throw new Error(`Invalid fulfillment_type: ${fulfillmentType}`);
+          }
+
+          const meta = await getProductMeta(trx, tenant, l.service_id);
+          if (meta.is_kit) {
+            // Kit explosion is owned by kitActions — insert parent + component lines, don't duplicate it.
+            const kitUnitPrice = await resolveKitSalesOrderUnitPrice(
+              trx,
+              tenant,
+              l.service_id,
+              l.kit_unit_price_override,
+              currency,
+            );
+            await explodeKitOntoSalesOrder(trx, tenant, soId, l.service_id, l.quantity_ordered, kitUnitPrice);
+            continue;
+          }
+
+          const unitPrice = normalizeSalesOrderUnitPrice(l.unit_price);
+
+          await trx('sales_order_lines').insert({
+            tenant,
+            so_id: soId,
+            service_id: l.service_id,
+            quantity_ordered: l.quantity_ordered,
+            quantity_fulfilled: 0,
+            quantity_invoiced: 0,
+            unit_price: unitPrice,
+            cost_snapshot: meta.average_cost ?? meta.catalog_cost ?? null,
+            tax_rate_id: l.tax_rate_id ?? null,
+            fulfillment_type: fulfillmentType,
+            parent_so_line_id: null,
+          });
         }
 
-        const unitPrice = normalizeSalesOrderUnitPrice(l.unit_price);
+        const lines = await loadLines(trx, tenant, soId);
+        return { ...(so as ISalesOrder), lines };
+      });
 
-        await trx('sales_order_lines').insert({
-          tenant,
-          so_id: soId,
-          service_id: l.service_id,
-          quantity_ordered: l.quantity_ordered,
-          quantity_fulfilled: 0,
-          quantity_invoiced: 0,
-          unit_price: unitPrice,
-          cost_snapshot: meta.average_cost ?? meta.catalog_cost ?? null,
-          tax_rate_id: l.tax_rate_id ?? null,
-          fulfillment_type: fulfillmentType,
-          parent_so_line_id: null,
-        });
-      }
+      await publishInventoryEvent('INVENTORY_SALES_ORDER_CREATED', timestampPayload({
+        tenant,
+        so_id: result.so_id,
+        user_id: user.user_id,
+      }));
 
-      const lines = await loadLines(trx, tenant, soId);
-      return { ...(so as ISalesOrder), lines };
+      return result;
     });
-
-    await publishInventoryEvent('INVENTORY_SALES_ORDER_CREATED', timestampPayload({
-      tenant,
-      so_id: result.so_id,
-      user_id: user.user_id,
-    }));
-
-    return result;
   },
 );
 
@@ -537,62 +634,64 @@ export const addSoLine = withAuth(
       fulfillment_type?: SalesOrderLineFulfillmentType;
       currency_code?: string;
     },
-  ): Promise<ISalesOrderLine | ISalesOrderLine[]> => {
-    await requireSoPerm(user, 'update');
-    if (!(Number(input.quantity_ordered) > 0)) throw new Error('quantity_ordered must be greater than 0');
-    const { knex: db } = await createTenantKnex();
-    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
-      const so = await getSoOrThrow(trx, tenant, soId);
-      if (so.status !== 'draft') throw new Error(`Cannot add a line to a ${so.status} sales order; release it first`);
+  ): Promise<ISalesOrderLine | ISalesOrderLine[] | SalesOrderActionError> => {
+    return withSalesOrderActionErrors(async () => {
+      await requireSoPerm(user, 'update');
+      if (!(Number(input.quantity_ordered) > 0)) throw new Error('quantity_ordered must be greater than 0');
+      const { knex: db } = await createTenantKnex();
+      const result = await withTransaction(db, async (trx: Knex.Transaction) => {
+        const so = await getSoOrThrow(trx, tenant, soId);
+        if (so.status !== 'draft') throw new Error(`Cannot add a line to a ${so.status} sales order; release it first`);
 
-      const lineCurrency = (input.currency_code ?? so.currency_code).trim();
-      if (lineCurrency !== so.currency_code) {
-        throw new Error(`Line currency (${lineCurrency}) must match sales order currency_code (${so.currency_code})`);
-      }
-      const fulfillmentType: SalesOrderLineFulfillmentType = input.fulfillment_type ?? 'from_stock';
-      if (!FULFILLMENT_TYPES.includes(fulfillmentType)) throw new Error(`Invalid fulfillment_type: ${fulfillmentType}`);
+        const lineCurrency = (input.currency_code ?? so.currency_code).trim();
+        if (lineCurrency !== so.currency_code) {
+          throw new Error(`Line currency (${lineCurrency}) must match sales order currency_code (${so.currency_code})`);
+        }
+        const fulfillmentType: SalesOrderLineFulfillmentType = input.fulfillment_type ?? 'from_stock';
+        if (!FULFILLMENT_TYPES.includes(fulfillmentType)) throw new Error(`Invalid fulfillment_type: ${fulfillmentType}`);
 
-      const meta = await getProductMeta(trx, tenant, input.service_id);
-      if (meta.is_kit) {
-        const kitUnitPrice = await resolveKitSalesOrderUnitPrice(
-          trx,
-          tenant,
-          input.service_id,
-          input.kit_unit_price_override,
-          so.currency_code,
-        );
-        const exploded = await explodeKitOntoSalesOrder(trx, tenant, soId, input.service_id, input.quantity_ordered, kitUnitPrice);
-        return [exploded.parentLine, ...exploded.componentLines];
-      }
+        const meta = await getProductMeta(trx, tenant, input.service_id);
+        if (meta.is_kit) {
+          const kitUnitPrice = await resolveKitSalesOrderUnitPrice(
+            trx,
+            tenant,
+            input.service_id,
+            input.kit_unit_price_override,
+            so.currency_code,
+          );
+          const exploded = await explodeKitOntoSalesOrder(trx, tenant, soId, input.service_id, input.quantity_ordered, kitUnitPrice);
+          return [exploded.parentLine, ...exploded.componentLines];
+        }
 
-      const unitPrice = normalizeSalesOrderUnitPrice(input.unit_price);
+        const unitPrice = normalizeSalesOrderUnitPrice(input.unit_price);
 
-      const [row] = await trx('sales_order_lines')
-        .insert({
-          tenant,
-          so_id: soId,
-          service_id: input.service_id,
-          quantity_ordered: input.quantity_ordered,
-          quantity_fulfilled: 0,
-          quantity_invoiced: 0,
-          unit_price: unitPrice,
-          cost_snapshot: meta.average_cost ?? meta.catalog_cost ?? null,
-          tax_rate_id: input.tax_rate_id ?? null,
-          fulfillment_type: fulfillmentType,
-          parent_so_line_id: null,
-        })
-        .returning('*');
-      return row as ISalesOrderLine;
+        const [row] = await trx('sales_order_lines')
+          .insert({
+            tenant,
+            so_id: soId,
+            service_id: input.service_id,
+            quantity_ordered: input.quantity_ordered,
+            quantity_fulfilled: 0,
+            quantity_invoiced: 0,
+            unit_price: unitPrice,
+            cost_snapshot: meta.average_cost ?? meta.catalog_cost ?? null,
+            tax_rate_id: input.tax_rate_id ?? null,
+            fulfillment_type: fulfillmentType,
+            parent_so_line_id: null,
+          })
+          .returning('*');
+        return row as ISalesOrderLine;
+      });
+
+      await publishInventoryEvent('INVENTORY_SALES_ORDER_UPDATED', timestampPayload({
+        tenant,
+        so_id: soId,
+        user_id: user.user_id,
+        changed_fields: ['lines'],
+      }));
+
+      return result;
     });
-
-    await publishInventoryEvent('INVENTORY_SALES_ORDER_UPDATED', timestampPayload({
-      tenant,
-      so_id: soId,
-      user_id: user.user_id,
-      changed_fields: ['lines'],
-    }));
-
-    return result;
   },
 );
 
@@ -602,139 +701,147 @@ export const updateSoLine = withAuth(
     { tenant },
     soLineId: string,
     patch: Partial<Pick<ISalesOrderLine, 'quantity_ordered' | 'unit_price' | 'tax_rate_id' | 'fulfillment_type'>>,
-  ): Promise<ISalesOrderLine> => {
-    await requireSoPerm(user, 'update');
-    if (patch.fulfillment_type && !FULFILLMENT_TYPES.includes(patch.fulfillment_type)) {
-      throw new Error(`Invalid fulfillment_type: ${patch.fulfillment_type}`);
-    }
-    const { knex: db } = await createTenantKnex();
-    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
-      const line = await trx('sales_order_lines').where({ tenant, so_line_id: soLineId }).first();
-      if (!line) throw new Error('Sales order line not found');
-      const so = await getSoOrThrow(trx, tenant, line.so_id);
-      if (so.status !== 'draft') throw new Error(`Cannot edit a line on a ${so.status} sales order; release it first`);
-      if (patch.quantity_ordered !== undefined && !(Number(patch.quantity_ordered) > 0)) {
-        throw new Error('quantity_ordered must be greater than 0');
+  ): Promise<ISalesOrderLine | SalesOrderActionError> => {
+    return withSalesOrderActionErrors(async () => {
+      await requireSoPerm(user, 'update');
+      if (patch.fulfillment_type && !FULFILLMENT_TYPES.includes(patch.fulfillment_type)) {
+        throw new Error(`Invalid fulfillment_type: ${patch.fulfillment_type}`);
       }
+      const { knex: db } = await createTenantKnex();
+      const result = await withTransaction(db, async (trx: Knex.Transaction) => {
+        const line = await trx('sales_order_lines').where({ tenant, so_line_id: soLineId }).first();
+        if (!line) throw new Error('Sales order line not found');
+        const so = await getSoOrThrow(trx, tenant, line.so_id);
+        if (so.status !== 'draft') throw new Error(`Cannot edit a line on a ${so.status} sales order; release it first`);
+        if (patch.quantity_ordered !== undefined && !(Number(patch.quantity_ordered) > 0)) {
+          throw new Error('quantity_ordered must be greater than 0');
+        }
 
-      const update: Record<string, unknown> = { updated_at: trx.fn.now() };
-      for (const k of ['quantity_ordered', 'unit_price', 'tax_rate_id', 'fulfillment_type'] as const) {
-        if (k in patch) update[k] = (patch as any)[k];
-      }
-      const [row] = await trx('sales_order_lines').where({ tenant, so_line_id: soLineId }).update(update).returning('*');
-      return row as ISalesOrderLine;
+        const update: Record<string, unknown> = { updated_at: trx.fn.now() };
+        for (const k of ['quantity_ordered', 'unit_price', 'tax_rate_id', 'fulfillment_type'] as const) {
+          if (k in patch) update[k] = (patch as any)[k];
+        }
+        const [row] = await trx('sales_order_lines').where({ tenant, so_line_id: soLineId }).update(update).returning('*');
+        return row as ISalesOrderLine;
+      });
+
+      await publishInventoryEvent('INVENTORY_SALES_ORDER_UPDATED', timestampPayload({
+        tenant,
+        so_id: result.so_id,
+        user_id: user.user_id,
+        changed_fields: Object.keys(patch),
+      }));
+
+      return result;
     });
-
-    await publishInventoryEvent('INVENTORY_SALES_ORDER_UPDATED', timestampPayload({
-      tenant,
-      so_id: result.so_id,
-      user_id: user.user_id,
-      changed_fields: Object.keys(patch),
-    }));
-
-    return result;
   },
 );
 
 export const removeSoLine = withAuth(
-  async (user, { tenant }, soLineId: string): Promise<{ removed: boolean }> => {
-    await requireSoPerm(user, 'update');
-    const { knex: db } = await createTenantKnex();
-    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
-      const line = await trx('sales_order_lines').where({ tenant, so_line_id: soLineId }).first();
-      if (!line) throw new Error('Sales order line not found');
-      const so = await getSoOrThrow(trx, tenant, line.so_id);
-      if (so.status !== 'draft') throw new Error(`Cannot remove a line from a ${so.status} sales order; release it first`);
-      // Remove kit child lines along with the parent.
-      await trx('sales_order_lines').where({ tenant, parent_so_line_id: soLineId }).del();
-      await trx('sales_order_lines').where({ tenant, so_line_id: soLineId }).del();
-      return { removed: true, so_id: so.so_id };
+  async (user, { tenant }, soLineId: string): Promise<{ removed: boolean } | SalesOrderActionError> => {
+    return withSalesOrderActionErrors(async () => {
+      await requireSoPerm(user, 'update');
+      const { knex: db } = await createTenantKnex();
+      const result = await withTransaction(db, async (trx: Knex.Transaction) => {
+        const line = await trx('sales_order_lines').where({ tenant, so_line_id: soLineId }).first();
+        if (!line) throw new Error('Sales order line not found');
+        const so = await getSoOrThrow(trx, tenant, line.so_id);
+        if (so.status !== 'draft') throw new Error(`Cannot remove a line from a ${so.status} sales order; release it first`);
+        // Remove kit child lines along with the parent.
+        await trx('sales_order_lines').where({ tenant, parent_so_line_id: soLineId }).del();
+        await trx('sales_order_lines').where({ tenant, so_line_id: soLineId }).del();
+        return { removed: true, so_id: so.so_id };
+      });
+
+      await publishInventoryEvent('INVENTORY_SALES_ORDER_UPDATED', timestampPayload({
+        tenant,
+        so_id: result.so_id,
+        user_id: user.user_id,
+        changed_fields: ['lines'],
+      }));
+
+      return { removed: result.removed };
     });
-
-    await publishInventoryEvent('INVENTORY_SALES_ORDER_UPDATED', timestampPayload({
-      tenant,
-      so_id: result.so_id,
-      user_id: user.user_id,
-      changed_fields: ['lines'],
-    }));
-
-    return { removed: result.removed };
   },
 );
 
 export const confirmSalesOrder = withAuth(
-  async (user, { tenant }, soId: string): Promise<ISalesOrder & { lines: ISalesOrderLine[] }> => {
-    await requireSoPerm(user, 'update');
-    const { knex: db } = await createTenantKnex();
-    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
-      const so = await getSoOrThrow(trx, tenant, soId, { forUpdate: true });
-      if (so.status !== 'draft') throw new Error(`Only draft sales orders can be confirmed (current: ${so.status})`);
+  async (user, { tenant }, soId: string): Promise<(ISalesOrder & { lines: ISalesOrderLine[] }) | SalesOrderActionError> => {
+    return withSalesOrderActionErrors(async () => {
+      await requireSoPerm(user, 'update');
+      const { knex: db } = await createTenantKnex();
+      const result = await withTransaction(db, async (trx: Knex.Transaction) => {
+        const so = await getSoOrThrow(trx, tenant, soId, { forUpdate: true });
+        if (so.status !== 'draft') throw new Error(`Only draft sales orders can be confirmed (current: ${so.status})`);
 
-      const lines = await loadLines(trx, tenant, soId);
-      const stockUnitTouches: StockUnitSearchTouch[] = [];
-      for (const line of lines) {
-        if (line.fulfillment_type === 'drop_ship') continue; // procured straight to client, never allocated from stock
-        const meta = await getProductMeta(trx, tenant, line.service_id);
-        if (meta.is_kit) continue; // kit parent is a container; its component lines carry the stock
-        stockUnitTouches.push(...await allocateLine(trx, tenant, so, line, meta));
-      }
+        const lines = await loadLines(trx, tenant, soId);
+        const stockUnitTouches: StockUnitSearchTouch[] = [];
+        for (const line of lines) {
+          if (line.fulfillment_type === 'drop_ship') continue; // procured straight to client, never allocated from stock
+          const meta = await getProductMeta(trx, tenant, line.service_id);
+          if (meta.is_kit) continue; // kit parent is a container; its component lines carry the stock
+          stockUnitTouches.push(...await allocateLine(trx, tenant, so, line, meta));
+        }
 
-      const [updated] = await trx('sales_orders')
-        .where({ tenant, so_id: soId })
-        .update({ status: 'confirmed', updated_at: trx.fn.now() })
-        .returning('*');
-      const finalLines = await loadLines(trx, tenant, soId);
-      return { ...(updated as ISalesOrder), lines: finalLines, stockUnitTouches };
-    });
+        const [updated] = await trx('sales_orders')
+          .where({ tenant, so_id: soId })
+          .update({ status: 'confirmed', updated_at: trx.fn.now() })
+          .returning('*');
+        const finalLines = await loadLines(trx, tenant, soId);
+        return { ...(updated as ISalesOrder), lines: finalLines, stockUnitTouches };
+      });
 
-    await publishInventoryEvent('INVENTORY_SALES_ORDER_UPDATED', timestampPayload({
-      tenant,
-      so_id: soId,
-      user_id: user.user_id,
-      changed_fields: ['status', 'allocation'],
-    }));
-    for (const unit of result.stockUnitTouches) {
-      await publishInventoryEvent('INVENTORY_STOCK_UNIT_UPDATED', timestampPayload({
+      await publishInventoryEvent('INVENTORY_SALES_ORDER_UPDATED', timestampPayload({
         tenant,
-        unit_id: unit.unit_id,
-        service_id: unit.service_id,
+        so_id: soId,
         user_id: user.user_id,
-        changed_fields: ['status', 'allocated_so_line_id'],
+        changed_fields: ['status', 'allocation'],
       }));
-    }
-    const { stockUnitTouches: _stockUnitTouches, ...publicResult } = result;
-    return publicResult;
+      for (const unit of result.stockUnitTouches) {
+        await publishInventoryEvent('INVENTORY_STOCK_UNIT_UPDATED', timestampPayload({
+          tenant,
+          unit_id: unit.unit_id,
+          service_id: unit.service_id,
+          user_id: user.user_id,
+          changed_fields: ['status', 'allocated_so_line_id'],
+        }));
+      }
+      const { stockUnitTouches: _stockUnitTouches, ...publicResult } = result;
+      return publicResult;
+    });
   },
 );
 
 /** Reverse allocations for a sales order (used on edit or cancel) without changing its status. */
 export const releaseSalesOrderAllocation = withAuth(
-  async (user, { tenant }, soId: string): Promise<{ released: boolean }> => {
-    await requireSoPerm(user, 'update');
-    const { knex: db } = await createTenantKnex();
-    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
-      const so = await getSoOrThrow(trx, tenant, soId, { forUpdate: true });
-      const lines = await loadLines(trx, tenant, soId);
-      const stockUnitTouches = await releaseAllocations(trx, tenant, so, lines);
-      return { released: true, stockUnitTouches };
-    });
+  async (user, { tenant }, soId: string): Promise<{ released: boolean } | SalesOrderActionError> => {
+    return withSalesOrderActionErrors(async () => {
+      await requireSoPerm(user, 'update');
+      const { knex: db } = await createTenantKnex();
+      const result = await withTransaction(db, async (trx: Knex.Transaction) => {
+        const so = await getSoOrThrow(trx, tenant, soId, { forUpdate: true });
+        const lines = await loadLines(trx, tenant, soId);
+        const stockUnitTouches = await releaseAllocations(trx, tenant, so, lines);
+        return { released: true, stockUnitTouches };
+      });
 
-    await publishInventoryEvent('INVENTORY_SALES_ORDER_UPDATED', timestampPayload({
-      tenant,
-      so_id: soId,
-      user_id: user.user_id,
-      changed_fields: ['allocation'],
-    }));
-    for (const unit of result.stockUnitTouches) {
-      await publishInventoryEvent('INVENTORY_STOCK_UNIT_UPDATED', timestampPayload({
+      await publishInventoryEvent('INVENTORY_SALES_ORDER_UPDATED', timestampPayload({
         tenant,
-        unit_id: unit.unit_id,
-        service_id: unit.service_id,
+        so_id: soId,
         user_id: user.user_id,
-        changed_fields: ['status', 'allocated_so_line_id'],
+        changed_fields: ['allocation'],
       }));
-    }
-    return { released: result.released };
+      for (const unit of result.stockUnitTouches) {
+        await publishInventoryEvent('INVENTORY_STOCK_UNIT_UPDATED', timestampPayload({
+          tenant,
+          unit_id: unit.unit_id,
+          service_id: unit.service_id,
+          user_id: user.user_id,
+          changed_fields: ['status', 'allocated_so_line_id'],
+        }));
+      }
+      return { released: result.released };
+    });
   },
 );
 
@@ -744,44 +851,46 @@ export const releaseSalesOrderAllocation = withAuth(
  * escape hatch. Releases all allocations.
  */
 export const reopenSalesOrder = withAuth(
-  async (user, { tenant }, soId: string): Promise<ISalesOrder & { lines: ISalesOrderLine[] }> => {
-    await requireSoPerm(user, 'update');
-    const { knex: db } = await createTenantKnex();
-    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
-      const so = await getSoOrThrow(trx, tenant, soId, { forUpdate: true });
-      if (so.status !== 'confirmed') {
-        throw new Error(`Only confirmed sales orders can be reopened (current: ${so.status})`);
-      }
-      const lines = await loadLines(trx, tenant, soId);
-      for (const line of lines) {
-        if (Number(line.quantity_fulfilled ?? 0) > 0) throw new Error('Cannot reopen a sales order with fulfilled lines');
-        if (Number(line.quantity_invoiced ?? 0) > 0) throw new Error('Cannot reopen a sales order with invoiced lines');
-      }
-      const stockUnitTouches = await releaseAllocations(trx, tenant, so, lines);
-      const [updated] = await trx('sales_orders')
-        .where({ tenant, so_id: soId })
-        .update({ status: 'draft', updated_at: trx.fn.now() })
-        .returning('*');
-      return { ...(updated as ISalesOrder), lines: await loadLines(trx, tenant, soId), stockUnitTouches };
-    });
+  async (user, { tenant }, soId: string): Promise<(ISalesOrder & { lines: ISalesOrderLine[] }) | SalesOrderActionError> => {
+    return withSalesOrderActionErrors(async () => {
+      await requireSoPerm(user, 'update');
+      const { knex: db } = await createTenantKnex();
+      const result = await withTransaction(db, async (trx: Knex.Transaction) => {
+        const so = await getSoOrThrow(trx, tenant, soId, { forUpdate: true });
+        if (so.status !== 'confirmed') {
+          throw new Error(`Only confirmed sales orders can be reopened (current: ${so.status})`);
+        }
+        const lines = await loadLines(trx, tenant, soId);
+        for (const line of lines) {
+          if (Number(line.quantity_fulfilled ?? 0) > 0) throw new Error('Cannot reopen a sales order with fulfilled lines');
+          if (Number(line.quantity_invoiced ?? 0) > 0) throw new Error('Cannot reopen a sales order with invoiced lines');
+        }
+        const stockUnitTouches = await releaseAllocations(trx, tenant, so, lines);
+        const [updated] = await trx('sales_orders')
+          .where({ tenant, so_id: soId })
+          .update({ status: 'draft', updated_at: trx.fn.now() })
+          .returning('*');
+        return { ...(updated as ISalesOrder), lines: await loadLines(trx, tenant, soId), stockUnitTouches };
+      });
 
-    await publishInventoryEvent('INVENTORY_SALES_ORDER_UPDATED', timestampPayload({
-      tenant,
-      so_id: soId,
-      user_id: user.user_id,
-      changed_fields: ['status', 'allocation'],
-    }));
-    for (const unit of result.stockUnitTouches) {
-      await publishInventoryEvent('INVENTORY_STOCK_UNIT_UPDATED', timestampPayload({
+      await publishInventoryEvent('INVENTORY_SALES_ORDER_UPDATED', timestampPayload({
         tenant,
-        unit_id: unit.unit_id,
-        service_id: unit.service_id,
+        so_id: soId,
         user_id: user.user_id,
-        changed_fields: ['status', 'allocated_so_line_id'],
+        changed_fields: ['status', 'allocation'],
       }));
-    }
-    const { stockUnitTouches: _stockUnitTouches, ...publicResult } = result;
-    return publicResult;
+      for (const unit of result.stockUnitTouches) {
+        await publishInventoryEvent('INVENTORY_STOCK_UNIT_UPDATED', timestampPayload({
+          tenant,
+          unit_id: unit.unit_id,
+          service_id: unit.service_id,
+          user_id: user.user_id,
+          changed_fields: ['status', 'allocated_so_line_id'],
+        }));
+      }
+      const { stockUnitTouches: _stockUnitTouches, ...publicResult } = result;
+      return publicResult;
+    });
   },
 );
 
@@ -820,76 +929,80 @@ export interface BackorderLine {
 
 /** Per-line: ordered-minus-fulfilled vs. available, flagging shortfalls. */
 export const computeBackorder = withAuth(
-  async (user, { tenant }, soId: string): Promise<BackorderLine[]> => {
-    await requireSoPerm(user, 'read');
-    const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
-      await getSoOrThrow(trx, tenant, soId);
-      const lines = await loadLines(trx, tenant, soId);
-      const result: BackorderLine[] = [];
-      for (const line of lines) {
-        if (line.fulfillment_type === 'drop_ship') continue;
-        const meta = await getProductMeta(trx, tenant, line.service_id);
-        if (meta.is_kit) continue;
-        const outstanding = Number(line.quantity_ordered) - Number(line.quantity_fulfilled ?? 0);
-        const secured = await lineSecuredQuantity(trx, tenant, line, meta);
-        const available = await totalAvailable(trx, tenant, line.service_id);
-        // The line's own allocation already depressed `available`; add it back so a
-        // confirmed order doesn't count its own claim as a shortage (F025).
-        const shortfall = Math.max(0, outstanding - secured - Math.max(0, available));
-        result.push({
-          so_line_id: line.so_line_id,
-          service_id: line.service_id,
-          quantity_ordered: Number(line.quantity_ordered),
-          quantity_fulfilled: Number(line.quantity_fulfilled ?? 0),
-          secured,
-          available,
-          shortfall,
-          backordered: shortfall > 0,
-        });
-      }
-      return result;
+  async (user, { tenant }, soId: string): Promise<BackorderLine[] | SalesOrderActionError> => {
+    return withSalesOrderActionErrors(async () => {
+      await requireSoPerm(user, 'read');
+      const { knex: db } = await createTenantKnex();
+      return withTransaction(db, async (trx: Knex.Transaction) => {
+        await getSoOrThrow(trx, tenant, soId);
+        const lines = await loadLines(trx, tenant, soId);
+        const result: BackorderLine[] = [];
+        for (const line of lines) {
+          if (line.fulfillment_type === 'drop_ship') continue;
+          const meta = await getProductMeta(trx, tenant, line.service_id);
+          if (meta.is_kit) continue;
+          const outstanding = Number(line.quantity_ordered) - Number(line.quantity_fulfilled ?? 0);
+          const secured = await lineSecuredQuantity(trx, tenant, line, meta);
+          const available = await totalAvailable(trx, tenant, line.service_id);
+          // The line's own allocation already depressed `available`; add it back so a
+          // confirmed order doesn't count its own claim as a shortage (F025).
+          const shortfall = Math.max(0, outstanding - secured - Math.max(0, available));
+          result.push({
+            so_line_id: line.so_line_id,
+            service_id: line.service_id,
+            quantity_ordered: Number(line.quantity_ordered),
+            quantity_fulfilled: Number(line.quantity_fulfilled ?? 0),
+            secured,
+            available,
+            shortfall,
+            backordered: shortfall > 0,
+          });
+        }
+        return result;
+      });
     });
   },
 );
 
 export const cancelSalesOrder = withAuth(
-  async (user, { tenant }, soId: string): Promise<ISalesOrder> => {
-    await requireSoPerm(user, 'update');
-    const { knex: db } = await createTenantKnex();
-    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
-      const so = await getSoOrThrow(trx, tenant, soId, { forUpdate: true });
-      if (so.status === 'cancelled') return { so, stockUnitTouches: [] as StockUnitSearchTouch[] };
-      const lines = await loadLines(trx, tenant, soId);
-      // Guard: a sales order with any fulfilled or invoiced quantity cannot be cancelled.
-      for (const line of lines) {
-        if (Number(line.quantity_fulfilled ?? 0) > 0) throw new Error('Cannot cancel a sales order with fulfilled lines');
-        if (Number(line.quantity_invoiced ?? 0) > 0) throw new Error('Cannot cancel a sales order with invoiced lines');
-      }
-      const stockUnitTouches = await releaseAllocations(trx, tenant, so, lines);
-      const [updated] = await trx('sales_orders')
-        .where({ tenant, so_id: soId })
-        .update({ status: 'cancelled', updated_at: trx.fn.now() })
-        .returning('*');
-      return { so: updated as ISalesOrder, stockUnitTouches };
-    });
+  async (user, { tenant }, soId: string): Promise<ISalesOrder | SalesOrderActionError> => {
+    return withSalesOrderActionErrors(async () => {
+      await requireSoPerm(user, 'update');
+      const { knex: db } = await createTenantKnex();
+      const result = await withTransaction(db, async (trx: Knex.Transaction) => {
+        const so = await getSoOrThrow(trx, tenant, soId, { forUpdate: true });
+        if (so.status === 'cancelled') return { so, stockUnitTouches: [] as StockUnitSearchTouch[] };
+        const lines = await loadLines(trx, tenant, soId);
+        // Guard: a sales order with any fulfilled or invoiced quantity cannot be cancelled.
+        for (const line of lines) {
+          if (Number(line.quantity_fulfilled ?? 0) > 0) throw new Error('Cannot cancel a sales order with fulfilled lines');
+          if (Number(line.quantity_invoiced ?? 0) > 0) throw new Error('Cannot cancel a sales order with invoiced lines');
+        }
+        const stockUnitTouches = await releaseAllocations(trx, tenant, so, lines);
+        const [updated] = await trx('sales_orders')
+          .where({ tenant, so_id: soId })
+          .update({ status: 'cancelled', updated_at: trx.fn.now() })
+          .returning('*');
+        return { so: updated as ISalesOrder, stockUnitTouches };
+      });
 
-    await publishInventoryEvent('INVENTORY_SALES_ORDER_UPDATED', timestampPayload({
-      tenant,
-      so_id: soId,
-      user_id: user.user_id,
-      changed_fields: ['status', 'allocation'],
-    }));
-    for (const unit of result.stockUnitTouches) {
-      await publishInventoryEvent('INVENTORY_STOCK_UNIT_UPDATED', timestampPayload({
+      await publishInventoryEvent('INVENTORY_SALES_ORDER_UPDATED', timestampPayload({
         tenant,
-        unit_id: unit.unit_id,
-        service_id: unit.service_id,
+        so_id: soId,
         user_id: user.user_id,
-        changed_fields: ['status', 'allocated_so_line_id'],
+        changed_fields: ['status', 'allocation'],
       }));
-    }
-    return result.so;
+      for (const unit of result.stockUnitTouches) {
+        await publishInventoryEvent('INVENTORY_STOCK_UNIT_UPDATED', timestampPayload({
+          tenant,
+          unit_id: unit.unit_id,
+          service_id: unit.service_id,
+          user_id: user.user_id,
+          changed_fields: ['status', 'allocated_so_line_id'],
+        }));
+      }
+      return result.so;
+    });
   },
 );
 
@@ -905,94 +1018,96 @@ export interface SuggestedPurchaseOrders {
  * `purchase_order:create`; lines without a preferred vendor are returned as `unassigned`.
  */
 export const suggestPoFromBackorder = withAuth(
-  async (user, { tenant }, soId: string): Promise<SuggestedPurchaseOrders> => {
-    await requireSoPerm(user, 'read');
-    if (!(await hasPermission(user, 'purchase_order', 'create'))) {
-      throw new Error('Permission denied: purchase_order create required');
-    }
-    const { knex: db } = await createTenantKnex();
-    const result = await withTransaction(db, async (trx: Knex.Transaction) => {
-      const so = await getSoOrThrow(trx, tenant, soId);
-      const lines = await loadLines(trx, tenant, soId);
-
-      // Group shortfall lines by preferred vendor.
-      const byVendor = new Map<string, Array<{ line: ISalesOrderLine; meta: ProductMeta; quantity: number }>>();
-      const unassigned: SuggestedPurchaseOrders['unassigned'] = [];
-
-      for (const line of lines) {
-        if (line.fulfillment_type === 'drop_ship') continue;
-        const meta = await getProductMeta(trx, tenant, line.service_id);
-        if (meta.is_kit) continue;
-        const outstanding = Number(line.quantity_ordered) - Number(line.quantity_fulfilled ?? 0);
-        const secured = await lineSecuredQuantity(trx, tenant, line, meta);
-        const available = await totalAvailable(trx, tenant, line.service_id);
-        // Same add-back as computeBackorder (F025): don't buy stock the line already holds.
-        const shortfall = Math.max(0, outstanding - secured - Math.max(0, available));
-        if (shortfall <= 0) continue;
-        if (!meta.preferred_vendor_id) {
-          unassigned.push({ so_line_id: line.so_line_id, service_id: line.service_id, quantity: shortfall });
-          continue;
-        }
-        const bucket = byVendor.get(meta.preferred_vendor_id) ?? [];
-        bucket.push({ line, meta, quantity: shortfall });
-        byVendor.set(meta.preferred_vendor_id, bucket);
+  async (user, { tenant }, soId: string): Promise<SuggestedPurchaseOrders | SalesOrderActionError> => {
+    return withSalesOrderActionErrors(async () => {
+      await requireSoPerm(user, 'read');
+      if (!(await hasPermission(user, 'purchase_order', 'create'))) {
+        throw new Error('Permission denied: purchase_order create required');
       }
+      const { knex: db } = await createTenantKnex();
+      const result = await withTransaction(db, async (trx: Knex.Transaction) => {
+        const so = await getSoOrThrow(trx, tenant, soId);
+        const lines = await loadLines(trx, tenant, soId);
 
-      const purchaseOrders: SuggestedPurchaseOrders['purchaseOrders'] = [];
-      for (const [vendorId, items] of byVendor) {
-        const r = await trx.raw('SELECT generate_next_number(?::uuid, ?) as number', [tenant, 'PURCHASE_ORDER']);
-        const poNumber: string = r.rows[0].number;
-        const [po] = await trx('purchase_orders')
-          .insert({
-            tenant,
-            po_number: poNumber,
-            vendor_id: vendorId,
-            status: 'draft',
-            order_date: trx.fn.now(),
-            currency_code: so.currency_code,
-            is_drop_ship: false,
-            notes: `Suggested from backorder on sales order ${so.so_number}`,
-            created_by: user.user_id,
-          })
-          .returning('*');
+        // Group shortfall lines by preferred vendor.
+        const byVendor = new Map<string, Array<{ line: ISalesOrderLine; meta: ProductMeta; quantity: number }>>();
+        const unassigned: SuggestedPurchaseOrders['unassigned'] = [];
 
-        const poLines: IPurchaseOrderLine[] = [];
-        for (const it of items) {
-          // Preferred-vendor contract price wins over average/catalog cost (F058).
-          const offer = await trx('vendor_products')
-            .where({ tenant, vendor_id: vendorId, service_id: it.line.service_id })
-            .first();
-          const unitCost =
-            offer?.unit_cost != null ? Number(offer.unit_cost) : it.meta.average_cost ?? it.meta.catalog_cost ?? 0;
-          const [row] = await trx('purchase_order_lines')
+        for (const line of lines) {
+          if (line.fulfillment_type === 'drop_ship') continue;
+          const meta = await getProductMeta(trx, tenant, line.service_id);
+          if (meta.is_kit) continue;
+          const outstanding = Number(line.quantity_ordered) - Number(line.quantity_fulfilled ?? 0);
+          const secured = await lineSecuredQuantity(trx, tenant, line, meta);
+          const available = await totalAvailable(trx, tenant, line.service_id);
+          // Same add-back as computeBackorder (F025): don't buy stock the line already holds.
+          const shortfall = Math.max(0, outstanding - secured - Math.max(0, available));
+          if (shortfall <= 0) continue;
+          if (!meta.preferred_vendor_id) {
+            unassigned.push({ so_line_id: line.so_line_id, service_id: line.service_id, quantity: shortfall });
+            continue;
+          }
+          const bucket = byVendor.get(meta.preferred_vendor_id) ?? [];
+          bucket.push({ line, meta, quantity: shortfall });
+          byVendor.set(meta.preferred_vendor_id, bucket);
+        }
+
+        const purchaseOrders: SuggestedPurchaseOrders['purchaseOrders'] = [];
+        for (const [vendorId, items] of byVendor) {
+          const r = await trx.raw('SELECT generate_next_number(?::uuid, ?) as number', [tenant, 'PURCHASE_ORDER']);
+          const poNumber: string = r.rows[0].number;
+          const [po] = await trx('purchase_orders')
             .insert({
               tenant,
-              po_id: (po as IPurchaseOrder).po_id,
-              service_id: it.line.service_id,
-              quantity_ordered: it.quantity,
-              quantity_received: 0,
-              unit_cost: unitCost,
-              vendor_sku: offer?.vendor_sku ?? null,
-              cost_currency: offer?.unit_cost != null ? offer.cost_currency : it.meta.cost_currency ?? so.currency_code,
-              source_so_line_id: it.line.so_line_id,
+              po_number: poNumber,
+              vendor_id: vendorId,
+              status: 'draft',
+              order_date: trx.fn.now(),
+              currency_code: so.currency_code,
+              is_drop_ship: false,
+              notes: `Suggested from backorder on sales order ${so.so_number}`,
+              created_by: user.user_id,
             })
             .returning('*');
-          poLines.push(row as IPurchaseOrderLine);
+
+          const poLines: IPurchaseOrderLine[] = [];
+          for (const it of items) {
+            // Preferred-vendor contract price wins over average/catalog cost (F058).
+            const offer = await trx('vendor_products')
+              .where({ tenant, vendor_id: vendorId, service_id: it.line.service_id })
+              .first();
+            const unitCost =
+              offer?.unit_cost != null ? Number(offer.unit_cost) : it.meta.average_cost ?? it.meta.catalog_cost ?? 0;
+            const [row] = await trx('purchase_order_lines')
+              .insert({
+                tenant,
+                po_id: (po as IPurchaseOrder).po_id,
+                service_id: it.line.service_id,
+                quantity_ordered: it.quantity,
+                quantity_received: 0,
+                unit_cost: unitCost,
+                vendor_sku: offer?.vendor_sku ?? null,
+                cost_currency: offer?.unit_cost != null ? offer.cost_currency : it.meta.cost_currency ?? so.currency_code,
+                source_so_line_id: it.line.so_line_id,
+              })
+              .returning('*');
+            poLines.push(row as IPurchaseOrderLine);
+          }
+          purchaseOrders.push({ ...(po as IPurchaseOrder), lines: poLines });
         }
-        purchaseOrders.push({ ...(po as IPurchaseOrder), lines: poLines });
+
+        return { purchaseOrders, unassigned };
+      });
+
+      for (const po of result.purchaseOrders) {
+        await publishInventoryEvent('INVENTORY_PURCHASE_ORDER_CREATED', timestampPayload({
+          tenant,
+          po_id: po.po_id,
+          user_id: user.user_id,
+        }));
       }
 
-      return { purchaseOrders, unassigned };
+      return result;
     });
-
-    for (const po of result.purchaseOrders) {
-      await publishInventoryEvent('INVENTORY_PURCHASE_ORDER_CREATED', timestampPayload({
-        tenant,
-        po_id: po.po_id,
-        user_id: user.user_id,
-      }));
-    }
-
-    return result;
   },
 );

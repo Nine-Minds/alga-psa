@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { IStatus } from '@alga-psa/types';
 
 type BoardRow = {
   tenant: string;
@@ -24,6 +25,23 @@ let state: { boards: BoardRow[]; statuses: StatusRow[] };
 
 const createTenantKnexMock = vi.fn();
 const withTransactionMock = vi.fn();
+
+type ReturnedActionError = { actionError: string } | { permissionError: string };
+
+function isReturnedActionError(value: unknown): value is ReturnedActionError {
+  return Boolean(
+    value &&
+    typeof value === 'object' &&
+    ('actionError' in value || 'permissionError' in value)
+  );
+}
+
+function expectActionSuccess<T>(result: T | ReturnedActionError): T {
+  if (isReturnedActionError(result)) {
+    throw new Error('actionError' in result ? result.actionError : result.permissionError);
+  }
+  return result;
+}
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: any) => async (...args: any[]) =>
@@ -192,30 +210,30 @@ describe('boardTicketStatusActions', () => {
   it('T023: createBoardTicketStatus writes board ownership and only rejects duplicates on the same board', async () => {
     const { createBoardTicketStatus } = await import('./boardTicketStatusActions');
 
-    const created = await createBoardTicketStatus('board-b', {
+    const created = expectActionSuccess(await createBoardTicketStatus('board-b', {
       name: 'Closed',
       is_closed: true,
       is_default: false,
-    });
+    })) as IStatus;
 
     expect(created.board_id).toBe('board-b');
     expect(state.statuses.some((status) => status.board_id === 'board-b' && status.name === 'Closed')).toBe(true);
 
-    await expect(
-      createBoardTicketStatus('board-b', {
+    expect(
+      await createBoardTicketStatus('board-b', {
         name: 'Open',
         is_closed: false,
         is_default: false,
       })
-    ).rejects.toThrow('Ticket status names must be unique within a board.');
+    ).toMatchObject({ actionError: 'Ticket status names must be unique within a board.' });
   });
 
   it('T024: updateBoardTicketStatus rejects implicit cross-board mutation', async () => {
     const { updateBoardTicketStatus } = await import('./boardTicketStatusActions');
 
-    await expect(
-      updateBoardTicketStatus('board-a', 'status-a-open', { board_id: 'board-b' } as any)
-    ).rejects.toThrow('Ticket statuses cannot be moved across boards implicitly.');
+    expect(
+      await updateBoardTicketStatus('board-a', 'status-a-open', { board_id: 'board-b' } as any)
+    ).toMatchObject({ actionError: 'Ticket statuses cannot be moved across boards implicitly.' });
 
     expect(state.statuses.find((status) => status.status_id === 'status-a-open')?.board_id).toBe('board-a');
   });
@@ -223,10 +241,10 @@ describe('boardTicketStatusActions', () => {
   it('T025: board-local default changes keep exactly one default on the edited board and leave other boards untouched', async () => {
     const { updateBoardTicketStatus } = await import('./boardTicketStatusActions');
 
-    const updated = await updateBoardTicketStatus('board-a', 'status-a-closed', {
+    const updated = expectActionSuccess(await updateBoardTicketStatus('board-a', 'status-a-closed', {
       is_closed: false,
       is_default: true,
-    });
+    })) as IStatus;
 
     expect(updated.status_id).toBe('status-a-closed');
 
@@ -240,12 +258,12 @@ describe('boardTicketStatusActions', () => {
   it('T026: deleting or closing the last valid open default on a board is rejected with a clear validation error', async () => {
     const { deleteBoardTicketStatus, updateBoardTicketStatus } = await import('./boardTicketStatusActions');
 
-    await expect(
-      updateBoardTicketStatus('board-b', 'status-b-open', { is_closed: true })
-    ).rejects.toThrow('Select exactly one open default ticket status before saving the board.');
+    expect(
+      await updateBoardTicketStatus('board-b', 'status-b-open', { is_closed: true })
+    ).toMatchObject({ actionError: 'Select exactly one open default ticket status before saving the board.' });
 
-    await expect(
-      deleteBoardTicketStatus('board-b', 'status-b-open')
-    ).rejects.toThrow('Add at least one ticket status before saving the board.');
+    expect(
+      await deleteBoardTicketStatus('board-b', 'status-b-open')
+    ).toMatchObject({ actionError: 'Add at least one ticket status before saving the board.' });
   });
 });

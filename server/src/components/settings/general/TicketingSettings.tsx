@@ -5,9 +5,12 @@ import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import CustomTabs from '@alga-psa/ui/components/CustomTabs';
 import ChecklistTemplatesSettings from './ChecklistTemplatesSettings';
-import { BoardsSettings, CategoriesSettings, DisplaySettings } from '@alga-psa/tickets/components';
-import { NumberingSettings, PrioritySettings } from '@alga-psa/reference-data/components';
-import { getSlaPolicies } from '@alga-psa/sla/actions';
+import BoardsSettings from '@alga-psa/tickets/components/settings/BoardsSettings';
+import CategoriesSettings from '@alga-psa/tickets/components/settings/CategoriesSettings';
+import DisplaySettings from '@alga-psa/tickets/components/settings/DisplaySettings';
+import NumberingSettings from '@alga-psa/reference-data/components/settings/NumberingSettings';
+import PrioritySettings from '@alga-psa/reference-data/components/settings/PrioritySettings';
+import { getSlaPolicies } from '@alga-psa/sla/actions/slaActions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useProduct } from '@/context/ProductContext';
 

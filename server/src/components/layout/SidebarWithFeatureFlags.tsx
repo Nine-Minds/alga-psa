@@ -11,7 +11,7 @@ import {
   type MenuItem,
   type NavigationSection,
 } from '@/config/menuConfig';
-import { getCurrentUserPermissions } from '@alga-psa/user-composition/actions';
+import { getCurrentUserPermissions } from '@alga-psa/user-composition/actions/userQueryActions';
 import { useTier } from '@/context/TierContext';
 import { useProduct } from '@/context/ProductContext';
 import { filterMenuSectionsByProduct } from '@/lib/productSurfaceRegistry';
@@ -56,9 +56,6 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
   const navigationFlag = useFeatureFlag('ui-navigation-v2', { defaultValue: true });
   const useNavigationSections =
     typeof navigationFlag === 'boolean' ? navigationFlag : navigationFlag?.enabled ?? false;
-  const inventoryFlag = useFeatureFlag('inventory-enabled');
-  const isInventoryEnabled =
-    typeof inventoryFlag === 'boolean' ? inventoryFlag : inventoryFlag?.enabled ?? false;
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
   const { hasFeature } = useTier();
   const { productCode } = useProduct();
@@ -105,10 +102,6 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
     const filteredSections = baseSections.map((section) => ({
       ...section,
       items: section.items.map((item) => {
-        if (item.name === 'Inventory' && !isInventoryEnabled) {
-          return null;
-        }
-
         if (item.name === 'Workflows') {
           const filteredSubItems = item.subItems?.filter((subItem) => {
             if (subItem.name !== 'Dead Letter') return true;
@@ -118,14 +111,14 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
         }
 
         return item;
-      }).filter((item): item is MenuItem => item !== null)
+      })
     }));
 
     return filterMenuSectionsByProduct(
       productCode,
       filterNavigationSectionsByFeatureAccess(filteredSections, hasFeature),
     );
-  }, [canWorkflowAdmin, useNavigationSections, hasFeature, productCode, isInventoryEnabled]);
+  }, [canWorkflowAdmin, useNavigationSections, hasFeature, productCode]);
 
   const settingsSections = useMemo<NavigationSection[]>(() => {
     return filterMenuSectionsByProduct(productCode, settingsNavigationSections);

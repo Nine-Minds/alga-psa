@@ -6,6 +6,7 @@ import { Knex } from 'knex';
 import { hasPermission, withAuth } from '@alga-psa/auth';
 import { getConnection, withTransaction, tenantDb, type TenantDb } from '@alga-psa/db';
 import { getAuthenticatedClientId } from '../../lib/clientAuth';
+import { clientPortalActionErrorFrom, type ClientPortalActionError } from './clientPortalActionErrors';
 
 export interface ClientDocumentFilters {
   search?: string;
@@ -184,11 +185,12 @@ export const getClientDocuments = withAuth(
     page: number = 1,
     pageSize: number = 20,
     filters: ClientDocumentFilters = {}
-  ): Promise<PaginatedClientDocuments> => {
-    // Enforce client portal access only
-    if (user.user_type !== 'client') {
-      throw new Error('Access denied: Client portal actions are restricted to client users');
-    }
+  ): Promise<PaginatedClientDocuments | ClientPortalActionError> => {
+    try {
+      // Enforce client portal access only
+      if (user.user_type !== 'client') {
+        throw new Error('Access denied: Client portal actions are restricted to client users');
+      }
 
     // Cap pageSize to prevent excessive queries
     const effectivePageSize = Math.min(Math.max(pageSize, 1), 100);
@@ -220,7 +222,7 @@ export const getClientDocuments = withAuth(
       throw new Error('Insufficient permissions to view documents');
     }
 
-    return withTransaction(db, async (trx: Knex.Transaction) => {
+      return withTransaction(db, async (trx: Knex.Transaction) => {
       const clientId = await getAuthenticatedClientId(trx, user.user_id, tenant);
       const scopedDb = tenantDb(trx, tenant);
 
@@ -277,7 +279,14 @@ export const getClientDocuments = withAuth(
         pageSize: effectivePageSize,
         totalPages: Math.ceil(total / effectivePageSize),
       };
-    });
+      });
+    } catch (error) {
+      const expected = clientPortalActionErrorFrom(error);
+      if (expected) {
+        return expected;
+      }
+      throw error;
+    }
   }
 );
 
@@ -286,11 +295,12 @@ export const getClientDocuments = withAuth(
  * Only includes folders that contain client-visible documents.
  */
 export const getClientDocumentFolders = withAuth(
-  async (user, { tenant }): Promise<IFolderNode[]> => {
-    // Enforce client portal access only
-    if (user.user_type !== 'client') {
-      throw new Error('Access denied: Client portal actions are restricted to client users');
-    }
+  async (user, { tenant }): Promise<IFolderNode[] | ClientPortalActionError> => {
+    try {
+      // Enforce client portal access only
+      if (user.user_type !== 'client') {
+        throw new Error('Access denied: Client portal actions are restricted to client users');
+      }
 
     const db = await getConnection(tenant);
 
@@ -310,7 +320,7 @@ export const getClientDocumentFolders = withAuth(
       throw new Error('Insufficient permissions to view document folders');
     }
 
-    return withTransaction(db, async (trx: Knex.Transaction) => {
+      return withTransaction(db, async (trx: Knex.Transaction) => {
       const clientId = await getAuthenticatedClientId(trx, user.user_id, tenant);
       const scopedDb = tenantDb(trx, tenant);
 
@@ -337,7 +347,14 @@ export const getClientDocumentFolders = withAuth(
       const allPaths = Array.from(new Set([...docPaths, ...explicitPaths])).filter(Boolean).sort();
 
       return buildFolderTreeFromPaths(allPaths);
-    });
+      });
+    } catch (error) {
+      const expected = clientPortalActionErrorFrom(error);
+      if (expected) {
+        return expected;
+      }
+      throw error;
+    }
   }
 );
 
@@ -346,11 +363,12 @@ export const getClientDocumentFolders = withAuth(
  * Returns the document if access is allowed, throws otherwise.
  */
 export const downloadClientDocument = withAuth(
-  async (user, { tenant }, documentId: string): Promise<IDocument> => {
-    // Enforce client portal access only
-    if (user.user_type !== 'client') {
-      throw new Error('Access denied: Client portal actions are restricted to client users');
-    }
+  async (user, { tenant }, documentId: string): Promise<IDocument | ClientPortalActionError> => {
+    try {
+      // Enforce client portal access only
+      if (user.user_type !== 'client') {
+        throw new Error('Access denied: Client portal actions are restricted to client users');
+      }
 
     if (!documentId) {
       throw new Error('documentId is required');
@@ -374,7 +392,7 @@ export const downloadClientDocument = withAuth(
       throw new Error('Insufficient permissions to download documents');
     }
 
-    return withTransaction(db, async (trx: Knex.Transaction) => {
+      return withTransaction(db, async (trx: Knex.Transaction) => {
       const clientId = await getAuthenticatedClientId(trx, user.user_id, tenant);
       const scopedDb = tenantDb(trx, tenant);
 
@@ -392,7 +410,14 @@ export const downloadClientDocument = withAuth(
       }
 
       return document as unknown as IDocument;
-    });
+      });
+    } catch (error) {
+      const expected = clientPortalActionErrorFrom(error);
+      if (expected) {
+        return expected;
+      }
+      throw error;
+    }
   }
 );
 

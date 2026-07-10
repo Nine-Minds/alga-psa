@@ -22,6 +22,7 @@ import {
   TICKET_ACTIVITY_SOURCE,
   writeTicketActivity,
 } from '@alga-psa/shared/lib/ticketActivity';
+import { ticketActionErrorFrom, type TicketActionError } from '../ticketActionErrors';
 
 function formatLiveUpdateDisplayName(user: any): string {
   return `${user?.first_name || ''} ${user?.last_name || ''}`.trim() || user?.username || 'Unknown User';
@@ -162,7 +163,7 @@ async function updateTicketResponseState(
   return { previousState, newState };
 }
 
-export const findCommentsByTicketId = withAuth(async (_user, { tenant }, ticketId: string) => {
+export const findCommentsByTicketId = withAuth(async (_user, { tenant }, ticketId: string): Promise<IComment[] | TicketActionError> => {
   const { knex: db } = await createTenantKnex();
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -171,11 +172,15 @@ export const findCommentsByTicketId = withAuth(async (_user, { tenant }, ticketI
     });
   } catch (error) {
     console.error(error);
-    throw new Error(`Failed to find comments for ticket id: ${ticketId}`);
+    const expected = ticketActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
   }
 });
 
-export const findCommentById = withAuth(async (_user, { tenant }, commentId: string) => {
+export const findCommentById = withAuth(async (_user, { tenant }, commentId: string): Promise<IComment | TicketActionError | null> => {
   const { knex: db } = await createTenantKnex();
   try {
     return await withTransaction(db, async (trx: Knex.Transaction) => {
@@ -184,11 +189,15 @@ export const findCommentById = withAuth(async (_user, { tenant }, commentId: str
     });
   } catch (error) {
     console.error(error);
-    throw new Error(`Failed to find comment with id: ${commentId}`);
+    const expected = ticketActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
   }
 });
 
-export const createComment = withAuth(async (user, { tenant }, comment: Omit<IComment, 'tenant'>): Promise<string> => {
+export const createComment = withAuth(async (user, { tenant }, comment: Omit<IComment, 'tenant'>): Promise<string | TicketActionError> => {
   try {
     console.log(`[createComment] Starting with comment:`, {
       note_length: comment.note ? comment.note.length : 0,
@@ -451,8 +460,12 @@ export const createComment = withAuth(async (user, { tenant }, comment: Omit<ICo
       return commentId;
     });
   } catch (error) {
+    const expected = ticketActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
     console.error(`Failed to create comment:`, error);
-    throw new Error(`Failed to create comment`);
+    throw error;
   }
 });
 
@@ -657,9 +670,13 @@ export const updateComment = withAuth(async (user, { tenant }, id: string, comme
       }
     });
   } catch (error) {
+    const expected = ticketActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
     console.error(`[updateComment] Failed to update comment with ID ${id}:`, error);
     console.error(`[updateComment] Stack trace:`, error instanceof Error ? error.stack : 'No stack trace available');
-    throw new Error(`Failed to update comment with id ${id}`);
+    throw error;
   }
 });
 
@@ -722,7 +739,11 @@ export const deleteComment = withAuth(async (user, _ctx, id: string) => {
       }
     }
   } catch (error) {
+    const expected = ticketActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
     console.error(`Failed to delete comment with id ${id}:`, error);
-    throw new Error(`Failed to delete comment with id ${id}`);
+    throw error;
   }
 });

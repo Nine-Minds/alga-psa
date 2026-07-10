@@ -42,4 +42,23 @@ describe('parseServiceReadRows', () => {
     expect(services[0]?.service_id).toBe(validServiceRow.service_id);
     expect(services[0]?.service_name).toBe('Managed Support');
   });
+
+  // The skip is narrow on purpose: only `per_unit` is unrepresentable. Anything else that
+  // fails validation is a real data defect and must fail fast rather than silently vanish
+  // from a billing service list.
+  it('still throws on a malformed row rather than dropping it', () => {
+    const malformedRow = {
+      ...validServiceRow,
+      service_id: '44444444-4444-4444-8444-444444444444',
+      billing_method: 'not_a_billing_method',
+    };
+
+    expect(() => parseServiceReadRows([malformedRow], {})).toThrow();
+  });
+
+  it('throws when a required field is missing rather than dropping the row', () => {
+    const { service_name: _omitted, ...rowWithoutName } = validServiceRow;
+
+    expect(() => parseServiceReadRows([rowWithoutName as typeof validServiceRow], {})).toThrow();
+  });
 });

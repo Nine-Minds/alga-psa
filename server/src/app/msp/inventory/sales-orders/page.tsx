@@ -1,4 +1,9 @@
-import { listKitSummaries, listSalesOrders, listStockLocations } from '@alga-psa/inventory/actions';
+import {
+  getInventoryTenantCurrency,
+  listKitSummaries,
+  listSalesOrders,
+  listStockLocations,
+} from '@alga-psa/inventory/actions';
 import { SalesOrdersManager } from '@alga-psa/inventory/components';
 // Billing owns SO invoicing (billing → inventory dependency direction); the server
 // action references are passed down to the client component as props (F008).
@@ -10,6 +15,7 @@ import {
 } from '@alga-psa/billing/actions';
 import { getAllClients } from '@alga-psa/clients/actions';
 import { getSession } from '@alga-psa/auth';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { redirect } from 'next/navigation';
 import type { IClient, ISalesOrder, IStockLocation } from '@alga-psa/types';
 import type { SalesOrderServiceOption } from '@alga-psa/inventory/components';
@@ -36,19 +42,30 @@ export default async function SalesOrdersPage({ searchParams }: SalesOrdersPageP
   }
 
   let initialSos: ISalesOrder[] = [];
+  let loadErrorMessage: string | undefined;
   try {
     const query = await searchParams;
     const serviceId = query?.create === '1'
       ? undefined
       : typeof query?.service_id === 'string' ? query.service_id : undefined;
-    initialSos = await listSalesOrders({ serviceId });
+    const result = await listSalesOrders({ serviceId });
+    if (isActionMessageError(result) || isActionPermissionError(result)) {
+      loadErrorMessage = getErrorMessage(result);
+    } else {
+      initialSos = result;
+    }
   } catch (error) {
     console.error('Failed to load sales orders:', error);
   }
 
   let locations: IStockLocation[] = [];
   try {
-    locations = await listStockLocations();
+    const result = await listStockLocations();
+    if (isActionMessageError(result) || isActionPermissionError(result)) {
+      console.error('Failed to load stock locations:', getErrorMessage(result));
+    } else {
+      locations = result;
+    }
   } catch (error) {
     console.error('Failed to load stock locations:', error);
   }
@@ -69,7 +86,11 @@ export default async function SalesOrdersPage({ searchParams }: SalesOrdersPageP
       getServices(1, 999, { item_kind: 'any' }),
       listKitSummaries(),
     ]);
-    const kitByServiceId = new Map(kits.map((kit) => [kit.service_id, kit]));
+    if (isActionMessageError(kits) || isActionPermissionError(kits)) {
+      console.error('Failed to load kits:', getErrorMessage(kits));
+    }
+    const kitList = isActionMessageError(kits) || isActionPermissionError(kits) ? [] : kits;
+    const kitByServiceId = new Map(kitList.map((kit) => [kit.service_id, kit]));
     services = paginated.services.map((s) => ({
       service_id: s.service_id,
       service_name: s.service_name,
@@ -84,15 +105,24 @@ export default async function SalesOrdersPage({ searchParams }: SalesOrdersPageP
     console.error('Failed to load services:', error);
   }
 
+  let defaultCurrencyCode = 'USD';
+  try {
+    defaultCurrencyCode = await getInventoryTenantCurrency();
+  } catch (error) {
+    console.error('Failed to load inventory default currency:', error);
+  }
+
   return (
     <SalesOrdersManager
       initialSos={initialSos}
+      loadErrorMessage={loadErrorMessage}
       locations={locations}
       clients={clients}
       services={services}
       fulfillAndInvoice={fulfillAndInvoiceSoLine}
       generateInvoice={generateInvoiceForSalesOrder}
       confirmDropShip={confirmDropShipAndInvoice}
+      defaultCurrencyCode={defaultCurrencyCode}
     />
   );
 }

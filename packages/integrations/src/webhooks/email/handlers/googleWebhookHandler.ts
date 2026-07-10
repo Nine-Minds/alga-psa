@@ -270,7 +270,7 @@ export async function handleGoogleWebhook(request: NextRequest) {
     // Retry transient/unknown failures; acknowledge only likely permanent parse/validation failures.
     return NextResponse.json({ 
       success: false,
-      error: error.message,
+      error: 'Google webhook could not be processed.',
       retryable,
     }, {
       status: retryable ? 503 : 400,

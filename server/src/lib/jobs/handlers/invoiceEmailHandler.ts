@@ -10,6 +10,7 @@ import { getInvoiceForRendering } from '@alga-psa/billing/actions/invoiceQueries
 import { getInvoicePaymentLinkUrlForEmail } from '@alga-psa/billing/actions/paymentActions';
 import logger from '@alga-psa/core/logger';
 import { tenantDb } from '@alga-psa/db';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 /**
  * Gets the tenant company name for email templates.
@@ -74,6 +75,9 @@ export class InvoiceEmailHandler {
         try {
           // Get invoice details first for better logging
           const invoice = await getInvoiceForRendering(invoiceId);
+          if (isActionMessageError(invoice) || isActionPermissionError(invoice)) {
+            throw new Error(getErrorMessage(invoice));
+          }
           if (!invoice || !invoice.invoice_number) {
             throw new Error(`Failed to get details for Invoice ID ${invoiceId}`);
           }
@@ -289,12 +293,15 @@ export class InvoiceEmailHandler {
         } catch (error) {
           console.log('failed to process invoice:', error);
           const invoice = await getInvoiceForRendering(invoiceId);
-          const client = invoice ? await getClientById(invoice.client_id) : null;
-          const invoiceNumber = invoice?.invoice_number || invoiceId;
+          const invoiceError = isActionMessageError(invoice) || isActionPermissionError(invoice)
+            ? getErrorMessage(invoice)
+            : null;
+          const client = invoice && !invoiceError ? await getClientById(invoice.client_id) : null;
+          const invoiceNumber = invoice && !invoiceError ? invoice.invoice_number || invoiceId : invoiceId;
           const clientName = client?.client_name || 'Unknown Client';
           
           const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-          const contextualError = `Failed to process Invoice #${invoiceNumber} for ${clientName}: ${errorMessage}`;
+          const contextualError = `Failed to process Invoice #${invoiceNumber} for ${clientName}: ${invoiceError ?? errorMessage}`;
           
           // Record the failure in job_details
           // Update existing job detail records to failed status

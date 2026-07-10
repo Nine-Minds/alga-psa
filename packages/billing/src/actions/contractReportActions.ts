@@ -7,6 +7,7 @@ import type { RenewalWorkItemStatus } from '@alga-psa/types';
 import { deriveClientContractStatus } from '@alga-psa/shared/billingClients';
 import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 import type { Knex } from 'knex';
+import { permissionError, type ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 
 // Type definitions for reports
@@ -217,9 +218,9 @@ const mapAssignmentStatusToRevenueStatus = (
  * Get contract revenue report data
  * Shows monthly recurring revenue and year-to-date billing by contract
  */
-export const getContractRevenueReport = withAuth(async (user, { tenant }): Promise<ContractRevenue[]> => {
+export const getContractRevenueReport = withAuth(async (user, { tenant }): Promise<ContractRevenue[] | ActionPermissionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    throw new Error('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required');
   }
   try {
     const { knex } = await createTenantKnex();
@@ -311,10 +312,7 @@ export const getContractRevenueReport = withAuth(async (user, { tenant }): Promi
     return rows;
   } catch (error) {
     console.error('Error fetching contract revenue report:', error);
-    if (error instanceof Error) {
-      throw error;
-    }
-    throw new Error(`Failed to fetch contract revenue report: ${error}`);
+    throw error;
   }
 });
 
@@ -322,9 +320,9 @@ export const getContractRevenueReport = withAuth(async (user, { tenant }): Promi
  * Get contract expiration report data
  * Track upcoming contract expirations and renewal opportunities
  */
-export const getContractExpirationReport = withAuth(async (user, { tenant }): Promise<ContractExpiration[]> => {
+export const getContractExpirationReport = withAuth(async (user, { tenant }): Promise<ContractExpiration[] | ActionPermissionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    throw new Error('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required');
   }
   try {
     const { knex } = await createTenantKnex();
@@ -436,10 +434,7 @@ export const getContractExpirationReport = withAuth(async (user, { tenant }): Pr
     return rows;
   } catch (error) {
     console.error('Error fetching contract expiration report:', error);
-    if (error instanceof Error) {
-      throw error;
-    }
-    throw new Error(`Failed to fetch contract expiration report: ${error}`);
+    throw error;
   }
 });
 
@@ -447,9 +442,9 @@ export const getContractExpirationReport = withAuth(async (user, { tenant }): Pr
  * Get bucket usage report data
  * Monitor bucket hours usage and identify overage situations
  */
-export const getBucketUsageReport = withAuth(async (user, { tenant }): Promise<BucketUsage[]> => {
+export const getBucketUsageReport = withAuth(async (user, { tenant }): Promise<BucketUsage[] | ActionPermissionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    throw new Error('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required');
   }
   try {
     const { knex } = await createTenantKnex();
@@ -511,19 +506,16 @@ export const getBucketUsageReport = withAuth(async (user, { tenant }): Promise<B
     return bucketUsages;
   } catch (error) {
     console.error('Error fetching bucket usage report:', error);
-    if (error instanceof Error) {
-      throw error;
-    }
-    throw new Error(`Failed to fetch bucket usage report: ${error}`);
+    throw error;
   }
 });
 
 /**
  * Get contract report summary statistics
  */
-export const getContractReportSummary = withAuth(async (user, { tenant }): Promise<ContractReportSummary> => {
+export const getContractReportSummary = withAuth(async (user, { tenant }): Promise<ContractReportSummary | ActionPermissionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
-    throw new Error('Permission denied: billing read required');
+    return permissionError('Permission denied: billing read required');
   }
   try {
     const { knex } = await createTenantKnex();
@@ -580,9 +572,6 @@ export const getContractReportSummary = withAuth(async (user, { tenant }): Promi
     };
   } catch (error) {
     console.error('Error fetching contract report summary:', error);
-    if (error instanceof Error) {
-      throw error;
-    }
-    throw new Error(`Failed to fetch contract report summary: ${error}`);
+    throw error;
   }
 });

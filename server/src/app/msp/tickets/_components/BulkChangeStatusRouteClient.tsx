@@ -5,6 +5,11 @@ import type { SelectOption } from '@alga-psa/ui/components/CustomSelect';
 import BulkChangeStatusDialog from '@alga-psa/tickets/components/BulkChangeStatusDialog';
 import { bulkUpdateTicketStatus } from '@alga-psa/tickets/actions/ticketActions';
 import { getBoardTicketStatuses } from '@alga-psa/tickets/actions/board-actions/boardTicketStatusActions';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { useTicketsRouteState } from '@alga-psa/tickets/components/TicketsRouteProvider';
 import {
   type TicketBulkCloseMode,
@@ -47,6 +52,11 @@ export default function BulkChangeStatusRouteClient({ closeMode }: BulkChangeSta
     getBoardTicketStatuses(selectedTicketsSharedBoardId)
       .then((rows) => {
         if (cancelled) return;
+        if (isActionMessageError(rows) || isActionPermissionError(rows)) {
+          handleError(rows, getErrorMessage(rows));
+          setStatuses([]);
+          return;
+        }
         setStatuses(rows.map((status: { status_id: string; name: string }) => ({
           value: status.status_id,
           label: status.name,
@@ -64,7 +74,7 @@ export default function BulkChangeStatusRouteClient({ closeMode }: BulkChangeSta
     return () => {
       cancelled = true;
     };
-  }, [isResolvingSelectedBoards, selectedTicketsSharedBoardId]);
+  }, [handleError, isResolvingSelectedBoards, selectedTicketsSharedBoardId]);
 
   const handleConfirm = async (statusId: string) => {
     if (selectedTicketIdsArray.length === 0) return;

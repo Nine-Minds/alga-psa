@@ -867,6 +867,7 @@
     "addPurchaseOrder": "Añadir orden de compra",
     "allVendors": "Todos los proveedores",
     "amountOnOrder": "{{amount}} en pedido",
+    "mixedCurrencyOnOrder": "{{count}} órdenes de compra en pedido en varias monedas",
     "cancelConfirm": "¿Está seguro de que desea cancelar la orden de compra {{poNumber}}? Esta acción no se puede deshacer.",
     "cancelFailed": "No se pudo cancelar la orden de compra.",
     "cancelTitle": "Cancelar orden de compra",
@@ -879,7 +880,7 @@
       "product": "Producto",
       "qty": "Cant.",
       "received": "Recibido",
-      "unitCost": "Costo unitario ($)",
+      "unitCost": "Costo unitario",
       "vendor": "Proveedor"
     },
     "count": "{{count}} orden de compra",
@@ -1111,7 +1112,7 @@
       "selectService": "Select a service…",
       "service": "Service",
       "serviceId": "ID de servicio",
-      "unitPrice": "Precio unitario ($)",
+      "unitPrice": "Precio unitario",
       "unitPriceIn": "Unit price ({{currency}})"
     },
     "filters": {
@@ -1199,7 +1200,8 @@
     "title": "Órdenes de venta",
     "total": "Total",
     "unassignedBackorder": "{{count}} línea(s) en pedido pendiente no tienen proveedor preferido — cree esas órdenes de compra manualmente.",
-    "unnamedService": "Unnamed"
+    "unnamedService": "Unnamed",
+    "notFound": "Sales order not found."
   },
   "stock": {
     "actions": {
@@ -1224,7 +1226,7 @@
     "fields": {
       "location": "Ubicación",
       "product": "Producto",
-      "unitCost": "Costo unitario (USD)"
+      "unitCost": "Costo unitario"
     },
     "filteredCount": "{{shown}} de {{total}} productos",
     "levels": {
@@ -1466,7 +1468,7 @@
     "dialogTitle": "Lista de precios — {{name}}",
     "emptyState": "Aún no hay ofertas — añada abajo los números de pieza y los costos contractuales del proveedor.",
     "fields": {
-      "cost": "Costo ($)",
+      "cost": "Costo",
       "currency": "Moneda",
       "leadTime": "Plazo de entrega (días)",
       "preferred": "Proveedor preferido para este producto (impulsa las sugerencias de reposición)",

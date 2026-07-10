@@ -10,17 +10,62 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getAnalyticsAsync } from '../lib/authHelpers';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
-import { assertPsaOnlyTenantAccess } from '@shared/services/productAccessGuard';
+import { assertPsaOnlyTenantAccess, ProductAccessError } from '@shared/services/productAccessGuard';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 
 
 export type DeleteTaxRateResult = DeletionValidationResult & { success: boolean; deleted?: boolean };
+type TaxRateActionError = ActionMessageError | ActionPermissionError;
 
-export const getTaxRates = withAuth(async (user, { tenant }): Promise<ITaxRate[]> => {
+function taxRateActionErrorFrom(error: unknown): TaxRateActionError | null {
+  if (error instanceof ProductAccessError) {
+    return permissionError('Permission denied: Billing tax rates are not available for this tenant.');
+  }
+  if (error instanceof Error) {
+    if (error.message.startsWith('Permission denied')) {
+      return permissionError(error.message);
+    }
+    if (error.message.includes('Tax rate date range overlaps')) {
+      return actionError('Tax rate date range overlaps with an existing rate for this region.');
+    }
+    switch (error.message) {
+      case 'Region is required':
+        return actionError('Region is required.');
+      case 'Tax rate ID is required for updates':
+        return actionError('Tax rate ID is required for updates.');
+      case 'Tax rate not found':
+        return actionError('Tax rate not found.');
+    }
+  }
+
+  const dbError = error as { code?: string; column?: string };
+  if (dbError?.code === '22P02') {
+    return actionError('The selected tax rate or region is invalid. Please refresh and try again.');
+  }
+  if (dbError?.code === '23502') {
+    return actionError(`Missing required tax rate field${dbError.column ? `: ${dbError.column}` : ''}.`);
+  }
+  if (dbError?.code === '23503') {
+    return actionError('The selected tax region is no longer valid. Please refresh and choose another region.');
+  }
+  if (dbError?.code === '23505') {
+    return actionError('A tax rate already exists for this region and date range.');
+  }
+
+  return null;
+}
+
+export const getTaxRates = withAuth(async (user, { tenant }): Promise<ITaxRate[] | TaxRateActionError> => {
   try {
     await assertPsaOnlyTenantAccess(tenant, 'billing_actions');
     if (!await hasPermission(user, 'billing', 'read')) {
-      throw new Error('Permission denied: Cannot read tax rates');
+      return permissionError('Permission denied: Cannot read tax rates');
     }
 
     const { knex: db } = await createTenantKnex();
@@ -29,16 +74,25 @@ export const getTaxRates = withAuth(async (user, { tenant }): Promise<ITaxRate[]
         .select('*');
     });
   } catch (error) {
+    const expected = taxRateActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+
     console.error('Error fetching tax rates:', error);
-    throw new Error('Failed to fetch tax rates');
+    throw error;
   }
 });
 
-export const addTaxRate = withAuth(async (user, { tenant }, taxRateData: Omit<ITaxRate, 'tax_rate_id'>): Promise<ITaxRate> => {
+export const addTaxRate = withAuth(async (
+  user,
+  { tenant },
+  taxRateData: Omit<ITaxRate, 'tax_rate_id'>
+): Promise<ITaxRate | TaxRateActionError> => {
   try {
     await assertPsaOnlyTenantAccess(tenant, 'billing_actions');
     if (!await hasPermission(user, 'billing', 'create')) {
-      throw new Error('Permission denied: Cannot create tax rates');
+      return permissionError('Permission denied: Cannot create tax rates');
     }
 
     const { knex: db } = await createTenantKnex();
@@ -66,15 +120,23 @@ export const addTaxRate = withAuth(async (user, { tenant }, taxRateData: Omit<IT
     });
   } catch (error: any) {
     console.error('Error adding tax rate:', error);
-    throw new Error(error.message || 'Failed to add tax rate');
+    const expected = taxRateActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
   }
 });
 
-export const updateTaxRate = withAuth(async (user, { tenant }, taxRateData: ITaxRate): Promise<ITaxRate> => {
+export const updateTaxRate = withAuth(async (
+  user,
+  { tenant },
+  taxRateData: ITaxRate
+): Promise<ITaxRate | TaxRateActionError> => {
   try {
     await assertPsaOnlyTenantAccess(tenant, 'billing_actions');
     if (!await hasPermission(user, 'billing', 'update')) {
-      throw new Error('Permission denied: Cannot update tax rates');
+      return permissionError('Permission denied: Cannot update tax rates');
     }
 
     const { knex: db } = await createTenantKnex();
@@ -130,7 +192,11 @@ export const updateTaxRate = withAuth(async (user, { tenant }, taxRateData: ITax
     });
   } catch (error: any) {
     console.error('Error updating tax rate:', error);
-    throw new Error(error.message || 'Failed to update tax rate');
+    const expected = taxRateActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
   }
 });
 
@@ -138,7 +204,14 @@ export const deleteTaxRate = withAuth(async (user, { tenant }, taxRateId: string
   try {
     await assertPsaOnlyTenantAccess(tenant, 'billing_actions');
     if (!await hasPermission(user, 'billing', 'delete')) {
-      throw new Error('Permission denied: billing delete required');
+      return {
+        success: false,
+        canDelete: false,
+        code: 'PERMISSION_DENIED',
+        message: 'Permission denied: billing delete required',
+        dependencies: [],
+        alternatives: [],
+      };
     }
     const { knex } = await createTenantKnex();
     const result = await deleteEntityWithValidation('tax_rate', taxRateId, knex, tenant, async (trx, tenantId) => {
@@ -192,7 +265,14 @@ export const deleteTaxRate = withAuth(async (user, { tenant }, taxRateId: string
 
 export const confirmDeleteTaxRate = withAuth(async (user, _ctx, taxRateId: string): Promise<DeleteTaxRateResult> => {
   if (!await hasPermission(user, 'billing', 'delete')) {
-    throw new Error('Permission denied: billing delete required');
+    return {
+      success: false,
+      canDelete: false,
+      code: 'PERMISSION_DENIED',
+      message: 'Permission denied: billing delete required',
+      dependencies: [],
+      alternatives: [],
+    };
   }
   return deleteTaxRate(taxRateId);
 });

@@ -10,6 +10,14 @@ import { auditLog } from '@alga-psa/db';
 import { resolveReconciliationReport } from './creditReconciliationActions';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+export type CreditReconciliationFixActionError = ActionMessageError | ActionPermissionError;
 
 function tenantScopedTable<Row extends object = Record<string, unknown>>(
   conn: Knex | Knex.Transaction,
@@ -17,6 +25,75 @@ function tenantScopedTable<Row extends object = Record<string, unknown>>(
   tableExpression: string
 ) {
   return tenantDb(conn, tenant).table<Row>(tableExpression);
+}
+
+function creditReconciliationFixActionErrorFrom(error: unknown): CreditReconciliationFixActionError | null {
+  if (
+    typeof error === 'object' &&
+    error !== null &&
+    (
+      typeof (error as { actionError?: unknown }).actionError === 'string' ||
+      typeof (error as { permissionError?: unknown }).permissionError === 'string'
+    )
+  ) {
+    return error as CreditReconciliationFixActionError;
+  }
+
+  if (error instanceof Error) {
+    if (error.message.startsWith('Permission denied')) {
+      return permissionError(error.message);
+    }
+    if (error.message.startsWith('Tenant context is required')) {
+      return actionError('No tenant context. Please refresh and try again.');
+    }
+    if (/^Reconciliation report .+ not found$/.test(error.message)) {
+      return actionError('Reconciliation report not found. It may have been updated or deleted. Please refresh and try again.');
+    }
+    if (/^Reconciliation report .+ is already resolved$/.test(error.message)) {
+      return actionError('This reconciliation report is already resolved. Please refresh and try again.');
+    }
+    if (/^Reconciliation report .+ is not .+ issue$/.test(error.message)) {
+      return actionError('This fix does not apply to the selected reconciliation report.');
+    }
+    if (/^Credit tracking entry .+ not found$/.test(error.message)) {
+      return actionError('Credit tracking entry not found. It may have been updated or deleted. Please refresh and try again.');
+    }
+    if (/^Client .+ not found$/.test(error.message)) {
+      return actionError('Client not found. It may have been updated or deleted. Please refresh and try again.');
+    }
+    if (error.message === 'Custom adjustment amount is required') {
+      return actionError('Custom adjustment amount is required.');
+    }
+    if (error.message.startsWith('Unknown fix type:')) {
+      return actionError('Unsupported reconciliation fix type.');
+    }
+  }
+
+  const dbError = error as { code?: string; column?: string };
+  if (dbError?.code === '22P02') {
+    return actionError('One of the selected reconciliation values is invalid. Please refresh and try again.');
+  }
+  if (dbError?.code === '23502') {
+    return actionError(`Missing required reconciliation field${dbError.column ? `: ${dbError.column}` : ''}.`);
+  }
+  if (dbError?.code === '23503') {
+    return actionError('A selected reconciliation record no longer exists. Please refresh and try again.');
+  }
+  if (dbError?.code === '23505') {
+    return actionError('A conflicting reconciliation record already exists. Please refresh and try again.');
+  }
+
+  return null;
+}
+
+async function withCreditReconciliationFixActionErrors<T>(work: () => Promise<T>): Promise<T | CreditReconciliationFixActionError> {
+  try {
+    return await work();
+  } catch (error) {
+    const expected = creditReconciliationFixActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
 }
 
 /**
@@ -31,7 +108,8 @@ export const createMissingCreditTrackingEntry = withAuth(async (
   { tenant },
   reportId: string,
   notes: string
-): Promise<ICreditReconciliationReport> => {
+): Promise<ICreditReconciliationReport | CreditReconciliationFixActionError> => {
+  return withCreditReconciliationFixActionErrors(async () => {
   if (!await hasPermission(user as any, 'billing', 'update')) {
     throw new Error('Permission denied: billing update required');
   }
@@ -102,6 +180,10 @@ export const createMissingCreditTrackingEntry = withAuth(async (
         notes,
         trx
       );
+      const resolverError = creditReconciliationFixActionErrorFrom(resolvedReport);
+      if (resolverError) {
+        throw resolverError;
+      }
 
       return resolvedReport;
     } catch (error) {
@@ -116,13 +198,14 @@ export const createMissingCreditTrackingEntry = withAuth(async (
           changedData: {},
           details: {
             action: 'Credit tracking entry creation failed',
-            reason: error instanceof Error ? error.message : 'Unknown error',
+            reason: 'Credit tracking entry could not be created.',
             report_id: reportId
           }
         }
       );
       throw error;
     }
+  });
   });
 });
 
@@ -138,7 +221,8 @@ export const updateCreditTrackingRemainingAmount = withAuth(async (
   { tenant },
   reportId: string,
   notes: string
-): Promise<ICreditReconciliationReport> => {
+): Promise<ICreditReconciliationReport | CreditReconciliationFixActionError> => {
+  return withCreditReconciliationFixActionErrors(async () => {
   if (!await hasPermission(user as any, 'billing', 'update')) {
     throw new Error('Permission denied: billing update required');
   }
@@ -208,6 +292,10 @@ export const updateCreditTrackingRemainingAmount = withAuth(async (
         notes,
         trx
       );
+      const resolverError = creditReconciliationFixActionErrorFrom(resolvedReport);
+      if (resolverError) {
+        throw resolverError;
+      }
 
       return resolvedReport;
     } catch (error) {
@@ -222,13 +310,14 @@ export const updateCreditTrackingRemainingAmount = withAuth(async (
           changedData: {},
           details: {
             action: 'Credit tracking remaining amount update failed',
-            reason: error instanceof Error ? error.message : 'Unknown error',
+            reason: 'Credit tracking remaining amount could not be updated.',
             report_id: reportId
           }
         }
       );
       throw error;
     }
+  });
   });
 });
 
@@ -246,7 +335,8 @@ export const applyCustomCreditAdjustment = withAuth(async (
   reportId: string,
   notes: string,
   amount?: number
-): Promise<ICreditReconciliationReport> => {
+): Promise<ICreditReconciliationReport | CreditReconciliationFixActionError> => {
+  return withCreditReconciliationFixActionErrors(async () => {
   if (!await hasPermission(user as any, 'billing', 'update')) {
     throw new Error('Permission denied: billing update required');
   }
@@ -359,13 +449,14 @@ export const applyCustomCreditAdjustment = withAuth(async (
           changedData: {},
           details: {
             action: 'Custom credit adjustment failed',
-            reason: error instanceof Error ? error.message : 'Unknown error',
+            reason: 'Custom credit adjustment could not be applied.',
             report_id: reportId
           }
         }
       );
       throw error;
     }
+  });
   });
 });
 
@@ -381,7 +472,8 @@ export const markReportAsResolvedNoAction = withAuth(async (
   { tenant },
   reportId: string,
   notes: string
-): Promise<ICreditReconciliationReport> => {
+): Promise<ICreditReconciliationReport | CreditReconciliationFixActionError> => {
+  return withCreditReconciliationFixActionErrors(async () => {
   if (!await hasPermission(user as any, 'billing', 'update')) {
     throw new Error('Permission denied: billing update required');
   }
@@ -452,13 +544,14 @@ export const markReportAsResolvedNoAction = withAuth(async (
           changedData: {},
           details: {
             action: 'Reconciliation report resolution failed',
-            reason: error instanceof Error ? error.message : 'Unknown error',
+            reason: 'Reconciliation report could not be resolved.',
             report_id: reportId
           }
         }
       );
       throw error;
     }
+  });
   });
 });
 
@@ -476,7 +569,8 @@ export async function applyReconciliationFix(
   fixType: string,
   notes: string,
   customData?: any
-): Promise<ICreditReconciliationReport> {
+): Promise<ICreditReconciliationReport | CreditReconciliationFixActionError> {
+  return withCreditReconciliationFixActionErrors(async () => {
   switch (fixType) {
     case 'create_tracking_entry':
       return await createMissingCreditTrackingEntry(reportId, notes);
@@ -499,4 +593,5 @@ export async function applyReconciliationFix(
     default:
       throw new Error(`Unknown fix type: ${fixType}`);
   }
+  });
 }

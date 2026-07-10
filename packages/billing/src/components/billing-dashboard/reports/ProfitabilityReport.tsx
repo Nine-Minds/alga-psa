@@ -25,6 +25,11 @@ import {
   type ProfitabilitySummary,
   type TicketProfitabilityRow,
 } from '@alga-psa/billing/actions';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 type DateRange = {
   startDate: string;
@@ -163,13 +168,21 @@ const ProfitabilityReport: React.FC = () => {
         ]);
 
         if (cancelled) return;
+        const returnedError = [summaryData, clientRows, agreementRows, ticketRows].find(
+          (result) => isActionMessageError(result) || isActionPermissionError(result)
+        );
+        if (returnedError) {
+          setError(getErrorMessage(returnedError));
+          return;
+        }
         setSummary(summaryData);
         setClients(clientRows);
         setAgreements(agreementRows);
         setTickets(ticketRows);
       } catch (err) {
         if (cancelled) return;
-        setError(err instanceof Error ? err.message : t('contractReports.profitability.errors.load', {
+        console.error('Failed to load profitability data:', err);
+        setError(t('contractReports.profitability.errors.load', {
           defaultValue: 'Failed to load profitability data',
         }));
       } finally {

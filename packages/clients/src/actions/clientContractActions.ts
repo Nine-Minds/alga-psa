@@ -29,6 +29,12 @@ import {
   deriveClientContractWorkflowStatus,
 } from '../lib/clientContractWorkflowEvents';
 import { assertMspPermission } from '../lib/authHelpers';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 const assertCanReadClientContracts = (user: any) =>
   assertMspPermission(
@@ -60,6 +66,27 @@ function maybeUserActor(user: any) {
   return { actorType: 'USER' as const, actorUserId: userId };
 }
 
+class ExpectedClientContractActionError extends Error {}
+
+export type ClientContractActionError = ActionMessageError | ActionPermissionError;
+export type ClientContractMutationResult = IClientContract | ClientContractActionError;
+
+function expectedClientContractActionError(message: string): ExpectedClientContractActionError {
+  return new ExpectedClientContractActionError(message);
+}
+
+function toClientContractActionError(error: unknown): ClientContractActionError | null {
+  if (error instanceof ExpectedClientContractActionError) {
+    return actionError(error.message);
+  }
+
+  if (error instanceof Error && error.message.startsWith('Permission denied:')) {
+    return permissionError(error.message);
+  }
+
+  return null;
+}
+
 const assertContractOwnedByClient = (
   contract: {
     contract_id?: string;
@@ -70,7 +97,7 @@ const assertContractOwnedByClient = (
   contractId: string
 ) => {
   if (!contract) {
-    throw new Error(`Contract ${contractId} not found or inactive`);
+    throw expectedClientContractActionError(`Contract ${contractId} not found or inactive`);
   }
 
   if (contract.is_template === true) {
@@ -83,11 +110,11 @@ const assertContractOwnedByClient = (
       : null;
 
   if (!ownerClientId) {
-    throw new Error(`Contract ${contractId} must have an owning client before it can be assigned`);
+    throw expectedClientContractActionError(`Contract ${contractId} must have an owning client before it can be assigned`);
   }
 
   if (ownerClientId !== clientId) {
-    throw new Error(
+    throw expectedClientContractActionError(
       `Contract ${contractId} belongs to a different client and cannot be assigned to client ${clientId}`
     );
   }
@@ -126,10 +153,7 @@ export const getClientContracts = withAuth(async (
     return clientContracts;
   } catch (error) {
     console.error(`Error fetching contracts for client ${clientId}:`, error);
-    if (error instanceof Error) {
-      throw error; // Preserve specific error messages
-    }
-    throw new Error(`Failed to fetch client contracts: ${error}`);
+    throw error;
   }
 });
 
@@ -147,10 +171,7 @@ export const getActiveClientContractsByClientIds = withAuth(async (
     return await ClientContract.getActiveByClientIds(clientIds, tenant);
   } catch (error) {
     console.error('Error fetching contracts for clients:', error);
-    if (error instanceof Error) {
-      throw error;
-    }
-    throw new Error(`Failed to fetch client contracts: ${error}`);
+    throw error;
   }
 });
 
@@ -168,10 +189,7 @@ export const getClientContractById = withAuth(async (
     return await ClientContract.getById(clientContractId, tenant);
   } catch (error) {
     console.error(`Error fetching client contract ${clientContractId}:`, error);
-    if (error instanceof Error) {
-      throw error; // Preserve specific error messages
-    }
-    throw new Error(`Failed to fetch client contract: ${error}`);
+    throw error;
   }
 });
 
@@ -189,10 +207,7 @@ export const getDetailedClientContract = withAuth(async (
     return await ClientContract.getDetailedClientContract(clientContractId, tenant);
   } catch (error) {
     console.error(`Error fetching detailed client contract ${clientContractId}:`, error);
-    if (error instanceof Error) {
-      throw error; // Preserve specific error messages
-    }
-    throw new Error(`Failed to fetch detailed client contract: ${error}`);
+    throw error;
   }
 });
 
@@ -297,10 +312,7 @@ export const assignContractToClient = withAuth(async (
     return clientContract;
   } catch (error) {
     console.error(`Error assigning contract ${contractId} to client ${clientId}:`, error);
-    if (error instanceof Error) {
-      throw error; // Preserve specific error messages
-    }
-    throw new Error(`Failed to assign contract to client: ${error}`);
+    throw error;
   }
 });
 
@@ -317,43 +329,60 @@ export const createClientContract = withAuth(async (
     po_number?: string | null;
     po_amount?: number | null;
   }
-): Promise<IClientContract> => {
-  await assertCanCreateClientContracts(_user);
+): Promise<ClientContractMutationResult> => {
+  try {
+    await assertCanCreateClientContracts(_user);
+  } catch (error) {
+    const expectedError = toClientContractActionError(error);
+    if (expectedError) {
+      return expectedError;
+    }
+    throw error;
+  }
 
   const { knex } = await createTenantKnex();
 
   let createdForEvent: IClientContract | null = null;
-  const created = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    const db = tenantDb(trx, tenant);
+  let created: IClientContract;
+  try {
+    created = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const db = tenantDb(trx, tenant);
 
-    const clientExists = await db.table('clients').where({ client_id: input.client_id }).first();
-    if (!clientExists) {
-      throw new Error(`Client ${input.client_id} not found`);
-    }
+      const clientExists = await db.table('clients').where({ client_id: input.client_id }).first();
+      if (!clientExists) {
+        throw expectedClientContractActionError(`Client ${input.client_id} not found`);
+      }
 
-    const contractQuery = db.table('contracts')
-      .where({ contract_id: input.contract_id });
-    if (input.is_active) {
-      contractQuery.andWhere({ is_active: true });
-    }
-    const contractExists = await contractQuery.first();
+      const contractQuery = db.table('contracts')
+        .where({ contract_id: input.contract_id });
+      if (input.is_active) {
+        contractQuery.andWhere({ is_active: true });
+      }
+      const contractExists = await contractQuery.first();
 
-    assertContractOwnedByClient(contractExists, input.client_id, input.contract_id);
+      assertContractOwnedByClient(contractExists, input.client_id, input.contract_id);
 
-    const createdAssignment = await createClientContractAssignment(trx, tenant, {
-      client_id: input.client_id,
-      contract_id: input.contract_id,
-      template_contract_id: null,
-      start_date: input.start_date,
-      end_date: input.end_date,
-      is_active: input.is_active,
-      po_required: input.po_required,
-      po_number: input.po_number ?? null,
-      po_amount: input.po_amount ?? null,
+      const createdAssignment = await createClientContractAssignment(trx, tenant, {
+        client_id: input.client_id,
+        contract_id: input.contract_id,
+        template_contract_id: null,
+        start_date: input.start_date,
+        end_date: input.end_date,
+        is_active: input.is_active,
+        po_required: input.po_required,
+        po_number: input.po_number ?? null,
+        po_amount: input.po_amount ?? null,
+      });
+      createdForEvent = createdAssignment;
+      return createdAssignment;
     });
-    createdForEvent = createdAssignment;
-    return createdAssignment;
-  });
+  } catch (error) {
+    const expectedError = toClientContractActionError(error);
+    if (expectedError) {
+      return expectedError;
+    }
+    throw error;
+  }
 
   if (createdForEvent) {
     const createdAt = createdForEvent.created_at ?? new Date().toISOString();
@@ -439,15 +468,23 @@ export const updateClientContract = withAuth(async (
   { tenant },
   clientContractId: string,
   updateData: Partial<IClientContract>
-): Promise<IClientContract> => {
-  await assertCanUpdateClientContracts(_user);
+): Promise<ClientContractMutationResult> => {
+  try {
+    await assertCanUpdateClientContracts(_user);
+  } catch (error) {
+    const expectedError = toClientContractActionError(error);
+    if (expectedError) {
+      return expectedError;
+    }
+    throw error;
+  }
 
   try {
     const { knex: db } = await createTenantKnex(); // Get knex instance
 
     const beforeContract = await ClientContract.getById(clientContractId, tenant);
     if (!beforeContract) {
-      throw new Error(`Client contract ${clientContractId} not found.`);
+      throw expectedClientContractActionError(`Client contract ${clientContractId} not found.`);
     }
 
     // --- Start Validation ---
@@ -483,13 +520,13 @@ export const updateClientContract = withAuth(async (
           earliestCoveredStart &&
           Temporal.PlainDate.compare(proposedStartDate, earliestCoveredStart) > 0
         ) {
-          throw new Error("Cannot change assignment dates as they overlap with an already invoiced period.");
+          throw expectedClientContractActionError("Cannot change assignment dates as they overlap with an already invoiced period.");
         }
 
         if (proposedEndDate && latestCoveredEndExclusive) {
           const latestCoveredDay = latestCoveredEndExclusive.subtract({ days: 1 });
           if (Temporal.PlainDate.compare(proposedEndDate, latestCoveredDay) < 0) {
-            throw new Error(
+            throw expectedClientContractActionError(
               `Cannot shorten contract end date before ${latestCoveredDay.toString()} because recurring service periods are already billed through that day.`
             );
           }
@@ -519,7 +556,7 @@ export const updateClientContract = withAuth(async (
             proposedEndExclusive === null || Temporal.PlainDate.compare(proposedEndExclusive, cycleStartDate) > 0;
 
           if (startsBeforeCycleEnds && endsAfterCycleStarts) {
-            throw new Error("Cannot change assignment dates as they overlap with an already invoiced period.");
+            throw expectedClientContractActionError("Cannot change assignment dates as they overlap with an already invoiced period.");
           }
         }
       }
@@ -646,20 +683,12 @@ export const updateClientContract = withAuth(async (
 
     return updatedClientContract;
   } catch (error) {
-    console.error(`Error updating client contract ${clientContractId}:`, error);
-    if (error instanceof Error) {
-      // Re-throw specific known errors or validation errors
-      if (
-        error.message === "Cannot change assignment dates as they overlap with an already invoiced period." ||
-        error.message.startsWith('Cannot shorten contract end date before ')
-      ) {
-          throw error;
-      }
-      // Preserve other specific error messages if needed
-      // throw error;
+    const expectedError = toClientContractActionError(error);
+    if (expectedError) {
+      return expectedError;
     }
-    // Throw a generic error for unexpected issues
-    throw new Error(`Failed to update client contract: ${error instanceof Error ? error.message : String(error)}`);
+    console.error(`Error updating client contract ${clientContractId}:`, error);
+    throw error;
   }
 });
 
@@ -670,13 +699,21 @@ export const deactivateClientContract = withAuth(async (
   _user,
   { tenant },
   clientContractId: string
-): Promise<IClientContract> => {
-  await assertCanUpdateClientContracts(_user);
+): Promise<ClientContractMutationResult> => {
+  try {
+    await assertCanUpdateClientContracts(_user);
+  } catch (error) {
+    const expectedError = toClientContractActionError(error);
+    if (expectedError) {
+      return expectedError;
+    }
+    throw error;
+  }
 
   try {
     const beforeContract = await ClientContract.getById(clientContractId, tenant);
     if (!beforeContract) {
-      throw new Error(`Client contract ${clientContractId} not found.`);
+      throw expectedClientContractActionError(`Client contract ${clientContractId} not found.`);
     }
 
     const deactivatedContract = await ClientContract.deactivateClientContract(clientContractId, tenant);
@@ -727,11 +764,12 @@ export const deactivateClientContract = withAuth(async (
 
     return deactivatedContract;
   } catch (error) {
-    console.error(`Error deactivating client contract ${clientContractId}:`, error);
-    if (error instanceof Error) {
-      throw error; // Preserve specific error messages
+    const expectedError = toClientContractActionError(error);
+    if (expectedError) {
+      return expectedError;
     }
-    throw new Error(`Failed to deactivate client contract: ${error}`);
+    console.error(`Error deactivating client contract ${clientContractId}:`, error);
+    throw error;
   }
 });
 
@@ -750,10 +788,7 @@ export const getClientContractLines = withAuth(async (
     return contractLines;
   } catch (error) {
     console.error(`Error fetching contract lines for client contract ${clientContractId}:`, error);
-    if (error instanceof Error) {
-      throw error; // Preserve specific error messages
-    }
-    throw new Error(`Failed to fetch contract lines for client contract: ${error}`);
+    throw error;
   }
 });
 
@@ -775,20 +810,20 @@ export const applyContractToClient = withAuth(async (
     // Get the client contract
     const clientContract = await ClientContract.getById(clientContractId, tenant);
     if (!clientContract) {
-      throw new Error(`Client contract ${clientContractId} not found`);
+      throw expectedClientContractActionError(`Client contract ${clientContractId} not found`);
     }
 
     // Get all contract lines associated with the contract
     const contractLines = await ClientContract.getContractLines(clientContractId, tenant);
     if (contractLines.length === 0) {
-      throw new Error(`No contract lines found in contract ${clientContract.contract_id}`);
+      throw expectedClientContractActionError(`No contract lines found in contract ${clientContract.contract_id}`);
     }
 
     // Start a transaction to populate services/configuration for each line
     await withTransaction(db, async (trx: Knex.Transaction) => {
       const templateContractId = clientContract.template_contract_id ?? null;
       if (!templateContractId) {
-        throw new Error(
+        throw expectedClientContractActionError(
           `Client contract ${clientContractId} is missing template provenance (template_contract_id) required for template clone operations`
         );
       }
@@ -807,9 +842,6 @@ export const applyContractToClient = withAuth(async (
     });
   } catch (error) {
     console.error(`Error applying contract ${clientContractId} to client:`, error);
-    if (error instanceof Error) {
-      throw error; // Preserve specific error messages
-    }
-    throw new Error(`Failed to apply contract to client: ${error}`);
+    throw error;
   }
 });

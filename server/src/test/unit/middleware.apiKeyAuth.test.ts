@@ -16,6 +16,15 @@ describe('shouldSkipApiKeyAuth', () => {
     expect(shouldSkipApiKeyAuth('/api/documents/123/thumbnail')).toBe(true);
   });
 
+  it('allows document download/content routes to use session auth (e.g. meeting transcripts)', () => {
+    expect(shouldSkipApiKeyAuth('/api/documents/123/download')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/documents/123/content')).toBe(true);
+  });
+
+  it('allows the Teams online-meeting recording proxy to use session auth', () => {
+    expect(shouldSkipApiKeyAuth('/api/online-meetings/recordings/artifact-123')).toBe(true);
+  });
+
   it('allows public appointment calendar downloads from email links', () => {
     expect(shouldSkipApiKeyAuth('/api/calendar/appointment/2187d639-b796-4b0e-b760-8a2576bb435f.ics')).toBe(true);
   });

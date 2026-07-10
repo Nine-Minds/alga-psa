@@ -43,6 +43,7 @@ import { validateTenantAccess } from '@alga-psa/validation';
 import { EventBusService } from './EventBusService';
 import { AuditLogService } from './AuditLogService';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { AppError } from '../../errors';
 
 export class QuickBooksService {
   private readonly qboApiUrl = 'https://quickbooks-api.intuit.com';
@@ -105,7 +106,7 @@ export class QuickBooksService {
     await validateTenantAccess(tenantId);
 
     if (data.error) {
-      throw new Error(`OAuth error: ${data.error_description || data.error}`);
+      throw new AppError('QBO_AUTH_ERROR', `OAuth error: ${data.error_description || data.error}`);
     }
 
     // Validate state
@@ -115,11 +116,11 @@ export class QuickBooksService {
     });
 
     if (!oauthState) {
-      throw new Error('Invalid OAuth state');
+      throw new AppError('QBO_VALIDATION_ERROR', 'Invalid OAuth state');
     }
 
     if (new Date(oauthState.expires_at) < new Date()) {
-      throw new Error('OAuth state expired');
+      throw new AppError('QBO_AUTH_ERROR', 'OAuth state expired');
     }
 
     // Exchange code for tokens
@@ -300,12 +301,12 @@ export class QuickBooksService {
           details: testResult
         }
       };
-    } catch (error) {
+    } catch {
       return {
         success: true,
         data: {
           success: false,
-          message: `Connection test failed: ${error instanceof Error ? error.message : String(error)}`
+          message: 'Connection test failed. Check the QuickBooks connection and try again.'
         }
       };
     }
@@ -420,7 +421,7 @@ export class QuickBooksService {
     } catch (error) {
       // Update sync status as failed
       await this.updateSyncStatusRecord(syncId, 'failed', {
-        error_message: error instanceof Error ? error.message : String(error),
+        error_message: 'QuickBooks customer sync failed.',
         duration_ms: Date.now() - startTime
       });
 
@@ -522,7 +523,7 @@ export class QuickBooksService {
     } catch (error) {
       // Update sync status as failed
       await this.updateSyncStatusRecord(syncId, 'failed', {
-        error_message: error instanceof Error ? error.message : String(error),
+        error_message: 'QuickBooks invoice export failed.',
         duration_ms: Date.now() - startTime
       });
 
@@ -578,7 +579,7 @@ export class QuickBooksService {
     } catch (error) {
       // Update sync status as failed
       await this.updateSyncStatusRecord(syncId, 'failed', {
-        error_message: error instanceof Error ? error.message : String(error),
+        error_message: 'QuickBooks invoice import failed.',
         duration_ms: Date.now() - startTime
       });
 
@@ -640,7 +641,7 @@ export class QuickBooksService {
     } catch (error) {
       // Update sync status as failed
       await this.updateSyncStatusRecord(syncId, 'failed', {
-        error_message: error instanceof Error ? error.message : String(error),
+        error_message: 'QuickBooks payment import failed.',
         duration_ms: Date.now() - startTime
       });
 
@@ -686,8 +687,8 @@ export class QuickBooksService {
 
         await this.db.insert('qbo_account_mappings', mappingConfig);
         results.created++;
-      } catch (error) {
-        results.errors.push(`${mapping.alga_account_name}: ${error instanceof Error ? error.message : String(error)}`);
+      } catch {
+        results.errors.push(`${mapping.alga_account_name}: Failed to create QuickBooks account mapping.`);
       }
     }
 
@@ -740,8 +741,8 @@ export class QuickBooksService {
 
         await this.db.insert('qbo_tax_mappings', mappingConfig);
         results.created++;
-      } catch (error) {
-        results.errors.push(`${mapping.alga_tax_region}: ${error instanceof Error ? error.message : String(error)}`);
+      } catch {
+        results.errors.push(`${mapping.alga_tax_region}: Failed to create QuickBooks tax mapping.`);
       }
     }
 
@@ -986,7 +987,7 @@ export class QuickBooksService {
     const credentials = await this.getStoredCredentials(tenantId);
 
     if (!credentials) {
-      throw new Error('QuickBooks not connected');
+      throw new AppError('QBO_SETUP_INCOMPLETE', 'QuickBooks not connected');
     }
 
     // Check if access token is expired and refresh if needed

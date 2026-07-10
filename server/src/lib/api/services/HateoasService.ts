@@ -9,6 +9,7 @@ import {
   generateCollectionLinks, 
   addHateoasLinks 
 } from '../utils/responseHelpers';
+import { BadRequestError } from '../middleware/apiMiddleware';
 
 export interface ResourceLinkConfig {
   resource: string;
@@ -284,7 +285,7 @@ export class HateoasService {
 
     const config = configs[resourceType];
     if (!config) {
-      throw new Error(`Unknown resource type: ${resourceType}`);
+      throw new BadRequestError(`Unknown resource type: ${resourceType}`);
     }
 
     return {

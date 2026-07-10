@@ -1506,5 +1506,6 @@
     "done": "Listo",
     "edit": "Editar",
     "save": "Guardar"
-  }
+  },
+  "loadError": "Failed to load projects"
 }

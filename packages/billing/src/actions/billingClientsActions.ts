@@ -24,6 +24,54 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { getClientLogoUrl, getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 import { syncRecurringServicePeriodsForContract } from './recurringServicePeriodSync';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+
+export type BillingClientsActionError = ActionMessageError | ActionPermissionError;
+
+function billingClientsActionErrorFrom(error: unknown): BillingClientsActionError | null {
+  if (error instanceof Error) {
+    if (error.message.startsWith('Permission denied')) {
+      return permissionError(error.message);
+    }
+    if (error.message.includes('System-managed default contracts are attribution-only')) {
+      return actionError(error.message);
+    }
+    if (/client contract.*not found/i.test(error.message) || /assignment.*not found/i.test(error.message)) {
+      return actionError('Client contract assignment not found. It may have been updated or deleted. Please refresh and try again.');
+    }
+  }
+
+  const dbError = error as { code?: string; column?: string };
+  if (dbError?.code === '22P02') {
+    return actionError('One of the selected client contract values is invalid. Please refresh and try again.');
+  }
+  if (dbError?.code === '23502') {
+    return actionError(`Missing required client contract field${dbError.column ? `: ${dbError.column}` : ''}.`);
+  }
+  if (dbError?.code === '23503') {
+    return actionError('The selected client, contract, or billing record no longer exists. Please refresh and try again.');
+  }
+  if (dbError?.code === '23505') {
+    return actionError('This client contract assignment already exists.');
+  }
+
+  return null;
+}
+
+async function withBillingClientsActionErrors<T>(work: () => Promise<T>): Promise<T | BillingClientsActionError> {
+  try {
+    return await work();
+  } catch (error) {
+    const expected = billingClientsActionErrorFrom(error);
+    if (expected) return expected;
+    throw error;
+  }
+}
 
 function tenantScopedTable(
   conn: Knex | Knex.Transaction,
@@ -76,41 +124,48 @@ export const getAllClientsForBilling = withAuth(async (
   user,
   { tenant },
   includeInactive: boolean = true
-): Promise<IClient[]> => {
-  await requireClientReadPermission(user);
+): Promise<IClient[] | BillingClientsActionError> => {
+  return withBillingClientsActionErrors(async () => {
+    await requireClientReadPermission(user);
   const { knex } = await createTenantKnex();
   const clients = await getAllClients(knex, tenant, includeInactive);
   return attachClientLogos(clients, tenant);
+  });
 });
 
 export const getAllClientsPaginatedForBilling = withAuth(async (
   user,
   { tenant },
   params: ClientPaginationParams = {}
-): Promise<PaginatedClientsResponse> => {
-  await requireClientReadPermission(user);
+): Promise<PaginatedClientsResponse | BillingClientsActionError> => {
+  return withBillingClientsActionErrors(async () => {
+    await requireClientReadPermission(user);
   const { knex } = await createTenantKnex();
   const response = await getAllClientsPaginated(knex, tenant, params);
   return { ...response, clients: await attachClientLogos(response.clients, tenant) };
+  });
 });
 
 export const getClientsWithBillingCycleRangePaginatedForBilling = withAuth(async (
   user,
   { tenant },
   params: ClientPaginationParams
-): Promise<PaginatedClientsResponse> => {
-  await requireClientReadPermission(user);
+): Promise<PaginatedClientsResponse | BillingClientsActionError> => {
+  return withBillingClientsActionErrors(async () => {
+    await requireClientReadPermission(user);
   const { knex } = await createTenantKnex();
   const response = await getClientsWithBillingCycleRangePaginated(knex, tenant, params);
   return { ...response, clients: await attachClientLogos(response.clients, tenant) };
+  });
 });
 
 export const getClientByIdForBilling = withAuth(async (
   user,
   { tenant },
   clientId: string
-): Promise<IClient | null> => {
-  await requireClientReadPermission(user);
+): Promise<IClient | null | BillingClientsActionError> => {
+  return withBillingClientsActionErrors(async () => {
+    await requireClientReadPermission(user);
   const { knex } = await createTenantKnex();
   const client = await getClientById(knex, tenant, clientId);
   if (!client) {
@@ -120,53 +175,63 @@ export const getClientByIdForBilling = withAuth(async (
   // the real logo, not just initials.
   const logoUrl = await getClientLogoUrl(clientId, tenant);
   return { ...client, logoUrl };
+  });
 });
 
 export const getClientContractsForBilling = withAuth(async (
   user,
   { tenant },
   clientId: string
-): Promise<IClientContract[]> => {
-  await requireClientReadPermission(user);
+): Promise<IClientContract[] | BillingClientsActionError> => {
+  return withBillingClientsActionErrors(async () => {
+    await requireClientReadPermission(user);
   const { knex } = await createTenantKnex();
   return getClientContracts(knex, tenant, clientId);
+  });
 });
 
 export const getClientContractByIdForBilling = withAuth(async (
   user,
   { tenant },
   clientContractId: string
-): Promise<IClientContract | null> => {
-  await requireClientReadPermission(user);
+): Promise<IClientContract | null | BillingClientsActionError> => {
+  return withBillingClientsActionErrors(async () => {
+    await requireClientReadPermission(user);
   const { knex } = await createTenantKnex();
   return getClientContractById(knex, tenant, clientContractId);
+  });
 });
 
 export const getDetailedClientContractForBilling = withAuth(async (
   user,
   { tenant },
   clientContractId: string
-): Promise<any | null> => {
-  await requireClientReadPermission(user);
+): Promise<any | null | BillingClientsActionError> => {
+  return withBillingClientsActionErrors(async () => {
+    await requireClientReadPermission(user);
   const { knex } = await createTenantKnex();
   return getDetailedClientContract(knex, tenant, clientContractId);
+  });
 });
 
 export const getActiveClientContractsByClientIdsForBilling = withAuth(async (
   user,
   { tenant },
   clientIds: string[]
-): Promise<IClientContract[]> => {
-  await requireClientReadPermission(user);
+): Promise<IClientContract[] | BillingClientsActionError> => {
+  return withBillingClientsActionErrors(async () => {
+    await requireClientReadPermission(user);
   const { knex } = await createTenantKnex();
   return getActiveClientContractsByClientIds(knex, tenant, clientIds);
+  });
 });
 
 export const createClientContractForBilling = withAuth(async (
   user,
   { tenant },
   input: ClientContractAssignmentCreateInput
-): Promise<IClientContract> => {
+): Promise<IClientContract | BillingClientsActionError> => {
+  return withBillingClientsActionErrors(async () => {
   if (!await hasPermission(user, 'client', 'create')) {
     throw new Error('Permission denied: Cannot create client contract assignments');
   }
@@ -192,6 +257,7 @@ export const createClientContractForBilling = withAuth(async (
     }
     return created;
   });
+  });
 });
 
 export const updateClientContractForBilling = withAuth(async (
@@ -199,7 +265,8 @@ export const updateClientContractForBilling = withAuth(async (
   { tenant },
   clientContractId: string,
   updateData: Partial<IClientContract>
-): Promise<IClientContract> => {
+): Promise<IClientContract | BillingClientsActionError> => {
+  return withBillingClientsActionErrors(async () => {
   if (!await hasPermission(user, 'client', 'update')) {
     throw new Error('Permission denied: Cannot update client contract assignments');
   }
@@ -218,4 +285,5 @@ export const updateClientContractForBilling = withAuth(async (
 
   await checkAndReactivateExpiredContract(knex, tenant, updated.contract_id);
   return updated;
+  });
 });

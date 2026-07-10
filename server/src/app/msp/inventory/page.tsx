@@ -2,6 +2,7 @@ import { getInventoryDashboardData } from '@alga-psa/inventory/actions';
 import type { InventoryDashboardData } from '@alga-psa/inventory/actions';
 import { InventoryDashboard } from '@alga-psa/inventory/components';
 import { getSession } from '@alga-psa/auth';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { redirect } from 'next/navigation';
 import type { Metadata } from 'next';
 import { enforceServerProductRoute } from '@/lib/serverProductRouteGuard';
@@ -48,7 +49,9 @@ const EMPTY: InventoryDashboardData = {
   ghost_week: { count: 0, est_total: null, techs: [] },
   footer: {
     value: 0,
+    value_by_currency: [],
     wow_delta: 0,
+    wow_delta_by_currency: [],
     on_hand_units: 0,
     serialized_units: 0,
     dead_stock: null,
@@ -70,7 +73,12 @@ export default async function InventoryDashboardPage() {
   let data: InventoryDashboardData = EMPTY;
   let loadError = false;
   try {
-    data = await getInventoryDashboardData();
+    const result = await getInventoryDashboardData();
+    if (isActionMessageError(result) || isActionPermissionError(result)) {
+      console.error('inventory dashboard: getInventoryDashboardData failed', getErrorMessage(result));
+    } else {
+      data = result;
+    }
   } catch (err) {
     loadError = true;
     console.error('inventory dashboard: getInventoryDashboardData failed', err);

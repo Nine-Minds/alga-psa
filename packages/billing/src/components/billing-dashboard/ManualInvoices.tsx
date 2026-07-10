@@ -6,7 +6,10 @@ import {
   generateInvoiceForSalesOrder,
   type InvoiceableSalesOrderForBilling,
 } from '@alga-psa/billing/actions';
-import { updateInvoiceManualItems } from '@alga-psa/billing/actions/invoiceModification';
+import {
+  updateInvoiceManualItems,
+  type InvoiceManualItemsUpdateActionResult,
+} from '@alga-psa/billing/actions/invoiceModification';
 import { getInvoiceLineItems } from '@alga-psa/billing/actions/invoiceQueries';
 import type { ManualInvoiceUpdate } from '@alga-psa/billing/actions/invoiceActions'; // Import the specific type
 import type { ManualInvoiceItem as ManualInvoiceItemForAction } from '@alga-psa/billing/actions'; // Import and alias
@@ -28,6 +31,11 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useQuickAddClient } from '@alga-psa/ui/context';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useRouter } from 'next/navigation';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 // Use a constant for environment check since process.env is not available
 const IS_DEVELOPMENT = typeof window !== 'undefined' &&
@@ -46,6 +54,12 @@ interface ManualInvoicesProps {
   invoiceableSalesOrders?: InvoiceableSalesOrderForBilling[];
   sourceSalesOrderId?: string | null;
 }
+
+const isManualItemsUpdateError = (
+  result: InvoiceManualItemsUpdateActionResult,
+): result is Exclude<InvoiceManualItemsUpdateActionResult, InvoiceViewModel> => (
+  isActionMessageError(result) || isActionPermissionError(result)
+);
 
 // This is the primary state type for manual items within this component
 // Reverted: Keep is_taxable, remove tax_rate_id
@@ -308,6 +322,10 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           console.log('[Effect] Fetching items for:', invoiceIdToFetch);
           setLoading(true);
           const fetchedItems = await getInvoiceLineItems(invoiceIdToFetch);
+          if (isActionMessageError(fetchedItems) || isActionPermissionError(fetchedItems)) {
+            setError(getErrorMessage(fetchedItems));
+            return;
+          }
           const LEGACY_HEADER_KEY = ('is_bundle_header') as keyof any;
           const normalizeHeaderAlias = (it: any) => ({
             ...it,
@@ -568,12 +586,17 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           // tax_rate_id: item.tax_rate_id, // Removed
         });
 
-        await updateInvoiceManualItems(currentInvoiceData.invoice_id, {
+        const updateResult = await updateInvoiceManualItems(currentInvoiceData.invoice_id, {
           invoice_number: currentInvoiceData.invoice_number,
           newItems: newItemsToSave.map(mapToNewItemSaveFormat),
           updatedItems: updatedItemsToSave.map(mapToUpdateSaveFormat),
           removedItemIds
         });
+
+        if (isManualItemsUpdateError(updateResult)) {
+          setError(translateManualInvoiceError(getErrorMessage(updateResult), 'update'));
+          return;
+        }
 
         setExpandedItems(new Set());
 
@@ -587,6 +610,10 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
         }
         // Refresh items from server
         const refreshedItems = await getInvoiceLineItems(currentInvoiceData.invoice_id);
+        if (isActionMessageError(refreshedItems) || isActionPermissionError(refreshedItems)) {
+          setError(getErrorMessage(refreshedItems));
+          return;
+        }
         console.log('[Submit] Refreshed items after update:', refreshedItems.length);
         
         // Fetch the updated invoice data from the server

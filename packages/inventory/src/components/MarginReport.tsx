@@ -7,6 +7,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { toast } from 'react-hot-toast';
 import type { ColumnDefinition } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { marginReport, type MarginReport as MarginReportData, type MarginReportRow } from '../actions';
 import { CurrencyFormatProvider, useCurrencyFormat } from './dashboard/shared';
 
@@ -42,9 +43,9 @@ function MarginReportBody({
       ),
     },
     { title: t('margin.columns.qtySold', 'Qty sold'), dataIndex: 'qty_sold', render: (v: any) => <span className="tabular-nums">{Number(v ?? 0)}</span> },
-    { title: t('margin.columns.revenue', 'Revenue'), dataIndex: 'revenue_cents', render: (v: any) => <span className="tabular-nums">{money(v, 2)}</span> },
-    { title: t('margin.columns.cogs', 'COGS'), dataIndex: 'cogs_cents', render: (v: any) => <span className="tabular-nums">{money(v, 2)}</span> },
-    { title: t('margin.columns.margin', 'Margin'), dataIndex: 'margin_cents', render: (v: any) => <span className="tabular-nums">{money(v, 2)}</span> },
+    { title: t('margin.columns.revenue', 'Revenue'), dataIndex: 'revenue_cents', render: (v: any) => <span className="tabular-nums">{money(v)}</span> },
+    { title: t('margin.columns.cogs', 'COGS'), dataIndex: 'cogs_cents', render: (v: any) => <span className="tabular-nums">{money(v)}</span> },
+    { title: t('margin.columns.margin', 'Margin'), dataIndex: 'margin_cents', render: (v: any) => <span className="tabular-nums">{money(v)}</span> },
     { title: t('margin.columns.marginPct', 'Margin %'), dataIndex: 'margin_pct', render: (v: any) => <span className="tabular-nums">{pct(t, v)}</span> },
   ];
 
@@ -53,15 +54,15 @@ function MarginReportBody({
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4" id="margin-report-totals">
         <div className="rounded border p-3">
           <div className="text-xs text-gray-500">{t('margin.metrics.revenue', 'Revenue')}</div>
-          <div className="text-xl font-semibold tabular-nums">{money(report.total_revenue_cents, 2)}</div>
+          <div className="text-xl font-semibold tabular-nums">{money(report.total_revenue_cents)}</div>
         </div>
         <div className="rounded border p-3">
           <div className="text-xs text-gray-500">{t('margin.metrics.cogs', 'COGS')}</div>
-          <div className="text-xl font-semibold tabular-nums">{money(report.total_cogs_cents, 2)}</div>
+          <div className="text-xl font-semibold tabular-nums">{money(report.total_cogs_cents)}</div>
         </div>
         <div className="rounded border p-3">
           <div className="text-xs text-gray-500">{t('margin.metrics.margin', 'Margin')}</div>
-          <div className="text-xl font-semibold tabular-nums">{money(report.total_margin_cents, 2)}</div>
+          <div className="text-xl font-semibold tabular-nums">{money(report.total_margin_cents)}</div>
         </div>
         <div className="rounded border p-3">
           <div className="text-xs text-gray-500">{t('margin.metrics.marginPct', 'Margin %')}</div>
@@ -88,7 +89,13 @@ export function MarginReport() {
   const run = async () => {
     setLoading(true);
     try {
-      setReport(await marginReport({ from: from || undefined, to: to || undefined }));
+      const result = await marginReport({ from: from || undefined, to: to || undefined });
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        setReport(null);
+        toast.error(getErrorMessage(result));
+        return;
+      }
+      setReport(result);
     } catch (e: any) {
       toast.error(e?.message || t('margin.runFailed', "Couldn't run the margin report."));
     } finally {

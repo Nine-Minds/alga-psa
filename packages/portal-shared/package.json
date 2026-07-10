@@ -15,6 +15,10 @@
       "import": "./dist/actions/index.js",
       "types": "./src/actions/index.ts"
     },
+    "./actions/*": {
+      "import": "./dist/actions/*.js",
+      "types": "./src/actions/*.ts"
+    },
     "./types": {
       "import": "./dist/types/index.js",
       "types": "./src/types/index.ts"

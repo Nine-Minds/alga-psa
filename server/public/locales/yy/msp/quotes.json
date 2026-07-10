@@ -231,7 +231,8 @@
       "notFound": "55555",
       "save": "55555",
       "saveFailed": "55555",
-      "workflowAction": "55555 {{action}} 55555"
+      "workflowAction": "55555 {{action}} 55555",
+      "removeItem": "55555"
     },
     "loading": "55555",
     "notices": {
@@ -556,7 +557,10 @@
       "contact": "55555",
       "internal": "55555"
     },
-    "removeAriaLabel": "55555 {{email}} 55555"
+    "removeAriaLabel": "55555 {{email}} 55555",
+    "errors": {
+      "contactsLoadFailed": "55555"
+    }
   },
   "quoteConversion": {
     "title": "55555",

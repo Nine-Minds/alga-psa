@@ -8,9 +8,8 @@
  */
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
-import { Button } from '@alga-psa/ui/components/Button';
 import CustomTabs, { TabContent } from '@alga-psa/ui/components/CustomTabs';
 import {
   Building2,
@@ -25,9 +24,8 @@ import {
 } from 'lucide-react';
 import AccountingIntegrationsSetup from './AccountingIntegrationsSetup';
 import RmmIntegrationsSetup from './RmmIntegrationsSetup';
-import { EmailProviderConfiguration } from '@alga-psa/integrations/components';
-import { GoogleIntegrationSettings } from './GoogleIntegrationSettings';
-import { MicrosoftIntegrationSettings } from './MicrosoftIntegrationSettings';
+import { EmailProviderConfiguration } from '../../email/EmailProviderConfiguration';
+import { ProviderCredentialsWorkbench } from './ProviderCredentialsWorkbench';
 import { CalendarEnterpriseIntegrationSettings } from './CalendarEnterpriseIntegrationSettings';
 import { TeamsEnterpriseIntegrationSettings } from './TeamsEnterpriseIntegrationSettings';
 import dynamic from 'next/dynamic';
@@ -144,8 +142,6 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
   qboOnboardingSlot,
 }) => {
   const { t } = useTranslation('msp/settings');
-  const { t: tIntegrations } = useTranslation('msp/integrations');
-  const router = useRouter();
   const isEEAvailable = isCalendarEnterpriseEdition();
   const entraUiFlag = useFeatureFlag('entra-integration-ui', { defaultValue: false });
   const isEntraUiEnabled = isEEAvailable && entraUiFlag.enabled;
@@ -280,49 +276,7 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
           description: isEEAvailable
             ? t('integrations.items.google.description.ee')
             : t('integrations.items.google.description.oss'),
-          component: () => (
-            <div className="space-y-6">
-              {/* Conspicuous, above-the-fold pointer: admins mistake this Providers tab for the
-                  SSO setup path, so the redirect must be the first thing they see — not a card
-                  buried under the Google/Microsoft panels. */}
-              <div className="flex flex-col gap-3 rounded-lg border-2 border-primary-500 bg-alert-info-bg p-4 shadow-sm sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-start gap-3">
-                  <Shield className="mt-0.5 h-6 w-6 shrink-0 text-primary-500" />
-                  <div className="space-y-0.5">
-                    <div className="text-base font-semibold text-[rgb(var(--color-text-900))]">
-                      {tIntegrations('integrations.sso.msp.moved.title', { defaultValue: 'MSP SSO Login Domains' })}
-                    </div>
-                    <div className="text-sm text-[rgb(var(--color-text-700))]">
-                      {tIntegrations('integrations.sso.msp.moved.body', {
-                        defaultValue:
-                          'Single sign-on settings, including login-domain claims, have moved to Security → Single Sign-On.',
-                      })}
-                    </div>
-                  </div>
-                </div>
-                <Button
-                  id="msp-sso-moved-link"
-                  type="button"
-                  onClick={() => router.push('/msp/security-settings?tab=single-sign-on')}
-                  className="shrink-0"
-                >
-                  {tIntegrations('integrations.sso.msp.moved.cta', { defaultValue: 'Open Single Sign-On settings' })}
-                </Button>
-              </div>
-              <Card>
-                <CardHeader>
-                  <CardTitle>{t('integrations.items.google.cardTitle')}</CardTitle>
-                  <CardDescription>
-                    {isEEAvailable
-                      ? t('integrations.items.google.cardDescription.ee')
-                      : t('integrations.items.google.cardDescription.oss')}
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-              <GoogleIntegrationSettings />
-              <MicrosoftIntegrationSettings canUseTeams={canUseTeams} />
-            </div>
-          ),
+          component: () => <ProviderCredentialsWorkbench canUseTeams={canUseTeams} isEnterpriseEdition={isEEAvailable} />,
         },
       ],
     },
@@ -381,20 +335,21 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
     icon: <category.icon className="w-4 h-4" />,
     content: (
       <div className="space-y-6">
-        {/* Category header */}
-        <div className="rounded-xl border bg-muted/30 px-6 py-8 text-center">
-          <div className="mx-auto flex max-w-3xl flex-col items-center gap-3">
-            <div className="flex items-center justify-center gap-3">
-              <category.icon className="h-7 w-7 text-primary" />
-              <h2 className="text-3xl font-bold tracking-tight">
-                {t('integrations.categoryHeading', { label: category.label })}
-              </h2>
+        {category.id !== 'providers' && (
+          <div className="rounded-xl border bg-muted/30 px-6 py-8 text-center">
+            <div className="mx-auto flex max-w-3xl flex-col items-center gap-3">
+              <div className="flex items-center justify-center gap-3">
+                <category.icon className="h-7 w-7 text-primary" />
+                <h2 className="text-3xl font-bold tracking-tight">
+                  {t('integrations.categoryHeading', { label: category.label })}
+                </h2>
+              </div>
+              <p className="max-w-2xl text-sm text-muted-foreground">
+                {category.description}
+              </p>
             </div>
-            <p className="max-w-2xl text-sm text-muted-foreground">
-              {category.description}
-            </p>
           </div>
-        </div>
+        )}
 
         {/* Integration components */}
         {category.integrations.length > 0 ? (

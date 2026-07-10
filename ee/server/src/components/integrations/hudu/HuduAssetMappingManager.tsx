@@ -146,12 +146,11 @@ const HuduAssetMappingManager: React.FC<HuduAssetMappingManagerProps> = ({ clien
         assetsResponse.assets.map((asset) => ({ asset_id: asset.asset_id, name: asset.name }))
       );
     } catch (err) {
+      console.error('Failed to load Hudu asset mappings:', err);
       setError(
-        err instanceof Error
-          ? err.message
-          : t('integrations.hudu.assets.errors.load', {
-              defaultValue: 'Failed to load Hudu asset mappings.',
-            })
+        t('integrations.hudu.assets.errors.load', {
+          defaultValue: 'Failed to load Hudu asset mappings.',
+        })
       );
     } finally {
       setIsLoading(false);
@@ -329,7 +328,12 @@ const HuduAssetMappingManager: React.FC<HuduAssetMappingManagerProps> = ({ clien
           remainingPending.delete(row.hudu_asset_id);
           savedCount += 1;
         } catch (err) {
-          firstFailure = firstFailure ?? { error: err instanceof Error ? err.message : String(err) };
+          console.error('Failed to save Hudu asset mapping row:', err);
+          firstFailure = firstFailure ?? {
+            error: t('integrations.hudu.assets.errors.save', {
+              defaultValue: 'Failed to update the asset mapping.',
+            }),
+          };
         }
       }
 
@@ -384,10 +388,9 @@ const HuduAssetMappingManager: React.FC<HuduAssetMappingManagerProps> = ({ clien
         })
       );
     } catch (err) {
+      console.error('Failed to import Hudu asset:', err);
       setError(
-        err instanceof Error
-          ? err.message
-          : t('integrations.hudu.assets.errors.import', { defaultValue: 'Failed to import the Hudu asset.' })
+        t('integrations.hudu.assets.errors.import', { defaultValue: 'Failed to import the Hudu asset.' })
       );
     } finally {
       setImportingRowId(null);
@@ -420,10 +423,9 @@ const HuduAssetMappingManager: React.FC<HuduAssetMappingManagerProps> = ({ clien
         setBulkSummary(result.data);
       }
     } catch (err) {
+      console.error('Failed to bulk import Hudu assets:', err);
       setError(
-        err instanceof Error
-          ? err.message
-          : t('integrations.hudu.assets.errors.importAll', { defaultValue: 'Bulk import failed.' })
+        t('integrations.hudu.assets.errors.importAll', { defaultValue: 'Bulk import failed.' })
       );
     } finally {
       setIsImportingAll(false);

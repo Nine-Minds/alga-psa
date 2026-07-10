@@ -199,7 +199,7 @@ export async function extUploadProxy(formData: FormData): Promise<{ upload: { ke
     if (code === 'NoSuchBucket' || status === 404) {
       throw new HttpError(500, 'BUCKET_NOT_FOUND', 'Storage bucket not found. Please contact an administrator to configure extension storage.');
     }
-    throw new HttpError(500, 'S3_PUT_FAILED', e?.message || 'Failed to store upload');
+    throw new HttpError(500, 'S3_PUT_FAILED', 'Failed to store upload. Please try again.');
   }
 
   try { console.log(JSON.stringify({ ts: new Date().toISOString(), event: "ext_bundles.upload_proxy.action.success", key, filename, size, durationMs: Date.now() - started })); } catch {}
@@ -241,10 +241,9 @@ function formatFinalizeError(err: unknown): { message: string; code?: string; de
 
   if (err && typeof err === "object") {
     const maybe = err as { message?: unknown; code?: unknown; details?: unknown };
-    const message = typeof maybe.message === "string" && maybe.message.length > 0
-      ? maybe.message
-      : "Unexpected error finalizing upload";
-    const payload: { message: string; code?: string; details?: unknown } = { message };
+    const payload: { message: string; code?: string; details?: unknown } = {
+      message: "Unexpected error finalizing upload",
+    };
     if (typeof maybe.code === "string" && maybe.code.length > 0) {
       payload.code = maybe.code;
     }
@@ -540,7 +539,6 @@ export async function extAbortUpload(params: AbortParams): Promise<AbortResult> 
     if (status === 404 || code === "NotFound") {
       return { status: "deleted", key, area: "staging" };
     }
-    const message = typeof e?.message === "string" ? e.message : "Unexpected error during delete";
-    throw new HttpError(500, "INTERNAL_ERROR", message);
+    throw new HttpError(500, "INTERNAL_ERROR", "Failed to clean up the staged upload. Please try again.");
   }
 }

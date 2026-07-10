@@ -13,7 +13,8 @@ import { Knex } from 'knex';
 import { isEnterprise, unparseCSV } from '@alga-psa/core';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { getContactAvatarUrlsBatchAsync } from '../../lib/documentsHelpers';
-import { createTag } from '@alga-psa/tags/actions';
+import { createTag } from '@alga-psa/tags/actions/tagActions';
+import { isTagActionError } from '@alga-psa/tags/actions/tagActionErrors';
 import { deleteEntityTags } from '@alga-psa/tags/lib/tagCleanup';
 import {
   assertMspOrClientPortalOwnClientPermission,
@@ -37,6 +38,12 @@ import {
   isValidContactCsvEmailValue,
   normalizeContactCsvEmailValue,
 } from '../../lib/contactCsvEmailFields';
+import {
+  actionError,
+  permissionError,
+  type ActionMessageError,
+  type ActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 function tenantScopedTable(
   conn: Knex | Knex.Transaction,
@@ -72,6 +79,175 @@ type ContactActionInput = Omit<Partial<IContact>, 'phone_numbers' | 'additional_
   primary_email_custom_type?: CreateContactInput['primary_email_custom_type'];
   additional_email_addresses?: CreateContactInput['additional_email_addresses'];
 };
+type ContactUpdateActionError = ActionMessageError | ActionPermissionError;
+
+function stripExpectedContactErrorPrefix(message: string): string {
+  return message.replace(/^(VALIDATION_ERROR|EMAIL_EXISTS|FOREIGN_KEY_ERROR):\s*/, '');
+}
+
+function contactEmailConflictMessageFrom(error: unknown): string | null {
+  const dbError = error as { code?: string; constraint?: string };
+  if (
+    dbError?.code === '23505' &&
+    (
+      dbError.constraint === 'ux_contact_additional_email_addresses_tenant_normalized_email' ||
+      dbError.constraint === 'contacts_email_tenant_unique' ||
+      dbError.constraint === 'contacts_tenant_email_unique'
+    )
+  ) {
+    return 'A contact with this email address already exists in the system';
+  }
+
+  if (!(error instanceof Error)) {
+    return null;
+  }
+
+  const message = error.message;
+  if (
+    message.includes('duplicate key') &&
+    (
+      message.includes('ux_contact_additional_email_addresses_tenant_normalized_email') ||
+      message.includes('contacts_email_tenant_unique') ||
+      message.includes('contacts_tenant_email_unique')
+    )
+  ) {
+    return 'A contact with this email address already exists in the system';
+  }
+  if (message.includes('A contact email already exists as an additional email address in this tenant')) {
+    return 'A contact with this email address already exists in the system';
+  }
+  if (message.includes('An additional email address already exists as a contact primary email in this tenant')) {
+    return 'A contact email address already exists in this tenant';
+  }
+
+  return null;
+}
+
+function contactUpdateActionErrorFrom(error: unknown): ContactUpdateActionError | null {
+  if (error instanceof Error) {
+    const message = error.message;
+    if (message.includes('Permission denied:') || message.includes('You do not have permission')) {
+      return permissionError(message);
+    }
+    if (message === 'Cannot manage contacts for another client') {
+      return permissionError('Permission denied: Cannot manage contacts for another client');
+    }
+    if (message === 'Contact not found') {
+      return actionError('Contact not found');
+    }
+    if (
+      message.startsWith('VALIDATION_ERROR:') ||
+      message.startsWith('EMAIL_EXISTS:') ||
+      message.startsWith('FOREIGN_KEY_ERROR:')
+    ) {
+      return actionError(stripExpectedContactErrorPrefix(message));
+    }
+
+    if (message.includes('duplicate key') && message.includes('contacts_email_tenant_unique')) {
+      return actionError('A contact with this email address already exists in the system');
+    }
+    if (message.includes('violates not-null constraint')) {
+      const field = message.match(/column "([^"]+)"/)?.[1] || 'field';
+      return actionError(`The ${field} is required`);
+    }
+    if (message.includes('violates foreign key constraint') && message.includes('client_id')) {
+      return actionError('The selected client is no longer valid');
+    }
+  }
+
+  const emailConflict = contactEmailConflictMessageFrom(error);
+  if (emailConflict) {
+    return actionError(emailConflict);
+  }
+
+  const dbError = error as { code?: string; constraint?: string; column?: string };
+  if (dbError?.code === '23505') {
+    if (dbError.constraint?.includes('contacts_email_tenant_unique')) {
+      return actionError('A contact with this email address already exists in the system');
+    }
+    return actionError('A contact with these details already exists.');
+  }
+  if (dbError?.code === '23502') {
+    return actionError(`The ${dbError.column || 'field'} is required`);
+  }
+  if (dbError?.code === '23503') {
+    return actionError('The selected client or inbound ticket destination is no longer valid');
+  }
+  if (dbError?.code === '22P02') {
+    return actionError('Invalid contact data provided. Please refresh and try again.');
+  }
+  if (dbError?.code === '23514') {
+    return actionError('Invalid contact data provided. Please check all fields and try again.');
+  }
+
+  return null;
+}
+
+function contactActionResultErrorFrom(error: unknown, fallback: string): string {
+  const expected = contactUpdateActionErrorFrom(error);
+  if (expected) {
+    const candidate = expected as unknown as { actionError?: unknown; permissionError?: unknown };
+    return typeof candidate.actionError === 'string'
+      ? candidate.actionError
+      : String(candidate.permissionError ?? fallback);
+  }
+
+  return fallback;
+}
+
+function prefixedContactActionErrorFrom(error: unknown, fallback: string): string {
+  const emailConflict = contactEmailConflictMessageFrom(error);
+  if (emailConflict) {
+    return `EMAIL_EXISTS: ${emailConflict}`;
+  }
+
+  if (error instanceof Error) {
+    const message = error.message;
+    if (
+      message.startsWith('VALIDATION_ERROR:') ||
+      message.startsWith('EMAIL_EXISTS:') ||
+      message.startsWith('FOREIGN_KEY_ERROR:')
+    ) {
+      return message;
+    }
+
+    if (message.includes('duplicate key') && message.includes('contacts_email_tenant_unique')) {
+      return 'EMAIL_EXISTS: A contact with this email address already exists in the system';
+    }
+
+    if (message.includes('violates not-null constraint')) {
+      const field = message.match(/column "([^"]+)"/)?.[1] || 'field';
+      return `VALIDATION_ERROR: The ${field} is required`;
+    }
+
+    if (message.includes('violates foreign key constraint') && message.includes('client_id')) {
+      return 'FOREIGN_KEY_ERROR: The selected client is no longer valid';
+    }
+  }
+
+  return fallback;
+}
+
+function contactImportRowMessageFrom(error: unknown): string {
+  return stripExpectedContactErrorPrefix(
+    prefixedContactActionErrorFrom(
+      error,
+      'Could not import this contact. Check required fields and client references.',
+    ),
+  );
+}
+
+function contactImportFailureResults(
+  contactsData: Array<ContactImportData> | null | undefined,
+  message: string
+): ImportContactResult[] {
+  const rows = contactsData && contactsData.length > 0 ? contactsData : [{} as ContactImportData];
+  return rows.map((originalData) => ({
+    success: false,
+    message,
+    originalData,
+  }));
+}
 
 type ContactImportData = Omit<Partial<IContact>, 'additional_email_addresses'> & {
   additional_email_addresses?: CreateContactInput['additional_email_addresses'];
@@ -276,6 +452,18 @@ export const deleteContact = withAuth(async (
   } catch (err) {
     console.error('Error deleting contact:', err);
 
+    const expected = contactUpdateActionErrorFrom(err);
+    if (expected) {
+      return {
+        success: false,
+        canDelete: false,
+        code: 'VALIDATION_FAILED',
+        message: contactActionResultErrorFrom(err, 'Unable to delete contact. Please try again.'),
+        dependencies: [],
+        alternatives: []
+      };
+    }
+
     if (err instanceof Error) {
       const message = err.message;
 
@@ -295,7 +483,7 @@ export const deleteContact = withAuth(async (
           success: false,
           canDelete: false,
           code: 'VALIDATION_FAILED',
-          message: `Database connection issue - ${message}`,
+          message: 'Database connection issue. Please try again.',
           dependencies: [],
           alternatives: []
         };
@@ -305,7 +493,7 @@ export const deleteContact = withAuth(async (
         success: false,
         canDelete: false,
         code: 'VALIDATION_FAILED',
-        message: `Contact deletion failed - ${message}`,
+        message: 'Unable to delete contact. Please try again.',
         dependencies: [],
         alternatives: []
       };
@@ -334,7 +522,7 @@ export const getContactsEligibleForInvitation = withAuth(async (
 
   const canRead = await hasMspPermission(user, 'contact', 'read', db);
   if (!canRead) {
-    throw new Error('Permission denied: Cannot read contacts');
+    return [];
   }
 
   try {
@@ -372,7 +560,7 @@ export const getContactsEligibleForInvitation = withAuth(async (
     return contactsWithAvatars;
   } catch (err) {
     console.error('Error fetching contacts eligible for invitation:', err);
-    throw new Error('SYSTEM_ERROR: Failed to retrieve contacts eligible for invitation');
+    throw err;
   }
 });
 
@@ -383,24 +571,24 @@ export const addContact = withAuth(async (
 ): Promise<AddContactResult> => {
   const { knex: db } = await createTenantKnex();
 
-  await assertMspPermission(user, 'contact', 'create', 'Permission denied: Cannot create contacts', db);
-
-  const createInput: CreateContactInput = {
-    full_name: contactData.full_name || '',
-    email: contactData.email ?? undefined,
-    primary_email_canonical_type: contactData.primary_email_canonical_type ?? undefined,
-    primary_email_custom_type: contactData.primary_email_custom_type ?? undefined,
-    additional_email_addresses: contactData.additional_email_addresses ?? [],
-    phone_numbers: contactData.phone_numbers ?? [],
-    client_id: contactData.client_id || undefined,
-    role: contactData.role ?? undefined,
-    notes: contactData.notes || undefined,
-    is_inactive: contactData.is_inactive ?? undefined
-  };
-
-  // Use the shared ContactModel to create the contact
-  // The model handles all validation and business logic
   try {
+    await assertMspPermission(user, 'contact', 'create', 'Permission denied: Cannot create contacts', db);
+
+    const createInput: CreateContactInput = {
+      full_name: contactData.full_name || '',
+      email: contactData.email ?? undefined,
+      primary_email_canonical_type: contactData.primary_email_canonical_type ?? undefined,
+      primary_email_custom_type: contactData.primary_email_custom_type ?? undefined,
+      additional_email_addresses: contactData.additional_email_addresses ?? [],
+      phone_numbers: contactData.phone_numbers ?? [],
+      client_id: contactData.client_id || undefined,
+      role: contactData.role ?? undefined,
+      notes: contactData.notes || undefined,
+      is_inactive: contactData.is_inactive ?? undefined
+    };
+
+    // Use the shared ContactModel to create the contact.
+    // The model handles validation and business rules.
     const created = await withTransaction(db, async (trx: Knex.Transaction) => {
       return ContactModel.createContact(createInput, tenant, trx);
     });
@@ -435,31 +623,13 @@ export const addContact = withAuth(async (
   } catch (err) {
     console.error('Error adding contact:', err);
 
-    if (err instanceof Error) {
-      const message = err.message;
-      if (
-        message.includes('VALIDATION_ERROR:') ||
-        message.includes('EMAIL_EXISTS:') ||
-        message.includes('FOREIGN_KEY_ERROR:')
-      ) {
-        return { success: false, error: message };
-      }
-
-      if (message.includes('duplicate key') && message.includes('contacts_email_tenant_unique')) {
-        return { success: false, error: 'EMAIL_EXISTS: A contact with this email address already exists in the system' };
-      }
-
-      if (message.includes('violates not-null constraint')) {
-        const field = message.match(/column "([^"]+)"/)?.[1] || 'field';
-        return { success: false, error: `VALIDATION_ERROR: The ${field} is required` };
-      }
-
-      if (message.includes('violates foreign key constraint') && message.includes('client_id')) {
-        return { success: false, error: 'FOREIGN_KEY_ERROR: The selected client is no longer valid' };
-      }
-    }
-
-    throw new Error('SYSTEM_ERROR: An unexpected error occurred while creating the contact');
+    return {
+      success: false,
+      error: prefixedContactActionErrorFrom(
+        err,
+        'SYSTEM_ERROR: An unexpected error occurred while creating the contact',
+      ),
+    };
   }
 });
 
@@ -544,7 +714,7 @@ export const updateContact = withAuth(async (
   user,
   { tenant },
   contactData: ContactActionInput
-): Promise<IContact> => {
+): Promise<IContact | ContactUpdateActionError> => {
   const { knex: db } = await createTenantKnex();
 
   try {
@@ -646,7 +816,7 @@ export const updateContact = withAuth(async (
 
     const updatedContact = updateResult.after;
     if (!updatedContact) {
-      throw new Error('SYSTEM_ERROR: Failed to update contact record');
+      throw new Error('Contact update completed without returning the updated contact record');
     }
 
     const occurredAt = updateResult.occurredAt ?? (updatedContact as any)?.updated_at ?? new Date().toISOString();
@@ -696,31 +866,10 @@ export const updateContact = withAuth(async (
   } catch (err) {
     console.error('Error updating contact:', err);
 
-    if (err instanceof Error) {
-      const message = err.message;
-      if (message.includes('VALIDATION_ERROR:') ||
-        message.includes('EMAIL_EXISTS:') ||
-        message.includes('FOREIGN_KEY_ERROR:') ||
-        message.includes('Permission denied:') ||
-        message.includes('SYSTEM_ERROR:')) {
-        throw err;
-      }
+    const expected = contactUpdateActionErrorFrom(err);
+    if (expected) return expected;
 
-      if (message.includes('duplicate key') && message.includes('contacts_email_tenant_unique')) {
-        throw new Error('EMAIL_EXISTS: A contact with this email address already exists in the system');
-      }
-
-      if (message.includes('violates not-null constraint')) {
-        const field = message.match(/column "([^"]+)"/)?.[1] || 'field';
-        throw new Error(`VALIDATION_ERROR: The ${field} is required`);
-      }
-
-      if (message.includes('violates foreign key constraint') && message.includes('client_id')) {
-        throw new Error('FOREIGN_KEY_ERROR: The selected client is no longer valid');
-      }
-    }
-
-    throw new Error('SYSTEM_ERROR: An unexpected error occurred while updating the contact');
+    throw err;
   }
 });
 
@@ -729,7 +878,7 @@ export const updateContactsForClient = withAuth(async (
   { tenant },
   clientId: string,
   updateData: Partial<IContact>
-): Promise<void> => {
+): Promise<void | ContactUpdateActionError> => {
   const { knex: db } = await createTenantKnex();
 
   try {
@@ -809,33 +958,28 @@ export const updateContactsForClient = withAuth(async (
         });
 
       if (!updated) {
-        throw new Error('SYSTEM_ERROR: Failed to update client contacts');
+        throw new Error('Client contact update completed without modifying any contact records');
       }
     });
   } catch (err) {
     console.error('Error updating contacts for client:', err);
 
+    const expected = contactUpdateActionErrorFrom(err);
+    if (expected) return expected;
+
     if (err instanceof Error) {
       const message = err.message;
-      if (message.includes('VALIDATION_ERROR:') ||
-        message.includes('EMAIL_EXISTS:') ||
-        message.includes('FOREIGN_KEY_ERROR:') ||
-        message.includes('Permission denied:') ||
-        message.includes('SYSTEM_ERROR:')) {
-        throw err;
-      }
-
       if (message.includes('duplicate key') && message.includes('contacts_email_tenant_unique')) {
-        throw new Error('EMAIL_EXISTS: One or more contacts already have this email address');
+        return actionError('One or more contacts already have this email address');
       }
 
       if (message.includes('violates not-null constraint')) {
         const field = message.match(/column "([^"]+)"/)?.[1] || 'field';
-        throw new Error(`VALIDATION_ERROR: The ${field} is required`);
+        return actionError(`The ${field} is required`);
       }
 
       if (message.includes('violates foreign key constraint')) {
-        throw new Error('FOREIGN_KEY_ERROR: Invalid reference in update data');
+        return actionError('Invalid reference in update data');
       }
     }
 
@@ -983,12 +1127,12 @@ export const importContactsFromCSV = withAuth(async (
 ): Promise<ImportContactResult[]> => {
   const { knex: db } = await createTenantKnex();
 
-  await assertMspPermission(user, 'contact', 'create', 'Permission denied: Cannot create contacts', db);
-  if (updateExisting && !await hasMspPermission(user, 'contact', 'update', db)) {
-    throw new Error('Permission denied: Cannot update contacts');
-  }
-
   try {
+    await assertMspPermission(user, 'contact', 'create', 'Permission denied: Cannot create contacts', db);
+    if (updateExisting && !await hasMspPermission(user, 'contact', 'update', db)) {
+      throw new Error('Permission denied: Cannot update contacts');
+    }
+
     if (!contactsData || contactsData.length === 0) {
       throw new Error('VALIDATION_ERROR: No contact data provided');
     }
@@ -1131,12 +1275,15 @@ export const importContactsFromCSV = withAuth(async (
                 if (contactData.tags) {
                   const tagTexts = contactData.tags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag);
                   for (const tagText of tagTexts) {
-                    await createTag({
+                    const tagResult = await createTag({
                       tag_text: tagText,
                       tagged_id: savedContact.contact_name_id,
                       tagged_type: 'contact',
                       created_by: user.user_id
                     });
+                    if (isTagActionError(tagResult)) {
+                      console.warn('Failed to create tag during CSV import:', tagResult);
+                    }
                   }
                 }
               } catch (tagError) {
@@ -1170,12 +1317,15 @@ export const importContactsFromCSV = withAuth(async (
               try {
                 const tagTexts = contactData.tags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag);
                 for (const tagText of tagTexts) {
-                  await createTag({
+                  const tagResult = await createTag({
                     tag_text: tagText,
                     tagged_id: savedContact.contact_name_id,
                     tagged_type: 'contact',
                     created_by: user.user_id
                   });
+                  if (isTagActionError(tagResult)) {
+                    console.warn('Failed to create tag during CSV import:', tagResult);
+                  }
                 }
               } catch (tagError) {
                 console.error('Failed to create tags during CSV import:', tagError);
@@ -1192,43 +1342,9 @@ export const importContactsFromCSV = withAuth(async (
         } catch (err) {
           console.error('Error processing contact:', contactData, err);
 
-          if (err instanceof Error) {
-            const message = err.message;
-            if (message.includes('VALIDATION_ERROR:') ||
-              message.includes('EMAIL_EXISTS:') ||
-              message.includes('FOREIGN_KEY_ERROR:') ||
-              message.includes('SYSTEM_ERROR:')) {
-              results.push({
-                success: false,
-                message: message,
-                originalData: contactData
-              });
-              continue;
-            }
-
-            if (message.includes('duplicate key') && (message.includes('contacts_email_tenant_unique') || message.includes('contacts_tenant_email_unique'))) {
-              results.push({
-                success: false,
-                message: `EMAIL_EXISTS: A contact with this email address already exists: ${contactData.email}`,
-                originalData: contactData
-              });
-              continue;
-            }
-
-            if (message.includes('violates not-null constraint')) {
-              const field = message.match(/column "([^"]+)"/)?.[1] || 'field';
-              results.push({
-                success: false,
-                message: `VALIDATION_ERROR: The ${field} is required`,
-                originalData: contactData
-              });
-              continue;
-            }
-          }
-
           results.push({
             success: false,
-            message: 'SYSTEM_ERROR: An unexpected error occurred while processing the contact',
+            message: contactImportRowMessageFrom(err),
             originalData: contactData
           });
         }
@@ -1239,11 +1355,16 @@ export const importContactsFromCSV = withAuth(async (
   } catch (err) {
     console.error('Error importing contacts:', err);
 
+    const expected = contactUpdateActionErrorFrom(err);
+    if (expected) {
+      return contactImportFailureResults(
+        contactsData,
+        contactActionResultErrorFrom(err, 'Unable to import contacts. Please check the file and try again.'),
+      );
+    }
+
     if (err instanceof Error) {
       const message = err.message;
-      if (message.includes('VALIDATION_ERROR:') || message.includes('SYSTEM_ERROR:')) {
-        throw err;
-      }
       if (message.includes('relation') && message.includes('does not exist')) {
         throw new Error('SYSTEM_ERROR: Database schema error - please contact support');
       }
@@ -1257,12 +1378,12 @@ export const checkExistingEmails = withAuth(async (
   user,
   { tenant },
   emails: string[]
-): Promise<string[]> => {
+): Promise<string[] | ContactUpdateActionError> => {
   const { knex: db } = await createTenantKnex();
 
-  await assertMspPermission(user, 'contact', 'read', 'Permission denied: Cannot read contacts', db);
-
   try {
+    await assertMspPermission(user, 'contact', 'read', 'Permission denied: Cannot read contacts', db);
+
     if (!emails || emails.length === 0) {
       throw new Error('VALIDATION_ERROR: No email addresses provided');
     }
@@ -1296,11 +1417,11 @@ export const checkExistingEmails = withAuth(async (
   } catch (err) {
     console.error('Error checking existing emails:', err);
 
+    const expected = contactUpdateActionErrorFrom(err);
+    if (expected) return expected;
+
     if (err instanceof Error) {
       const message = err.message;
-      if (message.includes('VALIDATION_ERROR:') || message.includes('SYSTEM_ERROR:')) {
-        throw err;
-      }
       if (message.includes('relation') && message.includes('does not exist')) {
         throw new Error('SYSTEM_ERROR: Database schema error - please contact support');
       }
@@ -1450,7 +1571,10 @@ export const updateContactPortalAdminStatus = withAuth(async (
     console.error('[contactActions.updateContactPortalAdminStatus]', error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : 'Failed to update contact'
+      error: contactActionResultErrorFrom(
+        error,
+        'Unable to update portal admin status. Please refresh and try again.',
+      )
     };
   }
 });
@@ -1509,7 +1633,7 @@ export const getUserByContactId = withAuth(async (
     console.error('[contactActions.getUserByContactId]', error);
     return {
       user: null,
-      error: error instanceof Error ? error.message : 'Failed to get user'
+      error: contactActionResultErrorFrom(error, 'Failed to get user')
     };
   }
 });
@@ -1528,6 +1652,48 @@ type VisibilityGroupPayload = {
   description?: string | null;
   boardIds?: string[];
 };
+
+type VisibilityGroupActionError = ActionMessageError | ActionPermissionError;
+
+function visibilityGroupActionErrorFrom(error: unknown): VisibilityGroupActionError | null {
+  if (error instanceof Error) {
+    const message = error.message;
+    if (message.includes('Permission denied:')) {
+      return permissionError(message);
+    }
+    if (message.startsWith('Validation error:')) {
+      return actionError(message.replace(/^Validation error:\s*/, ''));
+    }
+    if (message === 'Cannot manage contacts for another client') {
+      return permissionError('Permission denied: Cannot manage contacts for another client');
+    }
+    if (
+      message === 'Contact not found' ||
+      message === 'Assigned visibility group is invalid for this contact' ||
+      message === 'Visibility group not found' ||
+      message === 'One or more boards are invalid for this tenant' ||
+      message === 'Cannot delete visibility group while it is assigned to contacts'
+    ) {
+      return actionError(message);
+    }
+  }
+
+  const dbError = error as { code?: string; column?: string; constraint?: string };
+  if (dbError?.code === '23502') {
+    return actionError(`Missing required visibility group field${dbError.column ? `: ${dbError.column}` : ''}.`);
+  }
+  if (dbError?.code === '23503') {
+    return actionError('The selected contact, visibility group, or board is no longer valid. Please refresh and try again.');
+  }
+  if (dbError?.code === '23505') {
+    return actionError('A visibility group with these details already exists for this client.');
+  }
+  if (dbError?.code === '23514') {
+    return actionError('Invalid visibility group data provided. Please check the group details and selected boards.');
+  }
+
+  return null;
+}
 
 async function resolveContactClientId(
   trx: Knex.Transaction,
@@ -1624,7 +1790,7 @@ export const getClientPortalVisibilityGroupsForContact = withAuth(async (
   user,
   { tenant },
   contactId: string
-): Promise<VisibilityGroupListItem[]> => {
+): Promise<VisibilityGroupListItem[] | VisibilityGroupActionError> => {
   try {
     const { knex } = await createTenantKnex();
 
@@ -1658,6 +1824,10 @@ export const getClientPortalVisibilityGroupsForContact = withAuth(async (
       }));
     });
   } catch (error) {
+    const expected = visibilityGroupActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
     console.error('[contactActions.getClientPortalVisibilityGroupsForContact]', error);
     throw error;
   }
@@ -1667,7 +1837,7 @@ export const getClientPortalVisibilityBoardsByClient = withAuth(async (
   user,
   { tenant },
   contactId: string
-): Promise<IBoard[]> => {
+): Promise<IBoard[] | VisibilityGroupActionError> => {
   try {
     const { knex } = await createTenantKnex();
 
@@ -1679,6 +1849,10 @@ export const getClientPortalVisibilityBoardsByClient = withAuth(async (
         .select('board_id', 'board_name');
     });
   } catch (error) {
+    const expected = visibilityGroupActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
     console.error('[contactActions.getClientPortalVisibilityBoardsByClient]', error);
     throw error;
   }
@@ -1689,7 +1863,7 @@ export const getClientPortalVisibilityGroupById = withAuth(async (
   { tenant },
   contactId: string,
   groupId: string
-): Promise<{ group_id: string; name: string; description: string | null; board_ids: string[] }> => {
+): Promise<{ group_id: string; name: string; description: string | null; board_ids: string[] } | VisibilityGroupActionError> => {
   try {
     const { knex } = await createTenantKnex();
 
@@ -1714,6 +1888,10 @@ export const getClientPortalVisibilityGroupById = withAuth(async (
       };
     });
   } catch (error) {
+    const expected = visibilityGroupActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
     console.error('[contactActions.getClientPortalVisibilityGroupById]', error);
     throw error;
   }
@@ -1774,44 +1952,52 @@ export const createClientPortalVisibilityGroupForContact = withAuth(async (
   { tenant },
   contactId: string,
   input: VisibilityGroupPayload
-): Promise<{ group_id: string }> => {
+): Promise<{ group_id: string } | VisibilityGroupActionError> => {
   const name = input.name?.trim();
   if (!name) {
-    throw new Error('Validation error: Group name is required');
+    return actionError('Group name is required');
   }
 
   const { knex } = await createTenantKnex();
   const boardIds = Array.from(new Set((input.boardIds ?? []).filter(Boolean)));
 
-  return withTransaction(knex, async (trx: Knex.Transaction) => {
-    const clientId = await resolveContactAndVerifyPermission(user, trx, tenant, contactId);
+  try {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const clientId = await resolveContactAndVerifyPermission(user, trx, tenant, contactId);
 
-    await ensureBoardsAreActiveInTenant(trx, tenant, boardIds);
+      await ensureBoardsAreActiveInTenant(trx, tenant, boardIds);
 
-    const [group] = await tenantScopedTable(trx, 'client_portal_visibility_groups', tenant)
-      .insert({
-        tenant,
-        client_id: clientId,
-        name,
-        description: input.description?.trim() || null,
-      })
-      .returning('group_id');
-
-    if (!group?.group_id) {
-      throw new Error('Failed to create visibility group');
-    }
-
-    if (boardIds.length > 0) {
-      await tenantScopedTable(trx, 'client_portal_visibility_group_boards', tenant)
-        .insert(boardIds.map((boardId) => ({
+      const [group] = await tenantScopedTable(trx, 'client_portal_visibility_groups', tenant)
+        .insert({
           tenant,
-          group_id: group.group_id,
-          board_id: boardId
-        })));
-    }
+          client_id: clientId,
+          name,
+          description: input.description?.trim() || null,
+        })
+        .returning('group_id');
 
-    return { group_id: group.group_id };
-  });
+      if (!group?.group_id) {
+        throw new Error('Visibility group creation completed without returning a group id');
+      }
+
+      if (boardIds.length > 0) {
+        await tenantScopedTable(trx, 'client_portal_visibility_group_boards', tenant)
+          .insert(boardIds.map((boardId) => ({
+            tenant,
+            group_id: group.group_id,
+            board_id: boardId
+          })));
+      }
+
+      return { group_id: group.group_id };
+    });
+  } catch (error) {
+    const expected = visibilityGroupActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
+  }
 });
 
 export const updateClientPortalVisibilityGroupForContact = withAuth(async (
@@ -1820,49 +2006,57 @@ export const updateClientPortalVisibilityGroupForContact = withAuth(async (
   contactId: string,
   groupId: string,
   input: VisibilityGroupPayload
-): Promise<void> => {
+): Promise<void | VisibilityGroupActionError> => {
   const name = input.name?.trim();
   if (!name) {
-    throw new Error('Validation error: Group name is required');
+    return actionError('Group name is required');
   }
 
   const boardIds = Array.from(new Set((input.boardIds ?? []).filter(Boolean)));
   const { knex } = await createTenantKnex();
 
-  return withTransaction(knex, async (trx: Knex.Transaction) => {
-    const clientId = await resolveContactAndVerifyPermission(user, trx, tenant, contactId);
+  try {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const clientId = await resolveContactAndVerifyPermission(user, trx, tenant, contactId);
 
-    const existing = await tenantScopedTable(trx, 'client_portal_visibility_groups', tenant)
-      .where({ client_id: clientId, group_id: groupId })
-      .first('group_id');
+      const existing = await tenantScopedTable(trx, 'client_portal_visibility_groups', tenant)
+        .where({ client_id: clientId, group_id: groupId })
+        .first('group_id');
 
-    if (!existing) {
-      throw new Error('Visibility group not found');
-    }
+      if (!existing) {
+        throw new Error('Visibility group not found');
+      }
 
-    await ensureBoardsAreActiveOrAlreadyAssignedToGroup(trx, tenant, groupId, boardIds);
+      await ensureBoardsAreActiveOrAlreadyAssignedToGroup(trx, tenant, groupId, boardIds);
 
-    await tenantScopedTable(trx, 'client_portal_visibility_groups', tenant)
-      .where({ group_id: groupId })
-      .update({
-        name,
-        description: input.description?.trim() || null,
-        updated_at: new Date().toISOString()
-      });
+      await tenantScopedTable(trx, 'client_portal_visibility_groups', tenant)
+        .where({ group_id: groupId })
+        .update({
+          name,
+          description: input.description?.trim() || null,
+          updated_at: new Date().toISOString()
+        });
 
-    await tenantScopedTable(trx, 'client_portal_visibility_group_boards', tenant)
-      .where({ group_id: groupId })
-      .delete();
-
-    if (boardIds.length > 0) {
       await tenantScopedTable(trx, 'client_portal_visibility_group_boards', tenant)
-        .insert(boardIds.map((boardId) => ({
-          tenant,
-          group_id: groupId,
-          board_id: boardId
-        })));
+        .where({ group_id: groupId })
+        .delete();
+
+      if (boardIds.length > 0) {
+        await tenantScopedTable(trx, 'client_portal_visibility_group_boards', tenant)
+          .insert(boardIds.map((boardId) => ({
+            tenant,
+            group_id: groupId,
+            board_id: boardId
+          })));
+      }
+    });
+  } catch (error) {
+    const expected = visibilityGroupActionErrorFrom(error);
+    if (expected) {
+      return expected;
     }
-  });
+    throw error;
+  }
 });
 
 export const deleteClientPortalVisibilityGroupForContact = withAuth(async (
@@ -1870,37 +2064,45 @@ export const deleteClientPortalVisibilityGroupForContact = withAuth(async (
   { tenant },
   contactId: string,
   groupId: string
-): Promise<void> => {
+): Promise<void | VisibilityGroupActionError> => {
   const { knex } = await createTenantKnex();
 
-  return withTransaction(knex, async (trx: Knex.Transaction) => {
-    const clientId = await resolveContactAndVerifyPermission(user, trx, tenant, contactId);
+  try {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const clientId = await resolveContactAndVerifyPermission(user, trx, tenant, contactId);
 
-    const existing = await tenantScopedTable(trx, 'client_portal_visibility_groups', tenant)
-      .where({ client_id: clientId, group_id: groupId })
-      .first('group_id');
+      const existing = await tenantScopedTable(trx, 'client_portal_visibility_groups', tenant)
+        .where({ client_id: clientId, group_id: groupId })
+        .first('group_id');
 
-    if (!existing) {
-      throw new Error('Visibility group not found');
+      if (!existing) {
+        throw new Error('Visibility group not found');
+      }
+
+      const assignedCount = await tenantScopedTable(trx, 'contacts', tenant)
+        .where({ client_id: clientId, portal_visibility_group_id: groupId })
+        .count('contact_name_id as count')
+        .first();
+
+      if (Number(assignedCount?.count || 0) > 0) {
+        throw new Error('Cannot delete visibility group while it is assigned to contacts');
+      }
+
+      await tenantScopedTable(trx, 'client_portal_visibility_group_boards', tenant)
+        .where({ group_id: groupId })
+        .delete();
+
+      await tenantScopedTable(trx, 'client_portal_visibility_groups', tenant)
+        .where({ group_id: groupId })
+        .delete();
+    });
+  } catch (error) {
+    const expected = visibilityGroupActionErrorFrom(error);
+    if (expected) {
+      return expected;
     }
-
-    const assignedCount = await tenantScopedTable(trx, 'contacts', tenant)
-      .where({ client_id: clientId, portal_visibility_group_id: groupId })
-      .count('contact_name_id as count')
-      .first();
-
-    if (Number(assignedCount?.count || 0) > 0) {
-      throw new Error('Cannot delete visibility group while it is assigned to contacts');
-    }
-
-    await tenantScopedTable(trx, 'client_portal_visibility_group_boards', tenant)
-      .where({ group_id: groupId })
-      .delete();
-
-    await tenantScopedTable(trx, 'client_portal_visibility_groups', tenant)
-      .where({ group_id: groupId })
-      .delete();
-  });
+    throw error;
+  }
 });
 
 export const assignClientPortalVisibilityGroupToContact = withAuth(async (
@@ -1908,21 +2110,29 @@ export const assignClientPortalVisibilityGroupToContact = withAuth(async (
   { tenant },
   contactId: string,
   groupId: string | null
-): Promise<void> => {
+): Promise<void | VisibilityGroupActionError> => {
   const { knex } = await createTenantKnex();
 
-  return withTransaction(knex, async (trx: Knex.Transaction) => {
-    const clientId = await resolveContactAndVerifyPermission(user, trx, tenant, contactId);
+  try {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const clientId = await resolveContactAndVerifyPermission(user, trx, tenant, contactId);
 
-    if (groupId) {
-      await ensureContactPortalGroupsScope(trx, tenant, clientId, groupId);
+      if (groupId) {
+        await ensureContactPortalGroupsScope(trx, tenant, clientId, groupId);
+      }
+
+      await tenantScopedTable(trx, 'contacts', tenant)
+        .where({ contact_name_id: contactId })
+        .update({
+          portal_visibility_group_id: groupId,
+          updated_at: new Date().toISOString()
+        });
+    });
+  } catch (error) {
+    const expected = visibilityGroupActionErrorFrom(error);
+    if (expected) {
+      return expected;
     }
-
-    await tenantScopedTable(trx, 'contacts', tenant)
-      .where({ contact_name_id: contactId })
-      .update({
-        portal_visibility_group_id: groupId,
-        updated_at: new Date().toISOString()
-      });
-  });
+    throw error;
+  }
 });
