@@ -11,14 +11,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import toast from 'react-hot-toast';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import {
-  cancelAccountingExportBatch,
-  createAccountingExportBatch,
-  executeAccountingExportBatch,
-  getAccountingExportBatch,
-  listAccountingExportBatches,
-  getAccountingSyncHealth
-} from '@alga-psa/billing/actions';
+import { cancelAccountingExportBatch, createAccountingExportBatch, executeAccountingExportBatch, getAccountingExportBatch, listAccountingExportBatches } from '@alga-psa/billing/actions/accountingExportActions';
+import { getAccountingSyncHealth } from '@alga-psa/billing/actions/accountingSyncActions';
 
 type AccountingExportStatus =
   | 'pending'

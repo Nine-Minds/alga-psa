@@ -21,7 +21,7 @@ import { approveQuote, convertQuoteToBoth, convertQuoteToContract, convertQuoteT
 import { getQuoteDocumentTemplates } from '../../../actions/quoteDocumentTemplates';
 import { getSalesOrderForQuote, type SalesOrderQuoteLink } from '@alga-psa/inventory/actions/salesOrderLinkActions';
 import { getProductAvailability, type ProductAvailability } from '@alga-psa/inventory/actions/availabilityActions';
-import { getContactsForPicker } from '@alga-psa/user-composition/actions';
+import { getContactsForPicker } from '@alga-psa/user-composition/actions/contactQueryActions';
 import QuoteStatusBadge from './QuoteStatusBadge';
 import { ArrowLeft } from 'lucide-react';
 import { QuoteSendRecipientsField, type QuoteRecipient } from './QuoteSendRecipientsField';

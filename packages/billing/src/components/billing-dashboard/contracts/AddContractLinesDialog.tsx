@@ -15,7 +15,7 @@ import {
   getContractLinePresetServices,
   getContractLinePresetFixedConfig
 } from '@alga-psa/billing/actions/contractLinePresetActions';
-import { getServices } from '@alga-psa/billing/actions';
+import { getServices } from '@alga-psa/billing/actions/serviceActions';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';

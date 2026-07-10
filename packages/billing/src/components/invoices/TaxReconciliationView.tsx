@@ -9,7 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
-import { getInvoiceTaxReconciliation } from '@alga-psa/billing/actions';
+import { getInvoiceTaxReconciliation } from '@alga-psa/billing/actions/externalTaxImportActions';
 
 interface TaxReconciliationViewProps {
   invoiceId: string;

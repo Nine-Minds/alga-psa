@@ -20,7 +20,7 @@ import {
   getContractLinePresetServices,
   updateContractLinePresetServices
 } from '@alga-psa/billing/actions/contractLinePresetActions';
-import { getServices } from '@alga-psa/billing/actions';
+import { getServices } from '@alga-psa/billing/actions/serviceActions';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AlertCircle } from 'lucide-react';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';

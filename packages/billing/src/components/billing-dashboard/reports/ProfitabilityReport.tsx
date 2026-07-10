@@ -13,18 +13,8 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { ColumnDefinition } from '@alga-psa/types';
-import {
-  getAgreementProfitability,
-  getClientProfitability,
-  getProfitabilitySummary,
-  getTicketProfitability,
-  type AgreementProfitabilityRow,
-  type ClientProfitabilityRow,
-  type ContractLineProfitabilityRow,
-  type ProfitabilityMetricFields,
-  type ProfitabilitySummary,
-  type TicketProfitabilityRow,
-} from '@alga-psa/billing/actions';
+import { getAgreementProfitability, getClientProfitability, getProfitabilitySummary, getTicketProfitability } from '@alga-psa/billing/actions/profitabilityReportActions';
+import type { AgreementProfitabilityRow, ClientProfitabilityRow, ContractLineProfitabilityRow, ProfitabilityMetricFields, ProfitabilitySummary, TicketProfitabilityRow } from '@alga-psa/billing/actions/profitabilityReportActions';
 import {
   getErrorMessage,
   isActionMessageError,

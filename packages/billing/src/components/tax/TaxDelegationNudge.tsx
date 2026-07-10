@@ -13,10 +13,7 @@ import {
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { Cloud } from 'lucide-react';
-import {
-  getTenantTaxSettings,
-  updateTenantTaxSettings,
-} from '@alga-psa/billing/actions';
+import { getTenantTaxSettings, updateTenantTaxSettings } from '@alga-psa/billing/actions/taxSettingsActions';
 
 type SupportedAdapter = { key: 'xero' | 'qbo'; label: string; statusParam: string };
 

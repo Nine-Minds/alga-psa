@@ -6,7 +6,7 @@ import { UnitOfMeasureInput } from '@alga-psa/ui/components/UnitOfMeasureInput';
 import { ServiceTaxSettings } from './ServiceTaxSettings';
 import { ServiceRateTiers } from './ServiceRateTiers';
 import { IService } from '@alga-psa/types';
-import { getServiceById } from '@alga-psa/billing/actions';
+import { getServiceById } from '@alga-psa/billing/actions/serviceActions';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getErrorMessage,

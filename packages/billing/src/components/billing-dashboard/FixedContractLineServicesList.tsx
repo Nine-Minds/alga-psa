@@ -25,8 +25,8 @@ import {
   updateContractLineService,
   getContractLineServicesWithConfigurations
 } from '@alga-psa/billing/actions/contractLineServiceActions';
-import { getServices } from '@alga-psa/billing/actions';
-import { getServiceCategories } from '@alga-psa/billing/actions'; // Added import
+import { getServices } from '@alga-psa/billing/actions/serviceActions';
+import { getServiceCategories } from '@alga-psa/billing/actions/categoryActions'; // Added import
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AlertCircle } from 'lucide-react';
 import EditPlanServiceQuantityDialog from './contract-lines/EditContractLineServiceQuantityDialog';

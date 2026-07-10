@@ -20,7 +20,7 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
 import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import { BucketOverlayFields } from '../contracts/BucketOverlayFields';
-import { BucketOverlayInput } from '@alga-psa/billing/actions';
+import type { BucketOverlayInput } from '@alga-psa/billing/actions/bucketOverlayActions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 interface ServiceConfigurationPanelProps {
