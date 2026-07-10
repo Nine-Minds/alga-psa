@@ -220,6 +220,8 @@ async function sendWarnings(knex: Knex, tenant: string): Promise<void> {
       's.ticket_id',
       's.scheduled_close_at',
       'r.warning_days_before',
+      'r.suppress_contact_notifications',
+      'r.suppress_internal_notifications',
       't.title',
       't.ticket_number',
       't.contact_name_id',
@@ -231,6 +233,33 @@ async function sendWarnings(knex: Knex, tenant: string): Promise<void> {
 
   for (const row of due) {
     try {
+      if (row.suppress_contact_notifications) {
+        await withTransaction(knex, async (trx: Knex.Transaction) => {
+          await tenantScopedTable(trx, 'ticket_auto_close_state', tenant)
+            .where({ ticket_id: row.ticket_id })
+            .update({ warning_sent_at: now.toISOString(), updated_at: trx.fn.now() });
+
+          await writeTicketActivity(trx, {
+            tenant,
+            ticketId: row.ticket_id,
+            eventType: TICKET_ACTIVITY_EVENT.AUTO_CLOSE_WARNING_SENT,
+            entityType: TICKET_ACTIVITY_ENTITY.TICKET,
+            actor: { actorType: TICKET_ACTIVITY_ACTOR.SYSTEM },
+            source: TICKET_ACTIVITY_SOURCE.SYSTEM,
+            details: {
+              scheduled_close_at: new Date(row.scheduled_close_at).toISOString(),
+              recipient: null,
+              outcome: 'warning_suppressed',
+              notification_suppression: {
+                suppress_contact_notifications: true,
+                suppress_internal_notifications: Boolean(row.suppress_internal_notifications),
+              },
+            },
+          });
+        });
+        continue;
+      }
+
       // The handler runs in the Temporal worker (plain Node ESM) and must not
       // depend on @alga-psa/notifications. It only emits a domain event; the
       // server-side ticketAutoCloseWarningSubscriber resolves the contact email
@@ -288,7 +317,9 @@ async function closeDueTickets(knex: Knex, tenant: string): Promise<{ closed: nu
       's.ticket_id',
       's.rule_id',
       'r.inactivity_days',
-      'r.close_to_status_id'
+      'r.close_to_status_id',
+      'r.suppress_contact_notifications',
+      'r.suppress_internal_notifications'
     )) as Array<Record<string, any>>;
 
   let closed = 0;
@@ -349,7 +380,12 @@ async function closeDueTickets(knex: Knex, tenant: string): Promise<{ closed: nu
           tenant,
           row.ticket_id,
           { status_id: row.close_to_status_id },
-          { systemActor: true, bypassCloseRules: { source: 'auto_close' } }
+          {
+            systemActor: true,
+            bypassCloseRules: { source: 'auto_close' },
+            suppressContactNotifications: Boolean(row.suppress_contact_notifications),
+            suppressInternalNotifications: Boolean(row.suppress_internal_notifications),
+          }
         );
 
         await tenantScopedTable(trx, 'ticket_auto_close_state', tenant)

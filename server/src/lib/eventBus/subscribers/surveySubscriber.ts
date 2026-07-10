@@ -57,12 +57,24 @@ function extractActorUserId(payload: unknown): string | undefined {
   return typeof value === 'string' ? value : undefined;
 }
 
+function shouldSendTicketClosedSurveyInvitation(payload: { suppressContactNotifications?: boolean }): boolean {
+  return payload.suppressContactNotifications !== true;
+}
+
 async function handleTicketClosedEvent(event: unknown): Promise<void> {
   try {
     const validated = EventSchemas.TICKET_CLOSED.parse(event) as TicketClosedEvent;
     const { tenantId, ticketId } = validated.payload;
     const actorUserId = extractActorUserId(validated.payload);
     logger.info('[SurveySubscriber] Handling TICKET_CLOSED', { tenantId, ticketId, event });
+
+    if (!shouldSendTicketClosedSurveyInvitation(validated.payload)) {
+      logger.debug('[SurveySubscriber] Skipped ticket closed survey invitation due to suppression', {
+        tenantId,
+        ticketId,
+      });
+      return;
+    }
 
     const triggers = await getSurveyTriggersForTenant(tenantId);
     logger.info('[SurveySubscriber] Loaded triggers', { tenantId, triggerCount: triggers.length });
@@ -161,6 +173,7 @@ async function handleProjectClosedEvent(event: unknown): Promise<void> {
 }
 
 export const __testHooks = {
+  shouldSendTicketClosedSurveyInvitation,
   handleTicketClosedEvent,
   handleProjectClosedEvent,
 };

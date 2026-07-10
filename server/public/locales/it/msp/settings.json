@@ -717,8 +717,12 @@
           "fetchFailed": "Impossibile caricare le regole di chiusura per questa bacheca",
           "autoCloseStatusRequired": "Ogni regola di chiusura automatica richiede uno stato di attivazione e uno stato di chiusura target",
           "autoCloseDaysInvalid": "I giorni di inattività per la chiusura automatica devono essere un numero intero positivo",
-          "autoCloseWarningInvalid": "Il preavviso di avviso deve essere inferiore ai giorni di inattività"
-        }
+          "autoCloseWarningInvalid": "Il preavviso di avviso deve essere inferiore ai giorni di inattività",
+          "autoCloseSuppressionInvalid": "Le notifiche ad agenti e osservatori possono essere saltate solo se vengono saltate le notifiche al cliente."
+        },
+        "suppressContactNotificationsLabel": "Non notificare il cliente",
+        "suppressContactNotificationsHelp": "Salta l'e-mail di avviso, l'e-mail di chiusura, l'invito al sondaggio e la notifica del portale clienti.",
+        "suppressInternalNotificationsLabel": "Non notificare anche agenti e osservatori"
       },
       "editor": {
         "sections": {

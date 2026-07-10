@@ -2,7 +2,10 @@
 
 import { useState } from 'react';
 import BulkChangePriorityDialog from '@alga-psa/tickets/components/BulkChangePriorityDialog';
-import { bulkUpdateTicketPriority } from '@alga-psa/tickets/actions/ticketActions';
+import {
+  bulkUpdateTicketPriority,
+  type TicketNotificationSuppressionOptions,
+} from '@alga-psa/tickets/actions/ticketActions';
 import { useTicketsRouteState } from '@alga-psa/tickets/components/TicketsRouteProvider';
 import {
   type TicketBulkCloseMode,
@@ -31,14 +34,16 @@ export default function BulkChangePriorityRouteClient({ closeMode }: BulkChangeP
     toastBulkResult,
   } = useTicketBulkRouteDialog(closeMode);
 
-  const handleConfirm = async (priorityId: string) => {
+  const handleConfirm = async (priorityId: string, options?: TicketNotificationSuppressionOptions) => {
     if (selectedTicketIdsArray.length === 0) return;
 
     setIsSubmitting(true);
     setFailed([]);
 
     try {
-      const result = await bulkUpdateTicketPriority(selectedTicketIdsArray, priorityId);
+      const result = options
+        ? await bulkUpdateTicketPriority(selectedTicketIdsArray, priorityId, options)
+        : await bulkUpdateTicketPriority(selectedTicketIdsArray, priorityId);
 
       if (result.updatedIds.length > 0) {
         refreshList();

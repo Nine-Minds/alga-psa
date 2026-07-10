@@ -12,6 +12,7 @@ const disconnectRedisMock = vi.fn();
 const validateStatusBelongsToBoardMock = vi.fn(
   async (_statusId: string, _boardId: string, _tenant: string, _trx: unknown) => ({ valid: true })
 );
+const auditLogInserts: Record<string, unknown>[] = [];
 // Queue mirroring @alga-psa/db's after-commit hook registry: hooks registered
 // via registerAfterCommit during a transaction run after the (mocked)
 // transaction resolves, matching production's flush-after-commit semantics.
@@ -113,6 +114,10 @@ vi.mock('../lib/workflowTicketSlaStageEvents', () => ({
   buildTicketResolutionSlaStageCompletionEvent: vi.fn(() => null),
 }));
 
+vi.mock('../lib/validateTicketClosure', () => ({
+  enforceTicketCloseRules: vi.fn(async () => undefined),
+}));
+
 import {
   resetTicketUpdatePublisherClientForTests,
   setTicketUpdateEventBusLoaderForTests,
@@ -148,7 +153,7 @@ function makeStatus(status_id: string, is_closed = false) {
   return {
     status_id,
     tenant: 'tenant-1',
-    is_closed,
+    is_closed: is_closed || status_id.startsWith('closed-'),
   };
 }
 
@@ -249,7 +254,10 @@ function buildTrx(params: {
 
     if (table === 'ticket_audit_logs') {
       return {
-        insert: vi.fn(async () => undefined),
+        insert: vi.fn(async (row: Record<string, unknown>) => {
+          auditLogInserts.push(row);
+          return undefined;
+        }),
       };
     }
 
@@ -261,6 +269,7 @@ describe('updateTicketWithCache live updates', () => {
   beforeEach(async () => {
     await resetTicketUpdatePublisherClientForTests();
     vi.clearAllMocks();
+    auditLogInserts.length = 0;
     afterCommitHooksQueue.length = 0;
     setTicketUpdateEventBusLoaderForTests(async () => ({
       getRedisClient: vi.fn(async () => ({
@@ -313,8 +322,10 @@ describe('updateTicketWithCache live updates', () => {
     hasPermissionMock.mockResolvedValue(false);
 
     const { updateTicketWithCache } = await import('./optimizedTicketActions');
-    await expect(updateTicketWithCache('ticket-1', { status_id: 'status-2' })).rejects.toThrow(
-      'Permission denied: Cannot update ticket'
+    // Expected failures return a typed action error instead of throwing.
+    const result = await updateTicketWithCache('ticket-1', { status_id: 'status-2' });
+    expect(result).toEqual(
+      expect.objectContaining({ permissionError: 'Permission denied: Cannot update ticket' })
     );
 
     expect(publishRedisMock).not.toHaveBeenCalled();
@@ -350,6 +361,66 @@ describe('updateTicketWithCache live updates', () => {
     expect(channels).not.toContain('alga-psa:ticket-updates:tenant-1:child-2');
   });
 
+  it('T024: suppressed bundled master close publishes no per-child close events (master event carries the flags)', async () => {
+    withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) =>
+      callback(
+        buildTrx({
+          currentTicket: makeTicket({
+            ticket_id: 'parent-1',
+            status_id: 'status-1',
+          }),
+          bundleSettings: {
+            tenant: 'tenant-1',
+            master_ticket_id: 'parent-1',
+            mode: 'sync_updates',
+          },
+          childTickets: [
+            makeTicket({ ticket_id: 'child-1', master_ticket_id: 'parent-1', status_id: 'status-1' }),
+            makeTicket({ ticket_id: 'child-2', master_ticket_id: 'parent-1', status_id: 'closed-status-1' }),
+          ],
+        })
+      )
+    );
+
+    const { updateTicketWithCache } = await import('./optimizedTicketActions');
+    await expect(
+      updateTicketWithCache(
+        'parent-1',
+        { status_id: 'closed-status-1' },
+        {
+          suppressContactNotifications: true,
+          suppressInternalNotifications: true,
+        }
+      )
+    ).resolves.toBe('success');
+
+    expect(publishWorkflowEventMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: 'TICKET_CLOSED',
+        payload: expect.objectContaining({
+          ticketId: 'parent-1',
+          suppressContactNotifications: true,
+          suppressInternalNotifications: true,
+        }),
+      })
+    );
+    // Children never publish TICKET_CLOSED of their own — the master's event
+    // (with flags) drives child requester handling in the close subscriber.
+    // A silent close must not fan out events a normal close doesn't.
+    expect(
+      publishWorkflowEventMock.mock.calls.some(
+        ([event]) =>
+          event.eventType === 'TICKET_CLOSED' &&
+          (event.payload?.ticketId === 'child-1' || event.payload?.ticketId === 'child-2')
+      )
+    ).toBe(false);
+
+    // Child live UI updates still fire for the changed child only.
+    const channels = publishRedisMock.mock.calls.map((call) => call[0]);
+    expect(channels.filter((channel) => channel === 'alga-psa:ticket-updates:tenant-1:child-1')).toHaveLength(1);
+    expect(channels).not.toContain('alga-psa:ticket-updates:tenant-1:child-2');
+  });
+
   it('T007: live-update kill switch skips Redis publish without blocking the ticket update', async () => {
     process.env.LIVE_TICKET_UPDATES_DISABLED = '1';
 
@@ -357,5 +428,187 @@ describe('updateTicketWithCache live updates', () => {
     await expect(updateTicketWithCache('ticket-1', { status_id: 'status-2' })).resolves.toBe('success');
 
     expect(publishRedisMock).not.toHaveBeenCalled();
+  });
+
+  it('accepts contact-only suppression and publishes it on TICKET_UPDATED without changing dedupe behavior', async () => {
+    const { updateTicketWithCache } = await import('./optimizedTicketActions');
+
+    await expect(
+      updateTicketWithCache(
+        'ticket-1',
+        { title: 'Silently changed title' },
+        { suppressContactNotifications: true }
+      )
+    ).resolves.toBe('success');
+
+    expect(publishWorkflowEventMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: 'TICKET_UPDATED',
+        payload: expect.objectContaining({
+          ticketId: 'ticket-1',
+          suppressContactNotifications: true,
+          suppressInternalNotifications: false,
+        }),
+      })
+    );
+    const activityDetails = JSON.parse(String(auditLogInserts.at(-1)?.details ?? '{}'));
+    expect(activityDetails.notification_suppression).toEqual({
+      suppress_contact_notifications: true,
+      suppress_internal_notifications: false,
+    });
+  });
+
+  it('accepts full suppression and publishes it on TICKET_UPDATED', async () => {
+    const { updateTicketWithCache } = await import('./optimizedTicketActions');
+
+    await expect(
+      updateTicketWithCache(
+        'ticket-1',
+        { title: 'Fully silent title' },
+        {
+          suppressContactNotifications: true,
+          suppressInternalNotifications: true,
+        }
+      )
+    ).resolves.toBe('success');
+
+    expect(publishWorkflowEventMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: 'TICKET_UPDATED',
+        payload: expect.objectContaining({
+          suppressContactNotifications: true,
+          suppressInternalNotifications: true,
+        }),
+      })
+    );
+  });
+
+  it('rejects internal suppression unless contact suppression is also set', async () => {
+    const { updateTicketWithCache } = await import('./optimizedTicketActions');
+
+    await expect(
+      updateTicketWithCache(
+        'ticket-1',
+        { title: 'Invalid suppression request' },
+        { suppressInternalNotifications: true }
+      )
+    ).rejects.toThrow('suppressInternalNotifications requires suppressContactNotifications');
+
+    expect(publishWorkflowEventMock).not.toHaveBeenCalled();
+  });
+
+  it('publishes default-false suppression flags when no suppression options are supplied', async () => {
+    const { updateTicketWithCache } = await import('./optimizedTicketActions');
+
+    await expect(updateTicketWithCache('ticket-1', { title: 'Normal title' })).resolves.toBe('success');
+
+    expect(publishWorkflowEventMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: 'TICKET_UPDATED',
+        payload: expect.objectContaining({
+          suppressContactNotifications: false,
+          suppressInternalNotifications: false,
+        }),
+      })
+    );
+    const activityDetails = JSON.parse(String(auditLogInserts.at(-1)?.details ?? '{}'));
+    expect(activityDetails.notification_suppression).toBeUndefined();
+  });
+
+  it('propagates suppression flags on a non-closing status update without error', async () => {
+    const { updateTicketWithCache } = await import('./optimizedTicketActions');
+
+    await expect(
+      updateTicketWithCache(
+        'ticket-1',
+        { status_id: 'status-2' },
+        { suppressContactNotifications: true }
+      )
+    ).resolves.toBe('success');
+
+    expect(publishWorkflowEventMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: 'TICKET_UPDATED',
+        payload: expect.objectContaining({
+          changes: expect.objectContaining({
+            status_id: { old: 'status-1', new: 'status-2' },
+          }),
+          suppressContactNotifications: true,
+          suppressInternalNotifications: false,
+        }),
+      })
+    );
+  });
+
+  it('publishes suppression flags on TICKET_ASSIGNED', async () => {
+    const { updateTicketWithCache } = await import('./optimizedTicketActions');
+
+    await expect(
+      updateTicketWithCache(
+        'ticket-1',
+        { assigned_to: 'user-2' },
+        {
+          suppressContactNotifications: true,
+          suppressInternalNotifications: true,
+        }
+      )
+    ).resolves.toBe('success');
+
+    expect(publishWorkflowEventMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: 'TICKET_ASSIGNED',
+        payload: expect.objectContaining({
+          newAssigneeId: 'user-2',
+          suppressContactNotifications: true,
+          suppressInternalNotifications: true,
+        }),
+      })
+    );
+  });
+
+  it('publishes suppression flags on TICKET_CLOSED', async () => {
+    const { updateTicketWithCache } = await import('./optimizedTicketActions');
+    const slaEvents = await import('../lib/workflowTicketSlaStageEvents');
+    (slaEvents.buildTicketResolutionSlaStageCompletionEvent as any).mockReturnValueOnce({
+      eventType: 'TICKET_SLA_STAGE_MET',
+      payload: {
+        tenantId: 'tenant-1',
+        ticketId: 'ticket-1',
+        stage: 'resolution',
+        occurredAt: '2026-05-07T12:00:00.000Z',
+        targetAt: '2026-05-08T12:00:00.000Z',
+        completedAt: '2026-05-07T12:00:00.000Z',
+      },
+      idempotencyKey: 'sla:ticket-1:resolution:met',
+    });
+
+    await expect(
+      updateTicketWithCache(
+        'ticket-1',
+        { status_id: 'closed-status-1' },
+        { suppressContactNotifications: true }
+      )
+    ).resolves.toBe('success');
+
+    expect(publishWorkflowEventMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: 'TICKET_CLOSED',
+        payload: expect.objectContaining({
+          ticketId: 'ticket-1',
+          suppressContactNotifications: true,
+          suppressInternalNotifications: false,
+        }),
+      })
+    );
+    expect(publishWorkflowEventMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: 'TICKET_SLA_STAGE_MET',
+        payload: expect.objectContaining({
+          ticketId: 'ticket-1',
+          stage: 'resolution',
+        }),
+        idempotencyKey: 'sla:ticket-1:resolution:met',
+      })
+    );
   });
 });

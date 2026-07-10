@@ -2,7 +2,10 @@
 
 import { useState } from 'react';
 import BulkSetDueDateDialog from '@alga-psa/tickets/components/BulkSetDueDateDialog';
-import { bulkUpdateTicketDueDate } from '@alga-psa/tickets/actions/ticketActions';
+import {
+  bulkUpdateTicketDueDate,
+  type TicketNotificationSuppressionOptions,
+} from '@alga-psa/tickets/actions/ticketActions';
 import {
   type TicketBulkCloseMode,
   type TicketBulkFailure,
@@ -29,14 +32,16 @@ export default function BulkSetDueDateRouteClient({ closeMode }: BulkSetDueDateR
     toastBulkResult,
   } = useTicketBulkRouteDialog(closeMode);
 
-  const handleConfirm = async (dueDateIso: string | null) => {
+  const handleConfirm = async (dueDateIso: string | null, options?: TicketNotificationSuppressionOptions) => {
     if (selectedTicketIdsArray.length === 0) return;
 
     setIsSubmitting(true);
     setFailed([]);
 
     try {
-      const result = await bulkUpdateTicketDueDate(selectedTicketIdsArray, dueDateIso);
+      const result = options
+        ? await bulkUpdateTicketDueDate(selectedTicketIdsArray, dueDateIso, options)
+        : await bulkUpdateTicketDueDate(selectedTicketIdsArray, dueDateIso);
 
       if (result.updatedIds.length > 0) {
         refreshList();

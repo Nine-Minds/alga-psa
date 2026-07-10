@@ -106,7 +106,7 @@
       "blocked": "Bloqueado"
     },
     "progress": {
-      "label": "PROGRESS",
+      "label": "PROGRESSO",
       "steps": "{{completed}} de etapas {{total}}",
       "messageStart": "Apenas começando!",
       "messageComplete": "Tudo pronto - ótimo trabalho!",

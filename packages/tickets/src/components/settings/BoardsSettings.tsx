@@ -122,6 +122,8 @@ interface EditableAutoCloseRule {
   warning_days_before: number | null;
   close_to_status_id: string;
   is_enabled: boolean;
+  suppress_contact_notifications: boolean;
+  suppress_internal_notifications: boolean;
 }
 
 function createEmptyAutoCloseRule(index: number): EditableAutoCloseRule {
@@ -132,6 +134,8 @@ function createEmptyAutoCloseRule(index: number): EditableAutoCloseRule {
     warning_days_before: null,
     close_to_status_id: '',
     is_enabled: true,
+    suppress_contact_notifications: false,
+    suppress_internal_notifications: false,
   };
 }
 
@@ -616,6 +620,8 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
           warning_days_before: rule.warning_days_before,
           close_to_status_id: rule.close_to_status_id,
           is_enabled: rule.is_enabled,
+          suppress_contact_notifications: rule.suppress_contact_notifications ?? false,
+          suppress_internal_notifications: rule.suppress_internal_notifications ?? false,
         }))
       );
     } catch (loadError) {
@@ -888,6 +894,10 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
             failInSection('automation', t('ticketing.boards.closeRules.messages.autoCloseWarningInvalid'));
             return;
           }
+          if (rule.suppress_internal_notifications && !rule.suppress_contact_notifications) {
+            failInSection('automation', t('ticketing.boards.closeRules.messages.autoCloseSuppressionInvalid'));
+            return;
+          }
         }
       }
 
@@ -937,6 +947,8 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
             warning_days_before: rule.warning_days_before,
             close_to_status_id: rule.close_to_status_id,
             is_enabled: rule.is_enabled,
+            suppress_contact_notifications: rule.suppress_contact_notifications,
+            suppress_internal_notifications: rule.suppress_internal_notifications,
           };
           if (rule.rule_id) {
             const updateRuleResult = await updateBoardAutoCloseRule(rule.rule_id, payload);
@@ -1941,6 +1953,46 @@ const BoardsSettings: React.FC<BoardsSettingsProps> = ({ isAlgaDesk = false, get
                               });
                             }}
                           />
+                        </div>
+                      </div>
+                      <div className="space-y-2 rounded-md border border-gray-200 bg-white p-2">
+                        <div className="flex items-start gap-2">
+                          <Checkbox
+                            id={`auto-close-suppress-contact-${index}`}
+                            checked={rule.suppress_contact_notifications}
+                            onChange={(e) => {
+                              const checked = (e.target as HTMLInputElement).checked;
+                              updateRule({
+                                suppress_contact_notifications: checked,
+                                suppress_internal_notifications: checked ? rule.suppress_internal_notifications : false,
+                              });
+                            }}
+                          />
+                          <div>
+                            <Label htmlFor={`auto-close-suppress-contact-${index}`}>
+                              {t('ticketing.boards.closeRules.suppressContactNotificationsLabel')}
+                            </Label>
+                            <p className="text-xs text-muted-foreground">
+                              {t('ticketing.boards.closeRules.suppressContactNotificationsHelp')}
+                            </p>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 pl-6">
+                          <Checkbox
+                            id={`auto-close-suppress-internal-${index}`}
+                            checked={rule.suppress_internal_notifications}
+                            disabled={!rule.suppress_contact_notifications}
+                            onChange={(e) =>
+                              updateRule({
+                                suppress_internal_notifications: rule.suppress_contact_notifications
+                                  ? (e.target as HTMLInputElement).checked
+                                  : false,
+                              })
+                            }
+                          />
+                          <Label htmlFor={`auto-close-suppress-internal-${index}`}>
+                            {t('ticketing.boards.closeRules.suppressInternalNotificationsLabel')}
+                          </Label>
                         </div>
                       </div>
                       <div className="flex items-center justify-between">

@@ -68,6 +68,14 @@ import {
   type TicketStatusFilterOption,
 } from '../lib/ticketStatusFilter';
 import { useTicketsRouteState } from './TicketsRouteProvider';
+import TicketNotificationSuppressionControl, {
+  type TicketNotificationSuppressionValue,
+} from './ticket/TicketNotificationSuppressionControl';
+
+const defaultNotificationSuppression = (): TicketNotificationSuppressionValue => ({
+  suppressContactNotifications: false,
+  suppressInternalNotifications: false,
+});
 
 interface TicketingDashboardProps {
   id?: string;
@@ -265,6 +273,8 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
   const [selectedDestinationStatusId, setSelectedDestinationStatusId] = useState<string>('');
   const [isLoadingDestinationStatuses, setIsLoadingDestinationStatuses] = useState(false);
   const [destinationStatusError, setDestinationStatusError] = useState<string>('');
+  const [bulkMoveNotificationSuppression, setBulkMoveNotificationSuppression] =
+    useState<TicketNotificationSuppressionValue>(() => defaultNotificationSuppression());
   const [additionalAgentAvatarUrls, setAdditionalAgentAvatarUrls] = useState<Record<string, string | null>>(initialAgentAvatarUrls);
   const [teamAvatarUrls, setTeamAvatarUrls] = useState<Record<string, string | null>>(initialTeamAvatarUrls);
   const [isBundleDialogOpen, setIsBundleDialogOpen] = useState(false);
@@ -1234,6 +1244,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
     setSelectedDestinationStatusId('');
     setDestinationStatusError('');
     setIsLoadingDestinationStatuses(false);
+    setBulkMoveNotificationSuppression(defaultNotificationSuppression());
   }, [isBulkMoving]);
 
   const handleConfirmBulkMove = useCallback(async () => {
@@ -1257,7 +1268,10 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
       const result = await moveTicketsToBoard(
         selectedTicketIdsArray,
         selectedDestinationBoardId,
-        selectedDestinationStatusId
+        selectedDestinationStatusId,
+        bulkMoveNotificationSuppression.suppressContactNotifications
+          ? bulkMoveNotificationSuppression
+          : undefined
       );
 
       if (result.movedIds.length > 0) {
@@ -1290,13 +1304,14 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
         }
         clearSelection();
         setIsBulkMoveDialogOpen(false);
+        setBulkMoveNotificationSuppression(defaultNotificationSuppression());
       }
     } catch (error) {
       handleError(error, t('bulk.move.failure', 'Failed to move selected tickets'));
     } finally {
       setIsBulkMoving(false);
     }
-  }, [clearSelection, currentUser, onFilterChange, selectedDestinationBoardId, selectedDestinationStatusId, selectedTicketIdsArray, destinationBoardStatuses.length, t]);
+  }, [bulkMoveNotificationSuppression, clearSelection, currentUser, onFilterChange, selectedDestinationBoardId, selectedDestinationStatusId, selectedTicketIdsArray, destinationBoardStatuses.length, t]);
 
   const handleConfirmBulkDelete = useCallback(async () => {
     if (selectedTicketIdsArray.length === 0) {
@@ -2424,6 +2439,14 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
               />
             </div>
           </div>
+          <div className="mb-4">
+            <TicketNotificationSuppressionControl
+              idPrefix={`${id}-bulk-move-notification-suppression`}
+              value={bulkMoveNotificationSuppression}
+              onChange={setBulkMoveNotificationSuppression}
+              disabled={isBulkMoving}
+            />
+          </div>
           <div className="max-h-60 overflow-y-auto rounded-md border border-gray-200">
             {selectedTicketDetails.length > 0 ? (
               <ul>
@@ -2675,6 +2698,7 @@ const TicketingDashboard: React.FC<TicketingDashboardProps> = ({
           setDestinationBoardStatuses([]);
           setSelectedDestinationStatusId('');
           setDestinationStatusError('');
+          setBulkMoveNotificationSuppression(defaultNotificationSuppression());
           setIsBulkMoveDialogOpen(true);
         }}
         onBundle={() => {

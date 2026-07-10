@@ -884,7 +884,9 @@
     "noActiveTimePeriodMessage": "Nenhum período de tempo ativo encontrado. Os períodos de tempo precisam ser configurados no painel de cobrança antes de adicionar entradas de tempo.",
     "goToTimePeriodsSetup": "Ir para a configuração de períodos de tempo",
     "emailNotificationLogs": "Logs de notificação por e-mail",
-    "ticketActivity": "Atividade do ticket"
+    "ticketActivity": "Atividade do ticket",
+    "discardChanges": "Descartar alterações",
+    "saved": "Salvo"
   },
   "properties": {
     "timeEntry": "Entrada de tempo",
@@ -1457,7 +1459,9 @@
       "responseWaitingOnClient": "Aguardando o cliente",
       "responseNone": "Nenhuma resposta necessária",
       "additionalAgentsTooltip": "Agentes adicionais:",
-      "unknownAgent": "Agente desconhecido"
+      "unknownAgent": "Agente desconhecido",
+      "category": "Categoria",
+      "selectDestinationStatus": "Selecione um status para o novo quadro antes de salvar."
     },
     "layout": {
       "grid": "Grade",
@@ -1641,7 +1645,17 @@
         "close_rules_overridden": "regras de fechamento substituídas",
         "close_rules_bypassed": "regras de fechamento ignoradas",
         "auto_close_warning_sent": "aviso de fechamento automático enviado"
-      }
+      },
+      "closeStatus": "Close status",
+      "noStatusChange": "Do not change status"
+    }
+  },
+  "notifications": {
+    "suppression": {
+      "contactLabel": "Não notificar o cliente",
+      "contactHelper": "Ignora o e-mail ao cliente, o convite de pesquisa e a notificação do portal do cliente",
+      "internalLabel": "Também não notificar agentes e observadores",
+      "internalHelper": "Ignora também os e-mails e as notificações no aplicativo deles"
     }
   }
 }

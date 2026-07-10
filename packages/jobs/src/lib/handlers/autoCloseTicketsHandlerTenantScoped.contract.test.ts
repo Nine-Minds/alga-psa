@@ -31,4 +31,13 @@ describe('auto-close tickets handler tenant-scoped query contract', () => {
     expect(source).not.toContain('JOIN board_auto_close_rules r');
     expect(source).not.toContain('WHERE t.tenant = :tenant');
   });
+
+  it('passes auto-close suppression flags into close updates and skips warning events on contact suppression', () => {
+    expect(source).toContain("'r.suppress_contact_notifications'");
+    expect(source).toContain("'r.suppress_internal_notifications'");
+    expect(source).toContain('if (row.suppress_contact_notifications)');
+    expect(source).toContain("outcome: 'warning_suppressed'");
+    expect(source).toContain('suppressContactNotifications: Boolean(row.suppress_contact_notifications)');
+    expect(source).toContain('suppressInternalNotifications: Boolean(row.suppress_internal_notifications)');
+  });
 });

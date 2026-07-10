@@ -30,6 +30,7 @@ import { TagManager } from "@alga-psa/tags/components";
 import { findTagsByEntityId, isTagActionError } from "@alga-psa/tags/actions";
 import { useTags } from '@alga-psa/tags/context';
 import TicketInfo from "./TicketInfo";
+import type { TicketNotificationSuppressionValue } from './TicketNotificationSuppressionControl';
 import TicketProperties from "./TicketProperties";
 import TicketDocumentsSection from "./TicketDocumentsSection";
 import TicketEmailNotifications from "./TicketEmailNotifications";
@@ -176,7 +177,10 @@ interface TicketDetailsProps {
 
     // Optimized handlers
     onTicketUpdate?: (field: string, value: any) => Promise<void>;
-    onBatchTicketUpdate?: (changes: Record<string, unknown>) => Promise<boolean>;
+    onBatchTicketUpdate?: (
+        changes: Record<string, unknown>,
+        options?: TicketNotificationSuppressionValue
+    ) => Promise<boolean>;
     onAddComment?: (content: string, isInternal: boolean, isResolution: boolean, closesTicket?: boolean) => Promise<void>;
     onUpdateDescription?: (content: string) => Promise<boolean>;
     isSubmitting?: boolean;
@@ -368,7 +372,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         statusId: string | null;
         failures: CloseRuleFailure[];
         canOverride: boolean;
-    }>({ isOpen: false, statusId: null, failures: [], canOverride: false });
+        suppression: TicketNotificationSuppressionValue | null;
+    }>({ isOpen: false, statusId: null, failures: [], canOverride: false, suppression: null });
     const [closeOverrideReason, setCloseOverrideReason] = useState('');
     const [isSubmittingCloseOverride, setIsSubmittingCloseOverride] = useState(false);
     const [checklistItems, setChecklistItems] = useState<ITicketChecklistItem[] | undefined>(
@@ -408,12 +413,18 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             const result = await updateTicketWithCache(ticket.ticket_id, { status_id: closeBlockedDialog.statusId }, {
                 overrideCloseRules: true,
                 overrideCloseRulesReason: closeOverrideReason.trim() || null,
+                ...(closeBlockedDialog.suppression?.suppressContactNotifications
+                    ? {
+                        suppressContactNotifications: true,
+                        suppressInternalNotifications: closeBlockedDialog.suppression.suppressInternalNotifications,
+                    }
+                    : {}),
             });
             if (isReturnedActionError(result)) {
                 throw result;
             }
             setTicket((prev: any) => ({ ...prev, status_id: closeBlockedDialog.statusId, response_state: null }));
-            setCloseBlockedDialog({ isOpen: false, statusId: null, failures: [], canOverride: false });
+            setCloseBlockedDialog({ isOpen: false, statusId: null, failures: [], canOverride: false, suppression: null });
             setCloseOverrideReason('');
             toast.success(t('messages.ticketClosed', 'Ticket closed'));
         } catch (error) {
@@ -1644,6 +1655,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                         statusId: normalizedValue,
                         failures: check.failures,
                         canOverride: check.canOverride,
+                        suppression: null,
                     });
                     return;
                 }
@@ -1725,7 +1737,10 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         }
     };
 
-    const handleAssignTeam = useCallback(async (teamId: string) => {
+    const handleAssignTeam = useCallback(async (
+        teamId: string,
+        options?: TicketNotificationSuppressionValue
+    ) => {
         // Optimistically update UI before server call
         const previousTicket = ticket;
         const previousTeam = team;
@@ -1744,7 +1759,11 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         }
 
         try {
-            const result = await assignTeamToTicket(ticket.ticket_id || '', teamId);
+            const result = await assignTeamToTicket(
+                ticket.ticket_id || '',
+                teamId,
+                options?.suppressContactNotifications ? options : {}
+            );
             if (isReturnedActionError(result)) {
                 throw result;
             }
@@ -1836,7 +1855,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     const handleAddNewComment = async (
         isInternal: boolean,
         isResolution: boolean,
-        closeStatusId: string | null = null
+        closeStatusId: string | null = null,
+        options?: TicketNotificationSuppressionValue
     ): Promise<boolean> => {
         // Check if content is empty
         const contentStr = JSON.stringify(newCommentContent);
@@ -1913,9 +1933,43 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
                 // If this was a resolution note and a closed status was selected, close the ticket.
                 if (isResolution && closeStatusId && ticket.status_id !== closeStatusId) {
-                    // Backend clears response_state when closing; keep UI consistent.
-                    setTicket((prev: any) => ({ ...prev, response_state: null }));
-                    await handleSelectChange('status_id', closeStatusId);
+                    if (options?.suppressContactNotifications) {
+                        // Mirror handleSelectChange's pre-close check so unmet
+                        // close rules open the override dialog (carrying the
+                        // suppression choice) instead of a generic failure.
+                        let closeBlocked = false;
+                        if (ticket.ticket_id) {
+                            try {
+                                const check = await checkTicketClosure(ticket.ticket_id, closeStatusId);
+                                if (check.wouldClose && !check.allowed) {
+                                    closeBlocked = true;
+                                    setCloseOverrideReason('');
+                                    setCloseBlockedDialog({
+                                        isOpen: true,
+                                        statusId: closeStatusId,
+                                        failures: check.failures,
+                                        canOverride: check.canOverride,
+                                        suppression: options,
+                                    });
+                                }
+                            } catch (checkError) {
+                                // Fall through to the write; the server still enforces.
+                                console.error('Close rules pre-check failed:', checkError);
+                            }
+                        }
+                        if (!closeBlocked) {
+                            // Backend clears response_state when closing; keep UI consistent.
+                            setTicket((prev: any) => ({ ...prev, response_state: null }));
+                            const closed = await handleBatchSaveChanges({ status_id: closeStatusId }, options);
+                            if (!closed) {
+                                toast.error(t('messages.closeFailed', 'Failed to close ticket'));
+                            }
+                        }
+                    } else {
+                        // Backend clears response_state when closing; keep UI consistent.
+                        setTicket((prev: any) => ({ ...prev, response_state: null }));
+                        await handleSelectChange('status_id', closeStatusId);
+                    }
                 }
                 
                 // Reset the comment input
@@ -1968,7 +2022,11 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
 
                         if (isResolution && closeStatusId && ticket.status_id !== closeStatusId) {
                             setTicket((prev: any) => ({ ...prev, response_state: null }));
-                            await handleSelectChange('status_id', closeStatusId);
+                            if (options?.suppressContactNotifications) {
+                                await handleBatchSaveChanges({ status_id: closeStatusId }, options);
+                            } else {
+                                await handleSelectChange('status_id', closeStatusId);
+                            }
                         }
                         
                         // Reset the comment input
@@ -2473,10 +2531,13 @@ const handleClose = () => {
     };
 
     // Handler for batch save changes from TicketInfo
-    const handleBatchSaveChanges = useCallback(async (changes: Record<string, unknown>): Promise<boolean> => {
+    const handleBatchSaveChanges = useCallback(async (
+        changes: Record<string, unknown>,
+        options?: TicketNotificationSuppressionValue
+    ): Promise<boolean> => {
         // If we have a batch handler from container, use it
         if (onBatchTicketUpdate) {
-            const success = await runWithPendingLiveFields(Object.keys(changes), () => onBatchTicketUpdate(changes));
+            const success = await runWithPendingLiveFields(Object.keys(changes), () => onBatchTicketUpdate(changes, options));
             if (success) {
                 // Update local ticket state with the saved changes
                 setTicket(prevTicket => ({
@@ -2495,7 +2556,30 @@ const handleClose = () => {
 
         // Fallback: save each change individually
         try {
-            for (const [field, value] of Object.entries(changes)) {
+            const entries = Object.entries(changes);
+            const itilEntries = entries.filter(([field]) => field === 'itil_impact' || field === 'itil_urgency');
+            const ticketEntries = entries.filter(([field]) => field !== 'itil_impact' && field !== 'itil_urgency');
+
+            // Per-field saves can't carry suppression flags; write the ticket
+            // fields in one mirror-action call so the flags reach the event.
+            if (options?.suppressContactNotifications && ticketEntries.length > 0) {
+                const ticketChanges = Object.fromEntries(ticketEntries) as Partial<ITicket>;
+                const result = await runWithPendingLiveFields(
+                    ticketEntries.map(([field]) => field),
+                    () => updateTicket(ticket.ticket_id || '', ticketChanges, options)
+                );
+                if (result !== 'success') {
+                    return false;
+                }
+                setTicket(prevTicket => ({ ...prevTicket, ...ticketChanges }));
+                setActivityLogRefreshKey((value) => value + 1);
+                for (const [field, value] of itilEntries) {
+                    await handleItilFieldChange(field, value);
+                }
+                return true;
+            }
+
+            for (const [field, value] of entries) {
                 if (field === 'itil_impact' || field === 'itil_urgency') {
                     await handleItilFieldChange(field, value);
                 } else {
@@ -2507,7 +2591,7 @@ const handleClose = () => {
             console.error('Error in batch save:', error);
             return false;
         }
-    }, [handleItilFieldChange, onBatchTicketUpdate, runWithPendingLiveFields]);
+    }, [handleItilFieldChange, onBatchTicketUpdate, runWithPendingLiveFields, ticket.ticket_id]);
 
     const handleClientChange = async (newClientId: string) => {
         try {
@@ -3219,7 +3303,7 @@ const handleClose = () => {
                     id={`${id}-close-blocked-dialog`}
                     isOpen={closeBlockedDialog.isOpen}
                     onClose={() => {
-                        setCloseBlockedDialog({ isOpen: false, statusId: null, failures: [], canOverride: false });
+                        setCloseBlockedDialog({ isOpen: false, statusId: null, failures: [], canOverride: false, suppression: null });
                         setCloseOverrideReason('');
                     }}
                     title={t('info.cannotCloseYet', "This ticket can't be closed yet")}
@@ -3242,7 +3326,7 @@ const handleClose = () => {
                                             variant="outline"
                                             size="sm"
                                             onClick={() => {
-                                                setCloseBlockedDialog({ isOpen: false, statusId: null, failures: [], canOverride: false });
+                                                setCloseBlockedDialog({ isOpen: false, statusId: null, failures: [], canOverride: false, suppression: null });
                                                 document
                                                     .getElementById(`${id}-checklist-section`)
                                                     ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -3258,7 +3342,7 @@ const handleClose = () => {
                                             variant="outline"
                                             size="sm"
                                             onClick={() => {
-                                                setCloseBlockedDialog({ isOpen: false, statusId: null, failures: [], canOverride: false });
+                                                setCloseBlockedDialog({ isOpen: false, statusId: null, failures: [], canOverride: false, suppression: null });
                                                 document
                                                     .getElementById(`${id}-conversation`)
                                                     ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -3287,7 +3371,7 @@ const handleClose = () => {
                                 type="button"
                                 variant="outline"
                                 onClick={() => {
-                                    setCloseBlockedDialog({ isOpen: false, statusId: null, failures: [], canOverride: false });
+                                    setCloseBlockedDialog({ isOpen: false, statusId: null, failures: [], canOverride: false, suppression: null });
                                     setCloseOverrideReason('');
                                 }}
                             >
@@ -3388,7 +3472,7 @@ const handleClose = () => {
                     boardOptions={boardOptions}
                     agentOptions={agentOptions}
                     onSelectChange={handleSelectChange}
-                    onBatchSelectChange={(changes) => { void handleBatchSaveChanges(changes); }}
+                    onBatchSelectChange={(changes, options) => handleBatchSaveChanges(changes, options)}
                     responseStateTrackingEnabled={responseStateTrackingEnabled}
                     hideSlaStatus={hideSlaStatus}
                     hideBilling={hideBilling}
@@ -3401,6 +3485,7 @@ const handleClose = () => {
                     liveHighlightedFields={liveHighlightedFields}
                     liveFrozenFields={Object.keys(liveFieldConflicts)}
                     liveFieldConflicts={liveFieldConflicts}
+                    onLiveDirtyFieldsChange={setTicketInfoDirtyFields}
                     onKeepLiveConflict={handleKeepLiveConflict}
                     onTakeLiveConflict={handleTakeLiveConflict}
                     liveEditingUsers={liveEditingUsers}
@@ -3416,6 +3501,7 @@ const handleClose = () => {
                     isSubmitting={isSubmitting}
                     onNewCommentContentChange={setNewCommentContent}
                     onAddNewComment={handleAddNewComment}
+                    closedStatusOptions={closedStatusOptions}
                     onAddReplyComment={handleAddReplyComment}
                     bentoStreams={bootstrap?.streams ?? undefined}
                     currentUser={currentUser ? {

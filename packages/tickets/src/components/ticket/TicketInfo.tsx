@@ -54,6 +54,9 @@ import {
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+import TicketNotificationSuppressionControl, {
+  type TicketNotificationSuppressionValue,
+} from './TicketNotificationSuppressionControl';
 
 const isReturnedActionError = (value: unknown): value is ActionMessageError | ActionPermissionError =>
   isActionMessageError(value) || isActionPermissionError(value);
@@ -67,7 +70,10 @@ interface TicketInfoProps {
   boardOptions: { value: string; label: string }[];
   priorityOptions: { value: string; label: string }[];
   onSelectChange: (field: keyof ITicket, newValue: string | null) => void;
-  onSaveChanges?: (changes: Record<string, unknown>) => Promise<boolean>;
+  onSaveChanges?: (
+    changes: Record<string, unknown>,
+    options?: TicketNotificationSuppressionValue
+  ) => Promise<boolean>;
   onUpdateDescription?: (content: string) => Promise<boolean>;
   isSubmitting?: boolean;
   users?: IUserWithRoles[];
@@ -88,7 +94,7 @@ interface TicketInfoProps {
   additionalAgents?: { user_id: string; name: string }[];
   responseStateTrackingEnabled?: boolean;
   teams?: ITeam[];
-  onAssignTeam?: (teamId: string) => Promise<void>;
+  onAssignTeam?: (teamId: string, options?: TicketNotificationSuppressionValue) => Promise<void>;
   onRemoveTeamAssignment?: () => Promise<void>;
   onClipboardImageUploaded?: () => Promise<void> | void;
   uploadTicketAttachmentAction?: (
@@ -183,6 +189,10 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
   const [isSaving, setIsSaving] = useState(false);
   const [isFormInitialized, setIsFormInitialized] = useState(false);
   const [saveSuccess, setSaveSuccess] = useState(false);
+  const [notificationSuppression, setNotificationSuppression] = useState<TicketNotificationSuppressionValue>({
+    suppressContactNotifications: false,
+    suppressInternalNotifications: false,
+  });
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [additionalAgentAvatarUrls, setAdditionalAgentAvatarUrls] = useState<Record<string, string | null>>({});
   const [teamAvatarUrl, setTeamAvatarUrl] = useState<string | null>(null);
@@ -920,9 +930,13 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
         }
       }
 
+      const saveOptions = notificationSuppression.suppressContactNotifications
+        ? notificationSuppression
+        : undefined;
+
       // Assign team if pending (fires server action for member expansion)
       if (pendingTeamId && onAssignTeam) {
-        await onAssignTeam(pendingTeamId);
+        await onAssignTeam(pendingTeamId, saveOptions);
         setPendingTeamId(null);
       }
 
@@ -933,7 +947,9 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
       }
 
       if (onSaveChanges) {
-        const success = await onSaveChanges(allChanges);
+        const success = saveOptions
+          ? await onSaveChanges(allChanges, saveOptions)
+          : await onSaveChanges(allChanges);
         if (success) {
           setOriginalTicketValues(prev => ({
             ...prev,
@@ -942,6 +958,10 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
           }));
           setPendingChanges({});
           setPendingItilChanges({});
+          setNotificationSuppression({
+            suppressContactNotifications: false,
+            suppressInternalNotifications: false,
+          });
           setPendingBoardConfig(null);
           setPendingCategories(null);
           if (isEditingDescription) {
@@ -971,6 +991,10 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
         }));
         setPendingChanges({});
         setPendingItilChanges({});
+        setNotificationSuppression({
+          suppressContactNotifications: false,
+          suppressInternalNotifications: false,
+        });
         setPendingBoardConfig(null);
         setPendingCategories(null);
         if (isEditingDescription) {
@@ -988,7 +1012,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     } finally {
       setIsSaving(false);
     }
-  }, [finalizeSavedDescription, hasActiveLiveConflict, hasUnsavedChanges, isEditingDescription, onAssignTeam, onItilFieldChange, onRemoveTeamAssignment, onSaveChanges, onSelectChange, pendingChanges, pendingItilChanges, pendingTeamId, pendingTeamRemoval, persistDescriptionChanges, requiresDestinationStatusSelection, ticket.title, titleValue]);
+  }, [finalizeSavedDescription, hasActiveLiveConflict, hasUnsavedChanges, isEditingDescription, notificationSuppression, onAssignTeam, onItilFieldChange, onRemoveTeamAssignment, onSaveChanges, onSelectChange, pendingChanges, pendingItilChanges, pendingTeamId, pendingTeamRemoval, persistDescriptionChanges, requiresDestinationStatusSelection, ticket.title, titleValue]);
 
   usePageSaveShortcut(handleSaveChanges, {
     enabled: hasUnsavedChanges && !requiresDestinationStatusSelection && !hasActiveLiveConflict,
@@ -999,6 +1023,10 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     setTitleValue(ticket.title);
     setPendingChanges({});
     setPendingItilChanges({});
+    setNotificationSuppression({
+      suppressContactNotifications: false,
+      suppressInternalNotifications: false,
+    });
     setPendingBoardConfig(null);
     setPendingCategories(null);
     setPendingTeamId(null);
@@ -1994,7 +2022,7 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
           </div>
 
           {/* Save Changes Button - matching contracts behavior */}
-          <div className="flex items-center gap-3 mt-6 pt-4 border-t border-gray-200">
+          <div className="flex flex-wrap items-center gap-3 mt-6 pt-4 border-t border-gray-200">
             {renderProjectTaskActions?.({ ticket, additionalAgents })}
             {ticket.ticket_id && onOpenEmailNotificationLogs ? (
               <Tooltip content={t('info.openEmailNotificationLogs', 'View email notification logs')}>
@@ -2025,6 +2053,15 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
                   <History className="w-4 h-4" />
                 </Button>
               </Tooltip>
+            ) : null}
+            {hasUnsavedChanges ? (
+              <TicketNotificationSuppressionControl
+                idPrefix={`${id}-save-bar`}
+                value={notificationSuppression}
+                onChange={setNotificationSuppression}
+                disabled={isSaving}
+                className="min-w-[260px]"
+              />
             ) : null}
             <div className="flex-1" />
             <Button

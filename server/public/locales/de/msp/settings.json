@@ -717,8 +717,12 @@
           "fetchFailed": "Abschlussregeln für dieses Board konnten nicht geladen werden",
           "autoCloseStatusRequired": "Jede automatische Abschlussregel benötigt einen Auslösestatus und einen geschlossenen Zielstatus",
           "autoCloseDaysInvalid": "Die Inaktivitätstage für den automatischen Abschluss müssen eine positive ganze Zahl sein",
-          "autoCloseWarningInvalid": "Die Warnvorlaufzeit muss kleiner als die Inaktivitätstage sein"
-        }
+          "autoCloseWarningInvalid": "Die Warnvorlaufzeit muss kleiner als die Inaktivitätstage sein",
+          "autoCloseSuppressionInvalid": "Benachrichtigungen an Agenten und Beobachter können nur übersprungen werden, wenn Kundenbenachrichtigungen übersprungen werden."
+        },
+        "suppressContactNotificationsLabel": "Kunden nicht benachrichtigen",
+        "suppressContactNotificationsHelp": "Überspringt die Warn-E-Mail, die Abschluss-E-Mail, die Umfrage-Einladung und die Kundenportal-Benachrichtigung.",
+        "suppressInternalNotificationsLabel": "Auch Agenten und Beobachter nicht benachrichtigen"
       },
       "editor": {
         "sections": {

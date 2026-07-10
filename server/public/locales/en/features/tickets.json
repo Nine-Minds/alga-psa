@@ -35,6 +35,14 @@
   },
   "title": "Support Tickets",
   "subtitle": "View and manage your support tickets",
+  "notifications": {
+    "suppression": {
+      "contactLabel": "Don't notify the customer",
+      "contactHelper": "Skips the customer's email, survey invitation, and client-portal notification",
+      "internalLabel": "Also don't notify agents and watchers",
+      "internalHelper": "Skips their emails and in-app notifications too"
+    }
+  },
   "backToTickets": "Back to Tickets",
   "createNew": "Create New Ticket",
   "createButton": "Create Support Ticket",
@@ -884,7 +892,9 @@
     "noActiveTimePeriodMessage": "No active time period found. Time periods need to be set up in the billing dashboard before adding time entries.",
     "goToTimePeriodsSetup": "Go to Time Periods Setup",
     "emailNotificationLogs": "Email Notification Logs",
-    "ticketActivity": "Ticket Activity"
+    "ticketActivity": "Ticket Activity",
+    "discardChanges": "Discard Changes",
+    "saved": "Saved"
   },
   "properties": {
     "timeEntry": "Time Entry",
@@ -1457,7 +1467,9 @@
       "resolutionSla": "Resolution SLA:",
       "responseWaitingOnUs": "Waiting on us",
       "responseWaitingOnClient": "Waiting on client",
-      "responseNone": "No reply needed"
+      "responseNone": "No reply needed",
+      "category": "Category",
+      "selectDestinationStatus": "Select a status for the new board before saving."
     },
     "layout": {
       "grid": "Grid",
@@ -1641,7 +1653,9 @@
       "logged": "logged",
       "monitoringActor": "Monitoring",
       "occurrence": "(occurrence {{count}})",
-      "loadError": "Could not load the timeline"
+      "loadError": "Could not load the timeline",
+      "closeStatus": "Close status",
+      "noStatusChange": "Do not change status"
     }
   }
 }

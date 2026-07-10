@@ -123,6 +123,8 @@ describe('buildTicketWebhookPayload (T020)', () => {
       'due_date',
       'tags',
       'url',
+      'suppress_contact_notifications',
+      'suppress_internal_notifications',
     ];
     expect(Object.keys(payload).sort()).toEqual([...expectedKeys].sort());
 
@@ -137,6 +139,8 @@ describe('buildTicketWebhookPayload (T020)', () => {
 
     expect(payload.ticket_id).toBe(TICKET_ID);
     expect(payload.is_closed).toBe(false);
+    expect(payload.suppress_contact_notifications).toBe(false);
+    expect(payload.suppress_internal_notifications).toBe(false);
     expect(payload.url.endsWith(`/msp/tickets/${TICKET_ID}`)).toBe(true);
   });
 
@@ -183,6 +187,34 @@ describe('buildTicketWebhookPayload (T020)', () => {
       },
     });
   });
+
+  it.each([
+    ['TICKET_UPDATED', true, false],
+    ['TICKET_CLOSED', true, true],
+  ] as const)(
+    'carries suppression flags into %s webhook payloads',
+    async (eventType, suppressContactNotifications, suppressInternalNotifications) => {
+      tagMappingState.getByEntityMock.mockResolvedValue([]);
+      const { knex } = createFakeKnex(makeTicketRow());
+
+      const payload = await buildTicketWebhookPayload(
+        {
+          eventType,
+          timestamp: '2026-05-06T12:00:00.000Z',
+          payload: {
+            tenantId: TENANT,
+            ticketId: TICKET_ID,
+            suppressContactNotifications,
+            suppressInternalNotifications,
+          },
+        },
+        knex,
+      );
+
+      expect(payload.suppress_contact_notifications).toBe(suppressContactNotifications);
+      expect(payload.suppress_internal_notifications).toBe(suppressInternalNotifications);
+    }
+  );
 
   it('caches by (tenant, ticket_id) within 60s — second call hits neither the join nor the tag query', async () => {
     tagMappingState.getByEntityMock.mockResolvedValue([{ tag_text: 'urgent' }]);

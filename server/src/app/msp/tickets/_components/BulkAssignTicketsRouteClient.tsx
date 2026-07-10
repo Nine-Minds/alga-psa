@@ -6,6 +6,7 @@ import BulkAssignTicketsDialog from '@alga-psa/tickets/components/BulkAssignTick
 import {
   bulkAssignTickets,
   type BulkTicketAssignSelection,
+  type TicketNotificationSuppressionOptions,
 } from '@alga-psa/tickets/actions/ticketActions';
 import {
   type TicketBulkCloseMode,
@@ -37,14 +38,19 @@ export default function BulkAssignTicketsRouteClient({
     toastBulkResult,
   } = useTicketBulkRouteDialog(closeMode);
 
-  const handleConfirm = async (selection: BulkTicketAssignSelection) => {
+  const handleConfirm = async (
+    selection: BulkTicketAssignSelection,
+    options?: TicketNotificationSuppressionOptions
+  ) => {
     if (selectedTicketIdsArray.length === 0) return;
 
     setIsSubmitting(true);
     setFailed([]);
 
     try {
-      const result = await bulkAssignTickets(selectedTicketIdsArray, selection);
+      const result = options
+        ? await bulkAssignTickets(selectedTicketIdsArray, selection, options)
+        : await bulkAssignTickets(selectedTicketIdsArray, selection);
 
       if (result.updatedIds.length > 0) {
         refreshList();
