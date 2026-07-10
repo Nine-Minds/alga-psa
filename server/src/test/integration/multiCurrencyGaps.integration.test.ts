@@ -266,17 +266,12 @@ describe('Multi-Currency Gap Tests', () => {
       createdIds.invoiceIds.push(eurInvoiceId);
 
       // Action: Try to apply USD credit to EUR invoice
-      // GAP EXPOSED: This should throw an error but currently succeeds
-      let error: Error | null = null;
-      try {
-        await applyCreditToInvoice(clientId, eurInvoiceId, 5000);
-      } catch (e) {
-        error = e as Error;
-      }
+      const result = await applyCreditToInvoice(clientId, eurInvoiceId, 5000);
 
-      // Expected: Should reject with currency mismatch error
-      expect(error).not.toBeNull();
-      expect(error?.message).toContain('currencies');
+      // Expected: Should return currency mismatch error
+      expect(result).toMatchObject({
+        actionError: 'No EUR credits available. Credits exist in other currencies but cannot be applied to EUR invoices.',
+      });
     });
   });
 

@@ -67,6 +67,7 @@ function schemaTable(table: string) {
 async function cleanupTenant(tenantId: string): Promise<void> {
   if (hasColumn(clientContractsColumns, 'tenant')) {
     await tenantTable(tenantId, 'client_contracts').del();
+    await tenantTable(tenantId, 'contracts').del();
   }
 
   await tenantTable(tenantId, 'clients').del();
@@ -228,11 +229,20 @@ async function createReferenceFixture(): Promise<ReferenceFixture> {
     client_name: `Client ${clientId.slice(0, 8)}`,
   });
 
+  // client_contracts.contract_id has a composite FK to contracts (real since
+  // 20251008000003 was fixed to create it on plain Postgres) — create the row.
+  const contractRowId = uuidv4();
+  await tenantTable(tenantId, 'contracts').insert({
+    tenant: tenantId,
+    contract_id: contractRowId,
+    contract_name: `Contract ${contractRowId.slice(0, 8)}`,
+  });
+
   await tenantTable(tenantId, 'client_contracts').insert({
     tenant: tenantId,
     ...(hasColumn(clientContractsColumns, 'client_contract_id') ? { client_contract_id: contractId } : {}),
     ...(hasColumn(clientContractsColumns, 'client_id') ? { client_id: clientId } : {}),
-    ...(hasColumn(clientContractsColumns, 'contract_id') ? { contract_id: uuidv4() } : {}),
+    ...(hasColumn(clientContractsColumns, 'contract_id') ? { contract_id: contractRowId } : {}),
     ...(hasColumn(clientContractsColumns, 'start_date') ? { start_date: db.fn.now() } : {}),
     ...(hasColumn(clientContractsColumns, 'is_active') ? { is_active: true } : {}),
     ...(hasColumn(clientContractsColumns, 'renewal_ticket_board_id')
