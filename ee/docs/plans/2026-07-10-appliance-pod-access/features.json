@@ -1,0 +1,248 @@
+[
+  {
+    "id": "F001",
+    "description": "The appliance status UI includes an Access navigation tab beside Pods and Logs.",
+    "implemented": false,
+    "prdRefs": ["UX / UI Notes"]
+  },
+  {
+    "id": "F002",
+    "description": "Each pod row can preselect its first container and open the Access tab for a shell.",
+    "implemented": false,
+    "prdRefs": ["Users and Primary Flows > Open a container shell"]
+  },
+  {
+    "id": "F003",
+    "description": "Each pod row can preselect its first container and open the Access tab for a port forward.",
+    "implemented": false,
+    "prdRefs": ["Users and Primary Flows > Forward a pod port"]
+  },
+  {
+    "id": "F004",
+    "description": "The Access tab provides shared namespace, pod, and container selectors.",
+    "implemented": false,
+    "prdRefs": ["UX / UI Notes"]
+  },
+  {
+    "id": "F005",
+    "description": "The pod summary API reports each container's declared TCP ports.",
+    "implemented": false,
+    "prdRefs": ["Data / API / Integrations"]
+  },
+  {
+    "id": "F006",
+    "description": "The Access tab renders an interactive terminal with @xterm/xterm.",
+    "implemented": false,
+    "prdRefs": ["Requirements > Functional Requirements"]
+  },
+  {
+    "id": "F007",
+    "description": "The browser terminal fits its container and sends terminal dimension changes to Kubernetes.",
+    "implemented": false,
+    "prdRefs": ["Requirements > Functional Requirements"]
+  },
+  {
+    "id": "F008",
+    "description": "The terminal toolbar offers Auto, bash, and sh shell choices.",
+    "implemented": false,
+    "prdRefs": ["UX / UI Notes"]
+  },
+  {
+    "id": "F009",
+    "description": "Auto shell selection attempts bash and falls back to a new sh exec stream.",
+    "implemented": false,
+    "prdRefs": ["Requirements > Functional Requirements"]
+  },
+  {
+    "id": "F010",
+    "description": "The terminal exposes explicit Connect and Disconnect controls with live connection state.",
+    "implemented": false,
+    "prdRefs": ["UX / UI Notes"]
+  },
+  {
+    "id": "F011",
+    "description": "A browser tab maintains at most one active terminal and closes it when leaving Access.",
+    "implemented": false,
+    "prdRefs": ["UX / UI Notes"]
+  },
+  {
+    "id": "F012",
+    "description": "The exec WebSocket requires a valid appliance management-session cookie.",
+    "implemented": false,
+    "prdRefs": ["Security / Permissions"]
+  },
+  {
+    "id": "F013",
+    "description": "Exec WebSockets and port-forward mutations reject cross-origin requests.",
+    "implemented": false,
+    "prdRefs": ["Security / Permissions"]
+  },
+  {
+    "id": "F014",
+    "description": "Exec and port-forward APIs validate Kubernetes names, shell choices, ports, durations, and request sizes.",
+    "implemented": false,
+    "prdRefs": ["Security / Permissions"]
+  },
+  {
+    "id": "F015",
+    "description": "The host service opens pod exec streams with the official Kubernetes JavaScript client.",
+    "implemented": false,
+    "prdRefs": ["Requirements > Functional Requirements"]
+  },
+  {
+    "id": "F016",
+    "description": "The exec protocol relays terminal input, output, resize, ready, exit, and structured error messages.",
+    "implemented": false,
+    "prdRefs": ["Data / API / Integrations"]
+  },
+  {
+    "id": "F017",
+    "description": "Terminal input or output resets a 30-minute idle timeout.",
+    "implemented": false,
+    "prdRefs": ["Requirements > Non-functional Requirements"]
+  },
+  {
+    "id": "F018",
+    "description": "Browser disconnect, logout, pod replacement, timeout, or control-plane shutdown closes the exec stream.",
+    "implemented": false,
+    "prdRefs": ["Requirements > Functional Requirements"]
+  },
+  {
+    "id": "F019",
+    "description": "The appliance permits no more than four concurrent terminal sessions.",
+    "implemented": false,
+    "prdRefs": ["Requirements > Non-functional Requirements"]
+  },
+  {
+    "id": "F020",
+    "description": "The host service disconnects slow terminal clients before WebSocket output buffering becomes unbounded.",
+    "implemented": false,
+    "prdRefs": ["Requirements > Non-functional Requirements"]
+  },
+  {
+    "id": "F021",
+    "description": "The Access tab provides a form for creating a pod TCP port forward.",
+    "implemented": false,
+    "prdRefs": ["Users and Primary Flows > Forward a pod port"]
+  },
+  {
+    "id": "F022",
+    "description": "The port-forward form offers declared container ports and accepts a manual remote port.",
+    "implemented": false,
+    "prdRefs": ["UX / UI Notes"]
+  },
+  {
+    "id": "F023",
+    "description": "An omitted local port receives an available port from the configured high-port range.",
+    "implemented": false,
+    "prdRefs": ["Requirements > Functional Requirements"]
+  },
+  {
+    "id": "F024",
+    "description": "An administrator can request an explicit available appliance-side port.",
+    "implemented": false,
+    "prdRefs": ["Requirements > Functional Requirements"]
+  },
+  {
+    "id": "F025",
+    "description": "A new forward can run for 30 minutes, 1 hour, 4 hours, or 8 hours.",
+    "implemented": false,
+    "prdRefs": ["UX / UI Notes"]
+  },
+  {
+    "id": "F026",
+    "description": "The host service uses the Kubernetes JavaScript client to attach accepted TCP connections to the selected pod port.",
+    "implemented": false,
+    "prdRefs": ["Requirements > Functional Requirements"]
+  },
+  {
+    "id": "F027",
+    "description": "The Access tab lists all active in-memory port forwards and their current state.",
+    "implemented": false,
+    "prdRefs": ["UX / UI Notes"]
+  },
+  {
+    "id": "F028",
+    "description": "An active forward can be extended from the current time without exceeding eight hours.",
+    "implemented": false,
+    "prdRefs": ["Users and Primary Flows > Forward a pod port"]
+  },
+  {
+    "id": "F029",
+    "description": "Stopping a forward immediately closes its listener and active TCP connections.",
+    "implemented": false,
+    "prdRefs": ["Users and Primary Flows > Forward a pod port"]
+  },
+  {
+    "id": "F030",
+    "description": "The Access tab continuously warns that active forwarded ports are unauthenticated on the appliance LAN.",
+    "implemented": false,
+    "prdRefs": ["Security / Permissions"]
+  },
+  {
+    "id": "F031",
+    "description": "A forward binds only to the appliance IPv4 address that received its management request.",
+    "implemented": false,
+    "prdRefs": ["Requirements > Functional Requirements"]
+  },
+  {
+    "id": "F032",
+    "description": "Pod deletion, UID replacement, or transition out of Running stops related forwards.",
+    "implemented": false,
+    "prdRefs": ["Requirements > Functional Requirements"]
+  },
+  {
+    "id": "F033",
+    "description": "The appliance permits no more than sixteen active port forwards.",
+    "implemented": false,
+    "prdRefs": ["Requirements > Non-functional Requirements"]
+  },
+  {
+    "id": "F034",
+    "description": "Control-plane shutdown closes every terminal, listener, and accepted TCP connection.",
+    "implemented": false,
+    "prdRefs": ["Requirements > Functional Requirements"]
+  },
+  {
+    "id": "F035",
+    "description": "Terminal and forward lifecycle logs include targets and stop reasons but omit commands and payloads.",
+    "implemented": false,
+    "prdRefs": ["Observability"]
+  },
+  {
+    "id": "F036",
+    "description": "The UI displays structured validation, permission, shell, port, stream, timeout, and capacity failures.",
+    "implemented": false,
+    "prdRefs": ["Failure handling"]
+  },
+  {
+    "id": "F037",
+    "description": "The canonical control-plane ClusterRole grants create on pods/exec and pods/portforward.",
+    "implemented": false,
+    "prdRefs": ["Security / Permissions"]
+  },
+  {
+    "id": "F038",
+    "description": "Control-plane startup idempotently adds only the missing exec and port-forward rules to the known ClusterRole.",
+    "implemented": false,
+    "prdRefs": ["Rollout / Migration"]
+  },
+  {
+    "id": "F039",
+    "description": "A failed RBAC migration leaves existing management features healthy and reports Access as unavailable.",
+    "implemented": false,
+    "prdRefs": ["Rollout / Migration"]
+  },
+  {
+    "id": "F040",
+    "description": "The control-plane image packages the Kubernetes client, WebSocket server, xterm, and fit addon dependencies.",
+    "implemented": false,
+    "prdRefs": ["Data / API / Integrations"]
+  },
+  {
+    "id": "F041",
+    "description": "Existing setup, status, logs, recovery, update, and support-bundle routes continue to operate.",
+    "implemented": false,
+    "prdRefs": ["Requirements > Non-functional Requirements"]
+  }
+]
