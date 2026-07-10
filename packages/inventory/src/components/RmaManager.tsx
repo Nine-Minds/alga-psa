@@ -8,6 +8,7 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { usePageCreateShortcut, useDialogSubmitShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 import {
   getErrorMessage,
   isActionMessageError,
@@ -150,6 +151,7 @@ export function RmaManager({
     setForm({ rma_type: 'standard', returned_unit_id: '', reason: '' });
     setDialogOpen(true);
   };
+  usePageCreateShortcut(openCreate);
 
   const save = async () => {
     if (!form.returned_unit_id.trim()) {
@@ -175,6 +177,10 @@ export function RmaManager({
       setSaving(false);
     }
   };
+  useDialogSubmitShortcut(
+    () => { void save(); },
+    { active: dialogOpen, enabled: dialogOpen && !saving },
+  );
 
   const saveReceiveReturn = async () => {
     if (!receiveCase || !receiveLocation) {
@@ -197,6 +203,10 @@ export function RmaManager({
       setActioning(false);
     }
   };
+  useDialogSubmitShortcut(
+    () => { void saveReceiveReturn(); },
+    { active: receiveCase !== null, enabled: receiveCase !== null && !actioning },
+  );
 
   const saveSendToVendor = async () => {
     if (!vendorCase || !vendorId) {
@@ -219,6 +229,10 @@ export function RmaManager({
       setActioning(false);
     }
   };
+  useDialogSubmitShortcut(
+    () => { void saveSendToVendor(); },
+    { active: vendorCase !== null, enabled: vendorCase !== null && !actioning },
+  );
 
   const openReceiveReturn = (rma: IRmaCase) => {
     setReceiveCase(rma);

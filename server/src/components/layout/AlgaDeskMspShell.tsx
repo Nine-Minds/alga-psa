@@ -7,6 +7,7 @@ import Header from './Header';
 import Body from './Body';
 import { PlatformNotificationBanner } from './PlatformNotificationBanner';
 import { DrawerProvider, DrawerOutlet } from '@alga-psa/ui';
+import GlobalShortcutLayer from './GlobalShortcutLayer';
 import { MspDocumentsCrossFeatureProvider } from '@alga-psa/msp-composition/documents/MspDocumentsCrossFeatureProvider';
 import { AlgaDeskClientCrossFeatureProvider } from '@alga-psa/msp-composition/clients/AlgaDeskClientCrossFeatureProvider';
 
@@ -83,6 +84,7 @@ export default function AlgaDeskMspShell({
         </div>
       </div>
       <DrawerOutlet />
+      <GlobalShortcutLayer navAssetsEnabled={false} />
         </AlgaDeskClientCrossFeatureProvider>
       </MspDocumentsCrossFeatureProvider>
     </DrawerProvider>

@@ -46,7 +46,8 @@ import { getTicketStatuses } from '@alga-psa/reference-data/actions';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { TicketLiveConflictState } from './ticketLiveFields';
-import { usePageSaveShortcut } from '@alga-psa/ui/keyboard-shortcuts';
+import { usePageSaveShortcut, usePanelSubmitShortcut } from '@alga-psa/ui/keyboard-shortcuts';
+import { useInsideDrawer } from '@alga-psa/ui/components/ModalityContext';
 import {
   getErrorMessage,
   isActionMessageError,
@@ -990,8 +991,15 @@ const TicketInfo: React.FC<TicketInfoProps> = ({
     }
   }, [finalizeSavedDescription, hasActiveLiveConflict, hasUnsavedChanges, isEditingDescription, onAssignTeam, onItilFieldChange, onRemoveTeamAssignment, onSaveChanges, onSelectChange, pendingChanges, pendingItilChanges, pendingTeamId, pendingTeamRemoval, persistDescriptionChanges, requiresDestinationStatusSelection, ticket.title, titleValue]);
 
+  // Inside a drawer (e.g. the bento "All fields" drawer) the panel scope
+  // suppresses page.save, so the save shortcut registers as panel.submit there.
+  const insideDrawer = useInsideDrawer();
+  const canSaveViaShortcut = hasUnsavedChanges && !requiresDestinationStatusSelection && !hasActiveLiveConflict;
   usePageSaveShortcut(handleSaveChanges, {
-    enabled: hasUnsavedChanges && !requiresDestinationStatusSelection && !hasActiveLiveConflict,
+    enabled: !insideDrawer && canSaveViaShortcut,
+  });
+  usePanelSubmitShortcut(handleSaveChanges, {
+    enabled: insideDrawer && canSaveViaShortcut,
   });
 
   // Handler for discarding all pending changes

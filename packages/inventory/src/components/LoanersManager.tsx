@@ -8,6 +8,7 @@ import { CurrencyInput } from '@alga-psa/ui/components/CurrencyInput';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { usePageCreateShortcut, useDialogSubmitShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { toast } from 'react-hot-toast';
 import { toMinorUnits } from '@alga-psa/core';
@@ -101,6 +102,7 @@ export function LoanersManager({
     setLoanForm({ unit_id: '', client_id: '', loan_due_at: '' });
     setLoanOpen(true);
   };
+  usePageCreateShortcut(openLoan);
 
   const submitLoan = async () => {
     if (!loanForm.unit_id.trim()) {
@@ -130,6 +132,10 @@ export function LoanersManager({
       setSaving(false);
     }
   };
+  useDialogSubmitShortcut(
+    () => { void submitLoan(); },
+    { active: loanOpen, enabled: loanOpen && !saving },
+  );
 
   const openReturn = (rec: LoanerOutRow) => {
     setReturnUnit(rec);
@@ -159,6 +165,10 @@ export function LoanersManager({
       setSaving(false);
     }
   };
+  useDialogSubmitShortcut(
+    () => { void submitReturn(); },
+    { active: returnOpen, enabled: returnOpen && !saving },
+  );
 
   const openRestock = () => {
     setRestockForm({ unit_id: '', location_id: locations[0]?.location_id || '', restocking_fee: '' });
@@ -200,6 +210,10 @@ export function LoanersManager({
       setSaving(false);
     }
   };
+  useDialogSubmitShortcut(
+    () => { void submitRestock(); },
+    { active: restockOpen, enabled: restockOpen && !saving },
+  );
 
   const columns: ColumnDefinition<LoanerOutRow>[] = [
     {

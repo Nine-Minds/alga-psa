@@ -22,6 +22,7 @@ import {
 } from '@alga-psa/ui/components/DropdownMenu';
 import { ChevronDown, Trash2 } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { usePageCreateShortcut, useDialogSubmitShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 import {
   getErrorMessage,
   isActionMessageError,
@@ -281,6 +282,7 @@ export function SalesOrdersManager({
     setForm(emptyForm());
     setDialogOpen(true);
   };
+  usePageCreateShortcut(openCreate);
 
   // Currency is a property of who you bill, not a per-order choice: derive it from the picked
   // client and render it read-only (falling back to the tenant default when the client has none).
@@ -379,6 +381,10 @@ export function SalesOrdersManager({
       setSaving(false);
     }
   };
+  useDialogSubmitShortcut(
+    () => { void save(); },
+    { active: dialogOpen, enabled: dialogOpen && canSave },
+  );
 
   const confirm = async (so: ISalesOrder) => {
     if (busy) return;

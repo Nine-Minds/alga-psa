@@ -11,11 +11,13 @@ function read(relativePath: string): string {
 }
 
 describe('vim navigation shortcut wiring', () => {
-  it('mounts the shared navigation layer in the MSP layout', () => {
-    const source = read('server/src/components/layout/DefaultLayout.tsx');
+  it('mounts the shared navigation layer in both MSP shells via the global shortcut layer', () => {
+    const layer = read('server/src/components/layout/GlobalShortcutLayer.tsx');
 
-    expect(source).toContain("import VimNavigationLayer from './VimNavigationLayer'");
-    expect(source).toContain('<VimNavigationLayer onOpenHelp={openShortcutsShortcut} />');
+    expect(layer).toContain("import VimNavigationLayer from './VimNavigationLayer'");
+    expect(layer).toContain('<VimNavigationLayer onOpenHelp={openHelp} />');
+    expect(read('server/src/components/layout/DefaultLayout.tsx')).toContain('<GlobalShortcutLayer />');
+    expect(read('server/src/components/layout/AlgaDeskMspShell.tsx')).toContain('<GlobalShortcutLayer />');
   });
 
   it('registers vim-style scroll, table, hint, macro, and navigation actions', () => {

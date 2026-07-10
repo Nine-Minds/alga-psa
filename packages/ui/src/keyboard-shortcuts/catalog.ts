@@ -93,6 +93,7 @@ export const SHORTCUT_ACTION_CATALOG: readonly ShortcutActionCatalogEntry[] = [
   entry('dialog.cancel', 'dialog', 'dialog', ['Escape']),
   entry('dialog.submit', 'dialog', 'dialog', ['mod+s', 'mod+Enter'], { allowInEditable: true }),
   entry('panel.close', 'panel', 'panel', ['Escape']),
+  entry('panel.submit', 'panel', 'panel', ['mod+s', 'mod+Enter'], { allowInEditable: true }),
   entry('drawer.historyBack', 'panel', 'panel', ['alt+ArrowLeft']),
   entry('drawer.historyForward', 'panel', 'panel', ['alt+ArrowRight']),
   entry('record.previous', 'record', 'page', ['[']),

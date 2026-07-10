@@ -46,7 +46,8 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { PrintButton } from '@alga-psa/ui/components/PrintButton';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import Spinner from '@alga-psa/ui/components/Spinner';
-import { usePageSaveShortcut } from '@alga-psa/ui/keyboard-shortcuts';
+import { usePageSaveShortcut, usePanelSubmitShortcut } from '@alga-psa/ui/keyboard-shortcuts';
+import { useInsideDrawer } from '@alga-psa/ui/components/ModalityContext';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useRouter } from 'next/navigation';
@@ -564,7 +565,10 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
     }
   }, [client?.client_id, t]);
 
-  usePageSaveShortcut(handleSave, { enabled: hasUnsavedChanges && !isSaving });
+  // Quick views are drawer-hosted, where the panel scope suppresses page.save.
+  const insideDrawer = useInsideDrawer();
+  usePageSaveShortcut(handleSave, { enabled: !insideDrawer && hasUnsavedChanges && !isSaving });
+  usePanelSubmitShortcut(handleSave, { enabled: insideDrawer && hasUnsavedChanges && !isSaving });
 
   const normalizeInboundDomain = useCallback((raw: string) => {
     const trimmed = (raw ?? '').trim().toLowerCase();

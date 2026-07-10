@@ -217,6 +217,10 @@
       "close": {
         "label": "Chiudi pannello",
         "description": "Chiudi il pannello o drawer attivo."
+      },
+      "submit": {
+        "label": "Salva pannello",
+        "description": "Salva il modulo del pannello o cassetto attivo."
       }
     },
     "drawer": {

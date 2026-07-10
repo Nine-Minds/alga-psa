@@ -14,6 +14,7 @@ import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import { SearchInput } from '@alga-psa/ui/components/SearchInput';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { usePageCreateShortcut, useDialogSubmitShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 import {
   getErrorMessage,
   isActionMessageError,
@@ -175,6 +176,7 @@ export function StockLocationsManager({
     setForm(emptyForm());
     setDialogOpen(true);
   };
+  usePageCreateShortcut(openCreate);
 
   const openEdit = (loc: IStockLocation) => {
     setEditing(loc);
@@ -223,6 +225,10 @@ export function StockLocationsManager({
       setSaving(false);
     }
   };
+  useDialogSubmitShortcut(
+    () => { void save(); },
+    { active: dialogOpen, enabled: dialogOpen && !saving },
+  );
 
   const deactivate = async (loc: IStockLocation) => {
     try {

@@ -8,6 +8,7 @@ import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { usePageCreateShortcut, useDialogSubmitShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 import {
   getErrorMessage,
   isActionMessageError,
@@ -145,6 +146,9 @@ export function VendorBillsManager({
     };
   }, [getExportStatuses, bills]);
 
+  const openCreate = () => setCreateOpen(true);
+  usePageCreateShortcut(openCreate);
+
   const doExport = async (bill: BillRow) => {
     if (!exportBill) return;
     setExporting(bill.bill_id);
@@ -198,6 +202,10 @@ export function VendorBillsManager({
       setBusy(null);
     }
   };
+  useDialogSubmitShortcut(
+    () => { void create(); },
+    { active: createOpen, enabled: createOpen && busy === null },
+  );
 
   const transition = async (bill: BillRow, status: VendorBillStatus) => {
     setBusy(`${status}:${bill.bill_id}`);
@@ -363,7 +371,7 @@ export function VendorBillsManager({
             {t('vendorBills.subtitle', 'Light AP: track what vendors invoiced against what you received. No GL — mark paid manually.')}
           </p>
         </div>
-        <Button id="vendor-bills-add-button" onClick={() => setCreateOpen(true)}>
+        <Button id="vendor-bills-add-button" onClick={openCreate}>
           {t('vendorBills.addBill', 'Add bill')}
         </Button>
       </div>

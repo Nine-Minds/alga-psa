@@ -217,6 +217,10 @@
       "close": {
         "label": "Paneel sluiten",
         "description": "Sluit het actieve paneel of de lade."
+      },
+      "submit": {
+        "label": "Paneel opslaan",
+        "description": "Het formulier in het actieve paneel of de lade opslaan."
       }
     },
     "drawer": {

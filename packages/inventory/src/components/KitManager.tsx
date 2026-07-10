@@ -7,6 +7,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 import {
   getErrorMessage,
   isActionMessageError,
@@ -133,6 +134,7 @@ export function KitManager({ initialKits }: { initialKits: KitProduct[] }) {
       setSaving(false);
     }
   };
+  usePageCreateShortcut(add, { enabled: selectedKit !== null && !saving });
 
   const remove = async (rec: ComponentRow) => {
     if (!selectedKit) return;

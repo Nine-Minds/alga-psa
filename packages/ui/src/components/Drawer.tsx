@@ -7,7 +7,7 @@ import { Theme } from '@radix-ui/themes';
 import { useRegisterUIComponent } from "../ui-reflection/useRegisterUIComponent";
 import { DrawerComponent, UIComponent, AutomationProps } from "../ui-reflection/types";
 import { withDataAutomationId } from "../ui-reflection/withDataAutomationId";
-import { InsideDialogContext, useInsideDialog } from './ModalityContext';
+import { InsideDialogContext, InsideDrawerContext, useInsideDialog } from './ModalityContext';
 import { useRadixEscapeOwner } from '../keyboard-shortcuts';
 
 export interface DrawerProps {
@@ -116,11 +116,13 @@ const Drawer = ({
             Dialog Content
           </Dialog.Title>
           <InsideDialogContext.Provider value={true}>
-            <Theme>
-              <div className="p-6">
-                {children}
-              </div>
-            </Theme>
+            <InsideDrawerContext.Provider value={true}>
+              <Theme>
+                <div className="p-6">
+                  {children}
+                </div>
+              </Theme>
+            </InsideDrawerContext.Provider>
           </InsideDialogContext.Provider>
           {!hideCloseButton && (
             <button
