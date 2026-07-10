@@ -1147,7 +1147,9 @@
       "location": "Location",
       "macAddress": "MAC Address",
       "serialNumber": "Serial Number",
-      "warrantyExpires": "Warranty Expires"
+      "warrantyExpires": "Warranty Expires",
+      "product": "Product",
+      "unitCost": "Unit Cost"
     },
     "detail": {
       "delivered": "Delivered",
@@ -1155,24 +1157,25 @@
       "mac": "MAC",
       "received": "Received",
       "serial": "Serial",
-      "unitCost": "Unit cost"
+      "unitCost": "Unit cost",
+      "asset": "Asset"
     },
     "exportCsv": "Export CSV",
     "history": "History",
-    "historyLoadFailed": "Failed to load unit history",
-    "historyNotFound": "Unit history not found",
-    "loadFailed": "Failed to load units",
-    "noMovements": "No movements recorded.",
+    "historyLoadFailed": "Couldn't load this unit's history. Try again.",
+    "historyNotFound": "No history recorded for this unit yet.",
+    "loadFailed": "Couldn't load stock units. Try Refresh.",
+    "noMovements": "No movements yet",
     "qty": "Qty",
     "searchBy": "Search by",
-    "searchFailed": "Search failed",
+    "searchFailed": "Couldn't run that search. Check the serial or MAC address and try again.",
     "searchMode": {
       "mac": "MAC address",
       "serial": "Serial number"
     },
     "searchPlaceholder": {
-      "mac": "MAC address…",
-      "serial": "Serial number…"
+      "mac": "e.g. AA:BB:CC:00:00:01",
+      "serial": "e.g. SSD990-0007"
     },
     "searchTerm": "Search term",
     "title": "Stock Units",
@@ -1187,7 +1190,28 @@
       "returned": "Returned",
       "inRma": "In RMA",
       "retired": "Retired"
-    }
+    },
+    "empty": {
+      "noMatchTitle": "No units match \"{{term}}\"",
+      "noMatchDescription": "Clear the search and filters to see all units.",
+      "clearSearch": "Clear search",
+      "noUnitsTitle": "No stock units yet",
+      "noUnitsDescription": "Serialized units appear here once stock is received against a serialized product.",
+      "noFilterMatchTitle": "No units match this filter",
+      "clearFilters": "Clear filters"
+    },
+    "summary": {
+      "one": "{{n}} unit",
+      "many": "{{n}} units",
+      "valueSuffix": " · {{value}} value"
+    },
+    "filter": {
+      "status": "Status",
+      "allStatuses": "All statuses",
+      "client": "Client",
+      "allClients": "All clients"
+    },
+    "viewAsset": "View asset"
   },
   "transfers": {
     "addLine": "Add Line",

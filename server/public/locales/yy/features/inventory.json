@@ -1147,7 +1147,9 @@
       "location": "55555",
       "macAddress": "55555",
       "serialNumber": "55555",
-      "warrantyExpires": "55555"
+      "warrantyExpires": "55555",
+      "product": "55555",
+      "unitCost": "55555"
     },
     "detail": {
       "delivered": "55555",
@@ -1155,7 +1157,8 @@
       "mac": "55555",
       "received": "55555",
       "serial": "55555",
-      "unitCost": "55555"
+      "unitCost": "55555",
+      "asset": "55555"
     },
     "exportCsv": "55555",
     "history": "55555",
@@ -1187,7 +1190,28 @@
       "returned": "55555",
       "inRma": "55555",
       "retired": "55555"
-    }
+    },
+    "empty": {
+      "noMatchTitle": "55555 {{term}} 55555",
+      "noMatchDescription": "55555",
+      "clearSearch": "55555",
+      "noUnitsTitle": "55555",
+      "noUnitsDescription": "55555",
+      "noFilterMatchTitle": "55555",
+      "clearFilters": "55555"
+    },
+    "summary": {
+      "one": "55555 {{n}} 55555",
+      "many": "55555 {{n}} 55555",
+      "valueSuffix": "55555 {{value}} 55555"
+    },
+    "filter": {
+      "status": "55555",
+      "allStatuses": "55555",
+      "client": "55555",
+      "allClients": "55555"
+    },
+    "viewAsset": "55555"
   },
   "transfers": {
     "addLine": "55555",

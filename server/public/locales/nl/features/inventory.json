@@ -1147,7 +1147,9 @@
       "location": "Locatie",
       "macAddress": "MAC-adres",
       "serialNumber": "Serienummer",
-      "warrantyExpires": "Garantie verloopt"
+      "warrantyExpires": "Garantie verloopt",
+      "product": "Product",
+      "unitCost": "Kostprijs per eenheid"
     },
     "detail": {
       "delivered": "Geleverd",
@@ -1155,7 +1157,8 @@
       "mac": "MAC",
       "received": "Ontvangen",
       "serial": "Serienummer",
-      "unitCost": "Kostprijs per eenheid"
+      "unitCost": "Kostprijs per eenheid",
+      "asset": "Asset"
     },
     "exportCsv": "CSV exporteren",
     "history": "Geschiedenis",
@@ -1187,7 +1190,28 @@
       "returned": "Geretourneerd",
       "inRma": "In RMA",
       "retired": "Afgevoerd"
-    }
+    },
+    "empty": {
+      "clearFilters": "Filters wissen",
+      "clearSearch": "Zoekopdracht wissen",
+      "noFilterMatchTitle": "Geen eenheden komen overeen met dit filter",
+      "noMatchDescription": "Wis de zoekopdracht en filters om alle eenheden te zien.",
+      "noMatchTitle": "Geen eenheden komen overeen met \"{{term}}\"",
+      "noUnitsDescription": "Geserialiseerde eenheden verschijnen hier zodra voorraad wordt ontvangen voor een geserialiseerd product.",
+      "noUnitsTitle": "Nog geen voorraadeenheden"
+    },
+    "filter": {
+      "allClients": "Alle bedrijven",
+      "allStatuses": "Alle statussen",
+      "client": "Bedrijf",
+      "status": "Status"
+    },
+    "summary": {
+      "many": "{{n}} eenheden",
+      "one": "{{n}} eenheid",
+      "valueSuffix": " · {{value}} waarde"
+    },
+    "viewAsset": "Asset bekijken"
   },
   "transfers": {
     "addLine": "Regel toevoegen",

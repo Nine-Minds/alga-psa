@@ -159,6 +159,11 @@ export interface IStockUnit extends TenantEntity {
   notes?: string | null;
   created_at?: string | Date;
   updated_at?: string | Date;
+  // Denormalized display fields resolved by the list/search readers (LEFT JOINs).
+  // Read-only; present on rows fetched for UI listings, absent on bare inserts/updates.
+  location_name?: string | null;
+  client_name?: string | null;
+  product_name?: string | null;
 }
 
 export interface IStockMovement extends TenantEntity {

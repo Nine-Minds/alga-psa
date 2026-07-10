@@ -1147,7 +1147,9 @@
       "location": "Emplacement",
       "macAddress": "Adresse MAC",
       "serialNumber": "Numéro de série",
-      "warrantyExpires": "Expiration de la garantie"
+      "warrantyExpires": "Expiration de la garantie",
+      "product": "Produit",
+      "unitCost": "Coût unitaire"
     },
     "detail": {
       "delivered": "Livrée",
@@ -1155,7 +1157,8 @@
       "mac": "MAC",
       "received": "Réceptionnée",
       "serial": "Numéro de série",
-      "unitCost": "Coût unitaire"
+      "unitCost": "Coût unitaire",
+      "asset": "Actif"
     },
     "exportCsv": "Exporter CSV",
     "history": "Historique",
@@ -1187,7 +1190,28 @@
       "returned": "Retourné",
       "inRma": "En RMA",
       "retired": "Retiré"
-    }
+    },
+    "empty": {
+      "clearFilters": "Effacer les filtres",
+      "clearSearch": "Effacer la recherche",
+      "noFilterMatchTitle": "Aucune unité ne correspond à ce filtre",
+      "noMatchDescription": "Effacez la recherche et les filtres pour voir toutes les unités.",
+      "noMatchTitle": "Aucune unité ne correspond à « {{term}} »",
+      "noUnitsDescription": "Les unités sérialisées apparaissent ici dès qu'un stock est reçu pour un produit sérialisé.",
+      "noUnitsTitle": "Aucune unité en stock pour le moment"
+    },
+    "filter": {
+      "allClients": "Toutes les entreprises",
+      "allStatuses": "Tous les statuts",
+      "client": "Entreprise",
+      "status": "Statut"
+    },
+    "summary": {
+      "many": "{{n}} unités",
+      "one": "{{n}} unité",
+      "valueSuffix": " · {{value}} de valeur"
+    },
+    "viewAsset": "Voir l'actif"
   },
   "transfers": {
     "addLine": "Ajouter une ligne",
