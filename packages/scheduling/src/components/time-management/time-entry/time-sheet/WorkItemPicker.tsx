@@ -520,8 +520,8 @@ export function WorkItemPicker({ onSelect, availableWorkItems, initialWorkItemId
                 </Button>
               </div>
               </div>
-            <div className="grid grid-cols-4 gap-4">
-              <div className="flex items-center">
+            <div className="flex items-center gap-4">
+              <div className="flex items-center shrink-0 max-w-full">
                 <ClientPicker
                   id="client-picker"
                   selectedClientId={clientId}
@@ -538,7 +538,7 @@ export function WorkItemPicker({ onSelect, availableWorkItems, initialWorkItemId
                   fitContent
                 />
               </div>
-              <div className="flex items-center">
+              <div className="flex items-center shrink-0">
                 <CustomSelect
                   value={searchType}
                   onValueChange={(value) => {
@@ -555,7 +555,7 @@ export function WorkItemPicker({ onSelect, availableWorkItems, initialWorkItemId
                   ]}
                 />
               </div>
-              <div className="flex items-center">
+              <div className="flex items-center flex-1 min-w-10 max-w-44">
                 <DatePicker
                   label={t('workItemPicker.filters.startDate', { defaultValue: 'Start date' })}
                   value={startDate}
@@ -566,10 +566,11 @@ export function WorkItemPicker({ onSelect, availableWorkItems, initialWorkItemId
                   }}
                   placeholder={t('workItemPicker.filters.startDate', { defaultValue: 'Start date' })}
                   className="w-full"
+                  collapsible
                   clearable
                 />
               </div>
-              <div className="flex items-center">
+              <div className="flex items-center flex-1 min-w-10 max-w-44">
                 <DatePicker
                   label={t('workItemPicker.filters.endDate', { defaultValue: 'End date' })}
                   value={endDate}
@@ -580,6 +581,7 @@ export function WorkItemPicker({ onSelect, availableWorkItems, initialWorkItemId
                   }}
                   placeholder={t('workItemPicker.filters.endDate', { defaultValue: 'End date' })}
                   className="w-full"
+                  collapsible
                   clearable
                 />
               </div>

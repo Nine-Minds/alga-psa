@@ -15,6 +15,7 @@ import RichTextEditorSkeleton from '@alga-psa/ui/components/skeletons/RichTextEd
 import { buildCommentThreadGroups, HybridThreadNode, type CommentThreadGroup } from '@alga-psa/ui/components';
 import InlineReplyComposer from '@alga-psa/ui/components/InlineReplyComposer';
 import { withDataAutomationId } from '@alga-psa/ui/ui-reflection/withDataAutomationId';
+import { useDialogSubmitShortcut, usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { searchUsersForMentions } from '@alga-psa/user-composition/actions';
 import type { IAggregatedReaction, IComment } from '@alga-psa/types';
@@ -327,6 +328,7 @@ export function BentoTimelineTile({
   const [reactionUserNames, setReactionUserNames] = useState<Record<string, string>>({});
   // Threading: which comment currently has its inline reply composer open.
   const [replyingToCommentId, setReplyingToCommentId] = useState<string | null>(null);
+  const composerRef = useRef<HTMLDivElement>(null);
 
   const { deleteDocument } = useDocumentsCrossFeature();
   const composeUploadSession = useTicketRichTextUploadSession({
@@ -546,6 +548,19 @@ export function BentoTimelineTile({
     return success;
   }, [onAddNewComment, composerLane, composeUploadSession]);
 
+  // Keyboard parity with the conversation view: "c" focuses the composer, and
+  // mod+s/mod+Enter sends the draft. The dialog scope only activates while a
+  // draft exists, so page-scope shortcuts keep working on a pristine composer.
+  usePageCreateShortcut(() => {
+    const editable = composerRef.current?.querySelector<HTMLElement>('[contenteditable="true"]');
+    editable?.focus({ preventScroll: true });
+    composerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+  useDialogSubmitShortcut(() => { void handleSend(); }, {
+    active: hasDraft,
+    enabled: !isSubmitting && hasDraft,
+  });
+
   // A single comment card plus, when it's the active reply target, an inline
   // reply composer beneath it. Used for every node in a nested thread.
   const renderThreadComment = (comment: IComment): React.ReactNode => {
@@ -606,6 +621,7 @@ export function BentoTimelineTile({
   const composer = (
     <div
       id={`${id}-composer`}
+      ref={composerRef}
       className="mt-3 rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-3"
     >
       <p className="text-xs font-medium text-[rgb(var(--color-text-500))] mb-1.5">
@@ -749,7 +765,7 @@ export function BentoTimelineTile({
                 <div className="flex gap-3">
                   <div className="flex-shrink-0 w-6 flex justify-center pt-1">
                     <div
-                      className={`relative z-10 w-6 h-6 rounded-full ring-1 flex items-center justify-center flex-shrink-0 ${v.pin}`}
+                      className={`relative w-6 h-6 rounded-full ring-1 flex items-center justify-center flex-shrink-0 ${v.pin}`}
                     >
                       {v.icon}
                     </div>
