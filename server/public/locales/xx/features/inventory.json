@@ -953,7 +953,9 @@
       "reason": "11111",
       "returnedUnit": "11111",
       "type": "11111",
-      "vendor": "11111"
+      "vendor": "11111",
+      "creditAtStake": "11111",
+      "rmaNumber": "11111"
     },
     "deadUnitsOwed": "11111",
     "fields": {
@@ -999,6 +1001,10 @@
       "credited": "11111",
       "charged": "11111",
       "closed": "11111"
+    },
+    "ageAtVendor": "11111",
+    "filters": {
+      "statusActive": "11111"
     }
   },
   "salesOrders": {
@@ -1018,7 +1024,10 @@
       "invoicing": "11111",
       "manageLayouts": "11111",
       "reopenToDraft": "11111",
-      "reopening": "11111"
+      "reopening": "11111",
+      "cancelSalesOrder": "11111",
+      "moreActions": "11111",
+      "orderPdfs": "11111"
     },
     "addSalesOrder": "11111",
     "allocationMode": {
@@ -1043,7 +1052,10 @@
       "client": "11111",
       "currency": "11111",
       "invoiceMode": "11111",
-      "soNumber": "11111"
+      "soNumber": "11111",
+      "amount": "11111",
+      "fulfillment": "11111",
+      "invoiceable": "11111"
     },
     "confirmFailed": "11111",
     "confirmShipmentError": "11111",
@@ -1116,7 +1128,8 @@
       "unitPriceIn": "11111 {{currency}} 11111"
     },
     "filters": {
-      "kitUsageActive": "11111 {{kit}} 11111"
+      "kitUsageActive": "11111 {{kit}} 11111",
+      "invoiceableActive": "11111"
     },
     "fromQuote": "11111",
     "fulfillDialog": {
@@ -1201,7 +1214,11 @@
     "total": "11111",
     "unassignedBackorder": "11111 {{count}} 11111",
     "unnamedService": "11111",
-    "notFound": "11111"
+    "notFound": "11111",
+    "badges": {
+      "dropShip": "11111",
+      "readyToInvoice": "11111"
+    }
   },
   "stock": {
     "actions": {

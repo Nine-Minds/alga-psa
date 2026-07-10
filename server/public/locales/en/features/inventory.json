@@ -953,7 +953,9 @@
       "reason": "Reason",
       "returnedUnit": "Returned unit",
       "type": "Type",
-      "vendor": "Vendor"
+      "vendor": "Vendor",
+      "creditAtStake": "Credit at stake",
+      "rmaNumber": "RMA #"
     },
     "deadUnitsOwed": "Dead units owed",
     "fields": {
@@ -999,6 +1001,10 @@
       "credited": "Credited",
       "charged": "Charged",
       "closed": "Closed"
+    },
+    "ageAtVendor": "{{days}}d at vendor",
+    "filters": {
+      "statusActive": "Showing {{status}} RMA cases."
     }
   },
   "salesOrders": {
@@ -1018,7 +1024,10 @@
       "invoicing": "Invoicing…",
       "manageLayouts": "Manage layouts",
       "reopenToDraft": "Reopen to draft",
-      "reopening": "Reopening…"
+      "reopening": "Reopening…",
+      "cancelSalesOrder": "Cancel sales order",
+      "moreActions": "More actions",
+      "orderPdfs": "Order PDFs"
     },
     "addSalesOrder": "Add Sales Order",
     "allocationMode": {
@@ -1043,7 +1052,10 @@
       "client": "Client",
       "currency": "Currency",
       "invoiceMode": "Invoice Mode",
-      "soNumber": "SO Number"
+      "soNumber": "SO Number",
+      "amount": "Amount",
+      "fulfillment": "Fulfillment",
+      "invoiceable": "Invoiceable"
     },
     "confirmFailed": "Confirm failed",
     "confirmShipmentError": "Couldn't confirm the shipment.",
@@ -1116,7 +1128,8 @@
       "unitPriceIn": "Unit price ({{currency}})"
     },
     "filters": {
-      "kitUsageActive": "Showing sales orders using {{kit}}."
+      "kitUsageActive": "Showing sales orders using {{kit}}.",
+      "invoiceableActive": "Showing sales orders with fulfilled, uninvoiced items."
     },
     "fromQuote": "From quote",
     "fulfillDialog": {
@@ -1201,7 +1214,11 @@
     "total": "Total",
     "unassignedBackorder": "{{count}} backordered line(s) have no preferred vendor — create those POs manually.",
     "unnamedService": "Unnamed",
-    "notFound": "Sales order not found."
+    "notFound": "Sales order not found.",
+    "badges": {
+      "dropShip": "Drop-ship",
+      "readyToInvoice": "Ready"
+    }
   },
   "stock": {
     "actions": {

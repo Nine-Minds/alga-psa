@@ -953,7 +953,9 @@
       "reason": "Motivo",
       "returnedUnit": "Unità restituita",
       "type": "Tipo",
-      "vendor": "Fornitore"
+      "vendor": "Fornitore",
+      "creditAtStake": "Credit at stake",
+      "rmaNumber": "RMA #"
     },
     "deadUnitsOwed": "Unità guaste dovute",
     "fields": {
@@ -999,6 +1001,10 @@
       "credited": "Accreditato",
       "charged": "Addebitato",
       "closed": "Chiuso"
+    },
+    "ageAtVendor": "{{days}}d at vendor",
+    "filters": {
+      "statusActive": "Showing {{status}} RMA cases."
     }
   },
   "salesOrders": {
@@ -1018,7 +1024,10 @@
       "invoicing": "Fatturazione…",
       "manageLayouts": "Gestisci layout",
       "reopenToDraft": "Riapri come bozza",
-      "reopening": "Riapertura…"
+      "reopening": "Riapertura…",
+      "cancelSalesOrder": "Cancel sales order",
+      "moreActions": "More actions",
+      "orderPdfs": "Order PDFs"
     },
     "addSalesOrder": "Aggiungi ordine di vendita",
     "allocationMode": {
@@ -1043,7 +1052,10 @@
       "client": "Cliente",
       "currency": "Valuta",
       "invoiceMode": "Modalità fattura",
-      "soNumber": "Numero SO"
+      "soNumber": "Numero SO",
+      "amount": "Amount",
+      "fulfillment": "Fulfillment",
+      "invoiceable": "Invoiceable"
     },
     "confirmFailed": "Conferma non riuscita",
     "confirmShipmentError": "Impossibile confermare la spedizione.",
@@ -1116,7 +1128,8 @@
       "unitPriceIn": "Unit price ({{currency}})"
     },
     "filters": {
-      "kitUsageActive": "Showing sales orders using {{kit}}."
+      "kitUsageActive": "Showing sales orders using {{kit}}.",
+      "invoiceableActive": "Showing sales orders with fulfilled, uninvoiced items."
     },
     "fromQuote": "Da preventivo",
     "fulfillDialog": {
@@ -1201,7 +1214,11 @@
     "total": "Total",
     "unassignedBackorder": "{{count}} riga/righe in arretrato non hanno un fornitore preferito — crea quei PO manualmente.",
     "unnamedService": "Unnamed",
-    "notFound": "Sales order not found."
+    "notFound": "Sales order not found.",
+    "badges": {
+      "dropShip": "Drop-ship",
+      "readyToInvoice": "Ready"
+    }
   },
   "stock": {
     "actions": {
