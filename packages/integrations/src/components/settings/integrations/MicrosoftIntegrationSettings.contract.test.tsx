@@ -30,6 +30,18 @@ vi.mock('@alga-psa/integrations/actions', () => ({
     resetMicrosoftProvidersToDisconnectedMock(...args),
 }));
 
+vi.mock('../../../actions/integrations/microsoftActions', () => ({
+  getMicrosoftIntegrationStatus: (...args: unknown[]) => getMicrosoftIntegrationStatusMock(...args),
+  listMicrosoftConsumerBindings: (...args: unknown[]) => listMicrosoftConsumerBindingsMock(...args),
+  setMicrosoftConsumerBinding: (...args: unknown[]) => setMicrosoftConsumerBindingMock(...args),
+  createMicrosoftProfile: (...args: unknown[]) => createMicrosoftProfileMock(...args),
+  updateMicrosoftProfile: (...args: unknown[]) => updateMicrosoftProfileMock(...args),
+  archiveMicrosoftProfile: (...args: unknown[]) => archiveMicrosoftProfileMock(...args),
+  setDefaultMicrosoftProfile: (...args: unknown[]) => setDefaultMicrosoftProfileMock(...args),
+  resetMicrosoftProvidersToDisconnected: (...args: unknown[]) =>
+    resetMicrosoftProvidersToDisconnectedMock(...args),
+}));
+
 vi.mock('@alga-psa/ui/hooks/use-toast', () => ({
   useToast: () => ({ toast: toastMock }),
 }));
