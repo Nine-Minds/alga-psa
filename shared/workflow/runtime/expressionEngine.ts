@@ -1,6 +1,6 @@
 import jsonata from 'jsonata';
 import type { Expr } from './types';
-import { WORKFLOW_RUNTIME_ALLOWED_FUNCTIONS } from './expressionFunctions';
+import { WORKFLOW_EXPRESSION_FUNCTIONS, WORKFLOW_RUNTIME_ALLOWED_FUNCTIONS } from './expressionFunctions';
 
 const MAX_OUTPUT_BYTES = 256 * 1024;
 const DEFAULT_TIMEOUT_MS = 25;
@@ -48,28 +48,9 @@ export function compileExpression(expr: Expr): CompiledExpression {
   const normalizedSource = normalizeExpressionSource(expr.$expr);
   validateExpressionSource(normalizedSource);
   const compiled = jsonata(normalizedSource);
-  compiled.registerFunction('nowIso', () => new Date().toISOString());
-  compiled.registerFunction('coalesce', (...args: unknown[]) => {
-    for (const arg of args) {
-      if (arg !== null && arg !== undefined) return arg;
-    }
-    return null;
-  });
-  compiled.registerFunction('len', (value: unknown) => {
-    if (typeof value === 'string' || Array.isArray(value)) {
-      return value.length;
-    }
-    return 0;
-  });
-  compiled.registerFunction('toString', (value: unknown) => {
-    if (value === null || value === undefined) return '';
-    return String(value);
-  });
-  compiled.registerFunction('append', (list: unknown, value: unknown) => {
-    const base = Array.isArray(list) ? list : list === null || list === undefined ? [] : [list];
-    const toAdd = Array.isArray(value) ? value : [value];
-    return base.concat(toAdd);
-  });
+  for (const fn of WORKFLOW_EXPRESSION_FUNCTIONS) {
+    compiled.registerFunction(fn.name, fn.implementation as (...args: unknown[]) => unknown);
+  }
 
   return {
     source: expr.$expr,

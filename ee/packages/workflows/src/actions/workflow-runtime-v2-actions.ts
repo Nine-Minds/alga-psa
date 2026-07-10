@@ -33,6 +33,7 @@ import {
   simulateWorkflowDefinition,
   applyTriggerPayloadMapping,
   buildSampleFromJsonSchema,
+  buildWorkflowAuthoringGuide,
   type WorkflowTrigger,
   type PublishError
 } from '@alga-psa/workflows/runtime';
@@ -1721,6 +1722,13 @@ export const simulateWorkflowDefinitionDraftAction = withAuth(async (user, { ten
     payloadSource,
     triggerMappingApplied: mappingApplied
   };
+});
+
+export const getWorkflowAuthoringGuideAction = withAuth(async (user) => {
+  initializeWorkflowRuntimeV2();
+  const { knex } = await createTenantKnex();
+  await requireWorkflowPermission(user, 'read', knex);
+  return buildWorkflowAuthoringGuide();
 });
 
 export const getWorkflowDefinitionVersionAction = withAuth(async (user, { tenant }, input: unknown) => {

@@ -35,6 +35,8 @@ export {
   type WorkflowSimulationTraceEntry
 } from './simulation/simulator';
 export { buildSampleFromJsonSchema } from './simulation/samplePayload';
+export { buildWorkflowAuthoringGuide, type WorkflowAuthoringGuide } from './designer/authoringGuide';
+export { listWorkflowExpressionFunctions } from './expressionFunctions';
 export * from './actions/composeText';
 export {
   validateInputMapping,
