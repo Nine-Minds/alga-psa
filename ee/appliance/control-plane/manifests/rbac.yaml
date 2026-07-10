@@ -23,6 +23,11 @@ metadata:
       to Kubernetes cluster-admin. Narrow further once setup-engine moves from
       shell commands to typed in-cluster API operations.
 rules:
+  # Interactive support tools use the Kubernetes streaming subresources. These
+  # exact create grants do not permit pod creation or mutation.
+  - apiGroups: [""]
+    resources: ["pods/exec", "pods/portforward"]
+    verbs: ["create"]
   - apiGroups: [""]
     resources: ["namespaces", "configmaps", "secrets", "services", "serviceaccounts", "persistentvolumeclaims", "persistentvolumes", "pods", "pods/log", "events", "resourcequotas", "limitranges"]
     verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]

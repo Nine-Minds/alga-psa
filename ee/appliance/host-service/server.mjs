@@ -5,11 +5,17 @@ import os from 'node:os';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { URL } from 'node:url';
+import { WebSocketServer } from 'ws';
 import { collectStatusSnapshotAsync } from './status-engine.mjs';
 import { createKubectlQueue } from './kubectl-queue.mjs';
 import { persistSetupInputs, validateSetupInputs, runNetworkChecks, resolveReleaseManifest } from './setup-engine.mjs';
 import { generateSupportBundle } from './support-bundle.mjs';
 import { runAppChannelUpdate } from './update-engine.mjs';
+import { createNativeKubernetesAdapter } from './kubernetes-client-adapter.mjs';
+import { PodExecManager } from './pod-exec-manager.mjs';
+import { PortForwardManager } from './port-forward-manager.mjs';
+import { ensurePodAccessRbac } from './pod-access-rbac.mjs';
+import { accessError, PodAccessError, requestHasSameOrigin } from './pod-access-common.mjs';
 import {
   collectManageStatus,
   applyLicense,
@@ -46,6 +52,25 @@ const KUBECTL_LOG_TIMEOUT_MS = Number(process.env.ALGA_APPLIANCE_KUBECTL_LOG_TIM
 const NETWORK_PROBE_TTL_MS = Number(process.env.ALGA_APPLIANCE_NETWORK_PROBE_TTL_MS || 20_000);
 const NETWORK_PROBE_FAILURE_DEBOUNCE = Number(process.env.ALGA_APPLIANCE_NETWORK_PROBE_DEBOUNCE || 2);
 const kubectlQueue = createKubectlQueue({ name: 'host-service-kubectl' });
+const podAccessAdapter = createNativeKubernetesAdapter({ kubeconfigPath });
+const podExecManager = new PodExecManager({ adapter: podAccessAdapter });
+const portForwardManager = new PortForwardManager({ adapter: podAccessAdapter });
+let podAccessCapability = {
+  state: 'checking',
+  available: false,
+  migrated: false,
+  message: 'Checking Kubernetes pod-access permissions.',
+};
+ensurePodAccessRbac(podAccessAdapter).then((result) => {
+  podAccessCapability = result;
+}).catch((error) => {
+  podAccessCapability = {
+    state: 'unavailable',
+    available: false,
+    migrated: false,
+    message: error instanceof Error ? error.message : String(error),
+  };
+});
 let cachedStatusSnapshot = null;
 let cachedStatusSnapshotAt = 0;
 let cachedNetworkProbe = null;
@@ -320,6 +345,71 @@ async function readJsonBody(req) {
     try { return JSON.parse(body || '{}'); } catch { return {}; }
   }
   return Object.fromEntries(new URLSearchParams(body));
+}
+
+async function readPodAccessJson(req) {
+  const declaredLength = Number(req.headers['content-length'] || 0);
+  if (declaredLength > 16 * 1024) {
+    throw new PodAccessError('request_too_large', 'Request body exceeds 16 KiB.', 413);
+  }
+  const body = await new Promise((resolve, reject) => {
+    let data = '';
+    let bytes = 0;
+    let settled = false;
+    req.on('data', (chunk) => {
+      if (settled) return;
+      bytes += chunk.length;
+      if (bytes > 16 * 1024) {
+        settled = true;
+        req.resume();
+        reject(new PodAccessError('request_too_large', 'Request body exceeds 16 KiB.', 413));
+        return;
+      }
+      data += chunk.toString('utf8');
+    });
+    req.on('end', () => {
+      if (!settled) {
+        settled = true;
+        resolve(data);
+      }
+    });
+    req.on('error', (error) => {
+      if (!settled) {
+        settled = true;
+        reject(error);
+      }
+    });
+  });
+  try {
+    return JSON.parse(body || '{}');
+  } catch {
+    throw new PodAccessError('invalid_json', 'Request body must be valid JSON.', 400);
+  }
+}
+
+function requireSameOrigin(req, res) {
+  if (requestHasSameOrigin(req)) return true;
+  jsonResponse(res, 403, { code: 'origin_rejected', error: 'Request origin does not match the appliance management UI.' });
+  return false;
+}
+
+function requirePodAccessCapability(res) {
+  if (podAccessCapability.available) return true;
+  jsonResponse(res, 503, {
+    code: 'pod_access_unavailable',
+    error: podAccessCapability.message || 'Pod access is not available.',
+    capability: podAccessCapability,
+  });
+  return false;
+}
+
+function podAccessErrorResponse(res, error) {
+  const access = accessError(error);
+  jsonResponse(res, access.status || 502, {
+    code: access.code,
+    error: access.message,
+    details: access.details,
+  });
 }
 
 function passwordPolicyError(value) {
@@ -621,6 +711,11 @@ function summarizePod(item) {
     containers: (item.spec?.containers || []).map((container) => ({
       name: container.name,
       image: container.image,
+      ports: (container.ports || []).map((port) => ({
+        name: port.name || null,
+        containerPort: port.containerPort,
+        protocol: port.protocol || 'TCP'
+      })),
       ready: statuses.find((status) => status.name === container.name)?.ready || false,
       restarts: statuses.find((status) => status.name === container.name)?.restartCount || 0,
       state: statuses.find((status) => status.name === container.name)?.state || null
@@ -750,6 +845,7 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (url.pathname === '/api/auth/logout') {
+    podExecManager.closeAll('management-logout');
     jsonResponseWithCookie(res, 200, { ok: true }, clearSessionCookieHeader());
     return;
   }
@@ -954,6 +1050,68 @@ const server = http.createServer(async (req, res) => {
     const lines = result.stdout.split(/\r?\n/);
     if (lines.at(-1) === '') lines.pop();
     jsonResponse(res, 200, { namespace, pod, container: container || null, tail, previous, lines });
+    return;
+  }
+
+  if (url.pathname === '/api/k8s/access-capability') {
+    if (!requireAuth(req, res)) return;
+    jsonResponse(res, 200, { capability: podAccessCapability });
+    return;
+  }
+
+  if (url.pathname === '/api/k8s/port-forwards') {
+    if (!requireAuth(req, res)) return;
+    const method = (req.method || 'GET').toUpperCase();
+    if (method === 'GET') {
+      jsonResponse(res, 200, {
+        capability: podAccessCapability,
+        forwards: portForwardManager.list(),
+      });
+      return;
+    }
+    if (method !== 'POST') {
+      jsonResponse(res, 405, { error: 'Method not allowed. Use GET or POST.' });
+      return;
+    }
+    if (!requireSameOrigin(req, res) || !requirePodAccessCapability(res)) return;
+    try {
+      const payload = await readPodAccessJson(req);
+      const forward = await portForwardManager.create(payload, {
+        bindAddress: req.socket?.localAddress,
+        clientAddress: clientIp(req),
+      });
+      jsonResponse(res, 201, { forward });
+    } catch (error) {
+      podAccessErrorResponse(res, error);
+    }
+    return;
+  }
+
+  const forwardRoute = url.pathname.match(/^\/api\/k8s\/port-forwards\/(forward-[a-f0-9]{20})(?:\/(extend))?$/);
+  if (forwardRoute) {
+    if (!requireAuth(req, res)) return;
+    if (!requireSameOrigin(req, res) || !requirePodAccessCapability(res)) return;
+    const [, forwardId, action] = forwardRoute;
+    const method = (req.method || 'GET').toUpperCase();
+    try {
+      if (!action && method === 'DELETE') {
+        if (!portForwardManager.stop(forwardId)) {
+          jsonResponse(res, 404, { code: 'forward_not_found', error: 'Port forward was not found.' });
+          return;
+        }
+        jsonResponse(res, 200, { ok: true });
+        return;
+      }
+      if (action === 'extend' && method === 'POST') {
+        const payload = await readPodAccessJson(req);
+        const forward = portForwardManager.extend(forwardId, payload.durationMinutes);
+        jsonResponse(res, 200, { forward });
+        return;
+      }
+      jsonResponse(res, 405, { error: 'Method not allowed for this port-forward operation.' });
+    } catch (error) {
+      podAccessErrorResponse(res, error);
+    }
     return;
   }
 
@@ -1318,6 +1476,73 @@ const server = http.createServer(async (req, res) => {
 server.listen(port, '0.0.0.0', () => {
   process.stdout.write(`alga-appliance host service listening on :${port}\n`);
 });
+
+const execWebSocketServer = new WebSocketServer({ noServer: true, maxPayload: 64 * 1024 });
+
+function rejectWebSocket(socket, status, message) {
+  if (socket.destroyed) return;
+  socket.write(`HTTP/1.1 ${status}\r\nConnection: close\r\nContent-Type: text/plain\r\nContent-Length: ${Buffer.byteLength(message)}\r\n\r\n${message}`);
+  socket.destroy();
+}
+
+server.on('upgrade', (req, socket, head) => {
+  let url;
+  try {
+    url = new URL(req.url || '/', `http://${req.headers.host || 'localhost'}`);
+  } catch {
+    rejectWebSocket(socket, '400 Bad Request', 'Invalid WebSocket URL.');
+    return;
+  }
+  if (url.pathname !== '/api/k8s/exec') {
+    rejectWebSocket(socket, '404 Not Found', 'WebSocket endpoint not found.');
+    return;
+  }
+  if (!isAuthenticated(req)) {
+    rejectWebSocket(socket, '401 Unauthorized', 'Sign in to the appliance management UI.');
+    return;
+  }
+  if (!requestHasSameOrigin(req)) {
+    rejectWebSocket(socket, '403 Forbidden', 'WebSocket origin does not match the appliance management UI.');
+    return;
+  }
+  if (!podAccessCapability.available) {
+    rejectWebSocket(socket, '503 Service Unavailable', podAccessCapability.message || 'Pod access is unavailable.');
+    return;
+  }
+  const target = {
+    namespace: url.searchParams.get('namespace'),
+    pod: url.searchParams.get('pod'),
+    container: url.searchParams.get('container'),
+    shell: url.searchParams.get('shell') || 'auto',
+    columns: url.searchParams.get('columns') || 100,
+    rows: url.searchParams.get('rows') || 30,
+  };
+  execWebSocketServer.handleUpgrade(req, socket, head, (webSocket) => {
+    podExecManager.attach(webSocket, target, { clientAddress: clientIp(req) }).catch((error) => {
+      const access = accessError(error, 'exec_start_failed');
+      if (webSocket.readyState === 1) {
+        webSocket.send(JSON.stringify({ type: 'error', code: access.code, message: access.message }));
+        webSocket.close(1008, String(access.code).slice(0, 120));
+      }
+    });
+  });
+});
+
+let shuttingDown = false;
+function shutdownControlPlane(signal) {
+  if (shuttingDown) return;
+  shuttingDown = true;
+  process.stdout.write(`alga-appliance host service shutting down (${signal})\n`);
+  podExecManager.shutdown();
+  portForwardManager.shutdown();
+  execWebSocketServer.close();
+  server.close(() => process.exit(0));
+  const forceExit = setTimeout(() => process.exit(0), 5_000);
+  forceExit.unref();
+}
+
+process.once('SIGTERM', () => shutdownControlPlane('SIGTERM'));
+process.once('SIGINT', () => shutdownControlPlane('SIGINT'));
 
 if (!AUTO_RETRY_DISABLED) {
   const reconcileTimer = setInterval(() => { reconcileBlockedSetup().catch(() => {}); }, RECONCILE_INTERVAL_MS);

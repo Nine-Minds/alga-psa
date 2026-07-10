@@ -7,10 +7,12 @@ import {
   ScrollText,
   Server,
   Settings2,
+  SquareTerminal,
 } from "lucide-react";
 import { AlgaLogo } from "./AlgaLogo";
 import { LogoutButton } from "./auth/LogoutButton";
 import { ManageView } from "./manage/ManageView";
+import { PodAccessPanel } from "./PodAccessPanel";
 import styles from "./status.module.css";
 
 type RawTierMap = Record<
@@ -147,13 +149,18 @@ type Pod = {
   containers: Array<{
     name: string;
     image?: string;
+    ports?: Array<{
+      name?: string | null;
+      containerPort: number;
+      protocol?: string;
+    }>;
     ready?: boolean;
     restarts?: number;
     state?: Record<string, unknown> | null;
   }>;
 };
 
-type Tab = "overview" | "deployments" | "pods" | "logs";
+type Tab = "overview" | "deployments" | "pods" | "logs" | "access";
 type TopView = "status" | "manage";
 type LogLoadOptions = { preserveScroll?: boolean; scrollToEnd?: boolean };
 
@@ -270,6 +277,7 @@ const statusTabs = [
   { value: "deployments", label: "Deployments", Icon: Boxes },
   { value: "pods", label: "Pods", Icon: Server },
   { value: "logs", label: "Logs", Icon: ScrollText },
+  { value: "access", label: "Access", Icon: SquareTerminal },
 ] satisfies Array<{ value: Tab; label: string; Icon: typeof Activity }>;
 
 function escapeRegExp(value: string) {
@@ -598,7 +606,8 @@ export default function StatusPage() {
 
   useEffect(() => {
     if (activeTab === "deployments") loadDeployments();
-    if (activeTab === "pods" || activeTab === "logs") loadPods();
+    if (activeTab === "pods" || activeTab === "logs" || activeTab === "access")
+      loadPods();
   }, [activeTab, loadDeployments, loadPods]);
 
   useEffect(() => {
@@ -1218,20 +1227,50 @@ export default function StatusPage() {
                           ))}
                         </td>
                         <td>
-                          <button
-                            type="button"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              setNamespace(pod.namespace);
-                              setSelectedPod(pod.name);
-                              setSelectedContainer(
-                                pod.containers[0]?.name || "",
-                              );
-                              setActiveTab("logs");
-                            }}
-                          >
-                            View logs
-                          </button>
+                          <div className={styles.podActions}>
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setNamespace(pod.namespace);
+                                setSelectedPod(pod.name);
+                                setSelectedContainer(
+                                  pod.containers[0]?.name || "",
+                                );
+                                setActiveTab("logs");
+                              }}
+                            >
+                              Logs
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setNamespace(pod.namespace);
+                                setSelectedPod(pod.name);
+                                setSelectedContainer(
+                                  pod.containers[0]?.name || "",
+                                );
+                                setActiveTab("access");
+                              }}
+                            >
+                              Shell
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                setNamespace(pod.namespace);
+                                setSelectedPod(pod.name);
+                                setSelectedContainer(
+                                  pod.containers[0]?.name || "",
+                                );
+                                setActiveTab("access");
+                              }}
+                            >
+                              Forward
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))
@@ -1240,6 +1279,22 @@ export default function StatusPage() {
               </table>
             </div>
           </section>
+        ) : null}
+
+        {activeTab === "access" ? (
+          <PodAccessPanel
+            namespace={namespace}
+            namespaces={namespaces}
+            pods={pods}
+            selectedPod={selectedPod}
+            selectedContainer={selectedContainer}
+            loadingNamespaces={loadingNamespaces}
+            loadingPods={loadingPods}
+            onNamespace={setNamespace}
+            onPod={setSelectedPod}
+            onContainer={setSelectedContainer}
+            onRefreshPods={loadPods}
+          />
         ) : null}
 
         {activeTab === "logs" ? (
