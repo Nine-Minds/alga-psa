@@ -45,6 +45,36 @@ vi.mock('@alga-psa/users/actions', () => ({
   getCurrentUser: vi.fn(async () => null),
 }));
 
+vi.mock('@alga-psa/user-composition/actions', () => ({
+  getCurrentUser: vi.fn(async () => null),
+  findUserById: vi.fn(async () => null),
+}));
+
+vi.mock('@alga-psa/assets/actions/assetActions', () => ({
+  getAssetDetailBundle: vi.fn(),
+}));
+
+vi.mock('@alga-psa/assets/actions/assetActionErrors', () => ({
+  isAssetActionError: vi.fn(() => false),
+}));
+
+vi.mock('@alga-psa/clients/actions', () => ({
+  getClientById: vi.fn(),
+  getContactByContactNameId: vi.fn(),
+}));
+
+vi.mock('@alga-psa/projects/actions/projectActions', () => ({
+  getProject: vi.fn(),
+}));
+
+vi.mock('@alga-psa/tickets/actions/ticketActions', () => ({
+  getTicketById: vi.fn(),
+}));
+
+vi.mock('@alga-psa/tickets/actions/comment-actions/commentActions', () => ({
+  findCommentsByTicketId: vi.fn(),
+}));
+
 describe('ChatCompletionsService (streaming)', () => {
   it('passes stream: true to OpenRouter OpenAI client', async () => {
     openAiCreateSpy.mockResolvedValueOnce(createEmptyAsyncIterable());

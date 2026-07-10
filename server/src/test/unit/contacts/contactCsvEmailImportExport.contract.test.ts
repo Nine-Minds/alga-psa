@@ -6,6 +6,7 @@ import { parseCSV } from '@alga-psa/core';
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (action: any) => (...args: any[]) => action({ user_id: 'test-user', tenant: 'test-tenant' }, { tenant: 'test-tenant' }, ...args),
+  withOptionalAuth: (action: any) => (...args: any[]) => action({ user_id: 'test-user', tenant: 'test-tenant' }, { tenant: 'test-tenant' }, ...args),
 }));
 
 vi.mock('@alga-psa/db', async () => {

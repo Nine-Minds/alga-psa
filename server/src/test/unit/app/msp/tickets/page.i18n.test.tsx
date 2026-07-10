@@ -147,6 +147,7 @@ vi.mock('@alga-psa/ui/lib/i18n/client', async () => {
   };
 
   return {
+    detectClientLocale: () => 'en',
     I18nProvider: ({
       children,
       initialLocale = 'en',
@@ -201,6 +202,17 @@ vi.mock('@/components/layout/DefaultLayout', () => ({
   default: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="default-layout">{children}</div>
   ),
+}));
+
+vi.mock('server/src/components/layout/DefaultLayout', () => ({
+  default: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="default-layout">{children}</div>
+  ),
+}));
+
+vi.mock('server/src/components/layout/Header', () => ({
+  QUICK_CREATE_OPEN_EVENT: 'alga:quick-create:open',
+  default: () => null,
 }));
 
 vi.mock('@alga-psa/tags/context', () => ({
@@ -263,8 +275,15 @@ vi.mock('@alga-psa/tickets/actions/optimizedTicketActions', () => ({
   getConsolidatedTicketListData: (...args: unknown[]) => getConsolidatedTicketListDataMock(...args),
 }));
 
+vi.mock('@alga-psa/tickets/actions/ticketActions', () => ({}));
+
 vi.mock('@alga-psa/tickets/actions/ticketDisplaySettings', () => ({
   getTicketingDisplaySettings: (...args: unknown[]) => getTicketingDisplaySettingsMock(...args),
+}));
+
+vi.mock('@alga-psa/tickets/lib', () => ({
+  isTicketStatusOpenFilter: (value: unknown) => value === 'open',
+  TICKET_STATUS_FILTER_OPEN: 'open',
 }));
 
 vi.mock('@alga-psa/teams/actions', () => ({

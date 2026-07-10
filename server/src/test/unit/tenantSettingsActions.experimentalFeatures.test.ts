@@ -32,6 +32,7 @@ vi.mock('@alga-psa/auth', () => ({
 vi.mock('@alga-psa/db', () => ({
   getTenantContext: () => mockTenantContext,
   createTenantKnex: createTenantKnexMock,
+  withTransaction: (knex: any, fn: any) => fn(knex),
   // The facade scopes tenant_settings by tenant; the SUT no longer issues its own
   // .where({ tenant }) so the mock applies it here, keeping the tenant-isolation
   // assertions (knexWhereMock called with { tenant }) meaningful.
@@ -65,6 +66,11 @@ function wireTenantSettingsChain() {
 }
 
 vi.mock('@alga-psa/user-composition/actions', () => ({
+  getCurrentUser: getCurrentUserMock,
+  getCurrentUserPermissions: getCurrentUserPermissionsMock,
+}));
+
+vi.mock('@alga-psa/user-composition/actions/userQueryActions', () => ({
   getCurrentUser: getCurrentUserMock,
   getCurrentUserPermissions: getCurrentUserPermissionsMock,
 }));

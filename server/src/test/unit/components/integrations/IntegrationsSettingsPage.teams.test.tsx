@@ -206,10 +206,12 @@ describe('IntegrationsSettingsPage Teams placement', () => {
 
     render(<IntegrationsSettingsPage />);
 
-    expect(screen.getByText('Providers Integrations')).toBeInTheDocument();
+    // The simplified Providers tab renders no category heading banner.
+    expect(screen.queryByText('Providers Integrations')).not.toBeInTheDocument();
     expect(screen.getByText('Google Integration Settings')).toBeInTheDocument();
     expect(screen.getByText('Microsoft Integration Settings')).toBeInTheDocument();
-    expect(screen.getByText('MSP SSO Login Domains')).toBeInTheDocument();
+    // MSP SSO login-domain management moved to Settings -> Security (MspSsoAdvancedSection).
+    expect(screen.queryByText('MSP SSO Login Domains')).not.toBeInTheDocument();
     expect(screen.queryByTestId('teams-integration-settings-shell')).not.toBeInTheDocument();
   });
 

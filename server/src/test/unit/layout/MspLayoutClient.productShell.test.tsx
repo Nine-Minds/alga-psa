@@ -3,7 +3,7 @@ import React from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { MspLayoutClient } from '@/app/msp/MspLayoutClient';
-import { getTenantSettings } from '@alga-psa/tenancy/actions';
+import { getTenantSettings } from '@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions';
 
 const mockUsePathname = vi.fn(() => '/msp/tickets');
 const mockReplace = vi.fn();
@@ -29,15 +29,16 @@ vi.mock('@alga-psa/ui/ui-reflection/ClientUIStateProvider', () => ({
   ClientUIStateProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
-vi.mock('@alga-psa/tenancy/components', () => ({
+vi.mock('@alga-psa/tenancy/components/i18n/I18nWrapper', () => ({
   I18nWrapper: ({ children }: { children: React.ReactNode }) => <>{children}</>,
 }));
 
-vi.mock('@alga-psa/tenancy/actions', () => ({
+vi.mock('@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions', () => ({
   getTenantSettings: vi.fn(),
 }));
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
+  detectClientLocale: () => 'en',
   useTranslation: () => ({
     t: (key: string) => ({
       'onboardingRedirect.title': 'Taking you to setup',

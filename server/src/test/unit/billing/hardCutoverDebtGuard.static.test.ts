@@ -10,7 +10,6 @@ describe('hard cutover debt guard', () => {
   it('T018: active billing/editor codepaths do not retain per_unit compatibility branches', () => {
     const sources = [
       'packages/billing/src/actions/serviceActions.ts',
-      'packages/billing/src/models/service.ts',
       'packages/billing/src/components/settings/billing/QuickAddService.tsx',
       'packages/billing/src/components/settings/billing/QuickAddProduct.tsx',
       'packages/billing/src/components/settings/billing/ProductsManager.tsx',
@@ -26,6 +25,17 @@ describe('hard cutover debt guard', () => {
     for (const source of sources) {
       expect(source).not.toContain('per_unit');
     }
+  });
+
+  it('T018: service model treats per_unit only as unrepresentable, never as vocabulary', () => {
+    // PR #2889 deliberately references per_unit in service.ts as the one legacy
+    // billing_method the read path must skip (not a compatibility branch), so the
+    // blanket ban above no longer applies to this file. Guard the actual debt instead:
+    // per_unit must stay out of the schema vocabulary and appear only as the
+    // unrepresentable-row constant.
+    const source = read('packages/billing/src/models/service.ts');
+    expect(source).toContain("const UNREPRESENTABLE_BILLING_METHOD = 'per_unit'");
+    expect(source).not.toMatch(/enum\(\[[^\]]*per_unit/);
   });
 
   it('T018: no catalog billing-method eligibility gating remains in contract authoring picker surfaces', () => {

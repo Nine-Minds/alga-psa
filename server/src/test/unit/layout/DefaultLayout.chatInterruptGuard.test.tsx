@@ -7,7 +7,7 @@ import '@testing-library/jest-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import DefaultLayout from '../../../components/layout/DefaultLayout';
-import { isExperimentalFeatureEnabled } from '@alga-psa/tenancy/actions';
+import { isExperimentalFeatureEnabled } from '@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions';
 import { KeyboardShortcutsProvider } from '@alga-psa/ui/keyboard-shortcuts';
 
 const routerPush = vi.fn();
@@ -35,6 +35,7 @@ vi.mock('next/navigation', () => ({
 }));
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
+  detectClientLocale: () => 'en',
   useTranslation: () => ({
     t: (key: string, options?: string | { defaultValue?: string }) => {
       if (translations[key]) {
@@ -178,7 +179,7 @@ vi.mock('@alga-psa/ui/lib', () => ({
   savePreference: vi.fn(),
 }));
 
-vi.mock('@alga-psa/tenancy/actions', () => ({
+vi.mock('@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions', () => ({
   isExperimentalFeatureEnabled: vi.fn().mockResolvedValue(true),
 }));
 
