@@ -259,13 +259,24 @@ describe('AlgaDesk ticket attachment draft integration', () => {
     expect(deletedByAction).toEqual([fixture.deletableDocumentId]);
 
     permissionRef.canDeleteDocument = false;
-    await expect(
-      deleteDraftClipboardImages({
-        ticketId: fixture.ticketId,
-        documentIds: [fixture.deletableDocumentId],
-        deleteDocumentFn: async () => ({ success: true, deleted: true }),
+    let permissionDeleteCalled = false;
+    const permissionResult = await deleteDraftClipboardImages({
+      ticketId: fixture.ticketId,
+      documentIds: [fixture.deletableDocumentId],
+      deleteDocumentFn: async () => {
+        permissionDeleteCalled = true;
+        return { success: true, deleted: true };
+      },
+    });
+    expect(permissionResult.deletedDocumentIds).toEqual([]);
+    expect(permissionResult.failures).toEqual([
+      expect.objectContaining({
+        documentId: fixture.deletableDocumentId,
+        reason: 'permission_denied',
+        detail: 'Permission denied: cannot delete document attachments.',
       }),
-    ).rejects.toThrow('Permission denied: cannot delete document attachments.');
+    ]);
+    expect(permissionDeleteCalled).toBe(false);
 
   }, HOOK_TIMEOUT);
 });

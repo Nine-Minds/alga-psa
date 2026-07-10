@@ -271,19 +271,25 @@ describe('Ticket bundling integration', () => {
 
     mockCurrentUser = noPermUser;
     try {
-      await expect(
-        runWithTenant(tenantId, async () => {
-          await bundleTicketsAction({ masterTicketId: masterId, childTicketIds: [childId], mode: 'link_only' }, noPermUser as any);
-        })
-      ).rejects.toThrow(/permission denied/i);
+      const deniedBundleResult = await runWithTenant(tenantId, async () => {
+        return bundleTicketsAction({ masterTicketId: masterId, childTicketIds: [childId], mode: 'link_only' }, noPermUser as any);
+      });
+      expect(deniedBundleResult).toMatchObject({
+        permissionError: 'Permission denied: Cannot bundle tickets',
+      });
 
       await grantUserPermissions(db, tenantId, noPermUserId, [
         { resource: 'ticket', action: 'update' },
         { resource: 'ticket', action: 'read' },
       ]);
 
-      await runWithTenant(tenantId, async () => {
-        await bundleTicketsAction({ masterTicketId: masterId, childTicketIds: [childId], mode: 'link_only' }, noPermUser as any);
+      const allowedBundleResult = await runWithTenant(tenantId, async () => {
+        return bundleTicketsAction({ masterTicketId: masterId, childTicketIds: [childId], mode: 'link_only' }, noPermUser as any);
+      });
+      expect(allowedBundleResult).toMatchObject({
+        masterTicketId: masterId,
+        childTicketIds: [childId],
+        mode: 'link_only',
       });
     } finally {
       mockCurrentUser = internalUser;
@@ -398,9 +404,10 @@ describe('Ticket bundling integration', () => {
 
     await runWithTenant(tenantId, async () => {
       await bundleTicketsAction({ masterTicketId: oldMasterId, childTicketIds: [child1Id, child2Id], mode: 'sync_updates' }, internalUser as any);
-      await expect(
-        promoteBundleMasterAction({ oldMasterTicketId: oldMasterId, newMasterTicketId: oldMasterId }, internalUser as any)
-      ).rejects.toThrow(/must be different/i);
+      const selfPromoteResult = await promoteBundleMasterAction({ oldMasterTicketId: oldMasterId, newMasterTicketId: oldMasterId }, internalUser as any);
+      expect(selfPromoteResult).toMatchObject({
+        actionError: 'New master ticket must be different from the current master.',
+      });
       await promoteBundleMasterAction({ oldMasterTicketId: oldMasterId, newMasterTicketId: child1Id }, internalUser as any);
     });
 
@@ -442,11 +449,12 @@ describe('Ticket bundling integration', () => {
     expect(childAfter?.status_id).toBe(statusClosedId);
     expect(childAfter?.priority_id).toBe(nextPriorityId);
 
-    await expect(
-      runWithTenant(tenantId, async () => {
-        await updateTicketWithCache(childId, { status_id: statusOpenId }, internalUser as any);
-      })
-    ).rejects.toThrow();
+    const childWorkflowUpdateResult = await runWithTenant(tenantId, async () => {
+      return updateTicketWithCache(childId, { status_id: statusOpenId }, internalUser as any);
+    });
+    expect(childWorkflowUpdateResult).toMatchObject({
+      actionError: 'This ticket is bundled; workflow fields are locked (status_id). Update the master ticket instead.',
+    });
 
     const childAfterLockAttempt = await scopedDb.table('tickets').where({ ticket_id: childId }).first();
     expect(childAfterLockAttempt?.status_id).toBe(statusClosedId);
@@ -487,11 +495,12 @@ describe('Ticket bundling integration', () => {
     expect(mirrored?.is_internal).toBe(false);
 
     const originalNote = mirrored?.note;
-    await expect(
-      runWithTenant(tenantId, async () => {
-        await updateComment(mirrored.comment_id, { note: 'edited' } as any);
-      })
-    ).rejects.toThrow();
+    const mirroredUpdateResult = await runWithTenant(tenantId, async () => {
+      return updateComment(mirrored.comment_id, { note: 'edited' } as any);
+    });
+    expect(mirroredUpdateResult).toMatchObject({
+      actionError: 'This comment is system-generated and cannot be edited.',
+    });
 
     const mirroredAfter = await scopedDb.table('comments').where({ comment_id: mirrored.comment_id }).first();
     expect(mirroredAfter?.note).toBe(originalNote);

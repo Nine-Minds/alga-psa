@@ -1925,7 +1925,7 @@ describe('Appointment Request Integration Tests', () => {
       });
 
       expect(result.success).toBe(false);
-      expect(result.error).toMatch(/past|future|invalid date/i);
+      expect(result.error).toBe('Appointment request contains invalid fields. Review the details and try again.');
     });
 
     it('should reject appointment request with invalid time format', async () => {
