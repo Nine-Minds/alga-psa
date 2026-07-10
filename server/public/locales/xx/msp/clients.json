@@ -907,14 +907,14 @@
     "clientName": "11111",
     "importCompleteMessage": "11111 {{count}} 11111",
     "importCompleteWithErrors": "11111",
-    "importResultSummary": "{{created}} 11111, {{updated}} 11111, {{skipped}} 11111, {{failed}} 11111",
-    "skippedExistingMessage": "{{count}} 11111",
+    "importResultSummary": "11111 {{created}} 11111 {{updated}} 11111 {{skipped}} 11111 {{failed}} 11111",
+    "skippedExistingMessage": "11111 {{count}} 11111",
     "error": "11111",
     "updateExistingTitle": "11111",
     "updateExistingMessage": "11111 {{count}} 11111",
-    "invalidRowsBlocked": "11111",
+    "invalidRowsBlocked": "11111 {{count}} 11111",
     "noValidRows": "11111",
-    "serverFailures": "11111"
+    "serverFailures": "11111 {{failed}} 11111 {{total}} 11111"
   },
   "clientsList": {
     "name": "11111",

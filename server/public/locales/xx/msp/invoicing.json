@@ -213,7 +213,7 @@
       "fixAll": "11111",
       "fixAllBusy": "11111",
       "fixAllResult": "11111 {{schedules}} 11111 {{clients}} 11111",
-      "fixAllNoop": "11111 11111 11111 11111 11111 11111 11111",
+      "fixAllNoop": "11111",
       "fixAllError": "11111",
       "fixAllDenied": "11111"
     },
@@ -289,11 +289,15 @@
     "fields": {
       "client": "11111",
       "invoiceNumber": "11111",
-      "invoiceNumberOptional": "11111"
+      "invoiceNumberOptional": "11111",
+      "sourceSalesOrder": "11111"
     },
     "placeholders": {
       "selectClient": "11111",
-      "invoiceNumberOptional": "11111"
+      "invoiceNumberOptional": "11111",
+      "sourceSalesOrder": "11111",
+      "searchSalesOrders": "11111",
+      "noInvoiceableSalesOrders": "11111"
     },
     "automatedItems": {
       "title": "11111",
@@ -310,7 +314,9 @@
       "addDiscount": "11111",
       "generate": "11111",
       "saveChanges": "11111",
-      "processing": "11111"
+      "processing": "11111",
+      "generateSalesOrderInvoice": "11111",
+      "clearSalesOrderSource": "11111"
     },
     "labels": {
       "total": "11111"
@@ -332,11 +338,17 @@
       "loadItems": "11111",
       "refresh": "11111",
       "updateFailed": "11111",
-      "generateFailed": "11111"
+      "generateFailed": "11111",
+      "salesOrderGenerateFailed": "11111",
+      "salesOrderNothingToInvoice": "11111",
+      "salesOrderNotInvoiceable": "11111"
     },
     "errorFallback": {
       "title": "11111",
       "retry": "11111"
+    },
+    "salesOrderContext": {
+      "summary": "11111 {{quantity}} 11111 {{lineCount}} 11111"
     }
   },
   "draftsTab": {

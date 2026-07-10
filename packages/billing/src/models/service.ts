@@ -15,6 +15,9 @@ const log = {
       globalThis.console.log(message, ...args);
     }
   },
+  warn: (message: string, ...args: unknown[]) => {
+    globalThis.console.warn(message, ...args);
+  },
   error: (message: string, ...args: unknown[]) => {
     globalThis.console.error(message, ...args);
   }
@@ -128,6 +131,66 @@ export const serviceSchema = refinedServiceSchema.transform((data) => {
 // Infer the final type matching IService structure
 export type ServiceSchemaType = z.infer<typeof serviceSchema>;
 
+type ServiceReadRow = { service_id: string; billing_method?: string | null };
+
+/**
+ * The single legacy `billing_method` that billing's `IService` cannot represent.
+ *
+ * `serviceSchema.billing_method` is deliberately the canonical billing vocabulary
+ * (`fixed | hourly | usage`) — the T013 hard cutover purged `per_unit` from billing's
+ * `IService` contract (guarded by billingInterfacesCutover.static.test). Migration
+ * 20260323120000_normalize_per_unit_to_usage rewrote existing `service_catalog` rows,
+ * but it added no CHECK constraint there, so pre-migration or externally-written rows
+ * can still carry `per_unit`.
+ */
+const UNREPRESENTABLE_BILLING_METHOD = 'per_unit';
+
+/**
+ * Validate service_catalog rows for the read/list path.
+ *
+ * A single `per_unit` row used to throw from `.map(schema.parse(...))` and take down every
+ * consumer of getServices (Sales Order line picker, Manual Invoice client+service load).
+ * Such rows are skipped — and *only* such rows: every other validation failure is a real
+ * data defect and still throws, per the repo's fail-fast standard. Widening the skip to any
+ * `safeParse` failure would let a malformed row silently vanish from a billing list.
+ *
+ * Skipped rows are logged, not silently swallowed: a `per_unit` product will not appear in
+ * billing-sourced service pickers by design. Surfacing those products for sale is a separate
+ * inventory concern (an inventory-owned product reader), not a widening of billing's contract.
+ */
+export function parseServiceReadRows(
+  rows: ServiceReadRow[],
+  pricesByService: Record<string, IServicePrice[]>
+): IService[] {
+  const validatedServices: IService[] = [];
+  const skipped: string[] = [];
+
+  for (const service of rows) {
+    if (service.billing_method === UNREPRESENTABLE_BILLING_METHOD) {
+      skipped.push(service.service_id);
+      continue;
+    }
+
+    // Anything else that fails validation is a genuine defect: let it throw.
+    validatedServices.push(
+      serviceSchema.parse({
+        ...service,
+        prices: pricesByService[service.service_id] || []
+      }) as IService
+    );
+  }
+
+  if (skipped.length > 0) {
+    log.warn(
+      `[parseServiceReadRows] Skipped ${skipped.length} service_catalog row(s) with ` +
+        `billing_method='${UNREPRESENTABLE_BILLING_METHOD}', which billing's IService cannot represent; ` +
+        `they are excluded from billing-sourced service lists. service_ids: ${skipped.join(', ')}`
+    );
+  }
+
+  return validatedServices;
+}
+
 // Create schema: Omit service_id and tenant from the *base* schema first
 // We omit tenant because it will be added by the server-side code after validation
 const baseCreateServiceSchema = baseServiceSchema.omit({ service_id: true, tenant: true, created_at: true, updated_at: true });
@@ -206,15 +269,7 @@ const Service = {
         return acc;
       }, {} as Record<string, IServicePrice[]>);
 
-      // Validate and transform using the final schema's parse method
-      const validatedServices = servicesData.map((service) => {
-        // .parse() validates against the refined schema AND applies the transform
-        const validated = serviceSchema.parse({
-          ...service,
-          prices: pricesByService[service.service_id] || []
-        });
-        return validated as IService;
-      });
+      const validatedServices = parseServiceReadRows(servicesData, pricesByService);
 
       log.info(`[Service.getAll] Services data validated successfully`);
       return validatedServices;
@@ -718,13 +773,7 @@ const Service = {
         return acc;
       }, {} as Record<string, IServicePrice[]>);
 
-      // Validate and transform using the final schema's parse method
-      return servicesData.map(service => {
-        return serviceSchema.parse({
-          ...service,
-          prices: pricesByService[service.service_id] || []
-        }) as IService;
-      });
+      return parseServiceReadRows(servicesData, pricesByService);
     } catch (error) {
       log.error(`[Service.getByCategoryId] Error fetching services for category ${category_id}:`, error);
       throw error;

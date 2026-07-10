@@ -494,9 +494,10 @@ describe('ticket close rules', () => {
     const ticketId = await insertTicket(db, fixture);
     await setBoardCloseRules(db, fixture, { require_time_entry: true });
 
-    await expect(
-      updateTicket(ticketId, { status_id: fixture.closedStatusId })
-    ).rejects.toThrow(/cannot be closed/i);
+    const closeResult = await updateTicket(ticketId, { status_id: fixture.closedStatusId });
+    expect(closeResult).toMatchObject({
+      actionError: expect.stringContaining('Ticket cannot be closed'),
+    });
 
     let ticket = await scopedDb().table('tickets').where({ ticket_id: ticketId }).first();
     expect(ticket.status_id).toBe(fixture.openStatusId);

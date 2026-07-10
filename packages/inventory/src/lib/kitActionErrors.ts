@@ -35,14 +35,41 @@ export function kitActionErrorFrom(error: unknown): KitActionError | null {
         return actionError('Sales order line not found. It may have been updated or deleted. Please refresh and try again.');
       case 'Line is itself a kit component; pass the parent kit line':
         return actionError('Update the parent kit line instead of an individual component line.');
+      case 'Fixed kit price must be greater than 0':
+        return actionError('Set a fixed kit price greater than 0, or switch this kit to sum-of-components pricing.');
+      case 'Kit name is required':
+        return actionError('Enter a name for this kit.');
+      case 'Product type is required':
+        return actionError('Choose a product type for this kit.');
+      case 'Product type not found':
+        return actionError('The selected product type no longer exists. Please refresh and choose another.');
+      case 'Kit not found':
+        return actionError('Kit not found. It may have been updated or deleted. Please refresh and try again.');
+      case 'Kit was created but could not be loaded':
+      case 'Kit was updated but could not be loaded':
+        return actionError('The kit was saved but could not be reloaded. Please refresh to see the latest state.');
+      case 'currency_code must be a 3-letter currency code':
+        return actionError('Currency must be a 3-letter code such as USD.');
+    }
+
+    if (error.message.startsWith('Invalid kit_pricing_mode:')) {
+      return actionError('Kit pricing mode must be either sum-of-components or a fixed price.');
+    }
+    // normalizeMoney: `<field> must be greater than 0` / `<field> must be a non-negative amount`
+    if (/ must be (greater than 0|a non-negative amount)$/.test(error.message)) {
+      return actionError(error.message);
     }
   }
 
-  const dbError = error as { code?: string };
+  const dbError = error as { code?: string; constraint?: string };
   if (dbError?.code === '23503') {
     return actionError('One of the selected kit records is no longer valid. Please refresh and try again.');
   }
   if (dbError?.code === '23505') {
+    // A kit product and a kit component hit the same SQLSTATE for very different reasons.
+    if (dbError.constraint?.includes('sku')) {
+      return actionError('A product with this SKU already exists. Use a different SKU or edit the existing product.');
+    }
     return actionError('This kit component already exists. Update its quantity instead.');
   }
 

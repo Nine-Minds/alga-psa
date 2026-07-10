@@ -6,12 +6,14 @@ import { FocusScope } from '@radix-ui/react-focus-scope';
 import { RemoveScroll } from 'react-remove-scroll';
 import { ChevronDown, Plus } from 'lucide-react';
 import type { VariantProps } from 'class-variance-authority';
-import type { IClient } from '@alga-psa/types';
+import type { IClient, ITag } from '@alga-psa/types';
 
 import { Input } from './Input';
 import CustomSelect from './CustomSelect';
 import { Button, buttonVariants } from './Button';
 import ClientAvatar from './ClientAvatar';
+import { TagFilter } from './tags/TagFilter';
+import { useClientTags } from '../context/ClientTagsContext';
 import type { EntityAvatarProps } from './EntityAvatar';
 import { useTranslation } from '../lib/i18n/client';
 
@@ -115,8 +117,11 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
   'data-automation-type': dataAutomationType = 'picker',
 }) => {
   const { t } = useTranslation('common');
+  const { fetchClientTags } = useClientTags();
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [clientTags, setClientTags] = useState<ITag[]>([]);
+  const [selectedTagFilters, setSelectedTagFilters] = useState<string[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -133,6 +138,42 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
     () => clients.find((c) => c.client_id === selectedClientId),
     [clients, selectedClientId]
   );
+
+  useEffect(() => {
+    if (!isOpen || !fetchClientTags || clients.length === 0) return;
+    let cancelled = false;
+    fetchClientTags(clients.map((client) => client.client_id))
+      .then((tags) => {
+        if (!cancelled) setClientTags(tags);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, fetchClientTags, clients]);
+
+  const tagTextsByClientId = useMemo(() => {
+    const map = new Map<string, Set<string>>();
+    for (const tag of clientTags) {
+      let texts = map.get(tag.tagged_id);
+      if (!texts) {
+        texts = new Set<string>();
+        map.set(tag.tagged_id, texts);
+      }
+      texts.add(tag.tag_text);
+    }
+    return map;
+  }, [clientTags]);
+
+  const uniqueFilterTags = useMemo(() => {
+    const byText = new Map<string, ITag>();
+    for (const tag of clientTags) {
+      if (!byText.has(tag.tag_text)) byText.set(tag.tag_text, tag);
+    }
+    return Array.from(byText.values()).sort((a, b) => a.tag_text.localeCompare(b.tag_text));
+  }, [clientTags]);
+
+  const showTagFilter = uniqueFilterTags.length > 0;
 
   const filteredClients = useMemo(() => {
     return clients
@@ -154,8 +195,14 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
               : clientTypeFilter === 'individual'
                 ? client.client_type === 'individual'
                 : true;
+        const matchesTags =
+          selectedTagFilters.length === 0
+            ? true
+            : selectedTagFilters.some((tagText) =>
+                tagTextsByClientId.get(client.client_id)?.has(tagText)
+              );
 
-        return matchesSearch && matchesState && matchesClientType;
+        return matchesSearch && matchesState && matchesClientType && matchesTags;
       })
       .sort((a, b) => {
         const aDisabled = disabledClientIds?.has(a.client_id) ?? false;
@@ -163,7 +210,7 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
         if (aDisabled !== bDisabled) return aDisabled ? 1 : -1;
         return a.client_name.localeCompare(b.client_name);
       });
-  }, [clients, filterState, clientTypeFilter, searchTerm, disabledClientIds]);
+  }, [clients, filterState, clientTypeFilter, searchTerm, disabledClientIds, selectedTagFilters, tagTextsByClientId]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -376,6 +423,24 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
               autoFocus
               className="h-9"
             />
+            {showTagFilter && (
+              <TagFilter
+                id={`${id}-tag-filter`}
+                tags={uniqueFilterTags}
+                selectedTags={selectedTagFilters}
+                onToggleTag={(tagText) => {
+                  setSelectedTagFilters((current) =>
+                    current.includes(tagText)
+                      ? current.filter((text) => text !== tagText)
+                      : [...current, tagText]
+                  );
+                }}
+                onClearTags={() => setSelectedTagFilters([])}
+                modal
+                align="start"
+                contentClassName="z-[10001]"
+              />
+            )}
           </div>
           <div className="flex items-center gap-2 mt-2">
             <CustomSelect

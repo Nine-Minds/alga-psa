@@ -664,6 +664,7 @@
     "google": {
       "settings": {
         "actions": {
+          "disconnectProviders": "11111",
           "refresh": "11111",
           "resetProviders": "11111",
           "resetting": "11111",
@@ -673,6 +674,11 @@
         "afterSaveNotice": "11111",
         "consoleLink": "11111",
         "description": "11111",
+        "disconnectDialog": {
+          "cancel": "11111",
+          "message": "11111",
+          "title": "11111"
+        },
         "errors": {
           "loadFailed": "11111",
           "resetFailed": "11111",
@@ -690,11 +696,16 @@
           "enterSecret": "11111",
           "gmailClientId": "11111",
           "gmailClientSecret": "11111",
+          "locationHelp": "11111",
           "sectionTitle": "11111",
           "shareApp": "11111",
           "shareAppHelp": "11111",
           "storedSecret": "11111 {{secret}} 11111"
         },
+        "oauthValues": {
+          "title": "11111"
+        },
+        "redirectUrisHelp": "11111",
         "redirectUrisLabel": "11111",
         "scopes": "11111",
         "scopesCalendar": "11111 {{scopes}} 11111",
@@ -702,6 +713,7 @@
         "serviceAccount": {
           "alreadyStored": "11111",
           "description": "11111",
+          "locationHelp": "11111",
           "title": "11111"
         },
         "setupGuide": "11111",
@@ -1044,6 +1056,7 @@
     "microsoft": {
       "settings": {
         "actions": {
+          "disconnectProviders": "11111",
           "entraLink": "11111",
           "newProfile": "11111",
           "openTeamsSetup": "11111",
@@ -1066,22 +1079,20 @@
           "saving": "11111",
           "selectProfile": "11111",
           "unbound": "11111",
-          "noCapablePlaceholder": "No enabled profile",
-          "noCapableProfiles": "No Microsoft app is enabled for {{consumer}}. Edit a profile to enable it, or leave {{consumer}} unbound.",
-          "noEmailCapableProfiles": "No Microsoft app is enabled for Email. Edit a profile to enable it, or leave Email on the hosted app."
+          "noCapablePlaceholder": "11111"
         },
         "bindings": {
-          "summaryBound": "11111 {{consumer}} 11111 {{profile}} 11111",
+          "summaryBound": "11111 {{profile}} 11111",
           "summaryNone": "11111 {{consumer}} 11111",
-          "summaryUnavailable": "11111 {{consumer}} 11111",
-          "warningArchived": "11111 {{consumer}} 11111",
+          "summaryUnavailable": "11111",
+          "warningArchived": "11111 {{profile}} 11111",
+          "warningNoApps": "11111 {{consumer}} 11111",
           "warningNoBinding": "11111 {{consumer}} 11111",
-          "warningNotReady": "11111 {{consumer}} 11111 {{profile}} 11111",
-          "warningProfileMissing": "11111 {{consumer}} 11111",
-          "warningMissingCapability": "{{consumer}} is bound to a profile that is not enabled for {{consumer}}. Rebind it or edit the profile capabilities."
+          "warningNoCapable": "11111 {{consumer}} 11111 {{consumer}} 11111",
+          "warningNotReady": "11111 {{profile}} 11111 {{consumer}} 11111",
+          "warningProfileMissing": "11111",
+          "warningMissingCapability": "11111 {{profile}} 11111 {{consumer}} 11111 {{consumer}} 11111"
         },
-        "bindingsAlertCe": "11111",
-        "bindingsAlertEe": "11111",
         "consumerBindings": {
           "descriptionCe": "11111",
           "descriptionEe": "11111",
@@ -1109,6 +1120,11 @@
         },
         "descriptionCe": "11111",
         "descriptionEe": "11111",
+        "disconnectDialog": {
+          "cancel": "11111",
+          "message": "11111",
+          "title": "11111"
+        },
         "dialog": {
           "cancel": "11111",
           "clientId": "11111",
@@ -1128,8 +1144,8 @@
           "setDefaultHelp": "11111",
           "storedSecretHint": "11111 {{secret}} 11111",
           "tenantId": "11111",
-          "capabilities": "Enabled capabilities",
-          "capabilitiesHelp": "Only enabled capabilities can bind to this Microsoft app."
+          "capabilities": "11111",
+          "capabilitiesHelp": "11111"
         },
         "empty": {
           "createButton": "11111",
@@ -1184,10 +1200,14 @@
           "teamsAppIdUri": "11111",
           "tenantIdLabel": "11111",
           "updating": "11111",
-          "enabledCapabilities": "Enabled capabilities",
-          "noEnabledCapabilities": "No enabled capabilities"
+          "enabledCapabilities": "11111",
+          "noEnabledCapabilities": "11111"
         },
         "providerReconnect": {
+          "description": "11111",
+          "title": "11111"
+        },
+        "profileLibrary": {
           "description": "11111",
           "title": "11111"
         },
@@ -1230,6 +1250,29 @@
           "tenantIdRequired": "11111"
         }
       }
+    },
+    "providersWorkbench": {
+      "badges": {
+        "loading": "11111",
+        "needsAttention": "11111",
+        "needsSetup": "11111",
+        "notConfigured": "11111",
+        "ready": "11111"
+      },
+      "descriptionCe": "11111",
+      "descriptionEe": "11111",
+      "eyebrow": "11111",
+      "google": {
+        "description": "11111",
+        "label": "11111"
+      },
+      "microsoft": {
+        "descriptionCe": "11111",
+        "descriptionEe": "11111",
+        "label": "11111"
+      },
+      "selectorLabel": "11111",
+      "title": "11111"
     },
     "qbo": {
       "live": {
@@ -1874,9 +1917,9 @@
         "descriptionCe": "11111",
         "descriptionEe": "11111",
         "moved": {
-          "title": "MSP SSO Login Domains",
-          "body": "Single sign-on settings, including login-domain claims, have moved to Security → Single Sign-On.",
-          "cta": "Open Single Sign-On settings"
+          "title": "11111",
+          "body": "11111",
+          "cta": "11111"
         },
         "dnsHost": "11111",
         "dnsInstructions": "11111",
@@ -2196,7 +2239,7 @@
             "permissionGranted": "11111",
             "permissionMissing": "11111",
             "bot": "11111",
-            "botOk": "11111"
+            "botOk": "11111 {{appId}} 11111"
           },
           "activationBlocked": "11111",
           "step": {

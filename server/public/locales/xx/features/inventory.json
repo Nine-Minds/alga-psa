@@ -543,7 +543,9 @@
     "componentsHeading": "11111 {{name}} 11111",
     "fields": {
       "component": "11111",
-      "componentPlaceholder": "11111"
+      "componentPlaceholder": "11111",
+      "sku": "11111",
+      "unit": "11111"
     },
     "loadComponentsFailed": "11111",
     "loadKitsFailed": "11111",
@@ -552,7 +554,128 @@
     "removeConfirm": "11111 {{name}} 11111",
     "removeFailed": "11111",
     "removeTitle": "11111",
-    "title": "11111"
+    "title": "11111",
+    "actions": {
+      "addComponent": "11111",
+      "createKit": "11111",
+      "createSalesOrder": "11111",
+      "productSettings": "11111",
+      "updateQuantity": "11111",
+      "viewSalesOrders": "11111"
+    },
+    "bom": {
+      "componentCount": "11111 {{count}} 11111",
+      "componentCountShort": "11111",
+      "emptyBody": "11111",
+      "emptyTitle": "11111",
+      "qtyPerKit": "11111",
+      "title": "11111"
+    },
+    "create": {
+      "created": "11111",
+      "fields": {
+        "name": "11111",
+        "productType": "11111"
+      },
+      "noServiceTypes": "11111",
+      "title": "11111",
+      "validation": {
+        "costInvalid": "11111",
+        "nameRequired": "11111",
+        "priceRequired": "11111",
+        "typeRequired": "11111"
+      }
+    },
+    "detail": {
+      "loadFailedTitle": "11111",
+      "notFound": "11111",
+      "pickKit": "11111"
+    },
+    "empty": {
+      "body": "11111",
+      "noResults": "11111",
+      "title": "11111"
+    },
+    "filters": {
+      "all": "11111"
+    },
+    "list": {
+      "label": "11111"
+    },
+    "pricing": {
+      "addComponentsToCalculate": "11111",
+      "calculatedBasis": "11111",
+      "calculatedPrice": "11111",
+      "componentCost": "11111",
+      "createSumHint": "11111",
+      "currency": "11111",
+      "each": "11111",
+      "extCost": "11111",
+      "extended": "11111",
+      "fixed": "11111",
+      "fixedAmount": "11111",
+      "grossMargin": "11111",
+      "grossProfit": "11111",
+      "kitCostOptional": "11111",
+      "kitPrice": "11111",
+      "kitPriceWithCurrency": "11111 {{currency}} 11111",
+      "margin": "11111",
+      "marginUnavailable": "11111",
+      "mode": "11111",
+      "salesOrderPrice": "11111",
+      "save": "11111",
+      "saved": "11111",
+      "sellingPrice": "11111",
+      "sum": "11111",
+      "title": "11111",
+      "unitCost": "11111",
+      "unsaved": "11111",
+      "validation": {
+        "fixedRequired": "11111",
+        "priceRequired": "11111"
+      }
+    },
+    "salesOrder": {
+      "componentLines": "11111",
+      "componentLinesValue": "11111",
+      "parentLine": "11111",
+      "parentLineValue": "11111 {{price}} 11111",
+      "preview": "11111",
+      "previewQuantity": "11111",
+      "previewQuantityInvalid": "11111",
+      "stockEffect": "11111",
+      "stockEffectValue": "11111",
+      "title": "11111"
+    },
+    "searchPlaceholder": "11111",
+    "status": {
+      "incomplete": "11111",
+      "lowStock": "11111",
+      "noBom": "11111",
+      "ready": "11111"
+    },
+    "stock": {
+      "available": "11111",
+      "canBuildLabel": "11111",
+      "noStockLimit": "11111",
+      "noStockLimitShort": "11111",
+      "nonStocked": "11111",
+      "serialized": "11111",
+      "shortComponents": "11111",
+      "shortWarning": "11111",
+      "stocked": "11111",
+      "stockedComponents": "11111",
+      "title": "11111"
+    },
+    "summary": {
+      "attention": "11111 {{count}} 11111",
+      "ready": "11111 {{count}} 11111",
+      "total": "11111 {{count}} 11111"
+    },
+    "usage": {
+      "usedOnSalesOrders": "11111"
+    },
+    "componentUpdated": "11111"
   },
   "loaners": {
     "clientIdRequired": "11111",
@@ -830,7 +953,9 @@
       "reason": "11111",
       "returnedUnit": "11111",
       "type": "11111",
-      "vendor": "11111"
+      "vendor": "11111",
+      "creditAtStake": "11111",
+      "rmaNumber": "11111"
     },
     "deadUnitsOwed": "11111",
     "fields": {
@@ -876,6 +1001,10 @@
       "credited": "11111",
       "charged": "11111",
       "closed": "11111"
+    },
+    "ageAtVendor": "11111",
+    "filters": {
+      "statusActive": "11111"
     }
   },
   "salesOrders": {
@@ -895,7 +1024,10 @@
       "invoicing": "11111",
       "manageLayouts": "11111",
       "reopenToDraft": "11111",
-      "reopening": "11111"
+      "reopening": "11111",
+      "cancelSalesOrder": "11111",
+      "moreActions": "11111",
+      "orderPdfs": "11111"
     },
     "addSalesOrder": "11111",
     "allocationMode": {
@@ -920,7 +1052,10 @@
       "client": "11111",
       "currency": "11111",
       "invoiceMode": "11111",
-      "soNumber": "11111"
+      "soNumber": "11111",
+      "amount": "11111",
+      "fulfillment": "11111",
+      "invoiceable": "11111"
     },
     "confirmFailed": "11111",
     "confirmShipmentError": "11111",
@@ -992,6 +1127,10 @@
       "unitPrice": "11111",
       "unitPriceIn": "11111 {{currency}} 11111"
     },
+    "filters": {
+      "kitUsageActive": "11111 {{kit}} 11111",
+      "invoiceableActive": "11111"
+    },
     "fromQuote": "11111",
     "fulfillDialog": {
       "allocatedToThis": "11111",
@@ -1023,6 +1162,14 @@
     "invoiceMode": {
       "manual": "11111",
       "onFulfillment": "11111"
+    },
+    "kitPrice": {
+      "calculated": "11111",
+      "configured": "11111",
+      "currencyMismatch": "11111 {{kitCurrency}} 11111 {{orderCurrency}} 11111",
+      "currencyOverride": "11111 {{currency}} 11111",
+      "overridden": "11111 {{price}} 11111",
+      "reset": "11111"
     },
     "invoiceModeHelp": "11111",
     "invoicedItems": "11111 {{count}} 11111",
@@ -1067,7 +1214,11 @@
     "total": "11111",
     "unassignedBackorder": "11111 {{count}} 11111",
     "unnamedService": "11111",
-    "notFound": "11111"
+    "notFound": "11111",
+    "badges": {
+      "dropShip": "11111",
+      "readyToInvoice": "11111"
+    }
   },
   "stock": {
     "actions": {
@@ -1147,7 +1298,9 @@
       "location": "11111",
       "macAddress": "11111",
       "serialNumber": "11111",
-      "warrantyExpires": "11111"
+      "warrantyExpires": "11111",
+      "product": "11111",
+      "unitCost": "11111"
     },
     "detail": {
       "delivered": "11111",
@@ -1155,7 +1308,8 @@
       "mac": "11111",
       "received": "11111",
       "serial": "11111",
-      "unitCost": "11111"
+      "unitCost": "11111",
+      "asset": "11111"
     },
     "exportCsv": "11111",
     "history": "11111",
@@ -1187,7 +1341,28 @@
       "returned": "11111",
       "inRma": "11111",
       "retired": "11111"
-    }
+    },
+    "empty": {
+      "noMatchTitle": "11111 {{term}} 11111",
+      "noMatchDescription": "11111",
+      "clearSearch": "11111",
+      "noUnitsTitle": "11111",
+      "noUnitsDescription": "11111",
+      "noFilterMatchTitle": "11111",
+      "clearFilters": "11111"
+    },
+    "summary": {
+      "one": "11111 {{n}} 11111",
+      "many": "11111 {{n}} 11111",
+      "valueSuffix": "11111 {{value}} 11111"
+    },
+    "filter": {
+      "status": "11111",
+      "allStatuses": "11111",
+      "client": "11111",
+      "allClients": "11111"
+    },
+    "viewAsset": "11111"
   },
   "transfers": {
     "addLine": "11111",

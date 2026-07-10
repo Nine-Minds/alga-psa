@@ -327,7 +327,12 @@ const Quote = {
     }
 
     return deleteEntityWithValidation('quote', quoteId, knexOrTrx, tenant, async (trx, tenantId) => {
-      await tenantDb(trx, tenantId).table('quotes')
+      const db = tenantDb(trx, tenantId);
+      // FK CASCADE doesn't reach quote_activities while it's a Citus-local table; delete explicitly.
+      await db.table('quote_activities')
+        .where({ quote_id: quoteId })
+        .del();
+      await db.table('quotes')
         .where({ quote_id: quoteId })
         .del();
     });

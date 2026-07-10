@@ -1,4 +1,9 @@
-import { getInventoryTenantCurrency, listSalesOrders, listStockLocations } from '@alga-psa/inventory/actions';
+import {
+  getInventoryTenantCurrency,
+  listKitSummaries,
+  listSalesOrders,
+  listStockLocations,
+} from '@alga-psa/inventory/actions';
 import { SalesOrdersManager } from '@alga-psa/inventory/components';
 // Billing owns SO invoicing (billing → inventory dependency direction); the server
 // action references are passed down to the client component as props (F008).
@@ -21,7 +26,11 @@ export const metadata: Metadata = {
   title: 'Sales Orders',
 };
 
-export default async function SalesOrdersPage() {
+interface SalesOrdersPageProps {
+  searchParams?: Promise<Record<string, string | string[] | undefined>>;
+}
+
+export default async function SalesOrdersPage({ searchParams }: SalesOrdersPageProps) {
   const boundary = await enforceServerProductRoute({ pathname: '/msp/inventory/sales-orders', scope: 'msp' });
   if (boundary) {
     return boundary;
@@ -35,7 +44,11 @@ export default async function SalesOrdersPage() {
   let initialSos: ISalesOrder[] = [];
   let loadErrorMessage: string | undefined;
   try {
-    const result = await listSalesOrders({});
+    const query = await searchParams;
+    const serviceId = query?.create === '1'
+      ? undefined
+      : typeof query?.service_id === 'string' ? query.service_id : undefined;
+    const result = await listSalesOrders({ serviceId });
     if (isActionMessageError(result) || isActionPermissionError(result)) {
       loadErrorMessage = getErrorMessage(result);
     } else {
@@ -69,12 +82,24 @@ export default async function SalesOrdersPage() {
   // beside the other prop loads — inventory can't import billing's getServices directly.
   let services: SalesOrderServiceOption[] = [];
   try {
-    const paginated = await getServices(1, 999, { item_kind: 'any' });
+    const [paginated, kits] = await Promise.all([
+      getServices(1, 999, { item_kind: 'any' }),
+      listKitSummaries(),
+    ]);
+    if (isActionMessageError(kits) || isActionPermissionError(kits)) {
+      console.error('Failed to load kits:', getErrorMessage(kits));
+    }
+    const kitList = isActionMessageError(kits) || isActionPermissionError(kits) ? [] : kits;
+    const kitByServiceId = new Map(kitList.map((kit) => [kit.service_id, kit]));
     services = paginated.services.map((s) => ({
       service_id: s.service_id,
       service_name: s.service_name,
       sku: s.sku ?? null,
       default_rate: s.default_rate ?? null,
+      is_kit: kitByServiceId.has(s.service_id),
+      kit_pricing_mode: kitByServiceId.get(s.service_id)?.kit_pricing_mode ?? null,
+      resolved_kit_price: kitByServiceId.get(s.service_id)?.computed_price ?? null,
+      kit_currency: kitByServiceId.get(s.service_id)?.cost_currency ?? null,
     }));
   } catch (error) {
     console.error('Failed to load services:', error);
