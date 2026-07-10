@@ -1790,9 +1790,10 @@
   },
   "notifications": {
     "suppression": {
-      "contactLabel": "Don't notify contact",
-      "contactHelper": "Skips the customer email, survey invitation, and client-portal notification",
-      "internalLabel": "Also skip internal notifications"
+      "contactLabel": "Nie powiadamiaj klienta",
+      "contactHelper": "Pomija e-mail do klienta, zaproszenie do ankiety i powiadomienie w portalu klienta",
+      "internalLabel": "Nie powiadamiaj też agentów i obserwatorów",
+      "internalHelper": "Pomija także ich e-maile i powiadomienia w aplikacji"
     }
   }
 }

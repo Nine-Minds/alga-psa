@@ -823,6 +823,14 @@ export function BentoHero({
           </div>
         </div>
 
+        {hasUnsavedChanges ? (
+          <Alert id={`${id}-unsaved-changes-banner`} variant="warning" className="mt-3">
+            <AlertDescription>
+              {t('info.unsavedChanges', 'You have unsaved changes. Click "Save Changes" to apply them.')}
+            </AlertDescription>
+          </Alert>
+        ) : null}
+
         {requiresDestinationStatusSelection ? (
           <Alert id={`${id}-destination-status-warning`} variant="warning" className="mt-3">
             <AlertDescription>

@@ -717,8 +717,12 @@
           "fetchFailed": "Falha ao carregar regras de fechamento para este quadro",
           "autoCloseStatusRequired": "Cada regra de fechamento automático precisa de um status de gatilho e um status de destino fechado",
           "autoCloseDaysInvalid": "Os dias de inatividade com fechamento automático precisam ser um número inteiro positivo",
-          "autoCloseWarningInvalid": "O prazo de aviso deve ser menor que os dias de inatividade"
-        }
+          "autoCloseWarningInvalid": "O prazo de aviso deve ser menor que os dias de inatividade",
+          "autoCloseSuppressionInvalid": "As notificações de agentes e observadores só podem ser ignoradas quando as notificações do cliente forem ignoradas."
+        },
+        "suppressContactNotificationsLabel": "Não notificar o cliente",
+        "suppressContactNotificationsHelp": "Ignora o e-mail de aviso, o e-mail de fechamento, o convite de pesquisa e a notificação do portal do cliente.",
+        "suppressInternalNotificationsLabel": "Também não notificar agentes e observadores"
       },
       "editor": {
         "sections": {

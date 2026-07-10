@@ -39,7 +39,8 @@
     "suppression": {
       "contactLabel": "11111",
       "contactHelper": "11111",
-      "internalLabel": "11111"
+      "internalLabel": "11111",
+      "internalHelper": "11111"
     }
   },
   "backToTickets": "11111",

@@ -717,8 +717,12 @@
           "fetchFailed": "Error al cargar las reglas de cierre de este tablero",
           "autoCloseStatusRequired": "Cada regla de cierre automático requiere un estado de activación y un estado de destino cerrado",
           "autoCloseDaysInvalid": "Los días de inactividad del cierre automático deben ser un número entero positivo",
-          "autoCloseWarningInvalid": "El tiempo de aviso previo debe ser menor que los días de inactividad"
-        }
+          "autoCloseWarningInvalid": "El tiempo de aviso previo debe ser menor que los días de inactividad",
+          "autoCloseSuppressionInvalid": "Las notificaciones a agentes y observadores solo pueden omitirse cuando se omiten las notificaciones al cliente."
+        },
+        "suppressContactNotificationsLabel": "No notificar al cliente",
+        "suppressContactNotificationsHelp": "Omite el correo de aviso, el correo de cierre, la invitación a la encuesta y la notificación del portal de clientes.",
+        "suppressInternalNotificationsLabel": "Tampoco notificar a agentes y observadores"
       },
       "editor": {
         "sections": {

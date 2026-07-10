@@ -721,8 +721,12 @@
           "fetchFailed": "Nie udało się załadować reguł zamknięcia dla tej tablicy",
           "autoCloseStatusRequired": "Każda reguła automatycznego zamknięcia wymaga statusu wyzwalacza i docelowego statusu zamknięcia",
           "autoCloseDaysInvalid": "Liczba dni braku aktywności musi być dodatnią liczbą całkowitą",
-          "autoCloseWarningInvalid": "Czas wyprzedzenia ostrzeżenia musi być mniejszy niż liczba dni braku aktywności"
-        }
+          "autoCloseWarningInvalid": "Czas wyprzedzenia ostrzeżenia musi być mniejszy niż liczba dni braku aktywności",
+          "autoCloseSuppressionInvalid": "Powiadomienia agentów i obserwatorów można pominąć tylko wtedy, gdy pomijane są powiadomienia klienta."
+        },
+        "suppressContactNotificationsLabel": "Nie powiadamiaj klienta",
+        "suppressContactNotificationsHelp": "Pomija e-mail ostrzegawczy, e-mail o zamknięciu, zaproszenie do ankiety i powiadomienie w portalu klienta.",
+        "suppressInternalNotificationsLabel": "Nie powiadamiaj też agentów i obserwatorów"
       },
       "editor": {
         "sections": {

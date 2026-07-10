@@ -419,12 +419,12 @@ describe('TicketInfo board change status reselection', () => {
       expect(getTicketStatusesMock).toHaveBeenCalledWith('board-a');
     });
 
-    expect(screen.queryByLabelText("Don't notify contact")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Don't notify the customer")).not.toBeInTheDocument();
 
     const [statusSelect] = screen.getAllByRole('combobox');
     fireEvent.change(statusSelect, { target: { value: 'status-a-closed' } });
 
-    const contactSuppression = await screen.findByLabelText("Don't notify contact");
+    const contactSuppression = await screen.findByLabelText("Don't notify the customer");
     fireEvent.click(contactSuppression);
     fireEvent.click(screen.getByTestId('ticket-info-save-changes-btn'));
 

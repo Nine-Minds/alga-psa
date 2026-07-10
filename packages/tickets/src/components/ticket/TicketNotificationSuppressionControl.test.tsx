@@ -34,11 +34,11 @@ function StatefulControl({
 }
 
 describe('TicketNotificationSuppressionControl', () => {
-  it('T033: disables internal suppression until contact suppression is checked and clears it when contact is unchecked', () => {
+  it('T033: disables agent/watcher suppression until customer suppression is checked and clears it when customer is unchecked', () => {
     render(<StatefulControl />);
 
-    const contact = screen.getByLabelText("Don't notify contact");
-    const internal = screen.getByLabelText('Also skip internal notifications');
+    const contact = screen.getByLabelText("Don't notify the customer");
+    const internal = screen.getByLabelText("Also don't notify agents and watchers");
 
     expect(contact).not.toBeChecked();
     expect(internal).toBeDisabled();
@@ -47,6 +47,7 @@ describe('TicketNotificationSuppressionControl', () => {
     fireEvent.click(contact);
     expect(contact).toBeChecked();
     expect(internal).not.toBeDisabled();
+    expect(internal).not.toBeChecked();
 
     fireEvent.click(internal);
     expect(internal).toBeChecked();
@@ -60,10 +61,13 @@ describe('TicketNotificationSuppressionControl', () => {
   it('T034: renders helper text and kebab-case input ids', () => {
     render(<StatefulControl />);
 
-    const contact = screen.getByLabelText("Don't notify contact");
-    const internal = screen.getByLabelText('Also skip internal notifications');
+    const contact = screen.getByLabelText("Don't notify the customer");
+    const internal = screen.getByLabelText("Also don't notify agents and watchers");
 
-    expect(screen.getByText('Skips the customer email, survey invitation, and client-portal notification')).toBeInTheDocument();
+    expect(
+      screen.getByText("Skips the customer's email, survey invitation, and client-portal notification")
+    ).toBeInTheDocument();
+    expect(screen.getByText('Skips their emails and in-app notifications too')).toBeInTheDocument();
     expect(contact).toHaveAttribute('id', 'silent-ticket-update-suppress-contact-notifications');
     expect(internal).toHaveAttribute('id', 'silent-ticket-update-suppress-internal-notifications');
   });

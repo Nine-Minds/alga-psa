@@ -31,6 +31,7 @@ export default function TicketNotificationSuppressionControl({
   const contactId = `${idPrefix}-suppress-contact-notifications`;
   const contactHelperId = `${contactId}-helper`;
   const internalId = `${idPrefix}-suppress-internal-notifications`;
+  const internalHelperId = `${internalId}-helper`;
 
   const setContactSuppression = (checked: boolean) => {
     onChange({
@@ -54,13 +55,13 @@ export default function TicketNotificationSuppressionControl({
           checked={contactChecked}
           disabled={disabled}
           aria-describedby={contactHelperId}
-          label={t('notifications.suppression.contactLabel', "Don't notify contact")}
+          label={t('notifications.suppression.contactLabel', "Don't notify the customer")}
           onChange={(event) => setContactSuppression(event.currentTarget.checked)}
         />
         <p id={contactHelperId} className="mt-1 pl-6 text-xs text-[rgb(var(--color-text-600))]">
           {t(
             'notifications.suppression.contactHelper',
-            'Skips the customer email, survey invitation, and client-portal notification'
+            "Skips the customer's email, survey invitation, and client-portal notification"
           )}
         </p>
       </div>
@@ -69,9 +70,16 @@ export default function TicketNotificationSuppressionControl({
           id={internalId}
           checked={internalChecked}
           disabled={disabled || !contactChecked}
-          label={t('notifications.suppression.internalLabel', 'Also skip internal notifications')}
+          aria-describedby={internalHelperId}
+          label={t('notifications.suppression.internalLabel', "Also don't notify agents and watchers")}
           onChange={(event) => setInternalSuppression(event.currentTarget.checked)}
         />
+        <p id={internalHelperId} className="mt-1 pl-6 text-xs text-[rgb(var(--color-text-600))]">
+          {t(
+            'notifications.suppression.internalHelper',
+            'Skips their emails and in-app notifications too'
+          )}
+        </p>
       </div>
     </div>
   );

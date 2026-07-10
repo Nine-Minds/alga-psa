@@ -717,8 +717,12 @@
           "fetchFailed": "Échec du chargement des règles de clôture pour ce tableau",
           "autoCloseStatusRequired": "Chaque règle de clôture automatique nécessite un statut déclencheur et un statut cible fermé",
           "autoCloseDaysInvalid": "Le nombre de jours d'inactivité pour la clôture automatique doit être un entier positif",
-          "autoCloseWarningInvalid": "Le délai d'avertissement doit être inférieur au nombre de jours d'inactivité"
-        }
+          "autoCloseWarningInvalid": "Le délai d'avertissement doit être inférieur au nombre de jours d'inactivité",
+          "autoCloseSuppressionInvalid": "Les notifications aux agents et observateurs ne peuvent être ignorées que si les notifications au client le sont."
+        },
+        "suppressContactNotificationsLabel": "Ne pas notifier le client",
+        "suppressContactNotificationsHelp": "Ignore l'e-mail d'avertissement, l'e-mail de clôture, l'invitation à l'enquête et la notification du portail client.",
+        "suppressInternalNotificationsLabel": "Ne pas notifier non plus les agents et observateurs"
       },
       "editor": {
         "sections": {

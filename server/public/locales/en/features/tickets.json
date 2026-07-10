@@ -37,9 +37,10 @@
   "subtitle": "View and manage your support tickets",
   "notifications": {
     "suppression": {
-      "contactLabel": "Don't notify contact",
-      "contactHelper": "Skips the customer email, survey invitation, and client-portal notification",
-      "internalLabel": "Also skip internal notifications"
+      "contactLabel": "Don't notify the customer",
+      "contactHelper": "Skips the customer's email, survey invitation, and client-portal notification",
+      "internalLabel": "Also don't notify agents and watchers",
+      "internalHelper": "Skips their emails and in-app notifications too"
     }
   },
   "backToTickets": "Back to Tickets",

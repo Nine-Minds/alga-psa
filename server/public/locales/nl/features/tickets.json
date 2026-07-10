@@ -1648,9 +1648,10 @@
   },
   "notifications": {
     "suppression": {
-      "contactLabel": "Don't notify contact",
-      "contactHelper": "Skips the customer email, survey invitation, and client-portal notification",
-      "internalLabel": "Also skip internal notifications"
+      "contactLabel": "Klant niet informeren",
+      "contactHelper": "Slaat de e-mail aan de klant, de enquête-uitnodiging en de klantportaalmelding over",
+      "internalLabel": "Ook agenten en volgers niet informeren",
+      "internalHelper": "Slaat ook hun e-mails en in-app-meldingen over"
     }
   }
 }

@@ -149,9 +149,9 @@ vi.mock('../TicketNotificationSuppressionControl', () => ({
     onChange: (value: { suppressContactNotifications: boolean; suppressInternalNotifications: boolean }) => void;
   }) => (
     <label>
-      Don't notify contact
+      Don't notify the customer
       <input
-        aria-label="Don't notify contact"
+        aria-label="Don't notify the customer"
         type="checkbox"
         checked={value.suppressContactNotifications}
         onChange={(event) => onChange({
@@ -240,8 +240,13 @@ describe('BentoHero unsaved change model', () => {
 
     expect(onBatchSelectChange).not.toHaveBeenCalled();
     expect(screen.getByRole('button', { name: /Save Changes/i })).toBeInTheDocument();
+    // Entry-view parity: a persistent banner flags the dirty state for ANY
+    // pending field, not just board changes.
+    expect(
+      screen.getByText('You have unsaved changes. Click "Save Changes" to apply them.'),
+    ).toBeInTheDocument();
 
-    fireEvent.click(screen.getByLabelText("Don't notify contact"));
+    fireEvent.click(screen.getByLabelText("Don't notify the customer"));
     fireEvent.click(screen.getByRole('button', { name: /Save Changes/i }));
 
     await waitFor(() => {
@@ -253,6 +258,9 @@ describe('BentoHero unsaved change model', () => {
     await waitFor(() => {
       expect(screen.queryByRole('button', { name: /Save Changes/i })).not.toBeInTheDocument();
     });
+    expect(
+      screen.queryByText('You have unsaved changes. Click "Save Changes" to apply them.'),
+    ).not.toBeInTheDocument();
   });
 
   it('T059/T061-T064: board change clears scoped fields, gates Save, and persists one batch', async () => {

@@ -1648,9 +1648,10 @@
   },
   "notifications": {
     "suppression": {
-      "contactLabel": "Don't notify contact",
-      "contactHelper": "Skips the customer email, survey invitation, and client-portal notification",
-      "internalLabel": "Also skip internal notifications"
+      "contactLabel": "Não notificar o cliente",
+      "contactHelper": "Ignora o e-mail ao cliente, o convite de pesquisa e a notificação do portal do cliente",
+      "internalLabel": "Também não notificar agentes e observadores",
+      "internalHelper": "Ignora também os e-mails e as notificações no aplicativo deles"
     }
   }
 }
