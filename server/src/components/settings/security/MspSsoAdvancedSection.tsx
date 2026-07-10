@@ -6,11 +6,11 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { ChevronRight } from 'lucide-react';
 import { cn } from '@alga-psa/ui/lib/utils';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { MspSsoLoginDomainsSettings } from '@alga-psa/integrations/components';
+import { MspSsoLoginDomainsSettings } from '@alga-psa/integrations/components/settings/integrations/MspSsoLoginDomainsSettings';
 import {
   getMspSsoTenantCredentialStatus,
   type MspSsoTenantCredentialStatusResult,
-} from '@alga-psa/integrations/actions';
+} from '@alga-psa/integrations/actions/integrations/mspSsoDomainActions';
 
 /**
  * Advanced, collapsed-by-default section under Security → Single Sign-On that hosts the

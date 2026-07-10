@@ -33,7 +33,7 @@ import {
 } from '@alga-psa/tickets/lib';
 import { getClientContactVisibilityContext } from '@alga-psa/tickets/lib/clientPortalVisibility.server';
 import { publishTicketUpdate } from '@alga-psa/tickets/lib/liveUpdates';
-import { getUserAvatarUrlAction, getContactAvatarUrlAction } from '@alga-psa/user-composition/actions';
+import { getUserAvatarUrlAction, getContactAvatarUrlAction } from '@alga-psa/user-composition/actions/avatarActions';
 
 const clientTicketSchema = z.object({
   title: z.string().min(1),

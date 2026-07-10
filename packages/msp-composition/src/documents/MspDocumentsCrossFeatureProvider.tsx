@@ -24,7 +24,7 @@ import DocumentSelector from '@alga-psa/documents/components/DocumentSelector';
 import Documents from '@alga-psa/documents/components/Documents';
 import DocumentUpload from '@alga-psa/documents/components/DocumentUpload';
 import FolderSelectorModal from '@alga-psa/documents/components/FolderSelectorModal';
-import { DocumentStorageCard } from '@alga-psa/documents/components';
+import DocumentStorageCard from '@alga-psa/documents/components/DocumentStorageCard';
 import { downloadDocument, getDocumentDownloadUrl } from '@alga-psa/documents/lib/documentUtils';
 
 export function MspDocumentsCrossFeatureProvider({ children }: { children: ReactNode }) {

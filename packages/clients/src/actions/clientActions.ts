@@ -18,7 +18,7 @@ import {
 import { getClientLogoUrlAsync, getClientLogoUrlsBatchAsync } from '../lib/documentsHelpers';
 import { uploadEntityImage, deleteEntityImage } from '@alga-psa/storage';
 import { Knex } from 'knex';
-import { createTag, findTagsByEntityId } from '@alga-psa/tags/actions';
+import { createTag, findTagsByEntityId } from '@alga-psa/tags/actions/tagActions';
 import { deleteEntityTags } from '@alga-psa/tags/lib/tagCleanup';
 import { ClientModel } from '@alga-psa/shared/models/clientModel';
 import { publishWorkflowEvent } from '@alga-psa/event-bus/publishers';

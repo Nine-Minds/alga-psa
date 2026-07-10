@@ -2,28 +2,32 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { DeletionValidationResult, IClient, IClientWithLocation, IContact, ISlaPolicy, ITag } from '@alga-psa/types';
-import { findTagsByEntityId, isTagActionError } from '@alga-psa/tags/actions';
+import { findTagsByEntityId } from '@alga-psa/tags/actions/tagActions';
+import { isTagActionError } from '@alga-psa/tags/actions/tagActionErrors';
 import { getAllUsersBasicAsync } from '../../lib/usersHelpers';
 import { IUser } from '@shared/interfaces/user.interfaces';
 import {
-  addClientInboundEmailDomain,
-  addClientNameAlias,
   deleteClient,
   deleteClientLogo,
-  getContactsByClient,
-  getClientById,
-  listClientInboundEmailDomains,
-  listClientNameAliases,
-  listInboundTicketDestinationOptions,
   markClientActiveWithContacts,
   markClientInactiveWithContacts,
-  removeClientInboundEmailDomain,
-  removeClientNameAlias,
-  startClientEntraSync,
   updateClient,
   uploadClientLogo,
   validateClientDeletion,
-} from '@alga-psa/clients/actions';
+} from '@alga-psa/clients/actions/clientActions';
+import { getContactsByClient, getClientById } from '@alga-psa/clients/actions/queryActions';
+import {
+  addClientInboundEmailDomain,
+  listClientInboundEmailDomains,
+  removeClientInboundEmailDomain,
+} from '@alga-psa/clients/actions/clientInboundEmailDomainActions';
+import {
+  addClientNameAlias,
+  listClientNameAliases,
+  removeClientNameAlias,
+} from '@alga-psa/clients/actions/clientNameAliasActions';
+import { listInboundTicketDestinationOptions } from '@alga-psa/clients/actions/inboundTicketDestinationActions';
+import { startClientEntraSync } from '@alga-psa/clients/actions/entraClientSyncActions';
 import { useClientCrossFeature } from '../../context/ClientCrossFeatureContext';
 import { handleError, useDrawer, DeleteEntityDialog } from '@alga-psa/ui';
 import {

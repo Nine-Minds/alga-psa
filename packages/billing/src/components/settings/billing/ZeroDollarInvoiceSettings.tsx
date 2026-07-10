@@ -5,8 +5,8 @@ import { Label } from "@alga-psa/ui/components/Label";
 import toast from 'react-hot-toast';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { getDefaultBillingSettings, updateDefaultBillingSettings } from "@alga-psa/billing/actions";
-import type { BillingSettings } from "@alga-psa/billing/actions";
+import { getDefaultBillingSettings, updateDefaultBillingSettings } from "../../../actions/billingSettingsActions";
+import type { BillingSettings } from "../../../actions/billingSettingsActions";
 
 const ZeroDollarInvoiceSettings = (): React.JSX.Element => {
   const { t } = useTranslation('msp/billing-settings');

@@ -17,18 +17,20 @@ import {
   DialogTrigger
 } from '@alga-psa/ui/components/Dialog';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
-import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
+import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions/avatarActions';
 import { getAllUsersBasicAsync } from '../../lib/usersHelpers';
-import { createClient, createClientLocation, getAllCountries, ICountry, listContactPhoneTypeSuggestions } from '@alga-psa/clients/actions';
-import { createClientContact } from '@alga-psa/clients/actions';
+import { createClient } from '@alga-psa/clients/actions/clientActions';
+import { createClientLocation } from '@alga-psa/clients/actions/clientLocationActions';
+import { getAllCountries, ICountry } from '@alga-psa/clients/actions/countryActions';
+import { listContactPhoneTypeSuggestions, createClientContact } from '@alga-psa/clients/actions/contact-actions/contactActions';
 import CountryPicker from '@alga-psa/ui/components/CountryPicker';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import toast from 'react-hot-toast';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
 import { ChevronRight } from 'lucide-react';
-import { QuickAddTagPicker } from '@alga-psa/tags/components';
+import { QuickAddTagPicker } from '@alga-psa/tags/components/QuickAddTagPicker';
 import type { PendingTag } from '@alga-psa/types';
-import { createTagsForEntity } from '@alga-psa/tags/actions';
+import { createTagsForEntity } from '@alga-psa/tags/actions/tagActions';
 import { 
   validateClientForm, 
   validateClientName, 

@@ -8,7 +8,7 @@ import { revalidatePath } from 'next/cache';
 // Note: getUserClientId removed - was unused and caused nested withAuth issues
 import { uploadEntityImage, deleteEntityImage } from '@alga-psa/storage';
 import { hasPermission, withAuth, type AuthContext } from '@alga-psa/auth';
-import { getRoles, assignRoleToUser, removeRoleFromUser, getUserRoles } from '@alga-psa/auth/actions';
+import { getRoles, assignRoleToUser, removeRoleFromUser, getUserRoles } from '@alga-psa/auth/actions/policyActions';
 import {
   createPortalUserInDB,
   getClientPortalRoles as getClientPortalRolesFromDB,

@@ -10,12 +10,14 @@ import {
   fulfillSalesOrderLine,
   FulfillSalesOrderLineInput,
   FulfillSalesOrderLineResult,
+} from '@alga-psa/inventory/actions/fulfillmentActions';
+import {
   confirmDropShipShipment,
   ConfirmDropShipShipmentInput,
   ConfirmDropShipShipmentResult,
   DropShipLineRef,
   type InventoryActionError,
-} from '@alga-psa/inventory/actions';
+} from '@alga-psa/inventory/actions/dropShipActions';
 import {
   isActionMessageError,
   isActionPermissionError,

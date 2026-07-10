@@ -23,10 +23,10 @@ import {
   getUserRolesWithPermissions,
   getUserClientId,
   getClientUsersForClient
-} from '@alga-psa/user-composition/actions';
-import { deleteUser, updateUser } from '@alga-psa/users/actions';
-import { createOrFindContactByEmail } from '@alga-psa/clients/actions';
-import { createClientUser, getClientPortalRoles, getClientUserRoles } from '@alga-psa/client-portal/actions';
+} from '@alga-psa/user-composition/actions/userQueryActions';
+import { deleteUser, updateUser } from '@alga-psa/users/actions/user-actions/userActions';
+import { createOrFindContactByEmail } from '@alga-psa/clients/actions/queryActions';
+import { createClientUser, getClientPortalRoles, getClientUserRoles } from '../../actions/client-portal-actions/clientUserActions';
 import type { DeletionValidationResult, IUser, IPermission } from '@alga-psa/types';
 import type { IRole as SharedIRole } from '@shared/interfaces/user.interfaces';
 import { useDrawer } from "@alga-psa/ui";

@@ -18,6 +18,14 @@
       "import": "./src/components/index.ts",
       "types": "./src/components/index.ts"
     },
+    "./components/ActivityDrawerProvider": {
+      "import": "./src/components/ActivityDrawerProvider.tsx",
+      "types": "./src/components/ActivityDrawerProvider.tsx"
+    },
+    "./components/UserActivitiesDashboard": {
+      "import": "./src/components/UserActivitiesDashboard.tsx",
+      "types": "./src/components/UserActivitiesDashboard.tsx"
+    },
     "./hooks/useActivitiesCache": {
       "import": "./src/hooks/useActivitiesCache.ts",
       "types": "./src/hooks/useActivitiesCache.ts"

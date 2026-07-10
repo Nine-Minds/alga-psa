@@ -4,7 +4,7 @@ import { getAdminConnection } from '@alga-psa/db/admin';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { hashPassword } from '@alga-psa/core/encryption';
-import { verifyContactEmail } from '@alga-psa/users/actions';
+import { verifyContactEmail } from './userActions';
 import User from '@alga-psa/db/models/user';
 import {
   checkRegistrationLimit,

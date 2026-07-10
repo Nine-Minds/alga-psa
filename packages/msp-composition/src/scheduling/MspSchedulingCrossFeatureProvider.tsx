@@ -17,7 +17,7 @@ import { getConsolidatedTicketData } from '@alga-psa/tickets/actions/optimizedTi
 
 // Client imports
 import InteractionDetails from '@alga-psa/clients/components/interactions/InteractionDetails';
-import { getInteractionById } from '@alga-psa/clients/actions';
+import { getInteractionById } from '@alga-psa/clients/actions/queryActions';
 import {
   getErrorMessage,
   isActionMessageError,

@@ -27,7 +27,7 @@ import {
   IChecklistTemplateItem,
   IChecklistTemplateApplyRule,
 } from '@alga-psa/tickets/actions/checklists/checklistTemplateActions';
-import { getAllPriorities } from '@alga-psa/reference-data/actions';
+import { getAllPriorities } from '@alga-psa/reference-data/actions/priorityActions';
 import { toast } from 'react-hot-toast';
 import {
   getErrorMessage,

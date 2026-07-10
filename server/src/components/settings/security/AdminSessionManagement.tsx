@@ -16,8 +16,9 @@ import {
   getAllSessionsAction,
   revokeSessionAction,
   type SessionWithUser,
-} from '@alga-psa/auth/actions';
-import { getAllUsers, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
+} from '@alga-psa/auth/actions/session-actions/sessionActions';
+import { getAllUsers } from '@alga-psa/user-composition/actions/userQueryActions';
+import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions/avatarActions';
 import type { IUserWithRoles } from '@alga-psa/types';
 import {
   Monitor,

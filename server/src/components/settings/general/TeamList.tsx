@@ -1,9 +1,10 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { createTeam, deleteTeam } from '@alga-psa/teams/actions';
-import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
-import { getAllUsers, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
+import { createTeam, deleteTeam } from '@alga-psa/teams/actions/team-actions/teamActions';
+import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions/team-actions/avatarActions';
+import { getAllUsers } from '@alga-psa/user-composition/actions/userQueryActions';
+import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions/avatarActions';
 import { DeletionValidationResult, ITeam, IUser, IUserWithRoles } from '@alga-psa/types';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';

@@ -27,8 +27,8 @@ import {
     createServiceType, 
     updateServiceType, 
     deleteServiceType 
-} from '@alga-psa/billing/actions';
-import { getAvailableReferenceData, importReferenceData, checkImportConflicts, ImportConflict } from '@alga-psa/reference-data/actions';
+} from '../../../actions/serviceActions';
+import { getAvailableReferenceData, importReferenceData, checkImportConflicts, ImportConflict } from '@alga-psa/reference-data/actions/referenceDataActions';
 import { toast } from 'react-hot-toast';
 import {
   getErrorMessage,

@@ -6,7 +6,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Flex, Text } from '@radix-ui/themes';
 import { Button } from '@alga-psa/ui/components/Button';
 import { DeleteEntityDialog } from '@alga-psa/ui';
-import { createRole, updateRole, deleteRole, getRoles } from '@alga-psa/auth/actions';
+import { createRole, updateRole, deleteRole, getRoles } from '../../../actions/policyActions';
 import { IRole, DeletionValidationResult } from '@alga-psa/types';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from '@alga-psa/types';

@@ -14,7 +14,7 @@ import { ArrowLeft } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
 import Spinner from '@alga-psa/ui/components/Spinner';
-import { getCurrentUser, getAllUsersBasic } from "@alga-psa/user-composition/actions";
+import { getCurrentUser, getAllUsersBasic } from "@alga-psa/user-composition/actions/userQueryActions";
 import { toast } from 'react-hot-toast';
 import {
   getErrorMessage,
@@ -27,7 +27,7 @@ import { IWorkItem } from "@alga-psa/types";
 import { TimeSheetStatus, ITimePeriodWithStatusView } from "@alga-psa/types";
 import { NotificationDetailView } from "@alga-psa/notifications/components";
 import { NotificationActivity } from "@alga-psa/types";
-import { getNotificationByIdAction } from "@alga-psa/notifications/actions";
+import { getNotificationByIdAction } from "@alga-psa/notifications/actions/internal-notification-actions/internalNotificationActions";
 import { RichTextViewer, TextEditor } from "@alga-psa/ui/editor";
 import { PartialBlock } from '@blocknote/core';
 import { useActivityCrossFeature } from "@alga-psa/ui/context";

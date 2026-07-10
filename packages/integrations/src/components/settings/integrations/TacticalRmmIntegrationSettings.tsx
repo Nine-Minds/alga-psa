@@ -28,9 +28,9 @@ import {
   syncTacticalRmmDevices,
   testTacticalRmmConnection,
   updateTacticalRmmOrganizationMapping,
-  getRmmIntegrationIdByProvider,
-  type TacticalRmmAuthMode,
-} from '@alga-psa/integrations/actions';
+} from '../../../actions/integrations/tacticalRmmActions';
+import { getRmmIntegrationIdByProvider } from '../../../actions/integrations/rmmAlertRuleActions';
+import type { TacticalRmmAuthMode } from '../../../lib/rmm/tacticalrmm/shared';
 import { RmmAlertAutomationSettings } from './RmmAlertAutomationSettings';
 import type { IClient, IContact, ColumnDefinition } from '@alga-psa/types';
 import { getIntegrationClients, getIntegrationContacts } from '../../../actions/clientLookupActions';

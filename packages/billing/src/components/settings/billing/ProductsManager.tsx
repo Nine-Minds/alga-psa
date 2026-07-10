@@ -24,14 +24,14 @@ import {
   checkProductCanBeDeleted,
   deleteProductPermanently,
   ProductAssociationCheck
-} from '@alga-psa/billing/actions';
+} from '../../../actions/serviceActions';
 import { QuickAddProduct } from './QuickAddProduct';
 
-import { getTaxRates } from '@alga-psa/billing/actions';
+import { getTaxRates } from '../../../actions/taxRateActions';
 import { ITaxRate } from '@alga-psa/types';
 import { IService, IServicePrice } from '@alga-psa/types';
 import { getCurrencySymbol } from '@alga-psa/core';
-import { getServiceCategories } from '@alga-psa/billing/actions';
+import { getServiceCategories } from '../../../actions/categoryActions';
 import { IServiceCategory } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {

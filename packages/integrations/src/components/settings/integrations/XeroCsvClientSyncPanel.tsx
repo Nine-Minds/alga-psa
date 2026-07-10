@@ -12,7 +12,7 @@ import {
   exportClientsToXeroCsv,
   previewXeroCsvClientImport,
   executeXeroCsvClientImport
-} from '@alga-psa/integrations/actions';
+} from '../../../actions/integrations/xeroCsvActions';
 import type { ClientImportPreviewResult, ClientImportResult } from '../../../services/xeroCsvClientSyncService';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {

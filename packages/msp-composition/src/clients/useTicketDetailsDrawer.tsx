@@ -5,7 +5,7 @@ import { useDrawer } from '@alga-psa/ui';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import TicketDetails from '@alga-psa/tickets/components/ticket/TicketDetails';
 import { getConsolidatedTicketData } from '@alga-psa/tickets/actions/optimizedTicketActions';
-import { getCurrentUser } from '@alga-psa/user-composition/actions';
+import { getCurrentUser } from '@alga-psa/user-composition/actions/userQueryActions';
 
 /**
  * Open a ticket in the shared drawer, keeping the current page underneath.

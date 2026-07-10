@@ -1,6 +1,6 @@
 'use server';
 
-import { getCurrentUserPermissions } from '@alga-psa/user-composition/actions';
+import { getCurrentUserPermissions } from '@alga-psa/user-composition/actions/userQueryActions';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
 import { featureFlags } from '@alga-psa/core/server';
 import type { IUserWithRoles } from '@alga-psa/types';

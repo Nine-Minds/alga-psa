@@ -22,17 +22,21 @@ import {
   createBoardAutoCloseRule,
   updateBoardAutoCloseRule,
   deleteBoardAutoCloseRule,
-} from '@alga-psa/tickets/actions';
-import type { IBoardAutoCloseRule, BoardListStats } from '@alga-psa/tickets/actions';
+} from '../../actions/close-rules/closeRuleActions';
+import type { IBoardAutoCloseRule } from '../../actions/close-rules/closeRuleActions';
+import type { BoardListStats } from '../../actions/board-actions/boardActions';
 import { CLOSE_RULE_REQUIRED_FIELDS, CLOSE_RULE_REQUIRED_FIELD_LABELS } from '@alga-psa/tickets/lib';
-import { getAvailableReferenceData, importReferenceData, checkImportConflicts, ImportConflict } from '@alga-psa/reference-data/actions';
-import { getAllPriorities } from '@alga-psa/reference-data/actions';
-import { getAllUsers, getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions';
+import { getAvailableReferenceData, importReferenceData, checkImportConflicts, ImportConflict } from '@alga-psa/reference-data/actions/referenceDataActions';
+import { getAllPriorities } from '@alga-psa/reference-data/actions/priorityActions';
+import { getAllUsers } from '@alga-psa/user-composition/actions/userQueryActions';
+import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions/avatarActions';
 import UserPicker from '@alga-psa/ui/components/UserPicker';
 import UserAndTeamPicker from '@alga-psa/ui/components/UserAndTeamPicker';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
 import TeamAvatar from '@alga-psa/ui/components/TeamAvatar';
-import { getTeams, getTeamAvatarUrlsBatchAction, isTeamActionError } from '@alga-psa/teams/actions';
+import { getTeams } from '@alga-psa/teams/actions/team-actions/teamActions';
+import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions/team-actions/avatarActions';
+import { isTeamActionError } from '@alga-psa/teams/actions/team-actions/teamActionErrors';
 import { toast } from 'react-hot-toast';
 import {
   getErrorMessage,

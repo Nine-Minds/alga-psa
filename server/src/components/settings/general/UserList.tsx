@@ -6,8 +6,9 @@ import UserDetails from './UserDetails';
 import { useDrawer, DeleteEntityDialog } from "@alga-psa/ui";
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import UserAvatar from '@alga-psa/ui/components/UserAvatar';
-import { getContactAvatarUrlAction, getUserAvatarUrlAction } from '@alga-psa/user-composition/actions';
-import { deleteUser, getUsersClientInfo } from '@alga-psa/users/actions';
+import { getContactAvatarUrlAction, getUserAvatarUrlAction } from '@alga-psa/user-composition/actions/avatarActions';
+import { deleteUser } from '@alga-psa/users/actions/user-actions/userActions';
+import { getUsersClientInfo } from '@alga-psa/users/actions/user-actions/userClientActions';
 import { MoreVertical, Pen, Trash2 } from 'lucide-react';
 
 import ClientQuickView from '@alga-psa/clients/components/clients/ClientQuickView';

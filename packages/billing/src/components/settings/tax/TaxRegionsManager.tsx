@@ -40,7 +40,7 @@ import {
   getTaxRegions,
   createTaxRegion,
   updateTaxRegion,
-} from '@alga-psa/billing/actions';
+} from '../../../actions/taxSettingsActions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 // Zod schema for form validation

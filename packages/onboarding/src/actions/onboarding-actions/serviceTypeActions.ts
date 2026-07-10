@@ -3,7 +3,7 @@
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { importReferenceData, getAvailableReferenceData } from '@alga-psa/reference-data/actions';
+import { importReferenceData, getAvailableReferenceData } from '@alga-psa/reference-data/actions/referenceDataActions';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
 

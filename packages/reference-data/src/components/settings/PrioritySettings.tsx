@@ -5,15 +5,9 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Plus, MoreVertical, Palette } from "lucide-react";
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import ColorPicker from '@alga-psa/ui/components/ColorPicker';
-import {
-  createPriority,
-  deletePriority,
-  getAllPriorities,
-  isPriorityActionError,
-  updatePriority,
-  validatePriorityDeletion,
-} from '@alga-psa/reference-data/actions';
-import { importReferenceData, getAvailableReferenceData, checkImportConflicts, type ImportConflict } from '@alga-psa/reference-data/actions';
+import { getAllPriorities, createPriority, deletePriority, updatePriority, validatePriorityDeletion } from '../../actions/priorityActions';
+import { isPriorityActionError } from '../../actions/priorityActionErrors';
+import { importReferenceData, getAvailableReferenceData, checkImportConflicts, type ImportConflict } from '../../actions/referenceDataActions';
 import type { IPriority, IStandardPriority, DeletionValidationResult } from '@alga-psa/types';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import type { ColumnDefinition } from '@alga-psa/types';

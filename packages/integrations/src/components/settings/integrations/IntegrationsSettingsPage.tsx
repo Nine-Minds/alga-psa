@@ -25,7 +25,7 @@ import {
 } from 'lucide-react';
 import AccountingIntegrationsSetup from './AccountingIntegrationsSetup';
 import RmmIntegrationsSetup from './RmmIntegrationsSetup';
-import { EmailProviderConfiguration } from '@alga-psa/integrations/components';
+import { EmailProviderConfiguration } from '../../email/EmailProviderConfiguration';
 import { GoogleIntegrationSettings } from './GoogleIntegrationSettings';
 import { MicrosoftIntegrationSettings } from './MicrosoftIntegrationSettings';
 import { CalendarEnterpriseIntegrationSettings } from './CalendarEnterpriseIntegrationSettings';

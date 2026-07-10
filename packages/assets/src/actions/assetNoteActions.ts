@@ -16,7 +16,7 @@ import {
   createBlockDocument,
   getBlockContent,
   updateBlockContent,
-} from '@alga-psa/block-content/actions';
+} from '@alga-psa/block-content/actions/blockContentActions';
 import type { IDocument } from '@alga-psa/types';
 import {
   assetActionErrorFrom,

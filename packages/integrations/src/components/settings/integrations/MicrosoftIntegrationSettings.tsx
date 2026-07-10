@@ -30,7 +30,7 @@ import {
   setDefaultMicrosoftProfile,
   setMicrosoftConsumerBinding,
   updateMicrosoftProfile,
-} from '@alga-psa/integrations/actions';
+} from '../../../actions/integrations/microsoftActions';
 import {
   getVisibleMicrosoftConsumerTypes,
   isMicrosoftConsumerEnterpriseEdition,

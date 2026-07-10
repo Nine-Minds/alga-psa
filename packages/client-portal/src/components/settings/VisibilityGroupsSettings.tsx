@@ -26,7 +26,7 @@ import {
   getClientPortalVisibilityGroupBoards,
   getClientPortalVisibilityGroups,
   updateClientPortalVisibilityGroup
-} from '@alga-psa/client-portal/actions';
+} from '../../actions/client-portal-actions/visibilityGroupActions';
 
 type VisibilityGroup = {
   group_id: string;

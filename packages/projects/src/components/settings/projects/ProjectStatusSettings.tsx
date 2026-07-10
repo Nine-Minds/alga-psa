@@ -3,10 +3,11 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Plus, MoreVertical } from "lucide-react";
-import { getStatuses, deleteStatus, isStatusActionError, statusActionErrorMessage, updateStatus } from '@alga-psa/reference-data/actions';
-import { importReferenceData, getAvailableReferenceData, checkImportConflicts, type ImportConflict } from '@alga-psa/reference-data/actions';
+import { getStatuses, deleteStatus, updateStatus } from '@alga-psa/reference-data/actions/status-actions/statusActions';
+import { isStatusActionError, statusActionErrorMessage } from '@alga-psa/reference-data/actions/status-actions/statusActionErrors';
+import { importReferenceData, getAvailableReferenceData, checkImportConflicts, type ImportConflict } from '@alga-psa/reference-data/actions/referenceDataActions';
 import type { IStatus, IStandardStatus, DeletionValidationResult } from '@alga-psa/types';
-import { getCurrentUser } from '@alga-psa/user-composition/actions';
+import { getCurrentUser } from '@alga-psa/user-composition/actions/userQueryActions';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import type { ColumnDefinition } from '@alga-psa/types';
@@ -18,9 +19,9 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from '@alga-psa/ui/components/DropdownMenu';
-import { StatusDialog } from '@alga-psa/reference-data/components';
+import { StatusDialog } from '@alga-psa/reference-data/components/dialogs/StatusDialog';
 import { StatusImportDialog } from '@alga-psa/ui/components/settings/dialogs/StatusImportDialog';
-import { ConflictResolutionDialog } from '@alga-psa/reference-data/components';
+import { ConflictResolutionDialog } from '@alga-psa/reference-data/components/dialogs/ConflictResolutionDialog';
 import { DeleteEntityDialog } from '@alga-psa/ui';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { preCheckDeletion } from '@alga-psa/auth/lib/preCheckDeletion';

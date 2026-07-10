@@ -65,20 +65,23 @@ const AssetTypesManager = dynamic(() => import('@alga-psa/assets/components/sett
   ssr: false
 });
 import InteractionSettings from './general/InteractionSettings';
-import { TimeEntrySettings } from '@alga-psa/scheduling/components';
-import { BillingSettings, TaxDelegationNudge, QboSyncHealthPanel, QboOnboardingWizardEntry } from '@alga-psa/billing/components';
+import TimeEntrySettings from '@alga-psa/scheduling/components/settings/time-entry/TimeEntrySettings';
+import BillingSettings from '@alga-psa/billing/components/settings/billing/BillingSettings';
+import TaxDelegationNudge from '@alga-psa/billing/components/tax/TaxDelegationNudge';
+import QboSyncHealthPanel from '@alga-psa/billing/components/accounting/QboSyncHealthPanel';
+import { QboOnboardingWizardEntry } from '@alga-psa/billing/components/accounting/QboOnboardingWizard';
 import NotificationsTab from './general/NotificationsTab';
 // Removed import: import IntegrationsTabLoader from './IntegrationsTabLoader';
-import { IntegrationsSettingsPage } from '@alga-psa/integrations/components';
+import IntegrationsSettingsPage from '@alga-psa/integrations/components/settings/integrations/IntegrationsSettingsPage';
 import { useSearchParams } from 'next/navigation';
 import ImportExportSettings from '@/components/settings/import-export/ImportExportSettings';
 import ExtensionManagement from '@/components/settings/extensions/ExtensionManagement';
 import McpServerSettings from '@/components/settings/mcp/McpServerSettings';
 // Extensions are only available in Enterprise Edition
 import { EmailSettings } from '@alga-psa/integrations/email/settings/entry';
-import { EmailProviderConfiguration } from '@alga-psa/integrations/components';
-// Removed import: import { getCurrentUser } from '@alga-psa/users/actions';
-import { ProjectSettings } from '@alga-psa/projects/components';
+import { EmailProviderConfiguration } from '@alga-psa/integrations/components/email/EmailProviderConfiguration';
+// Removed getCurrentUser import from users actions.
+import ProjectSettings from '@alga-psa/projects/components/settings/ProjectSettings';
 
 import { SecretsManagement } from './secrets';
 import { useTier, useTierFeature } from '@/context/TierContext';

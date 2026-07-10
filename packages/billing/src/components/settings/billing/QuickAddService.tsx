@@ -8,13 +8,14 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect'
 import { EditableServiceTypeSelect } from '@alga-psa/ui/components/EditableServiceTypeSelect'
 import { Switch } from '@alga-psa/ui/components/Switch'
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert'
-import { createService, type CreateServiceInput, createServiceTypeInline, updateServiceTypeInline, deleteServiceTypeInline, setServicePrices, getDefaultBillingSettings } from '@alga-psa/billing/actions'
+import { createService, type CreateServiceInput, createServiceTypeInline, updateServiceTypeInline, deleteServiceTypeInline, setServicePrices } from '@alga-psa/billing/actions/serviceActions'
+import { getDefaultBillingSettings } from '@alga-psa/billing/actions/billingSettingsActions'
 import { CURRENCY_OPTIONS, getCurrencySymbol } from '@alga-psa/core'
 // Import getTaxRates and ITaxRate instead
-import { getTaxRates } from '@alga-psa/billing/actions'; // Removed getActiveTaxRegions
+import { getTaxRates } from '@alga-psa/billing/actions/taxRateActions'; // Removed getActiveTaxRegions
 import { ITaxRate } from '@alga-psa/types'; // Removed ITaxRegion
 // Note: getServiceCategories might be removable if categories are fully replaced by service types
-import { getServiceCategories } from '@alga-psa/billing/actions'
+import { getServiceCategories } from '@alga-psa/billing/actions/categoryActions'
 import { IService, IServiceCategory, IServiceType } from '@alga-psa/types' // Added IServiceType
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider'
 import { getErrorMessage, handleError, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling'

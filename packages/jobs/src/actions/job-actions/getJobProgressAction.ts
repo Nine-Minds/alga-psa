@@ -10,7 +10,7 @@ import { actionError, type ActionMessageError } from '@alga-psa/ui/lib/errorHand
 // back through the barrel risks an undefined value under a load-order cycle.
 import { JobStatus } from '../../types/job';
 import type { JobHeader, JobDetail } from '@alga-psa/jobs';
-import { JobMetrics } from '@alga-psa/jobs/actions';
+import type { JobMetrics } from '../job-actions';
 
 export interface JobProgressData {
   header: JobHeader;

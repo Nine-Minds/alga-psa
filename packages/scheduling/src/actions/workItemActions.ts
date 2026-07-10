@@ -7,7 +7,7 @@ import { IWorkItem, IExtendedWorkItem, WorkItemType } from '@alga-psa/types';
 import { IUser } from '@alga-psa/types';
 import ScheduleEntry from '@alga-psa/shared/models/scheduleEntry';
 import User from '@alga-psa/db/models/user';
-import { parseWorkItemStatusNameFilterValue } from '@alga-psa/reference-data/actions';
+import { parseWorkItemStatusNameFilterValue } from '@alga-psa/reference-data/actions/status-actions/workItemStatusFilter';
 import {
   actionError,
   isActionMessageError,

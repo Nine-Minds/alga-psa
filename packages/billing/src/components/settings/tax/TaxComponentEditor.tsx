@@ -38,7 +38,7 @@ import {
   createTaxComponent,
   updateTaxComponent,
   deleteTaxComponent,
-} from '@alga-psa/billing/actions';
+} from '../../../actions/taxSettingsActions';
 
 // Zod schema for form validation
 const taxComponentSchema = z.object({

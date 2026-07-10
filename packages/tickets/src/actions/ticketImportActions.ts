@@ -5,7 +5,7 @@ import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { unparseCSV } from '@alga-psa/core';
-import { createTagsForEntityWithTransaction } from '@alga-psa/tags/actions';
+import { createTagsForEntityWithTransaction } from '@alga-psa/tags/actions/tagActions';
 import { TicketModel, CreateTicketInput } from '@alga-psa/shared/models/ticketModel';
 import {
   TICKET_ACTIVITY_ACTOR,

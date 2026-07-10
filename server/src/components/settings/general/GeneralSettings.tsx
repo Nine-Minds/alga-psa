@@ -14,8 +14,9 @@ import {
   isActionMessageError,
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
-import { getTenantDetails, updateTenantName, addClientToTenant, removeClientFromTenant, setDefaultClient, getTenantTimezoneAuth, setTenantTimezone } from "@alga-psa/tenancy/actions";
-import { getAllClients } from "@alga-psa/clients/actions";
+import { getTenantDetails, updateTenantName, addClientToTenant, removeClientFromTenant, setDefaultClient } from "@alga-psa/tenancy/actions/coreTenantActions";
+import { getTenantTimezoneAuth, setTenantTimezone } from "@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions";
+import { getAllClients } from "@alga-psa/clients/actions/queryActions";
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import TimezonePicker from '@alga-psa/ui/components/TimezonePicker';
 import { IClient } from "@alga-psa/types";

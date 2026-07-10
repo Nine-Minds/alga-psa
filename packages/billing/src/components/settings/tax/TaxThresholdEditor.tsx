@@ -37,7 +37,7 @@ import {
   createTaxRateThreshold,
   updateTaxRateThreshold,
   deleteTaxRateThreshold,
-} from '@alga-psa/billing/actions';
+} from '../../../actions/taxSettingsActions';
 
 // Zod schema for form validation
 const taxThresholdSchema = z.object({

@@ -28,7 +28,7 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { getContractLinePresetServices, getContractLinePresetFixedConfig } from '@alga-psa/billing/actions/contractLinePresetActions';
 import { IContractLinePresetService, IContractLinePresetFixedConfig } from '@alga-psa/types';
-import { getServices } from '@alga-psa/billing/actions';
+import { getServices } from '@alga-psa/billing/actions/serviceActions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getErrorMessage,

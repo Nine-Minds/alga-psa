@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { IPermission, IUserWithRoles } from '@alga-psa/types';
 import { IUser, IRole } from '@shared/interfaces/user.interfaces';
-import { getCurrentUser, getUserRolesWithPermissions } from '@alga-psa/user-composition/actions';
+import { getCurrentUser, getUserRolesWithPermissions } from '@alga-psa/user-composition/actions/userQueryActions';
 import { 
   getClientUserById, 
   updateClientUser, 
@@ -13,7 +13,7 @@ import {
   getClientUserRoles,
   assignClientUserRole,
   removeClientUserRole
-} from '@alga-psa/client-portal/actions';
+} from '../../actions/client-portal-actions/clientUserActions';
 import { useDrawer } from "@alga-psa/ui";
 import { Input } from '@alga-psa/ui/components/Input';
 import { Button } from '@alga-psa/ui/components/Button';

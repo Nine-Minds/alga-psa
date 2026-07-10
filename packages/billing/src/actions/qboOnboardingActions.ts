@@ -7,7 +7,7 @@ import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { getDefaultQboRealmId } from '@alga-psa/integrations/lib/qbo/qboClientService';
 import { QboClientService } from '@alga-psa/integrations/lib/qbo/qboClientService';
-import { getQboCustomers } from '@alga-psa/integrations/actions';
+import { getQboCustomers } from '@alga-psa/integrations/actions/qboActions';
 import logger from '@alga-psa/core/logger';
 import type { AccountingExternalChange } from '@alga-psa/types';
 import {
