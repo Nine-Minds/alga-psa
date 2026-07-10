@@ -10,6 +10,7 @@ import { registerCrmActions } from './businessOperations/crm';
 import { registerAssetActions } from './businessOperations/assets';
 import { registerDataStoreActions } from './businessOperations/dataStore';
 import { registerEntityLinkActions } from './businessOperations/entityLinks';
+import { registerActivityActions } from './businessOperations/activities';
 
 export function registerBusinessOperationsActionsV2(): void {
   registerTicketActions();
@@ -24,4 +25,5 @@ export function registerBusinessOperationsActionsV2(): void {
   registerAssetActions();
   registerDataStoreActions();
   registerEntityLinkActions();
+  registerActivityActions();
 }
