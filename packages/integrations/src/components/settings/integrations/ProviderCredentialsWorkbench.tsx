@@ -11,10 +11,8 @@ import {
   Mail,
   ShieldCheck,
 } from 'lucide-react';
-import type {
-  getGoogleIntegrationStatus,
-  getMicrosoftIntegrationStatus,
-} from '@alga-psa/integrations/actions';
+import type { getGoogleIntegrationStatus } from '../../../actions/integrations/googleActions';
+import type { getMicrosoftIntegrationStatus } from '../../../actions/integrations/microsoftActions';
 import { GoogleIntegrationSettings } from './GoogleIntegrationSettings';
 import { MicrosoftIntegrationSettings } from './MicrosoftIntegrationSettings';
 
