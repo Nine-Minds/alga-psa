@@ -59,6 +59,18 @@ WORKDIR /app
 RUN npm install --ignore-scripts --workspaces=false --legacy-peer-deps \
     && npm install --no-save --workspaces=false openai@^4.104.0
 
+# Onboarding seeds are loaded dynamically at runtime and import @alga-psa/db
+# through its package exports. Build the package and its runtime dependency so
+# those exports exist in the production image; the Temporal TypeScript build
+# cannot discover this dynamic import on its own.
+WORKDIR /app/packages/core
+RUN npm run build
+
+WORKDIR /app/packages/db
+RUN npm run build
+RUN if [ -d dist/db/src ]; then cp -R dist/db/src/. dist/; fi \
+    && tsc-alias -p tsconfig.json -f --resolve-full-paths
+
 # Build event-schemas (imported at runtime by shared/workflow/streams)
 WORKDIR /app/packages/event-schemas
 
@@ -130,6 +142,9 @@ COPY --from=development /app/shared /app/shared
 COPY --from=development /app/ee/temporal-workflows/dist /app/ee/temporal-workflows/dist
 COPY --from=development /app/ee/temporal-workflows/node_modules /app/ee/temporal-workflows/node_modules
 COPY --from=development /app/ee/packages/workflows /app/ee/packages/workflows
+# Copy package exports used by dynamically loaded onboarding seeds.
+COPY --from=development /app/packages/core/dist /app/packages/core/dist
+COPY --from=development /app/packages/db/dist /app/packages/db/dist
 # Copy event-schemas dist (runtime dependency of shared/workflow/streams)
 COPY --from=development /app/packages/event-schemas/dist /app/packages/event-schemas/dist
 # Copy integrations node_modules to both locations for module resolution
