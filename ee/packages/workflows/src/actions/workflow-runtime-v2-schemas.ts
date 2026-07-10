@@ -28,6 +28,7 @@ export const CreateWorkflowDefinitionInput = z.object({
 export const UpdateWorkflowDefinitionInput = z.object({
   workflowId: z.string().min(1),
   definition: workflowDefinitionSchema,
+  expectedDraftVersion: optionalPositiveInt,
   payloadSchemaMode: z.enum(['inferred', 'pinned']).optional(),
   pinnedPayloadSchemaRef: z.string().min(1).optional()
 });

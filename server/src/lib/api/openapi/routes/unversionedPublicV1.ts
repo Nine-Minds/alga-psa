@@ -118,6 +118,19 @@ export function registerUnversionedPublicV1Routes(
     extensions: ext('workflow', 'manage'), edition: 'both',
   });
   registry.registerRoute({
+    method: 'post', path: '/api/workflow-definitions/validate',
+    summary: 'Validate a workflow definition draft',
+    description: 'Runs workflow validation without persisting anything.',
+    tags: [wfTag], security: [{ ApiKeyAuth: [] }],
+    request: { body: { schema: registry.registerSchema('WorkflowDefinitionValidateBody', zOpenApi.object({
+      definition: WorkflowDefinitionDoc,
+      payloadSchemaMode: zOpenApi.enum(['inferred', 'pinned']).optional(),
+      pinnedPayloadSchemaRef: zOpenApi.string().optional(),
+    })) } },
+    responses: { 200: { description: 'Validation completed.', schema: Success }, ...errs() },
+    extensions: ext('workflow', 'manage'), edition: 'both',
+  });
+  registry.registerRoute({
     method: 'post', path: '/api/workflow-definitions/import',
     summary: 'Import a v1 workflow bundle',
     description: 'Imports a legacy v1 workflow bundle. Pass force=true (query) to overwrite an existing definition.',
@@ -152,7 +165,7 @@ export function registerUnversionedPublicV1Routes(
     summary: 'Update workflow draft definition',
     description: 'Replaces the draft definition for a specific version.',
     tags: [wfTag], security: [{ ApiKeyAuth: [] }],
-    request: { params: WorkflowVersionParams, body: { schema: registry.registerSchema('WorkflowDefinitionUpdateBody', zOpenApi.object({ definition: WorkflowDefinitionDoc })) } },
+    request: { params: WorkflowVersionParams, body: { schema: registry.registerSchema('WorkflowDefinitionUpdateBody', zOpenApi.object({ definition: WorkflowDefinitionDoc, expectedDraftVersion: zOpenApi.number().int().positive().optional() })) } },
     responses: { 200: { description: 'Draft updated.', schema: Success }, ...errs({ 404: 'Workflow/version not found.' }) },
     extensions: ext('workflow', 'manage'), edition: 'both',
   });

@@ -24,7 +24,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ work
     const body = await req.json();
     const updated = await updateWorkflowDefinitionDraftAction({
       workflowId: resolvedParams.workflowId,
-      definition: body?.definition ?? body
+      definition: body?.definition ?? body,
+      expectedDraftVersion: body?.expectedDraftVersion
     });
     return NextResponse.json(updated);
   } catch (error) {

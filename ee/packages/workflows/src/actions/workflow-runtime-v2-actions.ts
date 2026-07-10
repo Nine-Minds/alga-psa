@@ -1579,6 +1579,32 @@ export const createWorkflowDefinitionAction = withAuth(async (user, { tenant }, 
   return { workflowId: record.workflow_id };
 });
 
+export const validateWorkflowDefinitionDraftAction = withAuth(async (user, { tenant }, input: unknown) => {
+  initializeWorkflowRuntimeV2();
+  const parsed = CreateWorkflowDefinitionInput.pick({
+    definition: true,
+    payloadSchemaMode: true,
+    pinnedPayloadSchemaRef: true
+  }).parse(input);
+
+  const { knex } = await createTenantKnex();
+  await requireWorkflowPermission(user, 'manage', knex);
+
+  const definition = parsed.definition;
+  const schemaRegistry = getSchemaRegistry();
+  const payloadSchemaJson = definition.payloadSchemaRef && schemaRegistry.has(definition.payloadSchemaRef)
+    ? schemaRegistry.toJsonSchema(definition.payloadSchemaRef)
+    : null;
+
+  return computeValidation({
+    definition,
+    payloadSchemaRef: definition.payloadSchemaRef,
+    payloadSchemaJson,
+    knex,
+    tenant
+  });
+});
+
 export const getWorkflowDefinitionVersionAction = withAuth(async (user, { tenant }, input: unknown) => {
   const parsed = GetWorkflowDefinitionVersionInput.parse(input);
   const { knex } = await createTenantKnex();
@@ -1607,6 +1633,12 @@ export const updateWorkflowDefinitionDraftAction = withAuth(async (user, { tenan
   const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'manage', knex);
   const current = await WorkflowDefinitionModelV2.getById(knex, tenant, parsed.workflowId);
+  if (!current) {
+    return throwHttpError(404, 'Not found');
+  }
+  if (parsed.expectedDraftVersion !== undefined && Number((current as any).draft_version) !== parsed.expectedDraftVersion) {
+    return throwHttpError(409, `Draft version mismatch. Expected ${parsed.expectedDraftVersion}, found ${(current as any).draft_version}.`);
+  }
   const normalizedDraft = normalizeTimeTriggerDraftContract({
     definition: { ...parsed.definition, id: parsed.workflowId },
     payloadSchemaMode: parsed.payloadSchemaMode ?? (typeof (current as any)?.payload_schema_mode === 'string' ? (current as any).payload_schema_mode : 'pinned'),
