@@ -757,7 +757,7 @@
       "product": "Prodotto",
       "qty": "Qtà",
       "received": "Ricevuto",
-      "unitCost": "Costo unitario ($)",
+      "unitCost": "Costo unitario",
       "vendor": "Fornitore"
     },
     "count": "{{count}} ordine di acquisto",
@@ -989,7 +989,7 @@
       "selectService": "Select a service…",
       "service": "Service",
       "serviceId": "ID servizio",
-      "unitPrice": "Prezzo unitario ($)",
+      "unitPrice": "Prezzo unitario",
       "unitPriceIn": "Unit price ({{currency}})"
     },
     "fromQuote": "Da preventivo",
@@ -1091,7 +1091,7 @@
     "fields": {
       "location": "Ubicazione",
       "product": "Prodotto",
-      "unitCost": "Costo unitario (USD)"
+      "unitCost": "Costo unitario"
     },
     "filteredCount": "{{shown}} di {{total}} prodotti",
     "levels": {
@@ -1333,7 +1333,7 @@
     "dialogTitle": "Listino prezzi — {{name}}",
     "emptyState": "Ancora nessuna offerta — aggiungi qui sotto i codici articolo del fornitore e i costi contrattuali.",
     "fields": {
-      "cost": "Costo ($)",
+      "cost": "Costo",
       "currency": "Valuta",
       "leadTime": "Tempo di consegna (giorni)",
       "preferred": "Fornitore preferito per questo prodotto (guida i suggerimenti di riordino)",

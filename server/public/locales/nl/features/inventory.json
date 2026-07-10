@@ -757,7 +757,7 @@
       "product": "Product",
       "qty": "Aantal",
       "received": "Ontvangen",
-      "unitCost": "Kostprijs per eenheid ($)",
+      "unitCost": "Kostprijs per eenheid",
       "vendor": "Leverancier"
     },
     "count": "{{count}} inkooporder",
@@ -989,7 +989,7 @@
       "selectService": "Select a service…",
       "service": "Service",
       "serviceId": "Service-ID",
-      "unitPrice": "Stukprijs ($)",
+      "unitPrice": "Stukprijs",
       "unitPriceIn": "Unit price ({{currency}})"
     },
     "fromQuote": "Uit offerte",
@@ -1091,7 +1091,7 @@
     "fields": {
       "location": "Locatie",
       "product": "Product",
-      "unitCost": "Kostprijs per eenheid (USD)"
+      "unitCost": "Kostprijs per eenheid"
     },
     "filteredCount": "{{shown}} van {{total}} producten",
     "levels": {
@@ -1333,7 +1333,7 @@
     "dialogTitle": "Prijslijst — {{name}}",
     "emptyState": "Nog geen aanbiedingen — voeg hieronder de artikelnummers en contractkosten van de leverancier toe.",
     "fields": {
-      "cost": "Kostprijs ($)",
+      "cost": "Kostprijs",
       "currency": "Valuta",
       "leadTime": "Levertijd (dagen)",
       "preferred": "Voorkeursleverancier voor dit product (bepaalt bestelsuggesties)",

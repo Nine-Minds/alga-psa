@@ -757,7 +757,7 @@
       "product": "Produto",
       "qty": "Qtd",
       "received": "Recebido",
-      "unitCost": "Custo unitário ($)",
+      "unitCost": "Custo unitário",
       "vendor": "Fornecedor"
     },
     "count": "{{count}} pedido de compra",
@@ -989,7 +989,7 @@
       "selectService": "Select a service…",
       "service": "Service",
       "serviceId": "ID do serviço",
-      "unitPrice": "Preço Unitário ($)",
+      "unitPrice": "Preço Unitário",
       "unitPriceIn": "Unit price ({{currency}})"
     },
     "fromQuote": "A partir de cotação",
@@ -1091,7 +1091,7 @@
     "fields": {
       "location": "Localização",
       "product": "Produto",
-      "unitCost": "Custo unitário (USD)"
+      "unitCost": "Custo unitário"
     },
     "filteredCount": "{{shown}} de {{total}} produtos",
     "levels": {
@@ -1333,7 +1333,7 @@
     "dialogTitle": "Lista de preços — {{name}}",
     "emptyState": "Ainda não há ofertas — adicione os números de peça e os custos contratuais do fornecedor abaixo.",
     "fields": {
-      "cost": "Custo ($)",
+      "cost": "Custo",
       "currency": "Moeda",
       "leadTime": "Prazo de entrega (dias)",
       "preferred": "Fornecedor preferencial para este produto (orienta sugestões de reposição)",

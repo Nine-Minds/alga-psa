@@ -757,7 +757,7 @@
       "product": "Produit",
       "qty": "Qté",
       "received": "Réceptionné",
-      "unitCost": "Coût unitaire ($)",
+      "unitCost": "Coût unitaire",
       "vendor": "Fournisseur"
     },
     "count": "{{count}} bon de commande",
@@ -989,7 +989,7 @@
       "selectService": "Select a service…",
       "service": "Service",
       "serviceId": "ID de service",
-      "unitPrice": "Prix unitaire ($)",
+      "unitPrice": "Prix unitaire",
       "unitPriceIn": "Unit price ({{currency}})"
     },
     "fromQuote": "Depuis le devis",
@@ -1091,7 +1091,7 @@
     "fields": {
       "location": "Emplacement",
       "product": "Produit",
-      "unitCost": "Coût unitaire (USD)"
+      "unitCost": "Coût unitaire"
     },
     "filteredCount": "{{shown}} sur {{total}} produits",
     "levels": {
@@ -1333,7 +1333,7 @@
     "dialogTitle": "Liste de prix — {{name}}",
     "emptyState": "Aucune offre pour l'instant — ajoutez ci-dessous les références du fournisseur et les coûts contractuels.",
     "fields": {
-      "cost": "Coût ($)",
+      "cost": "Coût",
       "currency": "Devise",
       "leadTime": "Délai de livraison (jours)",
       "preferred": "Fournisseur préféré pour ce produit (détermine les suggestions de réapprovisionnement)",
