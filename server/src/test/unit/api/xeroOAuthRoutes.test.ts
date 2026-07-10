@@ -152,7 +152,7 @@ describe('Xero OAuth routes', () => {
 
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toEqual({
-      error: 'Xero client credentials are not configured for this tenant or the application fallback.'
+      error: 'Xero connection is not configured for this workspace.'
     });
   });
 

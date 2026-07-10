@@ -76,6 +76,7 @@ vi.mock('@alga-psa/documents/lib/documentPreviewGenerator', () => ({
 
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishWorkflowEvent: vi.fn().mockResolvedValue(undefined),
+  publishEvent: vi.fn().mockResolvedValue(undefined),
 }));
 
 import { StorageService } from '@alga-psa/storage/StorageService';
@@ -264,19 +265,16 @@ describe('uploadDocument', () => {
     expect((knexStub.inserts[0] as IDocument).folder_path).toBe('/Tickets/Attachments');
   });
 
-  it('returns error result when validation fails before upload', async () => {
+  it('throws when validation fails before upload', async () => {
     validateFileUploadMock.mockRejectedValue(new Error('invalid file'));
 
     const formData = new FormData();
     const file = new File([Buffer.from('bad')], 'malware.exe', { type: 'application/octet-stream' });
     formData.set('file', file);
 
-    const result = await documentActions.uploadDocument(formData, {
+    await expect(documentActions.uploadDocument(formData, {
       userId: 'user-1',
-    });
-
-    expect(result.success).toBe(false);
-    expect(result).toHaveProperty('error', 'invalid file');
+    })).rejects.toThrow('invalid file');
     expect(uploadFileMock).not.toHaveBeenCalled();
     expect(generateDocumentPreviewsMock).not.toHaveBeenCalled();
   });

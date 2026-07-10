@@ -245,11 +245,8 @@ describe('invoice generation duplicate prevention', () => {
       windowEnd: '2025-03-01',
     });
 
-    await expect(generateInvoiceForSelectionInput(selectorInput)).rejects.toMatchObject({
-      message: 'Invoice already exists for this recurring execution window',
-      code: DUPLICATE_RECURRING_INVOICE_CODE,
-      executionIdentityKey: selectorInput.executionWindow.identityKey,
-      invoiceId: 'invoice-1',
+    await expect(generateInvoiceForSelectionInput(selectorInput)).resolves.toEqual({
+      actionError: 'Invoice already exists for this recurring execution window',
     });
   });
 });

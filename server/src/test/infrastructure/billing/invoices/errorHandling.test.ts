@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
 import '../../../../../test-utils/nextApiMock';
+import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { generateInvoice, createInvoiceFromBillingResult } from '@alga-psa/billing/actions/invoiceGeneration';
 import { v4 as uuidv4 } from 'uuid';
 import { TextEncoder as NodeTextEncoder } from 'util';
@@ -13,7 +14,6 @@ import {
   assignServiceTaxRate,
   ensureClientPlanBundlesTable
 } from '../../../../../test-utils/billingTestHelpers';
-import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import type { IBillingCharge, IBillingResult } from 'server/src/interfaces/billing.interfaces';
 
 // Override DB_PORT to connect directly to PostgreSQL instead of pgbouncer
@@ -22,7 +22,7 @@ process.env.DB_HOST = process.env.DB_HOST === 'pgbouncer' ? 'localhost' : proces
 
 
 vi.mock('@alga-psa/auth', async () => {
-  const { createAuthModuleMock } = await import('../../../../../test-utils/testMocks');
+  const { createAuthModuleMock } = await import('../../../../../test-utils/authModuleMock');
   return createAuthModuleMock();
 });
 
@@ -35,7 +35,8 @@ vi.mock('server/src/lib/analytics/posthog', () => ({
   }
 }));
 
-vi.mock('@alga-psa/db', () => ({
+vi.mock('@alga-psa/db', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/db')>()),
   withTransaction: vi.fn(async (knex, callback) => callback(knex)),
   withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
 }));
@@ -49,24 +50,26 @@ vi.mock('@alga-psa/core/logger', () => ({
   },
 }));
 
-vi.mock('@alga-psa/core/secrets', () => ({
+vi.mock('@alga-psa/core/secrets', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   getSecretProviderInstance: () => ({
     getSecret: async () => undefined,
     getAppSecret: async () => undefined,
     setSecret: async () => {},
     getProviderName: () => 'MockSecretProvider',
-    close: async () => {},
-  }),
+    close: async () => {}
+  })
 }));
 
-vi.mock('@alga-psa/core', () => ({
+vi.mock('@alga-psa/core', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
   getSecretProviderInstance: () => ({
     getSecret: async () => undefined,
     getAppSecret: async () => undefined,
     setSecret: async () => {},
     getProviderName: () => 'MockSecretProvider',
-    close: async () => {},
-  }),
+    close: async () => {}
+  })
 }));
 
 vi.mock('@alga-psa/workflows/persistence', () => ({

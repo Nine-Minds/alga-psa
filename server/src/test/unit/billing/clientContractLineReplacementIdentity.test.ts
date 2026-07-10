@@ -158,9 +158,10 @@ describe('client contract line replacement identity', () => {
         end_date: null,
         is_active: true,
       } as any),
-    ).rejects.toThrow(
-      'Client contract client-contract-1 is missing template provenance (template_contract_id) required to clone template contract lines',
-    );
+    ).resolves.toEqual({
+      actionError:
+        'Client contract client-contract-1 is missing template provenance (template_contract_id) required to clone template contract lines',
+    });
 
     expect(contractLinesBuilder.insert).not.toHaveBeenCalled();
     expect(cloneTemplateContractLineAsync).not.toHaveBeenCalled();

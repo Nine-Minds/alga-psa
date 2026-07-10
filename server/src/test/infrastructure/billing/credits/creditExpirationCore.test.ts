@@ -21,7 +21,7 @@ let mockedTenantId = '11111111-1111-1111-1111-111111111111';
 let mockedUserId = 'mock-user-id';
 
 vi.mock('@alga-psa/auth', async () => {
-  const { createAuthModuleMock } = await import('../../../../../test-utils/testMocks');
+  const { createAuthModuleMock } = await import('../../../../../test-utils/authModuleMock');
   return createAuthModuleMock();
 });
 
@@ -42,11 +42,6 @@ vi.mock('@alga-psa/db', async (importOriginal) => {
     withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
   };
 });
-
-vi.mock('@alga-psa/db', () => ({
-  withTransaction: vi.fn(async (knex, callback) => callback(knex)),
-  withAdminTransaction: vi.fn(async (callback, existingConnection) => callback(existingConnection as any))
-}));
 
 vi.mock('@alga-psa/core/logger', () => ({
   default: {

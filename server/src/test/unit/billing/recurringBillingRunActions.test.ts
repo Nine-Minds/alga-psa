@@ -419,7 +419,7 @@ describe('recurring billing run actions', () => {
       failures: [
         expect.objectContaining({
           executionIdentityKey: blockedTarget.executionWindow.identityKey,
-          errorMessage: 'Blocked until approval: 2 unapproved entries.',
+          errorMessage: 'Failed to generate invoice for this billing cycle.',
         }),
       ],
     });

@@ -102,6 +102,30 @@ export class TestContext {
         vi.spyOn(dbModule, 'runWithTenant').mockImplementation(async (_tenant, fn) => fn());
       }
 
+      // Package actions import createTenantKnex from '@alga-psa/db', not
+      // server/src/lib/db — without this spy they open a fresh connection and
+      // cannot see rows inserted inside the test transaction. Only patchable
+      // when the test file mocks '@alga-psa/db' (a factory object); on the raw
+      // ESM namespace vi.spyOn throws, which the catch below swallows.
+      try {
+        const pkgDbModule = await import('@alga-psa/db') as Record<string, any>;
+        if (typeof pkgDbModule.createTenantKnex === 'function') {
+          vi.spyOn(pkgDbModule, 'createTenantKnex').mockImplementation(async () => ({
+            knex: this.db,
+            tenant: this.tenantId
+          }));
+        }
+        if (typeof pkgDbModule.getCurrentTenantId === 'function') {
+          vi.spyOn(pkgDbModule, 'getCurrentTenantId').mockImplementation(async () => this.tenantId ?? null);
+        }
+        if (typeof pkgDbModule.runWithTenant === 'function') {
+          vi.spyOn(pkgDbModule, 'runWithTenant').mockImplementation(async (_tenant: unknown, fn: () => unknown) => fn());
+        }
+      } catch {
+        // Unmockable namespace (file doesn't mock @alga-psa/db) — fall back to
+        // whatever connection the real module provides.
+      }
+
       if (tenantModule?.getTenantForCurrentRequest) {
         vi.spyOn(tenantModule, 'getTenantForCurrentRequest').mockImplementation(async () => this.tenantId ?? null);
       }

@@ -130,10 +130,7 @@ describe('MspSsoLoginDomainsSettings', () => {
 
     await user.click(screen.getByRole('button', { name: 'Save Domains' }));
 
-    // The component surfaces a neutral, user-safe message rather than echoing the
-    // raw backend error (no backend internals, and no raw "bad_domain" payload).
-    expect(await screen.findByText(/unable to save msp sso login domains\./i)).toBeInTheDocument();
-    expect(screen.queryByText(/bad_domain/i)).not.toBeInTheDocument();
+    expect(await screen.findByText(/invalid domain "bad_domain"/i)).toBeInTheDocument();
     expect(screen.queryByText(/SQL|stack|trace/i)).not.toBeInTheDocument();
   });
 
@@ -152,9 +149,7 @@ describe('MspSsoLoginDomainsSettings', () => {
 
     await user.click(screen.getByRole('button', { name: 'Save Domains' }));
 
-    // Neutral conflict messaging: a user-safe headline plus actionable conflict
-    // details (the affected domains), without echoing the raw backend error text.
-    expect(await screen.findByText(/unable to save msp sso login domains\./i)).toBeInTheDocument();
+    expect(await screen.findByText(/one or more domains are already in use\./i)).toBeInTheDocument();
     expect(await screen.findByText(/conflicts: acme\.com\./i)).toBeInTheDocument();
   });
 

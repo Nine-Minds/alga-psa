@@ -689,7 +689,9 @@ describe('Document Folder Operations', () => {
     it('should throw when folder does not exist', async () => {
       mockKnex.first.mockResolvedValue(undefined);
 
-      await expect(toggleFolderVisibility('missing-folder', true, false)).rejects.toThrow('Folder not found');
+      await expect(toggleFolderVisibility('missing-folder', true, false)).resolves.toEqual({
+        actionError: 'Folder not found. It may have been deleted. Please refresh and try again.',
+      });
       expect(mockKnex.update).not.toHaveBeenCalled();
     });
 
@@ -759,8 +761,12 @@ describe('Document Folder Operations', () => {
     });
 
     it('should require both entityId and entityType', async () => {
-      await expect(ensureEntityFolders('', 'client')).rejects.toThrow('Both entityId and entityType are required');
-      await expect(ensureEntityFolders('entity-123', '')).rejects.toThrow('Both entityId and entityType are required');
+      await expect(ensureEntityFolders('', 'client')).resolves.toEqual({
+        actionError: 'Both entityId and entityType are required',
+      });
+      await expect(ensureEntityFolders('entity-123', '')).resolves.toEqual({
+        actionError: 'Both entityId and entityType are required',
+      });
     });
 
     it('should require document read permission', async () => {
@@ -859,17 +865,21 @@ describe('Document Folder Operations', () => {
     });
 
     it('should reject invalid folder paths', async () => {
-      await expect(createFolder('InvalidPath')).rejects.toThrow('Folder path must start with /');
-      await expect(createFolder('/')).rejects.toThrow('Invalid folder path');
+      await expect(createFolder('InvalidPath')).resolves.toEqual({
+        actionError: 'Folder path must start with /',
+      });
+      await expect(createFolder('/')).resolves.toEqual({
+        actionError: 'Invalid folder path',
+      });
     });
 
     it('should require both entityId and entityType when scoping folder', async () => {
-      await expect(createFolder('/Legal', 'client-123')).rejects.toThrow(
-        'Both entityId and entityType are required when scoping a folder to an entity'
-      );
-      await expect(createFolder('/Legal', null, 'client')).rejects.toThrow(
-        'Both entityId and entityType are required when scoping a folder to an entity'
-      );
+      await expect(createFolder('/Legal', 'client-123')).resolves.toEqual({
+        actionError: 'Both entityId and entityType are required when scoping a folder to an entity',
+      });
+      await expect(createFolder('/Legal', null, 'client')).resolves.toEqual({
+        actionError: 'Both entityId and entityType are required when scoping a folder to an entity',
+      });
     });
 
     it('should require document create permission', async () => {
@@ -896,7 +906,9 @@ describe('Document Folder Operations', () => {
     it('should reject deletion if folder contains documents', async () => {
       mockKnex.first.mockResolvedValueOnce({ count: '5' });
 
-      await expect(deleteFolder('/Legal')).rejects.toThrow('Cannot delete folder: contains documents');
+      await expect(deleteFolder('/Legal')).resolves.toEqual({
+        actionError: 'Move or delete the documents in this folder before deleting it.',
+      });
       expect(mockKnex.delete).not.toHaveBeenCalled();
     });
 
@@ -905,7 +917,9 @@ describe('Document Folder Operations', () => {
         .mockResolvedValueOnce({ count: '0' })  // No documents
         .mockResolvedValueOnce({ count: '2' }); // Has subfolders
 
-      await expect(deleteFolder('/Legal')).rejects.toThrow('Cannot delete folder: contains subfolders');
+      await expect(deleteFolder('/Legal')).resolves.toEqual({
+        actionError: 'Delete the subfolders in this folder before deleting it.',
+      });
       expect(mockKnex.delete).not.toHaveBeenCalled();
     });
 

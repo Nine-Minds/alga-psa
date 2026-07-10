@@ -1,8 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll, beforeEach, vi } from 'vitest';
-import { v4 as uuidv4 } from 'uuid';
-import { ITicket } from '../../interfaces/ticket.interfaces';
-import * as ticketActions from '@alga-psa/tickets/actions/ticketActions';
-import { TestContext } from '../../../../test-utils/testContext';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
 import {
   setupCommonMocks,
   mockNextHeaders,
@@ -10,6 +6,10 @@ import {
   mockRBAC,
   createMockUser
 } from '../../../../test-utils/testMocks';
+import { v4 as uuidv4 } from 'uuid';
+import { ITicket } from '../../interfaces/ticket.interfaces';
+import * as ticketActions from '@alga-psa/tickets/actions/ticketActions';
+import { TestContext } from '../../../../test-utils/testContext';
 import {
   createTenant,
   createClient,
@@ -184,11 +184,12 @@ describe('Ticket Permissions Infrastructure', () => {
   });
 
   // Use cleanup hook for test isolation
-  const cleanup = createCleanupHook(context.db, [
-    'tickets', 'categories', 'boards', 'contacts',
-    'clients', 'users', 'roles', 'permissions'
-  ]);
-  afterEach(cleanup);
+  afterEach(async () => {
+    await createCleanupHook(context.db, [
+      'tickets', 'categories', 'boards', 'contacts',
+      'clients', 'users', 'roles', 'permissions'
+    ])();
+  });
 
   it('should allow regular user to view tickets', async () => {
     const tickets = await ticketActions.getTickets(regularUser);

@@ -155,7 +155,7 @@ describe('QBO OAuth routes', () => {
 
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toEqual({
-      error: 'QuickBooks client credentials are not configured for this tenant or the application fallback.'
+      error: 'QuickBooks connection is not configured for this workspace.'
     });
   });
 

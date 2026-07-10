@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
 import '../../../../../test-utils/nextApiMock';
+import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { tenantDb } from '@alga-psa/db';
 import { TestContext } from '../../../../../test-utils/testContext';
 import { createPrepaymentInvoice, applyCreditToInvoice } from '@alga-psa/billing/actions/creditActions';
@@ -7,6 +8,7 @@ import { finalizeInvoice } from '@alga-psa/billing/actions/invoiceModification';
 import { createInvoiceFromBillingResult } from '@alga-psa/billing/actions/invoiceGeneration';
 import {
   createTestService,
+  createFixedPlanAssignment,
   setupClientTaxConfiguration,
   assignServiceTaxRate
 } from '../../../../../test-utils/billingTestHelpers';
@@ -16,7 +18,6 @@ import { Temporal } from '@js-temporal/polyfill';
 import { ClientContractLine } from '@alga-psa/billing/models';
 import { createTestDate } from '../../../test-utils/dateUtils';
 import { toPlainDate } from 'server/src/lib/utils/dateTimeUtils';
-import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { createClient } from '../../../../../test-utils/testDataFactory';
 
 let mockedTenantId = '11111111-1111-1111-1111-111111111111';
@@ -69,7 +70,7 @@ vi.mock('@alga-psa/users/actions', () => ({
 }));
 
 vi.mock('@alga-psa/auth', async () => {
-  const { createAuthModuleMock } = await import('../../../../../test-utils/testMocks');
+  const { createAuthModuleMock } = await import('../../../../../test-utils/authModuleMock');
   return createAuthModuleMock();
 });
 
@@ -104,7 +105,9 @@ function parseInvoiceTotals(invoice: Record<string, unknown>) {
     creditApplied,
     totalAmount,
     totalBeforeCredit: subtotal + tax,
-    amountDue: totalAmount
+    // Invoice totals are immutable after finalization; balance due is derived
+    // (total - credit) rather than written back to total_amount.
+    amountDue: totalAmount - creditApplied
   };
 }
 
@@ -133,35 +136,16 @@ async function ensureClientContractLine(
   clientId: string,
   startDate: string
 ): Promise<void> {
-  const existing = await tenantTable(context, 'client_contract_lines')
-    .where({ client_id: clientId, tenant: context.tenantId, is_active: true })
-    .first();
-
-  if (existing) {
-    return;
-  }
-
-  const contractLineId = uuidv4();
-  await tenantTable(context, 'contract_lines').insert({
-    contract_line_id: contractLineId,
-    tenant: context.tenantId,
-    contract_line_name: 'Test Contract Line',
-    billing_frequency: 'monthly',
-    is_custom: false,
-    contract_line_type: 'Fixed',
-    custom_rate: 0,
-    enable_proration: false,
-    billing_cycle_alignment: 'start',
-    billing_timing: 'arrears'
+  // The legacy client_contract_lines/contract_lines fixture this helper used
+  // was dropped from the schema (20251207140000_drop_redundant_client_contract_tables).
+  // The shared schema-aware fixture creates the contracts/client_contracts chain.
+  const anchorServiceId = await createTestService(context, {
+    service_name: 'Contract Line Anchor Service'
   });
-
-  await tenantTable(context, 'client_contract_lines').insert({
-    client_contract_line_id: uuidv4(),
-    client_id: clientId,
-    contract_line_id: contractLineId,
-    tenant: context.tenantId,
-    start_date: startDate,
-    is_active: true
+  await createFixedPlanAssignment(context, anchorServiceId, {
+    clientId,
+    startDate,
+    planName: 'Credit Test Plan'
   });
 }
 
@@ -191,6 +175,33 @@ async function generateInvoiceFromChargesForClient(
 
   if (!cycleRecord) {
     throw new Error(`Billing cycle ${billingCycleId} not found`);
+  }
+
+  // persistInvoiceCharges marks each usage charge's source usage_tracking row
+  // invoiced (and throws if it is missing), so back every fabricated usageId
+  // with a real row.
+  for (const charge of charges) {
+    // persistInvoiceCharges requires a config_id on recurring charges that
+    // carry service-period fields (invoice_charge_details has no FK on it, so
+    // a synthetic id satisfies the linkage for credit-math tests).
+    if (!(charge as { config_id?: string }).config_id) {
+      (charge as { config_id?: string }).config_id = uuidv4();
+    }
+    const usageId = (charge as { usageId?: string }).usageId;
+    if (charge.type === 'usage' && usageId) {
+      await tenantTable(context, 'usage_tracking')
+        .insert({
+          tenant: context.tenantId,
+          usage_id: usageId,
+          service_id: (charge as { serviceId?: string }).serviceId,
+          client_id: clientId,
+          usage_date: (charge as { servicePeriodStart?: string }).servicePeriodStart ?? cycleRecord.period_start_date,
+          quantity: (charge as { quantity?: number }).quantity ?? 1,
+          invoiced: false
+        })
+        .onConflict(['tenant', 'usage_id'])
+        .ignore();
+    }
   }
 
   const totalAmount = charges.reduce(
@@ -361,7 +372,8 @@ describe('Credit Application Tests', () => {
 
     const totals = parseInvoiceTotals(finalizedInvoice);
     expect(totals.creditApplied).toBe(5000);
-    expect(totals.totalAmount).toBe(totals.totalBeforeCredit - 5000);
+    expect(totals.totalAmount).toBe(totals.totalBeforeCredit);
+    expect(totals.amountDue).toBe(totals.totalBeforeCredit - 5000);
 
     const remainingCredit = await ClientContractLine.getClientCredit(clientId);
     expect(remainingCredit).toBe(0);
@@ -441,7 +453,7 @@ describe('Credit Application Tests', () => {
       .first();
 
     const totals = parseInvoiceTotals(finalizedInvoice);
-    expect(totals.totalAmount).toBe(0);
+    expect(totals.amountDue).toBe(0);
     expect(totals.creditApplied).toBe(totals.totalBeforeCredit);
 
     const remainingCredit = await ClientContractLine.getClientCredit(clientId);
@@ -535,7 +547,8 @@ describe('Credit Application Tests', () => {
 
     const totals = parseInvoiceTotals(finalizedInvoice);
     expect(totals.creditApplied).toBe(10000);
-    expect(totals.totalAmount).toBe(totals.totalBeforeCredit - 10000);
+    expect(totals.totalAmount).toBe(totals.totalBeforeCredit);
+    expect(totals.amountDue).toBe(totals.totalBeforeCredit - 10000);
 
     const remainingCredit = await ClientContractLine.getClientCredit(clientId);
     expect(remainingCredit).toBe(0);
@@ -621,7 +634,7 @@ describe('Credit Application Tests', () => {
 
     const totals = parseInvoiceTotals(finalizedInvoice);
     expect(totals.creditApplied).toBe(Math.min(8000, totals.totalBeforeCredit));
-    expect(totals.totalAmount).toBe(totals.totalBeforeCredit - totals.creditApplied);
+    expect(totals.amountDue).toBe(totals.totalBeforeCredit - totals.creditApplied);
 
     const remainingCredit = await ClientContractLine.getClientCredit(clientId);
     expect(remainingCredit).toBe(8000 - totals.creditApplied);

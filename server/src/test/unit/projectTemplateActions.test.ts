@@ -363,7 +363,7 @@ describe('Project Template Actions', () => {
         projectTemplateActions.createTemplateFromProject('invalid-id', {
           template_name: 'Test'
         })
-      ).rejects.toThrow('Project not found');
+      ).resolves.toEqual({ actionError: 'Project not found' });
     });
 
     it('should throw error if user has no permission', async () => {
@@ -373,7 +373,7 @@ describe('Project Template Actions', () => {
         projectTemplateActions.createTemplateFromProject('project-123', {
           template_name: 'Test'
         })
-      ).rejects.toThrow('Permission denied: Cannot create project');
+      ).resolves.toEqual({ permissionError: 'Permission denied: Cannot create project' });
     });
 
     it('should throw error if no authenticated user', async () => {
@@ -861,7 +861,7 @@ describe('Project Template Actions', () => {
           project_name: 'Test',
           client_id: 'client-123'
         })
-      ).rejects.toThrow('Template not found');
+      ).resolves.toEqual({ actionError: 'Template not found' });
     });
 
     it('should throw error if user has no permission', async () => {
@@ -872,7 +872,7 @@ describe('Project Template Actions', () => {
           project_name: 'Test',
           client_id: 'client-123'
         })
-      ).rejects.toThrow('Permission denied: Cannot create project');
+      ).resolves.toEqual({ permissionError: 'Permission denied: Cannot create project' });
     });
 
     it('should throw error if no authenticated user', async () => {
@@ -956,7 +956,7 @@ describe('Project Template Actions', () => {
 
       await expect(
         projectTemplateActions.updateTemplate('invalid-id', { template_name: 'Test' })
-      ).rejects.toThrow('Template not found');
+      ).resolves.toEqual({ actionError: 'Template not found' });
     });
 
     it('should throw error if user has no permission', async () => {
@@ -964,7 +964,7 @@ describe('Project Template Actions', () => {
 
       await expect(
         projectTemplateActions.updateTemplate('template-123', { template_name: 'Test' })
-      ).rejects.toThrow('Permission denied: Cannot update project');
+      ).resolves.toEqual({ permissionError: 'Permission denied: Cannot update project' });
     });
 
     it('should throw error if no authenticated user', async () => {
@@ -993,7 +993,7 @@ describe('Project Template Actions', () => {
 
       await expect(
         projectTemplateActions.deleteTemplate('invalid-id')
-      ).rejects.toThrow('Template not found');
+      ).resolves.toEqual({ actionError: 'Template not found' });
     });
 
     it('should throw error if user has no permission', async () => {
@@ -1001,7 +1001,7 @@ describe('Project Template Actions', () => {
 
       await expect(
         projectTemplateActions.deleteTemplate('template-123')
-      ).rejects.toThrow('Permission denied: Cannot delete project');
+      ).resolves.toEqual({ permissionError: 'Permission denied: Cannot delete project' });
     });
 
     it('should throw error if no authenticated user', async () => {
@@ -1290,7 +1290,7 @@ describe('Project Template Actions', () => {
 
       await expect(
         projectTemplateActions.duplicateTemplate('invalid-id')
-      ).rejects.toThrow('Template not found');
+      ).resolves.toEqual({ actionError: 'Template not found' });
     });
 
     it('should throw error if user has no permission', async () => {
@@ -1298,7 +1298,7 @@ describe('Project Template Actions', () => {
 
       await expect(
         projectTemplateActions.duplicateTemplate('template-123')
-      ).rejects.toThrow('Permission denied: Cannot create project');
+      ).resolves.toEqual({ permissionError: 'Permission denied: Cannot create project' });
     });
 
     it('should throw error if no authenticated user', async () => {

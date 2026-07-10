@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, beforeEach, afterEach, afterAll, vi } from 'vitest';
 import '../../../../../test-utils/nextApiMock';
+import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 import { TestContext } from '../../../../../test-utils/testContext';
 import { TaxService } from '@alga-psa/billing/services/taxService';
 import { Temporal } from '@js-temporal/polyfill';
@@ -9,7 +10,6 @@ import {
   setupClientTaxConfiguration,
   assignServiceTaxRate
 } from '../../../../../test-utils/billingTestHelpers';
-import { setupCommonMocks } from '../../../../../test-utils/testMocks';
 
 // Override DB_PORT to connect directly to PostgreSQL instead of pgbouncer
 // This is critical for tests that use advisory locks or other features not supported by pgbouncer
@@ -18,7 +18,7 @@ process.env.DB_HOST = process.env.DB_HOST === 'pgbouncer' ? 'localhost' : proces
 
 
 vi.mock('@alga-psa/auth', async () => {
-  const { createAuthModuleMock } = await import('../../../../../test-utils/testMocks');
+  const { createAuthModuleMock } = await import('../../../../../test-utils/authModuleMock');
   return createAuthModuleMock();
 });
 

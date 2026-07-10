@@ -251,7 +251,7 @@ describe('TeamsIntegrationSettings contracts', () => {
 
     // The shared profile selector + checklist replaces duplicated credential entry.
     expect(await screen.findByText('Microsoft profile selected')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Activate Teams' })).toBeDisabled();
+    expect(screen.getAllByRole('button', { name: 'Activate Teams' }).every((button) => button.hasAttribute('disabled'))).toBe(true);
     expect(
       screen.getByText('Select one eligible Microsoft profile before saving or activating Teams.'),
     ).toBeInTheDocument();
@@ -263,7 +263,7 @@ describe('TeamsIntegrationSettings contracts', () => {
 
     await user.selectOptions(screen.getByLabelText('Microsoft profile'), 'profile-1');
 
-    expect(screen.getByRole('button', { name: 'Activate Teams' })).toBeEnabled();
+    expect(screen.getAllByRole('button', { name: 'Activate Teams' }).some((button) => !button.hasAttribute('disabled'))).toBe(true);
     expect(screen.getAllByText('Primary Profile').length).toBeGreaterThan(0);
     expect(screen.getByText('https://psa.example.com/api/teams/auth/callback/tab')).toBeInTheDocument();
     expect(screen.getByText('https://psa.example.com/api/teams/auth/callback/bot')).toBeInTheDocument();
@@ -359,11 +359,11 @@ describe('TeamsIntegrationSettings contracts', () => {
     await screen.findByText('Bind Teams to a Microsoft profile, enable capabilities, and generate the tenant package.');
     await user.selectOptions(screen.getByLabelText('Microsoft profile'), 'profile-1');
 
-    await user.click(screen.getByRole('button', { name: 'Activate Teams' }));
+    await user.click(screen.getAllByRole('button', { name: 'Activate Teams' }).at(-1)!);
     // Activation failures surface a neutral message rather than the raw backend error.
     expect(await screen.findByText('Failed to save Teams settings')).toBeInTheDocument();
 
-    await user.click(screen.getByRole('button', { name: 'Activate Teams' }));
+    await user.click(screen.getAllByRole('button', { name: 'Activate Teams' }).at(-1)!);
 
     await waitFor(() => {
       expect(saveTeamsIntegrationSettingsMock).toHaveBeenLastCalledWith(
@@ -449,7 +449,7 @@ describe('TeamsIntegrationSettings contracts', () => {
     expect(
       await screen.findByText('No Microsoft profiles are ready for Teams. Finish Microsoft setup first.'),
     ).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Activate Teams' })).toBeDisabled();
+    expect(screen.getAllByRole('button', { name: 'Activate Teams' }).every((button) => button.hasAttribute('disabled'))).toBe(true);
     expect(screen.getByRole('button', { name: 'Save draft' })).toBeDisabled();
     // The incomplete profile is not offered as an eligible selection.
     expect(screen.queryByRole('option', { name: 'Incomplete Profile' })).not.toBeInTheDocument();
