@@ -20,6 +20,8 @@
   bash, and sh choices.
 - (2026-07-10) Keep automated testing minimal. Cover the privileged boundaries
   and production builds, then perform full live smoke testing separately.
+- (2026-07-10) Keep pod-access state in the control-plane process. A restart
+  intentionally closes terminals, listeners, and accepted connections.
 
 ## Discoveries / Constraints
 
@@ -41,6 +43,15 @@
 - (2026-07-10) The working copy is
   `/home/robert/alga-copies/feature-appliance-pod-access` on branch
   `feature/appliance-pod-access`.
+- (2026-07-10) The native client is packaged under
+  `/opt/alga-appliance/host-service/node_modules` so ESM resolution works from
+  the copied host-service modules without adding appliance dependencies to the
+  repository root.
+- (2026-07-10) `req.socket.localAddress` identifies the exact appliance address
+  used for the management request. The port-forward manager binds that address
+  instead of `0.0.0.0`.
+- (2026-07-10) Plain HTTP appliance origins may not expose the Clipboard API.
+  The address-copy action includes a DOM copy fallback.
 
 ## Commands / Runbooks
 
@@ -49,6 +60,12 @@
 - Publish the control plane with
   `WorkflowTemplate/alga-appliance-control-plane-build-publish` in namespace
   `argo` after the implementation commit is available remotely.
+- Focused checks:
+  `node --test ee/appliance/host-service/tests/pod-access.test.mjs ee/appliance/host-service/tests/control-plane-manifests.test.mjs ee/appliance/host-service/tests/control-plane-package.test.mjs ee/appliance/host-service/tests/status-ui-package-smoke.test.mjs`.
+- Full host-service regression suite:
+  `node --test ee/appliance/host-service/tests/*.test.mjs` (89 tests passed).
+- Production image build:
+  `docker build --progress=plain --provenance=false -f ee/appliance/control-plane/Dockerfile -t alga-appliance-control-plane:pod-access .`.
 
 ## Links / References
 
@@ -63,4 +80,5 @@
 
 ## Open Questions
 
-- None at plan creation.
+- None. Live shell and LAN port-forward behavior remains for the agreed smoke
+  test pass after merge.

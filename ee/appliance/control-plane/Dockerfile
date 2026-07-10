@@ -18,6 +18,8 @@ ENV ALGA_APPLIANCE_STATUS_UI_DIR=/opt/alga-appliance/status-ui/dist
 ENV ALGA_APPLIANCE_MODE=kubernetes-control-plane
 ENV ALGA_APPLIANCE_BUNDLE_ORIGIN=baked-iso
 
+COPY ee/appliance/host-service/package.json ee/appliance/host-service/package-lock.json ./host-service/
+RUN npm ci --omit=dev --prefix ./host-service
 COPY ee/appliance/host-service/*.mjs ./host-service/
 COPY ee/appliance/scripts ./scripts
 COPY ee/appliance/manifests ./manifests

@@ -2,7 +2,7 @@
 
 - Slug: `appliance-pod-access`
 - Date: `2026-07-10`
-- Status: Draft
+- Status: Implementation complete; live smoke test pending
 
 ## Summary
 
