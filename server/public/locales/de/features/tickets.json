@@ -884,7 +884,9 @@
     "noActiveTimePeriodMessage": "Kein aktiver Zeitraum gefunden. Zeiträume müssen im Abrechnungs-Dashboard eingerichtet werden, bevor Zeiteinträge hinzugefügt werden können.",
     "goToTimePeriodsSetup": "Zur Einrichtung der Zeiträume",
     "emailNotificationLogs": "E-Mail-Benachrichtigungsprotokolle",
-    "ticketActivity": "Ticket-Aktivität"
+    "ticketActivity": "Ticket-Aktivität",
+    "discardChanges": "Änderungen verwerfen",
+    "saved": "Gespeichert"
   },
   "properties": {
     "timeEntry": "Zeiteintrag",
@@ -1457,7 +1459,9 @@
       "responseWaitingOnClient": "Warten auf Kunde",
       "responseNone": "Keine Antwort erforderlich",
       "additionalAgentsTooltip": "Weitere Bearbeiter:",
-      "unknownAgent": "Unbekannter Bearbeiter"
+      "unknownAgent": "Unbekannter Bearbeiter",
+      "category": "Kategorie",
+      "selectDestinationStatus": "Wähle vor dem Speichern einen Status für das neue Board aus."
     },
     "layout": {
       "grid": "Raster",

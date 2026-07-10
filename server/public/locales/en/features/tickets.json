@@ -892,7 +892,9 @@
     "noActiveTimePeriodMessage": "No active time period found. Time periods need to be set up in the billing dashboard before adding time entries.",
     "goToTimePeriodsSetup": "Go to Time Periods Setup",
     "emailNotificationLogs": "Email Notification Logs",
-    "ticketActivity": "Ticket Activity"
+    "ticketActivity": "Ticket Activity",
+    "discardChanges": "Discard Changes",
+    "saved": "Saved"
   },
   "properties": {
     "timeEntry": "Time Entry",
@@ -1465,7 +1467,9 @@
       "resolutionSla": "Resolution SLA:",
       "responseWaitingOnUs": "Waiting on us",
       "responseWaitingOnClient": "Waiting on client",
-      "responseNone": "No reply needed"
+      "responseNone": "No reply needed",
+      "category": "Category",
+      "selectDestinationStatus": "Select a status for the new board before saving."
     },
     "layout": {
       "grid": "Grid",

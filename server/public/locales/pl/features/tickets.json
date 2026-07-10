@@ -994,7 +994,9 @@
     "noActiveTimePeriodMessage": "Nie znaleziono aktywnego okresu rozliczeniowego. Okresy rozliczeniowe muszą zostać skonfigurowane w panelu rozliczeń przed dodaniem wpisów czasu.",
     "goToTimePeriodsSetup": "Przejdź do konfiguracji okresów rozliczeniowych",
     "emailNotificationLogs": "Dzienniki powiadomień e-mail",
-    "ticketActivity": "Aktywność zgłoszenia"
+    "ticketActivity": "Aktywność zgłoszenia",
+    "discardChanges": "Odrzuć zmiany",
+    "saved": "Zapisano"
   },
   "properties": {
     "timeEntry": "Wpis czasu",
@@ -1597,7 +1599,9 @@
       "responseWaitingOnClient": "Oczekuje na klienta",
       "responseNone": "Odpowiedź niepotrzebna",
       "additionalAgentsTooltip": "Dodatkowi agenci:",
-      "unknownAgent": "Nieznany agent"
+      "unknownAgent": "Nieznany agent",
+      "category": "Kategoria",
+      "selectDestinationStatus": "Wybierz status dla nowej tablicy przed zapisaniem."
     },
     "layout": {
       "grid": "Siatka",

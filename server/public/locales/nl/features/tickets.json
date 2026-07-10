@@ -884,7 +884,9 @@
     "noActiveTimePeriodMessage": "Geen actieve periode gevonden. Periodes moeten worden ingesteld in het facturatiedashboard voordat je tijdregistraties kunt toevoegen.",
     "goToTimePeriodsSetup": "Naar instellingen voor periodes",
     "emailNotificationLogs": "Logboek e-mailmeldingen",
-    "ticketActivity": "Ticketactiviteit"
+    "ticketActivity": "Ticketactiviteit",
+    "discardChanges": "Wijzigingen verwerpen",
+    "saved": "Opgeslagen"
   },
   "properties": {
     "timeEntry": "Tijdregistratie",
@@ -1457,7 +1459,9 @@
       "responseWaitingOnClient": "Wacht op klant",
       "responseNone": "Geen antwoord nodig",
       "additionalAgentsTooltip": "Extra medewerkers:",
-      "unknownAgent": "Onbekende medewerker"
+      "unknownAgent": "Onbekende medewerker",
+      "category": "Categorie",
+      "selectDestinationStatus": "Selecteer een status voor het nieuwe bord voordat je opslaat."
     },
     "layout": {
       "grid": "Raster",

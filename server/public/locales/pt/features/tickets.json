@@ -884,7 +884,9 @@
     "noActiveTimePeriodMessage": "Nenhum período de tempo ativo encontrado. Os períodos de tempo precisam ser configurados no painel de cobrança antes de adicionar entradas de tempo.",
     "goToTimePeriodsSetup": "Ir para a configuração de períodos de tempo",
     "emailNotificationLogs": "Logs de notificação por e-mail",
-    "ticketActivity": "Atividade do ticket"
+    "ticketActivity": "Atividade do ticket",
+    "discardChanges": "Descartar alterações",
+    "saved": "Salvo"
   },
   "properties": {
     "timeEntry": "Entrada de tempo",
@@ -1457,7 +1459,9 @@
       "responseWaitingOnClient": "Aguardando o cliente",
       "responseNone": "Nenhuma resposta necessária",
       "additionalAgentsTooltip": "Agentes adicionais:",
-      "unknownAgent": "Agente desconhecido"
+      "unknownAgent": "Agente desconhecido",
+      "category": "Categoria",
+      "selectDestinationStatus": "Selecione um status para o novo quadro antes de salvar."
     },
     "layout": {
       "grid": "Grade",

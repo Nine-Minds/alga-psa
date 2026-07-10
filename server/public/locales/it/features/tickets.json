@@ -884,7 +884,9 @@
     "noActiveTimePeriodMessage": "Nessun periodo di tempo attivo trovato. È necessario configurare i periodi di tempo nella dashboard di fatturazione prima di aggiungere voci di tempo.",
     "goToTimePeriodsSetup": "Vai alla configurazione dei periodi di tempo",
     "emailNotificationLogs": "Log delle notifiche email",
-    "ticketActivity": "Attività del ticket"
+    "ticketActivity": "Attività del ticket",
+    "discardChanges": "Annulla modifiche",
+    "saved": "Salvato"
   },
   "properties": {
     "timeEntry": "Voce di tempo",
@@ -1457,7 +1459,9 @@
       "responseWaitingOnClient": "In attesa del cliente",
       "responseNone": "Nessuna risposta necessaria",
       "additionalAgentsTooltip": "Agenti aggiuntivi:",
-      "unknownAgent": "Agente sconosciuto"
+      "unknownAgent": "Agente sconosciuto",
+      "category": "Categoria",
+      "selectDestinationStatus": "Seleziona uno stato per il nuovo canale prima di salvare."
     },
     "layout": {
       "grid": "Griglia",

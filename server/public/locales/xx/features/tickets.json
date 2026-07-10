@@ -892,7 +892,9 @@
     "noActiveTimePeriodMessage": "11111",
     "goToTimePeriodsSetup": "11111",
     "emailNotificationLogs": "11111",
-    "ticketActivity": "11111"
+    "ticketActivity": "11111",
+    "discardChanges": "11111",
+    "saved": "11111"
   },
   "properties": {
     "timeEntry": "11111",
@@ -1465,7 +1467,9 @@
       "resolutionSla": "11111",
       "responseWaitingOnUs": "11111",
       "responseWaitingOnClient": "11111",
-      "responseNone": "11111"
+      "responseNone": "11111",
+      "category": "11111",
+      "selectDestinationStatus": "11111"
     },
     "layout": {
       "grid": "11111",

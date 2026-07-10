@@ -884,7 +884,9 @@
     "noActiveTimePeriodMessage": "Aucune période de temps active trouvée. Les périodes de temps doivent être configurées dans le tableau de bord de facturation avant d'ajouter des entrées de temps.",
     "goToTimePeriodsSetup": "Accéder à la configuration des périodes de temps",
     "emailNotificationLogs": "Journaux de notification par e-mail",
-    "ticketActivity": "Activité du ticket"
+    "ticketActivity": "Activité du ticket",
+    "discardChanges": "Annuler les modifications",
+    "saved": "Enregistré"
   },
   "properties": {
     "timeEntry": "Entrée de temps",
@@ -1457,7 +1459,9 @@
       "responseWaitingOnClient": "En attente du client",
       "responseNone": "Aucune réponse requise",
       "additionalAgentsTooltip": "Agents supplémentaires :",
-      "unknownAgent": "Agent inconnu"
+      "unknownAgent": "Agent inconnu",
+      "category": "Catégorie",
+      "selectDestinationStatus": "Sélectionnez un statut pour le nouveau tableau avant de sauvegarder."
     },
     "layout": {
       "grid": "Grille",
