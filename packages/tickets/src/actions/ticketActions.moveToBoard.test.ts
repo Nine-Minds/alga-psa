@@ -71,6 +71,17 @@ vi.mock('@alga-psa/tags/actions', () => ({
   findTagsByEntityIds: (...args: any[]) => findTagsByEntityIdsMock(...args),
 }));
 
+// ticketActions imports the deep modules, not the barrel — mock those too so
+// the real tagActions (which needs withOptionalAuth at module load) never loads.
+vi.mock('@alga-psa/tags/actions/tagActions', () => ({
+  createTagsForEntityWithTransaction: (...args: any[]) => createTagsForEntityWithTransactionMock(...args),
+  findTagsByEntityIds: (...args: any[]) => findTagsByEntityIdsMock(...args),
+}));
+
+vi.mock('@alga-psa/tags/actions/tagActionErrors', () => ({
+  isTagActionError: () => false,
+}));
+
 vi.mock('./teamAssignmentActions', () => ({
   assignTeamToTicket: (...args: any[]) => assignTeamToTicketMock(...args),
   removeTeamFromTicket: (...args: any[]) => removeTeamFromTicketMock(...args),

@@ -322,8 +322,10 @@ describe('updateTicketWithCache live updates', () => {
     hasPermissionMock.mockResolvedValue(false);
 
     const { updateTicketWithCache } = await import('./optimizedTicketActions');
-    await expect(updateTicketWithCache('ticket-1', { status_id: 'status-2' })).rejects.toThrow(
-      'Permission denied: Cannot update ticket'
+    // Expected failures return a typed action error instead of throwing.
+    const result = await updateTicketWithCache('ticket-1', { status_id: 'status-2' });
+    expect(result).toEqual(
+      expect.objectContaining({ permissionError: 'Permission denied: Cannot update ticket' })
     );
 
     expect(publishRedisMock).not.toHaveBeenCalled();
