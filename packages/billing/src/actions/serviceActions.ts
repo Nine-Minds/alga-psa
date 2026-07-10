@@ -1,12 +1,11 @@
 'use server'
 
 import { revalidatePath } from 'next/cache'
-import Service, { serviceSchema, refinedServiceSchema } from '../models/service'; // Import both schemas
+import Service, { parseServiceReadRows } from '../models/service';
 import type { IService, IServiceType, IServicePrice, DeletionValidationResult } from '@alga-psa/types';
 import { withTransaction } from '@alga-psa/db';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { validateArray } from '@alga-psa/validation';
 import { ServiceTypeModel } from '../models/serviceType'; // Import ServiceTypeModel
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
@@ -433,13 +432,7 @@ export const getServices = withAuth(async (
           return acc;
         }, {} as Record<string, IServicePrice[]>);
 
-        // Validate and transform the data
-        const validatedServices = servicesData.map((service: { service_id: string }) => {
-            return serviceSchema.parse({
-              ...service,
-              prices: pricesByService[service.service_id] || []
-            });
-        });
+        const validatedServices = parseServiceReadRows(servicesData, pricesByService);
 
             // Return paginated response
             return {

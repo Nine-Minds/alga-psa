@@ -289,11 +289,15 @@
     "fields": {
       "client": "Cliente",
       "invoiceNumber": "Número de factura",
-      "invoiceNumberOptional": "Número de factura (opcional)"
+      "invoiceNumberOptional": "Número de factura (opcional)",
+      "sourceSalesOrder": "Source sales order (optional)"
     },
     "placeholders": {
       "selectClient": "Seleccione un cliente",
-      "invoiceNumberOptional": "Déjelo en blanco para generar automáticamente"
+      "invoiceNumberOptional": "Déjelo en blanco para generar automáticamente",
+      "sourceSalesOrder": "Select a fulfilled or manually billable sales order",
+      "searchSalesOrders": "Search sales orders...",
+      "noInvoiceableSalesOrders": "No invoiceable sales orders found."
     },
     "automatedItems": {
       "title": "Líneas de pedido automatizadas",
@@ -310,7 +314,9 @@
       "addDiscount": "Agregar descuento",
       "generate": "Generar factura",
       "saveChanges": "Guardar cambios",
-      "processing": "Procesando..."
+      "processing": "Procesando...",
+      "generateSalesOrderInvoice": "Generate Sales Order Invoice",
+      "clearSalesOrderSource": "Clear sales order source"
     },
     "labels": {
       "total": "Total"
@@ -332,11 +338,17 @@
       "loadItems": "Error al cargar artículos de factura",
       "refresh": "Se produjo un error al actualizar los datos de la factura.",
       "updateFailed": "Error al actualizar la factura",
-      "generateFailed": "Error al generar factura"
+      "generateFailed": "Error al generar factura",
+      "salesOrderGenerateFailed": "Could not generate the sales order invoice.",
+      "salesOrderNothingToInvoice": "Nothing remains to invoice for this sales order.",
+      "salesOrderNotInvoiceable": "That sales order is no longer available to invoice."
     },
     "errorFallback": {
       "title": "algo salió mal",
       "retry": "Intentar de nuevo"
+    },
+    "salesOrderContext": {
+      "summary": "{{quantity}} item(s) ready to invoice from {{lineCount}} line(s). This draft will be linked back to the sales order."
     }
   },
   "draftsTab": {

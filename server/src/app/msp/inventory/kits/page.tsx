@@ -1,4 +1,4 @@
-import { listInventoryProducts } from '@alga-psa/inventory/actions';
+import { listKitComponentCandidates, listKitServiceTypes, listKitSummaries } from '@alga-psa/inventory/actions';
 import { KitManager } from '@alga-psa/inventory/components';
 import { getSession } from '@alga-psa/auth';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
@@ -22,18 +22,33 @@ export default async function KitsPage() {
   }
 
   let initialKits: any[] = [];
+  let serviceTypes: any[] = [];
+  let componentCandidates: any[] = [];
   try {
-    const result = await listInventoryProducts();
-    if (isActionMessageError(result) || isActionPermissionError(result)) {
-      console.error('Failed to load kits:', getErrorMessage(result));
-    } else {
-      initialKits = result.filter((p: any) => p.is_kit);
+    const [kitsResult, serviceTypesResult, candidatesResult] = await Promise.all([
+      listKitSummaries(),
+      listKitServiceTypes(),
+      listKitComponentCandidates(),
+    ]);
+    for (const result of [kitsResult, serviceTypesResult, candidatesResult]) {
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        console.error('Failed to load kits:', getErrorMessage(result));
+      }
+    }
+    if (!isActionMessageError(kitsResult) && !isActionPermissionError(kitsResult)) {
+      initialKits = kitsResult;
+    }
+    if (!isActionMessageError(serviceTypesResult) && !isActionPermissionError(serviceTypesResult)) {
+      serviceTypes = serviceTypesResult;
+    }
+    if (!isActionMessageError(candidatesResult) && !isActionPermissionError(candidatesResult)) {
+      componentCandidates = candidatesResult;
     }
   } catch (error) {
     console.error('Failed to load kits:', error);
   }
 
-  return <KitManager initialKits={initialKits} />;
+  return <KitManager initialKits={initialKits} serviceTypes={serviceTypes} componentCandidates={componentCandidates} />;
 }
 
 export const dynamic = 'force-dynamic';

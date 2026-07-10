@@ -240,6 +240,14 @@ export interface ISalesOrder extends TenantEntity {
   client_id: string;
   /** Denormalized client display name (joined in list reads); absent on bare row reads. */
   client_name?: string | null;
+  /** List-only summary values, populated by listSalesOrders. Monetary values are cents. */
+  total_amount?: number;
+  invoiceable_amount?: number;
+  quantity_ordered_total?: number;
+  quantity_fulfilled_total?: number;
+  quantity_invoiced_total?: number;
+  line_count?: number;
+  drop_ship_line_count?: number;
   status: SalesOrderStatus;
   order_date?: string | Date | null;
   expected_ship_date?: string | Date | null;
@@ -407,13 +415,24 @@ export interface IRmaCase extends TenantEntity {
   rma_id: string;
   rma_type: RmaType;
   returned_unit_id?: string | null;
+  /** Denormalized display fields populated by RMA list/report reads. */
+  returned_serial_number?: string | null;
+  returned_mac_address?: string | null;
+  returned_unit_cost?: number | null;
+  returned_unit_cost_currency?: string | null;
   service_id?: string | null;
+  service_name?: string | null;
+  service_sku?: string | null;
   client_id?: string | null;
+  client_name?: string | null;
   asset_id?: string | null;
   vendor_id?: string | null;
+  vendor_name?: string | null;
   rma_reference?: string | null;
   reason?: string | null;
   status: RmaStatus;
+  /** List-only age in days while the case is sitting with the vendor. */
+  age_days?: number | null;
   replacement_unit_id?: string | null;
   dead_unit_due_date?: string | Date | null;
   dead_unit_returned_at?: string | Date | null;

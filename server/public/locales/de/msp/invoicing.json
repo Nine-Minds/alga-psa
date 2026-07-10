@@ -289,11 +289,15 @@
     "fields": {
       "client": "Kunde",
       "invoiceNumber": "Rechnungsnummer",
-      "invoiceNumberOptional": "Rechnungsnummer (optional)"
+      "invoiceNumberOptional": "Rechnungsnummer (optional)",
+      "sourceSalesOrder": "Source sales order (optional)"
     },
     "placeholders": {
       "selectClient": "Wählen Sie einen Kunden aus",
-      "invoiceNumberOptional": "Für die automatische Generierung leer lassen"
+      "invoiceNumberOptional": "Für die automatische Generierung leer lassen",
+      "sourceSalesOrder": "Select a fulfilled or manually billable sales order",
+      "searchSalesOrders": "Search sales orders...",
+      "noInvoiceableSalesOrders": "No invoiceable sales orders found."
     },
     "automatedItems": {
       "title": "Automatisierte Werbebuchungen",
@@ -310,7 +314,9 @@
       "addDiscount": "Rabatt hinzufügen",
       "generate": "Rechnung erstellen",
       "saveChanges": "Änderungen speichern",
-      "processing": "Wird verarbeitet..."
+      "processing": "Wird verarbeitet...",
+      "generateSalesOrderInvoice": "Generate Sales Order Invoice",
+      "clearSalesOrderSource": "Clear sales order source"
     },
     "labels": {
       "total": "Gesamt"
@@ -332,11 +338,17 @@
       "loadItems": "Fehler beim Laden der Rechnungspositionen",
       "refresh": "Beim Aktualisieren der Rechnungsdaten ist ein Fehler aufgetreten.",
       "updateFailed": "Fehler beim Aktualisieren der Rechnung",
-      "generateFailed": "Fehler beim Generieren der Rechnung"
+      "generateFailed": "Fehler beim Generieren der Rechnung",
+      "salesOrderGenerateFailed": "Could not generate the sales order invoice.",
+      "salesOrderNothingToInvoice": "Nothing remains to invoice for this sales order.",
+      "salesOrderNotInvoiceable": "That sales order is no longer available to invoice."
     },
     "errorFallback": {
       "title": "Etwas ist schief gelaufen",
       "retry": "Erneut versuchen"
+    },
+    "salesOrderContext": {
+      "summary": "{{quantity}} item(s) ready to invoice from {{lineCount}} line(s). This draft will be linked back to the sales order."
     }
   },
   "draftsTab": {

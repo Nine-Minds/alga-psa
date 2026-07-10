@@ -28,6 +28,7 @@ import {
 } from '../lib';
 import { kitActionErrorFrom } from '../lib/kitActionErrors';
 import { explodeKitOntoSalesOrder } from './kitActions';
+import { resolveKitPriceInTransaction } from '../lib/kitPricing';
 
 /**
  * Sales orders (outbound document) — see design §6.I.
@@ -45,6 +46,43 @@ const INVOICE_MODES: SalesOrderInvoiceMode[] = ['on_fulfillment', 'manual'];
 const ALLOCATION_MODES: SalesOrderAllocationMode[] = ['soft', 'hard'];
 const FULFILLMENT_TYPES: SalesOrderLineFulfillmentType[] = ['from_stock', 'drop_ship'];
 type StockUnitSearchTouch = { unit_id: string; service_id?: string };
+
+function normalizeSalesOrderUnitPrice(value: unknown, fieldName = 'unit_price'): number {
+  const price = Number(value);
+  if (!Number.isFinite(price) || price < 0) {
+    throw new Error(`${fieldName} must be a non-negative amount`);
+  }
+  return Math.round(price);
+}
+
+/** Resolve a kit line at write time unless the caller explicitly marks a one-order override. */
+export async function resolveKitSalesOrderUnitPrice(
+  trx: Knex.Transaction,
+  tenant: string,
+  kitServiceId: string,
+  override?: number | null,
+  orderCurrency?: string | null,
+): Promise<number> {
+  if (override !== undefined && override !== null) {
+    return normalizeSalesOrderUnitPrice(override, 'kit_unit_price_override');
+  }
+  if (orderCurrency) {
+    const kit = await trx('product_inventory_settings as pis')
+      .join('service_catalog as sc', function () {
+        this.on('pis.service_id', '=', 'sc.service_id').andOn('pis.tenant', '=', 'sc.tenant');
+      })
+      .where({ 'pis.tenant': tenant, 'pis.service_id': kitServiceId })
+      .select(trx.raw("COALESCE(pis.cost_currency, sc.cost_currency, 'USD') as currency_code"))
+      .first() as { currency_code?: string } | undefined;
+    const kitCurrency = String(kit?.currency_code ?? 'USD').toUpperCase();
+    if (kitCurrency !== orderCurrency.toUpperCase()) {
+      throw new Error(
+        `Kit pricing is configured in ${kitCurrency}; enter an explicit ${orderCurrency.toUpperCase()} price for this sales order`,
+      );
+    }
+  }
+  return resolveKitPriceInTransaction(trx, tenant, kitServiceId);
+}
 
 async function requireSoPerm(user: any, action: 'create' | 'read' | 'update' | 'delete'): Promise<void> {
   if (!(await hasPermission(user, 'sales_order', action))) {
@@ -398,19 +436,68 @@ export const getSalesOrder = withAuth(
 );
 
 export const listSalesOrders = withAuth(
-  async (user, { tenant }, _input?: { includeCancelled?: boolean }): Promise<ISalesOrder[] | SalesOrderActionError> => {
+  async (
+    user,
+    { tenant },
+    input?: { includeCancelled?: boolean; serviceId?: string },
+  ): Promise<ISalesOrder[] | SalesOrderActionError> => {
     return withSalesOrderActionErrors(async () => {
       await requireSoPerm(user, 'read');
       const { knex: db } = await createTenantKnex();
       return withTransaction(db, async (trx: Knex.Transaction) => {
+        const lineMetrics = trx('sales_order_lines as sol')
+          .where({ 'sol.tenant': tenant })
+          .groupBy('sol.tenant', 'sol.so_id')
+          .select('sol.tenant', 'sol.so_id')
+          .select(
+            trx.raw('COALESCE(SUM(sol.quantity_ordered * sol.unit_price), 0)::bigint as total_amount'),
+            trx.raw(
+              `COALESCE(SUM(
+                GREATEST(COALESCE(sol.quantity_fulfilled, 0) - COALESCE(sol.quantity_invoiced, 0), 0)
+                * sol.unit_price
+              ), 0)::bigint as invoiceable_amount`,
+            ),
+            trx.raw('COALESCE(SUM(sol.quantity_ordered), 0)::int as quantity_ordered_total'),
+            trx.raw('COALESCE(SUM(sol.quantity_fulfilled), 0)::int as quantity_fulfilled_total'),
+            trx.raw('COALESCE(SUM(sol.quantity_invoiced), 0)::int as quantity_invoiced_total'),
+            trx.raw('COUNT(*)::int as line_count'),
+            trx.raw("COUNT(*) FILTER (WHERE sol.fulfillment_type = 'drop_ship')::int as drop_ship_line_count"),
+          )
+          .as('lm');
+
         // Join the client so the list can show a name, not a raw UUID.
-        return (await trx('sales_orders as so')
+        const query = trx('sales_orders as so')
           .leftJoin('clients as c', function () {
             this.on('c.client_id', '=', 'so.client_id').andOn('c.tenant', '=', 'so.tenant');
           })
+          .leftJoin(lineMetrics, function () {
+            this.on('lm.so_id', '=', 'so.so_id').andOn('lm.tenant', '=', 'so.tenant');
+          })
           .where('so.tenant', tenant)
           .orderBy('so.created_at', 'desc')
-          .select('so.*', 'c.client_name')) as ISalesOrder[];
+          .select(
+            'so.*',
+            'c.client_name',
+            trx.raw('COALESCE(lm.total_amount, 0)::bigint as total_amount'),
+            trx.raw('COALESCE(lm.invoiceable_amount, 0)::bigint as invoiceable_amount'),
+            trx.raw('COALESCE(lm.quantity_ordered_total, 0)::int as quantity_ordered_total'),
+            trx.raw('COALESCE(lm.quantity_fulfilled_total, 0)::int as quantity_fulfilled_total'),
+            trx.raw('COALESCE(lm.quantity_invoiced_total, 0)::int as quantity_invoiced_total'),
+            trx.raw('COALESCE(lm.line_count, 0)::int as line_count'),
+            trx.raw('COALESCE(lm.drop_ship_line_count, 0)::int as drop_ship_line_count'),
+          );
+
+        if (input?.serviceId) {
+          query.whereExists(function () {
+            this.select(trx.raw('1'))
+              .from('sales_order_lines as usage_sol')
+              .whereRaw('usage_sol.tenant = so.tenant')
+              .whereRaw('usage_sol.so_id = so.so_id')
+              .where('usage_sol.service_id', input.serviceId);
+          });
+        }
+
+        return (await query) as ISalesOrder[];
       });
     });
   },
@@ -433,7 +520,8 @@ export const createSalesOrder = withAuth(
       lines?: Array<{
         service_id: string;
         quantity_ordered: number;
-        unit_price: number;
+        unit_price?: number;
+        kit_unit_price_override?: number | null;
         tax_rate_id?: string | null;
         fulfillment_type?: SalesOrderLineFulfillmentType;
         currency_code?: string;
@@ -489,9 +577,18 @@ export const createSalesOrder = withAuth(
           const meta = await getProductMeta(trx, tenant, l.service_id);
           if (meta.is_kit) {
             // Kit explosion is owned by kitActions — insert parent + component lines, don't duplicate it.
-            await explodeKitOntoSalesOrder(trx, tenant, soId, l.service_id, l.quantity_ordered, l.unit_price);
+            const kitUnitPrice = await resolveKitSalesOrderUnitPrice(
+              trx,
+              tenant,
+              l.service_id,
+              l.kit_unit_price_override,
+              currency,
+            );
+            await explodeKitOntoSalesOrder(trx, tenant, soId, l.service_id, l.quantity_ordered, kitUnitPrice);
             continue;
           }
+
+          const unitPrice = normalizeSalesOrderUnitPrice(l.unit_price);
 
           await trx('sales_order_lines').insert({
             tenant,
@@ -500,7 +597,7 @@ export const createSalesOrder = withAuth(
             quantity_ordered: l.quantity_ordered,
             quantity_fulfilled: 0,
             quantity_invoiced: 0,
-            unit_price: l.unit_price,
+            unit_price: unitPrice,
             cost_snapshot: meta.average_cost ?? meta.catalog_cost ?? null,
             tax_rate_id: l.tax_rate_id ?? null,
             fulfillment_type: fulfillmentType,
@@ -531,7 +628,8 @@ export const addSoLine = withAuth(
     input: {
       service_id: string;
       quantity_ordered: number;
-      unit_price: number;
+      unit_price?: number;
+      kit_unit_price_override?: number | null;
       tax_rate_id?: string | null;
       fulfillment_type?: SalesOrderLineFulfillmentType;
       currency_code?: string;
@@ -554,9 +652,18 @@ export const addSoLine = withAuth(
 
         const meta = await getProductMeta(trx, tenant, input.service_id);
         if (meta.is_kit) {
-          const exploded = await explodeKitOntoSalesOrder(trx, tenant, soId, input.service_id, input.quantity_ordered, input.unit_price);
+          const kitUnitPrice = await resolveKitSalesOrderUnitPrice(
+            trx,
+            tenant,
+            input.service_id,
+            input.kit_unit_price_override,
+            so.currency_code,
+          );
+          const exploded = await explodeKitOntoSalesOrder(trx, tenant, soId, input.service_id, input.quantity_ordered, kitUnitPrice);
           return [exploded.parentLine, ...exploded.componentLines];
         }
+
+        const unitPrice = normalizeSalesOrderUnitPrice(input.unit_price);
 
         const [row] = await trx('sales_order_lines')
           .insert({
@@ -566,7 +673,7 @@ export const addSoLine = withAuth(
             quantity_ordered: input.quantity_ordered,
             quantity_fulfilled: 0,
             quantity_invoiced: 0,
-            unit_price: input.unit_price,
+            unit_price: unitPrice,
             cost_snapshot: meta.average_cost ?? meta.catalog_cost ?? null,
             tax_rate_id: input.tax_rate_id ?? null,
             fulfillment_type: fulfillmentType,

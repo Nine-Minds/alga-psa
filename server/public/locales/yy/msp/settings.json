@@ -1793,10 +1793,10 @@
       "description": "55555"
     },
     "status": {
-      "title": "Sign-in providers",
-      "caption": "These providers are managed by the platform — no client IDs or DNS setup is required. Enable auto-link or assign users below.",
-      "available": "Available",
-      "notConfigured": "Not configured"
+      "title": "55555",
+      "caption": "55555",
+      "available": "55555",
+      "notConfigured": "55555"
     },
     "autoLink": {
       "title": "55555",

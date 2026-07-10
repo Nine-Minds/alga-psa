@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useCallback, useEffect } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -71,7 +72,10 @@ export function StockOverview({
   initialProducts: InventoryProduct[];
   defaultCurrencyCode?: string;
 }) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
   const { t } = useTranslation('features/inventory');
+  const attentionFilter = searchParams?.get('attention') === '1';
 
   /** "Out · 1 site" / "Low · 2 sites" — per-location scope so a summed total never
    *  silently contradicts the pill (e.g. 8 available, but out at one location). */
@@ -91,7 +95,7 @@ export function StockOverview({
   const [locations, setLocations] = useState<IStockLocation[]>([]);
 
   const [search, setSearch] = useState('');
-  const [lowOnly, setLowOnly] = useState(false);
+  const [lowOnly, setLowOnly] = useState(attentionFilter);
 
   const [receiveOpen, setReceiveOpen] = useState(false);
   const [receiveForm, setReceiveForm] = useState<ReceiveForm>(EMPTY_RECEIVE);
@@ -161,6 +165,15 @@ export function StockOverview({
   useEffect(() => {
     loadLocations();
   }, [loadLocations]);
+
+  useEffect(() => {
+    if (attentionFilter) setLowOnly(true);
+  }, [attentionFilter]);
+
+  const setNeedsAttentionFilter = (enabled: boolean) => {
+    setLowOnly(enabled);
+    if (!enabled && attentionFilter) router.push('/msp/inventory/stock');
+  };
 
   const openReceive = (product?: InventoryProduct) => {
     setReceiveForm({
@@ -379,7 +392,7 @@ export function StockOverview({
           <Button
             id="stock-overview-low-filter"
             variant={lowOnly ? 'soft' : 'outline'}
-            onClick={() => setLowOnly((v) => !v)}
+            onClick={() => setNeedsAttentionFilter(!lowOnly)}
           >
             {t('stock.needsAttention', 'Needs attention')}
           </Button>
@@ -405,7 +418,7 @@ export function StockOverview({
               variant="link"
               onClick={() => {
                 setSearch('');
-                setLowOnly(false);
+                setNeedsAttentionFilter(false);
               }}
             >
               {t('stock.clearFilters', 'Clear filters')}
