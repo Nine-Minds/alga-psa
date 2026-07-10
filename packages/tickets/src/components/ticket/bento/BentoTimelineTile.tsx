@@ -749,7 +749,7 @@ export function BentoTimelineTile({
                 <div className="flex gap-3">
                   <div className="flex-shrink-0 w-6 flex justify-center pt-1">
                     <div
-                      className={`relative z-10 w-6 h-6 rounded-full ring-1 flex items-center justify-center flex-shrink-0 ${v.pin}`}
+                      className={`relative w-6 h-6 rounded-full ring-1 flex items-center justify-center flex-shrink-0 ${v.pin}`}
                     >
                       {v.icon}
                     </div>
