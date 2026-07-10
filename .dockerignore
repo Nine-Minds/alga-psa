@@ -13,6 +13,10 @@ build
 **/dist
 !shared/dist
 !shared/dist/**
+!packages/core/dist
+!packages/core/dist/**
+!packages/db/dist
+!packages/db/dist/**
 !ee/packages/workflows/dist/**
 !packages/workflow-streams/dist/**
 # Runtime-resolved @alga-psa packages: their dist/ must ship in images whose

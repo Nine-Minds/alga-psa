@@ -68,3 +68,13 @@ test('Temporal worker image includes database exports required by onboarding see
     /COPY --from=development \/app\/packages\/db\/dist \/app\/packages\/db\/dist/
   );
 });
+
+test('EE application image requires onboarding seed runtime package exports', () => {
+  const dockerfile = read('ee/server/Dockerfile');
+  const dockerignore = read('.dockerignore');
+
+  assert.match(dockerfile, /test -f \/app\/packages\/core\/dist\/index\.js/);
+  assert.match(dockerfile, /test -f \/app\/packages\/db\/dist\/index\.js/);
+  assert.match(dockerignore, /!packages\/core\/dist\/\*\*/);
+  assert.match(dockerignore, /!packages\/db\/dist\/\*\*/);
+});
