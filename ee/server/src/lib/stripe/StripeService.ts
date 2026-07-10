@@ -244,6 +244,20 @@ function tenantScopedTable<Row extends object = Record<string, any>>(
   return tenantDb(conn, tenant).table<Row>(table);
 }
 
+/**
+ * A tenant's license (seat) subscriptions in the given statuses. Excludes
+ * add-on subscriptions: those carry metadata.addon_key, license rows never do.
+ */
+function licenseSubscriptions(
+  conn: Knex,
+  tenant: string,
+  statuses: readonly string[]
+): Knex.QueryBuilder<Record<string, any>, Record<string, any>[]> {
+  return tenantScopedTable(conn, 'stripe_subscriptions', tenant)
+    .whereIn('status', [...statuses])
+    .whereRaw("COALESCE(metadata->>'addon_key', '') = ''");
+}
+
 export class StripeService {
   private stripe!: Stripe;
   private config!: Awaited<ReturnType<typeof getStripeConfig>>;
@@ -667,12 +681,9 @@ export class StripeService {
     const knex = await getConnection(tenantId);
     const customer = await this.getOrImportCustomer(tenantId);
 
-    // Get existing subscription
-    const existingSubscription = await tenantScopedTable(knex, 'stripe_subscriptions', tenantId)
-      .where({
-        stripe_customer_id: customer.stripe_customer_id,
-        status: 'active',
-      })
+    // Get existing license subscription (add-on subscriptions previewed separately)
+    const existingSubscription = await licenseSubscriptions(knex, tenantId, ['active'])
+      .where({ stripe_customer_id: customer.stripe_customer_id })
       .first();
 
     if (!existingSubscription || !existingSubscription.stripe_subscription_item_id) {
@@ -732,7 +743,9 @@ export class StripeService {
    * Update existing subscription quantity or create checkout for new subscription
    *
    * IMPORTANT: Different behavior for increases vs decreases:
-   * - Increase: Immediate change with prorated charge
+   * - Increase (active): Immediate change with prorated charge
+   * - Increase (trialing): Immediate change, no charge — billing starts at the
+   *   new quantity when the trial converts
    * - Decrease: Scheduled for end of billing period (no immediate credit)
    *
    * Returns either an updated subscription or checkout session details
@@ -761,27 +774,21 @@ export class StripeService {
     // Get or import customer
     const customer = await this.getOrImportCustomer(tenantId);
 
-    // Check for an existing active or trialing subscription for the license price.
-    const existingSubscription = await tenantScopedTable(knex, 'stripe_subscriptions', tenantId)
-      .where({
-        stripe_customer_id: customer.stripe_customer_id,
-      })
-      .whereIn('status', ['active', 'trialing'])
+    // Check for an existing active or trialing license subscription, preferring
+    // active over trialing so a tenant that temporarily carries both rows gets
+    // seat changes on the paid subscription.
+    const existingSubscription = await licenseSubscriptions(knex, tenantId, ['active', 'trialing'])
+      .where({ stripe_customer_id: customer.stripe_customer_id })
+      .orderByRaw("CASE WHEN status = 'active' THEN 0 ELSE 1 END")
       .first();
-
-    // Trials can only be DECREASED here (scheduled at trial end, no charge). A trial
-    // increase falls through to checkout so we never bill mid-trial.
-    const isTrialingIncrease =
-      existingSubscription?.status === 'trialing' &&
-      quantity > existingSubscription.quantity;
 
     if (
       existingSubscription &&
-      existingSubscription.stripe_subscription_item_id &&
-      !isTrialingIncrease
+      existingSubscription.stripe_subscription_item_id
     ) {
       const currentQuantity = existingSubscription.quantity;
       const isIncrease = quantity > currentQuantity;
+      const isTrialing = existingSubscription.status === 'trialing';
 
       logger.info(
         `[StripeService] Found existing subscription ${existingSubscription.stripe_subscription_external_id}, ` +
@@ -789,10 +796,15 @@ export class StripeService {
       );
 
       if (isIncrease) {
-        // INCREASE: Immediate change with prorated charge
+        // INCREASE: Immediate change with prorated charge.
         // IMPORTANT: payment_behavior: 'error_if_incomplete' ensures the API call fails
         // if payment cannot be collected immediately, preventing license count updates
         // when payment fails (e.g., insufficient funds, expired card)
+        //
+        // Trialing subscriptions increase in place with NO invoice: the seats are
+        // usable immediately and billing simply starts at the new quantity when the
+        // trial converts. Paying mid-trial is only for tier upgrades (upgradeTier),
+        // never for adding seats on the current plan.
 
         // `quantity` is the user-facing total. For multi-item subscriptions
         // (platform fee + per-user line), the per-user line only carries the
@@ -815,8 +827,12 @@ export class StripeService {
                 quantity: perUserQuantity,
               },
             ],
-            proration_behavior: 'always_invoice', // Charge prorated amount now
-            payment_behavior: 'error_if_incomplete', // Fail if payment cannot be collected
+            ...(isTrialing
+              ? { proration_behavior: 'none' as const }
+              : {
+                  proration_behavior: 'always_invoice' as const, // Charge prorated amount now
+                  payment_behavior: 'error_if_incomplete' as const, // Fail if payment cannot be collected
+                }),
             metadata: {
               tenant_id: tenantId,
             },
@@ -1455,23 +1471,40 @@ export class StripeService {
       .where('stripe_subscription_external_id', subscription.id)
       .update(subscriptionUpdateData);
 
-    // Update tenant licensed_user_count and plan if subscription is active or trialing
+    // Update tenant licensed_user_count and plan if subscription is active or trialing.
+    // Only the tenant's canonical license subscription may drive the seat count:
+    // when a tenant temporarily carries two live rows (e.g. a leftover trial next
+    // to a paid subscription), events on the non-canonical one must not clobber it.
     if (subscription.status === 'active' || subscription.status === 'trialing') {
-      const updateData: Record<string, any> = {
-        licensed_user_count: quantity,
-        updated_at: knex.fn.now(),
-      };
-      if (plan) {
-        updateData.plan = plan;
-      }
+      const canonicalSubscription = await licenseSubscriptions(knex, tenantId, ['active', 'trialing'])
+        .orderByRaw("CASE WHEN status = 'active' THEN 0 ELSE 1 END")
+        .first();
 
-      await tenantScopedTable(knex, 'tenants', tenantId)
-        .update(updateData);
-
-      if (subscription.status === 'trialing') {
-        logger.info(`[StripeService] Tenant ${tenantId} is trialing${plan ? ` on ${plan}` : ''}, trial ends ${subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : 'unknown'}`);
+      if (
+        canonicalSubscription &&
+        canonicalSubscription.stripe_subscription_external_id !== subscription.id
+      ) {
+        logger.info(
+          `[StripeService] Subscription ${subscription.id} is not tenant ${tenantId}'s canonical license subscription ` +
+          `(${canonicalSubscription.stripe_subscription_external_id}); skipping licensed_user_count sync`
+        );
       } else {
-        logger.info(`[StripeService] Updated tenant ${tenantId} licensed_user_count to ${quantity}${plan ? `, plan to ${plan}` : ''}`);
+        const updateData: Record<string, any> = {
+          licensed_user_count: quantity,
+          updated_at: knex.fn.now(),
+        };
+        if (plan) {
+          updateData.plan = plan;
+        }
+
+        await tenantScopedTable(knex, 'tenants', tenantId)
+          .update(updateData);
+
+        if (subscription.status === 'trialing') {
+          logger.info(`[StripeService] Tenant ${tenantId} is trialing${plan ? ` on ${plan}` : ''}, trial ends ${subscription.trial_end ? new Date(subscription.trial_end * 1000).toISOString() : 'unknown'}`);
+        } else {
+          logger.info(`[StripeService] Updated tenant ${tenantId} licensed_user_count to ${quantity}${plan ? `, plan to ${plan}` : ''}`);
+        }
       }
     }
 
@@ -1532,6 +1565,21 @@ export class StripeService {
       });
 
     logger.warn(`[StripeService] Subscription ${subscription.id} canceled for tenant ${tenantId}`);
+
+    // A tenant with another live license subscription is not churning — this is
+    // cleanup of a superseded subscription (e.g. a leftover trial after a license
+    // purchase). Add-on subscriptions don't count: they can't keep a tenant alive.
+    const survivingSubscription = await licenseSubscriptions(knex, tenantId, ['active', 'trialing', 'past_due', 'unpaid'])
+      .whereNot('stripe_subscription_external_id', subscription.id)
+      .first();
+
+    if (survivingSubscription) {
+      logger.info(
+        `[StripeService] Tenant ${tenantId} still has ${survivingSubscription.status} subscription ` +
+        `${survivingSubscription.stripe_subscription_external_id}; skipping tenant deletion workflow`
+      );
+      return;
+    }
 
     // Start tenant deletion workflow
     // This will:
