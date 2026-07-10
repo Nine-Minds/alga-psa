@@ -17,11 +17,11 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from '@alga-psa/types';
 import { IContractLine, IContractLineService, IService, IServiceCategory } from '@alga-psa/types';
 import { getContractLineServicesWithConfigurations, addServiceToContractLine, removeServiceFromContractLine } from '@alga-psa/billing/actions/contractLineServiceActions';
-import { getServices } from '@alga-psa/billing/actions';
+import { getServices } from '@alga-psa/billing/actions/serviceActions';
 import { getContractLineById } from '@alga-psa/billing/actions/contractLineAction'; // Import action to get plan details
 import { getContractById } from '@alga-psa/billing/actions/contractActions';
 import { getCurrencySymbol } from '@alga-psa/core'; // Import currency helper
-import { getServiceCategories } from '@alga-psa/billing/actions'; // Added import
+import { getServiceCategories } from '@alga-psa/billing/actions/categoryActions'; // Added import
 // Removed useTenant import as it wasn't used
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { AlertCircle } from 'lucide-react';

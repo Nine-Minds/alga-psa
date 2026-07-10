@@ -241,10 +241,10 @@ export const settingsNavigationSections: NavigationSection[] = [
     translationKey: 'settings.sections.organizationAccess',
     items: [
       { name: 'General', translationKey: 'settings.tabs.general', icon: Settings, href: '/msp/settings?tab=general' },
-      { name: 'Users', translationKey: 'settings.tabs.users', icon: UserCog, href: '/msp/settings?tab=users' },
+      { name: 'Users', translationKey: 'settings.tabs.users', icon: UserCog, href: '/msp/settings/users' },
       { name: 'Teams', translationKey: 'settings.tabs.teams', icon: Users, href: '/msp/settings?tab=teams' },
-      { name: 'Language', translationKey: 'settings.tabs.language', icon: Globe, href: '/msp/settings?tab=language' },
-      { name: 'Client Portal', translationKey: 'settings.tabs.clientPortal', icon: AtSign, href: '/msp/settings?tab=client-portal' },
+      { name: 'Language', translationKey: 'settings.tabs.language', icon: Globe, href: '/msp/settings/language' },
+      { name: 'Client Portal', translationKey: 'settings.tabs.clientPortal', icon: AtSign, href: '/msp/settings/client-portal' },
     ]
   },
   {
@@ -253,16 +253,16 @@ export const settingsNavigationSections: NavigationSection[] = [
     items: [
       { name: 'Ticketing', translationKey: 'settings.tabs.ticketing', icon: Ticket, href: '/msp/settings?tab=ticketing' },
       { name: 'SLA', translationKey: 'settings.tabs.sla', icon: Timer, href: '/msp/settings/sla' },
-      { name: 'Projects', translationKey: 'settings.tabs.projects', icon: ListTodo, href: '/msp/settings?tab=projects' },
-      { name: 'Interactions', translationKey: 'settings.tabs.interactions', icon: Handshake, href: '/msp/settings?tab=interactions' },
+      { name: 'Projects', translationKey: 'settings.tabs.projects', icon: ListTodo, href: '/msp/settings/projects' },
+      { name: 'Interactions', translationKey: 'settings.tabs.interactions', icon: Handshake, href: '/msp/settings/interactions' },
     ]
   },
   {
     title: 'Time & Billing',
     translationKey: 'settings.sections.timeBilling',
     items: [
-      { name: 'Time Entry', translationKey: 'settings.tabs.timeEntry', icon: Clock, href: '/msp/settings?tab=time-entry' },
-      { name: 'Billing', translationKey: 'settings.tabs.billing', icon: CreditCard, href: '/msp/settings?tab=billing' },
+      { name: 'Time Entry', translationKey: 'settings.tabs.timeEntry', icon: Clock, href: '/msp/settings/time-entry' },
+      { name: 'Billing', translationKey: 'settings.tabs.billing', icon: CreditCard, href: '/msp/settings/billing' },
     ]
   },
   {
@@ -270,16 +270,16 @@ export const settingsNavigationSections: NavigationSection[] = [
     translationKey: 'settings.sections.communication',
     items: [
       { name: 'Notifications', translationKey: 'settings.tabs.notifications', icon: Bell, href: '/msp/settings?tab=notifications' },
-      { name: 'Email', translationKey: 'settings.tabs.email', icon: Mail, href: '/msp/settings?tab=email' },
+      { name: 'Email', translationKey: 'settings.tabs.email', icon: Mail, href: '/msp/settings/email' },
     ]
   },
   {
     title: 'Data & Integration',
     translationKey: 'settings.sections.dataIntegration',
     items: [
-      { name: 'Secrets', translationKey: 'settings.tabs.secrets', icon: KeyRound, href: '/msp/settings?tab=secrets' },
-      { name: 'Import/Export', translationKey: 'settings.tabs.importExport', icon: Download, href: '/msp/settings?tab=import-export' },
-      { name: 'Integrations', translationKey: 'settings.tabs.integrations', icon: Plug, href: '/msp/settings?tab=integrations' },
+      { name: 'Secrets', translationKey: 'settings.tabs.secrets', icon: KeyRound, href: '/msp/settings/secrets' },
+      { name: 'Import/Export', translationKey: 'settings.tabs.importExport', icon: Download, href: '/msp/settings/import-export' },
+      { name: 'Integrations', translationKey: 'settings.tabs.integrations', icon: Plug, href: '/msp/settings/integrations' },
       { name: 'Extensions', translationKey: 'settings.tabs.extensions', icon: Puzzle, href: '/msp/settings?tab=extensions' },
     ]
   },

@@ -11,7 +11,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import Spinner from '@alga-psa/ui/components/Spinner';
-import { getServices } from '@alga-psa/billing/actions';
+import { getServices } from '@alga-psa/billing/actions/serviceActions';
 import {
   getContractLinePresetById,
   updateContractLinePreset,

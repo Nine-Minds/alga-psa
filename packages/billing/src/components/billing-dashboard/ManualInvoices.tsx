@@ -1,14 +1,14 @@
 'use client'
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { generateManualInvoice } from '@alga-psa/billing/actions';
+import { generateManualInvoice } from '@alga-psa/billing/actions/manualInvoiceActions';
 import {
   updateInvoiceManualItems,
   type InvoiceManualItemsUpdateActionResult,
 } from '@alga-psa/billing/actions/invoiceModification';
 import { getInvoiceLineItems } from '@alga-psa/billing/actions/invoiceQueries';
 import type { ManualInvoiceUpdate } from '@alga-psa/billing/actions/invoiceActions'; // Import the specific type
-import type { ManualInvoiceItem as ManualInvoiceItemForAction } from '@alga-psa/billing/actions'; // Import and alias
+import type { ManualInvoiceItem as ManualInvoiceItemForAction } from '@alga-psa/billing/actions/manualInvoiceActions'; // Import and alias
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';

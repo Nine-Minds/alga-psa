@@ -20,11 +20,7 @@ import { validateClientCredit } from '@alga-psa/billing/actions/creditReconcilia
 import { toast } from 'react-hot-toast';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
-import {
-  fetchReconciliationReports,
-  fetchClientsForDropdown,
-  fetchReconciliationStats
-} from '@alga-psa/reporting/actions';
+import { fetchReconciliationReports, fetchClientsForDropdown, fetchReconciliationStats } from '@alga-psa/reporting/actions/reconciliationReportActions';
 import { 
   BarChart, 
   Bar, 

@@ -17,7 +17,7 @@ import {
 import { ContractLineDialog } from '../ContractLineDialog';
 import { getContractLinePresets, deleteContractLinePreset } from '@alga-psa/billing/actions/contractLinePresetActions';
 import { IContractLinePreset } from '@alga-psa/types';
-import { getServiceTypesForSelection } from '@alga-psa/billing/actions'; // Added import for fetching types
+import { getServiceTypesForSelection } from '@alga-psa/billing/actions/serviceActions'; // Added import for fetching types
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { ColumnDefinition } from '@alga-psa/types';
 import { CONTRACT_LINE_TYPE_VALUES } from '@alga-psa/billing/constants/billing';

@@ -42,7 +42,8 @@ import {
   updateClientContractForBilling,
   getClientByIdForBilling,
 } from '@alga-psa/billing/actions/billingClientsActions';
-import { getAllBoards, getTicketStatuses } from '@alga-psa/reference-data/actions';
+import { getAllBoards } from '@alga-psa/reference-data/actions/boardActions';
+import { getTicketStatuses } from '@alga-psa/reference-data/actions/status-actions/statusActions';
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { fetchInvoicesByContract } from '@alga-psa/billing/actions/invoiceQueries';
 import { getInvoiceTemplates } from '@alga-psa/billing/actions/invoiceTemplates';

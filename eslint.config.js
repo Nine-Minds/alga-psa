@@ -321,6 +321,9 @@ export default [
             "server/src/app/msp/settings/**/*.{ts,tsx}",
             "server/src/components/settings/**/*.{ts,tsx}",
             "packages/*/src/components/settings/**/*.{ts,tsx}",
+            // The /msp/billing route renders the whole billing dashboard subtree; barrel imports
+            // here drag the 91-file billing action subsystem into the manifest (narrowed 2026-07-10).
+            "packages/billing/src/components/**/*.{ts,tsx}",
         ],
         ignores: ["**/*.test.*", "**/*.spec.*", "**/__tests__/**"],
         rules: {

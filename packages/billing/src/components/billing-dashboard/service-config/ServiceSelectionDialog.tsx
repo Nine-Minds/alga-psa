@@ -8,7 +8,7 @@ import { Input } from '@alga-psa/ui/components/Input';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@alga-psa/ui/components/Table';
 import { Search, Plus, Check } from 'lucide-react';
 import { IService } from '@alga-psa/types';
-import { getServices } from '@alga-psa/billing/actions';
+import { getServices } from '@alga-psa/billing/actions/serviceActions';
 import { addServiceToContractLine } from '@alga-psa/billing/actions/contractLineServiceActions';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';

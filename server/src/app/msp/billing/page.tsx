@@ -1,8 +1,8 @@
 import React, { Suspense } from 'react';
 import BillingPageClient from './BillingPageClient';
-import { getServices } from '@alga-psa/billing/actions';
+import { getServices } from '@alga-psa/billing/actions/serviceActions';
 import { getDocumentsByContractId } from '@alga-psa/documents/actions/documentActions';
-import { getCurrentUser } from '@alga-psa/user-composition/actions';
+import { getCurrentUser } from '@alga-psa/user-composition/actions/userQueryActions';
 import type { IDocument } from '@alga-psa/types';
 import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 import {

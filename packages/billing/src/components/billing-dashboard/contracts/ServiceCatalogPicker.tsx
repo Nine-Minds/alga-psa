@@ -2,7 +2,8 @@
 
 import React, { useCallback, useRef } from 'react';
 import AsyncSearchableSelect, { SelectOption } from '@alga-psa/ui/components/AsyncSearchableSelect';
-import { getServiceById, searchServiceCatalogForPicker, CatalogPickerItem } from '@alga-psa/billing/actions';
+import { getServiceById, searchServiceCatalogForPicker } from '@alga-psa/billing/actions/serviceActions';
+import type { CatalogPickerItem } from '@alga-psa/billing/actions/serviceActions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   isActionMessageError,

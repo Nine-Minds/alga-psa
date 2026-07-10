@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Card, CardHeader, CardContent, CardTitle, CardFooter } from '@alga-psa/ui/components/Card';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Button } from '@alga-psa/ui/components/Button';
-import { updateService } from '@alga-psa/billing/actions';
+import { updateService } from '@alga-psa/billing/actions/serviceActions';
 import { IService } from '@alga-psa/types';
 import { ITaxRate } from '@alga-psa/types'; // Use ITaxRate
 import { getTaxRates } from '@alga-psa/billing/actions/taxSettingsActions'; // Use getTaxRates

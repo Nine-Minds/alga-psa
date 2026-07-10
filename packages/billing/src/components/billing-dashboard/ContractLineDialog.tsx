@@ -21,7 +21,7 @@ import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import { Package, Clock, Activity, Plus, X, Coins } from 'lucide-react';
 import { useBillingFrequencyOptions } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 import { getCurrencySymbol } from '@alga-psa/core';
-import { getServiceById } from '@alga-psa/billing/actions';
+import { getServiceById } from '@alga-psa/billing/actions/serviceActions';
 import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import { BucketOverlayFields } from './contracts/BucketOverlayFields';
 import { BucketOverlayInput } from './contracts/ContractWizard';

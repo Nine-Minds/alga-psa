@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import type { IService, IClient } from '@alga-psa/types';
 import { getAllClientsForBilling } from '@alga-psa/billing/actions/billingClientsActions';
-import { getServices } from '@alga-psa/billing/actions';
+import { getServices } from '@alga-psa/billing/actions/serviceActions';
 import AutomaticInvoices from '../AutomaticInvoices';
 import ManualInvoices from '../ManualInvoices';
 import PrepaymentInvoices from '../PrepaymentInvoices';
