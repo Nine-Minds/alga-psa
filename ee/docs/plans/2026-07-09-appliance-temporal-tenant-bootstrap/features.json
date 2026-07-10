@@ -1,0 +1,22 @@
+[
+  {"id":"F001","description":"The appliance image contains server/scripts/appliance-create-tenant.mjs.","implemented":true,"prdRefs":["Requirements > Functional Requirements"]},
+  {"id":"F002","description":"The bootstrap script starts tenantCreationWorkflow on the local Temporal service.","implemented":true,"prdRefs":["Requirements > Functional Requirements"]},
+  {"id":"F003","description":"The workflow adopts a pre-minted appliance tenant id.","implemented":true,"prdRefs":["Goals"]},
+  {"id":"F004","description":"The workflow uses the administrator password selected during setup.","implemented":true,"prdRefs":["Goals"]},
+  {"id":"F005","description":"Appliance workflow execution skips hosted-only customer tracking and welcome email steps.","implemented":true,"prdRefs":["Non-goals"]},
+  {"id":"F006","description":"Bootstrap retries attach to an existing run and restart only failed executions.","implemented":true,"prdRefs":["Requirements > Functional Requirements"]},
+  {"id":"F007","description":"The rendered appliance bootstrap Job invokes the plain .mjs client rather than create-tenant.ts through tsx.","implemented":true,"prdRefs":["Requirements > Functional Requirements"]},
+  {"id":"F008","description":"The rendered bootstrap Job receives Temporal address, namespace, and tenant-workflows task queue settings.","implemented":true,"prdRefs":["Requirements > Functional Requirements"]},
+  {"id":"F009","description":"An appliance release can build Alga Core and Temporal worker images from one full source revision.","implemented":false,"prdRefs":["Rollout / Migration"]},
+  {"id":"F010","description":"An appliance release publishes charts and Flux config to an immutable reference before promotion.","implemented":false,"prdRefs":["Requirements > Non-functional Requirements"]},
+  {"id":"F011","description":"Release metadata records independent source revisions for Alga Core, Temporal worker, and config/charts.","implemented":false,"prdRefs":["Observability"]},
+  {"id":"F012","description":"The coordinated release validates all required image and config digests before promotion.","implemented":false,"prdRefs":["Requirements > Functional Requirements"]},
+  {"id":"F013","description":"The stable channel moves exactly once after validation and approval.","implemented":false,"prdRefs":["Requirements > Non-functional Requirements"]},
+  {"id":"F014","description":"A failure before final promotion leaves the previous stable manifest unchanged.","implemented":false,"prdRefs":["Requirements > Non-functional Requirements"]},
+  {"id":"F015","description":"Pointer-only promotion rejects a commit whose changed paths require an absent Temporal worker artifact.","implemented":false,"prdRefs":["Acceptance Criteria (Definition of Done)"]},
+  {"id":"F016","description":"Pointer-only promotion rejects a commit whose changed paths require absent chart or config artifacts.","implemented":false,"prdRefs":["Acceptance Criteria (Definition of Done)"]},
+  {"id":"F017","description":"The current tenant-bootstrap commit is published as a compatible stable appliance release.","implemented":false,"prdRefs":["Rollout / Migration"]},
+  {"id":"F018","description":"A reset local appliance creates its initial tenant through local Temporal.","implemented":false,"prdRefs":["Users and Primary Flows"]},
+  {"id":"F019","description":"The locally created tenant id matches the install-code registry tenant id.","implemented":false,"prdRefs":["Acceptance Criteria (Definition of Done)"]},
+  {"id":"F020","description":"The configured initial administrator can log in after Temporal tenant creation completes.","implemented":false,"prdRefs":["Acceptance Criteria (Definition of Done)"]}
+]
