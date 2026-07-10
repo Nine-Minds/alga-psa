@@ -1,10 +1,9 @@
 [
-  {"id":"T001","description":"Helm rendering proves appliance temporal-worker uses 1,000 PBKDF2 iterations while the hosted/default temporal-worker remains at 10,000.","implemented":false,"featureIds":["F001"]},
-  {"id":"T002","description":"DB-backed happy path resets exactly the original tenant admin, verifies the new password through the normal application verifier, rejects the old password, and leaves unrelated users unchanged.","implemented":false,"featureIds":["F002","F003","F004","F005"]},
-  {"id":"T003","description":"DB-backed guard cases for missing and ambiguous targets fail without modifying any user hashes.","implemented":false,"featureIds":["F004","F005"]},
-  {"id":"T004","description":"Host-service requests require an authenticated management session and reject invalid passwords, mismatched confirmation, browser-supplied target identity, and concurrent active reset Jobs.","implemented":false,"featureIds":["F006","F007","F008","F011"]},
-  {"id":"T005","description":"Generated Kubernetes resources use the current Alga image, correct application configuration, bounded lifetime, and cleanup while containing no plaintext password in names, arguments, labels, logs, status, or responses.","implemented":false,"featureIds":["F009","F010","F012","F013","F014","F018"]},
-  {"id":"T006","description":"Status UI displays only the original admin identity and covers validation, confirmation mismatch, busy, success, and generic failure behavior.","implemented":false,"featureIds":["F015","F016","F017","F018"]},
+  {"id":"T001","description":"Helm rendering proves appliance temporal-worker uses 1,000 PBKDF2 iterations while the hosted/default temporal-worker remains at 10,000.","implemented":true,"featureIds":["F001"]},
+  {"id":"T002","description":"DB-backed happy path resets exactly the original tenant admin, verifies the new password through the normal application verifier, rejects the old password, and leaves unrelated users unchanged.","implemented":true,"featureIds":["F002","F003","F004","F005"]},
+  {"id":"T003","description":"DB-backed guard cases for missing and ambiguous targets fail without modifying any user hashes.","implemented":true,"featureIds":["F004","F005"]},
+  {"id":"T004","description":"Host-service requests require an authenticated management session and reject invalid passwords, mismatched confirmation, browser-supplied target identity, and concurrent active reset Jobs.","implemented":true,"featureIds":["F006","F007","F008","F011"]},
+  {"id":"T005","description":"Generated Kubernetes resources use the current Alga image, correct application configuration, bounded lifetime, and cleanup while containing no plaintext password in names, arguments, labels, logs, status, or responses.","implemented":true,"featureIds":["F009","F010","F012","F013","F014","F018"]},
+  {"id":"T006","description":"Status UI displays only the original admin identity and covers validation, confirmation mismatch, busy, success, and generic failure behavior.","implemented":true,"featureIds":["F015","F016","F017","F018"]},
   {"id":"T007","description":"Appliance smoke test resets the original admin through the authenticated management UI and signs into Alga with the replacement password.","implemented":false,"featureIds":["F001","F006","F010","F015","F017"]}
 ]
-

@@ -37,9 +37,13 @@ type ManageStatus = {
     dnsMode: "system" | "custom";
     dnsServers: string[];
   };
+  adminPasswordReset: {
+    available: boolean;
+    email: string | null;
+  };
 };
 
-type ManageTab = "updates" | "control-plane" | "license" | "settings";
+type ManageTab = "updates" | "control-plane" | "license" | "admin-recovery" | "settings";
 
 function apiPath(
   path: string,
@@ -690,6 +694,146 @@ function SettingsTab({
   );
 }
 
+function passwordValidationError(value: string): string | null {
+  if (value.length < 8) return "Use at least 8 characters.";
+  if (!/[a-z]/.test(value)) return "Include a lowercase letter.";
+  if (!/[A-Z]/.test(value)) return "Include an uppercase letter.";
+  if (!/\d/.test(value)) return "Include a number.";
+  if (!/[!@#$%^&*(),.?":{}|<>]/.test(value)) return "Include a special character.";
+  return null;
+}
+
+function AdminRecoveryTab({ status }: { status: ManageStatus }) {
+  const [password, setPassword] = useState("");
+  const [passwordConfirm, setPasswordConfirm] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [confirm, setConfirm] = useState(false);
+  const [result, setResult] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  function clearFeedback() {
+    setConfirm(false);
+    setResult(null);
+    setError(null);
+  }
+
+  async function resetAdminPassword() {
+    const policyError = passwordValidationError(password);
+    if (policyError) { setError(policyError); return; }
+    if (password !== passwordConfirm) { setError("Passwords do not match."); return; }
+
+    setConfirm(false);
+    setBusy(true);
+    setResult(null);
+    setError(null);
+    try {
+      const response = await fetch(apiPath("/api/admin-password-reset"), {
+        method: "POST",
+        credentials: "same-origin",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ password, passwordConfirm }),
+        cache: "no-store",
+      });
+      if (response.status === 401) { window.location.reload(); return; }
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || "The password reset failed.");
+      setPassword("");
+      setPasswordConfirm("");
+      setResult("Password reset complete. You can now sign in to Alga with the new password.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  const recovery = status.adminPasswordReset;
+  return (
+    <div className={styles.manageSection}>
+      <h2>Alga admin recovery</h2>
+      <p className={styles.helpText}>
+        Reset the application password for the original administrator created during
+        appliance setup. This does not change the password used to access this management page.
+      </p>
+
+      <dl className={styles.kv}>
+        <div>
+          <dt>Account</dt>
+          <dd>{recovery?.email || "Original setup administrator unavailable"}</dd>
+        </div>
+        <div>
+          <dt>Reset method</dt>
+          <dd>Local one-time recovery job</dd>
+        </div>
+      </dl>
+
+      {!recovery?.available ? (
+        <div className={styles.alert}>
+          The original administrator identity is unavailable. Contact support before changing credentials directly.
+        </div>
+      ) : (
+        <>
+          <div className={styles.formGrid}>
+            <div className={styles.field}>
+              <label htmlFor="manage-admin-new-password">New Alga password</label>
+              <input
+                id="manage-admin-new-password"
+                type="password"
+                autoComplete="new-password"
+                value={password}
+                onChange={(event) => { setPassword(event.target.value); clearFeedback(); }}
+                disabled={busy}
+              />
+              <span className={styles.helpText}>
+                At least 8 characters with upper and lowercase letters, a number, and a special character.
+              </span>
+            </div>
+            <div className={styles.field}>
+              <label htmlFor="manage-admin-confirm-password">Confirm new password</label>
+              <input
+                id="manage-admin-confirm-password"
+                type="password"
+                autoComplete="new-password"
+                value={passwordConfirm}
+                onChange={(event) => { setPasswordConfirm(event.target.value); clearFeedback(); }}
+                disabled={busy}
+              />
+            </div>
+          </div>
+
+          {error ? <div className={styles.alert} role="alert">{error}</div> : null}
+          {result ? <p className={styles.manageResult} role="status">{result}</p> : null}
+
+          <div className={styles.toolbar}>
+            <button
+              type="button"
+              className={styles.actionButton}
+              disabled={busy || !password || !passwordConfirm}
+              onClick={() => {
+                const policyError = passwordValidationError(password);
+                if (policyError) { setError(policyError); return; }
+                if (password !== passwordConfirm) { setError("Passwords do not match."); return; }
+                if (!confirm) setConfirm(true);
+                else resetAdminPassword();
+              }}
+            >
+              {busy ? "Resetting…" : confirm ? "Confirm password reset" : "Reset Alga admin password"}
+            </button>
+            {confirm && !busy ? (
+              <button type="button" onClick={() => setConfirm(false)}>Cancel</button>
+            ) : null}
+          </div>
+          {busy ? (
+            <p className={styles.helpText} role="status">
+              A short-lived recovery job is updating the credential. Keep this page open until it completes.
+            </p>
+          ) : null}
+        </>
+      )}
+    </div>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Main ManageView
 // ---------------------------------------------------------------------------
@@ -698,6 +842,7 @@ const manageTabs: Array<{ value: ManageTab; label: string }> = [
   { value: "updates", label: "Updates" },
   { value: "control-plane", label: "Control-plane" },
   { value: "license", label: "License" },
+  { value: "admin-recovery", label: "Admin recovery" },
   { value: "settings", label: "Settings" },
 ];
 
@@ -840,6 +985,15 @@ export function ManageView() {
               aria-labelledby="manage-tab-license"
             >
               <LicenseTab status={manageStatus} onRefresh={loadManageStatus} />
+            </div>
+          ) : null}
+          {activeTab === "admin-recovery" ? (
+            <div
+              id="manage-panel-admin-recovery"
+              role="tabpanel"
+              aria-labelledby="manage-tab-admin-recovery"
+            >
+              <AdminRecoveryTab status={manageStatus} />
             </div>
           ) : null}
           {activeTab === "settings" ? (

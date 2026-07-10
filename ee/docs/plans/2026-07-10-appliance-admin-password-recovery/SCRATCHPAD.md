@@ -19,10 +19,17 @@
 - (2026-07-10) The appliance temporal-worker overlay does not currently override encryption values.
 - (2026-07-10) Existing 10,000-iteration hashes cannot be converted to 1,000 without the plaintext password.
 - (2026-07-10) The management UI already has session authentication and a separate recovery CLI for its own management password; this plan resets the Alga application admin credential only.
+- (2026-07-10) The existing control-plane ClusterRole already grants the namespaced Secret and Job operations required by recovery, so no RBAC expansion was necessary.
+- (2026-07-10) The recovery Job clones the running Alga container image and environment, then adds only Secret-backed target/password inputs. This makes the application deployment the effective hashing configuration authority.
+- (2026-07-10) Local VM `ubuntu24.04` currently leases `192.168.122.215`, not the older `192.168.122.55` recorded in the appliance skill.
+- (2026-07-10) Live VM deployment is pending explicit authorization to install a temporary SSH key; the automated fresh-install harness, full host-service suite, UI production build, Helm render, runtime import smoke, and migrated-schema DB integration all pass.
 
 ## Commands / Runbooks
 
 - Inspect effective pod hashing variables with `kubectl -n msp get deploy <name> -o yaml` and compare `SALT_BYTES`, `ITERATIONS`, `KEY_LENGTH`, `ALGORITHM`, and the `NEXTAUTH_SECRET` source.
+- Render the appliance worker environment with `helm template temporal-worker ee/helm/temporal-worker -f ee/appliance/flux/profiles/single-node/values/temporal-worker.single-node.yaml`.
+- Run appliance tests with `node --test ee/appliance/host-service/tests/*.test.mjs` (Docker access is required by the embedded fresh-install staging test).
+- Run the DB integration with `npx vitest run src/test/integration/applianceInitialAdminPasswordReset.integration.test.ts --coverage.enabled=false` from `server/` against the isolated local test PostgreSQL instance.
 
 ## Links / References
 
@@ -36,4 +43,3 @@
 ## Open Questions
 
 - None.
-

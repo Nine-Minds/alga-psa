@@ -17,6 +17,10 @@ import {
   requestControlPlaneUpgrade,
 } from './manage-engine.mjs';
 import {
+  readInitialAdminIdentity,
+  runInitialAdminPasswordReset,
+} from './admin-password-reset.mjs';
+import {
   authPhase,
   isAuthenticated,
   getCredentialState,
@@ -1012,7 +1016,41 @@ const server = http.createServer(async (req, res) => {
       resolveControlPlaneRef,
       resolveReleaseManifest: resolveReleaseManifestCached
     });
+    try {
+      const identity = await readInitialAdminIdentity(manageKube);
+      status.adminPasswordReset = {
+        available: identity.available,
+        email: identity.email,
+      };
+    } catch {
+      status.adminPasswordReset = { available: false, email: null };
+    }
     jsonResponse(res, 200, status);
+    return;
+  }
+
+  if (url.pathname === '/api/admin-password-reset') {
+    if (!requireAuth(req, res)) return;
+    if ((req.method || 'GET').toUpperCase() !== 'POST') {
+      jsonResponse(res, 405, { error: 'Method not allowed. Use POST.' });
+      return;
+    }
+    const payload = await readJsonBody(req);
+    const result = await runInitialAdminPasswordReset({
+      kube: manageKube,
+      password: payload?.password,
+      passwordConfirm: payload?.passwordConfirm,
+    });
+    if (result.ok) {
+      jsonResponse(res, 200, {
+        ok: true,
+        message: 'The original Alga administrator password was reset.',
+      });
+    } else {
+      jsonResponse(res, result.status || 502, {
+        error: result.error || 'The password reset did not complete successfully.',
+      });
+    }
     return;
   }
 
