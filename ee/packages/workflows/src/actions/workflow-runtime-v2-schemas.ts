@@ -33,6 +33,23 @@ export const UpdateWorkflowDefinitionInput = z.object({
   pinnedPayloadSchemaRef: z.string().min(1).optional()
 });
 
+export const SimulateWorkflowDefinitionInput = z.object({
+  definition: workflowDefinitionSchema,
+  /** Workflow payload used as-is. Wins over eventPayload/synthesis. */
+  payload: z.record(z.any()).optional(),
+  /** Source event payload, run through the trigger's payloadMapping. */
+  eventPayload: z.record(z.any()).optional(),
+  /** Event to synthesize a payload for when neither payload nor eventPayload is given. */
+  eventType: z.string().min(1).optional(),
+  /** Stub outputs keyed by step id or actionId; see simulator docs. */
+  fixtures: z.record(z.any()).optional(),
+  options: z.object({
+    maxSteps: z.number().int().positive().optional(),
+    maxForEachIterations: z.number().int().positive().optional(),
+    maxDurationMs: z.number().int().positive().optional()
+  }).optional()
+});
+
 export const UpdateWorkflowDefinitionMetadataInput = z.object({
   workflowId: z.string().min(1),
   key: workflowKey.optional(),

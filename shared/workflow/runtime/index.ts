@@ -23,6 +23,18 @@ export {
   validateWorkflowDefinition,
   type PublishValidationResult
 } from './validation/publishValidation';
+export {
+  simulateWorkflowDefinition,
+  applyTriggerPayloadMapping,
+  type WorkflowSimulationFixtures,
+  type WorkflowSimulationInvocation,
+  type WorkflowSimulationIssue,
+  type WorkflowSimulationOptions,
+  type WorkflowSimulationOutcome,
+  type WorkflowSimulationResult,
+  type WorkflowSimulationTraceEntry
+} from './simulation/simulator';
+export { buildSampleFromJsonSchema } from './simulation/samplePayload';
 export * from './actions/composeText';
 export {
   validateInputMapping,

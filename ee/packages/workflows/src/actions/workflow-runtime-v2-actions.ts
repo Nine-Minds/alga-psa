@@ -30,6 +30,9 @@ import {
   resolveInputMapping,
   createSecretResolverFromProvider,
   verifySecretsExist,
+  simulateWorkflowDefinition,
+  applyTriggerPayloadMapping,
+  buildSampleFromJsonSchema,
   type WorkflowTrigger,
   type PublishError
 } from '@alga-psa/workflows/runtime';
@@ -79,6 +82,7 @@ import {
   RunIdInput,
   RunActionInput,
   ReplayWorkflowRunInput,
+  SimulateWorkflowDefinitionInput,
   EventIdInput,
   GetLatestWorkflowRunInput,
   SchemaRefInput,
@@ -1065,6 +1069,14 @@ const workflowRunStartLimiter = new RateLimiterMemory({
   duration: Number.isFinite(WORKFLOW_RUN_RATE_LIMIT_DURATION) ? WORKFLOW_RUN_RATE_LIMIT_DURATION : 60
 });
 
+const WORKFLOW_SIMULATE_RATE_LIMIT_POINTS = Number(process.env.WORKFLOW_SIMULATE_RATE_LIMIT_POINTS ?? 60);
+const WORKFLOW_SIMULATE_RATE_LIMIT_DURATION = Number(process.env.WORKFLOW_SIMULATE_RATE_LIMIT_DURATION ?? 60);
+
+const workflowSimulateLimiter = new RateLimiterMemory({
+  points: Number.isFinite(WORKFLOW_SIMULATE_RATE_LIMIT_POINTS) ? WORKFLOW_SIMULATE_RATE_LIMIT_POINTS : 60,
+  duration: Number.isFinite(WORKFLOW_SIMULATE_RATE_LIMIT_DURATION) ? WORKFLOW_SIMULATE_RATE_LIMIT_DURATION : 60
+});
+
 const measurePayloadBytes = (payload: unknown) => {
   try {
     const serialized = JSON.stringify(payload ?? {});
@@ -1603,6 +1615,112 @@ export const validateWorkflowDefinitionDraftAction = withAuth(async (user, { ten
     knex,
     tenant
   });
+});
+
+export const simulateWorkflowDefinitionDraftAction = withAuth(async (user, { tenant }, input: unknown) => {
+  initializeWorkflowRuntimeV2();
+  const parsed = SimulateWorkflowDefinitionInput.parse(input);
+
+  const { knex } = await createTenantKnex();
+  await requireWorkflowPermission(user, 'manage', knex);
+  if (tenant) {
+    try {
+      await workflowSimulateLimiter.consume(tenant);
+    } catch {
+      throwHttpError(429, 'Workflow simulation rate limit exceeded');
+    }
+  }
+
+  for (const candidate of [parsed.payload, parsed.eventPayload, parsed.fixtures]) {
+    if (candidate === undefined) continue;
+    const bytes = measurePayloadBytes(candidate);
+    if (bytes === null) {
+      return throwHttpError(400, 'Simulation payload must be JSON serializable');
+    }
+    if (bytes > WORKFLOW_RUN_PAYLOAD_LIMIT) {
+      return throwHttpError(413, 'Simulation payload exceeds maximum size');
+    }
+  }
+
+  const definition = parsed.definition;
+  const schemaRegistry = getSchemaRegistry();
+  const trigger = definition.trigger;
+  const eventTrigger = isWorkflowEventTrigger(trigger) ? trigger : null;
+  const eventName = parsed.eventType ?? eventTrigger?.eventName ?? null;
+
+  // Resolve the workflow payload the simulation runs against:
+  // explicit payload > event payload through the trigger mapping > synthesized.
+  let payload: Record<string, unknown>;
+  let payloadSource: 'provided' | 'event-mapped' | 'synthesized-from-event' | 'synthesized-from-schema' | 'empty';
+  let mappingApplied = false;
+
+  const resolveSourceSchemaRef = async (): Promise<string | null> => {
+    if (typeof eventTrigger?.sourcePayloadSchemaRef === 'string' && eventTrigger.sourcePayloadSchemaRef.trim()) {
+      return eventTrigger.sourcePayloadSchemaRef.trim();
+    }
+    if (tenant && eventName) {
+      const catalog = await EventCatalogModel.getByEventType(knex, eventName, tenant);
+      const catalogRef = (catalog as { payload_schema_ref?: unknown } | null)?.payload_schema_ref;
+      if (typeof catalogRef === 'string' && catalogRef.trim()) {
+        return catalogRef.trim();
+      }
+    }
+    return null;
+  };
+
+  if (parsed.payload !== undefined) {
+    payload = parsed.payload;
+    payloadSource = 'provided';
+  } else if (parsed.eventPayload !== undefined && eventTrigger && eventName) {
+    const mapped = await applyTriggerPayloadMapping({
+      definition,
+      eventName,
+      eventPayload: parsed.eventPayload
+    });
+    payload = mapped.payload;
+    mappingApplied = mapped.mappingApplied;
+    payloadSource = 'event-mapped';
+  } else {
+    const sourceRef = eventTrigger && eventName ? await resolveSourceSchemaRef() : null;
+    if (sourceRef && schemaRegistry.has(sourceRef) && eventName) {
+      const sampleEventPayload = buildSampleFromJsonSchema(
+        schemaRegistry.toJsonSchema(sourceRef) as Record<string, unknown>
+      );
+      const mapped = await applyTriggerPayloadMapping({
+        definition,
+        eventName,
+        eventPayload: (sampleEventPayload ?? {}) as Record<string, unknown>
+      });
+      payload = mapped.payload;
+      mappingApplied = mapped.mappingApplied;
+      payloadSource = 'synthesized-from-event';
+    } else if (definition.payloadSchemaRef && schemaRegistry.has(definition.payloadSchemaRef)) {
+      payload = (buildSampleFromJsonSchema(
+        schemaRegistry.toJsonSchema(definition.payloadSchemaRef) as Record<string, unknown>
+      ) ?? {}) as Record<string, unknown>;
+      payloadSource = 'synthesized-from-schema';
+    } else {
+      payload = {};
+      payloadSource = 'empty';
+    }
+  }
+
+  const result = await simulateWorkflowDefinition({
+    definition,
+    payload,
+    fixtures: parsed.fixtures,
+    options: {
+      ...parsed.options,
+      tenantId: tenant ?? null
+    }
+  });
+
+  return {
+    ...result,
+    simulatedPayload: payload,
+    payloadSource,
+    triggerMappingApplied: mappingApplied
+  };
 });
 
 export const getWorkflowDefinitionVersionAction = withAuth(async (user, { tenant }, input: unknown) => {
