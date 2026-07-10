@@ -757,7 +757,7 @@
       "product": "Product",
       "qty": "Qty",
       "received": "Received",
-      "unitCost": "Unit cost ($)",
+      "unitCost": "Unit cost",
       "vendor": "Vendor"
     },
     "count": "{{count}} purchase order",
@@ -989,7 +989,7 @@
       "selectService": "Select a service…",
       "service": "Service",
       "serviceId": "Service ID",
-      "unitPrice": "Unit Price ($)",
+      "unitPrice": "Unit Price",
       "unitPriceIn": "Unit price ({{currency}})"
     },
     "fromQuote": "From quote",
@@ -1092,7 +1092,7 @@
     "fields": {
       "location": "Location",
       "product": "Product",
-      "unitCost": "Unit cost (USD)"
+      "unitCost": "Unit cost"
     },
     "filteredCount": "{{shown}} of {{total}} products",
     "levels": {
@@ -1334,7 +1334,7 @@
     "dialogTitle": "Price list — {{name}}",
     "emptyState": "No offers yet — add the vendor's part numbers and contract costs below.",
     "fields": {
-      "cost": "Cost ($)",
+      "cost": "Cost",
       "currency": "Currency",
       "leadTime": "Lead time (days)",
       "preferred": "Preferred vendor for this product (drives reorder suggestions)",
