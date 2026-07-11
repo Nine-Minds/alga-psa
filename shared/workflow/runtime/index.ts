@@ -23,6 +23,21 @@ export {
   validateWorkflowDefinition,
   type PublishValidationResult
 } from './validation/publishValidation';
+export {
+  simulateWorkflowDefinition,
+  applyTriggerPayloadMapping,
+  type WorkflowSimulationFixtures,
+  type WorkflowSimulationInvocation,
+  type WorkflowSimulationIssue,
+  type WorkflowSimulationOptions,
+  type WorkflowSimulationOutcome,
+  type WorkflowSimulationResult,
+  type WorkflowSimulationTraceEntry
+} from './simulation/simulator';
+export { buildSampleFromJsonSchema } from './simulation/samplePayload';
+export { buildWorkflowAuthoringGuide, type WorkflowAuthoringGuide } from './designer/authoringGuide';
+export { listWorkflowExpressionFunctions } from './expressionFunctions';
+export { didYouMean, findNearestName, levenshteinDistance } from './validation/didYouMean';
 export * from './actions/composeText';
 export {
   validateInputMapping,

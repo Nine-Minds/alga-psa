@@ -30,6 +30,11 @@ import {
   resolveInputMapping,
   createSecretResolverFromProvider,
   verifySecretsExist,
+  simulateWorkflowDefinition,
+  applyTriggerPayloadMapping,
+  buildSampleFromJsonSchema,
+  buildWorkflowAuthoringGuide,
+  didYouMean,
   type WorkflowTrigger,
   type PublishError
 } from '@alga-psa/workflows/runtime';
@@ -79,6 +84,7 @@ import {
   RunIdInput,
   RunActionInput,
   ReplayWorkflowRunInput,
+  SimulateWorkflowDefinitionInput,
   EventIdInput,
   GetLatestWorkflowRunInput,
   SchemaRefInput,
@@ -298,7 +304,8 @@ const buildUnknownPayloadSchemaRefError = (schemaRef: string, suggestions: strin
   code: 'UNKNOWN_PAYLOAD_SCHEMA_REF',
   message: suggestions.length
     ? `Unknown payload schema ref "${schemaRef}". Did you mean: ${suggestions.join(', ')}?`
-    : `Unknown payload schema ref "${schemaRef}".`
+    : `Unknown payload schema ref "${schemaRef}".`,
+  ...(suggestions.length ? { suggestion: `Did you mean "${suggestions[0]}"?` } : {})
 });
 
 const buildTimeTriggerMissingRunAtError = (): PublishError => ({
@@ -820,8 +827,11 @@ const computeValidation = async (params: {
   };
 
   const isCompatible = (expected: Set<string>, actual: Set<string>): { ok: boolean; known: boolean } => {
-    const expectedKnown = !(expected.size === 1 && expected.has('unknown'));
-    const actualKnown = !(actual.size === 1 && actual.has('unknown'));
+    // Any 'unknown' member means the inference is partial (e.g. a nullable
+    // field whose non-null side could not be resolved) — downgrade to the
+    // warning path instead of failing validation on a guess.
+    const expectedKnown = !expected.has('unknown');
+    const actualKnown = !actual.has('unknown');
     const known = expectedKnown && actualKnown;
     if (!known) return { ok: true, known: false };
     // Nullability: if expected includes null, allow actual null; otherwise normal check.
@@ -886,6 +896,24 @@ const computeValidation = async (params: {
       ? String(trigger.sourcePayloadSchemaRef).trim()
       : null;
     const catalog = tenant ? await EventCatalogModel.getByEventType(knex, eventName, tenant) : null;
+    if (tenant && !catalog) {
+      const knownEvents = await EventCatalogModel.getAll(knex, tenant, { limit: 2000, offset: 0 });
+      const suggestion = didYouMean(
+        eventName,
+        knownEvents
+          .map((entry: { event_type?: unknown }) => (typeof entry.event_type === 'string' ? entry.event_type : ''))
+          .filter(Boolean)
+      );
+      errors.push({
+        severity: 'error',
+        stepPath: 'root.trigger.eventName',
+        code: 'UNKNOWN_TRIGGER_EVENT',
+        message: suggestion
+          ? `Event "${eventName}" is not in the event catalog. ${suggestion}`
+          : `Event "${eventName}" is not in the event catalog. List known events via GET /api/workflow/registry/events.`,
+        ...(suggestion ? { suggestion } : {})
+      });
+    }
     const catalogRef = typeof (catalog as any)?.payload_schema_ref === 'string' ? String((catalog as any).payload_schema_ref) : null;
     const sourceRef = overrideSource ?? catalogRef;
     const sourceSchemaJson = sourceRef && schemaRegistry.has(sourceRef) ? (schemaRegistry.toJsonSchema(sourceRef) as any) : null;
@@ -1063,6 +1091,14 @@ const WORKFLOW_RUN_PAYLOAD_LIMIT = Number.isFinite(WORKFLOW_RUN_PAYLOAD_MAX_BYTE
 const workflowRunStartLimiter = new RateLimiterMemory({
   points: Number.isFinite(WORKFLOW_RUN_RATE_LIMIT_POINTS) ? WORKFLOW_RUN_RATE_LIMIT_POINTS : 60,
   duration: Number.isFinite(WORKFLOW_RUN_RATE_LIMIT_DURATION) ? WORKFLOW_RUN_RATE_LIMIT_DURATION : 60
+});
+
+const WORKFLOW_SIMULATE_RATE_LIMIT_POINTS = Number(process.env.WORKFLOW_SIMULATE_RATE_LIMIT_POINTS ?? 60);
+const WORKFLOW_SIMULATE_RATE_LIMIT_DURATION = Number(process.env.WORKFLOW_SIMULATE_RATE_LIMIT_DURATION ?? 60);
+
+const workflowSimulateLimiter = new RateLimiterMemory({
+  points: Number.isFinite(WORKFLOW_SIMULATE_RATE_LIMIT_POINTS) ? WORKFLOW_SIMULATE_RATE_LIMIT_POINTS : 60,
+  duration: Number.isFinite(WORKFLOW_SIMULATE_RATE_LIMIT_DURATION) ? WORKFLOW_SIMULATE_RATE_LIMIT_DURATION : 60
 });
 
 const measurePayloadBytes = (payload: unknown) => {
@@ -1576,7 +1612,146 @@ export const createWorkflowDefinitionAction = withAuth(async (user, { tenant }, 
     source: 'api'
   });
 
-  return { workflowId: record.workflow_id };
+  return { workflowId: record.workflow_id, draftVersion: Number(record.draft_version) };
+});
+
+export const validateWorkflowDefinitionDraftAction = withAuth(async (user, { tenant }, input: unknown) => {
+  initializeWorkflowRuntimeV2();
+  const parsed = CreateWorkflowDefinitionInput.pick({
+    definition: true,
+    payloadSchemaMode: true,
+    pinnedPayloadSchemaRef: true
+  }).parse(input);
+
+  const { knex } = await createTenantKnex();
+  await requireWorkflowPermission(user, 'manage', knex);
+
+  const definition = parsed.definition;
+  const schemaRegistry = getSchemaRegistry();
+  const payloadSchemaJson = definition.payloadSchemaRef && schemaRegistry.has(definition.payloadSchemaRef)
+    ? schemaRegistry.toJsonSchema(definition.payloadSchemaRef)
+    : null;
+
+  return computeValidation({
+    definition,
+    payloadSchemaRef: definition.payloadSchemaRef,
+    payloadSchemaJson,
+    knex,
+    tenant
+  });
+});
+
+export const simulateWorkflowDefinitionDraftAction = withAuth(async (user, { tenant }, input: unknown) => {
+  initializeWorkflowRuntimeV2();
+  const parsed = SimulateWorkflowDefinitionInput.parse(input);
+
+  const { knex } = await createTenantKnex();
+  await requireWorkflowPermission(user, 'manage', knex);
+  if (tenant) {
+    try {
+      await workflowSimulateLimiter.consume(tenant);
+    } catch {
+      throwHttpError(429, 'Workflow simulation rate limit exceeded');
+    }
+  }
+
+  for (const candidate of [parsed.payload, parsed.eventPayload, parsed.fixtures]) {
+    if (candidate === undefined) continue;
+    const bytes = measurePayloadBytes(candidate);
+    if (bytes === null) {
+      return throwHttpError(400, 'Simulation payload must be JSON serializable');
+    }
+    if (bytes > WORKFLOW_RUN_PAYLOAD_LIMIT) {
+      return throwHttpError(413, 'Simulation payload exceeds maximum size');
+    }
+  }
+
+  const definition = parsed.definition;
+  const schemaRegistry = getSchemaRegistry();
+  const trigger = definition.trigger;
+  const eventTrigger = isWorkflowEventTrigger(trigger) ? trigger : null;
+  const eventName = parsed.eventType ?? eventTrigger?.eventName ?? null;
+
+  // Resolve the workflow payload the simulation runs against:
+  // explicit payload > event payload through the trigger mapping > synthesized.
+  let payload: Record<string, unknown>;
+  let payloadSource: 'provided' | 'event-mapped' | 'synthesized-from-event' | 'synthesized-from-schema' | 'empty';
+  let mappingApplied = false;
+
+  const resolveSourceSchemaRef = async (): Promise<string | null> => {
+    if (typeof eventTrigger?.sourcePayloadSchemaRef === 'string' && eventTrigger.sourcePayloadSchemaRef.trim()) {
+      return eventTrigger.sourcePayloadSchemaRef.trim();
+    }
+    if (tenant && eventName) {
+      const catalog = await EventCatalogModel.getByEventType(knex, eventName, tenant);
+      const catalogRef = (catalog as { payload_schema_ref?: unknown } | null)?.payload_schema_ref;
+      if (typeof catalogRef === 'string' && catalogRef.trim()) {
+        return catalogRef.trim();
+      }
+    }
+    return null;
+  };
+
+  if (parsed.payload !== undefined) {
+    payload = parsed.payload;
+    payloadSource = 'provided';
+  } else if (parsed.eventPayload !== undefined && eventTrigger && eventName) {
+    const mapped = await applyTriggerPayloadMapping({
+      definition,
+      eventName,
+      eventPayload: parsed.eventPayload
+    });
+    payload = mapped.payload;
+    mappingApplied = mapped.mappingApplied;
+    payloadSource = 'event-mapped';
+  } else {
+    const sourceRef = eventTrigger && eventName ? await resolveSourceSchemaRef() : null;
+    if (sourceRef && schemaRegistry.has(sourceRef) && eventName) {
+      const sampleEventPayload = buildSampleFromJsonSchema(
+        schemaRegistry.toJsonSchema(sourceRef) as Record<string, unknown>
+      );
+      const mapped = await applyTriggerPayloadMapping({
+        definition,
+        eventName,
+        eventPayload: (sampleEventPayload ?? {}) as Record<string, unknown>
+      });
+      payload = mapped.payload;
+      mappingApplied = mapped.mappingApplied;
+      payloadSource = 'synthesized-from-event';
+    } else if (definition.payloadSchemaRef && schemaRegistry.has(definition.payloadSchemaRef)) {
+      payload = (buildSampleFromJsonSchema(
+        schemaRegistry.toJsonSchema(definition.payloadSchemaRef) as Record<string, unknown>
+      ) ?? {}) as Record<string, unknown>;
+      payloadSource = 'synthesized-from-schema';
+    } else {
+      payload = {};
+      payloadSource = 'empty';
+    }
+  }
+
+  const result = await simulateWorkflowDefinition({
+    definition,
+    payload,
+    fixtures: parsed.fixtures,
+    options: {
+      ...parsed.options,
+      tenantId: tenant ?? null
+    }
+  });
+
+  return {
+    ...result,
+    simulatedPayload: payload,
+    payloadSource,
+    triggerMappingApplied: mappingApplied
+  };
+});
+
+export const getWorkflowAuthoringGuideAction = withAuth(async (user) => {
+  initializeWorkflowRuntimeV2();
+  const { knex } = await createTenantKnex();
+  await requireWorkflowPermission(user, 'read', knex);
+  return buildWorkflowAuthoringGuide();
 });
 
 export const getWorkflowDefinitionVersionAction = withAuth(async (user, { tenant }, input: unknown) => {
@@ -1595,6 +1770,18 @@ export const getWorkflowDefinitionVersionAction = withAuth(async (user, { tenant
     tenant
   );
   if (!record) {
+    // Drafts have no published version row yet; the authoring update loop
+    // (GET -> edit -> PUT with expectedDraftVersion) still needs to read them.
+    if (Number((workflow as any).draft_version) === parsed.version && (workflow as any).draft_definition) {
+      return {
+        workflow_id: parsed.workflowId,
+        version: parsed.version,
+        definition_json: (workflow as any).draft_definition,
+        draft_version: (workflow as any).draft_version,
+        is_draft: true,
+        published_at: null
+      };
+    }
     return throwHttpError(404, 'Not found');
   }
   return record;
@@ -1607,6 +1794,12 @@ export const updateWorkflowDefinitionDraftAction = withAuth(async (user, { tenan
   const { knex } = await createTenantKnex();
   await requireWorkflowPermission(user, 'manage', knex);
   const current = await WorkflowDefinitionModelV2.getById(knex, tenant, parsed.workflowId);
+  if (!current) {
+    return throwHttpError(404, 'Not found');
+  }
+  if (parsed.expectedDraftVersion !== undefined && Number((current as any).draft_version) !== parsed.expectedDraftVersion) {
+    return throwHttpError(409, `Draft version mismatch. Expected ${parsed.expectedDraftVersion}, found ${(current as any).draft_version}.`);
+  }
   const normalizedDraft = normalizeTimeTriggerDraftContract({
     definition: { ...parsed.definition, id: parsed.workflowId },
     payloadSchemaMode: parsed.payloadSchemaMode ?? (typeof (current as any)?.payload_schema_mode === 'string' ? (current as any).payload_schema_mode : 'pinned'),
@@ -1646,9 +1839,17 @@ export const updateWorkflowDefinitionDraftAction = withAuth(async (user, { tenan
     validation_context_json: (validation as any).contextJson ?? null,
     validation_payload_schema_hash: (validation as any).payloadSchemaHash ?? null,
     validated_at: new Date().toISOString()
-  });
+  }, parsed.expectedDraftVersion !== undefined ? { expectedDraftVersion: parsed.expectedDraftVersion } : undefined);
 
   if (!updated) {
+    if (parsed.expectedDraftVersion !== undefined) {
+      // The pre-check passed but the guarded write matched no row: either a
+      // concurrent writer bumped draft_version or the workflow disappeared.
+      const latest = await WorkflowDefinitionModelV2.getById(knex, tenant, parsed.workflowId);
+      if (latest) {
+        return throwHttpError(409, `Draft version mismatch. Expected ${parsed.expectedDraftVersion}, found ${(latest as any).draft_version}.`);
+      }
+    }
     return throwHttpError(404, 'Not found');
   }
 

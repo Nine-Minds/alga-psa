@@ -1,0 +1,127 @@
+{
+  "entries": [
+    {
+      "match": { "method": "post", "path": "/api/workflow-definitions" },
+      "metadata": {
+        "displayName": "Create a workflow (draft)",
+        "summary": "Create a new automation workflow as a draft from a WorkflowDefinition JSON document",
+        "description": "Creates an automation workflow draft from a complete WorkflowDefinition document (trigger + steps). This is the endpoint to use when a user asks to build or automate something ('when X happens, do Y'). The draft is never activated automatically — a human reviews and publishes it in the workflow editor. Always follow the create-a-workflow playbook: discover the format, resolve tenant ids, compose, validate, simulate, then save.",
+        "rbacResource": "workflow",
+        "playbooks": [
+          "Create a workflow from natural language: 1) GET /api/workflow/registry/authoring-guide — the definition/step JSON schemas, expression grammar, worked example, and pitfalls. 2) GET /api/workflow/registry/events — pick the trigger event (event_type) and note its payload_schema_ref; fetch the payload shape via GET /api/workflow/registry/schemas/{schemaRef}. 3) GET /api/workflow/registry/designer-catalog and /api/workflow/registry/actions — find action ids and their input/output schemas. 4) Resolve every tenant-specific reference to a real id BEFORE composing — never invent UUIDs (see the resolve-tenant-references playbook). 5) Compose the WorkflowDefinition JSON. 6) POST /api/workflow-definitions/validate until it returns no errors (each error names the offending step and often a did-you-mean suggestion). 7) POST /api/workflow-definitions/simulate with a realistic payload; check the trace shows the intended branches and that each stubbed action's evaluatedInput is correct. 8) POST /api/workflow-definitions to save the draft. 9) Reply with the editor link /msp/workflow-editor/{workflowId} so the user can review and publish — never publish yourself.",
+          "Update an existing workflow: GET /api/workflow-definitions/{workflowId}/{version} to fetch the current draft, edit the definition document, validate and simulate as when creating, then PUT /api/workflow-definitions/{workflowId}/{version} with expectedDraftVersion set to the draft version you fetched (a 409 means someone else changed the draft — re-fetch and re-apply).",
+          "Resolve tenant references: priorities via GET /api/v1/priorities; boards via GET /api/v1/boards; statuses via GET /api/v1/statuses; users via GET /api/v1/users; clients via GET /api/v1/clients (or clients.find action at run time); contacts via GET /api/v1/contacts; activity groups via GET /api/v1/activities/groups or the activities.find_group workflow action at run time. Prefer run-time resolution actions (tickets.find, contacts.find, activities.find_group) inside the workflow when the value depends on the triggering event."
+        ],
+        "examples": [
+          {
+            "name": "VIP ticket fast lane draft",
+            "request": {
+              "body": {
+                "definition": {
+                  "id": "vip-ticket-fast-lane",
+                  "version": 1,
+                  "name": "VIP ticket fast lane",
+                  "payloadSchemaRef": "payload.TicketCreated.v1",
+                  "trigger": { "type": "event", "eventName": "TICKET_CREATED" },
+                  "steps": [
+                    {
+                      "id": "load-ticket",
+                      "type": "action.call",
+                      "config": {
+                        "actionId": "tickets.find",
+                        "version": 1,
+                        "inputMapping": { "ticket_id": { "$expr": "payload.ticketId" } },
+                        "saveAs": "vars.found"
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "notes": "Truncated to one step for brevity — the authoring guide's workedExample carries the full north-star definition (priority bump + activity-group filing gated on the requester's email)."
+          }
+        ]
+      }
+    },
+    {
+      "match": { "method": "post", "path": "/api/workflow-definitions/validate" },
+      "metadata": {
+        "displayName": "Validate a workflow draft",
+        "summary": "Validate a WorkflowDefinition document without saving anything",
+        "description": "Runs the full validation pipeline (schema shape, step configs, action ids and versions, expression syntax and function allowlist, trigger/event mapping requirements, payload schema refs, secret references) against an inline definition. Returns errors and warnings with step paths, codes, and did-you-mean suggestions. Iterate until errors is empty before simulating or saving.",
+        "rbacResource": "workflow",
+        "playbooks": [
+          "Fix validation errors: each error carries stepPath/stepId, a code, and often a suggestion (nearest action id, event name, or expression function). Apply the suggestion, re-validate, and only move on to simulation once the errors array is empty — warnings are advisory."
+        ],
+        "examples": [
+          {
+            "name": "Validate an inline draft",
+            "request": { "body": { "definition": { "id": "wf", "version": 1, "name": "Example", "payloadSchemaRef": "payload.TicketCreated.v1", "trigger": { "type": "event", "eventName": "TICKET_CREATED" }, "steps": [] } } },
+            "notes": "Nothing is persisted; safe to call repeatedly while iterating."
+          }
+        ]
+      }
+    },
+    {
+      "match": { "method": "post", "path": "/api/workflow-definitions/simulate" },
+      "metadata": {
+        "displayName": "Simulate a workflow draft (dry run)",
+        "summary": "Execute an inline WorkflowDefinition with zero side effects and read the step-by-step trace",
+        "description": "Dry-runs a draft: control flow and transforms execute for real, action.call steps are stubbed (their evaluated inputs are recorded in invocations), and waits pause the run unless a fixture resumes them. Omit payload to have one synthesized from the trigger's event schema. Use the trace to confirm branch decisions and that every action would be called with the right inputs before saving the draft.",
+        "rbacResource": "workflow",
+        "playbooks": [
+          "Verify a draft: simulate with a payload representative of the user's request; assert status is completed (or paused-at-wait when the flow intentionally waits), the trace takes the intended branches, and each invocation's input contains the resolved ids you expect. Supply fixtures keyed by step id to control stubbed action outputs your conditions depend on — schema-shaped placeholder outputs may otherwise steer branches unrealistically."
+        ],
+        "examples": [
+          {
+            "name": "Simulate with a fixture-controlled lookup",
+            "request": {
+              "body": {
+                "definition": { "id": "wf", "version": 1, "name": "Example", "payloadSchemaRef": "payload.TicketCreated.v1", "trigger": { "type": "event", "eventName": "TICKET_CREATED" }, "steps": [] },
+                "payload": { "ticketId": "00000000-0000-0000-0000-000000000001" },
+                "fixtures": { "load-ticket": { "ticket": { "contact_name_id": "00000000-0000-0000-0000-000000000002" } } }
+              }
+            },
+            "notes": "fixtures['load-ticket'] becomes that step's action output, letting the simulation exercise the branch that depends on it."
+          }
+        ]
+      }
+    },
+    {
+      "match": { "method": "put", "path": "/api/workflow-definitions/{workflowId}/{version}" },
+      "metadata": {
+        "displayName": "Replace a workflow draft",
+        "summary": "Full-document replace of a workflow's draft definition with optimistic concurrency",
+        "description": "Replaces the stored draft with the provided WorkflowDefinition document. Always send expectedDraftVersion (the draft_version you fetched); a 409 response means the draft changed concurrently — re-fetch, re-apply your edit, and retry. Validate and simulate the edited document before saving, exactly as when creating.",
+        "rbacResource": "workflow"
+      }
+    },
+    {
+      "match": { "method": "get", "path": "/api/workflow-definitions/{workflowId}/{version}" },
+      "metadata": {
+        "displayName": "Get a workflow definition version",
+        "summary": "Fetch a workflow definition document (start of the update loop)",
+        "description": "Returns the stored definition for a workflow version, including the draft document and draft version number needed for a concurrency-safe update via PUT.",
+        "rbacResource": "workflow"
+      }
+    },
+    {
+      "match": { "method": "get", "path": "/api/workflow/registry/authoring-guide" },
+      "metadata": {
+        "displayName": "Workflow authoring guide",
+        "summary": "Machine-readable manual for composing WorkflowDefinition JSON",
+        "description": "The first stop before composing or editing a workflow: definition and step JSON schemas assembled live from the runtime, node-type and control-block semantics, the $expr grammar with per-context expression roots and the custom function catalog, data-flow idioms, a complete worked example, and common pitfalls.",
+        "rbacResource": "workflow"
+      }
+    },
+    {
+      "match": { "method": "get", "path": "/api/workflow/registry/events" },
+      "metadata": {
+        "displayName": "Workflow trigger event catalog",
+        "summary": "List the events a workflow trigger can subscribe to",
+        "description": "Each entry gives event_type (use as trigger.eventName), a description, and payload_schema_ref — resolve the payload shape via GET /api/workflow/registry/schemas/{schemaRef} before writing conditions against payload fields.",
+        "rbacResource": "workflow"
+      }
+    }
+  ]
+}

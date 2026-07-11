@@ -98,6 +98,8 @@ const apiKeySkipPaths = [
   '/api/workflow-definitions/',
   '/api/workflow-runs',
   '/api/workflow-runs/',
+  // Workflow registry (authoring discovery surface): session OR API key, resolved in-route.
+  '/api/workflow/registry/',
   // Internal MSP UI endpoints (session-authenticated)
   '/api/accounting/csv/',
   '/api/accounting/exports/',

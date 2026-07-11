@@ -118,6 +118,39 @@ export function registerUnversionedPublicV1Routes(
     extensions: ext('workflow', 'manage'), edition: 'both',
   });
   registry.registerRoute({
+    method: 'post', path: '/api/workflow-definitions/validate',
+    summary: 'Validate a workflow definition draft',
+    description: 'Runs workflow validation without persisting anything.',
+    tags: [wfTag], security: [{ ApiKeyAuth: [] }],
+    request: { body: { schema: registry.registerSchema('WorkflowDefinitionValidateBody', zOpenApi.object({
+      definition: WorkflowDefinitionDoc,
+      payloadSchemaMode: zOpenApi.enum(['inferred', 'pinned']).optional(),
+      pinnedPayloadSchemaRef: zOpenApi.string().optional(),
+    })) } },
+    responses: { 200: { description: 'Validation completed.', schema: Success }, ...errs() },
+    extensions: ext('workflow', 'manage'), edition: 'both',
+  });
+  registry.registerRoute({
+    method: 'post', path: '/api/workflow-definitions/simulate',
+    summary: 'Simulate a workflow definition draft',
+    description: 'Executes an inline draft definition in a zero-side-effect simulator: expressions and transforms run for real, action.call steps are stubbed (fixture > schema-shaped placeholder > empty object) with their evaluated inputs recorded, and waits pause the run unless a fixture resumes them. Omit payload to have one synthesized from the trigger event schema or the workflow payload schema. Returns status, a per-step trace, final vars/payload, the stubbed action invocations, and any errors or warnings.',
+    tags: [wfTag], security: [{ ApiKeyAuth: [] }],
+    request: { body: { schema: registry.registerSchema('WorkflowDefinitionSimulateBody', zOpenApi.object({
+      definition: WorkflowDefinitionDoc,
+      payload: zOpenApi.record(zOpenApi.unknown()).optional().describe('Workflow payload used as-is (wins over eventPayload and synthesis).'),
+      eventPayload: zOpenApi.record(zOpenApi.unknown()).optional().describe('Source event payload, run through the trigger payloadMapping.'),
+      eventType: zOpenApi.string().optional().describe('Event to synthesize a payload for when payload/eventPayload are omitted.'),
+      fixtures: zOpenApi.record(zOpenApi.unknown()).optional().describe('Stub outputs keyed by step id or actionId. { "$error": { message } } makes a stubbed action fail; wait steps resume from their fixture.'),
+      options: zOpenApi.object({
+        maxSteps: zOpenApi.number().int().positive().optional(),
+        maxForEachIterations: zOpenApi.number().int().positive().optional(),
+        maxDurationMs: zOpenApi.number().int().positive().optional(),
+      }).optional(),
+    })) } },
+    responses: { 200: { description: 'Simulation completed (see status: completed | paused-at-wait | failed).', schema: Success }, ...errs({ 429: 'Simulation rate limit exceeded.' }) },
+    extensions: ext('workflow', 'manage'), edition: 'both',
+  });
+  registry.registerRoute({
     method: 'post', path: '/api/workflow-definitions/import',
     summary: 'Import a v1 workflow bundle',
     description: 'Imports a legacy v1 workflow bundle. Pass force=true (query) to overwrite an existing definition.',
@@ -152,7 +185,7 @@ export function registerUnversionedPublicV1Routes(
     summary: 'Update workflow draft definition',
     description: 'Replaces the draft definition for a specific version.',
     tags: [wfTag], security: [{ ApiKeyAuth: [] }],
-    request: { params: WorkflowVersionParams, body: { schema: registry.registerSchema('WorkflowDefinitionUpdateBody', zOpenApi.object({ definition: WorkflowDefinitionDoc })) } },
+    request: { params: WorkflowVersionParams, body: { schema: registry.registerSchema('WorkflowDefinitionUpdateBody', zOpenApi.object({ definition: WorkflowDefinitionDoc, expectedDraftVersion: zOpenApi.number().int().positive().optional() })) } },
     responses: { 200: { description: 'Draft updated.', schema: Success }, ...errs({ 404: 'Workflow/version not found.' }) },
     extensions: ext('workflow', 'manage'), edition: 'both',
   });
@@ -342,6 +375,56 @@ export function registerUnversionedPublicV1Routes(
     description: 'Returns the action catalog the workflow designer renders: registry actions and integration modules grouped into tiles, filtered to the integrations actually available to the tenant. Returns a bare array of catalog records (no envelope).',
     tags: [regTag], security: [{ ApiKeyAuth: [] }],
     responses: { 200: { description: 'Designer catalog tiles.', schema: zOpenApi.array(zOpenApi.record(zOpenApi.unknown()).describe('Catalog tile (groupKey, tileKind, actions, UI metadata).')) }, ...errs() },
+    extensions: ext('workflow', 'read'), edition: 'both',
+  });
+  registry.registerRoute({
+    method: 'get', path: '/api/workflow/registry/events',
+    summary: 'List workflow trigger events',
+    description: 'Returns the catalog of events a workflow event trigger can subscribe to: event_type (use as trigger.eventName), name, description, payload_schema_ref (resolve via GET /api/workflow/registry/schemas/{schemaRef}), payload_schema_ref_status, source (system|tenant), and status. Supports search, source, status, and limit query filters.',
+    tags: [regTag], security: [{ ApiKeyAuth: [] }],
+    request: { query: registry.registerSchema('WorkflowRegistryEventsQuery', zOpenApi.object({
+      search: zOpenApi.string().optional().describe('Case-insensitive match on event type, name, and description.'),
+      source: zOpenApi.enum(['all', 'system', 'tenant']).optional(),
+      status: zOpenApi.enum(['all', 'active', 'beta', 'draft', 'deprecated']).optional(),
+      limit: zOpenApi.number().int().min(1).max(2000).optional(),
+    })) },
+    responses: {
+      200: { description: 'Trigger event catalog.', schema: registry.registerSchema('WorkflowRegistryEventsResponse', zOpenApi.object({
+        events: zOpenApi.array(zOpenApi.object({
+          event_id: zOpenApi.string(),
+          event_type: zOpenApi.string().describe('Use this as trigger.eventName.'),
+          name: zOpenApi.string(),
+          description: zOpenApi.string().nullable().optional(),
+          category: zOpenApi.string().nullable().optional(),
+          payload_schema_ref: zOpenApi.string().nullable().optional().describe('Event payload schema reference; resolve via the schemas endpoint.'),
+          payload_schema_ref_status: zOpenApi.enum(['known', 'unknown', 'missing']),
+          source: zOpenApi.enum(['system', 'tenant']),
+          status: zOpenApi.enum(['active', 'beta', 'draft', 'deprecated']),
+        })),
+      })) },
+      ...errs(),
+    },
+    extensions: ext('workflow', 'read'), edition: 'both',
+  });
+  registry.registerRoute({
+    method: 'get', path: '/api/workflow/registry/authoring-guide',
+    summary: 'Get the workflow authoring guide',
+    description: 'Returns a machine-readable manual for composing WorkflowDefinition JSON: the definition and step JSON Schemas (assembled live from the runtime types), node-type semantics, control-block semantics, the $expr expression grammar with per-context roots and the custom function catalog, data-flow idioms, a complete worked example, and common pitfalls. Read this before composing or editing a workflow programmatically.',
+    tags: [regTag], security: [{ ApiKeyAuth: [] }],
+    responses: {
+      200: { description: 'Authoring guide document.', schema: registry.registerSchema('WorkflowAuthoringGuideResponse', zOpenApi.object({
+        overview: zOpenApi.record(zOpenApi.unknown()),
+        definitionSchema: JsonSchemaDoc,
+        stepSchemas: zOpenApi.record(JsonSchemaDoc),
+        nodeTypes: zOpenApi.array(zOpenApi.record(zOpenApi.unknown())),
+        controlBlocks: zOpenApi.array(zOpenApi.record(zOpenApi.unknown())),
+        expressionLanguage: zOpenApi.record(zOpenApi.unknown()),
+        dataFlow: zOpenApi.array(zOpenApi.string()),
+        workedExample: zOpenApi.record(zOpenApi.unknown()),
+        commonPitfalls: zOpenApi.array(zOpenApi.string()),
+      })) },
+      ...errs(),
+    },
     extensions: ext('workflow', 'read'), edition: 'both',
   });
   registry.registerRoute({

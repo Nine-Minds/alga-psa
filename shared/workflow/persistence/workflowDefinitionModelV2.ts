@@ -90,20 +90,36 @@ const WorkflowDefinitionModelV2 = {
     return record;
   },
 
-  update: async (knex: Knex, tenantId: string, workflowId: string, data: Partial<WorkflowDefinitionRecord>): Promise<WorkflowDefinitionRecord> => {
+  update: async (
+    knex: Knex,
+    tenantId: string,
+    workflowId: string,
+    data: Partial<WorkflowDefinitionRecord>,
+    options?: {
+      /**
+       * Optimistic concurrency: only apply the update when the stored
+       * draft_version still matches. When it doesn't, no row is written and
+       * null is returned — the caller decides between 404 and 409.
+       */
+      expectedDraftVersion?: number;
+    }
+  ): Promise<WorkflowDefinitionRecord | null> => {
     const tenant = assertTenantId(tenantId);
     const normalized = normalizeWorkflowDefinitionWrite(data);
     delete (normalized as Record<string, unknown>).tenant_id;
     delete (normalized as Record<string, unknown>).tenant;
-    const [record] = await workflowDefinitions(knex, tenant)
-      .where({ workflow_id: workflowId })
+    let query = workflowDefinitions(knex, tenant).where({ workflow_id: workflowId });
+    if (options?.expectedDraftVersion !== undefined) {
+      query = query.where({ draft_version: options.expectedDraftVersion });
+    }
+    const [record] = await query
       .update({
         ...normalized,
         is_system: false,
         updated_at: new Date().toISOString()
       })
       .returning('*');
-    return record;
+    return record ?? null;
   },
 
   getById: async (knex: Knex, tenantId: string, workflowId: string): Promise<WorkflowDefinitionRecord | null> => {
