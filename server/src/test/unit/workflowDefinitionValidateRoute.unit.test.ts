@@ -2,19 +2,22 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const validateWorkflowDefinitionDraftAction = vi.fn();
 const handleWorkflowV2ApiError = vi.fn((error: unknown) => new Response(JSON.stringify({ error: String(error) }), { status: 500 }));
+const runWorkflowV2RouteWithAuth = vi.fn(async (_req: unknown, fn: () => Promise<unknown>) => fn());
 
 vi.mock('@alga-psa/workflows/actions', () => ({
   validateWorkflowDefinitionDraftAction
 }));
 
 vi.mock('server/src/lib/api/workflowRuntimeV2Api', () => ({
-  handleWorkflowV2ApiError
+  handleWorkflowV2ApiError,
+  runWorkflowV2RouteWithAuth
 }));
 
 describe('workflow definition validate route', () => {
   beforeEach(() => {
     validateWorkflowDefinitionDraftAction.mockReset();
     handleWorkflowV2ApiError.mockClear();
+    runWorkflowV2RouteWithAuth.mockClear();
   });
 
   it('forwards the request body to the validation action', async () => {
@@ -26,6 +29,7 @@ describe('workflow definition validate route', () => {
       body: JSON.stringify({ definition: { name: 'Test' }, payloadSchemaMode: 'pinned' })
     }) as never);
 
+    expect(runWorkflowV2RouteWithAuth).toHaveBeenCalledTimes(1);
     expect(validateWorkflowDefinitionDraftAction).toHaveBeenCalledWith({
       definition: { name: 'Test' },
       payloadSchemaMode: 'pinned'
