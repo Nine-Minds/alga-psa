@@ -1075,7 +1075,8 @@
     "fromDate": "Dal",
     "toDate": "Al",
     "noResults": "Nessun risultato trovato",
-    "searchPlaceholder": "Cerca..."
+    "searchPlaceholder": "Cerca...",
+    "showingOfTotal": "Visualizzati {{shown}} di {{total}} — digita per restringere"
   },
   "pickers": {
     "addNewClient": "Aggiungi nuovo cliente",

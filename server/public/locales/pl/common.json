@@ -1105,7 +1105,8 @@
     "fromDate": "Od",
     "toDate": "Do",
     "noResults": "Nie znaleziono wyników",
-    "searchPlaceholder": "Szukaj..."
+    "searchPlaceholder": "Szukaj...",
+    "showingOfTotal": "Wyświetlono {{shown}} z {{total}} — wpisz, aby zawęzić"
   },
   "pickers": {
     "addNewClient": "Dodaj nowego klienta",

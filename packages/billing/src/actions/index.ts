@@ -40,6 +40,7 @@ export * from './invoiceTemplates';
 export * from './manualInvoiceActions';
 export * from './salesOrderInvoicingActions';
 export * from './rmaChargeActions';
+export * from './restockingFeeActions';
 export * from './salesOrderDocumentActions';
 export * from '../lib/salesOrderDocumentError';
 export * from './documentTemplateActions';

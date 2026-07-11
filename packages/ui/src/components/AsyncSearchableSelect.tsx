@@ -326,10 +326,17 @@ export function AsyncSearchableSelect({
               ))}
 
               {hasMore && (
-                <div className="flex items-center justify-center px-2 py-2">
+                <div className="flex items-center justify-center gap-2 px-2 py-2 text-xs text-[rgb(var(--color-text-400))]">
                   {loadingMore && (
-                    <Loader2 className="h-4 w-4 animate-spin text-[rgb(var(--color-text-300))]" />
+                    <Loader2 className="h-3.5 w-3.5 animate-spin text-[rgb(var(--color-text-300))]" />
                   )}
+                  <span>
+                    {t('form.showingOfTotal', {
+                      defaultValue: 'Showing {{shown}} of {{total}} — type to narrow',
+                      shown: options.length,
+                      total,
+                    })}
+                  </span>
                 </div>
               )}
             </>

@@ -80,7 +80,8 @@
     "fromDate": "A partir da data",
     "toDate": "A data",
     "noResults": "Nenhum resultado encontrado",
-    "searchPlaceholder": "Procurar..."
+    "searchPlaceholder": "Procurar...",
+    "showingOfTotal": "Mostrando {{shown}} de {{total}} — digite para refinar"
   },
   "pickers": {
     "addNewClient": "Adicionar novo cliente",

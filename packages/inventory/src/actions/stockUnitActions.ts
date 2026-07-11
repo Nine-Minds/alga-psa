@@ -183,6 +183,52 @@ export const searchUnitsByMac = withAuth(
 );
 
 /**
+ * Paged picker query behind the loan-out unit selector: in-stock units whose
+ * serial OR MAC matches the term (any-field ILIKE, so no client-side guessing
+ * about which one the user typed). An empty term browses the whole in-stock
+ * pool — a picker that shows nothing until you type reads as "no stock". The
+ * real `total` comes back with the page so the UI can say "showing N of M".
+ */
+export const searchInStockUnits = withAuth(
+  async (
+    user,
+    { tenant },
+    input?: { search?: string; page?: number; limit?: number },
+  ): Promise<{ units: IStockUnit[]; total: number } | StockUnitActionError> => {
+    return withStockUnitActionErrors(async () => {
+      await requireInvRead(user);
+      const term = (input?.search ?? '').trim();
+      const limit = Math.min(Math.max(Math.trunc(input?.limit ?? 10), 1), 100);
+      const page = Math.max(Math.trunc(input?.page ?? 1), 1);
+      const { knex: db } = await createTenantKnex();
+      return withTransaction(db, async (trx: Knex.Transaction) => {
+        const applyFilters = <T extends Knex.QueryBuilder>(q: T): T => {
+          q.andWhere({ 'su.status': 'in_stock' });
+          if (term) {
+            const pattern = `%${escapeLike(term)}%`;
+            q.andWhere((b) => {
+              b.whereRaw('su.serial_number ILIKE ? ESCAPE ?', [pattern, '\\']).orWhereRaw(
+                'su.mac_address ILIKE ? ESCAPE ?',
+                [pattern, '\\'],
+              );
+            });
+          }
+          return q;
+        };
+        const countRow = await applyFilters(trx('stock_units as su').where({ 'su.tenant': tenant }))
+          .count<{ count: string }>('* as count')
+          .first();
+        const units = (await applyFilters(stockUnitsWithNames(trx, tenant))
+          .orderBy('su.serial_number', 'asc')
+          .limit(limit)
+          .offset((page - 1) * limit)) as IStockUnit[];
+        return { units, total: Number(countRow?.count ?? 0) };
+      });
+    });
+  },
+);
+
+/**
  * A unit plus its full movement history (oldest → newest), the unit-lifecycle
  * record that bridges stock → deployed asset → RMA.
  */

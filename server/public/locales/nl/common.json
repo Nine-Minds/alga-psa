@@ -1075,7 +1075,8 @@
     "fromDate": "Van",
     "toDate": "Tot",
     "noResults": "Geen resultaten gevonden",
-    "searchPlaceholder": "Zoeken..."
+    "searchPlaceholder": "Zoeken...",
+    "showingOfTotal": "{{shown}} van {{total}} weergegeven — typ om te verfijnen"
   },
   "pickers": {
     "addNewClient": "Nieuwe klant toevoegen",

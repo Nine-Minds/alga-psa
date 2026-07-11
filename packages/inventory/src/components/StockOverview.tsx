@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
+import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { CurrencyInput } from '@alga-psa/ui/components/CurrencyInput';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { EmptyState } from '@alga-psa/ui/components/EmptyState';
@@ -59,9 +60,11 @@ interface ReceiveForm {
   location_id: string;
   quantity: string;
   unit_cost: string;
+  /** Newline-separated serials; only read for serialized products (quantity derives from it). */
+  serials: string;
 }
 
-const EMPTY_RECEIVE: ReceiveForm = { service_id: '', location_id: '', quantity: '', unit_cost: '' };
+const EMPTY_RECEIVE: ReceiveForm = { service_id: '', location_id: '', quantity: '', unit_cost: '', serials: '' };
 
 const NUM_HEADER = 'text-right';
 const NUM_CELL = 'text-right tabular-nums';
@@ -188,6 +191,13 @@ export function StockOverview({
 
   const selectedProduct = products.find((p) => p.service_id === receiveForm.service_id) || null;
 
+  // For serialized products the serial list IS the quantity — deriving it removes
+  // the "N serials but quantity M" error mode entirely instead of validating it.
+  const serialNumbers = receiveForm.serials
+    .split('\n')
+    .map((s) => s.trim())
+    .filter(Boolean);
+
   const saveReceive = async () => {
     if (!receiveForm.service_id) {
       toast.error(t('stock.receive.pickProduct', 'Pick a product.'));
@@ -197,10 +207,19 @@ export function StockOverview({
       toast.error(t('stock.receive.pickLocation', 'Pick a location.'));
       return;
     }
-    const quantity = Number(receiveForm.quantity);
-    if (!Number.isInteger(quantity) || quantity <= 0) {
-      toast.error(t('stock.receive.qtyPositive', 'Quantity must be a positive whole number.'));
-      return;
+    let quantity: number;
+    if (selectedProduct?.is_serialized) {
+      if (serialNumbers.length === 0) {
+        toast.error(t('stock.receive.serialsRequired', 'Enter at least one serial number.'));
+        return;
+      }
+      quantity = serialNumbers.length;
+    } else {
+      quantity = Number(receiveForm.quantity);
+      if (!Number.isInteger(quantity) || quantity <= 0) {
+        toast.error(t('stock.receive.qtyPositive', 'Quantity must be a positive whole number.'));
+        return;
+      }
     }
     const unitDollars = Number(receiveForm.unit_cost);
     if (!Number.isFinite(unitDollars) || unitDollars < 0) {
@@ -214,6 +233,9 @@ export function StockOverview({
         location_id: receiveForm.location_id,
         quantity,
         unit_cost: toMinorUnits(unitDollars, undefined, selectedProduct?.cost_currency ?? defaultCurrencyCode),
+        serials: selectedProduct?.is_serialized
+          ? serialNumbers.map((serial_number) => ({ serial_number }))
+          : undefined,
       });
       if (isActionMessageError(result) || isActionPermissionError(result)) {
         toast.error(getErrorMessage(result));
@@ -465,16 +487,34 @@ export function StockOverview({
             options={locations.map((loc) => ({ value: loc.location_id, label: loc.name }))}
             onValueChange={(v: string) => setReceiveForm({ ...receiveForm, location_id: v })}
           />
-          <Input
-            id="receive-stock-quantity"
-            label={t('common.quantity', 'Quantity')}
-            required
-            type="number"
-            min="1"
-            step="1"
-            value={receiveForm.quantity}
-            onChange={(e) => setReceiveForm({ ...receiveForm, quantity: e.target.value })}
-          />
+          {selectedProduct?.is_serialized ? (
+            <div>
+              <TextArea
+                id="receive-stock-serials"
+                label={t('stock.receive.serialNumbers', 'Serial numbers (one per line)')}
+                required
+                rows={4}
+                value={receiveForm.serials}
+                onChange={(e) => setReceiveForm({ ...receiveForm, serials: e.target.value })}
+              />
+              <p className="mt-1 text-xs text-[rgb(var(--color-text-500))]">
+                {serialNumbers.length === 1
+                  ? t('stock.receive.serialCountOne', 'Receiving 1 unit.')
+                  : t('stock.receive.serialCount', 'Receiving {{n}} units.', { n: serialNumbers.length })}
+              </p>
+            </div>
+          ) : (
+            <Input
+              id="receive-stock-quantity"
+              label={t('common.quantity', 'Quantity')}
+              required
+              type="number"
+              min="1"
+              step="1"
+              value={receiveForm.quantity}
+              onChange={(e) => setReceiveForm({ ...receiveForm, quantity: e.target.value })}
+            />
+          )}
           <CurrencyInput
             id="receive-stock-unit-cost"
             label={t('stock.fields.unitCost', 'Unit cost')}
@@ -482,11 +522,6 @@ export function StockOverview({
             value={receiveForm.unit_cost ? Number(receiveForm.unit_cost) : undefined}
             onChange={(value) => setReceiveForm({ ...receiveForm, unit_cost: value == null ? '' : String(value) })}
           />
-          {selectedProduct?.is_serialized && (
-            <p className="text-xs text-[rgb(var(--color-text-500))]">
-              {t('stock.receive.serializedHint', 'Receive serialized products one serial at a time.')}
-            </p>
-          )}
           <div className="flex justify-end gap-2 pt-2">
             <Button id="receive-stock-cancel" variant="outline" onClick={() => setReceiveOpen(false)}>
               {t('common.cancel', 'Cancel')}

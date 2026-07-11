@@ -10,6 +10,7 @@ export * from './SalesOrdersManager';
 export * from './StockLocationsManager';
 export * from './StockOverview';
 export * from './StockUnitsManager';
+export * from './UnitHistoryDialog';
 export * from './TransfersManager';
 export * from './VendorsManager';
 export * from './SalesOrderDetail';
