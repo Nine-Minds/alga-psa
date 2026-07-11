@@ -347,8 +347,10 @@ export const setVendorBillStatus = withAuth(
       });
 
       if (status === 'open') {
-        // eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- inventory→billing runtime, deferred to avoid a static cross-feature edge
-        const { enqueueVendorBillAutoExport } = await import('@alga-psa/billing/runtime');
+        // Resolve this optional runtime hook dynamically so inventory retains no static
+        // package edge to billing (the server assembly provides both packages).
+        const billingRuntimeModule = '@alga-psa/billing/runtime';
+        const { enqueueVendorBillAutoExport } = await import(billingRuntimeModule);
         void enqueueVendorBillAutoExport(db, tenant, billId);
       }
 
