@@ -1,5 +1,6 @@
 import type { IUserWithRoles } from '@alga-psa/types';
 import { getUserWithRoles, getUserWithRolesByEmail, createTenantKnex } from '@alga-psa/db';
+import { getApiKeyUserOverride } from './apiKeyUserContext';
 import { getSession } from './getSession';
 import logger from '@alga-psa/core/logger';
 // Note: Avatar URLs are NOT fetched here to avoid circular dependency with @alga-psa/documents.
@@ -7,6 +8,13 @@ import logger from '@alga-psa/core/logger';
 
 export async function getCurrentUser(): Promise<IUserWithRoles | null> {
   try {
+    // API-key routes establish the caller's identity explicitly (see
+    // apiKeyUserContext); it takes precedence over any ambient session.
+    const apiKeyUser = getApiKeyUserOverride();
+    if (apiKeyUser) {
+      return apiKeyUser;
+    }
+
     const session = await getSession();
 
     if (!session?.user) {

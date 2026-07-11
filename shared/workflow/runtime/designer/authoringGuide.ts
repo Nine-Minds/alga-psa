@@ -256,7 +256,7 @@ export function buildWorkflowAuthoringGuide(): WorkflowAuthoringGuide {
                       version: 1,
                       inputMapping: {
                         ticket_id: { $expr: 'payload.ticketId' },
-                        priority_id: '00000000-0000-0000-0000-00000000hi01',
+                        patch: { priority_id: '00000000-0000-0000-0000-000000000f01' },
                       },
                     },
                   },
@@ -268,7 +268,7 @@ export function buildWorkflowAuthoringGuide(): WorkflowAuthoringGuide {
                       version: 1,
                       inputMapping: {
                         groupName: 'important',
-                        ownerUserId: '00000000-0000-0000-0000-0000000use01',
+                        ownerUserId: '00000000-0000-0000-0000-000000000e01',
                       },
                       saveAs: 'vars.importantGroup',
                     },
@@ -283,7 +283,7 @@ export function buildWorkflowAuthoringGuide(): WorkflowAuthoringGuide {
                         groupId: { $expr: 'vars.importantGroup.groupId' },
                         activityId: { $expr: 'payload.ticketId' },
                         activityType: 'ticket',
-                        ownerUserId: '00000000-0000-0000-0000-0000000use01',
+                        ownerUserId: '00000000-0000-0000-0000-000000000e01',
                       },
                     },
                   },

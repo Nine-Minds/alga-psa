@@ -827,8 +827,11 @@ const computeValidation = async (params: {
   };
 
   const isCompatible = (expected: Set<string>, actual: Set<string>): { ok: boolean; known: boolean } => {
-    const expectedKnown = !(expected.size === 1 && expected.has('unknown'));
-    const actualKnown = !(actual.size === 1 && actual.has('unknown'));
+    // Any 'unknown' member means the inference is partial (e.g. a nullable
+    // field whose non-null side could not be resolved) — downgrade to the
+    // warning path instead of failing validation on a guess.
+    const expectedKnown = !expected.has('unknown');
+    const actualKnown = !actual.has('unknown');
     const known = expectedKnown && actualKnown;
     if (!known) return { ok: true, known: false };
     // Nullability: if expected includes null, allow actual null; otherwise normal check.
@@ -1767,6 +1770,18 @@ export const getWorkflowDefinitionVersionAction = withAuth(async (user, { tenant
     tenant
   );
   if (!record) {
+    // Drafts have no published version row yet; the authoring update loop
+    // (GET -> edit -> PUT with expectedDraftVersion) still needs to read them.
+    if (Number((workflow as any).draft_version) === parsed.version && (workflow as any).draft_definition) {
+      return {
+        workflow_id: parsed.workflowId,
+        version: parsed.version,
+        definition_json: (workflow as any).draft_definition,
+        draft_version: (workflow as any).draft_version,
+        is_draft: true,
+        published_at: null
+      };
+    }
     return throwHttpError(404, 'Not found');
   }
   return record;
