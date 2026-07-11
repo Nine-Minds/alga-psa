@@ -172,6 +172,8 @@ export function LoanersManager({
   }, [rows, query, overdueOnly]);
 
   const isFiltered = query.trim() !== '' || overdueOnly;
+  const returnDialogOpen = returnUnit !== null;
+  const extendDialogOpen = extendUnit !== null;
 
   // --- Loan out ---
   // Empty term = browse the in-stock pool (an empty dropdown reads as "no stock");
@@ -234,7 +236,7 @@ export function LoanersManager({
   };
   useDialogSubmitShortcut(
     () => { void submitLoan(); },
-    { active: loanOpen, enabled: loanOpen && !saving },
+    { active: loanOpen, enabled: loanOpen && !loanSaving },
   );
 
   // --- Return ---
@@ -268,7 +270,7 @@ export function LoanersManager({
   };
   useDialogSubmitShortcut(
     () => { void submitReturn(); },
-    { active: returnOpen, enabled: returnOpen && !saving },
+    { active: returnDialogOpen, enabled: returnDialogOpen && !returnSaving },
   );
 
   // --- Extend ---
@@ -298,8 +300,8 @@ export function LoanersManager({
     }
   };
   useDialogSubmitShortcut(
-    () => { void submitRestock(); },
-    { active: restockOpen, enabled: restockOpen && !saving },
+    () => { void submitExtend(); },
+    { active: extendDialogOpen, enabled: extendDialogOpen && !extendSaving },
   );
 
   // --- History ---
@@ -328,7 +330,6 @@ export function LoanersManager({
   );
 
   const emptyCell = <span className="text-[rgb(var(--color-text-400))]">{t('common.emptyValue', '—')}</span>;
-
   const columns: ColumnDefinition<LoanerOutRow>[] = [
     {
       title: t('loaners.columns.serial', 'Serial'),
@@ -567,7 +568,7 @@ export function LoanersManager({
       </Dialog>
 
       {/* Return */}
-      <Dialog isOpen={returnUnit !== null} onClose={() => setReturnUnit(null)} title={t('loaners.returnDialogTitle', 'Return loaner')} id="loaner-return-dialog">
+      <Dialog isOpen={returnDialogOpen} onClose={() => setReturnUnit(null)} title={t('loaners.returnDialogTitle', 'Return loaner')} id="loaner-return-dialog">
         <div className="space-y-4 p-1">
           <p className="text-sm text-gray-600">
             {t('loaners.returningTo', 'Returning {{serial}} to stock.', { serial: returnUnit?.serial_number ?? '' })}
@@ -593,7 +594,7 @@ export function LoanersManager({
       </Dialog>
 
       {/* Extend */}
-      <Dialog isOpen={extendUnit !== null} onClose={() => setExtendUnit(null)} title={t('loaners.extendDialogTitle', 'Extend loan')} id="loaner-extend-dialog">
+      <Dialog isOpen={extendDialogOpen} onClose={() => setExtendUnit(null)} title={t('loaners.extendDialogTitle', 'Extend loan')} id="loaner-extend-dialog">
         <div className="space-y-4 p-1">
           <p className="text-sm text-gray-600">
             {t('loaners.currentlyDue', 'Currently due: {{due}}', {
