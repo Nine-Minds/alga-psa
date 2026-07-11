@@ -117,12 +117,43 @@ async function assertCanOrganizeGroups(
 }
 
 /**
+ * Resolve which user's groups a mutation operates on. Own groups need the
+ * baseline organize gate; another internal user's groups (e.g. workflow
+ * automation filing a ticket into a specific person's list) require
+ * `user_schedule:update` — the capability that already governs changing
+ * someone else's schedule items.
+ */
+async function resolveGroupOwnerForWrite(
+  trx: Knex.Transaction,
+  user: IUserWithRoles,
+  tenant: string,
+  targetUserId?: string,
+): Promise<string> {
+  if (!targetUserId || targetUserId === user.user_id) {
+    await assertCanOrganizeGroups(trx, user);
+    return user.user_id;
+  }
+
+  if (!(await hasPermission(user, "user_schedule", "update", trx))) {
+    throw new Error("Permission denied: cannot organize another user's activity groups");
+  }
+  const target = await trx("users")
+    .where({ tenant, user_id: targetUserId, user_type: "internal" })
+    .first();
+  if (!target) {
+    throw new Error("User not found");
+  }
+  return targetUserId;
+}
+
+/**
  * Move an activity into a group at a specific position. If it already belonged to one of the
  * caller's groups it's removed from there first, so an activity lives in at most one group.
  * Rows at/after the insertion index are shifted up to keep `sort_order` dense and unique.
  *
- * Identity-explicit core shared by the web `withAuth` action and the v1 REST API; scoped to
- * the caller's own groups by `user_id`.
+ * Identity-explicit core shared by the web `withAuth` action, the v1 REST API, and workflow
+ * actions. Defaults to the caller's own groups; pass `targetUserId` to file into another
+ * internal user's group (requires `user_schedule:update`).
  */
 export async function moveActivityToGroupForApi(
   user: IUserWithRoles,
@@ -131,6 +162,7 @@ export async function moveActivityToGroupForApi(
   activityType: string,
   targetGroupId: string,
   sortOrder: number,
+  targetUserId?: string,
 ): Promise<void> {
   if (!activityId || !activityType) {
     throw new Error("Activity id and type are required");
@@ -141,18 +173,18 @@ export async function moveActivityToGroupForApi(
 
   const { knex: db } = await createTenantKnex(tenant);
   await withTransaction(db, async (trx: Knex.Transaction) => {
-    await assertCanOrganizeGroups(trx, user);
+    const ownerUserId = await resolveGroupOwnerForWrite(trx, user, tenant, targetUserId);
 
     const target = await trx("user_activity_groups")
-      .where({ tenant, group_id: targetGroupId, user_id: user.user_id })
+      .where({ tenant, group_id: targetGroupId, user_id: ownerUserId })
       .first();
     if (!target) {
       throw new Error("Target group not found");
     }
 
-    // Remove any existing membership of this activity in any of the caller's groups.
+    // Remove any existing membership of this activity in any of the owner's groups.
     const userGroupIds = await trx("user_activity_groups")
-      .where({ tenant, user_id: user.user_id })
+      .where({ tenant, user_id: ownerUserId })
       .pluck("group_id");
 
     if (userGroupIds.length > 0) {
@@ -180,14 +212,16 @@ export async function moveActivityToGroupForApi(
 }
 
 /**
- * Remove an activity from any of the caller's groups (makes it "ungrouped"). No-op when the
- * caller has no groups. Identity-explicit core scoped to the caller's own groups.
+ * Remove an activity from any of the owner's groups (makes it "ungrouped"). No-op when the
+ * owner has no groups. Defaults to the caller's own groups; pass `targetUserId` to operate
+ * on another internal user's groups (requires `user_schedule:update`).
  */
 export async function removeActivityFromGroupsForApi(
   user: IUserWithRoles,
   tenant: string,
   activityId: string,
   activityType: string,
+  targetUserId?: string,
 ): Promise<void> {
   if (!activityId || !activityType) {
     throw new Error("Activity id and type are required");
@@ -195,10 +229,10 @@ export async function removeActivityFromGroupsForApi(
 
   const { knex: db } = await createTenantKnex(tenant);
   await withTransaction(db, async (trx: Knex.Transaction) => {
-    await assertCanOrganizeGroups(trx, user);
+    const ownerUserId = await resolveGroupOwnerForWrite(trx, user, tenant, targetUserId);
 
     const userGroupIds = await trx("user_activity_groups")
-      .where({ tenant, user_id: user.user_id })
+      .where({ tenant, user_id: ownerUserId })
       .pluck("group_id");
     if (userGroupIds.length === 0) return;
 
