@@ -37,6 +37,7 @@ export {
 export { buildSampleFromJsonSchema } from './simulation/samplePayload';
 export { buildWorkflowAuthoringGuide, type WorkflowAuthoringGuide } from './designer/authoringGuide';
 export { listWorkflowExpressionFunctions } from './expressionFunctions';
+export { didYouMean, findNearestName, levenshteinDistance } from './validation/didYouMean';
 export * from './actions/composeText';
 export {
   validateInputMapping,

@@ -34,6 +34,7 @@ import {
   applyTriggerPayloadMapping,
   buildSampleFromJsonSchema,
   buildWorkflowAuthoringGuide,
+  didYouMean,
   type WorkflowTrigger,
   type PublishError
 } from '@alga-psa/workflows/runtime';
@@ -303,7 +304,8 @@ const buildUnknownPayloadSchemaRefError = (schemaRef: string, suggestions: strin
   code: 'UNKNOWN_PAYLOAD_SCHEMA_REF',
   message: suggestions.length
     ? `Unknown payload schema ref "${schemaRef}". Did you mean: ${suggestions.join(', ')}?`
-    : `Unknown payload schema ref "${schemaRef}".`
+    : `Unknown payload schema ref "${schemaRef}".`,
+  ...(suggestions.length ? { suggestion: `Did you mean "${suggestions[0]}"?` } : {})
 });
 
 const buildTimeTriggerMissingRunAtError = (): PublishError => ({
@@ -891,6 +893,24 @@ const computeValidation = async (params: {
       ? String(trigger.sourcePayloadSchemaRef).trim()
       : null;
     const catalog = tenant ? await EventCatalogModel.getByEventType(knex, eventName, tenant) : null;
+    if (tenant && !catalog) {
+      const knownEvents = await EventCatalogModel.getAll(knex, tenant, { limit: 2000, offset: 0 });
+      const suggestion = didYouMean(
+        eventName,
+        knownEvents
+          .map((entry: { event_type?: unknown }) => (typeof entry.event_type === 'string' ? entry.event_type : ''))
+          .filter(Boolean)
+      );
+      errors.push({
+        severity: 'error',
+        stepPath: 'root.trigger.eventName',
+        code: 'UNKNOWN_TRIGGER_EVENT',
+        message: suggestion
+          ? `Event "${eventName}" is not in the event catalog. ${suggestion}`
+          : `Event "${eventName}" is not in the event catalog. List known events via GET /api/workflow/registry/events.`,
+        ...(suggestion ? { suggestion } : {})
+      });
+    }
     const catalogRef = typeof (catalog as any)?.payload_schema_ref === 'string' ? String((catalog as any).payload_schema_ref) : null;
     const sourceRef = overrideSource ?? catalogRef;
     const sourceSchemaJson = sourceRef && schemaRegistry.has(sourceRef) ? (schemaRegistry.toJsonSchema(sourceRef) as any) : null;

@@ -4,7 +4,9 @@ import { workflowDefinitionSchema } from '../types';
 import { getNodeTypeRegistry } from '../registries/nodeTypeRegistry';
 import { getActionRegistryV2 } from '../registries/actionRegistry';
 import { validateExpressionSource } from '../expressionEngine';
+import { WORKFLOW_RUNTIME_ALLOWED_FUNCTIONS } from '../expressionFunctions';
 import { zodToJsonSchema } from 'zod-to-json-schema';
+import { didYouMean } from './didYouMean';
 import { validateInputMapping, validateInputMappingSchema, collectSecretRefsFromConfig } from './mappingValidator';
 import {
   isWorkflowAiInferAction,
@@ -150,12 +152,16 @@ function validateExpr(expr: { $expr: string }, stepPath: string, stepId: string,
   try {
     validateExpressionSource(expr.$expr);
   } catch (error) {
+    const message = error instanceof Error ? error.message : 'Invalid expression';
+    const disallowedFn = /disallowed function: (\S+)/.exec(message)?.[1];
+    const suggestion = disallowedFn ? didYouMean(disallowedFn, WORKFLOW_RUNTIME_ALLOWED_FUNCTIONS) : null;
     errors.push({
       severity: 'error',
       stepPath,
       stepId,
       code: 'INVALID_EXPR',
-      message: error instanceof Error ? error.message : 'Invalid expression'
+      message: suggestion ? `${message} in "${expr.$expr}". ${suggestion}` : message,
+      ...(suggestion ? { suggestion } : {})
     });
   }
 }
@@ -173,12 +179,14 @@ function validateNodeStep(
 ) {
   const nodeType = nodeRegistry.get(step.type);
   if (!nodeType) {
+    const suggestion = didYouMean(step.type, nodeRegistry.list().map((node) => node.id));
     errors.push({
       severity: 'error',
       stepPath,
       stepId: step.id,
       code: 'UNKNOWN_NODE_TYPE',
-      message: `Unknown node type: ${step.type}`
+      message: suggestion ? `Unknown node type: ${step.type}. ${suggestion}` : `Unknown node type: ${step.type}`,
+      ...(suggestion ? { suggestion } : {})
     });
     return;
   }
@@ -210,12 +218,20 @@ function validateNodeStep(
       } else {
         const action = actionRegistry.get(config.actionId, config.version);
         if (!action) {
+          const knownIds = new Set(actionRegistry.list().map((meta) => meta.id));
+          const versionsOfAction = actionRegistry.listById(config.actionId);
+          const suggestion = versionsOfAction.length > 0
+            ? `Action "${config.actionId}" exists at version${versionsOfAction.length > 1 ? 's' : ''} ${versionsOfAction.map((def) => def.version).join(', ')}.`
+            : didYouMean(config.actionId, knownIds);
           errors.push({
             severity: 'error',
             stepPath,
             stepId: step.id,
             code: 'UNKNOWN_ACTION',
-            message: `Unknown action ${config.actionId}@${config.version}`
+            message: suggestion
+              ? `Unknown action ${config.actionId}@${config.version}. ${suggestion}`
+              : `Unknown action ${config.actionId}@${config.version}`,
+            ...(suggestion ? { suggestion } : {})
           });
         } else {
           // Validate inputMapping if present
