@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { searchRegistryEntries } from '../search';
-import ceRegistry from '../../../../../server/src/lib/mcp/registry.generated';
-import eeRegistry from '../../../../../ee/server/src/chat/registry/apiRegistry.generated';
+import { searchRegistryEntries } from '../../../../packages/agent-tooling/src/registry/search';
+import ceRegistry from '../../lib/mcp/registry.generated';
+import eeRegistry from '../../../../ee/server/src/chat/registry/apiRegistry.generated';
 
 const PLACEHOLDER_DESCRIPTION =
   'This operation was generated automatically from the route inventory. Replace with canonical metadata.';

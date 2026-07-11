@@ -2,13 +2,15 @@ import { z } from 'zod';
 import { getActionRegistryV2 } from '../../registries/actionRegistry';
 import { withWorkflowJsonSchemaMetadata } from '../../jsonSchemaMetadata';
 import { withTenantTransaction, requirePermission, throwActionError, uuidSchema, type TenantTxContext } from './shared';
-import {
-  getUserActivityGroupsForApi,
-  moveActivityToGroupForApi,
-  removeActivityFromGroupsForApi,
-  type ActivityGroup,
-} from '@alga-psa/user-activities/server/activity-actions';
 import type { ActionContext } from '../../registries/actionRegistry';
+
+interface ActivityGroup {
+  groupId: string;
+  groupName: string;
+  sortOrder: number;
+  isCollapsed: boolean;
+  items: Array<{ activityId: string; activityType: string }>;
+}
 
 // LEVERAGE: pattern workflow-picker-metadata — same helper is private to tickets.ts
 const withWorkflowPicker = <T extends z.ZodTypeAny>(schema: T, description: string, kind: 'user'): T =>
@@ -66,24 +68,6 @@ const groupSummarySchema = z.object({
   itemCount: z.number(),
 });
 
-/**
- * The activity-group cores are identity-explicit (`hasPermission` needs
- * tenant + user_type and loads roles by user id), so build a real identity
- * for the workflow run's actor instead of casting a bare `{ user_id }`.
- */
-const loadActorIdentity = async (tx: TenantTxContext) => {
-  const actor = await tx.trx('users')
-    .where({ tenant: tx.tenantId, user_id: tx.actorUserId })
-    .first();
-  if (!actor) {
-    return null;
-  }
-  return {
-    ...actor,
-    roles: actor.roles ?? [],
-  };
-};
-
 const findGroup = (groups: ActivityGroup[], input: { groupId?: string; groupName?: string }): ActivityGroup | null => {
   if (input.groupId) {
     return groups.find((group) => group.groupId === input.groupId) ?? null;
@@ -97,12 +81,36 @@ const resolveGroupOrThrow = async (
   ctx: ActionContext,
   tx: TenantTxContext,
   input: { groupId?: string; groupName?: string; ownerUserId?: string }
-): Promise<{ group: ActivityGroup; identity: NonNullable<Awaited<ReturnType<typeof loadActorIdentity>>> }> => {
-  const identity = await loadActorIdentity(tx);
-  if (!identity) {
-    throwActionError(ctx, { category: 'ActionError', code: 'ACTOR_NOT_FOUND', message: 'Workflow actor user not found' });
+): Promise<{ group: ActivityGroup; ownerUserId: string }> => {
+  const ownerUserId = input.ownerUserId ?? tx.actorUserId;
+  if (ownerUserId !== tx.actorUserId) {
+    await requirePermission(ctx, tx, { resource: 'user_schedule', action: 'update' });
+    const owner = await tx.trx('users')
+      .where({ tenant: tx.tenantId, user_id: ownerUserId, user_type: 'internal' })
+      .first();
+    if (!owner) {
+      throwActionError(ctx, { category: 'ActionError', code: 'NOT_FOUND', message: 'Activity group owner not found' });
+    }
   }
-  const groups = await getUserActivityGroupsForApi(identity, tx.tenantId, input.ownerUserId);
+  const groupRows = await tx.trx('user_activity_groups')
+    .where({ tenant: tx.tenantId, user_id: ownerUserId })
+    .orderBy('sort_order');
+  const groupIds = groupRows.map((group) => group.group_id);
+  const itemRows = groupIds.length === 0
+    ? []
+    : await tx.trx('user_activity_group_items')
+      .where({ tenant: tx.tenantId })
+      .whereIn('group_id', groupIds)
+      .orderBy('sort_order');
+  const groups: ActivityGroup[] = groupRows.map((group) => ({
+    groupId: group.group_id,
+    groupName: group.group_name,
+    sortOrder: group.sort_order,
+    isCollapsed: group.is_collapsed,
+    items: itemRows
+      .filter((item) => item.group_id === group.group_id)
+      .map((item) => ({ activityId: item.activity_id, activityType: item.activity_type })),
+  }));
   const group = findGroup(groups, input);
   if (!group) {
     const known = groups.map((entry) => entry.groupName).join(', ');
@@ -114,7 +122,24 @@ const resolveGroupOrThrow = async (
         : `Activity group "${input.groupName}" not found${known ? `. Known groups: ${known}` : ''}`,
     });
   }
-  return { group: group as ActivityGroup, identity };
+  return { group, ownerUserId };
+};
+
+const removeExistingMembership = async (
+  tx: TenantTxContext,
+  ownerUserId: string,
+  activityId: string,
+  activityType: string
+): Promise<void> => {
+  const groupIds = await tx.trx('user_activity_groups')
+    .where({ tenant: tx.tenantId, user_id: ownerUserId })
+    .pluck('group_id');
+  if (groupIds.length > 0) {
+    await tx.trx('user_activity_group_items')
+      .where({ tenant: tx.tenantId, activity_id: activityId, activity_type: activityType })
+      .whereIn('group_id', groupIds)
+      .del();
+  }
 };
 
 export function registerActivityActions(): void {
@@ -162,18 +187,21 @@ export function registerActivityActions(): void {
     handler: async (input, ctx) => {
       return withTenantTransaction(ctx, async (tx) => {
         await requirePermission(ctx, tx, { resource: 'user_schedule', action: 'read' });
-        const { group, identity } = await resolveGroupOrThrow(ctx, tx, input);
+        const { group, ownerUserId } = await resolveGroupOrThrow(ctx, tx, input);
         // Insert at the top; the core removes any existing membership first,
         // so repeated adds converge on the same state.
-        await moveActivityToGroupForApi(
-          identity,
-          tx.tenantId,
-          input.activityId,
-          input.activityType,
-          group.groupId,
-          0,
-          input.ownerUserId
-        );
+        await removeExistingMembership(tx, ownerUserId, input.activityId, input.activityType);
+        await tx.trx('user_activity_group_items')
+          .where({ tenant: tx.tenantId, group_id: group.groupId })
+          .andWhere('sort_order', '>=', 0)
+          .increment('sort_order', 1);
+        await tx.trx('user_activity_group_items').insert({
+          tenant: tx.tenantId,
+          group_id: group.groupId,
+          activity_id: input.activityId,
+          activity_type: input.activityType,
+          sort_order: 0,
+        });
         return { added: true, groupId: group.groupId };
       });
     },
@@ -194,17 +222,11 @@ export function registerActivityActions(): void {
     handler: async (input, ctx) => {
       return withTenantTransaction(ctx, async (tx) => {
         await requirePermission(ctx, tx, { resource: 'user_schedule', action: 'read' });
-        const identity = await loadActorIdentity(tx);
-        if (!identity) {
-          throwActionError(ctx, { category: 'ActionError', code: 'ACTOR_NOT_FOUND', message: 'Workflow actor user not found' });
+        const ownerUserId = input.ownerUserId ?? tx.actorUserId;
+        if (ownerUserId !== tx.actorUserId) {
+          await requirePermission(ctx, tx, { resource: 'user_schedule', action: 'update' });
         }
-        await removeActivityFromGroupsForApi(
-          identity!,
-          tx.tenantId,
-          input.activityId,
-          input.activityType,
-          input.ownerUserId
-        );
+        await removeExistingMembership(tx, ownerUserId, input.activityId, input.activityType);
         return { removed: true };
       });
     },
