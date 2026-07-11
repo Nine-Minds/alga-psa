@@ -15,6 +15,20 @@ import { getCurrentUserPermissions } from '@alga-psa/user-composition/actions/us
 import { useTier } from '@/context/TierContext';
 import { useProduct } from '@/context/ProductContext';
 import { filterMenuSectionsByProduct } from '@/lib/productSurfaceRegistry';
+import { getLicenseStatus } from '@/lib/actions/licenseManagementActions';
+import { isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+
+export function filterNavigationSectionsBySelfHost(
+  sections: readonly NavigationSection[],
+  selfHostMode: boolean,
+): NavigationSection[] {
+  return sections
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => !item.requiresSelfHost || selfHostMode),
+    }))
+    .filter((section) => section.items.length > 0);
+}
 
 export function filterMenuItemsByFeatureAccess(
   items: readonly MenuItem[],
@@ -57,9 +71,22 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
   const useNavigationSections =
     typeof navigationFlag === 'boolean' ? navigationFlag : navigationFlag?.enabled ?? false;
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
+  const [selfHostMode, setSelfHostMode] = useState(false);
   const { hasFeature } = useTier();
   const { productCode } = useProduct();
   const isAlgaDesk = productCode === 'algadesk';
+
+  useEffect(() => {
+    let isMounted = true;
+    getLicenseStatus()
+      .then((result) => {
+        if (isMounted && !isActionPermissionError(result)) {
+          setSelfHostMode(result.selfHostMode);
+        }
+      })
+      .catch(() => {});
+    return () => { isMounted = false; };
+  }, []);
 
   useEffect(() => {
     if (!useNavigationSections) return;
@@ -121,8 +148,11 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
   }, [canWorkflowAdmin, useNavigationSections, hasFeature, productCode]);
 
   const settingsSections = useMemo<NavigationSection[]>(() => {
-    return filterMenuSectionsByProduct(productCode, settingsNavigationSections);
-  }, [productCode]);
+    return filterNavigationSectionsBySelfHost(
+      filterMenuSectionsByProduct(productCode, settingsNavigationSections),
+      selfHostMode,
+    );
+  }, [productCode, selfHostMode]);
 
   return (
     <Sidebar

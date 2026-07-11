@@ -51,7 +51,8 @@ import {
   UserCog,
   Users,
   Star,
-  Ticket
+  Ticket,
+  BadgeCheck
 } from 'lucide-react';
 
 // Navigation modes for the unified sidebar
@@ -65,6 +66,7 @@ export interface MenuItem {
   subItems?: MenuItem[];
   requiredFeature?: TIER_FEATURES;
   underConstruction?: boolean;
+  requiresSelfHost?: boolean;
 }
 
 export interface NavigationSection {
@@ -245,6 +247,7 @@ export const settingsNavigationSections: NavigationSection[] = [
       { name: 'Teams', translationKey: 'settings.tabs.teams', icon: Users, href: '/msp/settings?tab=teams' },
       { name: 'Language', translationKey: 'settings.tabs.language', icon: Globe, href: '/msp/settings/language' },
       { name: 'Client Portal', translationKey: 'settings.tabs.clientPortal', icon: AtSign, href: '/msp/settings/client-portal' },
+      { name: 'License', translationKey: 'settings.tabs.license', icon: BadgeCheck, href: '/msp/licenses', requiresSelfHost: true },
     ]
   },
   {

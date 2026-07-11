@@ -232,8 +232,11 @@ export async function connectAppliance(
   const serviceUrl = process.env.ALGA_LICENSE_SERVICE_URL;
   if (!serviceUrl) return { success: false, error: 'License service URL not configured' };
 
-  // Derive a stable install id from the existing license state id
-  const applianceId = `appliance-${row.id}-${crypto.createHash('sha256').update(String(row.id)).digest('hex').slice(0, 8)}`;
+  // Re-registration must retain the appliance identity and credential lineage.
+  // LEVERAGE: pattern license-state-writers — keep this identity resolution in
+  // sync with the appliance Temporal redemption activity.
+  const applianceId = row.appliance_id
+    ?? `appliance-${row.id}-${crypto.createHash('sha256').update(String(row.id)).digest('hex').slice(0, 8)}`;
 
   try {
     // Send tenant_id so the alga-license service can bind the issued JWT (its
