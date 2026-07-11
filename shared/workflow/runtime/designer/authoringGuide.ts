@@ -149,7 +149,7 @@ export function buildWorkflowAuthoringGuide(): WorkflowAuthoringGuide {
       {
         type: 'control.forEach',
         semantics:
-          'items is a $expr that MUST evaluate to an array. For each element the itemVar is set in vars (vars.<itemVar>) and as a bare local, alongside item/index/length/isFirst/isLast locals. onItemError: "continue" skips failed iterations; the default fails the run.',
+          'items is a $expr that MUST evaluate to an array. For each element the itemVar is set in vars (vars.<itemVar>) and as a bare local, alongside item/index/length/isFirst/isLast locals. onItemError: "continue" records the error and continues with the step after the failed one (an enclosing control.tryCatch takes precedence); the default fails the run.',
       },
       {
         type: 'control.tryCatch',

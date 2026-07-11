@@ -128,11 +128,24 @@ class SimulationStepError extends Error {
     message: string,
     readonly stepId: string,
     readonly path: string,
-    readonly runtimeError: Record<string, unknown>
+    readonly runtimeError: Record<string, unknown>,
+    /** Guard-rail failures (step/time budgets) that no policy may absorb. */
+    readonly fatal = false
   ) {
     super(message);
   }
 }
+
+/**
+ * Failure-routing context, mirroring the interpreter: the nearest enclosing
+ * tryCatch wins over everything; otherwise the nearest body-descended
+ * forEach's onItemError policy decides whether execution continues with the
+ * step after the failed one.
+ */
+type SequenceContext = {
+  tryDepth: number;
+  loopContinue: boolean;
+};
 
 class SimulationHalt extends Error {
   constructor(readonly status: 'completed' | 'paused-at-wait' | 'failed') {
@@ -238,10 +251,10 @@ export async function simulateWorkflowDefinition(params: {
   const checkBudgets = (stepId: string, path: string): void => {
     executedSteps += 1;
     if (executedSteps > maxSteps) {
-      throw stepError(stepId, path, 'QuotaExceeded', `Simulation exceeded the maximum of ${maxSteps} steps`);
+      throw stepError(stepId, path, 'QuotaExceeded', `Simulation exceeded the maximum of ${maxSteps} steps`, true);
     }
     if (Date.now() - startedAt > maxDurationMs) {
-      throw stepError(stepId, path, 'TimeoutError', `Simulation exceeded the ${maxDurationMs}ms time budget`);
+      throw stepError(stepId, path, 'TimeoutError', `Simulation exceeded the ${maxDurationMs}ms time budget`, true);
     }
   };
 
@@ -490,12 +503,38 @@ export async function simulateWorkflowDefinition(params: {
     }
   };
 
-  const runSequence = async (steps: Step[], sequencePath: string): Promise<void> => {
+  // Every step that starts gets exactly one trace entry — mirroring the
+  // interpreter's step-start projection — so a failing step's entry carries
+  // outcome 'error' instead of the step silently missing from the trace.
+  // `sinceIndex` scopes the dedupe to this execution: loop iterations revisit
+  // the same path and must trace again.
+  const traceStepFailure = (step: Step, path: string, error: unknown, sinceIndex: number): void => {
+    if (!(error instanceof SimulationStepError)) return;
+    const alreadyTraced = trace
+      .slice(sinceIndex)
+      .some((entry) => entry.stepId === step.id && entry.path === path);
+    if (!alreadyTraced) {
+      trace.push({ stepId: step.id, path, type: step.type, outcome: 'error', message: error.message });
+    }
+  };
+
+  const annotateHandledFailure = (stepId: string, handledBy: 'tryCatch' | 'forEach-continue'): void => {
+    for (let index = trace.length - 1; index >= 0; index -= 1) {
+      if (trace[index].stepId === stepId && trace[index].outcome === 'error') {
+        trace[index].handledBy = handledBy;
+        return;
+      }
+    }
+  };
+
+  const runSequence = async (steps: Step[], sequencePath: string, ctx: SequenceContext): Promise<void> => {
     for (let index = 0; index < steps.length; index += 1) {
       const step = steps[index];
       const path = `${sequencePath}[${index}]`;
       checkBudgets(step.id, path);
+      const traceMark = trace.length;
 
+      try {
       switch (step.type) {
         case 'control.return': {
           trace.push({ stepId: step.id, path, type: step.type, outcome: 'executed' });
@@ -511,7 +550,7 @@ export async function simulateWorkflowDefinition(params: {
           const branch = value ? 'then' : 'else';
           trace.push({ stepId: step.id, path, type: step.type, outcome: 'executed', branchTaken: branch });
           const branchSteps = value ? ifStep.then : ifStep.else ?? [];
-          await runSequence(branchSteps, `${path}.${branch}.steps`);
+          await runSequence(branchSteps, `${path}.${branch}.steps`, ctx);
           break;
         }
 
@@ -562,21 +601,11 @@ export async function simulateWorkflowDefinition(params: {
               isLast: itemIndex === items.length - 1,
             });
             try {
-              await runSequence(forEachStep.body, `${path}.body.steps`);
+              await runSequence(forEachStep.body, `${path}.body.steps`, {
+                tryDepth: ctx.tryDepth,
+                loopContinue: (forEachStep.onItemError ?? 'fail') === 'continue',
+              });
             } catch (error) {
-              if (error instanceof SimulationStepError && (forEachStep.onItemError ?? 'fail') === 'continue') {
-                scopes.error = error.runtimeError;
-                trace.push({
-                  stepId: error.stepId,
-                  path: error.path,
-                  type: 'control.forEach',
-                  outcome: 'error',
-                  handledBy: 'forEach-continue',
-                  message: error.message,
-                });
-                scopes.lexical.pop();
-                continue;
-              }
               scopes.lexical.pop();
               throw error;
             }
@@ -596,22 +625,18 @@ export async function simulateWorkflowDefinition(params: {
           const tryCatchStep = step as TryCatchBlock;
           trace.push({ stepId: step.id, path, type: step.type, outcome: 'executed' });
           try {
-            await runSequence(tryCatchStep.try, `${path}.try.steps`);
+            await runSequence(tryCatchStep.try, `${path}.try.steps`, {
+              tryDepth: ctx.tryDepth + 1,
+              loopContinue: ctx.loopContinue,
+            });
           } catch (error) {
-            if (!(error instanceof SimulationStepError)) throw error;
+            if (!(error instanceof SimulationStepError) || error.fatal) throw error;
             scopes.error = error.runtimeError;
             if (tryCatchStep.captureErrorAs) {
               assignToScopePath(`vars.${tryCatchStep.captureErrorAs}`, error.runtimeError);
             }
-            trace.push({
-              stepId: error.stepId,
-              path: error.path,
-              type: 'control.tryCatch',
-              outcome: 'error',
-              handledBy: 'tryCatch',
-              message: error.message,
-            });
-            await runSequence(tryCatchStep.catch, `${path}.catch.steps`);
+            annotateHandledFailure(error.stepId, 'tryCatch');
+            await runSequence(tryCatchStep.catch, `${path}.catch.steps`, ctx);
           }
           break;
         }
@@ -753,25 +778,38 @@ export async function simulateWorkflowDefinition(params: {
           break;
         }
       }
+      } catch (error) {
+        traceStepFailure(step, path, error, traceMark);
+        // onItemError: 'continue' matches the interpreter: when no tryCatch
+        // encloses the failed step and the nearest loop allows it, record the
+        // error and continue with the NEXT STEP of the same item. Only
+        // failures originating at this step qualify — bubbled failures were
+        // already adjudicated at their own level.
+        if (
+          error instanceof SimulationStepError &&
+          !error.fatal &&
+          error.stepId === step.id &&
+          ctx.tryDepth === 0 &&
+          ctx.loopContinue
+        ) {
+          scopes.error = error.runtimeError;
+          annotateHandledFailure(error.stepId, 'forEach-continue');
+          continue;
+        }
+        throw error;
+      }
     }
   };
 
   let status: WorkflowSimulationResult['status'] = 'completed';
   try {
-    await runSequence(definition.steps, 'root.steps');
+    await runSequence(definition.steps, 'root.steps', { tryDepth: 0, loopContinue: false });
   } catch (error) {
     if (error instanceof SimulationHalt) {
       status = error.status;
     } else if (error instanceof SimulationStepError) {
       status = 'failed';
       errors.push({ stepId: error.stepId, path: error.path, message: error.message });
-      trace.push({
-        stepId: error.stepId,
-        path: error.path,
-        type: 'error',
-        outcome: 'error',
-        message: error.message,
-      });
     } else {
       status = 'failed';
       errors.push({ message: error instanceof Error ? error.message : String(error) });
@@ -858,13 +896,19 @@ function expandDottedKeys(input: Record<string, unknown>): Record<string, unknow
   return result;
 }
 
-function stepError(stepId: string, path: string, category: string, message: string): SimulationStepError {
-  return new SimulationStepError(message, stepId, path, {
-    category,
+function stepError(stepId: string, path: string, category: string, message: string, fatal = false): SimulationStepError {
+  return new SimulationStepError(
     message,
-    nodePath: path,
-    at: new Date().toISOString(),
-  });
+    stepId,
+    path,
+    {
+      category,
+      message,
+      nodePath: path,
+      at: new Date().toISOString(),
+    },
+    fatal
+  );
 }
 
 function resolveOnErrorPolicy(
