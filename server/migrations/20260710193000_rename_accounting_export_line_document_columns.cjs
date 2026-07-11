@@ -66,26 +66,12 @@ exports.down = async function down(knex) {
 };
 
 async function renameIndexIfExists(knex, fromName, toName) {
-  await knex.raw(
-    `
-    DO $rename_index$
-    BEGIN
-      IF EXISTS (
-        SELECT 1
-        FROM pg_class
-        WHERE relkind = 'i'
-          AND relname = ?
-      ) AND NOT EXISTS (
-        SELECT 1
-        FROM pg_class
-        WHERE relkind = 'i'
-          AND relname = ?
-      ) THEN
-        EXECUTE format('ALTER INDEX %I RENAME TO %I', ?, ?);
-      END IF;
-    END;
-    $rename_index$;
-    `,
-    [fromName, toName, fromName, toName]
+  const result = await knex.raw(
+    'SELECT to_regclass(?) AS from_index, to_regclass(?) AS to_index',
+    [fromName, toName]
   );
+  const row = result.rows?.[0];
+  if (row?.from_index && !row?.to_index) {
+    await knex.raw('ALTER INDEX ?? RENAME TO ??', [fromName, toName]);
+  }
 }
