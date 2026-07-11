@@ -503,8 +503,8 @@ describe('S5 money story backend', () => {
     await service.appendLines(batch.batch_id, {
       lines: [{
         batch_id: batch.batch_id,
-        invoice_id: billId,
-        invoice_charge_id: null,
+        document_id: billId,
+        document_line_id: null,
         client_id: null,
         amount_cents: 12_500,
         currency_code: 'USD',
@@ -535,7 +535,7 @@ describe('S5 money story backend', () => {
     });
 
     const line = await trx('accounting_export_lines')
-      .where({ tenant: TENANT, batch_id: batch.batch_id, invoice_id: billId })
+      .where({ tenant: TENANT, batch_id: batch.batch_id, document_id: billId })
       .first();
     expect(line.status).toBe('delivered');
     expect(line.external_document_ref).toBe('qbo-bill-1');
@@ -561,8 +561,8 @@ describe('S5 money story backend', () => {
     await service.appendLines(secondBatch.batch_id, {
       lines: [{
         batch_id: secondBatch.batch_id,
-        invoice_id: billId,
-        invoice_charge_id: null,
+        document_id: billId,
+        document_line_id: null,
         client_id: null,
         amount_cents: 12_500,
         currency_code: 'USD',
@@ -572,7 +572,7 @@ describe('S5 money story backend', () => {
 
     expect(qboCreate).not.toHaveBeenCalled();
     const secondLine = await trx('accounting_export_lines')
-      .where({ tenant: TENANT, batch_id: secondBatch.batch_id, invoice_id: billId })
+      .where({ tenant: TENANT, batch_id: secondBatch.batch_id, document_id: billId })
       .first();
     expect(secondLine.status).toBe('delivered');
     expect(secondLine.external_document_ref).toBe('qbo-bill-1');

@@ -142,6 +142,8 @@ function normalizeLinePayload(payload: unknown): AccountingExportLinePayload | n
   const normalized: AccountingExportLinePayload = {
     invoice_number: typeof payload.invoice_number === 'string' ? payload.invoice_number : undefined,
     invoice_status: typeof payload.invoice_status === 'string' ? payload.invoice_status : undefined,
+    document_number: typeof payload.document_number === 'string' ? payload.document_number : undefined,
+    document_kind: typeof payload.document_kind === 'string' ? payload.document_kind : undefined,
     client_name:
       typeof payload.client_name === 'string'
         ? payload.client_name
@@ -189,8 +191,8 @@ export interface UpdateExportBatchStatusInput {
 
 export interface CreateExportLineInput {
   batch_id: string;
-  invoice_id: string;
-  invoice_charge_id?: Nullable<string>;
+  document_id: string;
+  document_line_id?: Nullable<string>;
   client_id?: Nullable<string>;
   amount_cents: number;
   currency_code: string;

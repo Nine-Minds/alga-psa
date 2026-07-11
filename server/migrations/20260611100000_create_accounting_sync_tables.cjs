@@ -36,7 +36,7 @@ exports.up = async function up(knex) {
       table.uuid('tenant').notNullable();
       table.string('adapter_type', 50).notNullable();
       table.string('target_realm', 255).nullable();
-      table.string('operation', 50).notNullable(); // export_invoice | export_credit_memo | apply_credit | record_payment | void_invoice
+      table.string('operation', 50).notNullable(); // export_invoice | export_credit_memo | export_vendor_bill | apply_credit | record_payment | void_invoice
       table.string('alga_entity_type', 50).notNullable();
       table.uuid('alga_entity_id').notNullable();
       table.string('status', 30).notNullable().defaultTo('pending'); // pending | in_progress | done | failed | skipped

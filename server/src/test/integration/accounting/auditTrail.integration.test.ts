@@ -27,6 +27,7 @@ class StubQuickBooksAdapter implements AccountingExportAdapter {
   capabilities(): AccountingExportAdapterCapabilities {
     return {
       deliveryMode: 'api',
+      supportedExportTypes: ['invoice'],
       supportsPartialRetry: true,
       supportsInvoiceUpdates: true
     };
@@ -35,10 +36,10 @@ class StubQuickBooksAdapter implements AccountingExportAdapter {
   async transform(context: AccountingExportAdapterContext): Promise<AccountingExportTransformResult> {
     return {
       documents: context.lines.map((line) => ({
-        documentId: `invoice-${line.invoice_id}`,
+        documentId: `invoice-${line.document_id}`,
         lineIds: [line.line_id],
         payload: {
-          invoiceId: line.invoice_id,
+          invoiceId: line.document_id,
           amountCents: line.amount_cents
         }
       }))
@@ -49,7 +50,7 @@ class StubQuickBooksAdapter implements AccountingExportAdapter {
     return {
       deliveredLines: context.lines.map((line) => ({
         lineId: line.line_id,
-        externalDocumentRef: `QB-${line.invoice_id}`
+        externalDocumentRef: `QB-${line.document_id}`
       }))
     };
   }
@@ -247,7 +248,7 @@ describe('Accounting export audit trail integration', () => {
     lines.forEach((line) => {
       const payload = line.payload as Record<string, any> | undefined;
       expect(payload).toBeTruthy();
-      const expectedTransactionId = seeded.transactionsByInvoice[line.invoice_id];
+      const expectedTransactionId = seeded.transactionsByInvoice[line.document_id];
       expect(expectedTransactionId).toBeTruthy();
       expect(payload?.transaction_ids).toContain(expectedTransactionId);
     });

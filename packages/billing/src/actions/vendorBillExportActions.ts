@@ -3,10 +3,10 @@
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex, withTransaction } from '@alga-psa/db';
-import { AccountingExportService } from '../services/accountingExportService';
-import { resolveDefaultRealm } from '../services/accountingSync/accountingSyncSettings';
+import { enqueueVendorBillExportRetry } from '../services/accountingSync/syncProducers';
+import { resolveConnectedAccountingIntegration } from '../services/accountingSync/connectedAccountingIntegration';
+import { ADAPTER_EXPORT_CAPABILITIES } from '../adapters/accounting/registry';
 import type { Knex } from 'knex';
-import type { VendorBillExportStatus } from '@alga-psa/inventory/lib/integrationTypes';
 import {
   actionError,
   permissionError,
@@ -14,9 +14,24 @@ import {
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 
-export type { VendorBillExportStatus, VendorBillExportState } from '@alga-psa/inventory/lib/integrationTypes';
+export type VendorBillExportState = 'not_exported' | 'pending' | 'exported' | 'error';
+
+export interface VendorBillExportStatus {
+  bill_id: string;
+  state: VendorBillExportState;
+  exported_at: string | null;
+  external_ref: string | null;
+  error_message: string | null;
+}
 
 type VendorBillExportActionError = ActionMessageError | ActionPermissionError;
+export interface VendorBillExportContext {
+  integration: {
+    adapterType: 'quickbooks_online' | 'xero';
+    label: string;
+  } | null;
+  vendorBillsSupported: boolean;
+}
 
 type ExportStatusRow = {
   bill_id: string;
@@ -26,6 +41,7 @@ type ExportStatusRow = {
   line_notes: string | null;
   batch_notes: string | null;
   delivered_at: string | Date | null;
+  line_created_at: string | Date | null;
   line_updated_at: string | Date | null;
   batch_updated_at: string | Date | null;
 };
@@ -36,6 +52,23 @@ type MappingStatusRow = {
   last_synced_at: string | Date | null;
 };
 
+type OperationStatusRow = {
+  bill_id: string;
+  status: 'pending' | 'in_progress' | 'done' | 'failed' | 'skipped';
+  last_error: string | null;
+  created_at: string | Date | null;
+  processed_at: string | Date | null;
+};
+
+function adapterSupportsExportType(adapterType: string, exportType: string): boolean {
+  const capabilities = ADAPTER_EXPORT_CAPABILITIES as Record<string, readonly string[] | undefined>;
+  return Boolean(capabilities[adapterType]?.includes(exportType));
+}
+
+function labelForAdapter(adapterType: 'quickbooks_online' | 'xero'): string {
+  return adapterType === 'quickbooks_online' ? 'QuickBooks Online' : 'Xero';
+}
+
 function toIso(value: string | Date | null | undefined): string | null {
   if (!value) return null;
   if (value instanceof Date) return value.toISOString();
@@ -43,7 +76,7 @@ function toIso(value: string | Date | null | undefined): string | null {
   return Number.isNaN(date.getTime()) ? String(value) : date.toISOString();
 }
 
-function statusFromExportRow(row: ExportStatusRow): VendorBillExportStatus {
+function exportedStatusFromExportRow(row: ExportStatusRow): VendorBillExportStatus | null {
   const lineStatus = row.line_status ?? '';
   const batchStatus = row.batch_status ?? '';
   const externalRef = row.external_document_ref ?? null;
@@ -58,6 +91,42 @@ function statusFromExportRow(row: ExportStatusRow): VendorBillExportStatus {
     };
   }
 
+  return null;
+}
+
+function pendingStatusFromExportRow(row: ExportStatusRow): VendorBillExportStatus | null {
+  const lineStatus = row.line_status ?? '';
+  const batchStatus = row.batch_status ?? '';
+  const externalRef = row.external_document_ref ?? null;
+  const batchIsActive = batchStatus === 'pending' || batchStatus === 'validating' || batchStatus === 'ready';
+
+  if (
+    batchIsActive &&
+    (
+      lineStatus === 'pending' ||
+      lineStatus === 'ready' ||
+      batchStatus === 'pending' ||
+      batchStatus === 'validating' ||
+      batchStatus === 'ready'
+    )
+  ) {
+    return {
+      bill_id: row.bill_id,
+      state: 'pending',
+      exported_at: null,
+      external_ref: externalRef,
+      error_message: null,
+    };
+  }
+
+  return null;
+}
+
+function errorStatusFromExportRow(row: ExportStatusRow): VendorBillExportStatus | null {
+  const lineStatus = row.line_status ?? '';
+  const batchStatus = row.batch_status ?? '';
+  const externalRef = row.external_document_ref ?? null;
+
   if (lineStatus === 'failed' || batchStatus === 'failed' || batchStatus === 'needs_attention') {
     return {
       bill_id: row.bill_id,
@@ -68,12 +137,34 @@ function statusFromExportRow(row: ExportStatusRow): VendorBillExportStatus {
     };
   }
 
+  return null;
+}
+
+function pendingStatusFromOperationRow(row: OperationStatusRow): VendorBillExportStatus | null {
+  if (row.status !== 'pending' && row.status !== 'in_progress') {
+    return null;
+  }
+
   return {
     bill_id: row.bill_id,
     state: 'pending',
     exported_at: null,
-    external_ref: externalRef,
+    external_ref: null,
     error_message: null,
+  };
+}
+
+function errorStatusFromOperationRow(row: OperationStatusRow): VendorBillExportStatus | null {
+  if (row.status !== 'failed' && row.status !== 'skipped') {
+    return null;
+  }
+
+  return {
+    bill_id: row.bill_id,
+    state: 'error',
+    exported_at: null,
+    external_ref: null,
+    error_message: row.last_error ?? 'Vendor bill export failed',
   };
 }
 
@@ -96,36 +187,41 @@ export async function getVendorBillExportStatusesForTenant(
       'batch.tenant': tenant,
       'batch.export_type': 'vendor_bill',
     })
-    .whereIn('line.invoice_id', uniqueBillIds)
+    .whereIn('line.document_id', uniqueBillIds)
     .orderBy('line.created_at', 'desc')
     .select(
-      'line.invoice_id as bill_id',
+      'line.document_id as bill_id',
       'line.status as line_status',
       'batch.status as batch_status',
       'line.external_document_ref',
       'line.notes as line_notes',
       'batch.notes as batch_notes',
       'batch.delivered_at',
+      'line.created_at as line_created_at',
       'line.updated_at as line_updated_at',
       'batch.updated_at as batch_updated_at',
     )) as ExportStatusRow[];
 
   const latestByBillId = new Map<string, VendorBillExportStatus>();
+
   for (const row of exportRows) {
-    if (!latestByBillId.has(row.bill_id)) {
-      latestByBillId.set(row.bill_id, statusFromExportRow(row));
+    const status = exportedStatusFromExportRow(row);
+    if (status && !latestByBillId.has(row.bill_id)) {
+      latestByBillId.set(row.bill_id, status);
     }
   }
 
-  const missingBillIds = uniqueBillIds.filter((billId) => !latestByBillId.has(billId));
-  if (missingBillIds.length > 0) {
+  const integration = await resolveConnectedAccountingIntegration(trx as Knex, tenant);
+  const mappingIntegrationType = integration?.adapterType ?? null;
+  const missingAfterDelivered = uniqueBillIds.filter((billId) => !latestByBillId.has(billId));
+  if (mappingIntegrationType && missingAfterDelivered.length > 0) {
     const mappingRows = (await trx('tenant_external_entity_mappings')
       .where({
         tenant,
-        integration_type: 'quickbooks_online',
+        integration_type: mappingIntegrationType,
         alga_entity_type: 'vendor_bill',
       })
-      .whereIn('alga_entity_id', missingBillIds)
+      .whereIn('alga_entity_id', missingAfterDelivered)
       .select(
         'alga_entity_id as bill_id',
         'external_entity_id as external_ref',
@@ -143,6 +239,51 @@ export async function getVendorBillExportStatusesForTenant(
     }
   }
 
+  const operationRows = (await trx('accounting_sync_operations')
+    .where({
+      tenant,
+      operation: 'export_vendor_bill',
+      alga_entity_type: 'vendor_bill',
+    })
+    .whereIn('alga_entity_id', uniqueBillIds)
+    .whereIn('status', ['pending', 'in_progress', 'failed', 'skipped'])
+    .orderBy('created_at', 'desc')
+    .select(
+      'alga_entity_id as bill_id',
+      'status',
+      'last_error',
+      'created_at',
+      'processed_at',
+    )) as OperationStatusRow[];
+
+  for (const row of operationRows) {
+    const status = pendingStatusFromOperationRow(row);
+    if (status && !latestByBillId.has(row.bill_id)) {
+      latestByBillId.set(row.bill_id, status);
+    }
+  }
+
+  for (const row of exportRows) {
+    const status = pendingStatusFromExportRow(row);
+    if (status && !latestByBillId.has(row.bill_id)) {
+      latestByBillId.set(row.bill_id, status);
+    }
+  }
+
+  for (const row of operationRows) {
+    const status = errorStatusFromOperationRow(row);
+    if (status && !latestByBillId.has(row.bill_id)) {
+      latestByBillId.set(row.bill_id, status);
+    }
+  }
+
+  for (const row of exportRows) {
+    const status = errorStatusFromExportRow(row);
+    if (status && !latestByBillId.has(row.bill_id)) {
+      latestByBillId.set(row.bill_id, status);
+    }
+  }
+
   return uniqueBillIds.map((billId) =>
     latestByBillId.get(billId) ?? {
       bill_id: billId,
@@ -155,14 +296,14 @@ export async function getVendorBillExportStatusesForTenant(
 }
 
 /**
- * Export one vendor bill through the accounting export engine (F045/F046, QBO adapter).
- * Idempotent: re-export of an already-exported bill returns its existing status.
+ * Retry one vendor bill by queueing the sync operation.
+ * Idempotent: already-exported or already-pending bills return their existing status.
  * Requires billing:update.
  *
  * NOTE (dependency direction): inventory components cannot import billing actions —
  * the vendor-bills server page passes these as props to VendorBillsManager (ghost-usage idiom).
  */
-export const exportVendorBillToAccounting = withAuth(async (
+export const retryVendorBillExport = withAuth(async (
   user,
   { tenant },
   billId: string
@@ -174,7 +315,7 @@ export const exportVendorBillToAccounting = withAuth(async (
   const { knex } = await createTenantKnex();
   const existing = await withTransaction(knex, async (trx: Knex.Transaction) => {
     const statuses = await getVendorBillExportStatusesForTenant(trx, tenant, [billId]);
-    if (statuses[0] && statuses[0].state !== 'not_exported') {
+    if (statuses[0] && (statuses[0].state === 'exported' || statuses[0].state === 'pending')) {
       return statuses[0];
     }
     return null;
@@ -186,53 +327,26 @@ export const exportVendorBillToAccounting = withAuth(async (
   const bill = await withTransaction(knex, async (trx: Knex.Transaction) => {
     const row = await trx('vendor_bills')
       .where({ tenant, bill_id: billId })
-      .first('bill_id', 'total_amount', 'currency_code', 'bill_number');
+      .first('bill_id');
     if (!row) {
-      return null;
+      return false;
     }
-    return row as { bill_id: string; total_amount: string | number; currency_code: string | null; bill_number: string };
+    return true;
   });
   if (!bill) {
     return actionError('Vendor bill not found. It may have been updated or deleted. Please refresh and try again.');
   }
 
-  const targetRealm = await resolveDefaultRealm(knex, tenant);
-  const exportService = await AccountingExportService.createForTenant(tenant);
-  const batch = await exportService.createBatch({
-    adapter_type: 'quickbooks_online',
-    export_type: 'vendor_bill',
-    target_realm: targetRealm,
-    filters: { billIds: [billId] },
-    created_by: user.user_id ?? null,
-    notes: `Vendor bill export: ${bill.bill_number}`,
-    origin: 'manual',
-  });
-
-  await exportService.appendLines(batch.batch_id, {
-    lines: [{
-      batch_id: batch.batch_id,
-      invoice_id: billId,
-      invoice_charge_id: null,
-      client_id: null,
-      amount_cents: Math.round(Number(bill.total_amount ?? 0)),
-      currency_code: bill.currency_code ?? 'USD',
-      payload: {
-        invoice_number: bill.bill_number,
-        invoice_status: 'vendor_bill',
-        metadata: {
-          manual_invoice: true,
-        },
-      },
-    }],
-  });
-
-  await exportService.executeBatch(batch.batch_id);
+  await enqueueVendorBillExportRetry(knex, tenant, billId);
 
   const [status] = await withTransaction(knex, (trx: Knex.Transaction) =>
     getVendorBillExportStatusesForTenant(trx, tenant, [billId]),
   );
   return status;
 });
+
+/** @deprecated Use retryVendorBillExport. Kept as a compatibility alias for existing imports. */
+export const exportVendorBillToAccounting = retryVendorBillExport;
 
 /** Export statuses for a set of vendor bills (badge rendering, F047). Requires billing:read. */
 export const getVendorBillExportStatuses = withAuth(async (
@@ -248,4 +362,31 @@ export const getVendorBillExportStatuses = withAuth(async (
   return withTransaction(knex, (trx: Knex.Transaction) =>
     getVendorBillExportStatusesForTenant(trx, tenant, billIds),
   );
+});
+
+/** Export context for vendor-bill badge/retry UI. Requires billing:read. */
+export const getVendorBillExportContext = withAuth(async (
+  user,
+  { tenant },
+): Promise<VendorBillExportContext> => {
+  if (!(await hasPermission(user, 'billing', 'read'))) {
+    throw new Error('Permission denied: billing read required');
+  }
+
+  const { knex } = await createTenantKnex();
+  const integration = await resolveConnectedAccountingIntegration(knex, tenant);
+  if (!integration) {
+    return {
+      integration: null,
+      vendorBillsSupported: false,
+    };
+  }
+
+  return {
+    integration: {
+      adapterType: integration.adapterType,
+      label: labelForAdapter(integration.adapterType),
+    },
+    vendorBillsSupported: adapterSupportsExportType(integration.adapterType, 'vendor_bill'),
+  };
 });

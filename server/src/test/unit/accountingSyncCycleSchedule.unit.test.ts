@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const getStoredQboCredentialsMapMock = vi.fn();
+const resolveConnectedAccountingIntegrationMock = vi.fn();
 const scheduleRecurringJobMock = vi.fn();
 const cancelJobMock = vi.fn();
 const firstMock = vi.fn();
@@ -8,9 +8,13 @@ const firstMock = vi.fn();
 vi.mock('@alga-psa/core/logger', () => ({ default: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 vi.mock('server/src/lib/db', () => ({ runWithTenant: vi.fn() }));
 vi.mock('server/src/lib/db/db', () => ({ getConnection: vi.fn() }));
-vi.mock('@alga-psa/billing/services', () => ({ runAccountingSyncCycle: vi.fn(), AccountingAdapterRegistry: { createDefault: vi.fn() } }));
+vi.mock('@alga-psa/billing/services', () => ({
+  runAccountingSyncCycle: vi.fn(),
+  AccountingAdapterRegistry: { createDefault: vi.fn() },
+  resolveConnectedAccountingIntegration: (...a: unknown[]) => resolveConnectedAccountingIntegrationMock(...a),
+}));
 vi.mock('@alga-psa/integrations/lib/qbo/qboClientService', () => ({
-  getStoredQboCredentialsMap: (...a: unknown[]) => getStoredQboCredentialsMapMock(...a),
+  getStoredQboCredentialsMap: vi.fn(),
 }));
 vi.mock('@/lib/jobs/JobRunnerFactory', () => ({
   getJobRunner: async () => ({
@@ -39,7 +43,7 @@ describe('scheduleAccountingSyncCycleJob (connected-only)', () => {
     // even if an earlier test file leaks NEXT_PUBLIC_EDITION into the worker.
     vi.stubEnv('EDITION', 'ee');
     vi.stubEnv('NEXT_PUBLIC_EDITION', 'enterprise');
-    getStoredQboCredentialsMapMock.mockReset();
+    resolveConnectedAccountingIntegrationMock.mockReset();
     scheduleRecurringJobMock.mockReset();
     cancelJobMock.mockReset();
     firstMock.mockReset();
@@ -48,7 +52,10 @@ describe('scheduleAccountingSyncCycleJob (connected-only)', () => {
   });
 
   it('schedules a connected tenant', async () => {
-    getStoredQboCredentialsMapMock.mockResolvedValue({ 'realm-123': { accessToken: 'x' } });
+    resolveConnectedAccountingIntegrationMock.mockResolvedValue({
+      adapterType: 'quickbooks_online',
+      targetRealm: 'realm-123',
+    });
 
     const result = await scheduleAccountingSyncCycleJob('t1');
 
@@ -64,7 +71,7 @@ describe('scheduleAccountingSyncCycleJob (connected-only)', () => {
   });
 
   it('does NOT schedule an unconnected tenant, and cancels a stray schedule', async () => {
-    getStoredQboCredentialsMapMock.mockResolvedValue({}); // no realms
+    resolveConnectedAccountingIntegrationMock.mockResolvedValue(null);
     firstMock.mockResolvedValue({ job_id: 'stale-job' }); // a leftover schedule exists
 
     const result = await scheduleAccountingSyncCycleJob('t2');
@@ -75,7 +82,7 @@ describe('scheduleAccountingSyncCycleJob (connected-only)', () => {
   });
 
   it('unconnected with no existing schedule is a no-op', async () => {
-    getStoredQboCredentialsMapMock.mockResolvedValue({});
+    resolveConnectedAccountingIntegrationMock.mockResolvedValue(null);
     firstMock.mockResolvedValue(undefined);
 
     const result = await scheduleAccountingSyncCycleJob('t3');
@@ -89,7 +96,7 @@ describe('scheduleAccountingSyncCycleJob (connected-only)', () => {
     vi.stubEnv('EDITION', 'community');
     vi.stubEnv('NEXT_PUBLIC_EDITION', 'community');
     const result = await scheduleAccountingSyncCycleJob('t4');
-    expect(getStoredQboCredentialsMapMock).not.toHaveBeenCalled();
+    expect(resolveConnectedAccountingIntegrationMock).not.toHaveBeenCalled();
     expect(scheduleRecurringJobMock).not.toHaveBeenCalled();
     expect(result).toBeNull();
   });

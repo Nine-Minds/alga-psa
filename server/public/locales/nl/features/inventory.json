@@ -1494,8 +1494,6 @@
   },
   "vendorBills": {
     "actions": {
-      "export": "Exporteren",
-      "exporting": "Exporteren…",
       "markPaid": "Als betaald markeren",
       "open": "Openen",
       "void": "Storneren"
@@ -1536,7 +1534,9 @@
       "error": "Export mislukt",
       "exported": "Geëxporteerd",
       "notExported": "Niet geëxporteerd",
-      "pending": "Export in afwachting"
+      "pending": "Export in afwachting",
+      "retry": "Opnieuw proberen",
+      "retrying": "Opnieuw proberen…"
     },
     "exportError": "Kon de factuur niet exporteren.",
     "exportFailed": "Export mislukt.",

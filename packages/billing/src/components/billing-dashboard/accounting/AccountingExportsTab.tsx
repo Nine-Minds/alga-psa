@@ -44,7 +44,7 @@ type AccountingExportBatch = {
 type AccountingExportLine = {
   line_id: string;
   batch_id: string;
-  invoice_id: string;
+  document_id: string;
   amount_cents: number;
   currency_code: string;
   status: 'pending' | 'ready' | 'delivered' | 'posted' | 'failed';

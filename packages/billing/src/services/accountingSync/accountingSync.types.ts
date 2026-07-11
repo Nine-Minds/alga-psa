@@ -1,6 +1,7 @@
 export type SyncOperationType =
   | 'export_invoice'
   | 'export_credit_memo'
+  | 'export_vendor_bill'
   | 'apply_credit'
   | 'record_payment'
   | 'void_invoice';

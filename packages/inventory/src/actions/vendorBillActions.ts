@@ -330,7 +330,7 @@ export const setVendorBillStatus = withAuth(
     return withVendorBillActionErrors(async () => {
       await requireBillPerm(user, 'update');
       const { knex: db } = await createTenantKnex();
-      return withTransaction(db, async (trx: Knex.Transaction) => {
+      const updated = await withTransaction(db, async (trx: Knex.Transaction) => {
         const bill = await getBillOrThrow(trx, tenant, billId, { forUpdate: true });
         if (!TRANSITIONS[bill.status]?.includes(status)) {
           throw new Error(`Cannot move a ${bill.status} bill to ${status}`);
@@ -345,6 +345,16 @@ export const setVendorBillStatus = withAuth(
           .returning('*');
         return row as IVendorBill;
       });
+
+      if (status === 'open') {
+        // Resolve this optional runtime hook dynamically so inventory retains no static
+        // package edge to billing (the server assembly provides both packages).
+        const billingRuntimeModule = '@alga-psa/billing/runtime';
+        const { enqueueVendorBillAutoExport } = await import(billingRuntimeModule);
+        void enqueueVendorBillAutoExport(db, tenant, billId);
+      }
+
+      return updated;
     });
   },
 );

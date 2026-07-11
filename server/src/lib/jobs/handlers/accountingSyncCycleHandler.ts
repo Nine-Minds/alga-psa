@@ -5,15 +5,19 @@ import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import { getJobRunner } from '../JobRunnerFactory';
 import type { BaseJobData } from '../interfaces';
-import { runAccountingSyncCycle, AccountingAdapterRegistry } from '@alga-psa/billing/services';
+import {
+  runAccountingSyncCycle,
+  AccountingAdapterRegistry,
+  resolveConnectedAccountingIntegration
+} from '@alga-psa/billing/services';
 import { getStoredQboCredentialsMap } from '@alga-psa/integrations/lib/qbo/qboClientService';
+import { getStoredXeroConnections } from '@alga-psa/integrations/lib/xero/xeroClientService';
 
 export interface AccountingSyncCycleJobData extends BaseJobData {
   tenantId: string;
 }
 
 const JOB_NAME = 'accounting-sync-cycle';
-const ADAPTER_TYPE = 'quickbooks_online';
 /** Every 15 minutes; runs through the IJobRunner cron path (NOT the legacy 24h-coerced scheduler). */
 const CYCLE_CRON = '*/15 * * * *';
 
@@ -37,36 +41,56 @@ export async function accountingSyncCycleHandler(data: AccountingSyncCycleJobDat
     return;
   }
 
-  const credentials = await getStoredQboCredentialsMap(tenantId).catch(() => ({} as Record<string, any>));
-  const realms = Object.keys(credentials);
-  if (realms.length === 0) {
+  const knex = await getConnection(tenantId);
+  const integration = await resolveConnectedAccountingIntegration(knex, tenantId);
+  if (!integration) {
     return; // cycle guard: no connection, nothing to do
   }
 
   const registry = await AccountingAdapterRegistry.createDefault();
-  const adapter = registry.get(ADAPTER_TYPE);
+  const adapter = registry.get(integration.adapterType);
   if (!adapter) {
-    logger.warn('[accountingSync] No adapter registered for scheduled cycle', { tenantId });
+    logger.warn('[accountingSync] No adapter registered for scheduled cycle', {
+      tenantId,
+      adapterType: integration.adapterType
+    });
     return;
   }
 
-  const knex = await getConnection(tenantId);
+  const targets =
+    integration.adapterType === 'quickbooks_online'
+      ? Object.entries(await getStoredQboCredentialsMap(tenantId).catch(() => ({} as Record<string, any>))).map(
+          ([targetRealm, credentials]) => ({
+            targetRealm,
+            refreshTokenExpiresAt: (credentials as any)?.refreshTokenExpiresAt ?? null
+          })
+        )
+      : [{
+          targetRealm: integration.targetRealm,
+          refreshTokenExpiresAt:
+            (await getStoredXeroConnections(tenantId).catch(() => ({} as Record<string, any>)))[integration.targetRealm]
+              ?.refreshTokenExpiresAt ?? null
+        }];
+
+  if (targets.length === 0) {
+    return;
+  }
 
   await runWithTenant(tenantId, async () => {
-    for (const realm of realms) {
+    for (const target of targets) {
       try {
         const result = await runAccountingSyncCycle({
           knex,
           tenantId,
-          adapterType: ADAPTER_TYPE,
-          targetRealm: realm,
+          adapterType: integration.adapterType,
+          targetRealm: target.targetRealm,
           adapter,
-          refreshTokenExpiresAt: credentials[realm]?.refreshTokenExpiresAt ?? null
+          refreshTokenExpiresAt: target.refreshTokenExpiresAt
         });
         if (result.ran) {
           logger.info('[accountingSync] Scheduled cycle finished', {
             tenantId,
-            realm,
+            realm: target.targetRealm,
             status: result.status,
             stats: result.stats
           });
@@ -74,7 +98,7 @@ export async function accountingSyncCycleHandler(data: AccountingSyncCycleJobDat
       } catch (error) {
         logger.error('[accountingSync] Scheduled cycle crashed', {
           tenantId,
-          realm,
+          realm: target.targetRealm,
           error: error instanceof Error ? error.message : error
         });
       }
@@ -85,9 +109,10 @@ export async function accountingSyncCycleHandler(data: AccountingSyncCycleJobDat
 // Throws if credentials can't be read (e.g. a transient secret-store error) so
 // the caller can distinguish "genuinely disconnected" from "couldn't tell" — the
 // latter must NOT cancel a connected tenant's schedule.
-async function tenantHasConnectedRealm(tenantId: string): Promise<boolean> {
-  const credentials = await getStoredQboCredentialsMap(tenantId);
-  return Object.keys(credentials).length > 0;
+async function tenantHasConnectedAccountingIntegration(tenantId: string): Promise<boolean> {
+  const adminKnex = await getAdminConnection();
+  const integration = await resolveConnectedAccountingIntegration(adminKnex, tenantId);
+  return integration !== null;
 }
 
 async function cancelAccountingSyncCycle(tenantId: string, singletonKey: string): Promise<void> {
@@ -124,9 +149,9 @@ export async function scheduleAccountingSyncCycleJob(tenantId: string): Promise<
 
   const singletonKey = `${JOB_NAME}:${tenantId}`;
 
-  let hasRealm: boolean;
+  let hasIntegration: boolean;
   try {
-    hasRealm = await tenantHasConnectedRealm(tenantId);
+    hasIntegration = await tenantHasConnectedAccountingIntegration(tenantId);
   } catch (error) {
     // Couldn't read credentials (e.g. a transient secret-store blip). Don't treat
     // that as "disconnected" — leave any existing schedule untouched rather than
@@ -138,7 +163,7 @@ export async function scheduleAccountingSyncCycleJob(tenantId: string): Promise<
     return null;
   }
 
-  if (!hasRealm) {
+  if (!hasIntegration) {
     await cancelAccountingSyncCycle(tenantId, singletonKey);
     return null;
   }

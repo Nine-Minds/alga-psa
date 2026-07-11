@@ -1494,8 +1494,6 @@
   },
   "vendorBills": {
     "actions": {
-      "export": "Exportar",
-      "exporting": "Exportando…",
       "markPaid": "Marcar como paga",
       "open": "Abrir",
       "void": "Anular"
@@ -1536,7 +1534,9 @@
       "error": "Falha na exportação",
       "exported": "Exportada",
       "notExported": "Não exportada",
-      "pending": "Exportação pendente"
+      "pending": "Exportação pendente",
+      "retry": "Tentar novamente",
+      "retrying": "Tentando novamente…"
     },
     "exportError": "Não foi possível exportar a fatura.",
     "exportFailed": "Falha na exportação.",

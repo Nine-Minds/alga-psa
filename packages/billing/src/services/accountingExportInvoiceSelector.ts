@@ -341,8 +341,8 @@ export class AccountingExportInvoiceSelector {
 
     const lineInputs = preview.map((line) => ({
       batch_id: batch.batch_id,
-      invoice_id: line.invoiceId,
-      invoice_charge_id: line.chargeId,
+      document_id: line.invoiceId,
+      document_line_id: line.chargeId,
       client_id: line.clientId,
       amount_cents: line.amountCents,
       currency_code: line.currencyCode,

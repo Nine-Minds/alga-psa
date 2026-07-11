@@ -33,11 +33,20 @@ import type { VendorBillExportStatus, VendorBillExportState } from '../lib/integ
 
 type BillRow = IVendorBill & { vendor_name: string | null; po_number: string | null };
 
+interface VendorBillExportContext {
+  integration: {
+    adapterType: 'quickbooks_online' | 'xero';
+    label: string;
+  } | null;
+  vendorBillsSupported: boolean;
+}
+
 // Billing actions cannot be imported here (inventory must not depend on billing); the
 // vendor-bills server page injects them (F047, ghost-usage props idiom).
 interface VendorBillExportProps {
-  exportBill?: (billId: string) => Promise<VendorBillExportStatus | ActionMessageError | ActionPermissionError>;
+  retryExportBill?: (billId: string) => Promise<VendorBillExportStatus | ActionMessageError | ActionPermissionError>;
   getExportStatuses?: (billIds: string[]) => Promise<VendorBillExportStatus[] | ActionMessageError | ActionPermissionError>;
+  exportContext?: VendorBillExportContext;
 }
 
 interface CreateForm {
@@ -56,8 +65,9 @@ const isReturnedActionError = (value: unknown): value is ReturnedActionError =>
 export function VendorBillsManager({
   initialBills,
   loadErrorMessage,
-  exportBill,
+  retryExportBill,
   getExportStatuses,
+  exportContext,
 }: { initialBills: BillRow[]; loadErrorMessage?: string } & VendorBillExportProps) {
   const { t } = useTranslation('features/inventory');
   const { money } = useCurrencyFormat();
@@ -71,6 +81,7 @@ export function VendorBillsManager({
   const [busy, setBusy] = useState<string | null>(null);
   const [exportStatuses, setExportStatuses] = useState<Map<string, VendorBillExportStatus>>(new Map());
   const [exporting, setExporting] = useState<string | null>(null);
+  const showExportState = Boolean(exportContext?.integration && exportContext.vendorBillsSupported && getExportStatuses);
 
   const EXPORT_BADGES: Record<VendorBillExportState, { label: string; variant: BadgeVariant }> = {
     not_exported: { label: t('vendorBills.export.notExported', 'Not exported'), variant: 'secondary' },
@@ -129,7 +140,7 @@ export function VendorBillsManager({
   // Batch-load export statuses for the current bills (F047). Best-effort: a failure
   // (or no injected action) simply leaves the badges off.
   useEffect(() => {
-    if (!getExportStatuses || bills.length === 0) return;
+    if (!showExportState || !getExportStatuses || bills.length === 0) return;
     let cancelled = false;
     getExportStatuses(bills.map((b) => b.bill_id))
       .then((rows) => {
@@ -144,17 +155,17 @@ export function VendorBillsManager({
     return () => {
       cancelled = true;
     };
-  }, [getExportStatuses, bills]);
+  }, [showExportState, getExportStatuses, bills]);
 
   const openCreate = () => setCreateOpen(true);
   usePageCreateShortcut(openCreate);
 
-  const doExport = async (bill: BillRow) => {
-    if (!exportBill) return;
+  const doRetryExport = async (bill: BillRow) => {
+    if (!retryExportBill) return;
     setExporting(bill.bill_id);
     try {
-      const status = await exportBill(bill.bill_id);
-      if (isActionMessageError(status) || isActionPermissionError(status)) {
+      const status = await retryExportBill(bill.bill_id);
+      if (isReturnedActionError(status)) {
         toast.error(getErrorMessage(status));
         return;
       }
@@ -167,7 +178,7 @@ export function VendorBillsManager({
         toast.success(t('vendorBills.exportQueued', 'Export queued.'));
       }
     } catch (e: any) {
-      toast.error(e?.message || t('vendorBills.exportError', "Couldn't export the bill."));
+      toast.error(e?.message || t('vendorBills.exportError', "Couldn't retry the export."));
     } finally {
       setExporting(null);
     }
@@ -334,22 +345,29 @@ export function VendorBillsManager({
                 {t('vendorBills.actions.void', 'Void')}
               </Button>
             )}
-            {exportBill && (
+            {showExportState && (
               <>
                 {expMeta && (
-                  <Badge id={`vendor-bill-export-badge-${rec.bill_id}`} variant={expMeta.variant} size="sm">
+                  <Badge
+                    id={`vendor-bill-export-badge-${rec.bill_id}`}
+                    variant={expMeta.variant}
+                    size="sm"
+                    title={exp?.error_message ?? undefined}
+                  >
                     {expMeta.label}
                   </Badge>
                 )}
-                {exp?.state !== 'exported' && (
+                {exp?.state === 'error' && retryExportBill && (
                   <Button
-                    id={`vendor-bill-export-${rec.bill_id}`}
+                    id={`vendor-bill-export-retry-${rec.bill_id}`}
                     variant="outline"
                     size="sm"
                     disabled={exporting === rec.bill_id}
-                    onClick={() => doExport(rec)}
+                    onClick={() => doRetryExport(rec)}
                   >
-                    {exporting === rec.bill_id ? t('vendorBills.actions.exporting', 'Exporting…') : t('vendorBills.actions.export', 'Export')}
+                    {exporting === rec.bill_id
+                      ? t('vendorBills.export.retrying', 'Retrying…')
+                      : t('vendorBills.export.retry', 'Retry')}
                   </Button>
                 )}
               </>

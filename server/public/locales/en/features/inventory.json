@@ -1494,8 +1494,6 @@
   },
   "vendorBills": {
     "actions": {
-      "export": "Export",
-      "exporting": "Exporting…",
       "markPaid": "Mark paid",
       "open": "Open",
       "void": "Void"
@@ -1536,7 +1534,9 @@
       "error": "Export failed",
       "exported": "Exported",
       "notExported": "Not exported",
-      "pending": "Export pending"
+      "pending": "Export pending",
+      "retry": "Retry",
+      "retrying": "Retrying…"
     },
     "exportError": "Couldn't export the bill.",
     "exportFailed": "Export failed.",

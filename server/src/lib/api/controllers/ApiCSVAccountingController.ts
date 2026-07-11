@@ -160,8 +160,8 @@ export class ApiCSVAccountingController extends ApiBaseController {
           await exportService.appendLines(batchId, {
             lines: lines.map((line) => ({
               batch_id: batchId,
-              invoice_id: line.invoiceId,
-              invoice_charge_id: line.chargeId ?? null,
+              document_id: line.invoiceId,
+              document_line_id: line.chargeId ?? null,
               client_id: null,
               amount_cents: line.amountCents,
               currency_code: line.currencyCode || 'USD',

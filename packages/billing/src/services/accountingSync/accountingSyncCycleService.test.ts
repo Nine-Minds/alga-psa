@@ -1,6 +1,14 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
 // ── Module mocks ────────────────────────────────────────────────────────────
+// tenantDb is only used by the vendor-bill drain to read bill rows; everything
+// else on @alga-psa/db stays real.
+const tenantDbMock = vi.hoisted(() => vi.fn());
+vi.mock('@alga-psa/db', async (importOriginal) => ({
+  ...(await importOriginal<Record<string, unknown>>()),
+  tenantDb: tenantDbMock
+}));
+
 vi.mock('./syncCycleRepository', () => ({
   SyncCycleRepository: vi.fn().mockImplementation(function () { return ({
     getLastSuccessfulCursor: vi.fn(async () => null),
@@ -15,6 +23,7 @@ vi.mock('./syncOperationsRepository', () => ({
     markInProgress: vi.fn(async () => undefined),
     markDone: vi.fn(async () => undefined),
     markFailed: vi.fn(async () => 'pending'),
+    markFailedTerminal: vi.fn(async () => 'failed'),
     satisfyPending: vi.fn(async () => 0),
     enqueue: vi.fn(async () => ({}))
   }); })
@@ -142,6 +151,16 @@ function makeFakeNotifications() {
   };
 }
 
+/** Fake tenant-scoped db for the vendor-bill drain's bill lookup. */
+function makeVendorBillDb(
+  bills: Array<{ bill_id: string; bill_number: string; total_amount: number | string | null; currency_code: string | null }>
+) {
+  const builder: any = {};
+  builder.whereIn = vi.fn(() => builder);
+  builder.select = vi.fn(async () => bills);
+  return { table: vi.fn(() => builder) };
+}
+
 function getCyclesInstance() {
   return vi.mocked(SyncCycleRepository).mock.instances[vi.mocked(SyncCycleRepository).mock.instances.length - 1] as any;
 }
@@ -155,6 +174,7 @@ describe('runAccountingSyncCycle', () => {
     // Reset all module-level mocks to defaults
     vi.mocked(getAccountingSyncSettings).mockResolvedValue({ autoSyncEnabled: true, autoSyncStartDate: null, depositAccountRef: null, defaultClassRef: null, defaultDepartmentRef: null, defaultRealm: null });
     vi.mocked(resolveTokenThresholdToAnnounce).mockResolvedValue(null);
+    tenantDbMock.mockImplementation(() => makeVendorBillDb([]));
   });
 
   it('skips when adapter does not support change polling', async () => {
@@ -842,8 +862,8 @@ describe('runAccountingSyncCycle', () => {
     const invoiceOp = { op_id: 'op-inv-10', alga_entity_id: 'inv-10', attempts: 0 };
     const creditMemoOp = { op_id: 'op-cm-10', alga_entity_id: 'inv-cm-10', attempts: 0 };
 
-    // listPending is called twice (once per operation type); return each op from its call
-    const listPending = vi.fn()
+    // listPending is called once per outbound operation type; only invoice/credit-memo have ops here.
+    const listPending = vi.fn(async () => [] as any[])
       .mockResolvedValueOnce([invoiceOp])      // export_invoice call
       .mockResolvedValueOnce([creditMemoOp]);  // export_credit_memo call
 
@@ -955,5 +975,297 @@ describe('runAccountingSyncCycle', () => {
 
     expect(result.status).toBe('succeeded');
   });
-});
 
+  // ── Vendor bill drain (draft→open auto-queue is drained here) ─────────────
+
+  function makeVendorBillOpsRepo(pendingOps: any[], overrides: Record<string, any> = {}) {
+    const repo = {
+      listPending: vi.fn(async (_t: string, _a: string, opts: any) =>
+        opts?.operation === 'export_vendor_bill' ? pendingOps : []),
+      markInProgress: vi.fn(async () => undefined),
+      markDone: vi.fn(async () => undefined),
+      markFailed: vi.fn(async () => 'pending'),
+      markFailedTerminal: vi.fn(async () => 'failed'),
+      satisfyPending: vi.fn(async () => 0),
+      enqueue: vi.fn(async () => ({})),
+      ...overrides
+    };
+    vi.mocked(SyncOperationsRepository).mockImplementationOnce(function () { return repo as any; });
+    return repo;
+  }
+
+  function restoreExportServiceDefault() {
+    vi.mocked(AccountingExportService.createForTenant).mockReset();
+    vi.mocked(AccountingExportService.createForTenant).mockResolvedValue({
+      executeBatch: vi.fn(async () => undefined)
+    } as any);
+  }
+
+  it('vendor-bill drain: queued export_vendor_bill ops → scheduled vendor_bill batch with document lines → executeBatch → ops done', async () => {
+    const repo = makeVendorBillOpsRepo([
+      { op_id: 'op-vb-1', alga_entity_id: 'bill-1', attempts: 0 },
+      { op_id: 'op-vb-2', alga_entity_id: 'bill-2', attempts: 0 }
+    ]);
+
+    tenantDbMock.mockImplementation(() => makeVendorBillDb([
+      { bill_id: 'bill-1', bill_number: 'VB-001', total_amount: 12345, currency_code: 'USD' },
+      { bill_id: 'bill-2', bill_number: 'VB-002', total_amount: '6789', currency_code: null }
+    ]));
+
+    const createBatch = vi.fn(async () => ({ batch_id: 'batch-vb' }));
+    const appendLines = vi.fn(async () => undefined);
+    const executeBatch = vi.fn(async () => undefined);
+    vi.mocked(AccountingExportService.createForTenant).mockResolvedValue({
+      createBatch,
+      appendLines,
+      executeBatch
+    } as any);
+
+    const exceptions = makeFakeExceptions();
+    const result = await runAccountingSyncCycle({
+      knex: {} as any,
+      tenantId: TENANT,
+      adapterType: ADAPTER_TYPE,
+      targetRealm: REALM,
+      adapter: makeFakeAdapter(),
+      exceptions,
+      notifications: makeFakeNotifications()
+    });
+
+    expect(createBatch).toHaveBeenCalledWith(expect.objectContaining({
+      adapter_type: 'quickbooks_online',
+      target_realm: REALM,
+      export_type: 'vendor_bill',
+      origin: 'scheduled',
+      filters: { billIds: ['bill-1', 'bill-2'] }
+    }));
+    expect(appendLines).toHaveBeenCalledWith('batch-vb', {
+      lines: [
+        expect.objectContaining({
+          document_id: 'bill-1',
+          document_line_id: null,
+          amount_cents: 12345,
+          currency_code: 'USD',
+          payload: { document_number: 'VB-001', document_kind: 'vendor_bill' }
+        }),
+        expect.objectContaining({
+          document_id: 'bill-2',
+          amount_cents: 6789,
+          // null currency falls back to USD
+          currency_code: 'USD',
+          payload: { document_number: 'VB-002', document_kind: 'vendor_bill' }
+        })
+      ]
+    });
+    expect(executeBatch).toHaveBeenCalledWith('batch-vb');
+    expect(repo.markDone).toHaveBeenCalledTimes(2);
+    expect(result.stats?.opsProcessed).toBe(2);
+    // A successful export clears any earlier vendor-bill export-error exception.
+    expect(exceptions.resolve).toHaveBeenCalledWith('accounting_sync_export_error', 'vendor_bill', 'bill-1');
+    expect(result.status).toBe('succeeded');
+
+    restoreExportServiceDefault();
+  });
+
+  it('vendor-bill drain: already-mapped bill → op done without creating a batch (idempotency)', async () => {
+    const repo = makeVendorBillOpsRepo([{ op_id: 'op-vb-mapped', alga_entity_id: 'bill-mapped', attempts: 0 }]);
+
+    vi.mocked(SyncMappingLedger).mockImplementationOnce(function () { return ({
+      findByExternalId: vi.fn(async () => undefined),
+      findByAlgaId: vi.fn(async (entityType: string, entityId: string) =>
+        entityType === 'vendor_bill' && entityId === 'bill-mapped'
+          ? { id: 'map-1', sync_status: 'synced' }
+          : undefined),
+      insert: vi.fn(async () => ({})),
+      update: vi.fn(async () => undefined),
+      withKnex: vi.fn().mockReturnThis()
+    } as any); });
+
+    const createBatch = vi.fn(async () => ({ batch_id: 'batch-should-not-exist' }));
+    vi.mocked(AccountingExportService.createForTenant).mockResolvedValue({
+      createBatch,
+      appendLines: vi.fn(async () => undefined),
+      executeBatch: vi.fn(async () => undefined)
+    } as any);
+
+    const exceptions = makeFakeExceptions();
+    const result = await runAccountingSyncCycle({
+      knex: {} as any,
+      tenantId: TENANT,
+      adapterType: ADAPTER_TYPE,
+      targetRealm: REALM,
+      adapter: makeFakeAdapter(),
+      exceptions,
+      notifications: makeFakeNotifications()
+    });
+
+    expect(createBatch).not.toHaveBeenCalled();
+    expect(repo.markDone).toHaveBeenCalledWith(TENANT, 'op-vb-mapped');
+    expect(exceptions.resolve).toHaveBeenCalledWith('accounting_sync_export_error', 'vendor_bill', 'bill-mapped');
+    expect(result.stats?.opsProcessed).toBe(1);
+
+    restoreExportServiceDefault();
+  });
+
+  it('vendor-bill drain: validation failure → op terminally failed with actionable message + vendor_bill exception + batch auto-cancelled', async () => {
+    const repo = makeVendorBillOpsRepo([{ op_id: 'op-vb-val', alga_entity_id: 'bill-val', attempts: 0 }]);
+
+    tenantDbMock.mockImplementation(() => makeVendorBillDb([
+      { bill_id: 'bill-val', bill_number: 'VB-VAL', total_amount: 5000, currency_code: 'USD' }
+    ]));
+
+    const cancelBatch = vi.fn(async () => ({ batch_id: 'batch-vb-val', status: 'cancelled' }));
+    vi.mocked(AccountingExportService.createForTenant).mockResolvedValue({
+      createBatch: vi.fn(async () => ({ batch_id: 'batch-vb-val' })),
+      appendLines: vi.fn(async () => undefined),
+      executeBatch: vi.fn(async () => {
+        throw new AppError('ACCOUNTING_EXPORT_VALIDATION_FAILED', 'batch not ready', {
+          batchId: 'batch-vb-val',
+          status: 'needs_attention',
+          validationErrors: [{
+            code: 'QBO_VENDOR_BILL_EXPENSE_ACCOUNT_REQUIRED',
+            message: 'Set a default expense account in accounting sync settings'
+          }]
+        });
+      }),
+      getBatchWithDetails: vi.fn(async () => ({
+        batch: { batch_id: 'batch-vb-val', status: 'needs_attention', origin: 'scheduled' },
+        lines: [],
+        errors: []
+      })),
+      cancelBatch
+    } as any);
+
+    const exceptions = makeFakeExceptions();
+    const result = await runAccountingSyncCycle({
+      knex: {} as any,
+      tenantId: TENANT,
+      adapterType: ADAPTER_TYPE,
+      targetRealm: REALM,
+      adapter: makeFakeAdapter(),
+      exceptions,
+      notifications: makeFakeNotifications()
+    });
+
+    // Validation failures are deterministic → terminal failure, not the retry cap.
+    expect(repo.markFailedTerminal).toHaveBeenCalledWith(TENANT, 'op-vb-val', expect.stringContaining('batch not ready'));
+    expect(repo.markFailed).not.toHaveBeenCalled();
+    // The failed op's message is the actionable surface the UI badge shows.
+    expect(exceptions.createOrUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'accounting_sync_export_error',
+        entityType: 'vendor_bill',
+        entityId: 'bill-val',
+        title: 'Scheduled vendor bill export failed validation',
+        context: expect.objectContaining({
+          details: expect.stringContaining('QBO_VENDOR_BILL_EXPENSE_ACCOUNT_REQUIRED')
+        })
+      })
+    );
+    // The wedged scheduled batch is cancelled so a later retry can recreate it.
+    expect(cancelBatch).toHaveBeenCalledWith('batch-vb-val', expect.anything());
+    expect(result.stats?.opsFailed).toBe(1);
+    expect(result.status).toBe('succeeded');
+
+    restoreExportServiceDefault();
+  });
+
+  it('vendor-bill drain: transient failure → op marked failed (retryable), no exception before the attempts cap', async () => {
+    const repo = makeVendorBillOpsRepo([{ op_id: 'op-vb-net', alga_entity_id: 'bill-net', attempts: 0 }]);
+
+    tenantDbMock.mockImplementation(() => makeVendorBillDb([
+      { bill_id: 'bill-net', bill_number: 'VB-NET', total_amount: 100, currency_code: 'USD' }
+    ]));
+
+    vi.mocked(AccountingExportService.createForTenant).mockResolvedValue({
+      createBatch: vi.fn(async () => ({ batch_id: 'batch-vb-net' })),
+      appendLines: vi.fn(async () => undefined),
+      executeBatch: vi.fn(async () => { throw new Error('socket hang up'); }),
+      getBatchWithDetails: vi.fn(async () => ({
+        batch: { batch_id: 'batch-vb-net', status: 'failed', origin: 'scheduled' },
+        lines: [],
+        errors: []
+      })),
+      cancelBatch: vi.fn(async () => ({}))
+    } as any);
+
+    const exceptions = makeFakeExceptions();
+    const result = await runAccountingSyncCycle({
+      knex: {} as any,
+      tenantId: TENANT,
+      adapterType: ADAPTER_TYPE,
+      targetRealm: REALM,
+      adapter: makeFakeAdapter(),
+      exceptions,
+      notifications: makeFakeNotifications()
+    });
+
+    expect(repo.markFailed).toHaveBeenCalledWith(TENANT, 'op-vb-net', expect.stringContaining('socket hang up'));
+    expect(repo.markFailedTerminal).not.toHaveBeenCalled();
+    expect(exceptions.createOrUpdate).not.toHaveBeenCalled();
+    expect(result.stats?.opsFailed).toBe(1);
+    expect(result.status).toBe('succeeded');
+
+    restoreExportServiceDefault();
+  });
+
+  it('vendor-bill drain: ACCOUNTING_EXPORT_EMPTY_BATCH → ops marked done (already exported elsewhere)', async () => {
+    const repo = makeVendorBillOpsRepo([{ op_id: 'op-vb-empty', alga_entity_id: 'bill-empty', attempts: 0 }]);
+
+    tenantDbMock.mockImplementation(() => makeVendorBillDb([
+      { bill_id: 'bill-empty', bill_number: 'VB-EMPTY', total_amount: 100, currency_code: 'USD' }
+    ]));
+
+    vi.mocked(AccountingExportService.createForTenant).mockResolvedValue({
+      createBatch: vi.fn(async () => ({ batch_id: 'batch-vb-empty' })),
+      appendLines: vi.fn(async () => undefined),
+      executeBatch: vi.fn(async () => {
+        throw new AppError('ACCOUNTING_EXPORT_EMPTY_BATCH', 'nothing to export');
+      }),
+      getBatchWithDetails: vi.fn(async () => ({
+        batch: { batch_id: 'batch-vb-empty', status: 'pending', origin: 'scheduled' },
+        lines: [],
+        errors: []
+      })),
+      cancelBatch: vi.fn(async () => ({}))
+    } as any);
+
+    const result = await runAccountingSyncCycle({
+      knex: {} as any,
+      tenantId: TENANT,
+      adapterType: ADAPTER_TYPE,
+      targetRealm: REALM,
+      adapter: makeFakeAdapter(),
+      exceptions: makeFakeExceptions(),
+      notifications: makeFakeNotifications()
+    });
+
+    expect(repo.markDone).toHaveBeenCalledWith(TENANT, 'op-vb-empty');
+    expect(result.stats?.opsProcessed).toBe(1);
+    expect(result.status).toBe('succeeded');
+
+    restoreExportServiceDefault();
+  });
+
+  it('vendor-bill drain: adapter without vendor_bill capability (xero) never drains export_vendor_bill ops', async () => {
+    const repo = makeVendorBillOpsRepo([{ op_id: 'op-vb-xero', alga_entity_id: 'bill-xero', attempts: 0 }]);
+
+    const result = await runAccountingSyncCycle({
+      knex: {} as any,
+      tenantId: TENANT,
+      adapterType: 'xero',
+      targetRealm: REALM,
+      adapter: makeFakeAdapter(),
+      exceptions: makeFakeExceptions(),
+      notifications: makeFakeNotifications()
+    });
+
+    // The invoice drains still list their operations; the vendor-bill drain never runs.
+    const vendorBillCalls = repo.listPending.mock.calls.filter(
+      (call: any[]) => call[2]?.operation === 'export_vendor_bill'
+    );
+    expect(vendorBillCalls).toHaveLength(0);
+    expect(repo.markInProgress).not.toHaveBeenCalled();
+    expect(result.status).toBe('succeeded');
+  });
+});

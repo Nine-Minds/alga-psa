@@ -208,8 +208,8 @@ describe('Live Xero export integration', () => {
       lines: [
         {
           batch_id: batch.batch_id,
-          invoice_id: invoiceId,
-          invoice_charge_id: chargeId,
+          document_id: invoiceId,
+          document_line_id: chargeId,
           client_id: ctx.clientId,
           amount_cents: 5000,
           currency_code: 'USD',

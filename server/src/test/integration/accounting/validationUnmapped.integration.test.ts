@@ -46,7 +46,7 @@ describe('Accounting export validation – unmapped services', () => {
     await ctx.db('service_catalog').where({ tenant: ctx.tenantId }).del();
   }, HOOK_TIMEOUT);
 
-afterEach(async () => {
+  afterEach(async () => {
     vi.restoreAllMocks();
     await helpers.afterEach();
   }, HOOK_TIMEOUT);
@@ -196,8 +196,8 @@ afterEach(async () => {
       line_id: uuidv4(),
       batch_id: batchId,
       tenant: ctx.tenantId,
-      invoice_id: invoiceId,
-      invoice_charge_id: chargeId,
+      document_id: invoiceId,
+      document_line_id: chargeId,
       client_id: ctx.clientId,
       amount_cents: 5000,
       currency_code: 'USD',
@@ -272,8 +272,8 @@ afterEach(async () => {
       line_id: uuidv4(),
       batch_id: batchId,
       tenant: ctx.tenantId,
-      invoice_id: invoiceId,
-      invoice_charge_id: chargeId,
+      document_id: invoiceId,
+      document_line_id: chargeId,
       client_id: ctx.clientId,
       amount_cents: 5000,
       currency_code: 'USD',
@@ -339,8 +339,8 @@ afterEach(async () => {
       line_id: uuidv4(),
       batch_id: batchId,
       tenant: ctx.tenantId,
-      invoice_id: invoiceId,
-      invoice_charge_id: chargeId,
+      document_id: invoiceId,
+      document_line_id: chargeId,
       client_id: ctx.clientId,
       amount_cents: 5000,
       currency_code: 'USD',
@@ -402,8 +402,8 @@ afterEach(async () => {
       line_id: uuidv4(),
       batch_id: batchId,
       tenant: ctx.tenantId,
-      invoice_id: invoiceId,
-      invoice_charge_id: chargeId,
+      document_id: invoiceId,
+      document_line_id: chargeId,
       client_id: ctx.clientId,
       amount_cents: 5000,
       currency_code: 'USD',

@@ -2,9 +2,11 @@
 import { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import logger from '@alga-psa/core/logger';
-import { resolveDefaultRealm } from './accountingSyncSettings';
 import { getAccountingSyncSettings } from './accountingSyncSettings';
+import { resolveDefaultRealm } from './accountingSyncSettings';
 import { SyncOperationsRepository } from './syncOperationsRepository';
+import { ADAPTER_EXPORT_CAPABILITIES } from '../../adapters/accounting/registry';
+import { resolveConnectedAccountingIntegration } from './connectedAccountingIntegration';
 
 /**
  * Producers enqueue outbound sync operations from billing events. They are
@@ -19,7 +21,12 @@ function isEnterpriseEdition(): boolean {
   );
 }
 
-const SYNC_ADAPTER_TYPE = 'quickbooks_online';
+const QBO_ADAPTER_TYPE = 'quickbooks_online';
+
+function adapterSupportsExportType(adapterType: string, exportType: string): boolean {
+  const capabilities = ADAPTER_EXPORT_CAPABILITIES as Record<string, readonly string[] | undefined>;
+  return Boolean(capabilities[adapterType]?.includes(exportType));
+}
 
 /**
  * Auto-export on finalize: enqueue the invoice for the next sync cycle when
@@ -54,8 +61,8 @@ export async function enqueueInvoiceAutoExport(
       }
     }
 
-    const realm = await resolveDefaultRealm(knex, tenantId);
-    if (!realm) {
+    const integration = await resolveConnectedAccountingIntegration(knex, tenantId);
+    if (!integration) {
       return;
     }
 
@@ -77,14 +84,20 @@ export async function enqueueInvoiceAutoExport(
 
     await new SyncOperationsRepository(knex).enqueue({
       tenant: tenantId,
-      adapterType: SYNC_ADAPTER_TYPE,
-      targetRealm: realm,
+      adapterType: integration.adapterType,
+      targetRealm: integration.targetRealm,
       operation,
       algaEntityType: 'invoice',
       algaEntityId: invoiceId
     });
 
-    logger.debug('[accountingSync] Queued invoice auto-export', { tenantId, invoiceId, realm, operation });
+    logger.debug('[accountingSync] Queued invoice auto-export', {
+      tenantId,
+      invoiceId,
+      adapterType: integration.adapterType,
+      targetRealm: integration.targetRealm,
+      operation
+    });
   } catch (error) {
     logger.warn('[accountingSync] Failed to queue invoice auto-export (finalize unaffected)', {
       tenantId,
@@ -92,6 +105,89 @@ export async function enqueueInvoiceAutoExport(
       error: error instanceof Error ? error.message : error
     });
   }
+}
+
+async function enqueueVendorBillExportOperation(
+  knex: Knex,
+  tenantId: string,
+  billId: string,
+  options: { requireAutoSync: boolean }
+): Promise<boolean> {
+  if (!isEnterpriseEdition()) {
+    return false;
+  }
+
+  const settings = await getAccountingSyncSettings(knex, tenantId);
+  if (options.requireAutoSync && !settings.autoSyncEnabled) {
+    return false;
+  }
+
+  if (options.requireAutoSync && settings.autoSyncStartDate) {
+    const today = new Date().toISOString().slice(0, 10);
+    if (today < settings.autoSyncStartDate.slice(0, 10)) {
+      return false;
+    }
+  }
+
+  const integration = await resolveConnectedAccountingIntegration(knex, tenantId);
+  if (!integration) {
+    return false;
+  }
+
+  if (!adapterSupportsExportType(integration.adapterType, 'vendor_bill')) {
+    return false;
+  }
+
+  await new SyncOperationsRepository(knex).enqueue({
+    tenant: tenantId,
+    adapterType: integration.adapterType,
+    targetRealm: integration.targetRealm,
+    operation: 'export_vendor_bill',
+    algaEntityType: 'vendor_bill',
+    algaEntityId: billId
+  });
+
+  logger.debug('[accountingSync] Queued vendor bill export', {
+    tenantId,
+    billId,
+    adapterType: integration.adapterType,
+    targetRealm: integration.targetRealm,
+    requireAutoSync: options.requireAutoSync
+  });
+
+  return true;
+}
+
+/**
+ * Auto-export on vendor bill open: enqueue for the next sync cycle when the
+ * tenant has a connected accounting integration that supports vendor bills.
+ */
+export async function enqueueVendorBillAutoExport(
+  knex: Knex,
+  tenantId: string,
+  billId: string
+): Promise<void> {
+  try {
+    await enqueueVendorBillExportOperation(knex, tenantId, billId, { requireAutoSync: true });
+  } catch (error) {
+    logger.warn('[accountingSync] Failed to queue vendor bill auto-export (status change unaffected)', {
+      tenantId,
+      billId,
+      error: error instanceof Error ? error.message : error
+    });
+  }
+}
+
+/**
+ * Explicit retry from the UI. This intentionally bypasses the auto-sync toggle
+ * because the operator is making a direct retry decision.
+ */
+export async function enqueueVendorBillExportRetry(
+  knex: Knex,
+  tenantId: string,
+  billId: string
+): Promise<boolean> {
+  return enqueueVendorBillExportOperation(knex, tenantId, billId, { requireAutoSync: false });
 }
 
 /**
@@ -105,7 +201,7 @@ export async function satisfyExportOpsForManualBatch(
   invoiceIds: string[]
 ): Promise<void> {
   try {
-    if (adapterType !== SYNC_ADAPTER_TYPE || invoiceIds.length === 0) {
+    if (invoiceIds.length === 0) {
       return;
     }
     const satisfied = await new SyncOperationsRepository(knex).satisfyPending(
@@ -148,7 +244,7 @@ export async function enqueueInvoiceVoid(
     // Only enqueue when a mapping exists (otherwise there's nothing to void in QBO)
     const mapping = await tenantDb(knex, tenantId).table('tenant_external_entity_mappings')
       .where({
-        integration_type: SYNC_ADAPTER_TYPE,
+        integration_type: QBO_ADAPTER_TYPE,
         alga_entity_type: 'invoice',
         alga_entity_id: invoiceId
       })
@@ -160,7 +256,7 @@ export async function enqueueInvoiceVoid(
 
     await new SyncOperationsRepository(knex).enqueue({
       tenant: tenantId,
-      adapterType: SYNC_ADAPTER_TYPE,
+      adapterType: QBO_ADAPTER_TYPE,
       targetRealm: realm,
       operation: 'void_invoice',
       algaEntityType: 'invoice',
@@ -219,7 +315,7 @@ export async function enqueueExternalPaymentPush(
     // Skip invoices that don't have a QBO mapping yet (pre-go-live invoices).
     const mapping = await tenantDb(knex, tenantId).table('tenant_external_entity_mappings')
       .where({
-        integration_type: SYNC_ADAPTER_TYPE,
+        integration_type: QBO_ADAPTER_TYPE,
         alga_entity_type: 'invoice',
         alga_entity_id: params.invoiceId
       })
@@ -236,7 +332,7 @@ export async function enqueueExternalPaymentPush(
 
     await new SyncOperationsRepository(knex).enqueue({
       tenant: tenantId,
-      adapterType: SYNC_ADAPTER_TYPE,
+      adapterType: QBO_ADAPTER_TYPE,
       targetRealm: realm,
       operation: 'record_payment',
       algaEntityType: 'invoice_payment',
@@ -297,7 +393,7 @@ export async function enqueueCreditApplication(
 
     await new SyncOperationsRepository(knex).enqueue({
       tenant: tenantId,
-      adapterType: SYNC_ADAPTER_TYPE,
+      adapterType: QBO_ADAPTER_TYPE,
       targetRealm: realm,
       operation: 'apply_credit',
       algaEntityType: 'credit_allocation',

@@ -139,6 +139,7 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
   capabilities(): AccountingExportAdapterCapabilities {
     return {
       deliveryMode: 'file',
+      supportedExportTypes: ['invoice'],
       supportsPartialRetry: false, // All-or-nothing file generation
       supportsInvoiceUpdates: false, // CSV export is one-way
       supportsTaxDelegation: true, // Can export without tax
@@ -170,7 +171,7 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
     const resolver = await AccountingMappingResolver.create();
 
     // Group lines by invoice
-    const linesByInvoice = this.groupBy(context.lines, (line) => line.invoice_id);
+    const linesByInvoice = this.groupBy(context.lines, (line) => line.document_id);
     const documents: AccountingExportDocument[] = [];
     let invoicesWithExternalTax = 0;
 
@@ -202,13 +203,13 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
       let totalTaxCents = 0;
 
       for (const line of exportLines) {
-        if (!line.invoice_charge_id) {
+        if (!line.document_line_id) {
           throw new Error(`QuickBooks CSV adapter: line ${line.line_id} missing invoice_charge_id`);
         }
 
-        const charge = chargesById.get(line.invoice_charge_id);
+        const charge = chargesById.get(line.document_line_id);
         if (!charge) {
-          throw new Error(`QuickBooks CSV adapter: charge ${line.invoice_charge_id} not found`);
+          throw new Error(`QuickBooks CSV adapter: charge ${line.document_line_id} not found`);
         }
 
         if (!charge.service_id) {
@@ -504,7 +505,7 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
     tenantId: string,
     context: AccountingExportAdapterContext
   ): Promise<Map<string, DbInvoice>> {
-    const invoiceIds = Array.from(new Set(context.lines.map((line) => line.invoice_id)));
+    const invoiceIds = Array.from(new Set(context.lines.map((line) => line.document_id)));
     if (invoiceIds.length === 0) {
       return new Map();
     }
@@ -532,7 +533,7 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
     context: AccountingExportAdapterContext
   ): Promise<Map<string, DbCharge>> {
     const chargeIds = context.lines
-      .map((line) => line.invoice_charge_id)
+      .map((line) => line.document_line_id)
       .filter((id): id is string => Boolean(id));
 
     if (chargeIds.length === 0) {
@@ -629,6 +630,6 @@ export class QuickBooksCSVAdapter implements AccountingExportAdapter {
     lineId: string
   ): string | undefined {
     const line = context.lines.find((l) => l.line_id === lineId);
-    return line?.invoice_id;
+    return line?.document_id;
   }
 }

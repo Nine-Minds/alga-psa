@@ -1494,8 +1494,6 @@
   },
   "vendorBills": {
     "actions": {
-      "export": "Esporta",
-      "exporting": "Esportazione…",
       "markPaid": "Segna come pagata",
       "open": "Apri",
       "void": "Annulla"
@@ -1536,7 +1534,9 @@
       "error": "Esportazione non riuscita",
       "exported": "Esportata",
       "notExported": "Non esportata",
-      "pending": "Esportazione in sospeso"
+      "pending": "Esportazione in sospeso",
+      "retry": "Riprova",
+      "retrying": "Nuovo tentativo…"
     },
     "exportError": "Impossibile esportare la fattura.",
     "exportFailed": "Esportazione non riuscita.",

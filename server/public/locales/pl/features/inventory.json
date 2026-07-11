@@ -1494,8 +1494,6 @@
   },
   "vendorBills": {
     "actions": {
-      "export": "Eksportuj",
-      "exporting": "Eksportowanie…",
       "markPaid": "Oznacz jako zapłacony",
       "open": "Otwórz",
       "void": "Unieważnij"
@@ -1536,7 +1534,9 @@
       "error": "Eksport nie powiódł się",
       "exported": "Wyeksportowano",
       "notExported": "Nie wyeksportowano",
-      "pending": "Eksport oczekujący"
+      "pending": "Eksport oczekujący",
+      "retry": "Ponów",
+      "retrying": "Ponawianie…"
     },
     "exportError": "Nie udało się wyeksportować rachunku.",
     "exportFailed": "Eksport nie powiódł się.",

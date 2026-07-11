@@ -313,11 +313,11 @@ export class ApiAccountingExportController extends ApiBaseController {
           }
 
           const lineInvoiceIds = await db.table('accounting_export_lines')
-            .distinct('invoice_id')
+            .distinct('document_id')
             .where({ batch_id: batchId })
-            .whereNotNull('invoice_id');
+            .whereNotNull('document_id');
 
-          const invoiceIds = lineInvoiceIds.map((row: any) => row.invoice_id).filter(Boolean);
+          const invoiceIds = lineInvoiceIds.map((row: any) => row.document_id).filter(Boolean);
           if (invoiceIds.length === 0) {
             return NextResponse.json({
               success: true,
@@ -408,8 +408,19 @@ export class ApiAccountingExportController extends ApiBaseController {
       return await runWithTenant(apiRequest.context.tenant, async () => {
         await this.authorize(apiRequest, 'update');
 
-        const body = (await apiRequest.json()) as { lines: CreateExportLineInput[] };
-        const lines = await appendAccountingExportLines(params.batchId, body.lines);
+        const body = (await apiRequest.json()) as { lines: Array<CreateExportLineInput & {
+          invoice_id?: string;
+          invoice_charge_id?: string | null;
+        }> };
+        const normalizedLines = (body.lines ?? []).map((line) => {
+          const { invoice_id, invoice_charge_id, ...rest } = line;
+          return {
+            ...rest,
+            document_id: rest.document_id ?? invoice_id,
+            document_line_id: rest.document_line_id ?? invoice_charge_id ?? null,
+          };
+        }) as CreateExportLineInput[];
+        const lines = await appendAccountingExportLines(params.batchId, normalizedLines);
 
         await AccountingExportValidation.ensureMappingsForBatch(params.batchId);
         return NextResponse.json(lines, { status: 201 });

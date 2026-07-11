@@ -1,8 +1,14 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 
 // ── Module mocks (hoisted) ──────────────────────────────────────────────────
+const getStoredXeroConnectionsMock = vi.hoisted(() => vi.fn(async () => ({})));
+
 vi.mock('@alga-psa/integrations/lib/qbo/qboClientService', () => ({
   getDefaultQboRealmId: vi.fn(async () => 'realm-1')
+}));
+
+vi.mock('@alga-psa/integrations/lib/xero/xeroClientService', () => ({
+  getStoredXeroConnections: getStoredXeroConnectionsMock
 }));
 
 vi.mock('./accountingSyncSettings', () => ({
@@ -24,9 +30,15 @@ vi.mock('./syncOperationsRepository', () => ({
   }); })
 }));
 
-import { enqueueInvoiceAutoExport, satisfyExportOpsForManualBatch, enqueueCreditApplication, enqueueInvoiceVoid, enqueueExternalPaymentPush } from './syncProducers';
-// eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- mocks the QuickBooks client the producers bridge to
-import { getDefaultQboRealmId } from '@alga-psa/integrations/lib/qbo/qboClientService';
+import {
+  enqueueInvoiceAutoExport,
+  enqueueVendorBillAutoExport,
+  enqueueVendorBillExportRetry,
+  satisfyExportOpsForManualBatch,
+  enqueueCreditApplication,
+  enqueueInvoiceVoid,
+  enqueueExternalPaymentPush
+} from './syncProducers';
 import { getAccountingSyncSettings, resolveDefaultRealm } from './accountingSyncSettings';
 import { SyncOperationsRepository } from './syncOperationsRepository';
 
@@ -65,6 +77,7 @@ describe('enqueueInvoiceAutoExport', () => {
     vi.clearAllMocks();
     // Reset to default happy-path mocks
     mockGetRealm.mockResolvedValue('realm-1');
+    getStoredXeroConnectionsMock.mockResolvedValue({});
     mockGetSettings.mockResolvedValue({ autoSyncEnabled: true, autoSyncStartDate: null, depositAccountRef: null, defaultClassRef: null, defaultDepartmentRef: null, defaultRealm: null });
   });
 
@@ -169,6 +182,87 @@ describe('enqueueInvoiceAutoExport', () => {
     await enqueueInvoiceAutoExport(makeKnex('prepayment'), 't1', 'inv-pp-1');
 
     // SyncOperationsRepository should not have been constructed, or its enqueue never called.
+    const results = vi.mocked(SyncOperationsRepository).mock.results;
+    for (const result of results) {
+      const enqueueFn = (result.value as any)?.enqueue;
+      if (enqueueFn) {
+        expect(enqueueFn).not.toHaveBeenCalled();
+      }
+    }
+  });
+});
+
+describe('enqueueVendorBillAutoExport', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetRealm.mockResolvedValue('realm-1');
+    getStoredXeroConnectionsMock.mockResolvedValue({});
+    mockGetSettings.mockResolvedValue({ autoSyncEnabled: true, autoSyncStartDate: null, depositAccountRef: null, defaultClassRef: null, defaultDepartmentRef: null, defaultRealm: null });
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('enqueues export_vendor_bill when EE, auto-sync, and QBO support are present', async () => {
+    vi.stubEnv('EDITION', 'ee');
+
+    await enqueueVendorBillAutoExport(makeKnex(), 't1', 'bill-1');
+
+    const results = vi.mocked(SyncOperationsRepository).mock.results;
+    expect(results.length).toBeGreaterThan(0);
+    const enqueueFn = (results[results.length - 1].value as any)?.enqueue as ReturnType<typeof vi.fn>;
+    expect(enqueueFn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        tenant: 't1',
+        adapterType: 'quickbooks_online',
+        targetRealm: 'realm-1',
+        operation: 'export_vendor_bill',
+        algaEntityType: 'vendor_bill',
+        algaEntityId: 'bill-1'
+      })
+    );
+  });
+
+  it('skips auto-export when autoSyncEnabled=false', async () => {
+    vi.stubEnv('EDITION', 'ee');
+    mockGetSettings.mockResolvedValue({ autoSyncEnabled: false, autoSyncStartDate: null, depositAccountRef: null, defaultClassRef: null, defaultDepartmentRef: null, defaultRealm: null });
+
+    await enqueueVendorBillAutoExport(makeKnex(), 't1', 'bill-2');
+
+    const results = vi.mocked(SyncOperationsRepository).mock.results;
+    for (const result of results) {
+      const enqueueFn = (result.value as any)?.enqueue;
+      if (enqueueFn) {
+        expect(enqueueFn).not.toHaveBeenCalled();
+      }
+    }
+  });
+
+  it('retry bypasses autoSyncEnabled=false', async () => {
+    vi.stubEnv('EDITION', 'ee');
+    mockGetSettings.mockResolvedValue({ autoSyncEnabled: false, autoSyncStartDate: null, depositAccountRef: null, defaultClassRef: null, defaultDepartmentRef: null, defaultRealm: null });
+
+    await expect(enqueueVendorBillExportRetry(makeKnex(), 't1', 'bill-3')).resolves.toBe(true);
+
+    const results = vi.mocked(SyncOperationsRepository).mock.results;
+    expect(results.length).toBeGreaterThan(0);
+    const enqueueFn = (results[results.length - 1].value as any)?.enqueue as ReturnType<typeof vi.fn>;
+    expect(enqueueFn).toHaveBeenCalledWith(
+      expect.objectContaining({
+        operation: 'export_vendor_bill',
+        algaEntityId: 'bill-3'
+      })
+    );
+  });
+
+  it('skips when only Xero is connected because vendor bills are unsupported there', async () => {
+    vi.stubEnv('EDITION', 'ee');
+    mockGetRealm.mockResolvedValue(null);
+    getStoredXeroConnectionsMock.mockResolvedValue({ 'xero-connection-1': {} });
+
+    await enqueueVendorBillAutoExport(makeKnex(), 't1', 'bill-4');
+
     const results = vi.mocked(SyncOperationsRepository).mock.results;
     for (const result of results) {
       const enqueueFn = (result.value as any)?.enqueue;
@@ -452,13 +546,12 @@ describe('satisfyExportOpsForManualBatch', () => {
     vi.clearAllMocks();
   });
 
-  it('does nothing for non-quickbooks adapterType', async () => {
+  it('satisfies pending export ops for any adapterType', async () => {
     await satisfyExportOpsForManualBatch(knex, 't1', 'xero', ['inv-1']);
-    const instances = vi.mocked(SyncOperationsRepository).mock.instances;
-    // No instances should have been created, or satisfyPending not called
-    for (const inst of instances) {
-      expect((inst as any).satisfyPending).not.toHaveBeenCalled();
-    }
+    const results = vi.mocked(SyncOperationsRepository).mock.results;
+    expect(results.length).toBeGreaterThan(0);
+    const satisfyPending = (results[results.length - 1].value as any)?.satisfyPending as ReturnType<typeof vi.fn>;
+    expect(satisfyPending).toHaveBeenCalledWith('t1', 'xero', 'export_invoice', ['inv-1']);
   });
 
   it('does nothing for empty invoiceIds', async () => {
