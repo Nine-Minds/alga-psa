@@ -307,7 +307,7 @@ export function KitManager({ initialKits, serviceTypes, componentCandidates: ini
       setCreating(false);
     }
   };
-  usePageCreateShortcut(add, { enabled: selectedKit !== null && !saving });
+  usePageCreateShortcut(openCreateDialog);
 
   const handleSavePricing = async () => {
     if (!detail) return;

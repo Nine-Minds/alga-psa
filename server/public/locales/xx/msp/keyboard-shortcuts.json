@@ -217,6 +217,10 @@
       "close": {
         "label": "11111",
         "description": "11111"
+      },
+      "submit": {
+        "label": "11111",
+        "description": "11111"
       }
     },
     "drawer": {
