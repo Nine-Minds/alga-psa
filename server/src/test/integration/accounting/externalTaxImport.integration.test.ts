@@ -581,7 +581,7 @@ describe('External Tax Import', () => {
           status: 'delivered'
         },
         lines: [
-          { invoice_id: invoiceId, line_id: `line-${invoiceId}-0` }
+          { document_id: invoiceId, line_id: `line-${invoiceId}-0` }
         ],
         taxDelegationMode: 'delegate' as const,
         excludeTaxFromExport: true
