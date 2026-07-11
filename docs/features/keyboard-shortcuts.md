@@ -79,6 +79,19 @@ When a drawer or modal dialog is open it captures `Escape` (close/cancel) and
 `[`/`]` (previous/next record within the panel). Global and page shortcuts do
 not fire while a panel-scope owner is active.
 
+| Action | macOS | Windows / Linux |
+|--------|-------|-----------------|
+| Close / cancel | ⎋ | Escape |
+| Previous record in panel | `[` | `[` |
+| Next record in panel | `]` | `]` |
+| Save panel form (`panel.submit`) | ⌘S or ⌘↵ | Ctrl+S or Ctrl+Enter |
+
+`panel.submit` fires when a drawer is the active scope owner and the form
+inside it registers the shortcut. It takes priority over the page-level
+`Save current page` action — pressing ⌘S / Ctrl+S while a drawer is open
+saves the panel form rather than the underlying page. The shortcut is wired up
+in: ticket details panel, client quick-view panel, and contact details panel.
+
 ## Customizing Shortcuts
 
 Navigate to **Profile → Keyboard Shortcuts** to manage personal bindings.

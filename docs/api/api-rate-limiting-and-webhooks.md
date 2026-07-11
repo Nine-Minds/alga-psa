@@ -112,6 +112,22 @@ Ticket webhooks support these event types in v1:
 - `ticket.closed`
 - `ticket.comment.added`
 
+### Notification Suppression
+
+`ticket.updated`, `ticket.assigned`, and `ticket.closed` payloads carry two
+boolean flags that reflect whether notifications were suppressed when the
+operation was performed:
+
+| Field | Type | Default | Meaning |
+| --- | --- | --- | --- |
+| `suppress_contact_notifications` | boolean | `false` | `true` when the contact (end-customer) was not notified about this update. |
+| `suppress_internal_notifications` | boolean | `false` | `true` when all notifications were suppressed — neither internal users nor the contact were notified. Implies `suppress_contact_notifications`. |
+
+Both fields are always present in the payload and default to `false`.
+Integrations that forward ticket events to an external system can read these
+flags to avoid double-notifying contacts when the MSP operator already chose
+to suppress the native notification.
+
 ### Delivery Envelope
 
 Every outbound webhook is delivered as JSON:
@@ -148,6 +164,8 @@ Every outbound webhook is delivered as JSON:
     "closed_at": null,
     "due_date": null,
     "tags": ["printer", "onsite"],
+    "suppress_contact_notifications": false,
+    "suppress_internal_notifications": false,
     "url": "https://algapsa.com/msp/tickets/22222222-2222-2222-2222-222222222222"
   }
 }
@@ -191,6 +209,8 @@ Every outbound webhook is delivered as JSON:
     "status_name": "Open",
     "tags": ["printer"],
     "url": "https://algapsa.com/msp/tickets/22222222-2222-2222-2222-222222222222",
+    "suppress_contact_notifications": false,
+    "suppress_internal_notifications": false,
     "changes": {
       "title": {
         "previous": "Printer offline",
@@ -236,6 +256,8 @@ Every outbound webhook is delivered as JSON:
     "assigned_to_name": "Pat Lee",
     "status_name": "In Progress",
     "tags": [],
+    "suppress_contact_notifications": false,
+    "suppress_internal_notifications": false,
     "url": "https://algapsa.com/msp/tickets/22222222-2222-2222-2222-222222222222"
   }
 }
@@ -255,6 +277,8 @@ Every outbound webhook is delivered as JSON:
     "is_closed": true,
     "closed_at": "2026-05-05T16:20:00.000Z",
     "tags": [],
+    "suppress_contact_notifications": false,
+    "suppress_internal_notifications": false,
     "url": "https://algapsa.com/msp/tickets/22222222-2222-2222-2222-222222222222"
   }
 }
