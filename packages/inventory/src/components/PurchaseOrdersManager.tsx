@@ -16,6 +16,7 @@ import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { CURRENCY_OPTIONS, toMinorUnits } from '@alga-psa/core';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { usePageCreateShortcut, useDialogSubmitShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 import {
   getErrorMessage,
   isActionMessageError,
@@ -271,6 +272,7 @@ export function PurchaseOrdersManager({
     setForm(emptyForm(defaultCurrencyCode));
     setDialogOpen(true);
   };
+  usePageCreateShortcut(openCreate);
 
   const updateLine = (idx: number, patch: Partial<LineForm>) => {
     setForm((f) => ({
@@ -327,6 +329,10 @@ export function PurchaseOrdersManager({
       setSaving(false);
     }
   };
+  useDialogSubmitShortcut(
+    () => { void save(); },
+    { active: dialogOpen, enabled: dialogOpen && !saving },
+  );
 
   const submit = async (po: IPurchaseOrder) => {
     try {

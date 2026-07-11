@@ -1002,9 +1002,9 @@
       "charged": "55555",
       "closed": "55555"
     },
-    "ageAtVendor": "55555",
+    "ageAtVendor": "55555 {{days}} 55555",
     "filters": {
-      "statusActive": "55555"
+      "statusActive": "55555 {{status}} 55555"
     }
   },
   "salesOrders": {

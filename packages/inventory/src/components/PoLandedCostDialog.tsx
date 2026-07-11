@@ -10,6 +10,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { toMinorUnits } from '@alga-psa/core';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useDialogSubmitShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { toast } from 'react-hot-toast';
 import type { IPurchaseOrder, IPurchaseOrderLine, IPoLandedCost } from '@alga-psa/types';
@@ -200,6 +201,10 @@ export function PoLandedCostDialog({
       setBusy(null);
     }
   };
+  useDialogSubmitShortcut(
+    () => { void apply(); },
+    { active: po !== null, enabled: po !== null && busy === null && unapplied.length > 0 && lines.length > 0 },
+  );
 
   return (
     <Dialog

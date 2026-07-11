@@ -5,7 +5,7 @@ import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import { ADD_ONS } from '@alga-psa/types';
 import { type NavMode } from "@/config/menuConfig";
 import SidebarWithFeatureFlags from "./SidebarWithFeatureFlags";
-import Header, { QUICK_CREATE_OPEN_EVENT } from "./Header";
+import Header from "./Header";
 import Body from "./Body";
 import RightSidebar from "./RightSidebar";
 import { DrawerProvider } from "@alga-psa/ui";
@@ -15,14 +15,10 @@ import { savePreference } from '@alga-psa/ui/lib';
 import QuickAskOverlay from 'server/src/components/chat/QuickAskOverlay';
 import { QuickAskProvider } from './QuickAskContext';
 import { PlatformNotificationBanner } from './PlatformNotificationBanner';
-import VimNavigationLayer from './VimNavigationLayer';
+import GlobalShortcutLayer from './GlobalShortcutLayer';
 import { isExperimentalFeatureEnabled } from '@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions';
 import { useTier } from 'server/src/context/TierContext';
-import {
-  useCatalogShortcut,
-  useShortcutScope,
-} from '@alga-psa/ui/keyboard-shortcuts';
-import { ShortcutHelpDialog, ShortcutHintHud } from '@alga-psa/ui/keyboard-shortcuts';
+import { useCatalogShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 
 interface DefaultLayoutProps {
   children: React.ReactNode;
@@ -119,7 +115,6 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
 
   const [rightSidebarOpen, setRightSidebarOpen] = useState(false);
   const [quickAskOpen, setQuickAskOpen] = useState(false);
-  const [shortcutsHelpOpen, setShortcutsHelpOpen] = useState(false);
   const [isChatInterruptible, setIsChatInterruptible] = useState(false);
   const [pendingInterruptKind, setPendingInterruptKind] = useState<'close-sidebar' | 'navigate' | null>(null);
   const [sidebarHandoff, setSidebarHandoff] = useState<{ chatId: string | null; nonce: number }>({
@@ -237,38 +232,8 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
       setQuickAskOpen(prev => !prev);
   }, [aiAssistantAvailable, rightSidebarOpen]);
 
-  const openShortcutsShortcut = useCallback(() => {
-    setShortcutsHelpOpen(true);
-  }, []);
-
-  const quickCreateShortcut = useCallback(() => {
-    const trigger = document.getElementById('global-quick-create-trigger');
-    if (!(trigger instanceof HTMLElement)) {
-      return false;
-    }
-    window.dispatchEvent(new CustomEvent(QUICK_CREATE_OPEN_EVENT));
-  }, []);
-
-  const goTicketsShortcut = useCallback(() => {
-    router.push('/msp/tickets');
-  }, [router]);
-
-  const goAssetsShortcut = useCallback(() => {
-    router.push('/msp/assets');
-  }, [router]);
-
-  const goClientsShortcut = useCallback(() => {
-    router.push('/msp/clients');
-  }, [router]);
-
-  useShortcutScope('page');
   useCatalogShortcut('global.toggleChat', toggleChatShortcut, { enabled: aiAssistantAvailable });
   useCatalogShortcut('ai.quickAsk', quickAskShortcut, { enabled: aiAssistantAvailable });
-  useCatalogShortcut('global.openShortcuts', openShortcutsShortcut);
-  useCatalogShortcut('global.quickCreate', quickCreateShortcut);
-  useCatalogShortcut('navigation.goTickets', goTicketsShortcut);
-  useCatalogShortcut('navigation.goAssets', goAssetsShortcut);
-  useCatalogShortcut('navigation.goClients', goClientsShortcut);
 
   useEffect(() => {
     const bootstrapChatContext = async () => {
@@ -508,9 +473,7 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
                 hf={null}
               />
             ) : null}
-            <VimNavigationLayer onOpenHelp={openShortcutsShortcut} />
-            <ShortcutHelpDialog isOpen={shortcutsHelpOpen} onClose={() => setShortcutsHelpOpen(false)} />
-            <ShortcutHintHud />
+            <GlobalShortcutLayer />
           </QuickAskProvider>
         </div>
       </div>

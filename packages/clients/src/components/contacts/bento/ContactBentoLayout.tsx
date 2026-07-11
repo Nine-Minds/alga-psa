@@ -42,6 +42,7 @@ import {
   isActionMessageError,
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+import { usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 
 type PortalPermissions = {
   canInvite: boolean;
@@ -368,6 +369,10 @@ export function ContactBentoLayout({
     setIsEditingRole(false);
     if (roleDraft !== (contact.role ?? '')) void saveField('role', roleDraft);
   };
+
+  // Keyboard parity with other detail surfaces: "c" opens the contact editor,
+  // the same affordance as the hero's Edit / add-reach buttons.
+  usePageCreateShortcut(openEditDrawer);
 
   const hero = (
     <BentoTile id={`${id}-hero`} className="col-span-12">

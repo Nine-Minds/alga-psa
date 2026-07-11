@@ -217,6 +217,10 @@
       "close": {
         "label": "Fechar painel",
         "description": "Feche o painel ou gaveta ativa."
+      },
+      "submit": {
+        "label": "Salvar painel",
+        "description": "Salvar o formulário do painel ou gaveta ativa."
       }
     },
     "drawer": {

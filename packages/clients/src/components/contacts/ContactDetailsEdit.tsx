@@ -15,6 +15,8 @@ import { ArrowLeft } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { usePageSaveShortcut, usePanelSubmitShortcut } from '@alga-psa/ui/keyboard-shortcuts';
+import { useInsideDrawer } from '@alga-psa/ui/components/ModalityContext';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
 import { ReflectionContainer } from '@alga-psa/ui/ui-reflection/ReflectionContainer';
 import { ButtonComponent, FormFieldComponent } from '@alga-psa/ui/ui-reflection/types';
@@ -259,6 +261,11 @@ const ContactDetailsEdit: React.FC<ContactDetailsEditProps> = ({
       }
     }
   };
+
+  // Drawer-hosted edits save via panel.submit (page.save is suppressed there).
+  const insideDrawer = useInsideDrawer() || isInDrawer;
+  usePageSaveShortcut(() => { void handleSave(); }, { enabled: !insideDrawer });
+  usePanelSubmitShortcut(() => { void handleSave(); }, { enabled: insideDrawer });
 
   const handleTagsChange = (updatedTags: ITag[]) => {
     setTags(updatedTags);

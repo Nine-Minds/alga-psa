@@ -21,6 +21,7 @@ import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { usePageCreateShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 import {
   getErrorMessage,
   isActionMessageError,
@@ -306,6 +307,7 @@ export function KitManager({ initialKits, serviceTypes, componentCandidates: ini
       setCreating(false);
     }
   };
+  usePageCreateShortcut(openCreateDialog);
 
   const handleSavePricing = async () => {
     if (!detail) return;

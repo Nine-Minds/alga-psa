@@ -11,6 +11,7 @@ import { EmptyState } from '@alga-psa/ui/components/EmptyState';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { usePageCreateShortcut, useDialogSubmitShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 import {
   getErrorMessage,
   isActionMessageError,
@@ -183,6 +184,7 @@ export function StockOverview({
     });
     setReceiveOpen(true);
   };
+  usePageCreateShortcut(() => openReceive());
 
   const selectedProduct = products.find((p) => p.service_id === receiveForm.service_id) || null;
 
@@ -229,6 +231,10 @@ export function StockOverview({
       setSaving(false);
     }
   };
+  useDialogSubmitShortcut(
+    () => { void saveReceive(); },
+    { active: receiveOpen, enabled: receiveOpen && !saving },
+  );
 
   const loadLevels = async (product: InventoryProduct) => {
     setLevelsLoading(true);

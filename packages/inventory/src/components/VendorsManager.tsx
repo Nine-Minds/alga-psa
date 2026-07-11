@@ -8,6 +8,7 @@ import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { usePageCreateShortcut, useDialogSubmitShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 import { toast } from 'react-hot-toast';
 import type { ColumnDefinition, IVendor } from '@alga-psa/types';
 import { listVendors, createVendor, updateVendor, deactivateVendor } from '../actions';
@@ -76,6 +77,7 @@ export function VendorsManager({
     setForm(EMPTY_FORM);
     setDialogOpen(true);
   };
+  usePageCreateShortcut(openCreate);
 
   const openEdit = (vendor: IVendor) => {
     setEditing(vendor);
@@ -128,6 +130,10 @@ export function VendorsManager({
       setSaving(false);
     }
   };
+  useDialogSubmitShortcut(
+    () => { void save(); },
+    { active: dialogOpen, enabled: dialogOpen && !saving },
+  );
 
   const deactivate = async (vendor: IVendor) => {
     try {

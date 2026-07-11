@@ -32,11 +32,12 @@ describe('MSP global shortcut migration contract', () => {
 
   it('migrates AI, help, and quick-create global actions out of DefaultLayout window keydown handling', () => {
     const source = read('server/src/components/layout/DefaultLayout.tsx');
+    const layer = read('server/src/components/layout/GlobalShortcutLayer.tsx');
     expect(source).toContain("useCatalogShortcut('global.toggleChat'");
     expect(source).toContain("useCatalogShortcut('ai.quickAsk'");
-    expect(source).toContain("useCatalogShortcut('global.openShortcuts'");
-    expect(source).toContain("useCatalogShortcut('global.quickCreate'");
-    expect(source).toContain("'global-quick-create-trigger'");
+    expect(layer).toContain("useCatalogShortcut('global.openShortcuts'");
+    expect(layer).toContain("useCatalogShortcut('global.quickCreate'");
+    expect(layer).toContain("'global-quick-create-trigger'");
     expect(source).not.toContain("window.addEventListener('keydown', handleKeyDown)");
   });
 

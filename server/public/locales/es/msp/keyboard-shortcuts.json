@@ -217,6 +217,10 @@
       "close": {
         "label": "Cerrar panel",
         "description": "Cerrar el panel o cajón activo."
+      },
+      "submit": {
+        "label": "Guardar panel",
+        "description": "Guardar el formulario del panel o cajón activo."
       }
     },
     "drawer": {

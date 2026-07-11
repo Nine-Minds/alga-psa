@@ -217,6 +217,10 @@
       "close": {
         "label": "Fermer le panneau",
         "description": "Fermer le panneau ou tiroir actif."
+      },
+      "submit": {
+        "label": "Enregistrer le panneau",
+        "description": "Enregistrer le formulaire du panneau ou tiroir actif."
       }
     },
     "drawer": {

@@ -10,6 +10,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { usePageCreateShortcut, useDialogSubmitShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { toast } from 'react-hot-toast';
 import type { ColumnDefinition, ICountSession, IStockLocation } from '@alga-psa/types';
@@ -110,6 +111,9 @@ export function CycleCountsManager({
     }
   };
 
+  const openStart = () => setStartOpen(true);
+  usePageCreateShortcut(openStart);
+
   const start = async () => {
     if (!startLocation) {
       toast.error(t('counts.pickLocation', 'Pick a location to count.'));
@@ -133,6 +137,10 @@ export function CycleCountsManager({
       setBusy(null);
     }
   };
+  useDialogSubmitShortcut(
+    () => { void start(); },
+    { active: startOpen, enabled: startOpen && busy === null },
+  );
 
   const saveLine = async (line: CountLineView) => {
     if (!detail) return;
@@ -289,7 +297,7 @@ export function CycleCountsManager({
             {t('counts.subtitle', 'Blind per-location stock takes — variances apply through the movement ledger on approval.')}
           </p>
         </div>
-        <Button id="cycle-counts-start-button" onClick={() => setStartOpen(true)}>
+        <Button id="cycle-counts-start-button" onClick={openStart}>
           {t('counts.startCount', 'Start count')}
         </Button>
       </div>

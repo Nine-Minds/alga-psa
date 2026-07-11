@@ -9,6 +9,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { usePageCreateShortcut, useDialogSubmitShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 import {
   getErrorMessage,
   isActionMessageError,
@@ -137,6 +138,7 @@ export function TransfersManager({
       toast.error(t('transfers.loadLocationsFailed', 'Failed to load locations'));
     }
   };
+  usePageCreateShortcut(() => { void openCreate(); });
 
   const resetLoadList = () => {
     setLoadListTo('');
@@ -302,6 +304,10 @@ export function TransfersManager({
       setSaving(false);
     }
   };
+  useDialogSubmitShortcut(
+    () => { void save(); },
+    { active: dialogOpen, enabled: dialogOpen && !saving },
+  );
 
   const receive = async (rec: IStockTransfer) => {
     try {

@@ -217,6 +217,10 @@
       "close": {
         "label": "Close panel",
         "description": "Close the active panel or drawer."
+      },
+      "submit": {
+        "label": "Save panel",
+        "description": "Save the form in the active panel or drawer."
       }
     },
     "drawer": {
