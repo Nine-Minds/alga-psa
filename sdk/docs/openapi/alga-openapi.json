@@ -12773,6 +12773,74 @@
           "definition"
         ]
       },
+      "WorkflowDefinitionValidateBody": {
+        "type": "object",
+        "properties": {
+          "definition": {
+            "$ref": "#/components/schemas/WorkflowDefinitionDocument"
+          },
+          "payloadSchemaMode": {
+            "type": "string",
+            "enum": [
+              "inferred",
+              "pinned"
+            ]
+          },
+          "pinnedPayloadSchemaRef": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "definition"
+        ]
+      },
+      "WorkflowDefinitionSimulateBody": {
+        "type": "object",
+        "properties": {
+          "definition": {
+            "$ref": "#/components/schemas/WorkflowDefinitionDocument"
+          },
+          "payload": {
+            "type": "object",
+            "additionalProperties": {},
+            "description": "Workflow payload used as-is (wins over eventPayload and synthesis)."
+          },
+          "eventPayload": {
+            "type": "object",
+            "additionalProperties": {},
+            "description": "Source event payload, run through the trigger payloadMapping."
+          },
+          "eventType": {
+            "type": "string",
+            "description": "Event to synthesize a payload for when payload/eventPayload are omitted."
+          },
+          "fixtures": {
+            "type": "object",
+            "additionalProperties": {},
+            "description": "Stub outputs keyed by step id or actionId. { \"$error\": { message } } makes a stubbed action fail; wait steps resume from their fixture."
+          },
+          "options": {
+            "type": "object",
+            "properties": {
+              "maxSteps": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "maxForEachIterations": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              },
+              "maxDurationMs": {
+                "type": "integer",
+                "exclusiveMinimum": 0
+              }
+            }
+          }
+        },
+        "required": [
+          "definition"
+        ]
+      },
       "WorkflowImportQuery": {
         "type": "object",
         "properties": {
@@ -12832,6 +12900,10 @@
         "properties": {
           "definition": {
             "$ref": "#/components/schemas/WorkflowDefinitionDocument"
+          },
+          "expectedDraftVersion": {
+            "type": "integer",
+            "exclusiveMinimum": 0
           }
         },
         "required": [
@@ -13075,6 +13147,178 @@
           "configSchema",
           "examples",
           "defaultRetry"
+        ]
+      },
+      "WorkflowRegistryEventsQuery": {
+        "type": "object",
+        "properties": {
+          "search": {
+            "type": "string",
+            "description": "Case-insensitive match on event type, name, and description."
+          },
+          "source": {
+            "type": "string",
+            "enum": [
+              "all",
+              "system",
+              "tenant"
+            ]
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "all",
+              "active",
+              "beta",
+              "draft",
+              "deprecated"
+            ]
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 2000
+          }
+        }
+      },
+      "WorkflowRegistryEventsResponse": {
+        "type": "object",
+        "properties": {
+          "events": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "event_id": {
+                  "type": "string"
+                },
+                "event_type": {
+                  "type": "string",
+                  "description": "Use this as trigger.eventName."
+                },
+                "name": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "category": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "payload_schema_ref": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "description": "Event payload schema reference; resolve via the schemas endpoint."
+                },
+                "payload_schema_ref_status": {
+                  "type": "string",
+                  "enum": [
+                    "known",
+                    "unknown",
+                    "missing"
+                  ]
+                },
+                "source": {
+                  "type": "string",
+                  "enum": [
+                    "system",
+                    "tenant"
+                  ]
+                },
+                "status": {
+                  "type": "string",
+                  "enum": [
+                    "active",
+                    "beta",
+                    "draft",
+                    "deprecated"
+                  ]
+                }
+              },
+              "required": [
+                "event_id",
+                "event_type",
+                "name",
+                "payload_schema_ref_status",
+                "source",
+                "status"
+              ]
+            }
+          }
+        },
+        "required": [
+          "events"
+        ]
+      },
+      "WorkflowAuthoringGuideResponse": {
+        "type": "object",
+        "properties": {
+          "overview": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "definitionSchema": {
+            "$ref": "#/components/schemas/WorkflowJsonSchemaDocument"
+          },
+          "stepSchemas": {
+            "type": "object",
+            "additionalProperties": {
+              "$ref": "#/components/schemas/WorkflowJsonSchemaDocument"
+            }
+          },
+          "nodeTypes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": {}
+            }
+          },
+          "controlBlocks": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": {}
+            }
+          },
+          "expressionLanguage": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "dataFlow": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "workedExample": {
+            "type": "object",
+            "additionalProperties": {}
+          },
+          "commonPitfalls": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        },
+        "required": [
+          "overview",
+          "definitionSchema",
+          "stepSchemas",
+          "nodeTypes",
+          "controlBlocks",
+          "expressionLanguage",
+          "dataFlow",
+          "workedExample",
+          "commonPitfalls"
         ]
       },
       "WorkflowSchemaRefParam": {
@@ -15216,7 +15460,7 @@
           },
           "types": {
             "type": "string",
-            "description": "Comma-separated list of object types to restrict the search (e.g. \"ticket,project\"). Omit to search every type the API key's user is permitted to read. Allowed values: client, contact, user, ticket, ticket_comment, project, project_phase, project_task, project_task_comment, asset, invoice, invoice_item, invoice_annotation, contract, client_contract, document, kb_article, service_catalog, service_request_submission, service_request_definition, workflow_task, interaction, schedule_entry, time_entry, board, category, tag, status."
+            "description": "Comma-separated list of object types to restrict the search (e.g. \"ticket,project\"). Omit to search every type the API key's user is permitted to read. Allowed values: client, contact, user, ticket, ticket_comment, project, project_phase, project_task, project_task_comment, asset, sales_order, purchase_order, stock_unit, invoice, invoice_item, invoice_annotation, contract, client_contract, document, kb_article, service_catalog, service_request_submission, service_request_definition, workflow_task, interaction, schedule_entry, time_entry, board, category, tag, status."
           },
           "limit": {
             "type": "integer",
@@ -15257,6 +15501,9 @@
               "project_task",
               "project_task_comment",
               "asset",
+              "sales_order",
+              "purchase_order",
+              "stock_unit",
               "invoice",
               "invoice_item",
               "invoice_annotation",
@@ -54720,6 +54967,184 @@
         }
       }
     },
+    "/api/workflow-definitions/validate": {
+      "post": {
+        "summary": "Validate a workflow definition draft",
+        "description": "Runs workflow validation without persisting anything.",
+        "tags": [
+          "Workflow Definitions"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "workflow",
+          "x-rbac-action": "manage"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkflowDefinitionValidateBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Validation completed.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnversionedV1Success"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/workflow-definitions/simulate": {
+      "post": {
+        "summary": "Simulate a workflow definition draft",
+        "description": "Executes an inline draft definition in a zero-side-effect simulator: expressions and transforms run for real, action.call steps are stubbed (fixture > schema-shaped placeholder > empty object) with their evaluated inputs recorded, and waits pause the run unless a fixture resumes them. Omit payload to have one synthesized from the trigger event schema or the workflow payload schema. Returns status, a per-step trace, final vars/payload, the stubbed action invocations, and any errors or warnings.",
+        "tags": [
+          "Workflow Definitions"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "workflow",
+          "x-rbac-action": "manage"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/WorkflowDefinitionSimulateBody"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Simulation completed (see status: completed | paused-at-wait | failed).",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UnversionedV1Success"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Simulation rate limit exceeded.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/workflow-definitions/import": {
       "post": {
         "summary": "Import a v1 workflow bundle",
@@ -57924,6 +58349,204 @@
                     "additionalProperties": {},
                     "description": "Catalog tile (groupKey, tileKind, actions, UI metadata)."
                   }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/workflow/registry/events": {
+      "get": {
+        "summary": "List workflow trigger events",
+        "description": "Returns the catalog of events a workflow event trigger can subscribe to: event_type (use as trigger.eventName), name, description, payload_schema_ref (resolve via GET /api/workflow/registry/schemas/{schemaRef}), payload_schema_ref_status, source (system|tenant), and status. Supports search, source, status, and limit query filters.",
+        "tags": [
+          "Workflow Registry"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "workflow",
+          "x-rbac-action": "read"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "parameters": [
+          {
+            "schema": {
+              "type": "string",
+              "description": "Case-insensitive match on event type, name, and description."
+            },
+            "required": false,
+            "description": "Case-insensitive match on event type, name, and description.",
+            "name": "search",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "all",
+                "system",
+                "tenant"
+              ]
+            },
+            "required": false,
+            "name": "source",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "string",
+              "enum": [
+                "all",
+                "active",
+                "beta",
+                "draft",
+                "deprecated"
+              ]
+            },
+            "required": false,
+            "name": "status",
+            "in": "query"
+          },
+          {
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2000
+            },
+            "required": false,
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Trigger event catalog.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowRegistryEventsResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Invalid request.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "API key missing/invalid.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Caller lacks the required permission.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "500": {
+            "description": "Unexpected error.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/workflow/registry/authoring-guide": {
+      "get": {
+        "summary": "Get the workflow authoring guide",
+        "description": "Returns a machine-readable manual for composing WorkflowDefinition JSON: the definition and step JSON Schemas (assembled live from the runtime types), node-type semantics, control-block semantics, the $expr expression grammar with per-context roots and the custom function catalog, data-flow idioms, a complete worked example, and common pitfalls. Read this before composing or editing a workflow programmatically.",
+        "tags": [
+          "Workflow Registry"
+        ],
+        "security": [
+          {
+            "ApiKeyAuth": []
+          }
+        ],
+        "extensions": {
+          "x-tenant-scoped": true,
+          "x-rbac-resource": "workflow",
+          "x-rbac-action": "read"
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "responses": {
+          "200": {
+            "description": "Authoring guide document.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkflowAuthoringGuideResponse"
                 }
               }
             }
@@ -69832,10 +70455,10 @@
           {
             "schema": {
               "type": "string",
-              "description": "Comma-separated list of object types to restrict the search (e.g. \"ticket,project\"). Omit to search every type the API key's user is permitted to read. Allowed values: client, contact, user, ticket, ticket_comment, project, project_phase, project_task, project_task_comment, asset, invoice, invoice_item, invoice_annotation, contract, client_contract, document, kb_article, service_catalog, service_request_submission, service_request_definition, workflow_task, interaction, schedule_entry, time_entry, board, category, tag, status."
+              "description": "Comma-separated list of object types to restrict the search (e.g. \"ticket,project\"). Omit to search every type the API key's user is permitted to read. Allowed values: client, contact, user, ticket, ticket_comment, project, project_phase, project_task, project_task_comment, asset, sales_order, purchase_order, stock_unit, invoice, invoice_item, invoice_annotation, contract, client_contract, document, kb_article, service_catalog, service_request_submission, service_request_definition, workflow_task, interaction, schedule_entry, time_entry, board, category, tag, status."
             },
             "required": false,
-            "description": "Comma-separated list of object types to restrict the search (e.g. \"ticket,project\"). Omit to search every type the API key's user is permitted to read. Allowed values: client, contact, user, ticket, ticket_comment, project, project_phase, project_task, project_task_comment, asset, invoice, invoice_item, invoice_annotation, contract, client_contract, document, kb_article, service_catalog, service_request_submission, service_request_definition, workflow_task, interaction, schedule_entry, time_entry, board, category, tag, status.",
+            "description": "Comma-separated list of object types to restrict the search (e.g. \"ticket,project\"). Omit to search every type the API key's user is permitted to read. Allowed values: client, contact, user, ticket, ticket_comment, project, project_phase, project_task, project_task_comment, asset, sales_order, purchase_order, stock_unit, invoice, invoice_item, invoice_annotation, contract, client_contract, document, kb_article, service_catalog, service_request_submission, service_request_definition, workflow_task, interaction, schedule_entry, time_entry, board, category, tag, status.",
             "name": "types",
             "in": "query"
           },

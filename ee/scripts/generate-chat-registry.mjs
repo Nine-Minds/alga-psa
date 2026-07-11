@@ -308,6 +308,8 @@ function applyOverrides(entry, overrides) {
     if (metadata.requestBodySchema !== undefined) entry.requestBodySchema = metadata.requestBodySchema;
     if (metadata.responseBodySchema !== undefined) entry.responseBodySchema = metadata.responseBodySchema;
   }
+
+  return matches.length > 0;
 }
 
 function normalizeExample(example) {
@@ -363,8 +365,12 @@ function collectOperations(spec) {
         ?? fallback?.summary
         ?? `${method.toUpperCase()} ${pathName}`;
       const description = operation.description;
+      const isInventoryPlaceholder =
+        description === PLACEHOLDER_DESCRIPTION ||
+        operation['x-route-inventory-only'] === true ||
+        operation.extensions?.['x-route-inventory-only'] === true;
       const normalizedDescription =
-        description === PLACEHOLDER_DESCRIPTION && fallback ? undefined : description;
+        isInventoryPlaceholder && fallback ? undefined : description;
 
       const entry = {
         id,
@@ -381,6 +387,13 @@ function collectOperations(spec) {
         requestExample,
         responseBodySchema,
       };
+
+      // Route-inventory placeholders carry no real schema or description; they
+      // are pure noise to an agent. Marked here, dropped at emit time unless a
+      // curated override supplies real metadata.
+      if (isInventoryPlaceholder) {
+        Object.defineProperty(entry, '__inventoryPlaceholder', { value: true, enumerable: false });
+      }
 
       entries.push(entry);
     }
@@ -404,17 +417,24 @@ function writeOutput(entries, outputPath, importPath) {
 
 function generateTarget(target, overrides) {
   const spec = loadSpec(target.specPath);
-  const entries = collectOperations(spec);
+  const collected = collectOperations(spec);
 
-  for (const entry of entries) {
-    applyOverrides(entry, overrides);
+  const entries = [];
+  const droppedIds = new Set();
+  for (const entry of collected) {
+    const hasOverride = applyOverrides(entry, overrides);
+    if (entry.__inventoryPlaceholder && !hasOverride) {
+      droppedIds.add(entry.id);
+      continue;
+    }
+    entries.push(entry);
   }
 
   writeOutput(entries, target.outputPath, target.importPath);
   console.log(
-    `[${target.edition}] generated ${entries.length} entries -> ${path.relative(repoRoot, target.outputPath)}`,
+    `[${target.edition}] generated ${entries.length} entries (dropped ${droppedIds.size} route-inventory placeholders) -> ${path.relative(repoRoot, target.outputPath)}`,
   );
-  return entries;
+  return { entries, droppedIds };
 }
 
 function main() {
@@ -431,16 +451,18 @@ function main() {
   }
 
   // Invariant (T005): the CE surface must be a subset of EE — EE is a superset.
+  // Compare against EE's pre-drop surface: an entry EE dropped as a
+  // route-inventory placeholder still exists in the EE API.
   if (byEdition.ce && byEdition.ee) {
-    const eeIds = new Set(byEdition.ee.map((e) => e.id));
-    const ceOnly = byEdition.ce.filter((e) => !eeIds.has(e.id)).map((e) => e.id);
+    const eeIds = new Set([...byEdition.ee.entries.map((e) => e.id), ...byEdition.ee.droppedIds]);
+    const ceOnly = byEdition.ce.entries.filter((e) => !eeIds.has(e.id)).map((e) => e.id);
     if (ceOnly.length > 0) {
       throw new Error(
         `CE registry has ${ceOnly.length} endpoint(s) absent from EE (EE must be a superset): ` +
           ceOnly.slice(0, 10).join(', '),
       );
     }
-    console.log(`OK: CE (${byEdition.ce.length}) is a subset of EE (${byEdition.ee.length}).`);
+    console.log(`OK: CE (${byEdition.ce.entries.length}) is a subset of EE (${byEdition.ee.entries.length}).`);
   }
 }
 
