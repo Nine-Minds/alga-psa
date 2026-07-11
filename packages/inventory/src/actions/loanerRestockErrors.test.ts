@@ -144,14 +144,19 @@ describe('normalizeDueDate', () => {
     expect(normalizeDueDate('')).toBeNull();
   });
 
-  it('passes through parseable date values unchanged', () => {
-    expect(normalizeDueDate('2026-07-20')).toBe('2026-07-20');
+  it('pins a date-only string to UTC midnight so the stored day never shifts with time zones', () => {
+    expect(normalizeDueDate('2026-07-20')).toBe('2026-07-20T00:00:00.000Z');
+  });
+
+  it('passes through full timestamps and Date instances unchanged', () => {
+    expect(normalizeDueDate('2026-07-20T15:30:00.000Z')).toBe('2026-07-20T15:30:00.000Z');
     const d = new Date('2026-07-20T00:00:00Z');
     expect(normalizeDueDate(d)).toBe(d);
   });
 
   it('throws the guarded message for garbage input (mapped to a toast upstream)', () => {
     expect(() => normalizeDueDate('not-a-date')).toThrow('loan_due_at must be a valid date');
+    expect(() => normalizeDueDate('2026-13-45')).toThrow('loan_due_at must be a valid date');
   });
 });
 

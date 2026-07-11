@@ -1075,7 +1075,8 @@
     "fromDate": "Du",
     "toDate": "Au",
     "noResults": "Aucun résultat trouvé",
-    "searchPlaceholder": "Rechercher..."
+    "searchPlaceholder": "Rechercher...",
+    "showingOfTotal": "Affichage de {{shown}} sur {{total}} — saisissez pour affiner"
   },
   "pickers": {
     "addNewClient": "Ajouter un nouveau client",

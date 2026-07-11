@@ -80,7 +80,8 @@
     "fromDate": "From date",
     "toDate": "To date",
     "noResults": "No results found",
-    "searchPlaceholder": "Search..."
+    "searchPlaceholder": "Search...",
+    "showingOfTotal": "Showing {{shown}} of {{total}} — type to narrow"
   },
   "pickers": {
     "addNewClient": "Add new client",

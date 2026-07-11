@@ -16,15 +16,14 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { usePageCreateShortcut, useDialogSubmitShortcut } from '@alga-psa/ui/keyboard-shortcuts';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { toast } from 'react-hot-toast';
-import type { ColumnDefinition, IClient, IStockLocation, IStockUnit } from '@alga-psa/types';
+import type { ColumnDefinition, IClient, IStockLocation } from '@alga-psa/types';
 import {
   getUnitDetail,
   listStockLocations,
   loanOut,
   loanReturn,
   loanersOutReport,
-  searchUnitsByMac,
-  searchUnitsBySerial,
+  searchInStockUnits,
   updateLoanDueDate,
   type LoanerOutRow,
 } from '../actions';
@@ -50,20 +49,36 @@ function dayDelta(value: string | Date): number | null {
   return Math.round((target.getTime() - today.getTime()) / DAY_MS);
 }
 
+/**
+ * `loan_due_at` is a calendar date pinned to UTC midnight (see normalizeDueDate),
+ * NOT an instant like `loaned_at` — render and compare its UTC date parts, or every
+ * viewer west of UTC sees the previous day and overdue flips a day early.
+ */
+function fmtDueDate(value: string | Date | null | undefined): string | null {
+  if (!value) return null;
+  const d = new Date(value);
+  return Number.isNaN(d.getTime()) ? null : d.toLocaleDateString(undefined, { timeZone: 'UTC' });
+}
+
+/** Calendar-day delta between the due date (UTC parts) and today (local calendar). */
+function dueDayDelta(value: string | Date): number | null {
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return null;
+  const target = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+  const now = new Date();
+  const today = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+  return Math.round((target - today) / DAY_MS);
+}
+
 type DueState = 'overdue' | 'soon' | 'ok' | 'nodate' | 'invalid';
 
 function dueStatus(value: string | Date | null | undefined): { state: DueState; days: number } {
   if (!value) return { state: 'nodate', days: 0 };
-  const delta = dayDelta(value);
+  const delta = dueDayDelta(value);
   if (delta === null) return { state: 'invalid', days: 0 };
   if (delta < 0) return { state: 'overdue', days: -delta };
   if (delta <= 7) return { state: 'soon', days: delta };
   return { state: 'ok', days: delta };
-}
-
-/** Whether a `date`-input value should be treated as MAC input for the typeahead. */
-function looksLikeMac(term: string): boolean {
-  return term.includes(':') || term.includes('-') || /^[0-9a-fA-F]{6,}$/.test(term.replace(/[^0-9a-fA-F]/g, ''));
 }
 
 export function LoanersManager({
@@ -159,29 +174,20 @@ export function LoanersManager({
   const isFiltered = query.trim() !== '' || overdueOnly;
 
   // --- Loan out ---
+  // Empty term = browse the in-stock pool (an empty dropdown reads as "no stock");
+  // the returned total lets the select show "N of M" when there's more to narrow.
   const loadUnitOptions = useCallback(
-    async ({ search }: { search: string; page: number; limit: number }): Promise<{ options: SelectOption[]; total: number }> => {
-      const term = search.trim();
-      if (!term) return { options: [], total: 0 };
-      const bySerial = await searchUnitsBySerial(term);
-      const serialUnits = isReturnedActionError(bySerial) ? [] : bySerial;
-      let macUnits: IStockUnit[] = [];
-      if (looksLikeMac(term)) {
-        const byMac = await searchUnitsByMac(term);
-        macUnits = isReturnedActionError(byMac) ? [] : byMac;
-      }
-      const merged = new Map<string, IStockUnit>();
-      for (const u of [...serialUnits, ...macUnits]) {
-        if (u.status === 'in_stock') merged.set(u.unit_id, u); // only in-stock units can be loaned
-      }
-      const options: SelectOption[] = Array.from(merged.values()).map((u) => {
+    async ({ search, page, limit }: { search: string; page: number; limit: number }): Promise<{ options: SelectOption[]; total: number }> => {
+      const result = await searchInStockUnits({ search, page, limit });
+      if (isReturnedActionError(result)) return { options: [], total: 0 };
+      const options: SelectOption[] = result.units.map((u) => {
         const parts = [u.product_name, u.location_name].filter(Boolean).join(' · ');
         return {
           value: u.unit_id,
           label: parts ? `${u.serial_number} — ${parts}` : u.serial_number,
         };
       });
-      return { options, total: options.length };
+      return { options, total: result.total };
     },
     [],
   );
@@ -373,7 +379,7 @@ export function LoanersManager({
         if (status.state === 'nodate' || status.state === 'invalid') {
           return <span className="text-gray-500">{t('loaners.noDueDate', 'No due date')}</span>;
         }
-        const date = fmtDate(rec.loan_due_at);
+        const date = fmtDueDate(rec.loan_due_at);
         if (status.state === 'overdue') {
           return (
             <div className="leading-tight text-red-600 font-medium">
@@ -523,7 +529,7 @@ export function LoanersManager({
             dropdownMode="overlay"
             placeholder={t('loaners.fields.unitPlaceholder', 'Search by serial or MAC…')}
             searchPlaceholder={t('loaners.fields.unitSearchPlaceholder', 'e.g. SSD990-0007')}
-            emptyMessage={t('loaners.fields.noInStockUnits', 'No in-stock units match')}
+            emptyMessage={t('loaners.fields.noInStockUnits', 'No in-stock units found')}
             onChange={(value, option) => {
               setLoanUnitId(value);
               setLoanUnitLabel(option?.label ?? '');
@@ -591,7 +597,7 @@ export function LoanersManager({
         <div className="space-y-4 p-1">
           <p className="text-sm text-gray-600">
             {t('loaners.currentlyDue', 'Currently due: {{due}}', {
-              due: fmtDate(extendUnit?.loan_due_at) ?? t('loaners.noDueDate', 'No due date'),
+              due: fmtDueDate(extendUnit?.loan_due_at) ?? t('loaners.noDueDate', 'No due date'),
             })}
           </p>
           <Input

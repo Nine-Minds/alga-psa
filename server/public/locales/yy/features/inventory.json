@@ -1301,7 +1301,10 @@
       "qtyPositive": "55555",
       "selectLocation": "55555",
       "selectProduct": "55555",
-      "serializedHint": "55555",
+      "serialCount": "55555 {{n}} 55555",
+      "serialCountOne": "55555",
+      "serialNumbers": "55555",
+      "serialsRequired": "55555",
       "success": "55555"
     },
     "receiveStock": "55555",

@@ -1075,7 +1075,8 @@
     "fromDate": "Von",
     "toDate": "Bis",
     "noResults": "Keine Ergebnisse gefunden",
-    "searchPlaceholder": "Suchen..."
+    "searchPlaceholder": "Suchen...",
+    "showingOfTotal": "{{shown}} von {{total}} angezeigt – tippen Sie zum Eingrenzen"
   },
   "pickers": {
     "addNewClient": "Neuen Kunden hinzufügen",

@@ -1075,7 +1075,8 @@
     "fromDate": "Desde",
     "toDate": "Hasta",
     "noResults": "No se encontraron resultados",
-    "searchPlaceholder": "Buscar..."
+    "searchPlaceholder": "Buscar...",
+    "showingOfTotal": "Mostrando {{shown}} de {{total}} — escriba para acotar"
   },
   "pickers": {
     "addNewClient": "Agregar nuevo cliente",

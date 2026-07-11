@@ -41,9 +41,21 @@ export function currentStatusOf(message: string): string | null {
   return m ? m[1] : null;
 }
 
-/** Reject a `loan_due_at` we can't store as a real timestamp before it hits the DB. */
+/**
+ * Reject a `loan_due_at` we can't store before it hits the DB, and pin date-only
+ * strings to an explicit UTC midnight. A due date is a calendar date, not an
+ * instant: the UI sends `YYYY-MM-DD`, which Postgres would otherwise parse in the
+ * session time zone — silently shifting the stored day. Readers render the UTC
+ * date parts (see LoanersManager's fmtDueDate/dueDayDelta) so every viewer sees
+ * the calendar date that was picked.
+ */
 export function normalizeDueDate(value: string | Date | null | undefined): string | Date | null {
   if (value == null || value === '') return null;
+  if (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    const utc = new Date(`${value}T00:00:00.000Z`);
+    if (Number.isNaN(utc.getTime())) throw new Error('loan_due_at must be a valid date');
+    return utc.toISOString();
+  }
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) throw new Error('loan_due_at must be a valid date');
   return value;

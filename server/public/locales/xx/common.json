@@ -80,7 +80,8 @@
     "fromDate": "11111",
     "toDate": "11111",
     "noResults": "11111",
-    "searchPlaceholder": "11111"
+    "searchPlaceholder": "11111",
+    "showingOfTotal": "11111 {{shown}} 11111 {{total}} 11111"
   },
   "pickers": {
     "addNewClient": "11111",
