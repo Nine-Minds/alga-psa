@@ -1609,7 +1609,7 @@ export const createWorkflowDefinitionAction = withAuth(async (user, { tenant }, 
     source: 'api'
   });
 
-  return { workflowId: record.workflow_id };
+  return { workflowId: record.workflow_id, draftVersion: Number(record.draft_version) };
 });
 
 export const validateWorkflowDefinitionDraftAction = withAuth(async (user, { tenant }, input: unknown) => {
@@ -1824,9 +1824,17 @@ export const updateWorkflowDefinitionDraftAction = withAuth(async (user, { tenan
     validation_context_json: (validation as any).contextJson ?? null,
     validation_payload_schema_hash: (validation as any).payloadSchemaHash ?? null,
     validated_at: new Date().toISOString()
-  });
+  }, parsed.expectedDraftVersion !== undefined ? { expectedDraftVersion: parsed.expectedDraftVersion } : undefined);
 
   if (!updated) {
+    if (parsed.expectedDraftVersion !== undefined) {
+      // The pre-check passed but the guarded write matched no row: either a
+      // concurrent writer bumped draft_version or the workflow disappeared.
+      const latest = await WorkflowDefinitionModelV2.getById(knex, tenant, parsed.workflowId);
+      if (latest) {
+        return throwHttpError(409, `Draft version mismatch. Expected ${parsed.expectedDraftVersion}, found ${(latest as any).draft_version}.`);
+      }
+    }
     return throwHttpError(404, 'Not found');
   }
 
