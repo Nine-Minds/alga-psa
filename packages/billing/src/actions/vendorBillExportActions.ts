@@ -7,7 +7,6 @@ import { enqueueVendorBillExportRetry } from '../services/accountingSync/syncPro
 import { resolveConnectedAccountingIntegration } from '../services/accountingSync/connectedAccountingIntegration';
 import { ADAPTER_EXPORT_CAPABILITIES } from '../adapters/accounting/registry';
 import type { Knex } from 'knex';
-import type { VendorBillExportStatus } from '@alga-psa/inventory/lib/integrationTypes';
 import {
   actionError,
   permissionError,
@@ -15,7 +14,15 @@ import {
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 
-export type { VendorBillExportStatus, VendorBillExportState } from '@alga-psa/inventory/lib/integrationTypes';
+export type VendorBillExportState = 'not_exported' | 'pending' | 'exported' | 'error';
+
+export interface VendorBillExportStatus {
+  bill_id: string;
+  state: VendorBillExportState;
+  exported_at: string | null;
+  external_ref: string | null;
+  error_message: string | null;
+}
 
 type VendorBillExportActionError = ActionMessageError | ActionPermissionError;
 export interface VendorBillExportContext {
