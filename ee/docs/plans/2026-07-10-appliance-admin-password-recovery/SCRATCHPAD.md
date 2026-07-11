@@ -22,7 +22,8 @@
 - (2026-07-10) The existing control-plane ClusterRole already grants the namespaced Secret and Job operations required by recovery, so no RBAC expansion was necessary.
 - (2026-07-10) The recovery Job clones the running Alga container image and environment, then adds only Secret-backed target/password inputs. This makes the application deployment the effective hashing configuration authority.
 - (2026-07-10) Local VM `ubuntu24.04` currently leases `192.168.122.215`, not the older `192.168.122.55` recorded in the appliance skill.
-- (2026-07-10) Live VM deployment is pending explicit authorization to install a temporary SSH key; the automated fresh-install harness, full host-service suite, UI production build, Helm render, runtime import smoke, and migrated-schema DB integration all pass.
+- (2026-07-11) Live appliance smoke passed on `alga-appliance-pro-lab`: Argo workflow `temporal-worker-build-auto-vmfgb` published `ghcr.io/nine-minds/temporal-worker:78b18a50` (digest `sha256:ffb93248de3f9b6d9b80e008f1c3ac8e1f3d19aa4682c7d4c7eb4c59454af8d1`), the appliance rolled out that sole worker with `ITERATIONS=1000`, and `tenantCreationWorkflow` created `temporal-password-smoke-20260711@local.test`. Alga authenticated that user with the exact workflow-supplied password.
+- (2026-07-11) The authenticated management recovery path reset original setup admin `bob@nineminds.com`; the reset returned HTTP 200 and Alga authenticated the original admin with the replacement password. The live Job initially failed while the app still used the pre-change `c18cf795` image because that image lacked the reset script, then passed after deploying the committed script on the same base image.
 
 ## Commands / Runbooks
 
