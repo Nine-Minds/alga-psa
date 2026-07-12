@@ -23,11 +23,13 @@ metadata:
       to Kubernetes cluster-admin. Narrow further once setup-engine moves from
       shell commands to typed in-cluster API operations.
 rules:
-  # Interactive support tools use the Kubernetes streaming subresources. These
-  # exact create grants do not permit pod creation or mutation.
+  # Interactive support tools use the Kubernetes streaming subresources. The
+  # WebSocket streaming protocol opens these with GET (SPDY used POST/create),
+  # so both verbs are required — create alone authorizes the access review but
+  # the actual exec then 403s. Neither grant permits pod creation or mutation.
   - apiGroups: [""]
     resources: ["pods/exec", "pods/portforward"]
-    verbs: ["create"]
+    verbs: ["get", "create"]
   - apiGroups: [""]
     resources: ["namespaces", "configmaps", "secrets", "services", "serviceaccounts", "persistentvolumeclaims", "persistentvolumes", "pods", "pods/log", "events", "resourcequotas", "limitranges"]
     verbs: ["get", "list", "watch", "create", "patch", "update", "delete"]

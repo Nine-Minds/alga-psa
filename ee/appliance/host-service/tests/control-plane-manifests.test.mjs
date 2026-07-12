@@ -33,7 +33,8 @@ test('T002 control-plane manifests define isolated namespace, workload, exposure
   assert.match(rbac, /clusterrolebindings/);
   assert.match(rbac, /storageclasses/);
   assert.match(rbac, /resources: \["pods\/exec", "pods\/portforward"\]/);
-  assert.match(rbac, /verbs: \["create"\]/);
+  // WebSocket streaming opens exec/port-forward with GET; create alone 403s.
+  assert.match(rbac, /verbs: \["get", "create"\]/);
   assert.doesNotMatch(rbac, /resources: \["\*"\]/);
   assert.doesNotMatch(rbac, /verbs: \["\*"\]/);
   assert.doesNotMatch(rbac, /host kubeconfig/);

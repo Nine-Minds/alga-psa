@@ -85,7 +85,10 @@ export function createNativeKubernetesAdapter({
       return rbac.replaceClusterRole({ name, body });
     },
 
-    async canCreatePodSubresource(subresource) {
+    // Probe the verb the WebSocket streaming protocol actually issues (GET).
+    // Reviewing 'create' (the old SPDY verb) reported the feature available on
+    // roles that then 403'd the real stream.
+    async canUsePodSubresource(subresource, verb = 'get') {
       const { authorization } = await clients();
       const review = await authorization.createSelfSubjectAccessReview({
         body: {
@@ -96,7 +99,7 @@ export function createNativeKubernetesAdapter({
               group: '',
               resource: 'pods',
               subresource,
-              verb: 'create',
+              verb,
             },
           },
         },

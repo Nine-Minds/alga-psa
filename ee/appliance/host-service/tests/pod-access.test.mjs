@@ -182,14 +182,14 @@ test('T004 RBAC migration adds only missing streaming subresources and verifies 
   const patched = addPodAccessRules(initial);
   assert.equal(patched.changed, true);
   assert.deepEqual(patched.role.rules.at(-1), {
-    apiGroups: [''], resources: ['pods/exec', 'pods/portforward'], verbs: ['create'],
+    apiGroups: [''], resources: ['pods/exec', 'pods/portforward'], verbs: ['get', 'create'],
   });
 
   let replaced = null;
   const result = await ensurePodAccessRbac({
     async readClusterRole() { return initial; },
     async replaceClusterRole(_name, role) { replaced = role; },
-    async canCreatePodSubresource() { return true; },
+    async canUsePodSubresource() { return true; },
   }, { logger: quietLogger() });
   assert.equal(result.available, true);
   assert.equal(result.migrated, true);
@@ -200,4 +200,36 @@ test('T004 RBAC migration adds only missing streaming subresources and verifies 
   }, { logger: quietLogger() });
   assert.equal(unavailable.available, false);
   assert.match(unavailable.message, /forbidden/);
+});
+
+test('T004b a create-only role (shipped by earlier builds) is migrated to add get', async () => {
+  // WebSocket exec issues GET; create-only roles passed the access review and
+  // then 403'd the real stream ("cannot get resource pods/exec").
+  const createOnly = {
+    metadata: { name: 'appliance-control-plane-setup-admin', resourceVersion: '2' },
+    rules: [{ apiGroups: [''], resources: ['pods/exec', 'pods/portforward'], verbs: ['create'] }],
+  };
+  assert.deepEqual(missingPodAccessResources(createOnly), ['pods/exec', 'pods/portforward']);
+
+  let replaced = null;
+  const result = await ensurePodAccessRbac({
+    async readClusterRole() { return createOnly; },
+    async replaceClusterRole(_name, role) { replaced = role; },
+    async canUsePodSubresource(_subresource, verb = 'get') {
+      // Model the apiserver: only what the migrated role actually grants.
+      return (replaced?.rules || []).some((rule) => (rule.verbs || []).includes(verb));
+    },
+  }, { logger: quietLogger() });
+  assert.equal(result.migrated, true);
+  assert.equal(result.available, true);
+  assert.deepEqual(missingPodAccessResources(replaced), []);
+});
+
+test('T004c a role already granting get+create is left alone', async () => {
+  const complete = {
+    metadata: { name: 'appliance-control-plane-setup-admin', resourceVersion: '3' },
+    rules: [{ apiGroups: [''], resources: ['pods/exec', 'pods/portforward'], verbs: ['get', 'create'] }],
+  };
+  assert.deepEqual(missingPodAccessResources(complete), []);
+  assert.equal(addPodAccessRules(complete).changed, false);
 });
