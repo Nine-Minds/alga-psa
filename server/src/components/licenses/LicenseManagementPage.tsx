@@ -616,16 +616,16 @@ export default function LicenseManagementPage() {
                   id="license-claim-code"
                   type="text"
                   value={claimCode}
-                  onChange={(e) => setClaimCode(e.target.value.toUpperCase())}
-                  placeholder="XXXX-XXXX"
-                  maxLength={9}
+                  onChange={(e) => setClaimCode(e.target.value.toUpperCase().replace(/[\s-]/g, ""))}
+                  placeholder="XXXXXXXX"
+                  maxLength={8}
                   className="min-h-10 flex-1 rounded-md border border-[rgb(var(--color-border-300))] bg-[rgb(var(--color-card))] px-3 py-2 font-mono text-sm uppercase tracking-[0.12em] text-[rgb(var(--color-text-900))] placeholder:text-[rgb(var(--color-text-400))] focus:border-[rgb(var(--color-primary-400))] focus:outline-none focus:ring-2 focus:ring-[rgb(var(--color-primary-500)/0.25)]"
                 />
                 <Button
                   id="license-activate-claim-code"
                   variant="outline"
                   onClick={handleConnectAppliance}
-                  disabled={isPending || claimCode.replace(/-/g, "").length < 8}
+                  disabled={isPending || claimCode.length < 8}
                   className="whitespace-nowrap"
                 >
                   {isPending ? "Activating…" : "Apply claim code"}
