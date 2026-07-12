@@ -11,6 +11,7 @@ import {
   getLicenseStateRow,
   upsertLicenseState,
   resolveSelfHostTier,
+  isLicenseVerifyFailure,
   type ResolvedLicenseState,
   type LicenseStateKind,
 } from '@alga-psa/licensing';
@@ -112,7 +113,7 @@ export async function submitLicense(token: string): Promise<LicenseMutationResul
   }
 
   const result = verifyLicense(token.trim());
-  if (!result.valid) {
+  if (isLicenseVerifyFailure(result)) {
     return { success: false, error: `License is invalid: ${result.reason}` };
   }
   if (result.claims.exp * 1000 <= Date.now()) {
