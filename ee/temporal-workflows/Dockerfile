@@ -138,6 +138,13 @@ RUN ls -la /app/ee/temporal-workflows/dist/seeds/onboarding || echo "Seeds direc
 # whitelist) — fail the build here rather than in prod if they didn't.
 RUN cd /app/ee/temporal-workflows && node --input-type=module -e "const m = await import('@alga-psa/db'); if (typeof m.tenantDb !== 'function') throw new Error('@alga-psa/db loaded but tenantDb missing')"
 
+# packages/licensing source is compiled INTO this dist tree, so any bare
+# third-party import it grows must be resolvable from here at runtime. file:
+# deps install as symlinks WITHOUT their own dependencies, so such an import
+# ships as a startup ERR_MODULE_NOT_FOUND (jsonwebtoken broke prod workers
+# exactly this way) — import the compiled module now to fail the build instead.
+RUN cd /app/ee/temporal-workflows && node --input-type=module -e "await import('./dist/packages/licensing/src/lib/verify-license.js')"
+
 RUN groupadd -r temporal && useradd -r -g temporal temporal
 RUN chown -R temporal:temporal /app
 USER temporal
@@ -190,6 +197,13 @@ RUN ls -la /app/ee/temporal-workflows/dist/seeds/onboarding || echo "Seeds direc
 # onboarding seeds load it (dynamic import from node_modules). Missing
 # packages/db/dist shipped silently and broke prod tenant provisioning.
 RUN cd /app/ee/temporal-workflows && node --input-type=module -e "const m = await import('@alga-psa/db'); if (typeof m.tenantDb !== 'function') throw new Error('@alga-psa/db loaded but tenantDb missing')"
+
+# packages/licensing source is compiled INTO this dist tree, so any bare
+# third-party import it grows must be resolvable from here at runtime. file:
+# deps install as symlinks WITHOUT their own dependencies, so such an import
+# ships as a startup ERR_MODULE_NOT_FOUND (jsonwebtoken broke prod workers
+# exactly this way) — import the compiled module now to fail the build instead.
+RUN cd /app/ee/temporal-workflows && node --input-type=module -e "await import('./dist/packages/licensing/src/lib/verify-license.js')"
 
 # Create non-root user
 RUN groupadd -r temporal && useradd -r -g temporal temporal
