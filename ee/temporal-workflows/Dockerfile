@@ -138,6 +138,14 @@ RUN ls -la /app/ee/temporal-workflows/dist/seeds/onboarding || echo "Seeds direc
 # whitelist) — fail the build here rather than in prod if they didn't.
 RUN cd /app/ee/temporal-workflows && node --input-type=module -e "const m = await import('@alga-psa/db'); if (typeof m.tenantDb !== 'function') throw new Error('@alga-psa/db loaded but tenantDb missing')"
 
+# packages/licensing source is compiled INTO this dist tree, so every import
+# reachable from its root must be resolvable from here at runtime. file: deps
+# install as symlinks WITHOUT their own dependencies, so a bare third-party
+# import ships as a startup ERR_MODULE_NOT_FOUND (jsonwebtoken, then a root
+# re-export of the Next-only actions, each crash-looped prod workers) — link
+# the whole compiled root graph now to fail the build instead.
+RUN cd /app/ee/temporal-workflows && node --input-type=module -e "await import('./dist/packages/licensing/src/index.js')"
+
 RUN groupadd -r temporal && useradd -r -g temporal temporal
 RUN chown -R temporal:temporal /app
 USER temporal
@@ -190,6 +198,14 @@ RUN ls -la /app/ee/temporal-workflows/dist/seeds/onboarding || echo "Seeds direc
 # onboarding seeds load it (dynamic import from node_modules). Missing
 # packages/db/dist shipped silently and broke prod tenant provisioning.
 RUN cd /app/ee/temporal-workflows && node --input-type=module -e "const m = await import('@alga-psa/db'); if (typeof m.tenantDb !== 'function') throw new Error('@alga-psa/db loaded but tenantDb missing')"
+
+# packages/licensing source is compiled INTO this dist tree, so every import
+# reachable from its root must be resolvable from here at runtime. file: deps
+# install as symlinks WITHOUT their own dependencies, so a bare third-party
+# import ships as a startup ERR_MODULE_NOT_FOUND (jsonwebtoken, then a root
+# re-export of the Next-only actions, each crash-looped prod workers) — link
+# the whole compiled root graph now to fail the build instead.
+RUN cd /app/ee/temporal-workflows && node --input-type=module -e "await import('./dist/packages/licensing/src/index.js')"
 
 # Create non-root user
 RUN groupadd -r temporal && useradd -r -g temporal temporal
