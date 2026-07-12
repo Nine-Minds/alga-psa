@@ -1,4 +1,7 @@
+import { existsSync } from 'node:fs';
 import { PassThrough, Writable } from 'node:stream';
+
+const SERVICE_ACCOUNT_TOKEN_PATH = '/var/run/secrets/kubernetes.io/serviceaccount/token';
 
 class ResizableOutput extends Writable {
   constructor({ columns, rows, onData }) {
@@ -33,6 +36,7 @@ function closeWebSocket(candidate) {
 export function createNativeKubernetesAdapter({
   kubeconfigPath,
   moduleLoader = () => import('@kubernetes/client-node'),
+  serviceAccountTokenPath = SERVICE_ACCOUNT_TOKEN_PATH,
 } = {}) {
   let clientsPromise;
 
@@ -40,7 +44,18 @@ export function createNativeKubernetesAdapter({
     if (!clientsPromise) {
       clientsPromise = moduleLoader().then((k8s) => {
         const config = new k8s.KubeConfig();
-        config.loadFromFile(kubeconfigPath);
+        // In-cluster (the control-plane pod), use the library's own
+        // service-account flow instead of the entrypoint's kubeconfig file.
+        // client-node's kubeconfig parser only understands `token`/`token-file`
+        // — it silently ignores kubectl's `tokenFile:` spelling, so loading
+        // that file authenticated NOTHING and every exec/port-forward/access
+        // probe got a 401. loadFromCluster() also re-reads the projected token
+        // as it rotates (~hourly), which a one-shot file read would not.
+        if (process.env.KUBERNETES_SERVICE_HOST && existsSync(serviceAccountTokenPath)) {
+          config.loadFromCluster();
+        } else {
+          config.loadFromFile(kubeconfigPath);
+        }
         return {
           config,
           core: config.makeApiClient(k8s.CoreV1Api),
@@ -70,7 +85,10 @@ export function createNativeKubernetesAdapter({
       return rbac.replaceClusterRole({ name, body });
     },
 
-    async canCreatePodSubresource(subresource) {
+    // Probe the verb the WebSocket streaming protocol actually issues (GET).
+    // Reviewing 'create' (the old SPDY verb) reported the feature available on
+    // roles that then 403'd the real stream.
+    async canUsePodSubresource(subresource, verb = 'get') {
       const { authorization } = await clients();
       const review = await authorization.createSelfSubjectAccessReview({
         body: {
@@ -81,7 +99,7 @@ export function createNativeKubernetesAdapter({
               group: '',
               resource: 'pods',
               subresource,
-              verb: 'create',
+              verb,
             },
           },
         },
