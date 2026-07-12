@@ -37,6 +37,7 @@ type InvoiceProjection = {
 type ClientProjection = {
   tenant: string;
   client_id: string;
+  client_name?: string | null;
   payment_terms?: string | null;
 };
 
@@ -228,10 +229,61 @@ export class AccountingExportValidation {
     const clients =
       clientIds.size > 0
         ? await db.table<ClientProjection>('clients')
-            .select('client_id', 'payment_terms')
+            .select('client_id', 'client_name', 'payment_terms')
             .whereIn('client_id', Array.from(clientIds))
         : [];
     const clientsById = new Map(clients.map((row) => [row.client_id, row]));
+
+    // With customer auto-provisioning off (the default), an unmapped customer
+    // is a validation failure, not a license for the delivery path to write
+    // to the QBO customer list from a background job.
+    if (adapterType === 'quickbooks_online' && clientIds.size > 0 && tenant) {
+      const syncSettings = await getAccountingSyncSettings(knex, tenant);
+      if (!syncSettings.autoProvisionCustomers) {
+        const mappedRows = await knex('tenant_external_entity_mappings')
+          .where({
+            tenant,
+            integration_type: 'quickbooks_online',
+            alga_entity_type: 'client'
+          })
+          .whereIn('alga_entity_id', Array.from(clientIds))
+          .modify((builder) => {
+            const targetRealm = batch.target_realm;
+            if (targetRealm) {
+              builder.andWhere((realmClause) =>
+                realmClause.where('external_realm_id', targetRealm).orWhereNull('external_realm_id')
+              );
+            } else {
+              builder.whereNull('external_realm_id');
+            }
+          })
+          .select('alga_entity_id');
+        const mappedClientIds = new Set(mappedRows.map((row: any) => row.alga_entity_id));
+        const flaggedClients = new Set<string>();
+
+        for (const invoice of invoices) {
+          if (!invoice.client_id || mappedClientIds.has(invoice.client_id) || flaggedClients.has(invoice.client_id)) {
+            continue;
+          }
+          const lineId = firstLineByInvoice.get(invoice.invoice_id);
+          const line = lineId ? lineById.get(lineId) : null;
+          if (lineId) {
+            const clientName = clientsById.get(invoice.client_id)?.client_name ?? invoice.client_id;
+            await repo.addError({
+              batch_id: batchId,
+              line_id: lineId,
+              code: 'missing_customer_mapping',
+              message: `Customer "${clientName}" is not mapped to a QuickBooks customer. Link or create it from the QuickBooks customer mapping screen, or enable automatic customer creation in sync settings.`,
+              metadata: mergeErrorMetadata(line, {
+                client_id: invoice.client_id,
+                client_name: clientName
+              })
+            });
+            flaggedClients.add(invoice.client_id);
+          }
+        }
+      }
+    }
 
     const checkedTaxRegions = new Set<string>();
     const missingTaxRegions = new Set<string>();

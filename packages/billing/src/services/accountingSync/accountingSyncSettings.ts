@@ -12,8 +12,16 @@ export type QboAccountRef = QboRef;
 
 export interface AccountingSyncSettings {
   autoSyncEnabled: boolean;
-  /** Invoices finalized before this ISO date are never auto-enqueued (set by the onboarding wizard). */
+  /** Invoices dated before this ISO date are never auto-enqueued (set by the onboarding wizard). */
   autoSyncStartDate: string | null;
+  /**
+   * Allow the export pipeline to create or link QBO customers outside the
+   * onboarding wizard. Off (the default) means an unmapped customer fails
+   * batch validation with an actionable exception instead of writing to the
+   * QBO customer list from a background job — the safe behavior for
+   * established company files.
+   */
+  autoProvisionCustomers: boolean;
   /** QBO account to deposit payments into (Bank or Other Current Asset). Null = Undeposited Funds. */
   depositAccountRef: QboRef | null;
   /** Default QBO class applied to invoice lines when the item mapping has no classId. */
@@ -29,6 +37,7 @@ export interface AccountingSyncSettings {
 const DEFAULT_SETTINGS: AccountingSyncSettings = {
   autoSyncEnabled: false,
   autoSyncStartDate: null,
+  autoProvisionCustomers: false,
   depositAccountRef: null,
   defaultClassRef: null,
   defaultDepartmentRef: null,
@@ -58,6 +67,7 @@ function normalize(raw: unknown): AccountingSyncSettings {
   return {
     autoSyncEnabled: Boolean(record.autoSyncEnabled),
     autoSyncStartDate: typeof record.autoSyncStartDate === 'string' ? record.autoSyncStartDate : null,
+    autoProvisionCustomers: Boolean(record.autoProvisionCustomers),
     depositAccountRef: normalizeQboRef(record.depositAccountRef),
     defaultClassRef: normalizeQboRef(record.defaultClassRef),
     defaultDepartmentRef: normalizeQboRef(record.defaultDepartmentRef),

@@ -71,6 +71,7 @@ export const updateAccountingSyncSettingsAction = withAuth(async (
   return updateAccountingSyncSettings(knex, tenant, {
     ...(patch.autoSyncEnabled !== undefined ? { autoSyncEnabled: Boolean(patch.autoSyncEnabled) } : {}),
     ...(patch.autoSyncStartDate !== undefined ? { autoSyncStartDate: patch.autoSyncStartDate } : {}),
+    ...(patch.autoProvisionCustomers !== undefined ? { autoProvisionCustomers: Boolean(patch.autoProvisionCustomers) } : {}),
     ...(patch.depositAccountRef !== undefined ? { depositAccountRef: patch.depositAccountRef } : {}),
     ...(patch.defaultClassRef !== undefined ? { defaultClassRef: patch.defaultClassRef } : {}),
     ...(patch.defaultDepartmentRef !== undefined ? { defaultDepartmentRef: patch.defaultDepartmentRef } : {}),

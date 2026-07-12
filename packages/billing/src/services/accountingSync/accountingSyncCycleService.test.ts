@@ -1,5 +1,10 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 
+// These tests verify cycle WIRING (ordering, cursor rules, drain error
+// handling) with all appliers mocked out. To test applier BEHAVIOR against
+// stateful QBO semantics, use the simulator in ./testing/qboSimulator.ts —
+// see ./testing/README.md.
+
 // ── Module mocks ────────────────────────────────────────────────────────────
 // tenantDb is only used by the vendor-bill drain to read bill rows; everything
 // else on @alga-psa/db stays real.
@@ -55,7 +60,7 @@ vi.mock('./accountingSyncSettings', () => ({
   getAccountingSyncSettings: vi.fn(async () => ({
     autoSyncEnabled: true,
     autoSyncStartDate: null,
-    depositAccountRef: null,
+    autoProvisionCustomers: false, depositAccountRef: null,
     defaultClassRef: null,
     defaultDepartmentRef: null,
     defaultRealm: null
@@ -172,7 +177,7 @@ describe('runAccountingSyncCycle', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Reset all module-level mocks to defaults
-    vi.mocked(getAccountingSyncSettings).mockResolvedValue({ autoSyncEnabled: true, autoSyncStartDate: null, depositAccountRef: null, defaultClassRef: null, defaultDepartmentRef: null, defaultRealm: null });
+    vi.mocked(getAccountingSyncSettings).mockResolvedValue({ autoSyncEnabled: true, autoSyncStartDate: null, autoProvisionCustomers: false, depositAccountRef: null, defaultClassRef: null, defaultDepartmentRef: null, defaultRealm: null });
     vi.mocked(resolveTokenThresholdToAnnounce).mockResolvedValue(null);
     tenantDbMock.mockImplementation(() => makeVendorBillDb([]));
   });
@@ -192,7 +197,7 @@ describe('runAccountingSyncCycle', () => {
   });
 
   it('skips when autoSyncEnabled=false and force not set', async () => {
-    vi.mocked(getAccountingSyncSettings).mockResolvedValue({ autoSyncEnabled: false, autoSyncStartDate: null, depositAccountRef: null, defaultClassRef: null, defaultDepartmentRef: null, defaultRealm: null });
+    vi.mocked(getAccountingSyncSettings).mockResolvedValue({ autoSyncEnabled: false, autoSyncStartDate: null, autoProvisionCustomers: false, depositAccountRef: null, defaultClassRef: null, defaultDepartmentRef: null, defaultRealm: null });
 
     const result = await runAccountingSyncCycle({
       knex: {} as any,
@@ -207,7 +212,7 @@ describe('runAccountingSyncCycle', () => {
   });
 
   it('runs when autoSyncEnabled=false but force=true', async () => {
-    vi.mocked(getAccountingSyncSettings).mockResolvedValue({ autoSyncEnabled: false, autoSyncStartDate: null, depositAccountRef: null, defaultClassRef: null, defaultDepartmentRef: null, defaultRealm: null });
+    vi.mocked(getAccountingSyncSettings).mockResolvedValue({ autoSyncEnabled: false, autoSyncStartDate: null, autoProvisionCustomers: false, depositAccountRef: null, defaultClassRef: null, defaultDepartmentRef: null, defaultRealm: null });
 
     const result = await runAccountingSyncCycle({
       knex: {} as any,

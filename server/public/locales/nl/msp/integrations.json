@@ -1348,6 +1348,8 @@
         "refreshTokenExpiry": "QuickBooks-token verloopt op {{date}}",
         "refreshTokenExpired": "QuickBooks-token verlopen — maak opnieuw verbinding om de synchronisatie te hervatten.",
         "autoSyncLabel": "Automatische synchronisatie ingeschakeld",
+        "autoProvisionCustomersLabel": "Create QuickBooks customers automatically",
+        "autoProvisionCustomersHint": "Off: exports for unmapped customers pause with an exception until you link them in the customer mapping screen.",
         "syncNowButton": "Nu synchroniseren",
         "syncNowRunning": "Synchroniseren…",
         "syncNowSuccess": "Synchronisatie voltooid.",

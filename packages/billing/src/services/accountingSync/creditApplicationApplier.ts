@@ -24,6 +24,24 @@ interface ApplyCreditPayload {
   amountCents: number;
 }
 
+/** How long an apply_credit op may wait on missing mappings before we surface it. */
+export const STALLED_APPLY_CREDIT_AGE_MS = 7 * 24 * 60 * 60 * 1000;
+
+/** True when the credit's source document is a prepayment (which never exports). */
+async function isPrepaymentSourced(deps: DrainDeps, creditNoteInvoiceId: string): Promise<boolean> {
+  try {
+    const sourceInvoice = await deps.knex('invoices')
+      .where({ invoice_id: creditNoteInvoiceId, tenant: deps.tenantId })
+      .select('invoice_type', 'is_prepayment')
+      .first();
+    return Boolean(sourceInvoice && (sourceInvoice.invoice_type === 'prepayment' || sourceInvoice.is_prepayment));
+  } catch {
+    // Infra failure: treat as not-prepayment so the op stays pending rather
+    // than terminally failing on a lookup error.
+    return false;
+  }
+}
+
 /**
  * Drain pending apply_credit ops.
  *
@@ -92,8 +110,71 @@ export async function drainApplyCreditOps(deps: DrainDeps): Promise<void> {
     const invoiceMapping = await deps.ledger.findByAlgaId('invoice', payload.targetInvoiceId);
 
     if (!creditMemoMapping || !invoiceMapping) {
-      // One or both documents are not yet exported — leave pending without
-      // incrementing attempt count so the op retries without burning retries.
+      // Doomed op check: credit drawn from a PREPAYMENT invoice can never map,
+      // because prepayments are not exported to QBO. Without this, the op
+      // pends silently forever while the QBO invoice shows an open balance
+      // Alga believes is settled.
+      if (!creditMemoMapping && (await isPrepaymentSourced(deps, payload.creditNoteInvoiceId))) {
+        const message =
+          'Credit drawn from a prepayment cannot sync: prepayment invoices are not exported to QuickBooks, ' +
+          'so the QuickBooks invoice balance will not reflect this application.';
+        const result = await deps.exceptions.createOrUpdate({
+          type: 'accounting_sync_export_error',
+          entityType: 'credit_allocation',
+          entityId: op.alga_entity_id,
+          title: 'Prepayment credit applied to a synced invoice — QuickBooks not updated',
+          context: {
+            reason: 'prepayment_credit_not_syncable',
+            alga_entity_id: op.alga_entity_id,
+            alga_credit_note_invoice_id: payload.creditNoteInvoiceId,
+            alga_target_invoice_id: payload.targetInvoiceId,
+            requested_amount_cents: payload.amountCents,
+            message,
+            details:
+              `${message} Settle the invoice inside QuickBooks (apply the customer's credit or record the ` +
+              'payment there) so both systems agree, then resolve this exception.',
+            realm: deps.targetRealm
+          }
+        });
+        if (result.created) {
+          deps.stats.exceptionsCreated += 1;
+        }
+        await deps.ops.markFailed(deps.tenantId, op.op_id, message);
+        deps.stats.opsFailed += 1;
+        continue;
+      }
+
+      // Otherwise an export simply hasn't drained yet — leave pending without
+      // burning attempts. But waiting is only healthy for so long: past the
+      // stall window, surface an exception instead of hiding behind the
+      // pending-ops counter (it auto-resolves when the application lands).
+      const ageMs = Date.now() - Date.parse(String(op.created_at));
+      if (Number.isFinite(ageMs) && ageMs > STALLED_APPLY_CREDIT_AGE_MS) {
+        const result = await deps.exceptions.createOrUpdate({
+          type: 'accounting_sync_export_error',
+          entityType: 'credit_allocation',
+          entityId: op.alga_entity_id,
+          title: 'Credit application has been waiting on an invoice export for over a week',
+          context: {
+            reason: 'apply_credit_stalled',
+            alga_entity_id: op.alga_entity_id,
+            alga_credit_note_invoice_id: payload.creditNoteInvoiceId,
+            alga_target_invoice_id: payload.targetInvoiceId,
+            has_credit_memo_mapping: Boolean(creditMemoMapping),
+            has_invoice_mapping: Boolean(invoiceMapping),
+            op_created_at: op.created_at,
+            details:
+              'This credit application is waiting for a document that has not exported to QuickBooks. ' +
+              'Check why the credit note or target invoice has not synced (export exceptions, go-live cutoff, ' +
+              'auto-sync toggle); the application pushes automatically once both documents are mapped.',
+            realm: deps.targetRealm
+          }
+        });
+        if (result.created) {
+          deps.stats.exceptionsCreated += 1;
+        }
+      }
+
       logger.debug('[creditApplicationApplier] Mappings not yet available; leaving apply_credit op pending', {
         opId: op.op_id,
         hasCreditMemoMapping: Boolean(creditMemoMapping),

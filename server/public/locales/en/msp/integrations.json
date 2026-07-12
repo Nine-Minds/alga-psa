@@ -1371,6 +1371,8 @@
         "refreshTokenExpiry": "QuickBooks token expires {{date}}",
         "refreshTokenExpired": "QuickBooks token expired — reconnect to resume syncing.",
         "autoSyncLabel": "Auto-sync enabled",
+        "autoProvisionCustomersLabel": "Create QuickBooks customers automatically",
+        "autoProvisionCustomersHint": "Off: exports for unmapped customers pause with an exception until you link them in the customer mapping screen.",
         "syncNowButton": "Sync Now",
         "syncNowRunning": "Syncing…",
         "syncNowSuccess": "Sync completed successfully.",

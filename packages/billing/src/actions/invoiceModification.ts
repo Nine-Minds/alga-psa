@@ -24,6 +24,8 @@ import {
 
 import { validateInvoiceFinalization } from './taxSourceActions';
 import { enqueueInvoiceAutoExport } from '../services/accountingSync/syncProducers';
+import { assertInvoiceNotExported } from '../services/accountingSync/invoiceExportGuards';
+import { assertInvoiceExportReady, InvoiceExportReadinessError } from '../services/accountingSync/exportReadiness';
 import { withAuth } from '@alga-psa/auth';
 import { getSession } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
@@ -341,6 +343,18 @@ export async function finalizeInvoiceWithKnex(
     throw expectedInvoiceActionError(taxValidation.error || 'Invoice cannot be finalized');
   }
 
+  // When this invoice will auto-export to QBO, block finalize on deterministic
+  // export failures (line without a service, unmapped service) so the fix
+  // happens here rather than in the sync exception inbox.
+  try {
+    await assertInvoiceExportReady(knex, tenant, invoiceId);
+  } catch (error) {
+    if (error instanceof InvoiceExportReadinessError) {
+      throw expectedInvoiceActionError(error.message);
+    }
+    throw error;
+  }
+
   // First transaction to update invoice status
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Check if invoice exists and is not already finalized
@@ -651,6 +665,14 @@ export const unfinalizeInvoice = withAuth(async (
     return permissionError('Permission denied: invoice update required');
   }
   const { knex } = await createTenantKnex();
+
+  // Guard: a document posted to an accounting system must stay posted. Reopening
+  // it here would let a later re-finalize export into reconciled books.
+  try {
+    await assertInvoiceNotExported(knex, tenant, invoiceId, 'unfinalize');
+  } catch (error) {
+    return actionError(getErrorMessage(error));
+  }
 
   let expectedError: InvoiceActionError | null = null;
 

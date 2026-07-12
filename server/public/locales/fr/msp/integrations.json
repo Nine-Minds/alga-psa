@@ -1348,6 +1348,8 @@
         "refreshTokenExpiry": "Le jeton QuickBooks expire le {{date}}",
         "refreshTokenExpired": "Jeton QuickBooks expiré — reconnectez-vous pour reprendre la synchronisation.",
         "autoSyncLabel": "Synchronisation automatique activée",
+        "autoProvisionCustomersLabel": "Create QuickBooks customers automatically",
+        "autoProvisionCustomersHint": "Off: exports for unmapped customers pause with an exception until you link them in the customer mapping screen.",
         "syncNowButton": "Synchroniser maintenant",
         "syncNowRunning": "Synchronisation…",
         "syncNowSuccess": "Synchronisation terminée avec succès.",

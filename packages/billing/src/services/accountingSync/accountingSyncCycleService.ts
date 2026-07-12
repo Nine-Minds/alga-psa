@@ -46,6 +46,11 @@ import { ADAPTER_EXPORT_CAPABILITIES } from '../../adapters/accounting/registry'
  * failures retry per-op with capped attempts and never block the cursor.
  * All appliers are idempotent against the mapping ledger, which is what makes
  * the deliberate cursor overlap (and our own outbound echoes) safe.
+ *
+ * Testing: for multi-step sequences against stateful QBO behavior (balances,
+ * SyncTokens, CDC replay, auto-apply races), drive the appliers with the
+ * in-memory simulator in ./testing/qboSimulator.ts instead of canned mocks —
+ * see ./testing/README.md.
  */
 
 /** Overlap subtracted from the stored cursor to absorb clock skew. */
