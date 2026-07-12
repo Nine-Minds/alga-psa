@@ -59,6 +59,14 @@ temporal:
   address: temporal-frontend.msp.svc.cluster.local:7233
   namespace: default
 
+# Nine Minds license service (alga-license). Appliances reach it through the
+# public gateway; the License screen's claim-code redemption (connectAppliance
+# -> POST /register) fails with "License service URL not configured" without it.
+# Claim-code and check-in routes are claim/credential-authed — no service
+# secret is needed or set on appliances.
+licenseService:
+  url: "https://license.nineminds.com"
+
 db:
   enabled: true
   persistence:
