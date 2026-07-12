@@ -73,11 +73,27 @@ focused, and reset on route change.
 `C` and `N` are suppressed while any editable target is focused and while a
 dialog or drawer owns scope.
 
-### Panel / dialog scope
+### Panel / drawer scope (when a drawer is open)
 
-When a drawer or modal dialog is open it captures `Escape` (close/cancel) and
-`[`/`]` (previous/next record within the panel). Global and page shortcuts do
-not fire while a panel-scope owner is active.
+When a side drawer is open (for example, the **All fields** view on a ticket,
+the **Client quick view**, or the contact editor), the page scope is suspended
+and the drawer captures keyboard input. Use these shortcuts while a drawer is
+active:
+
+| Action | macOS | Windows / Linux |
+|--------|-------|-----------------|
+| Save the form in the drawer | ⌘S / ⌘↩ | Ctrl+S / Ctrl+Enter |
+| Close the drawer | Escape | Escape |
+| Navigate to previous record | `[` | `[` |
+| Navigate to next record | `]` | `]` |
+
+`⌘S` / `Ctrl+S` on a regular page triggers `page.save` (saves the page). The
+same keys inside a drawer trigger `panel.submit` instead — the drawer-scoped
+save action. Opening a drawer suspends the page scope so the two do not
+conflict.
+
+Modal dialogs behave similarly: `⌘S` / `Ctrl+S` submits the active dialog
+(`dialog.submit`) rather than saving the page behind it.
 
 ## Customizing Shortcuts
 
@@ -118,7 +134,8 @@ profile's baseline (not the factory default).
 The dispatcher picks the highest-priority registered action that matches the
 event's active scope set:
 
-1. **Dialog / panel** — highest priority; owns `Escape` and record-nav keys.
+1. **Dialog / panel** — highest priority; owns `Escape`, `mod+s` / `mod+Enter`
+   (save / submit), and record-nav keys.
 2. **Editor** — `editor`-scoped shortcuts (invoice designer, workflow designer,
    rich-text) override page shortcuts.
 3. **Page** — page-scoped shortcuts fire when the registered page is active.
@@ -147,6 +164,7 @@ and `eslint-plugin-custom-rules`).
 | `packages/ui/src/keyboard-shortcuts/preferences.ts` | `ShortcutStorage` adapter interface + preference resolution (`user override → profile delta → platform default`) |
 | `packages/ui/src/keyboard-shortcuts/ShortcutHintHud.tsx` | `<Kbd>` / `ShortcutHint` component rendering OS-native glyphs |
 | `packages/ui/src/keyboard-shortcuts/command-palette-query.ts` | Command palette query parser (TeamCity-style field scopes + operators) |
+| `server/src/components/layout/GlobalShortcutLayer.tsx` | Shared keyboard layer mounted in both MSP shells (`DefaultLayout` and `AlgaDeskMspShell`); registers global / navigation actions, vim navigation, help dialog, and hint HUD |
 | `server/src/components/settings/general/KeyboardShortcutsPanel.tsx` | Profile → Keyboard Shortcuts settings UI |
 
 The provider is mounted in `MspLayoutClient.tsx` (wraps `DefaultLayout` and
