@@ -8,6 +8,7 @@ import {
   decodeLicenseClaims,
   licenseStatusFromClaims,
   applyLicense,
+  redeemClaimCode,
   applyAppUrl,
   collectManageStatus
 } from '../manage-engine.mjs';
@@ -25,7 +26,7 @@ function fakeKube(overrides = {}) {
   return {
     calls,
     json: async (args) => { calls.push(['json', args]); return (overrides.json && overrides.json(args)) || { ok: true, value: {} }; },
-    run: async (args) => { calls.push(['run', args]); return (overrides.run && overrides.run(args)) || { ok: true, stdout: '', stderr: '' }; },
+    run: async (args, options = {}) => { calls.push(['run', args, options]); return (overrides.run && overrides.run(args, options)) || { ok: true, stdout: '', stderr: '' }; },
     apply: async (manifest) => { calls.push(['apply', manifest]); return (overrides.apply && overrides.apply(manifest)) || { ok: true, stdout: '', stderr: '' }; },
     quote: (v) => `'${String(v).replaceAll("'", "'\\''")}'`
   };
@@ -65,8 +66,10 @@ test('applyLicense rejects an invalid JWS without touching kubectl', async () =>
   assert.equal(kube.calls.length, 0);
 });
 
-test('applyLicense patches the seed secret (base64) and restarts the app', async () => {
-  const kube = fakeKube();
+test('applyLicense verifies through the worker, patches the seed, and does not restart', async () => {
+  const kube = fakeKube({ run: (args) => args.includes('appliance-apply-license-key')
+    ? { ok: true, stdout: JSON.stringify({ ok: true, result: { edition: 'pro' } }) }
+    : { ok: true, stdout: '' } });
   const token = jwsWith({ edition: 'pro', exp: 9999999999 });
   const res = await applyLicense({ licenseKey: token, kube });
   assert.equal(res.ok, true);
@@ -74,7 +77,53 @@ test('applyLicense patches the seed secret (base64) and restarts the app', async
   assert.ok(patch, 'expected a secret patch');
   const tokenB64 = Buffer.from(token, 'utf8').toString('base64');
   assert.ok(patch[1].includes(tokenB64), 'patch should carry the base64 token');
-  assert.ok(kube.calls.some((c) => c[0] === 'run' && c[1].includes('rollout restart deploy/alga-core-sebastian')), 'expected an app rollout restart');
+  assert.equal(kube.calls.some((c) => c[0] === 'run' && c[1].includes('rollout restart')), false);
+  const exec = kube.calls.find((c) => c[1].includes('appliance-apply-license-key'));
+  assert.deepEqual(JSON.parse(exec[2].stdin), { licenseKey: token });
+});
+
+test('redeemClaimCode writes connected recovery seed after workflow success', async () => {
+  const result = { edition: 'pro', licenseToken: 'a.b.c', applianceId: 'appliance-1', applianceCredential: 'credential', checkInUrl: 'https://license.example/check-in' };
+  const kube = fakeKube({ run: (args) => args.includes('appliance-redeem-claim-code')
+    ? { ok: true, stdout: JSON.stringify({ ok: true, result }) }
+    : { ok: true, stdout: '' } });
+  const response = await redeemClaimCode({ claimCode: 'AB-CD', kube });
+  assert.equal(response.ok, true);
+  const exec = kube.calls.find((c) => c[1].includes('appliance-redeem-claim-code'));
+  assert.deepEqual(JSON.parse(exec[2].stdin), { claimCode: 'ABCD' });
+  assert.ok(kube.calls.some((c) => c[1].includes('patch secret appliance-license-seed')));
+  assert.equal(kube.calls.some((c) => c[1].includes('rollout restart')), false);
+});
+
+test('redeemClaimCode surfaces structured workflow errors despite a nonzero exit', async () => {
+  // The in-pod scripts print structured JSON and exit 1 on failure — the
+  // structured code must survive, not collapse into app_unavailable 503.
+  const kube = fakeKube({ run: (args) => args.includes('appliance-redeem-claim-code')
+    ? { ok: false, code: 1, stdout: JSON.stringify({ ok: false, code: 'invalid_claim_code', error: 'nope' }), stderr: '' }
+    : { ok: true, stdout: '' } });
+  const response = await redeemClaimCode({ claimCode: 'ABCDEFGH', kube });
+  assert.equal(response.ok, false);
+  assert.equal(response.status, 400);
+  assert.match(response.error, /Invalid claim code/);
+});
+
+test('redeemClaimCode maps an exec failure with no structured output to 503', async () => {
+  const kube = fakeKube({ run: (args) => args.includes('appliance-redeem-claim-code')
+    ? { ok: false, code: 1, stdout: '', stderr: 'error: unable to upgrade connection' }
+    : { ok: true, stdout: '' } });
+  const response = await redeemClaimCode({ claimCode: 'ABCDEFGH', kube });
+  assert.equal(response.ok, false);
+  assert.equal(response.status, 503);
+});
+
+test('applyLicense surfaces structured workflow errors despite a nonzero exit', async () => {
+  const kube = fakeKube({ run: (args) => args.includes('appliance-apply-license-key')
+    ? { ok: false, code: 1, stdout: JSON.stringify({ ok: false, code: 'tenant_mismatch', error: 'wrong tenant' }), stderr: '' }
+    : { ok: true, stdout: '' } });
+  const res = await applyLicense({ licenseKey: jwsWith({ edition: 'pro', exp: 9999999999 }), kube });
+  assert.equal(res.ok, false);
+  assert.equal(res.status, 400);
+  assert.match(res.error, /different account/);
 });
 
 test('applyAppUrl rewrites values, persists runtime, reconciles helm', async () => {

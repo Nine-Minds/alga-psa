@@ -13,6 +13,7 @@
     "../../packages/event-schemas/src/index.ts",
     "../../packages/authorization/src/kernel/index.ts",
     "../../packages/authorization/src/bundles/service.ts",
+    "../../packages/licensing/src/index.ts",
     "../../packages/validation/src/index.ts"
   ],
   "exclude": [

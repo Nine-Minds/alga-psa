@@ -19,6 +19,7 @@ import { accessError, PodAccessError, requestHasSameOrigin } from './pod-access-
 import {
   collectManageStatus,
   applyLicense,
+  redeemClaimCode,
   applyAppUrl,
   requestControlPlaneUpgrade,
 } from './manage-engine.mjs';
@@ -563,6 +564,7 @@ function runQueuedKubectl(command, options = {}) {
     onStart: options.onStart,
     onDone: options.onDone,
     signal: options.signal
+    ,stdin: options.stdin
   });
 }
 
@@ -579,7 +581,7 @@ async function runKubectlJson(args, timeoutMs = KUBECTL_API_TIMEOUT_MS, signal) 
 // kubectl adapter for manage-engine: json/run/apply/quote backed by the queue.
 const manageKube = {
   json: (args) => runKubectlJson(args),
-  run: (args) => runQueuedKubectl(kubectlCommand(args)),
+  run: (args, options = {}) => runQueuedKubectl(kubectlCommand(args), options),
   quote: (value) => shellQuote(value),
   apply: async (manifest) => {
     const tmp = path.join(os.tmpdir(), `alga-manage-${process.pid}-${Date.now()}.json`);
@@ -1233,6 +1235,19 @@ const server = http.createServer(async (req, res) => {
     const payload = await readJsonBody(req);
     const result = await applyLicense({ licenseKey: payload?.licenseKey, kube: manageKube });
     if (result.ok) jsonResponse(res, 200, { ok: true });
+    else jsonResponse(res, result.status || 400, { error: result.error });
+    return;
+  }
+
+  if (url.pathname === '/api/license/redeem') {
+    if (!requireAuth(req, res)) return;
+    if ((req.method || 'GET').toUpperCase() !== 'POST') {
+      jsonResponse(res, 405, { error: 'Method not allowed. Use POST.' });
+      return;
+    }
+    const payload = await readJsonBody(req);
+    const result = await redeemClaimCode({ claimCode: payload?.claimCode, kube: manageKube });
+    if (result.ok) jsonResponse(res, 200, { ok: true, result: result.result });
     else jsonResponse(res, result.status || 400, { error: result.error });
     return;
   }

@@ -23,14 +23,16 @@ gUyETxpmGwiPUM8mqwchE8pAyX8C7cZslf9XX609TYDSqQBq5sekERbcIw==
 -----END PUBLIC KEY-----`,
 
   /**
-   * v1-test: throwaway test keypair. ONLY for automated tests — do not issue
-   * real licenses with this kid. The private key is intentionally NOT committed
-   * (a PEM private key trips secret scanners); the fixture tokens in
-   * verify-license.test.ts are pre-signed with it. To regenerate fixtures, mint
-   * a fresh ES256 keypair, replace this public key, and re-sign the test tokens.
+   * v1-test: throwaway test keypair. ONLY for automated tests and local-dev
+   * license services — do not issue real licenses with this kid. The private
+   * key is intentionally NOT committed (a PEM private key trips secret
+   * scanners); the fixture tokens in verify-license.test.ts are pre-signed
+   * with it. To rotate the keypair and re-sign the fixtures, run
+   * packages/licensing/scripts/gen-test-fixtures.mjs and paste its output
+   * here and into the test files.
    */
   'v1-test': `-----BEGIN PUBLIC KEY-----
-MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEv1wbPfZJVePUOzgtwSOaKN5dWDWX
-sPkVRg54g4JlA9v0gM0bdImyAKsfIqwuTt3ouXgCtnMFf9WoYVGD0/fBdA==
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE5Iq3v10oS9/9IMvc88Rau44Ri0dV
+We8VqRV0D58tVtWXa28OyqciNLEOtbn9qlNBhmsuAHf6c5rwTXZqHhRAAA==
 -----END PUBLIC KEY-----`,
 };
