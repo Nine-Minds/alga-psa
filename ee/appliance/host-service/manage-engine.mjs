@@ -120,9 +120,14 @@ export async function readLicenseStatus(deps) {
 }
 
 function parseWorkflowResult(execResult) {
-  if (!execResult?.ok) return { ok: false, code: 'app_unavailable', error: 'The app is still starting — try again shortly.' };
+  // The in-pod scripts print a structured JSON result to stdout AND exit
+  // nonzero on failure, so stdout wins whenever it parses — a nonzero exit
+  // must not mask structured codes like invalid_claim_code.
   try { return JSON.parse(execResult.stdout.trim()); }
-  catch { return { ok: false, code: 'invalid_response', error: 'The app returned an invalid activation response.' }; }
+  catch {
+    if (!execResult?.ok) return { ok: false, code: 'app_unavailable', error: 'The app is still starting — try again shortly.' };
+    return { ok: false, code: 'invalid_response', error: 'The app returned an invalid activation response.' };
+  }
 }
 
 const REDEEM_ERRORS = {

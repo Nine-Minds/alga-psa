@@ -95,6 +95,37 @@ test('redeemClaimCode writes connected recovery seed after workflow success', as
   assert.equal(kube.calls.some((c) => c[1].includes('rollout restart')), false);
 });
 
+test('redeemClaimCode surfaces structured workflow errors despite a nonzero exit', async () => {
+  // The in-pod scripts print structured JSON and exit 1 on failure — the
+  // structured code must survive, not collapse into app_unavailable 503.
+  const kube = fakeKube({ run: (args) => args.includes('appliance-redeem-claim-code')
+    ? { ok: false, code: 1, stdout: JSON.stringify({ ok: false, code: 'invalid_claim_code', error: 'nope' }), stderr: '' }
+    : { ok: true, stdout: '' } });
+  const response = await redeemClaimCode({ claimCode: 'ABCDEFGH', kube });
+  assert.equal(response.ok, false);
+  assert.equal(response.status, 400);
+  assert.match(response.error, /Invalid claim code/);
+});
+
+test('redeemClaimCode maps an exec failure with no structured output to 503', async () => {
+  const kube = fakeKube({ run: (args) => args.includes('appliance-redeem-claim-code')
+    ? { ok: false, code: 1, stdout: '', stderr: 'error: unable to upgrade connection' }
+    : { ok: true, stdout: '' } });
+  const response = await redeemClaimCode({ claimCode: 'ABCDEFGH', kube });
+  assert.equal(response.ok, false);
+  assert.equal(response.status, 503);
+});
+
+test('applyLicense surfaces structured workflow errors despite a nonzero exit', async () => {
+  const kube = fakeKube({ run: (args) => args.includes('appliance-apply-license-key')
+    ? { ok: false, code: 1, stdout: JSON.stringify({ ok: false, code: 'tenant_mismatch', error: 'wrong tenant' }), stderr: '' }
+    : { ok: true, stdout: '' } });
+  const res = await applyLicense({ licenseKey: jwsWith({ edition: 'pro', exp: 9999999999 }), kube });
+  assert.equal(res.ok, false);
+  assert.equal(res.status, 400);
+  assert.match(res.error, /different account/);
+});
+
 test('applyAppUrl rewrites values, persists runtime, reconciles helm', async () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-manage-'));
   const releaseSelectionFile = path.join(tmp, 'release-selection.json');
