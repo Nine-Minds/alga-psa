@@ -890,6 +890,16 @@ All tests should follow the conventions outlined in [docs/testing-standards.md](
 
 See the full [Testing Standards](./reference/testing-standards.md) document for complete guidelines, templates, and the decision tree for test placement.
 
+## Testing the QuickBooks Online sync
+
+Do not hand-mock `QboClientService` for multi-step accounting-sync tests. A
+stateful in-memory QBO simulator (SyncTokens, duplicate-name rules, balances,
+CDC replay, the auto-apply-credits race) lives at
+`packages/billing/src/services/accountingSync/testing/qboSimulator.ts` — its
+README covers wiring and the scenario pattern, and
+`qboSimulator.scenarios.test.ts` next to it shows real appliers driven
+end-to-end. Canned `vi.fn()` mocks remain fine for single-call unit tests.
+
 # Time Entry Work Item Types
 They can be:
 - Ticket

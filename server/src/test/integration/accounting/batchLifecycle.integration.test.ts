@@ -157,6 +157,25 @@ describe('Accounting export batch lifecycle integration', () => {
       updated_at: now
     });
 
+    // Map the customer too, so the batch clears validation and reaches
+    // "ready" — this suite exercises the batch lifecycle, not the
+    // customer-provisioning gate. Idempotent: tests may seed several
+    // invoices for the same test client.
+    await ctx.db('tenant_external_entity_mappings')
+      .insert({
+        id: uuidv4(),
+        tenant: ctx.tenantId,
+        integration_type: 'quickbooks_online',
+        alga_entity_type: 'client',
+        alga_entity_id: ctx.clientId,
+        external_entity_id: `QBO-CUST-${uuidv4()}`,
+        sync_status: 'synced',
+        created_at: now,
+        updated_at: now
+      })
+      .onConflict()
+      .ignore();
+
     const invoiceId = uuidv4();
 
     await ctx.db('invoices').insert({

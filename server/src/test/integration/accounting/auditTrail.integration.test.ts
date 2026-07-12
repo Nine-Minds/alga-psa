@@ -84,6 +84,7 @@ describe('Accounting export audit trail integration', () => {
     await ctx.db('accounting_export_errors').where({ tenant: ctx.tenantId }).del();
     await ctx.db('accounting_export_lines').where({ tenant: ctx.tenantId }).del();
     await ctx.db('accounting_export_batches').where({ tenant: ctx.tenantId }).del();
+    await ctx.db('tenant_external_entity_mappings').where({ tenant: ctx.tenantId }).del();
     await ctx.db('transactions').where({ tenant: ctx.tenantId }).del();
     await ctx.db('invoice_charges').where({ tenant: ctx.tenantId }).del();
     await ctx.db('invoices').where({ tenant: ctx.tenantId }).del();
@@ -188,6 +189,20 @@ describe('Accounting export audit trail integration', () => {
       alga_entity_type: 'service',
       alga_entity_id: serviceId,
       external_entity_id: 'QB-ITEM-DEFAULT',
+      sync_status: 'synced',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    });
+
+    // Map the customer so batch validation passes; this suite exercises the
+    // audit trail, not the customer-provisioning gate.
+    await ctx.db('tenant_external_entity_mappings').insert({
+      id: uuidv4(),
+      tenant: ctx.tenantId,
+      integration_type: 'quickbooks_online',
+      alga_entity_type: 'client',
+      alga_entity_id: ctx.clientId,
+      external_entity_id: 'QB-CUST-DEFAULT',
       sync_status: 'synced',
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()

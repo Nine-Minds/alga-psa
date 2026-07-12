@@ -14,6 +14,7 @@ import { resolveConnectedAccountingIntegration } from './connectedAccountingInte
  * action (finalize, payment, ...), so everything is caught and logged.
  */
 
+// LEVERAGE: pattern edition-gate — same local isEnterpriseEdition as exportReadiness.ts
 function isEnterpriseEdition(): boolean {
   return (
     (process.env.EDITION ?? '').toLowerCase() === 'ee' ||
@@ -26,6 +27,19 @@ const QBO_ADAPTER_TYPE = 'quickbooks_online';
 function adapterSupportsExportType(adapterType: string, exportType: string): boolean {
   const capabilities = ADAPTER_EXPORT_CAPABILITIES as Record<string, readonly string[] | undefined>;
   return Boolean(capabilities[adapterType]?.includes(exportType));
+}
+
+/** Normalize a date-ish column value (Date | ISO string | date string) to YYYY-MM-DD. */
+// LEVERAGE: pattern date-only-normalization — same helper as exportReadiness.ts
+function toDateOnly(value: unknown): string | null {
+  if (value === null || value === undefined) {
+    return null;
+  }
+  const date = value instanceof Date ? value : new Date(String(value));
+  if (Number.isNaN(date.getTime())) {
+    return null;
+  }
+  return date.toISOString().slice(0, 10);
 }
 
 /**
@@ -53,23 +67,12 @@ export async function enqueueInvoiceAutoExport(
       return;
     }
 
-    if (settings.autoSyncStartDate) {
-      // Finalization happens "now"; the cutoff fences out re-finalized history.
-      const today = new Date().toISOString().slice(0, 10);
-      if (today < settings.autoSyncStartDate.slice(0, 10)) {
-        return;
-      }
-    }
-
-    const integration = await resolveConnectedAccountingIntegration(knex, tenantId);
-    if (!integration) {
-      return;
-    }
-
-    // Look up invoice_type to route the operation correctly.
+    // Look up invoice_type (operation routing) and invoice_date (cutoff fence).
+    // Done before resolving the connected integration so a prepayment or a
+    // pre-cutoff document short-circuits without any realm work.
     const invoiceRow = await tenantDb(knex, tenantId).table('invoices')
       .where({ invoice_id: invoiceId })
-      .select('invoice_type')
+      .select('invoice_type', 'invoice_date')
       .first();
 
     const invoiceType: string | null | undefined = invoiceRow?.invoice_type;
@@ -77,6 +80,29 @@ export async function enqueueInvoiceAutoExport(
     // Prepayments are excluded from QBO export entirely.
     if (invoiceType === 'prepayment') {
       logger.debug('[accountingSync] Skipping prepayment invoice auto-export', { tenantId, invoiceId });
+      return;
+    }
+
+    if (settings.autoSyncStartDate) {
+      // Fence by the invoice's own document date, not the wall clock:
+      // finalization can happen long after the document's era (unfinalize →
+      // re-finalize), and pre-go-live documents must never auto-export into
+      // books that were reconciled before the connection existed.
+      const cutoff = settings.autoSyncStartDate.slice(0, 10);
+      const invoiceDate = toDateOnly(invoiceRow?.invoice_date) ?? new Date().toISOString().slice(0, 10);
+      if (invoiceDate < cutoff) {
+        logger.debug('[accountingSync] Skipping auto-export of pre-cutoff invoice', {
+          tenantId,
+          invoiceId,
+          invoiceDate,
+          cutoff
+        });
+        return;
+      }
+    }
+
+    const integration = await resolveConnectedAccountingIntegration(knex, tenantId);
+    if (!integration) {
       return;
     }
 

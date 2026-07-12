@@ -1348,6 +1348,8 @@
         "refreshTokenExpiry": "O token QuickBooks expira {{date}}",
         "refreshTokenExpired": "O token QuickBooks expirou – reconecte para retomar a sincronização.",
         "autoSyncLabel": "Sincronização automática ativada",
+        "autoProvisionCustomersLabel": "Create QuickBooks customers automatically",
+        "autoProvisionCustomersHint": "Off: exports for unmapped customers pause with an exception until you link them in the customer mapping screen.",
         "syncNowButton": "Sincronizar agora",
         "syncNowRunning": "Sincronizando…",
         "syncNowSuccess": "Sincronização concluída com sucesso.",

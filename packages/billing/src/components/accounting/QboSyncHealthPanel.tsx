@@ -34,6 +34,7 @@ export default function QboSyncHealthPanel() {
   const [syncNowRunning, setSyncNowRunning] = React.useState(false);
   const [syncNowFeedback, setSyncNowFeedback] = React.useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [autoSyncToggling, setAutoSyncToggling] = React.useState(false);
+  const [autoProvisionToggling, setAutoProvisionToggling] = React.useState(false);
 
   // Sync config catalog data
   const [accounts, setAccounts] = React.useState<QboAccount[]>([]);
@@ -359,6 +360,39 @@ export default function QboSyncHealthPanel() {
                   // Silently ignore — badge state stays as-is
                 } finally {
                   setAutoSyncToggling(false);
+                }
+              }}
+            />
+          </div>
+
+          {/* Customer auto-provisioning toggle */}
+          <div className="flex items-center justify-between">
+            <div className="pr-4">
+              <span className="text-sm font-medium">
+                {t('integrations.qbo.sync.autoProvisionCustomersLabel', {
+                  defaultValue: 'Create QuickBooks customers automatically'
+                })}
+              </span>
+              <p className="text-xs text-muted-foreground">
+                {t('integrations.qbo.sync.autoProvisionCustomersHint', {
+                  defaultValue:
+                    'Off: exports for unmapped customers pause with an exception until you link them in the customer mapping screen.'
+                })}
+              </p>
+            </div>
+            <Switch
+              id="qbo-sync-auto-provision-toggle"
+              checked={Boolean(health.settings.autoProvisionCustomers)}
+              disabled={autoProvisionToggling}
+              onCheckedChange={async (checked) => {
+                setAutoProvisionToggling(true);
+                try {
+                  const updated = await updateAccountingSyncSettingsAction({ autoProvisionCustomers: checked });
+                  setHealth((prev) => prev ? { ...prev, settings: updated } : prev);
+                } catch {
+                  // Silently ignore — badge state stays as-is
+                } finally {
+                  setAutoProvisionToggling(false);
                 }
               }}
             />

@@ -1,4 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
+// Hand-built change payloads keep these unit tests small. To verify against
+// changes a real QBO would emit (voids, balance movement), generate them with
+// the simulator in ./testing/qboSimulator.ts — see ./testing/README.md.
 import { applyExternalDocumentChange } from './driftDetector';
 import { emptyCycleStats, MAPPING_SYNC_STATUS } from './accountingSync.types';
 import type { AccountingExternalChange } from '@alga-psa/types';

@@ -302,6 +302,13 @@ export async function upsertStoredQboCredentials(tenantId: string, credentials: 
   await notifyQboConnectionChanged(tenantId);
 }
 
+/**
+ * Testing note: don't mock this class method-by-method for multi-step tests.
+ * A stateful in-memory QBO implementing this surface (SyncTokens, duplicate
+ * names, balances, CDC replay) lives at
+ * packages/billing/src/services/accountingSync/testing/qboSimulator.ts —
+ * see the README next to it for wiring.
+ */
 export class QboClientService {
   private tenantId: string;
   private realmId: string;

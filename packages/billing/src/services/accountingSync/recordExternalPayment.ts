@@ -266,6 +266,9 @@ export async function reverseExternalPayment(
         invoice_id: input.invoiceId,
         amount: -Math.abs(input.amount),
         payment_method: input.provider,
+        // Deliberately "now", not the original TxnDate: a reversal is a new
+        // bookkeeping event recognized when the sync observes it; backdating
+        // it would rewrite a period that may already be reconciled.
         payment_date: new Date(),
         reference_number: input.referenceNumber,
         notes: input.notes ?? null,

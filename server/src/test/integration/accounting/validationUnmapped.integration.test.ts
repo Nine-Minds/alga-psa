@@ -93,6 +93,22 @@ describe('Accounting export validation – unmapped services', () => {
       updated_at: new Date().toISOString()
     });
 
+    // Map the customer so batch validation doesn't additionally flag
+    // missing_customer_mapping — this suite exercises service/tax/term/realm
+    // gaps, not the customer-provisioning gate.
+    await ctx.db('tenant_external_entity_mappings').insert({
+      id: uuidv4(),
+      tenant: ctx.tenantId,
+      integration_type: 'quickbooks_online',
+      alga_entity_type: 'client',
+      alga_entity_id: ctx.clientId,
+      external_entity_id: 'QB-CUST-1',
+      external_realm_id: null,
+      sync_status: 'synced',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    });
+
     return { serviceId, invoiceId, chargeId };
   }
 

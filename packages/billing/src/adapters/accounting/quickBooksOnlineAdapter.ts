@@ -172,6 +172,12 @@ function resolveQboServiceDate(line: AccountingExportAdapterContext['lines'][num
   return line.service_period_start ?? line.service_period_end ?? null;
 }
 
+/**
+ * Testing note: transform/deliver behavior against real QBO semantics
+ * (SyncTokens, duplicate customer names, recomputed totals) can be exercised
+ * with the stateful in-memory simulator at
+ * ../../services/accountingSync/testing/qboSimulator.ts — see its README.
+ */
 export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
   static readonly TYPE = 'quickbooks_online';
 
@@ -255,6 +261,15 @@ export class QuickBooksOnlineAdapter implements AccountingExportAdapter {
 
       let clientMapping = clientData.mappings.get(clientId);
       if (!clientMapping) {
+        // Defense in depth behind the batch-validation check: without explicit
+        // opt-in, the delivery path never creates or links QBO customers —
+        // that decision belongs to a human in the mapping wizard.
+        if (!syncSettings?.autoProvisionCustomers) {
+          throw new Error(
+            `QuickBooks adapter: customer "${clientRow.client_name ?? clientId}" has no QuickBooks mapping and automatic customer creation is disabled — link the customer from the QuickBooks customer mapping screen`
+          );
+        }
+
         if (!context.batch.target_realm) {
           throw new Error('QuickBooks adapter requires batch target realm to sync customers');
         }

@@ -1371,6 +1371,8 @@
         "refreshTokenExpiry": "11111 {{date}} 11111",
         "refreshTokenExpired": "11111",
         "autoSyncLabel": "11111",
+        "autoProvisionCustomersLabel": "11111",
+        "autoProvisionCustomersHint": "11111",
         "syncNowButton": "11111",
         "syncNowRunning": "11111",
         "syncNowSuccess": "11111",
