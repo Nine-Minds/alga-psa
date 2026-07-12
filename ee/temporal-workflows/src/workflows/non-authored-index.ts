@@ -23,4 +23,5 @@ export * from './sla-ticket-workflow.js';
 export * from './premium-trial-expiry-workflow.js';
 export * from './appliance-license-issuance-workflow.js';
 export * from './appliance-check-in-workflow.js';
+export * from './appliance-license-redeem-workflow.js';
 export * from './appliance-essentials-registration-workflow.js';

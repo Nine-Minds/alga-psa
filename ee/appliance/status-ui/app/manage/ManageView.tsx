@@ -30,6 +30,8 @@ type ManageStatus = {
     expiresAt: string | null;
     perpetual: boolean;
     status: "active" | "expired" | "unknown";
+    source?: "live" | "seed-fallback";
+    lastCheckinAt?: string | null;
   };
   appUrl: {
     url: string | null;
@@ -422,6 +424,7 @@ function LicenseTab({
   onRefresh: () => Promise<void>;
 }) {
   const [licenseKey, setLicenseKey] = useState("");
+  const [claimCode, setClaimCode] = useState("");
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState(false);
   const [result, setResult] = useState<string | null>(null);
@@ -453,17 +456,31 @@ function LicenseTab({
       if (response.status === 401) { window.location.reload(); return; }
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || "Failed to apply license.");
-      setResult("License applied. The app is restarting to apply the change.");
+      setResult("License applied. The change is active immediately.");
       setLicenseKey("");
-      // Poll to pick up the refreshed license status after restart.
-      pollRef.current = setInterval(async () => {
-        try { await onRefresh(); } catch { /* tolerate restart gap */ }
-      }, 3000);
-      setTimeout(() => { stopPoll(); setBusy(false); }, 30000);
+      await onRefresh();
+      setBusy(false);
     } catch (err) {
       setBusy(false);
       setError(err instanceof Error ? err.message : String(err));
     }
+  }
+
+  async function redeemClaimCode() {
+    setBusy(true); setResult(null); setError(null);
+    try {
+      const normalized = claimCode.trim().toUpperCase().replace(/[\s-]/g, "");
+      const response = await fetch(apiPath("/api/license/redeem"), {
+        method: "POST", credentials: "same-origin", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ claimCode: normalized }), cache: "no-store",
+      });
+      if (response.status === 401) { window.location.reload(); return; }
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.error || "Failed to activate license.");
+      setResult(`License activated${data.result?.edition ? `: ${data.result.edition}` : ""}.`);
+      setClaimCode(""); await onRefresh();
+    } catch (err) { setError(err instanceof Error ? err.message : String(err)); }
+    finally { setBusy(false); }
   }
 
   const lic = status.license;
@@ -505,12 +522,29 @@ function LicenseTab({
           </dd>
         </div>
       </dl>
+      {lic.source === "seed-fallback" ? (
+        <p className={styles.helpText}>As of last activation — live status unavailable.</p>
+      ) : null}
 
       <div className={styles.manageSeparator} />
 
-      <h3 className={styles.manageSubheading}>Apply a new license key</h3>
+      <h3 className={styles.manageSubheading}>Activate with claim code</h3>
+      <p className={styles.helpText}>Enter the activation code from your Nine Minds email.</p>
+      <div className={styles.field} style={{ marginTop: "var(--space-md)" }}>
+        <label htmlFor="manage-license-claim-code">Claim code</label>
+        <input id="manage-license-claim-code" value={claimCode} onChange={(event) => setClaimCode(event.target.value)} disabled={busy} />
+      </div>
+      <div className={styles.toolbar} style={{ marginTop: "var(--space-md)" }}>
+        <button id="manage-license-activate" type="button" className={styles.actionButton} disabled={busy || !claimCode.trim()} onClick={redeemClaimCode}>
+          {busy ? "Activating…" : "Activate"}
+        </button>
+      </div>
+
+      <div className={styles.manageSeparator} />
+
+      <h3 className={styles.manageSubheading}>Air-gapped: paste a signed license key</h3>
       <p className={styles.helpText}>
-        Paste the signed JWS license key from Nine Minds. The app will restart to apply it.
+        Paste the signed JWS license key from Nine Minds. Changes apply immediately.
       </p>
 
       <div className={styles.field} style={{ marginTop: "var(--space-md)" }}>

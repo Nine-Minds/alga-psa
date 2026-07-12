@@ -9,6 +9,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import http from 'node:http';
 import { appUrlFromInput, hostFromAppUrl, setYamlScalar } from './setup-engine.mjs';
+import { licenseSeedFromRedeem } from './install-code.mjs';
 
 const JWS_RE = /^[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+\.[A-Za-z0-9\-_]+$/;
 
@@ -98,15 +99,52 @@ function decodeSecretValue(value) {
 // Read edition + license expiry from the appliance-license-seed secret.
 export async function readLicenseStatus(deps) {
   const { kube, namespace = 'msp', secretName = 'appliance-license-seed' } = deps;
+  const live = await kube.run('exec -i deploy/alga-core-sebastian -n msp -c sebastian -- node /app/server/scripts/appliance-license-status.mjs');
+  if (live?.ok) {
+    try {
+      const body = JSON.parse(live.stdout.trim());
+      if (body.ok && body.row) {
+        return { ...licenseStatusFromClaims(decodeLicenseClaims(body.row.license_token), body.row.edition_choice), source: 'live', lastCheckinAt: body.row.last_checkin_at };
+      }
+    } catch { /* use seed fallback */ }
+  }
   const res = await kube.json(`get secret ${secretName} -n ${namespace}`);
   if (!res || !res.ok || !res.value || !res.value.data) {
-    return { edition: null, expiresAt: null, status: 'unknown' };
+    return { edition: null, expiresAt: null, status: 'unknown', source: 'seed-fallback' };
   }
   const data = res.value.data;
   const token = decodeSecretValue(data.LICENSE_TOKEN);
   const edition = decodeSecretValue(data.EDITION_CHOICE) || null;
   const claims = token ? decodeLicenseClaims(token) : null;
-  return licenseStatusFromClaims(claims, edition);
+  return { ...licenseStatusFromClaims(claims, edition), source: 'seed-fallback' };
+}
+
+function parseWorkflowResult(execResult) {
+  if (!execResult?.ok) return { ok: false, code: 'app_unavailable', error: 'The app is still starting — try again shortly.' };
+  try { return JSON.parse(execResult.stdout.trim()); }
+  catch { return { ok: false, code: 'invalid_response', error: 'The app returned an invalid activation response.' }; }
+}
+
+const REDEEM_ERRORS = {
+  invalid_claim_code: 'Invalid claim code. Check the code and try again.',
+  expired_claim_code: 'Claim code has expired. Request a new one from your licensing portal.',
+  consumed_claim_code: 'Claim code has already been used.',
+  superseded_claim_code: 'Claim code was superseded. Request the newest code from your licensing portal.',
+  tenant_mismatch: 'This code belongs to a different account — reissue a code from your licensing portal.',
+};
+
+export async function redeemClaimCode({ claimCode, kube, namespace = 'msp', secretName = 'appliance-license-seed' }) {
+  const normalized = String(claimCode || '').trim().toUpperCase().replace(/[\s-]/g, '');
+  if (!normalized) return { ok: false, status: 400, error: 'A claim code is required.' };
+  const executed = await kube.run('exec -i deploy/alga-core-sebastian -n msp -c sebastian -- node /app/server/scripts/appliance-redeem-claim-code.mjs', { stdin: JSON.stringify({ claimCode: normalized }) });
+  const body = parseWorkflowResult(executed);
+  if (!body.ok) return { ok: false, status: body.code === 'app_unavailable' ? 503 : 400, error: REDEEM_ERRORS[body.code] || body.error };
+  const literals = licenseSeedFromRedeem(body.result);
+  const data = Object.fromEntries(Object.entries(literals).map(([key, value]) => [key, Buffer.from(String(value), 'utf8').toString('base64')]));
+  const patch = JSON.stringify({ data });
+  const patched = await kube.run(`patch secret ${secretName} -n ${namespace} --type merge -p ${kube.quote(patch)}`);
+  if (!patched.ok) return { ok: false, status: 412, error: 'License active; recovery seed not yet updated — retry activation.' };
+  return { ok: true, result: body.result };
 }
 
 export async function applyLicense(deps) {
@@ -127,6 +165,10 @@ export async function applyLicense(deps) {
     return { ok: false, status: 400, error: 'Invalid license key format. Expected a signed JWS (three dot-separated base64url segments).' };
   }
 
+  const executed = await kube.run(`exec -i deploy/${appDeployment} -n ${appNamespace} -c sebastian -- node /app/server/scripts/appliance-apply-license-key.mjs`, { stdin: JSON.stringify({ licenseKey: token }) });
+  const applied = parseWorkflowResult(executed);
+  if (!applied.ok) return { ok: false, status: applied.code === 'app_unavailable' ? 503 : 400, error: REDEEM_ERRORS[applied.code] || applied.error };
+
   // Patch only LICENSE_TOKEN so the edition and any connected-refresh fields are
   // preserved. Secret.data values are base64.
   const tokenB64 = Buffer.from(token, 'utf8').toString('base64');
@@ -136,12 +178,7 @@ export async function applyLicense(deps) {
     return { ok: false, status: 412, error: `Could not update the license secret: ${(patched.stderr || patched.stdout || '').trim()}` };
   }
 
-  // Restart the app so it re-reads the license seed.
-  const restarted = await kube.run(`rollout restart deploy/${appDeployment} -n ${appNamespace}`);
-  if (!restarted.ok) {
-    return { ok: false, status: 412, error: `License updated but app restart failed: ${(restarted.stderr || restarted.stdout || '').trim()}` };
-  }
-  return { ok: true };
+  return { ok: true, result: applied.result };
 }
 
 // --- Settings: app URL / DNS ----------------------------------------------
