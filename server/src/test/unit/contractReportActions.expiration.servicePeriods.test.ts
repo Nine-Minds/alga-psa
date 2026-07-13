@@ -26,11 +26,14 @@ vi.mock('@alga-psa/auth/rbac', () => ({
 function buildThenableQuery(result: any) {
   const builder: any = {};
   builder.where = vi.fn(() => builder);
+  builder.whereIn = vi.fn(() => builder);
   builder.whereNotNull = vi.fn(() => builder);
   builder.join = vi.fn(() => builder);
   builder.leftJoin = vi.fn(() => builder);
   builder.select = vi.fn(() => builder);
+  builder.groupBy = vi.fn(() => builder);
   builder.orderBy = vi.fn(() => builder);
+  builder.sum = vi.fn(() => builder);
   builder.andWhere = vi.fn((arg: any) => {
     if (typeof arg === 'function') {
       const callbackBuilder = {
@@ -110,6 +113,20 @@ describe('contractReportActions expiration report service-period basis', () => {
     const knex: any = vi.fn((table: string) => {
       if (table === 'contracts as c') {
         return buildThenableQuery(expirationRows);
+      }
+      if (table === 'client_contracts as cc') {
+        return buildThenableQuery([
+          {
+            client_contract_id: 'cc-1',
+            currency_code: 'USD',
+            monthly_value_cents: 15000,
+          },
+          {
+            client_contract_id: 'cc-expired',
+            currency_code: 'USD',
+            monthly_value_cents: 9000,
+          },
+        ]);
       }
       throw new Error(`Unexpected table ${table}`);
     });

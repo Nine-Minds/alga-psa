@@ -10,6 +10,7 @@ import DashboardContainer from '../../../components/dashboard/DashboardContainer
 
 const capture = vi.fn();
 const toastSuccess = vi.fn();
+const useFeatureFlag = vi.fn();
 let isEnterpriseMode = true;
 
 const translations: Record<string, string> = {
@@ -72,6 +73,10 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   }),
 }));
 
+vi.mock('@alga-psa/ui/hooks', () => ({
+  useFeatureFlag: (...args: unknown[]) => useFeatureFlag(...args),
+}));
+
 vi.mock('@/lib/features', () => ({
   get isEnterprise() {
     return isEnterpriseMode;
@@ -82,6 +87,7 @@ describe('DashboardContainer i18n wiring', () => {
   beforeEach(() => {
     capture.mockReset();
     toastSuccess.mockReset();
+    useFeatureFlag.mockReturnValue(false);
     isEnterpriseMode = true;
   });
 

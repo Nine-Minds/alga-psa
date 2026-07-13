@@ -48,6 +48,15 @@ vi.mock('@alga-psa/projects/actions/projectActions', () => ({
 
 vi.mock('@alga-psa/projects/models/project', () => ({
   default: {
+    getStatusesByType: vi.fn().mockResolvedValue([
+      {
+        status_id: 'project-status-1',
+        name: 'Open',
+        status_type: 'project',
+        is_closed: false,
+        tenant: 'tenant-123',
+      },
+    ]),
     generateNextWbsCode: vi.fn().mockResolvedValue('1'),
     create: vi.fn().mockResolvedValue({
       project_id: 'new-project-123',
