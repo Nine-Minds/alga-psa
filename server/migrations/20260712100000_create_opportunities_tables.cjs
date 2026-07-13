@@ -1,3 +1,28 @@
+const OPPORTUNITY_TABLES = [
+  'opportunities',
+  'opportunity_evidence',
+  'opportunity_suggestions',
+];
+
+async function hasCitus(knex) {
+  const result = await knex.raw(`
+    SELECT EXISTS (
+      SELECT 1 FROM pg_proc WHERE proname = 'create_distributed_table'
+    ) AS available
+  `);
+  return Boolean(result.rows?.[0]?.available);
+}
+
+async function distributeOpportunityTables(knex) {
+  if (!await hasCitus(knex)) return;
+  for (const table of OPPORTUNITY_TABLES) {
+    await knex.raw(
+      `SELECT create_distributed_table(?::regclass, 'tenant', colocate_with => 'tenants')`,
+      [table],
+    );
+  }
+}
+
 /**
  * @param {import('knex').Knex} knex
  * @returns {Promise<void>}
@@ -38,13 +63,6 @@ exports.up = async function up(knex) {
     table.timestamp('created_at', { useTz: true }).notNullable().defaultTo(knex.fn.now());
     table.timestamp('updated_at', { useTz: true }).notNullable().defaultTo(knex.fn.now());
     table.primary(['tenant', 'opportunity_id']);
-    table.foreign('tenant').references('tenants.tenant');
-    table.foreign(['tenant', 'client_id']).references(['tenant', 'client_id']).inTable('clients');
-    table.foreign(['tenant', 'contact_id']).references(['tenant', 'contact_name_id']).inTable('contacts');
-    table.foreign(['tenant', 'owner_id']).references(['tenant', 'user_id']).inTable('users');
-    table.foreign(['tenant', 'converted_contract_id']).references(['tenant', 'contract_id']).inTable('contracts');
-    table.foreign(['tenant', 'converted_project_id']).references(['tenant', 'project_id']).inTable('projects');
-    table.foreign(['tenant', 'created_by']).references(['tenant', 'user_id']).inTable('users');
   });
 
   await knex.raw(`
@@ -111,10 +129,6 @@ exports.up = async function up(knex) {
     table.uuid('recorded_by').nullable();
     table.timestamp('recorded_at', { useTz: true }).notNullable().defaultTo(knex.fn.now());
     table.primary(['tenant', 'evidence_id']);
-    table.foreign('tenant').references('tenants.tenant');
-    table.foreign(['tenant', 'opportunity_id']).references(['tenant', 'opportunity_id']).inTable('opportunities').onDelete('CASCADE');
-    table.foreign(['tenant', 'corrected_by']).references(['tenant', 'user_id']).inTable('users');
-    table.foreign(['tenant', 'recorded_by']).references(['tenant', 'user_id']).inTable('users');
   });
 
   await knex.raw(`
@@ -151,6 +165,28 @@ exports.up = async function up(knex) {
     table.timestamp('created_at', { useTz: true }).notNullable().defaultTo(knex.fn.now());
     table.timestamp('updated_at', { useTz: true }).notNullable().defaultTo(knex.fn.now());
     table.primary(['tenant', 'suggestion_id']);
+  });
+
+  // Citus requires tenant tables to be distributed and colocated before
+  // cross-table foreign keys are added. On plain Postgres this is a no-op.
+  await distributeOpportunityTables(knex);
+
+  await knex.schema.alterTable('opportunities', (table) => {
+    table.foreign('tenant').references('tenants.tenant');
+    table.foreign(['tenant', 'client_id']).references(['tenant', 'client_id']).inTable('clients');
+    table.foreign(['tenant', 'contact_id']).references(['tenant', 'contact_name_id']).inTable('contacts');
+    table.foreign(['tenant', 'owner_id']).references(['tenant', 'user_id']).inTable('users');
+    table.foreign(['tenant', 'converted_contract_id']).references(['tenant', 'contract_id']).inTable('contracts');
+    table.foreign(['tenant', 'converted_project_id']).references(['tenant', 'project_id']).inTable('projects');
+    table.foreign(['tenant', 'created_by']).references(['tenant', 'user_id']).inTable('users');
+  });
+  await knex.schema.alterTable('opportunity_evidence', (table) => {
+    table.foreign('tenant').references('tenants.tenant');
+    table.foreign(['tenant', 'opportunity_id']).references(['tenant', 'opportunity_id']).inTable('opportunities').onDelete('CASCADE');
+    table.foreign(['tenant', 'corrected_by']).references(['tenant', 'user_id']).inTable('users');
+    table.foreign(['tenant', 'recorded_by']).references(['tenant', 'user_id']).inTable('users');
+  });
+  await knex.schema.alterTable('opportunity_suggestions', (table) => {
     table.foreign('tenant').references('tenants.tenant');
     table.foreign(['tenant', 'client_id']).references(['tenant', 'client_id']).inTable('clients');
     table.foreign(['tenant', 'created_opportunity_id']).references(['tenant', 'opportunity_id']).inTable('opportunities');
@@ -189,3 +225,6 @@ exports.down = async function down(knex) {
   await knex.schema.dropTableIfExists('opportunity_suggestions');
   await knex.schema.dropTableIfExists('opportunities');
 };
+
+// create_distributed_table cannot run inside a transaction on Citus.
+exports.config = { transaction: false };

@@ -84,7 +84,10 @@ exports.up = async function up(knex) {
     ALTER TABLE opportunity_meeting_reviews
       ADD CONSTRAINT opportunity_meeting_reviews_session_fk
       FOREIGN KEY (tenant, session_id)
-      REFERENCES opportunity_meeting_sessions (tenant, session_id) ON DELETE CASCADE,
+      REFERENCES opportunity_meeting_sessions (tenant, session_id) ON DELETE CASCADE
+  `);
+  await knex.raw(`
+    ALTER TABLE opportunity_meeting_reviews
       ADD CONSTRAINT opportunity_meeting_reviews_opportunity_fk
       FOREIGN KEY (tenant, opportunity_id)
       REFERENCES opportunities (tenant, opportunity_id) ON DELETE CASCADE
@@ -93,13 +96,25 @@ exports.up = async function up(knex) {
     ALTER TABLE opportunity_commitments
       ADD CONSTRAINT opportunity_commitments_opportunity_fk
       FOREIGN KEY (tenant, opportunity_id)
-      REFERENCES opportunities (tenant, opportunity_id) ON DELETE CASCADE,
+      REFERENCES opportunities (tenant, opportunity_id) ON DELETE CASCADE
+  `);
+  await knex.raw(`
+    ALTER TABLE opportunity_commitments
       ADD CONSTRAINT opportunity_commitments_made_by_fk
-      FOREIGN KEY (tenant, made_by) REFERENCES users (tenant, user_id),
+      FOREIGN KEY (tenant, made_by) REFERENCES users (tenant, user_id)
+  `);
+  await knex.raw(`
+    ALTER TABLE opportunity_commitments
       ADD CONSTRAINT opportunity_commitments_resolved_by_fk
-      FOREIGN KEY (tenant, resolved_by) REFERENCES users (tenant, user_id),
+      FOREIGN KEY (tenant, resolved_by) REFERENCES users (tenant, user_id)
+  `);
+  await knex.raw(`
+    ALTER TABLE opportunity_commitments
       ADD CONSTRAINT opportunity_commitments_resolution_status_check
-      CHECK (resolution_status IN ('open', 'quote_line', 'agreement_line', 'project_task', 'declined')),
+      CHECK (resolution_status IN ('open', 'quote_line', 'agreement_line', 'project_task', 'declined'))
+  `);
+  await knex.raw(`
+    ALTER TABLE opportunity_commitments
       ADD CONSTRAINT opportunity_commitments_resolution_fields_check
       CHECK (
         (resolution_status = 'open' AND resolution_ref_id IS NULL AND resolved_by IS NULL AND resolved_at IS NULL)
@@ -110,10 +125,16 @@ exports.up = async function up(knex) {
   await knex.raw(`
     ALTER TABLE opportunity_qbr_triggers
       ADD CONSTRAINT opportunity_qbr_triggers_client_fk
-      FOREIGN KEY (tenant, client_id) REFERENCES clients (tenant, client_id) ON DELETE CASCADE,
+      FOREIGN KEY (tenant, client_id) REFERENCES clients (tenant, client_id) ON DELETE CASCADE
+  `);
+  await knex.raw(`
+    ALTER TABLE opportunity_qbr_triggers
       ADD CONSTRAINT opportunity_qbr_triggers_opportunity_fk
       FOREIGN KEY (tenant, created_opportunity_id)
-      REFERENCES opportunities (tenant, opportunity_id),
+      REFERENCES opportunities (tenant, opportunity_id)
+  `);
+  await knex.raw(`
+    ALTER TABLE opportunity_qbr_triggers
       ADD CONSTRAINT opportunity_qbr_triggers_kind_check
       CHECK (trigger_kind IN ('renewal', 'asset_aging', 'ticket_trend', 'whitespace'))
   `);
