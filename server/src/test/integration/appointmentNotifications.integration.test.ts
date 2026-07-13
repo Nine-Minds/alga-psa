@@ -58,7 +58,7 @@ const createNotificationFromTemplateInternalMock = vi.fn().mockResolvedValue({
   internal_notification_id: uuidv4()
 });
 
-vi.mock('@alga-psa/notifications/actions', () => ({
+vi.mock('@alga-psa/notifications/actions/internal-notification-actions/internalNotificationActions', () => ({
   createNotificationFromTemplateInternal: createNotificationFromTemplateInternalMock
 }));
 

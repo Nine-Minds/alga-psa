@@ -23,6 +23,12 @@ vi.mock('@alga-psa/auth', () => ({
       { tenant: testState.tenant },
       ...args
     ),
+  withOptionalAuth: (action: any) => (...args: any[]) =>
+    action(
+      { user_id: testState.userId, tenant: testState.tenant, user_type: 'internal' },
+      { tenant: testState.tenant },
+      ...args
+    ),
   hasPermission: vi.fn().mockResolvedValue(true),
 }));
 

@@ -896,7 +896,7 @@ const computeValidation = async (params: {
       ? String(trigger.sourcePayloadSchemaRef).trim()
       : null;
     const catalog = tenant ? await EventCatalogModel.getByEventType(knex, eventName, tenant) : null;
-    if (tenant && !catalog) {
+    if (tenant && !catalog && !overrideSource) {
       const knownEvents = await EventCatalogModel.getAll(knex, tenant, { limit: 2000, offset: 0 });
       const suggestion = didYouMean(
         eventName,

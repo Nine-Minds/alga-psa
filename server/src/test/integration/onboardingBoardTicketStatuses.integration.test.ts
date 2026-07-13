@@ -67,6 +67,11 @@ vi.mock('@alga-psa/tenancy/actions', () => ({
   updateTenantOnboardingStatus: (...args: unknown[]) => mockedUpdateTenantOnboardingStatus(...args),
 }));
 
+vi.mock('@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions', () => ({
+  saveTenantOnboardingProgress: (...args: unknown[]) => mockedSaveTenantOnboardingProgress(...args),
+  updateTenantOnboardingStatus: (...args: unknown[]) => mockedUpdateTenantOnboardingStatus(...args),
+}));
+
 vi.mock('@alga-psa/clients/actions', () => ({
   createClient: vi.fn(async () => ({ client_id: 'mock-client-id' })),
   createClientContact: vi.fn(async () => ({ contact_id: 'mock-contact-id' })),
