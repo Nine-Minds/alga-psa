@@ -1564,7 +1564,10 @@ export function registerTicketActions(): void {
     is_initial_description: z.boolean(),
     created_at: isoDateTimeSchema,
     user_id: uuidSchema.nullable(),
-    contact_name_id: uuidSchema.nullable()
+    contact_name_id: uuidSchema.nullable(),
+    // Client-portal replies are authored by a user (user_type 'client'), so user_id
+    // alone cannot distinguish a client reply from an agent reply.
+    author_type: z.string().nullable()
   });
 
   const ticketAttachmentSchema = z.object({
@@ -1660,7 +1663,8 @@ export function registerTicketActions(): void {
           is_initial_description: Boolean(row.is_initial_description),
           created_at: new Date(row.created_at ?? new Date().toISOString()).toISOString(),
           user_id: row.user_id ?? null,
-          contact_name_id: row.contact_name_id ?? null
+          contact_name_id: row.contact_id ?? null,
+          author_type: row.author_type ?? null
         }));
       }
 
