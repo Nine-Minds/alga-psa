@@ -4,6 +4,8 @@ import { getToken, decode } from 'next-auth/jwt';
 import { ApiKeyServiceForApi } from '../../lib/services/apiKeyServiceForApi';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { getSessionCookieName } from 'server/src/lib/auth/sessionCookies';
+import { resolveDeploymentCapabilities } from '../../lib/deployment/deploymentProfile';
+import { resolveRequestHost, resolveRequestProto } from '../../lib/deployment/requestHost';
 
 /**
  * Constant-time comparison for privileged bypass keys. Using `===` leaks the
@@ -54,10 +56,18 @@ interface AuthenticatedRequest extends Request {
 }
 
 function getRequestOrigin(req: Request): string {
-  const forwardedProto = (req.headers['x-forwarded-proto'] as string)?.split(',')[0]?.trim();
-  const forwardedHost = (req.headers['x-forwarded-host'] as string)?.split(',')[0]?.trim();
-  const protocol = forwardedProto || req.protocol || 'http';
-  const host = req.get('host') || forwardedHost || 'localhost';
+  const headerAdapter = {
+    headers: {
+      get: (name: string) => {
+        const value = req.headers[name.toLowerCase()];
+        return Array.isArray(value) ? value[0] ?? null : value ?? null;
+      },
+    },
+  };
+  const caps = resolveDeploymentCapabilities();
+  const { hostHeader } = resolveRequestHost(headerAdapter, caps);
+  const protocol = resolveRequestProto(headerAdapter) ?? req.protocol ?? 'http';
+  const host = hostHeader || 'localhost';
   return `${protocol}://${host}`;
 }
 

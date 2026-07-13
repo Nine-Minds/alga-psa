@@ -16,6 +16,8 @@ import { ClientUIStateProvider } from '@alga-psa/ui/ui-reflection/ClientUIStateP
 import { getServerLocale } from "@alga-psa/ui/lib/i18n/serverOnly";
 import { cookies, headers } from 'next/headers.js';
 import { generateBrandingStyles } from "@alga-psa/tenancy";
+import { resolveDeploymentCapabilities } from '@/lib/deployment/deploymentProfile';
+import { resolveRequestHost, resolveRequestOrigin } from '@/lib/deployment/requestHost';
 import '@mantine/core/styles.css';
 import 'reactflow/dist/style.css';
 // Loaded last so the Inter font-token overrides win over Mantine/Radix defaults.
@@ -44,11 +46,13 @@ export const dynamic = 'force-dynamic';
 
 export async function generateMetadata(): Promise<Metadata> {
   const headersList = await headers();
-  const host = headersList.get('x-forwarded-host') || headersList.get('host') || 'localhost:3010';
-  const proto =
-    headersList.get('x-forwarded-proto') ||
-    (host.includes('localhost') ? 'http' : 'https');
-  const metadataBase = new URL(`${proto}://${host}`);
+  const request = { headers: headersList };
+  const caps = resolveDeploymentCapabilities();
+  const host = resolveRequestHost(request, caps).hostHeader || 'localhost:3010';
+  const metadataBase = resolveRequestOrigin(request, caps, {
+    fallbackHost: 'localhost:3010',
+    fallbackProto: host.includes('localhost') ? 'http' : 'https',
+  });
 
   return {
     metadataBase,

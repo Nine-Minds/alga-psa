@@ -38,6 +38,45 @@ export function resolveRequestHost(
 }
 
 /**
+ * Resolve the effective request protocol from the first X-Forwarded-Proto
+ * entry. Unlike forwarded host handling, protocol parsing applies in every
+ * deployment profile because every supported deployment terminates TLS at a
+ * proxy. Returns null when the header is absent or its first entry is not a
+ * plausible URL scheme, allowing callers to retain their own fallback.
+ *
+ * Edge-safe: pure header reads, no I/O.
+ */
+export function resolveRequestProto(
+  request: { headers: { get(name: string): string | null } }
+): string | null {
+  const proto = request.headers.get('x-forwarded-proto')?.split(',')[0].trim().toLowerCase();
+  return proto && /^[a-z][a-z0-9+.-]*$/.test(proto) ? proto : null;
+}
+
+/**
+ * Resolve the effective request origin. Host trust follows resolveRequestHost;
+ * protocol parsing follows resolveRequestProto. Invalid header input falls back
+ * to the caller-supplied origin instead of throwing.
+ *
+ * Edge-safe: pure header reads and URL parsing, no I/O.
+ */
+export function resolveRequestOrigin(
+  request: { headers: { get(name: string): string | null } },
+  caps: DeploymentCapabilities,
+  options: { fallbackProto: string; fallbackHost: string }
+): URL {
+  const { hostHeader } = resolveRequestHost(request, caps);
+  const host = hostHeader || options.fallbackHost;
+  const proto = resolveRequestProto(request) ?? options.fallbackProto;
+
+  try {
+    return new URL(`${proto}://${host}`);
+  } catch {
+    return new URL(`${options.fallbackProto}://${options.fallbackHost}`);
+  }
+}
+
+/**
  * Best-effort detection of a reverse proxy that rewrites `Host` to the canonical
  * app host while still passing the original host in `X-Forwarded-Host`. We can
  * recover from this (resolveRequestHost prefers XFH), but it's worth surfacing: if
