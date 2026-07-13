@@ -71,6 +71,10 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'workflow_data_store', 'workflow_entity_links',
   'workflow_runs', 'tenant_workflow_schedule', 'workflow_definitions',
 
+  // Interactions reference opportunities, while opportunities can reference
+  // converted contracts. Keep the complete sales chain child-first here.
+  'interactions', 'interaction_types',
+
   // Task/project details
   'task_checklist_items', 'project_task_dependencies', 'task_resources',
   'project_ticket_links', 'project_task_comment_reactions', 'project_task_comments',
@@ -84,6 +88,15 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Quote details
   'quote_activities', 'quote_items', 'quote_document_template_assignments',
   'quote_document_templates', 'standard_quote_document_templates', 'quotes',
+
+  // Opportunity management and core records. Quotes and interactions are
+  // deleted first because both reference opportunities. Reviews depend on
+  // sessions and opportunities; the other detail tables depend on
+  // opportunities. The opportunity_suggestions/opportunities back-reference
+  // is cleared by breakCircularDependencies() before this order runs.
+  'opportunity_meeting_reviews', 'opportunity_commitments',
+  'opportunity_evidence', 'opportunity_qbr_triggers', 'opportunity_suggestions',
+  'opportunity_meeting_sessions', 'opportunity_settings', 'opportunities',
 
   // Invoice details
   'invoice_charges', 'invoice_annotations', 'invoice_time_entries', 'invoice_usage_records',
@@ -306,9 +319,6 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
 
   // Payment methods
   'payment_methods',
-
-  // Interactions must come BEFORE tickets (tickets reference interactions in some cases)
-  'interactions', 'interaction_types',
 
   // Schedule entries
   'schedule_entries',
@@ -1367,6 +1377,11 @@ function explicitTenantDeletionTableQuery(
  *    so we null inbound_ticket_defaults.client_id here to let clients be
  *    deleted first; clients.inbound_ticket_defaults_id rows are gone by the
  *    time we get to inbound_ticket_defaults.)
+ *
+ * - opportunities.suggestion_id → opportunity_suggestions.suggestion_id
+ * - opportunity_suggestions.created_opportunity_id → opportunities.opportunity_id
+ *   (Cycle. Clear the opportunity back-reference so suggestions can be deleted
+ *    first, followed by opportunities.)
  */
 async function breakCircularDependencies(
   knex: Knex,
@@ -1470,6 +1485,23 @@ async function breakCircularDependencies(
   } catch (error) {
     // Ignore if table/column doesn't exist (older schemas or CE without inventory)
     log.debug('Could not clear stock_unit_id in assets (table or column may not exist)', {
+      error: error instanceof Error ? error.message : 'Unknown',
+    });
+  }
+
+  // Step 7: NULL out opportunities.suggestion_id so opportunity_suggestions
+  // can be deleted before opportunities. The reverse created_opportunity_id FK
+  // is then naturally satisfied by the child-first deletion order.
+  try {
+    const result7 = await tenantScopedDb.table('opportunities')
+      .whereNotNull('suggestion_id')
+      .update({ suggestion_id: null });
+    if (result7 > 0) {
+      log.info('Cleared suggestion_id references in opportunities', { count: result7 });
+    }
+  } catch (error) {
+    // Ignore if table/column doesn't exist (older schemas without Opportunities).
+    log.debug('Could not clear suggestion_id in opportunities (table or column may not exist)', {
       error: error instanceof Error ? error.message : 'Unknown',
     });
   }

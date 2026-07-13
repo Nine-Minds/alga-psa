@@ -60,7 +60,9 @@ const defaultDependencies: OpportunityWinConversionDependencies = {
   },
   async convertQuoteToDraftContract(trx, tenant, quoteId, actorUserId) {
     // Billing already depends on Opportunities for quote lifecycle hooks. Keep
-    // this import lazy so module initialization does not create a hard cycle.
+    // this import lazy so module initialization does not create a hard cycle,
+    // and keep the intentional runtime integration out of the Nx package graph.
+    // nx-ignore-next-line
     const billing = await import('@alga-psa/billing/services');
     return billing.convertQuoteToDraftContract(trx, tenant, quoteId, actorUserId);
   },
