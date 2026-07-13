@@ -76,6 +76,15 @@ import {
   tagRemovedEventPayloadSchema,
 } from './crmEventSchemas';
 import {
+  opportunityCreatedEventPayloadSchema,
+  opportunityEscalatedEventPayloadSchema,
+  opportunityNextActionOverdueEventPayloadSchema,
+  opportunityStageChangedEventPayloadSchema,
+  opportunityStalledEventPayloadSchema,
+  opportunityStatusChangedEventPayloadSchema,
+  opportunitySuggestionCreatedEventPayloadSchema,
+} from './opportunityEventSchemas';
+import {
   documentAssociatedEventPayloadSchema,
   documentDeletedEventPayloadSchema,
   documentDetachedEventPayloadSchema,
@@ -260,6 +269,15 @@ export const workflowEventPayloadSchemas: Record<string, ZodTypeAny> = {
   'payload.TagDefinitionUpdated.v1': tagDefinitionUpdatedEventPayloadSchema,
   'payload.TagApplied.v1': tagAppliedEventPayloadSchema,
   'payload.TagRemoved.v1': tagRemovedEventPayloadSchema,
+
+  // Opportunities
+  'payload.OpportunityCreated.v1': opportunityCreatedEventPayloadSchema,
+  'payload.OpportunityStageChanged.v1': opportunityStageChangedEventPayloadSchema,
+  'payload.OpportunityStatusChanged.v1': opportunityStatusChangedEventPayloadSchema,
+  'payload.OpportunityStalled.v1': opportunityStalledEventPayloadSchema,
+  'payload.OpportunityEscalated.v1': opportunityEscalatedEventPayloadSchema,
+  'payload.OpportunityNextActionOverdue.v1': opportunityNextActionOverdueEventPayloadSchema,
+  'payload.OpportunitySuggestionCreated.v1': opportunitySuggestionCreatedEventPayloadSchema,
 
   // Documents
   'payload.DocumentUploaded.v1': documentUploadedEventPayloadSchema,

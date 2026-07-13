@@ -915,6 +915,7 @@ export const createQuoteFromTemplate = withAuth(async (
       quote_date: input.quote_date,
       valid_until: input.valid_until,
       po_number: input.po_number ?? null,
+      opportunity_id: input.opportunity_id ?? null,
       internal_notes: input.internal_notes ?? template.internal_notes ?? null,
       client_notes: input.client_notes ?? template.client_notes ?? null,
       terms_and_conditions: input.terms_and_conditions ?? template.terms_and_conditions ?? null,

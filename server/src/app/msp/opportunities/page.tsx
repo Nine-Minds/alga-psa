@@ -6,7 +6,7 @@ import { getOpportunityDraftingAvailability } from '@enterprise/lib/opportunitie
 import { getManagementAvailability } from '@enterprise/lib/opportunities/actions';
 import { OpportunityForecastView } from '@/components/opportunities/OpportunityForecastView';
 import { OpportunityMeetingMode } from '@/components/opportunities/OpportunityMeetingMode';
-import { OpportunitiesHub } from '@alga-psa/opportunities/components';
+import { OpportunitiesHubHost } from '@/components/opportunities/OpportunitiesHubHost';
 import { getAllClients } from '@alga-psa/clients/actions';
 import type { IClient, IOpportunityListItem, IWorkQueue } from '@alga-psa/types';
 import { enforceServerProductRoute } from '@/lib/serverProductRouteGuard';
@@ -72,11 +72,11 @@ export default async function OpportunitiesPage() {
     : [];
 
   return (
-    <OpportunitiesHub
+    <OpportunitiesHubHost
       initialItems={items}
       initialTotal={total}
       initialQueue={queue}
-      clients={clients}
+      initialClients={clients}
       draftingAvailable={draftingAvailable}
       eeTabs={eeTabs}
     />

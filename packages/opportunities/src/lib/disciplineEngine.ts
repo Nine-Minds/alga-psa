@@ -1,9 +1,6 @@
 import { Temporal } from '@js-temporal/polyfill';
 import type { Knex } from 'knex';
-import { resolveEffectiveTimeZone, tenantDb } from '@alga-psa/db';
-import { createNotificationFromTemplateInternal } from '@alga-psa/notifications/actions';
-import ScheduleEntry from '@alga-psa/shared/models/scheduleEntry';
-import { composeWhy } from './whyComposer';
+import { tenantDb } from '@alga-psa/db';
 import {
   buildOpportunityEscalatedPayload,
   buildOpportunityNextActionOverduePayload,
@@ -83,10 +80,6 @@ export function classifyOpportunityDiscipline(input: {
   };
 }
 
-function fullName(row: DisciplineOpportunityRow): string {
-  return [row.owner_first_name, row.owner_last_name].filter(Boolean).join(' ') || 'The owner';
-}
-
 async function tenantAdminIds(trx: Knex.Transaction, tenant: string): Promise<string[]> {
   const db = tenantDb(trx, tenant);
   const query = db.table('users as u');
@@ -97,64 +90,6 @@ async function tenantAdminIds(trx: Knex.Transaction, tenant: string): Promise<st
     .whereRaw('LOWER(r.role_name) IN (?, ?)', ['admin', 'owner'])
     .distinct('u.user_id')
     .pluck('u.user_id');
-}
-
-async function nextBusinessMorning(
-  trx: Knex.Transaction,
-  tenant: string,
-  ownerId: string,
-  now: Temporal.Instant,
-): Promise<Temporal.Instant> {
-  const db = tenantDb(trx, tenant);
-  const timezone = await resolveEffectiveTimeZone(trx, tenant, ownerId);
-  const defaultSchedule = await db.table('business_hours_schedules')
-    .where({ is_default: true })
-    .select('schedule_id', 'timezone')
-    .first();
-  const scheduleTimezone = defaultSchedule?.timezone || timezone;
-  const entries = defaultSchedule
-    ? await db.table('business_hours_entries')
-        .where({ schedule_id: defaultSchedule.schedule_id, is_enabled: true })
-        .select('day_of_week', 'start_time')
-    : [];
-  const startByWeekday = new Map<number, string>(
-    entries.map((entry: { day_of_week: number; start_time: string }) => [
-      Number(entry.day_of_week),
-      String(entry.start_time),
-    ]),
-  );
-  const hasConfiguredHours = startByWeekday.size > 0;
-  const holidays = await db.table('holidays')
-    .where((builder) => {
-      builder.whereNull('schedule_id');
-      if (defaultSchedule) builder.orWhere('schedule_id', defaultSchedule.schedule_id);
-    })
-    .select('holiday_date', 'is_recurring');
-
-  let candidate = now.toZonedDateTimeISO(scheduleTimezone).toPlainDate().add({ days: 1 });
-  for (let attempt = 0; attempt < 14; attempt += 1) {
-    const jsWeekday = candidate.dayOfWeek % 7;
-    const configuredStart = startByWeekday.get(jsWeekday);
-    const weekdayFallback = jsWeekday >= 1 && jsWeekday <= 5 ? '09:00' : null;
-    const start = configuredStart ?? (hasConfiguredHours ? null : weekdayFallback);
-    const holiday = holidays.some((row: { holiday_date: Date | string; is_recurring: boolean }) => {
-      const date = row.holiday_date instanceof Date
-        ? row.holiday_date.toISOString().slice(0, 10)
-        : String(row.holiday_date).slice(0, 10);
-      return row.is_recurring
-        ? date.slice(5) === candidate.toString().slice(5)
-        : date === candidate.toString();
-    });
-    if (start && !holiday) {
-      const [hour, minute] = start.split(':').map(Number);
-      return candidate.toZonedDateTime({
-        timeZone: scheduleTimezone,
-        plainTime: new Temporal.PlainTime(hour, minute),
-      }).toInstant();
-    }
-    candidate = candidate.add({ days: 1 });
-  }
-  throw new Error('No business morning found in the next 14 days');
 }
 
 export async function runOpportunityDiscipline(
@@ -220,28 +155,6 @@ export async function runOpportunityDiscipline(
       });
 
       if (decision.nudge) {
-        const why = composeWhy({
-          kind: 'going_quiet',
-          clientName: opportunity.client_name,
-          daysSinceActivity,
-          daysSinceVerbal: null,
-        }).segments.map((segment) => segment.text).join('');
-        await createNotificationFromTemplateInternal(trx, {
-          tenant,
-          user_id: opportunity.owner_id,
-          template_name: 'opportunity-stalled',
-          type: 'warning',
-          category: 'opportunities',
-          link: `/msp/opportunities/${opportunity.opportunity_id}`,
-          data: {
-            opportunityTitle: opportunity.title,
-            clientName: opportunity.client_name,
-            daysSinceActivity: String(daysSinceActivity),
-            nextAction: opportunity.next_action,
-            why,
-          },
-          metadata: { opportunity_id: opportunity.opportunity_id },
-        });
         publishOpportunityEventAfterCommit(
           trx,
           tenant,
@@ -260,47 +173,14 @@ export async function runOpportunityDiscipline(
       }
 
       if (decision.escalate) {
-        let escalatedToUserId: string | undefined;
+        let escalatedToUserId: string | undefined = opportunity.owner_id;
         if (decision.escalationMode === 'solo') {
-          const start = await nextBusinessMorning(trx, tenant, opportunity.owner_id, now);
-          await ScheduleEntry.create(trx, tenant, {
-            title: `Follow up: ${opportunity.title}`,
-            notes: `Opportunity ${opportunity.opportunity_number}: ${opportunity.next_action}`,
-            scheduled_start: new Date(start.epochMilliseconds),
-            scheduled_end: new Date(start.add({ minutes: 30 }).epochMilliseconds),
-            status: 'scheduled',
-            work_item_type: 'ad_hoc',
-            work_item_id: null,
-            assigned_user_ids: [],
-            is_private: true,
-          }, {
-            assignedUserIds: [opportunity.owner_id],
-            assignedByUserId: opportunity.owner_id,
-          });
-          result.calendarEntries += 1;
+          // The published system workflow owns the customizable side effect.
         } else {
           const recipients = opportunity.reports_to
             ? [opportunity.reports_to]
             : (adminIds ??= await tenantAdminIds(trx, tenant));
-          for (const recipientId of recipients.filter((id) => id !== opportunity.owner_id)) {
-            await createNotificationFromTemplateInternal(trx, {
-              tenant,
-              user_id: recipientId,
-              template_name: 'opportunity-escalated',
-              type: 'warning',
-              category: 'opportunities',
-              link: `/msp/opportunities/${opportunity.opportunity_id}`,
-              data: {
-                opportunityTitle: opportunity.title,
-                clientName: opportunity.client_name,
-                ownerName: fullName(opportunity),
-                daysSinceActivity: String(daysSinceActivity),
-              },
-              metadata: { opportunity_id: opportunity.opportunity_id, owner_id: opportunity.owner_id },
-            });
-            escalatedToUserId ??= recipientId;
-            result.managerNotifications += 1;
-          }
+          escalatedToUserId = recipients.find((id) => id !== opportunity.owner_id) ?? opportunity.owner_id;
         }
         publishOpportunityEventAfterCommit(
           trx,

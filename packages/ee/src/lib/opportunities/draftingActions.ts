@@ -10,3 +10,5 @@ export async function saveOpportunityVoiceProfile(..._args: unknown[]): Promise<
 export async function deleteOpportunityVoiceProfile(..._args: unknown[]): Promise<never> { return unavailable(); }
 export async function generateFollowUpDraft(..._args: unknown[]): Promise<never> { return unavailable(); }
 export async function logDraftSent(..._args: unknown[]): Promise<never> { return unavailable(); }
+export async function getOpportunityFollowUpRecipient(..._args: unknown[]): Promise<never> { return unavailable(); }
+export async function sendOpportunityFollowUp(..._args: unknown[]): Promise<never> { return unavailable(); }

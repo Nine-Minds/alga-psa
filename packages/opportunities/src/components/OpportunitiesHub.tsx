@@ -22,7 +22,8 @@ import {
   updateOpportunity,
 } from '../actions/opportunityActions';
 import { getWorkQueue } from '../actions/workQueueActions';
-import { acceptSuggestion, dismissSuggestion } from '../actions/suggestionActions';
+import { acceptSuggestion, dismissSuggestion, snoozeSuggestion } from '../actions/suggestionActions';
+import { createWhitespaceSuggestion } from '../actions/generatorActions';
 import { getClientDefaultCurrency } from '../actions/opportunityDefaults';
 import { WorkQueue } from './queue/WorkQueue';
 import { MoneyFoundCard } from './queue/MoneyFoundCard';
@@ -43,12 +44,14 @@ export function OpportunitiesHub({
   clients,
   draftingAvailable = false,
   eeTabs = [],
+  renderProspectCreator,
 }: {
   initialItems: IOpportunityListItem[];
   initialTotal: number;
   initialQueue: IWorkQueue;
   clients: IClient[];
   draftingAvailable?: boolean;
+  renderProspectCreator?: (onCreated: (client: IClient) => void) => ReactNode;
   /** EE surfaces (Meeting, Forecast) injected by the host app when the management tier allows them. */
   eeTabs?: Array<{ id: string; label: string; content: ReactNode }>;
 }) {
@@ -63,10 +66,6 @@ export function OpportunitiesHub({
   const [completeFor, setCompleteFor] = useState<string | null>(null);
   const [loseFor, setLoseFor] = useState<string | null>(null);
   const [onePagerFor, setOnePagerFor] = useState<string | null>(null);
-  const [whitespaceCreate, setWhitespaceCreate] = useState<{
-    client: { client_id: string; client_name: string };
-    categoryName: string;
-  } | null>(null);
 
   const refresh = useCallback(async (toPage = page) => {
     const [result, nextQueue] = await Promise.all([
@@ -155,6 +154,36 @@ export function OpportunitiesHub({
     }
   };
 
+  const handleSnoozeSuggestion = async (suggestionId: string) => {
+    try {
+      const until = new Date(Date.now() + 7 * 86400000).toISOString();
+      await snoozeSuggestion(suggestionId, until);
+      toast.success(t('opportunities.toast.suggestionSnoozed', 'Snoozed for one week'));
+      await refresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err));
+    }
+  };
+
+  const handleWhitespaceCell = async (
+    client: { client_id: string; client_name: string },
+    category: { category_id: string; category_name: string },
+  ) => {
+    try {
+      const suggestion = await createWhitespaceSuggestion(client.client_id, category.category_id);
+      if (suggestion.status === 'pending') {
+        toast.success(t('opportunities.toast.whitespaceSuggestionCreated', 'Suggestion ready for review'));
+      } else if (suggestion.status === 'dismissed') {
+        toast(t('opportunities.toast.whitespaceSuggestionDismissed', 'This suggestion was previously dismissed'));
+      } else {
+        toast(t('opportunities.toast.whitespaceSuggestionKnown', 'This suggestion is already known'));
+      }
+      await refresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err));
+    }
+  };
+
   const handleDeclareQualified = async (opportunityId: string) => {
     try {
       await declareQualified(opportunityId, undefined);
@@ -181,6 +210,7 @@ export function OpportunitiesHub({
           onMarkLost={setLoseFor}
           onAcceptSuggestion={handleAcceptSuggestion}
           onDismissSuggestion={handleDismissSuggestion}
+          onSnoozeSuggestion={handleSnoozeSuggestion}
           onViewSuggestionEvidence={setOnePagerFor}
           onReviewDraft={
             draftingAvailable ? (id) => router.push(`/msp/opportunities/${id}?draft=1`) : undefined
@@ -240,6 +270,7 @@ export function OpportunitiesHub({
                     item={item}
                     onAccept={handleAcceptSuggestion}
                     onDismiss={handleDismissSuggestion}
+                    onSnooze={handleSnoozeSuggestion}
                     onViewEvidence={setOnePagerFor}
                   />
                 ))}
@@ -257,7 +288,7 @@ export function OpportunitiesHub({
               )}
             </p>
             <WhitespaceGridView
-              onCellClick={(client, categoryName) => setWhitespaceCreate({ client, categoryName })}
+              onCellClick={(client, category) => void handleWhitespaceCell(client, category)}
             />
           </div>
         </div>
@@ -282,6 +313,7 @@ export function OpportunitiesHub({
         isOpen={createOpen}
         onClose={() => setCreateOpen(false)}
         clients={clients}
+        renderProspectCreator={renderProspectCreator}
         onSubmit={handleCreate}
       />
       <CompleteActionDialog
@@ -299,23 +331,6 @@ export function OpportunitiesHub({
           void handleAcceptSuggestion(id);
         }}
       />
-      {whitespaceCreate ? (
-        <CreateOpportunityDialog
-          isOpen
-          onClose={() => setWhitespaceCreate(null)}
-          lockedClient={whitespaceCreate.client}
-          defaults={{
-            title: t('opportunities.whitespace.dealTitle', 'Add {{category}}', {
-              category: whitespaceCreate.categoryName,
-            }),
-            type: 'expansion',
-          }}
-          onSubmit={async (input) => {
-            await handleCreate(input);
-            setWhitespaceCreate(null);
-          }}
-        />
-      ) : null}
     </div>
   );
 }

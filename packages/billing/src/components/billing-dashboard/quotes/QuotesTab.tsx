@@ -298,6 +298,10 @@ const QuotesTab: React.FC = () => {
   const selectedMode = searchParams?.get('mode');
   const requestedSubtab = searchParams?.get('subtab');
   const isTemplateParam = searchParams?.get('isTemplate') === 'true';
+  const opportunityId = searchParams?.get('opportunityId') ?? undefined;
+  const opportunityClientId = searchParams?.get('clientId') ?? undefined;
+  const opportunityContactId = searchParams?.get('contactId') ?? undefined;
+  const opportunityTitle = searchParams?.get('title') ?? undefined;
   const activeSubTab = requestedSubtab && QUOTE_SUBTABS.includes(requestedSubtab as QuoteSubTab)
     ? (requestedSubtab as QuoteSubTab)
     : 'active';
@@ -497,10 +501,22 @@ const QuotesTab: React.FC = () => {
       <QuoteForm
         quoteId={selectedQuoteId}
         initialIsTemplate={isTemplateParam}
-        onCancel={() => isTemplateParam ? router.push('/msp/billing?tab=quote-business-templates') : router.push('/msp/billing?tab=quotes')}
+        initialContext={{
+          clientId: opportunityClientId,
+          contactId: opportunityContactId,
+          opportunityId,
+          title: opportunityTitle,
+        }}
+        onCancel={() => opportunityId
+          ? router.push(`/msp/opportunities/${opportunityId}`)
+          : isTemplateParam
+            ? router.push('/msp/billing?tab=quote-business-templates')
+            : router.push('/msp/billing?tab=quotes')}
         onSaved={() => {
           void loadData();
-          if (isTemplateParam) {
+          if (opportunityId) {
+            router.push(`/msp/opportunities/${opportunityId}`);
+          } else if (isTemplateParam) {
             router.push('/msp/billing?tab=quote-business-templates');
           } else {
             router.push('/msp/billing?tab=quotes');

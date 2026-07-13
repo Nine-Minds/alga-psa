@@ -20,6 +20,10 @@
     "./models": {
       "types": "./dist/models/index.d.ts",
       "import": "./dist/models/index.mjs"
+    },
+    "./services": {
+      "types": "./dist/services/index.d.ts",
+      "import": "./dist/services/index.mjs"
     }
   },
   "scripts": {

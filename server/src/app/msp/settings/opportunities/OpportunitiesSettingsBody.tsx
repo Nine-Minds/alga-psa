@@ -10,14 +10,36 @@ import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { toMinorUnits, currencyFractionDigits } from '@alga-psa/core';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
-import { readOpportunitySettings, writeOpportunitySettings } from '@alga-psa/opportunities/actions';
+import {
+  readOpportunitySettings,
+  runGeneratorNow,
+  writeOpportunitySettings,
+} from '@alga-psa/opportunities/actions';
 import { getDefaultBillingSettings } from '@alga-psa/billing/actions/billingSettingsActions';
 import {
   getOpportunityDraftingAvailability,
   getOpportunityVoiceProfile,
   saveOpportunityVoiceProfile,
 } from '@enterprise/lib/opportunities/draftingActions';
-import type { IOpportunitySettings, IOpportunityVoiceProfile, OpportunityEscalationMode } from '@alga-psa/types';
+import type {
+  IOpportunitySettings,
+  IOpportunityVoiceProfile,
+  OpportunityEscalationMode,
+  OpportunityGeneratorKey,
+} from '@alga-psa/types';
+
+const GENERATORS: Array<{
+  key: OpportunityGeneratorKey;
+  label: string;
+  description: string;
+}> = [
+  { key: 'renewal', label: 'Renewals', description: 'Contracts approaching their renewal decision date.' },
+  { key: 'tm_conversion', label: 'T&M conversion', description: 'Clients whose billed support spend may justify an agreement.' },
+  { key: 'whitespace', label: 'Service whitespace', description: 'Services adopted across the book but missing for a client.' },
+  { key: 'asset_aging', label: 'Asset refresh', description: 'Aging, out-of-warranty, and end-of-life client assets.' },
+];
+
+type GeneratorSummary = Awaited<ReturnType<typeof runGeneratorNow>>;
 
 /**
  * Opportunity discipline + generator thresholds. The defaults are the
@@ -32,6 +54,8 @@ export default function OpportunitiesSettingsBody() {
   const [voice, setVoice] = useState<IOpportunityVoiceProfile | null>(null);
   const [voiceAvailable, setVoiceAvailable] = useState(false);
   const [savingVoice, setSavingVoice] = useState(false);
+  const [runningGenerator, setRunningGenerator] = useState<OpportunityGeneratorKey | null>(null);
+  const [generatorSummaries, setGeneratorSummaries] = useState<Partial<Record<OpportunityGeneratorKey, GeneratorSummary>>>({});
 
   useEffect(() => {
     let mounted = true;
@@ -83,6 +107,23 @@ export default function OpportunitiesSettingsBody() {
       toast.error(err instanceof Error ? err.message : String(err));
     } finally {
       setSaving(false);
+    }
+  };
+
+  const runGenerator = async (key: OpportunityGeneratorKey) => {
+    setRunningGenerator(key);
+    try {
+      const summary = await runGeneratorNow(key);
+      setGeneratorSummaries((current) => ({ ...current, [key]: summary }));
+      toast.success(
+        t('opportunities.settings.generatorComplete', '{{count}} new suggestions found', {
+          count: summary.created + summary.reopened,
+        })
+      );
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : String(err));
+    } finally {
+      setRunningGenerator(null);
     }
   };
 
@@ -164,6 +205,50 @@ export default function OpportunitiesSettingsBody() {
             value={String(settings.asset_age_years)}
             onChange={numberField(settings.asset_age_years, (n) => patch({ asset_age_years: n }))}
           />
+        </div>
+        <div className="mt-5 divide-y divide-[rgb(var(--color-border-100))] rounded-xl border border-[rgb(var(--color-border-200))] bg-white px-4">
+          {GENERATORS.map((generator) => {
+            const summary = generatorSummaries[generator.key];
+            const running = runningGenerator === generator.key;
+            return (
+              <div
+                key={generator.key}
+                className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="min-w-0">
+                  <div className="text-sm font-semibold text-[rgb(var(--color-text-800))]">{generator.label}</div>
+                  <div className="text-xs text-[rgb(var(--color-text-500))]">{generator.description}</div>
+                  {summary ? (
+                    <div
+                      id={`opportunities-settings-generator-${generator.key}-summary`}
+                      className="mt-1 text-xs font-medium text-[rgb(var(--color-primary-600))]"
+                    >
+                      {t(
+                        'opportunities.settings.generatorSummary',
+                        '{{created}} created · {{reopened}} reopened · {{deduped}} already known',
+                        {
+                          created: summary.created,
+                          reopened: summary.reopened,
+                          deduped: summary.deduped,
+                        }
+                      )}
+                    </div>
+                  ) : null}
+                </div>
+                <Button
+                  id={`opportunities-settings-generator-${generator.key}-run`}
+                  size="xs"
+                  variant="outline"
+                  disabled={runningGenerator !== null}
+                  onClick={() => void runGenerator(generator.key)}
+                >
+                  {running
+                    ? t('opportunities.settings.generatorRunning', 'Running…')
+                    : t('opportunities.settings.generatorRun', 'Run now')}
+                </Button>
+              </div>
+            );
+          })}
         </div>
       </section>
 

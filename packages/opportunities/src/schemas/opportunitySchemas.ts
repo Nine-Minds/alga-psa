@@ -96,6 +96,9 @@ export const updateOpportunitySchema = createOpportunitySchema.partial();
 export const winOpportunitySchema = z.object({
   convert_quote_id: z.string().uuid().optional(),
   project_template_id: z.string().uuid().optional(),
+  project_name: z.string().trim().min(1).optional(),
+  project_status_id: z.string().uuid().optional(),
+  project_start_date: expectedCloseDateSchema.optional(),
 }).strict();
 
 export const loseOpportunitySchema = z.object({

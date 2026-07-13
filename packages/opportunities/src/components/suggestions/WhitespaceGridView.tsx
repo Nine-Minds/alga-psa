@@ -15,7 +15,10 @@ import { getWhitespaceGrid } from '../../actions/generatorActions';
 export function WhitespaceGridView({
   onCellClick,
 }: {
-  onCellClick: (client: { client_id: string; client_name: string }, categoryName: string) => void;
+  onCellClick: (
+    client: { client_id: string; client_name: string },
+    category: { category_id: string; category_name: string },
+  ) => void;
 }) {
   const { t } = useTranslation();
   const [grid, setGrid] = useState<IWhitespaceGrid | null>(null);
@@ -84,7 +87,10 @@ export function WhitespaceGridView({
                           client: client.client_name,
                         })}
                         onClick={() =>
-                          onCellClick({ client_id: client.client_id, client_name: client.client_name }, cat.category_name)
+                          onCellClick(
+                            { client_id: client.client_id, client_name: client.client_name },
+                            { category_id: cat.category_id, category_name: cat.category_name },
+                          )
                         }
                       />
                     )}

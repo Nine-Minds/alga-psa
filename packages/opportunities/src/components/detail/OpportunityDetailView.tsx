@@ -10,6 +10,13 @@ import type { IOpportunityDetail, OpportunityConfidence } from '@alga-psa/types'
 import { EvidenceLadder } from '../EvidenceLadder';
 import { WhySentenceText } from '../WhySentenceText';
 
+const OPPORTUNITY_TYPE_DEFAULTS = {
+  new_logo: 'New client',
+  expansion: 'Expansion',
+  renewal: 'Renewal',
+  project: 'Project',
+} as const;
+
 export interface OpportunityDetailViewProps {
   detail: IOpportunityDetail;
   /** Timeline feed (interactions) rendered by the host, so the module reuses the standard interactions UI. */
@@ -21,9 +28,13 @@ export interface OpportunityDetailViewProps {
   onConfidenceChange: (opportunityId: string, confidence: OpportunityConfidence) => void;
   onWin: (opportunityId: string) => void;
   onLose: (opportunityId: string) => void;
+  onDelete: (opportunityId: string) => void;
   onCreateQuote: (opportunityId: string) => void;
+  onLinkQuote: (opportunityId: string) => void;
   onOpenQuote: (quoteId: string) => void;
+  onUnlinkQuote: (quoteId: string) => void;
   onEditValues?: (opportunityId: string) => void;
+  onEditDetails?: (opportunityId: string) => void;
   /** Present only when the AI module is enabled for the tenant. */
   onDraftFollowUp?: (opportunityId: string) => void;
 }
@@ -42,9 +53,13 @@ export function OpportunityDetailView({
   onConfidenceChange,
   onWin,
   onLose,
+  onDelete,
   onCreateQuote,
+  onLinkQuote,
   onOpenQuote,
+  onUnlinkQuote,
   onEditValues,
+  onEditDetails,
   onDraftFollowUp,
 }: OpportunityDetailViewProps) {
   const { t } = useTranslation();
@@ -71,6 +86,16 @@ export function OpportunityDetailView({
             <Badge variant="error">{t('opportunities.status.lost', 'Lost')}</Badge>
           ) : null}
           <span className="font-mono text-xs text-[rgb(var(--color-text-400))]">{detail.opportunity_number}</span>
+          {open && onEditDetails ? (
+            <Button
+              id="opportunity-detail-edit"
+              size="xs"
+              variant="ghost"
+              onClick={() => onEditDetails(detail.opportunity_id)}
+            >
+              {t('common.edit', 'Edit')}
+            </Button>
+          ) : null}
         </div>
         <div className="mt-0.5 text-sm text-[rgb(var(--color-text-500))]">
           {detail.client_name}
@@ -81,6 +106,17 @@ export function OpportunityDetailView({
           ) : null}
           {detail.contact_name ? ` · ${detail.contact_name}` : ''}
           {` · ${t('opportunities.detail.owner', 'Owner')}: ${detail.owner_name}`}
+        </div>
+        <div id="opportunity-detail-metadata" className="mt-1 text-xs text-[rgb(var(--color-text-400))]">
+          {t(
+            `opportunities.type.${detail.opportunity_type}`,
+            OPPORTUNITY_TYPE_DEFAULTS[detail.opportunity_type]
+          )}
+          {detail.expected_close_date
+            ? ` · ${t('opportunities.detail.expectedClose', 'Expected close')}: ${new Date(
+                `${detail.expected_close_date.slice(0, 10)}T12:00:00`
+              ).toLocaleDateString()}`
+            : ''}
         </div>
         {detail.why.segments.length > 0 ? (
           <p className="mt-2 text-[13px] leading-relaxed text-[rgb(var(--color-text-500))]">
@@ -229,14 +265,24 @@ export function OpportunityDetailView({
             {t('opportunities.detail.quotes', 'Quotes')}
           </h2>
           {open ? (
-            <Button
-              id="opportunity-detail-create-quote"
-              size="xs"
-              variant="soft"
-              onClick={() => onCreateQuote(detail.opportunity_id)}
-            >
-              {t('opportunities.detail.createQuote', 'Create quote')}
-            </Button>
+            <div className="flex items-center gap-2">
+              <Button
+                id="opportunity-detail-link-quote"
+                size="xs"
+                variant="ghost"
+                onClick={() => onLinkQuote(detail.opportunity_id)}
+              >
+                {t('opportunities.detail.linkQuote', 'Link existing')}
+              </Button>
+              <Button
+                id="opportunity-detail-create-quote"
+                size="xs"
+                variant="soft"
+                onClick={() => onCreateQuote(detail.opportunity_id)}
+              >
+                {t('opportunities.detail.createQuote', 'Create quote')}
+              </Button>
+            </div>
           ) : null}
         </div>
         {detail.linked_quotes.length === 0 ? (
@@ -262,6 +308,16 @@ export function OpportunityDetailView({
                   <span className="tabular-nums text-[rgb(var(--color-text-700))]">
                     {formatCurrencyFromMinorUnits(q.total_amount, undefined, q.currency_code)}
                   </span>
+                  {open ? (
+                    <Button
+                      id={`opportunity-detail-unlink-quote-${q.quote_id}`}
+                      size="xs"
+                      variant="ghost"
+                      onClick={() => onUnlinkQuote(q.quote_id)}
+                    >
+                      {t('opportunities.detail.unlinkQuote', 'Unlink')}
+                    </Button>
+                  ) : null}
                 </span>
               </li>
             ))}
@@ -273,13 +329,23 @@ export function OpportunityDetailView({
 
       {/* Close the deal — quiet until evidence carries it */}
       {open ? (
-        <section className="flex items-center justify-end gap-2">
-          <Button id="opportunity-detail-lose" size="sm" variant="ghost" onClick={() => onLose(detail.opportunity_id)}>
-            {t('opportunities.detail.markLost', 'Mark lost')}
+        <section className="flex items-center justify-between gap-2">
+          <Button
+            id="opportunity-detail-delete"
+            size="sm"
+            variant="ghost"
+            onClick={() => onDelete(detail.opportunity_id)}
+          >
+            {t('common.delete', 'Delete')}
           </Button>
-          <Button id="opportunity-detail-win" size="sm" variant="soft" onClick={() => onWin(detail.opportunity_id)}>
-            {t('opportunities.detail.markWon', 'Mark won')}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button id="opportunity-detail-lose" size="sm" variant="ghost" onClick={() => onLose(detail.opportunity_id)}>
+              {t('opportunities.detail.markLost', 'Mark lost')}
+            </Button>
+            <Button id="opportunity-detail-win" size="sm" variant="soft" onClick={() => onWin(detail.opportunity_id)}>
+              {t('opportunities.detail.markWon', 'Mark won')}
+            </Button>
+          </div>
         </section>
       ) : null}
 

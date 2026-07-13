@@ -20,6 +20,8 @@ export { CreateOpportunityDialog } from './dialogs/CreateOpportunityDialog';
 export { CompleteActionDialog } from './dialogs/CompleteActionDialog';
 export { LoseOpportunityDialog } from './dialogs/LoseOpportunityDialog';
 export { EditValuesDialog } from './dialogs/EditValuesDialog';
+export { EditOpportunityDialog } from './dialogs/EditOpportunityDialog';
+export type { EditOpportunityInput } from './dialogs/EditOpportunityDialog';
 export { DraftEditorDialog } from './dialogs/DraftEditorDialog';
 export type { OpportunityDraftingCallbacks } from './detail/OpportunityDetailHost';
 export { WhitespaceGridView } from './suggestions/WhitespaceGridView';

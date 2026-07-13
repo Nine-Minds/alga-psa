@@ -4,7 +4,7 @@ import { registerOpportunityActions } from '../businessOperations/opportunities'
 import { zodToWorkflowJsonSchema } from '../../jsonSchemaMetadata';
 
 describe('opportunity workflow actions', () => {
-  it('registers all four runtime actions with validation and Designer metadata', () => {
+  it('registers all opportunity runtime actions with validation and Designer metadata', () => {
     registerOpportunityActions();
     const registry = getActionRegistryV2();
     const ids = [
@@ -12,6 +12,7 @@ describe('opportunity workflow actions', () => {
       'opportunities.find',
       'opportunities.update',
       'opportunities.set_next_action',
+      'opportunities.generate_suggestions',
     ];
 
     for (const id of ids) {

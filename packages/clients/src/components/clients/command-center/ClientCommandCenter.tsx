@@ -285,6 +285,16 @@ export default function ClientCommandCenter({
             ))}
           </span>
         )}
+        {tabIds.has('opportunities') && (
+          <button
+            id={`${idPrefix}-open-opportunities`}
+            type="button"
+            className="font-semibold text-primary-600 hover:text-primary-800 hover:underline"
+            onClick={() => openFocus('opportunities')}
+          >
+            {t('clientDetails.opportunities', { defaultValue: 'Opportunities' })}
+          </button>
+        )}
       </div>
 
       {pulseError && (

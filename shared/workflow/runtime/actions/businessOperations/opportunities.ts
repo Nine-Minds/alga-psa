@@ -186,6 +186,41 @@ export function registerOpportunityActions(): void {
   });
 
   registry.register({
+    id: 'opportunities.generate_suggestions',
+    version: 1,
+    inputSchema: z.object({
+      generator_key: z.enum(['renewal', 'tm_conversion', 'whitespace', 'asset_aging']),
+    }).strict(),
+    outputSchema: z.object({
+      generated: z.number().int().nonnegative(),
+      created: z.number().int().nonnegative(),
+      reopened: z.number().int().nonnegative(),
+      deduped: z.number().int().nonnegative(),
+    }),
+    sideEffectful: true,
+    idempotency: { mode: 'engineProvided' },
+    ui: {
+      label: 'Generate Opportunity Suggestions',
+      category: 'Business Operations',
+      description: 'Run one idempotent opportunity suggestion generator for the tenant',
+    },
+    handler: async (input, ctx) => {
+      if (!ctx.knex || !ctx.tenantId) {
+        throwActionError(ctx, { category: 'ActionError', code: 'CONTEXT_MISSING', message: 'Workflow database and tenant context are required' });
+      }
+      const moduleName = '@alga-psa/opportunities/lib/generators/runGenerators';
+      const { runGenerators } = await import(moduleName);
+      const [summary] = await runGenerators(ctx.knex, ctx.tenantId, [input.generator_key]);
+      return {
+        generated: summary.generated,
+        created: summary.created,
+        reopened: summary.reopened,
+        deduped: summary.deduped,
+      };
+    },
+  });
+
+  registry.register({
     id: 'opportunities.find',
     version: 1,
     inputSchema: z.object({

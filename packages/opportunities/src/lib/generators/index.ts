@@ -1,4 +1,4 @@
-export * from './types';
+export type * from './types';
 export * from './runGenerators';
 export * from './renewalGenerator';
 export * from './tmConversionGenerator';

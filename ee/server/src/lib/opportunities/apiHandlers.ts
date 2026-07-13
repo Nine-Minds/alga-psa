@@ -16,7 +16,7 @@ import {
   createQbrOpportunitiesSchema,
   opportunityPeriodSchema,
   updateCommitmentSchema,
-} from './actions';
+} from './schemas';
 import { getForecastBandData, getSellerCalibrationData } from './forecast';
 import {
   createCommitmentData,

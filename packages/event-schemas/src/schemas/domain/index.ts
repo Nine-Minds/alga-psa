@@ -4,6 +4,7 @@ export * from './projectEventSchemas';
 export * from './billingEventSchemas';
 export * from './schedulingEventSchemas';
 export * from './crmEventSchemas';
+export * from './opportunityEventSchemas';
 export * from './documentEventSchemas';
 export * from './communicationsEventSchemas';
 export * from './integrationEventSchemas';

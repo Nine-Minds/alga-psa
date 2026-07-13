@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Temporal } from '@js-temporal/polyfill';
-import { bucketQueueActionItems } from '../src/actions/workQueueActions';
+import { bucketQueueActionItems } from '../src/lib/workQueueBuckets';
 
 function opportunity(overrides: Record<string, unknown>) {
   return {

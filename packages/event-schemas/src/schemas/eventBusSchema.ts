@@ -79,6 +79,15 @@ import {
   tagRemovedEventPayloadSchema,
 } from './domain/crmEventSchemas';
 import {
+  opportunityCreatedEventPayloadSchema,
+  opportunityEscalatedEventPayloadSchema,
+  opportunityNextActionOverdueEventPayloadSchema,
+  opportunityStageChangedEventPayloadSchema,
+  opportunityStalledEventPayloadSchema,
+  opportunityStatusChangedEventPayloadSchema,
+  opportunitySuggestionCreatedEventPayloadSchema,
+} from './domain/opportunityEventSchemas';
+import {
   documentAssociatedEventPayloadSchema,
   documentDeletedEventPayloadSchema,
   documentDetachedEventPayloadSchema,
@@ -344,6 +353,15 @@ export const EVENT_TYPES = [
   'STATUS_CREATED',
   'STATUS_UPDATED',
   'STATUS_DELETED',
+
+  // Opportunities
+  'OPPORTUNITY_CREATED',
+  'OPPORTUNITY_STAGE_CHANGED',
+  'OPPORTUNITY_STATUS_CHANGED',
+  'OPPORTUNITY_STALLED',
+  'OPPORTUNITY_ESCALATED',
+  'OPPORTUNITY_NEXT_ACTION_OVERDUE',
+  'OPPORTUNITY_SUGGESTION_CREATED',
 
   // Users
   'USER_CREATED',
@@ -1242,6 +1260,15 @@ export const EventPayloadSchemas = {
   STATUS_CREATED: StatusEventPayloadSchema,
   STATUS_UPDATED: StatusEventPayloadSchema,
   STATUS_DELETED: StatusEventPayloadSchema,
+
+  // Opportunities
+  OPPORTUNITY_CREATED: opportunityCreatedEventPayloadSchema,
+  OPPORTUNITY_STAGE_CHANGED: opportunityStageChangedEventPayloadSchema,
+  OPPORTUNITY_STATUS_CHANGED: opportunityStatusChangedEventPayloadSchema,
+  OPPORTUNITY_STALLED: opportunityStalledEventPayloadSchema,
+  OPPORTUNITY_ESCALATED: opportunityEscalatedEventPayloadSchema,
+  OPPORTUNITY_NEXT_ACTION_OVERDUE: opportunityNextActionOverdueEventPayloadSchema,
+  OPPORTUNITY_SUGGESTION_CREATED: opportunitySuggestionCreatedEventPayloadSchema,
 
   // Users
   USER_CREATED: UserEventPayloadSchema,

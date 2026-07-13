@@ -6,16 +6,19 @@ import type {
   ITmConversionMonthBucket,
   ITmConversionOnePager,
   IWhitespaceGrid,
+  IOpportunitySuggestion,
   OpportunityGeneratorKey,
 } from '@alga-psa/types';
 import { opportunityGeneratorKeySchema } from '../schemas/opportunitySchemas';
 import {
   loadTmBillingFacts,
   loadWhitespaceGrid,
+  persistGeneratedSuggestions,
   runGenerators,
   trailingTwelveMonthKeys,
   type GeneratorRunSummary,
 } from '../lib/generators';
+import { listSuggestionsInternal } from '../lib/suggestions';
 
 async function requirePermission(user: unknown, action: 'read' | 'update'): Promise<void> {
   if (!await hasPermission(user as any, 'opportunities', action)) {
@@ -42,6 +45,46 @@ export const getWhitespaceGrid = withAuth(async (
   await requirePermission(user, 'read');
   const { knex } = await createTenantKnex();
   return (await loadWhitespaceGrid(knex, tenant)).grid;
+});
+
+export const createWhitespaceSuggestion = withAuth(async (
+  user,
+  { tenant },
+  clientId: string,
+  categoryId: string,
+): Promise<IOpportunitySuggestion> => {
+  await requirePermission(user, 'update');
+  const { knex } = await createTenantKnex();
+  const { grid, currencies } = await loadWhitespaceGrid(knex, tenant);
+  const client = grid.clients.find((candidate) => candidate.client_id === clientId);
+  const category = grid.categories.find((candidate) => candidate.category_id === categoryId);
+  if (!client || !category) throw new Error('Whitespace grid cell not found');
+  if (client.cells.find((cell) => cell.category_id === categoryId)?.has_category) {
+    throw new Error('This client already buys that service category');
+  }
+
+  const dedupeKey = `whitespace:${clientId}:${categoryId}`;
+  await persistGeneratedSuggestions(knex, tenant, 'whitespace', [{
+    client_id: clientId,
+    title: `${client.client_name}: ${category.category_name} opportunity`,
+    evidence: {
+      category_id: categoryId,
+      category_name: category.category_name,
+      missing_service_name: category.category_name,
+      adoption_percentage: category.adoption_percentage,
+      adopted_client_count: category.adopted_client_count,
+      comparable_client_count: grid.active_contract_client_count,
+    },
+    mrr_cents: 0,
+    nrr_cents: 0,
+    currency_code: currencies.get(clientId) ?? 'USD',
+    dedupe_key: dedupeKey,
+  }]);
+
+  const suggestion = (await listSuggestionsInternal(knex, tenant))
+    .find((candidate) => candidate.generator_key === 'whitespace' && candidate.dedupe_key === dedupeKey);
+  if (!suggestion) throw new Error('Failed to create whitespace suggestion');
+  return suggestion;
 });
 
 function evidenceBuckets(value: unknown): ITmConversionMonthBucket[] | null {

@@ -1,7 +1,7 @@
 'use server';
 
 import type { Knex } from 'knex';
-import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import { createTenantKnex, registerAfterCommit, tenantDb, withTransaction } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import type { IOpportunity, IOpportunityDetail, IOpportunityEvidence, IOpportunityHandoff, IQuote, OpportunityListFilters } from '@alga-psa/types';
@@ -20,6 +20,16 @@ import {
 } from '../lib/closeGates';
 import { prepareOpportunityWinConversions, type WinOpportunityOptions } from '../lib/opportunityWin';
 import { getOpportunityHandoffData } from '../lib/opportunityHandoff';
+import { publishEvent } from '@alga-psa/event-bus/publishers';
+
+export interface LinkableOpportunityQuote {
+  quote_id: string;
+  quote_number: string;
+  title: string;
+  status: string;
+  total_amount: number;
+  currency_code: string;
+}
 
 async function requirePermission(user: unknown, action: 'create' | 'read' | 'update' | 'delete'): Promise<void> {
   if (!await hasPermission(user as any, 'opportunities', action)) throw new Error(`Permission denied: opportunities ${action} required`);
@@ -135,6 +145,9 @@ export const winOpportunity = withAuth(async (
   const data = winOpportunitySchema.parse(options);
   const { knex } = await createTenantKnex();
   return withTransaction(knex, async (trx) => {
+    if (data.project_template_id && !await hasPermission(user as any, 'project', 'create', trx)) {
+      throw new Error('Permission denied: project create required');
+    }
     await ensureEnterpriseOpportunityCloseGatesRegistered();
     await runOpportunityCloseGates(trx, tenant, opportunityId);
     const conversions = await prepareOpportunityWinConversions(
@@ -149,7 +162,27 @@ export const winOpportunity = withAuth(async (
       won_at: now,
       ...conversions,
     });
-    await recordEvidence(trx, tenant, { opportunityId, checkpoint: 'won', source: 'declared', detail: 'Opportunity marked won', recordedBy: actorId(user) });
+    if (conversions.converted_project_id) {
+      const projectId = conversions.converted_project_id;
+      registerAfterCommit(trx, () => publishEvent({
+        eventType: 'PROJECT_CREATED',
+        payload: {
+          tenantId: tenant,
+          projectId,
+          userId: actorId(user),
+          timestamp: new Date().toISOString(),
+        },
+      }), `project_created_from_opportunity:${opportunityId}:${projectId}`);
+    }
+    await recordEvidence(trx, tenant, {
+      opportunityId,
+      checkpoint: 'won',
+      source: 'declared',
+      detail: conversions.converted_project_id
+        ? `Opportunity marked won; project ${conversions.converted_project_id} created from template`
+        : 'Opportunity marked won',
+      recordedBy: actorId(user),
+    });
     const client = await tenantDb(trx, tenant).table('clients').where({ client_id: updated.client_id }).first();
     if (client?.lifecycle_status === 'prospect') {
       await tenantDb(trx, tenant).table('clients').where({ client_id: updated.client_id }).update({ lifecycle_status: 'active', updated_at: now });
@@ -181,8 +214,16 @@ export const deleteOpportunity = withAuth(async (user, { tenant }, opportunityId
   await requirePermission(user, 'delete');
   const { knex } = await createTenantKnex();
   await withTransaction(knex, async (trx) => {
-    const linkedQuote = await tenantDb(trx, tenant).table('quotes').where({ opportunity_id: opportunityId }).first();
+    const db = tenantDb(trx, tenant);
+    const linkedQuote = await db.table('quotes').where({ opportunity_id: opportunityId }).first();
     if (linkedQuote) throw new Error('Unlink quotes before deleting an opportunity');
+
+    // Keep client-history and suggestion provenance records while removing
+    // their link to the opportunity that is about to be deleted.
+    await db.table('interactions').where({ opportunity_id: opportunityId }).update({ opportunity_id: null });
+    await db.table('opportunity_suggestions').where({ created_opportunity_id: opportunityId }).update({ created_opportunity_id: null });
+    await db.table('opportunity_qbr_triggers').where({ created_opportunity_id: opportunityId }).update({ created_opportunity_id: null });
+
     if (!await OpportunityModel.delete(trx, tenant, opportunityId)) throw new Error('Open opportunity not found');
   });
 });
@@ -218,11 +259,43 @@ export const linkQuoteToOpportunity = withAuth(async (user, { tenant }, opportun
     const quote = await tenantDb(trx, tenant).table('quotes').where({ quote_id: quoteId }).forUpdate().first<IQuote>();
     if (!quote) throw new Error('Quote not found');
     if (quote.client_id !== opportunity.client_id) throw new Error('Quote and opportunity must belong to the same client');
+    if (quote.opportunity_id && quote.opportunity_id !== opportunityId) {
+      throw new Error('Quote is already linked to another opportunity');
+    }
     const [linked] = await tenantDb(trx, tenant).table('quotes').where({ quote_id: quoteId }).update({ opportunity_id: opportunityId, updated_at: new Date().toISOString() }).returning('*') as IQuote[];
     if (linked.status === 'sent') await onQuoteSent(trx, linked);
     if (linked.status === 'accepted' || linked.status === 'converted') await onQuoteAccepted(trx, linked);
     return linked;
   });
+});
+
+export const listLinkableQuotesForOpportunity = withAuth(async (
+  user,
+  { tenant },
+  opportunityId: string,
+): Promise<LinkableOpportunityQuote[]> => {
+  await requirePermission(user, 'read');
+  const { knex } = await createTenantKnex();
+  const db = tenantDb(knex, tenant);
+  const opportunity = await db.table('opportunities')
+    .where({ opportunity_id: opportunityId })
+    .select('client_id')
+    .first();
+  if (!opportunity) throw new Error('Opportunity not found');
+  const rows = await db.table('quotes')
+    .where({ client_id: opportunity.client_id, is_template: false })
+    .whereNull('opportunity_id')
+    .whereNotIn('status', ['superseded', 'archived'])
+    .select('quote_id', 'quote_number', 'title', 'status', 'total_amount', 'currency_code')
+    .orderBy('updated_at', 'desc');
+  return rows.map((row) => ({
+    quote_id: String(row.quote_id),
+    quote_number: String(row.quote_number ?? row.quote_id),
+    title: String(row.title ?? ''),
+    status: String(row.status),
+    total_amount: Number(row.total_amount ?? 0),
+    currency_code: String(row.currency_code),
+  }));
 });
 
 export const unlinkQuoteFromOpportunity = withAuth(async (user, { tenant }, opportunityId: string, quoteId: string): Promise<void> => {

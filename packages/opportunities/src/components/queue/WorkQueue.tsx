@@ -18,6 +18,7 @@ export interface WorkQueueProps {
   onMarkLost: (opportunityId: string) => void;
   onAcceptSuggestion: (suggestionId: string) => void;
   onDismissSuggestion: (suggestionId: string) => void;
+  onSnoozeSuggestion: (suggestionId: string) => void;
   onViewSuggestionEvidence?: (suggestionId: string) => void;
   /** When drafting is available, overdue rows lead with the draft instead of the checkbox. */
   onReviewDraft?: (opportunityId: string) => void;
@@ -36,6 +37,7 @@ export function WorkQueue({
   onMarkLost,
   onAcceptSuggestion,
   onDismissSuggestion,
+  onSnoozeSuggestion,
   onViewSuggestionEvidence,
   onReviewDraft,
 }: WorkQueueProps) {
@@ -119,6 +121,7 @@ export function WorkQueue({
                     item={item}
                     onAccept={onAcceptSuggestion}
                     onDismiss={onDismissSuggestion}
+                    onSnooze={onSnoozeSuggestion}
                     onViewEvidence={onViewSuggestionEvidence}
                   />
                 ))}

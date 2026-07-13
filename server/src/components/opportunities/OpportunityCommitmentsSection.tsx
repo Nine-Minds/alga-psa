@@ -56,9 +56,11 @@ export function OpportunityCommitmentsSection({ detail }: { detail: IOpportunity
   const resolve = async (commitment: IOpportunityCommitment, value: string) => {
     try {
       if (value === 'declined') {
-        await updateOpportunityCommitment(commitment.commitment_id, { resolution_status: 'declined' });
+        await updateOpportunityCommitment(detail.opportunity_id, commitment.commitment_id, {
+          resolution_status: 'declined',
+        });
       } else if (value.startsWith('quote:')) {
-        await updateOpportunityCommitment(commitment.commitment_id, {
+        await updateOpportunityCommitment(detail.opportunity_id, commitment.commitment_id, {
           resolution_status: 'quote_line',
           resolution_ref_id: value.slice('quote:'.length),
         });

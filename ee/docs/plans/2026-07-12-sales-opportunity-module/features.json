@@ -321,7 +321,7 @@
     "prdRefs": [
       "FR5"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Create quote from opportunity: prefills client/contact and sets quotes.opportunity_id"
   },
   {
@@ -348,7 +348,7 @@
     "prdRefs": [
       "FR5"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Won flow optional project spawn: pick a project template, create onboarding project, store project ref on the opportunity"
   },
   {
@@ -377,7 +377,7 @@
       "FR1",
       "Users and Primary Flows"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Quick-add prospect client (name-only) inline from opportunity creation; creates client with lifecycle_status=prospect"
   },
   {
@@ -386,7 +386,7 @@
     "prdRefs": [
       "FR1"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "lifecycle_status surfaced on client create/edit forms and client schemas"
   },
   {
@@ -395,7 +395,7 @@
     "prdRefs": [
       "UX / UI Notes"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Operational client lists filter prospects out by default with an explicit filter to include them"
   },
   {
@@ -645,7 +645,7 @@
     "prdRefs": [
       "FR6"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Default-on system workflows implementing the nudge/escalation methodology (registered so EE Designer can customize; CE runs the defaults)"
   },
   {
@@ -1013,7 +1013,7 @@
     "prdRefs": [
       "FR9"
     ],
-    "implemented": false,
+    "implemented": true,
     "description": "Draft editor + send through existing tenant outbound email; no send without explicit user action (no auto-send path exists)"
   },
   {

@@ -609,6 +609,7 @@ export interface ClientPaginationParams {
   includeInactive?: boolean;
   searchTerm?: string;
   clientTypeFilter?: 'all' | 'company' | 'individual';
+  lifecycleFilter?: 'all' | 'prospect' | 'active' | 'former';
   loadLogos?: boolean; // Option to load logos or not
   selectedTags?: string[]; // Filter by tags
   /**
@@ -677,6 +678,7 @@ export const getAllClientsPaginated = withAuth(async (user, { tenant }, params: 
     includeInactive = true,
     searchTerm,
     clientTypeFilter = 'all',
+    lifecycleFilter = 'all',
     loadLogos = true,
     statusFilter,
     selectedTags,
@@ -717,6 +719,10 @@ export const getAllClientsPaginated = withAuth(async (user, { tenant }, params: 
 
       if (clientTypeFilter !== 'all') {
         baseQuery = baseQuery.where('c.client_type', clientTypeFilter);
+      }
+
+      if (lifecycleFilter !== 'all') {
+        baseQuery = baseQuery.where('c.lifecycle_status', lifecycleFilter);
       }
 
       // Apply tag filter using new tag structure

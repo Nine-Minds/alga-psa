@@ -40,6 +40,7 @@ export function CreateOpportunityDialog({
   defaultClientId,
   lockedClient,
   defaults,
+  renderProspectCreator,
   onSubmit,
 }: {
   isOpen: boolean;
@@ -50,6 +51,8 @@ export function CreateOpportunityDialog({
   lockedClient?: { client_id: string; client_name: string };
   /** Prefill for launches from a context that already knows the deal shape (e.g. a whitespace cell). */
   defaults?: { title?: string; type?: OpportunityType };
+  /** Host-provided client creation keeps this package independent of the clients UI package. */
+  renderProspectCreator?: (onCreated: (client: IClient) => void) => React.ReactNode;
   onSubmit: (input: CreateOpportunityInput) => Promise<void> | void;
 }) {
   const { t } = useTranslation();
@@ -75,7 +78,7 @@ export function CreateOpportunityDialog({
         opportunity_type: type,
         next_action: nextAction.trim(),
         next_action_due: due.toISOString(),
-        expected_close_date: expectedClose ? expectedClose.toISOString() : undefined,
+        expected_close_date: expectedClose ? expectedClose.toISOString().slice(0, 10) : undefined,
       });
       setTitle('');
       setNextAction('');
@@ -103,16 +106,19 @@ export function CreateOpportunityDialog({
             <div className="font-medium">{lockedClient.client_name}</div>
           </div>
         ) : (
-          <ClientPicker
-            id="opportunity-create-client"
-            clients={clients}
-            selectedClientId={clientId}
-            onSelect={setClientId}
-            filterState={filterState}
-            onFilterStateChange={setFilterState}
-            clientTypeFilter={typeFilter}
-            onClientTypeFilterChange={setTypeFilter}
-          />
+          <div className="space-y-2">
+            <ClientPicker
+              id="opportunity-create-client"
+              clients={clients}
+              selectedClientId={clientId}
+              onSelect={setClientId}
+              filterState={filterState}
+              onFilterStateChange={setFilterState}
+              clientTypeFilter={typeFilter}
+              onClientTypeFilterChange={setTypeFilter}
+            />
+            {renderProspectCreator?.((client) => setClientId(client.client_id))}
+          </div>
         )}
         <Input
           id="opportunity-create-title"

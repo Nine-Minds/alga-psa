@@ -12,26 +12,33 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { IOpportunityFollowUpDraft } from '@alga-psa/types';
 
 /**
- * The draft editor. The AI writes; you edit; you send it from your own email.
- * Nothing here can send to a client — by construction, not policy.
+ * The draft editor. The AI writes, the user reviews and edits, then an explicit
+ * action sends through the tenant's configured outbound email provider.
  */
 export function DraftEditorDialog({
   isOpen,
   onClose,
   onGenerate,
-  onLogSent,
+  onGetRecipient,
+  onSend,
 }: {
   isOpen: boolean;
   onClose: () => void;
   onGenerate: (toneAdjustment?: string) => Promise<IOpportunityFollowUpDraft>;
-  onLogSent: (input: { subject: string; summary: string }) => Promise<void>;
+  onGetRecipient: () => Promise<string | null>;
+  onSend: (input: { subject: string; body: string }) => Promise<{
+    recipient: string;
+    messageId: string | null;
+  }>;
 }) {
   const { t } = useTranslation();
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
   const [tone, setTone] = useState('');
   const [generating, setGenerating] = useState(false);
-  const [logging, setLogging] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [recipient, setRecipient] = useState<string | null>(null);
+  const [recipientLoaded, setRecipientLoaded] = useState(false);
 
   const generate = useCallback(
     async (toneAdjustment?: string) => {
@@ -51,6 +58,16 @@ export function DraftEditorDialog({
 
   useEffect(() => {
     if (isOpen && !subject && !body) void generate();
+    if (isOpen) {
+      setRecipientLoaded(false);
+      void onGetRecipient()
+        .then(setRecipient)
+        .catch((err) => {
+          setRecipient(null);
+          toast.error(err instanceof Error ? err.message : String(err));
+        })
+        .finally(() => setRecipientLoaded(true));
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
 
@@ -59,11 +76,11 @@ export function DraftEditorDialog({
     toast.success(t('opportunities.draft.copied', 'Copied. Paste it into your email.'));
   };
 
-  const markSent = async () => {
-    setLogging(true);
+  const send = async () => {
+    setSending(true);
     try {
-      await onLogSent({ subject, summary: body.slice(0, 140) });
-      toast.success(t('opportunities.draft.logged', 'Logged on the deal.'));
+      await onSend({ subject, body });
+      toast.success(t('opportunities.draft.sent', 'Follow-up sent and logged on the deal.'));
       setSubject('');
       setBody('');
       setTone('');
@@ -71,7 +88,7 @@ export function DraftEditorDialog({
     } catch (err) {
       toast.error(err instanceof Error ? err.message : String(err));
     } finally {
-      setLogging(false);
+      setSending(false);
     }
   };
 
@@ -124,17 +141,21 @@ export function DraftEditorDialog({
         )}
         <p className="flex items-center gap-1.5 text-[11.5px] text-[rgb(var(--color-text-400))]">
           <Send className="h-3 w-3" aria-hidden />
-          {t('opportunities.draft.note', 'You send it from your own email. Nothing goes to a client on its own.')}
+          {recipient
+            ? t('opportunities.draft.recipient', 'Sends to {{recipient}} through your tenant email provider.', { recipient })
+            : recipientLoaded
+              ? t('opportunities.draft.noRecipient', 'Link a contact with a primary email address before sending.')
+              : t('opportunities.draft.loadingRecipient', 'Checking the linked contact...')}
         </p>
         <div className="flex justify-end gap-2">
-          <Button id="opportunity-draft-cancel" variant="ghost" size="sm" onClick={onClose} disabled={logging}>
+          <Button id="opportunity-draft-cancel" variant="ghost" size="sm" onClick={onClose} disabled={sending}>
             {t('common.cancel', 'Cancel')}
           </Button>
           <Button id="opportunity-draft-copy" variant="soft" size="sm" onClick={copyBody} disabled={!body || generating}>
             {t('opportunities.draft.copy', 'Copy')}
           </Button>
-          <Button id="opportunity-draft-sent" size="sm" onClick={markSent} disabled={!body || generating || logging}>
-            {t('opportunities.draft.markSent', 'I sent it — log it')}
+          <Button id="opportunity-draft-send" size="sm" onClick={send} disabled={!subject || !body || !recipient || generating || sending}>
+            {t('opportunities.draft.send', 'Send follow-up')}
           </Button>
         </div>
       </div>

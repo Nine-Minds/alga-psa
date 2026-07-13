@@ -1497,6 +1497,29 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       content: (
         <div className="space-y-6 bg-white p-6 rounded-lg shadow-sm">
           <div className="grid grid-cols-2 gap-4">
+            <FieldContainer
+              label={t('clientDetails.lifecycleStatus', { defaultValue: 'Lifecycle' })}
+              fieldType="select"
+              value={editedClient.lifecycle_status ?? 'active'}
+              helperText={t('clientDetails.lifecycleStatusHelper', {
+                defaultValue: 'Prospects are available to sales workflows but hidden from operational client lists by default.',
+              })}
+              automationId="client-lifecycle-field"
+            >
+              <Text as="label" size="2" className="text-gray-700 font-medium">
+                {t('clientDetails.lifecycleStatus', { defaultValue: 'Lifecycle' })}
+              </Text>
+              <CustomSelect
+                id="client-lifecycle-select"
+                value={editedClient.lifecycle_status ?? 'active'}
+                onValueChange={(value) => handleFieldChange('lifecycle_status', value)}
+                options={[
+                  { value: 'prospect', label: t('clientLifecycle.prospect', { defaultValue: 'Prospect' }) },
+                  { value: 'active', label: t('clientLifecycle.active', { defaultValue: 'Active client' }) },
+                  { value: 'former', label: t('clientLifecycle.former', { defaultValue: 'Former client' }) },
+                ]}
+              />
+            </FieldContainer>
             <TextDetailItem
               label="Tax ID"
               value={editedClient.properties?.tax_id ?? ""}

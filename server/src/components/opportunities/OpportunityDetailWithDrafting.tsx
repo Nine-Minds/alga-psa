@@ -2,7 +2,11 @@
 
 import { OpportunityDetailHost } from '@alga-psa/opportunities/components';
 import type { IOpportunityDetail } from '@alga-psa/types';
-import { generateFollowUpDraft, logDraftSent } from '@enterprise/lib/opportunities/draftingActions';
+import {
+  generateFollowUpDraft,
+  getOpportunityFollowUpRecipient,
+  sendOpportunityFollowUp,
+} from '@enterprise/lib/opportunities/draftingActions';
 import { OpportunityCommitmentsSection } from './OpportunityCommitmentsSection';
 
 /**
@@ -30,7 +34,8 @@ export function OpportunityDetailWithDrafting({
         draftingAvailable
           ? {
               generate: (opportunityId, tone) => generateFollowUpDraft(opportunityId, tone),
-              logSent: (opportunityId, input) => logDraftSent(opportunityId, input),
+              getRecipient: (opportunityId) => getOpportunityFollowUpRecipient(opportunityId),
+              send: (opportunityId, input) => sendOpportunityFollowUp(opportunityId, input),
             }
           : undefined
       }
