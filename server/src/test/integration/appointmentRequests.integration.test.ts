@@ -168,7 +168,7 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
 }));
 
 // Mock internal notification actions
-vi.mock('@alga-psa/notifications/actions', () => ({
+vi.mock('@alga-psa/notifications/actions/internal-notification-actions/internalNotificationActions', () => ({
   createNotificationFromTemplateInternal: vi.fn(() => Promise.resolve())
 }));
 
@@ -562,7 +562,9 @@ describe('Appointment Request Integration Tests', () => {
       tomorrow.setDate(tomorrow.getDate() + 1);
       const requestDate = tomorrow.toISOString().split('T')[0];
 
-      const { createNotificationFromTemplateInternal } = await import('@alga-psa/notifications/actions');
+      const { createNotificationFromTemplateInternal } = await import(
+        '@alga-psa/notifications/actions/internal-notification-actions/internalNotificationActions'
+      );
 
       const result = await createAppointmentRequest({
         service_id: serviceId!,
