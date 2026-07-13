@@ -2,6 +2,7 @@ import type { ISO8601String } from '../lib/temporal';
 import type { ITaggable } from './tag.interfaces';
 import type { TenantEntity } from '.';
 import type { BillingCycleType, IContractLine } from './billing.interfaces';
+import type { ClientLifecycleStatus } from './opportunity.interfaces';
 
 export interface IClientSummary extends TenantEntity {
     id: string;
@@ -13,6 +14,7 @@ export interface IClient extends TenantEntity, ITaggable {
   client_id: string;
   client_name: string;
   client_type?: 'company' | 'individual' | null;
+  lifecycle_status?: ClientLifecycleStatus;
   url: string;
   phone_no?: string | null;
   email?: string | null;

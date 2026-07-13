@@ -52,6 +52,7 @@ const makeListQuery = (rows: any[]) => {
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: (...args: any[]) => createTenantKnex(...args),
+  withTransaction: (_conn: any, handler: (trx: typeof mockTrx) => Promise<unknown>) => handler(mockTrx),
   tenantDb: (conn: any, _tenant: string) => ({
     table: (table: string) => conn(table),
     unscoped: (table: string) => conn(table),
@@ -635,7 +636,7 @@ describe('quoteActions', () => {
 
     expect(approvalSettingsMock).toHaveBeenCalledWith(mockKnex, TENANT_ID);
     expect(Quote.update).toHaveBeenCalledWith(
-      mockKnex,
+      mockTrx,
       TENANT_ID,
       QUOTE_ID,
       expect.objectContaining({ status: 'sent' })
@@ -874,7 +875,7 @@ describe('quoteActions', () => {
     expect(generatePDFMock).toHaveBeenCalledWith({ quoteId: QUOTE_ID, userId: USER_ID });
     expect(sendEmailMock).toHaveBeenCalled();
     expect(Quote.update).toHaveBeenCalledWith(
-      mockKnex,
+      mockTrx,
       TENANT_ID,
       QUOTE_ID,
       expect.objectContaining({ status: 'sent', updated_by: USER_ID, sent_at: expect.any(String) })
@@ -1066,7 +1067,7 @@ describe('quoteActions', () => {
     expect(sendEmailMock).toHaveBeenCalled();
     // Status was updated to sent despite storage failure
     expect(Quote.update).toHaveBeenCalledWith(
-      mockKnex,
+      mockTrx,
       TENANT_ID,
       QUOTE_ID,
       expect.objectContaining({ status: 'sent' })

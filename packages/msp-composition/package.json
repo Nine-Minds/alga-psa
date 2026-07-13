@@ -104,6 +104,7 @@
     "@alga-psa/db": "*",
     "@alga-psa/documents": "*",
     "@alga-psa/formatting": "*",
+    "@alga-psa/opportunities": "*",
     "@alga-psa/projects": "*",
     "@alga-psa/reporting": "*",
     "@alga-psa/scheduling": "*",

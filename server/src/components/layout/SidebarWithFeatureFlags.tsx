@@ -70,6 +70,9 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
   const navigationFlag = useFeatureFlag('ui-navigation-v2', { defaultValue: true });
   const useNavigationSections =
     typeof navigationFlag === 'boolean' ? navigationFlag : navigationFlag?.enabled ?? false;
+  const opportunitiesFlag = useFeatureFlag('opportunities-module', { defaultValue: false });
+  const opportunitiesEnabled =
+    typeof opportunitiesFlag === 'boolean' ? opportunitiesFlag : opportunitiesFlag?.enabled ?? false;
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
   const [selfHostMode, setSelfHostMode] = useState(false);
   const { hasFeature } = useTier();
@@ -128,7 +131,9 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
 
     const filteredSections = baseSections.map((section) => ({
       ...section,
-      items: section.items.map((item) => {
+      items: section.items
+        .filter((item) => item.name !== 'Opportunities' || opportunitiesEnabled)
+        .map((item) => {
         if (item.name === 'Workflows') {
           const filteredSubItems = item.subItems?.filter((subItem) => {
             if (subItem.name !== 'Dead Letter') return true;
@@ -145,7 +150,7 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
       productCode,
       filterNavigationSectionsByFeatureAccess(filteredSections, hasFeature),
     );
-  }, [canWorkflowAdmin, useNavigationSections, hasFeature, productCode]);
+  }, [canWorkflowAdmin, useNavigationSections, hasFeature, productCode, opportunitiesEnabled]);
 
   const settingsSections = useMemo<NavigationSection[]>(() => {
     return filterNavigationSectionsBySelfHost(

@@ -9,6 +9,7 @@
 // Re-export all client actions as legacy aliases
 // These will be gradually migrated to client-specific implementations
 export * from './clientActions';
+export * from './clientLifecycleActions';
 export * from './clientLocationActions';
 export * from './clientLocaleActions';
 export * from './clientTaxRateActions';

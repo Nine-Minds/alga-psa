@@ -5,6 +5,7 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import type { RenewalWorkItemStatus } from '@alga-psa/types';
 import { deriveClientContractStatus } from '@alga-psa/shared/billingClients';
+import { getContractMonthlyValuesByAssignment } from '@alga-psa/shared/billingClients/contractMonthlyValue';
 import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 import type { Knex } from 'knex';
 import { permissionError, type ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
@@ -95,7 +96,6 @@ type ContractExpirationRow = {
   use_tenant_renewal_defaults: boolean | null;
   tenant_default_renewal_mode: string | null;
   queue_status: RenewalWorkItemStatus | null;
-  monthly_value: string | number | null;
 };
 
 const EXCLUDED_INVOICE_STATUSES = ['draft', 'Draft', 'cancelled', 'Cancelled', 'canceled', 'Canceled'] as const;
@@ -348,18 +348,21 @@ export const getContractExpirationReport = withAuth(async (user, { tenant }): Pr
         'cc.renewal_mode',
         'cc.use_tenant_renewal_defaults',
         'dbs.default_renewal_mode as tenant_default_renewal_mode',
-        'cc.status as queue_status',
-        knex.raw('COALESCE(cln.custom_rate, 0) as monthly_value')
+        'cc.status as queue_status'
       )
       .orderBy('cc.end_date', 'asc');
     db.tenantJoin(dataQuery, 'client_contracts as cc', 'c.contract_id', 'cc.contract_id');
     db.tenantJoin(dataQuery, 'clients as cl', 'cc.client_id', 'cl.client_id', { type: 'left' });
-    db.tenantJoin(dataQuery, 'contract_lines as cln', 'c.contract_id', 'cln.contract_id', { type: 'left' });
     db.tenantJoin(dataQuery, 'default_billing_settings as dbs', 'cc.tenant', 'dbs.tenant', {
       type: 'left',
       rootTenantColumn: 'cc.tenant',
     });
     const data = (await dataQuery) as unknown as ContractExpirationRow[];
+    const monthlyValues = await getContractMonthlyValuesByAssignment(
+      knex,
+      tenant,
+      data.map((row) => row.client_contract_id),
+    );
 
     const expirationMap = new Map<string, ContractExpiration>();
 
@@ -396,9 +399,10 @@ export const getContractExpirationReport = withAuth(async (user, { tenant }): Pr
         ?? 'manual';
 
       const key = row.client_contract_id;
+      const monthlyValue = monthlyValues.get(key)?.monthlyValueCents ?? 0;
       const existing = expirationMap.get(key);
       if (existing) {
-        existing.monthly_value += Number(row.monthly_value ?? 0) || 0;
+        existing.monthly_value = monthlyValue;
         continue;
       }
 
@@ -412,7 +416,7 @@ export const getContractExpirationReport = withAuth(async (user, { tenant }): Pr
         renewal_mode: effectiveRenewalMode,
         queue_status: row.queue_status ?? null,
         days_until_expiration: Math.max(0, daysUntilExpiration),
-        monthly_value: Number(row.monthly_value ?? 0) || 0,
+        monthly_value: monthlyValue,
         auto_renew: effectiveRenewalMode === 'auto'
       });
     }

@@ -375,6 +375,26 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
       });
     }
 
+    const previousClientLifecycleStatus = (updateResult.before as any)?.lifecycle_status;
+    const newClientLifecycleStatus = (updateResult.after as any)?.lifecycle_status;
+    if (
+      typeof previousClientLifecycleStatus === 'string' &&
+      typeof newClientLifecycleStatus === 'string' &&
+      previousClientLifecycleStatus !== newClientLifecycleStatus
+    ) {
+      await publishWorkflowEvent({
+        eventType: 'CLIENT_STATUS_CHANGED',
+        payload: buildClientStatusChangedPayload({
+          clientId,
+          previousStatus: previousClientLifecycleStatus,
+          newStatus: newClientLifecycleStatus,
+          changedAt: occurredAt,
+        }),
+        ctx: { tenantId: tenant, occurredAt, actor },
+        idempotencyKey: `client_lifecycle_status_changed:${clientId}:${occurredAt}`,
+      });
+    }
+
     const previousOwnerUserId = (updateResult.before as any)?.account_manager_id;
     const newOwnerUserId = (updateResult.after as any)?.account_manager_id;
     if (previousOwnerUserId !== newOwnerUserId && typeof newOwnerUserId === 'string' && newOwnerUserId) {

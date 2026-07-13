@@ -233,7 +233,10 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
   isAlgaDeskMode = false,
 }) => {
   const { t } = useTranslation('msp/clients');
-  const { renderQuickAddTicket, getTicketFormOptions, renderSurveySummaryCard, renderClientAssets, renderClientTickets, getSlaPolicies, openTicketDetails } = useClientCrossFeature();
+  const { renderQuickAddTicket, getTicketFormOptions, renderSurveySummaryCard, renderClientAssets, renderClientOpportunities, renderClientTickets, getSlaPolicies, openTicketDetails } = useClientCrossFeature();
+  const opportunitiesModuleFlag = useFeatureFlag('opportunities-module', { defaultValue: false });
+  const opportunitiesModuleEnabled =
+    typeof opportunitiesModuleFlag === 'boolean' ? opportunitiesModuleFlag : opportunitiesModuleFlag?.enabled ?? false;
   const { renderDocuments } = useDocumentsCrossFeature();
   const [editedClient, setEditedClient] = useState<IClient>(client);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
@@ -1406,6 +1409,16 @@ const ClientDetails: React.FC<ClientDetailsProps> = ({
       id: 'equipment',
       label: t('clientDetails.equipment', { defaultValue: 'Equipment' }),
       content: <ClientEquipmentTab clientId={client.client_id} />,
+    }] : []),
+    // Opportunities tab — PSA-only, behind the module flag, injected by the composition layer.
+    ...((shouldRenderPsaOnlyClientSurfaces && opportunitiesModuleEnabled && renderClientOpportunities) ? [{
+      id: 'opportunities',
+      label: t('clientDetails.opportunities', { defaultValue: 'Opportunities' }),
+      content: (
+        <div className="bg-white p-6 rounded-lg shadow-sm">
+          {renderClientOpportunities({ clientId: client.client_id, clientName: client.client_name })}
+        </div>
+      ),
     }] : []),
     {
       id: 'billing',

@@ -46,6 +46,7 @@
     "@alga-psa/documents": "*",
     "@alga-psa/email": "*",
     "@alga-psa/inventory": "*",
+    "@alga-psa/opportunities": "*",
     "@alga-psa/shared": "*",
     "@alga-psa/storage": "*",
     "@alga-psa/types": "*",

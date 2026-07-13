@@ -2,7 +2,8 @@
 
 import React, { useMemo, useCallback, type ReactNode } from 'react';
 import { ClientCrossFeatureProvider } from '@alga-psa/clients/context/ClientCrossFeatureContext';
-import type { ClientCrossFeatureCallbacks, QuickAddTicketRenderProps, SurveySummaryRenderProps, ClientAssetsRenderProps, ClientTicketsRenderProps, ContactTicketsRenderProps, ContractWizardRenderProps, ContractQuickAddRenderProps, ScheduleTeamsMeetingFromClientInput } from '@alga-psa/clients/context/ClientCrossFeatureContext';
+import type { ClientCrossFeatureCallbacks, QuickAddTicketRenderProps, SurveySummaryRenderProps, ClientAssetsRenderProps, ClientOpportunitiesRenderProps, ClientTicketsRenderProps, ContactTicketsRenderProps, ContractWizardRenderProps, ContractQuickAddRenderProps, ScheduleTeamsMeetingFromClientInput } from '@alga-psa/clients/context/ClientCrossFeatureContext';
+import { ClientOpportunitiesTab } from '@alga-psa/opportunities/components';
 import { QuickAddTicket } from '@alga-psa/tickets/components/QuickAddTicket';
 import { getTicketFormOptions } from '@alga-psa/tickets/actions/optimizedTicketActions';
 import { useTicketDetailsDrawer } from './useTicketDetailsDrawer';
@@ -45,6 +46,13 @@ export function MspClientCrossFeatureProvider({ children }: { children: ReactNod
   const renderClientAssets = useCallback(
     (props: ClientAssetsRenderProps) => (
       <ClientAssets clientId={props.clientId} />
+    ),
+    []
+  );
+
+  const renderClientOpportunities = useCallback(
+    (props: ClientOpportunitiesRenderProps) => (
+      <ClientOpportunitiesTab clientId={props.clientId} clientName={props.clientName} />
     ),
     []
   );
@@ -127,6 +135,7 @@ export function MspClientCrossFeatureProvider({ children }: { children: ReactNod
       getTicketFormOptions,
       renderSurveySummaryCard,
       renderClientAssets,
+      renderClientOpportunities,
       renderClientTickets,
       renderContactTickets,
       renderContractWizard,
@@ -142,6 +151,7 @@ export function MspClientCrossFeatureProvider({ children }: { children: ReactNod
       getTicketFormOptions,
       renderSurveySummaryCard,
       renderClientAssets,
+      renderClientOpportunities,
       renderClientTickets,
       renderContactTickets,
       renderContractWizard,

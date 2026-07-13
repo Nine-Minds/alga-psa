@@ -11,6 +11,7 @@ import { registerAssetActions } from './businessOperations/assets';
 import { registerDataStoreActions } from './businessOperations/dataStore';
 import { registerEntityLinkActions } from './businessOperations/entityLinks';
 import { registerActivityActions } from './businessOperations/activities';
+import { registerOpportunityActions } from './businessOperations/opportunities';
 
 export function registerBusinessOperationsActionsV2(): void {
   registerTicketActions();
@@ -26,4 +27,5 @@ export function registerBusinessOperationsActionsV2(): void {
   registerDataStoreActions();
   registerEntityLinkActions();
   registerActivityActions();
+  registerOpportunityActions();
 }

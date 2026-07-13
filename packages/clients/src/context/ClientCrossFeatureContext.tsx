@@ -31,6 +31,11 @@ export interface ClientAssetsRenderProps {
   clientId: string;
 }
 
+export interface ClientOpportunitiesRenderProps {
+  clientId: string;
+  clientName: string;
+}
+
 export interface ClientTicketsRenderProps {
   clientId: string;
   clientName?: string;
@@ -101,6 +106,8 @@ export interface ClientCrossFeatureCallbacks {
   getTicketFormOptions: () => Promise<TicketFormOptions>;
   renderSurveySummaryCard: (props: SurveySummaryRenderProps) => ReactNode;
   renderClientAssets: (props: ClientAssetsRenderProps) => ReactNode;
+  /** Optional: the Opportunities tab on client detail (provided by the composition layer when the module is available). */
+  renderClientOpportunities?: (props: ClientOpportunitiesRenderProps) => ReactNode;
   renderClientTickets: (props: ClientTicketsRenderProps) => ReactNode;
   renderContactTickets: (props: ContactTicketsRenderProps) => ReactNode;
   renderContractWizard?: (props: ContractWizardRenderProps) => ReactNode;

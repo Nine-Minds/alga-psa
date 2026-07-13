@@ -12,6 +12,7 @@ export interface IInteraction extends TenantEntity {
   user_id: string;
   user_name: string;
   ticket_id: string | null;
+  opportunity_id?: string | null;
   title: string;
   notes?: string;
   interaction_date: Date;

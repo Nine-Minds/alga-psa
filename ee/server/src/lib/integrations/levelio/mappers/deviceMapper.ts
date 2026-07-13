@@ -145,6 +145,7 @@ export function mapLevelIoDeviceToSnapshot(args: {
         manufacturer: device.manufacturer ?? null,
         model: device.model ?? null,
         fullOperatingSystem: device.operating_system?.full_operating_system ?? null,
+        osEndOfLife: device.operating_system?.end_of_life ?? device.security?.os_end_of_life ?? false,
         securityScore: device.security?.score ?? device.security_score ?? null,
         securityRisk: device.security?.risk ?? null,
         patchSecurityRisk: device.security?.patch_security_risk ?? null,

@@ -46,7 +46,7 @@ export enum ActivityPriority {
  */
 export interface RelatedEntity {
   id: string;
-  type: 'project' | 'ticket' | 'client' | 'contact' | 'workflow';
+  type: 'project' | 'ticket' | 'client' | 'contact' | 'workflow' | 'opportunity';
   name: string;
   url?: string;
 }
@@ -82,6 +82,8 @@ export interface ActivityBase extends TenantEntity {
   assignedTo?: string[];
   assignedToNames?: string[];
   relatedEntities?: RelatedEntity[];
+  /** Optional direct navigation target for sources without a dedicated detail drawer. */
+  link?: string;
   sourceId: string;
   sourceType: ActivityType;
   actions: ActivityAction[];

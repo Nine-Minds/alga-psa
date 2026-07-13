@@ -35,6 +35,7 @@ export const SETTINGS_TABS: readonly SettingsTabMeta[] = [
   { id: 'projects', labelKey: 'tabs.projects', title: 'Projects', hasOwnRoute: true },
   { id: 'assets', labelKey: 'settings.assetTypes.tab', title: 'Assets' },
   { id: 'interactions', labelKey: 'tabs.interactions', title: 'Interactions', hasOwnRoute: true },
+  { id: 'opportunities', labelKey: 'tabs.opportunities', title: 'Opportunities', hasOwnRoute: true },
   { id: 'notifications', labelKey: 'tabs.notifications', title: 'Notifications' },
   { id: 'time-entry', labelKey: 'tabs.timeEntry', title: 'Time Entry', hasOwnRoute: true },
   { id: 'billing', labelKey: 'tabs.billing', title: 'Billing', hasOwnRoute: true },

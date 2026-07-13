@@ -32,6 +32,7 @@ import type {
   SendQuoteApi,
   ConvertQuoteApi,
 } from '../schemas/quoteSchemas';
+import { onQuoteAccepted, onQuoteSent } from '@alga-psa/opportunities/lib/quoteLifecycleHooks';
 
 export interface QuoteListOptions extends ListOptions {
   include_items?: boolean;
@@ -263,10 +264,18 @@ export class QuoteService extends BaseService<IQuote> {
     const { knex } = await this.getKnex();
 
     return withTransaction(knex, async (trx) => {
-      const updated = await Quote.update(trx, context.tenant, id, {
+      const lifecycleData = {
         ...data,
+        ...(data.status === 'sent' ? { sent_at: new Date().toISOString() } : {}),
+        ...(data.status === 'accepted' ? { accepted_at: new Date().toISOString() } : {}),
+      };
+      const updated = await Quote.update(trx, context.tenant, id, {
+        ...lifecycleData,
         updated_by: context.userId,
       } as Partial<IQuote>);
+
+      if (updated.status === 'sent') await onQuoteSent(trx, updated);
+      if (updated.status === 'accepted') await onQuoteAccepted(trx, updated);
 
       return updated;
     }).catch(throwQuoteApiError);
@@ -433,6 +442,8 @@ export class QuoteService extends BaseService<IQuote> {
         sent_at: new Date().toISOString(),
         updated_by: context.userId,
       } as Partial<IQuote>);
+
+      await onQuoteSent(trx, updated);
 
       return updated;
     }).catch(throwQuoteApiError);
