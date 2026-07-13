@@ -38,7 +38,15 @@
     "no": "Nee",
     "yes": "Ja"
   },
+  "clientLifecycle": {
+    "prospect": "Prospect",
+    "active": "Actieve klant",
+    "former": "Voormalige klant",
+    "all": "Alle levenscyclusfasen"
+  },
   "clientsPage": {
+    "filterByLifecycle": "Filteren op levenscyclus",
+    "lifecycleFilterLabel": "Levenscyclusfilter",
     "title": "Klantenpagina",
     "description": "Hoofdbeheerpagina voor klanten met zoeken, filters en klantenraster/lijstweergave",
     "searchPlaceholder": "Zoek klanten, notities, documenten en interacties",
@@ -176,6 +184,9 @@
     "deletePermissionDenied": "Toestemming geweigerd: klanten kunnen niet worden verwijderd."
   },
   "clientDetails": {
+    "opportunities": "Verkoopkansen",
+    "lifecycleStatus": "Levenscyclus",
+    "lifecycleStatusHelper": "Prospects zijn beschikbaar in verkoopworkflows, maar worden standaard verborgen in operationele klantenlijsten.",
     "title": "Klantgegevens",
     "backToClients": "Terug naar Klanten",
     "openInNewTab": "Openen in nieuw tabblad",
@@ -286,6 +297,7 @@
     "parentClientLegacy": "Eerder als tekst ingevoerd: {{name}}"
   },
   "quickAddClient": {
+    "lifecycleStatus": "Levenscyclus",
     "title": "Nieuwe klant toevoegen",
     "clientDetails": "Klantgegevens",
     "clientLocation": "Klant Locatie",

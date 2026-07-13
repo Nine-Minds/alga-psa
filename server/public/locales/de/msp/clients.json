@@ -38,7 +38,15 @@
     "no": "Nein",
     "yes": "Ja"
   },
+  "clientLifecycle": {
+    "prospect": "Interessent",
+    "active": "Aktiver Kunde",
+    "former": "Ehemaliger Kunde",
+    "all": "Alle Lebenszyklusphasen"
+  },
   "clientsPage": {
+    "filterByLifecycle": "Nach Lebenszyklus filtern",
+    "lifecycleFilterLabel": "Lebenszyklusfilter",
     "title": "Kundenseite",
     "description": "Hauptseite zur Kundenverwaltung mit Suche, Filtern und Kundenraster-/Listenansicht",
     "searchPlaceholder": "Kunden, Notizen, Dokumente und Interaktionen suchen",
@@ -176,6 +184,9 @@
     "deletePermissionDenied": "Berechtigung verweigert: Kunden können nicht gelöscht werden."
   },
   "clientDetails": {
+    "opportunities": "Verkaufschancen",
+    "lifecycleStatus": "Lebenszyklus",
+    "lifecycleStatusHelper": "Interessenten stehen Vertriebsworkflows zur Verfügung, werden aber standardmäßig in operativen Kundenlisten ausgeblendet.",
     "title": "Kundendaten",
     "backToClients": "Zurück zu Kunden",
     "openInNewTab": "In neuem Tab öffnen",
@@ -286,6 +297,7 @@
     "parentClientLegacy": "Zuvor als Text eingegeben: {{name}}"
   },
   "quickAddClient": {
+    "lifecycleStatus": "Lebenszyklus",
     "title": "Neuen Kunden hinzufügen",
     "clientDetails": "Kundendaten",
     "clientLocation": "Kundenstandort",
