@@ -234,6 +234,9 @@ async function collectProcessedActivities(
 
   if (typesToFetch.includes(ActivityType.SCHEDULE)) {
     promises.push(fetchScheduleActivities(effectiveUserId, tenantId, filters));
+    // Opportunity next actions use the schedule-compatible activity shape so
+    // they render in the existing feed without adding a UI section in this lane.
+    promises.push(fetchOpportunityActivities(effectiveUserId, tenantId, filters));
   }
   if (typesToFetch.includes(ActivityType.PROJECT_TASK)) {
     promises.push(fetchProjectActivities(effectiveUserId, tenantId, filters));
@@ -1558,6 +1561,99 @@ export async function fetchNotificationActivities(
     return filteredActivities;
   } catch (error) {
     console.error("Error fetching notification activities:", error);
+    return [];
+  }
+}
+
+/**
+ * Fetch the current owner's open opportunity next actions. This is aggregation-only;
+ * the generic activities list can render the base fields and follow `link` without a
+ * dedicated opportunity section or detail drawer.
+ */
+export async function fetchOpportunityActivities(
+  userId: string,
+  tenantId: string,
+  filters: ActivityFilters
+): Promise<Activity[]> {
+  try {
+    const { knex, tenant } = await createTenantKnex(tenantId);
+    if (!tenant) throw new Error('Tenant is required');
+    const db = tenantDb(knex, tenant);
+    const query = db.table('opportunities as o');
+    db.tenantJoin(query, 'clients as c', 'o.client_id', 'c.client_id');
+    query
+      .where({ 'o.owner_id': userId, 'o.status': 'open' })
+      .whereNotNull('o.next_action')
+      .whereNotNull('o.next_action_due');
+
+    if (filters.clientId) query.where('o.client_id', filters.clientId);
+    if (filters.dueDateStart) query.where('o.next_action_due', '>=', filters.dueDateStart);
+    if (filters.dueDateEnd) query.where('o.next_action_due', '<=', filters.dueDateEnd);
+    if (filters.createdAtStart) query.where('o.created_at', '>=', filters.createdAtStart);
+    if (filters.createdAtEnd) query.where('o.created_at', '<=', filters.createdAtEnd);
+    if (filters.search) {
+      const term = `%${filters.search}%`;
+      query.where(function opportunitySearch() {
+        this.whereILike('o.next_action', term)
+          .orWhereILike('o.title', term)
+          .orWhereILike('o.opportunity_number', term)
+          .orWhereILike('c.client_name', term);
+      });
+    }
+
+    const rows = await query.select(
+      'o.opportunity_id',
+      'o.opportunity_number',
+      'o.title as opportunity_title',
+      'o.next_action',
+      'o.next_action_due',
+      'o.client_id',
+      'c.client_name',
+      'o.created_at',
+      'o.updated_at'
+    );
+    const now = Date.now();
+    let activities: Activity[] = rows.map((row: any) => {
+      const dueDate = new Date(row.next_action_due).toISOString();
+      const overdue = new Date(dueDate).getTime() < now;
+      const link = `/msp/opportunities/${row.opportunity_id}`;
+      return {
+        id: row.opportunity_id,
+        title: row.next_action,
+        description: `${row.client_name}: ${row.opportunity_title}`,
+        type: ActivityType.SCHEDULE,
+        status: overdue ? 'overdue' : 'open',
+        priority: overdue ? ActivityPriority.HIGH : ActivityPriority.MEDIUM,
+        dueDate,
+        assignedTo: [userId],
+        relatedEntities: [{
+          id: row.opportunity_id,
+          type: 'opportunity',
+          name: row.opportunity_number,
+          url: link,
+        }],
+        sourceId: row.opportunity_id,
+        sourceType: ActivityType.SCHEDULE,
+        workItemId: row.opportunity_id,
+        workItemType: 'opportunity',
+        link,
+        actions: [{ id: 'view', label: 'Open Opportunity' }],
+        isClosed: false,
+        tenant,
+        createdAt: new Date(row.created_at).toISOString(),
+        updatedAt: new Date(row.updated_at).toISOString(),
+      };
+    });
+
+    if (filters.status?.length) {
+      activities = activities.filter((activity) => filters.status!.includes(activity.status));
+    }
+    if (filters.priority?.length) {
+      activities = activities.filter((activity) => filters.priority!.includes(activity.priority));
+    }
+    return activities;
+  } catch (error) {
+    console.error('Error fetching opportunity activities:', error);
     return [];
   }
 }

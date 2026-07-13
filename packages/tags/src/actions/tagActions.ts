@@ -26,6 +26,7 @@ import { isTagActionError, type TagActionError } from './tagActionErrors';
 const ENTITY_PERMISSION_MAP: Partial<Record<TaggedEntityType, string>> = {
   client: 'client',
   knowledge_base_article: 'document',
+  opportunity: 'opportunities',
 };
 
 function getPermissionResource(taggedType: TaggedEntityType): string {

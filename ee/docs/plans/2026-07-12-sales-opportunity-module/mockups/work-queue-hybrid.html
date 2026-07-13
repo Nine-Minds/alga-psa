@@ -1,0 +1,264 @@
+<title>Opportunities work queue — A+C hybrid</title>
+<style>
+  :root {
+    --page-bg: linear-gradient(180deg, #FFFFFF 0%, #FAF5FF 60%, #F3F0FF 100%);
+    --page-fg: #171717;
+    --page-fg-2: #404040;
+    --page-muted: #737373;
+    --page-card: #FFFFFF;
+    --page-border: #E5E5E5;
+    --chip-fg: #6E33D1;
+    --frame-shadow: 0 18px 48px -12px rgba(82,46,140,0.28), 0 4px 12px -4px rgba(15,23,42,0.08);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --page-bg: linear-gradient(180deg, #0C111D 0%, #151228 100%); --page-fg: #F5F5F5; --page-fg-2: #CBD5E1; --page-muted: #94A3B8; --page-card: #161C30; --page-border: rgba(255,255,255,0.10); --chip-fg: #BFA5FB; --frame-shadow: 0 24px 64px -16px rgba(0,0,0,0.6); }
+  }
+  :root[data-theme="dark"] { --page-bg: linear-gradient(180deg, #0C111D 0%, #151228 100%); --page-fg: #F5F5F5; --page-fg-2: #CBD5E1; --page-muted: #94A3B8; --page-card: #161C30; --page-border: rgba(255,255,255,0.10); --chip-fg: #BFA5FB; --frame-shadow: 0 24px 64px -16px rgba(0,0,0,0.6); }
+  :root[data-theme="light"] { --page-bg: linear-gradient(180deg, #FFFFFF 0%, #FAF5FF 60%, #F3F0FF 100%); --page-fg: #171717; --page-fg-2: #404040; --page-muted: #737373; --page-card: #FFFFFF; --page-border: #E5E5E5; --chip-fg: #6E33D1; --frame-shadow: 0 18px 48px -12px rgba(82,46,140,0.28), 0 4px 12px -4px rgba(15,23,42,0.08); }
+
+  html, body { margin: 0; padding: 0; }
+  body { font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', sans-serif; background: var(--page-bg); color: var(--page-fg); font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; }
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 56px 32px 96px; display: flex; flex-direction: column; gap: 28px; }
+  .eyebrow { font-size: 12px; letter-spacing: 0.12em; text-transform: uppercase; font-weight: 600; color: var(--chip-fg); margin-bottom: 12px; }
+  h1 { font-family: 'Poppins', system-ui, sans-serif; font-size: 32px; font-weight: 700; letter-spacing: -0.01em; line-height: 1.15; margin: 0 0 12px; text-wrap: balance; }
+  .intro { max-width: 760px; }
+  .intro p { color: var(--page-fg-2); margin: 0; }
+
+  .frame-scroller { overflow-x: auto; border-radius: 18px; }
+  .frame { min-width: 1180px; border-radius: 16px; overflow: hidden; border: 1px solid var(--page-border); box-shadow: var(--frame-shadow); background: #F8FAFC; }
+
+  .notes { background: var(--page-card); border: 1px solid var(--page-border); border-radius: 16px; padding: 24px 28px; max-width: 860px; }
+  .notes h3 { font-family: 'Poppins', system-ui, sans-serif; font-size: 17px; margin: 0 0 10px; }
+  .notes p { margin: 0 0 8px; color: var(--page-fg-2); font-size: 14px; }
+  .notes p:last-child { margin-bottom: 0; }
+  .notes strong { color: var(--page-fg); }
+
+  /* ---------- mock (fixed light product UI) ---------- */
+  .mock { display: flex; height: 900px; background: #F8FAFC; color: #1E293B; font-size: 13.5px; text-align: left; }
+  .mock * { box-sizing: border-box; }
+  .mrr { font-family: 'JetBrains Mono', ui-monospace, monospace; font-variant-numeric: tabular-nums; }
+
+  .sb { width: 216px; flex: none; background: linear-gradient(180deg, #0C111D 0%, #1B1437 100%); color: #CBD5E1; display: flex; flex-direction: column; padding: 14px 12px; }
+  .sb-logo { display: flex; align-items: center; gap: 10px; padding: 6px 8px 18px; }
+  .sb-mark { width: 30px; height: 30px; border-radius: 9px; background: rgba(255,255,255,0.08); display: grid; place-items: center; color: #A36FF8; font-family: 'Poppins', sans-serif; font-weight: 800; font-size: 15px; }
+  .sb-logo b { color: #fff; font-size: 14px; letter-spacing: -0.01em; display: block; }
+  .sb-logo small { font-size: 11px; color: #94A3B8; }
+  .sb-nav { flex: 1; display: flex; flex-direction: column; gap: 2px; }
+  .sb-item { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 8px; color: #CBD5E1; font-weight: 500; }
+  .sb-item svg { width: 16px; height: 16px; flex: none; }
+  .sb-item.active { color: #fff; font-weight: 600; background: linear-gradient(90deg, rgba(138,77,234,0.35), rgba(138,77,234,0.15)); box-shadow: inset 0 0 0 1px rgba(166,115,242,0.35); }
+  .sb-item .cnt { margin-left: auto; background: rgba(255,255,255,0.14); padding: 1px 7px; border-radius: 999px; font-size: 11px; color: #fff; }
+  .sb-user { border-top: 1px solid rgba(255,255,255,0.08); padding: 12px 8px 4px; display: flex; align-items: center; gap: 10px; }
+  .sb-ava { width: 28px; height: 28px; border-radius: 999px; background: #8A4DEA; color: #fff; display: grid; place-items: center; font-size: 11px; font-weight: 600; }
+  .sb-user small { display: block; font-size: 11px; color: #94A3B8; }
+  .sb-user b { font-size: 13px; color: #fff; font-weight: 500; }
+
+  .main { flex: 1; display: flex; flex-direction: column; min-width: 0; }
+  .topbar { height: 58px; flex: none; background: #fff; border-bottom: 1px solid #E2E8F0; display: flex; align-items: center; gap: 20px; padding: 0 24px; }
+  .topbar .pg { font-family: 'Poppins', sans-serif; font-size: 17px; font-weight: 600; color: #0F172A; margin: 0; }
+  .tabs { display: flex; gap: 2px; margin-left: 8px; }
+  .tab { padding: 6px 12px; border-radius: 8px; color: #64748B; font-weight: 500; font-size: 13px; }
+  .tab.on { color: #6E33D1; background: #F3F0FF; font-weight: 600; }
+  .topbar .grow { flex: 1; }
+  .searchbox { display: flex; align-items: center; gap: 8px; background: #F1F5F9; border: 1px solid #E2E8F0; border-radius: 8px; padding: 6px 12px; color: #94A3B8; width: 200px; font-size: 13px; }
+  .searchbox svg { width: 14px; height: 14px; }
+  .btn { display: inline-flex; align-items: center; gap: 7px; border-radius: 8px; padding: 7px 14px; font-weight: 600; font-size: 13px; border: 1px solid transparent; white-space: nowrap; }
+  .btn svg { width: 14px; height: 14px; }
+  .btn.primary { background: linear-gradient(135deg, #A36FF8, #8A4DEA); color: #fff; box-shadow: 0 2px 8px -2px rgba(138,77,234,0.5); }
+  .btn.ghost { background: #fff; border-color: #E2E8F0; color: #334155; font-weight: 500; }
+  .btn.soft { background: #F3F0FF; color: #6E33D1; }
+  .btn.sm { padding: 5px 10px; font-size: 12.5px; border-radius: 7px; }
+
+  .content { flex: 1; overflow-y: auto; padding: 28px 24px; background: linear-gradient(180deg, #FFFFFF 0%, #FAF5FF 40%, #F8FAFC 100%); }
+  .col { max-width: 720px; margin: 0 auto; }
+
+  .brief h2 { font-family: 'Poppins', sans-serif; font-size: 25px; font-weight: 700; color: #0F172A; margin: 0 0 5px; letter-spacing: -0.01em; }
+  .brief p { margin: 0 0 26px; color: #475569; font-size: 14.5px; }
+  .brief p b { color: #6E33D1; }
+
+  .sect { margin-bottom: 30px; }
+  .sect-label { font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; font-weight: 600; color: #94A3B8; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; }
+  .sect-label .line { flex: 1; height: 1px; background: #E2E8F0; }
+  .sect-label .sub { text-transform: none; letter-spacing: 0; font-weight: 500; color: #A3A3A3; }
+
+  .row { background: #fff; border: 1px solid #E2E8F0; border-radius: 13px; padding: 15px 17px; display: flex; gap: 14px; margin-bottom: 9px; box-shadow: 0 2px 10px -6px rgba(82,46,140,0.10); }
+  .row:hover { border-color: #D4C3FD; }
+  .tick { width: 22px; height: 22px; flex: none; border-radius: 999px; border: 1.75px solid #CBD5E1; margin-top: 2px; }
+  .row.urgent .tick { border-color: #F87171; }
+  .row-main { flex: 1; min-width: 0; }
+  .row-main .act { font-weight: 600; color: #0F172A; font-size: 14.5px; margin-bottom: 3px; display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .row-main .act .val { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 12.5px; font-weight: 500; color: #475569; }
+  .row-main .why { font-size: 13px; color: #64748B; line-height: 1.5; margin-bottom: 10px; }
+  .row-main .why b { color: #334155; font-weight: 600; }
+  .row-main .why .flag { font-weight: 600; }
+  .row-main .why .flag.red { color: #B91C1C; }
+  .row-main .why .flag.amber { color: #92400E; }
+  .row-acts { display: flex; gap: 7px; align-items: center; }
+  .row-acts .skip { color: #94A3B8; font-size: 12.5px; margin-left: 4px; }
+
+  .mgrid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  .mcard { background: #fff; border: 1px solid #E2E8F0; border-radius: 13px; padding: 16px; display: flex; flex-direction: column; box-shadow: 0 2px 10px -6px rgba(82,46,140,0.10); }
+  .mcard:hover { border-color: #D4C3FD; }
+  .mcard .amt { font-family: 'JetBrains Mono', ui-monospace, monospace; font-size: 20px; font-weight: 600; color: #065F46; margin-bottom: 2px; font-variant-numeric: tabular-nums; }
+  .mcard .amt small { font-size: 12px; color: #94A3B8; font-family: 'Inter', sans-serif; font-weight: 500; }
+  .mcard .what { font-size: 13px; font-weight: 600; color: #0F172A; margin-bottom: 3px; }
+  .mcard .how { font-size: 12px; color: #64748B; flex: 1; margin-bottom: 12px; line-height: 1.45; }
+  .mcard .acts { display: flex; gap: 6px; }
+
+  .lesson { margin: 2px 0 26px; border-radius: 13px; padding: 15px 18px; background: linear-gradient(90deg, rgba(138,77,234,0.10), rgba(163,111,248,0.05)); border: 1px solid #E9E1FE; display: flex; align-items: center; gap: 13px; }
+  .lesson svg { width: 17px; height: 17px; color: #8A4DEA; flex: none; }
+  .lesson .txt { flex: 1; font-size: 13px; color: #334155; line-height: 1.5; }
+  .lesson .txt b { color: #0F172A; }
+
+  .done-note { text-align: center; color: #94A3B8; font-size: 13px; padding: 6px 0 10px; }
+</style>
+
+<div class="wrap">
+  <header class="intro">
+    <div class="eyebrow">Opportunities module · design direction</div>
+    <h1>The Docket, with the Advisor's voice</h1>
+    <p>A's skeleton — one finishable column with a bottom — carrying C's language: every row explains <em>why</em> in a sentence built from evidence, found money leads with the dollar figure, and the day ends with one lesson drawn from your own numbers.</p>
+  </header>
+
+  <div class="frame-scroller"><div class="frame">
+    <div class="mock">
+      <aside class="sb">
+        <div class="sb-logo"><div class="sb-mark">9</div><div><b>Alga PSA</b><small>harborlight-msp</small></div></div>
+        <nav class="sb-nav">
+          <div class="sb-item"><svg data-i="dash"></svg>Dashboard</div>
+          <div class="sb-item"><svg data-i="ticket"></svg>Tickets<span class="cnt">24</span></div>
+          <div class="sb-item"><svg data-i="kanban"></svg>Projects</div>
+          <div class="sb-item"><svg data-i="building"></svg>Clients</div>
+          <div class="sb-item active"><svg data-i="target"></svg>Opportunities<span class="cnt">7</span></div>
+          <div class="sb-item"><svg data-i="receipt"></svg>Billing</div>
+          <div class="sb-item"><svg data-i="chart"></svg>Reports</div>
+        </nav>
+        <div class="sb-user"><div class="sb-ava">DO</div><div><b>Dana Okafor</b><small>Owner</small></div></div>
+      </aside>
+      <div class="main">
+        <div class="topbar">
+          <span class="pg">Opportunities</span>
+          <div class="tabs"><span class="tab on">Queue</span><span class="tab">Pipeline</span><span class="tab">Board</span><span class="tab">Suggestions</span></div>
+          <div class="grow"></div>
+          <div class="searchbox"><svg data-i="search"></svg>Search deals…</div>
+          <span class="btn primary"><svg data-i="plus"></svg>New opportunity</span>
+        </div>
+        <div class="content"><div class="col">
+
+          <div class="brief">
+            <h2>Morning, Dana.</h2>
+            <p>Four things need you today — and <b>$4,650/mo</b> is sitting in your own data, nothing typed in.</p>
+          </div>
+
+          <div class="sect">
+            <div class="sect-label">Do today<span class="line"></span></div>
+            <div class="row urgent">
+              <div class="tick"></div>
+              <div class="row-main">
+                <div class="act">Reply to Pinewood's pricing-tier questions <span class="val">$2,900/mo</span></div>
+                <div class="why"><span class="flag red">Day 9 since the proposal</span> and Marisol has emailed twice. The per-branch tier answer is drafted from quote Q-2041 — <b>90 seconds to review and send.</b></div>
+                <div class="row-acts"><span class="btn primary sm"><svg data-i="send"></svg>Review the draft</span><span class="btn ghost sm">Done → set next</span><span class="skip">Snooze to Monday</span></div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="tick"></div>
+              <div class="row-main">
+                <div class="act">Send Gary the quote you promised <span class="val">est. $1,800/mo</span></div>
+                <div class="why">Qualified three weeks ago at the chamber lunch. <b>Quotes you send within a week close twice as often</b> as the ones that wait.</div>
+                <div class="row-acts"><span class="btn soft sm"><svg data-i="pen"></svg>Start the quote</span><span class="btn ghost sm">Open deal</span><span class="skip">Snooze</span></div>
+              </div>
+            </div>
+            <div class="row">
+              <div class="tick"></div>
+              <div class="row-main">
+                <div class="act">Book the assessment kickoff with Harvest <span class="val">$4,500 one-time</span></div>
+                <div class="why">They signed the assessment agreement Tuesday — evidence puts this at <b>Assessment</b>, your strongest stage. Kickoff within the week keeps it warm.</div>
+                <div class="row-acts"><span class="btn soft sm"><svg data-i="cal"></svg>Schedule the call</span><span class="btn ghost sm">Open deal</span><span class="skip">Snooze</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="sect">
+            <div class="sect-label">Going quiet<span class="line"></span></div>
+            <div class="row">
+              <div class="tick"></div>
+              <div class="row-main">
+                <div class="act">Nudge Cedar Point Dental <span class="val">$1,450/mo</span></div>
+                <div class="why"><span class="flag amber">16 days since their verbal yes</span> — the paperwork never went out. A two-line check-in is drafted; two more weeks of silence and this one usually dies.</div>
+                <div class="row-acts"><span class="btn soft sm"><svg data-i="send"></svg>Review the nudge</span><span class="btn ghost sm">Open deal</span><span class="skip">Mark lost</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="sect">
+            <div class="sect-label">Money found<span class="line"></span><span class="sub">from billing, contracts, and assets</span></div>
+            <div class="mgrid">
+              <div class="mcard">
+                <div class="amt">$3,240<small>/mo</small></div>
+                <div class="what">Lakeshore Title renewal</div>
+                <div class="how">Agreement renews in 118 days. Starting now means the escalator conversation isn't rushed.</div>
+                <div class="acts"><span class="btn soft sm">Create opportunity</span><span class="btn ghost sm">Dismiss</span></div>
+              </div>
+              <div class="mcard">
+                <div class="amt">$1,410<small>/mo</small></div>
+                <div class="what">3 clients overpaying on T&amp;M</div>
+                <div class="how">Bristol Law, Summit Ortho, and Keystone CPA each paid more last year than an agreement costs. The one-pager makes it their idea.</div>
+                <div class="acts"><span class="btn soft sm">See the numbers</span><span class="btn ghost sm">Dismiss</span></div>
+              </div>
+              <div class="mcard">
+                <div class="amt">$18,500<small> project</small></div>
+                <div class="what">Meridian server refresh</div>
+                <div class="how">Two servers past six years. Quote the refresh before it becomes an outage ticket.</div>
+                <div class="acts"><span class="btn soft sm">Create opportunity</span><span class="btn ghost sm">Dismiss</span></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="lesson">
+            <svg data-i="spark"></svg>
+            <div class="txt"><b>You close 4 of every 5 assessments you propose.</b> You haven't proposed one since March — Harvest-style paid assessments are your strongest opening move.</div>
+            <span class="btn ghost sm">Who's a fit?</span>
+          </div>
+
+          <div class="done-note">That's everything. Nothing else needs you today.</div>
+
+        </div></div>
+      </div>
+    </div>
+  </div></div>
+
+  <footer class="notes">
+    <h3>What came from where</h3>
+    <p><strong>From A:</strong> the single finishable column, the tick affordance, the three-section rhythm (Do today → Going quiet → Money found), and the explicit bottom — "That's everything." The screen stays a short list you can complete, never a dashboard you owe.</p>
+    <p><strong>From C:</strong> the greeting with the found-money total, the why-sentence on every row (evidence speaking in plain language, with the one bold clause that matters), dollar-forward cards for the generators, and the closing lesson drawn from the tenant's own numbers.</p>
+    <p><strong>The rule that makes it work:</strong> one primary button per screen — the most urgent item gets it; everything else is soft or ghost. Why-sentences are assembled from evidence facts (day counts, quote refs, checkpoint states), so they stay true as data changes; the AI seam later upgrades their fluency, not their honesty.</p>
+  </footer>
+</div>
+
+<script>
+  const ICONS = {
+    dash:   '<rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>',
+    ticket: '<path d="M2 9a3 3 0 0 1 0 6v3a1 1 0 0 0 1 1h18a1 1 0 0 0 1-1v-3a3 3 0 0 1 0-6V6a1 1 0 0 0-1-1H3a1 1 0 0 0-1 1Z"/><path d="M13 5v2"/><path d="M13 17v2"/><path d="M13 11v2"/>',
+    kanban: '<path d="M6 5v11"/><path d="M12 5v6"/><path d="M18 5v14"/>',
+    building:'<path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v8h4"/><path d="M18 9h2a2 2 0 0 1 2 2v11h-4"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/>',
+    target: '<circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/>',
+    receipt:'<path d="M4 2v20l2-1 2 1 2-1 2 1 2-1 2 1 2-1 2 1V2l-2 1-2-1-2 1-2-1-2 1-2-1-2 1Z"/><path d="M8 8h8"/><path d="M8 12h8"/><path d="M8 16h5"/>',
+    chart:  '<path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>',
+    search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>',
+    plus:   '<path d="M5 12h14"/><path d="M12 5v14"/>',
+    cal:    '<rect x="3" y="4" width="18" height="17" rx="2"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h18"/>',
+    pen:    '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+    send:   '<path d="m22 2-11 11"/><path d="M22 2 15 22l-4-9-9-4Z"/>',
+    spark:  '<path d="M12 2l2.2 5.8L20 10l-5.8 2.2L12 18l-2.2-5.8L4 10l5.8-2.2Z"/><path d="M19 15l.9 2.4L22 18.3l-2.1.9L19 21.5l-.9-2.3-2.1-.9 2.1-.9Z"/>'
+  };
+  document.querySelectorAll('svg[data-i]').forEach(el => {
+    const name = el.getAttribute('data-i');
+    el.setAttribute('viewBox', '0 0 24 24');
+    el.setAttribute('fill', 'none');
+    el.setAttribute('stroke', 'currentColor');
+    el.setAttribute('stroke-width', '1.75');
+    el.setAttribute('stroke-linecap', 'round');
+    el.setAttribute('stroke-linejoin', 'round');
+    el.innerHTML = ICONS[name] || '';
+  });
+</script>

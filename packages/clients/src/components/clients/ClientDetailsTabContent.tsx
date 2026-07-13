@@ -500,6 +500,30 @@ export function ClientDetailsTabContent({
             />
           </FieldContainer>
 
+          <FieldContainer
+            label={t('clientDetails.lifecycleStatus', { defaultValue: 'Lifecycle' })}
+            fieldType="select"
+            value={editedClient.lifecycle_status ?? 'active'}
+            helperText={t('clientDetails.lifecycleStatusHelper', {
+              defaultValue: 'Prospects are available to sales workflows but hidden from operational client lists by default.',
+            })}
+            automationId="client-lifecycle-field"
+          >
+            <Text as="label" size="2" className="text-gray-700 font-medium">
+              {t('clientDetails.lifecycleStatus', { defaultValue: 'Lifecycle' })}
+            </Text>
+            <CustomSelect
+              id="client-lifecycle-select"
+              value={editedClient.lifecycle_status ?? 'active'}
+              onValueChange={(value) => onFieldChange('lifecycle_status', value)}
+              options={[
+                { value: 'prospect', label: t('clientLifecycle.prospect', { defaultValue: 'Prospect' }) },
+                { value: 'active', label: t('clientLifecycle.active', { defaultValue: 'Active client' }) },
+                { value: 'former', label: t('clientLifecycle.former', { defaultValue: 'Former client' }) },
+              ]}
+            />
+          </FieldContainer>
+
           <TextDetailItem
             label={t('quickAddClient.websiteUrl', { defaultValue: 'Website URL' })}
             value={editedClient.properties?.website || ''}

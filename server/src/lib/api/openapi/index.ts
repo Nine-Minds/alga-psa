@@ -28,6 +28,7 @@ import { registerProductRoutes } from './routes/products';
 import { registerQuickBooksRoutes } from './routes/quickbooks';
 import { registerQuickBooksV1Routes } from './routes/quickbooksV1';
 import { registerQuotesContractsV1Routes } from './routes/quotesContractsV1';
+import { registerOpportunitiesV1Routes } from './routes/opportunitiesV1';
 import { registerServiceTypeRoutes } from './routes/serviceTypes';
 import { registerSoftwareOneRoutes } from './routes/softwareOne';
 import { registerStorageRoutes } from './routes/extensionStorage';
@@ -83,6 +84,7 @@ export function buildBaseRegistry(options: RegistryInitOptions = {}): ApiOpenApi
   registerProjectRoutes(registry, components);
   registerWorkManagementV1Routes(registry);
   registerQuotesContractsV1Routes(registry);
+  registerOpportunitiesV1Routes(registry);
   registerMetaUtilityV1Routes(registry);
   registerEeInventoryOnlyRoutes(registry);
   registerSoftwareOneRoutes(registry);

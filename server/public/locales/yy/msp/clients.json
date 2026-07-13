@@ -38,7 +38,15 @@
     "no": "55555",
     "yes": "55555"
   },
+  "clientLifecycle": {
+    "prospect": "55555",
+    "active": "55555",
+    "former": "55555",
+    "all": "55555"
+  },
   "clientsPage": {
+    "filterByLifecycle": "55555",
+    "lifecycleFilterLabel": "55555",
     "title": "55555",
     "description": "55555",
     "searchPlaceholder": "55555",
@@ -176,6 +184,9 @@
     "deletePermissionDenied": "55555"
   },
   "clientDetails": {
+    "opportunities": "55555",
+    "lifecycleStatus": "55555",
+    "lifecycleStatusHelper": "55555",
     "title": "55555",
     "backToClients": "55555",
     "openInNewTab": "55555",
@@ -286,6 +297,7 @@
     "parentClientLegacy": "55555 {{name}} 55555"
   },
   "quickAddClient": {
+    "lifecycleStatus": "55555",
     "title": "55555",
     "clientDetails": "55555",
     "clientLocation": "55555",

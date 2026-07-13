@@ -60,6 +60,7 @@ describe('clientActions tenant-scoped query contract', () => {
     expect(paginatedSection).toContain("scopedDb.tenantJoin(baseQuery, 'users as u'");
     expect(paginatedSection).toContain("scopedDb.tenantJoinSubquery(baseQuery, buildDefaultClientLocationSubquery(trx, tenant)");
     expect(paginatedSection).toContain("scopedDb.table('tag_mappings as tm')");
+    expect(paginatedSection).toContain("baseQuery = baseQuery.where('c.lifecycle_status', lifecycleFilter)");
     expect(paginatedSection).toContain("scopedDb.tenantJoin(tagSubquery, 'tag_definitions as td'");
     expect(paginatedSection).toContain("tenantJoin(baseQuery, 'tenant_companies as tc'");
     expect(paginatedSection).not.toContain(".leftJoin(buildDefaultClientLocationSubquery");

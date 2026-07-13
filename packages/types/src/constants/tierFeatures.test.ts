@@ -59,6 +59,7 @@ describe('tierFeatures', () => {
         TIER_FEATURES.MOBILE_ACCESS,
         TIER_FEATURES.CIPP,
         TIER_FEATURES.ADVANCED_AUTHORIZATION_BUNDLES,
+        TIER_FEATURES.OPPORTUNITY_MANAGEMENT,
       ]);
     });
   });
@@ -86,6 +87,7 @@ describe('tierFeatures', () => {
       expect(tierHasFeature('pro', TIER_FEATURES.ENTRA_SYNC)).toBe(false);
       expect(tierHasFeature('pro', TIER_FEATURES.CIPP)).toBe(false);
       expect(tierHasFeature('pro', TIER_FEATURES.ADVANCED_AUTHORIZATION_BUNDLES)).toBe(false);
+      expect(tierHasFeature('pro', TIER_FEATURES.OPPORTUNITY_MANAGEMENT)).toBe(false);
     });
 
     it('premium has access to premium tier features but not add-on-only features', () => {
@@ -95,6 +97,7 @@ describe('tierFeatures', () => {
       expect(tierHasFeature('premium', TIER_FEATURES.ENTRA_SYNC)).toBe(false);
       expect(tierHasFeature('premium', TIER_FEATURES.CIPP)).toBe(true);
       expect(tierHasFeature('premium', TIER_FEATURES.ADVANCED_AUTHORIZATION_BUNDLES)).toBe(true);
+      expect(tierHasFeature('premium', TIER_FEATURES.OPPORTUNITY_MANAGEMENT)).toBe(true);
     });
   });
 
@@ -117,6 +120,7 @@ describe('tierFeatures', () => {
       expect(FEATURE_MINIMUM_TIER[TIER_FEATURES.ENTRA_SYNC]).toBe('premium');
       expect(FEATURE_MINIMUM_TIER[TIER_FEATURES.CIPP]).toBe('premium');
       expect(FEATURE_MINIMUM_TIER[TIER_FEATURES.ADVANCED_AUTHORIZATION_BUNDLES]).toBe('premium');
+      expect(FEATURE_MINIMUM_TIER[TIER_FEATURES.OPPORTUNITY_MANAGEMENT]).toBe('premium');
     });
   });
 });

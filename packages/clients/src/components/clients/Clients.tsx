@@ -110,6 +110,7 @@ interface ClientResultsProps {
   searchTerm: string;
   filterStatus: 'all' | 'active' | 'inactive';
   clientTypeFilter: 'all' | 'company' | 'individual';
+  lifecycleFilter: 'all' | 'prospect' | 'active' | 'former';
   selectedTags: string[];
   viewMode: 'grid' | 'list';
   selectedClients: string[];
@@ -137,6 +138,7 @@ const ClientResults = memo(({
   searchTerm,
   filterStatus,
   clientTypeFilter,
+  lifecycleFilter,
   selectedTags,
   viewMode,
   selectedClients,
@@ -187,6 +189,7 @@ const ClientResults = memo(({
           statusFilter: filterStatus,
           searchTerm: searchTerm || undefined,
           clientTypeFilter,
+          lifecycleFilter,
           selectedTags,
           loadLogos: true,
           sortBy,
@@ -205,7 +208,7 @@ const ClientResults = memo(({
     };
 
     loadClients();
-  }, [currentPage, pageSize, filterStatus, searchTerm, clientTypeFilter, selectedTags, sortBy, sortDirection]);
+  }, [currentPage, pageSize, filterStatus, searchTerm, clientTypeFilter, lifecycleFilter, selectedTags, sortBy, sortDirection]);
 
   // Fetch tags when clients change
   useEffect(() => {
@@ -433,6 +436,7 @@ const Clients: React.FC = () => {
   const [isPrintOptionsOpen, setIsPrintOptionsOpen] = useState(false);
   const [filterStatus, setFilterStatus] = useState<'all' | 'active' | 'inactive'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
+  const [lifecycleFilter, setLifecycleFilter] = useState<'all' | 'prospect' | 'active' | 'former'>('active');
   const [isMultiDeleteDialogOpen, setIsMultiDeleteDialogOpen] = useState(false);
   const [isImportDialogOpen, setIsImportDialogOpen] = useState(false);
   const [multiDeleteError, setMultiDeleteError] = useState<string | null>(null);
@@ -584,9 +588,10 @@ const Clients: React.FC = () => {
       searchTerm !== '' || 
       filterStatus !== 'active' || 
       clientTypeFilter !== 'all' || 
+      lifecycleFilter !== 'active' ||
       selectedTags.length > 0;
     setIsFiltered(hasFilters);
-  }, [searchTerm, filterStatus, clientTypeFilter, selectedTags]);
+  }, [searchTerm, filterStatus, clientTypeFilter, lifecycleFilter, selectedTags]);
 
   // Tags will be loaded by ClientResults component
 
@@ -994,6 +999,7 @@ const Clients: React.FC = () => {
     setSearchTerm('');
     setFilterStatus('active');
     setClientTypeFilter('all');
+    setLifecycleFilter('active');
     setSelectedTags([]);
     setCurrentPage(1);
     setIsFiltered(false);
@@ -1239,6 +1245,7 @@ const Clients: React.FC = () => {
       statusFilter: filterStatus,
       searchTerm,
       clientTypeFilter,
+      lifecycleFilter,
       selectedTags,
       loadLogos: false,
       sortBy,
@@ -1249,6 +1256,7 @@ const Clients: React.FC = () => {
     setPrintClients(response.clients);
   }, [
     clientTypeFilter,
+    lifecycleFilter,
     filterStatus,
     hydratePrintClientTags,
     loadedClients,
@@ -1484,6 +1492,25 @@ const Clients: React.FC = () => {
 
             <div className="w-48 shrink-0">
               <CustomSelect
+                id="lifecycle-filter"
+                value={lifecycleFilter}
+                onValueChange={(value) => {
+                  setLifecycleFilter(value as 'all' | 'prospect' | 'active' | 'former');
+                  setCurrentPage(1);
+                }}
+                options={[
+                  { value: 'active', label: t('clientLifecycle.active', { defaultValue: 'Active clients' }) },
+                  { value: 'prospect', label: t('clientLifecycle.prospect', { defaultValue: 'Prospects' }) },
+                  { value: 'former', label: t('clientLifecycle.former', { defaultValue: 'Former clients' }) },
+                  { value: 'all', label: t('clientLifecycle.all', { defaultValue: 'All lifecycle stages' }) }
+                ]}
+                placeholder={t('clientsPage.filterByLifecycle', { defaultValue: 'Filter by lifecycle' })}
+                label={t('clientsPage.lifecycleFilterLabel', { defaultValue: 'Lifecycle Filter' })}
+              />
+            </div>
+
+            <div className="w-48 shrink-0">
+              <CustomSelect
                 id="client-type-filter"
                 value={clientTypeFilter}
                 onValueChange={(value) => {
@@ -1608,6 +1635,7 @@ const Clients: React.FC = () => {
         searchTerm={searchTerm}
         filterStatus={filterStatus}
         clientTypeFilter={clientTypeFilter}
+        lifecycleFilter={lifecycleFilter}
         selectedTags={selectedTags}
         viewMode={viewMode!}
         selectedClients={selectedClients}

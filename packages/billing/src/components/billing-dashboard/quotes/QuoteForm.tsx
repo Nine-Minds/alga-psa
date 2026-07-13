@@ -41,6 +41,12 @@ import { calculateDraftQuoteTotals, createDraftQuoteItemFromQuoteItem, formatDra
 interface QuoteFormProps {
   quoteId?: string | null;
   initialIsTemplate?: boolean;
+  initialContext?: {
+    clientId?: string;
+    contactId?: string;
+    opportunityId?: string;
+    title?: string;
+  };
   onCancel: () => void;
   onSaved: (quoteId: string) => void;
 }
@@ -96,7 +102,13 @@ const formatRelativeMinutes = (iso?: string | null): string | null => {
 const isReturnedActionError = (value: unknown) =>
   isActionMessageError(value) || isActionPermissionError(value);
 
-const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = false, onCancel, onSaved }) => {
+const QuoteForm: React.FC<QuoteFormProps> = ({
+  quoteId,
+  initialIsTemplate = false,
+  initialContext,
+  onCancel,
+  onSaved,
+}) => {
   const { t } = useTranslation('msp/quotes');
   const { formatCurrency: formatLocalizedCurrency, formatDate } = useFormatters();
   const isEditMode = Boolean(quoteId && quoteId !== 'new');
@@ -301,6 +313,9 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
 
         setForm({
           ...EMPTY_FORM,
+          client_id: initialContext?.clientId ?? '',
+          contact_id: initialContext?.contactId ?? '',
+          title: initialContext?.title ?? '',
           currency_code: defaultCurrency,
           quote_date: today.toISOString().slice(0, 10),
           valid_until: validUntil.toISOString().slice(0, 10),
@@ -439,6 +454,7 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ quoteId, initialIsTemplate = fals
         tax: 0,
         total_amount: 0,
         currency_code: form.currency_code,
+        opportunity_id: initialContext?.opportunityId ?? quote?.opportunity_id ?? null,
         is_template: isTemplate,
         template_id: documentTemplateId || null,
       };

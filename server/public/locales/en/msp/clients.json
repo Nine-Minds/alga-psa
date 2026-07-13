@@ -38,7 +38,15 @@
     "no": "No",
     "yes": "Yes"
   },
+  "clientLifecycle": {
+    "prospect": "Prospect",
+    "active": "Active client",
+    "former": "Former client",
+    "all": "All lifecycle stages"
+  },
   "clientsPage": {
+    "filterByLifecycle": "Filter by lifecycle",
+    "lifecycleFilterLabel": "Lifecycle Filter",
     "title": "Clients Page",
     "description": "Main clients management page with search, filters, and client grid/list view",
     "searchPlaceholder": "Search clients, notes, documents, and interactions",
@@ -176,6 +184,9 @@
     "deletePermissionDenied": "Permission denied: Cannot delete clients."
   },
   "clientDetails": {
+    "opportunities": "Opportunities",
+    "lifecycleStatus": "Lifecycle",
+    "lifecycleStatusHelper": "Prospects are available to sales workflows but hidden from operational client lists by default.",
     "title": "Client Details",
     "backToClients": "Back to Clients",
     "openInNewTab": "Open in new tab",
@@ -286,6 +297,7 @@
     "parentClientLegacy": "Previously entered as text: {{name}}"
   },
   "quickAddClient": {
+    "lifecycleStatus": "Lifecycle",
     "title": "Add New Client",
     "clientDetails": "Client Details",
     "clientLocation": "Client Location",

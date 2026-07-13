@@ -23,6 +23,7 @@
   },
   "dependencies": {
     "@alga-psa/authorization": "*",
+    "@alga-psa/email": "*",
     "@alga-psa/workflow-streams": "*",
     "@alga-psa/workflows": "*",
     "@huggingface/inference": "^3.3.3",

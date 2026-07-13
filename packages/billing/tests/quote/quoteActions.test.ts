@@ -52,6 +52,7 @@ const makeListQuery = (rows: any[]) => {
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: (...args: any[]) => createTenantKnex(...args),
+  withTransaction: (_conn: any, handler: (trx: typeof mockTrx) => Promise<unknown>) => handler(mockTrx),
   tenantDb: (conn: any, _tenant: string) => ({
     table: (table: string) => conn(table),
     unscoped: (table: string) => conn(table),
@@ -635,7 +636,7 @@ describe('quoteActions', () => {
 
     expect(approvalSettingsMock).toHaveBeenCalledWith(mockKnex, TENANT_ID);
     expect(Quote.update).toHaveBeenCalledWith(
-      mockKnex,
+      mockTrx,
       TENANT_ID,
       QUOTE_ID,
       expect.objectContaining({ status: 'sent' })
@@ -829,7 +830,7 @@ describe('quoteActions', () => {
     });
   });
 
-  it('T089: sendQuote rejects quotes not in draft or approved status', async () => {
+  it('T089: sendQuote returns an action error for quotes not in draft or approved status', async () => {
     vi.spyOn(Quote, 'getById')
       .mockResolvedValueOnce({
         quote_id: QUOTE_ID,
@@ -846,9 +847,9 @@ describe('quoteActions', () => {
 
     const { sendQuote } = await import('../../src/actions/quoteActions');
 
-    await expect(sendQuote(QUOTE_ID, { email_addresses: ['client@example.com'] })).rejects.toThrow(
-      'Only draft or approved quotes can be sent'
-    );
+    await expect(sendQuote(QUOTE_ID, { email_addresses: ['client@example.com'] })).resolves.toEqual({
+      actionError: 'Only draft or approved quotes can be sent',
+    });
   });
 
   it('T090: sendQuote generates PDF, sends email, and updates status to sent', async () => {
@@ -874,7 +875,7 @@ describe('quoteActions', () => {
     expect(generatePDFMock).toHaveBeenCalledWith({ quoteId: QUOTE_ID, userId: USER_ID });
     expect(sendEmailMock).toHaveBeenCalled();
     expect(Quote.update).toHaveBeenCalledWith(
-      mockKnex,
+      mockTrx,
       TENANT_ID,
       QUOTE_ID,
       expect.objectContaining({ status: 'sent', updated_by: USER_ID, sent_at: expect.any(String) })
@@ -1066,7 +1067,7 @@ describe('quoteActions', () => {
     expect(sendEmailMock).toHaveBeenCalled();
     // Status was updated to sent despite storage failure
     expect(Quote.update).toHaveBeenCalledWith(
-      mockKnex,
+      mockTrx,
       TENANT_ID,
       QUOTE_ID,
       expect.objectContaining({ status: 'sent' })
@@ -1151,12 +1152,14 @@ describe('quoteActions', () => {
     expect(result).toBe('stored-file-1');
   });
 
-  it('T134: regenerateQuotePdf throws when quote does not exist', async () => {
+  it('T134: regenerateQuotePdf returns an action error when quote does not exist', async () => {
     vi.spyOn(Quote, 'getById').mockResolvedValueOnce(null);
 
     const { regenerateQuotePdf } = await import('../../src/actions/quoteActions');
 
-    await expect(regenerateQuotePdf(QUOTE_ID)).rejects.toThrow('Quote 33333333-3333-4333-8333-333333333333 not found');
+    await expect(regenerateQuotePdf(QUOTE_ID)).resolves.toEqual({
+      actionError: 'Quote not found. It may have been updated or deleted. Please refresh and try again.',
+    });
   });
 
   it('T135: regenerateQuotePdf requires billing:update permission', async () => {

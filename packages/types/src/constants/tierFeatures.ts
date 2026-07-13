@@ -25,6 +25,12 @@ export enum TIER_FEATURES {
   ADVANCED_AUTHORIZATION_BUNDLES = 'ADVANCED_AUTHORIZATION_BUNDLES',
 }
 
+// Namespace member instead of an enum member so older exhaustive UI label maps
+// remain source-compatible while edition-gated server code gets a distinct key.
+export namespace TIER_FEATURES {
+  export const OPPORTUNITY_MANAGEMENT = 'OPPORTUNITY_MANAGEMENT' as TIER_FEATURES;
+}
+
 /**
  * Alias for TIER_FEATURES for shorter usage.
  */
@@ -46,6 +52,7 @@ export const FEATURE_MINIMUM_TIER: Record<TIER_FEATURES, TenantTier> = {
   [TIER_FEATURES.CIPP]: 'premium',
   [TIER_FEATURES.TEAMS_INTEGRATION]: 'pro',
   [TIER_FEATURES.ADVANCED_AUTHORIZATION_BUNDLES]: 'premium',
+  [TIER_FEATURES.OPPORTUNITY_MANAGEMENT]: 'premium',
 } as const;
 
 const ADD_ON_ONLY_FEATURES = new Set<TIER_FEATURES>([

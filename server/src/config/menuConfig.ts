@@ -51,6 +51,7 @@ import {
   UserCog,
   Users,
   Star,
+  Target,
   Ticket,
   BadgeCheck
 } from 'lucide-react';
@@ -123,6 +124,12 @@ export const navigationSections: NavigationSection[] = [
         translationKey: 'nav.clients',
         icon: Building2,
         href: '/msp/clients'
+      },
+      {
+        name: 'Opportunities',
+        translationKey: 'nav.opportunities',
+        icon: Target,
+        href: '/msp/opportunities'
       },
       {
         name: 'Contacts',
@@ -258,6 +265,7 @@ export const settingsNavigationSections: NavigationSection[] = [
       { name: 'SLA', translationKey: 'settings.tabs.sla', icon: Timer, href: '/msp/settings/sla' },
       { name: 'Projects', translationKey: 'settings.tabs.projects', icon: ListTodo, href: '/msp/settings/projects' },
       { name: 'Interactions', translationKey: 'settings.tabs.interactions', icon: Handshake, href: '/msp/settings/interactions' },
+      { name: 'Opportunities', translationKey: 'settings.tabs.opportunities', icon: Target, href: '/msp/settings/opportunities' },
     ]
   },
   {

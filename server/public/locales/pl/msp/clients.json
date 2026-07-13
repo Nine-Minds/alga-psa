@@ -38,7 +38,15 @@
     "no": "Nie",
     "yes": "Tak"
   },
+  "clientLifecycle": {
+    "prospect": "Potencjalny klient",
+    "active": "Aktywny klient",
+    "former": "Były klient",
+    "all": "Wszystkie etapy cyklu życia"
+  },
   "clientsPage": {
+    "filterByLifecycle": "Filtruj według cyklu życia",
+    "lifecycleFilterLabel": "Filtr cyklu życia",
     "title": "Strona klientów",
     "description": "Główna strona zarządzania klientami z wyszukiwaniem, filtrami i widokiem siatki/listy klientów",
     "searchPlaceholder": "Szukaj klientów, notatek, dokumentów i interakcji",
@@ -202,6 +210,9 @@
     "singleInactiveWithContactsSuccess_many": "{{name}} i {{count}} kontaktów zostało pomyślnie dezaktywowanych."
   },
   "clientDetails": {
+    "opportunities": "Szanse sprzedażowe",
+    "lifecycleStatus": "Cykl życia",
+    "lifecycleStatusHelper": "Potencjalni klienci są dostępni w procesach sprzedażowych, ale domyślnie ukryci na operacyjnych listach klientów.",
     "title": "Dane Klienta",
     "backToClients": "Powrót do Klientów",
     "openInNewTab": "Otwórz w nowej karcie",
@@ -316,6 +327,7 @@
     "parentClientLegacy": "Wcześniej wprowadzono jako tekst: {{name}}"
   },
   "quickAddClient": {
+    "lifecycleStatus": "Cykl życia",
     "title": "Dodaj nowego klienta",
     "clientDetails": "Dane Klienta",
     "clientLocation": "Lokalizacja klienta",

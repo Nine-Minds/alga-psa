@@ -8,6 +8,9 @@ import { generateInvoiceHandler, GenerateInvoiceData } from './handlers/generate
 import { expiredCreditsHandler, ExpiredCreditsJobData } from '@alga-psa/jobs/handlers/expiredCreditsHandler';
 import { expiringCreditsNotificationHandler, ExpiringCreditsNotificationJobData } from '@alga-psa/jobs/handlers/expiringCreditsNotificationHandler';
 import { expireQuotesHandler, ExpireQuotesJobData } from './handlers/expireQuotesHandler';
+import { opportunityDisciplineHandler, OpportunityDisciplineJobData } from './handlers/opportunityDisciplineHandler';
+import { opportunityWeeklyDigestHandler, OpportunityWeeklyDigestJobData } from './handlers/opportunityWeeklyDigestHandler';
+import { opportunityGeneratorsHandler, OpportunityGeneratorsJobData } from './handlers/opportunityGeneratorsHandler';
 import { creditReconciliationHandler, CreditReconciliationJobData } from '@alga-psa/jobs/handlers/creditReconciliationHandler';
 // Import the new handler
 import { handleReconcileBucketUsage, ReconcileBucketUsageJobData } from '@alga-psa/jobs/handlers/reconcileBucketUsageHandler';
@@ -140,6 +143,18 @@ export const initializeScheduler = async (storageService?: StorageService) => {
     
     jobScheduler.registerJobHandler<ExpireQuotesJobData>('expire-quotes', async (job: Job<ExpireQuotesJobData>) => {
       await expireQuotesHandler(job.data);
+    });
+
+    jobScheduler.registerJobHandler<OpportunityDisciplineJobData>('opportunity-discipline', async (job: Job<OpportunityDisciplineJobData>) => {
+      await opportunityDisciplineHandler(job.data);
+    });
+
+    jobScheduler.registerJobHandler<OpportunityWeeklyDigestJobData>('opportunity-weekly-digest', async (job: Job<OpportunityWeeklyDigestJobData>) => {
+      await opportunityWeeklyDigestHandler(job.data);
+    });
+
+    jobScheduler.registerJobHandler<OpportunityGeneratorsJobData>('opportunity-generators', async (job: Job<OpportunityGeneratorsJobData>) => {
+      await opportunityGeneratorsHandler(job.data);
     });
 
     // Register credit reconciliation handler
@@ -471,6 +486,48 @@ export const scheduleQuoteAutoExpirationJob = async (
     cronExpression,
     { tenantId }
   );
+};
+
+export const scheduleOpportunityDisciplineJob = async (
+  tenantId: string,
+  cronExpression: string = '0 7 * * *'
+): Promise<string | null> => {
+  const runner = await getJobRunnerInstance();
+  const result = await runner.scheduleRecurringJob<OpportunityDisciplineJobData>(
+    'opportunity-discipline',
+    { tenantId },
+    cronExpression,
+    { singletonKey: `opportunity-discipline:${tenantId}` }
+  );
+  return result.jobId;
+};
+
+export const scheduleOpportunityWeeklyDigestJob = async (
+  tenantId: string,
+  cronExpression: string = '0 8 * * 1'
+): Promise<string | null> => {
+  const runner = await getJobRunnerInstance();
+  const result = await runner.scheduleRecurringJob<OpportunityWeeklyDigestJobData>(
+    'opportunity-weekly-digest',
+    { tenantId },
+    cronExpression,
+    { singletonKey: `opportunity-weekly-digest:${tenantId}` }
+  );
+  return result.jobId;
+};
+
+export const scheduleOpportunityGeneratorsJob = async (
+  tenantId: string,
+  cronExpression: string = '0 6 * * *'
+): Promise<string | null> => {
+  const runner = await getJobRunnerInstance();
+  const result = await runner.scheduleRecurringJob<OpportunityGeneratorsJobData>(
+    'opportunity-generators',
+    { tenantId },
+    cronExpression,
+    { singletonKey: `opportunity-generators:${tenantId}` }
+  );
+  return result.jobId;
 };
 
 /**

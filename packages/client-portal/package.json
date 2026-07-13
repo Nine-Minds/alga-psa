@@ -31,6 +31,7 @@
     "@alga-psa/db": "*",
     "@alga-psa/formatting": "*",
     "@alga-psa/msp-composition": "*",
+    "@alga-psa/opportunities": "*",
     "@alga-psa/projects": "*",
     "@alga-psa/scheduling": "*",
     "@alga-psa/storage": "*",

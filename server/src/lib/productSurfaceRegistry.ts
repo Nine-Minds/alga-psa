@@ -73,6 +73,7 @@ export const MSP_ROUTE_RULES: readonly RouteRule[] = [
       '/msp/surveys',
       '/msp/extensions',
       '/msp/service-requests',
+      '/msp/opportunities',
     ],
     behaviorByProduct: { psa: 'allowed', algadesk: 'upgrade_boundary' },
   },

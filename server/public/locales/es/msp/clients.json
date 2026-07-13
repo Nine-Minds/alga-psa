@@ -38,7 +38,15 @@
     "no": "No",
     "yes": "Sí"
   },
+  "clientLifecycle": {
+    "prospect": "Cliente potencial",
+    "active": "Cliente activo",
+    "former": "Antiguo cliente",
+    "all": "Todas las etapas del ciclo de vida"
+  },
   "clientsPage": {
+    "filterByLifecycle": "Filtrar por ciclo de vida",
+    "lifecycleFilterLabel": "Filtro de ciclo de vida",
     "title": "Página de clientes",
     "description": "Página principal de administración de clientes con búsqueda, filtros y vista de lista/cuadrícula de clientes",
     "searchPlaceholder": "Buscar clientes, notas, documentos e interacciones",
@@ -176,6 +184,9 @@
     "deletePermissionDenied": "Permiso denegado: no se pueden eliminar clientes."
   },
   "clientDetails": {
+    "opportunities": "Oportunidades",
+    "lifecycleStatus": "Ciclo de vida",
+    "lifecycleStatusHelper": "Los clientes potenciales están disponibles en los flujos de ventas, pero se ocultan de forma predeterminada en las listas operativas de clientes.",
     "title": "Detalles del cliente",
     "backToClients": "Volver a Clientes",
     "openInNewTab": "Abrir en nueva pestaña",
@@ -286,6 +297,7 @@
     "parentClientLegacy": "Introducido anteriormente como texto: {{name}}"
   },
   "quickAddClient": {
+    "lifecycleStatus": "Ciclo de vida",
     "title": "Agregar nuevo cliente",
     "clientDetails": "Detalles del cliente",
     "clientLocation": "Ubicación del cliente",

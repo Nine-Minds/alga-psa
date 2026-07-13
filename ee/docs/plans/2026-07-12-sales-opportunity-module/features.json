@@ -1,0 +1,1066 @@
+[
+  {
+    "id": "F001",
+    "phase": 1,
+    "prdRefs": [
+      "FR1"
+    ],
+    "implemented": true,
+    "description": "Migration: create `opportunities` table (tenant-scoped) with number, client_id, contact_id, title, type, owner_id, status, derived stage, confidence, mrr_cents/nrr_cents/hardware_cents + currency_code, expected_close_date, next_action + next_action_due, last_activity_at, loss_reason/lost_to, generator provenance (key + context jsonb), converted contract/project refs"
+  },
+  {
+    "id": "F002",
+    "phase": 1,
+    "prdRefs": [
+      "FR1",
+      "FR2"
+    ],
+    "implemented": true,
+    "description": "Migration: create `opportunity_evidence` table (checkpoint, source system|declared, ref_type/ref_id, recorded_by/at, correction audit note)"
+  },
+  {
+    "id": "F003",
+    "phase": 1,
+    "prdRefs": [
+      "FR1",
+      "FR4"
+    ],
+    "implemented": true,
+    "description": "Migration: create `opportunity_suggestions` table (generator_key, client_id, evidence payload jsonb, computed values, status pending|accepted|dismissed|snoozed, snooze_until, dedupe_key unique per tenant+generator, created opportunity_id)"
+  },
+  {
+    "id": "F004",
+    "phase": 1,
+    "prdRefs": [
+      "FR1"
+    ],
+    "implemented": true,
+    "description": "Migration: add `clients.lifecycle_status` enum (prospect|active|former) with backfill of all existing rows to active"
+  },
+  {
+    "id": "F005",
+    "phase": 1,
+    "prdRefs": [
+      "FR1"
+    ],
+    "implemented": true,
+    "description": "Migration: add nullable `interactions.opportunity_id` (FK) so interactions serve as the opportunity timeline"
+  },
+  {
+    "id": "F006",
+    "phase": 1,
+    "prdRefs": [
+      "FR1",
+      "FR5"
+    ],
+    "implemented": true,
+    "description": "Migration: add FK constraint `quotes.opportunity_id` \u2192 opportunities (verify all existing values NULL first)"
+  },
+  {
+    "id": "F007",
+    "phase": 1,
+    "prdRefs": [
+      "FR1"
+    ],
+    "implemented": true,
+    "description": "Migration: register next_number entity OPPORTUNITY with prefix OPP- for opportunity numbering"
+  },
+  {
+    "id": "F008",
+    "phase": 1,
+    "prdRefs": [
+      "FR10"
+    ],
+    "implemented": true,
+    "description": "Migration: seed RBAC permission rows for resource `opportunities` (create/read/update/delete, MSP portal only)"
+  },
+  {
+    "id": "F009",
+    "phase": 1,
+    "prdRefs": [
+      "FR1"
+    ],
+    "implemented": true,
+    "description": "Extend TaggedEntityType with `opportunity` and wire tag support (definitions/mappings) for opportunities"
+  },
+  {
+    "id": "F010",
+    "phase": 1,
+    "prdRefs": [
+      "FR6"
+    ],
+    "implemented": true,
+    "description": "Migration: seed event catalog with OPPORTUNITY_CREATED, OPPORTUNITY_STAGE_CHANGED, OPPORTUNITY_STATUS_CHANGED, OPPORTUNITY_STALLED, OPPORTUNITY_ESCALATED, OPPORTUNITY_NEXT_ACTION_OVERDUE, OPPORTUNITY_SUGGESTION_CREATED under the CRM category"
+  },
+  {
+    "id": "F011",
+    "phase": 1,
+    "prdRefs": [
+      "FR1"
+    ],
+    "implemented": true,
+    "description": "TypeScript interfaces in packages/types: IOpportunity, IOpportunityEvidence, IOpportunitySuggestion, stage/checkpoint/status/confidence enums, list-item and detail view models"
+  },
+  {
+    "id": "F012",
+    "phase": 1,
+    "prdRefs": [
+      "FR1"
+    ],
+    "implemented": true,
+    "description": "Zod schemas for opportunity create/update/list filters/suggestion actions in packages/opportunities/src/schemas"
+  },
+  {
+    "id": "F013",
+    "phase": 1,
+    "prdRefs": [
+      "FR10"
+    ],
+    "implemented": true,
+    "description": "Scaffold packages/opportunities (models/actions/schemas/components/index per house pattern) and register msp-composition provider"
+  },
+  {
+    "id": "F014",
+    "phase": 1,
+    "prdRefs": [
+      "UX / UI Notes"
+    ],
+    "implemented": true,
+    "description": "Add top-level Opportunities nav item in menuConfig.ts routing to /msp/opportunities"
+  },
+  {
+    "id": "F015",
+    "phase": 1,
+    "prdRefs": [
+      "FR10"
+    ],
+    "implemented": true,
+    "description": "Register /msp/opportunities route rules in productSurfaceRegistry: PSA allowed, AlgaDesk upgrade_boundary; API prefix rules for /api/v1/opportunities"
+  },
+  {
+    "id": "F016",
+    "phase": 1,
+    "prdRefs": [
+      "FR10",
+      "Rollout / Migration"
+    ],
+    "implemented": true,
+    "description": "PostHog feature flag gating the Opportunities nav item for soft launch"
+  },
+  {
+    "id": "F017",
+    "phase": 1,
+    "prdRefs": [
+      "FR1"
+    ],
+    "implemented": true,
+    "description": "Opportunity model (tenant-scoped knex CRUD with pagination/filter query helpers, no N+1 value rollups)"
+  },
+  {
+    "id": "F018",
+    "phase": 1,
+    "prdRefs": [
+      "FR1",
+      "FR3"
+    ],
+    "implemented": true,
+    "description": "createOpportunity action: validates client, assigns OPP- number, defaults owner to client account manager else creator, rejects creation without next_action + next_action_due"
+  },
+  {
+    "id": "F019",
+    "phase": 1,
+    "prdRefs": [
+      "FR1"
+    ],
+    "implemented": true,
+    "description": "updateOpportunity action (title, contact, type, expected_close_date, owner, values pre-quote, confidence) with permission enforcement"
+  },
+  {
+    "id": "F020",
+    "phase": 1,
+    "prdRefs": [
+      "FR5"
+    ],
+    "implemented": true,
+    "description": "Win action: sets status won + won_at, records Won evidence, transitions prospect client lifecycle to active, emits OPPORTUNITY_STATUS_CHANGED and CLIENT_STATUS_CHANGED"
+  },
+  {
+    "id": "F021",
+    "phase": 1,
+    "prdRefs": [
+      "FR1"
+    ],
+    "implemented": true,
+    "description": "Lose action: requires loss_reason (enum + optional text and lost_to), sets lost_at, emits OPPORTUNITY_STATUS_CHANGED"
+  },
+  {
+    "id": "F022",
+    "phase": 1,
+    "prdRefs": [
+      "FR1",
+      "Non-functional Requirements"
+    ],
+    "implemented": true,
+    "description": "List/filter action: server-side pagination and filters by status, stage, owner, client, type, staleness"
+  },
+  {
+    "id": "F023",
+    "phase": 1,
+    "prdRefs": [
+      "FR1"
+    ],
+    "implemented": true,
+    "description": "getOpportunity action returning detail view model: evidence ladder, values, linked quotes, timeline summary, tags"
+  },
+  {
+    "id": "F024",
+    "phase": 1,
+    "prdRefs": [
+      "FR2"
+    ],
+    "implemented": true,
+    "description": "Evidence recording API: record checkpoint fact with source (system|declared) and entity ref; idempotent per checkpoint+ref"
+  },
+  {
+    "id": "F025",
+    "phase": 1,
+    "prdRefs": [
+      "FR2"
+    ],
+    "implemented": true,
+    "description": "Stage derivation engine: stage = furthest checkpoint reached with skippable checkpoints (renewal/expansion deals enter mid-ladder); recomputed on evidence change; emits OPPORTUNITY_STAGE_CHANGED"
+  },
+  {
+    "id": "F026",
+    "phase": 1,
+    "prdRefs": [
+      "FR2"
+    ],
+    "implemented": true,
+    "description": "Declared Qualified checkpoint action (decision-maker + budget conversation attestation, the one human-attested checkpoint)"
+  },
+  {
+    "id": "F027",
+    "phase": 1,
+    "prdRefs": [
+      "FR2"
+    ],
+    "implemented": true,
+    "description": "Evidence correction flow: evidence is append-only; corrections require an audit note; no deletion path exists"
+  },
+  {
+    "id": "F028",
+    "phase": 1,
+    "prdRefs": [
+      "FR2",
+      "FR5"
+    ],
+    "implemented": true,
+    "description": "Quote sent event records Proposed evidence on the linked opportunity automatically"
+  },
+  {
+    "id": "F029",
+    "phase": 1,
+    "prdRefs": [
+      "FR2",
+      "FR5"
+    ],
+    "implemented": true,
+    "description": "Quote accepted / contract sent-for-signature records Verbal evidence on the linked opportunity automatically"
+  },
+  {
+    "id": "F030",
+    "phase": 1,
+    "prdRefs": [
+      "FR2",
+      "Open Questions"
+    ],
+    "implemented": true,
+    "description": "Assessment evidence: accepted quote (or created project) matching the tenant's assessment mapping records Assessment checkpoint; assessment detection configured in module settings"
+  },
+  {
+    "id": "F031",
+    "phase": 1,
+    "prdRefs": [
+      "FR2"
+    ],
+    "implemented": true,
+    "description": "Declared confidence field (low|medium|high|committed) settable independently of stage; never alters derived stage"
+  },
+  {
+    "id": "F032",
+    "phase": 1,
+    "prdRefs": [
+      "FR1",
+      "FR5"
+    ],
+    "implemented": true,
+    "description": "Manual MRR/NRR/hardware value entry with tenant currency handling (standard currency components, cents storage)"
+  },
+  {
+    "id": "F033",
+    "phase": 1,
+    "prdRefs": [
+      "FR5"
+    ],
+    "implemented": true,
+    "description": "Value derivation from linked accepted quote lines: is_recurring \u2192 MRR, product kind \u2192 hardware, else NRR"
+  },
+  {
+    "id": "F034",
+    "phase": 1,
+    "prdRefs": [
+      "FR5"
+    ],
+    "implemented": true,
+    "description": "Value recompute on quote item/status change; manual values allowed only before a quote is linked (override rules)"
+  },
+  {
+    "id": "F035",
+    "phase": 1,
+    "prdRefs": [
+      "FR5"
+    ],
+    "implemented": true,
+    "description": "Create quote from opportunity: prefills client/contact and sets quotes.opportunity_id"
+  },
+  {
+    "id": "F036",
+    "phase": 1,
+    "prdRefs": [
+      "FR5"
+    ],
+    "implemented": true,
+    "description": "Link/unlink an existing quote to an opportunity (with evidence and value recompute side effects)"
+  },
+  {
+    "id": "F037",
+    "phase": 1,
+    "prdRefs": [
+      "FR5"
+    ],
+    "implemented": true,
+    "description": "Won flow guided conversion step: accepted quote \u2192 draft agreement via existing conversion; store converted contract ref on the opportunity"
+  },
+  {
+    "id": "F038",
+    "phase": 1,
+    "prdRefs": [
+      "FR5"
+    ],
+    "implemented": true,
+    "description": "Won flow optional project spawn: pick a project template, create onboarding project, store project ref on the opportunity"
+  },
+  {
+    "id": "F039",
+    "phase": 1,
+    "prdRefs": [
+      "FR5",
+      "FR6"
+    ],
+    "implemented": true,
+    "description": "CLIENT_STATUS_CHANGED domain event builder + emission for all lifecycle_status transitions (the catalogued event becomes real)"
+  },
+  {
+    "id": "F040",
+    "phase": 1,
+    "prdRefs": [
+      "FR5"
+    ],
+    "implemented": true,
+    "description": "Won-without-quote path: manual values accepted, reduced evidence recorded, no conversion step required"
+  },
+  {
+    "id": "F041",
+    "phase": 1,
+    "prdRefs": [
+      "FR1",
+      "Users and Primary Flows"
+    ],
+    "implemented": true,
+    "description": "Quick-add prospect client (name-only) inline from opportunity creation; creates client with lifecycle_status=prospect"
+  },
+  {
+    "id": "F042",
+    "phase": 1,
+    "prdRefs": [
+      "FR1"
+    ],
+    "implemented": true,
+    "description": "lifecycle_status surfaced on client create/edit forms and client schemas"
+  },
+  {
+    "id": "F043",
+    "phase": 1,
+    "prdRefs": [
+      "UX / UI Notes"
+    ],
+    "implemented": true,
+    "description": "Operational client lists filter prospects out by default with an explicit filter to include them"
+  },
+  {
+    "id": "F044",
+    "phase": 1,
+    "prdRefs": [
+      "UX / UI Notes"
+    ],
+    "implemented": true,
+    "description": "Client detail gains an Opportunities tab listing the client's opportunities with create shortcut"
+  },
+  {
+    "id": "F045",
+    "phase": 1,
+    "prdRefs": [
+      "UX / UI Notes"
+    ],
+    "implemented": true,
+    "description": "Prospect clients visually distinct (badge) wherever client names render in opportunity surfaces"
+  },
+  {
+    "id": "F046",
+    "phase": 1,
+    "prdRefs": [
+      "UX / UI Notes"
+    ],
+    "implemented": true,
+    "description": "/msp/opportunities page shell with tabs: Queue (default), Pipeline, Board, Suggestions (+ EE tabs when licensed)"
+  },
+  {
+    "id": "F047",
+    "phase": 1,
+    "prdRefs": [
+      "FR1",
+      "UX / UI Notes"
+    ],
+    "implemented": true,
+    "description": "Pipeline list view: title, client, stage, confidence, MRR/NRR, next action due, owner; server-side sort/filter/pagination; no raw IDs"
+  },
+  {
+    "id": "F048",
+    "phase": 1,
+    "prdRefs": [
+      "UX / UI Notes"
+    ],
+    "implemented": true,
+    "description": "Opportunity detail screen: header with values and status actions, evidence ladder visualization with source refs, confidence control, linked quotes section, tags"
+  },
+  {
+    "id": "F049",
+    "phase": 1,
+    "prdRefs": [
+      "FR1"
+    ],
+    "implemented": true,
+    "description": "Create/edit opportunity form (standard components; client picker with quick-add prospect; next action + due required)"
+  },
+  {
+    "id": "F050",
+    "phase": 1,
+    "prdRefs": [
+      "UX / UI Notes"
+    ],
+    "implemented": true,
+    "description": "Board view: stage columns Identified\u2192Verbal plus recent Won/Lost rail; cards show MRR/NRR, staleness badge, next-action due"
+  },
+  {
+    "id": "F051",
+    "phase": 1,
+    "prdRefs": [
+      "FR2",
+      "UX / UI Notes"
+    ],
+    "implemented": true,
+    "description": "Board drag rules: forward drag only onto declared checkpoints (Qualified); drag to Lost prompts loss reason; evidence-derived positions are otherwise not draggable"
+  },
+  {
+    "id": "F052",
+    "phase": 1,
+    "prdRefs": [
+      "FR1",
+      "FR3"
+    ],
+    "implemented": true,
+    "description": "Opportunity timeline: log/list interactions from the opportunity detail (reusing interactions module UI), linked via interactions.opportunity_id"
+  },
+  {
+    "id": "F053",
+    "phase": 1,
+    "prdRefs": [
+      "FR1"
+    ],
+    "implemented": true,
+    "description": "REST API v1: /api/v1/opportunities CRUD (controller + service + schemas) following the quotes API pattern"
+  },
+  {
+    "id": "F054",
+    "phase": 1,
+    "prdRefs": [
+      "FR4"
+    ],
+    "implemented": true,
+    "description": "REST API v1: suggestion endpoints (list, accept, dismiss, snooze) and evidence endpoints (list, record declared)"
+  },
+  {
+    "id": "F055",
+    "phase": 1,
+    "prdRefs": [
+      "FR1"
+    ],
+    "implemented": true,
+    "description": "OpenAPI registration for all opportunity endpoints"
+  },
+  {
+    "id": "F056",
+    "phase": 1,
+    "prdRefs": [
+      "FR10"
+    ],
+    "implemented": true,
+    "description": "Permission enforcement on all opportunity server actions and API routes (opportunities resource, action-level checks)"
+  },
+  {
+    "id": "F057",
+    "phase": 1,
+    "prdRefs": [
+      "FR6"
+    ],
+    "implemented": true,
+    "description": "Opportunity domain event builders (shared/workflow/streams/domainEventBuilders) publishing all OPPORTUNITY_* events via the standard helpers"
+  },
+  {
+    "id": "F058",
+    "phase": 2,
+    "prdRefs": [
+      "FR3"
+    ],
+    "implemented": true,
+    "description": "Complete-next-action flow: completing an action immediately requires setting the next action + due date (the chain never breaks while status=open)"
+  },
+  {
+    "id": "F059",
+    "phase": 2,
+    "prdRefs": [
+      "FR3"
+    ],
+    "implemented": true,
+    "description": "last_activity_at maintenance: updated by action completion, logged interactions, and quote lifecycle events on the deal"
+  },
+  {
+    "id": "F060",
+    "phase": 2,
+    "prdRefs": [
+      "FR3"
+    ],
+    "implemented": true,
+    "description": "Staleness detection job: scheduled scan flags open opportunities silent past the nudge threshold (default 14d) and emits OPPORTUNITY_STALLED"
+  },
+  {
+    "id": "F061",
+    "phase": 2,
+    "prdRefs": [
+      "FR3"
+    ],
+    "implemented": true,
+    "description": "Nudge notification: private notification (in-app + email template) to the opportunity owner listing the stalled deal and its last activity"
+  },
+  {
+    "id": "F062",
+    "phase": 2,
+    "prdRefs": [
+      "FR3",
+      "UX / UI Notes"
+    ],
+    "implemented": true,
+    "description": "Escalation at interrupt threshold (default 21d), solo mode: auto-create ad_hoc schedule entry calendar block ('Follow up: {opportunity}') on the owner's calendar; emits OPPORTUNITY_ESCALATED"
+  },
+  {
+    "id": "F063",
+    "phase": 2,
+    "prdRefs": [
+      "FR3",
+      "UX / UI Notes"
+    ],
+    "implemented": true,
+    "description": "Escalation, team mode: private notification chain (rep first, then account-manager/owner) \u2014 never a public surface"
+  },
+  {
+    "id": "F064",
+    "phase": 2,
+    "prdRefs": [
+      "FR3"
+    ],
+    "implemented": true,
+    "description": "Module settings: tenant-configurable nudge/interrupt thresholds and solo-vs-team escalation mode"
+  },
+  {
+    "id": "F065",
+    "phase": 2,
+    "prdRefs": [
+      "FR3",
+      "Users and Primary Flows"
+    ],
+    "implemented": true,
+    "description": "Work queue view: sections for overdue/due-today next actions, stalled deals, and pending suggestions; celebratory empty state"
+  },
+  {
+    "id": "F066",
+    "phase": 2,
+    "prdRefs": [
+      "FR3"
+    ],
+    "implemented": true,
+    "description": "Queue one-click interactions: complete action (with inline next-action prompt), log interaction, snooze, mark lost \u2014 sub-30-second deal touch"
+  },
+  {
+    "id": "F067",
+    "phase": 2,
+    "prdRefs": [
+      "FR3"
+    ],
+    "implemented": true,
+    "description": "OPPORTUNITY_NEXT_ACTION_OVERDUE emission when a next action passes its due date"
+  },
+  {
+    "id": "F068",
+    "phase": 2,
+    "prdRefs": [
+      "FR3"
+    ],
+    "implemented": true,
+    "description": "User Activities dashboard integration: opportunity next actions appear as a new activity source in the aggregator"
+  },
+  {
+    "id": "F069",
+    "phase": 2,
+    "prdRefs": [
+      "FR3",
+      "UX / UI Notes"
+    ],
+    "implemented": true,
+    "description": "Weekly digest email (notification template): actions due, stalled deals, new suggestions, recent wins; per-user toggle"
+  },
+  {
+    "id": "F070",
+    "phase": 2,
+    "prdRefs": [
+      "FR6"
+    ],
+    "implemented": true,
+    "description": "Default-on system workflows implementing the nudge/escalation methodology (registered so EE Designer can customize; CE runs the defaults)"
+  },
+  {
+    "id": "F071",
+    "phase": 3,
+    "prdRefs": [
+      "FR4"
+    ],
+    "implemented": true,
+    "description": "Generator framework: generators produce suggestions (never opportunities), each with evidence payload, computed values, and a stable dedupe_key"
+  },
+  {
+    "id": "F072",
+    "phase": 3,
+    "prdRefs": [
+      "FR4"
+    ],
+    "implemented": true,
+    "description": "Generator scheduling: recurring job runs plus on-demand 'run now' per generator from settings; run summary logging (fired/deduped counts)"
+  },
+  {
+    "id": "F073",
+    "phase": 3,
+    "prdRefs": [
+      "FR4",
+      "Users and Primary Flows"
+    ],
+    "implemented": true,
+    "description": "Suggestions review UI: evidence payload rendered per generator type; accept / dismiss / snooze actions"
+  },
+  {
+    "id": "F074",
+    "phase": 3,
+    "prdRefs": [
+      "FR4"
+    ],
+    "implemented": true,
+    "description": "Accept suggestion \u2192 creates opportunity prefilled with client, type, values, and generator provenance; suggestion links to created opportunity"
+  },
+  {
+    "id": "F075",
+    "phase": 3,
+    "prdRefs": [
+      "FR4"
+    ],
+    "implemented": true,
+    "description": "Dismiss persists dedupe so the same suggestion does not refire; snooze re-surfaces at snooze_until"
+  },
+  {
+    "id": "F076",
+    "phase": 3,
+    "prdRefs": [
+      "FR4",
+      "FR6"
+    ],
+    "implemented": true,
+    "description": "OPPORTUNITY_SUGGESTION_CREATED event emission per new suggestion"
+  },
+  {
+    "id": "F077",
+    "phase": 3,
+    "prdRefs": [
+      "FR4"
+    ],
+    "implemented": true,
+    "description": "Renewal generator: fires at configurable T-days (default 120) before client_contract end/decision dates; suggestion linked 1:1 to the renewal work item; MRR prefilled from contract monthly value"
+  },
+  {
+    "id": "F078",
+    "phase": 3,
+    "prdRefs": [
+      "FR4"
+    ],
+    "implemented": true,
+    "description": "Renewal-born opportunities typed renewal and enter the ladder mid-stream (Proposed when the renewal quote goes out)"
+  },
+  {
+    "id": "F079",
+    "phase": 3,
+    "prdRefs": [
+      "FR4"
+    ],
+    "implemented": true,
+    "description": "T&M conversion generator: trailing-12-month hourly/T&M billed totals per client vs configurable monthly-average threshold"
+  },
+  {
+    "id": "F080",
+    "phase": 3,
+    "prdRefs": [
+      "FR4",
+      "Users and Primary Flows"
+    ],
+    "implemented": true,
+    "description": "T&M evidence one-pager: printable client-facing view of monthly T&M spend history vs agreement comparison ('reporting, not selling')"
+  },
+  {
+    "id": "F081",
+    "phase": 3,
+    "prdRefs": [
+      "FR4"
+    ],
+    "implemented": true,
+    "description": "Whitespace grid computation: service categories \u00d7 active clients matrix derived from active contract lines"
+  },
+  {
+    "id": "F082",
+    "phase": 3,
+    "prdRefs": [
+      "FR4"
+    ],
+    "implemented": true,
+    "description": "Whitespace grid UI (CE): full-book grid view; empty-cell click creates a whitespace suggestion for that client+service line"
+  },
+  {
+    "id": "F083",
+    "phase": 3,
+    "prdRefs": [
+      "FR4"
+    ],
+    "implemented": true,
+    "description": "Asset aging generator: assets past the configured purchase/warranty date threshold grouped per client into refresh suggestions with asset-list evidence"
+  },
+  {
+    "id": "F084",
+    "phase": 4,
+    "prdRefs": [
+      "FR7"
+    ],
+    "implemented": true,
+    "description": "Report definition: pipeline by stage (count, MRR, NRR, hardware) with owner/type dimensions"
+  },
+  {
+    "id": "F085",
+    "phase": 4,
+    "prdRefs": [
+      "FR7"
+    ],
+    "implemented": true,
+    "description": "Report definition: win/loss outcomes with loss reasons and lost-to breakdown"
+  },
+  {
+    "id": "F086",
+    "phase": 4,
+    "prdRefs": [
+      "FR7"
+    ],
+    "implemented": true,
+    "description": "Report definition: won rate among closed deals with an Assessment checkpoint compared with closed deals without one"
+  },
+  {
+    "id": "F087",
+    "phase": 4,
+    "prdRefs": [
+      "FR7"
+    ],
+    "implemented": true,
+    "description": "Report definition: generator yield (suggestions \u2192 accepted \u2192 won, count and value, per generator)"
+  },
+  {
+    "id": "F088",
+    "phase": 4,
+    "prdRefs": [
+      "FR7"
+    ],
+    "implemented": true,
+    "description": "MSP dashboard widget: pipeline snapshot (open count, MRR/NRR by stage) + queue summary (actions due, stalled count)"
+  },
+  {
+    "id": "F089",
+    "phase": 5,
+    "prdRefs": [
+      "FR8",
+      "FR10"
+    ],
+    "implemented": true,
+    "description": "EE tier gating for all management-layer surfaces (tabs, endpoints, actions) via existing tier-gating seam; CE loses nothing from the core loop"
+  },
+  {
+    "id": "F090",
+    "phase": 5,
+    "prdRefs": [
+      "FR8"
+    ],
+    "implemented": true,
+    "description": "Forecast band computation: floor = verbal + won this period; ceiling = evidence-weighted open pipeline; never a single number"
+  },
+  {
+    "id": "F091",
+    "phase": 5,
+    "prdRefs": [
+      "FR8"
+    ],
+    "implemented": true,
+    "description": "Per-seller calibration feeding the ceiling: historical declared-confidence-vs-outcome rates per seller once sufficient closed-deal history exists, with evidence-stage base rates as fallback"
+  },
+  {
+    "id": "F092",
+    "phase": 5,
+    "prdRefs": [
+      "FR8"
+    ],
+    "implemented": true,
+    "description": "Forecast UI: band with composition drill-down (which deals make the floor vs ceiling) per period"
+  },
+  {
+    "id": "F093",
+    "phase": 5,
+    "prdRefs": [
+      "FR8"
+    ],
+    "implemented": true,
+    "description": "Calibration report: per seller declared confidence vs actual close rate"
+  },
+  {
+    "id": "F094",
+    "phase": 5,
+    "prdRefs": [
+      "FR8"
+    ],
+    "implemented": true,
+    "description": "Attach rate report: per seller, share of won new-logo deals closing with an agreement attached"
+  },
+  {
+    "id": "F095",
+    "phase": 5,
+    "prdRefs": [
+      "FR8"
+    ],
+    "implemented": false,
+    "description": "Realized effective rate vs quoted report (quoted line rates vs realized billing on converted agreements)"
+  },
+  {
+    "id": "F096",
+    "phase": 5,
+    "prdRefs": [
+      "FR8",
+      "Users and Primary Flows"
+    ],
+    "implemented": true,
+    "description": "Pipeline meeting mode: full-screen deal-by-deal walk showing evidence-vs-declared gap, days silent, next action; keyboard-driven advance"
+  },
+  {
+    "id": "F097",
+    "phase": 5,
+    "prdRefs": [
+      "FR8"
+    ],
+    "implemented": true,
+    "description": "Meeting session persistence: per-meeting reviewed markers per deal, resumable within the session"
+  },
+  {
+    "id": "F098",
+    "phase": 5,
+    "prdRefs": [
+      "FR8"
+    ],
+    "implemented": true,
+    "description": "Migration (EE): `opportunity_commitments` table (description, made_by/at, resolution_status open|quote_line|agreement_line|project_task|declined, resolution ref, resolved_by/at)"
+  },
+  {
+    "id": "F099",
+    "phase": 5,
+    "prdRefs": [
+      "FR8"
+    ],
+    "implemented": true,
+    "description": "Commitments CRUD on the opportunity detail (record promises as they're made)"
+  },
+  {
+    "id": "F100",
+    "phase": 5,
+    "prdRefs": [
+      "FR8"
+    ],
+    "implemented": true,
+    "description": "Close gate: close-won is blocked while unresolved commitments exist (EE enforcement)"
+  },
+  {
+    "id": "F101",
+    "phase": 5,
+    "prdRefs": [
+      "FR8"
+    ],
+    "implemented": true,
+    "description": "Commitment resolution linking: resolve each commitment to a quote line, agreement line, or project task ref, or explicitly decline it"
+  },
+  {
+    "id": "F102",
+    "phase": 5,
+    "prdRefs": [
+      "FR8"
+    ],
+    "implemented": true,
+    "description": "Handoff visibility: spawned onboarding project surfaces the deal's commitments and courtship timeline to the delivery engineer"
+  },
+  {
+    "id": "F103",
+    "phase": 5,
+    "prdRefs": [
+      "FR8",
+      "Users and Primary Flows"
+    ],
+    "implemented": true,
+    "description": "QBR trigger pack: per-account view assembling renewal dates, aging/EOL assets, ticket volume trend, and whitespace rows for AMs"
+  },
+  {
+    "id": "F104",
+    "phase": 5,
+    "prdRefs": [
+      "FR8"
+    ],
+    "implemented": true,
+    "description": "QBR one-click 'Create opportunities?' from fired triggers (batch accept into typed opportunities)"
+  },
+  {
+    "id": "F105",
+    "phase": 5,
+    "prdRefs": [
+      "FR8"
+    ],
+    "implemented": true,
+    "description": "QBR\u2192pipeline tracking: opportunities created from QBR triggers attributed and reportable (triggers fired vs pipeline created per account/AM)"
+  },
+  {
+    "id": "F106",
+    "phase": 5,
+    "prdRefs": [
+      "FR8",
+      "Open Questions"
+    ],
+    "implemented": true,
+    "description": "Rollups by seller and by office (per resolved attribution rule) across pipeline, wins, and attach metrics"
+  },
+  {
+    "id": "F107",
+    "phase": 5,
+    "prdRefs": [
+      "FR6"
+    ],
+    "implemented": true,
+    "description": "Workflow actions registered with Zod schemas: opportunities.create, opportunities.find, opportunities.update, opportunities.set_next_action (Designer-usable with form metadata)"
+  },
+  {
+    "id": "F108",
+    "phase": 6,
+    "prdRefs": [
+      "FR9",
+      "FR10"
+    ],
+    "implemented": true,
+    "description": "AI module seam gating: drafting features render/execute only when the tenant's AI module is enabled"
+  },
+  {
+    "id": "F109",
+    "phase": 6,
+    "prdRefs": [
+      "FR9"
+    ],
+    "implemented": true,
+    "description": "Follow-up draft generation from opportunity context (timeline, stage, quote state, staleness) available from detail and queue"
+  },
+  {
+    "id": "F110",
+    "phase": 6,
+    "prdRefs": [
+      "FR9"
+    ],
+    "implemented": true,
+    "description": "Draft editor + send through existing tenant outbound email; no send without explicit user action (no auto-send path exists)"
+  },
+  {
+    "id": "F111",
+    "phase": 6,
+    "prdRefs": [
+      "FR9"
+    ],
+    "implemented": true,
+    "description": "Sent drafts logged as interactions on the opportunity and update last_activity_at"
+  },
+  {
+    "id": "F112",
+    "phase": 6,
+    "prdRefs": [
+      "FR9"
+    ],
+    "implemented": true,
+    "description": "Per-user voice profile: pasted sample emails and/or steering instructions stored and editable in user settings"
+  },
+  {
+    "id": "F113",
+    "phase": 6,
+    "prdRefs": [
+      "FR9"
+    ],
+    "implemented": true,
+    "description": "Voice profile applied to every draft; per-draft tone adjustment control"
+  },
+  {
+    "id": "F114",
+    "phase": 2,
+    "prdRefs": [
+      "FR3",
+      "UX / UI Notes"
+    ],
+    "implemented": true,
+    "description": "Why-sentence composer: fact-templating engine that assembles one-sentence explanations from structured evidence (day counts, linked-artifact refs, checkpoint states, historical ratios) for queue rows, suggestions, nudges, and the digest \u2014 no AI dependency, one bold clause per sentence"
+  },
+  {
+    "id": "F115",
+    "phase": 4,
+    "prdRefs": [
+      "FR7",
+      "UX / UI Notes"
+    ],
+    "implemented": true,
+    "description": "Queue lesson strip: library of own-numbers insight computations (e.g. assessment close rate vs. proposals this quarter) rendering one insight per visit with a single follow-up action, degrading gracefully on thin history"
+  }
+]

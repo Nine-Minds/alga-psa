@@ -4,6 +4,7 @@
 
 export {
   ClientPropertiesSchema,
+  ClientLifecycleStatusSchema,
   ClientSchema,
   CreateClientSchema,
   UpdateClientSchema,

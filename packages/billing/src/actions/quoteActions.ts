@@ -2,7 +2,7 @@
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- Quote PDF generation creates document records - direct model access required in server action context */
 
 import { randomUUID } from 'crypto';
-import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth/withAuth';
 import { hasPermission } from '@alga-psa/auth/rbac';
@@ -29,6 +29,7 @@ import {
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination';
 import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
+import { onQuoteAccepted, onQuoteSent } from '@alga-psa/opportunities/lib/quoteLifecycleHooks';
 
 type CreateQuoteInput = Omit<
   IQuote,
@@ -590,6 +591,22 @@ export const updateQuote = withAuth(async (
     updated_by: input.updated_by ?? getActorUserId(user),
   }));
 
+  if (parsedInput.status === 'sent' || parsedInput.status === 'accepted') {
+    const updatedQuote = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const lifecyclePatch = {
+        ...parsedInput,
+        ...(parsedInput.status === 'sent' && !parsedInput.sent_at ? { sent_at: new Date().toISOString() } : {}),
+        ...(parsedInput.status === 'accepted' && !parsedInput.accepted_at ? { accepted_at: new Date().toISOString() } : {}),
+      } as Partial<IQuote>;
+      const updated = await Quote.update(trx, tenant, quoteId, lifecyclePatch);
+      if (updated.status === 'sent') await onQuoteSent(trx, updated);
+      if (updated.status === 'accepted') {
+        await onQuoteAccepted(trx, updated);
+      }
+      return updated;
+    });
+    return await Quote.getById(knex, tenant, updatedQuote.quote_id) as IQuote;
+  }
   const updatedQuote = await Quote.update(knex, tenant, quoteId, parsedInput as Partial<IQuote>);
   return await Quote.getById(knex, tenant, updatedQuote.quote_id) as IQuote;
   });
@@ -898,6 +915,7 @@ export const createQuoteFromTemplate = withAuth(async (
       quote_date: input.quote_date,
       valid_until: input.valid_until,
       po_number: input.po_number ?? null,
+      opportunity_id: input.opportunity_id ?? null,
       internal_notes: input.internal_notes ?? template.internal_notes ?? null,
       client_notes: input.client_notes ?? template.client_notes ?? null,
       terms_and_conditions: input.terms_and_conditions ?? template.terms_and_conditions ?? null,
@@ -1407,10 +1425,13 @@ export const sendQuote = withAuth(async (
 
   // Transition to "sent" first — this publishes the quote in the client portal
   const actorUserId = getActorUserId(user);
-  await Quote.update(knex, tenant, quoteId, {
-    status: 'sent',
-    sent_at: new Date().toISOString(),
-    updated_by: actorUserId,
+  await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const sentQuote = await Quote.update(trx, tenant, quoteId, {
+      status: 'sent',
+      sent_at: new Date().toISOString(),
+      updated_by: actorUserId,
+    });
+    await onQuoteSent(trx, sentQuote);
   });
 
   // Store the generated PDF as a document associated with the quote (best-effort)

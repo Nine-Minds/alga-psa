@@ -375,6 +375,26 @@ export const updateClient = withAuth(async (user, { tenant }, clientId: string, 
       });
     }
 
+    const previousClientLifecycleStatus = (updateResult.before as any)?.lifecycle_status;
+    const newClientLifecycleStatus = (updateResult.after as any)?.lifecycle_status;
+    if (
+      typeof previousClientLifecycleStatus === 'string' &&
+      typeof newClientLifecycleStatus === 'string' &&
+      previousClientLifecycleStatus !== newClientLifecycleStatus
+    ) {
+      await publishWorkflowEvent({
+        eventType: 'CLIENT_STATUS_CHANGED',
+        payload: buildClientStatusChangedPayload({
+          clientId,
+          previousStatus: previousClientLifecycleStatus,
+          newStatus: newClientLifecycleStatus,
+          changedAt: occurredAt,
+        }),
+        ctx: { tenantId: tenant, occurredAt, actor },
+        idempotencyKey: `client_lifecycle_status_changed:${clientId}:${occurredAt}`,
+      });
+    }
+
     const previousOwnerUserId = (updateResult.before as any)?.account_manager_id;
     const newOwnerUserId = (updateResult.after as any)?.account_manager_id;
     if (previousOwnerUserId !== newOwnerUserId && typeof newOwnerUserId === 'string' && newOwnerUserId) {
@@ -589,6 +609,7 @@ export interface ClientPaginationParams {
   includeInactive?: boolean;
   searchTerm?: string;
   clientTypeFilter?: 'all' | 'company' | 'individual';
+  lifecycleFilter?: 'all' | 'prospect' | 'active' | 'former';
   loadLogos?: boolean; // Option to load logos or not
   selectedTags?: string[]; // Filter by tags
   /**
@@ -657,6 +678,7 @@ export const getAllClientsPaginated = withAuth(async (user, { tenant }, params: 
     includeInactive = true,
     searchTerm,
     clientTypeFilter = 'all',
+    lifecycleFilter = 'all',
     loadLogos = true,
     statusFilter,
     selectedTags,
@@ -697,6 +719,10 @@ export const getAllClientsPaginated = withAuth(async (user, { tenant }, params: 
 
       if (clientTypeFilter !== 'all') {
         baseQuery = baseQuery.where('c.client_type', clientTypeFilter);
+      }
+
+      if (lifecycleFilter !== 'all') {
+        baseQuery = baseQuery.where('c.lifecycle_status', lifecycleFilter);
       }
 
       // Apply tag filter using new tag structure

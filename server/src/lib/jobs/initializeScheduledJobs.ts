@@ -1,4 +1,4 @@
-import { initializeScheduler, scheduleExpiredCreditsJob, scheduleExpiringCreditsNotificationJob, scheduleCreditReconciliationJob, scheduleQuoteAutoExpirationJob, scheduleReconcileBucketUsageJob, scheduleCleanupTemporaryFormsJob, scheduleCleanupWebhookDeliveriesJob, scheduleCleanupAiSessionKeysJob, scheduleMicrosoftWebhookRenewalJob, scheduleTeamsMeetingArtifactSubscriptionRenewalJob, scheduleTeamsMeetingSweepJob, scheduleGooglePubSubVerificationJob, scheduleGoogleGmailWatchRenewalJob, scheduleEmailWebhookMaintenanceJob, scheduleRenewalQueueProcessingJob, scheduleSlaTimerJob, scheduleWorkflowQuotaResumeScanJob, scheduleSearchReconcileJob, scheduleAutoCloseTicketsJob, scheduleLowStockNotificationJob } from './index';
+import { initializeScheduler, scheduleExpiredCreditsJob, scheduleExpiringCreditsNotificationJob, scheduleCreditReconciliationJob, scheduleQuoteAutoExpirationJob, scheduleReconcileBucketUsageJob, scheduleCleanupTemporaryFormsJob, scheduleCleanupWebhookDeliveriesJob, scheduleCleanupAiSessionKeysJob, scheduleMicrosoftWebhookRenewalJob, scheduleTeamsMeetingArtifactSubscriptionRenewalJob, scheduleTeamsMeetingSweepJob, scheduleGooglePubSubVerificationJob, scheduleGoogleGmailWatchRenewalJob, scheduleEmailWebhookMaintenanceJob, scheduleRenewalQueueProcessingJob, scheduleSlaTimerJob, scheduleWorkflowQuotaResumeScanJob, scheduleSearchReconcileJob, scheduleAutoCloseTicketsJob, scheduleLowStockNotificationJob, scheduleOpportunityDisciplineJob, scheduleOpportunityWeeklyDigestJob, scheduleOpportunityGeneratorsJob } from './index';
 import { scheduleAccountingSyncCycleJob } from './handlers/accountingSyncCycleHandler';
 import { scheduleHuduAutoSyncJob } from './handlers/huduAutoSyncHandler';
 import logger from '@alga-psa/core/logger';
@@ -76,6 +76,27 @@ export async function initializeScheduledJobs(): Promise<void> {
         }
       } catch (error) {
         logger.error(`Failed to schedule low-stock notification job for tenant ${tenantId}`, error);
+      }
+
+      try {
+        const disciplineJobId = await scheduleOpportunityDisciplineJob(tenantId, '0 7 * * *');
+        logger.info('Opportunity discipline schedule converged', { tenantId, disciplineJobId });
+      } catch (error) {
+        logger.error(`Failed to schedule opportunity discipline job for tenant ${tenantId}`, error);
+      }
+
+      try {
+        const generatorsJobId = await scheduleOpportunityGeneratorsJob(tenantId, '0 6 * * *');
+        logger.info('Opportunity generators schedule converged', { tenantId, generatorsJobId });
+      } catch (error) {
+        logger.error(`Failed to schedule opportunity generators job for tenant ${tenantId}`, error);
+      }
+
+      try {
+        const digestJobId = await scheduleOpportunityWeeklyDigestJob(tenantId, '0 8 * * 1');
+        logger.info('Opportunity weekly digest schedule converged', { tenantId, digestJobId });
+      } catch (error) {
+        logger.error(`Failed to schedule opportunity weekly digest job for tenant ${tenantId}`, error);
       }
 
       // Schedule daily job to run credit reconciliation (runs at 2:00 AM)

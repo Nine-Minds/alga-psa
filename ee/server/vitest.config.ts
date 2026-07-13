@@ -63,6 +63,8 @@ export default defineConfig({
       { find: /^@alga-psa\/ui$/, replacement: `${path.resolve(__dirname, '../../packages/ui/src/index.ts')}` },
       { find: /^@alga-psa\/billing$/, replacement: `${path.resolve(__dirname, '../../packages/billing/src/index.ts')}` },
       { find: /^@alga-psa\/billing\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/billing/src')}/$1` },
+      { find: /^@alga-psa\/opportunities$/, replacement: `${path.resolve(__dirname, '../../packages/opportunities/src/index.ts')}` },
+      { find: /^@alga-psa\/opportunities\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/opportunities/src')}/$1` },
       { find: /^@alga-psa\/tenancy\/actions$/, replacement: `${path.resolve(__dirname, '../../packages/tenancy/src/actions/index.ts')}` },
       { find: /^@alga-psa\/tags$/, replacement: `${path.resolve(__dirname, '../../packages/tags/src/index.ts')}` },
       { find: /^@alga-psa\/tags\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/tags/src')}/$1` },

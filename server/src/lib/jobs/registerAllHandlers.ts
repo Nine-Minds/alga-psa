@@ -14,6 +14,9 @@ import {
   ExpiringCreditsNotificationJobData,
 } from '@alga-psa/jobs/handlers/expiringCreditsNotificationHandler';
 import { expireQuotesHandler, ExpireQuotesJobData } from './handlers/expireQuotesHandler';
+import { opportunityDisciplineHandler, OpportunityDisciplineJobData } from './handlers/opportunityDisciplineHandler';
+import { opportunityWeeklyDigestHandler, OpportunityWeeklyDigestJobData } from './handlers/opportunityWeeklyDigestHandler';
+import { opportunityGeneratorsHandler, OpportunityGeneratorsJobData } from './handlers/opportunityGeneratorsHandler';
 import {
   creditReconciliationHandler,
   CreditReconciliationJobData,
@@ -227,6 +230,33 @@ export async function registerAllJobHandlers(
       handler: async (_jobId, data) => {
         await expireQuotesHandler(data);
       },
+      retry: { maxAttempts: 3 },
+    },
+    registerOpts
+  );
+
+  JobHandlerRegistry.register<OpportunityDisciplineJobData & BaseJobData>(
+    {
+      name: 'opportunity-discipline',
+      handler: async (_jobId, data) => opportunityDisciplineHandler(data),
+      retry: { maxAttempts: 3 },
+    },
+    registerOpts
+  );
+
+  JobHandlerRegistry.register<OpportunityWeeklyDigestJobData & BaseJobData>(
+    {
+      name: 'opportunity-weekly-digest',
+      handler: async (_jobId, data) => opportunityWeeklyDigestHandler(data),
+      retry: { maxAttempts: 3 },
+    },
+    registerOpts
+  );
+
+  JobHandlerRegistry.register<OpportunityGeneratorsJobData & BaseJobData>(
+    {
+      name: 'opportunity-generators',
+      handler: async (_jobId, data) => opportunityGeneratorsHandler(data),
       retry: { maxAttempts: 3 },
     },
     registerOpts
@@ -602,6 +632,9 @@ export function getAvailableJobHandlers(): string[] {
     'expired-credits',
     'expiring-credits-notification',
     'credit-reconciliation',
+    'opportunity-discipline',
+    'opportunity-weekly-digest',
+    'opportunity-generators',
     // Assets & Import
     'asset_import',
     // Usage & Reconciliation

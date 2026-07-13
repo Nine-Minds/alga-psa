@@ -11,6 +11,7 @@ export { Client } from './models';
 // Schemas
 export {
   ClientPropertiesSchema,
+  ClientLifecycleStatusSchema,
   ClientSchema,
   CreateClientSchema,
   UpdateClientSchema,

@@ -30,6 +30,7 @@ import { withAuth } from '@alga-psa/auth';
 import { scheduleInvoiceEmailAction, scheduleInvoiceZipAction } from '@alga-psa/billing/actions/invoiceJobActions';
 import { JobStatus } from '@alga-psa/types';
 import { normalizeLiveRecurringStorage } from '@alga-psa/shared/billingClients/recurrenceStorageModel';
+import { onQuoteAccepted } from '@alga-psa/opportunities/lib/quoteLifecycleHooks';
 
 export type ClientBillingActionError =
   | { readonly actionError: string }
@@ -512,6 +513,8 @@ export const acceptClientQuote = withAuth(async (
       if (!acceptedQuote) {
         return actionError('Quote is no longer available. Refresh the quote before accepting it.');
       }
+
+      await onQuoteAccepted(trx, acceptedQuote);
 
       return acceptedQuote;
     });
