@@ -668,11 +668,13 @@ export function BentoTimelineTile({
       ref={composerRef}
       className="mt-3 rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-3"
     >
-      <p className="text-xs font-medium text-[rgb(var(--color-text-500))] mb-1.5">
-        {contactFirstName
-          ? t('bento.timeline.replyTo', 'Reply to {{name}}', { name: contactFirstName })
-          : t('bento.timeline.writeReply', 'Write a reply')}
-      </p>
+      {composerLane === 'client' ? (
+        <p className="text-xs font-medium text-[rgb(var(--color-text-500))] mb-1.5">
+          {contactFirstName
+            ? t('bento.timeline.replyTo', 'Reply to {{name}}', { name: contactFirstName })
+            : t('bento.timeline.writeReply', 'Write a reply')}
+        </p>
+      ) : null}
       <TextEditor
         {...withDataAutomationId({ id: `${id}-composer-editor` })}
         key={editorKey}
