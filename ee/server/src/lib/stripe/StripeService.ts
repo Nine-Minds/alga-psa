@@ -118,6 +118,8 @@ async function getStripeConfig() {
   // AlgaDesk prices (per-user only; product_code seam, not a tenant tier)
   const algadeskUserPriceId = process.env.STRIPE_ALGADESK_USER_PRICE_ID || null;
   const algadeskUserAnnualPriceId = process.env.STRIPE_ALGADESK_USER_ANNUAL_PRICE_ID || null;
+  const algapsaUserPriceId = process.env.STRIPE_ALGAPSA_USER_PRICE_ID || null;
+  const algapsaUserAnnualPriceId = process.env.STRIPE_ALGAPSA_USER_ANNUAL_PRICE_ID || null;
 
   if (!secretKey) {
     throw new Error('STRIPE_SECRET_KEY not found in secrets or environment');
@@ -160,6 +162,8 @@ async function getStripeConfig() {
     earlyAdoptersUserAnnualPriceId,
     algadeskUserPriceId,
     algadeskUserAnnualPriceId,
+    algapsaUserPriceId,
+    algapsaUserAnnualPriceId,
   };
 }
 
@@ -234,6 +238,26 @@ type TierPriceIds = {
 type StripeLineItem = {
   price: string;
   quantity: number;
+};
+
+export interface ProductUpgradePreview {
+  currentProduct: 'algadesk';
+  targetProduct: 'psa';
+  seatCount: number;
+  billingInterval: 'month' | 'year';
+  currentPerSeat: number;
+  targetPerSeat: number;
+  prorationAmount: number | null;
+  currency: string;
+}
+
+type ProductUpgradeContext = {
+  subscription: Stripe.Subscription;
+  userItem: Stripe.SubscriptionItem;
+  quantity: number;
+  interval: 'month' | 'year';
+  sourcePriceId: string;
+  targetPriceId: string;
 };
 
 function tenantScopedTable<Row extends object = Record<string, any>>(
@@ -1796,6 +1820,26 @@ export class StripeService {
     return this.config.algadeskUserPriceId;
   }
 
+  private isProductUpgradeInterval(value: unknown): value is 'month' | 'year' {
+    return value === 'month' || value === 'year';
+  }
+
+  private getRequiredProductUpgradePriceId(
+    product: 'ALGADESK' | 'ALGAPSA',
+    interval: 'month' | 'year',
+  ): string {
+    const envName = `STRIPE_${product}_USER_${interval === 'year' ? 'ANNUAL_' : ''}PRICE_ID`;
+    const priceId = product === 'ALGADESK'
+      ? (interval === 'year' ? this.config.algadeskUserAnnualPriceId : this.config.algadeskUserPriceId)
+      : (interval === 'year' ? this.config.algapsaUserAnnualPriceId : this.config.algapsaUserPriceId);
+
+    if (!priceId) {
+      throw new Error(`${envName} environment variable is not configured`);
+    }
+
+    return priceId;
+  }
+
   private getAddOnPriceId(
     addOn: AddOnKey,
     interval: 'month' | 'year' = 'month'
@@ -1931,6 +1975,8 @@ export class StripeService {
     if (this.config.earlyAdoptersUserAnnualPriceId) ids.push(this.config.earlyAdoptersUserAnnualPriceId);
     if (this.config.algadeskUserPriceId) ids.push(this.config.algadeskUserPriceId);
     if (this.config.algadeskUserAnnualPriceId) ids.push(this.config.algadeskUserAnnualPriceId);
+    if (this.config.algapsaUserPriceId) ids.push(this.config.algapsaUserPriceId);
+    if (this.config.algapsaUserAnnualPriceId) ids.push(this.config.algapsaUserAnnualPriceId);
     return ids;
   }
 
@@ -1977,6 +2023,158 @@ export class StripeService {
       .first();
 
     return parseInt((result?.count as string | undefined) || '0', 10);
+  }
+
+  private async getProductUpgradeContext(tenantId: string): Promise<ProductUpgradeContext> {
+    const knex = await getConnection(tenantId);
+    const canonicalSubscription = await licenseSubscriptions(
+      knex,
+      tenantId,
+      ['active', 'trialing', 'past_due', 'unpaid'],
+    )
+      .orderByRaw("CASE WHEN status = 'active' THEN 0 WHEN status = 'trialing' THEN 1 ELSE 2 END")
+      .first();
+
+    if (!canonicalSubscription) {
+      throw new Error(`No canonical license subscription found for tenant ${tenantId}`);
+    }
+
+    if (canonicalSubscription.status !== 'active') {
+      throw new Error(
+        `Product upgrade requires an active subscription; found ${canonicalSubscription.status || 'unknown'}`,
+      );
+    }
+
+    const interval = canonicalSubscription.billing_interval;
+    if (!this.isProductUpgradeInterval(interval)) {
+      throw new Error(`Unsupported subscription billing interval: ${String(interval)}`);
+    }
+
+    // Resolve all required configuration before making any Stripe API call.
+    const sourcePriceId = this.getRequiredProductUpgradePriceId('ALGADESK', interval);
+    const targetPriceId = this.getRequiredProductUpgradePriceId('ALGAPSA', interval);
+    const subscriptionId = canonicalSubscription.stripe_subscription_external_id;
+    if (!subscriptionId) {
+      throw new Error(`Canonical license subscription for tenant ${tenantId} has no Stripe subscription ID`);
+    }
+
+    const subscription = await this.stripe.subscriptions.retrieve(subscriptionId);
+    if (subscription.status !== 'active') {
+      throw new Error(`Product upgrade requires an active Stripe subscription; found ${subscription.status}`);
+    }
+
+    const userItem = this.findUserItemFromStripe(subscription.items.data);
+    if (!userItem) {
+      throw new Error(`Stripe subscription ${subscription.id} has no license item`);
+    }
+
+    const itemInterval = userItem.price.recurring?.interval;
+    if (!this.isProductUpgradeInterval(itemInterval)) {
+      throw new Error(`Unsupported Stripe price billing interval: ${String(itemInterval)}`);
+    }
+    if (itemInterval !== interval) {
+      throw new Error(
+        `Subscription billing interval mismatch: database=${interval}, Stripe=${itemInterval}`,
+      );
+    }
+    const quantity = userItem.quantity;
+    if (quantity === null || quantity === undefined) {
+      throw new Error(`Stripe subscription item ${userItem.id} has no fixed seat quantity`);
+    }
+
+    return {
+      subscription,
+      userItem,
+      quantity,
+      interval,
+      sourcePriceId,
+      targetPriceId,
+    };
+  }
+
+  async previewProductUpgrade(tenantId: string): Promise<ProductUpgradePreview> {
+    await this.ensureInitialized();
+    const context = await this.getProductUpgradeContext(tenantId);
+
+    if (context.userItem.price.id !== context.sourcePriceId) {
+      throw new Error(
+        `Refusing product upgrade preview: Stripe price ${context.userItem.price.id} is not the configured AlgaDesk ${context.interval} price`,
+      );
+    }
+
+    const [currentPrice, targetPrice] = await Promise.all([
+      this.stripe.prices.retrieve(context.sourcePriceId),
+      this.stripe.prices.retrieve(context.targetPriceId),
+    ]);
+    if (currentPrice.unit_amount === null || targetPrice.unit_amount === null) {
+      throw new Error('Product upgrade requires fixed per-seat Stripe prices');
+    }
+
+    const seatCount = context.quantity;
+    let prorationAmount: number | null = null;
+    try {
+      const customerId = typeof context.subscription.customer === 'string'
+        ? context.subscription.customer
+        : context.subscription.customer.id;
+      const invoice = await this.stripe.invoices.createPreview({
+        customer: customerId,
+        subscription: context.subscription.id,
+        subscription_details: {
+          items: [{
+            id: context.userItem.id,
+            price: context.targetPriceId,
+            quantity: seatCount,
+          }],
+          proration_behavior: 'always_invoice',
+        },
+      });
+      prorationAmount = (invoice.amount_due || 0) / 100;
+    } catch (error) {
+      logger.warn('[StripeService] Could not estimate AlgaDesk to AlgaPSA proration', {
+        tenantId,
+        error,
+      });
+    }
+
+    return {
+      currentProduct: 'algadesk',
+      targetProduct: 'psa',
+      seatCount,
+      billingInterval: context.interval,
+      currentPerSeat: currentPrice.unit_amount / 100,
+      targetPerSeat: targetPrice.unit_amount / 100,
+      prorationAmount,
+      currency: targetPrice.currency,
+    };
+  }
+
+  async swapSubscriptionToPsaProduct(
+    tenantId: string,
+  ): Promise<{ swapped: boolean; reason?: string; prorationAmount?: number }> {
+    await this.ensureInitialized();
+    const context = await this.getProductUpgradeContext(tenantId);
+
+    if (context.userItem.price.id === context.targetPriceId) {
+      return { swapped: false, reason: 'already-target' };
+    }
+    if (context.userItem.price.id !== context.sourcePriceId) {
+      throw new Error(
+        `Refusing product upgrade: Stripe price ${context.userItem.price.id} is not the configured AlgaDesk ${context.interval} price`,
+      );
+    }
+
+    // quantity deliberately omitted: Stripe preserves the item's live quantity on a
+    // price-only change, so seats can never be clobbered by a stale read.
+    await this.stripe.subscriptions.update(context.subscription.id, {
+      items: [{
+        id: context.userItem.id,
+        price: context.targetPriceId,
+      }],
+      proration_behavior: 'always_invoice',
+      metadata: { product_code: 'psa' },
+    });
+
+    return { swapped: true };
   }
 
   /**

@@ -10,6 +10,7 @@
     "start": "node dist/ee/temporal-workflows/src/worker.js",
     "start:worker": "node dist/ee/temporal-workflows/src/worker.js",
     "start:client": "node dist/ee/temporal-workflows/src/client.js",
+    "upgrade:tenant-product": "tsx src/scripts/upgrade-tenant-product.ts",
     "test": "vitest",
     "test:watch": "vitest --watch",
     "test:e2e": "./scripts/test-e2e.sh",

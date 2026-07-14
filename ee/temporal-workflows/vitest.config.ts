@@ -33,6 +33,9 @@ export default defineConfig({
   },
   resolve: {
     alias: [
+      // tsconfig maps @ee/* → ../server/src/*; mirror it here (strip the ESM .js suffix to hit the .ts source)
+      { find: /^@ee\/(.*)\.js$/, replacement: `${path.resolve(__dirname, '../server/src')}/$1` },
+      { find: /^@ee\/(.*)$/, replacement: `${path.resolve(__dirname, '../server/src')}/$1` },
       { find: /^@\/(.*)$/, replacement: `${path.resolve(__dirname, './src')}/$1` },
       { find: /^@shared\/(.*)$/, replacement: `${path.resolve(__dirname, '../../shared')}/$1` },
       { find: /^@alga-psa\/shared$/, replacement: path.resolve(__dirname, '../../shared') },
@@ -44,8 +47,9 @@ export default defineConfig({
       { find: /^@alga-psa\/workflows\/persistence$/, replacement: path.resolve(__dirname, '../packages/workflows/src/persistence/index.ts') },
       { find: /^@alga-psa\/workflows\/(.*)$/, replacement: `${path.resolve(__dirname, '../packages/workflows/src')}/$1` },
       { find: /^@alga-psa\/db$/, replacement: path.resolve(__dirname, '../../packages/db/src/index.ts') },
-      { find: /^@alga-psa\/db\/admin$/, replacement: path.resolve(__dirname, '../../packages/db/src/lib/admin.ts') },
-      { find: /^@alga-psa\/db\/tenant$/, replacement: path.resolve(__dirname, '../../packages/db/src/lib/tenant.ts') },
+      // Accept the ESM .js specifier form used by runtime code (package exports map it to dist/).
+      { find: /^@alga-psa\/db\/admin(\.js)?$/, replacement: path.resolve(__dirname, '../../packages/db/src/lib/admin.ts') },
+      { find: /^@alga-psa\/db\/tenant(\.js)?$/, replacement: path.resolve(__dirname, '../../packages/db/src/lib/tenant.ts') },
       { find: /^@alga-psa\/db\/(.*)$/, replacement: `${path.resolve(__dirname, '../../packages/db/src')}/$1` },
       { find: /^@alga-psa\/event-bus$/, replacement: path.resolve(__dirname, '../../packages/event-bus/src/index.ts') },
       { find: /^@alga-psa\/event-bus\/publishers$/, replacement: path.resolve(__dirname, '../../packages/event-bus/src/publishers/index.ts') },

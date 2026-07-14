@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import {
+  filterMenuSectionsByProduct,
   isApiVisibleInMetadata,
   resolveProductApiBehavior,
   resolveProductRouteBehavior,
@@ -32,6 +33,9 @@ describe('AlgaDesk route/API boundary smoke', () => {
     expect(resolveProductRouteBehavior('psa', '/msp/test/ui-kit')).toBe('allowed');
     expect(resolveProductRouteBehavior('algadesk', '/msp/reports')).toBe('allowed');
     expect(resolveProductRouteBehavior('psa', '/msp/reports')).toBe('allowed');
+    // Account page hosts the self-serve AlgaDesk→AlgaPSA upgrade — open to both products.
+    expect(resolveProductRouteBehavior('algadesk', '/msp/account')).toBe('allowed');
+    expect(resolveProductRouteBehavior('psa', '/msp/account')).toBe('allowed');
   });
 
   it('T019: AlgaDesk API boundary allows ticket/client/contact/KB/email and denies representative PSA-only groups', () => {
@@ -78,5 +82,49 @@ describe('AlgaDesk route/API boundary smoke', () => {
 
     expect(metadataControllerSource).toContain('isApiVisibleInMetadata(productCode, endpoint.path)');
     expect(metadataControllerSource).toContain('isApiVisibleInMetadata(productCode, apiPath)');
+  });
+
+  it('AlgaDesk settings segment routes follow the tab allow-list; PSA stays fully allowed', () => {
+    const allowedSegments = ['users', 'teams', 'ticketing', 'email', 'client-portal', 'language', 'general'];
+    for (const segment of allowedSegments) {
+      expect(resolveProductRouteBehavior('algadesk', `/msp/settings/${segment}`)).toBe('allowed');
+    }
+
+    const blockedSegments = [
+      'billing', 'projects', 'interactions', 'opportunities', 'time-entry',
+      'secrets', 'import-export', 'assets', 'mcp-server', 'experimental-features',
+      'sla', 'notifications', 'extensions', 'integrations',
+    ];
+    for (const segment of blockedSegments) {
+      expect(resolveProductRouteBehavior('algadesk', `/msp/settings/${segment}`)).toBe('not_found');
+      expect(resolveProductRouteBehavior('psa', `/msp/settings/${segment}`)).toBe('allowed');
+    }
+
+    // Settings home and nested tab paths behave like their segment.
+    expect(resolveProductRouteBehavior('algadesk', '/msp/settings')).toBe('allowed');
+    expect(resolveProductRouteBehavior('algadesk', '/msp/settings/ticketing/boards')).toBe('allowed');
+    expect(resolveProductRouteBehavior('algadesk', '/msp/settings/billing/plans')).toBe('not_found');
+  });
+
+  it('AlgaDesk sidebar filtering drops non-whitelisted settings entries for both href forms', () => {
+    const sections = [{
+      items: [
+        { href: '/msp/settings/users' },
+        { href: '/msp/settings/billing' },
+        { href: '/msp/settings/language' },
+        { href: '/msp/settings?tab=general' },
+        { href: '/msp/settings?tab=billing' },
+      ],
+    }];
+
+    const filtered = filterMenuSectionsByProduct('algadesk', sections);
+    expect(filtered[0].items.map(item => item.href)).toEqual([
+      '/msp/settings/users',
+      '/msp/settings/language',
+      '/msp/settings?tab=general',
+    ]);
+
+    const psaFiltered = filterMenuSectionsByProduct('psa', sections);
+    expect(psaFiltered[0].items).toHaveLength(5);
   });
 });

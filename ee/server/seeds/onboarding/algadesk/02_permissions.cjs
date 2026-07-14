@@ -13,6 +13,7 @@ exports.seed = async function(knex, tenantId) {
     }
 
     const mspPermissions = [
+        ['account_management', ['read', 'update', 'delete'], 'account and subscription'],
         ['client', ['create', 'read', 'update', 'delete'], 'clients'],
         ['contact', ['create', 'read', 'update', 'delete'], 'contacts'],
         ['document', ['create', 'read', 'update', 'delete'], 'documents'],

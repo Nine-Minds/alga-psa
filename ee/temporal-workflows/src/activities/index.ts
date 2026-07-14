@@ -24,6 +24,7 @@ export * from "./premium-trial-activities";
 export * from "./appliance-check-in-activities";
 export * from "./appliance-license-redeem-activities";
 export * from "./workflow-runtime-v2-activities";
+export * from "./product-upgrade-activities";
 // Exclude generateTemporaryPassword and sendWelcomeEmail to avoid duplicates with email-activities
 export {
   getTenant,

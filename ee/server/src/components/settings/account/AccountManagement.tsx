@@ -39,14 +39,22 @@ import {
   cancelIapTransitionAction,
   type IapBillingContext,
 } from 'ee/server/src/lib/actions/license-actions';
+import {
+  previewProductUpgradeAction,
+  startProductUpgradeAction,
+  getProductUpgradeStatusAction,
+  type ProductUpgradePreview,
+  type ProductUpgradeStatus,
+} from '@ee/lib/actions/product-upgrade-actions';
 import { checkAccountManagementPermission } from '@alga-psa/auth/actions';
 import { useRouter } from 'next/navigation';
 import { ILicenseInfo, IPaymentMethod, ISubscriptionInfo, IInvoiceInfo, IScheduledLicenseChange } from 'server/src/interfaces/subscription.interfaces';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import ReduceLicensesModal from '@ee/components/licensing/ReduceLicensesModal';
 import CancellationFeedbackModal from './CancellationFeedbackModal';
-import { signOut } from 'next-auth/react';
+import { signOut, useSession } from 'next-auth/react';
 import { useTier } from 'server/src/context/TierContext';
+import { useProduct } from 'server/src/context/ProductContext';
 import { ADD_ONS, ADD_ON_LABELS, TIER_LABELS, TIER_FEATURE_MAP, TIER_FEATURES, type AddOnKey } from '@alga-psa/types';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useFormatAddOnDescription } from '@alga-psa/ui/hooks/useAddOnEnumOptions';
@@ -104,6 +112,8 @@ export default function AccountManagement() {
   const tierUpgradeFlowEnabled = typeof upgradeFlowFlag === 'boolean'
     ? upgradeFlowFlag
     : upgradeFlowFlag?.enabled ?? false;
+  const { isAlgaDesk } = useProduct();
+  const { update: updateSession } = useSession();
 
   // Collapsible sections state
   const [expandedSections, setExpandedSections] = useState({
@@ -354,6 +364,89 @@ export default function AccountManagement() {
     savingsPercent?: number;
   } | null>(null);
   const [loadingIntervalPreview, setLoadingIntervalPreview] = useState(false);
+
+  // Product upgrade (AlgaDesk → AlgaPSA) state
+  const [showProductUpgradeDialog, setShowProductUpgradeDialog] = useState(false);
+  const [productUpgradePreview, setProductUpgradePreview] = useState<ProductUpgradePreview | null>(null);
+  const [loadingProductUpgradePreview, setLoadingProductUpgradePreview] = useState(false);
+  const [productUpgradePreviewFailed, setProductUpgradePreviewFailed] = useState(false);
+  const [startingProductUpgrade, setStartingProductUpgrade] = useState(false);
+  const [productUpgradeStatus, setProductUpgradeStatus] = useState<ProductUpgradeStatus>({ state: 'idle' });
+
+  // Poll the upgrade workflow status every 2s while it is running
+  useEffect(() => {
+    if (productUpgradeStatus.state !== 'running') return;
+    let cancelled = false;
+    const poll = async () => {
+      try {
+        const status = await getProductUpgradeStatusAction();
+        if (!cancelled) setProductUpgradeStatus(status);
+      } catch (error) {
+        console.error('Error polling product upgrade status:', error);
+      }
+    };
+    const interval = setInterval(poll, 2000);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [productUpgradeStatus.state]);
+
+  // On completion, refresh the session (flips product_code to psa) and the route
+  useEffect(() => {
+    if (productUpgradeStatus.state !== 'completed') return;
+    (async () => {
+      await updateSession();
+      router.refresh();
+    })();
+  }, [productUpgradeStatus.state]);
+
+  const handleOpenProductUpgrade = async () => {
+    if (!canManageAccount) {
+      toast.error(t('messages.noPermissionSubscription'));
+      return;
+    }
+    setShowProductUpgradeDialog(true);
+    // Reopening mid-run or after completion keeps the current state visible
+    if (productUpgradeStatus.state === 'running' || productUpgradeStatus.state === 'completed') {
+      return;
+    }
+    setProductUpgradeStatus({ state: 'idle' });
+    await loadProductUpgradePreview();
+  };
+
+  const loadProductUpgradePreview = async () => {
+    setLoadingProductUpgradePreview(true);
+    setProductUpgradePreviewFailed(false);
+    try {
+      const preview = await previewProductUpgradeAction();
+      setProductUpgradePreview(preview);
+    } catch (error) {
+      console.error('Error fetching product upgrade preview:', error);
+      setProductUpgradePreviewFailed(true);
+      toast.error(t('productUpgrade.previewFailed'));
+    } finally {
+      setLoadingProductUpgradePreview(false);
+    }
+  };
+
+  // Confirm + retry share the same call — the workflow is idempotent server-side
+  const handleStartProductUpgrade = async () => {
+    setStartingProductUpgrade(true);
+    try {
+      const result = await startProductUpgradeAction();
+      setProductUpgradeStatus({ state: 'running', workflowId: result.workflowId, currentStep: null, completedSteps: [] });
+    } catch (error) {
+      console.error('Error starting product upgrade:', error);
+      toast.error(t('productUpgrade.startFailed'));
+    } finally {
+      setStartingProductUpgrade(false);
+    }
+  };
+
+  const handleCloseProductUpgrade = () => {
+    setShowProductUpgradeDialog(false);
+  };
 
   const handleIntervalSwitchClick = async () => {
     if (!canManageAccount || !subscriptionInfo) return;
@@ -1305,7 +1398,7 @@ export default function AccountManagement() {
                 </div>
               )}
 
-              {canDowngradeToSolo && !isPremium && (
+              {!isAlgaDesk && canDowngradeToSolo && !isPremium && (
                 <div className="mt-4 rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-4">
                   <div className="flex items-center justify-between gap-4">
                     <div>
@@ -1334,7 +1427,7 @@ export default function AccountManagement() {
 
               {/* Premium Trial — self-service for paying Pro, manual request for trialing Pro */}
               {/* Hide if already on a Premium trial (they manage it from the trial card above) */}
-              {isPro && !isTrialing && !isPremiumTrial && (
+              {!isAlgaDesk && isPro && !isTrialing && !isPremiumTrial && (
                 <div className="mt-4 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-4">
                   <h4 className="font-semibold mb-1">{t('planTier.tryPremiumTitle')}</h4>
                   <p className="text-sm text-muted-foreground mb-3">
@@ -1349,7 +1442,7 @@ export default function AccountManagement() {
                   </Button>
                 </div>
               )}
-              {isPro && isTrialing && !isPremiumTrial && (
+              {!isAlgaDesk && isPro && isTrialing && !isPremiumTrial && (
                 <div className="mt-4 rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 p-4">
                   <h4 className="font-semibold mb-1">{t('planTier.tryPremiumTitle')}</h4>
                   <p className="text-sm text-muted-foreground mb-3">
@@ -1386,6 +1479,44 @@ export default function AccountManagement() {
           </CardContent>
         )}
       </Card>
+
+      {/* AlgaDesk → AlgaPSA product upgrade */}
+      {isAlgaDesk && (
+        <Card id="product-upgrade-card" className="border-primary/30 bg-primary/5">
+          <CardHeader>
+            <div className="flex items-center space-x-2">
+              <Rocket className="h-5 w-5 text-primary" />
+              <CardTitle>{t('productUpgrade.cardTitle')}</CardTitle>
+            </div>
+            <CardDescription>{t('productUpgrade.cardDescription')}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="rounded-lg border p-4 bg-muted/50 space-y-2">
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">{t('productUpgrade.currentPlanLabel')}</span>
+                <span className="font-medium">{t('productUpgrade.algadeskPlanName')}</span>
+              </div>
+              {productUpgradePreview && (
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">{t('productUpgrade.currentPerSeatLabel')}</span>
+                  <span>{t('productUpgrade.perSeatValue', { amount: productUpgradePreview.currentPerSeat.toFixed(2) })}</span>
+                </div>
+              )}
+            </div>
+            <div className="flex items-center justify-between gap-4">
+              <p className="text-sm text-muted-foreground">{t('productUpgrade.cardCta')}</p>
+              <Button
+                id="product-upgrade-open-button"
+                onClick={handleOpenProductUpgrade}
+                disabled={loadingProductUpgradePreview || productUpgradeStatus.state === 'running'}
+              >
+                <Rocket className="mr-2 h-4 w-4" />
+                {loadingProductUpgradePreview ? t('common.loading') : t('productUpgrade.openButton')}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {tierUpgradeFlowEnabled && addOnCards.map((card) => {
         const isActive = hasAddOn(card.addOn);
@@ -2218,6 +2349,166 @@ export default function AccountManagement() {
           )
         }
       />
+
+      {/* AlgaDesk → AlgaPSA product upgrade dialog */}
+      <Dialog
+        id="product-upgrade-dialog"
+        isOpen={showProductUpgradeDialog}
+        onClose={handleCloseProductUpgrade}
+        title={t('productUpgrade.dialogTitle')}
+      >
+        {productUpgradeStatus.state === 'running' ? (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <Rocket className="h-5 w-5 text-primary animate-pulse" />
+              <p className="font-semibold">{t('productUpgrade.inProgressTitle')}</p>
+            </div>
+            <p className="text-sm text-muted-foreground">{t('productUpgrade.inProgressBody')}</p>
+            <div className="rounded-lg border p-4 space-y-2 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">{t('productUpgrade.currentStepLabel')}</span>
+                <span className="font-medium">
+                  {productUpgradeStatus.currentStep
+                    ? productUpgradeStatus.currentStep.replace(/^product_upgrade_/, '').replace(/_/g, ' ')
+                    : t('productUpgrade.preparingStep')}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">{t('productUpgrade.completedStepsLabel')}</span>
+                <span className="font-medium">{productUpgradeStatus.completedSteps.length}</span>
+              </div>
+            </div>
+          </div>
+        ) : productUpgradeStatus.state === 'completed' ? (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <CheckCircle className="h-5 w-5 text-green-600" />
+              <p className="font-semibold">{t('productUpgrade.successTitle')}</p>
+            </div>
+            <p className="text-sm text-muted-foreground">{t('productUpgrade.successBody')}</p>
+            <div className="rounded-lg border border-blue-200 bg-blue-50 dark:border-blue-800 dark:bg-blue-900/20 p-3">
+              <p className="text-sm text-blue-800 dark:text-blue-200">{t('productUpgrade.successReloginNotice')}</p>
+            </div>
+            <div className="flex justify-end pt-2">
+              <Button id="product-upgrade-done-button" onClick={handleCloseProductUpgrade}>
+                {t('productUpgrade.successDone')}
+              </Button>
+            </div>
+          </div>
+        ) : productUpgradeStatus.state === 'failed' ? (
+          <div className="space-y-4">
+            <Alert variant="destructive">
+              <AlertDescription>
+                <p className="font-semibold">{t('productUpgrade.failedTitle')}</p>
+                <p className="text-sm">{t('productUpgrade.failedBody')}</p>
+                {productUpgradeStatus.error && (
+                  <p className="text-sm mt-2 font-mono break-words">{productUpgradeStatus.error}</p>
+                )}
+              </AlertDescription>
+            </Alert>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                id="product-upgrade-close-button"
+                variant="outline"
+                onClick={handleCloseProductUpgrade}
+                disabled={startingProductUpgrade}
+              >
+                {t('productUpgrade.close')}
+              </Button>
+              <Button
+                id="product-upgrade-retry-button"
+                onClick={handleStartProductUpgrade}
+                disabled={startingProductUpgrade}
+              >
+                {startingProductUpgrade ? t('productUpgrade.retrying') : t('productUpgrade.retry')}
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {loadingProductUpgradePreview ? (
+              <p className="text-sm text-muted-foreground">{t('common.loadingPricingDetails')}</p>
+            ) : productUpgradePreviewFailed || !productUpgradePreview ? (
+              <>
+                <Alert variant="destructive">
+                  <AlertDescription>{t('productUpgrade.previewFailed')}</AlertDescription>
+                </Alert>
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button
+                    id="product-upgrade-cancel-button"
+                    variant="outline"
+                    onClick={handleCloseProductUpgrade}
+                  >
+                    {t('productUpgrade.cancel')}
+                  </Button>
+                  <Button
+                    id="product-upgrade-preview-retry-button"
+                    onClick={loadProductUpgradePreview}
+                  >
+                    {t('productUpgrade.retry')}
+                  </Button>
+                </div>
+              </>
+            ) : (
+              <>
+                <p>
+                  <span dangerouslySetInnerHTML={{ __html: t('productUpgrade.intro') }} />
+                </p>
+                <div className="rounded-lg border p-4 space-y-2 text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">{t('productUpgrade.targetPerSeatLabel')}</span>
+                    <span>{t('productUpgrade.perSeatValue', { amount: productUpgradePreview.targetPerSeat.toFixed(2) })}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">{t('productUpgrade.seatCountLabel')}</span>
+                    <span>{productUpgradePreview.seatCount}</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">{t('productUpgrade.billingIntervalLabel')}</span>
+                    <span>
+                      {productUpgradePreview.billingInterval === 'year'
+                        ? t('productUpgrade.intervalYear')
+                        : t('productUpgrade.intervalMonth')}
+                    </span>
+                  </div>
+                  <div className="flex justify-between font-semibold pt-2 border-t">
+                    <span>{t('productUpgrade.dueTodayLabel')}</span>
+                    <span>
+                      {productUpgradePreview.prorationAmount !== null
+                        ? `$${productUpgradePreview.prorationAmount.toFixed(2)}`
+                        : t('productUpgrade.dueTodayUnknown')}
+                    </span>
+                  </div>
+                </div>
+                {productUpgradePreview.prorationAmount === null && (
+                  <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/20 p-3">
+                    <p className="text-sm text-amber-800 dark:text-amber-200">
+                      {t('productUpgrade.prorationFallback')}
+                    </p>
+                  </div>
+                )}
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button
+                    id="product-upgrade-cancel-button"
+                    variant="outline"
+                    onClick={handleCloseProductUpgrade}
+                    disabled={startingProductUpgrade}
+                  >
+                    {t('productUpgrade.cancel')}
+                  </Button>
+                  <Button
+                    id="product-upgrade-confirm-button"
+                    onClick={handleStartProductUpgrade}
+                    disabled={startingProductUpgrade}
+                  >
+                    {startingProductUpgrade ? t('productUpgrade.confirming') : t('productUpgrade.confirm')}
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        )}
+      </Dialog>
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { PRODUCT_CODES, type ProductCode } from '@alga-psa/types';
+import { getAllowedSettingsTabIds } from './settingsProductTabs';
 
 export type ProductRouteBehavior = 'allowed' | 'upgrade_boundary' | 'not_found';
 export type ProductApiBehavior = 'allowed' | 'denied';
@@ -52,7 +53,7 @@ export const MSP_ROUTE_RULES: readonly RouteRule[] = [
   },
   {
     group: 'msp_core_helpdesk',
-    staticPrefixes: ['/msp/tickets', '/msp/create-ticket', '/msp/clients', '/msp/contacts', '/msp/knowledge-base', '/msp/reports', '/msp/settings', '/msp/profile', '/msp/security-settings'],
+    staticPrefixes: ['/msp/tickets', '/msp/create-ticket', '/msp/clients', '/msp/contacts', '/msp/knowledge-base', '/msp/reports', '/msp/settings', '/msp/profile', '/msp/security-settings', '/msp/account'],
     behaviorByProduct: { psa: 'allowed', algadesk: 'allowed' },
   },
   {
@@ -209,7 +210,21 @@ function matchesRule(pathname: string, rule: Pick<RouteRule | ApiRule, 'staticPr
   return false;
 }
 
+// '/msp/settings/<segment>[/...]' → '<segment>'; null for the settings home and non-settings paths.
+function mspSettingsSegment(pathname: string): string | null {
+  const normalized = normalizePathname(pathname.split(/[?#]/)[0]);
+  if (!normalized.startsWith('/msp/settings/')) return null;
+  return normalized.slice('/msp/settings/'.length).split('/')[0] || null;
+}
+
 export function resolveProductRouteBehavior(productCode: ProductCode, pathname: string): ProductRouteBehavior {
+  // Settings tab routes are gated per-segment against the same allow-list SettingsTab
+  // uses, so the split-out /msp/settings/<tab> routes keep the pre-split ?tab= boundary.
+  const settingsSegment = mspSettingsSegment(pathname);
+  if (settingsSegment !== null && productCode === 'algadesk') {
+    return getAllowedSettingsTabIds(productCode).has(settingsSegment) ? 'allowed' : 'not_found';
+  }
+
   const rules = pathname.startsWith('/client-portal/') ? PORTAL_ROUTE_RULES : MSP_ROUTE_RULES;
   const matched = rules.find((rule) => matchesRule(pathname, rule));
   if (!matched) {
@@ -248,8 +263,7 @@ function includeByHref(productCode: ProductCode, href?: string): boolean {
   if (!href || href.startsWith('http')) return true;
   if (productCode === 'algadesk' && href.startsWith('/msp/settings?tab=')) {
     const tab = new URLSearchParams(href.split('?')[1]).get('tab');
-    const allowedTabs = new Set(['general', 'users', 'teams', 'ticketing', 'email', 'client-portal']);
-    return tab ? allowedTabs.has(tab) : false;
+    return tab ? getAllowedSettingsTabIds(productCode).has(tab) : false;
   }
   if (href.startsWith('/msp/')) return resolveProductRouteBehavior(productCode, href) === 'allowed';
   if (href.startsWith('/client-portal/')) return resolveProductRouteBehavior(productCode, href) === 'allowed';
