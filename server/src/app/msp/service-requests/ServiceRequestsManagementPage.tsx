@@ -156,7 +156,11 @@ export default function ServiceRequestsManagementPage() {
                 onClick={() =>
                   startTransition(async () => {
                     try {
-                      await duplicateServiceRequestDefinitionAction(row.definition_id);
+                      const result = await duplicateServiceRequestDefinitionAction(row.definition_id);
+                      if (!result.success) {
+                        toast.error(result.message);
+                        return;
+                      }
                       await reload();
                       toast.success(t('messages.success.definitionDuplicated'));
                     } catch (error) {
@@ -174,7 +178,11 @@ export default function ServiceRequestsManagementPage() {
                   onClick={() =>
                     startTransition(async () => {
                       try {
-                        await unarchiveServiceRequestDefinitionAction(row.definition_id);
+                        const result = await unarchiveServiceRequestDefinitionAction(row.definition_id);
+                        if (!result.success) {
+                          toast.error(result.message);
+                          return;
+                        }
                         await reload();
                         toast.success(t('messages.success.definitionUnarchived'));
                       } catch (error) {
@@ -192,7 +200,11 @@ export default function ServiceRequestsManagementPage() {
                   onClick={() =>
                     startTransition(async () => {
                       try {
-                        await archiveServiceRequestDefinitionAction(row.definition_id);
+                        const result = await archiveServiceRequestDefinitionAction(row.definition_id);
+                        if (!result.success) {
+                          toast.error(result.message);
+                          return;
+                        }
                         await reload();
                         toast.success(t('messages.success.definitionArchived'));
                       } catch (error) {
@@ -272,16 +284,20 @@ export default function ServiceRequestsManagementPage() {
                   onClick={() =>
                     startTransition(async () => {
                       try {
-                        const created = await createServiceRequestDefinitionFromTemplateAction(
+                        const result = await createServiceRequestDefinitionFromTemplateAction(
                           template.providerKey,
                           template.templateId
                         );
+                        if (!result.success) {
+                          toast.error(result.message);
+                          return;
+                        }
                         toast.success(
                           t('messages.success.draftCreatedFromExample', {
                             name: template.templateName,
                           })
                         );
-                        router.push(`/msp/service-requests/${created.definition_id}`);
+                        router.push(`/msp/service-requests/${result.data.definition_id}`);
                       } catch (error) {
                         console.error('Failed to create draft from template', error);
                         toast.error(t('messages.error.createFromExampleFailed'));

@@ -131,7 +131,8 @@ describe('ServiceRequestsManagementPage', () => {
       },
     ]);
     createServiceRequestDefinitionFromTemplateActionMock.mockResolvedValue({
-      definition_id: 'definition-123',
+      success: true,
+      data: { definition_id: 'definition-123' },
     });
   });
 
@@ -157,6 +158,27 @@ describe('ServiceRequestsManagementPage', () => {
     expect(pushMock).toHaveBeenCalledWith('/msp/service-requests/definition-123');
     expect(listServiceRequestDefinitionsActionMock).toHaveBeenCalledTimes(1);
     expect(listServiceRequestTemplatesActionMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('shows an expected template failure without navigating', async () => {
+    createServiceRequestDefinitionFromTemplateActionMock.mockResolvedValue({
+      success: false,
+      code: 'TEMPLATE_UNAVAILABLE',
+      message: 'This template is not available for this tenant',
+    });
+
+    render(<ServiceRequestsManagementPage />);
+
+    await screen.findByText('New Hire Onboarding');
+    fireEvent.click(screen.getByText(/New Hire Onboarding/));
+
+    await waitFor(() => {
+      expect(toastErrorMock).toHaveBeenCalledWith(
+        'This template is not available for this tenant'
+      );
+    });
+    expect(toastSuccessMock).not.toHaveBeenCalled();
+    expect(pushMock).not.toHaveBeenCalled();
   });
 
   it('hides archived service requests by default and reveals them when toggled on', async () => {
