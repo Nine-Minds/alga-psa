@@ -1052,7 +1052,8 @@
         "primaryColor": "Primaire kleur",
         "secondaryColor": "Secundaire kleur",
         "supportEmail": "Support-e-mail",
-        "supportPhone": "Support-telefoonnummer"
+        "supportPhone": "Support-telefoonnummer",
+        "heroGradient": "Verloop van dashboardkop"
       },
       "help": {
         "companyName": "Dit wordt weergegeven in de koptekst van het klantenportaal",
@@ -1060,7 +1061,12 @@
         "primaryColor": "Wordt gebruikt voor knoppen, links en accenten",
         "secondaryColor": "Wordt gebruikt voor accenten en secundaire acties",
         "supportEmail": "Wordt aan klanten getoond in afspraakbevestigingen en andere uitgaande e-mails als contactadres voor hulp.",
-        "supportPhone": "Optioneel. Wordt naast het support-e-mailadres weergegeven in e-mails aan klanten."
+        "supportPhone": "Optioneel. Wordt naast het support-e-mailadres weergegeven in e-mails aan klanten.",
+        "heroGradient": "Bepaalt het verloop van de welkomstbanner op het klantendashboard."
+      },
+      "heroGradient": {
+        "primaryShades": "Primaire kleur naar primaire tint",
+        "primarySecondary": "Primaire kleur naar secundaire kleur"
       },
       "preview": "Voorbeeld",
       "previewDarkMode": "Voorbeeld donkere modus",

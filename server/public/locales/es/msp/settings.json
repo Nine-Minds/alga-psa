@@ -1052,7 +1052,8 @@
         "primaryColor": "Color primario",
         "secondaryColor": "Color secundario",
         "supportEmail": "Correo de soporte",
-        "supportPhone": "Teléfono de soporte"
+        "supportPhone": "Teléfono de soporte",
+        "heroGradient": "Degradado del encabezado del panel"
       },
       "help": {
         "companyName": "Esto se mostrará en el encabezado del portal del cliente",
@@ -1060,7 +1061,12 @@
         "primaryColor": "Se utiliza para botones, enlaces y elementos destacados",
         "secondaryColor": "Se utiliza para acentos y acciones secundarias",
         "supportEmail": "Se muestra a los clientes en las confirmaciones de citas y otros correos salientes como dirección de contacto para obtener ayuda.",
-        "supportPhone": "Opcional. Se muestra junto al correo de soporte en los correos enviados a los clientes."
+        "supportPhone": "Opcional. Se muestra junto al correo de soporte en los correos enviados a los clientes.",
+        "heroGradient": "Controla el degradado del banner de bienvenida del panel del cliente."
+      },
+      "heroGradient": {
+        "primaryShades": "Color primario a tono primario",
+        "primarySecondary": "Color primario a color secundario"
       },
       "preview": "Vista previa",
       "previewDarkMode": "Vista previa en modo oscuro",

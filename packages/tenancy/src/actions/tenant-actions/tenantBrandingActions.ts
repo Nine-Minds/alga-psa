@@ -7,11 +7,18 @@ import { withAuth, withOptionalAuth, type AuthContext } from '@alga-psa/auth';
 import type { IUserWithRoles } from '@alga-psa/types';
 import type { Knex } from 'knex';
 
+export type PortalHeroGradient = 'primary-shades' | 'primary-secondary';
+
 export interface TenantBranding {
   logoUrl: string;
   primaryColor: string;
   secondaryColor: string;
   clientName: string;
+  /**
+   * Controls the client dashboard welcome gradient. Missing values retain the
+   * original primary-500 -> primary-700 behavior for existing tenants.
+   */
+  portalHeroGradient?: PortalHeroGradient;
   supportEmail?: string;
   supportPhone?: string;
   computedStyles?: string; // Cached CSS styles
@@ -57,6 +64,7 @@ export const updateTenantBrandingAction = withAuth(async (user: IUserWithRoles, 
       primaryColor: branding.primaryColor,
       secondaryColor: branding.secondaryColor,
       clientName: branding.clientName,
+      portalHeroGradient: branding.portalHeroGradient,
       computedStyles, // Store precomputed CSS
     }
   };

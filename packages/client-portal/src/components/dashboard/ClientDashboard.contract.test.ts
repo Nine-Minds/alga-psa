@@ -8,6 +8,19 @@ const source = fs.readFileSync(
 );
 
 describe('ClientDashboard quick-action distribution contract', () => {
+  it('preserves the established hero gradient unless the tenant opts into both brand colors', () => {
+    expect(source).toContain("branding?.portalHeroGradient ?? 'primary-shades'");
+    expect(source).toContain("portalHeroGradient === 'primary-secondary'");
+    expect(source).toContain("? '--color-secondary-500'");
+    expect(source).toContain(": '--color-primary-700'");
+    expect(source).toContain('linear-gradient(90deg');
+  });
+
+  it('uses the selected gradient endpoint when computing readable hero text', () => {
+    expect(source).toContain("? '--color-secondary-500'");
+    expect(source).toContain(": '--color-primary-700'");
+  });
+
   it('does NOT put the quick-action buttons in the hero block', () => {
     // Hero quick-action IDs were removed; presence of any of these would mean we regressed.
     expect(source).not.toContain('dashboard-quick-create-ticket');

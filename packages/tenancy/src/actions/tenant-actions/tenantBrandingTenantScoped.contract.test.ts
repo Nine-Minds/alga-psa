@@ -9,6 +9,12 @@ const files = [
 ];
 
 describe('tenant branding actions tenant-scoped query contract', () => {
+  it('persists the optional client portal hero gradient mode with branding', () => {
+    const source = readFileSync(resolve(__dirname, 'tenantBrandingActions.ts'), 'utf8');
+    expect(source).toContain("export type PortalHeroGradient = 'primary-shades' | 'primary-secondary'");
+    expect(source).toContain('portalHeroGradient: branding.portalHeroGradient');
+  });
+
   it('uses structural tenant scoping for tenant settings branding roots', () => {
     for (const file of files) {
       const source = readFileSync(resolve(__dirname, file), 'utf8');
