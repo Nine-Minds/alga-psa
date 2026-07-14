@@ -62,6 +62,7 @@ const activities = proxyActivities<{
     adminUserId: string;
     clientId?: string;
     contractLine?: string;
+    emailProvider?: 'smtp' | 'resend';
   }): Promise<SetupTenantDataActivityResult>;
   run_onboarding_seeds(input: {
     tenantId: string;
@@ -309,6 +310,7 @@ export async function runTenantCreationOrchestration(
       adminUserId: userResult.userId,
       clientId: tenantResult.clientId,
       contractLine: input.contractLine,
+      emailProvider: input.emailProvider,
     });
 
     workflowState.progress = 90;

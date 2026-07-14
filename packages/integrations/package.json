@@ -39,6 +39,7 @@
   "dependencies": {
     "@alga-psa/core": "file:../core",
     "@alga-psa/db": "file:../db",
+    "@alga-psa/email": "file:../email",
     "@alga-psa/event-bus": "file:../event-bus",
     "@alga-psa/shared": "file:../../shared",
     "@alga-psa/types": "file:../types",

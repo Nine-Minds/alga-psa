@@ -50,12 +50,14 @@ test('appliance Temporal client uses an idempotent fixed workflow execution', ()
   assert.match(client, /taskQueue/);
   assert.match(client, /skipCustomerTracking: true/);
   assert.match(client, /skipWelcomeEmail: true/);
+  assert.match(client, /emailProvider: 'smtp'/);
   assert.match(client, /tenantId/);
   assert.match(client, /password/);
 });
 
-test('Temporal worker image includes database exports required by onboarding seeds', () => {
+test('Temporal worker image includes package exports required by tenant setup', () => {
   const dockerfile = read('ee/temporal-workflows/Dockerfile');
+  const dockerignore = read('.dockerignore');
 
   assert.match(dockerfile, /WORKDIR \/app\/packages\/core\s+RUN npm run build/);
   assert.match(dockerfile, /WORKDIR \/app\/packages\/db\s+RUN npm run build/);
@@ -67,6 +69,13 @@ test('Temporal worker image includes database exports required by onboarding see
     dockerfile,
     /COPY --from=development \/app\/packages\/db\/dist \/app\/packages\/db\/dist/
   );
+  assert.match(dockerfile, /WORKDIR \/app\/packages\/email\s+RUN npm install --ignore-scripts && npm run build/);
+  assert.match(
+    dockerfile,
+    /COPY --from=development \/app\/packages\/email\/dist \/app\/packages\/email\/dist/
+  );
+  assert.match(dockerfile, /import\('@alga-psa\/email\/providerConfig'\)/);
+  assert.match(dockerignore, /!packages\/email\/dist\/\*\*/);
 });
 
 test('EE application image requires onboarding seed runtime package exports', () => {
