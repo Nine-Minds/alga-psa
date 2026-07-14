@@ -180,7 +180,8 @@ describe('NinjaOne workflow action handlers', () => {
     });
 
     const result = await action.handler({ limit: 10, live: false }, { ...baseCtx, tenantId: 'tenant-1', knex } as any);
-    expect(alertsBuilder.where).toHaveBeenCalledWith({ tenant: 'tenant-1', integration_id: 'int-1', status: 'active' });
+    expect(alertsBuilder.where).toHaveBeenNthCalledWith(1, 'rmm_alerts.tenant', 'tenant-1');
+    expect(alertsBuilder.where).toHaveBeenNthCalledWith(2, { integration_id: 'int-1', status: 'active' });
     expect(result.count).toBe(1);
     expect(result.alerts[0]).toMatchObject({
       alert_id: 'a1',
@@ -204,7 +205,8 @@ describe('NinjaOne workflow action handlers', () => {
       throw new Error(`Unexpected table ${table}`);
     });
     const found = await action.handler({ external_alert_id: 'ext-a1' }, { ...baseCtx, tenantId: 'tenant-1', knex: foundKnex } as any);
-    expect(foundBuilder.where).toHaveBeenCalledWith({ tenant: 'tenant-1', integration_id: 'int-1', external_alert_id: 'ext-a1' });
+    expect(foundBuilder.where).toHaveBeenNthCalledWith(1, 'rmm_alerts.tenant', 'tenant-1');
+    expect(foundBuilder.where).toHaveBeenNthCalledWith(2, { integration_id: 'int-1', external_alert_id: 'ext-a1' });
     expect(found.alert.external_alert_id).toBe('ext-a1');
 
     const missingBuilder: any = { where: vi.fn().mockReturnThis(), first: vi.fn().mockResolvedValue(undefined) };
@@ -233,7 +235,8 @@ describe('NinjaOne workflow action handlers', () => {
 
     const result = await action.handler({ external_alert_id: 'ext-a1' }, { ...baseCtx, tenantId: 'tenant-1', knex } as any);
     expect(resetAlert).toHaveBeenCalledWith('ext-a1');
-    expect(alertsBuilder.where).toHaveBeenCalledWith({ tenant: 'tenant-1', integration_id: 'int-1', external_alert_id: 'ext-a1' });
+    expect(alertsBuilder.where).toHaveBeenNthCalledWith(1, 'rmm_alerts.tenant', 'tenant-1');
+    expect(alertsBuilder.where).toHaveBeenNthCalledWith(2, { integration_id: 'int-1', external_alert_id: 'ext-a1' });
     expect(update).toHaveBeenCalled();
     expect(result).toEqual({ acknowledged: true, alert_id: 'ext-a1' });
   });

@@ -219,7 +219,9 @@ describe('client portal board-scoped ticket status validation', () => {
 
     const { updateTicketStatus } = await import('./client-tickets');
 
-    await expect(updateTicketStatus('ticket-1', 'board-2-closed')).rejects.toThrow('Failed to update ticket status');
+    await expect(updateTicketStatus('ticket-1', 'board-2-closed')).resolves.toEqual({
+      actionError: 'Selected status is not valid for the ticket board',
+    });
     expect(ticketUpdates).toHaveLength(0);
     expect(publishEventMock).not.toHaveBeenCalled();
   });

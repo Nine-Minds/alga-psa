@@ -81,10 +81,24 @@ vi.mock('../../src/actions/billingClientsActions', () => ({
   getAllClientsForBilling: (...args: any[]) => getAllClientsForBillingMock(...args),
 }));
 
-vi.mock('@alga-psa/user-composition/actions', () => ({
+vi.mock('@alga-psa/user-composition/actions/contactQueryActions', () => ({
   getContactsForPicker: (...args: any[]) => getAllContactsMock(...args),
+}));
+
+vi.mock('@alga-psa/user-composition/actions/userQueryActions', () => ({
   getAllUsersBasic: vi.fn().mockResolvedValue([]),
+}));
+
+vi.mock('@alga-psa/user-composition/actions/avatarActions', () => ({
   getUserAvatarUrlsBatchAction: vi.fn().mockResolvedValue(new Map()),
+}));
+
+vi.mock('@alga-psa/inventory/actions/salesOrderLinkActions', () => ({
+  getSalesOrderForQuote: vi.fn().mockResolvedValue(null),
+}));
+
+vi.mock('@alga-psa/inventory/actions/availabilityActions', () => ({
+  getProductAvailability: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock('../../src/actions/quoteRecipientActions', () => ({

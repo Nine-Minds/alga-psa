@@ -63,6 +63,7 @@ vi.mock(
 
 vi.mock('@alga-psa/ui/lib/errorHandling', () => ({
   handleError: vi.fn(),
+  isActionMessageError: () => false,
   isActionPermissionError: () => false,
 }));
 

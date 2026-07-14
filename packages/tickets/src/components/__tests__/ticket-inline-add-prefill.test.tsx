@@ -333,15 +333,44 @@ vi.mock('@alga-psa/tickets/actions', () => ({
   getAllBoards: vi.fn()
 }));
 
+vi.mock('../../actions/ticketCategoryActions', () => ({
+  getTicketCategoriesByBoard: vi.fn().mockResolvedValue({
+    categories: [],
+    boardConfig: {
+      category_type: 'custom',
+      priority_type: 'custom',
+      display_itil_impact: false,
+      display_itil_urgency: false,
+    },
+  }),
+  getTicketCategories: vi.fn(),
+}));
+
 vi.mock('@alga-psa/reference-data/actions', () => ({
   getTicketStatuses: (...args: unknown[]) => getTicketStatusesMock(...args),
   getAllPriorities: vi.fn().mockResolvedValue([])
+}));
+
+vi.mock('@alga-psa/reference-data/actions/status-actions/statusActions', () => ({
+  getTicketStatuses: (...args: unknown[]) => getTicketStatusesMock(...args),
 }));
 
 vi.mock('@alga-psa/user-composition/actions', () => ({
   getCurrentUser: vi.fn().mockResolvedValue({ user_id: 'user-1' }),
   getUserAvatarUrlsBatchAction: vi.fn(),
   searchUsersForMentions: vi.fn().mockResolvedValue([])
+}));
+
+vi.mock('@alga-psa/user-composition/actions/userQueryActions', () => ({
+  getCurrentUser: vi.fn().mockResolvedValue({ user_id: 'user-1' }),
+}));
+
+vi.mock('@alga-psa/user-composition/actions/avatarActions', () => ({
+  getUserAvatarUrlsBatchAction: vi.fn(),
+}));
+
+vi.mock('@alga-psa/user-composition/actions/searchUsersForMentions', () => ({
+  searchUsersForMentions: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock('@alga-psa/documents/actions/documentActions', () => ({
@@ -446,13 +475,37 @@ vi.mock('@alga-psa/tags/components', () => ({
   QuickAddTagPicker: () => <div data-testid="tag-picker" />
 }));
 
+vi.mock('@alga-psa/tags/components/QuickAddTagPicker', () => ({
+  QuickAddTagPicker: () => <div data-testid="tag-picker" />
+}));
+
 vi.mock('@alga-psa/tags/actions', () => ({
+  createTagsForEntity: vi.fn()
+}));
+
+vi.mock('@alga-psa/tags/actions/tagActions', () => ({
   createTagsForEntity: vi.fn()
 }));
 
 vi.mock('@alga-psa/teams/actions', () => ({
   getTeams: vi.fn().mockResolvedValue([]),
   getTeamAvatarUrlsBatchAction: vi.fn()
+}));
+
+vi.mock('@alga-psa/teams/actions/team-actions/teamActions', () => ({
+  getTeams: vi.fn().mockResolvedValue([]),
+}));
+
+vi.mock('@alga-psa/teams/actions/team-actions/avatarActions', () => ({
+  getTeamAvatarUrlsBatchAction: vi.fn(),
+}));
+
+vi.mock('@alga-psa/teams/actions/team-actions/teamActionErrors', () => ({
+  isTeamActionError: () => false,
+}));
+
+vi.mock('../../actions/teamAssignmentActions', () => ({
+  assignTeamToTicket: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('@alga-psa/ui/components/DatePicker', () => ({

@@ -836,7 +836,9 @@ describe('getDraftContractForResume action', () => {
     createTenantKnex.mockResolvedValue({ knex });
 
     const { getDraftContractForResume } = await import('../src/actions/contractWizardActions');
-    await expect(getDraftContractForResume('contract-1')).rejects.toThrow('Contract is not a draft');
+    await expect(getDraftContractForResume('contract-1')).resolves.toEqual({
+      actionError: 'Contract is not a draft',
+    });
   });
 
   it('user without contract create permission cannot resume drafts (T063)', async () => {

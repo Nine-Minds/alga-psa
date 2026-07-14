@@ -28,6 +28,18 @@ vi.mock('@alga-psa/integrations/actions', () => ({
   saveMspSsoLoginDomains: (...args: unknown[]) => saveMspSsoLoginDomainsMock(...args),
 }));
 
+vi.mock('../../../actions/integrations/mspSsoDomainActions', () => ({
+  listMspSsoDomainClaims: (...args: unknown[]) => listMspSsoDomainClaimsMock(...args),
+  verifyMspSsoDomainClaimOwnership: (...args: unknown[]) =>
+    verifyMspSsoDomainClaimOwnershipMock(...args),
+  requestMspSsoDomainClaim: (...args: unknown[]) => requestMspSsoDomainClaimMock(...args),
+  refreshMspSsoDomainClaimChallenge: (...args: unknown[]) =>
+    refreshMspSsoDomainClaimChallengeMock(...args),
+  revokeMspSsoDomainClaim: (...args: unknown[]) => revokeMspSsoDomainClaimMock(...args),
+  listMspSsoLoginDomains: (...args: unknown[]) => listMspSsoLoginDomainsMock(...args),
+  saveMspSsoLoginDomains: (...args: unknown[]) => saveMspSsoLoginDomainsMock(...args),
+}));
+
 vi.mock('@alga-psa/ui/hooks/use-toast', () => ({
   useToast: () => ({ toast: toastMock }),
 }));

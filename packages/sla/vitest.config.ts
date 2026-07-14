@@ -17,6 +17,7 @@ export default defineConfig({
         '../notifications/src/actions/internal-notification-actions/internalNotificationActions'
       ),
       '@alga-psa/email': path.resolve(__dirname, '../email/src'),
+      '@alga-psa/event-bus/publishers': path.resolve(__dirname, '../event-bus/src/publishers/index.ts'),
     },
   },
 });

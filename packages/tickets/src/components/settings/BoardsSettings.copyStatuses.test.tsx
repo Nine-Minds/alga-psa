@@ -39,6 +39,35 @@ vi.mock('@alga-psa/tickets/actions', () => ({
   deleteBoardAutoCloseRule: vi.fn(),
 }));
 
+vi.mock('@alga-psa/tickets/actions/board-actions/boardActions', () => ({
+  getAllBoards: (...args: unknown[]) => getAllBoardsMock(...args),
+  getBoardListStats: () => Promise.resolve({}),
+  createBoard: (...args: unknown[]) => createBoardMock(...args),
+  updateBoard: (...args: unknown[]) => updateBoardMock(...args),
+  deleteBoard: vi.fn(),
+}));
+
+vi.mock('@alga-psa/tickets/actions/board-actions/boardTicketStatusActions', () => ({
+  getBoardTicketStatuses: (...args: unknown[]) => getBoardTicketStatusesMock(...args),
+}));
+
+vi.mock('../../actions/close-rules/closeRuleActions', () => ({
+  getBoardCloseRules: () =>
+    Promise.resolve({
+      require_resolution_comment: false,
+      require_time_entry: false,
+      require_checklist_complete: false,
+      require_no_open_children: false,
+      required_fields: [],
+      is_enabled: true,
+    }),
+  upsertBoardCloseRules: vi.fn(),
+  getBoardAutoCloseRules: () => Promise.resolve([]),
+  createBoardAutoCloseRule: vi.fn(),
+  updateBoardAutoCloseRule: vi.fn(),
+  deleteBoardAutoCloseRule: vi.fn(),
+}));
+
 vi.mock('@alga-psa/reference-data/actions', () => ({
   getAvailableReferenceData: vi.fn().mockResolvedValue([]),
   importReferenceData: vi.fn(),
@@ -46,8 +75,26 @@ vi.mock('@alga-psa/reference-data/actions', () => ({
   getAllPriorities: (...args: unknown[]) => getAllPrioritiesMock(...args),
 }));
 
+vi.mock('@alga-psa/reference-data/actions/referenceDataActions', () => ({
+  getAvailableReferenceData: vi.fn().mockResolvedValue([]),
+  importReferenceData: vi.fn(),
+  checkImportConflicts: vi.fn().mockResolvedValue([]),
+}));
+
+vi.mock('@alga-psa/reference-data/actions/priorityActions', () => ({
+  getAllPriorities: (...args: unknown[]) => getAllPrioritiesMock(...args),
+}));
+
 vi.mock('@alga-psa/user-composition/actions', () => ({
   getAllUsers: (...args: unknown[]) => getAllUsersMock(...args),
+  getUserAvatarUrlsBatchAction: vi.fn(),
+}));
+
+vi.mock('@alga-psa/user-composition/actions/userQueryActions', () => ({
+  getAllUsers: (...args: unknown[]) => getAllUsersMock(...args),
+}));
+
+vi.mock('@alga-psa/user-composition/actions/avatarActions', () => ({
   getUserAvatarUrlsBatchAction: vi.fn(),
 }));
 
@@ -58,6 +105,18 @@ vi.mock('@alga-psa/sla/actions', () => ({
 vi.mock('@alga-psa/teams/actions', () => ({
   getTeams: (...args: unknown[]) => getTeamsMock(...args),
   getTeamAvatarUrlsBatchAction: vi.fn(),
+}));
+
+vi.mock('@alga-psa/teams/actions/team-actions/teamActions', () => ({
+  getTeams: (...args: unknown[]) => getTeamsMock(...args),
+}));
+
+vi.mock('@alga-psa/teams/actions/team-actions/avatarActions', () => ({
+  getTeamAvatarUrlsBatchAction: vi.fn(),
+}));
+
+vi.mock('@alga-psa/teams/actions/team-actions/teamActionErrors', () => ({
+  isTeamActionError: () => false,
 }));
 
 vi.mock('@alga-psa/ui/hooks', () => ({
@@ -226,6 +285,15 @@ const expandSection = (id: string) => {
 
 describe('BoardsSettings ticket status copy flow', () => {
   beforeEach(() => {
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      value: {
+        getItem: vi.fn(() => null),
+        setItem: vi.fn(),
+        removeItem: vi.fn(),
+        clear: vi.fn(),
+      },
+    });
     vi.clearAllMocks();
     useFeatureFlagMock.mockReturnValue({ enabled: false });
     getAllBoardsMock.mockResolvedValue([

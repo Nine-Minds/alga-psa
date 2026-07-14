@@ -8,16 +8,9 @@ import path from 'node:path';
 import knexLib, { Knex } from 'knex';
 import { recordStockMovement } from './movements';
 import { recordStockConsumption, reverseStockConsumption } from './consume';
+import { getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
 
-function readEnv(): Record<string, string> {
-  const p = path.resolve(__dirname, '../../../../server/.env.local');
-  const e: Record<string, string> = {};
-  for (const line of fs.readFileSync(p, 'utf8').split('\n')) {
-    const m = line.match(/^([A-Z_]+)=(.*)$/);
-    if (m) e[m[1]] = m[2];
-  }
-  return e;
-}
+const databaseConnection = getInventoryTestDatabaseConnection();
 
 let knex: Knex;
 let TENANT: string;
@@ -26,8 +19,8 @@ let LOCATION: string;
 let CLIENT: string;
 
 beforeAll(async () => {
-  const e = readEnv();
-  knex = knexLib({ client: 'pg', connection: { host: 'localhost', port: 5432, user: e.DB_USER_ADMIN, password: e.DB_PASSWORD_ADMIN, database: 'server' }, pool: { min: 1, max: 4 } });
+  if (!databaseConnection) return;
+  knex = knexLib({ client: 'pg', connection: databaseConnection, pool: { min: 1, max: 4 } });
   TENANT = (await knex('tenants').select('tenant').first()).tenant;
   SER_SERVICE = (await knex('service_catalog').where({ tenant: TENANT, item_kind: 'service' }).orderBy('service_id').first()).service_id;
   LOCATION = (await knex('stock_locations').where({ tenant: TENANT, is_default: true }).first()).location_id;
@@ -46,7 +39,7 @@ async function onHand(trx: Knex.Transaction, locationId: string) {
   return r ? Number(r.quantity_on_hand) : 0;
 }
 
-describe('F089 serialized material consumption (real DB, rolled back)', () => {
+describe.skipIf(!databaseConnection)('F089 serialized material consumption (real DB, rolled back)', () => {
   it('delivers the picked unit and reverses on unbilled delete', async () => {
     await inTx(async (trx) => {
       await trx('product_inventory_settings')

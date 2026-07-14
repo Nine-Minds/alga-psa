@@ -54,7 +54,6 @@ describe('RecommendedFixPanel i18n wiring contract', () => {
     expect(source).toContain("t('recommendedFix.dialog.notesPlaceholder', {");
     expect(source).toContain("t('recommendedFix.errors.notesRequired', {");
     expect(source).toContain("t('recommendedFix.errors.invalidAmount', {");
-    expect(source).toContain("t('recommendedFix.errors.unknown', { defaultValue: 'An unknown error occurred' })");
     expect(source).toContain("t('recommendedFix.impactSummary.title', { defaultValue: 'Impact Summary' })");
     expect(source).toContain("t('recommendedFix.impactSummary.currentBalance', { defaultValue: 'Current Balance' })");
     expect(source).toContain("t('recommendedFix.impactSummary.newBalance', { defaultValue: 'New Balance' })");

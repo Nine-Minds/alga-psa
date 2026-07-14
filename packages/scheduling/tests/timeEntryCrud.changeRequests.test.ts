@@ -300,7 +300,9 @@ describe('time entry change-request action integration', () => {
           changeRequestComment: 'Please fix this.',
         },
       ),
-    ).rejects.toThrow('Permission denied: Cannot update time entry approval status');
+    ).resolves.toEqual({
+      permissionError: 'Permission denied: Cannot update time entry approval status',
+    });
 
     expect(createTimeEntryChangeRequestRecordMock).not.toHaveBeenCalled();
   });
