@@ -357,9 +357,21 @@
       "refresh": "Wystąpił błąd podczas odświeżania danych faktury.",
       "updateFailed": "Błąd podczas aktualizowania faktury",
       "generateFailed": "Błąd podczas generowania faktury",
+      "NO_BILLING_EMAIL": "Klient {{clientName}} nie ma adresu e-mail do rozliczeń. Ustaw adres e-mail w lokalizacji rozliczeniowej klienta i spróbuj ponownie.",
+      "CLIENT_NOT_FOUND": "Nie znaleziono wybranego klienta. Odśwież stronę i spróbuj ponownie.",
+      "SERVICE_NOT_FOUND": "Nie znaleziono usługi {{serviceId}}. Odśwież stronę i spróbuj ponownie.",
+      "INVALID_QUANTITY": "Ilość musi być większa od zera.",
+      "NO_TAX_RATE": "Nie znaleziono aktywnej stawki podatku dla regionu {{region}} w dniu {{date}}.",
+      "DISCOUNT_TARGET_NOT_FOUND": "Nie znaleziono usługi {{serviceId}} dla tego rabatu.",
+      "INVOICE_NUMBER_CONFLICT": "Ten numer faktury jest już używany.",
+      "PERMISSION_DENIED": "Nie masz uprawnień do tworzenia ani aktualizowania tej faktury.",
+      "UNEXPECTED": "Wystąpił błąd podczas generowania faktury. Kontaktując się z pomocą techniczną, podaj numer referencyjny {{ref}}.",
       "salesOrderGenerateFailed": "Could not generate the sales order invoice.",
       "salesOrderNothingToInvoice": "Nothing remains to invoice for this sales order.",
       "salesOrderNotInvoiceable": "That sales order is no longer available to invoice."
+    },
+    "warnings": {
+      "noBillingEmail": "Ten klient nie ma adresu e-mail do rozliczeń. Ustaw adres e-mail w lokalizacji rozliczeniowej przed wygenerowaniem faktury."
     },
     "errorFallback": {
       "title": "Coś poszło nie tak",

@@ -1,7 +1,10 @@
 'use client'
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { generateManualInvoice } from '@alga-psa/billing/actions/manualInvoiceActions';
+import {
+  generateManualInvoice,
+  getClientBillingEmailStatus,
+} from '@alga-psa/billing/actions/manualInvoiceActions';
 import { generateInvoiceForSalesOrder, type InvoiceableSalesOrderForBilling } from '@alga-psa/billing/actions/salesOrderInvoicingActions';
 import {
   updateInvoiceManualItems,
@@ -10,6 +13,10 @@ import {
 import { getInvoiceLineItems } from '@alga-psa/billing/actions/invoiceQueries';
 import type { ManualInvoiceUpdate } from '@alga-psa/billing/actions/invoiceActions'; // Import the specific type
 import type { ManualInvoiceItem as ManualInvoiceItemForAction } from '@alga-psa/billing/actions/manualInvoiceActions'; // Import and alias
+import type {
+  ManualInvoiceFailure,
+} from '../../errors/manualInvoiceErrors';
+import { translateManualInvoiceFailure } from './manualInvoiceErrorTranslation';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
@@ -52,10 +59,17 @@ interface ManualInvoicesProps {
   sourceSalesOrderId?: string | null;
 }
 
-const isManualItemsUpdateError = (
+const isLegacyManualItemsUpdateError = (
   result: InvoiceManualItemsUpdateActionResult,
-): result is Exclude<InvoiceManualItemsUpdateActionResult, InvoiceViewModel> => (
+): result is Exclude<InvoiceManualItemsUpdateActionResult, InvoiceViewModel | ManualInvoiceFailure> => (
   isActionMessageError(result) || isActionPermissionError(result)
+);
+
+const isManualInvoiceFailure = (result: unknown): result is ManualInvoiceFailure => (
+  Boolean(result) &&
+  typeof result === 'object' &&
+  (result as Partial<ManualInvoiceFailure>).success === false &&
+  typeof (result as Partial<ManualInvoiceFailure>).code === 'string'
 );
 
 // This is the primary state type for manual items within this component
@@ -232,7 +246,11 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
   const [isPrepayment, setIsPrepayment] = useState(false);
   const [expirationDate, setExpirationDate] = useState<string>('');
   const [isQuickAddClientOpen, setIsQuickAddClientOpen] = useState(false);
-  const translateManualInvoiceError = (message: string, mode: 'update' | 'generate'): string => {
+  const [hasSelectedClientBillingEmail, setHasSelectedClientBillingEmail] = useState<boolean | null>(null);
+  const translateManualInvoiceError = (result: ManualInvoiceFailure): string => (
+    translateManualInvoiceFailure(t, result)
+  );
+  const translateLegacyManualInvoiceError = (message: string, mode: 'update' | 'generate'): string => {
     if (message === 'Invoice number must be unique') {
       return t('manualInvoices.errors.invoiceNumberUnique', {
         defaultValue: 'This invoice number is already in use.',
@@ -294,6 +312,31 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
       setSelectedClient(selectedSalesOrder.client_id);
     }
   }, [selectedSalesOrder]);
+
+  useEffect(() => {
+    if (currentInvoiceData || selectedSalesOrder || !selectedClient) {
+      setHasSelectedClientBillingEmail(null);
+      return;
+    }
+
+    let active = true;
+    setHasSelectedClientBillingEmail(null);
+    void getClientBillingEmailStatus(selectedClient)
+      .then(({ hasBillingEmail }) => {
+        if (active) {
+          setHasSelectedClientBillingEmail(hasBillingEmail);
+        }
+      })
+      .catch((statusError: unknown) => {
+        if (IS_DEVELOPMENT) {
+          console.error('Unable to check client billing email status:', statusError);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [currentInvoiceData, selectedClient, selectedSalesOrder]);
 
   const salesOrderOptions = useMemo(
     () =>
@@ -590,8 +633,13 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
           removedItemIds
         });
 
-        if (isManualItemsUpdateError(updateResult)) {
-          setError(translateManualInvoiceError(getErrorMessage(updateResult), 'update'));
+        if (isManualInvoiceFailure(updateResult)) {
+          setError(translateManualInvoiceError(updateResult));
+          return;
+        }
+
+        if (isLegacyManualItemsUpdateError(updateResult)) {
+          setError(translateLegacyManualInvoiceError(getErrorMessage(updateResult), 'update'));
           return;
         }
 
@@ -683,12 +731,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
         });
 
         if (!result.success) {
-          setError(
-            translateManualInvoiceError(
-              (result as { success: false; error: string }).error,
-              'generate',
-            ),
-          );
+          setError(translateManualInvoiceError(result));
           return;
         }
 
@@ -702,7 +745,7 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
          defaultValue: `Error ${errorMode === 'update' ? 'updating' : 'generating'} invoice`,
        });
        if (err instanceof Error) {
-         errorMessage = translateManualInvoiceError(err.message, errorMode);
+         errorMessage = translateLegacyManualInvoiceError(err.message, errorMode);
        }
        setError(errorMessage);
     } finally {
@@ -991,6 +1034,16 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                     </>
                   )}
                 </div>
+              )}
+
+              {!invoice && !currentInvoiceData && !hasSalesOrderSource && hasSelectedClientBillingEmail === false && (
+                <Alert id="manual-invoice-no-billing-email-warning" variant="warning">
+                  <AlertDescription>
+                    {t('manualInvoices.warnings.noBillingEmail', {
+                      defaultValue: 'This client has no billing email. Set an email address on the client\'s billing location before generating the invoice.',
+                    })}
+                  </AlertDescription>
+                </Alert>
               )}
 
               {!invoice && !currentInvoiceData && !hasSalesOrderSource && (

@@ -1,4 +1,5 @@
 import { Temporal } from '@js-temporal/polyfill';
+import { ManualInvoiceError, type HandledManualInvoiceErrorCode } from '../errors/manualInvoiceErrors';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { v4 as uuidv4 } from 'uuid';
 import { TaxService } from './taxService';
@@ -294,7 +295,10 @@ export async function getClientDetails(knex: Knex, tenant: string, clientId: str
   });
   const client = (await clientQuery.first()) as unknown as IClientWithLocation | undefined;
   if (!client) {
-    throw new Error(`Client not found for tenant ${tenant}`);
+    throw new ManualInvoiceError(
+      'CLIENT_NOT_FOUND',
+      `Client not found for tenant ${tenant}`,
+    );
   }
   return client;
 }
@@ -321,6 +325,8 @@ export async function getClientBillingEmail(knex: Knex, tenant: string, clientId
 export interface ValidationResult {
   valid: boolean;
   error?: string;
+  code?: HandledManualInvoiceErrorCode;
+  params?: Record<string, string>;
 }
 
 /**
@@ -333,6 +339,8 @@ export async function validateClientBillingEmail(knex: Knex, tenant: string, cli
   if (!billingEmail) {
     return {
       valid: false,
+      code: 'NO_BILLING_EMAIL',
+      params: { clientName },
       error: `Cannot generate invoice: No billing email address for "${clientName}". ` +
         `Please set an email address on the client's billing location before generating invoices.`
     };
@@ -474,7 +482,11 @@ export async function persistManualInvoiceCharges(
         .first();
       if (!service) {
         console.warn(`Service ID ${requestItem.service_id} provided for manual item but not found.`);
-        throw new Error(`Service not found: ${requestItem.service_id}`);
+        throw new ManualInvoiceError(
+          'SERVICE_NOT_FOUND',
+          `Service not found: ${requestItem.service_id}`,
+          { serviceId: requestItem.service_id },
+        );
       }
     }
     // --- Determine Tax Info based on the item's (or service's) Tax Rate ID ---
@@ -515,7 +527,7 @@ export async function persistManualInvoiceCharges(
     // --- End Determine Tax Info ---
 
     if ((requestItem.quantity ?? 0) <= 0) {
-      throw new Error('Quantity must be greater than 0');
+      throw new ManualInvoiceError('INVALID_QUANTITY', 'Quantity must be greater than 0');
     }
 
     const netAmount = calculateNetAmount(requestItem, subtotal); // No applicable amount needed here
@@ -568,7 +580,11 @@ export async function persistManualInvoiceCharges(
     if (requestItem.applies_to_service_id && !applicableItemId) {
       applicableItemId = serviceToItemMap.get(requestItem.applies_to_service_id);
       if (!applicableItemId) {
-        throw new Error(`Could not find invoice item for service: ${requestItem.applies_to_service_id} to apply discount.`);
+        throw new ManualInvoiceError(
+          'DISCOUNT_TARGET_NOT_FOUND',
+          `Could not find invoice item for service: ${requestItem.applies_to_service_id} to apply discount.`,
+          { serviceId: requestItem.applies_to_service_id },
+        );
       }
     }
 

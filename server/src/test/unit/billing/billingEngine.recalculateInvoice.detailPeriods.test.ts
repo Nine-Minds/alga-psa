@@ -83,4 +83,53 @@ describe('BillingEngine recalculation recurring detail preservation', () => {
     expect(queriedTables).not.toContain('invoice_charge_details');
     expect(queriedTables).not.toContain('trx:invoice_charge_details');
   });
+
+  it('joins an existing transaction instead of opening a nested transaction', async () => {
+    const queriedTables: string[] = [];
+    const trx = vi.fn((table: string) => {
+      queriedTables.push(`trx:${table}`);
+      if (table === 'invoices') {
+        return createBuilder({
+          invoice_id: 'invoice-1',
+          client_id: 'client-1',
+          invoice_number: 'INV-1001',
+          tenant: 'tenant-1',
+        });
+      }
+
+      if (table === 'clients') {
+        return createBuilder({
+          client_id: 'client-1',
+          client_name: 'Acme Co',
+          is_tax_exempt: false,
+        });
+      }
+
+      return createBuilder(null);
+    }) as any;
+
+    const knex = vi.fn(() => {
+      throw new Error('root connection should not be queried');
+    }) as any;
+    knex.transaction = vi.fn();
+
+    const engine = new BillingEngine();
+    (engine as any).tenant = 'tenant-1';
+    (engine as any).knex = knex;
+    (engine as any).initKnex = vi.fn(async () => undefined);
+
+    await engine.recalculateInvoice('invoice-1', trx, 'tenant-1');
+
+    expect(knex).not.toHaveBeenCalled();
+    expect(knex.transaction).not.toHaveBeenCalled();
+    expect((engine as any).initKnex).not.toHaveBeenCalled();
+    expect(queriedTables).toEqual(['trx:invoices', 'trx:clients']);
+    expect(calculateAndDistributeTax).toHaveBeenLastCalledWith(
+      trx,
+      'invoice-1',
+      expect.objectContaining({ client_id: 'client-1' }),
+      expect.any(Object),
+      'tenant-1',
+    );
+  });
 });

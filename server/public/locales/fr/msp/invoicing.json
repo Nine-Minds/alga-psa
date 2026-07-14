@@ -339,9 +339,21 @@
       "refresh": "Une erreur s'est produite lors de l'actualisation des données de facture.",
       "updateFailed": "Erreur lors de la mise à jour de la facture",
       "generateFailed": "Erreur lors de la génération de la facture",
+      "NO_BILLING_EMAIL": "{{clientName}} n'a pas d'adresse e-mail de facturation. Ajoutez une adresse e-mail à l'emplacement de facturation du client, puis réessayez.",
+      "CLIENT_NOT_FOUND": "Le client sélectionné est introuvable. Actualisez la page et réessayez.",
+      "SERVICE_NOT_FOUND": "Le service {{serviceId}} est introuvable. Actualisez la page et réessayez.",
+      "INVALID_QUANTITY": "La quantité doit être supérieure à zéro.",
+      "NO_TAX_RATE": "Aucun taux de taxe actif n'a été trouvé pour {{region}} à la date du {{date}}.",
+      "DISCOUNT_TARGET_NOT_FOUND": "Le service {{serviceId}} associé à cette remise est introuvable.",
+      "INVOICE_NUMBER_CONFLICT": "Ce numéro de facture est déjà utilisé.",
+      "PERMISSION_DENIED": "Vous n'êtes pas autorisé à créer ou à mettre à jour cette facture.",
+      "UNEXPECTED": "Une erreur s'est produite lors de la génération de la facture. Indiquez la référence {{ref}} lorsque vous contactez le support.",
       "salesOrderGenerateFailed": "Could not generate the sales order invoice.",
       "salesOrderNothingToInvoice": "Nothing remains to invoice for this sales order.",
       "salesOrderNotInvoiceable": "That sales order is no longer available to invoice."
+    },
+    "warnings": {
+      "noBillingEmail": "Ce client n'a pas d'adresse e-mail de facturation. Ajoutez une adresse e-mail à son emplacement de facturation avant de générer la facture."
     },
     "errorFallback": {
       "title": "Quelque chose s'est mal passé",

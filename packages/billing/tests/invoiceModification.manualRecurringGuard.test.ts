@@ -153,4 +153,18 @@ describe('manual invoice edits preserve recurring provenance', () => {
     expect(state.queriedTables).toContain('invoice_charges as ic');
     expect(recalculateInvoiceMock).not.toHaveBeenCalled();
   });
+
+  it('T208: recalculates manual edits on the open mutation transaction', async () => {
+    state.nonManualTargets = [];
+    const { updateInvoiceManualItems } = await import('../src/actions/invoiceModification.ts');
+
+    await updateInvoiceManualItems('invoice-1', {
+      updatedItems: [],
+      newItems: [],
+      removedItemIds: [],
+    } as any);
+
+    expect(recalculateInvoiceMock).toHaveBeenCalledTimes(1);
+    expect(recalculateInvoiceMock).toHaveBeenCalledWith('invoice-1', expect.any(Function), 'tenant-1');
+  });
 });
