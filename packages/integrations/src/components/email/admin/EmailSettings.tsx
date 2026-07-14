@@ -16,10 +16,8 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
 import { Mail, Globe, Settings, CheckCircle, XCircle, Clock, Eye, EyeOff, Send, Inbox } from 'lucide-react';
-import {
-  TenantEmailSettings,
-  EmailProviderConfig
-} from '@alga-psa/types';
+import type { TenantEmailSettings } from '@alga-psa/types';
+import { createDefaultProviderConfig } from '@alga-psa/email/providerConfig';
 import {
   getEmailSettings,
   updateEmailSettings,
@@ -212,21 +210,7 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
     // Ensure we have a config for the selected provider
     const hasProvider = updatedSettings.providerConfigs.some(config => config.providerType === providerType);
     if (!hasProvider) {
-      const newConfig: EmailProviderConfig = {
-        providerId: `${providerType}-provider`,
-        providerType: providerType,
-        isEnabled: true,
-        config: providerType === 'smtp' ? {
-          host: '',
-          port: 587,
-          username: '',
-          password: '',
-          from: ''
-        } : {
-          apiKey: '',
-          from: ''
-        }
-      };
+      const newConfig = createDefaultProviderConfig(providerType, { isEnabled: true });
       updatedSettings.providerConfigs.push(newConfig);
     }
 
@@ -246,9 +230,7 @@ export const EmailSettings: React.FC<EmailSettingsProps> = () => {
   };
 
   const getCurrentProviderConfig = () => {
-    return settings?.providerConfigs.find(config =>
-      config.providerType === selectedProvider && config.isEnabled
-    );
+    return settings?.providerConfigs.find(config => config.providerType === selectedProvider);
   };
 
   const renderSMTPConfig = () => {

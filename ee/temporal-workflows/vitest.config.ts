@@ -38,6 +38,7 @@ export default defineConfig({
       { find: /^@ee\/(.*)$/, replacement: `${path.resolve(__dirname, '../server/src')}/$1` },
       { find: /^@\/(.*)$/, replacement: `${path.resolve(__dirname, './src')}/$1` },
       { find: /^@shared\/(.*)$/, replacement: `${path.resolve(__dirname, '../../shared')}/$1` },
+      { find: /^@ee\/(.*)$/, replacement: `${path.resolve(__dirname, '../server/src')}/$1` },
       { find: /^@alga-psa\/shared$/, replacement: path.resolve(__dirname, '../../shared') },
       { find: /^@alga-psa\/shared\/(.*)$/, replacement: `${path.resolve(__dirname, '../../shared')}/$1` },
       // Workspace packages resolved from source — their package.json entries

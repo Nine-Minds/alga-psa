@@ -99,6 +99,9 @@ RUN npm install --ignore-scripts && npm run build
 WORKDIR /app/packages/db
 RUN npm install --ignore-scripts && npm run build
 
+WORKDIR /app/packages/email
+RUN npm install --ignore-scripts && npm run build
+
 WORKDIR /app/ee/temporal-workflows
 RUN npm run build
 
@@ -138,6 +141,8 @@ RUN ls -la /app/ee/temporal-workflows/dist/seeds/onboarding || echo "Seeds direc
 # whitelist) — fail the build here rather than in prod if they didn't.
 RUN cd /app/ee/temporal-workflows && node --input-type=module -e "const m = await import('@alga-psa/db'); if (typeof m.tenantDb !== 'function') throw new Error('@alga-psa/db loaded but tenantDb missing')"
 
+RUN cd /app/ee/temporal-workflows && node --input-type=module -e "const m = await import('@alga-psa/email/providerConfig'); if (typeof m.createDefaultProviderConfig !== 'function') throw new Error('@alga-psa/email/providerConfig loaded but createDefaultProviderConfig missing')"
+
 # packages/licensing source is compiled INTO this dist tree, so every import
 # reachable from its root must be resolvable from here at runtime. file: deps
 # install as symlinks WITHOUT their own dependencies, so a bare third-party
@@ -172,6 +177,7 @@ COPY --from=development /app/ee/packages/workflows /app/ee/packages/workflows
 # Copy package exports used by dynamically loaded onboarding seeds.
 COPY --from=development /app/packages/core/dist /app/packages/core/dist
 COPY --from=development /app/packages/db/dist /app/packages/db/dist
+COPY --from=development /app/packages/email/dist /app/packages/email/dist
 # Copy event-schemas dist (runtime dependency of shared/workflow/streams)
 COPY --from=development /app/packages/event-schemas/dist /app/packages/event-schemas/dist
 # Copy the runtime-resolved @alga-psa package dists built above (base-stage
@@ -198,6 +204,8 @@ RUN ls -la /app/ee/temporal-workflows/dist/seeds/onboarding || echo "Seeds direc
 # onboarding seeds load it (dynamic import from node_modules). Missing
 # packages/db/dist shipped silently and broke prod tenant provisioning.
 RUN cd /app/ee/temporal-workflows && node --input-type=module -e "const m = await import('@alga-psa/db'); if (typeof m.tenantDb !== 'function') throw new Error('@alga-psa/db loaded but tenantDb missing')"
+
+RUN cd /app/ee/temporal-workflows && node --input-type=module -e "const m = await import('@alga-psa/email/providerConfig'); if (typeof m.createDefaultProviderConfig !== 'function') throw new Error('@alga-psa/email/providerConfig loaded but createDefaultProviderConfig missing')"
 
 # packages/licensing source is compiled INTO this dist tree, so every import
 # reachable from its root must be resolvable from here at runtime. file: deps

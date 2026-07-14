@@ -8,6 +8,7 @@ import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
 import type { EmailProviderConfig, TenantEmailSettings } from '@alga-psa/types';
 import { TenantEmailService } from '@alga-psa/email';
+import { createDefaultProviderConfig } from '@alga-psa/email/providerConfig';
 import {
   actionError,
   isActionMessageError,
@@ -24,6 +25,21 @@ type EmailSettingsUpdateInput = Partial<TenantEmailSettings> & {
 // sent to the browser. On save it means "unchanged" — restore the real value.
 const SECRET_MASK = '***';
 const SECRET_FIELDS = ['password', 'apiKey'] as const;
+const EDITABLE_PROVIDER_TYPES = ['smtp', 'resend'] as const;
+
+function withEditableProviderConfigs(settings: TenantEmailSettings): TenantEmailSettings {
+  const providerConfigs = [...(settings.providerConfigs ?? [])];
+
+  for (const providerType of EDITABLE_PROVIDER_TYPES) {
+    if (!providerConfigs.some(config => config.providerType === providerType)) {
+      providerConfigs.push(createDefaultProviderConfig(providerType, {
+        isEnabled: providerType === settings.emailProvider,
+      }));
+    }
+  }
+
+  return { ...settings, providerConfigs };
+}
 
 function mergeProviderSecrets(
   incoming: EmailProviderConfig[],
@@ -81,6 +97,7 @@ export const getEmailSettings = withAuth(async (
 
     if (!settings) {
       // Return default settings if none exist
+      const defaultSmtpConfig = createDefaultProviderConfig('smtp', { isEnabled: true });
       const defaultSettings: TenantEmailSettings = {
         tenantId: tenant || '',
         defaultFromDomain: process.env.EMAIL_FROM ? extractDomain(process.env.EMAIL_FROM) || undefined : undefined,
@@ -88,26 +105,23 @@ export const getEmailSettings = withAuth(async (
         ticketingFromName: null,
         customDomains: [],
         emailProvider: 'smtp',
-        providerConfigs: [
-          {
-            providerId: 'default-smtp',
-            providerType: 'smtp',
-            isEnabled: true,
-            config: {
-              host: process.env.EMAIL_HOST || '',
-              port: parseInt(process.env.EMAIL_PORT || '587'),
-              username: process.env.EMAIL_USERNAME || '',
-              password: '', // Don't expose password
-              from: process.env.EMAIL_FROM || ''
-            }
+        providerConfigs: [{
+          ...defaultSmtpConfig,
+          config: {
+            ...defaultSmtpConfig.config,
+            host: process.env.EMAIL_HOST || '',
+            port: parseInt(process.env.EMAIL_PORT || '587'),
+            username: process.env.EMAIL_USERNAME || '',
+            password: '', // Don't expose password
+            from: process.env.EMAIL_FROM || ''
           }
-        ],
+        }],
         trackingEnabled: false,
         createdAt: new Date(),
         updatedAt: new Date()
       };
       
-      return defaultSettings;
+      return withEditableProviderConfigs(defaultSettings);
     }
 
     // Don't expose sensitive data like passwords and API keys in full
@@ -123,7 +137,7 @@ export const getEmailSettings = withAuth(async (
       }))
     };
 
-    return sanitizedSettings;
+    return withEditableProviderConfigs(sanitizedSettings);
   } catch (error: any) {
     console.error('Error fetching email settings:', error);
     return actionError('Failed to fetch email settings');
@@ -152,6 +166,16 @@ export const updateEmailSettings = withAuth(async (
       ? normalizeOptionalString(updates.ticketingFromName)
       : existingSettings?.ticketingFromName ?? null;
 
+    const mergedProviderConfigs = updates.providerConfigs
+      ? mergeProviderSecrets(updates.providerConfigs, existingSettings?.providerConfigs)
+      : existingSettings?.providerConfigs ?? [];
+    const normalizedProviderConfigs = updates.emailProvider
+      ? mergedProviderConfigs.map(config => ({
+          ...config,
+          isEnabled: config.providerType === updates.emailProvider,
+        }))
+      : mergedProviderConfigs;
+
     const mergedSettings: TenantEmailSettings = {
       tenantId: tenant || '',
       defaultFromDomain: nextDefaultFromDomain,
@@ -159,9 +183,7 @@ export const updateEmailSettings = withAuth(async (
       ticketingFromName: nextTicketingFromName,
       customDomains: updates.customDomains ?? existingSettings?.customDomains ?? [],
       emailProvider: updates.emailProvider ?? existingSettings?.emailProvider ?? 'smtp',
-      providerConfigs: updates.providerConfigs
-        ? mergeProviderSecrets(updates.providerConfigs, existingSettings?.providerConfigs)
-        : existingSettings?.providerConfigs ?? [],
+      providerConfigs: normalizedProviderConfigs,
       trackingEnabled: updates.trackingEnabled ?? existingSettings?.trackingEnabled ?? false,
       maxDailyEmails: updates.maxDailyEmails ?? existingSettings?.maxDailyEmails,
       createdAt: existingSettings?.createdAt ?? now,

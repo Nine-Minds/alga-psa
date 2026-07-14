@@ -11,6 +11,11 @@
       "types": "./src/index.ts",
       "import": "./dist/index.js",
       "require": "./dist/index.cjs"
+    },
+    "./providerConfig": {
+      "types": "./src/providerConfig.ts",
+      "import": "./dist/providerConfig.js",
+      "require": "./dist/providerConfig.cjs"
     }
   },
   "scripts": {
