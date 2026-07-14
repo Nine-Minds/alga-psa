@@ -43,6 +43,10 @@ export interface BillingSettings {
   enableCreditExpiration?: boolean;
   creditExpirationDays?: number;
   creditExpirationNotificationDays?: number[];
+  /** The customer holds a credit balance in the external accounting system (e.g. QBO). */
+  hasExternalCredit?: boolean;
+  /** Free-text shown alongside the flag (e.g. "Paid through Dec 2026 by check"). */
+  externalCreditNote?: string | null;
   defaultRenewalMode?: RenewalMode;
   defaultNoticePeriodDays?: number;
   renewalDueDateActionPolicy?: RenewalDueDateActionPolicy;
@@ -237,6 +241,8 @@ export const getClientContractLineSettings = withAuth(async (
     enableCreditExpiration: settings.enable_credit_expiration,
     creditExpirationDays: settings.credit_expiration_days,
     creditExpirationNotificationDays: settings.credit_expiration_notification_days,
+    hasExternalCredit: settings.has_external_credit,
+    externalCreditNote: settings.external_credit_note,
     defaultRecurringCadenceOwner: DEFAULT_RECURRING_CADENCE_OWNER,
     recurringCadenceRolloutState: DEFAULT_RECURRING_CADENCE_ROLLOUT_STATE,
     recurringCadenceRolloutMessage: CONTRACT_CADENCE_ROLLOUT_BLOCK_MESSAGE,
@@ -266,6 +272,8 @@ export const updateClientContractLineSettings = withAuth(async (
             enableCreditExpiration: data.enableCreditExpiration,
             creditExpirationDays: data.creditExpirationDays,
             creditExpirationNotificationDays: data.creditExpirationNotificationDays,
+            hasExternalCredit: data.hasExternalCredit,
+            externalCreditNote: data.externalCreditNote,
           }
         : null
     );

@@ -9,8 +9,10 @@ import {
   getClientContractLine,
   getClientInvoices,
   getClientQuotes,
+  getClientExternalCreditNotice,
   getCurrentUsage
 } from '@alga-psa/client-portal/actions';
+import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import {
   getClientHoursByService,
   getClientBucketUsage,
@@ -174,6 +176,23 @@ export default function BillingOverview() {
       setCurrentTab(targetTab);
     }
   }, [tabParam, currentTab]);
+
+  // Credit held in the MSP's accounting system: invoices can show open here
+  // until the bookkeeper applies that credit, so tell the customer.
+  const [externalCredit, setExternalCredit] = useState<{ hasExternalCredit: boolean; note: string | null } | null>(null);
+  useEffect(() => {
+    let isMounted = true;
+    getClientExternalCreditNotice()
+      .then((notice) => {
+        if (isMounted) setExternalCredit(notice);
+      })
+      .catch(() => {
+        // The notice is best-effort; billing renders without it.
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Load billing data
   useEffect(() => {
@@ -578,6 +597,17 @@ export default function BillingOverview() {
         </div>
       )}
 
+      {externalCredit?.hasExternalCredit && (
+        <Alert id="client-billing-external-credit-notice">
+          <AlertDescription>
+            {t(
+              'externalCreditNotice',
+              'Your account has a credit balance on file with our billing team. Recent invoices may show as open until that credit is applied.'
+            )}
+            {externalCredit.note ? ` ${externalCredit.note}` : ''}
+          </AlertDescription>
+        </Alert>
+      )}
       <CustomTabs
         tabs={tabs}
         defaultTab={currentTab || tabs[0]?.id}

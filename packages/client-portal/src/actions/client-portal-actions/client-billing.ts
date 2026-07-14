@@ -1052,3 +1052,38 @@ export const getLocationsForClientQuote = withAuth(async (
       .orderBy('location_name', 'asc');
   });
 });
+
+export interface ClientExternalCreditNotice {
+  hasExternalCredit: boolean;
+  note: string | null;
+}
+
+/**
+ * Whether the signed-in client holds a credit balance in the MSP's accounting
+ * system. Alga has no record of external credits, so between an invoice
+ * finalizing and the bookkeeper applying the credit, the customer would
+ * otherwise look unpaid in the portal. The MSP sets this flag per client.
+ */
+export const getClientExternalCreditNotice = withAuth(async (
+  user,
+  { tenant }
+): Promise<ClientExternalCreditNotice> => {
+  const knex = await getConnection(tenant);
+
+  return withTransaction(knex, async (trx: Knex.Transaction) => {
+    const clientId = await getClientIdFromUser(trx, user, tenant);
+    if (!clientId) {
+      throw new Error('Unauthorized');
+    }
+
+    const row = await trx('client_billing_settings')
+      .where({ tenant, client_id: clientId })
+      .select('has_external_credit', 'external_credit_note')
+      .first();
+
+    return {
+      hasExternalCredit: Boolean(row?.has_external_credit),
+      note: row?.external_credit_note ?? null
+    };
+  });
+});

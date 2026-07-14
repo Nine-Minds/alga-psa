@@ -8,6 +8,10 @@ export type ClientBillingSettings = {
   enableCreditExpiration?: boolean;
   creditExpirationDays?: number;
   creditExpirationNotificationDays?: number[];
+  /** The customer holds a credit balance in the external accounting system (e.g. QBO). */
+  hasExternalCredit?: boolean;
+  /** Free-text shown alongside the flag (e.g. "Paid through Dec 2026 by check"). */
+  externalCreditNote?: string | null;
 };
 
 type DbClientBillingSettings = {
@@ -18,6 +22,8 @@ type DbClientBillingSettings = {
   enable_credit_expiration: boolean;
   credit_expiration_days: number;
   credit_expiration_notification_days: number[];
+  has_external_credit: boolean;
+  external_credit_note: string | null;
 };
 
 async function ensureClientBillingSettingsRowInTransaction(
@@ -86,7 +92,9 @@ export async function getClientBillingSettings(
       'suppress_zero_dollar_invoices',
       'enable_credit_expiration',
       'credit_expiration_days',
-      'credit_expiration_notification_days'
+      'credit_expiration_notification_days',
+      'has_external_credit',
+      'external_credit_note'
     );
 
   if (!row) return null;
@@ -97,6 +105,8 @@ export async function getClientBillingSettings(
     enableCreditExpiration: row.enable_credit_expiration,
     creditExpirationDays: row.credit_expiration_days,
     creditExpirationNotificationDays: row.credit_expiration_notification_days,
+    hasExternalCredit: row.has_external_credit,
+    externalCreditNote: row.external_credit_note,
   };
 }
 
@@ -133,6 +143,12 @@ export async function updateClientBillingSettings(
   }
   if (settings.creditExpirationNotificationDays !== undefined) {
     updates.credit_expiration_notification_days = settings.creditExpirationNotificationDays;
+  }
+  if (settings.hasExternalCredit !== undefined) {
+    updates.has_external_credit = settings.hasExternalCredit;
+  }
+  if (settings.externalCreditNote !== undefined) {
+    updates.external_credit_note = settings.externalCreditNote;
   }
 
   await ensureClientBillingSettingsRow(knexOrTrx, { tenant, clientId });
