@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const mocks = vi.hoisted(() => ({
   getSession: vi.fn(),
   checkAccountManagementPermission: vi.fn(),
+  checkAccountManagementUpdatePermission: vi.fn(),
   getTenantProduct: vi.fn(),
   isConfigured: vi.fn(),
   previewProductUpgrade: vi.fn(),
@@ -16,6 +17,7 @@ vi.mock('@alga-psa/auth', () => ({
 
 vi.mock('@alga-psa/auth/actions', () => ({
   checkAccountManagementPermission: mocks.checkAccountManagementPermission,
+  checkAccountManagementUpdatePermission: mocks.checkAccountManagementUpdatePermission,
 }));
 
 vi.mock('server/src/lib/productAccess', () => ({
@@ -47,6 +49,7 @@ describe('product upgrade actions', () => {
       user: { id: 'user-1', tenant: 'tenant-1' },
     });
     mocks.checkAccountManagementPermission.mockResolvedValue(true);
+    mocks.checkAccountManagementUpdatePermission.mockResolvedValue(true);
     mocks.getTenantProduct.mockResolvedValue('algadesk');
     mocks.isConfigured.mockResolvedValue(true);
     mocks.getTenantProductUpgradeStatus.mockResolvedValue({
@@ -57,15 +60,16 @@ describe('product upgrade actions', () => {
 
   it('T047: denies a non-admin user on all three actions', async () => {
     mocks.checkAccountManagementPermission.mockResolvedValue(false);
+    mocks.checkAccountManagementUpdatePermission.mockResolvedValue(false);
 
     await expect(previewProductUpgradeAction()).rejects.toThrow(
-      'You do not have permission to change the subscription plan'
+      'Permission denied'
     );
     await expect(startProductUpgradeAction()).rejects.toThrow(
-      'You do not have permission to change the subscription plan'
+      'Permission denied'
     );
     await expect(getProductUpgradeStatusAction()).rejects.toThrow(
-      'You do not have permission to change the subscription plan'
+      'Permission denied'
     );
 
     expect(mocks.getTenantProduct).not.toHaveBeenCalled();
@@ -117,6 +121,18 @@ describe('product upgrade actions', () => {
     expect(mocks.getTenantProduct).toHaveBeenCalledWith('tenant-1');
     expect(mocks.isConfigured).toHaveBeenCalledOnce();
     expect(mocks.previewProductUpgrade).toHaveBeenCalledWith('tenant-1');
+  });
+
+  it('denies start (but not preview/status) for a user with account_management:read only', async () => {
+    mocks.checkAccountManagementUpdatePermission.mockResolvedValue(false);
+
+    // read is sufficient for the non-mutating actions — they must not reject
+    await previewProductUpgradeAction();
+    await getProductUpgradeStatusAction();
+    await expect(startProductUpgradeAction()).rejects.toThrow(
+      'Permission denied',
+    );
+    expect(mocks.startTenantProductUpgradeWorkflow).not.toHaveBeenCalled();
   });
 
   it('T050: returns the deterministic workflow ID and reports a repeated start', async () => {

@@ -1,7 +1,10 @@
 'use server';
 
 import { getSession } from '@alga-psa/auth';
-import { checkAccountManagementPermission } from '@alga-psa/auth/actions';
+import {
+  checkAccountManagementPermission,
+  checkAccountManagementUpdatePermission,
+} from '@alga-psa/auth/actions';
 import { getStripeService } from '../stripe/StripeService';
 import { getTenantProduct } from 'server/src/lib/productAccess';
 import {
@@ -37,7 +40,9 @@ interface ProductUpgradeActionContext {
 }
 
 async function requireProductUpgradeActionContext(
-  requireAlgaDesk: boolean
+  requireAlgaDesk: boolean,
+  // Mutations require account_management:update; read-only surfaces accept :read.
+  requiredAction: 'read' | 'update' = 'read'
 ): Promise<ProductUpgradeActionContext> {
   const session = await getSession();
   const tenantId = session?.user?.tenant;
@@ -47,8 +52,11 @@ async function requireProductUpgradeActionContext(
     throw new Error('Not authenticated');
   }
 
-  if (!(await checkAccountManagementPermission())) {
-    throw new Error('You do not have permission to change the subscription plan');
+  const permitted = requiredAction === 'update'
+    ? await checkAccountManagementUpdatePermission()
+    : await checkAccountManagementPermission();
+  if (!permitted) {
+    throw new Error('Permission denied');
   }
 
   if (requireAlgaDesk && (await getTenantProduct(tenantId)) !== 'algadesk') {
@@ -73,7 +81,7 @@ export async function startProductUpgradeAction(): Promise<{
   workflowId: string;
   alreadyRunning: boolean;
 }> {
-  const { tenantId, userId } = await requireProductUpgradeActionContext(true);
+  const { tenantId, userId } = await requireProductUpgradeActionContext(true, 'update');
   const statusResult = await getTenantProductUpgradeStatus(tenantId);
 
   if (statusResult.available === true && statusResult.data.state === 'running') {

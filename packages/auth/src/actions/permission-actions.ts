@@ -47,3 +47,16 @@ export const checkAccountManagementPermission = withOptionalAuth(async (currentU
     return false;
   }
 });
+
+export const checkAccountManagementUpdatePermission = withOptionalAuth(async (currentUser, _ctx) => {
+  try {
+    if (!currentUser) {
+      return false;
+    }
+
+    return await hasPermission(currentUser, 'account_management', 'update');
+  } catch (error) {
+    console.error('Error checking account management update permission:', error);
+    return false;
+  }
+});
