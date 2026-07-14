@@ -40,6 +40,8 @@ import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { toBrowserDate } from '../appointments/dateUtils';
 import type { AppointmentSummary } from '../appointments/types';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { useBranding } from '@alga-psa/tenancy/components';
+import type { PortalHeroGradient } from '@alga-psa/tenancy/actions';
 
 type TranslateFn = ReturnType<typeof useTranslation>['t'];
 
@@ -142,10 +144,9 @@ function deviceIcon(type: Asset['asset_type']): React.ComponentType<{ className?
   }
 }
 
-// Pick black or white text based on the average luminance of the hero
-// gradient (read from --color-primary-500 / --color-primary-700, which can be
-// rebranded per tenant or flipped by theme).
-function useHeroTextColor(): 'black' | 'white' {
+// Pick black or white text based on the average luminance of the selected hero
+// gradient. The endpoint is either primary-700 (legacy) or secondary-500.
+function useHeroTextColor(gradientMode: PortalHeroGradient): 'black' | 'white' {
   const [color, setColor] = useState<'black' | 'white'>('white');
 
   useEffect(() => {
@@ -161,7 +162,11 @@ function useHeroTextColor(): 'black' | 'white' {
         return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b);
       };
       const start = parse('--color-primary-500');
-      const end = parse('--color-primary-700');
+      const end = parse(
+        gradientMode === 'primary-secondary'
+          ? '--color-secondary-500'
+          : '--color-primary-700',
+      );
       if (start.length !== 3 || end.length !== 3 || [...start, ...end].some(Number.isNaN)) return;
       const avg = (relLum(start) + relLum(end)) / 2;
       setColor(avg > 0.5 ? 'black' : 'white');
@@ -170,7 +175,7 @@ function useHeroTextColor(): 'black' | 'white' {
     const observer = new MutationObserver(compute);
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
     return () => observer.disconnect();
-  }, []);
+  }, [gradientMode]);
 
   return color;
 }
@@ -202,9 +207,14 @@ const DASHBOARD_PREVIEW_APPOINTMENTS = 3;
 
 export function ClientDashboard({ productCode = 'psa' }: { productCode?: ProductCode } = {}) {
   const { t, i18n } = useTranslation('client-portal');
+  const { branding } = useBranding();
+  const portalHeroGradient = branding?.portalHeroGradient ?? 'primary-shades';
+  const heroGradientEnd = portalHeroGradient === 'primary-secondary'
+    ? '--color-secondary-500'
+    : '--color-primary-700';
   const isAlgaDeskPortal = productCode === 'algadesk';
   const locale = i18n.language || undefined;
-  const heroTextColor = useHeroTextColor();
+  const heroTextColor = useHeroTextColor(portalHeroGradient);
   const heroTextClass = heroTextColor === 'black' ? 'text-black' : 'text-white';
   const heroTextMutedClass = heroTextColor === 'black' ? 'text-black/70' : 'text-white/80';
   const heroTextSubtleClass = heroTextColor === 'black' ? 'text-black/75' : 'text-white/85';
@@ -421,7 +431,12 @@ export function ClientDashboard({ productCode = 'psa' }: { productCode?: Product
       {/* Welcome Hero */}
       {/* Text color is computed from the gradient's luminance (see
           useHeroTextColor) so it tracks the actual background, not the theme. */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[rgb(var(--color-primary-500))] to-[rgb(var(--color-primary-700))] px-8 py-7 shadow-sm">
+      <div
+        className="relative overflow-hidden rounded-2xl px-8 py-7 shadow-sm"
+        style={{
+          background: `linear-gradient(90deg, rgb(var(--color-primary-500)), rgb(var(${heroGradientEnd})))`,
+        }}
+      >
         <div className="max-w-2xl">
           <div className={`text-xs font-medium uppercase tracking-wider ${heroTextMutedClass}`}>
             {t('dashboard.welcomeBack', 'Welcome back')}

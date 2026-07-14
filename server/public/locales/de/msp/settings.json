@@ -1052,7 +1052,8 @@
         "primaryColor": "Primärfarbe",
         "secondaryColor": "Sekundärfarbe",
         "supportEmail": "Support-E-Mail",
-        "supportPhone": "Support-Telefon"
+        "supportPhone": "Support-Telefon",
+        "heroGradient": "Dashboard-Hintergrundverlauf"
       },
       "help": {
         "companyName": "Dies wird in der Kopfzeile des Kundenportals angezeigt",
@@ -1060,7 +1061,12 @@
         "primaryColor": "Wird für Schaltflächen, Links und Hervorhebungen verwendet",
         "secondaryColor": "Wird für Akzente und sekundäre Aktionen verwendet",
         "supportEmail": "Wird Kunden in Terminbestätigungen und anderen ausgehenden E-Mails als Kontaktadresse für den Support angezeigt.",
-        "supportPhone": "Optional. Wird neben der Support-E-Mail in E-Mails an Kunden angezeigt."
+        "supportPhone": "Optional. Wird neben der Support-E-Mail in E-Mails an Kunden angezeigt.",
+        "heroGradient": "Steuert den Verlauf des Willkommensbanners im Kunden-Dashboard."
+      },
+      "heroGradient": {
+        "primaryShades": "Primärfarbe zu Primärfarbton",
+        "primarySecondary": "Primärfarbe zu Sekundärfarbe"
       },
       "preview": "Vorschau",
       "previewDarkMode": "Dunkelmodus-Vorschau",

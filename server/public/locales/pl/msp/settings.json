@@ -1058,7 +1058,8 @@
         "primaryColor": "Kolor główny",
         "secondaryColor": "Kolor dodatkowy",
         "supportEmail": "E-mail wsparcia",
-        "supportPhone": "Telefon wsparcia"
+        "supportPhone": "Telefon wsparcia",
+        "heroGradient": "Gradient nagłówka pulpitu"
       },
       "help": {
         "companyName": "Będzie wyświetlana w nagłówku portalu klienta",
@@ -1066,7 +1067,12 @@
         "primaryColor": "Używany dla przycisków, linków i wyróżnień",
         "secondaryColor": "Używany dla akcentów i akcji dodatkowych",
         "supportEmail": "Wyświetlany klientom w potwierdzeniach wizyt i innych wychodzących wiadomościach e-mail jako adres kontaktowy do uzyskania pomocy.",
-        "supportPhone": "Opcjonalnie. Wyświetlany obok e-maila wsparcia w wiadomościach wysyłanych do klientów."
+        "supportPhone": "Opcjonalnie. Wyświetlany obok e-maila wsparcia w wiadomościach wysyłanych do klientów.",
+        "heroGradient": "Steruje gradientem banera powitalnego na pulpicie klienta."
+      },
+      "heroGradient": {
+        "primaryShades": "Kolor główny do odcienia głównego",
+        "primarySecondary": "Kolor główny do koloru dodatkowego"
       },
       "preview": "Podgląd",
       "previewDarkMode": "Podgląd trybu ciemnego",

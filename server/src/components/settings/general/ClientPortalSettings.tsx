@@ -10,6 +10,7 @@ import CustomSelect, { SelectOption } from '@alga-psa/ui/components/CustomSelect
 import {
   getTenantBrandingAction,
   updateTenantBrandingAction,
+  type PortalHeroGradient,
 } from '@alga-psa/tenancy/actions/tenant-actions/tenantBrandingActions';
 import {
   getTenantLocaleSettingsAction,
@@ -35,6 +36,28 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 const UNSET_LOCALE_VALUE = '__inherit__';
+const DEFAULT_PORTAL_HERO_GRADIENT: PortalHeroGradient = 'primary-shades';
+
+const hexToRgb = (hex: string): [number, number, number] | null => {
+  const match = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return match
+    ? [parseInt(match[1], 16), parseInt(match[2], 16), parseInt(match[3], 16)]
+    : null;
+};
+
+const rgbToCss = (rgb: [number, number, number]): string => `rgb(${rgb.join(', ')})`;
+
+/** Mirror the live portal's generated primary-700 shade in the dashboard preview. */
+const getPrimaryShadeEnd = (primary: string, isDark: boolean): string => {
+  const rgb = hexToRgb(primary);
+  if (!rgb) return primary;
+
+  return rgbToCss(rgb.map((channel) => (
+    isDark
+      ? Math.min(255, Math.round(channel + (255 - channel) * 0.75))
+      : Math.max(0, Math.round(channel * 0.7))
+  )) as [number, number, number]);
+};
 
 const ClientPortalSettings = () => {
   const { t } = useTranslation('msp/settings');
@@ -43,6 +66,9 @@ const ClientPortalSettings = () => {
   const [logoUrl, setLogoUrl] = useState<string>('');
   const [primaryColor, setPrimaryColor] = useState<string>('');
   const [secondaryColor, setSecondaryColor] = useState<string>('');
+  const [portalHeroGradient, setPortalHeroGradient] = useState<PortalHeroGradient>(
+    DEFAULT_PORTAL_HERO_GRADIENT,
+  );
   const [clientName, setClientName] = useState<string>('');
   const [supportEmail, setSupportEmail] = useState<string>('');
   const [supportPhone, setSupportPhone] = useState<string>('');
@@ -117,6 +143,7 @@ const ClientPortalSettings = () => {
           setLogoUrl(brandingSettings.logoUrl || '');
           setPrimaryColor(brandingSettings.primaryColor || '');
           setSecondaryColor(brandingSettings.secondaryColor || '');
+          setPortalHeroGradient(brandingSettings.portalHeroGradient ?? DEFAULT_PORTAL_HERO_GRADIENT);
           setClientName(brandingSettings.clientName || '');
           setSupportEmail(brandingSettings.supportEmail || '');
           setSupportPhone(brandingSettings.supportPhone || '');
@@ -173,6 +200,7 @@ const ClientPortalSettings = () => {
   const saveBrandingSettings = async (updates: Partial<{
     primaryColor: string;
     secondaryColor: string;
+    portalHeroGradient: PortalHeroGradient;
     clientName: string;
     supportEmail: string;
     supportPhone: string;
@@ -181,6 +209,7 @@ const ClientPortalSettings = () => {
       logoUrl: logoUrl, // Keep existing logo URL
       primaryColor: updates.primaryColor || primaryColor,
       secondaryColor: updates.secondaryColor || secondaryColor,
+      portalHeroGradient: updates.portalHeroGradient ?? portalHeroGradient,
       clientName: updates.clientName !== undefined ? updates.clientName : clientName,
       supportEmail: updates.supportEmail !== undefined ? updates.supportEmail : supportEmail,
       supportPhone: updates.supportPhone !== undefined ? updates.supportPhone : supportPhone,
@@ -196,6 +225,7 @@ const ClientPortalSettings = () => {
       await saveBrandingSettings({
         primaryColor,
         secondaryColor,
+        portalHeroGradient,
         clientName,
         supportEmail,
         supportPhone,
@@ -447,6 +477,37 @@ const ClientPortalSettings = () => {
                   </p>
                 </div>
               </div>
+
+              <div>
+                <CustomSelect
+                  id="client-portal-hero-gradient"
+                  label={t('clientPortal.branding.fields.heroGradient', { defaultValue: 'Dashboard hero gradient' })}
+                  options={[
+                    {
+                      value: 'primary-shades',
+                      label: t('clientPortal.branding.heroGradient.primaryShades', {
+                        defaultValue: 'Primary color to primary shade',
+                      }),
+                    },
+                    {
+                      value: 'primary-secondary',
+                      label: t('clientPortal.branding.heroGradient.primarySecondary', {
+                        defaultValue: 'Primary color to secondary color',
+                      }),
+                    },
+                  ]}
+                  value={portalHeroGradient}
+                  onValueChange={(value) => setPortalHeroGradient(value as PortalHeroGradient)}
+                  className="!w-fit"
+                  disabled={brandingLoading || brandingSaving}
+                  data-automation-id="client-portal-hero-gradient-select"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  {t('clientPortal.branding.help.heroGradient', {
+                    defaultValue: 'Controls the welcome banner gradient on the client dashboard.',
+                  })}
+                </p>
+              </div>
             </div>
 
             {/* Preview Selection Buttons */}
@@ -522,6 +583,15 @@ const ClientPortalSettings = () => {
                 const text = isDark ? 'text-slate-300' : 'text-gray-700';
                 const subtext = isDark ? 'text-slate-400' : 'text-gray-500';
                 const sidebarInactiveText = isDark ? '#94a3b8' : '#cbd5e1';
+                const previewPrimary = primaryColor || (isDark ? '#9855EE' : '#8A4DEA');
+                const previewSecondary = secondaryColor || (isDark ? '#53D7FA' : '#40CFF9');
+                const heroGradientEnd = portalHeroGradient === 'primary-secondary'
+                  ? previewSecondary
+                  : primaryColor
+                    ? getPrimaryShadeEnd(previewPrimary, isDark)
+                    : isDark
+                      ? '#B891F5'
+                      : '#6E3DBB';
 
                 return (
                   <div className={`border ${borderCls} rounded-lg overflow-hidden ${pageBg} max-h-[560px] overflow-y-auto`}>
@@ -594,7 +664,7 @@ const ClientPortalSettings = () => {
                           <div
                             className="rounded-lg p-3 text-white"
                             style={{
-                              background: `linear-gradient(135deg, ${primaryColor || '#8B5CF6'}, ${secondaryColor || '#6366F1'})`,
+                              background: `linear-gradient(90deg, ${previewPrimary}, ${heroGradientEnd})`,
                             }}
                           >
                             <div className="text-[10px] uppercase tracking-wider text-white/80">
