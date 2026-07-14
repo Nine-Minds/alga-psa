@@ -83,6 +83,7 @@ export function FixedPlanConfiguration({
 
   // Form state
   const [planName, setPlanName] = useState('');
+  const [invoiceLineDescription, setInvoiceLineDescription] = useState('');
   const [planType, setPlanType] = useState<PlanType>('Fixed');
   const [billingFrequency, setBillingFrequency] = useState<string>('monthly');
   const [isCustom, setIsCustom] = useState(false);
@@ -114,6 +115,7 @@ export function FixedPlanConfiguration({
 
         // Populate form fields
         setPlanName(fetchedPlan.contract_line_name);
+        setInvoiceLineDescription(fetchedPlan.invoice_line_description ?? '');
         setBillingFrequency(fetchedPlan.billing_frequency);
         setPlanType(fetchedPlan.contract_line_type as PlanType);
         setIsCustom(fetchedPlan.is_custom ?? false);
@@ -200,6 +202,7 @@ export function FixedPlanConfiguration({
     try {
       const planData: Partial<IContractLine> = {
         contract_line_name: planName,
+        invoice_line_description: invoiceLineDescription.trim() ? invoiceLineDescription.trim() : null,
         billing_frequency: billingFrequency,
         billing_timing: planType === 'Fixed' ? billingTiming : 'arrears',
         is_custom: isCustom,
@@ -332,6 +335,30 @@ export function FixedPlanConfiguration({
                   })}
                   required
                 />
+              </div>
+              <div>
+                <Label htmlFor="invoice-line-description">
+                  {t('configuration.fixed.basics.invoiceLineDescriptionLabel', {
+                    defaultValue: 'Invoice Line Description',
+                  })}
+                </Label>
+                <Input
+                  id="invoice-line-description"
+                  value={invoiceLineDescription}
+                  onChange={(e) => {
+                    setInvoiceLineDescription(e.target.value);
+                    markDirty();
+                  }}
+                  placeholder={t('configuration.fixed.basics.invoiceLineDescriptionPlaceholder', {
+                    defaultValue: 'e.g. Monthly phone system maintenance per 2019 agreement',
+                  })}
+                />
+                <p className="text-sm text-muted-foreground mt-1">
+                  {t('configuration.fixed.basics.invoiceLineDescriptionHelp', {
+                    defaultValue:
+                      'Used verbatim as the invoice line text for this fixed fee. Leave empty to use the contract line name.',
+                  })}
+                </p>
               </div>
               <div>
                 <Label htmlFor="frequency">

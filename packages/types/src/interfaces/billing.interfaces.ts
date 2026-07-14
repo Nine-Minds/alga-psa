@@ -250,6 +250,8 @@ export interface IContractLine extends TenantEntity {
   contract_line_id?: string;
   contract_line_name: string;
   description?: string | null;
+  /** Verbatim invoice line text for fixed-fee charges; falls back to the line name when null. */
+  invoice_line_description?: string | null;
   billing_frequency: string;
   contract_id?: string | null;
   service_category?: string;
