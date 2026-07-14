@@ -15,7 +15,7 @@ vi.mock('@alga-psa/core/secrets', () => ({
   })
 }));
 
-import { resolveXeroOAuthCredentials } from './xeroClientService';
+import { getDefaultXeroTenantId, resolveXeroOAuthCredentials } from './xeroClientService';
 
 describe('Xero OAuth credential resolution', () => {
   beforeEach(() => {
@@ -56,5 +56,31 @@ describe('Xero OAuth credential resolution', () => {
     await expect(resolveXeroOAuthCredentials('tenant-1')).rejects.toThrow(
       'Xero client ID and client secret must both be configured for this tenant before connecting.'
     );
+  });
+});
+
+describe('getDefaultXeroTenantId', () => {
+  beforeEach(() => {
+    tenantSecrets.clear();
+    appSecrets.clear();
+    vi.clearAllMocks();
+  });
+
+  it('returns the Xero organisation tenant id from the first stored connection', async () => {
+    tenantSecrets.set('tenant-1:xero_credentials', JSON.stringify({
+      'connection-1': {
+        connectionId: 'connection-1',
+        xeroTenantId: 'xero-tenant-1',
+        accessToken: 'access-token',
+        refreshToken: 'refresh-token',
+        accessTokenExpiresAt: new Date(Date.now() + 60_000).toISOString()
+      }
+    }));
+
+    await expect(getDefaultXeroTenantId('tenant-1')).resolves.toBe('xero-tenant-1');
+  });
+
+  it('returns null when no Xero connection is stored', async () => {
+    await expect(getDefaultXeroTenantId('tenant-1')).resolves.toBeNull();
   });
 });

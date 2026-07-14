@@ -42,6 +42,18 @@ function createPkcePair(): { verifier: string; challenge: string } {
 }
 
 export async function GET(): Promise<NextResponse> {
+  try {
+    return await handleConnectRequest();
+  } catch (error) {
+    logger.error('[xeroOAuth] Unexpected failure while starting Xero OAuth', { error });
+    return NextResponse.json(
+      { error: 'Unable to start the Xero connection. Please refresh and try again.' },
+      { status: 503 }
+    );
+  }
+}
+
+async function handleConnectRequest(): Promise<NextResponse> {
   if (!isEnterpriseEdition()) {
     return NextResponse.json(
       { error: 'Xero integration is only available in Enterprise Edition.' },

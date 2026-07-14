@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { useSearchParams } from 'next/navigation';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 import CustomTabs, { TabContent } from '@alga-psa/ui/components/CustomTabs';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -29,22 +29,22 @@ export function AccountingMappingManager({
   urlParamKey
 }: AccountingMappingManagerProps) {
   const { t } = useTranslation('msp/integrations');
+  const router = useRouter();
   const searchParams = useSearchParams();
   const paramKey = urlParamKey ?? 'tab';
   const tabParam = searchParams?.get(paramKey);
-
-  const defaultTab = defaultTabId ?? modules[0]?.id ?? '';
+  const moduleIds = useMemo(() => modules.map((module) => module.id), [modules]);
+  const requestedDefaultTab = defaultTabId ?? modules[0]?.id ?? '';
+  const defaultTab = moduleIds.includes(requestedDefaultTab) ? requestedDefaultTab : modules[0]?.id ?? '';
+  const urlTab = tabParam?.toLowerCase() ?? '';
 
   const [activeTab, setActiveTab] = useState<string>(() => {
-    return tabParam?.toLowerCase() || defaultTab;
+    return moduleIds.includes(urlTab) ? urlTab : defaultTab;
   });
 
   useEffect(() => {
-    const targetTab = tabParam?.toLowerCase() || defaultTab;
-    if (targetTab !== activeTab) {
-      setActiveTab(targetTab);
-    }
-  }, [tabParam, activeTab, defaultTab]);
+    setActiveTab(moduleIds.includes(urlTab) ? urlTab : defaultTab);
+  }, [defaultTab, urlTab, moduleIds]);
 
   const updateURL = (tabId: string) => {
     // Build new URL with tab parameter
@@ -60,7 +60,7 @@ export function AccountingMappingManager({
       ? `${window.location.pathname}?${currentSearchParams.toString()}`
       : window.location.pathname;
 
-    window.history.pushState({}, '', newUrl);
+    router.replace(newUrl, { scroll: false });
   };
 
   if (!modules.length) {
@@ -83,7 +83,7 @@ export function AccountingMappingManager({
   return (
     <CustomTabs
       tabs={tabs}
-      defaultTab={activeTab}
+      value={activeTab}
       tabStyles={tabStyles}
       onTabChange={(tabId) => {
         setActiveTab(tabId);

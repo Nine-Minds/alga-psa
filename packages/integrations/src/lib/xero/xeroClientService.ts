@@ -850,6 +850,12 @@ export async function getXeroConnectionSummaries(tenantId: string): Promise<Xero
   return summaries;
 }
 
+export async function getDefaultXeroTenantId(tenantId: string): Promise<string | null> {
+  const connections = await getTenantConnections(tenantId);
+  const defaultConnection = Object.values(connections)[0];
+  return defaultConnection?.xeroTenantId ?? null;
+}
+
 async function getTenantConnections(tenantId: string): Promise<XeroConnectionsStore> {
   const secretProvider = await getSecretProviderInstance();
   const secret = await secretProvider.getTenantSecret(tenantId, XERO_CREDENTIALS_SECRET);

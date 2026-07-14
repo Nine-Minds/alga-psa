@@ -36,6 +36,16 @@ const PREVIEW_LINE_LIMIT = 50;
 
 type AccountingExportPermission = 'create' | 'read' | 'update' | 'execute';
 
+function isAccountingExportActionFailure(
+  value: unknown
+): value is { success: false; code: string; message: string } {
+  if (!value || typeof value !== 'object') return false;
+  const candidate = value as { success?: unknown; code?: unknown; message?: unknown };
+  return candidate.success === false &&
+    typeof candidate.code === 'string' &&
+    typeof candidate.message === 'string';
+}
+
 const noopService: BaseService = {
   async list(_options: ListOptions): Promise<{ data: any[]; total: number }> {
     throw new NotImplementedError('Accounting export controller does not support base list operations');
@@ -481,6 +491,21 @@ export class ApiAccountingExportController extends ApiBaseController {
         try {
           const result = await executeAccountingExportBatch(params.batchId);
 
+          if (isActionPermissionError(result)) {
+            return NextResponse.json({ error: 'forbidden', message: result.permissionError }, { status: 403 });
+          }
+          if (isAccountingExportActionFailure(result)) {
+            const status = result.code === 'ACCOUNTING_EXPORT_INVALID_STATE'
+              ? 409
+              : result.code === 'ACCOUNTING_EXPORT_UNEXPECTED'
+                ? 500
+                : 400;
+            return NextResponse.json(
+              { error: result.code, message: result.message },
+              { status }
+            );
+          }
+
           return NextResponse.json(result);
         } catch (error) {
           if (error instanceof AppError && error.code === 'ACCOUNTING_EXPORT_INVALID_STATE') {
@@ -523,6 +548,12 @@ export class ApiAccountingExportController extends ApiBaseController {
 
           if (isActionPermissionError(result)) {
             return NextResponse.json({ error: 'forbidden', message: result.permissionError }, { status: 403 });
+          }
+          if (isAccountingExportActionFailure(result)) {
+            return NextResponse.json(
+              { error: result.code, message: result.message },
+              { status: result.code === 'ACCOUNTING_EXPORT_UNEXPECTED' ? 500 : 400 }
+            );
           }
 
           const files = (result.metadata as any)?.files ?? [];

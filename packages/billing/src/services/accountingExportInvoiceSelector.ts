@@ -4,9 +4,12 @@ import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { AccountingExportService } from './accountingExportService';
 import { AccountingExportBatch, AccountingExportServicePeriodSource } from '@alga-psa/types';
 import { AppError } from '@alga-psa/core';
-// eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- batch creation stamps the default QBO realm so realm-scoped mappings resolve
+// eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- batch creation stamps live-accounting realms so realm-scoped mappings resolve
 import { getDefaultQboRealmId } from '@alga-psa/integrations/lib/qbo/qboClientService';
+// eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- batch creation stamps live-accounting realms so realm-scoped mappings resolve
+import { getDefaultXeroTenantId } from '@alga-psa/integrations/lib/xero/xeroClientService';
 import { satisfyExportOpsForManualBatch } from './accountingSync/syncProducers';
+import { normalizeAccountingExportCalendarDate } from './accountingExportDateUtils';
 
 type Nullable<T> = T | null | undefined;
 
@@ -301,6 +304,9 @@ export class AccountingExportInvoiceSelector {
       // Live QBO mappings are realm-scoped, so a batch without a realm cannot
       // resolve them; default to the tenant's connected company.
       targetRealm = await getDefaultQboRealmId(this.tenantId).catch(() => null);
+    } else if (!targetRealm && options.adapterType === 'xero') {
+      // Live Xero mappings use the Xero organisation tenant id as their realm.
+      targetRealm = await getDefaultXeroTenantId(this.tenantId).catch(() => null);
     }
 
     const preview = await this.previewInvoiceLines({
@@ -441,50 +447,7 @@ function toInteger(value: unknown): number {
 }
 
 function toIsoString(value: unknown): string | null {
-  if (value === null || value === undefined) {
-    return null;
-  }
-
-  if (value instanceof Date) {
-    const isLocalMidnight =
-      value.getHours() === 0 &&
-      value.getMinutes() === 0 &&
-      value.getSeconds() === 0 &&
-      value.getMilliseconds() === 0;
-    const isUtcMidnight =
-      value.getUTCHours() === 0 &&
-      value.getUTCMinutes() === 0 &&
-      value.getUTCSeconds() === 0 &&
-      value.getUTCMilliseconds() === 0;
-
-    const year = isLocalMidnight ? value.getFullYear() : value.getUTCFullYear();
-    const month = isLocalMidnight ? value.getMonth() + 1 : value.getUTCMonth() + 1;
-    const day = isLocalMidnight ? value.getDate() : value.getUTCDate();
-
-    if (isLocalMidnight || isUtcMidnight) {
-      return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T00:00:00.000Z`;
-    }
-
-    return value.toISOString();
-  }
-
-  if (typeof value === 'string') {
-    const trimmed = value.trim();
-    if (!trimmed) {
-      return null;
-    }
-
-    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
-      return `${trimmed}T00:00:00.000Z`;
-    }
-  }
-
-  const date = new Date(value as string);
-  if (Number.isNaN(date.getTime())) {
-    return null;
-  }
-
-  return date.toISOString();
+  return normalizeAccountingExportCalendarDate(value) ?? null;
 }
 
 function expandInvoiceStatuses(input?: string[]): string[] | undefined {

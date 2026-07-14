@@ -55,6 +55,29 @@ describe('AccountingExportValidation service-period projection', () => {
         },
         resolution_state: 'open',
       },
+      {
+        line_id: 'line-2',
+        batch_id: 'batch-1',
+        tenant: 'tenant-1',
+        document_id: 'invoice-2',
+        document_line_id: 'charge-2',
+        client_id: 'client-1',
+        amount_cents: 5000,
+        currency_code: 'USD',
+        service_period_start: '2026-05-01T00:00:00.000Z',
+        service_period_end: '2026-06-01T00:00:00.000Z',
+        payload: {
+          service_period_source: 'canonical_detail_periods',
+          recurring_detail_periods: [
+            {
+              service_period_start: '2026-05-01T00:00:00.000Z',
+              service_period_end: '2026-06-01T00:00:00.000Z',
+              billing_timing: 'advance',
+            },
+          ],
+        },
+        resolution_state: 'open',
+      },
     ];
 
     const persistedErrors: Array<Record<string, unknown>> = [];
@@ -77,6 +100,14 @@ describe('AccountingExportValidation service-period projection', () => {
             invoice_id: 'invoice-1',
             service_id: 'service-1',
             tax_region: null,
+            net_amount: 10000,
+          },
+          {
+            item_id: 'charge-2',
+            invoice_id: 'invoice-2',
+            service_id: 'service-1',
+            tax_region: null,
+            net_amount: 5000,
           },
         ]);
       }
@@ -94,12 +125,23 @@ describe('AccountingExportValidation service-period projection', () => {
             service_period_end: '2026-03-01T00:00:00.000Z',
             billing_timing: 'advance',
           },
+          {
+            item_id: 'charge-2',
+            service_period_start: new Date('2026-05-01T04:00:00.000Z'),
+            service_period_end: new Date('2026-06-01T04:00:00.000Z'),
+            billing_timing: 'advance',
+          },
         ]);
       }
       if (table === 'invoices') {
         return buildThenableQuery([
           {
             invoice_id: 'invoice-1',
+            client_id: 'client-1',
+            tax_source: 'internal',
+          },
+          {
+            invoice_id: 'invoice-2',
             client_id: 'client-1',
             tax_source: 'internal',
           },
@@ -137,7 +179,7 @@ describe('AccountingExportValidation service-period projection', () => {
     } as unknown as AccountingExportRepository);
 
     const resolver = {
-      resolveServiceMapping: vi.fn(),
+      resolveServiceMapping: vi.fn().mockResolvedValue({ externalEntityId: 'ITEM-1' }),
       resolveTaxCodeMapping: vi.fn(),
       resolvePaymentTermMapping: vi.fn(),
       resolveClientMapping: vi.fn(),
@@ -171,6 +213,7 @@ describe('AccountingExportValidation service-period projection', () => {
     });
     expect(updateBatchStatus).toHaveBeenCalledWith('batch-1', { status: 'needs_attention' });
     expect(batch.status).toBe('needs_attention');
-    expect(resolver.resolveServiceMapping).not.toHaveBeenCalled();
+    expect(resolver.resolveServiceMapping).toHaveBeenCalledOnce();
+    expect(persistedErrors).not.toContainEqual(expect.objectContaining({ line_id: 'line-2' }));
   });
 });

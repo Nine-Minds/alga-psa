@@ -335,7 +335,8 @@ export class AccountingExportService {
       if (failedDocuments.length === 0) {
         await this.repository.updateBatchStatus(batchId, {
           status: 'delivered',
-          delivered_at: new Date().toISOString()
+          delivered_at: new Date().toISOString(),
+          notes: null
         });
       } else {
         await this.repository.updateBatchStatus(batchId, {

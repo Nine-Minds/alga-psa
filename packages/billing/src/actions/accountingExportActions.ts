@@ -26,6 +26,8 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { permissionError } from '@alga-psa/ui/lib/errorHandling';
 import type { ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { AppError } from '@alga-psa/core';
+import logger from '@alga-psa/core/logger';
 
 type AccountingExportPermission = 'create' | 'read' | 'update' | 'execute';
 
@@ -37,6 +39,46 @@ const ACTION_DESCRIPTIONS: Record<AccountingExportPermission, string> = {
 };
 
 const PREVIEW_LINE_LIMIT = 50;
+
+export interface AccountingExportActionError {
+  success: false;
+  code: string;
+  message: string;
+}
+
+function toAccountingExportActionError(
+  error: unknown,
+  operation: 'create' | 'execute' | 'cancel'
+): AccountingExportActionError {
+  if (error instanceof AppError) {
+    if (error.code === 'XERO_NOT_CONFIGURED') {
+      return {
+        success: false,
+        code: error.code,
+        message: 'Connect Xero before executing this export.'
+      };
+    }
+
+    const recreateGuidance = error.code === 'ACCOUNTING_EXPORT_VALIDATION_FAILED'
+      ? ' Review the batch errors, then cancel and recreate the batch after repairing the source data.'
+      : '';
+    return {
+      success: false,
+      code: error.code,
+      message: `${error.message}${recreateGuidance}`
+    };
+  }
+
+  logger.error('[accountingExportActions] Unexpected accounting export failure', {
+    operation,
+    error
+  });
+  return {
+    success: false,
+    code: 'ACCOUNTING_EXPORT_UNEXPECTED',
+    message: `Unable to ${operation} the accounting export. Please try again or contact support.`
+  };
+}
 
 export interface AccountingExportPreviewFilters {
   startDate?: string;
@@ -103,19 +145,23 @@ export const createAccountingExportBatch = withAuth(async (
   user,
   { tenant },
   input: CreateExportBatchInput
-): Promise<AccountingExportBatch | ActionPermissionError> => {
+): Promise<AccountingExportBatch | ActionPermissionError | AccountingExportActionError> => {
   const denied = await checkAccountingExportPermission(user, 'create');
   if (denied) return denied;
-  const selector = await AccountingExportInvoiceSelector.create();
-  const filters = normalizeCreateBatchFilters(input.filters);
-  const { batch } = await selector.createBatchFromFilters({
-    adapterType: input.adapter_type,
-    targetRealm: input.target_realm ?? null,
-    notes: input.notes ?? null,
-    createdBy: input.created_by ?? user.user_id,
-    filters
-  });
-  return batch;
+  try {
+    const selector = await AccountingExportInvoiceSelector.create();
+    const filters = normalizeCreateBatchFilters(input.filters);
+    const { batch } = await selector.createBatchFromFilters({
+      adapterType: input.adapter_type,
+      targetRealm: input.target_realm ?? null,
+      notes: input.notes ?? null,
+      createdBy: input.created_by ?? user.user_id,
+      filters
+    });
+    return batch;
+  } catch (error) {
+    return toAccountingExportActionError(error, 'create');
+  }
 });
 
 export const appendAccountingExportLines = withAuth(async (
@@ -162,14 +208,18 @@ export const cancelAccountingExportBatch = withAuth(async (
   { tenant },
   batchId: string,
   reason?: string
-): Promise<AccountingExportBatch | ActionPermissionError> => {
+): Promise<AccountingExportBatch | ActionPermissionError | AccountingExportActionError> => {
   const denied = await checkAccountingExportPermission(user, 'update');
   if (denied) return denied;
-  const service = await AccountingExportService.create();
-  return service.cancelBatch(batchId, {
-    cancelledBy: user.user_id,
-    reason: reason ?? null
-  });
+  try {
+    const service = await AccountingExportService.create();
+    return await service.cancelBatch(batchId, {
+      cancelledBy: user.user_id,
+      reason: reason ?? null
+    });
+  } catch (error) {
+    return toAccountingExportActionError(error, 'cancel');
+  }
 });
 
 export const getAccountingExportBatch = withAuth(async (
@@ -202,11 +252,15 @@ export const executeAccountingExportBatch = withAuth(async (
   user,
   { tenant },
   batchId: string
-): Promise<AccountingExportDeliveryResult | ActionPermissionError> => {
+): Promise<AccountingExportDeliveryResult | ActionPermissionError | AccountingExportActionError> => {
   const denied = await checkAccountingExportPermission(user, 'execute');
   if (denied) return denied;
-  const service = await AccountingExportService.create();
-  return service.executeBatch(batchId);
+  try {
+    const service = await AccountingExportService.create();
+    return await service.executeBatch(batchId);
+  } catch (error) {
+    return toAccountingExportActionError(error, 'execute');
+  }
 });
 
 export const previewAccountingExport = withAuth(async (

@@ -58,6 +58,15 @@ function createRedirect(path: string, params?: Record<string, string | undefined
 }
 
 export async function GET(request: NextRequest): Promise<NextResponse> {
+  try {
+    return await handleCallbackRequest(request);
+  } catch (error) {
+    logger.error('[xeroOAuth] Unexpected Xero OAuth callback failure', { error });
+    return createRedirect(FAILURE_PATH, { xero_error: 'unexpected_failure' });
+  }
+}
+
+async function handleCallbackRequest(request: NextRequest): Promise<NextResponse> {
   if (!isEnterpriseEdition()) {
     return NextResponse.json(
       { error: 'Xero integration is only available in Enterprise Edition.' },

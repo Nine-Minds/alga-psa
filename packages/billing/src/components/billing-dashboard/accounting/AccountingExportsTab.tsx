@@ -12,6 +12,7 @@ import toast from 'react-hot-toast';
 import { handleError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { cancelAccountingExportBatch, createAccountingExportBatch, executeAccountingExportBatch, getAccountingExportBatch, listAccountingExportBatches } from '@alga-psa/billing/actions/accountingExportActions';
+import type { AccountingExportActionError } from '@alga-psa/billing/actions/accountingExportActions';
 import { getAccountingSyncHealth } from '@alga-psa/billing/actions/accountingSyncActions';
 
 type AccountingExportStatus =
@@ -69,6 +70,16 @@ type BatchDetail = {
   errors: AccountingExportError[];
 };
 
+function isAccountingExportActionError(value: unknown): value is AccountingExportActionError {
+  const candidate = value as Partial<AccountingExportActionError> | null;
+  return Boolean(
+    candidate &&
+    candidate.success === false &&
+    typeof candidate.code === 'string' &&
+    typeof candidate.message === 'string'
+  );
+}
+
 function formatIso(iso: string | null | undefined): string {
   if (!iso) return '-';
   const dt = new Date(iso);
@@ -79,6 +90,7 @@ function formatIso(iso: string | null | undefined): string {
 const DEFAULT_ADAPTERS = [
   { id: 'quickbooks_csv', label: 'QuickBooks CSV' },
   { id: 'xero_csv', label: 'Xero CSV' },
+  { id: 'xero', label: 'Xero' },
   { id: 'quickbooks_online', label: 'QuickBooks Online' },
   { id: 'quickbooks_desktop', label: 'QuickBooks Desktop' }
 ] as const;
@@ -226,6 +238,10 @@ export default function AccountingExportsTab(): React.JSX.Element {
         handleError(batchResult.permissionError);
         return;
       }
+      if (isAccountingExportActionError(batchResult)) {
+        handleError(batchResult.message);
+        return;
+      }
       const batch = batchResult as unknown as AccountingExportBatch;
       toast.success(t('accountingExports.toast.created', {
         defaultValue: 'Accounting export batch created',
@@ -249,6 +265,12 @@ export default function AccountingExportsTab(): React.JSX.Element {
         handleError(result.permissionError);
         return;
       }
+      if (isAccountingExportActionError(result)) {
+        await loadBatches();
+        await loadBatchDetail(batchId);
+        handleError(result.message);
+        return;
+      }
       toast.success(t('accountingExports.toast.executing', {
         defaultValue: 'Batch execution started',
       }));
@@ -266,6 +288,10 @@ export default function AccountingExportsTab(): React.JSX.Element {
       const result = await cancelAccountingExportBatch(batchId);
       if (isActionPermissionError(result)) {
         handleError(result.permissionError);
+        return;
+      }
+      if (isAccountingExportActionError(result)) {
+        handleError(result.message);
         return;
       }
       toast.success(t('accountingExports.toast.cancelled', {
