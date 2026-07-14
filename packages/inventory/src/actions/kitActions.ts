@@ -611,7 +611,7 @@ export const createKitProduct = withAuth(
             rate: catalogProjection,
           })
           .onConflict(['tenant', 'service_id', 'currency_code'])
-          .merge({ rate: catalogProjection, updated_at: trx.fn.now() });
+          .merge({ rate: catalogProjection, updated_at: new Date().toISOString() });
 
         await trx('product_inventory_settings')
           .insert({
@@ -704,7 +704,7 @@ export const updateKitProduct = withAuth(
             rate: catalogProjection,
           })
           .onConflict(['tenant', 'service_id', 'currency_code'])
-          .merge({ rate: catalogProjection, updated_at: trx.fn.now() });
+          .merge({ rate: catalogProjection, updated_at: new Date().toISOString() });
 
         await trx('product_inventory_settings')
           .where({ tenant, service_id: kitServiceId })
@@ -813,7 +813,7 @@ export const addKitComponent = withAuth(
             quantity: qty,
           })
           .onConflict(['tenant', 'kit_service_id', 'component_service_id'])
-          .merge({ quantity: qty, updated_at: trx.fn.now() })
+          .merge({ quantity: qty, updated_at: new Date().toISOString() })
           .returning('*');
         return row as IKitComponent;
       });
