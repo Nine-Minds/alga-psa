@@ -92,7 +92,7 @@ function deterministicUuid(namespace, tenantId) {
 }
 
 async function seedWorkflow(knex, tenantId, workflow) {
-  const { tenantDb } = await import('@alga-psa/db');
+  const { tenantDb } = require('./utils/tenantDb.cjs');
   const db = tenantDb(knex, tenantId);
   const workflowId = deterministicUuid(workflow.baseId, tenantId);
   const definition = { ...workflow.definition, id: workflowId };

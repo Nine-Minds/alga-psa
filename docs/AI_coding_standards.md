@@ -455,6 +455,19 @@ Run migrations with the migration environment (env) flag.
 
 Every query must be tenant-scoped, including joins. Route queries through the `tenantDb` facade so the tenant predicates are applied structurally; raw SQL (`knex.raw`) must still carry tenant predicates by hand.
 
+**Inside migration files**, get the facade from the local CJS shim, never from the workspace package:
+
+```javascript
+// ✅ CORRECT: the shim ships with the migration tree
+const { tenantDb } = require('./utils/tenantDb.cjs');
+const db = tenantDb(knex, tenantId);
+
+// ❌ WRONG: fails or resolves to a stale dist in migration runners
+const { tenantDb } = await import('@alga-psa/db');
+```
+
+Several environments that run migrations (CI Citus smoke, the integration harness, the prod migration image, the EE combined temp dir) do not load the `@alga-psa/db` ESM package, so `import('@alga-psa/db')` fails with `ERR_MODULE_NOT_FOUND` — or resolves to a stale `dist/` where the export is `undefined` (`tenantDb is not a function`). The shim at `server/migrations/utils/tenantDb.cjs` mirrors the facade's `table()` / `unscoped()` / `tenantJoin()` API and carries its own table registry; if a migration touches a table the shim doesn't know, register it in the shim's metadata in the same change.
+
 ## Local EE migrations
 - Do not physically copy EE migrations into `server/migrations/` locally.
 - Use the temp-dir overlay runner which points Knex at a merged directory via `MIGRATIONS_DIR`.
