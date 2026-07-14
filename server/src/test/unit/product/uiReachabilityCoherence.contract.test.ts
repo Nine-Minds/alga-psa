@@ -12,11 +12,10 @@ import {
 import {
   MSP_ROUTE_RULES,
   filterMenuSectionsByProduct,
-  matchesDynamicPattern,
-  matchesStaticPrefix,
   resolveProductRouteBehavior,
 } from '../../../lib/productSurfaceRegistry';
 import { getAllowedSettingsTabIds } from '../../../lib/settingsProductTabs';
+import { listRouteDirSegments, matchesRules } from './support/appRouteInventory';
 
 type ProductCode = 'algadesk' | 'psa';
 const PRODUCTS: ProductCode[] = ['algadesk', 'psa'];
@@ -131,14 +130,7 @@ describe('UI reachability coherence (nav ↔ route ↔ permission)', () => {
 
     const unregistered = [...new Set(rawHrefs.map(stripQuery))]
       .filter((pathname) => !(pathname in KNOWN_REGISTRY_GAPS))
-      .filter(
-        (pathname) =>
-          !MSP_ROUTE_RULES.some(
-            (rule) =>
-              (rule.staticPrefixes && matchesStaticPrefix(pathname, rule.staticPrefixes)) ||
-              (rule.dynamicPatterns && matchesDynamicPattern(pathname, rule.dynamicPatterns)),
-          ),
-      );
+      .filter((pathname) => !matchesRules(MSP_ROUTE_RULES, pathname));
 
     expect(
       unregistered,
@@ -194,13 +186,8 @@ describe('UI reachability coherence (nav ↔ route ↔ permission)', () => {
       // destination must be explicitly ruled — a fallback-decided route means
       // a visible menu item can land on a not_found boundary. This is a hard
       // requirement for entry-point destinations; there is no exception list.
-      const explicitlyRuled = MSP_ROUTE_RULES.some(
-        (rule) =>
-          (rule.staticPrefixes && matchesStaticPrefix(pin.destination, rule.staticPrefixes)) ||
-          (rule.dynamicPatterns && matchesDynamicPattern(pin.destination, rule.dynamicPatterns)),
-      );
       expect(
-        explicitlyRuled,
+        matchesRules(MSP_ROUTE_RULES, pin.destination),
         `"${pin.destination}" (${pin.reachedVia}) matches no explicit RouteRule — the product fallback decides its reachability, so the rendered entry can dead-end on a boundary page`,
       ).toBe(true);
 
@@ -236,19 +223,10 @@ describe('UI reachability coherence (nav ↔ route ↔ permission)', () => {
 
   it('every settings page on disk is classified for algadesk: allowed tab or documented exclusion', () => {
     const tabAllowList = getAllowedSettingsTabIds('algadesk');
-    const settingsRoots = ['src/app/msp/settings', '../ee/server/src/app/msp/settings'];
-    const onDisk = new Set<string>();
-    for (const root of settingsRoots) {
-      let entries: fs.Dirent[] = [];
-      try {
-        entries = fs.readdirSync(path.resolve(process.cwd(), root), { withFileTypes: true });
-      } catch {
-        continue;
-      }
-      for (const entry of entries) {
-        if (entry.isDirectory() && !/^[@_(]/.test(entry.name)) onDisk.add(entry.name);
-      }
-    }
+    const onDisk = listRouteDirSegments([
+      'src/app/msp/settings',
+      '../ee/server/src/app/msp/settings',
+    ]);
     expect(onDisk.size).toBeGreaterThan(5);
 
     const unclassified = [...onDisk]
