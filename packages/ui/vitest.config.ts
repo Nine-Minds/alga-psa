@@ -5,6 +5,7 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     include: ['src/**/*.test.{ts,tsx}'],
+    setupFiles: ['./vitest.setup.ts'],
     sequence: { concurrent: false, shuffle: false },
     coverage: { enabled: false },
   },
