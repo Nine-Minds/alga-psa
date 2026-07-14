@@ -216,32 +216,70 @@ describe('UI reachability coherence (nav ↔ route ↔ permission)', () => {
     }
   });
 
-  it('settings coherence: route registry and settings tab allow-list agree for algadesk', () => {
+  // Settings segments on disk that AlgaDesk deliberately does not get.
+  // The route registry derives settings behavior from
+  // getAllowedSettingsTabIds, so a segment missing from BOTH lists is a
+  // page nobody classified — that is the failure this test exists for.
+  const ALGADESK_BLOCKED_SETTINGS: Record<string, string> = {
+    billing: 'PSA billing configuration',
+    extensions: 'PSA/EE extension management',
+    'import-export': 'PSA data import/export',
+    integrations: 'PSA integrations (QBO, Xero, RMM)',
+    interactions: 'PSA interactions configuration',
+    'mcp-server': 'PSA MCP server configuration',
+    notifications: 'PSA notification settings',
+    opportunities: 'PSA sales opportunities configuration',
+    projects: 'PSA project management settings',
+    sla: 'PSA SLA configuration',
+    'time-entry': 'PSA time tracking settings',
+  };
+
+  it('every settings page on disk is classified for algadesk: allowed tab or documented exclusion', () => {
     const tabAllowList = getAllowedSettingsTabIds('algadesk');
-    const segments = new Set<string>();
-    for (const section of settingsNavigationSections) {
-      for (const href of collectHrefs(section.items)) {
-        const tab = settingsTabOf(href);
-        if (tab) segments.add(tab);
-        const match = stripQuery(href).match(/^\/msp\/settings\/([^/]+)$/);
-        if (match) segments.add(match[1]);
+    const settingsRoots = ['src/app/msp/settings', '../ee/server/src/app/msp/settings'];
+    const onDisk = new Set<string>();
+    for (const root of settingsRoots) {
+      let entries: fs.Dirent[] = [];
+      try {
+        entries = fs.readdirSync(path.resolve(process.cwd(), root), { withFileTypes: true });
+      } catch {
+        continue;
+      }
+      for (const entry of entries) {
+        if (entry.isDirectory() && !/^[@_(]/.test(entry.name)) onDisk.add(entry.name);
       }
     }
+    expect(onDisk.size).toBeGreaterThan(5);
 
-    const drifted = [...segments]
-      .map((segment) => ({
-        segment,
-        routeAllows: resolveProductRouteBehavior('algadesk', `/msp/settings/${segment}`) === 'allowed',
-        tabAllows: tabAllowList.has(segment),
-      }))
-      .filter(({ routeAllows, tabAllows }) => routeAllows !== tabAllows)
-      .map(
-        ({ segment, routeAllows }) =>
-          `"${segment}" (route registry: ${routeAllows ? 'allowed' : 'blocked'}, tab allow-list: ${routeAllows ? 'blocked' : 'allowed'})`,
-      );
+    const unclassified = [...onDisk]
+      .filter((segment) => !tabAllowList.has(segment) && !(segment in ALGADESK_BLOCKED_SETTINGS))
+      .sort();
     expect(
-      drifted,
-      `algadesk settings segments where the route registry and the tab allow-list disagree: ${drifted.join('; ')}`,
+      unclassified,
+      `settings pages on disk that are neither in the algadesk tab allow-list nor documented in ALGADESK_BLOCKED_SETTINGS — classify them: ${unclassified.join(', ')}`,
     ).toEqual([]);
+
+    // The classification must hold at the route layer, and the exclusion
+    // list must stay honest as pages come and go.
+    for (const segment of Object.keys(ALGADESK_BLOCKED_SETTINGS)) {
+      expect(
+        onDisk.has(segment),
+        `"${segment}" no longer has a settings page on disk — remove it from ALGADESK_BLOCKED_SETTINGS`,
+      ).toBe(true);
+      expect(
+        tabAllowList.has(segment),
+        `"${segment}" is now in the algadesk tab allow-list — remove it from ALGADESK_BLOCKED_SETTINGS`,
+      ).toBe(false);
+      expect(
+        resolveProductRouteBehavior('algadesk', `/msp/settings/${segment}`),
+        `blocked settings segment "${segment}" must not resolve allowed for algadesk`,
+      ).not.toBe('allowed');
+    }
+    for (const segment of [...onDisk].filter((s) => tabAllowList.has(s))) {
+      expect(
+        resolveProductRouteBehavior('algadesk', `/msp/settings/${segment}`),
+        `allowed settings segment "${segment}" must resolve allowed for algadesk`,
+      ).toBe('allowed');
+    }
   });
 });

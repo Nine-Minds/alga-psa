@@ -19,7 +19,6 @@ import {
 // the route rides the fallback today. Do not add entries without
 // reporting the gap; remove entries as rules are added.
 const KNOWN_UNRULED_ROUTES: Record<string, string> = {
-  '/msp/account': 'header avatar menu destination; upgrade_path branch adds it to msp_core_helpdesk',
   '/msp/account-manager': 'account-manager workspace, no rule',
   '/msp/automation-hub': 'automation hub, no rule',
   '/msp/chat': 'AI chat surface, no rule',
