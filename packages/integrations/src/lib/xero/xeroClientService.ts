@@ -347,9 +347,10 @@ export class XeroClientService {
       throw new AppError('XERO_NOT_CONFIGURED', `No Xero connections configured for tenant ${tenantId}`);
     }
 
-    const selectedConnection =
-      (connectionId ? connections[connectionId] : undefined) ??
-      connections[Object.keys(connections)[0]];
+    const selectedConnection = connectionId
+      ? connections[connectionId] ??
+        Object.values(connections).find((connection) => connection.xeroTenantId === connectionId)
+      : connections[Object.keys(connections)[0]];
 
     if (!selectedConnection) {
       throw new AppError('XERO_CONNECTION_NOT_FOUND', `Xero connection ${connectionId ?? 'default'} not found`, {

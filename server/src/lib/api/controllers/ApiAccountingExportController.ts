@@ -121,6 +121,26 @@ export class ApiAccountingExportController extends ApiBaseController {
             ...body,
             created_by: body.created_by ?? apiRequest.context.userId
           });
+
+          if (isActionPermissionError(batch)) {
+            return NextResponse.json(
+              { error: 'forbidden', message: batch.permissionError },
+              { status: 403 }
+            );
+          }
+          if (isAccountingExportActionFailure(batch)) {
+            const status = batch.code === 'ACCOUNTING_EXPORT_DUPLICATE' ||
+              batch.code === 'ACCOUNTING_EXPORT_EMPTY_BATCH'
+              ? 409
+              : batch.code === 'ACCOUNTING_EXPORT_UNEXPECTED'
+                ? 500
+                : 400;
+            return NextResponse.json(
+              { error: batch.code, message: batch.message },
+              { status }
+            );
+          }
+
           return NextResponse.json(batch, { status: 201 });
         } catch (error) {
           if (error instanceof AppError && error.code === 'ACCOUNTING_EXPORT_DUPLICATE') {
