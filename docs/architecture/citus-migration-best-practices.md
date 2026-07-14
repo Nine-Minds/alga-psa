@@ -247,6 +247,7 @@ if (isCitus.rows[0]?.is_distributed) {
 Before deploying a migration:
 
 - [ ] Migration is idempotent (can be run multiple times safely)
+- [ ] Data access goes through `require('./utils/tenantDb.cjs')`, never `import('@alga-psa/db')` — migration runners don't build the workspace package
 - [ ] If it distributes a possibly-non-empty table, it calls `truncate_local_data_after_distributing_table()` right after (see Issue 4)
 - [ ] Tested on both PostgreSQL and CitusDB
 - [ ] Large backfills include delays for propagation
