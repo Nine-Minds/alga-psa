@@ -42,7 +42,7 @@ describe('email action tenant-scoped query contract', () => {
     expect(text).toContain("import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';");
     expect(text).toContain("tenantDb(trx, tenant).table('inbound_ticket_defaults')");
     expect(text).toContain(".table<{ addon_key: string; expires_at: string | Date | null }>('tenant_addons')");
-    expect(text).toContain("tenantDb(trx, tenant)\n      .table('clients')");
+    expect(text).toContain("tenantDb(trx, tenant)\n        .table('clients')");
   });
 
   it('uses tenantDb for tenant email settings upsert roots', () => {

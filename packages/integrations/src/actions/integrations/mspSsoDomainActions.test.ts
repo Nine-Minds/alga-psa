@@ -275,49 +275,49 @@ describe('msp sso domain actions', () => {
 
   it('T004: list action denies unauthorized users and client users', async () => {
     mockUser = { user_id: 'client-1', user_type: 'client' };
-    await expect(listMspSsoLoginDomains()).resolves.toEqual({ success: false, error: 'Forbidden' });
+    await expect(listMspSsoLoginDomains()).resolves.toEqual({ success: false, error: 'Permission denied: You do not have permission to manage MSP SSO login domains.' });
 
     mockUser = { user_id: 'user-1', user_type: 'internal' };
     hasPermissionValue = false;
-    await expect(listMspSsoLoginDomains()).resolves.toEqual({ success: false, error: 'Forbidden' });
+    await expect(listMspSsoLoginDomains()).resolves.toEqual({ success: false, error: 'Permission denied: You do not have permission to manage MSP SSO login domains.' });
   });
 
   it('T004b: lifecycle actions deny unauthorized users and client users', async () => {
     mockUser = { user_id: 'client-1', user_type: 'client' };
     await expect(requestMspSsoDomainClaim({ domain: 'acme.com' })).resolves.toEqual({
       success: false,
-      error: 'Forbidden',
+      error: 'Permission denied: You do not have permission to manage MSP SSO login domains.',
     });
     await expect(refreshMspSsoDomainClaimChallenge({ claimId: 'claim-1' })).resolves.toEqual({
       success: false,
-      error: 'Forbidden',
+      error: 'Permission denied: You do not have permission to manage MSP SSO login domains.',
     });
     await expect(verifyMspSsoDomainClaimOwnership({ claimId: 'claim-1' })).resolves.toEqual({
       success: false,
-      error: 'Forbidden',
+      error: 'Permission denied: You do not have permission to manage MSP SSO login domains.',
     });
     await expect(revokeMspSsoDomainClaim({ claimId: 'claim-1' })).resolves.toEqual({
       success: false,
-      error: 'Forbidden',
+      error: 'Permission denied: You do not have permission to manage MSP SSO login domains.',
     });
 
     mockUser = { user_id: 'user-1', user_type: 'internal' };
     hasPermissionValue = false;
     await expect(requestMspSsoDomainClaim({ domain: 'acme.com' })).resolves.toEqual({
       success: false,
-      error: 'Forbidden',
+      error: 'Permission denied: You do not have permission to manage MSP SSO login domains.',
     });
     await expect(refreshMspSsoDomainClaimChallenge({ claimId: 'claim-1' })).resolves.toEqual({
       success: false,
-      error: 'Forbidden',
+      error: 'Permission denied: You do not have permission to manage MSP SSO login domains.',
     });
     await expect(verifyMspSsoDomainClaimOwnership({ claimId: 'claim-1' })).resolves.toEqual({
       success: false,
-      error: 'Forbidden',
+      error: 'Permission denied: You do not have permission to manage MSP SSO login domains.',
     });
     await expect(revokeMspSsoDomainClaim({ claimId: 'claim-1' })).resolves.toEqual({
       success: false,
-      error: 'Forbidden',
+      error: 'Permission denied: You do not have permission to manage MSP SSO login domains.',
     });
   });
 
@@ -369,7 +369,7 @@ describe('msp sso domain actions', () => {
     });
 
     mockUser = { user_id: 'client-1', user_type: 'client' };
-    await expect(listMspSsoDomainClaims()).resolves.toEqual({ success: false, error: 'Forbidden' });
+    await expect(listMspSsoDomainClaims()).resolves.toEqual({ success: false, error: 'Permission denied: You do not have permission to manage MSP SSO login domains.' });
   });
 
   it('T006/T007: save action persists and normalizes valid domains', async () => {

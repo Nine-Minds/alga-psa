@@ -259,7 +259,7 @@ export const getClientPortalVisibilityGroups = withAuth(async (
   try {
     const { knex } = await createTenantKnex();
 
-    return withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
       const { clientId } = await resolveManagementScope(trx, tenant, currentUser, targetClientId, targetContactId);
 
       const groups = await tenantDb(trx, tenant).table('client_portal_visibility_groups')
@@ -331,7 +331,7 @@ export const getClientPortalVisibilityGroup = withAuth(async (
     visibilityGroupIdSchema.parse({ groupId });
     const { knex } = await createTenantKnex();
 
-    return withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
       const { clientId } = await resolveManagementScope(trx, tenant, currentUser, targetClientId, targetContactId);
 
       const group = await tenantDb(trx, tenant).table('client_portal_visibility_groups')
@@ -395,7 +395,7 @@ export const getClientPortalVisibilityGroupBoards = withAuth(async (
   try {
     const { knex } = await createTenantKnex();
 
-    return withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
       await resolveManagementScope(trx, tenant, currentUser, targetClientId, targetContactId);
 
       return tenantDb(trx, tenant).table('boards')
@@ -419,7 +419,7 @@ export const getClientPortalVisibilityContacts = withAuth(async (
   try {
     const { knex } = await createTenantKnex();
 
-    return withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
       const { clientId } = await resolveManagementScope(trx, tenant, currentUser, targetClientId);
 
       return tenantDb(trx, tenant).table('contacts')
@@ -447,7 +447,7 @@ export const createClientPortalVisibilityGroup = withAuth(async (
     const payload = visibilityGroupSchema.parse(input);
     const { knex } = await createTenantKnex();
 
-    return withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
       const { clientId } = await resolveManagementScope(
         trx,
         tenant,
@@ -508,7 +508,7 @@ export const updateClientPortalVisibilityGroup = withAuth(async (
 
     const { knex } = await createTenantKnex();
 
-    return withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
       const { clientId } = await resolveManagementScope(trx, tenant, currentUser);
       const boardIds = uniqueItems(payload.boardIds);
       await ensureBoardsAreActiveOrAlreadyAssignedToGroup(trx, tenant, groupId, boardIds);
@@ -562,7 +562,7 @@ export const deleteClientPortalVisibilityGroup = withAuth(async (
     visibilityGroupIdSchema.parse({ groupId });
     const { knex } = await createTenantKnex();
 
-    return withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
       const { clientId } = await resolveManagementScope(trx, tenant, currentUser);
 
       const existing = await tenantDb(trx, tenant).table('client_portal_visibility_groups')
@@ -614,7 +614,7 @@ export const assignClientPortalVisibilityGroupToContact = withAuth(async (
     const { contactId, groupId } = visibilityAssignmentSchema.parse(input);
     const { knex } = await createTenantKnex();
 
-    return withTransaction(knex, async (trx: Knex.Transaction) => {
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
       const contact = await tenantDb(trx, tenant).table('contacts')
         .where({
           contact_name_id: contactId

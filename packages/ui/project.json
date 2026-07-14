@@ -9,13 +9,6 @@
       "executor": "nx:noop",
       "dependsOn": []
     },
-    "test": {
-      "executor": "@nx/vitest:test",
-      "outputs": ["{workspaceRoot}/coverage/packages/ui"],
-      "options": {
-        "configFile": "packages/ui/vitest.config.ts"
-      }
-    },
     "lint": {
       "executor": "@nx/eslint:lint",
       "outputs": ["{options.outputFile}"],

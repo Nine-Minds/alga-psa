@@ -37,6 +37,8 @@ vi.mock('react-hot-toast', () => ({
 
 vi.mock('@alga-psa/ui/lib/errorHandling', () => ({
   handleError: (...args: unknown[]) => mockHandleError(...args),
+  isActionMessageError: () => false,
+  isActionPermissionError: () => false,
 }));
 
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({

@@ -86,6 +86,7 @@
     }
   },
   "scripts": {
+    "test": "vitest run",
     "build": "tsup",
     "typecheck": "tsc --noEmit"
   },

@@ -201,6 +201,8 @@ describe('resolveClientBillingCurrency — fallback chain', () => {
         { tenant: 'tenant-1' },
         'client-1'
       )
-    ).rejects.toThrow('Client has active contracts in multiple currencies');
+    ).resolves.toEqual({
+      actionError: 'Client has active contracts in multiple currencies (GBP, EUR).',
+    });
   });
 });

@@ -77,6 +77,11 @@ async function loadHook() {
 
 async function flushAsyncWork() {
   await act(async () => {
+    if (vi.isFakeTimers()) {
+      await vi.advanceTimersByTimeAsync(0);
+    } else {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    }
     await Promise.resolve();
     await Promise.resolve();
   });

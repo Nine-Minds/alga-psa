@@ -12,16 +12,9 @@ import { recordStockMovement } from './movements';
 import { recordStockConsumption, InsufficientStockError } from './consume';
 import { addMaterial, deleteMaterial, MaterialValidationError } from './materials';
 import { queryProductAvailability } from './availability';
+import { getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
 
-function readEnv(): Record<string, string> {
-  const p = path.resolve(__dirname, '../../../../server/.env.local');
-  const e: Record<string, string> = {};
-  for (const line of fs.readFileSync(p, 'utf8').split('\n')) {
-    const m = line.match(/^([A-Z_]+)=(.*)$/);
-    if (m) e[m[1]] = m[2];
-  }
-  return e;
-}
+const databaseConnection = getInventoryTestDatabaseConnection();
 
 let knex: Knex;
 let TENANT: string;
@@ -30,8 +23,8 @@ let CLIENT: string;
 let TICKET: string;
 
 beforeAll(async () => {
-  const e = readEnv();
-  knex = knexLib({ client: 'pg', connection: { host: 'localhost', port: 5432, user: e.DB_USER_ADMIN, password: e.DB_PASSWORD_ADMIN, database: 'server' }, pool: { min: 1, max: 6 } });
+  if (!databaseConnection) return;
+  knex = knexLib({ client: 'pg', connection: databaseConnection, pool: { min: 1, max: 6 } });
   TENANT = (await knex('tenants').select('tenant').first()).tenant;
   LOCATION = (await knex('stock_locations').where({ tenant: TENANT, is_default: true }).first()).location_id;
   CLIENT = (await knex('clients').where({ tenant: TENANT }).first()).client_id;
@@ -64,7 +57,7 @@ async function onHand(trx: Knex.Transaction, serviceId: string): Promise<number>
   return r ? Number(r.quantity_on_hand) : 0;
 }
 
-describe('F014/F015 negative-stock guard (T003)', () => {
+describe.skipIf(!databaseConnection)('F014/F015 negative-stock guard (T003)', () => {
   it('blocks insufficient consumption naming the available quantity; exact-to-zero succeeds', async () => {
     await inTx(async (trx) => {
       const svc = await makeTrackedProduct(trx, `vitest-t003-${randomUUID().slice(0, 8)}`, 2);
@@ -104,7 +97,7 @@ describe('F014/F015 negative-stock guard (T003)', () => {
   });
 });
 
-describe('F048 canonical materials service (T005)', () => {
+describe.skipIf(!databaseConnection)('F048 canonical materials service (T005)', () => {
   it('addMaterial writes the row, consumes stock, derives client from the ticket; deleteMaterial reverses', async () => {
     await inTx(async (trx) => {
       const svc = await makeTrackedProduct(trx, `vitest-t005-${randomUUID().slice(0, 8)}`, 3);
@@ -155,7 +148,7 @@ describe('F048 canonical materials service (T005)', () => {
   });
 });
 
-describe('F005 availability (T002)', () => {
+describe.skipIf(!databaseConnection)('F005 availability (T002)', () => {
   it('reports on-hand, available (minus reservations), reorder point, and per-location rows', async () => {
     await inTx(async (trx) => {
       const svc = await makeTrackedProduct(trx, `vitest-t002-${randomUUID().slice(0, 8)}`, 5, { reorder_point: 2 });
@@ -177,7 +170,7 @@ describe('F005 availability (T002)', () => {
   });
 });
 
-describe('F014 concurrency (T004) — committed race on a persistent fixture', () => {
+describe.skipIf(!databaseConnection)('F014 concurrency (T004) — committed race on a persistent fixture', () => {
   // stock_movements is an append-only ledger (no DELETE), so this test uses a single
   // idempotent get-or-create fixture (inactive product, hidden from pickers) instead of
   // disposable rows, and resets its level via `adjust` movements each run.

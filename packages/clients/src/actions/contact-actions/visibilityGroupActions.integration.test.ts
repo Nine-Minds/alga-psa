@@ -180,14 +180,11 @@ describe('contactActions visibility group integration', () => {
   });
 
   it('T001: MSP board loading returns active tenant boards without requiring board client ownership', async () => {
-    const boardsWhereMock = vi.fn(() => ({
-      andWhere: vi.fn(() => ({
-        select: vi.fn().mockResolvedValue([
-          { board_id: 'board-1', board_name: 'General Support' },
-          { board_id: 'board-2', board_name: 'Projects' },
-        ]),
-      })),
-    }));
+    const boardsSelectMock = vi.fn().mockResolvedValue([
+      { board_id: 'board-1', board_name: 'General Support' },
+      { board_id: 'board-2', board_name: 'Projects' },
+    ]);
+    const boardsAndWhereMock = vi.fn(() => ({ select: boardsSelectMock }));
 
     withTransactionMock.mockImplementation(async (_db: any, callback: (innerTrx: any) => Promise<unknown>) =>
       callback(
@@ -202,7 +199,7 @@ describe('contactActions visibility group integration', () => {
 
           if (table === 'boards') {
             return {
-              where: boardsWhereMock,
+              andWhere: boardsAndWhereMock,
             };
           }
 
@@ -214,7 +211,7 @@ describe('contactActions visibility group integration', () => {
     const { getClientPortalVisibilityBoardsByClient } = await import('./contactActions');
     const boards = await getClientPortalVisibilityBoardsByClient('contact-1');
 
-    expect(boardsWhereMock).toHaveBeenCalledWith({ tenant: 'tenant-1' });
+    expect(boardsAndWhereMock).toHaveBeenCalledWith('is_inactive', false);
     expect(boards).toEqual([
       { board_id: 'board-1', board_name: 'General Support' },
       { board_id: 'board-2', board_name: 'Projects' },

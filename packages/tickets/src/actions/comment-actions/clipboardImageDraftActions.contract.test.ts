@@ -29,7 +29,9 @@ describe('clipboardImageDraftActions contract', () => {
   it('guards against deleting documents still associated to non-ticket entities', () => {
     const source = getActionSource();
 
-    expect(source).toContain("tenantScopedTable(trx, 'document_associations', tenant)");
+    expect(source).toMatch(
+      /const documentAssociations = await tenantScopedTable<\{[\s\S]*?\}>\(trx, 'document_associations', tenant\)/
+    );
     expect(source).toContain("association.entity_type === 'ticket'");
     expect(source).toContain("reason: 'has_other_associations'");
   });
@@ -38,6 +40,7 @@ describe('clipboardImageDraftActions contract', () => {
     const source = getActionSource();
 
     expect(source).toContain("const hasDeletePermission = await hasPermission(user, 'document', 'delete')");
-    expect(source).toContain("throw new Error('Permission denied: cannot delete document attachments.')");
+    expect(source).toContain("'permission_denied'");
+    expect(source).toContain("'Permission denied: cannot delete document attachments.'");
   });
 });

@@ -27,6 +27,12 @@ vi.mock('@alga-psa/integrations/actions', () => ({
   disconnectQbo: async (...args: unknown[]) => disconnectQboMock(...args)
 }));
 
+vi.mock('../../../actions/qboActions', () => ({
+  getQboConnectionStatus: async (...args: unknown[]) => getQboConnectionStatusMock(...args),
+  saveQboCredentials: async (...args: unknown[]) => saveQboCredentialsMock(...args),
+  disconnectQbo: async (...args: unknown[]) => disconnectQboMock(...args),
+}));
+
 const disconnectedStatus = {
   connected: false,
   connections: [],

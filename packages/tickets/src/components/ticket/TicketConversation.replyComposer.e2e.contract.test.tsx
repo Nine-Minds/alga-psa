@@ -556,7 +556,7 @@ describe('TicketConversation threaded reply e2e contract', () => {
     await user.click(screen.getByRole('button', { name: 'Show in drawer' }));
     await user.click(within(screen.getByRole('dialog')).getByRole('button', { name: 'Reply' }));
 
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(await screen.findByTestId('drawer-reply')).toBeInTheDocument();
     expect(screen.getByTestId('drawer-reply').closest('.thread-children')).toHaveClass('depth-1');
   });

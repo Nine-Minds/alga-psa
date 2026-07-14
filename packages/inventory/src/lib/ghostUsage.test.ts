@@ -17,16 +17,9 @@ import {
   setGhostUsageReviewDisposition,
   upsertGhostUsageReview,
 } from './ghostUsage';
+import { getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
 
-function readEnv(): Record<string, string> {
-  const p = path.resolve(__dirname, '../../../../server/.env.local');
-  const e: Record<string, string> = {};
-  for (const line of fs.readFileSync(p, 'utf8').split('\n')) {
-    const m = line.match(/^([A-Z_]+)=(.*)$/);
-    if (m) e[m[1]] = m[2];
-  }
-  return e;
-}
+const databaseConnection = getInventoryTestDatabaseConnection();
 
 let knex: Knex;
 let TENANT: string;
@@ -39,10 +32,10 @@ const CLOSED_LATER = '2031-01-16T12:00:00.000Z';
 const FILTERS = { closedFrom: '2031-01-01', closedTo: '2031-01-31' };
 
 beforeAll(async () => {
-  const e = readEnv();
+  if (!databaseConnection) return;
   knex = knexLib({
     client: 'pg',
-    connection: { host: 'localhost', port: 5432, user: e.DB_USER_ADMIN, password: e.DB_PASSWORD_ADMIN, database: 'server' },
+    connection: databaseConnection,
     pool: { min: 1, max: 4 },
   });
   TENANT = (await knex('tenants').select('tenant').first()).tenant;
@@ -157,7 +150,7 @@ async function addTicketMaterial(trx: Knex.Transaction, ticketId: string): Promi
   });
 }
 
-describe('ghost usage report queries', () => {
+describe.skipIf(!databaseConnection)('ghost usage report queries', () => {
   it('T036: material-less closed hardware tickets are candidates until ticket_materials exists', async () => {
     await inTx(async (trx) => {
       const scope = await makeScope(trx);
@@ -315,7 +308,7 @@ describe('ghost usage action and parsing contracts', () => {
   });
 });
 
-describe('ghost usage AI settings', () => {
+describe.skipIf(!databaseConnection)('ghost usage AI settings', () => {
   it('defaults disabled, enables nested setting, and preserves unrelated settings', async () => {
     await inTx(async (trx) => {
       await trx('tenant_settings')
