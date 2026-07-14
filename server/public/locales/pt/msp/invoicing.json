@@ -339,9 +339,21 @@
       "refresh": "Ocorreu um erro ao atualizar os dados da fatura.",
       "updateFailed": "Erro ao atualizar fatura",
       "generateFailed": "Erro ao gerar fatura",
+      "NO_BILLING_EMAIL": "{{clientName}} não tem um e-mail de faturação. Defina um endereço de e-mail na localização de faturação do cliente e tente novamente.",
+      "CLIENT_NOT_FOUND": "O cliente selecionado não foi encontrado. Atualize a página e tente novamente.",
+      "SERVICE_NOT_FOUND": "O serviço {{serviceId}} não foi encontrado. Atualize a página e tente novamente.",
+      "INVALID_QUANTITY": "A quantidade deve ser maior que zero.",
+      "NO_TAX_RATE": "Não foi encontrada uma taxa de imposto ativa para {{region}} em {{date}}.",
+      "DISCOUNT_TARGET_NOT_FOUND": "O serviço {{serviceId}} para este desconto não foi encontrado.",
+      "INVOICE_NUMBER_CONFLICT": "Este número de fatura já está em uso.",
+      "PERMISSION_DENIED": "Não tem permissão para criar ou atualizar esta fatura.",
+      "UNEXPECTED": "Ocorreu um erro ao gerar a fatura. Indique a referência {{ref}} ao contactar o suporte.",
       "salesOrderGenerateFailed": "Could not generate the sales order invoice.",
       "salesOrderNothingToInvoice": "Nothing remains to invoice for this sales order.",
       "salesOrderNotInvoiceable": "That sales order is no longer available to invoice."
+    },
+    "warnings": {
+      "noBillingEmail": "Este cliente não tem um e-mail de faturação. Defina um endereço de e-mail na localização de faturação antes de gerar a fatura."
     },
     "errorFallback": {
       "title": "Algo deu errado",

@@ -339,9 +339,21 @@
       "refresh": "Beim Aktualisieren der Rechnungsdaten ist ein Fehler aufgetreten.",
       "updateFailed": "Fehler beim Aktualisieren der Rechnung",
       "generateFailed": "Fehler beim Generieren der Rechnung",
+      "NO_BILLING_EMAIL": "Für {{clientName}} ist keine Rechnungs-E-Mail-Adresse hinterlegt. Lege eine E-Mail-Adresse am Rechnungsstandort des Kunden fest und versuche es erneut.",
+      "CLIENT_NOT_FOUND": "Der ausgewählte Kunde wurde nicht gefunden. Aktualisiere die Seite und versuche es erneut.",
+      "SERVICE_NOT_FOUND": "Der Dienst {{serviceId}} wurde nicht gefunden. Aktualisiere die Seite und versuche es erneut.",
+      "INVALID_QUANTITY": "Die Menge muss größer als null sein.",
+      "NO_TAX_RATE": "Für {{region}} wurde am {{date}} kein aktiver Steuersatz gefunden.",
+      "DISCOUNT_TARGET_NOT_FOUND": "Der Dienst {{serviceId}} für diesen Rabatt wurde nicht gefunden.",
+      "INVOICE_NUMBER_CONFLICT": "Diese Rechnungsnummer wird bereits verwendet.",
+      "PERMISSION_DENIED": "Du hast keine Berechtigung, diese Rechnung zu erstellen oder zu aktualisieren.",
+      "UNEXPECTED": "Beim Generieren der Rechnung ist ein Fehler aufgetreten. Gib bei der Kontaktaufnahme mit dem Support die Referenz {{ref}} an.",
       "salesOrderGenerateFailed": "Could not generate the sales order invoice.",
       "salesOrderNothingToInvoice": "Nothing remains to invoice for this sales order.",
       "salesOrderNotInvoiceable": "That sales order is no longer available to invoice."
+    },
+    "warnings": {
+      "noBillingEmail": "Für diesen Kunden ist keine Rechnungs-E-Mail-Adresse hinterlegt. Lege vor dem Generieren der Rechnung eine E-Mail-Adresse am Rechnungsstandort fest."
     },
     "errorFallback": {
       "title": "Etwas ist schief gelaufen",

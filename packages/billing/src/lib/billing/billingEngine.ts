@@ -4813,44 +4813,48 @@ export class BillingEngine {
    * Recalculates an entire invoice, including tax amounts and totals.
    * This is used when updating manual items to ensure all calculations are consistent.
    */
-  async recalculateInvoice(invoiceId: string): Promise<void> {
-    await this.initKnex();
-    if (!this.tenant) {
+  async recalculateInvoice(
+    invoiceId: string,
+    existingTransaction?: Knex.Transaction,
+    existingTenant?: string,
+  ): Promise<void> {
+    if (!existingTransaction || (!this.tenant && !existingTenant)) {
+      await this.initKnex();
+    }
+
+    const tenant = existingTenant ?? this.tenant;
+    if (!tenant) {
       throw new Error("tenant context not found");
     }
 
-    let tenant = this.tenant;
-    const db = tenantDb(this.knex, tenant);
+    const connection = existingTransaction ?? this.knex;
+    const db = tenantDb(connection, tenant);
 
     console.log(`Recalculating invoice ${invoiceId}`);
-
-    if (!this.tenant) {
-      throw new Error("tenant context not found");
-    }
 
     const invoice = await db.table("invoices")
       .where({
         invoice_id: invoiceId,
-        tenant: this.tenant,
+        tenant,
       })
       .first();
 
     if (!invoice) {
       throw new Error(
-        `Invoice ${invoiceId} not found in tenant ${this.tenant}`,
+        `Invoice ${invoiceId} not found in tenant ${tenant}`,
       );
     }
 
     const client = await db.table("clients")
       .where({
         client_id: invoice.client_id,
-        tenant: this.tenant,
+        tenant,
       })
       .first();
 
     if (!client) {
       throw new Error(
-        `Client ${invoice.client_id} not found in tenant ${this.tenant}`,
+        `Client ${invoice.client_id} not found in tenant ${tenant}`,
       );
     }
 
@@ -4870,7 +4874,7 @@ export class BillingEngine {
     // Recalculation is intentionally financial-only. Canonical recurring
     // invoice_charge_details rows remain the persisted source of service-period
     // truth after invoice creation; this path should only update tax and totals.
-    await this.knex.transaction(async (trx) => {
+    const recalculate = async (trx: Knex.Transaction) => {
       // Step 1: Recalculate and distribute tax across all items using the service function
       console.log(
         `[recalculateInvoice] Calling calculateAndDistributeTax for invoice ${invoiceId}`,
@@ -4913,7 +4917,13 @@ export class BillingEngine {
       // If discount amounts need recalculation based on the new subtotal *before* tax distribution,
       // that logic would need to be added back here or integrated into calculateAndDistributeTax.
       // For now, we follow the instruction to delegate fully.
-    });
+    };
+
+    if (existingTransaction) {
+      await recalculate(existingTransaction);
+    } else {
+      await withTransaction(this.knex, recalculate);
+    }
 
     // Removed console log referencing deleted variables subtotal/totalTax
 

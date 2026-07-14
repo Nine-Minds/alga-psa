@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { persistManualInvoiceCharges } from '../../../../../packages/billing/src/services/invoiceService';
+import {
+  persistManualInvoiceCharges,
+  validateClientBillingEmail,
+} from '../../../../../packages/billing/src/services/invoiceService';
 
 function normalizeColumnName(columnName: string) {
   const [, unqualifiedName] = columnName.match(/^(?:[^.]+)\.(.+)$/) ?? [];
@@ -41,6 +44,9 @@ function createMockTx(existingInvoiceCharges: Array<Record<string, any>> = []) {
       select() {
         return builder;
       },
+      orderByRaw() {
+        return builder;
+      },
       async first() {
         return filteredRows[0] ?? null;
       },
@@ -59,6 +65,73 @@ function createMockTx(existingInvoiceCharges: Array<Record<string, any>> = []) {
 }
 
 describe('manual invoice service-period policy', () => {
+  it('returns NO_BILLING_EMAIL with the client name when no billing location email exists', async () => {
+    const { tx } = createMockTx();
+
+    await expect(validateClientBillingEmail(
+      tx,
+      'tenant-1',
+      'client-1',
+      'Omni Energy Partners',
+    )).resolves.toMatchObject({
+      valid: false,
+      code: 'NO_BILLING_EMAIL',
+      params: { clientName: 'Omni Energy Partners' },
+    });
+  });
+
+  it('returns SERVICE_NOT_FOUND with the missing service identifier', async () => {
+    const { tx } = createMockTx();
+
+    await expect(persistManualInvoiceCharges(
+      tx,
+      'invoice-1',
+      [{ service_id: 'service-404', description: 'Missing service', quantity: 1, rate: 2500 }] as any,
+      { client_id: 'client-1', region_code: 'US-WA' },
+      { user: { id: 'user-1' } } as any,
+      'tenant-1',
+    )).rejects.toMatchObject({
+      code: 'SERVICE_NOT_FOUND',
+      params: { serviceId: 'service-404' },
+    });
+  });
+
+  it('returns INVALID_QUANTITY before persisting a non-positive line', async () => {
+    const { tx, inserts } = createMockTx();
+
+    await expect(persistManualInvoiceCharges(
+      tx,
+      'invoice-1',
+      [{ description: 'Invalid quantity', quantity: 0, rate: 2500 }] as any,
+      { client_id: 'client-1', region_code: 'US-WA' },
+      { user: { id: 'user-1' } } as any,
+      'tenant-1',
+    )).rejects.toMatchObject({ code: 'INVALID_QUANTITY' });
+    expect(inserts.invoice_charges).toHaveLength(0);
+  });
+
+  it('returns DISCOUNT_TARGET_NOT_FOUND with the missing service identifier', async () => {
+    const { tx } = createMockTx();
+
+    await expect(persistManualInvoiceCharges(
+      tx,
+      'invoice-1',
+      [{
+        description: 'Orphan discount',
+        quantity: 1,
+        rate: 100,
+        is_discount: true,
+        applies_to_service_id: 'service-404',
+      }] as any,
+      { client_id: 'client-1', region_code: 'US-WA' },
+      { user: { id: 'user-1' } } as any,
+      'tenant-1',
+    )).rejects.toMatchObject({
+      code: 'DISCOUNT_TARGET_NOT_FOUND',
+      params: { serviceId: 'service-404' },
+    });
+  });
+
   it('manual invoice charges do not create time-entry source links', async () => {
     const { tx, inserts } = createMockTx();
 

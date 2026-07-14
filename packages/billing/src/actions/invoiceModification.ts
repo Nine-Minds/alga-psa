@@ -38,6 +38,12 @@ import {
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+import logger from '@alga-psa/core/logger';
+import {
+  ManualInvoiceError,
+  type ManualInvoiceErrorCode,
+  type ManualInvoiceFailure,
+} from '../errors/manualInvoiceErrors';
 
 function tenantScopedTable<Row extends object = Record<string, unknown>>(
   conn: Knex | Knex.Transaction,
@@ -161,7 +167,7 @@ export type DraftInvoicePropertiesUpdateActionResult =
   | InvoiceActionError;
 
 export type InvoiceMutationActionResult = InvoiceActionSuccess | InvoiceActionError;
-export type InvoiceManualItemsUpdateActionResult = InvoiceViewModel | InvoiceActionError;
+export type InvoiceManualItemsUpdateActionResult = InvoiceViewModel | InvoiceActionError | ManualInvoiceFailure;
 
 function expectedInvoiceActionError(message: string): ExpectedInvoiceActionError {
   return new ExpectedInvoiceActionError(message);
@@ -173,6 +179,59 @@ function toInvoiceActionError(error: unknown): InvoiceActionError | null {
   }
 
   return null;
+}
+
+function manualInvoiceUpdateFailure(
+  code: Exclude<ManualInvoiceErrorCode, 'UNEXPECTED'>,
+  message: string,
+  context: Record<string, string>,
+  params: Record<string, string> = {},
+): ManualInvoiceFailure {
+  logger.warn(`[updateInvoiceManualItems] ${code}`, {
+    ...context,
+    ...params,
+  });
+
+  return {
+    success: false,
+    code,
+    params,
+    message,
+    error: message,
+  };
+}
+
+function unexpectedManualInvoiceUpdateFailure(
+  error: unknown,
+  context: Record<string, string>,
+): ManualInvoiceFailure {
+  const ref = crypto.randomUUID().slice(0, 8);
+  const message = 'Unexpected error updating invoice';
+  logger.error('[updateInvoiceManualItems] UNEXPECTED', {
+    ...context,
+    ref,
+    error: error instanceof Error ? error.message : String(error),
+    stack: error instanceof Error ? error.stack : undefined,
+  });
+
+  return {
+    success: false,
+    code: 'UNEXPECTED',
+    params: { ref },
+    message,
+    error: message,
+    ref,
+  };
+}
+
+function isManualInvoiceNumberConflict(error: unknown): boolean {
+  if (!error || typeof error !== 'object') {
+    return false;
+  }
+
+  const databaseError = error as { code?: string; constraint?: string };
+  return databaseError.code === '23505' &&
+    databaseError.constraint === 'unique_invoice_number_per_tenant';
 }
 
 export const updateDraftInvoiceProperties = withAuth(async (
@@ -742,57 +801,89 @@ export const updateInvoiceManualItems = withAuth(async (
   invoiceId: string,
   changes: ManualItemsUpdate
 ): Promise<InvoiceManualItemsUpdateActionResult> => {
+  const context = {
+    tenant,
+    invoiceId,
+    clientId: '',
+    userId: user.user_id,
+  };
+
   if (!await hasPermission(user, 'invoice', 'update')) {
-    return permissionError('Permission denied: invoice update required');
+    return manualInvoiceUpdateFailure(
+      'PERMISSION_DENIED',
+      'Permission denied: invoice update required',
+      context,
+    );
   }
-  const session = await getSession();
-  const billingEngine = new BillingEngine();
-
-  console.log('[updateInvoiceManualItems] session:', session);
-
-  if (!session?.user?.id) {
-    return permissionError('Unauthorized: No authenticated user found');
-  }
-
-  const { knex } = await createTenantKnex();
-
-  // Load and validate invoice
-  const invoice = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await tenantScopedTable(trx, tenant, 'invoices')
-      .where({ invoice_id: invoiceId })
-      .first();
-  });
-
-  if (!invoice) {
-    return actionError('Invoice not found');
-  }
-
-  if (['paid', 'cancelled'].includes(invoice.status)) {
-    return actionError('Cannot modify a paid or cancelled invoice');
-  }
-
-  const client = await withTransaction(knex, async (trx: Knex.Transaction) => {
-    return await tenantScopedTable(trx, tenant, 'clients')
-      .where({ client_id: invoice.client_id })
-      .first();
-  });
-
-  if (!client) {
-    return actionError('Client not found');
-  }
-
-  const currentDate = Temporal.Now.plainDateISO().toString();
 
   try {
+    const session = await getSession();
+    if (!session?.user?.id) {
+      return manualInvoiceUpdateFailure(
+        'PERMISSION_DENIED',
+        'Unauthorized: No authenticated user found',
+        context,
+      );
+    }
+    context.userId = session.user.id;
+
+    const { knex } = await createTenantKnex();
+    const invoice = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await tenantScopedTable(trx, tenant, 'invoices')
+        .where({ invoice_id: invoiceId })
+        .first();
+    });
+
+    if (!invoice) {
+      return actionError('Invoice not found');
+    }
+    context.clientId = invoice.client_id;
+
+    if (['paid', 'cancelled'].includes(invoice.status)) {
+      return actionError('Cannot modify a paid or cancelled invoice');
+    }
+
+    const client = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      return await tenantScopedTable(trx, tenant, 'clients')
+        .where({ client_id: invoice.client_id })
+        .first();
+    });
+
+    if (!client) {
+      return manualInvoiceUpdateFailure(
+        'CLIENT_NOT_FOUND',
+        'Client not found',
+        context,
+      );
+    }
+
     await updateManualInvoiceItemsInternal(invoiceId, changes, session!, tenant); // Renamed internal call
+    return await Invoice.getFullInvoiceById(knex, tenant, invoiceId);
   } catch (error) {
+    if (error instanceof ManualInvoiceError) {
+      return manualInvoiceUpdateFailure(
+        error.code,
+        error.message,
+        context,
+        error.params,
+      );
+    }
+
+    if (isManualInvoiceNumberConflict(error)) {
+      return manualInvoiceUpdateFailure(
+        'INVOICE_NUMBER_CONFLICT',
+        'Invoice number must be unique',
+        context,
+      );
+    }
+
     const expectedError = toInvoiceActionError(error);
     if (expectedError) {
       return expectedError;
     }
-    throw error;
+
+    return unexpectedManualInvoiceUpdateFailure(error, context);
   }
-  return await Invoice.getFullInvoiceById(knex, tenant, invoiceId);
 });
 
 // Internal helper function to avoid recursive export/import loop
@@ -995,7 +1086,10 @@ async function updateManualInvoiceItemsInternal(
           error.code === '23505' &&
           'constraint' in error &&
               error.constraint === 'unique_invoice_number_per_tenant') {
-          throw expectedInvoiceActionError('Invoice number must be unique');
+          throw new ManualInvoiceError(
+            'INVOICE_NUMBER_CONFLICT',
+            'Invoice number must be unique',
+          );
         }
         throw error;
       }
@@ -1005,10 +1099,10 @@ async function updateManualInvoiceItemsInternal(
           .where({ invoice_id: invoiceId })
           .update({ updated_at: currentDate });
     }
-  });
 
-  // Recalculate totals after modifications
-  await billingEngine.recalculateInvoice(invoiceId);
+    // Recalculate before commit so tax/totals failures roll back item mutations.
+    await billingEngine.recalculateInvoice(invoiceId, trx, tenant);
+  });
 
 }
 

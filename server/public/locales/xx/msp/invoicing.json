@@ -339,9 +339,21 @@
       "refresh": "11111",
       "updateFailed": "11111",
       "generateFailed": "11111",
+      "NO_BILLING_EMAIL": "11111 {{clientName}} 11111",
+      "CLIENT_NOT_FOUND": "11111",
+      "SERVICE_NOT_FOUND": "11111 {{serviceId}} 11111",
+      "INVALID_QUANTITY": "11111",
+      "NO_TAX_RATE": "11111 {{region}} 11111 {{date}} 11111",
+      "DISCOUNT_TARGET_NOT_FOUND": "11111 {{serviceId}} 11111",
+      "INVOICE_NUMBER_CONFLICT": "11111",
+      "PERMISSION_DENIED": "11111",
+      "UNEXPECTED": "11111 {{ref}} 11111",
       "salesOrderGenerateFailed": "11111",
       "salesOrderNothingToInvoice": "11111",
       "salesOrderNotInvoiceable": "11111"
+    },
+    "warnings": {
+      "noBillingEmail": "11111"
     },
     "errorFallback": {
       "title": "11111",

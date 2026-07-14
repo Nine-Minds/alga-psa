@@ -10,6 +10,7 @@ import type {
 import ClientTaxSettings from '../models/clientTaxSettings';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { v4 as uuid4 } from 'uuid';
+import { ManualInvoiceError } from '../errors/manualInvoiceErrors';
 
 export class TaxService {
   constructor() {
@@ -113,7 +114,11 @@ export class TaxService {
         // Optional: Log all rates for debugging
         // Debug option: inspect all tenant tax rates through the tenantDb facade.
         // console.log('All tax rates:', allTaxRates);
-        throw new Error(`No active tax rate(s) found for region ${regionCode} on date ${date}`);
+        throw new ManualInvoiceError(
+          'NO_TAX_RATE',
+          `No active tax rate(s) found for region ${regionCode} on date ${date}`,
+          { region: regionCode, date },
+        );
       }
 
       console.log('Applicable rates:', applicableRates);

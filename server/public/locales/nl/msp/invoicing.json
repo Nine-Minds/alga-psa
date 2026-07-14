@@ -339,9 +339,21 @@
       "refresh": "Er is een fout opgetreden bij het vernieuwen van de factuurgegevens.",
       "updateFailed": "Fout bij bijwerken factuur",
       "generateFailed": "Fout bij genereren factuur",
+      "NO_BILLING_EMAIL": "{{clientName}} heeft geen facturatie-e-mailadres. Stel een e-mailadres in op de facturatielocatie van de klant en probeer het opnieuw.",
+      "CLIENT_NOT_FOUND": "De geselecteerde klant is niet gevonden. Vernieuw de pagina en probeer het opnieuw.",
+      "SERVICE_NOT_FOUND": "Service {{serviceId}} is niet gevonden. Vernieuw de pagina en probeer het opnieuw.",
+      "INVALID_QUANTITY": "De hoeveelheid moet groter zijn dan nul.",
+      "NO_TAX_RATE": "Er is geen actief belastingtarief gevonden voor {{region}} op {{date}}.",
+      "DISCOUNT_TARGET_NOT_FOUND": "Service {{serviceId}} voor deze korting is niet gevonden.",
+      "INVOICE_NUMBER_CONFLICT": "Dit factuurnummer is al in gebruik.",
+      "PERMISSION_DENIED": "U bent niet gemachtigd om deze factuur te maken of bij te werken.",
+      "UNEXPECTED": "Er is iets misgegaan bij het genereren van de factuur. Vermeld referentie {{ref}} wanneer u contact opneemt met ondersteuning.",
       "salesOrderGenerateFailed": "Could not generate the sales order invoice.",
       "salesOrderNothingToInvoice": "Nothing remains to invoice for this sales order.",
       "salesOrderNotInvoiceable": "That sales order is no longer available to invoice."
+    },
+    "warnings": {
+      "noBillingEmail": "Deze klant heeft geen facturatie-e-mailadres. Stel een e-mailadres in op de facturatielocatie voordat u de factuur genereert."
     },
     "errorFallback": {
       "title": "Er is iets misgegaan",

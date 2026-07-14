@@ -339,9 +339,21 @@
       "refresh": "An error occurred while refreshing invoice data.",
       "updateFailed": "Error updating invoice",
       "generateFailed": "Error generating invoice",
+      "NO_BILLING_EMAIL": "{{clientName}} has no billing email. Set an email address on the client's billing location, then try again.",
+      "CLIENT_NOT_FOUND": "The selected client could not be found. Refresh and try again.",
+      "SERVICE_NOT_FOUND": "Service {{serviceId}} could not be found. Refresh and try again.",
+      "INVALID_QUANTITY": "Quantity must be greater than zero.",
+      "NO_TAX_RATE": "No active tax rate was found for {{region}} on {{date}}.",
+      "DISCOUNT_TARGET_NOT_FOUND": "Service {{serviceId}} could not be found for this discount.",
+      "INVOICE_NUMBER_CONFLICT": "This invoice number is already in use.",
+      "PERMISSION_DENIED": "You do not have permission to create or update this invoice.",
+      "UNEXPECTED": "Something went wrong generating the invoice. Quote reference {{ref}} when contacting support.",
       "salesOrderGenerateFailed": "Could not generate the sales order invoice.",
       "salesOrderNothingToInvoice": "Nothing remains to invoice for this sales order.",
       "salesOrderNotInvoiceable": "That sales order is no longer available to invoice."
+    },
+    "warnings": {
+      "noBillingEmail": "This client has no billing email. Set an email address on the client's billing location before generating the invoice."
     },
     "errorFallback": {
       "title": "Something went wrong",

@@ -339,9 +339,21 @@
       "refresh": "55555",
       "updateFailed": "55555",
       "generateFailed": "55555",
+      "NO_BILLING_EMAIL": "55555 {{clientName}} 55555",
+      "CLIENT_NOT_FOUND": "55555",
+      "SERVICE_NOT_FOUND": "55555 {{serviceId}} 55555",
+      "INVALID_QUANTITY": "55555",
+      "NO_TAX_RATE": "55555 {{region}} 55555 {{date}} 55555",
+      "DISCOUNT_TARGET_NOT_FOUND": "55555 {{serviceId}} 55555",
+      "INVOICE_NUMBER_CONFLICT": "55555",
+      "PERMISSION_DENIED": "55555",
+      "UNEXPECTED": "55555 {{ref}} 55555",
       "salesOrderGenerateFailed": "55555",
       "salesOrderNothingToInvoice": "55555",
       "salesOrderNotInvoiceable": "55555"
+    },
+    "warnings": {
+      "noBillingEmail": "55555"
     },
     "errorFallback": {
       "title": "55555",

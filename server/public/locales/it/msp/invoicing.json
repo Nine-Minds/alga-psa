@@ -339,9 +339,21 @@
       "refresh": "Si è verificato un errore durante l'aggiornamento dei dati della fattura.",
       "updateFailed": "Errore durante l'aggiornamento della fattura",
       "generateFailed": "Errore nella generazione della fattura",
+      "NO_BILLING_EMAIL": "{{clientName}} non ha un indirizzo e-mail di fatturazione. Imposta un indirizzo e-mail nella sede di fatturazione del cliente e riprova.",
+      "CLIENT_NOT_FOUND": "Il cliente selezionato non è stato trovato. Aggiorna la pagina e riprova.",
+      "SERVICE_NOT_FOUND": "Il servizio {{serviceId}} non è stato trovato. Aggiorna la pagina e riprova.",
+      "INVALID_QUANTITY": "La quantità deve essere maggiore di zero.",
+      "NO_TAX_RATE": "Non è stata trovata un'aliquota fiscale attiva per {{region}} alla data {{date}}.",
+      "DISCOUNT_TARGET_NOT_FOUND": "Il servizio {{serviceId}} per questo sconto non è stato trovato.",
+      "INVOICE_NUMBER_CONFLICT": "Questo numero di fattura è già in uso.",
+      "PERMISSION_DENIED": "Non disponi dell'autorizzazione per creare o aggiornare questa fattura.",
+      "UNEXPECTED": "Si è verificato un errore durante la generazione della fattura. Indica il riferimento {{ref}} quando contatti l'assistenza.",
       "salesOrderGenerateFailed": "Could not generate the sales order invoice.",
       "salesOrderNothingToInvoice": "Nothing remains to invoice for this sales order.",
       "salesOrderNotInvoiceable": "That sales order is no longer available to invoice."
+    },
+    "warnings": {
+      "noBillingEmail": "Questo cliente non ha un indirizzo e-mail di fatturazione. Imposta un indirizzo e-mail nella sede di fatturazione prima di generare la fattura."
     },
     "errorFallback": {
       "title": "Qualcosa è andato storto",
