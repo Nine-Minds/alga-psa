@@ -278,11 +278,14 @@ Every outbound webhook is delivered as JSON:
       "text": "Scheduled onsite visit for 3 PM.",
       "author": "Pat Lee",
       "timestamp": "2026-05-05T14:25:00.000Z",
-      "is_internal": false
+      "is_internal": false,
+      "author_type": "internal"
     }
   }
 }
 ```
+
+`author_type` identifies whether the comment was posted by an MSP agent or by a client through the client portal. Possible values are `"internal"` (an MSP team member wrote the comment), `"client"` (a contact replied via the client portal), or `null` (the author type is unknown, for example on comments created before this field was tracked). Use `author_type` to distinguish client-initiated replies from agent replies without a separate user-record lookup.
 
 Comment payloads never include attachments.
 
