@@ -12,6 +12,7 @@ import { updateSubscriptionMetadata } from '../services/stripe-service.js';
 import { getSecret } from '@alga-psa/core/secrets';
 import { tierFromStripeProduct } from '@ee/lib/stripe/stripeTierMapping.js';
 import { normalizeProductCode } from './product-bootstrap-resolver.js';
+import type { SeedRunLog } from './onboarding-seeds-operations.js';
 
 const logger = () => Context.current().log;
 const TENANT_CREATION_SUBSCRIPTION_DISCOVERY_CONTEXT = 'tenant-creation-subscription-discovery';
@@ -588,8 +589,11 @@ export async function setupTenantDataInDB(
 /**
  * Rollback tenant creation (for error handling)
  */
-export async function rollbackTenantInDB(tenantId: string): Promise<void> {
-  const log = logger();
+export async function rollbackTenantInDB(
+  tenantId: string,
+  options?: { log?: SeedRunLog },
+): Promise<void> {
+  const log = options?.log ?? logger();
   log.info('Rolling back tenant creation', { tenantId });
 
   try {

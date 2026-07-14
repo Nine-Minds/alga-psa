@@ -12,14 +12,20 @@ import {
 
 const logger = () => Context.current().log;
 
+export interface SeedRunLog {
+  info: (msg: string, meta?: Record<string, unknown>) => void;
+  error: (msg: string, meta?: Record<string, unknown>) => void;
+}
+
 /**
  * Runs the onboarding seed files for a specific tenant
  */
 export async function runOnboardingSeeds(
   tenantId: string,
   productCode?: ProductCode | string | null,
+  options?: { include?: (fileName: string) => boolean; log?: SeedRunLog },
 ): Promise<{ success: boolean; seedsApplied: string[] }> {
-  const log = logger();
+  const log = options?.log ?? logger();
   const resolvedProductCode = normalizeProductCode(productCode);
   const seedsApplied: string[] = [];
   
@@ -58,10 +64,10 @@ export async function runOnboardingSeeds(
       });
 
       // Filter and sort seed files (case-insensitive for cross-platform compatibility)
-      const seedFiles = await listProductSeedFiles({
+      const seedFiles = (await listProductSeedFiles({
         onboardingSeedsRoot,
         productCode: resolvedProductCode,
-      });
+      })).filter(options?.include ?? (() => true));
       log.info('Resolved product onboarding seeds', {
         tenantId,
         productCode: resolvedProductCode,

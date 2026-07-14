@@ -53,7 +53,7 @@ export const MSP_ROUTE_RULES: readonly RouteRule[] = [
   },
   {
     group: 'msp_core_helpdesk',
-    staticPrefixes: ['/msp/tickets', '/msp/create-ticket', '/msp/clients', '/msp/contacts', '/msp/knowledge-base', '/msp/reports', '/msp/settings', '/msp/profile', '/msp/security-settings'],
+    staticPrefixes: ['/msp/tickets', '/msp/create-ticket', '/msp/clients', '/msp/contacts', '/msp/knowledge-base', '/msp/reports', '/msp/settings', '/msp/profile', '/msp/security-settings', '/msp/account'],
     behaviorByProduct: { psa: 'allowed', algadesk: 'allowed' },
   },
   {
