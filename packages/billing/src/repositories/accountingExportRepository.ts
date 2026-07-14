@@ -10,6 +10,7 @@ import {
   AccountingExportServicePeriodSource,
   AccountingExportStatus
 } from '@alga-psa/types';
+import { normalizeAccountingExportCalendarDate } from '../services/accountingExportDateUtils';
 
 type Nullable<T> = T | null | undefined;
 
@@ -72,56 +73,7 @@ function normalizeRecurringDetailPeriods(
 }
 
 function normalizeIsoDateField(value: unknown): string | null | undefined {
-  if (value === undefined) {
-    return undefined;
-  }
-
-  if (value === null) {
-    return null;
-  }
-
-  if (value instanceof Date) {
-    const isLocalMidnight =
-      value.getHours() === 0 &&
-      value.getMinutes() === 0 &&
-      value.getSeconds() === 0 &&
-      value.getMilliseconds() === 0;
-    const isUtcMidnight =
-      value.getUTCHours() === 0 &&
-      value.getUTCMinutes() === 0 &&
-      value.getUTCSeconds() === 0 &&
-      value.getUTCMilliseconds() === 0;
-
-    const year = isLocalMidnight ? value.getFullYear() : value.getUTCFullYear();
-    const month = isLocalMidnight ? value.getMonth() + 1 : value.getUTCMonth() + 1;
-    const day = isLocalMidnight ? value.getDate() : value.getUTCDate();
-
-    if (isLocalMidnight || isUtcMidnight) {
-      return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T00:00:00.000Z`;
-    }
-
-    return value.toISOString();
-  }
-
-  if (typeof value === 'string') {
-    const trimmed = value.trim();
-    if (!trimmed) {
-      return null;
-    }
-
-    if (/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
-      return `${trimmed}T00:00:00.000Z`;
-    }
-
-    return trimmed;
-  }
-
-  const date = new Date(String(value));
-  if (Number.isNaN(date.getTime())) {
-    return undefined;
-  }
-
-  return date.toISOString();
+  return normalizeAccountingExportCalendarDate(value);
 }
 
 function normalizeLinePayload(payload: unknown): AccountingExportLinePayload | null {

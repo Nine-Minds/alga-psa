@@ -150,7 +150,7 @@ export interface XeroConnectionStatus {
 
 function xeroConnectionStatusError(
   error: string,
-  errorCode: NonNullable<XeroConnectionStatus['errorCode']>
+  errorCode?: NonNullable<XeroConnectionStatus['errorCode']>
 ): XeroConnectionStatus {
   return {
     connections: [],
@@ -316,58 +316,64 @@ export const getXeroConnectionStatus = withAuth(async (
 
   try {
     await checkBillingReadAccess(user);
+
+    const secretProvider = await getSecretProviderInstance();
+    const [storedClientId, storedClientSecret, redirectUri, resolvedCredentials] = await Promise.all([
+      secretProvider.getTenantSecret(tenant, XERO_CLIENT_ID_SECRET_NAME),
+      secretProvider.getTenantSecret(tenant, XERO_CLIENT_SECRET_SECRET_NAME),
+      getXeroRedirectUri(secretProvider),
+      resolveXeroOAuthCredentials(tenant, secretProvider).catch(() => null)
+    ]);
+    const clientId = typeof storedClientId === 'string' ? storedClientId.trim() : '';
+    const clientSecret = typeof storedClientSecret === 'string' ? storedClientSecret.trim() : '';
+    const summaries = await getXeroConnectionSummaries(tenant);
+    const defaultConnection = summaries[0];
+    const credentials = {
+      clientIdConfigured: Boolean(clientId),
+      clientSecretConfigured: Boolean(clientSecret),
+      ready: Boolean(resolvedCredentials),
+      clientIdMasked: clientId ? maskSecret(clientId) : undefined,
+      clientSecretMasked: clientSecret ? maskSecret(clientSecret) : undefined
+    };
+
+    let connected = false;
+    let error: string | undefined;
+
+    if (!credentials.ready) {
+      error = 'Add a Xero client ID and client secret before connecting live Xero.';
+    } else if (!defaultConnection) {
+      error = 'No live Xero organisation is connected yet. Save credentials, then click Connect Xero.';
+    } else {
+      try {
+        await XeroClientService.create(tenant, defaultConnection.connectionId);
+        connected = true;
+      } catch (err) {
+        error = formatXeroStatusError(err);
+      }
+    }
+
+    return {
+      connections: summaries,
+      connected,
+      defaultConnectionId: defaultConnection?.connectionId,
+      defaultConnection,
+      redirectUri,
+      scopes: getXeroOAuthScopes(),
+      credentials,
+      error
+    };
   } catch (error) {
     if (error instanceof Error && error.message.startsWith('Forbidden')) {
       return xeroConnectionStatusError(error.message, 'FORBIDDEN');
     }
-    throw error;
+    logger.error('[xeroActions] Failed to load Xero connection status', {
+      tenantId: tenant,
+      error
+    });
+    return xeroConnectionStatusError(
+      'Failed to load Xero connection status. Please refresh and try again.'
+    );
   }
-
-  const secretProvider = await getSecretProviderInstance();
-  const [storedClientId, storedClientSecret, redirectUri, resolvedCredentials] = await Promise.all([
-    secretProvider.getTenantSecret(tenant, XERO_CLIENT_ID_SECRET_NAME),
-    secretProvider.getTenantSecret(tenant, XERO_CLIENT_SECRET_SECRET_NAME),
-    getXeroRedirectUri(secretProvider),
-    resolveXeroOAuthCredentials(tenant, secretProvider).catch(() => null)
-  ]);
-  const clientId = typeof storedClientId === 'string' ? storedClientId.trim() : '';
-  const clientSecret = typeof storedClientSecret === 'string' ? storedClientSecret.trim() : '';
-  const summaries = await getXeroConnectionSummaries(tenant);
-  const defaultConnection = summaries[0];
-  const credentials = {
-    clientIdConfigured: Boolean(clientId),
-    clientSecretConfigured: Boolean(clientSecret),
-    ready: Boolean(resolvedCredentials),
-    clientIdMasked: clientId ? maskSecret(clientId) : undefined,
-    clientSecretMasked: clientSecret ? maskSecret(clientSecret) : undefined
-  };
-
-  let connected = false;
-  let error: string | undefined;
-
-  if (!credentials.ready) {
-    error = 'Add a Xero client ID and client secret before connecting live Xero.';
-  } else if (!defaultConnection) {
-    error = 'No live Xero organisation is connected yet. Save credentials, then click Connect Xero.';
-  } else {
-    try {
-      await XeroClientService.create(tenant, defaultConnection.connectionId);
-      connected = true;
-    } catch (err) {
-      error = formatXeroStatusError(err);
-    }
-  }
-
-  return {
-    connections: summaries,
-    connected,
-    defaultConnectionId: defaultConnection?.connectionId,
-    defaultConnection,
-    redirectUri,
-    scopes: getXeroOAuthScopes(),
-    credentials,
-    error
-  };
 });
 
 // Backwards-compatible alias used by older callers.

@@ -121,7 +121,12 @@ describe('Live Xero export integration', () => {
     });
   }
 
-  async function seedLiveXeroBatch(): Promise<{ batchId: string; lineId: string }> {
+  async function seedLiveXeroBatch(options: {
+    targetRealm?: string | null;
+    netAmount?: number | null;
+  } = {}): Promise<{ batchId: string; lineId: string }> {
+    const targetRealm = options.targetRealm ?? null;
+    const netAmount = options.netAmount === undefined ? 5000 : options.netAmount;
     const serviceId = await createTestService(ctx, {
       service_name: 'Managed Endpoint',
       billing_method: 'fixed',
@@ -144,7 +149,7 @@ describe('Live Xero export integration', () => {
         alga_entity_type: 'service',
         alga_entity_id: serviceId,
         external_entity_id: 'ITEM-001',
-        external_realm_id: null,
+        external_realm_id: targetRealm,
         metadata: { accountCode: '200' },
         sync_status: 'synced',
         created_at: now,
@@ -157,7 +162,7 @@ describe('Live Xero export integration', () => {
         alga_entity_type: 'client',
         alga_entity_id: ctx.clientId,
         external_entity_id: 'CONTACT-001',
-        external_realm_id: null,
+        external_realm_id: targetRealm,
         sync_status: 'synced',
         created_at: now,
         updated_at: now
@@ -188,7 +193,7 @@ describe('Live Xero export integration', () => {
       description: 'Endpoint subscription',
       quantity: 1,
       unit_price: 5000,
-      net_amount: 5000,
+      net_amount: netAmount,
       total_price: 5000,
       tax_amount: 0,
       is_manual: false,
@@ -199,7 +204,7 @@ describe('Live Xero export integration', () => {
     const batch = await service.createBatch({
       adapter_type: 'xero',
       export_type: 'invoice',
-      target_realm: null,
+      target_realm: targetRealm,
       filters: { start_date: '2025-01-01', end_date: '2025-01-31' },
       created_by: ctx.user.user_id
     });
@@ -285,5 +290,38 @@ describe('Live Xero export integration', () => {
     expect(line.line_id).toBe(lineId);
     expect(line.status).not.toBe('delivered');
     expect(line.external_document_ref).toBeNull();
+  }, HOOK_TIMEOUT);
+
+  it('T019: realm-scoped Xero service and client mappings resolve for a realm-targeted batch', async () => {
+    const { batchId, lineId } = await seedLiveXeroBatch({ targetRealm: 'xero-tenant-1' });
+
+    xeroCreateMock.mockResolvedValue({
+      createInvoices: vi.fn(async (payloads: Array<Record<string, any>>) => [{
+        status: 'success',
+        invoiceId: 'xero-invoice-realm-1',
+        documentId: payloads[0].invoiceId
+      }])
+    });
+
+    await expect(service.executeBatch(batchId)).resolves.toEqual({
+      deliveredLines: [{ lineId, externalDocumentRef: 'xero-invoice-realm-1' }],
+      metadata: { adapter: 'xero', deliveredInvoices: 1 }
+    });
+    expect(xeroCreateMock).toHaveBeenCalledWith(ctx.tenantId, 'xero-tenant-1');
+  }, HOOK_TIMEOUT);
+
+  it('T020: missing net_amount is a per-line readiness error and never reaches the Xero adapter', async () => {
+    const { batchId, lineId } = await seedLiveXeroBatch({ netAmount: null });
+
+    await expect(service.executeBatch(batchId)).rejects.toMatchObject({
+      code: 'ACCOUNTING_EXPORT_VALIDATION_FAILED'
+    });
+    expect(xeroCreateMock).not.toHaveBeenCalled();
+
+    const errors = await repository.listErrors(batchId);
+    expect(errors).toContainEqual(expect.objectContaining({
+      line_id: lineId,
+      code: 'missing_net_amount'
+    }));
   }, HOOK_TIMEOUT);
 });

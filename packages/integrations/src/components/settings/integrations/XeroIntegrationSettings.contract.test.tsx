@@ -21,7 +21,7 @@ vi.mock('../../xero/XeroLiveMappingManager', () => ({
   )
 }));
 
-vi.mock('@alga-psa/integrations/actions', () => ({
+vi.mock('../../../actions/integrations/xeroActions', () => ({
   getXeroConnectionStatus: (...args: unknown[]) => getXeroConnectionStatusMock(...args),
   saveXeroCredentials: (...args: unknown[]) => saveXeroCredentialsMock(...args),
   disconnectXero: (...args: unknown[]) => disconnectXeroMock(...args)

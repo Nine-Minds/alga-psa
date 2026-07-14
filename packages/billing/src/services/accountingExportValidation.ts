@@ -3,6 +3,7 @@ import { AccountingExportRepository } from '../repositories/accountingExportRepo
 import { AccountingMappingResolver } from './accountingMappingResolver';
 import { getAccountingSyncSettings } from './accountingSync/accountingSyncSettings';
 import type { AccountingExportLine, AccountingExportServicePeriodSource } from '@alga-psa/types';
+import { normalizeAccountingExportCalendarDate } from './accountingExportDateUtils';
 
 type ChargeProjection = {
   tenant: string;
@@ -10,6 +11,7 @@ type ChargeProjection = {
   invoice_id?: string | null;
   service_id?: string | null;
   tax_region?: string | null;
+  net_amount?: number | string | null;
 };
 
 type ChargeDetailProjection = {
@@ -168,7 +170,7 @@ export class AccountingExportValidation {
     const charges =
       chargeIds.size > 0
         ? await db.table<ChargeProjection>('invoice_charges')
-            .select('item_id', 'invoice_id', 'service_id', 'tax_region')
+            .select('item_id', 'invoice_id', 'service_id', 'tax_region', 'net_amount')
             .whereIn('item_id', Array.from(chargeIds))
         : [];
     const chargesById = new Map(charges.map((charge) => [charge.item_id, charge]));
@@ -323,6 +325,16 @@ export class AccountingExportValidation {
       }
 
       const charge = chargesById.get(line.document_line_id);
+      if (adapterType === 'xero' && (charge?.net_amount === null || charge?.net_amount === undefined)) {
+        await repo.addError({
+          batch_id: batchId,
+          line_id: line.line_id,
+          code: 'missing_net_amount',
+          message: `Charge ${line.document_line_id} is missing its net amount. Repair the invoice, then cancel and recreate this export batch.`,
+          metadata: mergeErrorMetadata(line, { invoice_charge_id: line.document_line_id })
+        });
+        continue;
+      }
       if (!charge?.service_id) {
         await repo.addError({
           batch_id: batchId,
@@ -536,16 +548,7 @@ export class AccountingExportValidation {
 }
 
 function normalizeIsoString(value: unknown): string | null {
-  if (value === null || value === undefined) {
-    return null;
-  }
-
-  const date = value instanceof Date ? value : new Date(String(value));
-  if (Number.isNaN(date.getTime())) {
-    return null;
-  }
-
-  return date.toISOString();
+  return normalizeAccountingExportCalendarDate(value) ?? null;
 }
 
 function normalizeRecurringPeriod(input: {
