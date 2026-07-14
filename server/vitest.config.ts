@@ -1,4 +1,4 @@
-import { defineConfig } from 'vitest/config';
+import { coverageConfigDefaults, defineConfig } from 'vitest/config';
 import fs from 'node:fs';
 import path from 'path';
 
@@ -55,8 +55,26 @@ export default defineConfig({
       // instrumentation cost. CI enables it where reports are collected.
       enabled: false,
       provider: 'v8',
+      // The suite loads @alga-psa/* code through the src aliases below, so
+      // package and shared sources are measured alongside server/src.
+      // allowExternal admits files outside server/ into the report — and it
+      // switches include/exclude matching to absolute paths, so these
+      // patterns must be absolute. Two limits of the v8 provider here:
+      // untested-file discovery never leaves the vitest root, so package and
+      // shared files the suite never loads are absent from the report (their
+      // percentages read optimistic), while server/src gets true 0% entries.
+      allowExternal: true,
       include: [
-        'src/**/*.{js,ts,jsx,tsx}',
+        path.resolve(__dirname, './src') + '/**/*.{js,ts,jsx,tsx}',
+        path.resolve(__dirname, '../packages') + '/*/src/**/*.{js,ts,jsx,tsx}',
+        path.resolve(__dirname, '../shared') + '/**/*.{js,ts,jsx,tsx}',
+      ],
+      exclude: [
+        ...coverageConfigDefaults.exclude,
+        '**/dist/**',
+        '**/node_modules/**',
+        '**/migrations/**',
+        '**/seeds/**',
       ],
       reportsDirectory: path.resolve(__dirname, './coverage'),
       reporter: ['text', 'html', 'lcov'],

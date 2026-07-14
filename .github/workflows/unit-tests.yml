@@ -151,16 +151,32 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y ripgrep
       - name: Run server unit tests with coverage
         working-directory: ./server
-        run: npx vitest run src/test/unit --coverage.enabled=true --coverage.reporter=text-summary --coverage.reporter=lcov
+        run: npx vitest run src/test/unit --coverage.enabled=true --coverage.reporter=text-summary --coverage.reporter=lcov --coverage.reporter=json-summary --reporter=default --reporter=json --outputFile.json=./test-results.json
         env:
           NODE_OPTIONS: '--max-old-space-size=14336'
           VITEST_SEED: '20260610'
+      # `if: always()`: a red run is exactly the data point the coverage
+      # artifact and metrics sheet exist to capture.
       - name: Upload lcov artifact
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: server-unit-coverage
           path: server/coverage/lcov.info
           retention-days: 30
+      # Appends pass/coverage numbers to the shared metrics sheet
+      # (docs/reference/test-metrics.md). No-op until the Google secrets exist.
+      - name: Record metrics to Google Sheet
+        if: always()
+        continue-on-error: true
+        run: node scripts/record-test-metrics.mjs
+        env:
+          TEST_METRICS_SUITE: unit-coverage
+          TEST_METRICS_RESULTS: server/test-results.json
+          TEST_METRICS_COVERAGE: server/coverage/coverage-summary.json
+          TEST_METRICS_DETAIL: '1'
+          GOOGLE_SA_KEY: ${{ secrets.TEST_METRICS_GOOGLE_SA_KEY }}
+          TEST_METRICS_SHEET_ID: ${{ vars.TEST_METRICS_SHEET_ID }}
 
   # DB-backed infrastructure tests run inside integration-tests.yml (sharing its
   # Postgres job): Tier-1 subset on PRs, full suite nightly — both non-blocking.
