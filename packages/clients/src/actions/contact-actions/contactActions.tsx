@@ -206,7 +206,8 @@ function prefixedContactActionErrorFrom(error: unknown, fallback: string): strin
     if (
       message.startsWith('VALIDATION_ERROR:') ||
       message.startsWith('EMAIL_EXISTS:') ||
-      message.startsWith('FOREIGN_KEY_ERROR:')
+      message.startsWith('FOREIGN_KEY_ERROR:') ||
+      message.startsWith('Permission denied:')
     ) {
       return message;
     }
