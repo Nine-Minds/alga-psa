@@ -8,6 +8,8 @@ node_modules/
 # testing
 /coverage
 test-results/
+test-results-*.json
+server/test-results.json
 playwright-test-results/
 playwright-report/
 screenshots/

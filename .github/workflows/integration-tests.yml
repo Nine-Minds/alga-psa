@@ -164,14 +164,14 @@ jobs:
       - name: Run Tier-1 integration subset
         if: github.event_name != 'schedule' && github.event.inputs.suite != 'full'
         working-directory: ./server
-        run: npm run test:integration:tier1
+        run: npm run test:integration:tier1 -- --reporter=default --reporter=json --outputFile.json=./test-results-integration.json
         env:
           NODE_OPTIONS: '--max-old-space-size=8192'
 
       - name: Run full integration suite
         if: github.event_name == 'schedule' || github.event.inputs.suite == 'full'
         working-directory: ./server
-        run: npm run test:integration:ci
+        run: npm run test:integration:ci -- --reporter=default --reporter=json --outputFile.json=./test-results-integration.json
         env:
           NODE_OPTIONS: '--max-old-space-size=8192'
 
@@ -179,11 +179,14 @@ jobs:
       # (invoice generation, tax, credits). It shares this job's Postgres rather
       # than running a parallel workflow. Non-blocking until it has a green
       # baseline; flip continue-on-error off once stable.
+      # `always()` lets the infra suite build its baseline even when the
+      # integration step above fails — without it a red nightly leaves the
+      # infra suite with no data at all.
       # timeout-minutes bounds a hang: continue-on-error ignores a failure but NOT
       # a hung process, so without this a stuck infra run would consume the whole
       # job timeout and cancel the (passing) integration step above.
       - name: Run Tier-1 infrastructure subset (non-blocking)
-        if: github.event_name != 'schedule' && github.event.inputs.suite != 'full'
+        if: always() && github.event_name != 'schedule' && github.event.inputs.suite != 'full'
         continue-on-error: true
         timeout-minutes: 15
         working-directory: ./server
@@ -192,10 +195,44 @@ jobs:
           NODE_OPTIONS: '--max-old-space-size=8192'
 
       - name: Run full infrastructure suite (non-blocking)
-        if: github.event_name == 'schedule' || github.event.inputs.suite == 'full'
+        if: always() && (github.event_name == 'schedule' || github.event.inputs.suite == 'full')
         continue-on-error: true
         timeout-minutes: 60
         working-directory: ./server
-        run: npm run test:infrastructure:ci
+        run: npm run test:infrastructure:ci -- --reporter=default --reporter=json --outputFile.json=./test-results-infrastructure.json
         env:
           NODE_OPTIONS: '--max-old-space-size=8192'
+
+      # Append this run's numbers to the shared metrics sheet
+      # (docs/reference/test-metrics.md). No-op until the Google secrets exist.
+      # Tier-1 rows are recorded on push to main only — PR runs would be noisy
+      # and fork PRs don't get secrets anyway.
+      - name: Record Tier-1 metrics to Google Sheet
+        if: always() && github.event_name == 'push'
+        continue-on-error: true
+        run: node scripts/record-test-metrics.mjs
+        env:
+          TEST_METRICS_SUITE: integration-tier1
+          TEST_METRICS_RESULTS: server/test-results-integration.json
+          GOOGLE_SA_KEY: ${{ secrets.TEST_METRICS_GOOGLE_SA_KEY }}
+          TEST_METRICS_SHEET_ID: ${{ vars.TEST_METRICS_SHEET_ID }}
+
+      - name: Record full-suite metrics to Google Sheet
+        if: always() && (github.event_name == 'schedule' || github.event.inputs.suite == 'full')
+        continue-on-error: true
+        run: node scripts/record-test-metrics.mjs
+        env:
+          TEST_METRICS_SUITE: integration-full
+          TEST_METRICS_RESULTS: server/test-results-integration.json
+          GOOGLE_SA_KEY: ${{ secrets.TEST_METRICS_GOOGLE_SA_KEY }}
+          TEST_METRICS_SHEET_ID: ${{ vars.TEST_METRICS_SHEET_ID }}
+
+      - name: Record infrastructure metrics to Google Sheet
+        if: always() && (github.event_name == 'schedule' || github.event.inputs.suite == 'full')
+        continue-on-error: true
+        run: node scripts/record-test-metrics.mjs
+        env:
+          TEST_METRICS_SUITE: infrastructure-full
+          TEST_METRICS_RESULTS: server/test-results-infrastructure.json
+          GOOGLE_SA_KEY: ${{ secrets.TEST_METRICS_GOOGLE_SA_KEY }}
+          TEST_METRICS_SHEET_ID: ${{ vars.TEST_METRICS_SHEET_ID }}
