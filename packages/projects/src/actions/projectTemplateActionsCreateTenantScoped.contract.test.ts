@@ -3,6 +3,10 @@ import { readFileSync } from 'fs';
 import { resolve } from 'path';
 
 const source = readFileSync(resolve(__dirname, 'projectTemplateActions.ts'), 'utf8');
+const applyTemplateSource = readFileSync(
+  resolve(__dirname, '../services/applyProjectTemplate.ts'),
+  'utf8'
+);
 
 function section(start: string, end: string): string {
   const startIndex = source.indexOf(start);
@@ -53,25 +57,26 @@ describe('project template tenant-scoped query contract', () => {
       '/**\n * Get all templates'
     );
 
-    expect(actionSource).toContain("tenantScopedTable(trx, 'project_templates', tenant)");
-    expect(actionSource).toContain("tenantScopedTable(trx, 'project_template_status_mappings', tenant)");
-    expect(actionSource).toContain("tenantScopedTable(trx, 'projects', tenant)");
-    expect(actionSource).toContain("tenantScopedTable(trx, 'project_template_phases', tenant)");
-    expect(actionSource).toContain("tenantScopedTable(trx, 'project_phases', tenant)");
-    expect(actionSource).toContain("tenantScopedTable(trx, 'statuses', tenant)");
-    expect(actionSource).toContain("tenantScopedTable(trx, 'project_template_tasks', tenant)");
-    expect(actionSource).toContain("tenantScopedTable(trx, 'project_tasks', tenant)");
-    expect(actionSource).toContain("tenantScopedTable(trx, 'project_template_task_resources', tenant)");
-    expect(actionSource).toContain("tenantScopedTable(trx, 'users', tenant)");
-    expect(actionSource).toContain("tenantScopedTable(trx, 'project_template_dependencies', tenant)");
-    expect(actionSource).toContain("tenantScopedTable(trx, 'project_template_checklist_items', tenant)");
-    expect(actionSource).not.toContain('.where({ template_id: templateId, tenant })');
-    expect(actionSource).not.toContain('.where({ project_id: newProjectId, tenant })');
-    expect(actionSource).not.toContain('.where({ phase_id: newPhaseId, tenant })');
-    expect(actionSource).not.toContain('.where({ task_id: newTaskId, tenant })');
-    expect(actionSource).not.toContain('.where({ user_id: resource.user_id, tenant })');
-    expect(actionSource).not.toContain(".where('tenant', tenant)");
-    expect(actionSource).not.toContain('.where({ tenant, status_type:');
+    expect(actionSource).toContain('applyProjectTemplate(trx, tenant, templateId, projectData)');
+    expect(applyTemplateSource).toContain("tenantScopedTable(trx, 'project_templates', tenant)");
+    expect(applyTemplateSource).toContain("tenantScopedTable(trx, 'project_template_status_mappings', tenant)");
+    expect(applyTemplateSource).toContain("tenantScopedTable(trx, 'projects', tenant)");
+    expect(applyTemplateSource).toContain("tenantScopedTable(trx, 'project_template_phases', tenant)");
+    expect(applyTemplateSource).toContain("tenantScopedTable(trx, 'project_phases', tenant)");
+    expect(applyTemplateSource).toContain("tenantScopedTable(trx, 'statuses', tenant)");
+    expect(applyTemplateSource).toContain("tenantScopedTable(trx, 'project_template_tasks', tenant)");
+    expect(applyTemplateSource).toContain("tenantScopedTable(trx, 'project_tasks', tenant)");
+    expect(applyTemplateSource).toContain("tenantScopedTable(trx, 'project_template_task_resources', tenant)");
+    expect(applyTemplateSource).toContain("tenantScopedTable(trx, 'users', tenant)");
+    expect(applyTemplateSource).toContain("tenantScopedTable(trx, 'project_template_dependencies', tenant)");
+    expect(applyTemplateSource).toContain("tenantScopedTable(trx, 'project_template_checklist_items', tenant)");
+    expect(applyTemplateSource).not.toContain('.where({ template_id: templateId, tenant })');
+    expect(applyTemplateSource).not.toContain('.where({ project_id: newProjectId, tenant })');
+    expect(applyTemplateSource).not.toContain('.where({ phase_id: newPhaseId, tenant })');
+    expect(applyTemplateSource).not.toContain('.where({ task_id: newTaskId, tenant })');
+    expect(applyTemplateSource).not.toContain('.where({ user_id: resource.user_id, tenant })');
+    expect(applyTemplateSource).not.toContain(".where('tenant', tenant)");
+    expect(applyTemplateSource).not.toContain('.where({ tenant, status_type:');
   });
 
   it('uses structural tenant scoping for template list and detail read roots', () => {
