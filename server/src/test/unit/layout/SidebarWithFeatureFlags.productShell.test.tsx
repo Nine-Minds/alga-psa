@@ -78,6 +78,23 @@ describe('SidebarWithFeatureFlags product shell composition', () => {
     expect(names).not.toContain('License');
   });
 
+  it('hides Opportunities from settings navigation when its feature flag is disabled', async () => {
+    useFeatureFlag.mockImplementation((flagKey: string) => flagKey !== 'opportunities-module');
+
+    render(<SidebarWithFeatureFlags sidebarOpen={true} setSidebarOpen={vi.fn()} />);
+
+    await waitFor(() => expect(sidebarPropsSpy).toHaveBeenCalled());
+
+    const latestProps = sidebarPropsSpy.mock.calls.at(-1)?.[0] as {
+      settingsSectionsOverride: Array<{ items: Array<{ name: string }> }>;
+    };
+    const settingsNames = latestProps.settingsSectionsOverride.flatMap((section) =>
+      section.items.map((item) => item.name),
+    );
+
+    expect(settingsNames).not.toContain('Opportunities');
+  });
+
   it('T005: AlgaDesk shell keeps only allowed nav and uses AlgaDesk branding labels', async () => {
     useProduct.mockReturnValue({ productCode: 'algadesk' });
 
