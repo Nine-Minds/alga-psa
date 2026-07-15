@@ -77,7 +77,7 @@ vi.mock('@alga-psa/storage', () => ({
   deleteEntityImage: vi.fn(),
 }));
 
-vi.mock('@alga-psa/tags/actions', () => ({
+vi.mock('@alga-psa/tags/actions/tagActions', () => ({
   createTag: createTagMock,
   findTagsByEntityId: findTagsByEntityIdMock,
 }));
@@ -374,6 +374,38 @@ describe('importClientsFromCSV', () => {
       address_line1: '1201 Alaskan Way',
       is_default: true,
     });
+  });
+
+  it('normalizes case-variant client types on create and update', async () => {
+    const createResults = await importClients([
+      csvRow({ client_name: 'Case Folded Co', client_type: ' Company ' }),
+    ]);
+
+    expect(createResults[0]).toMatchObject({ success: true, message: 'Client created' });
+    expect(state.clients[0].client_type).toBe('company');
+
+    const updateResults = await importClients([
+      csvRow({ client_name: 'Case Folded Co', client_type: 'INDIVIDUAL' }),
+    ], true);
+
+    expect(updateResults[0]).toMatchObject({ success: true, message: 'Client updated' });
+    expect(state.clients[0].client_type).toBe('individual');
+  });
+
+  it('rejects an unsupported client type without aborting sibling rows', async () => {
+    const results = await importClients([
+      csvRow({ client_name: 'Valid Before Co', client_type: 'Company' }),
+      csvRow({ client_name: 'Invalid Vendor Co', client_type: 'Vendor' }),
+      csvRow({ client_name: 'Valid After Person', client_type: 'Individual' }),
+    ]);
+
+    expect(results.map((result) => result.success)).toEqual([true, false, true]);
+    expect(results[1].message).toContain("client_type must be 'company' or 'individual'");
+    expect(state.clients.map((client) => client.client_name)).toEqual([
+      'Valid Before Co',
+      'Valid After Person',
+    ]);
+    expect(state.clients.map((client) => client.client_type)).toEqual(['company', 'individual']);
   });
 
   it('updates the existing default location instead of inserting a second one', async () => {

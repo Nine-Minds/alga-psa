@@ -38,6 +38,7 @@ import {
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { applyClientListIndexedSearchFilter } from '../lib/listSearchSql';
+import { normalizeClientType } from '../lib/normalizeClientType';
 
 const CLIENT_PORTAL_MUTABLE_CLIENT_PROPERTIES = new Set([
   'website',
@@ -1617,7 +1618,7 @@ export const importClientsFromCSV = withAuth(async (
             updateData.url = clientData.website || clientData.url || '';
           }
           if (clientData.client_type !== undefined) {
-            updateData.client_type = clientData.client_type || 'company';
+            updateData.client_type = normalizeClientType(clientData.client_type);
           }
           if (clientData.is_inactive !== undefined) {
             updateData.is_inactive = parseCsvBoolean(clientData.is_inactive);
@@ -1691,7 +1692,7 @@ export const importClientsFromCSV = withAuth(async (
             url: clientData.website || clientData.url || '',
             is_inactive: parseCsvBoolean(clientData.is_inactive),
             is_tax_exempt: clientData.is_tax_exempt || false,
-            client_type: clientData.client_type || 'company',
+            client_type: normalizeClientType(clientData.client_type),
             tenant: tenant,
             properties: properties,
             account_manager_id: clientData.account_manager_id === '' ? null : clientData.account_manager_id,

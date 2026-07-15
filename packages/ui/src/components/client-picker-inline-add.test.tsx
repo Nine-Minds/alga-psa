@@ -22,11 +22,38 @@ vi.mock('./ClientAvatar', () => ({
   default: () => <div data-testid="client-avatar" />,
 }));
 
+vi.mock('./CustomSelect', () => ({
+  default: ({ id, value, onValueChange, options, placeholder }: {
+    id?: string;
+    value?: string | null;
+    onValueChange: (value: string) => void;
+    options: Array<{ value: string; label: React.ReactNode }>;
+    placeholder?: string;
+  }) => (
+    <select
+      id={id}
+      aria-label={placeholder}
+      value={value ?? ''}
+      onChange={(event) => onValueChange(event.target.value)}
+    >
+      {options.map((option) => (
+        <option key={option.value} value={option.value}>{option.label}</option>
+      ))}
+    </select>
+  ),
+}));
+
 const clients: IClient[] = [
   {
     client_id: 'client-1',
     client_name: 'Acme Corp',
     client_type: 'company',
+    is_inactive: false,
+  } as IClient,
+  {
+    client_id: 'client-2',
+    client_name: 'Jane Smith',
+    client_type: 'individual',
     is_inactive: false,
   } as IClient,
 ];
@@ -135,5 +162,46 @@ describe('ClientPicker', () => {
 
     expect(onSelect).toHaveBeenCalledWith('client-1');
     expect(screen.queryByRole('listbox', { name: /select client/i })).toBeNull();
+  });
+
+  it('owns omitted filter props and re-filters when the type changes', async () => {
+    const user = userEvent.setup();
+    render(
+      <ClientPicker
+        id="uncontrolled-client-picker"
+        clients={clients}
+        onSelect={vi.fn()}
+        selectedClientId={null}
+        placeholder="Select Client"
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: /select client/i }));
+    expect(screen.getByRole('option', { name: /acme corp/i })).toBeTruthy();
+    expect(screen.getByRole('option', { name: /jane smith/i })).toBeTruthy();
+
+    await user.selectOptions(screen.getByRole('combobox', { name: /type/i }), 'company');
+
+    expect(screen.getByRole('option', { name: /acme corp/i })).toBeTruthy();
+    expect(screen.queryByRole('option', { name: /jane smith/i })).toBeNull();
+  });
+
+  it('keeps a provided filter controlled while reporting requested changes', async () => {
+    const user = userEvent.setup();
+    const onClientTypeFilterChange = vi.fn();
+    renderPicker({
+      clientTypeFilter: 'company',
+      onClientTypeFilterChange,
+    });
+
+    await user.click(screen.getByRole('button', { name: /select client/i }));
+    expect(screen.getByRole('option', { name: /acme corp/i })).toBeTruthy();
+    expect(screen.queryByRole('option', { name: /jane smith/i })).toBeNull();
+
+    await user.selectOptions(screen.getByRole('combobox', { name: /type/i }), 'individual');
+
+    expect(onClientTypeFilterChange).toHaveBeenCalledWith('individual');
+    expect(screen.getByRole('option', { name: /acme corp/i })).toBeTruthy();
+    expect(screen.queryByRole('option', { name: /jane smith/i })).toBeNull();
   });
 });
