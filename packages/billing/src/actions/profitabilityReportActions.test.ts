@@ -208,7 +208,7 @@ describe('profitability report actions', () => {
     });
   });
 
-  it('surfaces project cap write-downs without changing recognized revenue or margin', async () => {
+  it('T036: surfaces project cap write-downs without changing recognized revenue or margin', async () => {
     seedRawMocks({
       writeDowns: [{
         config_id: 'config-1',
@@ -249,7 +249,7 @@ describe('profitability report actions', () => {
     ]);
   });
 
-  it('classifies fixed-price project work out of rated revenue while retaining schedule charges', async () => {
+  it('T036: classifies fixed-price project work out of rated revenue while retaining schedule charges', async () => {
     await (getProfitabilitySummary as any)(
       { user_id: 'user-1' },
       { tenant: 'tenant-1' },

@@ -220,3 +220,49 @@
 - `packages/billing` TypeScript reports no new errors: only the documented baseline `quoteActions.ts(32)` TS2307 for `@alga-psa/opportunities/lib/quoteLifecycleHooks` remains.
 - New notification migration/template CommonJS files pass `node --check`; `git diff --check` passes.
 - Wave 5 changed no React components. Concurrent UI-lane edits remain separate in the shared worktree.
+
+## Wave 6 report
+
+### Test coverage added
+
+- Added `server/src/test/unit/billing/projectBillingService.test.ts` with exhaustive allocation/remainder, cap straddle/exact/zero, threshold boundary/dedupe, and both deposit-reconciliation treatment cases (T005/T016/T017/T020).
+- Added `server/src/test/unit/billing/projectBillingDateReadiness.test.ts` for before/on/after-date readiness behavior (T009).
+- Added `packages/billing/src/actions/projectBillingActions.contract.test.ts` for config CRUD, currency and duplicate validation, immutable invoiced state, allocation gates, lifecycle/optimistic guards, deleted-phase fallback, event publication, and billing RBAC (T002–T007/T010/T026/T027).
+- Added `packages/projects/src/actions/projectBillingLifecycle.contract.test.ts` for phase complete/reopen behavior, phase-delete FK fallback, project cancellation, and project-only phase RBAC (T008/T010/T025/T027).
+- Added `server/src/test/unit/billing/projectBillingEngine.test.ts` for recurring/standalone selection, T&M inclusion, fixed-price exclusion, rate overrides, multi-run caps, deposits, taxes, and the no-config byte-identical golden output (T011–T017/T020–T022).
+- Added `server/src/test/unit/billing/projectBillingInvoiceLifecycle.contract.test.ts` for standalone invoice transaction stamping, project-earmarked deposit credits/application preference, and unfinalize rollback (T012/T019/T023).
+- Added `server/src/test/unit/billing/projectBillingInvoiceRenderer.test.ts` for standalone project template variables and line metadata (T038).
+- Added `server/src/test/unit/notifications/projectBillingNotifications.contract.test.ts` for localized email/in-app milestone-ready notification routing (T026).
+- Extended the existing recurring warning, profitability, accounting export, and credit application suites for T024/T036/T037.
+- Added `server/src/test/integration/billing/projectBillingSchema.integration.test.ts` with five real-DB cases covering migrated schema/metadata, enum/unique/XOR constraints, raw illegal transition rejection, and two concurrent cap consumers (T001/T018/T039). The suite is written but could not pass local database bootstrap, so those flags remain false.
+- Added `ee/server/src/__tests__/integration/project-billing.playwright.test.ts` with eight headed Playwright cases using the repository tenant/auth/permission helpers and component-provided automation ids (T028–T035).
+
+### Bugs found and fixed
+
+- `updateProjectBillingConfig` always passed `currency: undefined` into the Zod update object. Because the key survived parsing, ordinary updates such as total-price or cap edits incorrectly entered currency validation. The action now includes `currency` only when callers supplied it; the contract suite retains the regression case.
+- The schedule-entry migration enforced valid status values but not valid status transitions, so raw SQL/model updates could skip directly from `pending` to `invoiced`. Added `20260715090006_guard_project_billing_schedule_status_transitions.cjs`, preserving the legitimate ready/hold/approve/invoice/unfinalize/cancel paths and rejecting other transitions with `P0001`. Its syntax is verified; real-DB behavior remains pending the blocked integration run.
+
+### Verification
+
+- Server focused Vitest: 6 files / 39 tests passed.
+- Billing focused Vitest: 5 files / 61 tests passed.
+- Projects focused Vitest: 1 file / 5 tests passed.
+- Total newly written or directly extended non-Playwright verification: 12 files / 105 tests passed.
+- Focused TypeScript compile for `project-billing.playwright.test.ts`: pass (8 specs). The specs were not executed against a full headed stack.
+- `packages/projects` TypeScript: clean.
+- `packages/billing` TypeScript: no new errors; only the documented baseline `quoteActions.ts(32)` TS2307 remains.
+- Full `ee/server` TypeScript reached the 4 GiB Node heap limit; the focused Playwright config compiled cleanly with an 8 GiB limit.
+- The new transition migration passes `node --check`.
+
+### Infeasible or pending locally
+
+- The real-DB project billing suite and the existing DB-backed tax-distribution suite both fail during global setup with PostgreSQL `28P01` (`password authentication failed for user "postgres"`) against the local container on port 5432. No assertions ran. An attempt to inspect container credentials was rejected by the managed security boundary, so no credential workaround was used.
+- A Playwright `--list` discovery attempt with web-server startup disabled stopped before test discovery because the workspace package export for `@alga-psa/core/secrets` is unavailable to the unbuilt runtime. The focused TypeScript check passes, but T028–T035 still need a full headed-stack execution.
+- `tests.json` now marks T002–T017 and T019–T038 implemented (36 entries). T001, T018, and T039 remain false because their real-DB assertions could not be verified. `features.json` was not changed.
+
+## Orchestrator close-out (post Wave 6)
+
+- The three DB-gated tests (T001/T018/T039) were verified against a throwaway `ankane/pgvector` container (port 55432, `DB_*` env overrides): all 843 migrations apply cleanly and the 5-test schema/concurrency suite passes, including the FOR UPDATE double-spend test. Container removed afterwards.
+- Fixture fix during that run: the schema integration test inserted projects with random `status` uuids, violating `projects_status_tenant_foreign`; it now creates a `statuses` row (status_type 'project') first.
+- Playwright specs (T028–T035) are written and typechecked but have not run against a live stack — first stack run should execute `ee/server/src/__tests__/integration/project-billing.playwright.test.ts`.
+- Final state: 108/108 features, 39/39 tests implemented; all package typechecks at documented baselines.

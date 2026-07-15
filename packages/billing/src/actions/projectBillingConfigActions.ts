@@ -463,9 +463,10 @@ export const updateProjectBillingConfig = withAuth(async (
 ): Promise<IProjectBillingConfig> => {
   const { knex } = await createTenantKnex();
   await assertProjectBillingMutationPermission(user, knex);
+  const { currency, ...updatesWithoutCurrency } = updates;
   const parsed = updateProjectBillingConfigSchema.parse({
-    ...updates,
-    currency: updates.currency?.toUpperCase(),
+    ...updatesWithoutCurrency,
+    ...(currency !== undefined ? { currency: currency?.toUpperCase() } : {}),
   });
 
   const result = await withTransaction(knex, async (trx: Knex.Transaction) => {

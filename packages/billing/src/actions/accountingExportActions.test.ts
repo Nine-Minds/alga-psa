@@ -100,16 +100,14 @@ describe('accounting export action error boundaries', () => {
     expect(loggerErrorMock).toHaveBeenCalledOnce();
   });
 
-  it('preserves project references for milestone and deposit export previews', async () => {
-    previewInvoiceLinesMock.mockResolvedValue([{
+  it('T037: preserves project references for milestone and deposit export previews', async () => {
+    const baseLine = {
       invoiceId: 'invoice-1',
       invoiceNumber: 'INV-100',
       invoiceDate: '2026-07-15T00:00:00.000Z',
       invoiceStatus: 'sent',
       clientId: 'client-1',
       clientName: 'Acme',
-      chargeId: 'charge-1',
-      amountCents: 25000,
       currencyCode: 'USD',
       servicePeriodStart: null,
       servicePeriodEnd: null,
@@ -120,23 +118,46 @@ describe('accounting export action error boundaries', () => {
       isCredit: false,
       isZeroAmount: false,
       transactionIds: [],
-      chargeType: 'project_milestone',
       projectId: 'project-1',
       projectNumber: 'PRJ-100',
-      projectName: 'Datacenter migration',
-      scheduleEntryId: 'entry-1'
-    }]);
+      projectName: 'Datacenter migration'
+    };
+    previewInvoiceLinesMock.mockResolvedValue([
+      {
+        ...baseLine,
+        chargeId: 'charge-1',
+        amountCents: 25000,
+        chargeType: 'project_milestone',
+        scheduleEntryId: 'entry-1'
+      },
+      {
+        ...baseLine,
+        chargeId: 'charge-2',
+        amountCents: 10000,
+        chargeType: 'project_deposit',
+        scheduleEntryId: 'entry-2'
+      }
+    ]);
 
     await expect(previewAccountingExport()).resolves.toMatchObject({
       invoiceCount: 1,
-      lineCount: 1,
-      lines: [{
-        chargeType: 'project_milestone',
-        projectId: 'project-1',
-        projectNumber: 'PRJ-100',
-        projectName: 'Datacenter migration',
-        scheduleEntryId: 'entry-1'
-      }]
+      lineCount: 2,
+      lines: [
+        {
+          chargeType: 'project_milestone',
+          projectId: 'project-1',
+          projectNumber: 'PRJ-100',
+          projectName: 'Datacenter migration',
+          scheduleEntryId: 'entry-1'
+        },
+        {
+          chargeType: 'project_deposit',
+          projectId: 'project-1',
+          projectNumber: 'PRJ-100',
+          projectName: 'Datacenter migration',
+          scheduleEntryId: 'entry-2'
+        }
+      ]
     });
   });
 });

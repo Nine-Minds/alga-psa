@@ -41,7 +41,7 @@ describe('recurring project billing readiness warnings', () => {
     whereCalls.length = 0;
   });
 
-  it('adds a warning without creating a blocker for each due-work identity of the client', async () => {
+  it('T024: adds a warning without creating a blocker for each due-work identity of the client', async () => {
     queryRows.value = [{ client_id: 'client-1', entry_count: '2' }];
     const now = new Date('2026-07-15T12:00:00.000Z');
 
