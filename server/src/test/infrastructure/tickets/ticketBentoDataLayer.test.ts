@@ -71,7 +71,7 @@ vi.mock('@alga-psa/core/logger', () => ({
 const globalForVitest = globalThis as { TextEncoder: typeof NodeTextEncoder };
 globalForVitest.TextEncoder = NodeTextEncoder;
 
-process.env.DB_PORT = '5432';
+process.env.DB_PORT = process.env.DB_PORT === '6432' ? '5432' : process.env.DB_PORT;
 if (process.env.DB_HOST === 'pgbouncer') {
   process.env.DB_HOST = 'localhost';
 }

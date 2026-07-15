@@ -208,7 +208,7 @@ const NumberingSettings = ({ entityType }: NumberingSettingsProps): React.JSX.El
             <Input
               id={`${entityId}-padding-length-input`}
               type="number"
-              value={isEditing ? formState.padding_length : settings?.padding_length ?? 6}
+              value={(isEditing ? formState.padding_length : settings?.padding_length) ?? 6}
               onChange={(e) => handleInputChange('padding_length', e.target.value)}
               disabled={!isEditing}
               className="!w-48"

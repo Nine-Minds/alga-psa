@@ -34,13 +34,19 @@ describe('TimeEntryEditForm with Contract Line Selection', () => {
   const defaultStartDate = '2023-01-01T00:00:00.000Z';
   const defaultEndDate = null;
 
+  // Local midday on a fixed date: validateTimes() rejects entries that cross
+  // a (local) calendar day, and wall-clock `new Date()` built exactly that
+  // for any run between 23:00 and midnight.
+  const entryStart = new Date(2023, 0, 15, 10, 0, 0);
+  const entryEnd = new Date(2023, 0, 15, 11, 0, 0);
+
   const mockEntry = {
     client_id: 'test-client-id', // Add client ID to the mock entry
     entry_id: 'test-entry-id',
     work_item_id: 'test-work-item-id',
     work_item_type: 'project_task' as WorkItemType,
-    start_time: new Date().toISOString(),
-    end_time: new Date(Date.now() + 3600000).toISOString(), // 1 hour later
+    start_time: entryStart.toISOString(),
+    end_time: entryEnd.toISOString(),
     billable_duration: 60,
     notes: 'Test notes',
     user_id: 'test-user-id',

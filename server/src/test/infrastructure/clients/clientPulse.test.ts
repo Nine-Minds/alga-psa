@@ -45,7 +45,8 @@ const {
   afterAll: cleanupContext,
 } = TestContext.createHelpers();
 
-process.env.DB_PORT = '5432';
+process.env.DB_PORT = process.env.DB_PORT === '6432' ? '5432' : process.env.DB_PORT;
+
 process.env.DB_HOST = process.env.DB_HOST === 'pgbouncer' ? 'localhost' : process.env.DB_HOST;
 
 const NOW = new Date('2026-07-02T12:00:00.000Z');
