@@ -114,14 +114,28 @@ New entry point `generateProjectInvoice(projectId, entryIds)` in `invoiceGenerat
 
 ## 4. UI
 
-### Project detail — new "Billing" tab
+**Mockups:** `docs/plans/2026-07-15-project-billing-mockups/` — three integration options were mocked against the real project screen; **option 3 ("Billing" as a third view) was chosen**, plus option 1's metadata-row billed bar. `option-3-view.html` is the reference.
 
-`packages/projects/src/components/ProjectDetail.tsx` gains a tab; content in new `packages/projects/src/components/billing/`, calling `@alga-psa/billing` actions (cross-package pattern of `ProjectMaterialsDrawer`).
+### Project detail — "Billing" as a third view
+
+The project screen has no tab structure — it is `ProjectInfo` (header) over `ProjectDetail` (filter toolbar + phases panel + board), with a Kanban | List `ViewSwitcher` (`@alga-psa/ui/components/ViewSwitcher`, persisted via the `PROJECT_VIEW_MODE_SETTING` user preference). Billing integrates as a **third view**:
+
+- `ProjectViewMode` becomes `'kanban' | 'list' | 'billing'`; the switcher gains a Billing option (visible per RBAC — users without billing permissions never see it).
+- In the billing view the board area is replaced by the billing workspace; the **phases panel stays** for context. The toolbar swaps the phase heading for "Billing" + summary chips (model, ready count); task search/filters hide.
+- Content lives in new `packages/projects/src/components/billing/`, calling `@alga-psa/billing` actions (cross-package pattern of `ProjectMaterialsDrawer`).
+
+Billing view content:
 
 - **Setup:** compact "Enable billing" wizard — model, price/cap, invoice mode, optional contract link.
-- **Fixed-price:** payment schedule editor — entries (amount or %, trigger: phase picker / date / manual), running sum-to-total validation, status chips with invoice links.
+- **Fixed-price:** payment schedule table — entries (amount or %, trigger: phase picker / date / manual), sum-to-total allocation footer, status chips with invoice links, Approve & invoice / Hold row actions on ready entries.
 - **T&M:** cap config, thresholds, behavior toggle; phase rate overrides editor.
 - **Budget vs actual card** (both models): budget vs consumed (billed + pending approved time at rates for T&M; schedule progress for fixed-price), burn bar with threshold markers, written-down amount. Honors client-portal config flag conventions.
+- **Delivery economics card:** hours logged at cost, labor + materials cost, projected margin.
+
+### Ambient billing signals outside the view
+
+- **Metadata row** (`ProjectInfo.tsx`): a "Billed: $X of $Y" segmented bar (invoiced + ready segments) next to the Budget-hours bar, shown only when billing is enabled.
+- **Phases panel:** small `$` milestone badges on phases linked to schedule entries (green invoiced / amber ready / gray pending), tying the payment schedule to the WBS.
 
 ### Phase completion
 
