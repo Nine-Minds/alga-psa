@@ -403,6 +403,10 @@ async function persistProjectScheduleCharges(
   tenant: string,
   userId: string,
 ): Promise<number> {
+  if (charges.length === 0) {
+    return 0;
+  }
+
   let subtotal = 0;
   const now = Temporal.Now.instant().toString();
   const exportServiceIds = await ensureProjectScheduleExportServices(trx, tenant);

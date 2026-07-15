@@ -39,21 +39,28 @@ export async function detectRecurringApprovalWarnings(params: {
 
   const cutoff = new Date((params.now ?? new Date()).getTime() - 7 * 24 * 60 * 60 * 1000);
   const db = tenantDb(params.knex, params.tenant);
+  // Stale-ready entries are few by construction, so count per client in JS
+  // rather than groupBy/countDistinct — the plain row fetch also keeps the
+  // query inside the builder subset the due-work reader test harnesses model.
   const query = db.table('project_billing_schedule_entries as entry')
     .where('entry.status', 'ready')
     .whereNotNull('entry.ready_at')
     .where('entry.ready_at', '<', cutoff.toISOString())
     .whereIn('project.client_id', clientIds)
-    .groupBy('project.client_id')
-    .select('project.client_id')
-    .countDistinct({ entry_count: 'entry.schedule_entry_id' });
+    .select('project.client_id', 'entry.schedule_entry_id');
   db.tenantJoin(query, 'project_billing_configs as config', 'entry.config_id', 'config.config_id');
   db.tenantJoin(query, 'projects as project', 'config.project_id', 'project.project_id');
   const rows = await query as unknown as Array<{
     client_id: string;
-    entry_count: string | number;
+    schedule_entry_id: string;
   }>;
-  const countsByClient = new Map(rows.map((row) => [row.client_id, Number(row.entry_count)]));
+  const countsByClient = new Map<string, number>();
+  const seenEntries = new Set<string>();
+  for (const row of rows) {
+    if (seenEntries.has(row.schedule_entry_id)) continue;
+    seenEntries.add(row.schedule_entry_id);
+    countsByClient.set(row.client_id, (countsByClient.get(row.client_id) ?? 0) + 1);
+  }
 
   for (const row of params.rows) {
     const entryCount = countsByClient.get(row.clientId) ?? 0;
