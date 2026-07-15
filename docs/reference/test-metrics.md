@@ -2,7 +2,8 @@
 
 CI appends one row per test run to a shared Google Sheet, so you can watch
 pass rates and coverage move over time instead of opening individual Actions
-runs. `scripts/record-test-metrics.mjs` does the recording. It never fails a
+runs. `scripts/record-test-metrics.mjs` does the recording, and also writes
+the same numbers as a table on the Actions run summary page. It never fails a
 build: the step runs with `continue-on-error` and exits quietly when the
 Google credentials are not configured.
 

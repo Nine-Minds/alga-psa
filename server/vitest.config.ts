@@ -4,6 +4,11 @@ import path from 'path';
 
 fs.mkdirSync(path.resolve(__dirname, './coverage/.tmp'), { recursive: true });
 
+// CI runners are UTC and several date-sensitive suites assert against it.
+// Default local runs to UTC so results match CI; set TZ explicitly to
+// exercise another zone.
+process.env.TZ = process.env.TZ || 'UTC';
+
 export default defineConfig({
   // The repo's tsconfig sets `jsx: "preserve"` (Next.js/SWC compiles JSX with
   // the automatic runtime). esbuild does not understand "preserve" and falls
@@ -55,6 +60,9 @@ export default defineConfig({
       // instrumentation cost. CI enables it where reports are collected.
       enabled: false,
       provider: 'v8',
+      // Coverage reports are skipped on failing runs by default; red runs
+      // are exactly the ones the metrics sheet needs coverage rows for.
+      reportOnFailure: true,
       // The suite loads @alga-psa/* code through the src aliases below, so
       // package and shared sources are measured alongside server/src.
       // allowExternal admits files outside server/ into the report — and it
