@@ -14,6 +14,11 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { savePreference } from '@alga-psa/ui/lib';
 import QuickAskOverlay from 'server/src/components/chat/QuickAskOverlay';
 import { QuickAskProvider } from './QuickAskContext';
+// Mounted at the shell so the ClientPicker tag filter is ambient across every MSP
+// route (AlgaDeskMspShell mounts it for the AlgaDesk shell). The per-route-group
+// workspace provider stack is opt-in and left ~26 groups (inventory, opportunities,
+// surveys…) without it; this lightweight, fetch-on-demand provider fills that gap.
+import { MspClientTagsProvider } from '@alga-psa/msp-composition/clients/MspClientTagsProvider';
 import { PlatformNotificationBanner } from './PlatformNotificationBanner';
 import GlobalShortcutLayer from './GlobalShortcutLayer';
 import { isExperimentalFeatureEnabled } from '@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions';
@@ -410,6 +415,7 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
 
 
   return (
+    <MspClientTagsProvider>
     <DrawerProvider>
       <div className="flex h-screen overflow-hidden bg-gray-100">
         <SidebarWithFeatureFlags
@@ -512,5 +518,6 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
         />
       )}
     </DrawerProvider>
+    </MspClientTagsProvider>
   );
 }
