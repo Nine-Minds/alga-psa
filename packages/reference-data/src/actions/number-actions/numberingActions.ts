@@ -4,13 +4,13 @@ import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { withTransaction } from '@alga-psa/db';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { Knex } from 'knex';
-import type { EntityType } from '@alga-psa/shared/services/numberingService';
+import { NUMBERING_DEFAULTS, type EntityType } from '@alga-psa/shared/services/numberingService';
 
 export interface NumberSettings {
   prefix: string;
   last_number: number;
   initial_value: number;
-  padding_length: number;
+  padding_length: number | null;
 }
 
 export interface UpdateResponse {
@@ -54,12 +54,7 @@ export const updateNumberSettings = withAuth(async (
 
       // Combine current settings with updates
       const finalSettings = {
-        ...(currentSettings || {
-          prefix: entityType === 'TICKET' ? 'TK-' : 'INV-',
-          padding_length: 6,
-          last_number: 0,
-          initial_value: 1
-        }),
+        ...(currentSettings || { last_number: 0, ...NUMBERING_DEFAULTS[entityType] }),
         ...updates
       };
 
@@ -88,9 +83,8 @@ export const updateNumberSettings = withAuth(async (
       }
 
       if ('padding_length' in updates) {
-        if (!Number.isInteger(finalSettings.padding_length) ||
-            finalSettings.padding_length < 1 ||
-            finalSettings.padding_length > 10) {
+        const padding = finalSettings.padding_length;
+        if (typeof padding !== 'number' || !Number.isInteger(padding) || padding < 1 || padding > 10) {
           return { success: false, error: 'Padding length must be a positive integer between 1 and 10' };
         }
       }
