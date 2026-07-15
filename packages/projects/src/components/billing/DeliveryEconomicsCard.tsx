@@ -43,7 +43,9 @@ export default function DeliveryEconomicsCard({ economics, currency, billingMode
         </div>
         <div className="flex items-center justify-between border-b border-dashed border-[rgb(var(--color-border-100))] py-1.5 text-[13px]">
           <dt className="text-[rgb(var(--color-text-500))]">{t('billing.economics.cost', 'Labor + materials cost')}</dt>
-          <dd className="font-semibold tabular-nums text-[rgb(var(--color-text-900))]">{formatCents(totalCost, currency)}</dd>
+          <dd className="font-semibold tabular-nums text-[rgb(var(--color-text-900))]">
+            {formatCents(totalCost, economics.cost_currency)}
+          </dd>
         </div>
         <div className="flex items-center justify-between py-1.5 text-[13px]">
           <dt className="text-[rgb(var(--color-text-500))]">{t('billing.economics.margin', 'Projected margin')}</dt>
@@ -58,6 +60,24 @@ export default function DeliveryEconomicsCard({ economics, currency, billingMode
           </dd>
         </div>
       </dl>
+      {economics.currency_mismatch && (
+        <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
+          {t(
+            'billing.economics.currencyMismatch',
+            'Costs are recorded in {{costCurrency}}, while project revenue is in {{revenueCurrency}}. Projected margin is unavailable without an exchange rate.',
+            { costCurrency: economics.cost_currency, revenueCurrency: currency ?? economics.cost_currency },
+          )}
+        </p>
+      )}
+      {economics.uncosted_hours > 0 && (
+        <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
+          {t(
+            'billing.economics.uncostedHours',
+            '{{hours}} logged hours have no effective employee or default cost rate and contribute $0 to labor cost.',
+            { hours: economics.uncosted_hours.toFixed(1) },
+          )}
+        </p>
+      )}
     </Card>
   );
 }

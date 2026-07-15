@@ -1,6 +1,6 @@
 import { getEventBus } from '../index';
 import {
-  EventType, BaseEvent, EventSchemas, TicketCreatedEvent, TicketUpdatedEvent, TicketClosedEvent, TicketAssignedEvent, TicketAdditionalAgentAssignedEvent, TicketCommentAddedEvent, TicketCommentUpdatedEvent, ProjectCreatedEvent, ProjectAssignedEvent, ProjectTaskAssignedEvent, ProjectTaskAdditionalAgentAssignedEvent, TaskCommentAddedEvent, TaskCommentUpdatedEvent, InvoiceGeneratedEvent, MessageSentEvent, UserMentionedInDocumentEvent, AppointmentRequestCreatedEvent, AppointmentRequestApprovedEvent, AppointmentRequestDeclinedEvent, AppointmentRequestCancelledEvent, ProjectMilestoneReadyEvent, ProjectBudgetThresholdReachedEvent
+  EventType, BaseEvent, EventSchemas, TicketCreatedEvent, TicketUpdatedEvent, TicketClosedEvent, TicketAssignedEvent, TicketAdditionalAgentAssignedEvent, TicketCommentAddedEvent, TicketCommentUpdatedEvent, ProjectCreatedEvent, ProjectAssignedEvent, ProjectTaskAssignedEvent, ProjectTaskAdditionalAgentAssignedEvent, TaskCommentAddedEvent, TaskCommentUpdatedEvent, InvoiceGeneratedEvent, MessageSentEvent, UserMentionedInDocumentEvent, AppointmentRequestCreatedEvent, AppointmentRequestApprovedEvent, AppointmentRequestDeclinedEvent, AppointmentRequestCancelledEvent, ProjectMilestoneReadyEvent, ProjectBudgetThresholdReachedEvent, ProjectBudgetExceededEvent
 } from '@alga-psa/event-bus/events';
 import { createNotificationFromTemplateInternal } from '@alga-psa/notifications/actions';
 import logger from '@alga-psa/core/logger';
@@ -2164,7 +2164,7 @@ function formatInternalProjectBillingAmount(amountCents: number, currency: strin
 }
 
 async function handleProjectBillingInternalNotification(
-  event: ProjectMilestoneReadyEvent | ProjectBudgetThresholdReachedEvent,
+  event: ProjectMilestoneReadyEvent | ProjectBudgetThresholdReachedEvent | ProjectBudgetExceededEvent,
 ): Promise<void> {
   const { tenantId, projectId } = event.payload;
   const db = await getConnection(tenantId);
@@ -2218,6 +2218,28 @@ async function handleProjectBillingInternalNotification(
           projectNumber: project.project_number,
           scheduleEntryId: event.payload.entryId,
           trigger: event.payload.trigger,
+        },
+      });
+      continue;
+    }
+
+    if (event.eventType === 'PROJECT_BUDGET_EXCEEDED') {
+      await createNotificationFromTemplateInternal(db, {
+        tenant: tenantId,
+        user_id: userId,
+        template_name: 'project-budget-exceeded',
+        type: 'warning',
+        category: 'projects',
+        link: internalUrl,
+        data: {
+          projectName: project.project_name,
+          billed: formatInternalProjectBillingAmount(event.payload.billed, project.currency),
+          cap: formatInternalProjectBillingAmount(event.payload.cap, project.currency),
+          writtenDown: formatInternalProjectBillingAmount(event.payload.writtenDown, project.currency),
+        },
+        metadata: {
+          projectId,
+          projectNumber: project.project_number,
         },
       });
       continue;
@@ -2923,6 +2945,9 @@ async function handleInternalNotificationEvent(event: BaseEvent): Promise<void> 
     case 'PROJECT_BUDGET_THRESHOLD_REACHED':
       await handleProjectBillingInternalNotification(validatedEvent as ProjectBudgetThresholdReachedEvent);
       break;
+    case 'PROJECT_BUDGET_EXCEEDED':
+      await handleProjectBillingInternalNotification(validatedEvent as ProjectBudgetExceededEvent);
+      break;
     case 'INVOICE_GENERATED':
       await handleInvoiceGenerated(validatedEvent as InvoiceGeneratedEvent);
       break;
@@ -2983,6 +3008,7 @@ export async function registerInternalNotificationSubscriber(): Promise<void> {
       'PROJECT_TASK_ADDITIONAL_AGENT_ASSIGNED',
       'PROJECT_MILESTONE_READY',
       'PROJECT_BUDGET_THRESHOLD_REACHED',
+      'PROJECT_BUDGET_EXCEEDED',
       'INVOICE_GENERATED',
       'MESSAGE_SENT',
       'USER_MENTIONED_IN_DOCUMENT',
@@ -3028,6 +3054,7 @@ export async function unregisterInternalNotificationSubscriber(): Promise<void> 
       'PROJECT_TASK_ADDITIONAL_AGENT_ASSIGNED',
       'PROJECT_MILESTONE_READY',
       'PROJECT_BUDGET_THRESHOLD_REACHED',
+      'PROJECT_BUDGET_EXCEEDED',
       'INVOICE_GENERATED',
       'MESSAGE_SENT',
       'USER_MENTIONED_IN_DOCUMENT',

@@ -64,6 +64,18 @@ export function numberArrayFromDatabase(value: unknown): number[] {
   return candidate.map((item) => numberFromDatabase(item));
 }
 
+export function dateOnlyFromDatabase(value: unknown): string | null {
+  if (value === null || value === undefined || value === '') return null;
+  if (value instanceof Date) {
+    return value.toISOString().slice(0, 10);
+  }
+  const match = String(value).match(/^(\d{4}-\d{2}-\d{2})/);
+  if (!match) {
+    throw new Error(`Invalid project billing calendar date: ${String(value)}`);
+  }
+  return match[1];
+}
+
 export function withoutUndefined<T extends Record<string, unknown>>(value: T): Partial<T> {
   return Object.fromEntries(
     Object.entries(value).filter(([, item]) => item !== undefined)
@@ -86,6 +98,8 @@ export function normalizeProjectBillingScheduleEntry(
     ...row,
     amount: nullableNumberFromDatabase(row.amount),
     percentage: nullableNumberFromDatabase(row.percentage),
+    trigger_date: dateOnlyFromDatabase(row.trigger_date),
+    requires_payment_before_work: row.requires_payment_before_work === true,
     display_order: numberFromDatabase(row.display_order)
   } as IProjectBillingScheduleEntry;
 }

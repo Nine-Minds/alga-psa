@@ -58,6 +58,7 @@ import { TaskTypeSelector } from './TaskTypeSelector';
 import { getTaskTypes } from '../actions/projectTaskActions';
 import { ITaskType } from '@alga-psa/types';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import ProjectPaymentWarningBanner from './billing/ProjectPaymentWarningBanner';
 import TaskTicketLinks, { TaskTicketLinksRef } from './TaskTicketLinks';
 import { TaskDependencies, TaskDependenciesRef } from './TaskDependencies';
 import TaskDocumentsSimple, { PendingTaskDocument } from './TaskDocumentsSimple';
@@ -1657,6 +1658,7 @@ export default function TaskForm({
           {printableHeader && (
             <div className="app-print-section">{printableHeader}</div>
           )}
+          <ProjectPaymentWarningBanner projectId={phase.project_id} />
           {/* Full width Title with Status dropdown */}
           <div>
             <div className="flex items-center justify-between mb-1">

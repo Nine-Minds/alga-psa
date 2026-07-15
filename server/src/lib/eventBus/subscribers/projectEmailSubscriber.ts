@@ -11,6 +11,7 @@ import {
   TaskCommentAddedEvent,
   ProjectMilestoneReadyEvent,
   ProjectBudgetThresholdReachedEvent,
+  ProjectBudgetExceededEvent,
 } from '@alga-psa/event-bus/events';
 import { sendEventEmail, SendEmailParams } from '../../notifications/sendEventEmail';
 import { EventEmailRetryQueue } from '../../notifications/EventEmailRetryQueue';
@@ -184,7 +185,7 @@ function formatProjectBillingAmount(amountCents: number, currency: string | null
 }
 
 async function handleProjectBillingNotificationEmail(
-  event: ProjectMilestoneReadyEvent | ProjectBudgetThresholdReachedEvent,
+  event: ProjectMilestoneReadyEvent | ProjectBudgetThresholdReachedEvent | ProjectBudgetExceededEvent,
 ): Promise<void> {
   const { tenantId, projectId } = event.payload;
   const { knex } = await createTenantKnex(tenantId);
@@ -207,6 +208,32 @@ async function handleProjectBillingNotificationEmail(
   ).values());
   const { internalUrl } = await resolveProjectLinks(knex, tenantId, projectId);
   const currency = project.project_billing_currency as string | null;
+
+  if (event.eventType === 'PROJECT_BUDGET_EXCEEDED') {
+    const payload = event.payload;
+    for (const recipient of uniqueRecipients) {
+      await sendNotificationIfEnabled({
+        tenantId,
+        to: recipient.email as string,
+        subject: `Project budget exceeded: ${project.project_name}`,
+        template: 'project-budget-exceeded',
+        context: {
+          project: {
+            name: project.project_name,
+            number: project.project_number || '',
+            url: internalUrl,
+          },
+          budget: {
+            billed: formatProjectBillingAmount(payload.billed, currency),
+            cap: formatProjectBillingAmount(payload.cap, currency),
+            writtenDown: formatProjectBillingAmount(payload.writtenDown, currency),
+          },
+        },
+        replyContext: { projectId },
+      }, 'Project Budget Exceeded', recipient.userId as string);
+    }
+    return;
+  }
 
   if (event.eventType === 'PROJECT_MILESTONE_READY') {
     const payload = event.payload;
@@ -1578,6 +1605,9 @@ async function handleProjectEvent(event: BaseEvent): Promise<void> {
     case 'PROJECT_BUDGET_THRESHOLD_REACHED':
       await handleProjectBillingNotificationEmail(validatedEvent as ProjectBudgetThresholdReachedEvent);
       break;
+    case 'PROJECT_BUDGET_EXCEEDED':
+      await handleProjectBillingNotificationEmail(validatedEvent as ProjectBudgetExceededEvent);
+      break;
     default:
       logger.warn('[ProjectEmailSubscriber] Unhandled project event type:', {
         eventType: event.eventType,
@@ -1601,7 +1631,8 @@ export async function registerProjectEmailSubscriber(): Promise<void> {
       'PROJECT_TASK_ASSIGNED',
       'TASK_COMMENT_ADDED',
       'PROJECT_MILESTONE_READY',
-      'PROJECT_BUDGET_THRESHOLD_REACHED'
+      'PROJECT_BUDGET_THRESHOLD_REACHED',
+      'PROJECT_BUDGET_EXCEEDED',
     ] as const;
 
     const channel = getEmailEventChannel();
@@ -1632,7 +1663,8 @@ export async function unregisterProjectEmailSubscriber(): Promise<void> {
       'PROJECT_TASK_ASSIGNED',
       'TASK_COMMENT_ADDED',
       'PROJECT_MILESTONE_READY',
-      'PROJECT_BUDGET_THRESHOLD_REACHED'
+      'PROJECT_BUDGET_THRESHOLD_REACHED',
+      'PROJECT_BUDGET_EXCEEDED',
     ] as const;
 
     const channel = getEmailEventChannel();

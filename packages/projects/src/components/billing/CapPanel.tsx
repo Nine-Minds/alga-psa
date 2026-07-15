@@ -6,11 +6,15 @@ import { Card } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
-import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { toast } from 'react-hot-toast';
 import { currencyFractionDigits, toMinorUnits } from '@alga-psa/core';
-import type { IProjectBillingConfig, ProjectBillingCapBehavior } from '@alga-psa/types';
+import type { IProjectBillingConfig } from '@alga-psa/types';
 import { updateProjectBillingConfig } from '@alga-psa/billing/actions/projectBillingConfigActions';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 interface CapPanelProps {
   config: IProjectBillingConfig;
@@ -25,15 +29,14 @@ function centsToMajor(cents: number | null, currency: string | null): string {
 }
 
 /**
- * F122 — T&M budget cap: cap amount, notify thresholds, and the notify-vs-hard
- * behavior toggle. Config edits go through updateProjectBillingConfig, whose
+ * F122 — T&M hard budget cap: cap amount and notification thresholds. Config
+ * edits go through updateProjectBillingConfig, whose
  * server-side validation (F127) surfaces here as an error toast.
  */
 export default function CapPanel({ config, canManage, onChanged }: CapPanelProps) {
-  const { t } = useTranslation(['features/projects', 'common']);
+  const { t, i18n } = useTranslation(['features/projects', 'common']);
   const currency = config.currency;
   const [capText, setCapText] = useState(centsToMajor(config.cap_amount, currency));
-  const [behavior, setBehavior] = useState<ProjectBillingCapBehavior>(config.cap_behavior ?? 'notify');
   const [thresholdsText, setThresholdsText] = useState((config.cap_notify_thresholds ?? []).join(', '));
   const [saving, setSaving] = useState(false);
 
@@ -46,7 +49,7 @@ export default function CapPanel({ config, canManage, onChanged }: CapPanelProps
         toast.error(t('billing.cap.errorAmount', 'Enter a cap greater than zero'));
         return;
       }
-      capAmount = toMinorUnits(major, 'en-US', currency ?? 'USD');
+      capAmount = toMinorUnits(major, i18n.language, currency ?? 'USD');
     }
     const thresholds = thresholdsText
       .split(',')
@@ -56,11 +59,15 @@ export default function CapPanel({ config, canManage, onChanged }: CapPanelProps
 
     setSaving(true);
     try {
-      await updateProjectBillingConfig(config.config_id, {
+      const result = await updateProjectBillingConfig(config.config_id, {
         cap_amount: capAmount,
-        cap_behavior: hasCap ? behavior : undefined,
+        cap_behavior: hasCap ? 'hard_cap' : undefined,
         cap_notify_thresholds: thresholds,
       });
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       toast.success(t('billing.cap.saved', 'Budget cap updated'));
       onChanged();
     } catch (error) {
@@ -93,18 +100,13 @@ export default function CapPanel({ config, canManage, onChanged }: CapPanelProps
             disabled={!canManage}
           />
         </div>
-        <div>
-          <Label htmlFor="billing-cap-behavior">{t('billing.cap.behavior', 'When reached')}</Label>
-          <CustomSelect
-            id="billing-cap-behavior"
-            value={behavior}
-            onValueChange={(v) => setBehavior(v as ProjectBillingCapBehavior)}
-            disabled={!canManage || capText.trim() === ''}
-            options={[
-              { value: 'notify', label: t('billing.cap.notify', 'Notify only') },
-              { value: 'hard_cap', label: t('billing.cap.hard', 'Hard cap (write down)') },
-            ]}
-          />
+        <div className="rounded-md border border-[rgb(var(--color-border-200))] px-3 py-2">
+          <p className="text-xs font-semibold text-[rgb(var(--color-text-700))]">
+            {t('billing.cap.hard', 'Hard cap (write down)')}
+          </p>
+          <p className="mt-1 text-[11px] text-[rgb(var(--color-text-500))]">
+            {t('billing.cap.hardHint', 'Labor and materials beyond the cap are written down automatically.')}
+          </p>
         </div>
       </div>
 

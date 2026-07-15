@@ -31,6 +31,20 @@ const TEMPLATES = [
     },
   },
   {
+    templateName: 'project-budget-exceeded',
+    subtypeName: 'project-budget-exceeded',
+    translations: {
+      en: { title: 'Project Budget Exceeded', message: 'Project "{{projectName}}" exceeded its {{cap}} budget; {{writtenDown}} was written down ({{billed}} billed)' },
+      fr: { title: 'Budget du projet dépassé', message: 'Le projet « {{projectName}} » a dépassé son budget de {{cap}} ; {{writtenDown}} ont été dépréciés ({{billed}} facturés)' },
+      es: { title: 'Presupuesto del proyecto superado', message: 'El proyecto "{{projectName}}" superó su presupuesto de {{cap}}; se dieron de baja {{writtenDown}} ({{billed}} facturados)' },
+      de: { title: 'Projektbudget überschritten', message: 'Projekt „{{projectName}}“ hat sein Budget von {{cap}} überschritten; {{writtenDown}} wurden abgeschrieben ({{billed}} abgerechnet)' },
+      nl: { title: 'Projectbudget overschreden', message: 'Project "{{projectName}}" heeft het budget van {{cap}} overschreden; {{writtenDown}} is afgeschreven ({{billed}} gefactureerd)' },
+      it: { title: 'Budget del progetto superato', message: 'Il progetto "{{projectName}}" ha superato il budget di {{cap}}; {{writtenDown}} sono stati svalutati ({{billed}} fatturati)' },
+      pl: { title: 'Przekroczono budżet projektu', message: 'Projekt „{{projectName}}” przekroczył budżet {{cap}}; odpisano {{writtenDown}} (zafakturowano {{billed}})' },
+      pt: { title: 'Orçamento do projeto excedido', message: 'O projeto "{{projectName}}" excedeu o orçamento de {{cap}}; {{writtenDown}} foram baixados ({{billed}} faturados)' },
+    },
+  },
+  {
     templateName: 'project-assigned',
     subtypeName: 'project-assigned',
     translations: {

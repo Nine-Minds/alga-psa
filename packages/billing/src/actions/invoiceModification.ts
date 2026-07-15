@@ -115,7 +115,7 @@ function normalizeTransactionMetadata(value: unknown): Record<string, any> {
   return {};
 }
 
-async function rollbackProjectBillingForInvoice(
+async function releaseProjectBillingForDeletedInvoice(
   trx: Knex.Transaction,
   tenant: string,
   invoiceId: string,
@@ -197,6 +197,24 @@ async function rollbackProjectBillingForInvoice(
           ...metadata,
           project_billing_cap_rolled_back: true,
         },
+      });
+  }
+}
+
+async function releaseMaterialsForDeletedInvoice(
+  trx: Knex.Transaction,
+  tenant: string,
+  invoiceId: string,
+): Promise<void> {
+  const releasedAt = new Date().toISOString();
+  for (const tableName of ['project_materials', 'ticket_materials']) {
+    await tenantScopedTable(trx, tenant, tableName)
+      .where({ billed_invoice_id: invoiceId, is_billed: true })
+      .update({
+        is_billed: false,
+        billed_invoice_id: null,
+        billed_at: null,
+        updated_at: releasedAt,
       });
   }
 }
@@ -1077,9 +1095,10 @@ export const unfinalizeInvoice = withAuth(async (
 
   let expectedError: InvoiceActionError | null = null;
 
-  await withTransaction(knex, async (trx: Knex.Transaction) => {
-    // Check if invoice exists and is finalized
-    const invoice = await tenantScopedTable(trx, tenant, 'invoices')
+  try {
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // Check if invoice exists and is finalized
+      const invoice = await tenantScopedTable(trx, tenant, 'invoices')
       .where({ invoice_id: invoiceId })
       .first();
 
@@ -1120,8 +1139,6 @@ export const unfinalizeInvoice = withAuth(async (
       })
       .update(updatedFields);
 
-    await rollbackProjectBillingForInvoice(trx, tenant, invoiceId);
-
     // Record audit log
     // await auditLog(
     //   trx,
@@ -1137,7 +1154,17 @@ export const unfinalizeInvoice = withAuth(async (
     //     }
     //   }
     // );
-  });
+    });
+  } catch (error) {
+    const expected = toInvoiceActionError(error);
+    if (expected) return expected;
+    logger.error('[unfinalizeInvoice] Unexpected failure', {
+      invoiceId,
+      tenant,
+      error: error instanceof Error ? error.message : String(error),
+    });
+    return actionError('Invoice could not be unfinalized because an unexpected data error occurred. Please refresh and try again.');
+  }
 
   if (expectedError) {
     return expectedError;
@@ -1779,7 +1806,8 @@ export const hardDeleteInvoice = withAuth(async (
     }
 
 
-    await rollbackProjectBillingForInvoice(trx, tenant, invoiceId);
+    await releaseProjectBillingForDeletedInvoice(trx, tenant, invoiceId);
+    await releaseMaterialsForDeletedInvoice(trx, tenant, invoiceId);
 
     // 4. Unmark time entries
     await tenantScopedTable(trx, tenant, 'time_entries')

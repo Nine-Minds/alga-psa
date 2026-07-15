@@ -13,6 +13,7 @@ import FinalizedTab from './invoicing/FinalizedTab';
 import ProjectBillingReviewTab from './invoicing/ProjectBillingReviewTab';
 import { getReadyEntryCount } from '@alga-psa/billing/actions/projectBillingScheduleActions';
 import { useTranslation } from 'react-i18next';
+import { isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 interface InvoicingHubProps {
   initialServices: IService[];
@@ -56,7 +57,12 @@ const InvoicingHub: React.FC<InvoicingHubProps> = ({ initialServices }) => {
   useEffect(() => {
     let active = true;
     getReadyEntryCount()
-      .then((count) => { if (active) setReadyProjectBillingCount(count); })
+      .then((count) => {
+        if (!active) return;
+        setReadyProjectBillingCount(
+          isActionMessageError(count) || isActionPermissionError(count) ? 0 : count,
+        );
+      })
       .catch((err) => { console.error('Failed to load ready project billing count:', err); });
     return () => { active = false; };
   }, [refreshTrigger]);

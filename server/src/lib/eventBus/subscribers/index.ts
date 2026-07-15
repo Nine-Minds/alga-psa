@@ -14,6 +14,10 @@ import { registerProjectWebhookSubscriber, unregisterProjectWebhookSubscriber } 
 import { registerRmmAlertTicketClosedSubscriber, unregisterRmmAlertTicketClosedSubscriber } from './rmmAlertTicketClosedSubscriber';
 import { registerRmmAlertNotificationSubscriber, unregisterRmmAlertNotificationSubscriber } from './rmmAlertNotificationSubscriber';
 import { registerMaintenanceJobSubscriber, unregisterMaintenanceJobSubscriber } from './maintenanceJobSubscriber';
+import {
+  registerProjectBillingPaymentStatusSubscriber,
+  unregisterProjectBillingPaymentStatusSubscriber,
+} from './projectBillingPaymentStatusSubscriber';
 
 type SubscriberRegistration = {
   name: string;
@@ -37,6 +41,7 @@ const REGISTRATIONS: SubscriberRegistration[] = [
   { name: 'rmmAlertTicketClosed', register: registerRmmAlertTicketClosedSubscriber },
   { name: 'rmmAlertNotification', register: registerRmmAlertNotificationSubscriber },
   { name: 'maintenanceJob', register: registerMaintenanceJobSubscriber },
+  { name: 'projectBillingPaymentStatus', register: registerProjectBillingPaymentStatusSubscriber },
 ];
 
 const UNREGISTRATIONS: SubscriberRegistration[] = [
@@ -56,6 +61,7 @@ const UNREGISTRATIONS: SubscriberRegistration[] = [
   { name: 'projectWebhook', register: unregisterProjectWebhookSubscriber },
   { name: 'rmmAlertTicketClosed', register: unregisterRmmAlertTicketClosedSubscriber },
   { name: 'rmmAlertNotification', register: unregisterRmmAlertNotificationSubscriber },
+  { name: 'projectBillingPaymentStatus', register: unregisterProjectBillingPaymentStatusSubscriber },
 ];
 
 // Each subscriber registers in its own try/catch. A transient failure (e.g. a

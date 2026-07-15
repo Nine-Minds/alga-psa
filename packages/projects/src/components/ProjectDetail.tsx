@@ -36,6 +36,7 @@ import { getProjectTaskStatuses, getProjectStatusesByPhase, updatePhase, deleteP
 import { checkCurrentUserPermissions } from '@alga-psa/auth/actions';
 import { getProjectBillingOverview, type ProjectBillingOverview } from '@alga-psa/billing/actions/projectBillingConfigActions';
 import ProjectBillingView from './billing/ProjectBillingView';
+import ProjectPaymentWarningBanner from './billing/ProjectPaymentWarningBanner';
 import { derivePhaseBillingBadges } from './billing/billingViewHelpers';
 import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 import { updateTaskStatus, reorderTask, reorderTasksInStatus, moveTaskToPhase, updateTaskWithChecklist, getTaskChecklistItems, getTaskResourcesAction, getTaskTicketLinksAction, duplicateTaskToPhase, deleteTask as deleteTaskAction, getTasksForPhase, getTaskById, getProjectTaskData, assignTeamToProjectTask, removeTeamFromProjectTask, bulkAddTagsToTasks } from '../actions/projectTaskActions';
@@ -639,6 +640,11 @@ export default function ProjectDetail({
     setBillingLoading(true);
     try {
       const overview = await getProjectBillingOverview(project.project_id);
+      if (isActionMessageError(overview) || isActionPermissionError(overview)) {
+        console.error('Error loading project billing overview:', getErrorMessage(overview));
+        setBillingOverview(null);
+        return;
+      }
       setBillingOverview(overview);
     } catch (error) {
       console.error('Error loading project billing overview:', error);
@@ -4184,6 +4190,7 @@ export default function ProjectDetail({
         className={styles.mainContent}
         onDragOver={handleDragOver}
       >
+        <ProjectPaymentWarningBanner projectId={project.project_id} className="mb-3 flex-shrink-0" />
         <div className={styles.contentWrapper}>
           {/* Phases panel - collapsible in kanban view */}
           {(viewMode === 'kanban' || viewMode === 'billing') && (

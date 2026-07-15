@@ -17,6 +17,11 @@ import {
 } from '@alga-psa/billing/actions/projectBillingConfigActions';
 import { getServices } from '../../actions/serviceCatalogActions';
 import { formatCents } from './billingViewHelpers';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 type OverrideView = IProjectPhaseRateOverride & {
   phase_name: string;
@@ -47,7 +52,7 @@ export default function PhaseRateOverridesEditor({
   canManage,
   onChanged,
 }: PhaseRateOverridesEditorProps) {
-  const { t } = useTranslation(['features/projects', 'common']);
+  const { t, i18n } = useTranslation(['features/projects', 'common']);
   const [services, setServices] = useState<{ value: string; label: string }[]>([]);
   const [adding, setAdding] = useState(false);
   const [phaseId, setPhaseId] = useState('');
@@ -92,7 +97,7 @@ export default function PhaseRateOverridesEditor({
         toast.error(t('billing.overrides.errorRate', 'Enter a valid rate'));
         return;
       }
-      rate = toMinorUnits(major, 'en-US', currency ?? 'USD');
+      rate = toMinorUnits(major, i18n.language, currency ?? 'USD');
     }
     const remap = remapServiceId === NO_REMAP ? null : remapServiceId;
     if (rate == null && remap == null) {
@@ -102,12 +107,16 @@ export default function PhaseRateOverridesEditor({
 
     setSaving(true);
     try {
-      await upsertPhaseRateOverride({
+      const result = await upsertPhaseRateOverride({
         phase_id: phaseId,
         service_id: serviceId === ALL_SERVICES ? null : serviceId,
         rate,
         override_service_id: remap,
       });
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       toast.success(t('billing.overrides.saved', 'Rate override saved'));
       resetForm();
       onChanged();
@@ -120,7 +129,11 @@ export default function PhaseRateOverridesEditor({
 
   const handleDelete = async (id: string) => {
     try {
-      await deletePhaseRateOverride(id);
+      const result = await deletePhaseRateOverride(id);
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       toast.success(t('billing.overrides.deleted', 'Rate override removed'));
       onChanged();
     } catch (error) {

@@ -12,6 +12,7 @@ import type {
 } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import { revalidatePath } from 'next/cache';
+import { publishEvent } from '@alga-psa/event-bus/publishers';
 import ProjectBillingCapUsage from '../models/projectBillingCapUsage';
 import ProjectBillingConfig from '../models/projectBillingConfig';
 import ProjectBillingScheduleEntry from '../models/projectBillingScheduleEntry';
@@ -21,6 +22,7 @@ import {
   updateProjectBillingConfigSchema,
 } from '../schemas/projectBillingSchemas';
 import { computeEntryAmounts, validateAllocation } from '../services/projectBillingService';
+import { withProjectBillingActionErrors } from './projectBillingActionErrors';
 
 export interface ProjectBillingRollup {
   total_price: number | null;
@@ -33,8 +35,11 @@ export interface ProjectBillingRollup {
 
 export interface ProjectBillingEconomics {
   hours_logged: number;
+  uncosted_hours: number;
   labor_cost: number;
   materials_cost: number;
+  cost_currency: string;
+  currency_mismatch: boolean;
   projected_margin_pct: number | null;
 }
 
@@ -262,6 +267,12 @@ async function getProjectEconomics(
   const laborResult = await connection.raw(`
     SELECT
       COALESCE(SUM(GREATEST(0, EXTRACT(EPOCH FROM (te.end_time - te.start_time))) / 3600), 0) AS hours_logged,
+      COALESCE(SUM(
+        CASE WHEN resolved_rate.cost_rate IS NULL
+          THEN GREATEST(0, EXTRACT(EPOCH FROM (te.end_time - te.start_time))) / 3600
+          ELSE 0
+        END
+      ), 0) AS uncosted_hours,
       COALESCE(ROUND(SUM(
         (GREATEST(0, EXTRACT(EPOCH FROM (te.end_time - te.start_time))) / 3600)
         * COALESCE(resolved_rate.cost_rate, 0)
@@ -328,6 +339,7 @@ async function getProjectEconomics(
   const laborRow = firstRawRow(laborResult);
   const materialRow = firstRawRow(materialResult);
   const hoursLogged = Number(laborRow.hours_logged ?? 0);
+  const uncostedHours = Number(laborRow.uncosted_hours ?? 0);
   const laborCost = Number(laborRow.labor_cost ?? 0);
   const materialsCost = Number(materialRow.materials_cost ?? 0);
   const projectedRevenue = config?.billing_model === 'fixed_price' ? config.total_price : null;
@@ -338,8 +350,11 @@ async function getProjectEconomics(
 
   return {
     hours_logged: Number.isFinite(hoursLogged) ? hoursLogged : 0,
+    uncosted_hours: Number.isFinite(uncostedHours) ? uncostedHours : 0,
     labor_cost: Number.isFinite(laborCost) ? Math.round(laborCost) : 0,
     materials_cost: Number.isFinite(materialsCost) ? Math.round(materialsCost) : 0,
+    cost_currency: defaultCurrency,
+    currency_mismatch: !sameCurrency,
     projected_margin_pct: projectedMargin === null
       ? null
       : Math.round(projectedMargin * 100) / 100,
@@ -382,7 +397,7 @@ async function listOverrideViews(
   }));
 }
 
-export const getProjectBillingOverview = withAuth(async (
+export const getProjectBillingOverview = withAuth(withProjectBillingActionErrors(async (
   user,
   { tenant },
   projectId: string,
@@ -419,9 +434,9 @@ export const getProjectBillingOverview = withAuth(async (
     economics,
     overrides,
   };
-});
+}));
 
-export const createProjectBillingConfig = withAuth(async (
+export const createProjectBillingConfig = withAuth(withProjectBillingActionErrors(async (
   user,
   { tenant },
   input: CreateProjectBillingConfigActionInput,
@@ -448,14 +463,25 @@ export const createProjectBillingConfig = withAuth(async (
     return ProjectBillingConfig.insert({
       ...parsed,
       currency: clientCurrency,
-      cap_behavior: parsed.cap_amount != null ? parsed.cap_behavior ?? 'notify' : parsed.cap_behavior,
+      cap_behavior: parsed.cap_amount != null ? 'hard_cap' : parsed.cap_behavior,
     }, trx);
   });
   revalidateProjectBilling(created.project_id);
+  await publishEvent({
+    eventType: 'PROJECT_BILLING_CONFIG_CREATED',
+    payload: {
+      tenantId: tenant,
+      projectId: created.project_id,
+      configId: created.config_id,
+      billingModel: created.billing_model,
+      invoiceMode: created.invoice_mode,
+      userId: user.user_id,
+    },
+  });
   return created;
-});
+}));
 
-export const updateProjectBillingConfig = withAuth(async (
+export const updateProjectBillingConfig = withAuth(withProjectBillingActionErrors(async (
   user,
   { tenant },
   configId: string,
@@ -464,10 +490,16 @@ export const updateProjectBillingConfig = withAuth(async (
   const { knex } = await createTenantKnex();
   await assertProjectBillingMutationPermission(user, knex);
   const { currency, ...updatesWithoutCurrency } = updates;
-  const parsed = updateProjectBillingConfigSchema.parse({
+  const parsedInput = updateProjectBillingConfigSchema.parse({
     ...updatesWithoutCurrency,
     ...(currency !== undefined ? { currency: currency?.toUpperCase() } : {}),
   });
+  const parsed = {
+    ...parsedInput,
+    ...(parsedInput.cap_amount != null || parsedInput.cap_behavior != null
+      ? { cap_behavior: 'hard_cap' as const }
+      : {}),
+  };
 
   const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
     const existing = await ProjectBillingConfig.getById(configId, trx);
@@ -510,17 +542,29 @@ export const updateProjectBillingConfig = withAuth(async (
     return Object.assign(updated, { allocation_warning: allocationWarning });
   });
   revalidateProjectBilling(result.project_id);
+  await publishEvent({
+    eventType: 'PROJECT_BILLING_CONFIG_UPDATED',
+    payload: {
+      tenantId: tenant,
+      projectId: result.project_id,
+      configId: result.config_id,
+      billingModel: result.billing_model,
+      invoiceMode: result.invoice_mode,
+      userId: user.user_id,
+      changes: updates,
+    },
+  });
   return result;
-});
+}));
 
-export const deleteProjectBillingConfig = withAuth(async (
+export const deleteProjectBillingConfig = withAuth(withProjectBillingActionErrors(async (
   user,
-  { tenant: _tenant },
+  { tenant },
   configId: string,
 ): Promise<void> => {
   const { knex } = await createTenantKnex();
   await assertProjectBillingMutationPermission(user, knex);
-  const projectId = await withTransaction(knex, async (trx: Knex.Transaction) => {
+  const deletedConfig = await withTransaction(knex, async (trx: Knex.Transaction) => {
     const config = await ProjectBillingConfig.getById(configId, trx);
     if (!config) throw new Error('Project billing config not found');
     const entries = await ProjectBillingScheduleEntry.listByConfig(configId, trx);
@@ -530,12 +574,23 @@ export const deleteProjectBillingConfig = withAuth(async (
     if (!await ProjectBillingConfig.delete(configId, trx)) {
       throw new Error('Project billing config not found');
     }
-    return config.project_id;
+    return config;
   });
-  revalidateProjectBilling(projectId);
-});
+  revalidateProjectBilling(deletedConfig.project_id);
+  await publishEvent({
+    eventType: 'PROJECT_BILLING_CONFIG_DELETED',
+    payload: {
+      tenantId: tenant,
+      projectId: deletedConfig.project_id,
+      configId: deletedConfig.config_id,
+      billingModel: deletedConfig.billing_model,
+      invoiceMode: deletedConfig.invoice_mode,
+      userId: user.user_id,
+    },
+  });
+}));
 
-export const upsertPhaseRateOverride = withAuth(async (
+export const upsertPhaseRateOverride = withAuth(withProjectBillingActionErrors(async (
   user,
   { tenant },
   input: UpsertPhaseRateOverrideActionInput,
@@ -595,9 +650,9 @@ export const upsertPhaseRateOverride = withAuth(async (
   });
   revalidateProjectBilling(result.projectId);
   return result.override;
-});
+}));
 
-export const deletePhaseRateOverride = withAuth(async (
+export const deletePhaseRateOverride = withAuth(withProjectBillingActionErrors(async (
   user,
   { tenant },
   overrideId: string,
@@ -618,4 +673,4 @@ export const deletePhaseRateOverride = withAuth(async (
     return phase.project_id;
   });
   revalidateProjectBilling(projectId);
-});
+}));

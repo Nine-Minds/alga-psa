@@ -2,7 +2,6 @@
 
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import Link from 'next/link';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -21,10 +20,17 @@ import {
   deleteScheduleEntry,
   holdScheduleEntry,
   markEntryReady,
+  releaseScheduleEntryHold,
 } from '@alga-psa/billing/actions/projectBillingScheduleActions';
 import StatusChip from './StatusChip';
 import ScheduleEntryDialog from './ScheduleEntryDialog';
 import { formatCents } from './billingViewHelpers';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
+import { useFormatters } from '@alga-psa/ui/lib/i18n/client';
 
 interface ScheduleTableProps {
   config: IProjectBillingConfig;
@@ -35,11 +41,19 @@ interface ScheduleTableProps {
   /** Entry to visually highlight after a phase-completion deep link (F139). */
   highlightEntryId?: string | null;
   onChanged: () => void;
+  onOpenInvoice: (invoiceId: string, invoiceNumber: string) => void;
 }
 
-function formatTriggerDate(value: Date | string | null): string {
-  if (!value) return '';
-  return new Date(value).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+function triggerDate(value: Date | string | null): Date | null {
+  if (!value) return null;
+  if (value instanceof Date) {
+    return value;
+  }
+  const match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  const date = match
+    ? new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]))
+    : new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
 }
 
 /**
@@ -56,8 +70,10 @@ export default function ScheduleTable({
   canManage,
   highlightEntryId,
   onChanged,
+  onOpenInvoice,
 }: ScheduleTableProps) {
   const { t } = useTranslation(['features/projects', 'common']);
+  const { formatDate } = useFormatters();
   const currency = config.currency;
   const [busyId, setBusyId] = useState<string | null>(null);
   const [dialogEntry, setDialogEntry] = useState<ScheduleEntryView | null>(null);
@@ -84,6 +100,10 @@ export default function ScheduleTable({
     setBusyId(id);
     try {
       const result = await action();
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       toast.success(t(successKey, fallback));
       onResult?.(result);
       onChanged();
@@ -121,7 +141,8 @@ export default function ScheduleTable({
       return entry.phase_name ?? t('billing.schedule.phaseTrigger', 'Phase completion');
     }
     if (entry.trigger_type === 'date') {
-      return formatTriggerDate(entry.trigger_date);
+      const date = triggerDate(entry.trigger_date);
+      return date ? formatDate(date, { dateStyle: 'medium' }) : '';
     }
     return t('billing.entry.triggerManual', 'Manual');
   };
@@ -132,11 +153,17 @@ export default function ScheduleTable({
         ? t('billing.schedule.depositCredit', 'Deposit · applied as credit')
         : t('billing.schedule.depositDeduct', 'Deposit · deducted from final');
     }
+    if (entry.status === 'held' && entry.hold_reason) {
+      return t('billing.schedule.heldReason', 'On hold: {{reason}}', { reason: entry.hold_reason });
+    }
     if (entry.trigger_type === 'phase' && entry.phase_name) {
       return t('billing.schedule.phaseSub', 'Phase: {{name}}', { name: entry.phase_name });
     }
     if (entry.trigger_type === 'date') {
-      return t('billing.schedule.dateSub', 'On {{date}}', { date: formatTriggerDate(entry.trigger_date) });
+      const date = triggerDate(entry.trigger_date);
+      return t('billing.schedule.dateSub', 'On {{date}}', {
+        date: date ? formatDate(date, { dateStyle: 'medium' }) : '',
+      });
     }
     return t('billing.schedule.manualSub', 'Manual trigger');
   };
@@ -156,7 +183,13 @@ export default function ScheduleTable({
                 id={`billing-approve-invoice-${entry.schedule_entry_id}`}
                 size="xs"
                 disabled={busy}
-                onClick={() => run(entry.schedule_entry_id, () => approveAndInvoiceNow(entry.schedule_entry_id), 'billing.schedule.invoiced', 'Invoice generated')}
+                onClick={() => run(
+                  entry.schedule_entry_id,
+                  () => approveAndInvoiceNow(entry.schedule_entry_id),
+                  'billing.schedule.invoiced',
+                  'Invoice generated',
+                  (result) => onOpenInvoice(result.invoice_id, result.entry.invoice_number ?? result.invoice_id),
+                )}
               >
                 {t('billing.schedule.approveInvoice', 'Approve & invoice')}
               </Button>
@@ -206,6 +239,22 @@ export default function ScheduleTable({
             onClick={() => run(entry.schedule_entry_id, () => cancelScheduleEntry(entry.schedule_entry_id), 'billing.schedule.canceled', 'Entry canceled')}
           >
             {t('common:actions.cancel', 'Cancel')}
+          </Button>
+        )}
+        {entry.status === 'held' && (
+          <Button
+            id={`billing-release-hold-${entry.schedule_entry_id}`}
+            size="xs"
+            variant="outline"
+            disabled={busy}
+            onClick={() => run(
+              entry.schedule_entry_id,
+              () => releaseScheduleEntryHold(entry.schedule_entry_id),
+              'billing.schedule.holdReleased',
+              'Hold released',
+            )}
+          >
+            {t('billing.schedule.releaseHold', 'Release hold')}
           </Button>
         )}
         {entry.status === 'pending' && (
@@ -306,13 +355,15 @@ export default function ScheduleTable({
                   <td className="px-3.5 py-3"><StatusChip status={entry.status} /></td>
                   <td className="px-3.5 py-3">
                     {entry.invoice_number && entry.invoice_id ? (
-                      <Link
+                      <button
                         id={`billing-invoice-link-${entry.schedule_entry_id}`}
-                        href={`/msp/billing?tab=invoicing&invoiceId=${entry.invoice_id}`}
+                        type="button"
+                        data-invoice-id={entry.invoice_id}
+                        onClick={() => onOpenInvoice(entry.invoice_id!, entry.invoice_number!)}
                         className="font-mono text-xs text-primary-600 hover:underline"
                       >
                         {entry.invoice_number}
-                      </Link>
+                      </button>
                     ) : (
                       <span className="text-[rgb(var(--color-text-400))]">—</span>
                     )}

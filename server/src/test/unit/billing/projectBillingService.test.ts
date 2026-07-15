@@ -4,6 +4,7 @@ import {
   computeDepositReconciliation,
   computeEntryAmounts,
   detectThresholdCrossings,
+  isFirstProjectCapOverage,
 } from '@alga-psa/billing/services/projectBillingService';
 
 type AllocationEntry = Parameters<typeof computeEntryAmounts>[1][number];
@@ -159,6 +160,13 @@ describe('project billing cap math (T016/T017)', () => {
     expect(() => detectThresholdCrossings(10_000, 0, 5_000, [Number.NaN], [])).toThrow(
       'thresholds must contain non-negative finite percentages',
     );
+  });
+
+  it('publishes the hard-cap exceeded signal only on the zero-to-positive write-down transition', () => {
+    expect(isFirstProjectCapOverage(0, 1)).toBe(true);
+    expect(isFirstProjectCapOverage(0, 500)).toBe(true);
+    expect(isFirstProjectCapOverage(0, 0)).toBe(false);
+    expect(isFirstProjectCapOverage(500, 750)).toBe(false);
   });
 });
 

@@ -13,6 +13,14 @@ import { currencyFractionDigits, toMinorUnits } from '@alga-psa/core';
 import type { IProjectPhase, ProjectBillingInvoiceMode } from '@alga-psa/types';
 import type { ProjectBillingOverview } from '@alga-psa/billing/actions/projectBillingConfigActions';
 import { updateProjectBillingConfig } from '@alga-psa/billing/actions/projectBillingConfigActions';
+import { generateProjectInvoice } from '@alga-psa/billing/actions/invoiceGeneration';
+import { useDrawer } from '@alga-psa/ui';
+import { InvoicePreviewDrawerContent } from '@alga-psa/billing/components';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import BillingSetupWizard from './BillingSetupWizard';
 import ScheduleTable from './ScheduleTable';
 import CapPanel from './CapPanel';
@@ -49,7 +57,9 @@ export default function ProjectBillingView({
   onChanged,
 }: ProjectBillingViewProps) {
   const { t } = useTranslation(['features/projects', 'common']);
+  const { openDrawer } = useDrawer();
   const [editingTerms, setEditingTerms] = useState(false);
+  const [generatingInvoice, setGeneratingInvoice] = useState(false);
 
   if (loading || !overview) {
     return (
@@ -74,6 +84,33 @@ export default function ProjectBillingView({
   }
 
   const isFixed = config.billing_model === 'fixed_price';
+
+  const openInvoice = (invoiceId: string) => {
+    openDrawer(
+      <InvoicePreviewDrawerContent invoiceId={invoiceId} />,
+      undefined,
+      undefined,
+      '1100px',
+    );
+  };
+
+  const handleGenerateTmInvoice = async () => {
+    setGeneratingInvoice(true);
+    try {
+      const result = await generateProjectInvoice(projectId);
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
+      toast.success(t('billing.tm.invoiceGenerated', 'Project invoice generated'));
+      onChanged();
+      openInvoice(result.invoice_id);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
+    } finally {
+      setGeneratingInvoice(false);
+    }
+  };
 
   return (
     <div className="flex flex-col gap-3.5 pb-4">
@@ -103,10 +140,25 @@ export default function ProjectBillingView({
             canManage={canManage}
             highlightEntryId={highlightEntryId}
             onChanged={onChanged}
+            onOpenInvoice={(invoiceId) => openInvoice(invoiceId)}
           />
         </>
       ) : (
         <>
+          {config.invoice_mode === 'standalone' && canManage && (
+            <div className="flex justify-end">
+              <Button
+                id="billing-generate-tm-invoice"
+                onClick={handleGenerateTmInvoice}
+                disabled={generatingInvoice}
+              >
+                {generatingInvoice && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
+                {generatingInvoice
+                  ? t('billing.tm.generatingInvoice', 'Generating invoice...')
+                  : t('billing.tm.generateInvoice', 'Generate project invoice')}
+              </Button>
+            </div>
+          )}
           <CapPanel config={config} canManage={canManage} onChanged={onChanged} />
           <PhaseRateOverridesEditor
             overrides={overrides}
@@ -149,10 +201,10 @@ interface TermsDialogProps {
 /**
  * F127 — fixed-price terms editor. Editing the total re-validates the schedule
  * server-side; the billing model is immutable once an entry is invoiced. Both
- * failures come back as thrown errors, surfaced here as a clear toast.
+ * failures come back as structured results, surfaced here as a clear toast.
  */
 function TermsDialog({ configId, currency, totalPrice, invoiceMode, onClose, onSaved }: TermsDialogProps) {
-  const { t } = useTranslation(['features/projects', 'common']);
+  const { t, i18n } = useTranslation(['features/projects', 'common']);
   const digits = currencyFractionDigits(currency ?? 'USD');
   const [totalText, setTotalText] = useState(totalPrice != null ? (totalPrice / Math.pow(10, digits)).toString() : '');
   const [mode, setMode] = useState<ProjectBillingInvoiceMode>(invoiceMode);
@@ -166,10 +218,14 @@ function TermsDialog({ configId, currency, totalPrice, invoiceMode, onClose, onS
     }
     setSaving(true);
     try {
-      await updateProjectBillingConfig(configId, {
-        total_price: toMinorUnits(major, 'en-US', currency ?? 'USD'),
+      const result = await updateProjectBillingConfig(configId, {
+        total_price: toMinorUnits(major, i18n.language, currency ?? 'USD'),
         invoice_mode: mode,
       });
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       toast.success(t('billing.terms.saved', 'Billing terms updated'));
       onSaved();
     } catch (error) {

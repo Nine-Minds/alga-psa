@@ -10,7 +10,7 @@ import type { ScheduleEntryView } from '@alga-psa/billing/actions/projectBilling
  * always formats through here and never hand-divides by 100.
  */
 export function formatCents(cents: number | null | undefined, currency: string | null | undefined): string {
-  return formatCurrencyFromMinorUnits(cents ?? 0, 'en-US', currency ?? 'USD');
+  return formatCurrencyFromMinorUnits(cents ?? 0, undefined, currency ?? 'USD');
 }
 
 /**
@@ -44,6 +44,11 @@ const STATUS_VISUALS: Record<ProjectBillingScheduleStatus, StatusVisual> = {
     dot: 'bg-amber-500',
     labelKey: 'ready',
   },
+  held: {
+    chip: 'bg-orange-50 text-orange-700 dark:bg-orange-500/10 dark:text-orange-300',
+    dot: 'bg-orange-500',
+    labelKey: 'held',
+  },
   pending: {
     chip: 'bg-gray-100 text-gray-600 dark:bg-gray-500/15 dark:text-gray-300',
     dot: 'bg-gray-400',
@@ -65,6 +70,7 @@ const STATUS_RANK: Record<ProjectBillingScheduleStatus, number> = {
   canceled: 0,
   pending: 1,
   ready: 2,
+  held: 2,
   approved: 3,
   invoiced: 4,
 };

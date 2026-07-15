@@ -328,7 +328,7 @@ export class PDFGenerationService {
         throw new Error(`Failed to map invoice ${invoiceId} to view model`);
       }
 
-      await enrichInvoiceViewModelWithLocations(knex, this.tenant, invoiceViewModel);
+      await enrichInvoiceViewModelWithLocations(knex, this.tenant, invoiceViewModel, invoiceId);
 
       // Standard-fallback auto-branch: when no custom template was picked and
       // the invoice spans ≥2 distinct locations, swap in the by-location

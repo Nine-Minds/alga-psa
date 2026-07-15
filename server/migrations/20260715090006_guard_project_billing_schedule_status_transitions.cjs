@@ -10,6 +10,16 @@
  * @returns {Promise<void>}
  */
 exports.up = async function up(knex) {
+  const { rows: citusRows } = await knex.raw(
+    "SELECT 1 FROM pg_extension WHERE extname = 'citus' LIMIT 1"
+  );
+  if (citusRows.length > 0) {
+    // Ordinary coordinator triggers are not propagated to distributed shard
+    // placements. Lifecycle enforcement is provided by the atomic model
+    // transition API on Citus and, after the hardening migration, everywhere.
+    return;
+  }
+
   await knex.raw(`
     CREATE OR REPLACE FUNCTION guard_project_billing_schedule_status_transition()
     RETURNS trigger

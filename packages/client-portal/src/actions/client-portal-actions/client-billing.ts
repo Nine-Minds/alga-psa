@@ -31,6 +31,10 @@ import { scheduleInvoiceEmailAction, scheduleInvoiceZipAction } from '@alga-psa/
 import { JobStatus } from '@alga-psa/types';
 import { normalizeLiveRecurringStorage } from '@alga-psa/shared/billingClients/recurrenceStorageModel';
 import { onQuoteAccepted } from '@alga-psa/opportunities/lib/quoteLifecycleHooks';
+import {
+  getClientIdFromPortalUser as getClientIdFromUser,
+  hasClientBillingReadPermission as hasBillingPermission,
+} from './clientBillingPermissions';
 
 export type ClientBillingActionError =
   | { readonly actionError: string }
@@ -107,49 +111,6 @@ class JobNotFoundError extends Error {
     super('Job not found');
     this.name = 'JobNotFoundError';
   }
-}
-
-/**
- * Get clientId from user's contact - avoids nested withAuth calls
- */
-async function getClientIdFromUser(
-  trx: Knex.Transaction,
-  user: IUserWithRoles,
-  tenant: string
-): Promise<string | null> {
-  if (!user.contact_id) return null;
-
-  const contact = await tenantDb(trx, tenant).table('contacts')
-    .where({
-      contact_name_id: user.contact_id,
-    })
-    .select('client_id')
-    .first();
-
-  return contact?.client_id || null;
-}
-
-/**
- * Check if user has billing read permission - avoids nested withAuth calls
- */
-async function hasBillingPermission(
-  trx: Knex.Transaction,
-  user: IUserWithRoles,
-  tenant: string
-): Promise<boolean> {
-  const scopedDb = tenantDb(trx, tenant);
-  const permissionsQuery = scopedDb.table('role_permissions as rp')
-    .where({
-      'ur.user_id': user.user_id,
-      'p.resource': 'billing',
-      'p.action': 'read'
-    })
-    .first();
-  scopedDb.tenantJoin(permissionsQuery, 'permissions as p', 'rp.permission_id', 'p.permission_id');
-  scopedDb.tenantJoin(permissionsQuery, 'user_roles as ur', 'rp.role_id', 'ur.role_id');
-  const permissions = await permissionsQuery;
-
-  return !!permissions;
 }
 
 async function getAuthorizedClientQuote(

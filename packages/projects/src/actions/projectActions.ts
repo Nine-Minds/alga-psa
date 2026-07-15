@@ -998,9 +998,11 @@ export const markPhaseComplete = withAuth(async (
                 ready_at: completedAt,
                 updated_at: completedAt,
             })
-            .returning(['schedule_entry_id', 'description', 'display_order', 'created_at']) as Array<{
+            .returning(['schedule_entry_id', 'config_id', 'description', 'requires_payment_before_work', 'display_order', 'created_at']) as Array<{
                 schedule_entry_id: string;
+                config_id: string;
                 description: string;
+                requires_payment_before_work: boolean;
                 display_order: number;
                 created_at: Date | string;
             }>;
@@ -1037,7 +1039,9 @@ export const markPhaseComplete = withAuth(async (
             })),
             ready_events: readyRows.map((entry) => ({
                 entryId: entry.schedule_entry_id,
+                configId: entry.config_id,
                 description: entry.description,
+                requiresPaymentBeforeWork: entry.requires_payment_before_work,
                 computedAmount: computedAmountByEntryId.get(entry.schedule_entry_id) ?? 0,
             })),
         };
@@ -1053,6 +1057,20 @@ export const markPhaseComplete = withAuth(async (
                 description: entry.description,
                 computedAmount: entry.computedAmount,
                 trigger: 'phase',
+            },
+        });
+        await publishEvent({
+            eventType: 'PROJECT_BILLING_SCHEDULE_STATUS_CHANGED',
+            payload: {
+                tenantId: tenant,
+                projectId: result.projectId,
+                configId: entry.configId,
+                entryId: entry.entryId,
+                description: entry.description,
+                status: 'ready',
+                previousStatus: 'pending',
+                requiresPaymentBeforeWork: entry.requiresPaymentBeforeWork,
+                userId: user.user_id,
             },
         });
     }

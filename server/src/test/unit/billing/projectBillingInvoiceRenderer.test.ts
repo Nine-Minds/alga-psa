@@ -63,10 +63,14 @@ describe('standalone project invoice rendering (T038)', () => {
       tax: 0,
       total: 10_000,
       currencyCode: 'USD',
-      __invoiceId: 'invoice-1',
     };
 
-    const enriched = await enrichInvoiceViewModelWithLocations({} as never, 'tenant-1', viewModel);
+    const enriched = await enrichInvoiceViewModelWithLocations(
+      {} as never,
+      'tenant-1',
+      viewModel,
+      'invoice-1',
+    );
 
     expect(enriched).toMatchObject({
       projectName: 'Datacenter migration',

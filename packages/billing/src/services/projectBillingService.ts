@@ -248,6 +248,16 @@ export function computeCapWriteDown(
   };
 }
 
+/** First persisted hard-cap overage; used to dedupe workflow and user notifications. */
+export function isFirstProjectCapOverage(
+  writtenDownBefore: number,
+  writtenDownAfter: number,
+): boolean {
+  assertNonNegativeCents(writtenDownBefore, 'writtenDownBefore');
+  assertNonNegativeCents(writtenDownAfter, 'writtenDownAfter');
+  return writtenDownBefore === 0 && writtenDownAfter > 0;
+}
+
 export function detectThresholdCrossings(
   capAmount: number,
   prevBilled: number,

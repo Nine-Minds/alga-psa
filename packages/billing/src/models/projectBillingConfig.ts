@@ -82,8 +82,15 @@ const ProjectBillingConfig = {
       updated_at: _updatedAt,
       ...safeInput
     } = input as CreateProjectBillingConfigModelInput & Partial<IProjectBillingConfig>;
+    const persistenceInput = withoutUndefined({
+      ...safeInput,
+      cap_notify_thresholds: safeInput.cap_notify_thresholds === undefined
+        ? undefined
+        : JSON.stringify(safeInput.cap_notify_thresholds),
+      tenant,
+    });
     const [row] = await tenantDb(connection, tenant).table('project_billing_configs')
-      .insert(withoutUndefined({ ...safeInput, tenant }))
+      .insert(persistenceInput)
       .returning('*');
 
     if (!row) {
@@ -106,10 +113,16 @@ const ProjectBillingConfig = {
       updated_at: _updatedAt,
       ...mutableUpdates
     } = updates as Partial<IProjectBillingConfig>;
+    const persistenceUpdates = withoutUndefined({
+      ...mutableUpdates,
+      cap_notify_thresholds: mutableUpdates.cap_notify_thresholds === undefined
+        ? undefined
+        : JSON.stringify(mutableUpdates.cap_notify_thresholds),
+    });
     const [row] = await tenantDb(connection, tenant).table('project_billing_configs')
       .where({ config_id: configId })
       .update({
-        ...withoutUndefined(mutableUpdates),
+        ...persistenceUpdates,
         updated_at: new Date().toISOString()
       })
       .returning('*');

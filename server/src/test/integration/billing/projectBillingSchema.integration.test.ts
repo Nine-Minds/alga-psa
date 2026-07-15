@@ -5,6 +5,8 @@ import type { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { runWithTenant, tenantDb } from '@alga-psa/db';
 import ProjectBillingCapUsage from '@alga-psa/billing/models/projectBillingCapUsage';
+import ProjectBillingConfig from '@alga-psa/billing/models/projectBillingConfig';
+import ProjectBillingScheduleEntry from '@alga-psa/billing/models/projectBillingScheduleEntry';
 import { computeCapWriteDown } from '@alga-psa/billing/services/projectBillingService';
 import { createTestDbConnection } from '../../../../test-utils/dbConfig';
 
@@ -112,6 +114,10 @@ describe('project billing migrated schema', () => {
     }
     await expect(db.schema.hasColumn('project_phases', 'completed_at')).resolves.toBe(true);
     await expect(db.schema.hasColumn('invoices', 'project_id')).resolves.toBe(true);
+    await expect(db.schema.hasColumn('project_billing_schedule_entries', 'hold_reason')).resolves.toBe(true);
+    await expect(db.schema.hasColumn('project_billing_schedule_entries', 'held_at')).resolves.toBe(true);
+    await expect(db.schema.hasColumn('project_billing_schedule_entries', 'held_by')).resolves.toBe(true);
+    await expect(db.schema.hasColumn('project_billing_schedule_entries', 'requires_payment_before_work')).resolves.toBe(true);
 
     const metadata = readFileSync(
       path.resolve(import.meta.dirname, '../../../../../packages/db/src/lib/tenantTableMetadata.ts'),
@@ -189,7 +195,39 @@ describe('project billing migrated schema', () => {
     })).rejects.toMatchObject({ code: '23514' });
   });
 
-  it('T039: rejects an illegal pending to invoiced transition at the database boundary', async () => {
+  it('T001/T004: model persistence preserves JSONB thresholds and date-only values', async () => {
+    await runWithTenant(tenant, async () => {
+      const updatedConfig = await ProjectBillingConfig.update(
+        cappedConfigId,
+        { cap_notify_thresholds: [60, 85, 100] },
+        db,
+      );
+      expect(updatedConfig?.cap_notify_thresholds).toEqual([60, 85, 100]);
+
+      const dateEntry = await ProjectBillingScheduleEntry.insert({
+        config_id: configId,
+        entry_type: 'milestone',
+        description: 'Date-only persistence fixture',
+        amount: 1_000,
+        percentage: null,
+        trigger_type: 'date',
+        trigger_date: '2026-11-01',
+        status: 'pending',
+        display_order: 10,
+      }, db);
+      expect(dateEntry.trigger_date).toBe('2026-11-01');
+
+      const reloaded = await ProjectBillingScheduleEntry.getById(dateEntry.schedule_entry_id, db);
+      expect(reloaded?.trigger_date).toBe('2026-11-01');
+    });
+
+    const rawThresholds = await table('project_billing_configs')
+      .where({ config_id: cappedConfigId })
+      .first('cap_notify_thresholds');
+    expect(rawThresholds.cap_notify_thresholds).toEqual([60, 85, 100]);
+  });
+
+  it('T039: rejects an illegal pending to invoiced transition at the application lifecycle boundary', async () => {
     const entryId = uuidv4();
     await table('project_billing_schedule_entries').insert({
       tenant,
@@ -204,10 +242,82 @@ describe('project billing migrated schema', () => {
       display_order: 1,
     });
 
+    await runWithTenant(tenant, async () => {
+      await expect(ProjectBillingScheduleEntry.transitionStatus(
+        entryId,
+        'pending',
+        'invoiced',
+        {},
+        db,
+      )).rejects.toThrow('Illegal project billing schedule status transition');
+    });
+  });
+
+  it('T039: persists the ready/held/ready lifecycle and its audit metadata', async () => {
+    const entryId = uuidv4();
+    const userId = uuidv4();
+    await table('users').insert({
+      tenant,
+      user_id: userId,
+      username: `project-billing-${userId.slice(0, 8)}`,
+      email: `project-billing-${userId.slice(0, 8)}@example.test`,
+      hashed_password: 'not-used',
+      user_type: 'internal',
+      is_inactive: false,
+    });
+    await table('project_billing_schedule_entries').insert({
+      tenant,
+      schedule_entry_id: entryId,
+      config_id: configId,
+      entry_type: 'milestone',
+      description: 'Hold lifecycle fixture',
+      amount: 10_000,
+      percentage: null,
+      trigger_type: 'manual',
+      status: 'pending',
+      display_order: 2,
+    });
+
+    await table('project_billing_schedule_entries')
+      .where({ schedule_entry_id: entryId })
+      .update({ status: 'ready', ready_at: db.fn.now() });
+    await table('project_billing_schedule_entries')
+      .where({ schedule_entry_id: entryId })
+      .update({
+        status: 'held',
+        hold_reason: 'Awaiting customer approval',
+        held_at: db.fn.now(),
+        held_by: userId,
+      });
+
+    const held = await table('project_billing_schedule_entries')
+      .where({ schedule_entry_id: entryId })
+      .first();
+    expect(held).toMatchObject({
+      status: 'held',
+      hold_reason: 'Awaiting customer approval',
+      held_by: userId,
+    });
+    expect(held.held_at).not.toBeNull();
+    expect(held.ready_at).not.toBeNull();
+
+    await table('project_billing_schedule_entries')
+      .where({ schedule_entry_id: entryId })
+      .update({
+        status: 'ready',
+        hold_reason: null,
+        held_at: null,
+        held_by: null,
+      });
     await expect(table('project_billing_schedule_entries')
       .where({ schedule_entry_id: entryId })
-      .update({ status: 'invoiced' }))
-      .rejects.toMatchObject({ code: 'P0001' });
+      .first())
+      .resolves.toMatchObject({
+        status: 'ready',
+        hold_reason: null,
+        held_at: null,
+        held_by: null,
+      });
   });
 
   it('T018: parallel cap consumers serialize on FOR UPDATE and cannot double-spend the cap', async () => {

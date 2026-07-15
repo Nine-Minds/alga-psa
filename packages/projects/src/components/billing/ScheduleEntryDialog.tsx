@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dia
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
+import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { toast } from 'react-hot-toast';
@@ -16,6 +17,11 @@ import {
   createScheduleEntry,
   updateScheduleEntry,
 } from '@alga-psa/billing/actions/projectBillingScheduleActions';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 type EntryType = 'milestone' | 'deposit';
 type ValueMode = 'amount' | 'percentage';
@@ -37,6 +43,23 @@ function centsToMajor(cents: number, currency: string | null): string {
   return (cents / Math.pow(10, digits)).toString();
 }
 
+function parseDateOnly(value: Date | string | null): Date | undefined {
+  if (!value) return undefined;
+  if (value instanceof Date) {
+    return new Date(value.getFullYear(), value.getMonth(), value.getDate());
+  }
+  const match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (!match) return undefined;
+  return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+}
+
+function formatDateOnly(value: Date): string {
+  const year = value.getFullYear();
+  const month = String(value.getMonth() + 1).padStart(2, '0');
+  const day = String(value.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 /**
  * F119 — add/edit a schedule entry. Amount XOR percentage, entry type
  * (milestone/deposit), and a trigger picker (live phase / date / manual). Only
@@ -50,7 +73,7 @@ export default function ScheduleEntryDialog({
   onClose,
   onSaved,
 }: ScheduleEntryDialogProps) {
-  const { t } = useTranslation(['features/projects', 'common']);
+  const { t, i18n } = useTranslation(['features/projects', 'common']);
   const isEdit = entry != null;
 
   const [description, setDescription] = useState(entry?.description ?? '');
@@ -65,7 +88,10 @@ export default function ScheduleEntryDialog({
   const [triggerType, setTriggerType] = useState<TriggerType>(entry?.trigger_type ?? 'phase');
   const [phaseId, setPhaseId] = useState<string>(entry?.phase_id ?? '');
   const [triggerDate, setTriggerDate] = useState<Date | undefined>(
-    entry?.trigger_date ? new Date(entry.trigger_date) : undefined,
+    parseDateOnly(entry?.trigger_date ?? null),
+  );
+  const [requiresPaymentBeforeWork, setRequiresPaymentBeforeWork] = useState(
+    entry?.requires_payment_before_work ?? false,
   );
   const [saving, setSaving] = useState(false);
 
@@ -87,7 +113,7 @@ export default function ScheduleEntryDialog({
         toast.error(t('billing.entry.errorAmount', 'Enter an amount greater than zero'));
         return;
       }
-      amount = toMinorUnits(major, 'en-US', currency ?? 'USD');
+      amount = toMinorUnits(major, i18n.language, currency ?? 'USD');
     } else {
       const value = Number(percentageText);
       if (!Number.isFinite(value) || value <= 0 || value > 100) {
@@ -112,15 +138,24 @@ export default function ScheduleEntryDialog({
       percentage,
       trigger_type: triggerType,
       phase_id: triggerType === 'phase' ? phaseId : null,
-      trigger_date: triggerType === 'date' && triggerDate ? triggerDate.toISOString().slice(0, 10) : null,
+      trigger_date: triggerType === 'date' && triggerDate ? formatDateOnly(triggerDate) : null,
+      requires_payment_before_work: requiresPaymentBeforeWork,
     };
 
     setSaving(true);
     try {
       if (isEdit && entry) {
-        await updateScheduleEntry(entry.schedule_entry_id, payload);
+        const result = await updateScheduleEntry(entry.schedule_entry_id, payload);
+        if (isActionMessageError(result) || isActionPermissionError(result)) {
+          toast.error(getErrorMessage(result));
+          return;
+        }
       } else {
-        await createScheduleEntry(configId, payload);
+        const result = await createScheduleEntry(configId, payload);
+        if (isActionMessageError(result) || isActionPermissionError(result)) {
+          toast.error(getErrorMessage(result));
+          return;
+        }
       }
       toast.success(isEdit
         ? t('billing.entry.updated', 'Schedule entry updated')
@@ -251,6 +286,24 @@ export default function ScheduleEntryDialog({
               />
             </div>
           )}
+
+          <div className="rounded-md border border-[rgb(var(--color-border-200))] p-3">
+            <Checkbox
+              id="billing-entry-requires-payment"
+              checked={requiresPaymentBeforeWork}
+              onChange={(event) => setRequiresPaymentBeforeWork(event.currentTarget.checked)}
+              label={t(
+                'billing.entry.requiresPaymentBeforeWork',
+                'Payment required before continuing work',
+              )}
+            />
+            <p className="mt-1 pl-6 text-xs text-[rgb(var(--color-text-500))]">
+              {t(
+                'billing.entry.requiresPaymentBeforeWorkHint',
+                'Shows technicians a warning until the linked invoice is paid. Work is not blocked.',
+              )}
+            </p>
+          </div>
         </div>
       </DialogContent>
       <DialogFooter>

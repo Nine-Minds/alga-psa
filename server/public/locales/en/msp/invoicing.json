@@ -456,7 +456,8 @@
       "pdfFailed": "Failed to generate PDF. Please try again.",
       "bulkPdfFailed": "Failed to generate PDFs. Please try again.",
       "unfinalizeFailed": "Failed to unfinalize invoice. Please try again.",
-      "bulkUnfinalizeFailed": "Failed to unfinalize invoices. Please try again."
+      "bulkUnfinalizeFailed": "Failed to unfinalize invoices. Please try again.",
+      "bulkUnfinalizeInvoiceFailed": "Could not unfinalize {{invoiceNumber}}: {{reason}}"
     }
   },
   "recurringServicePeriods": {

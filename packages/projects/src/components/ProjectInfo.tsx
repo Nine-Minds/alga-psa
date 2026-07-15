@@ -21,6 +21,7 @@ import { getProjectBillingOverview } from '@alga-psa/billing/actions/projectBill
 import { useTaskShareActions } from './TaskShareActionsContext';
 import { useTaskSelection } from './TaskSelectionContext';
 import { useTranslation } from 'react-i18next';
+import { isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 interface ProjectBilledSummary {
   invoicedCents: number;
@@ -104,7 +105,12 @@ export default function ProjectInfo({
         console.error('Error fetching project metrics:', metricsResult.reason);
       }
 
-      if (billingResult.status === 'fulfilled' && billingResult.value.config) {
+      if (
+        billingResult.status === 'fulfilled'
+        && !isActionMessageError(billingResult.value)
+        && !isActionPermissionError(billingResult.value)
+        && billingResult.value.config
+      ) {
         const { config, rollup } = billingResult.value;
         setBilledSummary({
           invoicedCents: rollup?.invoiced_amount ?? 0,

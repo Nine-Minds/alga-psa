@@ -58,6 +58,9 @@ function entry(overrides: Record<string, unknown> = {}) {
     trigger_date: null,
     status: 'approved',
     ready_at: '2026-07-01T00:00:00.000Z',
+    hold_reason: null,
+    held_at: null,
+    held_by: null,
     approved_by: 'user-1',
     approved_at: '2026-07-02T00:00:00.000Z',
     invoice_id: null,
@@ -270,7 +273,7 @@ describe('project T&M cap and override integration', () => {
     expect(billingEngineSource).toContain('phaseOverride?.override_service_name ?? entry.service_name');
   });
 
-  it('T016: a second run straddles a hard cap and a third run bills zero', () => {
+  it('T016: labor and materials share one hard cap and a later run bills zero', () => {
     const projectConfig = config({
       billing_model: 'time_and_materials',
       total_price: null,
@@ -284,21 +287,31 @@ describe('project T&M cap and override integration', () => {
       written_down_amount: 0,
       notified_thresholds: [],
     });
-    const secondRun = [{
-      type: 'time',
-      total: 2_000,
-      tax_amount: 200,
-      project_billing_config_id: 'config-1',
-    }];
+    const secondRun = [
+      {
+        type: 'time',
+        total: 1_000,
+        tax_amount: 100,
+        project_billing_config_id: 'config-1',
+      },
+      {
+        type: 'product',
+        total: 1_000,
+        tax_amount: 100,
+        project_billing_config_id: 'config-1',
+        project_id: 'project-1',
+      },
+    ];
 
     (engine as any).applyProjectCapAdjustments(secondRun, billingContext);
-    expect(secondRun[0]).toMatchObject({
-      total: 1_500,
-      tax_amount: 150,
+    expect(secondRun[0]).toMatchObject({ total: 1_000, tax_amount: 100, write_down_amount: 0 });
+    expect(secondRun[1]).toMatchObject({
+      total: 500,
+      tax_amount: 50,
       write_down_amount: 500,
       write_down_reason: 'project_cap',
     });
-    expect(8_500 + secondRun[0].total).toBe(10_000);
+    expect(8_500 + secondRun.reduce((sum, charge) => sum + charge.total, 0)).toBe(10_000);
 
     billingContext.capUsageByConfigId.set('config-1', {
       config_id: 'config-1',
@@ -306,12 +319,18 @@ describe('project T&M cap and override integration', () => {
       written_down_amount: 500,
       notified_thresholds: [],
     });
-    const thirdRun = [{ type: 'time', total: 1_000, tax_amount: 100, project_billing_config_id: 'config-1' }];
+    const thirdRun = [{
+      type: 'product',
+      total: 1_000,
+      tax_amount: 100,
+      project_billing_config_id: 'config-1',
+      project_id: 'project-1',
+    }];
     (engine as any).applyProjectCapAdjustments(thirdRun, billingContext);
     expect(thirdRun[0]).toMatchObject({ total: 0, tax_amount: 0, write_down_amount: 1_000 });
   });
 
-  it('T017: notify caps do not write down and dedupe threshold crossings across runs', () => {
+  it('T017: every capped project writes down overage and dedupes threshold crossings, including legacy notify rows', () => {
     const projectConfig = config({
       billing_model: 'time_and_materials',
       total_price: null,
@@ -329,8 +348,7 @@ describe('project T&M cap and override integration', () => {
     const firstCharge = [{ type: 'time', total: 4_000, tax_amount: 0, project_billing_config_id: 'config-1' }];
 
     const first = (engine as any).applyProjectCapAdjustments(firstCharge, billingContext);
-    expect(firstCharge[0]).toMatchObject({ total: 4_000 });
-    expect(firstCharge[0]).not.toHaveProperty('write_down_amount');
+    expect(firstCharge[0]).toMatchObject({ total: 4_000, write_down_amount: 0 });
     expect(first.thresholdCrossings.map((crossing: any) => crossing.threshold)).toEqual([50, 75]);
 
     billingContext.capUsageByConfigId.set('config-1', {
@@ -344,6 +362,27 @@ describe('project T&M cap and override integration', () => {
       billingContext,
     );
     expect(second.thresholdCrossings).toEqual([]);
+
+    billingContext.capUsageByConfigId.set('config-1', {
+      config_id: 'config-1',
+      billed_amount: 9_500,
+      written_down_amount: 0,
+      notified_thresholds: [50, 75],
+    });
+    const legacyNotifyOverage = [{
+      type: 'time',
+      total: 1_000,
+      tax_amount: 100,
+      project_billing_config_id: 'config-1',
+    }];
+    const overage = (engine as any).applyProjectCapAdjustments(legacyNotifyOverage, billingContext);
+    expect(legacyNotifyOverage[0]).toMatchObject({
+      total: 500,
+      tax_amount: 50,
+      write_down_amount: 500,
+      write_down_reason: 'project_cap',
+    });
+    expect(overage.thresholdCrossings.map((crossing: any) => crossing.threshold)).toEqual([100]);
   });
 });
 

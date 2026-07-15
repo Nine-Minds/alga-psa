@@ -274,6 +274,15 @@ export const EVENT_TYPES = [
   'PROJECT_APPROVAL_REJECTED',
   'PROJECT_MILESTONE_READY',
   'PROJECT_BUDGET_THRESHOLD_REACHED',
+  'PROJECT_BUDGET_EXCEEDED',
+  'PROJECT_BILLING_CONFIG_CREATED',
+  'PROJECT_BILLING_CONFIG_UPDATED',
+  'PROJECT_BILLING_CONFIG_DELETED',
+  'PROJECT_BILLING_SCHEDULE_ENTRY_CREATED',
+  'PROJECT_BILLING_SCHEDULE_ENTRY_UPDATED',
+  'PROJECT_BILLING_SCHEDULE_STATUS_CHANGED',
+  'PROJECT_BILLING_SCHEDULE_ENTRY_DELETED',
+  'PROJECT_BILLING_PAYMENT_STATUS_CHANGED',
 
   // Time entries (legacy)
   'TIME_ENTRY_CREATED',
@@ -579,6 +588,55 @@ export const ProjectBudgetThresholdReachedPayloadSchema = BasePayloadSchema.exte
   threshold: z.number().int().nonnegative(),
   billed: z.number().int().nonnegative(),
   cap: z.number().int().nonnegative(),
+});
+
+export const ProjectBudgetExceededPayloadSchema = BasePayloadSchema.extend({
+  projectId: z.string().uuid(),
+  invoiceId: z.string().uuid(),
+  billed: z.number().int().nonnegative(),
+  attempted: z.number().int().positive(),
+  cap: z.number().int().nonnegative(),
+  writtenDown: z.number().int().positive(),
+});
+
+export const ProjectBillingConfigEventPayloadSchema = BasePayloadSchema.extend({
+  projectId: z.string().uuid(),
+  configId: z.string().uuid(),
+  billingModel: z.enum(['fixed_price', 'time_and_materials']),
+  invoiceMode: z.enum(['recurring', 'standalone']),
+  userId: z.string().uuid().optional(),
+  changes: z.record(z.unknown()).optional(),
+});
+
+export const ProjectBillingScheduleEventPayloadSchema = BasePayloadSchema.extend({
+  projectId: z.string().uuid(),
+  configId: z.string().uuid(),
+  entryId: z.string().uuid(),
+  description: z.string().min(1),
+  status: z.enum(['pending', 'ready', 'held', 'approved', 'invoiced', 'canceled']),
+  previousStatus: z.enum(['pending', 'ready', 'held', 'approved', 'invoiced', 'canceled']).nullable().optional(),
+  requiresPaymentBeforeWork: z.boolean(),
+  userId: z.string().uuid().optional(),
+  changes: z.record(z.unknown()).optional(),
+});
+
+const ProjectBillingPaymentStateSchema = z.enum([
+  'outstanding',
+  'satisfied',
+  'replacement_needed',
+]);
+
+export const ProjectBillingPaymentStatusEventPayloadSchema = BasePayloadSchema.extend({
+  projectId: z.string().uuid(),
+  configId: z.string().uuid(),
+  entryId: z.string().uuid(),
+  invoiceId: z.string().uuid(),
+  previousState: ProjectBillingPaymentStateSchema,
+  newState: ProjectBillingPaymentStateSchema,
+  previousInvoiceStatus: z.string().min(1),
+  newInvoiceStatus: z.string().min(1),
+  requiresPaymentBeforeWork: z.literal(true),
+  userId: z.string().uuid().optional(),
 });
 
 // Project task event payload schema
@@ -1198,6 +1256,15 @@ export const EventPayloadSchemas = {
   PROJECT_APPROVAL_REJECTED: projectApprovalRejectedEventPayloadSchema,
   PROJECT_MILESTONE_READY: ProjectMilestoneReadyPayloadSchema,
   PROJECT_BUDGET_THRESHOLD_REACHED: ProjectBudgetThresholdReachedPayloadSchema,
+  PROJECT_BUDGET_EXCEEDED: ProjectBudgetExceededPayloadSchema,
+  PROJECT_BILLING_CONFIG_CREATED: ProjectBillingConfigEventPayloadSchema,
+  PROJECT_BILLING_CONFIG_UPDATED: ProjectBillingConfigEventPayloadSchema,
+  PROJECT_BILLING_CONFIG_DELETED: ProjectBillingConfigEventPayloadSchema,
+  PROJECT_BILLING_SCHEDULE_ENTRY_CREATED: ProjectBillingScheduleEventPayloadSchema,
+  PROJECT_BILLING_SCHEDULE_ENTRY_UPDATED: ProjectBillingScheduleEventPayloadSchema,
+  PROJECT_BILLING_SCHEDULE_STATUS_CHANGED: ProjectBillingScheduleEventPayloadSchema,
+  PROJECT_BILLING_SCHEDULE_ENTRY_DELETED: ProjectBillingScheduleEventPayloadSchema,
+  PROJECT_BILLING_PAYMENT_STATUS_CHANGED: ProjectBillingPaymentStatusEventPayloadSchema,
 
   // Time entries (legacy)
   TIME_ENTRY_CREATED: TimeEntryEventPayloadSchema,
@@ -1462,6 +1529,15 @@ export type ProjectTaskAdditionalAgentAssignedEvent = z.infer<typeof EventSchema
 export type ProjectTaskUpdatedEvent = z.infer<typeof EventSchemas.PROJECT_TASK_UPDATED>;
 export type ProjectMilestoneReadyEvent = z.infer<typeof EventSchemas.PROJECT_MILESTONE_READY>;
 export type ProjectBudgetThresholdReachedEvent = z.infer<typeof EventSchemas.PROJECT_BUDGET_THRESHOLD_REACHED>;
+export type ProjectBudgetExceededEvent = z.infer<typeof EventSchemas.PROJECT_BUDGET_EXCEEDED>;
+export type ProjectBillingConfigCreatedEvent = z.infer<typeof EventSchemas.PROJECT_BILLING_CONFIG_CREATED>;
+export type ProjectBillingConfigUpdatedEvent = z.infer<typeof EventSchemas.PROJECT_BILLING_CONFIG_UPDATED>;
+export type ProjectBillingConfigDeletedEvent = z.infer<typeof EventSchemas.PROJECT_BILLING_CONFIG_DELETED>;
+export type ProjectBillingScheduleEntryCreatedEvent = z.infer<typeof EventSchemas.PROJECT_BILLING_SCHEDULE_ENTRY_CREATED>;
+export type ProjectBillingScheduleEntryUpdatedEvent = z.infer<typeof EventSchemas.PROJECT_BILLING_SCHEDULE_ENTRY_UPDATED>;
+export type ProjectBillingScheduleStatusChangedEvent = z.infer<typeof EventSchemas.PROJECT_BILLING_SCHEDULE_STATUS_CHANGED>;
+export type ProjectBillingScheduleEntryDeletedEvent = z.infer<typeof EventSchemas.PROJECT_BILLING_SCHEDULE_ENTRY_DELETED>;
+export type ProjectBillingPaymentStatusChangedEvent = z.infer<typeof EventSchemas.PROJECT_BILLING_PAYMENT_STATUS_CHANGED>;
 export type TaskCommentAddedEvent = z.infer<typeof EventSchemas.TASK_COMMENT_ADDED>;
 export type TaskCommentUpdatedEvent = z.infer<typeof EventSchemas.TASK_COMMENT_UPDATED>;
 export type TimeEntrySubmittedEvent = z.infer<typeof EventSchemas.TIME_ENTRY_SUBMITTED>;

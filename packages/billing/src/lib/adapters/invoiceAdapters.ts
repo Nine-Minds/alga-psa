@@ -419,10 +419,6 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
         taxSource: dbData.tax_source || 'internal',
         currencyCode: (dbData as any).currency_code || (dbData as any).currencyCode || 'USD',
       };
-      Object.defineProperty(viewModel, '__invoiceId', {
-        value: (dbData as any).invoice_id ?? null,
-        enumerable: false,
-      });
     }
     // Check if the input data is already in WasmInvoiceViewModel format
     else if (typeof inputData.invoiceNumber !== 'undefined' && typeof inputData.customer !== 'undefined' && typeof inputData.items !== 'undefined') {

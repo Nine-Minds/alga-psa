@@ -168,7 +168,9 @@
     "empty": {
       "searching": "Procurando...",
       "noWorkItems": "Nenhum item de trabalho encontrado"
-    }
+    },
+    "paymentWarningTitle": "Aviso de pré-requisito de pagamento",
+    "paymentWarning": "O pagamento é obrigatório para um marco de faturação do projeto assinalado e ainda não foi confirmado. Confirme o pagamento antes de continuar o trabalho."
   },
   "workItemList": {
     "meta": {

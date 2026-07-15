@@ -159,12 +159,15 @@ export type ProjectBillingEngineResult = IBillingResult & {
   projectCapThresholdCrossings?: ProjectCapThresholdCrossing[];
 };
 
-type ProjectAnnotatedTimeCharge = ITimeBasedCharge & {
+type ProjectAnnotatedCharge = IBillingCharge & {
   project_id: string;
   project_name: string;
   project_number: string;
   project_billing_config_id: string;
   project_cap_original_amount?: number;
+  project_cap_original_tax_amount?: number;
+  write_down_amount?: number;
+  write_down_reason?: "project_cap";
 };
 
 type ProjectScheduleCharge = (IProjectMilestoneCharge | IProjectDepositCharge) & {
@@ -1478,24 +1481,24 @@ export class BillingEngine {
     charges: IBillingCharge[];
     thresholdCrossings: ProjectCapThresholdCrossing[];
   } {
-    const projectTimeCharges = new Map<string, ProjectAnnotatedTimeCharge[]>();
+    const projectCharges = new Map<string, ProjectAnnotatedCharge[]>();
     for (const charge of charges) {
       if (
-        charge.type !== "time"
-        || !("project_billing_config_id" in charge)
+        !("project_billing_config_id" in charge)
+        || typeof charge.project_billing_config_id !== "string"
       ) {
         continue;
       }
-      const projectCharge = charge as ProjectAnnotatedTimeCharge;
-      const grouped = projectTimeCharges.get(projectCharge.project_billing_config_id) ?? [];
+      const projectCharge = charge as ProjectAnnotatedCharge;
+      const grouped = projectCharges.get(projectCharge.project_billing_config_id) ?? [];
       grouped.push(projectCharge);
-      projectTimeCharges.set(projectCharge.project_billing_config_id, grouped);
+      projectCharges.set(projectCharge.project_billing_config_id, grouped);
     }
 
     const thresholdCrossings: ProjectCapThresholdCrossing[] = [];
-    for (const [configId, configCharges] of projectTimeCharges) {
+    for (const [configId, configCharges] of projectCharges) {
       const config = context.configsById.get(configId);
-      if (!config || config.cap_amount === null || config.cap_behavior === null) {
+      if (!config || config.cap_amount === null) {
         continue;
       }
 
@@ -1505,45 +1508,41 @@ export class BillingEngine {
 
       for (const charge of configCharges) {
         const originalAmount = charge.total;
+        const originalTaxAmount = charge.tax_amount ?? 0;
         charge.project_cap_original_amount = originalAmount;
-        if (config.cap_behavior === "hard_cap") {
-          const writeDown = computeCapWriteDown(
-            config.cap_amount,
-            runningBilled,
-            originalAmount,
-          );
-          charge.total = writeDown.billable;
-          charge.write_down_amount = writeDown.writtenDown;
-          if (writeDown.writtenDown > 0) {
-            charge.write_down_reason = "project_cap";
-          }
-          if (originalAmount > 0 && charge.tax_amount > 0) {
-            charge.tax_amount = Math.round(
-              charge.tax_amount * (writeDown.billable / originalAmount),
-            );
-          }
-          runningBilled += writeDown.billable;
-        } else {
-          runningBilled += originalAmount;
+        charge.project_cap_original_tax_amount = originalTaxAmount;
+        const writeDown = computeCapWriteDown(
+          config.cap_amount,
+          runningBilled,
+          originalAmount,
+        );
+        charge.total = writeDown.billable;
+        charge.write_down_amount = writeDown.writtenDown;
+        if (writeDown.writtenDown > 0) {
+          charge.write_down_reason = "project_cap";
         }
+        if (originalAmount > 0 && originalTaxAmount > 0) {
+          charge.tax_amount = Math.round(
+            originalTaxAmount * (writeDown.billable / originalAmount),
+          );
+        }
+        runningBilled += writeDown.billable;
       }
 
-      if (config.cap_behavior === "notify") {
-        const crossed = detectThresholdCrossings(
-          config.cap_amount,
-          previousBilled,
-          runningBilled,
-          config.cap_notify_thresholds,
-          usage?.notified_thresholds ?? [],
-        );
-        thresholdCrossings.push(...crossed.map((threshold) => ({
-          configId,
-          projectId: config.project_id,
-          threshold,
-          previousBilled,
-          newBilled: runningBilled,
-        })));
-      }
+      const crossed = detectThresholdCrossings(
+        config.cap_amount,
+        previousBilled,
+        runningBilled,
+        config.cap_notify_thresholds,
+        usage?.notified_thresholds ?? [],
+      );
+      thresholdCrossings.push(...crossed.map((threshold) => ({
+        configId,
+        projectId: config.project_id,
+        threshold,
+        previousBilled,
+        newBilled: runningBilled,
+      })));
     }
 
     return { charges, thresholdCrossings };

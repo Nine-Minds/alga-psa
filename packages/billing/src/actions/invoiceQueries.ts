@@ -690,7 +690,18 @@ export const getEnrichedInvoiceViewModel = withAuth(async (
   }
 
   const { knex } = await createTenantKnex();
-  const loadedInvoice = await Invoice.getFullInvoiceById(knex, tenant, invoiceId);
+  let loadedInvoice: InvoiceViewModel;
+  try {
+    loadedInvoice = await Invoice.getFullInvoiceById(knex, tenant, invoiceId);
+  } catch (error) {
+    // A draft can be hard-deleted while its preview request is still in
+    // flight. Missing is a normal terminal state for this nullable reader,
+    // not a server failure.
+    if (error instanceof Error && error.message === 'Invoice not found') {
+      return null;
+    }
+    throw error;
+  }
   const dbInvoiceData = loadedInvoice
     ? await enrichInvoiceWithProjectRenderingData(
         knex,
@@ -713,7 +724,7 @@ export const getEnrichedInvoiceViewModel = withAuth(async (
     return null;
   }
 
-  await enrichInvoiceViewModelWithLocations(knex, tenant, viewModel);
+  await enrichInvoiceViewModelWithLocations(knex, tenant, viewModel, invoiceId);
   return viewModel;
 });
 

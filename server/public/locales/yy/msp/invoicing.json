@@ -456,7 +456,8 @@
       "pdfFailed": "55555",
       "bulkPdfFailed": "55555",
       "unfinalizeFailed": "55555",
-      "bulkUnfinalizeFailed": "55555"
+      "bulkUnfinalizeFailed": "55555",
+      "bulkUnfinalizeInvoiceFailed": "55555 {{invoiceNumber}} {{reason}}"
     }
   },
   "recurringServicePeriods": {

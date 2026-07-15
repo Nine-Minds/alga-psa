@@ -74,6 +74,19 @@ export async function projectDateReadinessHandler(data: ProjectDateReadinessJobD
           trigger: 'date',
         },
       });
+      await publishEvent({
+        eventType: 'PROJECT_BILLING_SCHEDULE_STATUS_CHANGED',
+        payload: {
+          tenantId: data.tenantId,
+          projectId: config.project_id,
+          configId: entry.config_id,
+          entryId: entry.schedule_entry_id,
+          description: entry.description,
+          status: 'ready',
+          previousStatus: 'pending',
+          requiresPaymentBeforeWork: entry.requires_payment_before_work,
+        },
+      });
     }
 
     logger.info('[projectDateReadinessHandler] Evaluated project schedule readiness', {

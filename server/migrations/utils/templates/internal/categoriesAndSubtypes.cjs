@@ -37,6 +37,7 @@ const SUBTYPES = [
   { category: 'projects', name: 'milestone-completed', description: 'Project milestone completed' },
   { category: 'projects', name: 'project-milestone-ready', description: 'Project billing schedule entry ready for review' },
   { category: 'projects', name: 'project-budget-threshold-reached', description: 'Project budget notification threshold reached' },
+  { category: 'projects', name: 'project-budget-exceeded', description: 'Project hard budget cap exceeded' },
   { category: 'projects', name: 'task-additional-agent-assigned', description: 'User assigned as additional agent on task' },
   { category: 'projects', name: 'task-additional-agent-added', description: 'Additional agent added to task (for primary assignee)' },
   { category: 'projects', name: 'task-team-assigned', description: 'Team assigned to project task' },

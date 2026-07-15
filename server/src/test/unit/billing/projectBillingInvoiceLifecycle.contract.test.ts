@@ -63,9 +63,12 @@ describe('project invoice lifecycle contracts', () => {
     expect(creditActions).toContain('left.projectId === invoiceProjectId ? 0 : 1');
   });
 
-  it('T023: unfinalize reverts entries and cap deltas exactly once in the invoice transaction', () => {
-    const rollback = section(invoiceModification, 'async function rollbackProjectBillingForInvoice', 'type ProjectDepositCreditEvent');
+  it('T023: unfinalize preserves project linkage and caps while hard delete releases them exactly once', () => {
+    const rollback = section(invoiceModification, 'async function releaseProjectBillingForDeletedInvoice', 'type ProjectDepositCreditEvent');
     const unfinalize = section(invoiceModification, 'export const unfinalizeInvoice', 'export const updateInvoiceManualItems');
+    const hardDelete = invoiceModification.slice(
+      invoiceModification.indexOf('export const hardDeleteInvoice'),
+    );
 
     expect(rollback).toContain(".where({ invoice_id: invoiceId, status: 'invoiced' })");
     expect(rollback).toContain("'invoiced',");
@@ -76,6 +79,13 @@ describe('project invoice lifecycle contracts', () => {
     expect(rollback).toContain('ProjectBillingCapUsage.getForUpdate(delta.configId, trx)');
     expect(rollback).toContain('{ billed: -billedRollback, writtenDown: -writtenDownRollback }');
     expect(rollback).toContain('project_billing_cap_rolled_back: true');
-    expect(unfinalize).toContain('await rollbackProjectBillingForInvoice(trx, tenant, invoiceId);');
+    expect(invoiceModification).toContain("for (const tableName of ['project_materials', 'ticket_materials'])");
+    expect(invoiceModification).toContain('.where({ billed_invoice_id: invoiceId, is_billed: true })');
+    expect(invoiceModification).toContain('billed_invoice_id: null');
+    expect(invoiceModification).toContain('billed_at: null');
+    expect(unfinalize).not.toContain('releaseProjectBillingForDeletedInvoice');
+    expect(unfinalize).not.toContain('releaseMaterialsForDeletedInvoice');
+    expect(hardDelete).toContain('await releaseProjectBillingForDeletedInvoice(trx, tenant, invoiceId);');
+    expect(hardDelete).toContain('await releaseMaterialsForDeletedInvoice(trx, tenant, invoiceId);');
   });
 });

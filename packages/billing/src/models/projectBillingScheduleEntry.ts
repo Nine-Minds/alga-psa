@@ -22,19 +22,23 @@ export interface CreateProjectBillingScheduleEntryModelInput {
   percentage: number | null;
   trigger_type: ProjectBillingTriggerType;
   phase_id?: string | null;
-  trigger_date?: Date | string | null;
+  trigger_date?: string | null;
   status?: ProjectBillingScheduleStatus;
   ready_at?: Date | string | null;
+  hold_reason?: string | null;
+  held_at?: Date | string | null;
+  held_by?: string | null;
   approved_by?: string | null;
   approved_at?: Date | string | null;
   invoice_id?: string | null;
   invoice_charge_id?: string | null;
+  requires_payment_before_work?: boolean;
   display_order?: number;
 }
 
 export type UpdateProjectBillingScheduleEntryModelInput = Partial<Omit<
   IProjectBillingScheduleEntry,
-  'tenant' | 'schedule_entry_id' | 'config_id' | 'created_at' | 'updated_at'
+  'tenant' | 'schedule_entry_id' | 'config_id' | 'status' | 'created_at' | 'updated_at'
 >>;
 
 export type ProjectBillingStatusTransitionExtra = Partial<Omit<
@@ -59,6 +63,25 @@ export interface ReadyQueueRow {
   invoice_mode: 'recurring' | 'standalone';
   days_waiting: number;
   currency: string | null;
+}
+
+const ALLOWED_STATUS_TRANSITIONS: Readonly<Record<
+  ProjectBillingScheduleStatus,
+  readonly ProjectBillingScheduleStatus[]
+>> = {
+  pending: ['ready', 'canceled'],
+  ready: ['pending', 'held', 'approved', 'canceled'],
+  held: ['ready', 'canceled'],
+  approved: ['ready', 'invoiced', 'canceled'],
+  invoiced: ['approved'],
+  canceled: [],
+};
+
+export function isAllowedProjectBillingStatusTransition(
+  from: ProjectBillingScheduleStatus,
+  to: ProjectBillingScheduleStatus,
+): boolean {
+  return ALLOWED_STATUS_TRANSITIONS[from].includes(to);
 }
 
 function stableEntrySort(
@@ -121,6 +144,7 @@ const ProjectBillingScheduleEntry = {
       tenant: _tenant,
       schedule_entry_id: _entryId,
       config_id: _configId,
+      status: _status,
       created_at: _createdAt,
       updated_at: _updatedAt,
       ...mutableUpdates
@@ -156,6 +180,9 @@ const ProjectBillingScheduleEntry = {
     extra: ProjectBillingStatusTransitionExtra = {},
     trx?: ProjectBillingDbConnection
   ): Promise<IProjectBillingScheduleEntry | null> => {
+    if (!isAllowedProjectBillingStatusTransition(from, to)) {
+      throw new Error(`Illegal project billing schedule status transition: ${from} -> ${to}`);
+    }
     const { connection, tenant } = await resolveProjectBillingDb(trx);
     const {
       tenant: _tenant,

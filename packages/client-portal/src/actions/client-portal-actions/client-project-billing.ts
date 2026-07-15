@@ -9,9 +9,16 @@ import type {
   IProjectBillingScheduleEntry,
   IUserWithRoles,
 } from '@alga-psa/types';
+import { permissionError } from '@alga-psa/ui/lib/errorHandling';
+import type { ClientBillingActionError } from './client-billing';
+import {
+  getClientIdFromPortalUser,
+  hasClientBillingReadPermission,
+} from './clientBillingPermissions';
 
 export interface ClientProjectBillingSummary {
   enabled: boolean;
+  currency: string | null;
   total_price: number | null;
   invoiced_to_date: number;
   entries: {
@@ -48,6 +55,7 @@ function serializableDate(value: unknown): string | null {
 function disabledSummary(): ClientProjectBillingSummary {
   return {
     enabled: false,
+    currency: null,
     total_price: null,
     invoiced_to_date: 0,
     entries: [],
@@ -58,21 +66,21 @@ export const getClientProjectBillingSummary = withAuth(async (
   user: IUserWithRoles,
   { tenant }: AuthContext,
   projectId: string,
-): Promise<ClientProjectBillingSummary | null> => {
-  if (user.user_type !== 'client' || !user.contact_id) return null;
+): Promise<ClientProjectBillingSummary | null | ClientBillingActionError> => {
+  if (user.user_type !== 'client' || !user.contact_id) return permissionError('Unauthorized');
 
   const { knex } = await createTenantKnex();
   const db = tenantDb(knex, tenant);
-  const contact = await db.table('contacts')
-    .where({ contact_name_id: user.contact_id })
-    .select('client_id')
-    .first<{ client_id: string | null }>();
-  if (!contact?.client_id) return null;
+  const clientId = await getClientIdFromPortalUser(knex, user, tenant);
+  if (!clientId) return permissionError('Unauthorized');
+  if (!await hasClientBillingReadPermission(knex, user, tenant)) {
+    return permissionError('Unauthorized to access project billing data');
+  }
 
   // Client ownership is part of the project lookup so another client's UUID
   // never reveals whether a billing configuration exists.
   const project = await db.table('projects')
-    .where({ project_id: projectId, client_id: contact.client_id })
+    .where({ project_id: projectId, client_id: clientId })
     .select('project_id', 'client_portal_config')
     .first<{ project_id: string; client_portal_config: unknown }>();
   if (!project) return null;
@@ -80,11 +88,12 @@ export const getClientProjectBillingSummary = withAuth(async (
 
   const config = await db.table('project_billing_configs')
     .where({ project_id: projectId })
-    .select('config_id', 'billing_model', 'total_price')
+    .select('config_id', 'billing_model', 'total_price', 'currency')
     .first<{
       config_id: string;
       billing_model: 'fixed_price' | 'time_and_materials';
       total_price: string | number | null;
+      currency: string | null;
     }>();
   if (!config) return disabledSummary();
 
@@ -137,6 +146,7 @@ export const getClientProjectBillingSummary = withAuth(async (
 
   return {
     enabled: true,
+    currency: config.currency,
     total_price: totalPrice,
     invoiced_to_date: invoicedToDate,
     entries: visibleEntries,

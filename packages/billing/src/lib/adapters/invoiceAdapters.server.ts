@@ -29,10 +29,8 @@ async function enrichInvoiceViewModelWithProjects(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,
   viewModel: WasmInvoiceViewModel,
+  invoiceId: string | null | undefined,
 ): Promise<void> {
-  const invoiceId = (viewModel as WasmInvoiceViewModel & {
-    __invoiceId?: string | null;
-  }).__invoiceId;
   if (!invoiceId) return;
 
   try {
@@ -122,8 +120,9 @@ export async function enrichInvoiceViewModelWithLocations(
   knexOrTrx: Knex | Knex.Transaction,
   tenant: string,
   viewModel: WasmInvoiceViewModel,
+  invoiceId?: string | null,
 ): Promise<WasmInvoiceViewModel> {
-  await enrichInvoiceViewModelWithProjects(knexOrTrx, tenant, viewModel);
+  await enrichInvoiceViewModelWithProjects(knexOrTrx, tenant, viewModel, invoiceId);
   const items = viewModel.items ?? [];
 
   const locationIds = Array.from(

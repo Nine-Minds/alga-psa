@@ -1523,6 +1523,7 @@
     "status": {
       "pending": "Pending",
       "ready": "Ready",
+      "held": "Held",
       "approved": "Approved",
       "invoiced": "Invoiced",
       "canceled": "Canceled"
@@ -1604,7 +1605,10 @@
       "holdTitle": "Hold entry",
       "holdReason": "Reason",
       "holdReasonPlaceholder": "Why is this entry being held?",
-      "holdReasonRequired": "A hold reason is required"
+      "holdReasonRequired": "A hold reason is required",
+      "heldReason": "On hold: {{reason}}",
+      "releaseHold": "Release hold",
+      "holdReleased": "Hold released"
     },
     "entry": {
       "addTitle": "Add milestone or deposit",
@@ -1635,7 +1639,9 @@
       "errorAmount": "Enter an amount greater than zero",
       "errorPercentage": "Enter a percentage between 0 and 100",
       "errorPhase": "Select a phase for a phase trigger",
-      "errorDate": "Select a date for a date trigger"
+      "errorDate": "Select a date for a date trigger",
+      "requiresPaymentBeforeWork": "Payment required before continuing work",
+      "requiresPaymentBeforeWorkHint": "Show a warning to technicians until the linked invoice is paid. This warning does not block work."
     },
     "cap": {
       "title": "Budget cap",
@@ -1650,6 +1656,11 @@
       "saved": "Budget cap updated",
       "saving": "Saving...",
       "errorAmount": "Enter a cap greater than zero"
+    },
+    "tm": {
+      "generateInvoice": "Generate project invoice",
+      "generatingInvoice": "Generating invoice...",
+      "invoiceGenerated": "Project invoice generated"
     },
     "overrides": {
       "title": "Phase rate overrides",
@@ -1695,7 +1706,17 @@
       "cost": "Labor + materials cost",
       "margin": "Projected margin",
       "marginValue": "{{pct}}%",
-      "marginUnavailable": "—"
+      "marginUnavailable": "—",
+      "currencyMismatch": "Costs are recorded in {{costCurrency}}, while project revenue is in {{revenueCurrency}}. Projected margin is unavailable without an exchange rate.",
+      "uncostedHours": "{{hours}} logged hours have no effective employee or default cost rate and contribute $0 to labor cost."
+    },
+    "paymentWarning": {
+      "title": "Payment prerequisite warning",
+      "generic": "Payment is required for a flagged project billing milestone and has not been confirmed. Confirm payment before continuing work.",
+      "invoiceFallback": "the linked invoice",
+      "preparation": "Payment is required before work continues. Invoice {{invoiceNumber}} is still being prepared.",
+      "outstanding": "Payment is required before work continues. Invoice {{invoiceNumber}} has not been paid.",
+      "replacement": "Payment is required before work continues. Invoice {{invoiceNumber}} was cancelled or voided and needs a replacement."
     },
     "billed": {
       "label": "Billed:",

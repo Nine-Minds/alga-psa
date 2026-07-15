@@ -22,7 +22,11 @@ import { CheckCircle, MoreVertical, PauseCircle, Receipt, XCircle } from 'lucide
 import type { ColumnDefinition } from '@alga-psa/types';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useRangeSelection } from '@alga-psa/ui/hooks';
-import { getErrorMessage } from '@alga-psa/ui/lib/errorHandling';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import { toPlainDate } from '@alga-psa/core';
 import {
   approveScheduleEntry,
@@ -67,6 +71,11 @@ const ProjectBillingReviewTab: React.FC<ProjectBillingReviewTabProps> = ({
     setError(null);
     try {
       const queue = await listReadyScheduleEntries();
+      if (isActionMessageError(queue) || isActionPermissionError(queue)) {
+        setError(getErrorMessage(queue));
+        setRows([]);
+        return;
+      }
       setRows(queue);
       // Drop selections for rows that are no longer ready (approved/held/canceled elsewhere).
       setSelected((prev) => {
@@ -129,6 +138,10 @@ const ProjectBillingReviewTab: React.FC<ProjectBillingReviewTabProps> = ({
     setIsBusy(true);
     try {
       const result = await approveScheduleEntry(entryId);
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       if (result.allocation_warning) {
         toast.success(t('projectBilling.toasts.approvedWithWarning', {
           warning: result.allocation_warning,
@@ -150,7 +163,11 @@ const ProjectBillingReviewTab: React.FC<ProjectBillingReviewTabProps> = ({
   const handleApproveInvoiceNow = async (entryId: string) => {
     setIsBusy(true);
     try {
-      await approveAndInvoiceNow(entryId);
+      const result = await approveAndInvoiceNow(entryId);
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       toast.success(t('projectBilling.toasts.invoiced', {
         defaultValue: 'Entry approved and invoiced.',
       }));
@@ -169,7 +186,12 @@ const ProjectBillingReviewTab: React.FC<ProjectBillingReviewTabProps> = ({
     if (ids.length === 0) return;
     setIsBusy(true);
     try {
-      const { approved, failed } = await bulkApproveEntries(ids);
+      const result = await bulkApproveEntries(ids);
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
+      const { approved, failed } = result;
       if (approved.length > 0) {
         toast.success(t('projectBilling.toasts.bulkApproved', {
           count: approved.length,
@@ -210,10 +232,19 @@ const ProjectBillingReviewTab: React.FC<ProjectBillingReviewTabProps> = ({
     setIsConfirming(true);
     try {
       if (ids.length === 1) {
-        await holdScheduleEntry(ids[0], reason);
+        const result = await holdScheduleEntry(ids[0], reason);
+        if (isActionMessageError(result) || isActionPermissionError(result)) {
+          toast.error(getErrorMessage(result));
+          return;
+        }
         toast.success(t('projectBilling.toasts.held', { defaultValue: 'Entry placed on hold.' }));
       } else {
-        const { held, failed } = await bulkHoldEntries(ids, reason);
+        const result = await bulkHoldEntries(ids, reason);
+        if (isActionMessageError(result) || isActionPermissionError(result)) {
+          toast.error(getErrorMessage(result));
+          return;
+        }
+        const { held, failed } = result;
         if (held.length > 0) {
           toast.success(t('projectBilling.toasts.bulkHeld', {
             count: held.length,
@@ -243,7 +274,11 @@ const ProjectBillingReviewTab: React.FC<ProjectBillingReviewTabProps> = ({
     if (!cancelEntryId) return;
     setIsConfirming(true);
     try {
-      await cancelScheduleEntry(cancelEntryId);
+      const result = await cancelScheduleEntry(cancelEntryId);
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       toast.success(t('projectBilling.toasts.canceled', { defaultValue: 'Entry canceled.' }));
       setCancelEntryId(null);
       await afterMutation();

@@ -48,6 +48,7 @@ const SUBTYPES = [
   { category: 'Projects', name: 'Milestone Completed', description: 'When a project milestone is completed' },
   { category: 'Projects', name: 'Project Milestone Ready', description: 'When a project billing schedule entry becomes ready for review' },
   { category: 'Projects', name: 'Project Budget Threshold Reached', description: 'When project billing crosses a configured budget threshold' },
+  { category: 'Projects', name: 'Project Budget Exceeded', description: 'When billable project work first exceeds a hard budget cap' },
   // Time Entries
   { category: 'Time Entries', name: 'Time Entry Submitted', description: 'When time entries are submitted for approval' },
   { category: 'Time Entries', name: 'Time Entry Approved', description: 'When time entries are approved' },

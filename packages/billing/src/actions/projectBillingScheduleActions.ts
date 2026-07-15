@@ -24,6 +24,7 @@ import {
   type ReadyQueueRow,
   type ScheduleEntryView,
 } from './projectBillingConfigActions';
+import { withProjectBillingActionErrors } from './projectBillingActionErrors';
 
 export interface CreateScheduleEntryActionInput {
   entry_type: 'milestone' | 'deposit';
@@ -33,6 +34,7 @@ export interface CreateScheduleEntryActionInput {
   trigger_type: 'phase' | 'date' | 'manual';
   phase_id?: string | null;
   trigger_date?: string | null;
+  requires_payment_before_work?: boolean;
 }
 
 export type UpdateScheduleEntryActionInput = Partial<CreateScheduleEntryActionInput>;
@@ -52,6 +54,38 @@ interface ApprovedEntryResult {
 function revalidateProjectBilling(projectId: string): void {
   revalidatePath(`/msp/projects/${projectId}`);
   revalidatePath('/msp/billing');
+}
+
+type ProjectBillingScheduleEventType =
+  | 'PROJECT_BILLING_SCHEDULE_ENTRY_CREATED'
+  | 'PROJECT_BILLING_SCHEDULE_ENTRY_UPDATED'
+  | 'PROJECT_BILLING_SCHEDULE_STATUS_CHANGED'
+  | 'PROJECT_BILLING_SCHEDULE_ENTRY_DELETED';
+
+async function publishScheduleEvent(input: {
+  eventType: ProjectBillingScheduleEventType;
+  tenant: string;
+  userId: string;
+  projectId: string;
+  entry: IProjectBillingScheduleEntry;
+  previousStatus?: ProjectBillingScheduleStatus | null;
+  changes?: Record<string, unknown>;
+}): Promise<void> {
+  await publishEvent({
+    eventType: input.eventType,
+    payload: {
+      tenantId: input.tenant,
+      projectId: input.projectId,
+      configId: input.entry.config_id,
+      entryId: input.entry.schedule_entry_id,
+      description: input.entry.description,
+      status: input.entry.status,
+      previousStatus: input.previousStatus,
+      requiresPaymentBeforeWork: input.entry.requires_payment_before_work,
+      userId: input.userId,
+      changes: input.changes,
+    },
+  });
 }
 
 async function assertBillingReadPermission(user: IUserWithRoles): Promise<void> {
@@ -78,7 +112,7 @@ async function assertValidTrigger(
   input: {
     trigger_type: 'phase' | 'date' | 'manual';
     phase_id: string | null;
-    trigger_date: Date | string | null;
+    trigger_date: string | null;
   },
 ): Promise<void> {
   if (input.trigger_type === 'phase') {
@@ -228,7 +262,7 @@ function invoiceIdFrom(result: unknown): string {
   throw new Error('Project invoice generation did not return an invoice');
 }
 
-export const createScheduleEntry = withAuth(async (
+export const createScheduleEntry = withAuth(withProjectBillingActionErrors(async (
   user,
   { tenant },
   configId: string,
@@ -244,6 +278,7 @@ export const createScheduleEntry = withAuth(async (
     phase_id: input.phase_id ?? null,
     trigger_date: input.trigger_date ?? null,
     status: 'pending',
+    requires_payment_before_work: input.requires_payment_before_work ?? false,
   });
 
   const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -269,6 +304,7 @@ export const createScheduleEntry = withAuth(async (
       phase_id: parsed.phase_id ?? null,
       trigger_date: parsed.trigger_date ?? null,
       status: 'pending',
+      requires_payment_before_work: parsed.requires_payment_before_work,
       display_order: displayOrder,
     }, trx);
     return {
@@ -277,10 +313,17 @@ export const createScheduleEntry = withAuth(async (
     };
   });
   revalidateProjectBilling(result.projectId);
+  await publishScheduleEvent({
+    eventType: 'PROJECT_BILLING_SCHEDULE_ENTRY_CREATED',
+    tenant,
+    userId: user.user_id,
+    projectId: result.projectId,
+    entry: result.entry,
+  });
   return result.entry;
-});
+}));
 
-export const updateScheduleEntry = withAuth(async (
+export const updateScheduleEntry = withAuth(withProjectBillingActionErrors(async (
   user,
   { tenant },
   entryId: string,
@@ -327,6 +370,8 @@ export const updateScheduleEntry = withAuth(async (
       phase_id: phaseId,
       trigger_date: triggerDate,
       status: 'pending',
+      requires_payment_before_work:
+        updates.requires_payment_before_work ?? context.entry.requires_payment_before_work,
       display_order: context.entry.display_order,
     });
     await assertValidTrigger(trx, tenant, context.projectId, {
@@ -343,6 +388,7 @@ export const updateScheduleEntry = withAuth(async (
       trigger_type: parsed.trigger_type,
       phase_id: parsed.phase_id ?? null,
       trigger_date: parsed.trigger_date ?? null,
+      requires_payment_before_work: parsed.requires_payment_before_work,
     }, trx);
     if (!updated) throw new Error('Project billing schedule entry not found');
     return {
@@ -351,17 +397,25 @@ export const updateScheduleEntry = withAuth(async (
     };
   });
   revalidateProjectBilling(result.projectId);
+  await publishScheduleEvent({
+    eventType: 'PROJECT_BILLING_SCHEDULE_ENTRY_UPDATED',
+    tenant,
+    userId: user.user_id,
+    projectId: result.projectId,
+    entry: result.entry,
+    changes: updates,
+  });
   return result.entry;
-});
+}));
 
-export const deleteScheduleEntry = withAuth(async (
+export const deleteScheduleEntry = withAuth(withProjectBillingActionErrors(async (
   user,
-  { tenant: _tenant },
+  { tenant },
   entryId: string,
 ): Promise<void> => {
   const { knex } = await createTenantKnex();
   await assertProjectBillingMutationPermission(user, knex);
-  const projectId = await withTransaction(knex, async (trx: Knex.Transaction) => {
+  const deleted = await withTransaction(knex, async (trx: Knex.Transaction) => {
     const context = await loadEntryContext(trx, entryId);
     if (context.entry.status !== 'pending' && context.entry.status !== 'canceled') {
       throw new Error('Only pending or canceled schedule entries can be deleted');
@@ -369,12 +423,19 @@ export const deleteScheduleEntry = withAuth(async (
     if (!await ProjectBillingScheduleEntry.delete(entryId, trx)) {
       throw new Error('Project billing schedule entry not found');
     }
-    return context.projectId;
+    return { projectId: context.projectId, entry: context.entry };
   });
-  revalidateProjectBilling(projectId);
-});
+  revalidateProjectBilling(deleted.projectId);
+  await publishScheduleEvent({
+    eventType: 'PROJECT_BILLING_SCHEDULE_ENTRY_DELETED',
+    tenant,
+    userId: user.user_id,
+    projectId: deleted.projectId,
+    entry: deleted.entry,
+  });
+}));
 
-export const markEntryReady = withAuth(async (
+export const markEntryReady = withAuth(withProjectBillingActionErrors(async (
   user,
   { tenant },
   entryId: string,
@@ -403,11 +464,19 @@ export const markEntryReady = withAuth(async (
       trigger: 'manual',
     },
   });
+  await publishScheduleEvent({
+    eventType: 'PROJECT_BILLING_SCHEDULE_STATUS_CHANGED',
+    tenant,
+    userId: user.user_id,
+    projectId: result.projectId,
+    entry: result.entry,
+    previousStatus: 'pending',
+  });
   revalidateProjectBilling(result.projectId);
   return result.entry;
-});
+}));
 
-export const approveScheduleEntry = withAuth(async (
+export const approveScheduleEntry = withAuth(withProjectBillingActionErrors(async (
   user,
   { tenant },
   entryId: string,
@@ -418,10 +487,18 @@ export const approveScheduleEntry = withAuth(async (
     approveEntryInTransaction(user, tenant, trx, entryId)
   ));
   revalidateProjectBilling(result.projectId);
+  await publishScheduleEvent({
+    eventType: 'PROJECT_BILLING_SCHEDULE_STATUS_CHANGED',
+    tenant,
+    userId: user.user_id,
+    projectId: result.projectId,
+    entry: result.entry,
+    previousStatus: 'ready',
+  });
   return { entry: result.entry, allocation_warning: result.allocation_warning };
-});
+}));
 
-export const approveAndInvoiceNow = withAuth(async (
+export const approveAndInvoiceNow = withAuth(withProjectBillingActionErrors(async (
   user,
   { tenant },
   entryId: string,
@@ -436,14 +513,34 @@ export const approveAndInvoiceNow = withAuth(async (
     return approveEntryInTransaction(user, tenant, trx, entryId);
   });
 
-  const invoice = await generateProjectInvoice(approved.projectId, [entryId]);
+  let invoice: Awaited<ReturnType<typeof generateProjectInvoice>>;
+  try {
+    invoice = await generateProjectInvoice(approved.projectId, [entryId]);
+  } catch (error) {
+    // Approval and invoice generation cross a server-action boundary. Restore
+    // the ready state if generation fails before the schedule entry is linked.
+    await withTransaction(knex, async (trx: Knex.Transaction) => {
+      const current = await ProjectBillingScheduleEntry.getById(entryId, trx);
+      if (current?.status === 'approved') {
+        await ProjectBillingScheduleEntry.transitionStatus(
+          entryId,
+          'approved',
+          'ready',
+          { approved_by: null, approved_at: null },
+          trx,
+        );
+      }
+    });
+    revalidateProjectBilling(approved.projectId);
+    throw error;
+  }
   const invoiceId = invoiceIdFrom(invoice);
   const entry = await scheduleEntryView(knex, tenant, entryId);
   revalidateProjectBilling(approved.projectId);
   return { entry, invoice_id: invoiceId };
-});
+}));
 
-export const holdScheduleEntry = withAuth(async (
+export const holdScheduleEntry = withAuth(withProjectBillingActionErrors(async (
   user,
   { tenant },
   entryId: string,
@@ -451,15 +548,54 @@ export const holdScheduleEntry = withAuth(async (
 ): Promise<ScheduleEntryView> => {
   const { knex } = await createTenantKnex();
   await assertProjectBillingMutationPermission(user, knex);
-  if (!reason.trim()) throw new Error('A hold reason is required');
+  const holdReason = reason.trim();
+  if (!holdReason) throw new Error('A hold reason is required');
   const result = await withTransaction(knex, (trx: Knex.Transaction) => (
-    transitionEntry(tenant, trx, entryId, 'ready', 'pending', { ready_at: null })
+    transitionEntry(tenant, trx, entryId, 'ready', 'held', {
+      hold_reason: holdReason,
+      held_at: new Date().toISOString(),
+      held_by: user.user_id,
+    })
   ));
   revalidateProjectBilling(result.projectId);
+  await publishScheduleEvent({
+    eventType: 'PROJECT_BILLING_SCHEDULE_STATUS_CHANGED',
+    tenant,
+    userId: user.user_id,
+    projectId: result.projectId,
+    entry: result.entry,
+    previousStatus: 'ready',
+  });
   return result.entry;
-});
+}));
 
-export const cancelScheduleEntry = withAuth(async (
+export const releaseScheduleEntryHold = withAuth(withProjectBillingActionErrors(async (
+  user,
+  { tenant },
+  entryId: string,
+): Promise<ScheduleEntryView> => {
+  const { knex } = await createTenantKnex();
+  await assertProjectBillingMutationPermission(user, knex);
+  const result = await withTransaction(knex, (trx: Knex.Transaction) => (
+    transitionEntry(tenant, trx, entryId, 'held', 'ready', {
+      hold_reason: null,
+      held_at: null,
+      held_by: null,
+    })
+  ));
+  revalidateProjectBilling(result.projectId);
+  await publishScheduleEvent({
+    eventType: 'PROJECT_BILLING_SCHEDULE_STATUS_CHANGED',
+    tenant,
+    userId: user.user_id,
+    projectId: result.projectId,
+    entry: result.entry,
+    previousStatus: 'held',
+  });
+  return result.entry;
+}));
+
+export const cancelScheduleEntry = withAuth(withProjectBillingActionErrors(async (
   user,
   { tenant },
   entryId: string,
@@ -475,21 +611,33 @@ export const cancelScheduleEntry = withAuth(async (
       return {
         entry: await scheduleEntryView(trx, tenant, entryId, context.config),
         projectId: context.projectId,
+        previousStatus: context.entry.status,
       };
     }
-    return transitionEntry(
+    const transitioned = await transitionEntry(
       tenant,
       trx,
       entryId,
       context.entry.status,
       'canceled',
     );
+    return { ...transitioned, previousStatus: context.entry.status };
   });
   revalidateProjectBilling(result.projectId);
+  if (result.previousStatus !== 'canceled') {
+    await publishScheduleEvent({
+      eventType: 'PROJECT_BILLING_SCHEDULE_STATUS_CHANGED',
+      tenant,
+      userId: user.user_id,
+      projectId: result.projectId,
+      entry: result.entry,
+      previousStatus: result.previousStatus,
+    });
+  }
   return result.entry;
-});
+}));
 
-export const bulkApproveEntries = withAuth(async (
+export const bulkApproveEntries = withAuth(withProjectBillingActionErrors(async (
   user,
   { tenant },
   entryIds: string[],
@@ -506,14 +654,22 @@ export const bulkApproveEntries = withAuth(async (
       ));
       approved.push(id);
       revalidateProjectBilling(result.projectId);
+      await publishScheduleEvent({
+        eventType: 'PROJECT_BILLING_SCHEDULE_STATUS_CHANGED',
+        tenant,
+        userId: user.user_id,
+        projectId: result.projectId,
+        entry: result.entry,
+        previousStatus: 'ready',
+      });
     } catch (error) {
       failed.push({ id, error: error instanceof Error ? error.message : String(error) });
     }
   }
   return { approved, failed };
-});
+}));
 
-export const bulkHoldEntries = withAuth(async (
+export const bulkHoldEntries = withAuth(withProjectBillingActionErrors(async (
   user,
   { tenant },
   entryIds: string[],
@@ -521,25 +677,38 @@ export const bulkHoldEntries = withAuth(async (
 ): Promise<{ held: string[]; failed: { id: string; error: string }[] }> => {
   const { knex } = await createTenantKnex();
   await assertProjectBillingMutationPermission(user, knex);
-  if (!reason.trim()) throw new Error('A hold reason is required');
+  const holdReason = reason.trim();
+  if (!holdReason) throw new Error('A hold reason is required');
   const held: string[] = [];
   const failed: { id: string; error: string }[] = [];
 
   for (const id of entryIds) {
     try {
       const result = await withTransaction(knex, (trx: Knex.Transaction) => (
-        transitionEntry(tenant, trx, id, 'ready', 'pending', { ready_at: null })
+        transitionEntry(tenant, trx, id, 'ready', 'held', {
+          hold_reason: holdReason,
+          held_at: new Date().toISOString(),
+          held_by: user.user_id,
+        })
       ));
       held.push(id);
       revalidateProjectBilling(result.projectId);
+      await publishScheduleEvent({
+        eventType: 'PROJECT_BILLING_SCHEDULE_STATUS_CHANGED',
+        tenant,
+        userId: user.user_id,
+        projectId: result.projectId,
+        entry: result.entry,
+        previousStatus: 'ready',
+      });
     } catch (error) {
       failed.push({ id, error: error instanceof Error ? error.message : String(error) });
     }
   }
   return { held, failed };
-});
+}));
 
-export const listReadyScheduleEntries = withAuth(async (
+export const listReadyScheduleEntries = withAuth(withProjectBillingActionErrors(async (
   user,
   { tenant: _tenant },
 ): Promise<ReadyQueueRow[]> => {
@@ -557,13 +726,13 @@ export const listReadyScheduleEntries = withAuth(async (
         : row.entry.trigger_type,
     },
   })) as ReadyQueueRow[];
-});
+}));
 
-export const getReadyEntryCount = withAuth(async (
+export const getReadyEntryCount = withAuth(withProjectBillingActionErrors(async (
   user,
   { tenant: _tenant },
 ): Promise<number> => {
   await assertBillingReadPermission(user);
   const { knex } = await createTenantKnex();
   return (await ProjectBillingScheduleEntry.listReadyQueue(knex)).length;
-});
+}));

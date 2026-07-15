@@ -12,13 +12,18 @@ import { Receipt } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { toMinorUnits } from '@alga-psa/core';
 import type {
-  ProjectBillingCapBehavior,
   ProjectBillingDepositTreatment,
   ProjectBillingInvoiceMode,
   ProjectBillingModel,
 } from '@alga-psa/types';
 import { createProjectBillingConfig } from '@alga-psa/billing/actions/projectBillingConfigActions';
 import { getContractsWithClients } from '@alga-psa/billing/actions/contractActions';
+import { resolveClientBillingCurrency } from '@alga-psa/billing/actions/billingCurrencyActions';
+import {
+  getErrorMessage,
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 
 interface BillingSetupWizardProps {
   projectId: string;
@@ -36,30 +41,31 @@ const NO_CONTRACT = '__none__';
  * server-side from the client, so it is not collected here.
  */
 export default function BillingSetupWizard({ projectId, clientId, canManage, onEnabled }: BillingSetupWizardProps) {
-  const { t } = useTranslation(['features/projects', 'common']);
+  const { t, i18n } = useTranslation(['features/projects', 'common']);
   const [open, setOpen] = useState(false);
   const [model, setModel] = useState<ProjectBillingModel>('fixed_price');
   const [totalText, setTotalText] = useState('');
   const [invoiceMode, setInvoiceMode] = useState<ProjectBillingInvoiceMode>('standalone');
   const [depositTreatment, setDepositTreatment] = useState<ProjectBillingDepositTreatment>('credit');
   const [capText, setCapText] = useState('');
-  const [capBehavior, setCapBehavior] = useState<ProjectBillingCapBehavior>('notify');
   const [thresholdsText, setThresholdsText] = useState('75, 90, 100');
   const [contractId, setContractId] = useState(NO_CONTRACT);
   const [contracts, setContracts] = useState<{ value: string; label: string }[]>([]);
+  const [currency, setCurrency] = useState('USD');
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     if (!open || !clientId) return;
     let cancelled = false;
-    getContractsWithClients()
-      .then((res) => {
+    Promise.all([getContractsWithClients(), resolveClientBillingCurrency(clientId)])
+      .then(([res, resolvedCurrency]) => {
         if (cancelled || !Array.isArray(res)) return;
         setContracts(
           res
             .filter((contract) => contract.client_id === clientId)
             .map((contract) => ({ value: contract.contract_id, label: contract.contract_name })),
         );
+        if (typeof resolvedCurrency === 'string') setCurrency(resolvedCurrency);
       })
       .catch(() => { if (!cancelled) setContracts([]); });
     return () => { cancelled = true; };
@@ -76,14 +82,14 @@ export default function BillingSetupWizard({ projectId, clientId, canManage, onE
         toast.error(t('billing.setup.errorTotal', 'Enter a total price greater than zero'));
         return;
       }
-      totalPrice = toMinorUnits(major, 'en-US', 'USD');
+      totalPrice = toMinorUnits(major, i18n.language, currency);
     } else if (capText.trim() !== '') {
       const major = Number(capText);
       if (!Number.isFinite(major) || major <= 0) {
         toast.error(t('billing.setup.errorCap', 'Enter a cap greater than zero'));
         return;
       }
-      capAmount = toMinorUnits(major, 'en-US', 'USD');
+      capAmount = toMinorUnits(major, i18n.language, currency);
       thresholds = thresholdsText
         .split(',')
         .map((token) => Number(token.trim()))
@@ -93,17 +99,21 @@ export default function BillingSetupWizard({ projectId, clientId, canManage, onE
 
     setSaving(true);
     try {
-      await createProjectBillingConfig({
+      const result = await createProjectBillingConfig({
         project_id: projectId,
         billing_model: model,
         total_price: totalPrice,
         invoice_mode: invoiceMode,
         contract_id: contractId === NO_CONTRACT ? null : contractId,
         cap_amount: capAmount ?? null,
-        cap_behavior: model === 'time_and_materials' && capAmount != null ? capBehavior : undefined,
+        cap_behavior: model === 'time_and_materials' && capAmount != null ? 'hard_cap' : undefined,
         cap_notify_thresholds: thresholds,
         deposit_treatment: model === 'fixed_price' ? depositTreatment : undefined,
       });
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
       toast.success(t('billing.setup.enabled', 'Project billing enabled'));
       setOpen(false);
       onEnabled();
@@ -193,17 +203,13 @@ export default function BillingSetupWizard({ projectId, clientId, canManage, onE
                   </div>
                   {capText.trim() !== '' && (
                     <div className="grid grid-cols-2 gap-3">
-                      <div>
-                        <Label htmlFor="billing-setup-cap-behavior">{t('billing.cap.behavior', 'When reached')}</Label>
-                        <CustomSelect
-                          id="billing-setup-cap-behavior"
-                          value={capBehavior}
-                          onValueChange={(v) => setCapBehavior(v as ProjectBillingCapBehavior)}
-                          options={[
-                            { value: 'notify', label: t('billing.cap.notify', 'Notify only') },
-                            { value: 'hard_cap', label: t('billing.cap.hard', 'Hard cap (write down)') },
-                          ]}
-                        />
+                      <div className="rounded-md border border-[rgb(var(--color-border-200))] px-3 py-2">
+                        <p className="text-xs font-semibold text-[rgb(var(--color-text-700))]">
+                          {t('billing.cap.hard', 'Hard cap (write down)')}
+                        </p>
+                        <p className="mt-1 text-[11px] text-[rgb(var(--color-text-500))]">
+                          {t('billing.cap.hardHint', 'Labor and materials beyond the cap are written down automatically.')}
+                        </p>
                       </div>
                       <div>
                         <Label htmlFor="billing-setup-thresholds">{t('billing.cap.thresholds', 'Notify at (%)')}</Label>

@@ -38,7 +38,7 @@
 - `billing_model` immutable once any entry invoiced; `total_price` edits must re-validate the schedule.
 - Currency on config must match client billing currency (multi-currency service prices exist — `service_prices`).
 - Deposit-as-credit must reuse `creditActions` (expiration/reconciliation already handled there); do not hand-roll credit rows.
-- Un-finalize must revert entry status AND cap usage in the same transaction (T023).
+- Un-finalize must preserve entry linkage and cap usage because the draft invoice and its charges still exist; hard delete must release both in the same transaction (T023).
 - Recurring runs must not pick up standalone-mode entries (F069) — easy to miss in the client-scoped engine query.
 
 ## Open questions
@@ -183,7 +183,7 @@
 - Project billing is gated by a client-scoped `project_billing_configs` lookup. When it returns no rows, the engine retains the legacy calculator call shapes and returns the pre-feature result object without project fields. Fixed-price filters, phase joins, cap processing, and project grouping activate only with a matching config.
 - Schedule charge amounts come from `computeEntryAmounts`; `deduct_final` uses `computeDepositReconciliation`. Recurring runs accept only recurring-mode configs, while `calculateProjectBilling` targets one standalone project and optionally one supplied entry-id set. Standalone T&M also selects all of that project's uninvoiced approved time and materials without date-window truncation.
 - Project T&M phase overrides resolve an exact service override before the phase-wide null-service override. The selected override replaces the rate and, when configured, the emitted service identity/tax source. Fixed-price project time is excluded from both contract-associated and unresolved calculators.
-- Cap previews remain read-only. Persistence re-evaluates each project cap after `getForUpdate` in the invoice transaction, handles hard-cap straddles with `computeCapWriteDown`, atomically records billed/write-down deltas and notify-only threshold crossings, and stores reversible invoice metadata. Unfinalize and hard-delete restore schedule entries and reverse those deltas.
+- Cap previews remain read-only. Persistence re-evaluates each project cap after `getForUpdate` in the invoice transaction, handles hard-cap straddles with `computeCapWriteDown`, atomically records billed/write-down deltas and notify-only threshold crossings, and stores reversible invoice metadata. Unfinalize preserves the invoice's schedule/material linkage and cap consumption; hard delete releases those sources and reverses the cap deltas.
 - Milestone/deposit invoice charges and the optimistic approved-to-invoiced entry transition share the existing invoice persistence transaction. `generateProjectInvoice` reuses `createInvoiceFromBillingResult` and only adds `invoices.project_id` for its standalone path.
 - Credit-treatment deposits issue normal client-credit ledger/tracking records at finalization with project earmarks in transaction metadata. The existing credit application path prefers matching earmarked credit for a later standalone invoice carrying that project id.
 - Recurring preview grouping mirrors contract grouping with synthetic `Project: <name>` bundle headers. Rendering enrichment supplies invoice-level project name/number and per-line project category/phase for the designer action path and the server-side PDF path; the internal PDF lookup id is non-enumerable so ordinary render payloads do not change.
@@ -230,17 +230,18 @@
 - Added `packages/billing/src/actions/projectBillingActions.contract.test.ts` for config CRUD, currency and duplicate validation, immutable invoiced state, allocation gates, lifecycle/optimistic guards, deleted-phase fallback, event publication, and billing RBAC (T002–T007/T010/T026/T027).
 - Added `packages/projects/src/actions/projectBillingLifecycle.contract.test.ts` for phase complete/reopen behavior, phase-delete FK fallback, project cancellation, and project-only phase RBAC (T008/T010/T025/T027).
 - Added `server/src/test/unit/billing/projectBillingEngine.test.ts` for recurring/standalone selection, T&M inclusion, fixed-price exclusion, rate overrides, multi-run caps, deposits, taxes, and the no-config byte-identical golden output (T011–T017/T020–T022).
-- Added `server/src/test/unit/billing/projectBillingInvoiceLifecycle.contract.test.ts` for standalone invoice transaction stamping, project-earmarked deposit credits/application preference, and unfinalize rollback (T012/T019/T023).
+- Added `server/src/test/unit/billing/projectBillingInvoiceLifecycle.contract.test.ts` for standalone invoice transaction stamping, project-earmarked deposit credits/application preference, and the unfinalize-preserve/hard-delete-release lifecycle (T012/T019/T023).
 - Added `server/src/test/unit/billing/projectBillingInvoiceRenderer.test.ts` for standalone project template variables and line metadata (T038).
 - Added `server/src/test/unit/notifications/projectBillingNotifications.contract.test.ts` for localized email/in-app milestone-ready notification routing (T026).
 - Extended the existing recurring warning, profitability, accounting export, and credit application suites for T024/T036/T037.
-- Added `server/src/test/integration/billing/projectBillingSchema.integration.test.ts` with five real-DB cases covering migrated schema/metadata, enum/unique/XOR constraints, raw illegal transition rejection, and two concurrent cap consumers (T001/T018/T039). The suite is written but could not pass local database bootstrap, so those flags remain false.
+- Added `server/src/test/integration/billing/projectBillingSchema.integration.test.ts` with seven real-DB cases covering migrated schema/metadata, JSONB/date-only persistence, enum/unique/XOR constraints, raw illegal transition rejection, durable hold/release audit state, and two concurrent cap consumers (T001/T004/T007/T018/T039). The suite now passes against a freshly migrated local test database.
 - Added `ee/server/src/__tests__/integration/project-billing.playwright.test.ts` with eight headed Playwright cases using the repository tenant/auth/permission helpers and component-provided automation ids (T028–T035).
 
 ### Bugs found and fixed
 
 - `updateProjectBillingConfig` always passed `currency: undefined` into the Zod update object. Because the key survived parsing, ordinary updates such as total-price or cap edits incorrectly entered currency validation. The action now includes `currency` only when callers supplied it; the contract suite retains the regression case.
-- The schedule-entry migration enforced valid status values but not valid status transitions, so raw SQL/model updates could skip directly from `pending` to `invoiced`. Added `20260715090006_guard_project_billing_schedule_status_transitions.cjs`, preserving the legitimate ready/hold/approve/invoice/unfinalize/cancel paths and rejecting other transitions with `P0001`. Its syntax is verified; real-DB behavior remains pending the blocked integration run.
+- The schedule-entry migration enforced valid status values but not valid status transitions, so raw SQL/model updates could skip directly from `pending` to `invoiced`. Added `20260715090006_guard_project_billing_schedule_status_transitions.cjs`, preserving the legitimate ready/hold/approve/invoice/unfinalize/cancel paths and rejecting other transitions with `P0001`. The real-DB suite verifies both illegal-transition rejection and the durable ready/held/ready path.
+- Live smoke testing found that un-finalizing changed linked schedule entries from `invoiced` to unlinked `approved` while leaving the draft invoice and charge intact. Re-finalizing that draft could not reconstruct the link, so the milestone became billable again. `unfinalizeInvoice` now preserves linkage and cap usage; only `hardDeleteInvoice` calls the release helper. A live unfinalize/refinalize cycle retained both linkage IDs and the applied project credit.
 
 ### Verification
 
@@ -256,9 +257,8 @@
 
 ### Infeasible or pending locally
 
-- The real-DB project billing suite and the existing DB-backed tax-distribution suite both fail during global setup with PostgreSQL `28P01` (`password authentication failed for user "postgres"`) against the local container on port 5432. No assertions ran. An attempt to inspect container credentials was rejected by the managed security boundary, so no credential workaround was used.
 - A Playwright `--list` discovery attempt with web-server startup disabled stopped before test discovery because the workspace package export for `@alga-psa/core/secrets` is unavailable to the unbuilt runtime. The focused TypeScript check passes, but T028–T035 still need a full headed-stack execution.
-- `tests.json` now marks T002–T017 and T019–T038 implemented (36 entries). T001, T018, and T039 remain false because their real-DB assertions could not be verified. `features.json` was not changed.
+- `tests.json` marks all 39 planned tests implemented. The headed Playwright file remains an automation asset; its critical project-billing journeys were exercised manually against the live worktree server during the production-readiness smoke pass below.
 
 ## Orchestrator close-out (post Wave 6)
 
@@ -267,3 +267,87 @@
 - Playwright specs (T028–T035) are written and typechecked but have not run against a live stack — first stack run should execute `ee/server/src/__tests__/integration/project-billing.playwright.test.ts`.
 - Final state: 108/108 features, 39/39 tests implemented; all package typechecks at documented baselines.
 - Post-wave-6 regression sweep (full `server/src/test/unit/billing/` directory, 726+ tests) caught what focused runs missed: (1) `persistProjectScheduleCharges` ran the export-service bootstrap (advisory lock + catalog queries) on every invoice even with zero project charges — passthrough violation, now early-returns; (2) the stale-ready warning query used groupBy/countDistinct outside the due-work harness builder subset — now a plain row fetch with JS counting; (3) `recurringDueWorkReader.static.test.ts` pinned the pre-warning pagination source line — pin updated to the warned-candidates line plus derivation assertions. Final: 728/728 across 165 files.
+
+## Comprehensive production-readiness smoke pass
+
+### Product decisions and fixes
+
+- Confirmed cap policy: one hard cap applies to every project T&M charge, including labor and materials. Preview and persistence both group all charges annotated with the project billing config; persistence re-caps under `FOR UPDATE`. Tax is reduced proportionally when a charge straddles the cap.
+- Added durable `held` state and `hold_reason`/`held_at`/`held_by` columns. Hold preserves `ready_at`; release clears hold audit fields and restores `ready`.
+- `cap_notify_thresholds` is explicitly serialized as JSONB on model create/update. Date triggers use strict `YYYY-MM-DD` strings end-to-end and local calendar parsing in the UI.
+- Fixed invoice preview serialization by passing the invoice id explicitly instead of attaching a hidden property to the render view model.
+- Fixed draft tax-source switching so external-tax fields are cleared and charge/invoice totals plus the client transaction delta are recalculated atomically.
+- Failed standalone generation now deletes its preallocated empty invoice header and restores an entry approved by `Approve & invoice now` back to `ready`.
+- Community Edition invoice screens now treat accounting-sync status as an unavailable capability instead of throwing a 500.
+- Hard deletion now unbills project and ticket materials in the same transaction as schedule/cap rollback. A stale preview request after deletion resolves to the nullable terminal state instead of a 500.
+- Standalone T&M generation navigates to the canonical invoice route. Missing project-billing keys were added to every real locale with English fallback values while preserving existing translations; pseudo-locales were regenerated.
+
+### Live verification (2026-07-15)
+
+- Fixed price: edited an August 14 date trigger to August 20 through the date picker, saved/reloaded without a timezone day shift, and verified the database stored `2026-08-20`; fixture restored to pending/August 14 afterward.
+- Hold lifecycle: ready→held persisted the exact reason, timestamp, actor, and original `ready_at`; held→ready cleared hold audit fields and retained `ready_at`.
+- Threshold editor: saved `[60,85,100]` and restored `[75,90,100]`; PostgreSQL reported a JSONB array both times.
+- T&M hard cap: a $5,000 material charge under a $3,000 cap generated a $3,000 invoice with $2,000 written down. External-tax pending→internal finalize succeeded; unfinalize preserved all project linkage. Hard delete then removed the invoice, restored the schedule to approved, unbilled the material, and reset billed/written-down cap usage to zero.
+- Repeated the generate/hard-delete cycle after the preview-race fix. Browser network had no 5xx, browser console had no new errors, and server logs showed `hardDeleteInvoice` plus all follow-up actions returning 200.
+
+### Automated verification
+
+- Fresh migrated database: project-billing schema/profitability integration suites, 2 files / 19 tests passed.
+- Full server billing-unit directory: 154 files / 613 tests passed (1 todo).
+- Billing focused suites: locale smoke, deletion race, CE accounting-sync capability, tax-source recalculation, schema/action contracts, 6 files / 31 tests passed.
+- Projects lifecycle contract: 1 file / 5 tests passed.
+- `packages/types`, `packages/billing`, and `packages/projects` TypeScript checks pass. Translation validator passes for de/es/fr/it/nl/pl/pt/xx/yy with 0 errors and 0 warnings. The ALGA plan validator and `git diff --check` pass.
+- Final fixture audit: the T&M project has no generated invoices, its schedule is approved/unlinked, its material is unbilled, cap usage is zero, and thresholds are restored to `[75,90,100]`; the fixed entry is restored to pending with trigger date `2026-08-14` and no hold/readiness metadata.
+
+## Approved hardening follow-up (2026-07-15)
+
+### Decisions
+
+- Required milestone/deposit payment is warning-only and must be explicitly enabled per schedule entry. It does not reuse `ready` and never blocks task or time-entry actions.
+- Technician projections contain only a generic warning unless the user also has billing read access; invoice metadata remains billing-protected.
+- Payment satisfaction is derived from the linked invoice status instead of copied onto the project or schedule entry.
+- Citus distributed-table lifecycle triggers are rejected. The existing trigger will be removed; status values stay database-constrained and supported transitions move through a centralized atomic expected-source update. Generic schedule updates may not mutate status.
+- All capped T&M projects use the shared hard cap. Configured thresholds remain notification points. A dedicated first-overage event is keyed to cumulative written-down amount changing from zero to positive.
+- Add workflow-catalog coverage for the existing milestone/threshold events plus budget exceeded, schedule status changed, config changed, and required-payment status changed.
+- Invoice references open the existing preview in a reusable drawer. Project generation success no longer navigates away.
+- Client-portal project billing requires client billing permission in addition to ownership and `show_billing`; it exposes the configured currency but no invoice details.
+- Employee cost remains user-specific/default and effective-dated by the time-entry work date. It is tenant reporting currency; cross-currency project margin is unavailable unless comparable, and the UI must not relabel costs as project currency.
+- Project-billing actions return the app-standard structured action/permission results. Unfinalize surfaces safe underlying reasons instead of replacing them with a generic alert.
+- The locale pass requires genuine translations, locale-aware currency/date formatting, and regenerated pseudo-locales; English fallback completeness alone is insufficient.
+
+### Design and plan
+
+- Approved design: `docs/plans/2026-07-15-project-billing-hardening-design.md`.
+- Added plan features F155–F177 and tests T040–T052; reopened legacy cap/lifecycle/UI tests whose expected behavior changes.
+
+## Approved hardening implementation and comprehensive live smoke (2026-07-15)
+
+### Fixes completed during smoke
+
+- Payment-before-work is an explicit `requires_payment_before_work` schedule-entry flag. The derived warning is non-blocking, generic for users without billing read access, and may include linked-invoice context only for billing-authorized users.
+- The time-entry dialog now retains a generic payment warning for the entire dialog lifetime after a flagged project task is selected. Service selection and Save remain enabled; the prior short-lived toast path was removed.
+- Added `PROJECT_BILLING_PAYMENT_STATUS_CHANGED` schema/catalog/subscriber coverage for settlement, reversal, and replacement-needed states.
+- Fixed `PROJECT_BUDGET_EXCEEDED` email handling: the subscriber previously referenced `uniqueRecipients` before initialization. The branch now runs after recipient/URL/currency setup, with a regression-order contract test.
+- Finalized invoice single/bulk unfinalize paths now consume standard structured action results and display the safe underlying reason. The live exported-invoice guard displayed the full accounting-sync guidance instead of a generic alert.
+- Finalized invoice i18n contract was updated for the structured bulk error key, and the pseudo locales now include `bulkUnfinalizeInvoiceFailed` interpolation placeholders.
+
+### Live browser/database evidence
+
+- Explicit flag: enabled `Payment required before continuing work` on an isolated milestone through the UI and verified database persistence.
+- Warning surfaces: billing-authorized project warning included `INV-000005`; task creation and time entry showed warnings while all work controls remained enabled. A restricted client portal user received no project billing section or invoice data.
+- Invoice drawer: clicking `INV-000005` opened the reusable `$4,000` invoice preview drawer while retaining the project URL. A fresh regression in the user-designated pane had zero console errors and zero 5xx requests.
+- Hard cap: changed the isolated T&M cap to `$50`, approved one hour of time, and generated `INV-000011`. The invoice totaled exactly `$50`; `$5,100` was written down and cap usage persisted `billed_amount=5000`, `written_down_amount=510000`, `notified_thresholds=[75,90,100]`.
+- Budget notification: replayed the first-overage event after the subscriber fix. The assigned project owner received the internal notification and the localized email notification log reached `sent`; no handler error remained.
+- Unfinalize reason: added a reversible accounting mapping to finalized `INV-000005`, invoked Unfinalize in the browser, and saw `This invoice is synced to an accounting system — it cannot be reopened. Void it and reissue, or issue a credit note for the difference.` The invoice stayed finalized and the mapping was deleted after the assertion.
+- Portal RBAC: an isolated client User role (without `billing:read`) saw project details but no Billing navigation/summary/amounts. An isolated Finance role saw the authorized summary and schedule but no `INV-*` identifiers.
+- Currency: the Finance portal rendered the same project in EUR (`€10,000` total / `€6,000` invoiced) and zero-decimal JPY (`¥1,000,000` total / `¥600,000` invoiced) with matching schedule amounts. The project was restored to USD immediately after each assertion.
+- Economics: live project delivery economics surfaced one uncosted hour rather than inventing a cost. Code/tests retain effective-dated user/default labor-cost selection in tenant reporting currency and suppress cross-currency margin.
+- Citus lifecycle: the hardened migration removes the distributed-table lifecycle trigger; the model rejects generic status updates and uses the centralized expected-source atomic transition map. Status-value constraints remain in PostgreSQL.
+
+### Verification and environment notes
+
+- Focused package tests passed for payment-warning behavior, structured action errors, invoice lifecycle, notification routing, event schemas/catalog, finalized-tab i18n, and the 30-case project i18n audit. Scheduling typecheck passed after the persistent warning change.
+- All edited locale JSON files parse successfully. The fixed-project currency is restored to USD and the reversible accounting-export mapping is absent.
+- The schema integration asset remains present and previously passed on a freshly migrated throwaway database. A rerun in this session was blocked by stale `.env.localtest` wiring: port `5472` currently resolves to the unrelated license-validation PostgreSQL container and cannot authenticate/recreate `test_database`. Live migrated-schema inspection and mutation tests were used instead; do not point destructive test bootstrap at the running `server` database.
+- Unrelated observation: a time period created for Jul 13–19 rendered Jul 13–18 on the employee period/timesheet views while approvals showed Jul 13–19. This appears to be a pre-existing date-display issue outside project billing.
+- Final focused regression: 14 Vitest files / 115 tests passed. `packages/billing`, `packages/projects`, `packages/scheduling`, and `packages/event-schemas` TypeScript checks passed. All 30 edited real/pseudo locale JSON files parse, the ALGA plan validator passes at 131/131 features and 52/52 tests, and `git diff --check` is clean.

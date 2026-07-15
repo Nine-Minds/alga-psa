@@ -7,6 +7,7 @@ import { statusVisual } from './billingViewHelpers';
 const STATUS_LABEL_FALLBACK: Record<ProjectBillingScheduleStatus, string> = {
   pending: 'Pending',
   ready: 'Ready',
+  held: 'Held',
   approved: 'Approved',
   invoiced: 'Invoiced',
   canceled: 'Canceled',

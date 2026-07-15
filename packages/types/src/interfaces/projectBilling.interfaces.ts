@@ -6,7 +6,7 @@ export type ProjectBillingCapBehavior = 'notify' | 'hard_cap';
 export type ProjectBillingDepositTreatment = 'credit' | 'deduct_final';
 export type ProjectBillingScheduleEntryType = 'milestone' | 'deposit';
 export type ProjectBillingTriggerType = 'phase' | 'date' | 'manual';
-export type ProjectBillingScheduleStatus = 'pending' | 'ready' | 'approved' | 'invoiced' | 'canceled';
+export type ProjectBillingScheduleStatus = 'pending' | 'ready' | 'held' | 'approved' | 'invoiced' | 'canceled';
 
 export interface IProjectBillingConfig extends TenantEntity {
   config_id: string;
@@ -35,13 +35,17 @@ export interface IProjectBillingScheduleEntry extends TenantEntity {
   percentage: number | null;
   trigger_type: ProjectBillingTriggerType;
   phase_id: string | null;
-  trigger_date: Date | string | null;
+  trigger_date: string | null;
   status: ProjectBillingScheduleStatus;
   ready_at: Date | string | null;
+  hold_reason: string | null;
+  held_at: Date | string | null;
+  held_by: string | null;
   approved_by: string | null;
   approved_at: Date | string | null;
   invoice_id: string | null;
   invoice_charge_id: string | null;
+  requires_payment_before_work: boolean;
   display_order: number;
   created_at: Date | string;
   updated_at: Date | string;

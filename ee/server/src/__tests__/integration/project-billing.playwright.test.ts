@@ -63,7 +63,7 @@ async function createProjectFixture(page: Page, grantAll = true): Promise<Projec
     await grantAllPermissionsToRole(db, tenantId, 'Admin');
   }
 
-  await db('clients').where({ tenant: tenantId, client_id: clientId }).update({ billing_currency: 'USD' });
+  await db('clients').where({ tenant: tenantId, client_id: clientId }).update({ default_currency_code: 'USD' });
 
   const projectId = uuidv4();
   const phaseId = uuidv4();
@@ -77,7 +77,8 @@ async function createProjectFixture(page: Page, grantAll = true): Promise<Projec
     wbs_code: `PB-${suffix}`,
     is_inactive: false,
     client_portal_config: {},
-    entered_at: db.fn.now(),
+    created_at: db.fn.now(),
+    updated_at: db.fn.now(),
   });
   await db('project_phases').insert({
     tenant: tenantId,
@@ -86,7 +87,8 @@ async function createProjectFixture(page: Page, grantAll = true): Promise<Projec
     phase_name: phaseName,
     wbs_code: 'DISC',
     order_number: 1,
-    entered_at: db.fn.now(),
+    created_at: db.fn.now(),
+    updated_at: db.fn.now(),
   });
 
   return { tenantData, tenantId, clientId, projectId, phaseId, projectName, phaseName };

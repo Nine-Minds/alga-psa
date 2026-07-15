@@ -9,10 +9,22 @@ export const projectBillingTriggerTypeSchema = z.enum(['phase', 'date', 'manual'
 export const projectBillingScheduleStatusSchema = z.enum([
   'pending',
   'ready',
+  'held',
   'approved',
   'invoiced',
   'canceled'
 ]);
+
+const dateOnlySchema = z.string().regex(
+  /^\d{4}-(0[1-9]|1[0-2])-(0[1-9]|[12]\d|3[01])$/,
+  'trigger_date must be a YYYY-MM-DD calendar date'
+).refine((value) => {
+  const [year, month, day] = value.split('-').map(Number);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  return parsed.getUTCFullYear() === year
+    && parsed.getUTCMonth() === month - 1
+    && parsed.getUTCDate() === day;
+}, 'trigger_date must be a valid calendar date');
 
 const currencySchema = z.string().trim().regex(/^[A-Za-z]{3}$/, 'currency must be a 3-letter code');
 
@@ -56,8 +68,9 @@ const projectBillingScheduleEntryBaseSchema = z.object({
   percentage: z.number().positive().max(100).optional().nullable(),
   trigger_type: projectBillingTriggerTypeSchema,
   phase_id: z.string().uuid().optional().nullable(),
-  trigger_date: z.coerce.date().optional().nullable(),
+  trigger_date: dateOnlySchema.optional().nullable(),
   status: projectBillingScheduleStatusSchema.default('pending'),
+  requires_payment_before_work: z.boolean().default(false),
   display_order: z.number().int().min(0).default(0)
 });
 

@@ -1,8 +1,12 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { format } from 'date-fns';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
+import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
+import {
+  isActionMessageError,
+  isActionPermissionError,
+} from '@alga-psa/ui/lib/errorHandling';
 import {
   getClientProjectBillingSummary,
   type ClientProjectBillingSummary,
@@ -15,21 +19,27 @@ interface ProjectBillingSummarySectionProps {
 // Read-only billing summary for the client portal. Renders nothing unless the MSP
 // has enabled `show_billing` for this project and a billing config exists.
 export default function ProjectBillingSummarySection({ projectId }: ProjectBillingSummarySectionProps) {
-  const { t } = useTranslation('features/projects');
-  const { formatCurrency } = useFormatters();
+  const { t, i18n } = useTranslation('features/projects');
+  const { formatDate } = useFormatters();
   const [summary, setSummary] = useState<ClientProjectBillingSummary | null>(null);
 
   useEffect(() => {
     let active = true;
     getClientProjectBillingSummary(projectId)
-      .then((result) => { if (active) setSummary(result); })
+      .then((result) => {
+        if (!active) return;
+        setSummary(
+          isActionMessageError(result) || isActionPermissionError(result) ? null : result,
+        );
+      })
       .catch((error) => { console.error('Error fetching project billing summary:', error); });
     return () => { active = false; };
   }, [projectId]);
 
   if (!summary || !summary.enabled) return null;
 
-  const money = (cents: number) => formatCurrency(cents / 100, 'USD', { minimumFractionDigits: 2 });
+  const currency = summary.currency ?? 'USD';
+  const money = (minorUnits: number) => formatCurrencyFromMinorUnits(minorUnits, i18n.language, currency);
 
   return (
     <div className="bg-white rounded-lg shadow" id="client-portal-project-billing">
@@ -65,7 +75,7 @@ export default function ProjectBillingSummarySection({ projectId }: ProjectBilli
                     {entry.status === 'invoiced' && entry.invoiced_at && (
                       <p className="text-xs text-gray-500">
                         {t('billing.invoicedOn', 'Invoiced {{date}}', {
-                          date: format(new Date(entry.invoiced_at), 'PP'),
+                          date: formatDate(new Date(entry.invoiced_at), { dateStyle: 'medium' }),
                         })}
                       </p>
                     )}

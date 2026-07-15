@@ -116,7 +116,10 @@ vi.mock('../models/projectBillingConfig', () => ({
     )),
     insert: vi.fn(async (input: any) => {
       if (state.config?.project_id === input.project_id) {
-        throw new Error('duplicate key value violates unique constraint project_billing_configs_tenant_project_unique');
+        throw Object.assign(
+          new Error('duplicate key value violates unique constraint project_billing_configs_tenant_project_unique'),
+          { code: '23505' },
+        );
       }
       state.config = {
         tenant: state.tenant,
@@ -218,6 +221,7 @@ import {
   deleteScheduleEntry,
   holdScheduleEntry,
   markEntryReady,
+  releaseScheduleEntryHold,
   updateScheduleEntry,
 } from './projectBillingScheduleActions';
 
@@ -256,9 +260,13 @@ function makeEntry(overrides: Record<string, unknown> = {}) {
     phase_id: null,
     trigger_date: null,
     status: 'pending',
+    requires_payment_before_work: false,
     invoice_id: null,
     invoice_charge_id: null,
     ready_at: null,
+    hold_reason: null,
+    held_at: null,
+    held_by: null,
     approved_at: null,
     approved_by: null,
     invoiced_at: null,
@@ -271,6 +279,14 @@ function makeEntry(overrides: Record<string, unknown> = {}) {
 
 function allowBillingMutations() {
   state.permissions.set('invoice:create', true);
+}
+
+function returnedErrorMessage(result: unknown): string | null {
+  if (!result || typeof result !== 'object') return null;
+  const candidate = result as { actionError?: unknown; permissionError?: unknown };
+  if (typeof candidate.actionError === 'string') return candidate.actionError;
+  if (typeof candidate.permissionError === 'string') return candidate.permissionError;
+  return null;
 }
 
 beforeEach(() => {
@@ -305,23 +321,25 @@ describe('project billing config action contract', () => {
       total_price: 10_000,
       currency: 'USD',
     });
-    await expect(createProjectBillingConfig({
+    const duplicate = await createProjectBillingConfig({
       project_id: IDS.project,
       billing_model: 'fixed_price',
       total_price: 20_000,
       invoice_mode: 'recurring',
-    })).rejects.toThrow(/duplicate key value/);
+    });
+    expect(returnedErrorMessage(duplicate)).toMatch(/conflicting project billing record/i);
   });
 
   it('T002: rejects a currency that differs from the client billing currency', async () => {
     state.clientCurrency = 'EUR';
-    await expect(createProjectBillingConfig({
+    const result = await createProjectBillingConfig({
       project_id: IDS.project,
       billing_model: 'fixed_price',
       total_price: 10_000,
       currency: 'USD',
       invoice_mode: 'standalone',
-    })).rejects.toThrow("must match the client's billing currency (EUR)");
+    });
+    expect(returnedErrorMessage(result)).toContain("must match the client's billing currency (EUR)");
   });
 
   it('T003: allows billing-model changes before invoicing and rejects them afterward', async () => {
@@ -332,9 +350,10 @@ describe('project billing config action contract', () => {
 
     state.config = makeConfig();
     state.entries = [makeEntry({ status: 'invoiced' })];
-    await expect(updateProjectBillingConfig(IDS.config, {
+    const result = await updateProjectBillingConfig(IDS.config, {
       billing_model: 'time_and_materials',
-    })).rejects.toThrow('Billing model cannot be changed after a schedule entry has been invoiced');
+    });
+    expect(returnedErrorMessage(result)).toBe('Billing model cannot be changed after a schedule entry has been invoiced');
   });
 
   it('T003: revalidates schedule allocation after total_price edits and returns a warning', async () => {
@@ -366,23 +385,22 @@ describe('project billing schedule action contract', () => {
     const updated = await updateScheduleEntry(created.schedule_entry_id, { amount: 2_500 });
     expect(updated).toMatchObject({ amount: 2_500, percentage: null });
 
-    await expect(createScheduleEntry(IDS.config, {
+    const invalid = await createScheduleEntry(IDS.config, {
       entry_type: 'milestone',
       description: 'Invalid',
       amount: 1_000,
       percentage: 10,
       trigger_type: 'manual',
-    })).rejects.toThrow(/exactly one of amount or percentage is required/i);
+    });
+    expect(returnedErrorMessage(invalid)).toMatch(/exactly one of amount or percentage is required/i);
   });
 
   it('T004: keeps invoiced entries immutable and undeletable', async () => {
     state.entries = [makeEntry({ status: 'invoiced' })];
-    await expect(updateScheduleEntry(IDS.entry1, { description: 'Changed' })).rejects.toThrow(
-      'Only pending schedule entries can be edited',
-    );
-    await expect(deleteScheduleEntry(IDS.entry1)).rejects.toThrow(
-      'Only pending or canceled schedule entries can be deleted',
-    );
+    expect(returnedErrorMessage(await updateScheduleEntry(IDS.entry1, { description: 'Changed' })))
+      .toBe('Only pending schedule entries can be edited');
+    expect(returnedErrorMessage(await deleteScheduleEntry(IDS.entry1)))
+      .toBe('Only pending or canceled schedule entries can be deleted');
   });
 
   it('T006: approves an earlier under-allocated entry with a warning', async () => {
@@ -402,9 +420,8 @@ describe('project billing schedule action contract', () => {
       makeEntry({ schedule_entry_id: IDS.entry2, status: 'ready', amount: 5_000, display_order: 1 }),
     ];
 
-    await expect(approveScheduleEntry(IDS.entry2)).rejects.toThrow(
-      'Schedule is under-allocated by 1000 cents.',
-    );
+    expect(returnedErrorMessage(await approveScheduleEntry(IDS.entry2)))
+      .toBe('Schedule is under-allocated by 1000 cents.');
     expect(state.entries[1].status).toBe('ready');
   });
 
@@ -416,24 +433,50 @@ describe('project billing schedule action contract', () => {
     });
 
     state.entries = [makeEntry({ status: 'pending', amount: 10_000 })];
-    await expect(approveScheduleEntry(IDS.entry1)).rejects.toThrow(
-      'Only ready schedule entries can be approved',
-    );
+    expect(returnedErrorMessage(await approveScheduleEntry(IDS.entry1)))
+      .toBe('Only ready schedule entries can be approved');
 
     state.entries = [makeEntry({ status: 'invoiced', amount: 10_000 })];
-    await expect(markEntryReady(IDS.entry1)).rejects.toThrow(
-      'Schedule entry must be pending before it can become ready',
-    );
+    expect(returnedErrorMessage(await markEntryReady(IDS.entry1)))
+      .toBe('Schedule entry must be pending before it can become ready');
   });
 
   it('T007: optimistic status precondition prevents a double approval', async () => {
     state.entries = [makeEntry({ status: 'ready', amount: 10_000 })];
     state.transitionFailure = true;
 
-    await expect(approveScheduleEntry(IDS.entry1)).rejects.toThrow(
-      'Schedule entry status changed before it could be approved',
-    );
+    expect(returnedErrorMessage(await approveScheduleEntry(IDS.entry1)))
+      .toBe('Schedule entry status changed before it could be approved');
     expect(state.entries[0].status).toBe('ready');
+  });
+
+  it('T007: holds a ready entry with audit metadata and releases it back to ready', async () => {
+    state.entries = [makeEntry({ status: 'ready', amount: 10_000 })];
+
+    const held = await holdScheduleEntry(IDS.entry1, '  Waiting for customer approval  ');
+    expect(held).toMatchObject({
+      status: 'held',
+      hold_reason: 'Waiting for customer approval',
+      held_by: IDS.user,
+      held_at: expect.any(String),
+    });
+    expect(held.ready_at).toBeNull();
+
+    const released = await releaseScheduleEntryHold(IDS.entry1);
+    expect(released).toMatchObject({
+      status: 'ready',
+      hold_reason: null,
+      held_at: null,
+      held_by: null,
+    });
+  });
+
+  it('T007: requires a non-empty hold reason and rejects release from a non-held state', async () => {
+    state.entries = [makeEntry({ status: 'ready', amount: 10_000 })];
+
+    expect(returnedErrorMessage(await holdScheduleEntry(IDS.entry1, '   '))).toBe('A hold reason is required');
+    expect(returnedErrorMessage(await releaseScheduleEntryHold(IDS.entry1)))
+      .toBe('Schedule entry must be held before it can become ready');
   });
 
   it('T010: a deleted phase falls back to a flagged manual trigger that can be marked ready', async () => {
@@ -466,6 +509,20 @@ describe('project billing schedule action contract', () => {
         computedAmount: 10_000,
         trigger: 'manual',
       },
+    }, {
+      eventType: 'PROJECT_BILLING_SCHEDULE_STATUS_CHANGED',
+      payload: {
+        tenantId: IDS.tenant,
+        projectId: IDS.project,
+        configId: IDS.config,
+        entryId: IDS.entry1,
+        description: 'Go live',
+        status: 'ready',
+        previousStatus: 'pending',
+        requiresPaymentBeforeWork: false,
+        userId: IDS.user,
+        changes: undefined,
+      },
     }]);
   });
 });
@@ -482,33 +539,31 @@ describe('project billing action RBAC contract (T027)', () => {
   });
 
   it('rejects config CRUD without invoice create or generate permission', async () => {
-    await expect(createProjectBillingConfig({
+    expect(returnedErrorMessage(await createProjectBillingConfig({
       project_id: IDS.project,
       billing_model: 'fixed_price',
       total_price: 10_000,
       invoice_mode: 'standalone',
-    })).rejects.toThrow('Permission denied: invoice create or generate required');
-    await expect(updateProjectBillingConfig(IDS.config, { total_price: 11_000 })).rejects.toThrow(
-      'Permission denied: invoice create or generate required',
-    );
-    await expect(deleteProjectBillingConfig(IDS.config)).rejects.toThrow(
-      'Permission denied: invoice create or generate required',
-    );
+    }))).toBe('Permission denied: invoice create or generate required');
+    expect(returnedErrorMessage(await updateProjectBillingConfig(IDS.config, { total_price: 11_000 })))
+      .toBe('Permission denied: invoice create or generate required');
+    expect(returnedErrorMessage(await deleteProjectBillingConfig(IDS.config)))
+      .toBe('Permission denied: invoice create or generate required');
   });
 
   it('rejects approve, hold, cancel, and schedule CRUD without billing mutation permission', async () => {
-    await expect(approveScheduleEntry(IDS.entry1)).rejects.toThrow(/invoice create or generate required/);
-    await expect(holdScheduleEntry(IDS.entry1, 'Needs review')).rejects.toThrow(/invoice create or generate required/);
-    await expect(cancelScheduleEntry(IDS.entry1)).rejects.toThrow(/invoice create or generate required/);
-    await expect(createScheduleEntry(IDS.config, {
+    expect(returnedErrorMessage(await approveScheduleEntry(IDS.entry1))).toMatch(/invoice create or generate required/);
+    expect(returnedErrorMessage(await holdScheduleEntry(IDS.entry1, 'Needs review'))).toMatch(/invoice create or generate required/);
+    expect(returnedErrorMessage(await releaseScheduleEntryHold(IDS.entry1))).toMatch(/invoice create or generate required/);
+    expect(returnedErrorMessage(await cancelScheduleEntry(IDS.entry1))).toMatch(/invoice create or generate required/);
+    expect(returnedErrorMessage(await createScheduleEntry(IDS.config, {
       entry_type: 'milestone',
       description: 'No permission',
       amount: 100,
       trigger_type: 'manual',
-    })).rejects.toThrow(/invoice create or generate required/);
-    await expect(updateScheduleEntry(IDS.entry1, { description: 'No permission' })).rejects.toThrow(
-      /invoice create or generate required/,
-    );
-    await expect(deleteScheduleEntry(IDS.entry1)).rejects.toThrow(/invoice create or generate required/);
+    }))).toMatch(/invoice create or generate required/);
+    expect(returnedErrorMessage(await updateScheduleEntry(IDS.entry1, { description: 'No permission' })))
+      .toMatch(/invoice create or generate required/);
+    expect(returnedErrorMessage(await deleteScheduleEntry(IDS.entry1))).toMatch(/invoice create or generate required/);
   });
 });

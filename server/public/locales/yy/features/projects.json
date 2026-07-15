@@ -1523,6 +1523,7 @@
     "status": {
       "pending": "55555",
       "ready": "55555",
+      "held": "55555",
       "approved": "55555",
       "invoiced": "55555",
       "canceled": "55555"
@@ -1604,7 +1605,10 @@
       "holdTitle": "55555",
       "holdReason": "55555",
       "holdReasonPlaceholder": "55555",
-      "holdReasonRequired": "55555"
+      "holdReasonRequired": "55555",
+      "heldReason": "55555 {{reason}} 55555",
+      "releaseHold": "55555",
+      "holdReleased": "55555"
     },
     "entry": {
       "addTitle": "55555",
@@ -1635,7 +1639,9 @@
       "errorAmount": "55555",
       "errorPercentage": "55555",
       "errorPhase": "55555",
-      "errorDate": "55555"
+      "errorDate": "55555",
+      "requiresPaymentBeforeWork": "55555 55555 55555 55555 55555",
+      "requiresPaymentBeforeWorkHint": "55555 55555 55555 55555 55555 55555 55555 55555 55555 55555 55555 55555 55555"
     },
     "cap": {
       "title": "55555",
@@ -1650,6 +1656,11 @@
       "saved": "55555",
       "saving": "55555",
       "errorAmount": "55555"
+    },
+    "tm": {
+      "generateInvoice": "55555",
+      "generatingInvoice": "55555",
+      "invoiceGenerated": "55555"
     },
     "overrides": {
       "title": "55555",
@@ -1695,7 +1706,17 @@
       "cost": "55555",
       "margin": "55555",
       "marginValue": "55555 {{pct}} 55555",
-      "marginUnavailable": "55555"
+      "marginUnavailable": "55555",
+      "currencyMismatch": "55555 {{costCurrency}} 55555 {{revenueCurrency}} 55555",
+      "uncostedHours": "55555 {{hours}} 55555"
+    },
+    "paymentWarning": {
+      "title": "55555",
+      "generic": "55555",
+      "invoiceFallback": "55555",
+      "preparation": "55555 {{invoiceNumber}} 55555",
+      "outstanding": "55555 {{invoiceNumber}} 55555",
+      "replacement": "55555 {{invoiceNumber}} 55555"
     },
     "billed": {
       "label": "55555",

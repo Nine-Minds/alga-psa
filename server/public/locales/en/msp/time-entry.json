@@ -168,7 +168,9 @@
     "empty": {
       "searching": "Searching...",
       "noWorkItems": "No work items found"
-    }
+    },
+    "paymentWarningTitle": "Payment prerequisite warning",
+    "paymentWarning": "Payment is required for a flagged project billing milestone and has not been confirmed. Confirm payment before continuing work."
   },
   "workItemList": {
     "meta": {

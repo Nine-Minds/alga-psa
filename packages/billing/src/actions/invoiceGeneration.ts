@@ -15,6 +15,7 @@ import ProjectBillingScheduleEntry from '../models/projectBillingScheduleEntry';
 import {
   computeCapWriteDown,
   detectThresholdCrossings,
+  isFirstProjectCapOverage,
 } from '../services/projectBillingService';
 import ClientContractLine from '../models/clientContractLine';
 import { Session } from 'next-auth';
@@ -290,6 +291,8 @@ type ProjectCapPersistenceDelta = {
   billedAfter: number;
   billed: number;
   writtenDown: number;
+  writtenDownBefore: number;
+  writtenDownAfter: number;
   notifiedThresholds: number[];
 };
 
@@ -297,31 +300,35 @@ async function prepareProjectCapChargesForPersistence(
   trx: Knex.Transaction,
   charges: IBillingCharge[],
 ): Promise<ProjectCapPersistenceDelta[]> {
-  const chargesByConfig = new Map<string, Array<ITimeBasedCharge & {
+  type ProjectCapCharge = IBillingCharge & {
     project_billing_config_id: string;
     project_cap_original_amount?: number;
-  }>>();
+    project_cap_original_tax_amount?: number;
+    write_down_amount?: number;
+    write_down_reason?: 'project_cap';
+  };
+  const chargesByConfig = new Map<string, ProjectCapCharge[]>();
 
   for (const charge of charges) {
-    const candidate = charge as ITimeBasedCharge & {
+    const candidate = charge as IBillingCharge & {
       project_billing_config_id?: string;
       project_cap_original_amount?: number;
+      project_cap_original_tax_amount?: number;
+      write_down_amount?: number;
+      write_down_reason?: 'project_cap';
     };
-    if (candidate.type !== 'time' || !candidate.project_billing_config_id) {
+    if (!candidate.project_billing_config_id) {
       continue;
     }
     const grouped = chargesByConfig.get(candidate.project_billing_config_id) ?? [];
-    grouped.push(candidate as ITimeBasedCharge & {
-      project_billing_config_id: string;
-      project_cap_original_amount?: number;
-    });
+    grouped.push(candidate as ProjectCapCharge);
     chargesByConfig.set(candidate.project_billing_config_id, grouped);
   }
 
   const deltas: ProjectCapPersistenceDelta[] = [];
   for (const [configId, configCharges] of chargesByConfig) {
     const config = await ProjectBillingConfig.getById(configId, trx);
-    if (!config || config.cap_amount === null || config.cap_behavior === null) {
+    if (!config || config.cap_amount === null) {
       continue;
     }
 
@@ -332,6 +339,7 @@ async function prepareProjectCapChargesForPersistence(
     }
 
     const previousBilled = usage.billed_amount;
+    const previousWrittenDown = usage.written_down_amount;
     let runningBilled = previousBilled;
     let billedDelta = 0;
     let writtenDownDelta = 0;
@@ -339,38 +347,35 @@ async function prepareProjectCapChargesForPersistence(
     for (const charge of configCharges) {
       const originalAmount = charge.project_cap_original_amount
         ?? charge.total + (charge.write_down_amount ?? 0);
+      const originalTaxAmount = charge.project_cap_original_tax_amount
+        ?? charge.tax_amount
+        ?? 0;
       charge.project_cap_original_amount = originalAmount;
+      charge.project_cap_original_tax_amount = originalTaxAmount;
 
-      if (config.cap_behavior === 'hard_cap') {
-        const result = computeCapWriteDown(
-          config.cap_amount,
-          runningBilled,
-          originalAmount,
-        );
-        charge.total = result.billable;
-        charge.write_down_amount = result.writtenDown;
-        charge.write_down_reason = result.writtenDown > 0 ? 'project_cap' : undefined;
-        runningBilled += result.billable;
-        billedDelta += result.billable;
-        writtenDownDelta += result.writtenDown;
-      } else {
-        charge.total = originalAmount;
-        charge.write_down_amount = 0;
-        charge.write_down_reason = undefined;
-        runningBilled += originalAmount;
-        billedDelta += originalAmount;
-      }
+      const result = computeCapWriteDown(
+        config.cap_amount,
+        runningBilled,
+        originalAmount,
+      );
+      charge.total = result.billable;
+      charge.write_down_amount = result.writtenDown;
+      charge.write_down_reason = result.writtenDown > 0 ? 'project_cap' : undefined;
+      charge.tax_amount = originalAmount > 0
+        ? Math.round(originalTaxAmount * (result.billable / originalAmount))
+        : 0;
+      runningBilled += result.billable;
+      billedDelta += result.billable;
+      writtenDownDelta += result.writtenDown;
     }
 
-    const notifiedThresholds = config.cap_behavior === 'notify'
-      ? detectThresholdCrossings(
-          config.cap_amount,
-          previousBilled,
-          runningBilled,
-          config.cap_notify_thresholds,
-          usage.notified_thresholds,
-        )
-      : [];
+    const notifiedThresholds = detectThresholdCrossings(
+      config.cap_amount,
+      previousBilled,
+      runningBilled,
+      config.cap_notify_thresholds,
+      usage.notified_thresholds,
+    );
 
     await ProjectBillingCapUsage.increment(
       configId,
@@ -388,6 +393,8 @@ async function prepareProjectCapChargesForPersistence(
       billedAfter: runningBilled,
       billed: billedDelta,
       writtenDown: writtenDownDelta,
+      writtenDownBefore: previousWrittenDown,
+      writtenDownAfter: previousWrittenDown + writtenDownDelta,
       notifiedThresholds,
     });
   }
@@ -623,6 +630,8 @@ function invoiceGenerationActionErrorFrom(error: unknown): InvoiceGenerationActi
       error.message === 'No recurring execution windows selected' ||
       error.message === 'No billing settings found' ||
       error.message === 'Nothing to bill' ||
+      error.message === 'Project billing configuration not found' ||
+      error.message === 'Project is configured for recurring invoice generation' ||
       error.message === 'Recurring selector input execution window kind is not supported.' ||
       error.message === 'Unable to generate a unique invoice number after multiple attempts.' ||
       error.message.startsWith('Purchase Order is required') ||
@@ -2102,7 +2111,8 @@ export const generateProjectInvoice = withAuth(async (
   { tenant },
   projectId: string,
   entryIds?: string[],
-): Promise<{ invoice_id: string }> => {
+): Promise<{ invoice_id: string } | InvoiceGenerationActionError> => {
+  return withInvoiceGenerationActionErrors(async () => {
   if (!await hasPermission(user, 'invoice', 'create') && !await hasPermission(user, 'invoice', 'generate')) {
     throw new Error('Permission denied: Cannot generate invoices');
   }
@@ -2151,6 +2161,7 @@ export const generateProjectInvoice = withAuth(async (
   );
 
   return { invoice_id: createdInvoice.invoice_id };
+  });
 });
 
 export const generateInvoice = withAuth(async (
@@ -2870,6 +2881,17 @@ export const createInvoiceFromBillingResult = withAuth(async (
       // expirationDate is optional and not needed here
     );
 
+    // Keep the action result aligned with the totals committed above. This is
+    // especially important when persistence re-applies a project cap and
+    // changes the previewed charge totals.
+    newInvoice = {
+      ...newInvoice!,
+      subtotal: finalSubtotal,
+      tax: finalTax,
+      total_amount: Math.ceil(totalAmount),
+      credit_applied: 0,
+    };
+
     if (capDeltas.length > 0) {
       const invoiceTransaction = await tenantDb(trx, tenant).table('transactions')
         .where({
@@ -2895,7 +2917,63 @@ export const createInvoiceFromBillingResult = withAuth(async (
           },
         });
     }
+
+  }).catch(async (error) => {
+    // The invoice header is allocated separately so unique invoice-number
+    // retries stay small. Compensate a failed content transaction immediately;
+    // callers must never be left with an empty orphan draft.
+    try {
+      await withTransaction(knex, async (trx: Knex.Transaction) => {
+        await tenantDb(trx, tenant).table('invoices')
+          .where({ invoice_id: newInvoice!.invoice_id, status: 'draft' })
+          .delete();
+      });
+    } catch (cleanupError) {
+      console.error(
+        `[createInvoiceFromBillingResult] Failed to remove orphan invoice ${newInvoice.invoice_id}`,
+        cleanupError,
+      );
+    }
+    throw error;
   });
+
+  const invoicedScheduleRows = await knex('project_billing_schedule_entries as entry')
+    .join('project_billing_configs as config', function joinProjectBillingConfig() {
+      this.on('config.tenant', '=', 'entry.tenant')
+        .andOn('config.config_id', '=', 'entry.config_id');
+    })
+    .where('entry.tenant', tenant)
+    .andWhere('entry.invoice_id', newInvoice.invoice_id)
+    .select<Array<{
+      schedule_entry_id: string;
+      config_id: string;
+      project_id: string;
+      description: string;
+      requires_payment_before_work: boolean;
+    }>>(
+      'entry.schedule_entry_id',
+      'entry.config_id',
+      'config.project_id',
+      'entry.description',
+      'entry.requires_payment_before_work',
+    );
+  for (const entry of invoicedScheduleRows) {
+    await publishEvent({
+      eventType: 'PROJECT_BILLING_SCHEDULE_STATUS_CHANGED',
+      payload: {
+        tenantId: tenant,
+        projectId: entry.project_id,
+        configId: entry.config_id,
+        entryId: entry.schedule_entry_id,
+        description: entry.description,
+        status: 'invoiced',
+        previousStatus: 'approved',
+        requiresPaymentBeforeWork: entry.requires_payment_before_work,
+        userId,
+        changes: { invoiceId: newInvoice.invoice_id },
+      },
+    });
+  }
 
   for (const delta of persistedCapDeltas) {
     for (const threshold of delta.notifiedThresholds) {
@@ -2907,6 +2985,20 @@ export const createInvoiceFromBillingResult = withAuth(async (
           threshold,
           billed: delta.billedAfter,
           cap: delta.cap,
+        },
+      });
+    }
+    if (isFirstProjectCapOverage(delta.writtenDownBefore, delta.writtenDownAfter)) {
+      await publishEvent({
+        eventType: 'PROJECT_BUDGET_EXCEEDED',
+        payload: {
+          tenantId: tenant,
+          projectId: delta.projectId,
+          invoiceId: newInvoice.invoice_id,
+          billed: delta.billedAfter,
+          attempted: delta.billedAfter + delta.writtenDownAfter,
+          cap: delta.cap,
+          writtenDown: delta.writtenDownAfter,
         },
       });
     }
