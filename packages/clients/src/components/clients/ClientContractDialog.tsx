@@ -5,6 +5,8 @@ import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Input } from '@alga-psa/ui/components/Input';
+import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import { dateFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
 import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel'; // Import SwitchWithLabel
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
@@ -247,12 +249,14 @@ export function ClientContractDialog({
             
             <div>
               <Label htmlFor="start-date">{t('clientContractDialog.startDate', { defaultValue: 'Start Date' })}</Label>
-              <Input
+              <DatePicker
                 id="start-date"
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                required
+                label={t('clientContractDialog.startDate', { defaultValue: 'Start Date' })}
+                placeholder={t('clientContractDialog.startDate', { defaultValue: 'Start Date' })}
+                clearable
+                className="w-full"
+                value={dateFromString(startDate)}
+                onChange={(date) => setStartDate(dateToString(date))}
               />
             </div>
             
@@ -271,13 +275,15 @@ export function ClientContractDialog({
               <>
                 <div>
                   <Label htmlFor="end-date">{t('clientContractDialog.endDate', { defaultValue: 'End Date' })}</Label>
-                  <Input
+                  <DatePicker
                     id="end-date"
-                    type="date"
-                    value={endDate || ''}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    required={!isOngoing}
-                    min={startDate}
+                    label={t('clientContractDialog.endDate', { defaultValue: 'End Date' })}
+                    placeholder={t('clientContractDialog.endDate', { defaultValue: 'End Date' })}
+                    clearable
+                    className="w-full"
+                    value={dateFromString(endDate || '')}
+                    onChange={(date) => setEndDate(dateToString(date))}
+                    minDate={dateFromString(startDate)}
                   />
                 </div>
 

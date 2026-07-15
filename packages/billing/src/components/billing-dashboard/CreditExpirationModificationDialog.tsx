@@ -4,7 +4,8 @@ import React, { useState } from 'react';
 import { Dialog, DialogContent, DialogDescription, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Label } from '@alga-psa/ui/components/Label';
-import { Input } from '@alga-psa/ui/components/Input';
+import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import { dateFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { ICreditTracking } from '@alga-psa/types';
@@ -143,13 +144,15 @@ const CreditExpirationModificationDialog: React.FC<CreditExpirationModificationD
                 <Label htmlFor="expiration-date">
                   {t('expirationDialog.newExpirationDate', { defaultValue: 'New Expiration Date' })}
                 </Label>
-                <Input
+                <DatePicker
                   id="expiration-date"
-                  type="date"
-                  value={expirationDate}
-                  onChange={(e) => setExpirationDate(e.target.value)}
+                  label={t('expirationDialog.newExpirationDate', { defaultValue: 'New Expiration Date' })}
+                  placeholder={t('expirationDialog.newExpirationDate', { defaultValue: 'New Expiration Date' })}
+                  clearable
+                  value={dateFromString(expirationDate)}
+                  onChange={(date) => setExpirationDate(dateToString(date))}
                   disabled={removeExpiration}
-                  min={new Date().toISOString().split('T')[0]} // Prevent past dates
+                  minDate={dateFromString(new Date().toISOString().split('T')[0])} // Prevent past dates
                   className="w-full"
                 />
               </div>

@@ -20,6 +20,7 @@ import { translateManualInvoiceFailure } from './manualInvoiceErrorTranslation';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import { dateFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
 import { Card } from '@alga-psa/ui/components/Card';
 import { LineItem, ServiceOption, EditableItem as LineItemEditableItem } from './LineItem'; // Import EditableItem type from LineItem
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
@@ -1109,12 +1110,18 @@ const ManualInvoicesContent: React.FC<ManualInvoicesProps> = ({
                         })}
                       </label>
                       <div className="flex items-center">
-                        <input
+                        <DatePicker
                           id="expiration-date-input"
-                          type="date"
-                          value={expirationDate}
-                          onChange={(e) => setExpirationDate(e.target.value)}
-                          className="border rounded-md px-3 py-2 w-full max-w-xs shadow-sm focus:ring-blue-500 focus:border-blue-500"
+                          label={t('manualInvoices.creditExpiration.label', {
+                            defaultValue: 'Credit Expiration Date',
+                          })}
+                          placeholder={t('manualInvoices.creditExpiration.label', {
+                            defaultValue: 'Credit Expiration Date',
+                          })}
+                          clearable
+                          className="w-full max-w-xs"
+                          value={dateFromString(expirationDate)}
+                          onChange={(date) => setExpirationDate(dateToString(date))}
                         />
                         <div className="ml-2 text-sm text-muted-foreground">
                           {t('manualInvoices.creditExpiration.helpText', {

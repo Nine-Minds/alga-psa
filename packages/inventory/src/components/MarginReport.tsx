@@ -3,11 +3,13 @@
 import React, { useEffect, useState } from 'react';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Input } from '@alga-psa/ui/components/Input';
+import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import { Label } from '@alga-psa/ui/components/Label';
 import { toast } from 'react-hot-toast';
 import type { ColumnDefinition } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+import { dateFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
 import { marginReport, type MarginReport as MarginReportData, type MarginReportRow } from '../actions';
 import { CurrencyFormatProvider, useCurrencyFormat } from './dashboard/shared';
 
@@ -123,8 +125,14 @@ export function MarginReport() {
       </div>
 
       <div className="flex items-end gap-3 flex-wrap">
-        <Input id="margin-report-from" label={t('common.from', 'From')} type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
-        <Input id="margin-report-to" label={t('common.to', 'To')} type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+        <div>
+          <Label className="block mb-1" htmlFor="margin-report-from">{t('common.from', 'From')}</Label>
+          <DatePicker id="margin-report-from" label={t('common.from', 'From')} placeholder={t('common.from', 'From')} clearable className="w-40" value={dateFromString(from)} onChange={(date) => setFrom(dateToString(date))} />
+        </div>
+        <div>
+          <Label className="block mb-1" htmlFor="margin-report-to">{t('common.to', 'To')}</Label>
+          <DatePicker id="margin-report-to" label={t('common.to', 'To')} placeholder={t('common.to', 'To')} clearable className="w-40" value={dateFromString(to)} onChange={(date) => setTo(dateToString(date))} />
+        </div>
         <Button id="margin-report-run" onClick={run} disabled={loading}>
           {loading ? t('common.running', 'Running…') : t('common.runReport', 'Run report')}
         </Button>
