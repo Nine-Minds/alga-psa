@@ -31,11 +31,68 @@ async function constraintExists(knex) {
   return result.rows.length > 0;
 }
 
+async function isCitusDistributedTable(knex) {
+  try {
+    const result = await knex.raw(`
+      SELECT EXISTS (
+        SELECT 1
+        FROM pg_dist_partition
+        WHERE logicalrelid = 'clients'::regclass
+      ) AS is_distributed
+    `);
+    return Boolean(result.rows?.[0]?.is_distributed);
+  } catch (_error) {
+    return false;
+  }
+}
+
+async function setNotNull(knex) {
+  if (await isCitusDistributedTable(knex)) {
+    await knex.raw(`
+      SELECT * FROM run_command_on_shards(
+        'clients',
+        $$ALTER TABLE %s ALTER COLUMN client_type SET NOT NULL$$
+      )
+    `);
+    await knex.raw(`
+      UPDATE pg_attribute
+      SET attnotnull = true
+      WHERE attrelid = 'clients'::regclass
+        AND attname = 'client_type'
+        AND attnotnull = false
+    `);
+    return;
+  }
+
+  await knex.raw('ALTER TABLE clients ALTER COLUMN client_type SET NOT NULL');
+}
+
+async function dropNotNull(knex) {
+  if (await isCitusDistributedTable(knex)) {
+    await knex.raw(`
+      SELECT * FROM run_command_on_shards(
+        'clients',
+        $$ALTER TABLE %s ALTER COLUMN client_type DROP NOT NULL$$
+      )
+    `);
+    await knex.raw(`
+      UPDATE pg_attribute
+      SET attnotnull = false
+      WHERE attrelid = 'clients'::regclass
+        AND attname = 'client_type'
+        AND attnotnull = true
+    `);
+    return;
+  }
+
+  await knex.raw('ALTER TABLE clients ALTER COLUMN client_type DROP NOT NULL');
+}
+
 exports.up = async function up(knex) {
   await normalizeExistingClientTypes(knex);
 
   await knex.raw("ALTER TABLE clients ALTER COLUMN client_type SET DEFAULT 'company'");
-  await knex.raw('ALTER TABLE clients ALTER COLUMN client_type SET NOT NULL');
+  await setNotNull(knex);
 
   if (!await constraintExists(knex)) {
     await knex.raw(`
@@ -48,6 +105,9 @@ exports.up = async function up(knex) {
 
 exports.down = async function down(knex) {
   await knex.raw(`ALTER TABLE clients DROP CONSTRAINT IF EXISTS ${CLIENT_TYPE_CONSTRAINT}`);
-  await knex.raw('ALTER TABLE clients ALTER COLUMN client_type DROP NOT NULL');
+  await dropNotNull(knex);
   await knex.raw('ALTER TABLE clients ALTER COLUMN client_type DROP DEFAULT');
 };
+
+// ALTER COLUMN ... SET/DROP NOT NULL on Citus shards cannot run inside Knex's transaction.
+exports.config = { transaction: false };
