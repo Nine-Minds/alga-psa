@@ -110,6 +110,7 @@ const BillingSettings: React.FC = () => {
     }
   }, [sectionParam, activeTab, billingSectionIds]);
 
+  // LEVERAGE: pattern settings-subtab-url — 3rd copy of pathname-anchored pushState across scheduling/billing/server; no shared layer extracted (scope).
   const updateURL = (tabId: string) => {
     // Build new URL with tab and section parameters
     const currentSearchParams = new URLSearchParams(window.location.search);
@@ -121,9 +122,10 @@ const BillingSettings: React.FC = () => {
     }
 
     // Keep existing tab parameter
-    const newUrl = currentSearchParams.toString()
-      ? `/msp/settings?${currentSearchParams.toString()}`
-      : '/msp/settings?tab=billing';
+    const query = currentSearchParams.toString();
+    const newUrl = query
+      ? `${window.location.pathname}?${query}`
+      : window.location.pathname;
 
     window.history.pushState({}, '', newUrl);
   };
