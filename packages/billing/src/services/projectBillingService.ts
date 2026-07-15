@@ -159,8 +159,8 @@ export function validateAllocation(
 }
 
 /**
- * Transaction-friendly hook invoked after a project phase is explicitly completed.
- * Event publication intentionally belongs to a later implementation wave.
+ * Transaction-friendly readiness hook for callers that complete a project phase.
+ * The project completion action owns post-commit event publication.
  */
 export async function evaluatePhaseReadiness(
   phaseId: string,
@@ -197,7 +197,7 @@ export async function evaluatePhaseReadiness(
       || left.schedule_entry_id.localeCompare(right.schedule_entry_id));
 }
 
-/** Scheduled-job hook; registration is intentionally deferred to a later wave. */
+/** Evaluate date-triggered entries; the daily per-tenant job calls this hook. */
 export async function evaluateDateReadiness(
   now: Date | string,
   trx?: Knex.Transaction

@@ -11,6 +11,7 @@ import type {
 } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import { revalidatePath } from 'next/cache';
+import { publishEvent } from '@alga-psa/event-bus/publishers';
 import ProjectBillingConfig from '../models/projectBillingConfig';
 import ProjectBillingScheduleEntry from '../models/projectBillingScheduleEntry';
 import {
@@ -390,6 +391,17 @@ export const markEntryReady = withAuth(async (
     return transitionEntry(tenant, trx, entryId, 'pending', 'ready', {
       ready_at: new Date().toISOString(),
     });
+  });
+  await publishEvent({
+    eventType: 'PROJECT_MILESTONE_READY',
+    payload: {
+      tenantId: tenant,
+      projectId: result.projectId,
+      entryId: result.entry.schedule_entry_id,
+      description: result.entry.description,
+      computedAmount: result.entry.computed_amount,
+      trigger: 'manual',
+    },
   });
   revalidateProjectBilling(result.projectId);
   return result.entry;

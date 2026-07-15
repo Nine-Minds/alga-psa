@@ -58,6 +58,7 @@ export interface ReadyQueueRow {
   client_name: string;
   invoice_mode: 'recurring' | 'standalone';
   days_waiting: number;
+  currency: string | null;
 }
 
 function stableEntrySort(
@@ -221,7 +222,9 @@ const ProjectBillingScheduleEntry = {
       .select(
         'e.*',
         'c.total_price as config_total_price',
+        'c.currency as config_currency',
         'c.invoice_mode',
+        'client.default_currency_code as client_default_currency_code',
         'p.project_id',
         'p.project_name',
         'p.project_number',
@@ -283,6 +286,8 @@ const ProjectBillingScheduleEntry = {
       const {
         config_total_price: _totalPrice,
         invoice_mode,
+        config_currency,
+        client_default_currency_code,
         project_id,
         project_name,
         project_number,
@@ -308,7 +313,12 @@ const ProjectBillingScheduleEntry = {
         client_id: String(client_id),
         client_name: String(client_name),
         invoice_mode: invoice_mode as ReadyQueueRow['invoice_mode'],
-        days_waiting: elapsedWholeDays(entry.ready_at, now)
+        days_waiting: elapsedWholeDays(entry.ready_at, now),
+        currency: typeof config_currency === 'string' && config_currency.trim()
+          ? config_currency.trim().toUpperCase()
+          : typeof client_default_currency_code === 'string' && client_default_currency_code.trim()
+            ? client_default_currency_code.trim().toUpperCase()
+            : null
       };
     });
   }

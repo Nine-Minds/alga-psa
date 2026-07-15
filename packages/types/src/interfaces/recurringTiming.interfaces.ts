@@ -499,6 +499,13 @@ export interface IRecurringDueSelectionInput {
  */
 export type RecurringDueWorkChargeType = 'Fixed' | 'Hourly' | 'Usage' | 'Bucket';
 
+export interface IRecurringDueWorkWarning {
+  code: 'stale_project_billing_ready_entries';
+  severity: 'warning';
+  message: string;
+  entryCount: number;
+}
+
 export interface IRecurringDueWorkRow {
   rowKey: string;
   executionIdentityKey: string;
@@ -514,6 +521,7 @@ export interface IRecurringDueWorkRow {
   isEarly: boolean;
   canGenerate: boolean;
   approvalBlockedEntryCount?: number;
+  warnings?: IRecurringDueWorkWarning[];
   clientId: string;
   clientName?: string | null;
   /**
@@ -591,6 +599,7 @@ export interface IRecurringDueWorkInvoiceCandidate {
   availableOnDate?: ISO8601String | null;
   approvalBlockedEntryCount?: number;
   hasApprovalBlockers?: boolean;
+  warnings?: IRecurringDueWorkWarning[];
   attributionSummary?: IRecurringDueWorkCandidateAttributionSummary;
   members: IRecurringDueWorkRow[];
 }

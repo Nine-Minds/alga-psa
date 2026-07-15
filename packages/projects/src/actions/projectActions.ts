@@ -59,6 +59,65 @@ import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorizatio
 
 type ProjectActionError = ActionMessageError | ActionPermissionError;
 
+type ProjectScheduleAmountRow = {
+    schedule_entry_id: string;
+    amount: number | string | null;
+    percentage: number | string | null;
+    status: string;
+    display_order: number;
+    created_at: Date | string;
+};
+
+function computeProjectScheduleAmountsForNotification(
+    totalPriceValue: number | string | null,
+    entries: ProjectScheduleAmountRow[]
+): Map<string, number> {
+    const totalPrice = totalPriceValue == null ? null : Number(totalPriceValue);
+    const result = new Map<string, number>();
+    if (totalPrice == null) {
+        for (const entry of entries) {
+            result.set(entry.schedule_entry_id, entry.amount == null ? 0 : Number(entry.amount));
+        }
+        return result;
+    }
+
+    const percentageScale = 10_000n;
+    const denominator = 100n * percentageScale;
+    const activeEntries = entries.filter((entry) => entry.status !== 'canceled');
+    const baseAmounts: number[] = [];
+    let exactNumerator = 0n;
+    for (const entry of activeEntries) {
+        if (entry.amount != null) {
+            const amount = Number(entry.amount);
+            baseAmounts.push(amount);
+            exactNumerator += BigInt(amount) * denominator;
+            continue;
+        }
+        const scaledPercentage = BigInt(Math.round(Number(entry.percentage ?? 0) * Number(percentageScale)));
+        const numerator = BigInt(totalPrice) * scaledPercentage;
+        baseAmounts.push(Number((numerator + denominator / 2n) / denominator));
+        exactNumerator += numerator;
+    }
+    if (baseAmounts.length > 0 && exactNumerator === BigInt(totalPrice) * denominator) {
+        baseAmounts[baseAmounts.length - 1] = totalPrice
+            - baseAmounts.slice(0, -1).reduce((sum, amount) => sum + amount, 0);
+    }
+
+    let activeIndex = 0;
+    for (const entry of entries) {
+        if (entry.status === 'canceled') {
+            const amount = entry.amount != null
+                ? Number(entry.amount)
+                : Number((BigInt(totalPrice) * BigInt(Math.round(Number(entry.percentage ?? 0) * Number(percentageScale)))
+                    + denominator / 2n) / denominator);
+            result.set(entry.schedule_entry_id, amount);
+        } else {
+            result.set(entry.schedule_entry_id, baseAmounts[activeIndex++] ?? 0);
+        }
+    }
+    return result;
+}
+
 export type ProjectUpdateResult = IProject & {
     deposit_reconciliation_needed?: boolean;
 };
@@ -949,6 +1008,26 @@ export const markPhaseComplete = withAuth(async (
             || String(left.created_at).localeCompare(String(right.created_at))
             || left.schedule_entry_id.localeCompare(right.schedule_entry_id));
 
+        const configIds = Array.from(new Set((await tenantScopedTable(trx, 'project_billing_schedule_entries', tenant)
+            .whereIn('schedule_entry_id', readyRows.map((entry) => entry.schedule_entry_id))
+            .select('config_id') as Array<{ config_id: string }>).map((entry) => entry.config_id)));
+        const computedAmountByEntryId = new Map<string, number>();
+        for (const configId of configIds) {
+            const config = await tenantScopedTable(trx, 'project_billing_configs', tenant)
+                .where({ config_id: configId })
+                .select('total_price')
+                .first() as { total_price: number | string | null } | undefined;
+            const entries = await tenantScopedTable(trx, 'project_billing_schedule_entries', tenant)
+                .where({ config_id: configId })
+                .select('schedule_entry_id', 'amount', 'percentage', 'status', 'display_order', 'created_at')
+                .orderBy('display_order', 'asc')
+                .orderBy('created_at', 'asc')
+                .orderBy('schedule_entry_id', 'asc') as ProjectScheduleAmountRow[];
+            for (const [entryId, amount] of computeProjectScheduleAmountsForNotification(config?.total_price ?? null, entries)) {
+                computedAmountByEntryId.set(entryId, amount);
+            }
+        }
+
         return {
             phase,
             projectId,
@@ -956,8 +1035,27 @@ export const markPhaseComplete = withAuth(async (
                 entry_id: entry.schedule_entry_id,
                 description: entry.description,
             })),
+            ready_events: readyRows.map((entry) => ({
+                entryId: entry.schedule_entry_id,
+                description: entry.description,
+                computedAmount: computedAmountByEntryId.get(entry.schedule_entry_id) ?? 0,
+            })),
         };
     });
+
+    for (const entry of result.ready_events) {
+        await publishEvent({
+            eventType: 'PROJECT_MILESTONE_READY',
+            payload: {
+                tenantId: tenant,
+                projectId: result.projectId,
+                entryId: entry.entryId,
+                description: entry.description,
+                computedAmount: entry.computedAmount,
+                trigger: 'phase',
+            },
+        });
+    }
 
     revalidatePath(`/msp/projects/${result.projectId}`);
     return { phase: result.phase, ready_entries: result.ready_entries };

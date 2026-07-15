@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const createBatchFromFiltersMock = vi.hoisted(() => vi.fn());
+const previewInvoiceLinesMock = vi.hoisted(() => vi.fn());
 const executeBatchMock = vi.hoisted(() => vi.fn());
 const cancelBatchMock = vi.hoisted(() => vi.fn());
 const loggerErrorMock = vi.hoisted(() => vi.fn());
@@ -26,7 +27,10 @@ vi.mock('@alga-psa/core/logger', () => ({
 
 vi.mock('../services/accountingExportInvoiceSelector', () => ({
   AccountingExportInvoiceSelector: {
-    create: vi.fn(async () => ({ createBatchFromFilters: createBatchFromFiltersMock }))
+    create: vi.fn(async () => ({
+      createBatchFromFilters: createBatchFromFiltersMock,
+      previewInvoiceLines: previewInvoiceLinesMock
+    }))
   }
 }));
 
@@ -42,7 +46,8 @@ vi.mock('../services/accountingExportService', () => ({
 import { AppError } from '@alga-psa/core';
 import {
   createAccountingExportBatch,
-  executeAccountingExportBatch
+  executeAccountingExportBatch,
+  previewAccountingExport
 } from './accountingExportActions';
 
 describe('accounting export action error boundaries', () => {
@@ -93,5 +98,45 @@ describe('accounting export action error boundaries', () => {
     });
     expect(JSON.stringify(result)).not.toContain('document_id');
     expect(loggerErrorMock).toHaveBeenCalledOnce();
+  });
+
+  it('preserves project references for milestone and deposit export previews', async () => {
+    previewInvoiceLinesMock.mockResolvedValue([{
+      invoiceId: 'invoice-1',
+      invoiceNumber: 'INV-100',
+      invoiceDate: '2026-07-15T00:00:00.000Z',
+      invoiceStatus: 'sent',
+      clientId: 'client-1',
+      clientName: 'Acme',
+      chargeId: 'charge-1',
+      amountCents: 25000,
+      currencyCode: 'USD',
+      servicePeriodStart: null,
+      servicePeriodEnd: null,
+      servicePeriodSource: 'financial_document_fallback',
+      isManualInvoice: false,
+      isManualCharge: false,
+      isMultiPeriod: false,
+      isCredit: false,
+      isZeroAmount: false,
+      transactionIds: [],
+      chargeType: 'project_milestone',
+      projectId: 'project-1',
+      projectNumber: 'PRJ-100',
+      projectName: 'Datacenter migration',
+      scheduleEntryId: 'entry-1'
+    }]);
+
+    await expect(previewAccountingExport()).resolves.toMatchObject({
+      invoiceCount: 1,
+      lineCount: 1,
+      lines: [{
+        chargeType: 'project_milestone',
+        projectId: 'project-1',
+        projectNumber: 'PRJ-100',
+        projectName: 'Datacenter migration',
+        scheduleEntryId: 'entry-1'
+      }]
+    });
   });
 });

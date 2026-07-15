@@ -49,6 +49,11 @@ export interface InvoicePreviewLine {
   isCredit: boolean;
   isZeroAmount: boolean;
   transactionIds: string[];
+  chargeType?: 'project_milestone' | 'project_deposit';
+  projectId?: string;
+  projectNumber?: string | null;
+  projectName?: string;
+  scheduleEntryId?: string;
 }
 
 type InvoicePreviewSelectionRow = {
@@ -73,6 +78,11 @@ type InvoicePreviewSelectionRow = {
   detail_service_period_start?: string | Date | null;
   detail_service_period_end?: string | Date | null;
   detail_billing_timing?: 'arrears' | 'advance' | null;
+  project_entry_type?: 'milestone' | 'deposit' | null;
+  project_schedule_entry_id?: string | null;
+  project_id?: string | null;
+  project_number?: string | null;
+  project_name?: string | null;
 };
 
 interface CreateBatchOptions {
@@ -115,6 +125,9 @@ export class AccountingExportInvoiceSelector {
     db.tenantJoin(query, 'invoice_charges as ch', 'inv.invoice_id', 'ch.invoice_id');
     db.tenantJoin(query, 'invoice_charge_details as iid', 'ch.item_id', 'iid.item_id', { type: 'left' });
     db.tenantJoin(query, 'clients as cli', 'inv.client_id', 'cli.client_id', { type: 'left' });
+    db.tenantJoin(query, 'project_billing_schedule_entries as pbe', 'ch.item_id', 'pbe.invoice_charge_id', { type: 'left' });
+    db.tenantJoin(query, 'project_billing_configs as pbc', 'pbe.config_id', 'pbc.config_id', { type: 'left' });
+    db.tenantJoin(query, 'projects as project', 'pbc.project_id', 'project.project_id', { type: 'left' });
     query
       .select([
         'inv.invoice_id',
@@ -134,7 +147,12 @@ export class AccountingExportInvoiceSelector {
         'ch.is_manual as charge_is_manual',
         'iid.service_period_start as detail_service_period_start',
         'iid.service_period_end as detail_service_period_end',
-        'iid.billing_timing as detail_billing_timing'
+        'iid.billing_timing as detail_billing_timing',
+        'pbe.entry_type as project_entry_type',
+        'pbe.schedule_entry_id as project_schedule_entry_id',
+        'project.project_id',
+        'project.project_number as project_number',
+        'project.project_name'
       ]);
 
     if (filters.startDate) {
@@ -293,7 +311,16 @@ export class AccountingExportInvoiceSelector {
         isMultiPeriod,
         isCredit: amountCents < 0 || totalAmountCents < 0,
         isZeroAmount: amountCents === 0,
-        transactionIds: transactionMap.get(row.invoice_id) ?? []
+        transactionIds: transactionMap.get(row.invoice_id) ?? [],
+        ...(row.project_entry_type
+          ? {
+              chargeType: row.project_entry_type === 'deposit' ? 'project_deposit' as const : 'project_milestone' as const,
+              projectId: row.project_id ?? undefined,
+              projectNumber: row.project_number ?? null,
+              projectName: row.project_name ?? undefined,
+              scheduleEntryId: row.project_schedule_entry_id ?? undefined,
+            }
+          : {}),
       } satisfies InvoicePreviewLine;
     });
   }
@@ -365,7 +392,16 @@ export class AccountingExportInvoiceSelector {
           manual_charge: line.isManualCharge,
           multi_period: line.isMultiPeriod,
           credit_memo: line.isCredit,
-          zero_amount: line.isZeroAmount
+          zero_amount: line.isZeroAmount,
+          ...(line.chargeType
+            ? {
+                charge_type: line.chargeType,
+                project_id: line.projectId,
+                project_number: line.projectNumber ?? null,
+                project_name: line.projectName,
+                schedule_entry_id: line.scheduleEntryId,
+              }
+            : {})
         },
         transaction_ids: line.transactionIds
       }

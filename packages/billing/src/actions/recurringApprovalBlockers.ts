@@ -1,7 +1,7 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
 import { toISODate, toPlainDate } from '@alga-psa/core';
-import type { ISO8601String } from '@alga-psa/types';
+import type { ISO8601String, IRecurringDueWorkWarning } from '@alga-psa/types';
 
 export type RecurringApprovalBlockerRow = {
   executionIdentityKey: string;
@@ -13,12 +13,60 @@ export type RecurringApprovalBlockerRow = {
 };
 
 export type RecurringApprovalBlockerCounts = Map<string, number>;
+export type RecurringApprovalWarnings = Map<string, IRecurringDueWorkWarning[]>;
 
 const APPROVED_TIME_STATUS = 'APPROVED';
 
 export function formatApprovalBlockedReason(unapprovedEntryCount: number): string {
   const noun = unapprovedEntryCount === 1 ? 'entry' : 'entries';
   return `Blocked until approval: ${unapprovedEntryCount} unapproved ${noun}.`;
+}
+
+export function formatStaleProjectBillingWarning(entryCount: number): string {
+  const noun = entryCount === 1 ? 'entry has' : 'entries have';
+  return `${entryCount} project billing schedule ${noun} been ready for more than 7 days.`;
+}
+
+export async function detectRecurringApprovalWarnings(params: {
+  knex: Knex;
+  tenant: string;
+  rows: RecurringApprovalBlockerRow[];
+  now?: Date;
+}): Promise<RecurringApprovalWarnings> {
+  const warnings: RecurringApprovalWarnings = new Map();
+  const clientIds = Array.from(new Set(params.rows.map((row) => row.clientId).filter(Boolean)));
+  if (clientIds.length === 0) return warnings;
+
+  const cutoff = new Date((params.now ?? new Date()).getTime() - 7 * 24 * 60 * 60 * 1000);
+  const db = tenantDb(params.knex, params.tenant);
+  const query = db.table('project_billing_schedule_entries as entry')
+    .where('entry.status', 'ready')
+    .whereNotNull('entry.ready_at')
+    .where('entry.ready_at', '<', cutoff.toISOString())
+    .whereIn('project.client_id', clientIds)
+    .groupBy('project.client_id')
+    .select('project.client_id')
+    .countDistinct({ entry_count: 'entry.schedule_entry_id' });
+  db.tenantJoin(query, 'project_billing_configs as config', 'entry.config_id', 'config.config_id');
+  db.tenantJoin(query, 'projects as project', 'config.project_id', 'project.project_id');
+  const rows = await query as unknown as Array<{
+    client_id: string;
+    entry_count: string | number;
+  }>;
+  const countsByClient = new Map(rows.map((row) => [row.client_id, Number(row.entry_count)]));
+
+  for (const row of params.rows) {
+    const entryCount = countsByClient.get(row.clientId) ?? 0;
+    if (entryCount <= 0 || warnings.has(row.executionIdentityKey)) continue;
+    warnings.set(row.executionIdentityKey, [{
+      code: 'stale_project_billing_ready_entries',
+      severity: 'warning',
+      message: formatStaleProjectBillingWarning(entryCount),
+      entryCount,
+    }]);
+  }
+
+  return warnings;
 }
 
 function parseUnresolvedSelectionFromScheduleKey(scheduleKey: string | null | undefined): {

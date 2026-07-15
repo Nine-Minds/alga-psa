@@ -272,6 +272,8 @@ export const EVENT_TYPES = [
   'PROJECT_APPROVAL_REQUESTED',
   'PROJECT_APPROVAL_GRANTED',
   'PROJECT_APPROVAL_REJECTED',
+  'PROJECT_MILESTONE_READY',
+  'PROJECT_BUDGET_THRESHOLD_REACHED',
 
   // Time entries (legacy)
   'TIME_ENTRY_CREATED',
@@ -562,6 +564,21 @@ export const ProjectPhaseEventPayloadSchema = BasePayloadSchema.extend({
   userId: z.string().uuid().optional(),
   timestamp: z.string().datetime().optional(),
   changes: z.record(z.unknown()).optional(),
+});
+
+export const ProjectMilestoneReadyPayloadSchema = BasePayloadSchema.extend({
+  projectId: z.string().uuid(),
+  entryId: z.string().uuid(),
+  description: z.string().min(1),
+  computedAmount: z.number().int().nonnegative(),
+  trigger: z.enum(['phase', 'date', 'manual']),
+});
+
+export const ProjectBudgetThresholdReachedPayloadSchema = BasePayloadSchema.extend({
+  projectId: z.string().uuid(),
+  threshold: z.number().int().nonnegative(),
+  billed: z.number().int().nonnegative(),
+  cap: z.number().int().nonnegative(),
 });
 
 // Project task event payload schema
@@ -1179,6 +1196,8 @@ export const EventPayloadSchemas = {
   PROJECT_APPROVAL_REQUESTED: projectApprovalRequestedEventPayloadSchema,
   PROJECT_APPROVAL_GRANTED: projectApprovalGrantedEventPayloadSchema,
   PROJECT_APPROVAL_REJECTED: projectApprovalRejectedEventPayloadSchema,
+  PROJECT_MILESTONE_READY: ProjectMilestoneReadyPayloadSchema,
+  PROJECT_BUDGET_THRESHOLD_REACHED: ProjectBudgetThresholdReachedPayloadSchema,
 
   // Time entries (legacy)
   TIME_ENTRY_CREATED: TimeEntryEventPayloadSchema,
@@ -1441,6 +1460,8 @@ export type ProjectAssignedEvent = z.infer<typeof EventSchemas.PROJECT_ASSIGNED>
 export type ProjectTaskAssignedEvent = z.infer<typeof EventSchemas.PROJECT_TASK_ASSIGNED>;
 export type ProjectTaskAdditionalAgentAssignedEvent = z.infer<typeof EventSchemas.PROJECT_TASK_ADDITIONAL_AGENT_ASSIGNED>;
 export type ProjectTaskUpdatedEvent = z.infer<typeof EventSchemas.PROJECT_TASK_UPDATED>;
+export type ProjectMilestoneReadyEvent = z.infer<typeof EventSchemas.PROJECT_MILESTONE_READY>;
+export type ProjectBudgetThresholdReachedEvent = z.infer<typeof EventSchemas.PROJECT_BUDGET_THRESHOLD_REACHED>;
 export type TaskCommentAddedEvent = z.infer<typeof EventSchemas.TASK_COMMENT_ADDED>;
 export type TaskCommentUpdatedEvent = z.infer<typeof EventSchemas.TASK_COMMENT_UPDATED>;
 export type TimeEntrySubmittedEvent = z.infer<typeof EventSchemas.TIME_ENTRY_SUBMITTED>;

@@ -9,7 +9,9 @@ import { type LucideIcon, ChevronDown } from 'lucide-react';
 
 export interface TabContent {
   id: string;
-  label: string;
+  // ReactNode (not just string) so a trigger can carry inline chrome such as a
+  // count pill next to its label; existing string labels remain valid.
+  label: React.ReactNode;
   content: React.ReactNode;
   icon?: LucideIcon | React.ReactNode;
 }

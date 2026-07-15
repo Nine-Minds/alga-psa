@@ -67,6 +67,7 @@ export interface ReadyQueueRow {
   client_name: string;
   invoice_mode: 'recurring' | 'standalone';
   days_waiting: number;
+  currency: string | null;
 }
 
 export interface CreateProjectBillingConfigActionInput {

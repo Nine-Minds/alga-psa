@@ -77,6 +77,7 @@ import {
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+import { publishEvent } from '@alga-psa/event-bus/publishers';
 // TODO: Move these type guards to billingAndTax.ts or a shared utility file
 const POSTGRES_UNDEFINED_TABLE = '42P01';
 type InvoiceGenerationActionError = ActionMessageError | ActionPermissionError;
@@ -284,6 +285,9 @@ function hasPersistedInvoiceContent(billingResult: IBillingResult): boolean {
 
 type ProjectCapPersistenceDelta = {
   configId: string;
+  projectId: string;
+  cap: number;
+  billedAfter: number;
   billed: number;
   writtenDown: number;
   notifiedThresholds: number[];
@@ -379,6 +383,9 @@ async function prepareProjectCapChargesForPersistence(
 
     deltas.push({
       configId,
+      projectId: config.project_id,
+      cap: config.cap_amount,
+      billedAfter: runningBilled,
       billed: billedDelta,
       writtenDown: writtenDownDelta,
       notifiedThresholds,
@@ -398,6 +405,7 @@ async function persistProjectScheduleCharges(
 ): Promise<number> {
   let subtotal = 0;
   const now = Temporal.Now.instant().toString();
+  const exportServiceIds = await ensureProjectScheduleExportServices(trx, tenant);
 
   for (const charge of charges) {
     const projectCharge = charge as IBillingCharge & {
@@ -407,7 +415,7 @@ async function persistProjectScheduleCharges(
     await tenantDb(trx, tenant).table('invoice_charges').insert({
       item_id: itemId,
       invoice_id: invoiceId,
-      service_id: charge.serviceId ?? null,
+      service_id: charge.serviceId ?? exportServiceIds[charge.type as 'project_milestone' | 'project_deposit'],
       description: charge.serviceName,
       quantity: charge.quantity ?? 1,
       unit_price: charge.rate,
@@ -443,6 +451,67 @@ async function persistProjectScheduleCharges(
   }
 
   return subtotal;
+}
+
+async function ensureProjectScheduleExportServices(
+  trx: Knex.Transaction,
+  tenant: string,
+): Promise<Record<'project_milestone' | 'project_deposit', string>> {
+  await trx.raw('SELECT pg_advisory_xact_lock(hashtext(?))', [`project-billing-export-services:${tenant}`]);
+  const db = tenantDb(trx, tenant);
+  let serviceType = await db.table('service_types')
+    .where({ name: 'Project Billing' })
+    .first('id');
+  if (!serviceType) {
+    const maxOrder = await db.table('service_types').max({ max_order: 'order_number' }).first();
+    [serviceType] = await db.table('service_types').insert({
+      id: uuidv4(),
+      tenant,
+      name: 'Project Billing',
+      description: 'System services used to map project billing charges to accounting items',
+      is_active: true,
+      order_number: Number(maxOrder?.max_order ?? 0) + 1,
+    }).returning('id');
+  }
+
+  const definitions = [
+    {
+      chargeType: 'project_milestone' as const,
+      serviceName: 'Project Milestone',
+      description: 'Project milestone billing charge',
+    },
+    {
+      chargeType: 'project_deposit' as const,
+      serviceName: 'Project Deposit',
+      description: 'Project deposit billing charge',
+    },
+  ];
+  const result = {} as Record<'project_milestone' | 'project_deposit', string>;
+  for (const definition of definitions) {
+    let service = await db.table('service_catalog')
+      .where({
+        service_name: definition.serviceName,
+        item_kind: 'service',
+        custom_service_type_id: serviceType.id,
+      })
+      .first('service_id');
+    if (!service) {
+      [service] = await db.table('service_catalog').insert({
+        service_id: uuidv4(),
+        tenant,
+        service_name: definition.serviceName,
+        description: definition.description,
+        custom_service_type_id: serviceType.id,
+        billing_method: 'fixed',
+        default_rate: 0,
+        unit_of_measure: 'Each',
+        item_kind: 'service',
+        is_active: true,
+      }).returning('service_id');
+    }
+    result[definition.chargeType] = String(service.service_id);
+  }
+  return result;
 }
 
 type RecurringBridgeMetadata = {
@@ -2639,6 +2708,7 @@ export const createInvoiceFromBillingResult = withAuth(async (
     throw new Error('Invoice creation completed without returning an invoice.');
   }
 
+  let persistedCapDeltas: ProjectCapPersistenceDelta[] = [];
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Permission already checked in previous transaction, no need to recheck
     // Just use currentUser that we already validated
@@ -2663,6 +2733,7 @@ export const createInvoiceFromBillingResult = withAuth(async (
       trx,
       billingResult.charges,
     );
+    persistedCapDeltas = capDeltas;
     const projectScheduleCharges = billingResult.charges.filter(isProjectScheduleCharge);
     const standardCharges = billingResult.charges.filter((charge) => !isProjectScheduleCharge(charge));
     const standardSubtotal = await persistInvoiceCharges(
@@ -2821,6 +2892,21 @@ export const createInvoiceFromBillingResult = withAuth(async (
         });
     }
   });
+
+  for (const delta of persistedCapDeltas) {
+    for (const threshold of delta.notifiedThresholds) {
+      await publishEvent({
+        eventType: 'PROJECT_BUDGET_THRESHOLD_REACHED',
+        payload: {
+          tenantId: tenant,
+          projectId: delta.projectId,
+          threshold,
+          billed: delta.billedAfter,
+          cap: delta.cap,
+        },
+      });
+    }
+  }
 
   // Track analytics
   const { analytics, AnalyticsEvents } = await getAnalyticsAsync();

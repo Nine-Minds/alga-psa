@@ -194,3 +194,29 @@
 - `npx tsc --noEmit -p packages/billing/tsconfig.json --pretty false` — no new errors; only the documented baseline `quoteActions.ts(32)` TS2307 for `@alga-psa/opportunities/lib/quoteLifecycleHooks`.
 - From `server/`, the consolidated focused Vitest run covering billing-engine timing/end-exclusive/unresolved/product/license behavior, persisted recurring selection/execution, invoice generation preview/finalization/selection, invoice deletion guards, credit application/finalization/service-period behavior, and the invoice adapter — 17 files / 115 tests passed.
 - `git diff --check` — pass.
+
+## Wave 5 report
+
+### Events, notifications, and readiness
+
+- Added typed `PROJECT_MILESTONE_READY` and `PROJECT_BUDGET_THRESHOLD_REACHED` schemas and routed both through the event bus email and internal-notification channels.
+- Milestone-ready publication now occurs after successful pending-to-ready transitions from explicit phase completion, the daily date-readiness job, and manual `markEntryReady`. Amounts use the authoritative cents/remainder allocation and payloads identify the readiness trigger.
+- Budget-threshold publication occurs after invoice persistence and only for crossings newly written to the locked cap-usage row's `notified_thresholds`, preserving the existing database dedupe boundary.
+- Added localized email and in-app templates, settings categories/subtypes, subscriber registration, and a migration for existing installations. Recipients follow project conventions: project manager plus client account manager, deduplicated.
+- Registered `project-date-readiness` in both job systems and converged a daily 00:15 per-tenant singleton schedule. The handler runs in tenant context, calls `evaluateDateReadiness`, and publishes events for only the entries flipped by that evaluation.
+- Recurring due-work candidates now carry additive warning objects when their client has any schedule entries that have remained `ready` for more than seven days. The warning does not alter `canGenerate`, blocker counts, or blocked reasons.
+
+### Profitability and accounting
+
+- Fixed-price project revenue now recognizes invoiced milestone/deposit schedule charges and excludes rated time/material lines from revenue while retaining their existing labor/material cost facts. Deduct-final deposits use the already-reduced final invoice charge, so deposits are not counted twice.
+- Added additive `write_downs` metrics at summary, client, agreement, and agreement-line grains from persisted, non-rolled-back T&M cap deltas; revenue and margin math remain unchanged by this informational field.
+- Project milestone/deposit charges receive dedicated service-catalog items so existing accounting item mapping/readiness applies. Export previews and stored line payload metadata now include charge type, project id/number/name, and schedule entry id.
+- Verified deposit credits use the standard `credit_issuance` and credit-tracking flow. The QBO credit applier now detects project-deposit-backed positive invoices and follows the existing non-CreditMemo exception treatment instead of incorrectly using the invoice mapping as a CreditMemo.
+
+### Verification
+
+- Focused Vitest: 6 files / 61 tests passed (profitability, accounting export/readiness, credit application, recurring warning, and event schemas).
+- `packages/projects` and `packages/event-schemas` TypeScript checks pass; `packages/event-bus` also checked cleanly during the wave.
+- `packages/billing` TypeScript reports no new errors: only the documented baseline `quoteActions.ts(32)` TS2307 for `@alga-psa/opportunities/lib/quoteLifecycleHooks` remains.
+- New notification migration/template CommonJS files pass `node --check`; `git diff --check` passes.
+- Wave 5 changed no React components. Concurrent UI-lane edits remain separate in the shared worktree.

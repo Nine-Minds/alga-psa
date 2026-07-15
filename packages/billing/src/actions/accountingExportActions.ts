@@ -109,6 +109,11 @@ export interface AccountingExportPreviewLine {
     billing_timing?: 'arrears' | 'advance' | null;
   }>;
   servicePeriodSource: AccountingExportServicePeriodSource;
+  chargeType?: 'project_milestone' | 'project_deposit';
+  projectId?: string;
+  projectNumber?: string | null;
+  projectName?: string;
+  scheduleEntryId?: string;
 }
 
 export interface AccountingExportPreviewResult {
@@ -304,7 +309,12 @@ export const previewAccountingExport = withAuth(async (
     servicePeriodStart: line.servicePeriodStart ?? null,
     servicePeriodEnd: line.servicePeriodEnd ?? null,
     recurringDetailPeriods: line.recurringDetailPeriods ?? undefined,
-    servicePeriodSource: line.servicePeriodSource
+    servicePeriodSource: line.servicePeriodSource,
+    chargeType: line.chargeType,
+    projectId: line.projectId,
+    projectNumber: line.projectNumber,
+    projectName: line.projectName,
+    scheduleEntryId: line.scheduleEntryId
   }));
 
   return {

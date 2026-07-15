@@ -40,6 +40,7 @@ function isProfitabilityActionError(value: unknown): value is ProfitabilityActio
 
 export interface ProfitabilityMetricFields {
   revenue: number;
+  write_downs: number;
   laborCost: number;
   materialCost: number;
   margin: number;
@@ -158,6 +159,17 @@ interface SalesOrderCogsFact {
   currency_mismatch: boolean;
 }
 
+interface ProjectWriteDownFact {
+  config_id: string;
+  project_id: string;
+  client_id: string | null;
+  client_name: string | null;
+  client_contract_id: string | null;
+  contract_id: string | null;
+  contract_name: string | null;
+  amount_cents: number | null;
+}
+
 interface TicketRevenueFact {
   ticket_id: string;
   amount_cents: number | null;
@@ -203,12 +215,14 @@ type FactBundle = {
   laborFacts: LaborFact[];
   materialFacts: MaterialFact[];
   salesOrderCogsFacts: SalesOrderCogsFact[];
+  projectWriteDownFacts: ProjectWriteDownFact[];
   ticketRevenueFacts: TicketRevenueFact[];
   ticketMeta: Map<string, TicketMeta>;
 };
 
 class MetricAccumulator {
   revenue = 0;
+  write_downs = 0;
   laborCost = 0;
   materialCost = 0;
   totalMinutes = 0;
@@ -226,6 +240,10 @@ class MetricAccumulator {
       return;
     }
     this.revenue += amount ?? 0;
+  }
+
+  addWriteDown(amount: number | null) {
+    this.write_downs += Math.max(0, Math.round(amount ?? 0));
   }
 
   addLabor(fact: LaborFact, unattributed: boolean) {
@@ -286,6 +304,7 @@ class MetricAccumulator {
     const margin = this.revenue - totalCost;
     return {
       revenue: this.revenue,
+      write_downs: this.write_downs,
       laborCost: this.laborCost,
       materialCost: this.materialCost,
       margin,
@@ -342,7 +361,66 @@ async function fetchRevenueFacts(
   defaultCurrency: string
 ): Promise<RevenueFact[]> {
   const result = await knex.raw(`
-    WITH charge_details AS (
+    WITH charge_classification AS (
+      SELECT
+        ic.tenant,
+        ic.item_id,
+        EXISTS (
+          SELECT 1
+          FROM project_billing_schedule_entries entry
+          WHERE entry.tenant = ic.tenant
+            AND entry.invoice_charge_id = ic.item_id
+        ) AS is_project_schedule_charge,
+        EXISTS (
+          SELECT 1
+          FROM invoice_time_entries ite
+          JOIN time_entries te
+            ON te.tenant = ite.tenant
+           AND te.entry_id = ite.entry_id
+          JOIN project_tasks task
+            ON task.tenant = te.tenant
+           AND te.work_item_type = 'project_task'
+           AND task.task_id = te.work_item_id
+          JOIN project_phases phase
+            ON phase.tenant = task.tenant
+           AND phase.phase_id = task.phase_id
+          JOIN project_billing_configs config
+            ON config.tenant = phase.tenant
+           AND config.project_id = phase.project_id
+           AND config.billing_model = 'fixed_price'
+          WHERE ite.tenant = ic.tenant
+            AND ite.item_id = ic.item_id
+        ) AS is_fixed_project_time_charge,
+        (
+          SELECT COUNT(*)
+          FROM project_materials material
+          JOIN project_billing_configs config
+            ON config.tenant = material.tenant
+           AND config.project_id = material.project_id
+           AND config.billing_model = 'fixed_price'
+          LEFT JOIN service_catalog service
+            ON service.tenant = material.tenant
+           AND service.service_id = material.service_id
+          WHERE material.tenant = ic.tenant
+            AND material.billed_invoice_id = ic.invoice_id
+            AND material.service_id = ic.service_id
+            AND material.quantity = ic.quantity
+            AND material.quantity * material.rate = ic.net_amount
+            AND ic.description = 'Product: ' || COALESCE(NULLIF(material.description, ''), service.service_name, 'Material')
+        ) >= ROW_NUMBER() OVER (
+          PARTITION BY
+            ic.tenant,
+            ic.invoice_id,
+            ic.service_id,
+            ic.quantity,
+            ic.net_amount,
+            ic.description
+          ORDER BY ic.created_at, ic.item_id
+        ) AS is_fixed_project_material_charge
+      FROM invoice_charges ic
+      WHERE ic.tenant = ?
+    ),
+    charge_details AS (
       SELECT
         ic.tenant,
         ic.item_id,
@@ -353,6 +431,9 @@ async function fetchRevenueFacts(
         c.contract_name,
         inv.currency_code,
         inv.exchange_rate_basis_points,
+        classification.is_project_schedule_charge,
+        classification.is_fixed_project_time_charge,
+        classification.is_fixed_project_material_charge,
         CASE
           WHEN COUNT(iifd.item_detail_id) FILTER (WHERE iifd.item_detail_id IS NOT NULL) > 0
             THEN COALESCE(SUM(iifd.allocated_amount), 0)
@@ -362,6 +443,9 @@ async function fetchRevenueFacts(
       JOIN invoices inv
         ON inv.tenant = ic.tenant
        AND inv.invoice_id = ic.invoice_id
+      JOIN charge_classification classification
+        ON classification.tenant = ic.tenant
+       AND classification.item_id = ic.item_id
       LEFT JOIN clients cl
         ON cl.tenant = inv.tenant
        AND cl.client_id = inv.client_id
@@ -391,7 +475,10 @@ async function fetchRevenueFacts(
         cc.contract_id,
         c.contract_name,
         inv.currency_code,
-        inv.exchange_rate_basis_points
+        inv.exchange_rate_basis_points,
+        classification.is_project_schedule_charge,
+        classification.is_fixed_project_time_charge,
+        classification.is_fixed_project_material_charge
     ),
     line_candidates AS (
       SELECT DISTINCT ON (ic.item_id)
@@ -427,15 +514,23 @@ async function fetchRevenueFacts(
       lc.contract_line_id,
       lc.contract_line_name,
       CASE
+        WHEN (cd.is_fixed_project_time_charge OR cd.is_fixed_project_material_charge)
+          AND NOT cd.is_project_schedule_charge THEN 0::bigint
         WHEN COALESCE(cd.currency_code, ?) = ? THEN cd.amount_cents::bigint
         WHEN cd.exchange_rate_basis_points IS NULL THEN NULL
         ELSE ROUND((cd.amount_cents::numeric * cd.exchange_rate_basis_points::numeric) / 10000)::bigint
       END AS amount_cents,
-      (COALESCE(cd.currency_code, ?) <> ? AND cd.exchange_rate_basis_points IS NULL) AS unconverted
+      (
+        NOT ((cd.is_fixed_project_time_charge OR cd.is_fixed_project_material_charge)
+          AND NOT cd.is_project_schedule_charge)
+        AND COALESCE(cd.currency_code, ?) <> ?
+        AND cd.exchange_rate_basis_points IS NULL
+      ) AS unconverted
     FROM charge_details cd
     LEFT JOIN line_candidates lc
       ON lc.item_id = cd.item_id
   `, [
+    tenant,
     tenant,
     tenant,
     COUNTABLE_INVOICE_STATUSES,
@@ -807,6 +902,93 @@ async function fetchSalesOrderCogsFacts(
   }));
 }
 
+async function fetchProjectWriteDownFacts(
+  knex: Knex,
+  tenant: string,
+  startDate: string,
+  endDate: string,
+  defaultCurrency: string
+): Promise<ProjectWriteDownFact[]> {
+  const result = await knex.raw(`
+    SELECT
+      config.config_id,
+      config.project_id,
+      project.client_id,
+      client.client_name,
+      inv.client_contract_id,
+      config.contract_id,
+      contract.contract_name,
+      CASE
+        WHEN COALESCE(inv.currency_code, ?) = ?
+          THEN SUM((delta.value->>'writtenDown')::bigint)::bigint
+        WHEN inv.exchange_rate_basis_points IS NULL THEN NULL
+        ELSE ROUND(
+          SUM((delta.value->>'writtenDown')::numeric) * inv.exchange_rate_basis_points::numeric / 10000
+        )::bigint
+      END AS amount_cents
+    FROM transactions tx
+    JOIN invoices inv
+      ON inv.tenant = tx.tenant
+     AND inv.invoice_id = tx.invoice_id
+    CROSS JOIN LATERAL jsonb_array_elements(
+      CASE
+        WHEN jsonb_typeof(tx.metadata->'project_billing_cap_deltas') = 'array'
+          THEN tx.metadata->'project_billing_cap_deltas'
+        ELSE '[]'::jsonb
+      END
+    ) AS delta(value)
+    JOIN project_billing_configs config
+      ON config.tenant = tx.tenant
+     AND config.config_id::text = delta.value->>'configId'
+    JOIN projects project
+      ON project.tenant = config.tenant
+     AND project.project_id = config.project_id
+    LEFT JOIN clients client
+      ON client.tenant = project.tenant
+     AND client.client_id = project.client_id
+    LEFT JOIN contracts contract
+      ON contract.tenant = config.tenant
+     AND contract.contract_id = config.contract_id
+    WHERE tx.tenant = ?
+      AND tx.type = 'invoice_generated'
+      AND COALESCE((tx.metadata->>'project_billing_cap_rolled_back')::boolean, false) = false
+      AND COALESCE((delta.value->>'writtenDown')::bigint, 0) > 0
+      AND inv.status = ANY(?::text[])
+      AND inv.invoice_date::date >= ?::date
+      AND inv.invoice_date::date <= ?::date
+    GROUP BY
+      config.config_id,
+      config.project_id,
+      project.client_id,
+      client.client_name,
+      inv.client_contract_id,
+      config.contract_id,
+      contract.contract_name,
+      inv.currency_code,
+      inv.exchange_rate_basis_points
+  `, [
+    defaultCurrency,
+    defaultCurrency,
+    tenant,
+    COUNTABLE_INVOICE_STATUSES,
+    startDate,
+    endDate,
+  ]);
+
+  return rawRows<Record<string, unknown>>(result).map((row) => ({
+    config_id: String(row.config_id),
+    project_id: String(row.project_id),
+    client_id: row.client_id ? String(row.client_id) : null,
+    client_name: row.client_name ? String(row.client_name) : null,
+    client_contract_id: row.client_contract_id ? String(row.client_contract_id) : null,
+    contract_id: row.contract_id ? String(row.contract_id) : null,
+    contract_name: row.contract_name ? String(row.contract_name) : null,
+    amount_cents: row.amount_cents === null || row.amount_cents === undefined
+      ? null
+      : Number(row.amount_cents),
+  }));
+}
+
 async function fetchTicketRevenueFacts(
   knex: Knex,
   tenant: string,
@@ -1089,11 +1271,12 @@ function buildAllocatedTicketRevenue(
 async function fetchFacts(knex: Knex, tenant: string, startDate: string, endDate: string): Promise<FactBundle> {
   const defaultCurrency = await getTenantDefaultCurrency(knex, tenant);
   const costRateCount = await tenantDb(knex, tenant).table('user_cost_rates').count<{ count: string }[]>({ count: '*' }).first();
-  const [revenueFacts, laborFacts, materialFacts, salesOrderCogsFacts, exactTicketRevenueFacts, allocationChargeFacts] = await Promise.all([
+  const [revenueFacts, laborFacts, materialFacts, salesOrderCogsFacts, projectWriteDownFacts, exactTicketRevenueFacts, allocationChargeFacts] = await Promise.all([
     fetchRevenueFacts(knex, tenant, startDate, endDate, defaultCurrency),
     fetchLaborFacts(knex, tenant, startDate, endDate),
     fetchMaterialFacts(knex, tenant, startDate, endDate, defaultCurrency),
     fetchSalesOrderCogsFacts(knex, tenant, startDate, endDate, defaultCurrency),
+    fetchProjectWriteDownFacts(knex, tenant, startDate, endDate, defaultCurrency),
     fetchTicketRevenueFacts(knex, tenant, startDate, endDate, defaultCurrency),
     fetchTicketAllocationChargeFacts(knex, tenant, startDate, endDate, defaultCurrency),
   ]);
@@ -1135,6 +1318,7 @@ async function fetchFacts(knex: Knex, tenant: string, startDate: string, endDate
     laborFacts,
     materialFacts,
     salesOrderCogsFacts,
+    projectWriteDownFacts,
     ticketRevenueFacts,
     ticketMeta,
   };
@@ -1170,6 +1354,9 @@ function applyAllFactsToAccumulator(acc: MetricAccumulator, facts: FactBundle) {
     // SO hardware revenue is already in revenueFacts (the SO line's invoice
     // charge); the consume movements contribute only the cost side.
     acc.addSalesOrderCogs(fact);
+  }
+  for (const fact of facts.projectWriteDownFacts) {
+    acc.addWriteDown(fact.amount_cents);
   }
 }
 
@@ -1232,6 +1419,9 @@ export const getClientProfitability = withAuth(async (
   }
   for (const fact of facts.salesOrderCogsFacts) {
     getRow(fact.client_id, fact.client_name).acc.addSalesOrderCogs(fact);
+  }
+  for (const fact of facts.projectWriteDownFacts) {
+    getRow(fact.client_id, fact.client_name).acc.addWriteDown(fact.amount_cents);
   }
 
   return Array.from(rows.values()).map((row) => ({
@@ -1352,6 +1542,21 @@ export const getAgreementProfitability = withAuth(async (
     const bucket = getBucket(fact.client_id, fact.client_name, rowType, fact.client_contract_id, fact.contract_id, fact.contract_name);
     bucket.acc.addSalesOrderCogs(fact);
     getLine(bucket, null, null).acc.addSalesOrderCogs(fact);
+  }
+
+  for (const fact of facts.projectWriteDownFacts) {
+    if (!includeClient(fact.client_id)) continue;
+    const rowType = fact.client_contract_id ? 'agreement' : 'ad_hoc';
+    const bucket = getBucket(
+      fact.client_id,
+      fact.client_name,
+      rowType,
+      fact.client_contract_id,
+      fact.contract_id,
+      fact.contract_name
+    );
+    bucket.acc.addWriteDown(fact.amount_cents);
+    getLine(bucket, null, null).acc.addWriteDown(fact.amount_cents);
   }
 
   return Array.from(buckets.values()).map((bucket) => ({

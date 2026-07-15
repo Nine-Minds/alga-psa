@@ -1022,7 +1022,8 @@
     "tabs": {
       "generate": "11111",
       "drafts": "11111",
-      "finalized": "11111"
+      "finalized": "11111",
+      "projectBilling": "11111"
     }
   },
   "invoiceSyncBadge": {
@@ -1657,6 +1658,66 @@
     },
     "dragOverlay": {
       "component": "11111"
+    }
+  },
+  "projectBilling": {
+    "subtitle": "11111",
+    "bulkActions": "11111 {{count}} 11111",
+    "loading": "11111",
+    "empty": "11111",
+    "columns": {
+      "project": "11111",
+      "client": "11111",
+      "description": "11111",
+      "amount": "11111",
+      "trigger": "11111",
+      "daysWaiting": "11111",
+      "actions": "11111"
+    },
+    "trigger": {
+      "phase": "11111 {{phase}} 11111 {{date}} 11111",
+      "date": "11111",
+      "manual": "11111"
+    },
+    "actions": {
+      "approve": "11111",
+      "approveInvoiceNow": "11111",
+      "hold": "11111",
+      "cancel": "11111",
+      "approveSelected": "11111",
+      "holdSelected": "11111"
+    },
+    "toasts": {
+      "approved": "11111",
+      "approvedWithWarning": "11111 {{warning}} 11111",
+      "invoiced": "11111",
+      "bulkApproved": "11111 {{count}} 11111",
+      "bulkApproveFailed": "11111 {{count}} 11111 {{reason}} 11111",
+      "held": "11111",
+      "bulkHeld": "11111 {{count}} 11111",
+      "bulkHoldFailed": "11111 {{count}} 11111 {{reason}} 11111",
+      "canceled": "11111"
+    },
+    "errors": {
+      "loadFailed": "11111",
+      "approveFailed": "11111",
+      "invoiceFailed": "11111",
+      "holdFailed": "11111",
+      "cancelFailed": "11111"
+    },
+    "holdDialog": {
+      "title": "11111",
+      "titlePlural": "11111 {{count}} 11111",
+      "description": "11111",
+      "reasonPlaceholder": "11111",
+      "cancel": "11111",
+      "confirm": "11111"
+    },
+    "cancelDialog": {
+      "title": "11111",
+      "message": "11111",
+      "confirm": "11111",
+      "dismiss": "11111"
     }
   }
 }

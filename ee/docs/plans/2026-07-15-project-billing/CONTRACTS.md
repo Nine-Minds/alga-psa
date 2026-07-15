@@ -58,6 +58,7 @@ interface ReadyQueueRow {
   client_name: string;
   invoice_mode: 'recurring' | 'standalone';
   days_waiting: number;
+  currency: string | null;   // config currency, falling back to the client's default currency
 }
 ```
 

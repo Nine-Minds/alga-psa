@@ -238,6 +238,60 @@ describe('drainApplyCreditOps', () => {
     expect(stats.exceptionsCreated).toBe(1);
   });
 
+  it('project-deposit credit never treats its positive invoice mapping as a CreditMemo', async () => {
+    const op = makePendingOp();
+    const markFailed = vi.fn(async () => 'pending');
+    const ops = makeOps({ listPending: vi.fn(async () => [op]), markFailed });
+    const ledger = makeLedger({
+      findByAlgaId: vi.fn(async (entityType: string, entityId: string) => {
+        if (entityType === 'credit_application') return undefined;
+        if (entityId === 'inv-cn-1') {
+          return { id: 'map-source-invoice', external_entity_id: 'qbo-invoice-42', metadata: null };
+        }
+        if (entityId === 'inv-target-1') {
+          return { id: 'map-target', external_entity_id: 'qbo-inv-99', metadata: null };
+        }
+        return undefined;
+      })
+    });
+
+    const knex: any = vi.fn((table: string) => {
+      if (table === 'invoices') {
+        const first = vi.fn(async () => ({ invoice_type: 'standard', is_prepayment: false }));
+        const select = vi.fn(() => ({ first }));
+        return { where: vi.fn(() => ({ select })) };
+      }
+      const first = vi.fn(async () => ({ transaction_id: 'deposit-credit-tx' }));
+      const whereRaw = vi.fn(() => ({ first }));
+      return { where: vi.fn(() => ({ whereRaw })) };
+    });
+    const exceptions = makeExceptions();
+    const stats = makeStats();
+
+    await drainApplyCreditOps({
+      knex,
+      tenantId: TENANT,
+      adapterType: ADAPTER,
+      targetRealm: REALM,
+      ops,
+      ledger,
+      exceptions,
+      stats
+    });
+
+    expect(exceptions.createOrUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        entityType: 'credit_allocation',
+        entityId: 'alloc-1',
+        context: expect.objectContaining({ reason: 'project_deposit_credit_not_syncable' })
+      })
+    );
+    expect(markFailed).toHaveBeenCalled();
+    expect(qboReadMock).not.toHaveBeenCalled();
+    expect(qboCreateMock).not.toHaveBeenCalled();
+    expect(stats.exceptionsCreated).toBe(1);
+  });
+
   it('op stalled past the wait window → exception surfaced, op still left pending', async () => {
     const eightDaysAgo = new Date(Date.now() - 8 * 24 * 60 * 60 * 1000).toISOString();
     const op = makePendingOp({ created_at: eightDaysAgo });

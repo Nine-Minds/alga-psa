@@ -8,8 +8,10 @@ import {
   ProjectClosedEvent,
   ProjectAssignedEvent,
   ProjectTaskAssignedEvent,
-  TaskCommentAddedEvent
-} from '@alga-psa/event-schemas';
+  TaskCommentAddedEvent,
+  ProjectMilestoneReadyEvent,
+  ProjectBudgetThresholdReachedEvent,
+} from '@alga-psa/event-bus/events';
 import { sendEventEmail, SendEmailParams } from '../../notifications/sendEventEmail';
 import { EventEmailRetryQueue } from '../../notifications/EventEmailRetryQueue';
 import logger from '@alga-psa/core/logger';
@@ -133,6 +135,9 @@ async function fetchProjectForEmail(
       'u.first_name as manager_first_name',
       'u.last_name as manager_last_name',
       'u.email as assigned_user_email',
+      'c.account_manager_id',
+      'am.email as account_manager_email',
+      'pbc.currency as project_billing_currency',
       'ct.email as contact_email'
     );
 
@@ -152,11 +157,106 @@ async function fetchProjectForEmail(
       join.andOn('u.is_inactive', '=', db.raw('false'));
     },
   });
+  scopedDb.tenantJoin(query, 'users as am', 'am.user_id', 'c.account_manager_id', {
+    type: 'left',
+    on(join) {
+      join.andOn('am.is_inactive', '=', db.raw('false'));
+    },
+  });
+  scopedDb.tenantJoin(query, 'project_billing_configs as pbc', 'pbc.project_id', 'p.project_id', { type: 'left' });
   scopedDb.tenantJoin(query, 'contacts as ct', 'ct.contact_name_id', 'p.contact_name_id', { type: 'left' });
 
   return query
     .where('p.project_id', projectId)
     .first();
+}
+
+function formatProjectBillingAmount(amountCents: number, currency: string | null | undefined): string {
+  const currencyCode = currency?.trim() || 'USD';
+  try {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: currencyCode,
+    }).format(amountCents / 100);
+  } catch {
+    return `${currencyCode} ${(amountCents / 100).toFixed(2)}`;
+  }
+}
+
+async function handleProjectBillingNotificationEmail(
+  event: ProjectMilestoneReadyEvent | ProjectBudgetThresholdReachedEvent,
+): Promise<void> {
+  const { tenantId, projectId } = event.payload;
+  const { knex } = await createTenantKnex(tenantId);
+  const project = await fetchProjectForEmail(knex, tenantId, projectId);
+  if (!project) {
+    logger.warn('[ProjectEmailSubscriber] Project billing event project not found', {
+      eventId: event.id,
+      projectId,
+      tenantId,
+    });
+    return;
+  }
+
+  const recipients = [
+    { userId: project.assigned_to as string | null, email: project.assigned_user_email as string | null },
+    { userId: project.account_manager_id as string | null, email: project.account_manager_email as string | null },
+  ].filter((recipient) => recipient.userId && recipient.email && isValidEmail(recipient.email));
+  const uniqueRecipients = Array.from(new Map(
+    recipients.map((recipient) => [recipient.userId, recipient])
+  ).values());
+  const { internalUrl } = await resolveProjectLinks(knex, tenantId, projectId);
+  const currency = project.project_billing_currency as string | null;
+
+  if (event.eventType === 'PROJECT_MILESTONE_READY') {
+    const payload = event.payload;
+    const amount = formatProjectBillingAmount(payload.computedAmount, currency);
+    for (const recipient of uniqueRecipients) {
+      await sendNotificationIfEnabled({
+        tenantId,
+        to: recipient.email as string,
+        subject: `Ready to bill: ${payload.description}`,
+        template: 'project-milestone-ready',
+        context: {
+          project: {
+            name: project.project_name,
+            number: project.project_number || '',
+            url: internalUrl,
+          },
+          entry: {
+            description: payload.description,
+            amount,
+            trigger: payload.trigger,
+          },
+        },
+        replyContext: { projectId },
+      }, 'Project Milestone Ready', recipient.userId as string);
+    }
+    return;
+  }
+
+  const payload = event.payload;
+  for (const recipient of uniqueRecipients) {
+    await sendNotificationIfEnabled({
+      tenantId,
+      to: recipient.email as string,
+      subject: `Project budget threshold reached: ${project.project_name}`,
+      template: 'project-budget-threshold-reached',
+      context: {
+        project: {
+          name: project.project_name,
+          number: project.project_number || '',
+          url: internalUrl,
+        },
+        budget: {
+          threshold: `${payload.threshold}%`,
+          billed: formatProjectBillingAmount(payload.billed, currency),
+          cap: formatProjectBillingAmount(payload.cap, currency),
+        },
+      },
+      replyContext: { projectId },
+    }, 'Project Budget Threshold Reached', recipient.userId as string);
+  }
 }
 
 async function fetchTaskResourceEmails(
@@ -1472,6 +1572,12 @@ async function handleProjectEvent(event: BaseEvent): Promise<void> {
     case 'TASK_COMMENT_ADDED':
       await handleTaskCommentAdded(validatedEvent as TaskCommentAddedEvent);
       break;
+    case 'PROJECT_MILESTONE_READY':
+      await handleProjectBillingNotificationEmail(validatedEvent as ProjectMilestoneReadyEvent);
+      break;
+    case 'PROJECT_BUDGET_THRESHOLD_REACHED':
+      await handleProjectBillingNotificationEmail(validatedEvent as ProjectBudgetThresholdReachedEvent);
+      break;
     default:
       logger.warn('[ProjectEmailSubscriber] Unhandled project event type:', {
         eventType: event.eventType,
@@ -1493,7 +1599,9 @@ export async function registerProjectEmailSubscriber(): Promise<void> {
       'PROJECT_CLOSED',
       'PROJECT_ASSIGNED',
       'PROJECT_TASK_ASSIGNED',
-      'TASK_COMMENT_ADDED'
+      'TASK_COMMENT_ADDED',
+      'PROJECT_MILESTONE_READY',
+      'PROJECT_BUDGET_THRESHOLD_REACHED'
     ] as const;
 
     const channel = getEmailEventChannel();
@@ -1522,7 +1630,9 @@ export async function unregisterProjectEmailSubscriber(): Promise<void> {
       'PROJECT_CLOSED',
       'PROJECT_ASSIGNED',
       'PROJECT_TASK_ASSIGNED',
-      'TASK_COMMENT_ADDED'
+      'TASK_COMMENT_ADDED',
+      'PROJECT_MILESTONE_READY',
+      'PROJECT_BUDGET_THRESHOLD_REACHED'
     ] as const;
 
     const channel = getEmailEventChannel();

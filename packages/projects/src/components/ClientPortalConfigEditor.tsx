@@ -40,6 +40,10 @@ export default function ClientPortalConfigEditor({
       summary.push(t('clientPortal.summary.budgetHours', 'Budget hours: spent vs. budgeted totals and % used'));
     }
 
+    if (config.show_billing) {
+      summary.push(t('clientPortal.summary.billing', 'Billing summary: payment schedule, amounts, and invoiced-to-date'));
+    }
+
     if (config.show_phases) {
       summary.push(t('clientPortal.summary.phaseInfo', 'Phase names, descriptions, and date ranges'));
       if (config.show_phase_completion) {
@@ -104,6 +108,26 @@ export default function ClientPortalConfigEditor({
               id="show-budget-hours"
               checked={config.show_budget_hours}
               onCheckedChange={(checked) => updateConfig({ show_budget_hours: checked })}
+              disabled={disabled}
+            />
+          </div>
+        </div>
+
+        {/* Show Billing Toggle */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex-1">
+              <label htmlFor="show-billing" className="text-sm font-medium text-gray-700">
+                {t('clientPortal.showBilling', 'Show Billing')}
+              </label>
+              <p className="text-xs text-gray-500">
+                {t('clientPortal.showBillingDescription', 'Clients will see a read-only billing summary with the payment schedule, amounts, and invoiced-to-date. Only applies to projects with billing enabled.')}
+              </p>
+            </div>
+            <Switch
+              id="show-billing"
+              checked={config.show_billing}
+              onCheckedChange={(checked) => updateConfig({ show_billing: checked })}
               disabled={disabled}
             />
           </div>
