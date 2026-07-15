@@ -1,6 +1,7 @@
 {
   "tabs": {
     "general": "Algemeen",
+    "numbering": "Nummering",
     "quoting": "Citeren",
     "tax": "Belasting",
     "payments": "Betalingen",
@@ -27,6 +28,10 @@
     "invoiceNumbering": {
       "title": "Factuurnummering",
       "description": "Pas aan hoe factuurnummers worden gegenereerd en weergegeven."
+    },
+    "creditNoteNumbering": {
+      "title": "Creditnotanummering",
+      "description": "Pas aan hoe creditnotanummers worden gegenereerd en weergegeven."
     },
     "zeroDollar": {
       "title": "Facturen van nul dollar",
@@ -129,6 +134,10 @@
     "quoteNumbering": {
       "title": "Citaatnummering",
       "description": "Pas aan hoe offertenummers worden gegenereerd en weergegeven."
+    },
+    "salesOrderNumbering": {
+      "title": "Verkoopordernummering",
+      "description": "Pas aan hoe verkoopordernummers worden gegenereerd en weergegeven."
     }
   },
   "tax": {

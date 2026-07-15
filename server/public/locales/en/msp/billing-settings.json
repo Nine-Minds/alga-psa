@@ -1,6 +1,7 @@
 {
   "tabs": {
     "general": "General",
+    "numbering": "Numbering",
     "quoting": "Quoting",
     "tax": "Tax",
     "payments": "Payments",
@@ -27,6 +28,10 @@
     "invoiceNumbering": {
       "title": "Invoice Numbering",
       "description": "Customize how invoice numbers are generated and displayed."
+    },
+    "creditNoteNumbering": {
+      "title": "Credit Note Numbering",
+      "description": "Customize how credit note numbers are generated and displayed."
     },
     "zeroDollar": {
       "title": "Zero-Dollar Invoices",
@@ -129,6 +134,10 @@
     "quoteNumbering": {
       "title": "Quote Numbering",
       "description": "Customize how quote numbers are generated and displayed."
+    },
+    "salesOrderNumbering": {
+      "title": "Sales Order Numbering",
+      "description": "Customize how sales order numbers are generated and displayed."
     }
   },
   "tax": {

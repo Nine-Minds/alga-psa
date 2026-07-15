@@ -1,6 +1,7 @@
 {
   "tabs": {
     "general": "Allgemein",
+    "numbering": "Nummerierung",
     "quoting": "Zitieren",
     "tax": "Steuer",
     "payments": "Zahlungen",
@@ -27,6 +28,10 @@
     "invoiceNumbering": {
       "title": "Rechnungsnummerierung",
       "description": "Passen Sie an, wie Rechnungsnummern generiert und angezeigt werden."
+    },
+    "creditNoteNumbering": {
+      "title": "Gutschriftnummerierung",
+      "description": "Passen Sie an, wie Gutschriftnummern generiert und angezeigt werden."
     },
     "zeroDollar": {
       "title": "Null-Dollar-Rechnungen",
@@ -129,6 +134,10 @@
     "quoteNumbering": {
       "title": "Angebotsnummerierung",
       "description": "Passen Sie an, wie Angebotsnummern generiert und angezeigt werden."
+    },
+    "salesOrderNumbering": {
+      "title": "Auftragsnummerierung",
+      "description": "Passen Sie an, wie Auftragsnummern generiert und angezeigt werden."
     }
   },
   "tax": {
