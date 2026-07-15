@@ -17,6 +17,8 @@ import { MoreVertical, PlusCircle, Info } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Input } from '@alga-psa/ui/components/Input';
+import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import { dateFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Badge } from '@alga-psa/ui/components/Badge';
@@ -558,11 +560,21 @@ export function TaxComponentEditor({ taxRateId, isReadOnly = false }: TaxCompone
               <Label htmlFor="tax-component-start-date-field">
                 {t('tax.components.fields.startDate.label', { defaultValue: 'Start Date (Optional)' })}
               </Label>
-              <Input
-                id="tax-component-start-date-field"
-                type="date"
-                {...form.register('start_date')}
-                disabled={isSubmitting}
+              <Controller
+                control={form.control}
+                name="start_date"
+                render={({ field }) => (
+                  <DatePicker
+                    id="tax-component-start-date-field"
+                    label={t('tax.components.fields.startDate.label', { defaultValue: 'Start Date (Optional)' })}
+                    placeholder={t('tax.components.fields.startDate.label', { defaultValue: 'Start Date (Optional)' })}
+                    clearable
+                    className="w-full"
+                    disabled={isSubmitting}
+                    value={dateFromString(field.value)}
+                    onChange={(date) => field.onChange(dateToString(date))}
+                  />
+                )}
               />
             </div>
 
@@ -570,11 +582,21 @@ export function TaxComponentEditor({ taxRateId, isReadOnly = false }: TaxCompone
               <Label htmlFor="tax-component-end-date-field">
                 {t('tax.components.fields.endDate.label', { defaultValue: 'End Date (Optional)' })}
               </Label>
-              <Input
-                id="tax-component-end-date-field"
-                type="date"
-                {...form.register('end_date')}
-                disabled={isSubmitting}
+              <Controller
+                control={form.control}
+                name="end_date"
+                render={({ field }) => (
+                  <DatePicker
+                    id="tax-component-end-date-field"
+                    label={t('tax.components.fields.endDate.label', { defaultValue: 'End Date (Optional)' })}
+                    placeholder={t('tax.components.fields.endDate.label', { defaultValue: 'End Date (Optional)' })}
+                    clearable
+                    className="w-full"
+                    disabled={isSubmitting}
+                    value={dateFromString(field.value)}
+                    onChange={(date) => field.onChange(dateToString(date))}
+                  />
+                )}
               />
             </div>
           </div>

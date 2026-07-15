@@ -5,7 +5,8 @@ import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
-import { Input } from '@alga-psa/ui/components/Input';
+import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import { dateFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { QboCustomerMappingPanel } from './QboCustomerMappingPanel';
@@ -152,12 +153,14 @@ function StepHistory() {
           <Label htmlFor="qbo-history-window-start" className="text-xs">
             History window start (optional)
           </Label>
-          <Input
+          <DatePicker
             id="qbo-history-window-start"
-            type="date"
-            value={windowStart}
-            onChange={(e) => setWindowStart(e.target.value)}
+            label="History window start (optional)"
+            placeholder="History window start (optional)"
+            clearable
             className="w-44"
+            value={dateFromString(windowStart)}
+            onChange={(date) => setWindowStart(dateToString(date))}
           />
         </div>
         <Button id="qbo-history-load" type="button" variant="outline" disabled={fetching} onClick={() => void handleFetch()}>
@@ -346,11 +349,14 @@ function StepGoLive({ onDone }: StepGoLiveProps) {
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="qbo-golive-date">Auto-sync start date</Label>
-          <Input
+          <DatePicker
             id="qbo-golive-date"
-            type="date"
-            value={autoSyncStartDate}
-            onChange={(e) => setAutoSyncStartDate(e.target.value)}
+            label="Auto-sync start date"
+            placeholder="Auto-sync start date"
+            clearable
+            className="w-full"
+            value={dateFromString(autoSyncStartDate)}
+            onChange={(date) => setAutoSyncStartDate(dateToString(date))}
           />
           <p className="text-xs text-muted-foreground">
             Only invoices finalized on or after this date will auto-export.

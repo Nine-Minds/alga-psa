@@ -5,6 +5,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
+import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import { Label } from '@alga-psa/ui/components/Label';
 import { CurrencyInput } from '@alga-psa/ui/components/CurrencyInput';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
@@ -47,6 +49,7 @@ import {
   confirmSalesOrder,
   cancelSalesOrder,
 } from '../actions';
+import { dateFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
 import {
   SalesOrderDetail,
   type ConfirmDropShipFn,
@@ -789,13 +792,20 @@ export function SalesOrdersManager({
               value={form.client_po_number}
               onChange={(e) => setForm({ ...form, client_po_number: e.target.value })}
             />
-            <Input
-              id="sales-order-expected-ship-date"
-              label={t('salesOrders.fields.expectedShipDate', 'Expected ship date')}
-              type="date"
-              value={form.expected_ship_date}
-              onChange={(e) => setForm({ ...form, expected_ship_date: e.target.value })}
-            />
+            <div>
+              <Label className="block mb-1" htmlFor="sales-order-expected-ship-date">
+                {t('salesOrders.fields.expectedShipDate', 'Expected ship date')}
+              </Label>
+              <DatePicker
+                id="sales-order-expected-ship-date"
+                label={t('salesOrders.fields.expectedShipDate', 'Expected ship date')}
+                placeholder={t('salesOrders.fields.expectedShipDate', 'Expected ship date')}
+                clearable
+                className="w-full"
+                value={dateFromString(form.expected_ship_date)}
+                onChange={(date) => setForm({ ...form, expected_ship_date: dateToString(date) })}
+              />
+            </div>
           </div>
 
           {/* Items */}

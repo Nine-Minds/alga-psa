@@ -3,7 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Input } from '@alga-psa/ui/components/Input';
+import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import { Label } from '@alga-psa/ui/components/Label';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
@@ -27,6 +28,7 @@ import {
   type GhostRunResult,
   type GhostDisposition,
 } from '../actions';
+import { dateFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
 
 /**
  * Ghost-usage report (PRD §16/§17): the tickets a hardware shop closed with no part
@@ -391,8 +393,14 @@ export function GhostUsageReport({
             onValueChange={(v) => setCategoryId(v)}
           />
         </div>
-        <Input id="ghost-usage-from" label={t('common.from', 'From')} type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
-        <Input id="ghost-usage-to" label={t('common.to', 'To')} type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+        <div>
+          <Label className="block mb-1" htmlFor="ghost-usage-from">{t('common.from', 'From')}</Label>
+          <DatePicker id="ghost-usage-from" label={t('common.from', 'From')} placeholder={t('common.from', 'From')} clearable className="w-40" value={dateFromString(from)} onChange={(date) => setFrom(dateToString(date))} />
+        </div>
+        <div>
+          <Label className="block mb-1" htmlFor="ghost-usage-to">{t('common.to', 'To')}</Label>
+          <DatePicker id="ghost-usage-to" label={t('common.to', 'To')} placeholder={t('common.to', 'To')} clearable className="w-40" value={dateFromString(to)} onChange={(date) => setTo(dateToString(date))} />
+        </div>
         <Button id="ghost-usage-run" onClick={run} disabled={loading}>
           {loading ? t('common.running', 'Running…') : t('common.runReport', 'Run report')}
         </Button>

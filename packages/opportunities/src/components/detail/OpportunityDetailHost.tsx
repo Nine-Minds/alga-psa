@@ -6,6 +6,8 @@ import { toast } from 'react-hot-toast';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
+import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import { dateFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
@@ -397,11 +399,14 @@ export function OpportunityDetailHost({
                   <Label htmlFor="opportunity-win-project-start">
                     {t('opportunities.winDialog.projectStart', 'Start date')}
                   </Label>
-                  <Input
+                  <DatePicker
                     id="opportunity-win-project-start"
-                    type="date"
-                    value={winProjectStartDate}
-                    onChange={(event) => setWinProjectStartDate(event.target.value)}
+                    label={t('opportunities.winDialog.projectStart', 'Start date')}
+                    placeholder={t('opportunities.winDialog.projectStart', 'Start date')}
+                    clearable
+                    className="w-full"
+                    value={dateFromString(winProjectStartDate)}
+                    onChange={(date) => setWinProjectStartDate(dateToString(date))}
                   />
                 </div>
               </div>

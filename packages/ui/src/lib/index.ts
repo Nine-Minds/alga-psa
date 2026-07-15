@@ -1,6 +1,7 @@
 export * from './utils';
 export * from './colorUtils';
 export * from './dateFnsLocale';
+export * from './dateInput';
 export * from './errorHandling';
 export * from './cookies';
 export * from './i18n/client';

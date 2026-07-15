@@ -4,6 +4,9 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Card } from '@alga-psa/ui/components/Card';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Input } from '@alga-psa/ui/components/Input';
+import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import { Label } from '@alga-psa/ui/components/Label';
+import { dateFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog, DialogContent, DialogHeader } from '@alga-psa/ui/components/Dialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -232,20 +235,30 @@ export default function EmailLogsClient({ initialMetrics, initialLogs }: EmailLo
       <Card className="p-6">
         <div className="mb-4 flex flex-col gap-3">
           <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-            <Input
-              id="email-logs-filter-start-date"
-              type="date"
-              label={t('emailLogs.filters.startDate')}
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-            />
-            <Input
-              id="email-logs-filter-end-date"
-              type="date"
-              label={t('emailLogs.filters.endDate')}
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
-            />
+            <div>
+              <Label className="block mb-1" htmlFor="email-logs-filter-start-date">{t('emailLogs.filters.startDate')}</Label>
+              <DatePicker
+                id="email-logs-filter-start-date"
+                label={t('emailLogs.filters.startDate')}
+                placeholder={t('emailLogs.filters.startDate')}
+                clearable
+                className="w-full"
+                value={dateFromString(startDate)}
+                onChange={(date) => setStartDate(dateToString(date))}
+              />
+            </div>
+            <div>
+              <Label className="block mb-1" htmlFor="email-logs-filter-end-date">{t('emailLogs.filters.endDate')}</Label>
+              <DatePicker
+                id="email-logs-filter-end-date"
+                label={t('emailLogs.filters.endDate')}
+                placeholder={t('emailLogs.filters.endDate')}
+                clearable
+                className="w-full"
+                value={dateFromString(endDate)}
+                onChange={(date) => setEndDate(dateToString(date))}
+              />
+            </div>
             <div>
               <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">{t('emailLogs.filters.status')}</label>
               <select

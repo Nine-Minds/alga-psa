@@ -3,7 +3,8 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Input } from '@alga-psa/ui/components/Input';
+import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import { Label } from '@alga-psa/ui/components/Label';
 import { SearchInput } from '@alga-psa/ui/components/SearchInput';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
@@ -27,6 +28,7 @@ import {
   updateLoanDueDate,
   type LoanerOutRow,
 } from '../actions';
+import { dateFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
 import { UnitHistoryDialog, type UnitDetail } from './UnitHistoryDialog';
 
 const isReturnedActionError = (value: unknown) => isActionMessageError(value) || isActionPermissionError(value);
@@ -549,13 +551,20 @@ export function LoanersManager({
               onClientTypeFilterChange={setLoanClientType}
             />
           </div>
-          <Input
-            id="loaner-loan-due-at"
-            label={t('loaners.fields.dueDate', 'Due date')}
-            type="date"
-            value={loanDueAt}
-            onChange={(e) => setLoanDueAt(e.target.value)}
-          />
+          <div>
+            <Label className="block mb-1" htmlFor="loaner-loan-due-at">
+              {t('loaners.fields.dueDate', 'Due date')}
+            </Label>
+            <DatePicker
+              id="loaner-loan-due-at"
+              label={t('loaners.fields.dueDate', 'Due date')}
+              placeholder={t('loaners.fields.dueDate', 'Due date')}
+              clearable
+              className="w-full"
+              value={dateFromString(loanDueAt)}
+              onChange={(date) => setLoanDueAt(dateToString(date))}
+            />
+          </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button id="loaner-loan-cancel" variant="outline" onClick={() => setLoanOpen(false)}>
               {t('common.cancel', 'Cancel')}
@@ -601,13 +610,20 @@ export function LoanersManager({
               due: fmtDueDate(extendUnit?.loan_due_at) ?? t('loaners.noDueDate', 'No due date'),
             })}
           </p>
-          <Input
-            id="loaner-extend-due-at"
-            label={t('loaners.fields.dueDate', 'Due date')}
-            type="date"
-            value={extendDueAt}
-            onChange={(e) => setExtendDueAt(e.target.value)}
-          />
+          <div>
+            <Label className="block mb-1" htmlFor="loaner-extend-due-at">
+              {t('loaners.fields.dueDate', 'Due date')}
+            </Label>
+            <DatePicker
+              id="loaner-extend-due-at"
+              label={t('loaners.fields.dueDate', 'Due date')}
+              placeholder={t('loaners.fields.dueDate', 'Due date')}
+              clearable
+              className="w-full"
+              value={dateFromString(extendDueAt)}
+              onChange={(date) => setExtendDueAt(dateToString(date))}
+            />
+          </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button id="loaner-extend-cancel" variant="outline" onClick={() => setExtendUnit(null)}>
               {t('common.cancel', 'Cancel')}

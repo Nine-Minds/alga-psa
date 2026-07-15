@@ -13,6 +13,7 @@ import InteractionDetails from './InteractionDetails';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Input } from '@alga-psa/ui/components/Input';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import { dateFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { useAutomationIdAndRegister } from '@alga-psa/ui/ui-reflection/useAutomationIdAndRegister';
@@ -99,22 +100,6 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
     fieldType: 'select',
     label: 'Filter by Type',
     helperText: 'Filter interactions by their type'
-  });
-
-  const { automationIdProps: startDateProps } = useAutomationIdAndRegister<FormFieldComponent>({
-    id: `${id}-start-date`,
-    type: 'formField',
-    fieldType: 'textField',
-    label: 'Start Date Filter',
-    helperText: 'Filter interactions from this date'
-  });
-
-  const { automationIdProps: endDateProps } = useAutomationIdAndRegister<FormFieldComponent>({
-    id: `${id}-end-date`,
-    type: 'formField',
-    fieldType: 'textField',
-    label: 'End Date Filter',
-    helperText: 'Filter interactions until this date'
   });
 
   const { automationIdProps: resetButtonProps } = useAutomationIdAndRegister<ButtonComponent>({
@@ -374,19 +359,23 @@ const InteractionsFeed: React.FC<InteractionsFeedProps> = ({
               onValueChange={setSelectedType}
               placeholder={t('interactions.feed.typePlaceholder', { defaultValue: 'Interaction Type' })}
             />
-            <Input
-              {...startDateProps}
-              type="date"
-              value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
+            <DatePicker
+              id={`${id}-start-date`}
+              label={t('interactions.feed.startDate', { defaultValue: 'Start Date' })}
               placeholder={t('interactions.feed.startDate', { defaultValue: 'Start Date' })}
+              clearable
+              className="w-full"
+              value={dateFromString(startDate)}
+              onChange={(date) => setStartDate(dateToString(date))}
             />
-            <Input
-              {...endDateProps}
-              type="date"
-              value={endDate}
-              onChange={(e) => setEndDate(e.target.value)}
+            <DatePicker
+              id={`${id}-end-date`}
+              label={t('interactions.feed.endDate', { defaultValue: 'End Date' })}
               placeholder={t('interactions.feed.endDate', { defaultValue: 'End Date' })}
+              clearable
+              className="w-full"
+              value={dateFromString(endDate)}
+              onChange={(date) => setEndDate(dateToString(date))}
             />
           </div>
         </DialogContent>
