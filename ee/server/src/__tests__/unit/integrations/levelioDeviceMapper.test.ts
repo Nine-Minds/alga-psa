@@ -158,6 +158,20 @@ describe('mapLevelIoDeviceToSnapshot', () => {
     expect(snapshot.extension?.antivirusProduct).toBe('Defender');
   });
 
+  it('rounds fractional RAM to a whole integer for the integer ram_gb column', () => {
+    // Level reports usable memory, so a "16 GB" machine reports ~15.74 GB.
+    // ram_gb is a Postgres integer column; a decimal fails the insert with
+    // "invalid input syntax for type integer: 15.74".
+    const snapshot = mapLevelIoDeviceToSnapshot({
+      integrationId: 'int-1',
+      device: makeDevice({ total_memory: Math.round(15.74 * 1024 ** 3) }),
+      scopeId: 'g-root',
+    });
+
+    expect(snapshot.extension?.ramGb).toBe(16);
+    expect(Number.isInteger(snapshot.extension?.ramGb)).toBe(true);
+  });
+
   it('marks offline devices offline with no uptime', () => {
     const snapshot = mapLevelIoDeviceToSnapshot({
       integrationId: 'int-1',
