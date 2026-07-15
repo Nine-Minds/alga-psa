@@ -49,6 +49,7 @@ export interface WasmInvoiceLineItem {
   }>;
   category?: string; // Optional: For grouping items
   itemType?: 'service' | 'project' | 'product'; // Optional: For conditional rendering
+  projectPhaseName?: string | null;
   location_id?: string | null;
   /** Resolved location object, when available. */
   location?: WasmInvoiceLineItemLocation | null;
@@ -60,6 +61,8 @@ export interface WasmInvoiceViewModel {
   dueDate: string; // Consider using ISO8601String or a specific date format
   currencyCode: string; // Added for multi-currency support
   poNumber?: string | null;
+  projectName?: string | null;
+  projectNumber?: string | null;
   recurringServicePeriodStart?: string | null;
   recurringServicePeriodEnd?: string | null;
   recurringServicePeriodLabel?: string | null;

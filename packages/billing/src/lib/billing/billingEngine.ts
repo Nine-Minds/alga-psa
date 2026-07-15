@@ -18,6 +18,12 @@ import {
   IFixedPriceCharge,
   IProductCharge,
   ILicenseCharge,
+  IProjectBillingConfig,
+  IProjectBillingScheduleEntry,
+  IProjectPhaseRateOverride,
+  IProjectBillingCapUsage,
+  IProjectMilestoneCharge,
+  IProjectDepositCharge,
   IClientContractLineCycle,
   IRecurringServicePeriod,
   IRecurringServicePeriodRecord,
@@ -70,6 +76,18 @@ import contractLine from "../../models/contractLine";
 import service from "../../models/service";
 import { TaxService } from "../../services/taxService";
 import { ClientContractServiceConfigurationService } from "../../services/clientContractServiceConfigurationService";
+import {
+  computeCapWriteDown,
+  computeDepositReconciliation,
+  computeEntryAmounts,
+  detectThresholdCrossings,
+} from "../../services/projectBillingService";
+import {
+  normalizeProjectBillingCapUsage,
+  normalizeProjectBillingConfig,
+  normalizeProjectBillingScheduleEntry,
+  normalizeProjectPhaseRateOverride,
+} from "../../models/projectBillingModelUtils";
 // Workflow imports removed as event emission is moved back to the calling action
 
 type DiscountQueryRow = IDiscount & {
@@ -100,6 +118,61 @@ type CalculateBillingOptions = {
     timeEntryIds?: string[];
     usageRecordIds?: string[];
   };
+  projectTarget?: {
+    projectId: string;
+    entryIds?: string[];
+  };
+};
+
+type ProjectBillingConfigWithProject = IProjectBillingConfig & {
+  project_name: string;
+  project_number: string;
+};
+
+type ProjectPhaseRateOverrideWithService = IProjectPhaseRateOverride & {
+  override_service_name: string | null;
+  override_tax_rate_id: string | null;
+  override_default_rate: number | null;
+};
+
+type ProjectBillingContext = {
+  configs: ProjectBillingConfigWithProject[];
+  configsById: Map<string, ProjectBillingConfigWithProject>;
+  configsByProjectId: Map<string, ProjectBillingConfigWithProject>;
+  entriesByConfigId: Map<string, IProjectBillingScheduleEntry[]>;
+  computedAmountsByEntryId: Map<string, number>;
+  phaseNamesByEntryId: Map<string, string | null>;
+  overridesByPhaseId: Map<string, ProjectPhaseRateOverrideWithService[]>;
+  capUsageByConfigId: Map<string, IProjectBillingCapUsage>;
+};
+
+export type ProjectCapThresholdCrossing = {
+  configId: string;
+  projectId: string;
+  threshold: number;
+  previousBilled: number;
+  newBilled: number;
+};
+
+export type ProjectBillingEngineResult = IBillingResult & {
+  error?: string;
+  projectCapThresholdCrossings?: ProjectCapThresholdCrossing[];
+};
+
+type ProjectAnnotatedTimeCharge = ITimeBasedCharge & {
+  project_id: string;
+  project_name: string;
+  project_number: string;
+  project_billing_config_id: string;
+  project_cap_original_amount?: number;
+};
+
+type ProjectScheduleCharge = (IProjectMilestoneCharge | IProjectDepositCharge) & {
+  project_name: string;
+  project_number: string;
+  phase_name: string | null;
+  project_billing_config_id: string;
+  deposit_treatment: IProjectBillingConfig["deposit_treatment"];
 };
 
 type PersistedRecurringTimingSelectionRecord = Pick<
@@ -167,6 +240,158 @@ export class BillingEngine {
         this.knex = previousKnex;
       }
     });
+  }
+
+  private async loadProjectBillingContext(
+    clientId: string,
+    projectId?: string,
+  ): Promise<ProjectBillingContext | null> {
+    await this.initKnex();
+    if (!this.tenant) {
+      throw new Error("tenant context not found");
+    }
+
+    const db = tenantDb(this.knex, this.tenant);
+    const configsQuery = db.table<any>("project_billing_configs as config");
+    db.tenantJoin(configsQuery, "projects as project", "config.project_id", "project.project_id");
+    configsQuery
+      .where("project.client_id", clientId)
+      .select(
+        "config.*",
+        "project.project_name",
+        "project.project_number",
+      );
+    if (projectId) {
+      configsQuery.where("project.project_id", projectId);
+    }
+
+    const configRows = await configsQuery;
+    if (configRows.length === 0) {
+      return null;
+    }
+
+    const configs = configRows.map((row): ProjectBillingConfigWithProject => ({
+      ...normalizeProjectBillingConfig(row as Record<string, unknown>),
+      project_name: String(row.project_name),
+      project_number: String(row.project_number ?? ""),
+    }));
+    const configIds = configs.map((config) => config.config_id);
+    const configsById = new Map(configs.map((config) => [config.config_id, config]));
+    const configsByProjectId = new Map(configs.map((config) => [config.project_id, config]));
+
+    const entriesQuery = db.table<any>("project_billing_schedule_entries as entry");
+    db.tenantJoin(entriesQuery, "project_phases as phase", "entry.phase_id", "phase.phase_id", { type: "left" });
+    const entryRows = await entriesQuery
+      .whereIn("entry.config_id", configIds)
+      .select("entry.*", "phase.phase_name")
+      .orderBy("entry.display_order", "asc")
+      .orderBy("entry.created_at", "asc")
+      .orderBy("entry.schedule_entry_id", "asc");
+
+    const entriesByConfigId = new Map<string, IProjectBillingScheduleEntry[]>();
+    const phaseNamesByEntryId = new Map<string, string | null>();
+    for (const row of entryRows) {
+      const entry = normalizeProjectBillingScheduleEntry(row as Record<string, unknown>);
+      const entries = entriesByConfigId.get(entry.config_id) ?? [];
+      entries.push(entry);
+      entriesByConfigId.set(entry.config_id, entries);
+      phaseNamesByEntryId.set(
+        entry.schedule_entry_id,
+        typeof row.phase_name === "string" ? row.phase_name : null,
+      );
+    }
+
+    const computedAmountsByEntryId = new Map<string, number>();
+    for (const config of configs) {
+      const entries = entriesByConfigId.get(config.config_id) ?? [];
+      const amounts = computeEntryAmounts(config, entries);
+      entries.forEach((entry, index) => {
+        computedAmountsByEntryId.set(entry.schedule_entry_id, amounts[index]);
+      });
+    }
+
+    const tmConfigIds = configs
+      .filter((config) => config.billing_model === "time_and_materials")
+      .map((config) => config.config_id);
+    const overridesByPhaseId = new Map<string, ProjectPhaseRateOverrideWithService[]>();
+    if (tmConfigIds.length > 0) {
+      const overridesQuery = db.table<any>("project_phase_rate_overrides as rate_override");
+      db.tenantJoin(overridesQuery, "project_phases as phase", "rate_override.phase_id", "phase.phase_id");
+      db.tenantJoin(overridesQuery, "projects as project", "phase.project_id", "project.project_id");
+      db.tenantJoin(overridesQuery, "project_billing_configs as config", "project.project_id", "config.project_id");
+      db.tenantJoin(overridesQuery, "service_catalog as override_service", "rate_override.override_service_id", "override_service.service_id", { type: "left" });
+      const overrideRows = await overridesQuery
+        .whereIn("config.config_id", tmConfigIds)
+        .select(
+          "rate_override.*",
+          "override_service.service_name as override_service_name",
+          "override_service.tax_rate_id as override_tax_rate_id",
+          "override_service.default_rate as override_default_rate",
+        )
+        .orderBy("rate_override.created_at", "asc")
+        .orderBy("rate_override.rate_override_id", "asc");
+
+      for (const row of overrideRows) {
+        const normalized = normalizeProjectPhaseRateOverride(
+          row as Record<string, unknown>,
+        );
+        const override: ProjectPhaseRateOverrideWithService = {
+          ...normalized,
+          override_service_name:
+            typeof row.override_service_name === "string"
+              ? row.override_service_name
+              : null,
+          override_tax_rate_id:
+            typeof row.override_tax_rate_id === "string"
+              ? row.override_tax_rate_id
+              : null,
+          override_default_rate:
+            row.override_default_rate === null || row.override_default_rate === undefined
+              ? null
+              : Number(row.override_default_rate),
+        };
+        const overrides = overridesByPhaseId.get(override.phase_id) ?? [];
+        overrides.push(override);
+        overridesByPhaseId.set(override.phase_id, overrides);
+      }
+    }
+
+    const capUsageRows = tmConfigIds.length === 0
+      ? []
+      : await db.table("project_billing_cap_usage")
+          .whereIn("config_id", tmConfigIds);
+    const capUsageByConfigId = new Map(
+      capUsageRows.map((row) => {
+        const usage = normalizeProjectBillingCapUsage(row as Record<string, unknown>);
+        return [usage.config_id, usage] as const;
+      }),
+    );
+
+    return {
+      configs,
+      configsById,
+      configsByProjectId,
+      entriesByConfigId,
+      computedAmountsByEntryId,
+      phaseNamesByEntryId,
+      overridesByPhaseId,
+      capUsageByConfigId,
+    };
+  }
+
+  private resolveProjectPhaseRateOverride(
+    context: ProjectBillingContext | null,
+    phaseId: string | null | undefined,
+    serviceId: string,
+  ): ProjectPhaseRateOverrideWithService | null {
+    if (!context || !phaseId) {
+      return null;
+    }
+
+    const overrides = context.overridesByPhaseId.get(phaseId) ?? [];
+    return overrides.find((override) => override.service_id === serviceId)
+      ?? overrides.find((override) => override.service_id === null)
+      ?? null;
   }
 
   private getNextBillingDateForCycle(
@@ -385,6 +610,57 @@ export class BillingEngine {
         billingPeriod,
         client,
         options,
+      );
+    });
+  }
+
+  async calculateProjectBilling(
+    projectId: string,
+    entryIds?: string[],
+  ): Promise<ProjectBillingEngineResult> {
+    this.clientDefaultTaxRegionCodeCache.clear();
+    this.locationTaxRegionCodeCache.clear();
+    return this.withPinnedTransaction(async () => {
+      await this.initKnex();
+      if (!this.tenant) {
+        throw new Error("tenant context not found");
+      }
+
+      const db = tenantDb(this.knex, this.tenant);
+      const project = await db.table("projects")
+        .where({ project_id: projectId })
+        .first("project_id", "client_id", "start_date", "created_at");
+      if (!project) {
+        throw new Error(`Project ${projectId} not found`);
+      }
+
+      const client = await db.table<IClient>("clients")
+        .where({ client_id: project.client_id })
+        .first();
+      if (!client) {
+        throw new Error(`Client ${project.client_id} not found for project ${projectId}`);
+      }
+
+      const context = await this.loadProjectBillingContext(
+        project.client_id,
+        projectId,
+      );
+      if (!context) {
+        throw new Error(`Project ${projectId} does not have project billing configured`);
+      }
+
+      const startDate = toISODate(toPlainDate(project.start_date ?? project.created_at));
+      const endDate = toISODate(Temporal.Now.plainDateISO().add({ days: 1 }));
+      return this.calculateBillingForPreparedPeriod(
+        project.client_id,
+        { startDate, endDate },
+        client,
+        {
+          projectTarget: {
+            projectId,
+            entryIds,
+          },
+        },
       );
     });
   }
@@ -641,8 +917,11 @@ export class BillingEngine {
     billingPeriod: IBillingPeriod,
     client: IClient | undefined,
     options: CalculateBillingOptions = {},
-  ): Promise<IBillingResult & { error?: string }> {
-    if (options.recurringTimingSelectionSource !== "persisted") {
+  ): Promise<ProjectBillingEngineResult> {
+    if (
+      !options.projectTarget
+      && options.recurringTimingSelectionSource !== "persisted"
+    ) {
       // Legacy cycle validation is still relevant for cycle-driven/manual runs.
       const validationResult = await this.validateBillingPeriod(
         clientId,
@@ -666,7 +945,12 @@ export class BillingEngine {
     let clientContractLines: IClientContractLine[] = [];
     let cycle: string | undefined;
 
-    if (options.recurringTimingSelectionSource === "persisted") {
+    if (options.projectTarget) {
+      clientContractLines = await this.getClientContractLinesForBillingPeriod(
+        clientId,
+        billingPeriod,
+      );
+    } else if (options.recurringTimingSelectionSource === "persisted") {
       clientContractLines = await this.getClientContractLinesForBillingPeriod(
         clientId,
         billingPeriod,
@@ -732,6 +1016,14 @@ export class BillingEngine {
       `[BillingEngine] Resolved billing currency: ${billingCurrency}`,
     );
 
+    const projectBillingContext = await this.loadProjectBillingContext(
+      clientId,
+      options.projectTarget?.projectId,
+    );
+    const targetProjectConfig = options.projectTarget
+      ? projectBillingContext?.configsByProjectId.get(options.projectTarget.projectId)
+      : undefined;
+
     const recurringTimingSelections = options.recurringTimingSelections
       ? options.recurringTimingSelectionSource === "persisted"
         ? this.assertPersistedRecurringTimingSelectionsReferenceEligibleLines(
@@ -755,14 +1047,25 @@ export class BillingEngine {
         : {};
     const nonContractSelection = options.nonContractSelection;
 
-    const materialCharges = await this.calculateMaterialCharges(
-      clientId,
-      billingPeriod,
-      billingCurrency,
-    );
+    const materialCharges = options.projectTarget
+      && targetProjectConfig?.billing_model !== "time_and_materials"
+      ? []
+      : projectBillingContext
+        ? await this.calculateMaterialCharges(
+            clientId,
+            billingPeriod,
+            billingCurrency,
+            options.projectTarget?.projectId,
+            projectBillingContext,
+          )
+        : await this.calculateMaterialCharges(
+            clientId,
+            billingPeriod,
+            billingCurrency,
+          );
 
     if (clientContractLines.length === 0 && !nonContractSelection?.include) {
-      if (materialCharges.length === 0) {
+      if (materialCharges.length === 0 && !projectBillingContext) {
         return {
           charges: [],
           totalAmount: 0,
@@ -801,7 +1104,9 @@ export class BillingEngine {
         productCharges,
         licenseCharges,
       ] = await Promise.all([
-        this.calculateFixedPriceCharges(
+        options.projectTarget
+          ? Promise.resolve([] as IFixedPriceCharge[])
+          : this.calculateFixedPriceCharges(
           clientId,
           billingPeriod,
           clientContractLine,
@@ -809,7 +1114,34 @@ export class BillingEngine {
           recurringTimingSelections[clientContractLine.client_contract_line_id],
           options.recurringTimingSelectionSource,
         ),
-        this.calculateTimeBasedCharges(
+        targetProjectConfig?.billing_model === "fixed_price"
+          ? Promise.resolve([] as ITimeBasedCharge[])
+          : projectBillingContext || options.projectTarget
+            ? this.calculateTimeBasedCharges(
+                clientId,
+                billingPeriod,
+                clientContractLine,
+                cycle,
+                recurringTimingSelections[
+                  clientContractLine.client_contract_line_id
+                ],
+                options.recurringTimingSelectionSource,
+                projectBillingContext,
+                options.projectTarget,
+              )
+            : this.calculateTimeBasedCharges(
+                clientId,
+                billingPeriod,
+                clientContractLine,
+                cycle,
+                recurringTimingSelections[
+                  clientContractLine.client_contract_line_id
+                ],
+                options.recurringTimingSelectionSource,
+              ),
+        options.projectTarget
+          ? Promise.resolve([] as IUsageBasedCharge[])
+          : this.calculateUsageBasedCharges(
           clientId,
           billingPeriod,
           clientContractLine,
@@ -817,7 +1149,16 @@ export class BillingEngine {
           recurringTimingSelections[clientContractLine.client_contract_line_id],
           options.recurringTimingSelectionSource,
         ),
-        this.calculateUsageBasedCharges(
+        options.projectTarget
+          ? Promise.resolve([] as IBucketCharge[])
+          : this.calculateBucketPlanCharges(
+          clientId,
+          billingPeriod,
+          clientContractLine,
+        ),
+        options.projectTarget
+          ? Promise.resolve([] as IProductCharge[])
+          : this.calculateProductCharges(
           clientId,
           billingPeriod,
           clientContractLine,
@@ -825,20 +1166,9 @@ export class BillingEngine {
           recurringTimingSelections[clientContractLine.client_contract_line_id],
           options.recurringTimingSelectionSource,
         ),
-        this.calculateBucketPlanCharges(
-          clientId,
-          billingPeriod,
-          clientContractLine,
-        ),
-        this.calculateProductCharges(
-          clientId,
-          billingPeriod,
-          clientContractLine,
-          cycle,
-          recurringTimingSelections[clientContractLine.client_contract_line_id],
-          options.recurringTimingSelectionSource,
-        ),
-        this.calculateLicenseCharges(
+        options.projectTarget
+          ? Promise.resolve([] as ILicenseCharge[])
+          : this.calculateLicenseCharges(
           clientId,
           billingPeriod,
           clientContractLine,
@@ -912,17 +1242,61 @@ export class BillingEngine {
       totalCharges = totalCharges.concat(materialCharges);
     }
 
-    if (nonContractSelection?.include) {
-      const nonContractCharges = await this.calculateUnresolvedNonContractCharges(
-        clientId,
-        billingPeriod,
-        {
-          timeEntryIds: nonContractSelection.timeEntryIds,
-          usageRecordIds: nonContractSelection.usageRecordIds,
-        },
-      );
+    if (projectBillingContext) {
+      const [milestoneCharges, depositCharges] = await Promise.all([
+        this.calculateProjectMilestoneCharges(
+          projectBillingContext,
+          client,
+          billingPeriod,
+          billingCurrency,
+          options.projectTarget,
+        ),
+        this.calculateProjectDepositCharges(
+          projectBillingContext,
+          client,
+          billingPeriod,
+          billingCurrency,
+          options.projectTarget,
+        ),
+      ]);
+      totalCharges = totalCharges.concat(milestoneCharges, depositCharges);
+    }
+
+    const includeTargetProjectActivity =
+      options.projectTarget && targetProjectConfig?.billing_model === "time_and_materials";
+    if (nonContractSelection?.include || includeTargetProjectActivity) {
+      const selection = includeTargetProjectActivity
+        ? {
+            timeEntryIds: nonContractSelection?.timeEntryIds,
+            usageRecordIds: nonContractSelection?.usageRecordIds,
+            excludeTimeEntryIds: totalCharges
+              .filter((charge): charge is ITimeBasedCharge => charge.type === "time")
+              .map((charge) => charge.entryId),
+          }
+        : {
+            timeEntryIds: nonContractSelection?.timeEntryIds,
+            usageRecordIds: nonContractSelection?.usageRecordIds,
+          };
+      const nonContractCharges = projectBillingContext || options.projectTarget
+        ? await this.calculateUnresolvedNonContractCharges(
+            clientId,
+            billingPeriod,
+            selection,
+            projectBillingContext,
+            options.projectTarget,
+          )
+        : await this.calculateUnresolvedNonContractCharges(
+            clientId,
+            billingPeriod,
+            selection,
+          );
       totalCharges = totalCharges.concat(nonContractCharges);
     }
+
+    const capResult = projectBillingContext
+      ? this.applyProjectCapAdjustments(totalCharges, projectBillingContext)
+      : { charges: totalCharges, thresholdCrossings: [] };
+    totalCharges = capResult.charges;
 
     const totalAmount = totalCharges.reduce(
       (sum: number, charge: IBillingCharge) => sum + charge.total,
@@ -948,7 +1322,231 @@ export class BillingEngine {
       `Final amount after discounts and adjustments: ${getCurrencySymbol(billingCurrency)}${(finalCharges.finalAmount / 100).toFixed(2)} (${finalCharges.finalAmount} cents)`,
     );
 
-    return finalCharges;
+    return projectBillingContext
+      ? {
+          ...finalCharges,
+          projectCapThresholdCrossings: capResult.thresholdCrossings,
+        }
+      : finalCharges;
+  }
+
+  private async calculateProjectMilestoneCharges(
+    context: ProjectBillingContext,
+    client: IClient | undefined,
+    billingPeriod: IBillingPeriod,
+    billingCurrency: string,
+    target?: CalculateBillingOptions["projectTarget"],
+  ): Promise<ProjectScheduleCharge[]> {
+    return this.calculateProjectScheduleCharges(
+      "milestone",
+      context,
+      client,
+      billingPeriod,
+      billingCurrency,
+      target,
+    );
+  }
+
+  private async calculateProjectDepositCharges(
+    context: ProjectBillingContext,
+    client: IClient | undefined,
+    billingPeriod: IBillingPeriod,
+    billingCurrency: string,
+    target?: CalculateBillingOptions["projectTarget"],
+  ): Promise<ProjectScheduleCharge[]> {
+    return this.calculateProjectScheduleCharges(
+      "deposit",
+      context,
+      client,
+      billingPeriod,
+      billingCurrency,
+      target,
+    );
+  }
+
+  private async calculateProjectScheduleCharges(
+    entryType: "milestone" | "deposit",
+    context: ProjectBillingContext,
+    client: IClient | undefined,
+    billingPeriod: IBillingPeriod,
+    billingCurrency: string,
+    target?: CalculateBillingOptions["projectTarget"],
+  ): Promise<ProjectScheduleCharge[]> {
+    if (!client) {
+      return [];
+    }
+
+    const selectedEntryIds = target?.entryIds
+      ? new Set(target.entryIds)
+      : null;
+    const charges: ProjectScheduleCharge[] = [];
+
+    for (const config of context.configs) {
+      if (target) {
+        if (config.project_id !== target.projectId) {
+          continue;
+        }
+      } else if (config.invoice_mode !== "recurring") {
+        continue;
+      }
+
+      const entries = context.entriesByConfigId.get(config.config_id) ?? [];
+      const finalMilestone = entries.findLast(
+        (entry) => entry.entry_type === "milestone" && entry.status !== "canceled",
+      );
+      const depositReconciliation = entryType === "milestone" && finalMilestone
+        ? computeDepositReconciliation(
+            entries.map((entry) => ({
+              entry_type: entry.entry_type,
+              status: entry.status,
+              computed_amount:
+                context.computedAmountsByEntryId.get(entry.schedule_entry_id) ?? 0,
+            })),
+            config.deposit_treatment,
+          )
+        : 0;
+
+      for (const entry of entries) {
+        if (
+          entry.entry_type !== entryType
+          || entry.status !== "approved"
+          || (selectedEntryIds && !selectedEntryIds.has(entry.schedule_entry_id))
+        ) {
+          continue;
+        }
+
+        const computedAmount =
+          context.computedAmountsByEntryId.get(entry.schedule_entry_id) ?? 0;
+        const amount = entryType === "milestone"
+          && finalMilestone?.schedule_entry_id === entry.schedule_entry_id
+          ? Math.max(0, computedAmount - depositReconciliation)
+          : computedAmount;
+        const effectiveTaxRegion = config.tax_region
+          ?? await this.getClientDefaultTaxRegionCode(client.client_id)
+          ?? undefined;
+        let taxAmount = 0;
+        let taxRate = 0;
+        if (
+          !client.is_tax_exempt
+          && config.is_taxable
+          && effectiveTaxRegion
+          && amount > 0
+        ) {
+          const taxResult = await new TaxService().calculateTax(
+            client.client_id,
+            amount,
+            billingPeriod.endDate,
+            effectiveTaxRegion,
+            true,
+            config.currency ?? billingCurrency,
+          );
+          taxAmount = taxResult.taxAmount;
+          taxRate = taxResult.taxRate;
+        }
+
+        charges.push({
+          type: entryType === "milestone"
+            ? "project_milestone"
+            : "project_deposit",
+          project_id: config.project_id,
+          schedule_entry_id: entry.schedule_entry_id,
+          project_name: config.project_name,
+          project_number: config.project_number,
+          phase_name:
+            context.phaseNamesByEntryId.get(entry.schedule_entry_id) ?? null,
+          project_billing_config_id: config.config_id,
+          deposit_treatment: config.deposit_treatment,
+          serviceName: entry.description,
+          quantity: 1,
+          rate: amount,
+          total: amount,
+          tax_amount: taxAmount,
+          tax_rate: taxRate,
+          tax_region: effectiveTaxRegion,
+          is_taxable: config.is_taxable,
+        } as ProjectScheduleCharge);
+      }
+    }
+
+    return charges;
+  }
+
+  private applyProjectCapAdjustments(
+    charges: IBillingCharge[],
+    context: ProjectBillingContext,
+  ): {
+    charges: IBillingCharge[];
+    thresholdCrossings: ProjectCapThresholdCrossing[];
+  } {
+    const projectTimeCharges = new Map<string, ProjectAnnotatedTimeCharge[]>();
+    for (const charge of charges) {
+      if (
+        charge.type !== "time"
+        || !("project_billing_config_id" in charge)
+      ) {
+        continue;
+      }
+      const projectCharge = charge as ProjectAnnotatedTimeCharge;
+      const grouped = projectTimeCharges.get(projectCharge.project_billing_config_id) ?? [];
+      grouped.push(projectCharge);
+      projectTimeCharges.set(projectCharge.project_billing_config_id, grouped);
+    }
+
+    const thresholdCrossings: ProjectCapThresholdCrossing[] = [];
+    for (const [configId, configCharges] of projectTimeCharges) {
+      const config = context.configsById.get(configId);
+      if (!config || config.cap_amount === null || config.cap_behavior === null) {
+        continue;
+      }
+
+      const usage = context.capUsageByConfigId.get(configId);
+      const previousBilled = usage?.billed_amount ?? 0;
+      let runningBilled = previousBilled;
+
+      for (const charge of configCharges) {
+        const originalAmount = charge.total;
+        charge.project_cap_original_amount = originalAmount;
+        if (config.cap_behavior === "hard_cap") {
+          const writeDown = computeCapWriteDown(
+            config.cap_amount,
+            runningBilled,
+            originalAmount,
+          );
+          charge.total = writeDown.billable;
+          charge.write_down_amount = writeDown.writtenDown;
+          if (writeDown.writtenDown > 0) {
+            charge.write_down_reason = "project_cap";
+          }
+          if (originalAmount > 0 && charge.tax_amount > 0) {
+            charge.tax_amount = Math.round(
+              charge.tax_amount * (writeDown.billable / originalAmount),
+            );
+          }
+          runningBilled += writeDown.billable;
+        } else {
+          runningBilled += originalAmount;
+        }
+      }
+
+      if (config.cap_behavior === "notify") {
+        const crossed = detectThresholdCrossings(
+          config.cap_amount,
+          previousBilled,
+          runningBilled,
+          config.cap_notify_thresholds,
+          usage?.notified_thresholds ?? [],
+        );
+        thresholdCrossings.push(...crossed.map((threshold) => ({
+          configId,
+          projectId: config.project_id,
+          threshold,
+          previousBilled,
+          newBilled: runningBilled,
+        })));
+      }
+    }
+
+    return { charges, thresholdCrossings };
   }
 
   async calculateUnresolvedNonContractChargesForExecutionWindow(input: {
@@ -963,14 +1561,26 @@ export class BillingEngine {
         startDate: toISODate(toPlainDate(input.windowStart)),
         endDate: toISODate(toPlainDate(input.windowEnd)),
       };
-      return this.calculateUnresolvedNonContractCharges(
-        input.clientId,
-        billingPeriod,
-        {
-          timeEntryIds: input.selectedTimeEntryIds,
-          usageRecordIds: input.selectedUsageRecordIds,
-        },
-      );
+      const context = await this.loadProjectBillingContext(input.clientId);
+      const selection = {
+        timeEntryIds: input.selectedTimeEntryIds,
+        usageRecordIds: input.selectedUsageRecordIds,
+      };
+      const charges = context
+        ? await this.calculateUnresolvedNonContractCharges(
+            input.clientId,
+            billingPeriod,
+            selection,
+            context,
+          )
+        : await this.calculateUnresolvedNonContractCharges(
+            input.clientId,
+            billingPeriod,
+            selection,
+          );
+      return context
+        ? this.applyProjectCapAdjustments(charges, context).charges
+        : charges;
     });
   }
 
@@ -1015,7 +1625,10 @@ export class BillingEngine {
     selection?: {
       timeEntryIds?: string[];
       usageRecordIds?: string[];
+      excludeTimeEntryIds?: string[];
     },
+    projectBillingContext?: ProjectBillingContext | null,
+    projectTarget?: CalculateBillingOptions["projectTarget"],
   ): Promise<IBillingCharge[]> {
     await this.initKnex();
     if (!this.tenant) {
@@ -1030,6 +1643,7 @@ export class BillingEngine {
       selection?.usageRecordIds && selection.usageRecordIds.length > 0
         ? new Set(selection.usageRecordIds)
         : null;
+    const excludedTimeEntryIds = new Set(selection?.excludeTimeEntryIds ?? []);
 
     const db = tenantDb(this.knex, this.tenant);
     const client = await db.table("clients")
@@ -1054,12 +1668,10 @@ export class BillingEngine {
     db.tenantJoin(timeEntriesQuery, "projects", "project_phases.project_id", "projects.project_id", { type: "left" });
     db.tenantJoin(timeEntriesQuery, "tickets", "time_entries.work_item_id", "tickets.ticket_id", { type: "left" });
 
-    const timeEntries = await timeEntriesQuery
+    timeEntriesQuery
       .where({
         "time_entries.tenant": this.tenant,
       })
-      .where("time_entries.start_time", ">=", billingPeriod.startDate)
-      .where("time_entries.end_time", "<", billingPeriod.endDate)
       .where("time_entries.invoiced", false)
       .whereNull("time_entries.contract_line_id")
       .whereNotNull("time_entries.service_id")
@@ -1069,67 +1681,93 @@ export class BillingEngine {
           "tickets.client_id",
           clientId,
         );
-      })
-      .select(
+      });
+
+    if (projectTarget) {
+      timeEntriesQuery.where("projects.project_id", projectTarget.projectId);
+    } else {
+      timeEntriesQuery
+        .where("time_entries.start_time", ">=", billingPeriod.startDate)
+        .where("time_entries.end_time", "<", billingPeriod.endDate);
+    }
+
+    const fixedPriceProjectIds = projectBillingContext?.configs
+      .filter((config) => config.billing_model === "fixed_price")
+      .map((config) => config.project_id) ?? [];
+    if (fixedPriceProjectIds.length > 0) {
+      timeEntriesQuery.where(function (this: Knex.QueryBuilder) {
+        this.whereNull("projects.project_id")
+          .orWhereNotIn("projects.project_id", fixedPriceProjectIds);
+      });
+    }
+
+    const timeEntries = await timeEntriesQuery.select(
         "time_entries.*",
         "service_catalog.service_name",
         "service_catalog.default_rate",
         "service_catalog.tax_rate_id",
+        "project_phases.phase_id as project_phase_id",
+        "projects.project_id as project_id",
       );
 
     for (const entry of timeEntries) {
+      if (excludedTimeEntryIds.has(entry.entry_id)) {
+        continue;
+      }
       if (selectedTimeEntryIds && !selectedTimeEntryIds.has(entry.entry_id)) {
         continue;
       }
       if (!entry.service_id) {
         continue;
       }
-      const workDate = toISODate(toPlainDate(entry.start_time));
-      const eligibleLineIds = await this.getEligibleContractLineIdsForServiceAtDate({
-        clientId,
-        serviceId: entry.service_id,
-        workDate,
-      });
-      if (eligibleLineIds.length === 1) {
-        const updatedCount = await db.table("time_entries")
-          .where({
+      if (!projectTarget) {
+        const workDate = toISODate(toPlainDate(entry.start_time));
+        const eligibleLineIds = await this.getEligibleContractLineIdsForServiceAtDate({
+          clientId,
+          serviceId: entry.service_id,
+          workDate,
+        });
+        if (eligibleLineIds.length === 1) {
+          const updatedCount = await db.table("time_entries")
+            .where({
+              tenant: this.tenant,
+              entry_id: entry.entry_id,
+            })
+            .whereNull("contract_line_id")
+            .update({
+              contract_line_id: eligibleLineIds[0],
+              updated_at: this.knex.fn.now(),
+            });
+          console.info("[billing_engine.reconcile.unresolved]", {
+            event: "billing_engine.reconcile.unresolved",
+            recordType: "time_entry",
             tenant: this.tenant,
-            entry_id: entry.entry_id,
-          })
-          .whereNull("contract_line_id")
-          .update({
-            contract_line_id: eligibleLineIds[0],
-            updated_at: this.knex.fn.now(),
+            clientId,
+            recordId: entry.entry_id,
+            decision: "deterministic_single_match",
+            selectedContractLineId: eligibleLineIds[0],
+            eligibleLineCount: eligibleLineIds.length,
+            persisted: updatedCount > 0,
+            metric: { name: "unmatched_resolved_deterministically", value: 1 },
           });
+          continue;
+        }
         console.info("[billing_engine.reconcile.unresolved]", {
           event: "billing_engine.reconcile.unresolved",
           recordType: "time_entry",
           tenant: this.tenant,
           clientId,
           recordId: entry.entry_id,
-          decision: "deterministic_single_match",
-          selectedContractLineId: eligibleLineIds[0],
+          decision: eligibleLineIds.length > 1 ? "ambiguous" : "no_match",
+          selectedContractLineId: null,
           eligibleLineCount: eligibleLineIds.length,
-          persisted: updatedCount > 0,
-          metric: { name: "unmatched_resolved_deterministically", value: 1 },
+          persisted: false,
+          metric:
+            eligibleLineIds.length > 1
+              ? { name: "unresolved_ambiguous_count", value: 1 }
+              : undefined,
         });
-        continue;
       }
-      console.info("[billing_engine.reconcile.unresolved]", {
-        event: "billing_engine.reconcile.unresolved",
-        recordType: "time_entry",
-        tenant: this.tenant,
-        clientId,
-        recordId: entry.entry_id,
-        decision: eligibleLineIds.length > 1 ? "ambiguous" : "no_match",
-        selectedContractLineId: null,
-        eligibleLineCount: eligibleLineIds.length,
-        persisted: false,
-        metric:
-          eligibleLineIds.length > 1
-            ? { name: "unresolved_ambiguous_count", value: 1 }
-            : undefined,
-      });
 
       const startDateTime = Temporal.PlainDateTime.from(
         entry.start_time.toISOString().replace("Z", ""),
@@ -1147,12 +1785,26 @@ export class BillingEngine {
       // contract-line rounding config, so fall back to exact time rather than
       // Math.ceil to a whole hour, which overbilled every partial-hour entry.
       const duration = durationMinutes / 60;
-      const rate = Math.ceil(entry.custom_rate ?? entry.default_rate ?? 0);
+      const phaseOverride = this.resolveProjectPhaseRateOverride(
+        projectBillingContext ?? null,
+        entry.project_phase_id,
+        entry.service_id,
+      );
+      const effectiveServiceId = phaseOverride?.override_service_id ?? entry.service_id;
+      const effectiveServiceName = phaseOverride?.override_service_name ?? entry.service_name;
+      const effectiveTaxRateId = phaseOverride?.override_tax_rate_id ?? entry.tax_rate_id;
+      const rate = Math.ceil(
+        phaseOverride?.rate
+          ?? entry.custom_rate
+          ?? phaseOverride?.override_default_rate
+          ?? entry.default_rate
+          ?? 0,
+      );
       const total = Math.round(duration * rate);
       const { taxRegion: serviceTaxRegion, isTaxable } =
         await this.getTaxInfoFromService({
-          service_id: entry.service_id,
-          tax_rate_id: entry.tax_rate_id,
+          service_id: effectiveServiceId,
+          tax_rate_id: effectiveTaxRateId,
         });
 
       let taxAmount = 0;
@@ -1179,10 +1831,13 @@ export class BillingEngine {
         }
       }
 
+      const projectConfig = entry.project_id
+        ? projectBillingContext?.configsByProjectId.get(entry.project_id)
+        : undefined;
       unresolvedCharges.push({
         type: "time",
-        serviceId: entry.service_id,
-        serviceName: entry.service_name,
+        serviceId: effectiveServiceId,
+        serviceName: effectiveServiceName,
         userId: entry.user_id,
         duration,
         quantity: duration,
@@ -1196,7 +1851,19 @@ export class BillingEngine {
         servicePeriodStart: billingPeriod.startDate,
         servicePeriodEnd: billingPeriod.endDate,
         billingTiming: "arrears",
+        ...(projectConfig?.billing_model === "time_and_materials"
+          ? {
+              project_id: projectConfig.project_id,
+              project_name: projectConfig.project_name,
+              project_number: projectConfig.project_number,
+              project_billing_config_id: projectConfig.config_id,
+            }
+          : {}),
       } satisfies ITimeBasedCharge);
+    }
+
+    if (projectTarget) {
+      return unresolvedCharges;
     }
 
     const usageRecordsQuery = db.table<any>("usage_tracking");
@@ -3022,6 +3689,8 @@ export class BillingEngine {
     billingCycle?: string,
     recurringTimingSelection?: ResolvedRecurringChargeTiming,
     recurringTimingSelectionSource?: CalculateBillingOptions["recurringTimingSelectionSource"],
+    projectBillingContext?: ProjectBillingContext | null,
+    projectTarget?: CalculateBillingOptions["projectTarget"],
   ): Promise<ITimeBasedCharge[]> {
     await this.initKnex();
     if (!this.tenant) {
@@ -3067,18 +3736,28 @@ export class BillingEngine {
 
     const resolvedBillingCycle =
       billingCycle ??
-      (!recurringTimingSelection &&
+      (!projectTarget &&
+      !recurringTimingSelection &&
       recurringTimingSelectionSource !== "persisted"
         ? await this.getBillingCycle(clientId, billingPeriod.startDate)
         : undefined);
 
-    const timingResolution = this.resolveServiceDrivenChargeTiming(
-      billingPeriod,
-      clientContractLine,
-      resolvedBillingCycle,
-      recurringTimingSelection,
-      recurringTimingSelectionSource,
-    );
+    const timingResolution: ResolvedRecurringChargeTiming | null = projectTarget
+      ? {
+          duePosition: "arrears",
+          servicePeriodStart: billingPeriod.startDate,
+          servicePeriodEnd: billingPeriod.endDate,
+          servicePeriodStartExclusive: billingPeriod.startDate,
+          servicePeriodEndExclusive: billingPeriod.endDate,
+          coverageRatio: 1,
+        }
+      : this.resolveServiceDrivenChargeTiming(
+          billingPeriod,
+          clientContractLine,
+          resolvedBillingCycle,
+          recurringTimingSelection,
+          recurringTimingSelectionSource,
+        );
     if (!timingResolution) {
       return [];
     }
@@ -3172,8 +3851,6 @@ export class BillingEngine {
       .where({
         "time_entries.tenant": client.tenant,
       })
-      .where("time_entries.start_time", ">=", servicePeriodStartExclusive)
-      .where("time_entries.end_time", "<", servicePeriodEndExclusive)
       .where("time_entries.invoiced", false)
       .whereIn("time_entries.service_id", configuredServiceIds)
       .where(function (this: Knex.QueryBuilder) {
@@ -3211,8 +3888,27 @@ export class BillingEngine {
           clientId,
         );
       })
-      .where("time_entries.approval_status", "APPROVED")
-      .select(
+      .where("time_entries.approval_status", "APPROVED");
+
+    if (projectTarget) {
+      query.where("projects.project_id", projectTarget.projectId);
+    } else {
+      query
+        .where("time_entries.start_time", ">=", servicePeriodStartExclusive)
+        .where("time_entries.end_time", "<", servicePeriodEndExclusive);
+    }
+
+    const fixedPriceProjectIds = projectBillingContext?.configs
+      .filter((config) => config.billing_model === "fixed_price")
+      .map((config) => config.project_id) ?? [];
+    if (fixedPriceProjectIds.length > 0) {
+      query.where(function (this: Knex.QueryBuilder) {
+        this.whereNull("projects.project_id")
+          .orWhereNotIn("projects.project_id", fixedPriceProjectIds);
+      });
+    }
+
+    query.select(
         "time_entries.*",
         "service_catalog.service_name",
         "service_catalog.default_rate",
@@ -3221,6 +3917,8 @@ export class BillingEngine {
         this.knex.raw(
           "COALESCE(project_tasks.task_name, tickets.title) as work_item_name",
         ),
+        "project_phases.phase_id as project_phase_id",
+        "projects.project_id as project_id",
       );
 
     const timeEntries = await query;
@@ -3285,13 +3983,23 @@ export class BillingEngine {
           entry.custom_rate ??
           userTypeRate ??
           (entry.currency_rate != null ? Number(entry.currency_rate) : undefined);
-        if (resolvedRate === undefined) {
+        const phaseOverride = this.resolveProjectPhaseRateOverride(
+          projectBillingContext ?? null,
+          entry.project_phase_id,
+          entry.service_id,
+        );
+        if (resolvedRate === undefined && phaseOverride?.rate === undefined) {
           throw new Error(
             `Missing pricing for time entry on service "${entry.service_name}" (${entry.service_id}) in ${contractCurrency}. ` +
               `Add a ${contractCurrency} price in the service catalog or set a custom rate on the time entry / contract line.`,
           );
         }
-        const rate = Math.ceil(Number(resolvedRate) || 0);
+        const effectiveServiceId = phaseOverride?.override_service_id ?? entry.service_id;
+        const effectiveServiceName = phaseOverride?.override_service_name ?? entry.service_name;
+        const effectiveTaxRateId = phaseOverride?.override_tax_rate_id ?? entry.tax_rate_id;
+        const rate = Math.ceil(
+          phaseOverride?.rate ?? (Number(resolvedRate) || 0),
+        );
 
         // Check for overtime if applicable
         let total = Math.round(duration * rate);
@@ -3314,8 +4022,8 @@ export class BillingEngine {
         // Pass a minimal service object containing the necessary IDs
         const { taxRegion: serviceTaxRegion, isTaxable } =
           await this.getTaxInfoFromService({
-            service_id: entry.service_id,
-            tax_rate_id: entry.tax_rate_id, // Pass the fetched tax_rate_id
+            service_id: effectiveServiceId,
+            tax_rate_id: effectiveTaxRateId,
           });
 
         // Calculate tax amount (will be recalculated later in invoiceService, but set initial values)
@@ -3348,9 +4056,13 @@ export class BillingEngine {
           }
         }
 
+        const projectConfig = entry.project_id
+          ? projectBillingContext?.configsByProjectId.get(entry.project_id)
+          : undefined;
+
         return {
-          serviceId: entry.service_id,
-          serviceName: entry.service_name,
+          serviceId: effectiveServiceId,
+          serviceName: effectiveServiceName,
           config_id: serviceConfig?.config.config_id,
           client_contract_line_id: clientContractLine.client_contract_line_id,
           userId: entry.user_id,
@@ -3372,6 +4084,14 @@ export class BillingEngine {
             clientContractLine.client_contract_id || undefined,
           contract_name: clientContractLine.contract_name || undefined,
           location_id: clientContractLine.location_id ?? null,
+          ...(projectConfig?.billing_model === "time_and_materials"
+            ? {
+                project_id: projectConfig.project_id,
+                project_name: projectConfig.project_name,
+                project_number: projectConfig.project_number,
+                project_billing_config_id: projectConfig.config_id,
+              }
+            : {}),
         };
       },
     );
@@ -4009,6 +4729,8 @@ export class BillingEngine {
     clientId: string,
     billingPeriod: IBillingPeriod,
     currencyCode: string,
+    projectId?: string,
+    projectBillingContext?: ProjectBillingContext,
   ): Promise<IProductCharge[]> {
     await this.initKnex();
     if (!this.tenant) {
@@ -4031,55 +4753,82 @@ export class BillingEngine {
     let materialRows: any[] = [];
 
     try {
-      const ticketMaterialsQuery = db.table("ticket_materials as tm")
-        .select([
-          this.knex.raw(`'ticket' as source_type`),
-          "tm.ticket_material_id as source_id",
-          "tm.service_id",
-          "tm.quantity",
-          "tm.rate",
-          "tm.currency_code",
-          "tm.description",
-          "tm.created_at",
-          "sc.service_name",
-          "sc.tax_rate_id",
-        ]);
-      db.tenantJoin(ticketMaterialsQuery, "service_catalog as sc", "tm.service_id", "sc.service_id");
-      const projectMaterialsQuery = db.table("project_materials as pm")
-        .select([
-          this.knex.raw(`'project' as source_type`),
-          "pm.project_material_id as source_id",
-          "pm.service_id",
-          "pm.quantity",
-          "pm.rate",
-          "pm.currency_code",
-          "pm.description",
-          "pm.created_at",
-          "sc.service_name",
-          "sc.tax_rate_id",
-        ]);
-      db.tenantJoin(projectMaterialsQuery, "service_catalog as sc", "pm.service_id", "sc.service_id");
+      if (projectId) {
+        const projectMaterialsQuery = db.table("project_materials as pm")
+          .select([
+            this.knex.raw(`'project' as source_type`),
+            "pm.project_material_id as source_id",
+            "pm.project_id",
+            "pm.service_id",
+            "pm.quantity",
+            "pm.rate",
+            "pm.currency_code",
+            "pm.description",
+            "pm.created_at",
+            "sc.service_name",
+            "sc.tax_rate_id",
+          ]);
+        db.tenantJoin(projectMaterialsQuery, "service_catalog as sc", "pm.service_id", "sc.service_id");
+        materialRows = await projectMaterialsQuery.where({
+          "pm.tenant": tenant,
+          "pm.client_id": clientId,
+          "pm.project_id": projectId,
+          "pm.is_billed": false,
+          "pm.currency_code": currencyCode,
+        });
+      } else {
+        const ticketMaterialsQuery = db.table("ticket_materials as tm")
+          .select([
+            this.knex.raw(`'ticket' as source_type`),
+            "tm.ticket_material_id as source_id",
+            this.knex.raw("NULL as project_id"),
+            "tm.service_id",
+            "tm.quantity",
+            "tm.rate",
+            "tm.currency_code",
+            "tm.description",
+            "tm.created_at",
+            "sc.service_name",
+            "sc.tax_rate_id",
+          ]);
+        db.tenantJoin(ticketMaterialsQuery, "service_catalog as sc", "tm.service_id", "sc.service_id");
+        const projectMaterialsQuery = db.table("project_materials as pm")
+          .select([
+            this.knex.raw(`'project' as source_type`),
+            "pm.project_material_id as source_id",
+            "pm.project_id",
+            "pm.service_id",
+            "pm.quantity",
+            "pm.rate",
+            "pm.currency_code",
+            "pm.description",
+            "pm.created_at",
+            "sc.service_name",
+            "sc.tax_rate_id",
+          ]);
+        db.tenantJoin(projectMaterialsQuery, "service_catalog as sc", "pm.service_id", "sc.service_id");
 
-      materialRows = await ticketMaterialsQuery
-        .where({
-          "tm.tenant": tenant,
-          "tm.client_id": clientId,
-          "tm.is_billed": false,
-          "tm.currency_code": currencyCode,
-        })
-        .where("tm.created_at", ">=", billingPeriod.startDate)
-        .andWhere("tm.created_at", "<", billingPeriod.endDate)
-        .unionAll([
-          projectMaterialsQuery
-            .where({
-              "pm.tenant": tenant,
-              "pm.client_id": clientId,
-              "pm.is_billed": false,
-              "pm.currency_code": currencyCode,
-            })
-            .where("pm.created_at", ">=", billingPeriod.startDate)
-            .andWhere("pm.created_at", "<", billingPeriod.endDate),
-        ]);
+        materialRows = await ticketMaterialsQuery
+          .where({
+            "tm.tenant": tenant,
+            "tm.client_id": clientId,
+            "tm.is_billed": false,
+            "tm.currency_code": currencyCode,
+          })
+          .where("tm.created_at", ">=", billingPeriod.startDate)
+          .andWhere("tm.created_at", "<", billingPeriod.endDate)
+          .unionAll([
+            projectMaterialsQuery
+              .where({
+                "pm.tenant": tenant,
+                "pm.client_id": clientId,
+                "pm.is_billed": false,
+                "pm.currency_code": currencyCode,
+              })
+              .where("pm.created_at", ">=", billingPeriod.startDate)
+              .andWhere("pm.created_at", "<", billingPeriod.endDate),
+          ]);
+      }
     } catch (err: any) {
       if (err?.code === "42P01") {
         return [];
@@ -4128,6 +4877,9 @@ export class BillingEngine {
         }
 
         const description = row.description || row.service_name || "Material";
+        const projectConfig = row.source_type === "project" && row.project_id
+          ? projectBillingContext?.configsByProjectId.get(row.project_id)
+          : undefined;
 
         return {
           type: "product",
@@ -4143,6 +4895,14 @@ export class BillingEngine {
           servicePeriodStart: billingPeriod.startDate,
           servicePeriodEnd: billingPeriod.endDate,
           billingTiming: "arrears",
+          ...(projectConfig?.billing_model === "time_and_materials"
+            ? {
+                project_id: projectConfig.project_id,
+                project_name: projectConfig.project_name,
+                project_number: projectConfig.project_number,
+                project_billing_config_id: projectConfig.config_id,
+              }
+            : {}),
         };
       },
     );

@@ -12,6 +12,8 @@ import ClientContractLine from '../models/clientContractLine';
 import { applyCreditToInvoice } from './creditActions';
 import { IInvoiceCharge, InvoiceViewModel, DiscountType } from '@alga-psa/types';
 import { BillingEngine } from '../lib/billing/billingEngine';
+import ProjectBillingCapUsage from '../models/projectBillingCapUsage';
+import ProjectBillingScheduleEntry from '../models/projectBillingScheduleEntry';
 import { persistInvoiceCharges, persistManualInvoiceCharges } from '../services/invoiceService'; // Import persistManualInvoiceCharges
 import Invoice from '@alga-psa/billing/models/invoice';
 import { v4 as uuidv4 } from 'uuid';
@@ -89,6 +91,309 @@ function classifyInvoiceCreditHandling(invoice: {
   }
 
   return 'standard';
+}
+
+type ProjectCapRollbackDelta = {
+  configId: string;
+  billed: number;
+  writtenDown: number;
+  notifiedThresholds?: number[];
+};
+
+function normalizeTransactionMetadata(value: unknown): Record<string, any> {
+  if (value && typeof value === 'object') {
+    return value as Record<string, any>;
+  }
+  if (typeof value === 'string') {
+    try {
+      const parsed = JSON.parse(value);
+      return parsed && typeof parsed === 'object' ? parsed : {};
+    } catch {
+      return {};
+    }
+  }
+  return {};
+}
+
+async function rollbackProjectBillingForInvoice(
+  trx: Knex.Transaction,
+  tenant: string,
+  invoiceId: string,
+): Promise<void> {
+  const invoicedEntries = await tenantScopedTable(trx, tenant, 'project_billing_schedule_entries')
+    .where({ invoice_id: invoiceId, status: 'invoiced' })
+    .select('schedule_entry_id');
+
+  for (const entry of invoicedEntries) {
+    const transitioned = await ProjectBillingScheduleEntry.transitionStatus(
+      entry.schedule_entry_id,
+      'invoiced',
+      'approved',
+      {
+        invoice_id: null,
+        invoice_charge_id: null,
+      },
+      trx,
+    );
+    if (!transitioned) {
+      throw new Error(
+        `Project billing schedule entry ${entry.schedule_entry_id} could not be reverted`,
+      );
+    }
+  }
+
+  const invoiceTransactions = await tenantScopedTable(trx, tenant, 'transactions')
+    .where({ invoice_id: invoiceId, type: 'invoice_generated' })
+    .select('transaction_id', 'metadata');
+
+  for (const invoiceTransaction of invoiceTransactions) {
+    const metadata = normalizeTransactionMetadata(invoiceTransaction.metadata);
+    if (metadata.project_billing_cap_rolled_back === true) {
+      continue;
+    }
+    const deltas = Array.isArray(metadata.project_billing_cap_deltas)
+      ? metadata.project_billing_cap_deltas as ProjectCapRollbackDelta[]
+      : [];
+    if (deltas.length === 0) {
+      continue;
+    }
+
+    for (const delta of deltas) {
+      await ProjectBillingCapUsage.ensureRow(delta.configId, trx);
+      const usage = await ProjectBillingCapUsage.getForUpdate(delta.configId, trx);
+      if (!usage) {
+        throw new Error(`Project billing cap usage ${delta.configId} could not be locked`);
+      }
+      const billedRollback = Math.min(usage.billed_amount, Number(delta.billed) || 0);
+      const writtenDownRollback = Math.min(
+        usage.written_down_amount,
+        Number(delta.writtenDown) || 0,
+      );
+      await ProjectBillingCapUsage.increment(
+        delta.configId,
+        { billed: -billedRollback, writtenDown: -writtenDownRollback },
+        trx,
+      );
+
+      const notifiedThresholds = new Set(delta.notifiedThresholds ?? []);
+      if (notifiedThresholds.size > 0) {
+        await tenantScopedTable(trx, tenant, 'project_billing_cap_usage')
+          .where({ config_id: delta.configId })
+          .update({
+            notified_thresholds: JSON.stringify(
+              usage.notified_thresholds.filter(
+                (threshold) => !notifiedThresholds.has(threshold),
+              ),
+            ),
+            updated_at: new Date().toISOString(),
+          });
+      }
+    }
+
+    await tenantScopedTable(trx, tenant, 'transactions')
+      .where({ transaction_id: invoiceTransaction.transaction_id })
+      .update({
+        metadata: {
+          ...metadata,
+          project_billing_cap_rolled_back: true,
+        },
+      });
+  }
+}
+
+type ProjectDepositCreditEvent = {
+  creditNoteId: string;
+  clientId: string;
+  createdAt: string;
+  createdByUserId: string;
+  amount: number;
+  currency: string;
+  projectId: string;
+};
+
+async function issueProjectDepositCreditsForInvoice(
+  knex: Knex,
+  tenant: string,
+  invoice: any,
+  userId: string,
+): Promise<ProjectDepositCreditEvent[]> {
+  return withTransaction(knex, async (trx: Knex.Transaction) => {
+    const projectDeposit = await tenantScopedTable(
+      trx,
+      tenant,
+      'project_billing_schedule_entries',
+    )
+      .where({
+        invoice_id: invoice.invoice_id,
+        entry_type: 'deposit',
+        status: 'invoiced',
+      })
+      .first('schedule_entry_id');
+    if (!projectDeposit) {
+      return [];
+    }
+
+    const db = tenantDb(trx, tenant);
+    const depositsQuery = db.table('project_billing_schedule_entries as entry');
+    db.tenantJoin(depositsQuery, 'project_billing_configs as config', 'entry.config_id', 'config.config_id');
+    db.tenantJoin(depositsQuery, 'invoice_charges as charge', 'entry.invoice_charge_id', 'charge.item_id');
+    const deposits = await depositsQuery
+      .where({
+        'entry.invoice_id': invoice.invoice_id,
+        'entry.entry_type': 'deposit',
+        'entry.status': 'invoiced',
+        'config.deposit_treatment': 'credit',
+      })
+      .select('config.project_id')
+      .sum({ amount: 'charge.net_amount' })
+      .groupBy('config.project_id');
+
+    if (deposits.length === 0) {
+      return [];
+    }
+
+    const client = await tenantScopedTable(trx, tenant, 'clients')
+      .where({ client_id: invoice.client_id })
+      .forUpdate()
+      .first('credit_balance');
+    if (!client) {
+      throw new Error(`Client ${invoice.client_id} not found`);
+    }
+
+    const clientSettings = await tenantScopedTable(trx, tenant, 'client_billing_settings')
+      .where({ client_id: invoice.client_id })
+      .first();
+    const defaultSettings = await tenantScopedTable(trx, tenant, 'default_billing_settings')
+      .first();
+    const expirationDays = clientSettings?.credit_expiration_days
+      ?? defaultSettings?.credit_expiration_days;
+    const expirationEnabled = clientSettings?.enable_credit_expiration
+      ?? defaultSettings?.enable_credit_expiration
+      ?? true;
+    const now = new Date().toISOString();
+    let expirationDate: string | null = null;
+    if (expirationEnabled && Number(expirationDays) > 0) {
+      const expiresAt = new Date(now);
+      expiresAt.setDate(expiresAt.getDate() + Number(expirationDays));
+      expirationDate = expiresAt.toISOString();
+    }
+
+    let balance = Number(client.credit_balance ?? 0);
+    const events: ProjectDepositCreditEvent[] = [];
+    for (const deposit of deposits) {
+      const projectId = String(deposit.project_id);
+      const amount = Number(deposit.amount ?? 0);
+      if (!Number.isSafeInteger(amount) || amount <= 0) {
+        continue;
+      }
+
+      const existing = await tenantScopedTable(trx, tenant, 'transactions')
+        .where({
+          invoice_id: invoice.invoice_id,
+          type: 'credit_issuance',
+        })
+        .whereRaw("metadata->>'project_billing_credit_kind' = ?", ['project_deposit'])
+        .whereRaw("metadata->>'project_id' = ?", [projectId])
+        .first('transaction_id');
+      if (existing) {
+        continue;
+      }
+
+      balance += amount;
+      const transactionId = uuidv4();
+      await tenantScopedTable(trx, tenant, 'transactions').insert({
+        transaction_id: transactionId,
+        client_id: invoice.client_id,
+        invoice_id: invoice.invoice_id,
+        amount,
+        type: 'credit_issuance',
+        status: 'completed',
+        description: `Project deposit credit from invoice ${invoice.invoice_number}`,
+        created_at: now,
+        balance_after: balance,
+        tenant,
+        expiration_date: expirationDate,
+        currency_code: invoice.currency_code ?? 'USD',
+        metadata: {
+          project_billing_credit_kind: 'project_deposit',
+          project_id: projectId,
+        },
+      });
+
+      const creditNoteId = uuidv4();
+      await tenantScopedTable(trx, tenant, 'credit_tracking').insert({
+        credit_id: creditNoteId,
+        tenant,
+        client_id: invoice.client_id,
+        transaction_id: transactionId,
+        amount,
+        remaining_amount: amount,
+        created_at: now,
+        expiration_date: expirationDate,
+        is_expired: false,
+        updated_at: now,
+        currency_code: invoice.currency_code ?? 'USD',
+      });
+
+      events.push({
+        creditNoteId,
+        clientId: invoice.client_id,
+        createdAt: now,
+        createdByUserId: userId,
+        amount,
+        currency: String(invoice.currency_code ?? 'USD'),
+        projectId,
+      });
+    }
+
+    if (events.length > 0) {
+      await tenantScopedTable(trx, tenant, 'clients')
+        .where({ client_id: invoice.client_id })
+        .update({ credit_balance: balance, updated_at: now });
+    }
+
+    return events;
+  });
+}
+
+async function rollbackProjectDepositCreditsForInvoice(
+  trx: Knex.Transaction,
+  tenant: string,
+  invoiceId: string,
+  clientId: string,
+): Promise<void> {
+  const transactions = await tenantScopedTable(trx, tenant, 'transactions')
+    .where({ invoice_id: invoiceId, type: 'credit_issuance' })
+    .whereRaw("metadata->>'project_billing_credit_kind' = ?", ['project_deposit'])
+    .select('transaction_id');
+
+  let balanceRollback = 0;
+  for (const transaction of transactions) {
+    const credit = await tenantScopedTable(trx, tenant, 'credit_tracking')
+      .where({ transaction_id: transaction.transaction_id })
+      .first();
+    if (credit && Number(credit.remaining_amount) !== Number(credit.amount)) {
+      throw expectedInvoiceActionError(
+        `Cannot reopen invoice ${invoiceId}: its project deposit credit has already been used.`,
+      );
+    }
+    if (credit) {
+      balanceRollback += Number(credit.remaining_amount ?? 0);
+      await tenantScopedTable(trx, tenant, 'credit_tracking')
+        .where({ credit_id: credit.credit_id })
+        .delete();
+    }
+    await tenantScopedTable(trx, tenant, 'transactions')
+      .where({ transaction_id: transaction.transaction_id })
+      .delete();
+  }
+
+  if (balanceRollback > 0) {
+    await tenantScopedTable(trx, tenant, 'clients')
+      .where({ client_id: clientId })
+      .decrement('credit_balance', balanceRollback)
+      .update({ updated_at: new Date().toISOString() });
+  }
 }
 
 async function hasCanonicalRecurringDetailPeriodsForInvoice(
@@ -377,6 +682,7 @@ export async function finalizeInvoiceWithKnex(
   userId: string
 ): Promise<void> {
   let invoice: any;
+  let projectDepositCreditEvents: ProjectDepositCreditEvent[] = [];
   let createdCreditNote: {
     creditNoteId: string;
     clientId: string;
@@ -656,6 +962,15 @@ export async function finalizeInvoiceWithKnex(
     }
   }
 
+  if (invoice) {
+    projectDepositCreditEvents = await issueProjectDepositCreditsForInvoice(
+      knex,
+      tenant,
+      invoice,
+      userId,
+    );
+  }
+
   if (createdCreditNote) {
     if (createdCreditNote.sourceDocumentKind === 'negative_invoice') {
       // Negative-invoice credit notes inherit date meaning from the source
@@ -711,6 +1026,33 @@ export async function finalizeInvoiceWithKnex(
     });
   }
 
+  for (const event of projectDepositCreditEvents) {
+    await publishWorkflowEvent({
+      eventType: 'CREDIT_NOTE_CREATED',
+      payload: buildCreditNoteCreatedPayload({
+        creditNoteId: event.creditNoteId,
+        clientId: event.clientId,
+        createdByUserId: event.createdByUserId,
+        createdAt: event.createdAt,
+        amount: event.amount,
+        currency: event.currency,
+        status: 'issued',
+        sourceInvoiceId: invoice.invoice_id,
+        sourceInvoiceNumber: invoice.invoice_number ?? null,
+        sourceInvoiceStatus: invoice.status ?? null,
+        sourceInvoiceDateBasis: 'financial_document_date',
+        sourceServicePeriodStart: null,
+        sourceServicePeriodEnd: null,
+      }),
+      ctx: {
+        tenantId: tenant,
+        occurredAt: event.createdAt,
+        actor: { actorType: 'USER', actorUserId: event.createdByUserId },
+      },
+      idempotencyKey: `credit_note_created:${event.creditNoteId}`,
+    });
+  }
+
   // Auto-export producer (accounting sync): fire-and-forget, never blocks finalize.
   await enqueueInvoiceAutoExport(knex, tenant, invoiceId);
 }
@@ -754,6 +1096,13 @@ export const unfinalizeInvoice = withAuth(async (
       return;
     }
 
+    await rollbackProjectDepositCreditsForInvoice(
+      trx,
+      tenant,
+      invoiceId,
+      invoice.client_id,
+    );
+
     // When unfinalizing make sure the invoice returns to draft status even if some
     // environments only toggle the status flag without storing finalized_at.
     const updatedFields: Record<string, unknown> = {
@@ -770,6 +1119,8 @@ export const unfinalizeInvoice = withAuth(async (
         invoice_id: invoiceId
       })
       .update(updatedFields);
+
+    await rollbackProjectBillingForInvoice(trx, tenant, invoiceId);
 
     // Record audit log
     // await auditLog(
@@ -1303,6 +1654,13 @@ export const hardDeleteInvoice = withAuth(async (
       );
     }
 
+    await rollbackProjectDepositCreditsForInvoice(
+      trx,
+      tenant,
+      invoiceId,
+      invoice.client_id,
+    );
+
     // 2. Handle payments
     const payments = await tenantScopedTable(trx, tenant, 'transactions')
       .where({
@@ -1420,6 +1778,8 @@ export const hardDeleteInvoice = withAuth(async (
             .delete();
     }
 
+
+    await rollbackProjectBillingForInvoice(trx, tenant, invoiceId);
 
     // 4. Unmark time entries
     await tenantScopedTable(trx, tenant, 'time_entries')

@@ -374,6 +374,13 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
           servicePeriodEnd: summaryEnd,
           billingTiming: summaryBillingTiming,
           recurringDetailPeriods: normalizedDetailPeriods,
+          ...((item as any).item_type === 'project'
+            ? {
+                category: (item as any).category ?? undefined,
+                itemType: 'project' as const,
+                projectPhaseName: (item as any).project_phase_name ?? null,
+              }
+            : {}),
           location_id: item.location_id ?? null,
           location: null,
         };
@@ -393,6 +400,14 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
           address: String(dbData.client?.address ?? 'N/A'),
         },
         poNumber: (dbData as any).po_number ?? null,
+        ...((dbData as any).project_name
+          ? {
+              projectName: String((dbData as any).project_name),
+              projectNumber: (dbData as any).project_number
+                ? String((dbData as any).project_number)
+                : null,
+            }
+          : {}),
         recurringServicePeriodStart: recurringServicePeriodSummary.recurringServicePeriodStart,
         recurringServicePeriodEnd: recurringServicePeriodSummary.recurringServicePeriodEnd,
         recurringServicePeriodLabel: recurringServicePeriodSummary.recurringServicePeriodLabel,
@@ -404,6 +419,10 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
         taxSource: dbData.tax_source || 'internal',
         currencyCode: (dbData as any).currency_code || (dbData as any).currencyCode || 'USD',
       };
+      Object.defineProperty(viewModel, '__invoiceId', {
+        value: (dbData as any).invoice_id ?? null,
+        enumerable: false,
+      });
     }
     // Check if the input data is already in WasmInvoiceViewModel format
     else if (typeof inputData.invoiceNumber !== 'undefined' && typeof inputData.customer !== 'undefined' && typeof inputData.items !== 'undefined') {

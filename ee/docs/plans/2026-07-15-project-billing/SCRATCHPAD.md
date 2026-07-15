@@ -122,3 +122,75 @@
 - `packages/billing` typecheck has exactly ONE pre-existing error (also present on main / parent checkout): `quoteActions.ts(32)` TS2307 `@alga-psa/opportunities/lib/quoteLifecycleHooks`. Wave verification = "no NEW errors vs this baseline", not zero errors.
 - `packages/projects` typecheck baseline: clean (0 errors).
 - Wave 1 review fix: composite (tenant, X) FKs in the new migrations were rewritten to version-guarded column-targeted `ON DELETE SET NULL (col)` — bare SET NULL on composite FKs nulls the tenant column (repo-wide fix precedent: 20260611150000). `IProjectPhase.completed_at` made optional (`?:`) so existing construction sites don't break.
+
+## Wave 3b report
+
+### Files created
+
+- `packages/billing/src/actions/projectBillingConfigActions.ts`
+- `packages/billing/src/actions/projectBillingScheduleActions.ts`
+- `packages/client-portal/src/actions/client-portal-actions/client-project-billing.ts`
+
+### Files updated
+
+- `packages/billing/src/actions/index.ts`
+- `packages/projects/src/actions/projectActions.ts`
+- `packages/client-portal/src/actions/client-portal-actions/index.ts`
+- `ee/docs/plans/2026-07-15-project-billing/features.json` (F045–F059 and F152–F154 only)
+- `ee/docs/plans/2026-07-15-project-billing/SCRATCHPAD.md`
+
+### Decisions
+
+- `@alga-psa/projects` has no dependency on `@alga-psa/billing`. Phase completion/readiness and project-close cancellation therefore use tenant-scoped SQL inside the existing project transaction instead of adding a projects → billing feature dependency. The readiness updates retain the service's optimistic `status = 'pending'` predicate; reopen similarly changes only `status = 'ready'` rows.
+- The cancellation hook lives in `updateProject`, immediately after the new project status is resolved. A transition from non-closed to any `statuses.is_closed = true` status cancels pending/ready/approved schedule entries atomically. The returned project gains optional `deposit_reconciliation_needed`; its value compares authoritative linked `invoice_charges.total_price` for invoiced deposits and milestones, with schedule values only as a legacy fallback.
+- Billing mutations mirror invoice generation RBAC exactly: `invoice:create` OR `invoice:generate`. Overview/queue reads use `billing:read`. Phase complete/reopen use only `project:update`, so project managers do not need billing permissions.
+- Config currency resolution mirrors `billingCurrencyActions`: active contract currency, then `clients.default_currency_code`, then the tenant billing default. Economics reuse the profitability report's cost rules: actual elapsed time at effective user/default cost rates, and actual inventory COGS with catalog-cost fallback.
+- A `total_price` edit remains non-blocking and returns a serialized `allocation_warning` extra field when the updated schedule is not balanced, while preserving the locked `Promise<IProjectBillingConfig>` signature. Final-entry approval is the point that blocks an imbalanced schedule; earlier approvals return their contracted warning.
+- A phase-triggered entry whose FK was nulled by phase deletion is exposed and handled as a manual trigger while retaining `phase_deleted: true`, allowing `markEntryReady` to provide the required fallback behavior.
+- The client portal summary lives in the client-portal action layer, verifies a client user through contact → client ownership in the project query, and returns a disabled summary unless the raw JSONB `show_billing` value is exactly true. It imports only the billing service's pure authoritative allocation math.
+
+### Surprises and incompletes
+
+- The Wave 1 schedule table has no hold-reason column. `holdScheduleEntry` and bulk hold require a non-empty reason, but cannot persist it; no schema was expanded in this wave.
+- The locked update-config return type has no warning property. The runtime object includes `allocation_warning`, but the property is intentionally not added to `IProjectBillingConfig` or `CONTRACTS.md`.
+- F143 remains `implemented: false`: its backend action is complete, but the feature description includes the client portal UI, which belongs to the portal UI lane. F144/F145 (typed/default config and toggle UI) were not changed.
+- `packages/billing` typecheck reports only the documented pre-existing `quoteActions.ts(32)` TS2307 for `@alga-psa/opportunities/lib/quoteLifecycleHooks`. `packages/client-portal` inherits that same error and has its own pre-existing import of the same missing module in `client-billing.ts`; neither package reports a Wave 3b error. `packages/projects` typechecks cleanly.
+
+### Verification
+
+- `cd packages/projects && npx tsc --noEmit -p .` — pass.
+- `cd packages/billing && npx tsc --noEmit -p .` — no new errors; one documented baseline TS2307.
+- `cd packages/client-portal && npx tsc --noEmit -p .` — no new errors; only the inherited/documented TS2307 occurrences.
+- `cd packages/projects && npx vitest run src/actions/projectActionsTenantScoped.contract.test.ts src/actions/projectAuthorization.contract.test.ts src/actions/projectPhaseStatusActions.contract.test.ts` — 3 files / 13 tests passed.
+
+## Wave 3a report
+
+### Files updated
+
+- `packages/billing/src/lib/billing/billingEngine.ts`
+- `packages/billing/src/actions/invoiceGeneration.ts`
+- `packages/billing/src/actions/invoiceModification.ts`
+- `packages/billing/src/actions/creditActions.ts`
+- `packages/billing/src/actions/invoiceQueries.ts`
+- `packages/billing/src/lib/adapters/invoiceAdapters.ts`
+- `packages/billing/src/lib/adapters/invoiceAdapters.server.ts`
+- `packages/types/src/lib/invoice-renderer/types.ts`
+- `ee/docs/plans/2026-07-15-project-billing/features.json` (F067–F079 and F085–F092 only)
+- `ee/docs/plans/2026-07-15-project-billing/SCRATCHPAD.md`
+
+### Decisions
+
+- Project billing is gated by a client-scoped `project_billing_configs` lookup. When it returns no rows, the engine retains the legacy calculator call shapes and returns the pre-feature result object without project fields. Fixed-price filters, phase joins, cap processing, and project grouping activate only with a matching config.
+- Schedule charge amounts come from `computeEntryAmounts`; `deduct_final` uses `computeDepositReconciliation`. Recurring runs accept only recurring-mode configs, while `calculateProjectBilling` targets one standalone project and optionally one supplied entry-id set. Standalone T&M also selects all of that project's uninvoiced approved time and materials without date-window truncation.
+- Project T&M phase overrides resolve an exact service override before the phase-wide null-service override. The selected override replaces the rate and, when configured, the emitted service identity/tax source. Fixed-price project time is excluded from both contract-associated and unresolved calculators.
+- Cap previews remain read-only. Persistence re-evaluates each project cap after `getForUpdate` in the invoice transaction, handles hard-cap straddles with `computeCapWriteDown`, atomically records billed/write-down deltas and notify-only threshold crossings, and stores reversible invoice metadata. Unfinalize and hard-delete restore schedule entries and reverse those deltas.
+- Milestone/deposit invoice charges and the optimistic approved-to-invoiced entry transition share the existing invoice persistence transaction. `generateProjectInvoice` reuses `createInvoiceFromBillingResult` and only adds `invoices.project_id` for its standalone path.
+- Credit-treatment deposits issue normal client-credit ledger/tracking records at finalization with project earmarks in transaction metadata. The existing credit application path prefers matching earmarked credit for a later standalone invoice carrying that project id.
+- Recurring preview grouping mirrors contract grouping with synthetic `Project: <name>` bundle headers. Rendering enrichment supplies invoice-level project name/number and per-line project category/phase for the designer action path and the server-side PDF path; the internal PDF lookup id is non-enumerable so ordinary render payloads do not change.
+
+### Verification
+
+- `npx tsc --noEmit -p packages/types/tsconfig.json --pretty false` — pass.
+- `npx tsc --noEmit -p packages/billing/tsconfig.json --pretty false` — no new errors; only the documented baseline `quoteActions.ts(32)` TS2307 for `@alga-psa/opportunities/lib/quoteLifecycleHooks`.
+- From `server/`, the consolidated focused Vitest run covering billing-engine timing/end-exclusive/unresolved/product/license behavior, persisted recurring selection/execution, invoice generation preview/finalization/selection, invoice deletion guards, credit application/finalization/service-period behavior, and the invoice adapter — 17 files / 115 tests passed.
+- `git diff --check` — pass.

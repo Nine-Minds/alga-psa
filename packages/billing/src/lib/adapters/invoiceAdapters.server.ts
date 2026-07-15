@@ -25,6 +25,94 @@ const buildLocationAddressBlock = (location: WasmInvoiceLineItemLocation | null)
   return lines.length > 0 ? lines.join('\n') : null;
 };
 
+async function enrichInvoiceViewModelWithProjects(
+  knexOrTrx: Knex | Knex.Transaction,
+  tenant: string,
+  viewModel: WasmInvoiceViewModel,
+): Promise<void> {
+  const invoiceId = (viewModel as WasmInvoiceViewModel & {
+    __invoiceId?: string | null;
+  }).__invoiceId;
+  if (!invoiceId) return;
+
+  try {
+    const db = tenantDb(knexOrTrx, tenant);
+    const invoiceProjectQuery = db.table('invoices as invoice');
+    db.tenantJoin(
+      invoiceProjectQuery,
+      'projects as project',
+      'invoice.project_id',
+      'project.project_id',
+      { type: 'left' },
+    );
+    const invoiceProject = await invoiceProjectQuery
+      .where('invoice.invoice_id', invoiceId)
+      .first(
+        'invoice.project_id',
+        'project.project_name',
+        'project.project_number',
+      );
+
+    const scheduleLinesQuery = db.table('project_billing_schedule_entries as entry');
+    db.tenantJoin(scheduleLinesQuery, 'project_billing_configs as config', 'entry.config_id', 'config.config_id');
+    db.tenantJoin(scheduleLinesQuery, 'projects as project', 'config.project_id', 'project.project_id');
+    db.tenantJoin(scheduleLinesQuery, 'project_phases as phase', 'entry.phase_id', 'phase.phase_id', { type: 'left' });
+    const scheduleLines = await scheduleLinesQuery
+      .where('entry.invoice_id', invoiceId)
+      .whereNotNull('entry.invoice_charge_id')
+      .select(
+        'entry.invoice_charge_id as item_id',
+        'project.project_name',
+        'project.project_number',
+        'phase.phase_name',
+      );
+
+    const timeLinesQuery = db.table('invoice_time_entries as invoice_time');
+    db.tenantJoin(timeLinesQuery, 'time_entries as entry', 'invoice_time.entry_id', 'entry.entry_id');
+    db.tenantJoin(timeLinesQuery, 'project_tasks as task', 'entry.work_item_id', 'task.task_id', { type: 'left' });
+    db.tenantJoin(timeLinesQuery, 'project_phases as phase', 'task.phase_id', 'phase.phase_id', { type: 'left' });
+    db.tenantJoin(timeLinesQuery, 'projects as project', 'phase.project_id', 'project.project_id', { type: 'left' });
+    db.tenantJoin(timeLinesQuery, 'project_billing_configs as config', 'project.project_id', 'config.project_id');
+    const timeLines = await timeLinesQuery
+      .where('invoice_time.invoice_id', invoiceId)
+      .whereNotNull('invoice_time.item_id')
+      .where('config.billing_model', 'time_and_materials')
+      .select(
+        'invoice_time.item_id',
+        'project.project_name',
+        'project.project_number',
+        'phase.phase_name',
+      );
+
+    const projectByItemId = new Map(
+      [...scheduleLines, ...timeLines].map((line) => [String(line.item_id), line]),
+    );
+    if (invoiceProject?.project_id) {
+      const materialLines = await db.table('invoice_charges')
+        .where({ invoice_id: invoiceId, is_discount: false })
+        .whereNotNull('service_id')
+        .select('item_id');
+      for (const materialLine of materialLines) {
+        if (!projectByItemId.has(String(materialLine.item_id))) {
+          projectByItemId.set(String(materialLine.item_id), invoiceProject);
+        }
+      }
+      viewModel.projectName = invoiceProject.project_name ?? null;
+      viewModel.projectNumber = invoiceProject.project_number ?? null;
+    }
+
+    for (const item of viewModel.items ?? []) {
+      const projectLine = projectByItemId.get(item.id);
+      if (!projectLine) continue;
+      item.category = `Project: ${projectLine.project_name}`;
+      item.itemType = 'project';
+      item.projectPhaseName = projectLine.phase_name ?? null;
+    }
+  } catch (error) {
+    console.error('[enrichInvoiceViewModelWithProjects] Failed to load project billing data:', error);
+  }
+}
+
 /**
  * Resolve each line item's `location_id` against `client_locations` via a
  * single batched tenant-scoped query and attach the full location object to
@@ -35,6 +123,7 @@ export async function enrichInvoiceViewModelWithLocations(
   tenant: string,
   viewModel: WasmInvoiceViewModel,
 ): Promise<WasmInvoiceViewModel> {
+  await enrichInvoiceViewModelWithProjects(knexOrTrx, tenant, viewModel);
   const items = viewModel.items ?? [];
 
   const locationIds = Array.from(

@@ -47,6 +47,8 @@ export * from './documentTemplateActions';
 export * from './materialActions';
 export * from './paymentActions';
 export * from './profitabilityReportActions';
+export * from './projectBillingConfigActions';
+export * from './projectBillingScheduleActions';
 export * from './quoteActions';
 export * from './renewalsQueueActions';
 export * from './serviceActions';

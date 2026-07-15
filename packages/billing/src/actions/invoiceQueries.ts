@@ -60,6 +60,93 @@ function buildInvoiceDetailServicePeriodSubquery(
   return db.tenantWhereColumn(subquery, 'ic.tenant', `${outerInvoiceAlias}.tenant`);
 }
 
+async function enrichInvoiceWithProjectRenderingData(
+  knex: Knex | Knex.Transaction,
+  tenant: string,
+  invoiceId: string,
+  invoice: InvoiceViewModel,
+): Promise<InvoiceViewModel> {
+  const db = tenantDb(knex, tenant);
+  const projectQuery = db.table('invoices as invoice');
+  db.tenantJoin(projectQuery, 'projects as project', 'invoice.project_id', 'project.project_id', { type: 'left' });
+  const project = await projectQuery
+    .where('invoice.invoice_id', invoiceId)
+    .first(
+      'invoice.project_id',
+      'project.project_name',
+      'project.project_number',
+    );
+
+  const scheduleLinesQuery = db.table('project_billing_schedule_entries as entry');
+  db.tenantJoin(scheduleLinesQuery, 'project_billing_configs as config', 'entry.config_id', 'config.config_id');
+  db.tenantJoin(scheduleLinesQuery, 'projects as project', 'config.project_id', 'project.project_id');
+  db.tenantJoin(scheduleLinesQuery, 'project_phases as phase', 'entry.phase_id', 'phase.phase_id', { type: 'left' });
+  const scheduleLines = await scheduleLinesQuery
+    .where('entry.invoice_id', invoiceId)
+    .whereNotNull('entry.invoice_charge_id')
+    .select(
+      'entry.invoice_charge_id as item_id',
+      'project.project_id',
+      'project.project_name',
+      'project.project_number',
+      'phase.phase_name',
+    );
+
+  const timeLinesQuery = db.table('invoice_time_entries as invoice_time');
+  db.tenantJoin(timeLinesQuery, 'time_entries as entry', 'invoice_time.entry_id', 'entry.entry_id');
+  db.tenantJoin(timeLinesQuery, 'project_tasks as task', 'entry.work_item_id', 'task.task_id', { type: 'left' });
+  db.tenantJoin(timeLinesQuery, 'project_phases as phase', 'task.phase_id', 'phase.phase_id', { type: 'left' });
+  db.tenantJoin(timeLinesQuery, 'projects as project', 'phase.project_id', 'project.project_id', { type: 'left' });
+  db.tenantJoin(timeLinesQuery, 'project_billing_configs as config', 'project.project_id', 'config.project_id');
+  const timeLines = await timeLinesQuery
+    .where('invoice_time.invoice_id', invoiceId)
+    .whereNotNull('invoice_time.item_id')
+    .whereNotNull('project.project_id')
+    .where('config.billing_model', 'time_and_materials')
+    .select(
+      'invoice_time.item_id',
+      'project.project_id',
+      'project.project_name',
+      'project.project_number',
+      'phase.phase_name',
+    );
+
+  const projectByItemId = new Map(
+    [...scheduleLines, ...timeLines].map((line) => [String(line.item_id), line]),
+  );
+  const invoiceCharges = invoice.invoice_charges.map((charge) => {
+    const lineProject = projectByItemId.get(charge.item_id)
+      ?? (project?.project_id && charge.service_id && charge.is_discount !== true
+        ? project
+        : null);
+    if (!lineProject) {
+      return charge;
+    }
+    return {
+      ...charge,
+      project_id: lineProject.project_id,
+      project_name: lineProject.project_name,
+      project_number: lineProject.project_number,
+      project_phase_name: lineProject.phase_name ?? null,
+      category: `Project: ${lineProject.project_name}`,
+      item_type: 'project',
+    };
+  });
+
+  const enrichedInvoice = {
+    ...invoice,
+    invoice_charges: invoiceCharges,
+  };
+  return project?.project_id
+    ? {
+        ...enrichedInvoice,
+        project_id: project.project_id,
+        project_name: project.project_name,
+        project_number: project.project_number,
+      }
+    : enrichedInvoice;
+}
+
 // Helper function to create basic invoice view model
 async function getBasicInvoiceViewModel(invoice: IInvoice, client: any): Promise<InvoiceViewModel> {
   // Debug the invoice data, especially for the problematic invoice
@@ -580,7 +667,13 @@ export const getInvoiceForRendering = withAuth(async (
 
     // Existing-invoice preview refresh and rerender must hydrate through the full
     // detail-aware reader so canonical recurring periods survive after persistence.
-    return Invoice.getFullInvoiceById(knex, tenant, invoiceId);
+    const invoice = await Invoice.getFullInvoiceById(knex, tenant, invoiceId);
+    return enrichInvoiceWithProjectRenderingData(
+      knex,
+      tenant,
+      invoiceId,
+      invoice,
+    );
   } catch (error) {
     console.error('Error fetching invoice for rendering:', error);
     throw new Error('Error fetching invoice for rendering');
@@ -597,7 +690,15 @@ export const getEnrichedInvoiceViewModel = withAuth(async (
   }
 
   const { knex } = await createTenantKnex();
-  const dbInvoiceData = await Invoice.getFullInvoiceById(knex, tenant, invoiceId);
+  const loadedInvoice = await Invoice.getFullInvoiceById(knex, tenant, invoiceId);
+  const dbInvoiceData = loadedInvoice
+    ? await enrichInvoiceWithProjectRenderingData(
+        knex,
+        tenant,
+        invoiceId,
+        loadedInvoice,
+      )
+    : null;
   if (!dbInvoiceData) {
     return null;
   }
