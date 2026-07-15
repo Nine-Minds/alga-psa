@@ -10,7 +10,8 @@ import { addManualItemsToInvoice } from '@alga-psa/billing/actions/invoiceModifi
 import type { IInvoiceCharge } from 'server/src/interfaces/invoice.interfaces';
 import { v4 as uuidv4 } from 'uuid';
 
-process.env.DB_PORT = '5432';
+process.env.DB_PORT = process.env.DB_PORT === '6432' ? '5432' : process.env.DB_PORT;
+
 process.env.DB_HOST = process.env.DB_HOST === 'pgbouncer' ? 'localhost' : process.env.DB_HOST;
 
 const {

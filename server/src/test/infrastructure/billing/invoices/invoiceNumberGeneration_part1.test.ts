@@ -19,7 +19,7 @@ import {
 
 // Override DB_PORT to connect directly to PostgreSQL instead of pgbouncer
 // This is critical for tests that use advisory locks or other features not supported by pgbouncer
-process.env.DB_PORT = '5432';
+process.env.DB_PORT = process.env.DB_PORT === '6432' ? '5432' : process.env.DB_PORT;
 process.env.DB_HOST = process.env.DB_HOST === 'pgbouncer' ? 'localhost' : process.env.DB_HOST;
 
 
@@ -80,11 +80,12 @@ vi.mock('@alga-psa/workflows/persistence', () => ({
   }
 }));
 
-vi.mock('@alga-psa/workflow-streams', () => ({
+vi.mock('@alga-psa/workflow-streams', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/workflow-streams')>()),
   getRedisStreamClient: () => ({
-    publishEvent: vi.fn()
+    publishEvent: vi.fn(),
   }),
-  toStreamEvent: (event: unknown) => event
+  toStreamEvent: (event: unknown) => event,
 }));
 
 vi.mock('server/src/lib/auth/rbac', () => ({

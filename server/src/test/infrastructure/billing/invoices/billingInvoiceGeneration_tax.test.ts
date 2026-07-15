@@ -81,11 +81,12 @@ vi.mock('@alga-psa/workflows/persistence', () => ({
   }
 }));
 
-vi.mock('@alga-psa/workflow-streams', () => ({
+vi.mock('@alga-psa/workflow-streams', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/workflow-streams')>()),
   getRedisStreamClient: () => ({
-    publishEvent: vi.fn()
+    publishEvent: vi.fn(),
   }),
-  toStreamEvent: (event: unknown) => event
+  toStreamEvent: (event: unknown) => event,
 }));
 
 vi.mock('server/src/lib/auth/rbac', () => ({
