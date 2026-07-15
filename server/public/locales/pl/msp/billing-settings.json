@@ -1,6 +1,7 @@
 {
   "tabs": {
     "general": "Ogólny",
+    "numbering": "Numeracja",
     "quoting": "Cytowanie",
     "tax": "Podatek",
     "payments": "Płatności",
@@ -27,6 +28,10 @@
     "invoiceNumbering": {
       "title": "Numeracja faktur",
       "description": "Dostosuj sposób generowania i wyświetlania numerów faktur."
+    },
+    "creditNoteNumbering": {
+      "title": "Numeracja not kredytowych",
+      "description": "Dostosuj sposób generowania i wyświetlania numerów not kredytowych."
     },
     "zeroDollar": {
       "title": "Faktury o zerowej wartości dolara",
@@ -129,6 +134,10 @@
     "quoteNumbering": {
       "title": "Numeracja cytatów",
       "description": "Dostosuj sposób generowania i wyświetlania numerów ofert."
+    },
+    "salesOrderNumbering": {
+      "title": "Numeracja zamówień sprzedaży",
+      "description": "Dostosuj sposób generowania i wyświetlania numerów zamówień sprzedaży."
     }
   },
   "tax": {

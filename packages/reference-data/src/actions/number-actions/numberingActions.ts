@@ -31,7 +31,20 @@ export const getNumberSettings = withAuth(async (_user, { tenant }, entityType: 
       .where('entity_type', entityType)
       .first();
   });
-  return settings as NumberSettings;
+  if (settings) {
+    return settings as NumberSettings;
+  }
+  // No row yet (a type whose first number hasn't been generated — the row is
+  // self-initialized on first getNextNumber). Return the effective defaults so
+  // the settings UI shows the real format read-only, like the seeded types,
+  // instead of dropping into "new settings" edit mode.
+  const defaults = NUMBERING_DEFAULTS[entityType];
+  return {
+    prefix: defaults.prefix,
+    padding_length: defaults.padding_length,
+    last_number: 0,
+    initial_value: defaults.initial_value,
+  };
 });
 
 export const updateNumberSettings = withAuth(async (
