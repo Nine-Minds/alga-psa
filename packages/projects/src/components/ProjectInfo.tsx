@@ -21,6 +21,7 @@ import { getProjectBillingOverview } from '@alga-psa/billing/actions/projectBill
 import { useTaskShareActions } from './TaskShareActionsContext';
 import { useTaskSelection } from './TaskSelectionContext';
 import { useTranslation } from 'react-i18next';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 interface ProjectBilledSummary {
@@ -63,6 +64,7 @@ export default function ProjectInfo({
   onTagsChange
 }: ProjectInfoProps) {
   const { t } = useTranslation(['features/projects', 'common']);
+  const { enabled: projectBillingUiEnabled } = useFeatureFlag('project-billing-ui', { defaultValue: false });
   const { openDrawer, closeDrawer } = useDrawer();
   const { selectedTaskIds } = useTaskSelection();
   const selectedTaskCount = selectedTaskIds.size;
@@ -281,7 +283,7 @@ export default function ProjectInfo({
         )}
 
         {/* Billed bar (F135) — only when project billing is enabled */}
-        {billedSummary && (
+        {projectBillingUiEnabled && billedSummary && (
           <ProjectBilledBar
             invoicedCents={billedSummary.invoicedCents}
             readyCents={billedSummary.readyCents}

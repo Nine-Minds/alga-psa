@@ -78,6 +78,7 @@ import type { ITeam } from '@alga-psa/types';
 import RemoveTeamDialog from './RemoveTeamDialog';
 import { useTheme } from 'next-themes';
 import { useTranslation } from 'react-i18next';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
 
 const PROJECT_VIEW_MODE_SETTING = 'project_detail_view_mode';
 const PROJECT_PHASES_PANEL_VISIBLE_SETTING = 'project_phases_panel_visible';
@@ -241,6 +242,10 @@ export default function ProjectDetail({
   onUrlUpdate
 }: ProjectDetailProps) {
   const { t } = useTranslation(['features/projects', 'common']);
+  const {
+    enabled: projectBillingUiEnabled,
+    loading: projectBillingUiLoading,
+  } = useFeatureFlag('project-billing-ui', { defaultValue: false });
   useTagPermissions(['project', 'project_task']);
   const { getDocumentCountsForEntities } = useDocumentsCrossFeature();
   const { resolvedTheme } = useTheme();
@@ -658,10 +663,10 @@ export default function ProjectDetail({
 
   // Phase → billing badge (F136) and phase → "all tasks closed" (F138) maps.
   const phaseBillingBadges = useMemo(() => (
-    billingOverview?.config
+    projectBillingUiEnabled && billingOverview?.config
       ? derivePhaseBillingBadges(billingOverview.entries, billingOverview.config.currency)
       : {}
-  ), [billingOverview]);
+  ), [billingOverview, projectBillingUiEnabled]);
 
   const phaseAllTasksClosed = useMemo(() => {
     const result: Record<string, boolean> = {};
@@ -679,13 +684,26 @@ export default function ProjectDetail({
     return result;
   }, [projectTasks, phaseStatusLookup]);
 
-  // If a persisted preference selects the billing view but the viewer lacks
-  // billing read, fall back to kanban so the option can never be reached.
+  // A persisted Billing preference is ambient discovery, not direct access.
+  // Keep explicit ?view=billing links functional while the UI flag is off.
   useEffect(() => {
-    if (!isViewModeLoading && viewMode === 'billing' && !canViewBilling) {
+    if (
+      !isViewModeLoading
+      && !projectBillingUiLoading
+      && viewMode === 'billing'
+      && (!canViewBilling || (!projectBillingUiEnabled && initialViewMode !== 'billing'))
+    ) {
       setViewMode('kanban');
     }
-  }, [isViewModeLoading, viewMode, canViewBilling, setViewMode]);
+  }, [
+    isViewModeLoading,
+    projectBillingUiLoading,
+    viewMode,
+    canViewBilling,
+    projectBillingUiEnabled,
+    initialViewMode,
+    setViewMode,
+  ]);
 
   // A ?view= URL parameter (e.g. the Invoicing Hub's review-queue links)
   // overrides the persisted view preference once per navigation; the billing
@@ -707,7 +725,7 @@ export default function ProjectDetail({
       setProjectPhases((prev) => prev.map((p) => (p.phase_id === phase.phase_id ? result.phase : p)));
       void refreshBilling();
       const readyEntry = result.ready_entries[0];
-      if (readyEntry && canViewBilling) {
+      if (readyEntry && canViewBilling && projectBillingUiEnabled) {
         // F139 — deep link into the billing view and highlight the freshly ready entry.
         toast.success(
           (toastRef) => (
@@ -734,7 +752,7 @@ export default function ProjectDetail({
     } catch (error) {
       toast.error(error instanceof Error ? error.message : String(error));
     }
-  }, [refreshBilling, canViewBilling, t, setViewMode]);
+  }, [refreshBilling, canViewBilling, projectBillingUiEnabled, t, setViewMode]);
 
   const handleReopenPhase = useCallback(async (phase: IProjectPhase) => {
     try {
@@ -754,11 +772,11 @@ export default function ProjectDetail({
       { value: 'kanban', label: t('kanbanView', 'Kanban'), icon: LayoutGrid },
       { value: 'list', label: t('listView', 'List'), icon: List },
     ];
-    if (canViewBilling) {
+    if (canViewBilling && projectBillingUiEnabled) {
       options.push({ value: 'billing', label: t('billingView', 'Billing'), icon: Receipt });
     }
     return options;
-  }, [t, canViewBilling]);
+  }, [t, canViewBilling, projectBillingUiEnabled]);
 
   const readyEntryCount = useMemo(
     () => (billingOverview?.entries ?? []).filter((entry) => entry.status === 'ready').length,
@@ -4190,7 +4208,9 @@ export default function ProjectDetail({
         className={styles.mainContent}
         onDragOver={handleDragOver}
       >
-        <ProjectPaymentWarningBanner projectId={project.project_id} className="mb-3 flex-shrink-0" />
+        {projectBillingUiEnabled && (
+          <ProjectPaymentWarningBanner projectId={project.project_id} className="mb-3 flex-shrink-0" />
+        )}
         <div className={styles.contentWrapper}>
           {/* Phases panel - collapsible in kanban view */}
           {(viewMode === 'kanban' || viewMode === 'billing') && (

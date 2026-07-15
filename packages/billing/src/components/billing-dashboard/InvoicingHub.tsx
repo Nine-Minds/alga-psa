@@ -28,6 +28,7 @@ const InvoicingHub: React.FC<InvoicingHubProps> = ({ initialServices }) => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { enabled: billingEnabled } = useFeatureFlag('billing-enabled');
+  const { enabled: projectBillingUiEnabled } = useFeatureFlag('project-billing-ui', { defaultValue: false });
 
   // Get active sub-tab from URL or default to 'generate'
   const requestedSubtab = searchParams?.get('subtab');
@@ -179,6 +180,7 @@ const InvoicingHub: React.FC<InvoicingHubProps> = ({ initialServices }) => {
           },
           {
             id: 'project-billing',
+            hideTrigger: !projectBillingUiEnabled,
             label: (
               <span className="flex items-center gap-1.5">
                 {t('hub.tabs.projectBilling', { defaultValue: 'Project Billing' })}

@@ -6,6 +6,7 @@ import { Switch } from '@alga-psa/ui/components/Switch';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Alert, AlertDescription, AlertTitle } from '@alga-psa/ui/components/Alert';
 import { useTranslation } from 'react-i18next';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
 
 interface ClientPortalConfigEditorProps {
   config: IClientPortalConfig;
@@ -19,6 +20,7 @@ export default function ClientPortalConfigEditor({
   disabled = false
 }: ClientPortalConfigEditorProps) {
   const { t } = useTranslation(['features/projects', 'common']);
+  const { enabled: projectBillingUiEnabled } = useFeatureFlag('project-billing-ui', { defaultValue: false });
 
   const updateConfig = (updates: Partial<IClientPortalConfig>) => {
     onChange({ ...config, ...updates });
@@ -40,7 +42,7 @@ export default function ClientPortalConfigEditor({
       summary.push(t('clientPortal.summary.budgetHours', 'Budget hours: spent vs. budgeted totals and % used'));
     }
 
-    if (config.show_billing) {
+    if (projectBillingUiEnabled && config.show_billing) {
       summary.push(t('clientPortal.summary.billing', 'Billing summary: payment schedule, amounts, and invoiced-to-date'));
     }
 
@@ -114,24 +116,26 @@ export default function ClientPortalConfigEditor({
         </div>
 
         {/* Show Billing Toggle */}
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex-1">
-              <label htmlFor="show-billing" className="text-sm font-medium text-gray-700">
-                {t('clientPortal.showBilling', 'Show Billing')}
-              </label>
-              <p className="text-xs text-gray-500">
-                {t('clientPortal.showBillingDescription', 'Clients will see a read-only billing summary with the payment schedule, amounts, and invoiced-to-date. Only applies to projects with billing enabled.')}
-              </p>
+        {projectBillingUiEnabled && (
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex-1">
+                <label htmlFor="show-billing" className="text-sm font-medium text-gray-700">
+                  {t('clientPortal.showBilling', 'Show Billing')}
+                </label>
+                <p className="text-xs text-gray-500">
+                  {t('clientPortal.showBillingDescription', 'Clients will see a read-only billing summary with the payment schedule, amounts, and invoiced-to-date. Only applies to projects with billing enabled.')}
+                </p>
+              </div>
+              <Switch
+                id="show-billing"
+                checked={config.show_billing}
+                onCheckedChange={(checked) => updateConfig({ show_billing: checked })}
+                disabled={disabled}
+              />
             </div>
-            <Switch
-              id="show-billing"
-              checked={config.show_billing}
-              onCheckedChange={(checked) => updateConfig({ show_billing: checked })}
-              disabled={disabled}
-            />
           </div>
-        </div>
+        )}
 
         {/* Show Phases Toggle */}
         <div className="space-y-3">

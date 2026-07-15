@@ -34,6 +34,7 @@ AlgaPSA projects have no billing model of their own. Project task time bills thr
 9. Profitability report shows true fixed-price margin (schedule revenue vs cost).
 10. Client portal read-only billing summary (per-project opt-in).
 11. Project charges flow through existing QBO/Xero export with project reference metadata.
+12. Keep project billing undiscoverable before release with a temporary UI-only feature flag while preserving direct-link and backend access.
 
 ## 4. Non-goals
 
@@ -42,7 +43,7 @@ AlgaPSA projects have no billing model of their own. Project task time bills thr
 - No revenue recognition / WIP accounting.
 - No percent-complete automatic progress billing computation (schedule entries are explicit).
 - No changes to ticket billing or existing contract-line behavior — projects without a billing config bill **exactly** as today (passthrough guarantee).
-- No production-readiness extras (metrics, feature flags, perf hardening) beyond what exists by convention.
+- No production-readiness extras (metrics, perf hardening, or backend gating) beyond what exists by convention. The approved temporary UI-only rollout flag in §15 is the sole feature-flag exception.
 
 ## 5. Architecture (approved)
 
@@ -136,7 +137,8 @@ Other schema: `project_phases.completed_at` (explicit phase completion), `invoic
 9. An explicitly payment-gated schedule entry produces a warning-only signal for technicians until its linked invoice is paid; invoice details remain permission-gated.
 10. Project invoice references open in a drawer, expected action failures return structured results, and unfinalize displays the safe underlying reason.
 11. PostgreSQL/Citus lifecycle behavior, multi-currency formatting, real translations, and workflow catalog coverage pass their planned tests.
-12. All features in `features.json` implemented; all tests in `tests.json` passing.
+12. With the temporary project-billing UI flag disabled, ambient project, task, time-entry, invoicing, and client-portal traces are hidden while explicit project/invoicing deep links remain fully functional and server behavior is unchanged.
+13. All features in `features.json` implemented; all tests in `tests.json` passing.
 
 ## 13. Open questions
 
@@ -146,3 +148,13 @@ Other schema: `project_phases.completed_at` (explicit phase completion), `invoic
 ## 14. Approved hardening addendum
 
 The production-readiness follow-up is specified in `docs/plans/2026-07-15-project-billing-hardening-design.md`. Its payment-warning, Citus lifecycle, workflow-event, permission, drawer, currency, i18n, and structured-error decisions are part of this PRD.
+
+## 15. Approved temporary UI feature flag
+
+The pre-release hiding design is specified in `docs/plans/2026-07-15-project-billing-ui-feature-flag-design.md`.
+
+- Add a client-only boolean flag, `project-billing-ui`, which defaults/fails closed.
+- When disabled, hide all ambient project-billing traces: project view discovery, billed bar, phase badges and billing toast, payment warnings, Invoicing Hub tab/count, client-portal configuration, and client-portal summary.
+- Preserve explicit `?view=billing` and `?tab=invoicing&subtab=project-billing` access. A persisted Billing preference without the explicit URL falls back to Kanban.
+- Do not evaluate the flag in server actions, APIs, services, models, migrations, jobs, events, notifications, invoice generation, or authorization.
+- Document and remove the flag after the feature is released.

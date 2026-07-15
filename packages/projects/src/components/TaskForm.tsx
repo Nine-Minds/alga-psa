@@ -69,6 +69,7 @@ import TreeSelect, { TreeSelectOption, TreeSelectPath } from '@alga-psa/ui/compo
 import { useTicketIntegration } from '../context/TicketIntegrationContext';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { useDrawer } from '@alga-psa/ui';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useSchedulingCallbacks } from '@alga-psa/ui/context';
 import { IExtendedWorkItem, WorkItemType } from '@alga-psa/types';
 import TaskStatusSelect from './TaskStatusSelect';
@@ -136,6 +137,7 @@ export default function TaskForm({
   printTitle,
 }: TaskFormProps): React.JSX.Element {
   const { t } = useTranslation(['features/projects', 'common']);
+  const { enabled: projectBillingUiEnabled } = useFeatureFlag('project-billing-ui', { defaultValue: false });
   const { createDocumentAssociations, deleteDocument, removeDocumentAssociations } = useDocumentsCrossFeature();
   const dependenciesRef = useRef<TaskDependenciesRef>(null);
   const ticketLinksRef = useRef<TaskTicketLinksRef>(null);
@@ -1658,7 +1660,7 @@ export default function TaskForm({
           {printableHeader && (
             <div className="app-print-section">{printableHeader}</div>
           )}
-          <ProjectPaymentWarningBanner projectId={phase.project_id} />
+          {projectBillingUiEnabled && <ProjectPaymentWarningBanner projectId={phase.project_id} />}
           {/* Full width Title with Status dropdown */}
           <div>
             <div className="flex items-center justify-between mb-1">

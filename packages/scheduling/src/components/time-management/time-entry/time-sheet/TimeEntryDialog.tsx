@@ -29,6 +29,7 @@ import SingleTimeEntryForm from './SingleTimeEntryForm';
 import { validateTimeEntry } from './utils';
 // eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- payment prerequisite is billing-owned; time entry only consumes the warning action
 import { getProjectTaskPaymentWarning } from '@alga-psa/billing/actions';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
 
 function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
   return isActionMessageError(value) || isActionPermissionError(value);
@@ -72,6 +73,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
     inDrawer,
   } = props;
   const { t } = useTranslation('msp/time-entry');
+  const { enabled: projectBillingUiEnabled } = useFeatureFlag('project-billing-ui', { defaultValue: false });
   const {
     entries,
     services,
@@ -327,7 +329,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
       data-automation-type="container"
     >
       {inDrawer && <h2 className="mb-4 text-lg font-semibold">{title}</h2>}
-      {hasProjectPaymentWarning && (
+      {projectBillingUiEnabled && hasProjectPaymentWarning && (
         <Alert id={`${id}-project-payment-warning`} variant="warning" className="mb-3">
           <AlertDescription>
             <span className="font-medium">

@@ -129,5 +129,12 @@
   {"id": "F174", "description": "Internationalization: project billing has genuine supported-locale translations and locale-aware currency/date/status/error/warning presentation with regenerated pseudo-locales", "implemented": true, "prdRefs": ["§8", "§14"]},
   {"id": "F175", "description": "Policy: existing capped T&M configurations and new edits consistently enforce hard_cap while retaining configurable thresholds", "implemented": true, "prdRefs": ["§7", "§14"]},
   {"id": "F176", "description": "RBAC: internal billed header, invoice metadata, and invoice drawer remain server-authorized by billing read access", "implemented": true, "prdRefs": ["§8", "§14"]},
-  {"id": "F177", "description": "UI: schedule entry editor exposes an explicit Payment required before continuing work checkbox for milestones and deposits", "implemented": true, "prdRefs": ["§8", "§14"]}
+  {"id": "F177", "description": "UI: schedule entry editor exposes an explicit Payment required before continuing work checkbox for milestones and deposits", "implemented": true, "prdRefs": ["§8", "§14"]},
+  {"id": "F178", "description": "Feature flag: document a dedicated client-only project-billing-ui flag that defaults and fails closed", "implemented": true, "prdRefs": ["§15"]},
+  {"id": "F179", "description": "Project UI: when the flag is disabled, hide Billing discovery, billed header, phase badges, billing-specific completion toast, and project payment warning", "implemented": true, "prdRefs": ["§8", "§15"]},
+  {"id": "F180", "description": "Project direct access: explicit ?view=billing remains functional while a persisted Billing preference without that URL falls back to Kanban", "implemented": true, "prdRefs": ["§15"]},
+  {"id": "F181", "description": "Work UI: hide project-payment warnings on task and time-entry surfaces when the UI flag is disabled without changing warning actions", "implemented": true, "prdRefs": ["§8", "§15"]},
+  {"id": "F182", "description": "Invoicing UI: hide the Project Billing tab trigger/count while direct project-billing subtab content remains addressable", "implemented": true, "prdRefs": ["§8", "§15"]},
+  {"id": "F183", "description": "Client portal UI: hide the Show Billing configuration and embedded project billing summary when the UI flag is disabled", "implemented": true, "prdRefs": ["§8", "§15"]},
+  {"id": "F184", "description": "Scope guard: project-billing server actions, APIs, services, events, jobs, invoice behavior, data access, and authorization remain independent of the UI flag", "implemented": true, "prdRefs": ["§15"]}
 ]

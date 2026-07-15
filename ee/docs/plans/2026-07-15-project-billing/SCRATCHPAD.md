@@ -351,3 +351,20 @@
 - The schema integration asset remains present and previously passed on a freshly migrated throwaway database. A rerun in this session was blocked by stale `.env.localtest` wiring: port `5472` currently resolves to the unrelated license-validation PostgreSQL container and cannot authenticate/recreate `test_database`. Live migrated-schema inspection and mutation tests were used instead; do not point destructive test bootstrap at the running `server` database.
 - Unrelated observation: a time period created for Jul 13–19 rendered Jul 13–18 on the employee period/timesheet views while approvals showed Jul 13–19. This appears to be a pre-existing date-display issue outside project billing.
 - Final focused regression: 14 Vitest files / 115 tests passed. `packages/billing`, `packages/projects`, `packages/scheduling`, and `packages/event-schemas` TypeScript checks passed. All 30 edited real/pseudo locale JSON files parse, the ALGA plan validator passes at 131/131 features and 52/52 tests, and `git diff --check` is clean.
+
+## Approved temporary project-billing UI flag (2026-07-15)
+
+- Approved design: `docs/plans/2026-07-15-project-billing-ui-feature-flag-design.md` (design commit `1aa69b8a38`).
+- Flag key: `project-billing-ui`; client-side only, default/fail closed.
+- Hide all ambient traces when disabled: project Billing discovery, billed header, phase billing badges/toast, project/task/time warnings, Invoicing Hub trigger/count, client-portal toggle/summary.
+- Explicit project and invoicing deep links remain functional. Persisted Billing preference alone is not a bypass and falls back to Kanban.
+- Do not add server-side feature-flag evaluation or page wrappers. Backend/API/event/job/invoice behavior and RBAC remain unchanged.
+- `CustomTabs` needs a small trigger-visibility seam so a tab can remain URL-addressable while its trigger is absent.
+- Added plan features F178–F184 and focused tests T053–T056.
+
+### Implementation and verification
+
+- Added the fail-closed client hook at each ambient discovery seam without adding server-side flag evaluation or route guards.
+- Added `CustomTabs.hideTrigger` so an explicit hidden-tab URL can render its content while the tab trigger remains absent.
+- Project `?view=billing` and Invoicing Hub `?tab=invoicing&subtab=project-billing` direct access remain functional; a persisted Billing view alone falls back to Kanban while the flag is disabled.
+- Focused Vitest coverage passed: 6 files / 29 tests, including dynamic hidden-trigger/direct-content and client-configuration flag-state assertions. TypeScript checks passed for `packages/ui`, `packages/billing`, `packages/projects`, `packages/scheduling`, and `packages/client-portal`.
