@@ -45,6 +45,8 @@ export interface ITimeBasedCharge extends IBillingCharge, TenantEntity {
   total: number;
   type: 'time';
   entryId: string; // Added field for source time entry ID
+  write_down_amount?: number;
+  write_down_reason?: 'project_cap';
 }
 
 export interface IUsageBasedCharge extends IBillingCharge, TenantEntity {
@@ -57,7 +59,7 @@ export interface IUsageBasedCharge extends IBillingCharge, TenantEntity {
   usageId: string; // Added field for source usage record ID
 }
 
-type ChargeType = 'fixed' | 'time' | 'usage' | 'bucket' | 'product' | 'license';
+type ChargeType = 'fixed' | 'time' | 'usage' | 'bucket' | 'product' | 'license' | 'project_milestone' | 'project_deposit';
 export interface IRecurringChargeDetailPeriod {
   servicePeriodStart?: ISO8601String | null;
   servicePeriodEnd?: ISO8601String | null;
@@ -184,6 +186,18 @@ export interface ILicenseCharge extends IBillingCharge, TenantEntity {
   type: 'license';
   period_start?: ISO8601String;
   period_end?: ISO8601String;
+}
+
+export interface IProjectMilestoneCharge extends IBillingCharge, TenantEntity {
+  type: 'project_milestone';
+  project_id: string;
+  schedule_entry_id: string;
+}
+
+export interface IProjectDepositCharge extends IBillingCharge, TenantEntity {
+  type: 'project_deposit';
+  project_id: string;
+  schedule_entry_id: string;
 }
 
 /**

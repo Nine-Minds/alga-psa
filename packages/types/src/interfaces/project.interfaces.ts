@@ -111,6 +111,7 @@ export interface IProjectPhase extends TenantEntity {
   description: string | null;
   start_date: Date | null;
   end_date: Date | null;
+  completed_at?: Date | string | null;
   status: string;
   order_number: number;
   order_key?: string;

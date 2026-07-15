@@ -50,3 +50,33 @@
 
 - Dev stack: `alga-env-dev` / `alga-dev-env-manager` skills (worktree-built images).
 - Plan validation: `python3 ~/.claude/skills/alga-plan/scripts/validate_plan.py ee/docs/plans/2026-07-15-project-billing/`.
+
+## Wave 1 report
+
+### Files created
+
+- `server/migrations/20260715090000_create_project_billing_configs.cjs`
+- `server/migrations/20260715090001_create_project_billing_schedule_entries.cjs`
+- `server/migrations/20260715090002_create_project_phase_rate_overrides.cjs`
+- `server/migrations/20260715090003_create_project_billing_cap_usage.cjs`
+- `server/migrations/20260715090004_add_completed_at_to_project_phases.cjs`
+- `server/migrations/20260715090005_add_project_id_to_invoices.cjs`
+- `ee/server/migrations/citus/20260715090006_distribute_project_billing_tables.cjs`
+- `packages/types/src/interfaces/projectBilling.interfaces.ts`
+- `packages/billing/src/schemas/projectBillingSchemas.ts`
+
+### Convention discoveries
+
+- Tenant tables use composite `(tenant, entity_id)` primary keys and tenant-inclusive foreign keys. No new RLS policies are added by current migrations; tenant enforcement for application queries comes from `packages/db/src/lib/tenantTableMetadata.ts`.
+- Citus parity migrations under `ee/server/migrations/citus/` are non-transactional, guard non-Citus/read-replica environments, colocate on `tenant`, and tolerate already-distributed tables. The project billing parity migration temporarily removes the two new child-to-config FKs while all four tables enter the colocation group, then restores them.
+- Billing Zod schemas are colocated in `packages/billing/src/schemas/` and exported through that package's `./schemas` entry point; `packages/validation` currently contains only shared primitives rather than billing entity schemas.
+- Billing tables use `display_order` for ordered line-like records. Nullable service-scope uniqueness is represented by a `COALESCE` expression index so the one all-services override (`service_id IS NULL`) is also unique.
+- Current billing charge tax fields use nullable `tax_region` text values rather than a direct FK; the project config follows that persisted charge/quote convention.
+
+### Verification and gotchas
+
+- All seven new `.cjs` migration files load with `node -e "require(...)"`.
+- `cd packages/types && npx tsc --noEmit -p .` passes.
+- `cd packages/db && npx tsc --noEmit -p .` passes after tenant metadata registration.
+- The new project billing schema file passes a focused TypeScript compile and representative Zod parse checks. A full `packages/billing` typecheck remains blocked by a pre-existing unrelated missing module import in `src/actions/quoteActions.ts`: `@alga-psa/opportunities/lib/quoteLifecycleHooks`.
+- F019 remains `implemented: false`: `IProjectPhase.completed_at` is complete in this wave, but the UI-owned `ProjectViewMode` change was intentionally not made.
