@@ -80,3 +80,45 @@
 - `cd packages/db && npx tsc --noEmit -p .` passes after tenant metadata registration.
 - The new project billing schema file passes a focused TypeScript compile and representative Zod parse checks. A full `packages/billing` typecheck remains blocked by a pre-existing unrelated missing module import in `src/actions/quoteActions.ts`: `@alga-psa/opportunities/lib/quoteLifecycleHooks`.
 - F019 remains `implemented: false`: `IProjectPhase.completed_at` is complete in this wave, but the UI-owned `ProjectViewMode` change was intentionally not made.
+
+## Wave 2 report
+
+### Files created
+
+- `packages/billing/src/models/projectBillingModelUtils.ts`
+- `packages/billing/src/models/projectBillingConfig.ts`
+- `packages/billing/src/models/projectBillingScheduleEntry.ts`
+- `packages/billing/src/models/projectPhaseRateOverride.ts`
+- `packages/billing/src/models/projectBillingCapUsage.ts`
+- `packages/billing/src/services/projectBillingService.ts`
+
+### Files updated
+
+- `packages/billing/src/models/index.ts`
+- `packages/billing/src/services/index.ts`
+- `ee/docs/plans/2026-07-15-project-billing/features.json` (F023–F028 and F035–F041 only)
+- `ee/docs/plans/2026-07-15-project-billing/SCRATCHPAD.md`
+
+### Decisions
+
+- Model methods resolve tenant context through `tenantDb` and accept an optional caller-provided Knex connection/transaction. Cap locking and ledger mutations require a real transaction; `getForUpdate` issues `FOR UPDATE` and `increment` performs arithmetic in SQL.
+- PostgreSQL `bigint`, `numeric`, and JSON values are normalized at the model boundary so all returned money/percentage/threshold fields match the numeric TypeScript contracts.
+- `computeEntryAmounts` uses scaled integer/`bigint` arithmetic. Canceled entries do not participate in allocation, and the final non-canceled entry absorbs only a cent-rounding remainder when the underlying active allocations equal the configured total. Material gaps remain visible to `validateAllocation`; its `delta` is `total_price - allocated`, and it blocks when exactly one non-canceled entry remains unapproved.
+- The ready queue is stably ordered by `ready_at`, then creation/id, and resolves authoritative entry amounts from each config's full ordered schedule. The rollup follows `CONTRACTS.md`: fixed-price remaining excludes invoiced/ready/approved amounts, while T&M invoiced/remaining comes from cap usage.
+- The all-services phase override remains keyed by the Wave 1 expression unique index: `(tenant, phase_id, COALESCE(service_id, zero-uuid))`. CRUD addresses rows by `rate_override_id`; `listByProject` tenant-joins through phases so a null `service_id` needs no sentinel in application data.
+- Phase readiness verifies `project_phases.completed_at` before flipping matching pending rows. Date readiness compares the stored date through the supplied UTC calendar date. Both use a status predicate in the update and return only rows actually flipped; event publication and job registration remain intentionally separate later-wave work.
+- `deduct_final` reconciliation counts only previously invoiced deposits that precede the final non-canceled milestone and caps the reduction at that milestone's computed amount. `credit` returns zero reduction.
+
+### Verification, surprises, and incomplete items
+
+- A focused strict TypeScript project containing all Wave 2 files passes.
+- Five temporary Vitest smoke cases passed for allocation/remainder math, canceled entries, final-entry blocking, cap straddles/threshold dedupe, and deposit reconciliation; the temporary test file was removed because the plan's permanent test lane remains separate.
+- `cd packages/billing && npx tsc --noEmit -p .` reaches the same pre-existing Wave 1 blocker: `src/actions/quoteActions.ts` cannot resolve `@alga-psa/opportunities/lib/quoteLifecycleHooks`. No Wave 2 TypeScript errors were reported, and the focused compile confirms the new files independently.
+- `packages/billing/src/services/bucketUsageService.ts` is currently empty, so there was no service implementation to copy. The locking implementation follows the repository's active Knex `.forUpdate()` patterns and the PRD's required transaction boundary instead.
+- No engine, invoice-generation, action, event, scheduled-job registration, or UI files were touched. Those remain assigned to later waves.
+
+## Orchestrator notes (verification baselines)
+
+- `packages/billing` typecheck has exactly ONE pre-existing error (also present on main / parent checkout): `quoteActions.ts(32)` TS2307 `@alga-psa/opportunities/lib/quoteLifecycleHooks`. Wave verification = "no NEW errors vs this baseline", not zero errors.
+- `packages/projects` typecheck baseline: clean (0 errors).
+- Wave 1 review fix: composite (tenant, X) FKs in the new migrations were rewritten to version-guarded column-targeted `ON DELETE SET NULL (col)` — bare SET NULL on composite FKs nulls the tenant column (repo-wide fix precedent: 20260611150000). `IProjectPhase.completed_at` made optional (`?:`) so existing construction sites don't break.
