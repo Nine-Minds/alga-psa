@@ -169,13 +169,21 @@ import {
   ticketUpdatedEventPayloadSchema,
 } from './domain/ticketEventSchemas';
 import {
+  inventoryCountApprovedEventPayloadSchema,
+  inventoryCountSubmittedEventPayloadSchema,
   inventoryPoReceivedEventPayloadSchema,
-  inventoryPurchaseOrderSearchEventPayloadSchema,
+  inventoryPurchaseOrderCreatedEventPayloadSchema,
+  inventoryPurchaseOrderDeletedEventPayloadSchema,
+  inventoryPurchaseOrderUpdatedEventPayloadSchema,
   inventoryRmaCreatedEventPayloadSchema,
-  inventorySalesOrderSearchEventPayloadSchema,
+  inventorySalesOrderCreatedEventPayloadSchema,
+  inventorySalesOrderDeletedEventPayloadSchema,
+  inventorySalesOrderUpdatedEventPayloadSchema,
   inventorySoFulfilledEventPayloadSchema,
   inventoryStockLowEventPayloadSchema,
   inventoryStockUnitSearchEventPayloadSchema,
+  inventoryTransferDispatchedEventPayloadSchema,
+  inventoryTransferReceivedEventPayloadSchema,
 } from './domain/inventoryEventSchemas';
 
 // Define event types
@@ -499,6 +507,10 @@ export const EVENT_TYPES = [
   'INVENTORY_STOCK_UNIT_CREATED',
   'INVENTORY_STOCK_UNIT_UPDATED',
   'INVENTORY_STOCK_UNIT_DELETED',
+  'INVENTORY_TRANSFER_DISPATCHED',
+  'INVENTORY_TRANSFER_RECEIVED',
+  'INVENTORY_COUNT_SUBMITTED',
+  'INVENTORY_COUNT_APPROVED',
 
   // Generic events
   'CUSTOM_EVENT',
@@ -1473,15 +1485,19 @@ export const EventPayloadSchemas = {
   INVENTORY_PO_RECEIVED: inventoryPoReceivedEventPayloadSchema,
   INVENTORY_SO_FULFILLED: inventorySoFulfilledEventPayloadSchema,
   INVENTORY_RMA_CREATED: inventoryRmaCreatedEventPayloadSchema,
-  INVENTORY_SALES_ORDER_CREATED: inventorySalesOrderSearchEventPayloadSchema,
-  INVENTORY_SALES_ORDER_UPDATED: inventorySalesOrderSearchEventPayloadSchema,
-  INVENTORY_SALES_ORDER_DELETED: inventorySalesOrderSearchEventPayloadSchema,
-  INVENTORY_PURCHASE_ORDER_CREATED: inventoryPurchaseOrderSearchEventPayloadSchema,
-  INVENTORY_PURCHASE_ORDER_UPDATED: inventoryPurchaseOrderSearchEventPayloadSchema,
-  INVENTORY_PURCHASE_ORDER_DELETED: inventoryPurchaseOrderSearchEventPayloadSchema,
+  INVENTORY_SALES_ORDER_CREATED: inventorySalesOrderCreatedEventPayloadSchema,
+  INVENTORY_SALES_ORDER_UPDATED: inventorySalesOrderUpdatedEventPayloadSchema,
+  INVENTORY_SALES_ORDER_DELETED: inventorySalesOrderDeletedEventPayloadSchema,
+  INVENTORY_PURCHASE_ORDER_CREATED: inventoryPurchaseOrderCreatedEventPayloadSchema,
+  INVENTORY_PURCHASE_ORDER_UPDATED: inventoryPurchaseOrderUpdatedEventPayloadSchema,
+  INVENTORY_PURCHASE_ORDER_DELETED: inventoryPurchaseOrderDeletedEventPayloadSchema,
   INVENTORY_STOCK_UNIT_CREATED: inventoryStockUnitSearchEventPayloadSchema,
   INVENTORY_STOCK_UNIT_UPDATED: inventoryStockUnitSearchEventPayloadSchema,
   INVENTORY_STOCK_UNIT_DELETED: inventoryStockUnitSearchEventPayloadSchema,
+  INVENTORY_TRANSFER_DISPATCHED: inventoryTransferDispatchedEventPayloadSchema,
+  INVENTORY_TRANSFER_RECEIVED: inventoryTransferReceivedEventPayloadSchema,
+  INVENTORY_COUNT_SUBMITTED: inventoryCountSubmittedEventPayloadSchema,
+  INVENTORY_COUNT_APPROVED: inventoryCountApprovedEventPayloadSchema,
 
   // Generic unknown type for custom events
   UNKNOWN: CustomEventPayloadSchema,
@@ -1604,6 +1620,10 @@ export type InventoryPurchaseOrderDeletedEvent = z.infer<typeof EventSchemas.INV
 export type InventoryStockUnitCreatedEvent = z.infer<typeof EventSchemas.INVENTORY_STOCK_UNIT_CREATED>;
 export type InventoryStockUnitUpdatedEvent = z.infer<typeof EventSchemas.INVENTORY_STOCK_UNIT_UPDATED>;
 export type InventoryStockUnitDeletedEvent = z.infer<typeof EventSchemas.INVENTORY_STOCK_UNIT_DELETED>;
+export type InventoryTransferDispatchedEvent = z.infer<typeof EventSchemas.INVENTORY_TRANSFER_DISPATCHED>;
+export type InventoryTransferReceivedEvent = z.infer<typeof EventSchemas.INVENTORY_TRANSFER_RECEIVED>;
+export type InventoryCountSubmittedEvent = z.infer<typeof EventSchemas.INVENTORY_COUNT_SUBMITTED>;
+export type InventoryCountApprovedEvent = z.infer<typeof EventSchemas.INVENTORY_COUNT_APPROVED>;
 
 export type Event =
   {

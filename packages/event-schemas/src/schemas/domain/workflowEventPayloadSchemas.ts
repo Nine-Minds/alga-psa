@@ -167,10 +167,20 @@ import {
   ticketUpdatedEventPayloadSchema,
 } from './ticketEventSchemas';
 import {
+  inventoryCountApprovedEventPayloadSchema,
+  inventoryCountSubmittedEventPayloadSchema,
   inventoryPoReceivedEventPayloadSchema,
+  inventoryPurchaseOrderCreatedEventPayloadSchema,
+  inventoryPurchaseOrderDeletedEventPayloadSchema,
+  inventoryPurchaseOrderUpdatedEventPayloadSchema,
   inventoryRmaCreatedEventPayloadSchema,
+  inventorySalesOrderCreatedEventPayloadSchema,
+  inventorySalesOrderDeletedEventPayloadSchema,
+  inventorySalesOrderUpdatedEventPayloadSchema,
   inventorySoFulfilledEventPayloadSchema,
   inventoryStockLowEventPayloadSchema,
+  inventoryTransferDispatchedEventPayloadSchema,
+  inventoryTransferReceivedEventPayloadSchema,
 } from './inventoryEventSchemas';
 
 export const workflowEventPayloadSchemas: Record<string, ZodTypeAny> = {
@@ -351,6 +361,16 @@ export const workflowEventPayloadSchemas: Record<string, ZodTypeAny> = {
   'payload.InventoryPoReceived.v1': inventoryPoReceivedEventPayloadSchema,
   'payload.InventorySoFulfilled.v1': inventorySoFulfilledEventPayloadSchema,
   'payload.InventoryRmaCreated.v1': inventoryRmaCreatedEventPayloadSchema,
+  'payload.InventorySalesOrderCreated.v1': inventorySalesOrderCreatedEventPayloadSchema,
+  'payload.InventorySalesOrderUpdated.v1': inventorySalesOrderUpdatedEventPayloadSchema,
+  'payload.InventorySalesOrderDeleted.v1': inventorySalesOrderDeletedEventPayloadSchema,
+  'payload.InventoryPurchaseOrderCreated.v1': inventoryPurchaseOrderCreatedEventPayloadSchema,
+  'payload.InventoryPurchaseOrderUpdated.v1': inventoryPurchaseOrderUpdatedEventPayloadSchema,
+  'payload.InventoryPurchaseOrderDeleted.v1': inventoryPurchaseOrderDeletedEventPayloadSchema,
+  'payload.InventoryTransferDispatched.v1': inventoryTransferDispatchedEventPayloadSchema,
+  'payload.InventoryTransferReceived.v1': inventoryTransferReceivedEventPayloadSchema,
+  'payload.InventoryCountSubmitted.v1': inventoryCountSubmittedEventPayloadSchema,
+  'payload.InventoryCountApproved.v1': inventoryCountApprovedEventPayloadSchema,
 };
 
 export type WorkflowEventPayloadSchemaRef = keyof typeof workflowEventPayloadSchemas;
