@@ -378,29 +378,8 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     }>({ isOpen: false, statusId: null, failures: [], canOverride: false, suppression: null });
     const [closeOverrideReason, setCloseOverrideReason] = useState('');
     const [isSubmittingCloseOverride, setIsSubmittingCloseOverride] = useState(false);
-    const [resolutionCloseStatusId, setResolutionCloseStatusId] = useState<string | null>(null);
-    const resolutionCloseResolverRef = useRef<((resolution: string | null) => void) | null>(null);
-
-    const requestTicketResolution = useCallback((statusId: string): Promise<string | null> => {
-        resolutionCloseResolverRef.current?.(null);
-        setResolutionCloseStatusId(statusId);
-
-        return new Promise((resolve) => {
-            resolutionCloseResolverRef.current = resolve;
-        });
-    }, []);
-
-    const finishTicketResolutionRequest = useCallback((resolution: string | null) => {
-        const resolve = resolutionCloseResolverRef.current;
-        resolutionCloseResolverRef.current = null;
-        setResolutionCloseStatusId(null);
-        resolve?.(resolution);
-    }, []);
-
-    useEffect(() => () => {
-        resolutionCloseResolverRef.current?.(null);
-        resolutionCloseResolverRef.current = null;
-    }, []);
+    const [isResolutionCloseDialogOpen, setIsResolutionCloseDialogOpen] = useState(false);
+    const [isSubmittingResolutionClose, setIsSubmittingResolutionClose] = useState(false);
 
     const [checklistItems, setChecklistItems] = useState<ITicketChecklistItem[] | undefined>(
         bootstrap?.checklistItems ?? undefined,
@@ -481,17 +460,12 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             )
             .map(({ value, label }) => ({ value, label }));
     }, [statusOptions, ticket.board_id]);
-    const resolutionCloseStatusLabel = useMemo(
-        () => statusOptions.find((option) => option.value === resolutionCloseStatusId)?.label,
-        [resolutionCloseStatusId, statusOptions],
+    const currentStatusIsClosed = useMemo(
+        () => statusOptions.some((option) => option.value === ticket.status_id && option.is_closed),
+        [statusOptions, ticket.status_id],
     );
 
-    const addResolutionBeforeClose = useCallback(async (statusId: string): Promise<boolean> => {
-        const resolution = await requestTicketResolution(statusId);
-        if (resolution === null) {
-            return false;
-        }
-
+    const addResolutionComment = useCallback(async (resolution: string): Promise<boolean> => {
         if (!ticket.ticket_id) {
             toast.error(t('messages.closeFailed', 'Failed to close ticket'));
             return false;
@@ -520,7 +494,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             handleTicketActionError(error, t('messages.addCommentFailed', 'Failed to add comment'));
             return false;
         }
-    }, [requestTicketResolution, t, ticket.ticket_id]);
+    }, [t, ticket.ticket_id]);
 
     const [board, setBoard] = useState<any>(initialBoard);
     const [savedBoardId, setSavedBoardId] = useState<string | null>(initialBoard?.board_id ?? initialTicket.board_id ?? null);
@@ -1702,59 +1676,33 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         }
     };
 
-    const handleSelectChange = async (
-        field: keyof ITicket,
-        newValue: string | null,
-        skipResolutionPrompt = false,
-    ) => {
+    const handleSelectChange = async (field: keyof ITicket, newValue: string | null) => {
         const normalizedValue =
             field === 'assigned_to'
                 ? (newValue && newValue !== 'unassigned' ? newValue : null)
                 : newValue;
 
-        // A human open→closed transition first records a resolution, then
-        // evaluates board close rules against that newly-created comment.
-        // Programmatic resolution-comment closes opt out because they have
-        // already collected and persisted the resolution.
+        // Pre-close check: when this status change would close the ticket,
+        // surface unmet close rules in a dialog instead of submitting a write
+        // that the server would reject. The dedicated toolbar action owns the
+        // convenience resolution flow; ordinary status edits stay ordinary.
         if (field === 'status_id' && normalizedValue && ticket.ticket_id) {
-            const targetStatus = statusOptions.find((option) => option.value === normalizedValue);
-            const currentStatus = statusOptions.find((option) => option.value === ticket.status_id);
-            let wouldClose = Boolean(targetStatus?.is_closed && !currentStatus?.is_closed);
-            let check: Awaited<ReturnType<typeof checkTicketClosure>> | null = null;
-
             try {
-                check = await checkTicketClosure(ticket.ticket_id, normalizedValue);
-                wouldClose = check.wouldClose;
-            } catch (checkError) {
-                // Use the locally-loaded status metadata for the resolution
-                // prompt; the server write still enforces close rules.
-                console.error('Close rules pre-check failed:', checkError);
-            }
-
-            if (wouldClose && !skipResolutionPrompt) {
-                const resolutionAdded = await addResolutionBeforeClose(normalizedValue);
-                if (!resolutionAdded) {
+                const check = await checkTicketClosure(ticket.ticket_id, normalizedValue);
+                if (check.wouldClose && !check.allowed) {
+                    setCloseOverrideReason('');
+                    setCloseBlockedDialog({
+                        isOpen: true,
+                        statusId: normalizedValue,
+                        failures: check.failures,
+                        canOverride: check.canOverride,
+                        suppression: null,
+                    });
                     return;
                 }
-
-                try {
-                    check = await checkTicketClosure(ticket.ticket_id, normalizedValue);
-                } catch (checkError) {
-                    console.error('Close rules re-check failed after adding resolution:', checkError);
-                    check = null;
-                }
-            }
-
-            if (check?.wouldClose && !check.allowed) {
-                setCloseOverrideReason('');
-                setCloseBlockedDialog({
-                    isOpen: true,
-                    statusId: normalizedValue,
-                    failures: check.failures,
-                    canOverride: check.canOverride,
-                    suppression: null,
-                });
-                return;
+            } catch (checkError) {
+                // Fall through to the write; the server still enforces.
+                console.error('Close rules pre-check failed:', checkError);
             }
         }
 
@@ -2053,11 +2001,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                         if (!closeBlocked) {
                             // Backend clears response_state when closing; keep UI consistent.
                             setTicket((prev: any) => ({ ...prev, response_state: null }));
-                            const closed = await handleBatchSaveChanges(
-                                { status_id: closeStatusId },
-                                options,
-                                { skipResolutionPrompt: true },
-                            );
+                            const closed = await handleBatchSaveChanges({ status_id: closeStatusId }, options);
                             if (!closed) {
                                 toast.error(t('messages.closeFailed', 'Failed to close ticket'));
                             }
@@ -2065,7 +2009,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                     } else {
                         // Backend clears response_state when closing; keep UI consistent.
                         setTicket((prev: any) => ({ ...prev, response_state: null }));
-                        await handleSelectChange('status_id', closeStatusId, true);
+                        await handleSelectChange('status_id', closeStatusId);
                     }
                 }
                 
@@ -2120,13 +2064,9 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                         if (isResolution && closeStatusId && ticket.status_id !== closeStatusId) {
                             setTicket((prev: any) => ({ ...prev, response_state: null }));
                             if (options?.suppressContactNotifications) {
-                                await handleBatchSaveChanges(
-                                    { status_id: closeStatusId },
-                                    options,
-                                    { skipResolutionPrompt: true },
-                                );
+                                await handleBatchSaveChanges({ status_id: closeStatusId }, options);
                             } else {
-                                await handleSelectChange('status_id', closeStatusId, true);
+                                await handleSelectChange('status_id', closeStatusId);
                             }
                         }
                         
@@ -2635,49 +2575,26 @@ const handleClose = () => {
     const handleBatchSaveChanges = useCallback(async (
         changes: Record<string, unknown>,
         options?: TicketNotificationSuppressionValue,
-        behavior: { skipResolutionPrompt?: boolean } = {},
     ): Promise<boolean> => {
         const targetStatusId = typeof changes.status_id === 'string' ? changes.status_id : null;
-        let statusClosurePrepared = behavior.skipResolutionPrompt === true;
 
         if (targetStatusId && ticket.ticket_id) {
-            const targetStatus = statusOptions.find((option) => option.value === targetStatusId);
-            const currentStatus = statusOptions.find((option) => option.value === ticket.status_id);
-            let wouldClose = Boolean(targetStatus?.is_closed && !currentStatus?.is_closed);
-            let check: Awaited<ReturnType<typeof checkTicketClosure>> | null = null;
-
             try {
-                check = await checkTicketClosure(ticket.ticket_id, targetStatusId);
-                wouldClose = check.wouldClose;
-            } catch (checkError) {
-                console.error('Close rules pre-check failed:', checkError);
-            }
-
-            if (wouldClose && !statusClosurePrepared) {
-                const resolutionAdded = await addResolutionBeforeClose(targetStatusId);
-                if (!resolutionAdded) {
+                const check = await checkTicketClosure(ticket.ticket_id, targetStatusId);
+                if (check.wouldClose && !check.allowed) {
+                    setCloseOverrideReason('');
+                    setCloseBlockedDialog({
+                        isOpen: true,
+                        statusId: targetStatusId,
+                        failures: check.failures,
+                        canOverride: check.canOverride,
+                        suppression: options ?? null,
+                    });
                     return false;
                 }
-                statusClosurePrepared = true;
-
-                try {
-                    check = await checkTicketClosure(ticket.ticket_id, targetStatusId);
-                } catch (checkError) {
-                    console.error('Close rules re-check failed after adding resolution:', checkError);
-                    check = null;
-                }
-            }
-
-            if (check?.wouldClose && !check.allowed) {
-                setCloseOverrideReason('');
-                setCloseBlockedDialog({
-                    isOpen: true,
-                    statusId: targetStatusId,
-                    failures: check.failures,
-                    canOverride: check.canOverride,
-                    suppression: options ?? null,
-                });
-                return false;
+            } catch (checkError) {
+                // Fall through to the write; the server still enforces.
+                console.error('Close rules pre-check failed:', checkError);
             }
         }
 
@@ -2729,11 +2646,7 @@ const handleClose = () => {
                 if (field === 'itil_impact' || field === 'itil_urgency') {
                     await handleItilFieldChange(field, value);
                 } else {
-                    await handleSelectChange(
-                        field as keyof ITicket,
-                        value as string | null,
-                        field === 'status_id' && statusClosurePrepared,
-                    );
+                    await handleSelectChange(field as keyof ITicket, value as string | null);
                 }
             }
             return true;
@@ -2742,15 +2655,71 @@ const handleClose = () => {
             return false;
         }
     }, [
-        addResolutionBeforeClose,
         handleItilFieldChange,
         handleSelectChange,
         onBatchTicketUpdate,
         runWithPendingLiveFields,
-        statusOptions,
-        ticket.status_id,
         ticket.ticket_id,
     ]);
+
+    const handleResolveAndClose = useCallback(async (statusId: string, resolution: string) => {
+        if (!ticket.ticket_id || !closedStatusOptions.some((option) => option.value === statusId)) {
+            toast.error(t('messages.closeFailed', 'Failed to close ticket'));
+            return;
+        }
+
+        setIsSubmittingResolutionClose(true);
+        try {
+            const resolutionAdded = await addResolutionComment(resolution);
+            if (!resolutionAdded) {
+                return;
+            }
+
+            // The comment is already durable at this point. Close this dialog
+            // so a failed or blocked status write cannot accidentally create a
+            // duplicate resolution on resubmit.
+            setIsResolutionCloseDialogOpen(false);
+
+            try {
+                const check = await checkTicketClosure(ticket.ticket_id, statusId);
+                if (check.wouldClose && !check.allowed) {
+                    setCloseOverrideReason('');
+                    setCloseBlockedDialog({
+                        isOpen: true,
+                        statusId,
+                        failures: check.failures,
+                        canOverride: check.canOverride,
+                        suppression: null,
+                    });
+                    return;
+                }
+            } catch (checkError) {
+                // Fall through to the write; the server still enforces.
+                console.error('Close rules check failed after adding resolution:', checkError);
+            }
+
+            const result = await runWithPendingLiveFields(
+                ['status_id', 'response_state'],
+                () => updateTicketWithCache(ticket.ticket_id!, { status_id: statusId }),
+            );
+            if (isReturnedActionError(result)) {
+                throw result;
+            }
+
+            setTicket((previousTicket) => ({
+                ...previousTicket,
+                status_id: statusId,
+                response_state: null,
+                updated_at: new Date().toISOString(),
+            }));
+            setActivityLogRefreshKey((value) => value + 1);
+            toast.success(t('messages.ticketClosed', 'Ticket closed'));
+        } catch (error) {
+            handleTicketActionError(error, t('messages.closeFailed', 'Failed to close ticket'));
+        } finally {
+            setIsSubmittingResolutionClose(false);
+        }
+    }, [addResolutionComment, closedStatusOptions, runWithPendingLiveFields, t, ticket.ticket_id]);
 
     const handleClientChange = async (newClientId: string) => {
         try {
@@ -3458,10 +3427,15 @@ const handleClose = () => {
 
                 <TicketResolutionDialog
                     id={`${id}-resolution-close`}
-                    isOpen={resolutionCloseStatusId !== null}
-                    statusLabel={resolutionCloseStatusLabel}
-                    onClose={() => finishTicketResolutionRequest(null)}
-                    onConfirm={(resolution) => finishTicketResolutionRequest(resolution)}
+                    isOpen={isResolutionCloseDialogOpen}
+                    statusOptions={closedStatusOptions}
+                    isSubmitting={isSubmittingResolutionClose}
+                    onClose={() => {
+                        if (!isSubmittingResolutionClose) {
+                            setIsResolutionCloseDialogOpen(false);
+                        }
+                    }}
+                    onConfirm={handleResolveAndClose}
                 />
                 
                 {/* Blocked-close dialog: unmet close rules with quick actions and
@@ -3649,6 +3623,10 @@ const handleClose = () => {
                     tags={tags}
                     onTagsChange={handleTagsChange}
                     taskActions={renderCreateProjectTask?.({ ticket, additionalAgents: additionalAgentsForInfo })}
+                    onResolveAndClose={ticket.ticket_id && !currentStatusIsClosed
+                        ? () => setIsResolutionCloseDialogOpen(true)
+                        : undefined}
+                    resolveAndCloseDisabled={closedStatusOptions.length === 0 || isSubmitting || isSubmittingResolutionClose}
                     liveHighlightedFields={liveHighlightedFields}
                     liveFrozenFields={Object.keys(liveFieldConflicts)}
                     liveFieldConflicts={liveFieldConflicts}
@@ -3777,6 +3755,10 @@ const handleClose = () => {
                                     isBundledChild={Boolean(bundle?.isBundleChild)}
                                     responseStateTrackingEnabled={responseStateTrackingEnabled}
                                     renderProjectTaskActions={renderCreateProjectTask}
+                                    onResolveAndClose={ticket.ticket_id && !currentStatusIsClosed
+                                        ? () => setIsResolutionCloseDialogOpen(true)
+                                        : undefined}
+                                    resolveAndCloseDisabled={closedStatusOptions.length === 0 || isSubmitting || isSubmittingResolutionClose}
                                     teams={teams}
                                     onAssignTeam={handleAssignTeam}
                                     onRemoveTeamAssignment={async () => {
@@ -3981,6 +3963,10 @@ const handleClose = () => {
                             isBundledChild={Boolean(bundle?.isBundleChild)}
                             responseStateTrackingEnabled={responseStateTrackingEnabled}
                             renderProjectTaskActions={renderCreateProjectTask}
+                            onResolveAndClose={ticket.ticket_id && !currentStatusIsClosed
+                                ? () => setIsResolutionCloseDialogOpen(true)
+                                : undefined}
+                            resolveAndCloseDisabled={closedStatusOptions.length === 0 || isSubmitting || isSubmittingResolutionClose}
                             teams={teams}
                             onAssignTeam={handleAssignTeam}
                             onRemoveTeamAssignment={async () => {

@@ -38,8 +38,8 @@ describe('resolution comment close contract', () => {
     const tile = read('./BentoTimelineTile.tsx');
 
     expect(details).toContain('metadata: { closes_ticket: true }');
-    expect(details).toContain("await handleSelectChange('status_id', closeStatusId, true)");
-    expect(details).toContain('{ skipResolutionPrompt: true }');
+    expect(details).toContain("await handleSelectChange('status_id', closeStatusId)");
+    expect(details).toContain('await handleBatchSaveChanges({ status_id: closeStatusId }, options)');
     expect(tile).toContain('const success = await onAddNewComment(');
     expect(tile).toContain('closeStatusId && notificationSuppression.suppressContactNotifications');
     expect(tile).toContain('? notificationSuppression');
@@ -89,16 +89,28 @@ describe('resolution comment close contract', () => {
     expect(read('../../TicketingDashboard.tsx')).toContain('setBulkMoveNotificationSuppression(defaultNotificationSuppression())');
   });
 
-  it('prompts for and records a resolution before a status-based close', () => {
+  it('offers a dedicated toolbar close action that records a resolution and chosen status', () => {
     const details = read('../TicketDetails.tsx');
     const dialog = read('../TicketResolutionDialog.tsx');
+    const entry = read('../TicketInfo.tsx');
+    const hero = read('./BentoHero.tsx');
 
-    expect(details).toContain('await addResolutionBeforeClose(targetStatusId)');
+    expect(details).toContain('await addResolutionComment(resolution)');
     expect(details).toContain('addTicketCommentWithCache(');
     expect(details).toContain('<TicketResolutionDialog');
-    expect(details).toContain('check = await checkTicketClosure(ticket.ticket_id, targetStatusId)');
+    expect(details).toContain("['status_id', 'response_state']");
+    expect(details).toContain('() => updateTicketWithCache(ticket.ticket_id!, { status_id: statusId })');
+    expect(details).not.toContain('skipResolutionPrompt');
     expect(dialog).toContain("title={t('info.closeTicketTitle', 'Close ticket')}");
+    expect(dialog).toContain('<CustomSelect');
+    expect(dialog).toContain('options={statusOptions}');
     expect(dialog).toContain('footer={footer}');
-    expect(dialog).toContain('disabled={!trimmedResolution}');
+    expect(dialog).toContain('disabled={!statusId || !trimmedResolution || isSubmitting}');
+    expect(entry).toContain('id={`${id}-resolve-and-close-button`}');
+    expect(entry).toContain("t('info.resolveAndClose', 'Resolve and close')");
+    expect(entry).toContain("workflowLocked || isFieldFrozen('status_id') || resolveAndCloseDisabled");
+    expect(hero).toContain('id={`${id}-resolve-and-close-button`}');
+    expect(hero).toContain("t('info.resolveAndClose', 'Resolve and close')");
+    expect(hero).toContain("workflowLocked || isFrozen('status_id') || resolveAndCloseDisabled");
   });
 });
