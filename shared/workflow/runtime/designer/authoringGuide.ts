@@ -171,7 +171,7 @@ export function buildWorkflowAuthoringGuide(): WorkflowAuthoringGuide {
         'Expressions are JSONata programs written as { "$expr": "<source>" } objects.',
         '`==` is normalized to JSONata `=` for equality; use `!=`, `>`, `>=`, `<`, `<=` for comparisons and `and` / `or` / `$not(...)` for boolean logic.',
         'String concatenation uses `&` (e.g. payload.name & "!"). String literals use double quotes inside the source.',
-        'Only the functions listed in `functions` (called with or without a $ prefix) plus JSONata built-ins that they wrap are allowed; unknown function names fail validation.',
+        'Only these five functions are allowed, exhaustively: nowIso, coalesce, len, toString, append. They may be called with or without a $ prefix; any other function name fails validation.',
         'Results must be JSON-serializable and under 256KiB.',
       ],
       contexts: [
@@ -303,6 +303,9 @@ export function buildWorkflowAuthoringGuide(): WorkflowAuthoringGuide {
       'Do not invent tenant UUIDs (priorities, users, boards, groups) — resolve them via the v1 REST endpoints first.',
       'The workflow payloadSchemaRef must exist in the schema registry; when it differs from the trigger event schema a trigger.payloadMapping is required.',
       'Validate, then simulate, before saving — the simulate trace shows each action\'s evaluated input without side effects.',
+      'JSONata filter results collapse when exactly one item matches. Wrong: `len(vars.found.comments[is_internal = false]) > 0` returns 0 for zero matches and also 0 for one matching object; only 2+ matches works. Correct: force an array with `len([vars.found.comments[is_internal = false]]) > 0`. This is data-dependent and breaks precisely in the common case of exactly one client reply.',
+      'event.wait timeout throws `{ category: "TimeoutError" }`; it does not fall through and there is no resumed-vs-timed-out flag. Wrong: put the timeout path in the next step after event.wait. Correct: wrap the wait in control.tryCatch and treat catch[] as the timeout path, e.g. `{ "type": "control.tryCatch", "try": [{ "type": "event.wait", "config": { "timeoutMs": 86400000 } }], "catch": [{ "id": "handle-timeout", "type": "action.call", "config": { "...": "..." } }] }`.',
+      'The function allowlist is exactly nowIso, coalesce, len, toString, append. Wrong: `$count`, `$filter`, `$map`, `$toMillis`, `$sum`, and `$substring` fail validation. Correct: use `len([...])` instead of `$count(...)`; compare full ISO-8601 UTC timestamps as strings instead of `$toMillis(...)`.',
     ],
   };
 }
