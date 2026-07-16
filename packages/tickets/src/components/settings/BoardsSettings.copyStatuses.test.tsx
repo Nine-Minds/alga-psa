@@ -348,6 +348,13 @@ describe('BoardsSettings ticket status copy flow', () => {
     await waitFor(() => {
       expect(getAllBoardsMock).toHaveBeenCalledWith(true);
     });
+    // Also wait for the fetched boards to render before interacting: the add
+    // handler reads the committed `boards` state (falling back to create_inline
+    // seeding when boards.length === 0), so clicking while the resolved boards
+    // are still uncommitted races away the copy-statuses select on slow runners.
+    await waitFor(() => {
+      expect(document.querySelector('[id^="board-row-"]')).toBeTruthy();
+    });
 
     fireEvent.click(screen.getByTestId('add-board-button'));
 
@@ -415,6 +422,13 @@ describe('BoardsSettings ticket status copy flow', () => {
     await waitFor(() => {
       expect(getAllBoardsMock).toHaveBeenCalledWith(true);
     });
+    // Also wait for the fetched boards to render before interacting: the add
+    // handler reads the committed `boards` state (falling back to create_inline
+    // seeding when boards.length === 0), so clicking while the resolved boards
+    // are still uncommitted races away the copy-statuses select on slow runners.
+    await waitFor(() => {
+      expect(document.querySelector('[id^="board-row-"]')).toBeTruthy();
+    });
 
     fireEvent.click(screen.getByTestId('add-board-button'));
     fireEvent.change(screen.getByTestId('copy-ticket-statuses-select'), {
@@ -445,6 +459,13 @@ describe('BoardsSettings ticket status copy flow', () => {
 
     await waitFor(() => {
       expect(getAllBoardsMock).toHaveBeenCalledWith(true);
+    });
+    // Also wait for the fetched boards to render before interacting: the add
+    // handler reads the committed `boards` state (falling back to create_inline
+    // seeding when boards.length === 0), so clicking while the resolved boards
+    // are still uncommitted races away the copy-statuses select on slow runners.
+    await waitFor(() => {
+      expect(document.querySelector('[id^="board-row-"]')).toBeTruthy();
     });
 
     fireEvent.click(screen.getByTestId('add-board-button'));
@@ -490,6 +511,13 @@ describe('BoardsSettings ticket status copy flow', () => {
 
     await waitFor(() => {
       expect(getAllBoardsMock).toHaveBeenCalledWith(true);
+    });
+    // Also wait for the fetched boards to render before interacting: the add
+    // handler reads the committed `boards` state (falling back to create_inline
+    // seeding when boards.length === 0), so clicking while the resolved boards
+    // are still uncommitted races away the copy-statuses select on slow runners.
+    await waitFor(() => {
+      expect(document.querySelector('[id^="board-row-"]')).toBeTruthy();
     });
 
     fireEvent.click(screen.getByTestId('add-board-button'));
@@ -544,6 +572,13 @@ describe('BoardsSettings ticket status copy flow', () => {
 
     await waitFor(() => {
       expect(getAllBoardsMock).toHaveBeenCalledWith(true);
+    });
+    // Also wait for the fetched boards to render before interacting: the add
+    // handler reads the committed `boards` state (falling back to create_inline
+    // seeding when boards.length === 0), so clicking while the resolved boards
+    // are still uncommitted races away the copy-statuses select on slow runners.
+    await waitFor(() => {
+      expect(document.querySelector('[id^="board-row-"]')).toBeTruthy();
     });
 
     fireEvent.click(screen.getByTestId('add-board-button'));
@@ -600,6 +635,13 @@ describe('BoardsSettings ticket status copy flow', () => {
     await waitFor(() => {
       expect(getAllBoardsMock).toHaveBeenCalledWith(true);
     });
+    // Also wait for the fetched boards to render before interacting: the add
+    // handler reads the committed `boards` state (falling back to create_inline
+    // seeding when boards.length === 0), so clicking while the resolved boards
+    // are still uncommitted races away the copy-statuses select on slow runners.
+    await waitFor(() => {
+      expect(document.querySelector('[id^="board-row-"]')).toBeTruthy();
+    });
 
     fireEvent.click(screen.getAllByText('ticketing.boards.actions.edit')[0]);
 
@@ -618,6 +660,13 @@ describe('BoardsSettings ticket status copy flow', () => {
 
     await waitFor(() => {
       expect(getAllBoardsMock).toHaveBeenCalledWith(true);
+    });
+    // Also wait for the fetched boards to render before interacting: the add
+    // handler reads the committed `boards` state (falling back to create_inline
+    // seeding when boards.length === 0), so clicking while the resolved boards
+    // are still uncommitted races away the copy-statuses select on slow runners.
+    await waitFor(() => {
+      expect(document.querySelector('[id^="board-row-"]')).toBeTruthy();
     });
 
     fireEvent.click(screen.getByTestId('add-board-button'));
@@ -647,6 +696,13 @@ describe('BoardsSettings ticket status copy flow', () => {
     await waitFor(() => {
       expect(getAllBoardsMock).toHaveBeenCalledWith(true);
     });
+    // Also wait for the fetched boards to render before interacting: the add
+    // handler reads the committed `boards` state (falling back to create_inline
+    // seeding when boards.length === 0), so clicking while the resolved boards
+    // are still uncommitted races away the copy-statuses select on slow runners.
+    await waitFor(() => {
+      expect(document.querySelector('[id^="board-row-"]')).toBeTruthy();
+    });
 
     fireEvent.click(document.getElementById('board-row-board-source') as HTMLElement);
 
@@ -673,6 +729,13 @@ describe('BoardsSettings ticket status copy flow', () => {
 
     await waitFor(() => {
       expect(getAllBoardsMock).toHaveBeenCalledWith(true);
+    });
+    // Also wait for the fetched boards to render before interacting: the add
+    // handler reads the committed `boards` state (falling back to create_inline
+    // seeding when boards.length === 0), so clicking while the resolved boards
+    // are still uncommitted races away the copy-statuses select on slow runners.
+    await waitFor(() => {
+      expect(document.querySelector('[id^="board-row-"]')).toBeTruthy();
     });
 
     fireEvent.click(document.getElementById('board-row-board-source') as HTMLElement);
@@ -715,6 +778,13 @@ describe('BoardsSettings ticket status copy flow', () => {
     await waitFor(() => {
       expect(getAllBoardsMock).toHaveBeenCalledWith(true);
     });
+    // Also wait for the fetched boards to render before interacting: the add
+    // handler reads the committed `boards` state (falling back to create_inline
+    // seeding when boards.length === 0), so clicking while the resolved boards
+    // are still uncommitted races away the copy-statuses select on slow runners.
+    await waitFor(() => {
+      expect(document.querySelector('[id^="board-row-"]')).toBeTruthy();
+    });
 
     fireEvent.click(document.getElementById('board-row-board-source') as HTMLElement);
 
@@ -750,6 +820,13 @@ describe('BoardsSettings ticket status copy flow', () => {
     await waitFor(() => {
       expect(getAllBoardsMock).toHaveBeenCalledWith(true);
     });
+    // Also wait for the fetched boards to render before interacting: the add
+    // handler reads the committed `boards` state (falling back to create_inline
+    // seeding when boards.length === 0), so clicking while the resolved boards
+    // are still uncommitted races away the copy-statuses select on slow runners.
+    await waitFor(() => {
+      expect(document.querySelector('[id^="board-row-"]')).toBeTruthy();
+    });
 
     // Page 1 shows the first 10 boards only.
     await waitFor(() => {
@@ -778,6 +855,13 @@ describe('BoardsSettings ticket status copy flow', () => {
 
     await waitFor(() => {
       expect(getAllBoardsMock).toHaveBeenCalledWith(true);
+    });
+    // Also wait for the fetched boards to render before interacting: the add
+    // handler reads the committed `boards` state (falling back to create_inline
+    // seeding when boards.length === 0), so clicking while the resolved boards
+    // are still uncommitted races away the copy-statuses select on slow runners.
+    await waitFor(() => {
+      expect(document.querySelector('[id^="board-row-"]')).toBeTruthy();
     });
 
     // Default 10 per page: the 11th board is on page 2.

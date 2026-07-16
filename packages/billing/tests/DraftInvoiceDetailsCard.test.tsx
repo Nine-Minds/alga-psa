@@ -12,6 +12,26 @@ vi.mock('@alga-psa/billing/actions/invoiceModification', () => ({
   updateDraftInvoiceProperties: (...args: unknown[]) => updateDraftInvoicePropertiesMock(...args),
 }));
 
+vi.mock('@alga-psa/ui/components/DatePicker', () => ({
+  // The real DatePicker is a Radix popover + calendar, which getByDisplayValue /
+  // fireEvent.change cannot drive. Render it as a native date input while
+  // preserving the Date-based onChange contract: (date: Date | undefined) => void.
+  DatePicker: ({ value, onChange, id, placeholder, label, clearable, displayFormat, minDate, maxDate, collapsible, ...props }: any) => {
+    const toDateString = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    return (
+      <input
+        id={id}
+        type="date"
+        placeholder={placeholder}
+        value={value instanceof Date ? toDateString(value) : ''}
+        onChange={(e) => onChange?.(e.target.value ? new Date(`${e.target.value}T00:00:00`) : undefined)}
+        {...props}
+      />
+    );
+  },
+}));
+
 const draftInvoice = {
   invoice_id: 'inv-1',
   invoice_number: 'INV-1001',
