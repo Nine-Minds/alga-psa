@@ -252,6 +252,10 @@ async function createClientLocation(
     country_code: options.country_code || 'US',
     country_name: options.country_name || 'United States',
     region_code: options.region_code || 'US-NY',
+    location_name: options.location_name,
+    phone: options.phone,
+    is_default: options.is_default ?? false,
+    is_active: options.is_active ?? true,
     created_at: now,
     updated_at: now,
   });
@@ -454,6 +458,120 @@ describe('client workflow runtime DB-backed action handlers', () => {
   afterAll(async () => {
     await db?.destroy();
     runtimeState.db = null;
+  });
+
+  it('clients.find matches active client locations by normalized exact phone within the current tenant', async () => {
+    const clientId = await createClient(db, runtimeState.tenantId, 'Phone Match Client');
+    const locationId = await createClientLocation(db, clientId, runtimeState.tenantId, {
+      location_name: 'Phone Match HQ',
+      phone: '+1 (555) 222-3333',
+      is_default: true,
+      is_active: true,
+    });
+
+    const otherTenantId = await createTenant(db, `Other Phone Tenant ${Date.now()}`);
+    const otherClientId = await createClient(db, otherTenantId, 'Other Tenant Phone Client');
+    await createClientLocation(db, otherClientId, otherTenantId, {
+      location_name: 'Other Tenant HQ',
+      phone: '+1 (555) 222-3333',
+      is_default: true,
+      is_active: true,
+    });
+
+    const result = await invokeAction('clients.find', {
+      phone: '+1 555.222.3333',
+    });
+
+    expect(result.client.client_id).toBe(clientId);
+    expect(result.client.client_name).toBe('Phone Match Client');
+    expect(result.primary_contact).toBeNull();
+    expect(result.matched_location).toEqual({
+      location_id: locationId,
+      location_name: 'Phone Match HQ',
+      phone: '+1 (555) 222-3333',
+    });
+    expect(result.matched_count).toBe(1);
+  });
+
+  it('clients.find prefers a default location when multiple active locations match one phone', async () => {
+    const clientA = await createClient(db, runtimeState.tenantId, 'Non Default Phone Client');
+    const clientB = await createClient(db, runtimeState.tenantId, 'Default Phone Client');
+
+    await createClientLocation(db, clientA, runtimeState.tenantId, {
+      location_name: 'Branch',
+      phone: '555-333-4444',
+      is_default: false,
+      is_active: true,
+    });
+    const defaultLocationId = await createClientLocation(db, clientB, runtimeState.tenantId, {
+      location_name: 'Default HQ',
+      phone: '(555) 333-4444',
+      is_default: true,
+      is_active: true,
+    });
+
+    const result = await invokeAction('clients.find', {
+      phone: '5553334444',
+    });
+
+    expect(result.client.client_id).toBe(clientB);
+    expect(result.matched_location.location_id).toBe(defaultLocationId);
+    expect(result.matched_count).toBe(2);
+  });
+
+  it('clients.find excludes inactive locations and applies on_not_found behavior for phone matches', async () => {
+    const clientId = await createClient(db, runtimeState.tenantId, 'Inactive Location Client');
+    await createClientLocation(db, clientId, runtimeState.tenantId, {
+      location_name: 'Inactive HQ',
+      phone: '555-444-5555',
+      is_default: true,
+      is_active: false,
+    });
+
+    const result = await invokeAction('clients.find', {
+      phone: '5554445555',
+      on_not_found: 'return_null',
+    });
+
+    expect(result).toMatchObject({
+      client: null,
+      primary_contact: null,
+      matched_location: null,
+      matched_count: 0,
+    });
+
+    await expect(
+      invokeAction('clients.find', {
+        phone: '5554445555',
+        on_not_found: 'error',
+      })
+    ).rejects.toMatchObject({ code: 'NOT_FOUND', details: { matched_by: 'phone' } });
+  });
+
+  it('clients.find supports last7 phone matching and rejects too-short last7 input', async () => {
+    const clientId = await createClient(db, runtimeState.tenantId, 'Last Seven Client');
+    const locationId = await createClientLocation(db, clientId, runtimeState.tenantId, {
+      location_name: 'Last Seven HQ',
+      phone: '(212) 555-0199',
+      is_default: true,
+      is_active: true,
+    });
+
+    const result = await invokeAction('clients.find', {
+      phone: '(646) 555-0199',
+      phone_match: 'last7',
+    });
+
+    expect(result.client.client_id).toBe(clientId);
+    expect(result.matched_location.location_id).toBe(locationId);
+    expect(result.matched_count).toBe(1);
+
+    await expect(
+      invokeAction('clients.find', {
+        phone: '555019',
+        phone_match: 'last7',
+      })
+    ).rejects.toMatchObject({ code: 'VALIDATION_ERROR', message: 'phone is invalid' });
   });
 
   it('T004: clients.create creates tenant-scoped client summary and initial tags; actionProvided idempotency uses actionProvidedKey fallback', async () => {

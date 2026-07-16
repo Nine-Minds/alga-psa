@@ -11,6 +11,8 @@ export type TenantTxContext = {
 };
 
 export type ActionErrorCategory = 'ValidationError' | 'ActionError' | 'TransientError';
+export const phoneMatchModes = ['exact', 'last7', 'last10'] as const;
+export type PhoneMatchMode = (typeof phoneMatchModes)[number];
 
 export function throwActionError(
   ctx: ActionContext,
@@ -62,6 +64,31 @@ export function parseJsonMaybe(value: unknown): any {
   }
   if (typeof value === 'object') return value;
   return null;
+}
+
+export function normalizePhoneDigits(value: unknown): string {
+  return String(value ?? '').replace(/\D/g, '');
+}
+
+export function buildNormalizedPhoneMatchCondition(
+  columnRef: string,
+  digits: string,
+  mode: PhoneMatchMode = 'exact'
+): { sql: string; bindings: Array<string | number> } {
+  const normalizedColumn = `regexp_replace(coalesce(??, ''), '\\\\D', '', 'g')`;
+
+  if (mode === 'last7' || mode === 'last10') {
+    const length = mode === 'last7' ? 7 : 10;
+    return {
+      sql: `right(${normalizedColumn}, ?) = right(?, ?)`,
+      bindings: [columnRef, length, digits, length],
+    };
+  }
+
+  return {
+    sql: `${normalizedColumn} = ?`,
+    bindings: [columnRef, digits],
+  };
 }
 
 export function isJsonArrayString(value: string): boolean {
