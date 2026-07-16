@@ -71,9 +71,6 @@ segment the component is actually mounted on:
      ```
    - This removes the hardcoded `` `/msp/settings?${...}` `` and the stale
      `'/msp/settings?tab=billing'` fallback.
-   - Add a marker above the helper:
-     `// LEVERAGE: pattern settings-subtab-url — 3rd copy of pathname-anchored pushState across scheduling/billing/server; no shared layer extracted (scope).`
-
 2. **`packages/scheduling/src/components/settings/time-entry/TimeEntrySettings.tsx`**
    (`updateURL`, ~line 45):
    - Replace `const newUrl = `/msp/settings?${currentSearchParams.toString()}`;`
@@ -96,27 +93,6 @@ The existing `tab`-param bookkeeping in these helpers (`if (!currentSearchParams
 is a no-op on the segment routes (there is no `tab` param there) and can be left
 as-is to minimize the diff.
 
-## Regression guard (source-level contract test)
-
-Add `server/src/test/unit/settings/settingsSubtabUrlBase.contract.test.ts`,
-mirroring the existing `server/src/test/unit/settings/*.contract.test.ts`
-convention (read the file with `fs`, assert substrings). For each of the three
-components, assert:
-
-- the source **contains** `${window.location.pathname}?` (the corrected base), and
-- the source does **not** contain the hardcoded templated base
-  `` `/msp/settings?${ `` (use a plain-string `.not.toContain`, not a path
-  substring, to avoid matching unrelated `href="/msp/settings?tab=..."` strings —
-  none of these three files contain the templated-interpolation form except in the
-  bug).
-
-This catches all three fixes and any future reintroduction of the hardcoded base
-in a migrated sub-tab component.
-
-Run: the repo's unit-test script that covers `server/src/test/unit/settings`
-(same runner as the existing `*.contract.test.ts` files, e.g.
-`npm run test:unit` scoped to that path).
-
 ## Manual verification
 
 1. Start the dev server (host port 3400 for this worktree).
@@ -131,7 +107,6 @@ Run: the repo's unit-test script that covers `server/src/test/unit/settings`
 
 ## Files touched
 
-- `packages/billing/src/components/settings/billing/BillingSettings.tsx` (fix + marker)
+- `packages/billing/src/components/settings/billing/BillingSettings.tsx` (fix)
 - `packages/scheduling/src/components/settings/time-entry/TimeEntrySettings.tsx` (fix)
 - `server/src/components/settings/import-export/ImportExportSettings.tsx` (fix)
-- `server/src/test/unit/settings/settingsSubtabUrlBase.contract.test.ts` (new test)
