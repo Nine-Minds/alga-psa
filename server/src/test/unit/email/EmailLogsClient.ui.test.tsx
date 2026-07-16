@@ -27,6 +27,26 @@ vi.mock('@alga-psa/ui/components/Button', () => ({
   ),
 }));
 
+vi.mock('@alga-psa/ui/components/DatePicker', () => ({
+  // The real DatePicker is a Radix popover + calendar, which fireEvent.change
+  // cannot drive. Render it as a native date input while preserving the
+  // Date-based onChange contract: (date: Date | undefined) => void.
+  DatePicker: ({ value, onChange, id, placeholder, label, clearable, displayFormat, minDate, maxDate, collapsible, ...props }: any) => {
+    const toDateString = (d: Date) =>
+      `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    return (
+      <input
+        id={id}
+        type="date"
+        placeholder={placeholder}
+        value={value instanceof Date ? toDateString(value) : ''}
+        onChange={(e) => onChange?.(e.target.value ? new Date(`${e.target.value}T00:00:00`) : undefined)}
+        {...props}
+      />
+    );
+  },
+}));
+
 vi.mock('@alga-psa/ui/components/Dialog', () => ({
   Dialog: ({ isOpen, children }: any) => (isOpen ? <div data-testid="dialog">{children}</div> : null),
   DialogHeader: ({ children }: any) => <div>{children}</div>,
