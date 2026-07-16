@@ -54,7 +54,7 @@ import { findBoardById } from "../../actions/board-actions/boardActions";
 import { findCommentsByTicketId, deleteComment, createComment, updateComment, findCommentById } from "../../actions/comment-actions/commentActions";
 import { useDocumentsCrossFeature } from '@alga-psa/core/context/DocumentsCrossFeatureContext';
 import { getAllActiveContacts, getClientLocations, getContactByContactNameId, getContactsByClient, getClientById, getAllClients } from "../../actions/clientLookupActions";
-import { updateTicketWithCache } from "../../actions/optimizedTicketActions";
+import { addTicketCommentWithCache, updateTicketWithCache } from "../../actions/optimizedTicketActions";
 import { getTicketById, updateTicket, deleteTicket } from "../../actions/ticketActions";
 import {
     checkTicketClosure,
@@ -123,6 +123,8 @@ import { isBoardLiveTicketTimerEnabled } from '../../lib/boardLiveTicketTimer';
 import { hasAdminSettingsViewAccess } from './commentMetadataDebug';
 import type { TicketScreenBootstrap } from '../../lib/ticketScreenBootstrap';
 import { normalizeTicketLiveField, type TicketLiveConflictState } from './ticketLiveFields';
+import { createTicketRichTextParagraph } from '../../lib/ticketRichText';
+import TicketResolutionDialog from './TicketResolutionDialog';
 
 interface PendingCommentDelete {
     commentId: string;
@@ -376,6 +378,30 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     }>({ isOpen: false, statusId: null, failures: [], canOverride: false, suppression: null });
     const [closeOverrideReason, setCloseOverrideReason] = useState('');
     const [isSubmittingCloseOverride, setIsSubmittingCloseOverride] = useState(false);
+    const [resolutionCloseStatusId, setResolutionCloseStatusId] = useState<string | null>(null);
+    const resolutionCloseResolverRef = useRef<((resolution: string | null) => void) | null>(null);
+
+    const requestTicketResolution = useCallback((statusId: string): Promise<string | null> => {
+        resolutionCloseResolverRef.current?.(null);
+        setResolutionCloseStatusId(statusId);
+
+        return new Promise((resolve) => {
+            resolutionCloseResolverRef.current = resolve;
+        });
+    }, []);
+
+    const finishTicketResolutionRequest = useCallback((resolution: string | null) => {
+        const resolve = resolutionCloseResolverRef.current;
+        resolutionCloseResolverRef.current = null;
+        setResolutionCloseStatusId(null);
+        resolve?.(resolution);
+    }, []);
+
+    useEffect(() => () => {
+        resolutionCloseResolverRef.current?.(null);
+        resolutionCloseResolverRef.current = null;
+    }, []);
+
     const [checklistItems, setChecklistItems] = useState<ITicketChecklistItem[] | undefined>(
         bootstrap?.checklistItems ?? undefined,
     );
@@ -455,6 +481,47 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
             )
             .map(({ value, label }) => ({ value, label }));
     }, [statusOptions, ticket.board_id]);
+    const resolutionCloseStatusLabel = useMemo(
+        () => statusOptions.find((option) => option.value === resolutionCloseStatusId)?.label,
+        [resolutionCloseStatusId, statusOptions],
+    );
+
+    const addResolutionBeforeClose = useCallback(async (statusId: string): Promise<boolean> => {
+        const resolution = await requestTicketResolution(statusId);
+        if (resolution === null) {
+            return false;
+        }
+
+        if (!ticket.ticket_id) {
+            toast.error(t('messages.closeFailed', 'Failed to close ticket'));
+            return false;
+        }
+
+        try {
+            const result = await addTicketCommentWithCache(
+                ticket.ticket_id,
+                JSON.stringify(createTicketRichTextParagraph(resolution)),
+                false,
+                true,
+                true,
+            );
+            if (isReturnedActionError(result)) {
+                throw result;
+            }
+
+            const updatedComments = await findCommentsByTicketId(ticket.ticket_id);
+            if (isReturnedActionError(updatedComments)) {
+                throw updatedComments;
+            }
+            setConversations(updatedComments);
+            setActivityLogRefreshKey((value) => value + 1);
+            return true;
+        } catch (error) {
+            handleTicketActionError(error, t('messages.addCommentFailed', 'Failed to add comment'));
+            return false;
+        }
+    }, [requestTicketResolution, t, ticket.ticket_id]);
+
     const [board, setBoard] = useState<any>(initialBoard);
     const [savedBoardId, setSavedBoardId] = useState<string | null>(initialBoard?.board_id ?? initialTicket.board_id ?? null);
     const isLiveTicketTimerEnabled = useMemo(() => isBoardLiveTicketTimerEnabled(board), [board]);
@@ -1635,33 +1702,59 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         }
     };
 
-    const handleSelectChange = async (field: keyof ITicket, newValue: string | null) => {
+    const handleSelectChange = async (
+        field: keyof ITicket,
+        newValue: string | null,
+        skipResolutionPrompt = false,
+    ) => {
         const normalizedValue =
             field === 'assigned_to'
                 ? (newValue && newValue !== 'unassigned' ? newValue : null)
                 : newValue;
 
-        // Pre-close check: when this status change would close the ticket,
-        // surface unmet close rules in a dialog instead of submitting a write
-        // that the server would reject. The write paths re-enforce, so this is
-        // UX only — never trust it for correctness.
+        // A human open→closed transition first records a resolution, then
+        // evaluates board close rules against that newly-created comment.
+        // Programmatic resolution-comment closes opt out because they have
+        // already collected and persisted the resolution.
         if (field === 'status_id' && normalizedValue && ticket.ticket_id) {
+            const targetStatus = statusOptions.find((option) => option.value === normalizedValue);
+            const currentStatus = statusOptions.find((option) => option.value === ticket.status_id);
+            let wouldClose = Boolean(targetStatus?.is_closed && !currentStatus?.is_closed);
+            let check: Awaited<ReturnType<typeof checkTicketClosure>> | null = null;
+
             try {
-                const check = await checkTicketClosure(ticket.ticket_id, normalizedValue);
-                if (check.wouldClose && !check.allowed) {
-                    setCloseOverrideReason('');
-                    setCloseBlockedDialog({
-                        isOpen: true,
-                        statusId: normalizedValue,
-                        failures: check.failures,
-                        canOverride: check.canOverride,
-                        suppression: null,
-                    });
+                check = await checkTicketClosure(ticket.ticket_id, normalizedValue);
+                wouldClose = check.wouldClose;
+            } catch (checkError) {
+                // Use the locally-loaded status metadata for the resolution
+                // prompt; the server write still enforces close rules.
+                console.error('Close rules pre-check failed:', checkError);
+            }
+
+            if (wouldClose && !skipResolutionPrompt) {
+                const resolutionAdded = await addResolutionBeforeClose(normalizedValue);
+                if (!resolutionAdded) {
                     return;
                 }
-            } catch (checkError) {
-                // Fall through to the normal update; the server still enforces.
-                console.error('Close rules pre-check failed:', checkError);
+
+                try {
+                    check = await checkTicketClosure(ticket.ticket_id, normalizedValue);
+                } catch (checkError) {
+                    console.error('Close rules re-check failed after adding resolution:', checkError);
+                    check = null;
+                }
+            }
+
+            if (check?.wouldClose && !check.allowed) {
+                setCloseOverrideReason('');
+                setCloseBlockedDialog({
+                    isOpen: true,
+                    statusId: normalizedValue,
+                    failures: check.failures,
+                    canOverride: check.canOverride,
+                    suppression: null,
+                });
+                return;
             }
         }
 
@@ -1960,7 +2053,11 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                         if (!closeBlocked) {
                             // Backend clears response_state when closing; keep UI consistent.
                             setTicket((prev: any) => ({ ...prev, response_state: null }));
-                            const closed = await handleBatchSaveChanges({ status_id: closeStatusId }, options);
+                            const closed = await handleBatchSaveChanges(
+                                { status_id: closeStatusId },
+                                options,
+                                { skipResolutionPrompt: true },
+                            );
                             if (!closed) {
                                 toast.error(t('messages.closeFailed', 'Failed to close ticket'));
                             }
@@ -1968,7 +2065,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                     } else {
                         // Backend clears response_state when closing; keep UI consistent.
                         setTicket((prev: any) => ({ ...prev, response_state: null }));
-                        await handleSelectChange('status_id', closeStatusId);
+                        await handleSelectChange('status_id', closeStatusId, true);
                     }
                 }
                 
@@ -2023,9 +2120,13 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                         if (isResolution && closeStatusId && ticket.status_id !== closeStatusId) {
                             setTicket((prev: any) => ({ ...prev, response_state: null }));
                             if (options?.suppressContactNotifications) {
-                                await handleBatchSaveChanges({ status_id: closeStatusId }, options);
+                                await handleBatchSaveChanges(
+                                    { status_id: closeStatusId },
+                                    options,
+                                    { skipResolutionPrompt: true },
+                                );
                             } else {
-                                await handleSelectChange('status_id', closeStatusId);
+                                await handleSelectChange('status_id', closeStatusId, true);
                             }
                         }
                         
@@ -2533,8 +2634,53 @@ const handleClose = () => {
     // Handler for batch save changes from TicketInfo
     const handleBatchSaveChanges = useCallback(async (
         changes: Record<string, unknown>,
-        options?: TicketNotificationSuppressionValue
+        options?: TicketNotificationSuppressionValue,
+        behavior: { skipResolutionPrompt?: boolean } = {},
     ): Promise<boolean> => {
+        const targetStatusId = typeof changes.status_id === 'string' ? changes.status_id : null;
+        let statusClosurePrepared = behavior.skipResolutionPrompt === true;
+
+        if (targetStatusId && ticket.ticket_id) {
+            const targetStatus = statusOptions.find((option) => option.value === targetStatusId);
+            const currentStatus = statusOptions.find((option) => option.value === ticket.status_id);
+            let wouldClose = Boolean(targetStatus?.is_closed && !currentStatus?.is_closed);
+            let check: Awaited<ReturnType<typeof checkTicketClosure>> | null = null;
+
+            try {
+                check = await checkTicketClosure(ticket.ticket_id, targetStatusId);
+                wouldClose = check.wouldClose;
+            } catch (checkError) {
+                console.error('Close rules pre-check failed:', checkError);
+            }
+
+            if (wouldClose && !statusClosurePrepared) {
+                const resolutionAdded = await addResolutionBeforeClose(targetStatusId);
+                if (!resolutionAdded) {
+                    return false;
+                }
+                statusClosurePrepared = true;
+
+                try {
+                    check = await checkTicketClosure(ticket.ticket_id, targetStatusId);
+                } catch (checkError) {
+                    console.error('Close rules re-check failed after adding resolution:', checkError);
+                    check = null;
+                }
+            }
+
+            if (check?.wouldClose && !check.allowed) {
+                setCloseOverrideReason('');
+                setCloseBlockedDialog({
+                    isOpen: true,
+                    statusId: targetStatusId,
+                    failures: check.failures,
+                    canOverride: check.canOverride,
+                    suppression: options ?? null,
+                });
+                return false;
+            }
+        }
+
         // If we have a batch handler from container, use it
         if (onBatchTicketUpdate) {
             const success = await runWithPendingLiveFields(Object.keys(changes), () => onBatchTicketUpdate(changes, options));
@@ -2583,7 +2729,11 @@ const handleClose = () => {
                 if (field === 'itil_impact' || field === 'itil_urgency') {
                     await handleItilFieldChange(field, value);
                 } else {
-                    await handleSelectChange(field as keyof ITicket, value as string | null);
+                    await handleSelectChange(
+                        field as keyof ITicket,
+                        value as string | null,
+                        field === 'status_id' && statusClosurePrepared,
+                    );
                 }
             }
             return true;
@@ -2591,7 +2741,16 @@ const handleClose = () => {
             console.error('Error in batch save:', error);
             return false;
         }
-    }, [handleItilFieldChange, onBatchTicketUpdate, runWithPendingLiveFields, ticket.ticket_id]);
+    }, [
+        addResolutionBeforeClose,
+        handleItilFieldChange,
+        handleSelectChange,
+        onBatchTicketUpdate,
+        runWithPendingLiveFields,
+        statusOptions,
+        ticket.status_id,
+        ticket.ticket_id,
+    ]);
 
     const handleClientChange = async (newClientId: string) => {
         try {
@@ -3295,6 +3454,14 @@ const handleClose = () => {
                     thirdButtonLabel={deleteDialogHasImages ? t('conversation.deleteCommentOnly', 'Delete Comment Only') : undefined}
                     cancelLabel={t('actions.cancel', 'Cancel')}
                     isConfirming={isDeletingComment}
+                />
+
+                <TicketResolutionDialog
+                    id={`${id}-resolution-close`}
+                    isOpen={resolutionCloseStatusId !== null}
+                    statusLabel={resolutionCloseStatusLabel}
+                    onClose={() => finishTicketResolutionRequest(null)}
+                    onConfirm={(resolution) => finishTicketResolutionRequest(resolution)}
                 />
                 
                 {/* Blocked-close dialog: unmet close rules with quick actions and

@@ -38,8 +38,8 @@ describe('resolution comment close contract', () => {
     const tile = read('./BentoTimelineTile.tsx');
 
     expect(details).toContain('metadata: { closes_ticket: true }');
-    expect(details).toContain("await handleSelectChange('status_id', closeStatusId)");
-    expect(details).toContain('await handleBatchSaveChanges({ status_id: closeStatusId }, options)');
+    expect(details).toContain("await handleSelectChange('status_id', closeStatusId, true)");
+    expect(details).toContain('{ skipResolutionPrompt: true }');
     expect(tile).toContain('const success = await onAddNewComment(');
     expect(tile).toContain('closeStatusId && notificationSuppression.suppressContactNotifications');
     expect(tile).toContain('? notificationSuppression');
@@ -87,5 +87,18 @@ describe('resolution comment close contract', () => {
     expect(read('./BentoTimelineTile.tsx')).toContain('setNotificationSuppression(defaultNotificationSuppression())');
     expect(read('./BentoHero.tsx')).toContain('setNotificationSuppression(defaultNotificationSuppression())');
     expect(read('../../TicketingDashboard.tsx')).toContain('setBulkMoveNotificationSuppression(defaultNotificationSuppression())');
+  });
+
+  it('prompts for and records a resolution before a status-based close', () => {
+    const details = read('../TicketDetails.tsx');
+    const dialog = read('../TicketResolutionDialog.tsx');
+
+    expect(details).toContain('await addResolutionBeforeClose(targetStatusId)');
+    expect(details).toContain('addTicketCommentWithCache(');
+    expect(details).toContain('<TicketResolutionDialog');
+    expect(details).toContain('check = await checkTicketClosure(ticket.ticket_id, targetStatusId)');
+    expect(dialog).toContain("title={t('info.closeTicketTitle', 'Close ticket')}");
+    expect(dialog).toContain('footer={footer}');
+    expect(dialog).toContain('disabled={!trimmedResolution}');
   });
 });
