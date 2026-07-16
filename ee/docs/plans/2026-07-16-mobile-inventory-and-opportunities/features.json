@@ -574,7 +574,7 @@
   {
     "id": "F111",
     "description": "OpenAPI spec regenerated with all new routes; synced to developer portal (alga-openapi-sync)",
-    "implemented": false,
+    "implemented": true,
     "commitGroup": "openapi-docs",
     "prdRefs": [
       "FR4",
