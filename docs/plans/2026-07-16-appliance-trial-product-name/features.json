@@ -1,0 +1,20 @@
+[
+  {
+    "id": "F001",
+    "description": "Every appliance trial banner state uses Pro in its fallback copy without changing licensing behavior",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements", "Non-goals"]
+  },
+  {
+    "id": "F002",
+    "description": "Every real-locale appliance trial banner string introduced or changed by this card uses the Pro product name",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements", "UX / UI Notes"]
+  },
+  {
+    "id": "F003",
+    "description": "Focused banner coverage verifies all appliance trial states use Pro and rejects Enterprise and Premium regressions",
+    "implemented": true,
+    "prdRefs": ["Requirements > Functional Requirements", "Acceptance Criteria (Definition of Done)"]
+  }
+]
