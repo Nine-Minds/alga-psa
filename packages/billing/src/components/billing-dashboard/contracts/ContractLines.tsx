@@ -16,9 +16,10 @@ import {
 } from '@alga-psa/billing/actions/contractLineMappingActions';
 import { checkContractHasInvoices } from '@alga-psa/billing/actions/contractActions';
 import {
+  applyContractLineServiceMembershipChanges,
   getContractLineServicesWithConfigurations,
   getTemplateLineServicesWithConfigurations,
-  removeServiceFromContractLine,
+  type ContractLineServiceMembershipAddition,
 } from '@alga-psa/billing/actions/contractLineServiceActions';
 import {
   updateConfiguration,
@@ -34,7 +35,10 @@ import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { AddContractLinesDialog } from './AddContractLinesDialog';
 import { CreateCustomContractLineDialog } from './CreateCustomContractLineDialog';
-import { ServiceSelectionDialog } from '../service-config/ServiceSelectionDialog';
+import {
+  ServiceSelectionDialog,
+  type ContractLineServiceSelection,
+} from '../service-config/ServiceSelectionDialog';
 import { SwitchWithLabel } from '@alga-psa/ui/components/SwitchWithLabel';
 import { BucketOverlayFields } from './BucketOverlayFields';
 import { BucketOverlayInput } from './ContractWizard';
@@ -118,6 +122,13 @@ interface ServiceConfiguration {
   bucketConfig?: any; // Add bucketConfig property for merged bucket data
 }
 
+interface PendingServiceAddition {
+  selection: ContractLineServiceSelection;
+  draftConfigurationId: string;
+}
+
+const DRAFT_SERVICE_CONFIG_PREFIX = 'draft-service-config:';
+
 const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null, onContractLinesChanged, isReadOnly = false }) => {
   const { t } = useTranslation('msp/contracts');
   const { formatCurrency } = useFormatters();
@@ -158,6 +169,8 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
   const [editLineData, setEditLineData] = useState<Partial<DetailedContractLineMapping>>({});
   const [editServiceConfigs, setEditServiceConfigs] = useState<Record<string, any>>({});
   const [editBucketConfigs, setEditBucketConfigs] = useState<Record<string, BucketOverlayInput | null>>({});
+  const [pendingServiceAdditions, setPendingServiceAdditions] = useState<PendingServiceAddition[]>([]);
+  const [pendingServiceRemovalIds, setPendingServiceRemovalIds] = useState<string[]>([]);
 
   // Location grouping state
   const [clientLocations, setClientLocations] = useState<BillingLocationSummary[]>([]);
@@ -396,10 +409,31 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
     setEditBucketConfigs(bucketConfigsData);
   };
 
-  const refreshServicesForEditing = async (contractLineId: string) => {
-    const services = await loadServicesForLine(contractLineId, true);
-    initializeServiceConfigEdits(services);
+  const resetServiceMembershipDraft = () => {
+    setPendingServiceAdditions([]);
+    setPendingServiceRemovalIds([]);
   };
+
+  const createDraftServiceConfiguration = (
+    contractLineId: string,
+    pendingAddition: PendingServiceAddition,
+  ): ServiceConfiguration => ({
+    service: {
+      service_id: pendingAddition.selection.service.service_id,
+      service_name: pendingAddition.selection.service.service_name,
+      billing_method: pendingAddition.selection.service.billing_method,
+    },
+    configuration: {
+      config_id: pendingAddition.draftConfigurationId,
+      service_id: pendingAddition.selection.service.service_id,
+      contract_line_id: contractLineId,
+      configuration_type: pendingAddition.selection.configurationType,
+      custom_rate: pendingAddition.selection.customRate,
+      quantity: pendingAddition.selection.quantity,
+    },
+    typeConfig: pendingAddition.selection.typeConfig,
+    bucketConfig: null,
+  });
 
   const handleAddContractLines = async () => {
     if (!contract.contract_id) return;
@@ -470,6 +504,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
         location_id: line.location_id ?? defaultLocationId ?? null,
       });
       initializeServiceConfigEdits(services);
+      resetServiceMembershipDraft();
     } catch (err) {
       console.error('Error checking contract invoices:', err);
       setError(t('contractLines.errors.failedToCheckEditable', {
@@ -478,35 +513,86 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
     }
   };
 
-  const handleRemoveService = async (contractLineId: string, serviceId: string) => {
+  const handleRemoveService = (contractLineId: string, serviceId: string, configId: string) => {
     setError(null);
-    try {
-      const result = await removeServiceFromContractLine(contractLineId, serviceId);
-      if (isReturnedActionError(result)) {
-        setError(getErrorMessage(result));
-        return;
-      }
-
-      await refreshServicesForEditing(contractLineId);
-      onContractLinesChanged?.();
-    } catch (err) {
-      console.error('Error removing service from contract line:', err);
-      setError(t('contractLines.errors.failedToUpdate', {
-        defaultValue: 'Failed to update contract line',
-      }));
+    if (configId.startsWith(DRAFT_SERVICE_CONFIG_PREFIX)) {
+      setPendingServiceAdditions((current) =>
+        current.filter((addition) => addition.selection.service.service_id !== serviceId)
+      );
+      setEditServiceConfigs((current) => {
+        const next = { ...current };
+        delete next[configId];
+        return next;
+      });
+      setEditBucketConfigs((current) => {
+        const next = { ...current };
+        delete next[serviceId];
+        return next;
+      });
+      return;
     }
+
+    if (!lineServices[contractLineId]?.some((service) => service.service.service_id === serviceId)) {
+      return;
+    }
+
+    setPendingServiceRemovalIds((current) =>
+      current.includes(serviceId) ? current : [...current, serviceId]
+    );
   };
 
-  const handleServicesAdded = async (contractLineId: string) => {
-    try {
-      await refreshServicesForEditing(contractLineId);
-      onContractLinesChanged?.();
-    } catch (err) {
-      console.error('Error refreshing services after adding to contract line:', err);
-      setError(t('contractLines.errors.failedToUpdate', {
-        defaultValue: 'Failed to update contract line',
-      }));
-    }
+  const handleServicesSelected = (
+    contractLineId: string,
+    selections: ContractLineServiceSelection[],
+  ) => {
+    const persistedServiceIds = new Set(
+      (lineServices[contractLineId] || []).map((service) => service.service.service_id)
+    );
+    const pendingServiceIds = new Set(
+      pendingServiceAdditions.map((addition) => addition.selection.service.service_id)
+    );
+    const newSelections = selections.filter((selection) => {
+      const serviceId = selection.service.service_id;
+      return !persistedServiceIds.has(serviceId) && !pendingServiceIds.has(serviceId);
+    });
+    const newAdditions = newSelections.map((selection) => ({
+      selection,
+      draftConfigurationId: `${DRAFT_SERVICE_CONFIG_PREFIX}${selection.service.service_id}`,
+    }));
+
+    setPendingServiceRemovalIds((current) =>
+      current.filter((serviceId) => !selections.some(
+        (selection) => selection.service.service_id === serviceId && persistedServiceIds.has(serviceId)
+      ))
+    );
+    setPendingServiceAdditions((current) => [...current, ...newAdditions]);
+    setEditServiceConfigs((configs) => {
+      const next = { ...configs };
+      for (const addition of newAdditions) {
+        const { selection, draftConfigurationId } = addition;
+        next[draftConfigurationId] = {
+          quantity: selection.quantity,
+          custom_rate: selection.customRate,
+          hourly_rate: 'hourly_rate' in selection.typeConfig
+            ? selection.typeConfig.hourly_rate
+            : undefined,
+          base_rate: 'base_rate' in selection.typeConfig
+            ? selection.typeConfig.base_rate
+            : undefined,
+          unit_of_measure: 'unit_of_measure' in selection.typeConfig
+            ? selection.typeConfig.unit_of_measure
+            : undefined,
+        };
+      }
+      return next;
+    });
+    setEditBucketConfigs((configs) => {
+      const next = { ...configs };
+      for (const addition of newAdditions) {
+        next[addition.selection.service.service_id] = null;
+      }
+      return next;
+    });
   };
 
   const handleSaveContractLine = async (contractLineId: string) => {
@@ -533,7 +619,9 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
 
       // Update all service configurations based on what was actually edited
       // Use editServiceConfigs keys to ensure we update the correct config_ids
-      const services = lineServices[contractLineId] || [];
+      const services = (lineServices[contractLineId] || []).filter(
+        (service) => !pendingServiceRemovalIds.includes(service.service.service_id)
+      );
 
       // Build a map of service_id to serviceConfig for bucket updates
       const serviceById = new Map();
@@ -578,8 +666,47 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
         }
       }
 
-      // Update bucket configurations separately
+      const additions: ContractLineServiceMembershipAddition[] = pendingServiceAdditions.map((addition) => {
+        const editData = editServiceConfigs[addition.draftConfigurationId] || {};
+        const typeConfig = addition.selection.configurationType === 'Hourly'
+          ? { hourly_rate: editData.hourly_rate ?? addition.selection.customRate }
+          : addition.selection.configurationType === 'Usage'
+            ? {
+                base_rate: editData.base_rate ?? addition.selection.customRate,
+                unit_of_measure:
+                  editData.unit_of_measure || addition.selection.service.unit_of_measure || 'unit',
+              }
+            : { base_rate: editData.base_rate ?? addition.selection.customRate };
+
+        return {
+          serviceId: addition.selection.service.service_id,
+          quantity: editData.quantity ?? addition.selection.quantity,
+          customRate: editData.custom_rate ?? addition.selection.customRate,
+          configurationType: addition.selection.configurationType,
+          typeConfig,
+        };
+      });
+
+      if (additions.length > 0 || pendingServiceRemovalIds.length > 0) {
+        const membershipResult = await applyContractLineServiceMembershipChanges(
+          contractLineId,
+          {
+            additions,
+            removals: pendingServiceRemovalIds,
+          }
+        );
+        if (isReturnedActionError(membershipResult)) {
+          setError(getErrorMessage(membershipResult));
+          return;
+        }
+      }
+
+      // Persist memberships before bucket overlays so a newly selected service
+      // has its primary configuration available to the bucket upsert.
       for (const [serviceId, bucketConfig] of Object.entries(editBucketConfigs)) {
+        if (pendingServiceRemovalIds.includes(serviceId)) {
+          continue;
+        }
         if (bucketConfig && bucketConfig.total_minutes !== undefined && bucketConfig.overage_rate !== undefined) {
           const bucketResult = await upsertContractLineServiceBucketConfigurationAction(
             contractLineId,
@@ -612,6 +739,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
       setEditLineData({});
       setEditServiceConfigs({});
       setEditBucketConfigs({});
+      resetServiceMembershipDraft();
       setShowServiceSelectionDialog(false);
       onContractLinesChanged?.();
     } catch (err) {
@@ -627,6 +755,7 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
     setEditLineData({});
     setEditServiceConfigs({});
     setEditBucketConfigs({});
+    resetServiceMembershipDraft();
     setShowServiceSelectionDialog(false);
   };
 
@@ -640,11 +769,18 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
   const editingLine = editingLineId
     ? contractLines.find((line) => line.contract_line_id === editingLineId)
     : undefined;
-  const editingLineServiceIds = editingLineId
-    ? (lineServices[editingLineId] || [])
-        .filter((service) => service.configuration.configuration_type !== 'Bucket')
-        .map((service) => service.service.service_id)
-    : [];
+  const editingLineServiceIds = useMemo(() => editingLineId
+    ? [
+        ...(lineServices[editingLineId] || [])
+          .filter(
+            (service) =>
+              service.configuration.configuration_type !== 'Bucket' &&
+              !pendingServiceRemovalIds.includes(service.service.service_id)
+          )
+          .map((service) => service.service.service_id),
+        ...pendingServiceAdditions.map((addition) => addition.selection.service.service_id),
+      ]
+    : [], [editingLineId, lineServices, pendingServiceAdditions, pendingServiceRemovalIds]);
 
   if (isLoading) {
     return (
@@ -822,7 +958,17 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                     <div className="space-y-2">
                       {group.lines.map((line) => {
               const isExpanded = expandedLines[line.contract_line_id];
-              const services = lineServices[line.contract_line_id] || [];
+              const persistedServices = lineServices[line.contract_line_id] || [];
+              const services = editingLineId === line.contract_line_id
+                ? [
+                    ...persistedServices.filter(
+                      (service) => !pendingServiceRemovalIds.includes(service.service.service_id)
+                    ),
+                    ...pendingServiceAdditions.map((addition) =>
+                      createDraftServiceConfiguration(line.contract_line_id, addition)
+                    ),
+                  ]
+                : persistedServices;
               const isLoadingServices = loadingServices[line.contract_line_id];
               const isSavingLine = savingLineId === line.contract_line_id;
 
@@ -1290,9 +1436,10 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
                                             type="button"
                                             variant="ghost"
                                             size="sm"
-                                            onClick={() => void handleRemoveService(
+                                            onClick={() => handleRemoveService(
                                               line.contract_line_id,
                                               serviceConfig.service.service_id,
+                                              serviceConfig.configuration.config_id,
                                             )}
                                             className="text-destructive hover:bg-destructive/10 hover:text-destructive"
                                             disabled={isSavingLine}
@@ -1566,11 +1713,12 @@ const ContractLines: React.FC<ContractLinesProps> = ({ contract, clientId = null
             <ServiceSelectionDialog
               isOpen={showServiceSelectionDialog}
               onClose={() => setShowServiceSelectionDialog(false)}
-              contractLineId={editingLine.contract_line_id}
               contractLineType={editingLine.contract_line_type as 'Fixed' | 'Hourly' | 'Usage'}
               currencyCode={contract.currency_code || 'USD'}
               existingServiceIds={editingLineServiceIds}
-              onServiceAdded={() => void handleServicesAdded(editingLine.contract_line_id)}
+              onServicesSelected={(selections) =>
+                handleServicesSelected(editingLine.contract_line_id, selections)
+              }
             />
           )}
         </>

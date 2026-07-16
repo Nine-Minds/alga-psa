@@ -7,32 +7,46 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '@alga-psa/ui/components/Table';
 import { Search, Plus, Check } from 'lucide-react';
-import { IService } from '@alga-psa/types';
+import {
+  IContractLineServiceFixedConfig,
+  IContractLineServiceHourlyConfig,
+  IContractLineServiceUsageConfig,
+  IService,
+} from '@alga-psa/types';
 import { getServices } from '@alga-psa/billing/actions/serviceActions';
-import { addServiceToContractLine } from '@alga-psa/billing/actions/contractLineServiceActions';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 const isReturnedActionError = (value: unknown): boolean =>
   isActionMessageError(value) || isActionPermissionError(value);
 
+export interface ContractLineServiceSelection {
+  service: IService;
+  quantity: number;
+  customRate: number;
+  configurationType: 'Fixed' | 'Hourly' | 'Usage';
+  typeConfig: Partial<
+    IContractLineServiceFixedConfig |
+    IContractLineServiceHourlyConfig |
+    IContractLineServiceUsageConfig
+  >;
+}
+
 interface ServiceSelectionDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  contractLineId: string;
   contractLineType: 'Fixed' | 'Hourly' | 'Usage';
   currencyCode: string;
-  onServiceAdded?: () => void;
+  onServicesSelected: (services: ContractLineServiceSelection[]) => void | Promise<void>;
   existingServiceIds?: string[];
 }
 
 export function ServiceSelectionDialog({ 
   isOpen, 
   onClose, 
-  contractLineId,
   contractLineType,
   currencyCode,
-  onServiceAdded,
+  onServicesSelected,
   existingServiceIds = []
 }: ServiceSelectionDialogProps) {
   const { t } = useTranslation('msp/service-catalog');
@@ -64,7 +78,7 @@ export function ServiceSelectionDialog({
           setError(getErrorMessage(servicesResponse));
           return;
         }
-        
+
         // Extract the services array from the paginated response
         const servicesData = Array.isArray(servicesResponse)
           ? servicesResponse
@@ -133,13 +147,10 @@ export function ServiceSelectionDialog({
       setAdding(true);
       setError(null);
       
-      // Add each selected service with a usable type-specific default so it can
-      // be configured immediately in the contract-line editor after refresh.
-      for (const serviceId of selectedServices) {
+      const selections = selectedServices.map((serviceId): ContractLineServiceSelection => {
         const selectedService = services.find((service) => service.service_id === serviceId);
         if (!selectedService) {
-          setError(t('serviceSelection.errors.add', { defaultValue: 'Failed to add services to contract line' }));
-          return;
+          throw new Error(`Selected service ${serviceId} is no longer available`);
         }
 
         const currencyRate = selectedService.prices?.find(
@@ -155,23 +166,19 @@ export function ServiceSelectionDialog({
               }
             : { base_rate: resolvedRate };
 
-        const result = await addServiceToContractLine(
-          contractLineId,
-          serviceId,
-          1,
-          resolvedRate,
-          contractLineType,
-          typeConfig
-        );
-        if (isReturnedActionError(result)) {
-          setError(getErrorMessage(result));
-          return;
-        }
-      }
-      
-      if (onServiceAdded) {
-        onServiceAdded();
-      }
+        return {
+          service: selectedService,
+          quantity: 1,
+          customRate: resolvedRate,
+          configurationType: contractLineType,
+          typeConfig,
+        };
+      });
+
+      // The parent editor owns persistence. Keeping this callback local makes
+      // the picker part of the contract-line draft, so its outer Cancel action
+      // can discard additions along with every other unsaved edit.
+      await onServicesSelected(selections);
 
       setSelectedServices([]);
       onClose();

@@ -1,15 +1,24 @@
 // @vitest-environment jsdom
 
 import React from 'react';
-import { readFileSync } from 'node:fs';
-import { resolve } from 'node:path';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import ContractLines from '../src/components/billing-dashboard/contracts/ContractLines';
 import { ServiceSelectionDialog } from '../src/components/billing-dashboard/service-config/ServiceSelectionDialog';
 
 const actionMocks = vi.hoisted(() => ({
-  addServiceToContractLine: vi.fn(),
+  applyContractLineServiceMembershipChanges: vi.fn(),
+  checkContractHasInvoices: vi.fn(),
+  getActiveClientLocationsForBilling: vi.fn(),
+  getContractLineServicesWithConfigurations: vi.fn(),
+  getDetailedContractLines: vi.fn(),
   getServices: vi.fn(),
+  getTemplateLineServicesWithConfigurations: vi.fn(),
+  removeContractLine: vi.fn(),
+  updateConfiguration: vi.fn(),
+  updateContractLine: vi.fn(),
+  updateContractLineAssociation: vi.fn(),
+  upsertBucketConfiguration: vi.fn(),
 }));
 
 vi.mock('@alga-psa/billing/actions/serviceActions', () => ({
@@ -17,22 +26,67 @@ vi.mock('@alga-psa/billing/actions/serviceActions', () => ({
 }));
 
 vi.mock('@alga-psa/billing/actions/contractLineServiceActions', () => ({
-  addServiceToContractLine: actionMocks.addServiceToContractLine,
+  applyContractLineServiceMembershipChanges: actionMocks.applyContractLineServiceMembershipChanges,
+  getContractLineServicesWithConfigurations: actionMocks.getContractLineServicesWithConfigurations,
+  getTemplateLineServicesWithConfigurations: actionMocks.getTemplateLineServicesWithConfigurations,
 }));
 
+vi.mock('@alga-psa/billing/actions/contractLineAction', () => ({
+  updateContractLine: actionMocks.updateContractLine,
+}));
+
+vi.mock('@alga-psa/billing/actions/contractLineMappingActions', () => ({
+  getDetailedContractLines: actionMocks.getDetailedContractLines,
+  removeContractLine: actionMocks.removeContractLine,
+  updateContractLineAssociation: actionMocks.updateContractLineAssociation,
+}));
+
+vi.mock('@alga-psa/billing/actions/contractActions', () => ({
+  checkContractHasInvoices: actionMocks.checkContractHasInvoices,
+}));
+
+vi.mock('@alga-psa/billing/actions/contractLineServiceConfigurationActions', () => ({
+  updateConfiguration: actionMocks.updateConfiguration,
+  upsertPlanServiceBucketConfigurationAction: actionMocks.upsertBucketConfiguration,
+}));
+
+vi.mock('@alga-psa/billing/actions/billingClientLocationActions', () => ({
+  getActiveClientLocationsForBilling: actionMocks.getActiveClientLocationsForBilling,
+}));
+
+const translate = (_key: string, options?: Record<string, unknown>) => {
+  let value = String(options?.defaultValue ?? _key);
+  for (const [name, replacement] of Object.entries(options ?? {})) {
+    value = value.replace(`{{${name}}}`, String(replacement));
+  }
+  return value;
+};
+
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
-  useTranslation: () => ({
-    t: (_key: string, options?: { defaultValue?: string }) => options?.defaultValue ?? _key,
-  }),
+  useTranslation: () => ({ t: translate }),
   useFormatters: () => ({
     formatCurrency: (value: number, currency: string) => `${currency} ${value}`,
   }),
+}));
+
+vi.mock('@alga-psa/billing/hooks/useBillingEnumOptions', () => ({
+  useFormatBillingFrequency: () => (value: string) => value,
+  useFormatContractLineType: () => (value: string) => value,
 }));
 
 vi.mock('@alga-psa/ui/lib/errorHandling', () => ({
   getErrorMessage: () => 'action error',
   isActionMessageError: () => false,
   isActionPermissionError: () => false,
+}));
+
+vi.mock('@alga-psa/core', () => ({
+  getCurrencySymbol: () => '$',
+}));
+
+vi.mock('@radix-ui/themes', () => ({
+  Card: ({ children }: { children: React.ReactNode }) => <section>{children}</section>,
+  Box: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
 }));
 
 vi.mock('@alga-psa/ui/components/Dialog', () => ({
@@ -57,7 +111,7 @@ vi.mock('@alga-psa/ui/components/Dialog', () => ({
 }));
 
 vi.mock('@alga-psa/ui/components/Button', () => ({
-  Button: ({ children, ...props }: React.ButtonHTMLAttributes<HTMLButtonElement>) => (
+  Button: ({ children, variant: _variant, size: _size, ...props }: any) => (
     <button {...props}>{children}</button>
   ),
 }));
@@ -68,6 +122,29 @@ vi.mock('@alga-psa/ui/components/Badge', () => ({
 
 vi.mock('@alga-psa/ui/components/Input', () => ({
   Input: (props: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} />,
+}));
+
+vi.mock('@alga-psa/ui/components/Label', () => ({
+  Label: ({ children, ...props }: React.LabelHTMLAttributes<HTMLLabelElement>) => (
+    <label {...props}>{children}</label>
+  ),
+}));
+
+vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
+  default: () => null,
+}));
+
+vi.mock('@alga-psa/ui/components/Alert', () => ({
+  Alert: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  AlertDescription: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+}));
+
+vi.mock('@alga-psa/ui/components/LoadingIndicator', () => ({
+  default: ({ text }: { text?: React.ReactNode }) => <div>{text}</div>,
+}));
+
+vi.mock('@alga-psa/ui/components/SwitchWithLabel', () => ({
+  SwitchWithLabel: () => null,
 }));
 
 vi.mock('@alga-psa/ui/components/Table', () => ({
@@ -81,100 +158,212 @@ vi.mock('@alga-psa/ui/components/Table', () => ({
   TableCell: ({ children }: { children: React.ReactNode }) => <td>{children}</td>,
 }));
 
+vi.mock('../src/components/billing-dashboard/contracts/AddContractLinesDialog', () => ({
+  AddContractLinesDialog: () => null,
+}));
+
+vi.mock('../src/components/billing-dashboard/contracts/CreateCustomContractLineDialog', () => ({
+  CreateCustomContractLineDialog: () => null,
+}));
+
+vi.mock('../src/components/billing-dashboard/contracts/BucketOverlayFields', () => ({
+  BucketOverlayFields: () => null,
+}));
+
+const existingServiceConfiguration = {
+  service: {
+    service_id: 'existing-service',
+    service_name: 'Existing service',
+    service_type_name: 'Support',
+    unit_of_measure: 'item',
+    default_rate: 12000,
+    billing_method: 'fixed',
+    item_kind: 'service',
+    is_active: true,
+  },
+  configuration: {
+    config_id: 'existing-config',
+    contract_line_id: 'line-1',
+    service_id: 'existing-service',
+    configuration_type: 'Fixed',
+    custom_rate: 12000,
+    quantity: 1,
+  },
+  typeConfig: { base_rate: 12000 },
+  bucketConfig: null,
+};
+
+const availableServices = [
+  existingServiceConfiguration.service,
+  {
+    service_id: 'new-service',
+    service_name: 'New service',
+    service_type_name: 'Support',
+    unit_of_measure: 'item',
+    default_rate: 18000,
+    billing_method: 'fixed',
+    item_kind: 'service',
+    is_active: true,
+    prices: [{ currency_code: 'USD', rate: 25000 }],
+  },
+];
+
+const renderContractLines = () => render(
+  <ContractLines
+    contract={{
+      contract_id: 'contract-1',
+      contract_name: 'Managed Services',
+      currency_code: 'USD',
+      is_template: false,
+    } as any}
+  />
+);
+
 describe('contract line service membership editing', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    actionMocks.addServiceToContractLine.mockResolvedValue('new-config-id');
+    actionMocks.applyContractLineServiceMembershipChanges.mockResolvedValue(true);
+    actionMocks.checkContractHasInvoices.mockResolvedValue(false);
+    actionMocks.getActiveClientLocationsForBilling.mockResolvedValue([]);
+    actionMocks.getContractLineServicesWithConfigurations.mockResolvedValue([
+      existingServiceConfiguration,
+    ]);
+    actionMocks.getTemplateLineServicesWithConfigurations.mockResolvedValue([]);
+    actionMocks.getDetailedContractLines.mockResolvedValue([{
+      tenant: 'tenant-1',
+      contract_id: 'contract-1',
+      contract_line_id: 'line-1',
+      display_order: 1,
+      created_at: new Date(),
+      contract_line_name: 'Managed Services line',
+      billing_frequency: 'monthly',
+      billing_timing: 'arrears',
+      cadence_owner: 'client',
+      contract_line_type: 'Fixed',
+      default_rate: 10000,
+      location_id: null,
+    }]);
     actionMocks.getServices.mockResolvedValue({
-      services: [
-        {
-          service_id: 'existing-service',
-          service_name: 'Existing service',
-          service_type_name: 'Support',
-          unit_of_measure: 'hour',
-          default_rate: 12000,
-          billing_method: 'hourly',
-          item_kind: 'service',
-          is_active: true,
-          prices: [],
-        },
-        {
-          service_id: 'new-service',
-          service_name: 'New hourly service',
-          service_type_name: 'Support',
-          unit_of_measure: 'hour',
-          default_rate: 18000,
-          billing_method: 'hourly',
-          item_kind: 'service',
-          is_active: true,
-          prices: [{ currency_code: 'USD', rate: 25000 }],
-        },
-      ],
-      totalCount: 2,
+      services: availableServices,
+      totalCount: availableServices.length,
     });
+    actionMocks.updateConfiguration.mockResolvedValue(true);
+    actionMocks.updateContractLine.mockResolvedValue({ contract_line_id: 'line-1' });
+    actionMocks.upsertBucketConfiguration.mockResolvedValue(true);
   });
 
-  it('filters the picker for the line type, excludes existing services, and adds with contract-currency defaults', async () => {
+  it('returns selected services to the editor with contract-currency defaults without persisting them', async () => {
     const onClose = vi.fn();
-    const onServiceAdded = vi.fn();
+    const onServicesSelected = vi.fn();
 
     render(
       <ServiceSelectionDialog
         isOpen
         onClose={onClose}
-        contractLineId="line-1"
-        contractLineType="Hourly"
+        contractLineType="Fixed"
         currencyCode="USD"
         existingServiceIds={['existing-service']}
-        onServiceAdded={onServiceAdded}
+        onServicesSelected={onServicesSelected}
       />
     );
 
-    expect(await screen.findByText('New hourly service')).not.toBeNull();
+    expect(await screen.findByText('New service')).not.toBeNull();
     expect(screen.queryByText('Existing service')).toBeNull();
     expect(screen.getByText('USD 250')).not.toBeNull();
-    expect(actionMocks.getServices).toHaveBeenCalledWith(1, 999, {
-      item_kind: 'service',
-      is_active: true,
-    });
 
-    fireEvent.click(screen.getByText('New hourly service'));
+    fireEvent.click(screen.getByText('New service'));
     fireEvent.click(screen.getByRole('button', { name: 'Add Selected Services' }));
 
-    await waitFor(() => {
-      expect(actionMocks.addServiceToContractLine).toHaveBeenCalledWith(
-        'line-1',
-        'new-service',
-        1,
-        25000,
-        'Hourly',
-        { hourly_rate: 25000 }
-      );
-    });
-    expect(onServiceAdded).toHaveBeenCalledOnce();
+    await waitFor(() => expect(onServicesSelected).toHaveBeenCalledWith([
+      expect.objectContaining({
+        service: expect.objectContaining({ service_id: 'new-service' }),
+        quantity: 1,
+        customRate: 25000,
+        configurationType: 'Fixed',
+        typeConfig: { base_rate: 25000 },
+      }),
+    ]));
+    expect(actionMocks.applyContractLineServiceMembershipChanges).not.toHaveBeenCalled();
     expect(onClose).toHaveBeenCalledOnce();
   });
 
-  it('exposes removal only from the active inline editor and refreshes its configuration state', () => {
-    const source = readFileSync(
-      resolve(__dirname, '../src/components/billing-dashboard/contracts/ContractLines.tsx'),
-      'utf8'
-    );
+  it('stages additions and removals, then restores persisted membership on Cancel', async () => {
+    renderContractLines();
 
-    expect(source).toContain('editingLineId === line.contract_line_id');
-    expect(source).toContain('removeServiceFromContractLine(contractLineId, serviceId)');
-    expect(source).toContain('await refreshServicesForEditing(contractLineId)');
-    expect(source).toContain('id={`remove-service-${serviceConfig.configuration.config_id}`}');
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
+    expect(await screen.findByText('Existing service')).not.toBeNull();
+
+    fireEvent.click(document.getElementById('remove-service-existing-config')!);
+    expect(screen.queryByText('Existing service')).toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add Item' }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByText('New service'));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Add Selected Services' }));
+    expect(await screen.findByText('New service')).not.toBeNull();
+    expect(actionMocks.applyContractLineServiceMembershipChanges).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Cancel' }));
+
+    expect(await screen.findByText('Existing service')).not.toBeNull();
+    expect(screen.queryByText('New service')).toBeNull();
+    expect(actionMocks.applyContractLineServiceMembershipChanges).not.toHaveBeenCalled();
   });
 
-  it('preserves the selected base rate when creating a usage-service configuration', () => {
-    const source = readFileSync(
-      resolve(__dirname, '../src/services/contractLineServiceConfigurationService.ts'),
-      'utf8'
+  it('persists the complete staged membership change only when the outer editor is saved', async () => {
+    renderContractLines();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit' }));
+    expect(await screen.findByText('Existing service')).not.toBeNull();
+    fireEvent.click(document.getElementById('remove-service-existing-config')!);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Add Item' }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByText('New service'));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Add Selected Services' }));
+    expect(await screen.findByText('New service')).not.toBeNull();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Save' }));
+
+    await waitFor(() => expect(actionMocks.applyContractLineServiceMembershipChanges).toHaveBeenCalledWith(
+      'line-1',
+      {
+        additions: [{
+          serviceId: 'new-service',
+          quantity: 1,
+          customRate: 25000,
+          configurationType: 'Fixed',
+          typeConfig: { base_rate: 25000 },
+        }],
+        removals: ['existing-service'],
+      },
+    ));
+  });
+
+  it('preserves the selected base rate when creating a usage-service configuration', async () => {
+    const onServicesSelected = vi.fn();
+    render(
+      <ServiceSelectionDialog
+        isOpen
+        onClose={vi.fn()}
+        contractLineType="Usage"
+        currencyCode="USD"
+        existingServiceIds={['existing-service']}
+        onServicesSelected={onServicesSelected}
+      />
     );
 
-    expect(source).toContain(
-      "base_rate: (typeConfig as IContractLineServiceUsageConfig)?.base_rate ?? null"
-    );
+    fireEvent.click(await screen.findByText('New service'));
+    fireEvent.click(screen.getByRole('button', { name: 'Add Selected Services' }));
+
+    await waitFor(() => expect(onServicesSelected).toHaveBeenCalledWith([
+      expect.objectContaining({
+        configurationType: 'Usage',
+        typeConfig: {
+          base_rate: 25000,
+          unit_of_measure: 'item',
+        },
+      }),
+    ]));
   });
 });
