@@ -53,8 +53,25 @@ const WorkflowRuntimeEventModelV2 = {
   },
 
   getById: async (knex: Knex, eventId: string, tenant?: string | null): Promise<WorkflowRuntimeEventRecord | null> => {
+    const query = workflowRuntimeEvents(knex, tenant)
+      .where({ event_id: eventId });
+    if (tenant) {
+      query.where({ tenant });
+    }
+    const record = await query
+      .first();
+    return record || null;
+  },
+
+  getLatestByEventName: async (
+    knex: Knex,
+    tenant: string,
+    eventName: string
+  ): Promise<WorkflowRuntimeEventRecord | null> => {
     const record = await workflowRuntimeEvents(knex, tenant)
-      .where({ event_id: eventId })
+      .where({ tenant, event_name: eventName })
+      .orderBy('created_at', 'desc')
+      .orderBy('event_id', 'desc')
       .first();
     return record || null;
   },

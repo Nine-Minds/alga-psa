@@ -843,6 +843,7 @@ export async function applyTriggerPayloadMapping(params: {
   eventName: string;
   eventPayload: Record<string, unknown>;
   correlationKey?: string | null;
+  sourcePayloadSchemaRef?: string | null;
 }): Promise<{ payload: Record<string, unknown>; mappingApplied: boolean }> {
   const trigger = params.definition.trigger;
   if (!trigger || trigger.type !== 'event') {
@@ -859,7 +860,7 @@ export async function applyTriggerPayloadMapping(params: {
         name: params.eventName,
         correlationKey: params.correlationKey ?? null,
         payload: params.eventPayload,
-        payloadSchemaRef: trigger.sourcePayloadSchemaRef ?? null,
+        payloadSchemaRef: params.sourcePayloadSchemaRef ?? trigger.sourcePayloadSchemaRef ?? null,
       },
     },
   });
