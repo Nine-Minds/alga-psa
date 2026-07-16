@@ -379,8 +379,11 @@ async function updateTicketResponseStateFromComment(
         eventType: 'TICKET_RESPONSE_STATE_CHANGED',
         payload: {
           tenantId: tenant,
+          occurredAt: new Date().toISOString(),
           ticketId,
           userId,
+          previousResponseState: previousState,
+          newResponseState: newState,
           previousState,
           newState,
           trigger: 'comment',
@@ -2975,8 +2978,11 @@ export async function updateTicketInTransaction(
           eventType: 'TICKET_RESPONSE_STATE_CHANGED',
           payload: {
             tenantId: tenant,
+            occurredAt,
             ticketId: id,
             userId: user.user_id,
+            previousResponseState: currentTicket.response_state || null,
+            newResponseState: updateData.response_state || null,
             previousState: currentTicket.response_state || null,
             newState: updateData.response_state || null,
             trigger: clearsResponseStateOnClose ? 'close' : 'manual',
@@ -3290,7 +3296,9 @@ export const addTicketCommentWithCache = withAuth(async (
         eventType: 'TICKET_COMMENT_ADDED',
         payload: {
           tenantId: tenant,
+          occurredAt: newComment.created_at ?? new Date().toISOString(),
           ticketId: ticketId,
+          commentId: newComment.comment_id,
           userId: user.user_id,
           comment: {
             id: newComment.comment_id,

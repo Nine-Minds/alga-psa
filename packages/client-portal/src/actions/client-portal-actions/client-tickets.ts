@@ -620,7 +620,9 @@ export const addClientTicketComment = withAuth(async (
         eventType: 'TICKET_COMMENT_ADDED',
         payload: {
           tenantId: tenant,
+          occurredAt: newComment.created_at ?? new Date().toISOString(),
           ticketId: ticketId,
+          commentId: newComment.comment_id,
           userId,
           comment: {
             id: newComment.comment_id,
@@ -857,6 +859,7 @@ export const updateTicketStatus = withAuth(async (
       const statusChanges = {
         status_id: {
           old: oldStatusId,
+          previous: oldStatusId,
           new: newStatusId
         }
       };
@@ -904,6 +907,7 @@ export const updateTicketStatus = withAuth(async (
           eventType: 'TICKET_UPDATED',
           payload: {
             tenantId: tenant,
+            occurredAt,
             ticketId: ticketId,
             userId,
             changes: statusChanges

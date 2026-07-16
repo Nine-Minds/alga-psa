@@ -417,6 +417,70 @@ describe('WorkflowRuntimeV2EventStreamWorker', () => {
     ).toBe(false);
   });
 
+  it('logs and persists payload validation failures before skipping workflow launch', async () => {
+    workflowRuntimeEventCreateMock.mockResolvedValue({ event_id: 'event-validation' });
+    workflowRunWaitListEventWaitCandidatesMock.mockResolvedValue([]);
+    workflowDefinitionListMock.mockResolvedValue([
+      {
+        workflow_id: 'workflow-1',
+        key: 'workflow-key',
+        status: 'published',
+        trigger: { type: 'event', eventName: 'PING', sourcePayloadSchemaRef: 'payload.WorkflowEvent.v1' }
+      }
+    ]);
+    schemaRegistryGetMock.mockReturnValue({
+      safeParse: () => ({
+        success: false,
+        error: {
+          issues: [
+            {
+              path: ['occurredAt'],
+              code: 'invalid_type',
+              message: 'Required',
+            },
+          ],
+        },
+      }),
+    });
+
+    const worker = new WorkflowRuntimeV2EventStreamWorker('worker-1');
+    await worker.start();
+
+    await registeredConsumer?.({
+      event_id: 'event-validation',
+      event_type: 'PING',
+      workflow_correlation_key: 'corr-validation',
+      tenant: 'tenant-1',
+      payload: { foo: 'bar' }
+    });
+
+    expect(launchPublishedWorkflowRunMock).not.toHaveBeenCalled();
+    expect(loggerWarnMock).toHaveBeenCalledWith(
+      '[WorkflowRuntimeV2EventStreamWorker] Payload validation failed; skipping workflow launch',
+      expect.objectContaining({
+        eventType: 'PING',
+        workflowId: 'workflow-1',
+        workflowKey: 'workflow-key',
+        payloadSchemaRef: 'payload.WorkflowEvent.v1',
+        issues: [
+          {
+            path: 'occurredAt',
+            code: 'invalid_type',
+            message: 'Required',
+          },
+        ],
+      })
+    );
+    expect(workflowRuntimeEventUpdateMock).toHaveBeenCalledWith(
+      knexMock,
+      'event-validation',
+      expect.objectContaining({
+        error_message: expect.stringContaining('Payload validation failed for workflow workflow-key'),
+      }),
+      'tenant-1'
+    );
+  });
+
   it('persists Temporal delivery failures onto the event row', async () => {
     workflowRuntimeEventCreateMock.mockResolvedValue({ event_id: 'event-5' });
     signalWorkflowRuntimeV2EventMock.mockRejectedValueOnce(new Error('temporal signal failed'));

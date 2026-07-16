@@ -286,6 +286,7 @@ export class WorkflowRuntimeV2EventStreamWorker {
     );
 
     const startedRuns: string[] = [];
+    const payloadValidationErrors: string[] = [];
     const skipStats = {
       noVersion: 0,
       missingSchemaRef: 0,
@@ -365,6 +366,29 @@ export class WorkflowRuntimeV2EventStreamWorker {
       const validation = schemaRegistry.get(workflowPayloadSchemaRef).safeParse(workflowPayload);
       if (!validation.success) {
         skipStats.payloadValidationFailed += 1;
+        const workflowKey = workflow.key ?? workflow.workflow_id;
+        const issues = validation.error.issues.map((issue) => ({
+          path: issue.path.join('.'),
+          code: issue.code,
+          message: issue.message,
+        }));
+        const validationMessage = `Payload validation failed for workflow ${workflowKey} (${workflow.workflow_id}) using ${workflowPayloadSchemaRef}: ${JSON.stringify(issues)}`;
+        payloadValidationErrors.push(validationMessage);
+        logger.warn('[WorkflowRuntimeV2EventStreamWorker] Payload validation failed; skipping workflow launch', {
+          workerId: this.workerId,
+          eventId: event.event_id,
+          eventType: event.event_type,
+          tenant: event.tenant,
+          workflowId: workflow.workflow_id,
+          workflowKey,
+          payloadSchemaRef: workflowPayloadSchemaRef,
+          sourcePayloadSchemaRef: effectiveSourceSchemaRef,
+          issues,
+        });
+        await WorkflowRuntimeEventModelV2.update(knex, eventRecord.event_id, {
+          error_message: payloadValidationErrors.join('\n'),
+          processed_at: processedAt,
+        }, event.tenant);
         continue;
       }
 
@@ -436,6 +460,11 @@ export class WorkflowRuntimeV2EventStreamWorker {
         error_message: deliveryError,
         processed_at: processedAt,
       });
+    } else if (payloadValidationErrors.length > 0 && startedRuns.length === 0 && signaledRuns.size === 0) {
+      await WorkflowRuntimeEventModelV2.update(knex, eventRecord.event_id, {
+        error_message: payloadValidationErrors.join('\n'),
+        processed_at: processedAt,
+      }, event.tenant);
     } else if (missingCorrelationWarning && startedRuns.length === 0 && signaledRuns.size === 0) {
       await WorkflowRuntimeEventModelV2.update(knex, eventRecord.event_id, {
         error_message: missingCorrelationWarning,
