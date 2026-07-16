@@ -1198,6 +1198,7 @@
   "categoryPicker": {
     "title": "Kategorieauswahl",
     "placeholder": "Kategorien auswählen...",
+    "searchPlaceholder": "Kategorien suchen...",
     "noCategory": "Keine Kategorie",
     "addNew": "Neue Kategorie hinzufügen",
     "itilBadge": "ITIL",

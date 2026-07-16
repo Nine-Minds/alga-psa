@@ -1198,6 +1198,7 @@
   "categoryPicker": {
     "title": "Categoriekiezer",
     "placeholder": "Categorieën selecteren...",
+    "searchPlaceholder": "Categorieën zoeken...",
     "noCategory": "Geen categorie",
     "addNew": "Nieuwe categorie toevoegen",
     "itilBadge": "ITIL",
