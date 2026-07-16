@@ -15,12 +15,12 @@
     "expiringForClient_other": "{{count}} créditos de {{clientName}} vencerán pronto"
   },
   "licenseBanner": {
-    "trialExpiresIn_one": "La prueba Premium vence en {{count}} día. Introduzca una clave de licencia para conservar las funciones Premium.",
-    "trialExpiresIn_other": "La prueba Premium vence en {{count}} días. Introduzca una clave de licencia para conservar las funciones Premium.",
-    "trialDaysRemaining_one": "Prueba Premium activa: queda {{count}} día.",
-    "trialDaysRemaining_other": "Prueba Premium activa: quedan {{count}} días.",
-    "trialAvailable": "Las funciones Essentials están activas. Inicie una prueba Premium gratuita de 15 días para desbloquear todas las funciones.",
-    "trialExpired": "La prueba Premium ha vencido. La instalación ahora usa las funciones Essentials.",
+    "trialExpiresIn_one": "La prueba Pro vence en {{count}} día. Introduzca una clave de licencia para conservar las funciones Pro.",
+    "trialExpiresIn_other": "La prueba Pro vence en {{count}} días. Introduzca una clave de licencia para conservar las funciones Pro.",
+    "trialDaysRemaining_one": "Prueba Pro activa: queda {{count}} día.",
+    "trialDaysRemaining_other": "Prueba Pro activa: quedan {{count}} días.",
+    "trialAvailable": "Las funciones Essentials están activas. Inicie una prueba Pro gratuita de 15 días para desbloquear todas las funciones.",
+    "trialExpired": "La prueba Pro ha vencido. La instalación ahora usa las funciones Essentials.",
     "licenseExpiresIn_one": "La licencia vence en {{count}} día. Renueve para evitar interrupciones del servicio.",
     "licenseExpiresIn_other": "La licencia vence en {{count}} días. Renueve para evitar interrupciones del servicio."
   },

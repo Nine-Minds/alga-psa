@@ -15,12 +15,12 @@
     "expiringForClient_other": "{{count}} tegoeden van {{clientName}} verlopen binnenkort"
   },
   "licenseBanner": {
-    "trialExpiresIn_one": "De Premium-proefperiode verloopt over {{count}} dag. Voer een licentiesleutel in om Premium-functies te behouden.",
-    "trialExpiresIn_other": "De Premium-proefperiode verloopt over {{count}} dagen. Voer een licentiesleutel in om Premium-functies te behouden.",
-    "trialDaysRemaining_one": "Premium-proefperiode actief — nog {{count}} dag.",
-    "trialDaysRemaining_other": "Premium-proefperiode actief — nog {{count}} dagen.",
-    "trialAvailable": "Essentials-functies zijn actief. Start een gratis Premium-proefperiode van 15 dagen om alle functies te ontgrendelen.",
-    "trialExpired": "De Premium-proefperiode is verlopen. De installatie gebruikt nu Essentials-functies.",
+    "trialExpiresIn_one": "De Pro-proefperiode verloopt over {{count}} dag. Voer een licentiesleutel in om Pro-functies te behouden.",
+    "trialExpiresIn_other": "De Pro-proefperiode verloopt over {{count}} dagen. Voer een licentiesleutel in om Pro-functies te behouden.",
+    "trialDaysRemaining_one": "Pro-proefperiode actief — nog {{count}} dag.",
+    "trialDaysRemaining_other": "Pro-proefperiode actief — nog {{count}} dagen.",
+    "trialAvailable": "Essentials-functies zijn actief. Start een gratis Pro-proefperiode van 15 dagen om alle functies te ontgrendelen.",
+    "trialExpired": "De Pro-proefperiode is verlopen. De installatie gebruikt nu Essentials-functies.",
     "licenseExpiresIn_one": "De licentie verloopt over {{count}} dag. Verleng om serviceonderbreking te voorkomen.",
     "licenseExpiresIn_other": "De licentie verloopt over {{count}} dagen. Verleng om serviceonderbreking te voorkomen."
   },

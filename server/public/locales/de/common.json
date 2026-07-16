@@ -15,12 +15,12 @@
     "expiringForClient_other": "{{count}} Guthaben für {{clientName}} laufen bald ab"
   },
   "licenseBanner": {
-    "trialExpiresIn_one": "Die Premium-Testphase läuft in {{count}} Tag ab. Geben Sie einen Lizenzschlüssel ein, um die Premium-Funktionen zu behalten.",
-    "trialExpiresIn_other": "Die Premium-Testphase läuft in {{count}} Tagen ab. Geben Sie einen Lizenzschlüssel ein, um die Premium-Funktionen zu behalten.",
-    "trialDaysRemaining_one": "Premium-Testphase aktiv — noch {{count}} Tag.",
-    "trialDaysRemaining_other": "Premium-Testphase aktiv — noch {{count}} Tage.",
-    "trialAvailable": "Essentials-Funktionen sind aktiv. Starten Sie eine kostenlose 15-tägige Premium-Testphase, um alle Funktionen freizuschalten.",
-    "trialExpired": "Die Premium-Testphase ist abgelaufen. Die Installation verwendet jetzt Essentials-Funktionen.",
+    "trialExpiresIn_one": "Die Pro-Testphase läuft in {{count}} Tag ab. Geben Sie einen Lizenzschlüssel ein, um die Pro-Funktionen zu behalten.",
+    "trialExpiresIn_other": "Die Pro-Testphase läuft in {{count}} Tagen ab. Geben Sie einen Lizenzschlüssel ein, um die Pro-Funktionen zu behalten.",
+    "trialDaysRemaining_one": "Pro-Testphase aktiv — noch {{count}} Tag.",
+    "trialDaysRemaining_other": "Pro-Testphase aktiv — noch {{count}} Tage.",
+    "trialAvailable": "Essentials-Funktionen sind aktiv. Starten Sie eine kostenlose 15-tägige Pro-Testphase, um alle Funktionen freizuschalten.",
+    "trialExpired": "Die Pro-Testphase ist abgelaufen. Die Installation verwendet jetzt Essentials-Funktionen.",
     "licenseExpiresIn_one": "Die Lizenz läuft in {{count}} Tag ab. Verlängern Sie, um Serviceunterbrechungen zu vermeiden.",
     "licenseExpiresIn_other": "Die Lizenz läuft in {{count}} Tagen ab. Verlängern Sie, um Serviceunterbrechungen zu vermeiden."
   },

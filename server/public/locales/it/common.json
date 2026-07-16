@@ -15,12 +15,12 @@
     "expiringForClient_other": "{{count}} crediti di {{clientName}} scadranno presto"
   },
   "licenseBanner": {
-    "trialExpiresIn_one": "La prova Premium scade tra {{count}} giorno. Inserisci una chiave di licenza per mantenere le funzionalità Premium.",
-    "trialExpiresIn_other": "La prova Premium scade tra {{count}} giorni. Inserisci una chiave di licenza per mantenere le funzionalità Premium.",
-    "trialDaysRemaining_one": "Prova Premium attiva — {{count}} giorno rimanente.",
-    "trialDaysRemaining_other": "Prova Premium attiva — {{count}} giorni rimanenti.",
-    "trialAvailable": "Le funzionalità Essentials sono attive. Avvia una prova Premium gratuita di 15 giorni per sbloccare tutte le funzionalità.",
-    "trialExpired": "La prova Premium è scaduta. L'installazione ora utilizza le funzionalità Essentials.",
+    "trialExpiresIn_one": "La prova Pro scade tra {{count}} giorno. Inserisci una chiave di licenza per mantenere le funzionalità Pro.",
+    "trialExpiresIn_other": "La prova Pro scade tra {{count}} giorni. Inserisci una chiave di licenza per mantenere le funzionalità Pro.",
+    "trialDaysRemaining_one": "Prova Pro attiva — {{count}} giorno rimanente.",
+    "trialDaysRemaining_other": "Prova Pro attiva — {{count}} giorni rimanenti.",
+    "trialAvailable": "Le funzionalità Essentials sono attive. Avvia una prova Pro gratuita di 15 giorni per sbloccare tutte le funzionalità.",
+    "trialExpired": "La prova Pro è scaduta. L'installazione ora utilizza le funzionalità Essentials.",
     "licenseExpiresIn_one": "La licenza scade tra {{count}} giorno. Rinnova per evitare interruzioni del servizio.",
     "licenseExpiresIn_other": "La licenza scade tra {{count}} giorni. Rinnova per evitare interruzioni del servizio."
   },

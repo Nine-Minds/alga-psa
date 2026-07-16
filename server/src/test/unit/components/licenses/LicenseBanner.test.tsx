@@ -58,7 +58,7 @@ const scenarios: Array<{
       daysRemaining: 12,
       trialUsed: true,
     },
-    expectedMessage: 'Premium trial active — 12 days remaining.',
+    expectedMessage: 'Pro trial active — 12 days remaining.',
   },
   {
     name: 'expiring trial',
@@ -69,12 +69,12 @@ const scenarios: Array<{
       daysRemaining: 3,
       trialUsed: true,
     },
-    expectedMessage: 'Premium trial expires in 3 days. Enter a license key to keep Premium features.',
+    expectedMessage: 'Pro trial expires in 3 days. Enter a license key to keep Pro features.',
   },
   {
     name: 'available trial',
     status: baseStatus,
-    expectedMessage: 'Running Essentials features. Start a free 15-day Premium trial to unlock all features.',
+    expectedMessage: 'Running Essentials features. Start a free 15-day Pro trial to unlock all features.',
   },
   {
     name: 'expired trial',
@@ -83,7 +83,15 @@ const scenarios: Array<{
       state: 'trial_expired',
       trialUsed: true,
     },
-    expectedMessage: 'Premium trial has expired. The install is now running Essentials features.',
+    expectedMessage: 'Pro trial has expired. The install is now running Essentials features.',
+  },
+  {
+    name: 'unused CE trial',
+    status: {
+      ...baseStatus,
+      state: 'ce',
+    },
+    expectedMessage: 'Running Essentials features. Start a free 15-day Pro trial to unlock all features.',
   },
 ];
 
@@ -97,12 +105,12 @@ describe('LicenseBanner', () => {
     vi.clearAllMocks();
   });
 
-  it.each(scenarios)('names the $name as Premium', async ({ status, expectedMessage }) => {
+  it.each(scenarios)('names the $name as Pro', async ({ status, expectedMessage }) => {
     mockGetLicenseStatus.mockResolvedValue(status);
 
     render(<LicenseBanner />);
 
     expect(await screen.findByText(expectedMessage)).toBeInTheDocument();
-    expect(screen.queryByText(/Enterprise trial/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/(?:Enterprise|Premium)/i)).not.toBeInTheDocument();
   });
 });
