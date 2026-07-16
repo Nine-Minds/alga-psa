@@ -17,9 +17,11 @@ import type {
   IQuote,
   OpportunityListFilters,
   OpportunitySuggestionStatus,
+  IWorkQueue,
 } from '@alga-psa/types';
 import {
   OpportunityModel,
+  assembleWorkQueue,
   buildOpportunityCreatedPayload,
   buildOpportunityStatusChangedPayload,
   completeOpportunityNextAction,
@@ -37,6 +39,8 @@ import {
   ensureEnterpriseOpportunityCloseGatesRegistered,
   runOpportunityCloseGates,
   prepareOpportunityWinConversions,
+  listOpportunityTimelineCore,
+  type IOpportunityTimelineEntry,
 } from '@alga-psa/opportunities';
 import {
   ConflictError,
@@ -146,6 +150,30 @@ export class OpportunityService extends BaseService<IOpportunity | IOpportunityL
       filters,
     );
     return { data: result.data, total: result.total };
+  }
+
+  async getWorkQueue(context: ServiceContext): Promise<IWorkQueue> {
+    const knex = await this.getDbForContext(context);
+    return assembleWorkQueue(
+      knex,
+      context.tenant,
+      context.userId,
+      String(context.user?.first_name ?? ''),
+    );
+  }
+
+  async listTimeline(
+    id: string,
+    context: ServiceContext,
+  ): Promise<IOpportunityTimelineEntry[]> {
+    const knex = await this.getDbForContext(context);
+    const opportunity = await tenantDb(knex, context.tenant).table('opportunities')
+      .where({ opportunity_id: id })
+      .select('opportunity_id')
+      .first();
+    if (!opportunity) throw new NotFoundError('Opportunity not found');
+
+    return listOpportunityTimelineCore(knex, context.tenant, id);
   }
 
   async listSuggestions(
