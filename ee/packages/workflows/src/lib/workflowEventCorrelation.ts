@@ -1,3 +1,5 @@
+import { getWorkflowEventCorrelationPaths } from '@alga-psa/shared/workflow/runtime';
+
 export type WorkflowEventCorrelationResolution = {
   key: string | null;
   source: 'explicit' | 'derived' | 'missing';
@@ -27,7 +29,7 @@ export function resolveWorkflowEventCorrelation(
     return {
       key: derived.value,
       source: 'derived',
-      detail: `path:${derived.path}`,
+      detail: `path:${derived.path} (${derived.configSource})`,
     };
   }
 
@@ -51,43 +53,16 @@ function resolveExplicitCorrelation(
 function resolveDerivedCorrelation(
   eventName: string,
   payload: Record<string, unknown>
-): { value: string; path: string } | null {
-  const configuredPaths = getConfiguredCorrelationPaths(eventName);
-  for (const path of configuredPaths) {
+): { value: string; path: string; configSource: string } | null {
+  const { paths, source } = getWorkflowEventCorrelationPaths(eventName);
+  for (const path of paths) {
     const value = readDottedValue(payload, path);
     if (value === null || value === undefined) continue;
     const asString = String(value).trim();
     if (!asString) continue;
-    return { value: asString, path };
+    return { value: asString, path, configSource: source };
   }
   return null;
-}
-
-function getConfiguredCorrelationPaths(eventName: string): string[] {
-  const raw = process.env.WORKFLOW_RUNTIME_V2_EVENT_CORRELATION_PATHS_JSON;
-  if (!raw) return [];
-
-  try {
-    const parsed = JSON.parse(raw) as Record<string, unknown>;
-    const eventPaths = parsed[eventName];
-    const wildcardPaths = parsed['*'];
-    return normalizePathConfig(eventPaths).concat(normalizePathConfig(wildcardPaths));
-  } catch {
-    return [];
-  }
-}
-
-function normalizePathConfig(value: unknown): string[] {
-  if (typeof value === 'string' && value.trim()) {
-    return [value.trim()];
-  }
-  if (!Array.isArray(value)) {
-    return [];
-  }
-  return value
-    .filter((item): item is string => typeof item === 'string')
-    .map((item) => item.trim())
-    .filter(Boolean);
 }
 
 function readDottedValue(input: Record<string, unknown>, dottedPath: string): unknown {

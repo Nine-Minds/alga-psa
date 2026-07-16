@@ -203,6 +203,9 @@ services:
       dockerfile: services/workflow-worker/Dockerfile
     environment:
       EDITION: enterprise
+      # Optional override for event.wait correlation derivation paths.
+      # Unset = built-in defaults (shared/workflow/runtime/correlationDefaults.ts).
+      WORKFLOW_RUNTIME_V2_EVENT_CORRELATION_PATHS_JSON: ${WORKFLOW_RUNTIME_V2_EVENT_CORRELATION_PATHS_JSON:-}
       DB_NAME: server
       PGBOSS_DATABASE: server
       DB_NAME_SERVER: server
