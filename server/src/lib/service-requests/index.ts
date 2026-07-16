@@ -1,4 +1,5 @@
 export * from './domain';
+export * from './definitionErrors';
 export * from './definitionPublishing';
 export * from './definitionValidation';
 export * from './definitionLifecycle';

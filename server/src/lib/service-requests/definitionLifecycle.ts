@@ -1,5 +1,6 @@
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { ServiceRequestDefinitionBusinessError } from './definitionErrors';
 
 export interface ServiceRequestDefinitionListItem {
   tenant: string;
@@ -21,11 +22,18 @@ export async function archiveServiceRequestDefinition(
   definitionId: string,
   archivedBy?: string | null
 ): Promise<void> {
-  await tenantDb(knex, tenant).table('service_request_definitions').where({ definition_id: definitionId }).update({
+  const updated = await tenantDb(knex, tenant).table('service_request_definitions').where({ definition_id: definitionId }).update({
     lifecycle_state: 'archived',
     updated_by: archivedBy ?? null,
     updated_at: knex.fn.now(),
   });
+
+  if (updated === 0) {
+    throw new ServiceRequestDefinitionBusinessError(
+      'DEFINITION_NOT_FOUND',
+      'Service request definition was not found or is no longer available.'
+    );
+  }
 }
 
 export async function unarchiveServiceRequestDefinition(
@@ -34,13 +42,20 @@ export async function unarchiveServiceRequestDefinition(
   definitionId: string,
   updatedBy?: string | null
 ): Promise<void> {
-  await tenantDb(knex, tenant).table('service_request_definitions').where({ definition_id: definitionId }).update({
+  const updated = await tenantDb(knex, tenant).table('service_request_definitions').where({ definition_id: definitionId }).update({
     lifecycle_state: 'draft',
     published_by: null,
     published_at: null,
     updated_by: updatedBy ?? null,
     updated_at: knex.fn.now(),
   });
+
+  if (updated === 0) {
+    throw new ServiceRequestDefinitionBusinessError(
+      'DEFINITION_NOT_FOUND',
+      'Service request definition was not found or is no longer available.'
+    );
+  }
 }
 
 export async function listPublishedServiceRequestDefinitions(
