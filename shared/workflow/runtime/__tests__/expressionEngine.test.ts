@@ -11,8 +11,23 @@ describe('expressionEngine guardrails', () => {
     expect(() => validateExpressionSource('$append(payload.items, payload.extra)')).not.toThrow();
   });
 
+  it('accepts boolean operators followed by parenthesized expressions', () => {
+    expect(() => validateExpressionSource('vars.x = 0 and (vars.y = 1 or vars.z = 2)')).not.toThrow();
+    expect(() => validateExpressionSource('(vars.y = 1 or vars.z = 2) and vars.x = 0')).not.toThrow();
+    expect(() => validateExpressionSource('vars.a in (vars.values)')).not.toThrow();
+    expect(() => validateExpressionSource('vars.a = 1 or (vars.b = 2)')).not.toThrow();
+  });
+
+  it('accepts nested parenthesized expressions after operators', () => {
+    expect(() =>
+      validateExpressionSource('vars.a = 1 and ((vars.b = 2 or (vars.c = 3)))')
+    ).not.toThrow();
+  });
+
   it('rejects disallowed functions', () => {
     expect(() => validateExpressionSource('$sum([1, 2, 3])')).toThrow('disallowed function');
+    expect(() => validateExpressionSource('$count(payload.items)')).toThrow('disallowed function');
+    expect(() => validateExpressionSource('foo(payload.items)')).toThrow('disallowed function');
   });
 
   it('enforces timeout during evaluation', async () => {

@@ -32,16 +32,16 @@ export async function evaluateExpressionSource(
 
 export function validateExpressionSource(source: string): void {
   const normalizedSource = normalizeExpressionSource(source);
-  const functionCalls = extractFunctionCalls(normalizedSource);
+  const expr = jsonata(normalizedSource);
+  // Access AST to ensure parse happens now; jsonata throws on invalid syntax
+  const ast = expr.ast();
+  const functionCalls = extractFunctionCalls(ast);
   for (const fn of functionCalls) {
     const normalizedFn = fn.startsWith('$') ? fn.slice(1) : fn;
     if (!allowedFunctions.has(normalizedFn)) {
       throw new Error(`Expression uses disallowed function: ${normalizedFn}`);
     }
   }
-  const expr = jsonata(normalizedSource);
-  // Access AST to ensure parse happens now; jsonata throws on invalid syntax
-  expr.ast();
 }
 
 export function compileExpression(expr: Expr): CompiledExpression {
@@ -97,14 +97,61 @@ function normalizeExpressionSource(source: string): string {
   );
 }
 
-function extractFunctionCalls(source: string): string[] {
+function extractFunctionCalls(ast: unknown): string[] {
   const calls: string[] = [];
-  const regex = /([A-Za-z_$][A-Za-z0-9_]*)\s*\(/g;
-  let match;
-  while ((match = regex.exec(source)) !== null) {
-    calls.push(match[1]);
-  }
+  const seen = new WeakSet<object>();
+
+  const visit = (node: unknown): void => {
+    if (!node || typeof node !== 'object') return;
+    if (seen.has(node)) return;
+    seen.add(node);
+
+    if (Array.isArray(node)) {
+      for (const item of node) visit(item);
+      return;
+    }
+
+    const astNode = node as Record<string, unknown>;
+    if (astNode.type === 'function' || astNode.type === 'partial') {
+      const calleeName = getProcedureName(astNode.procedure);
+      if (calleeName) {
+        calls.push(calleeName);
+      }
+    }
+
+    for (const value of Object.values(astNode)) {
+      visit(value);
+    }
+  };
+
+  visit(ast);
   return calls;
+}
+
+function getProcedureName(procedure: unknown): string | null {
+  if (!procedure || typeof procedure !== 'object' || Array.isArray(procedure)) {
+    return null;
+  }
+
+  const node = procedure as Record<string, unknown>;
+  if ((node.type === 'variable' || node.type === 'name') && typeof node.value === 'string') {
+    return node.value;
+  }
+
+  if (node.type === 'path' && Array.isArray(node.steps)) {
+    for (let index = node.steps.length - 1; index >= 0; index -= 1) {
+      const stepName = getProcedureName(node.steps[index]);
+      if (stepName) {
+        return stepName;
+      }
+    }
+  }
+
+  if (node.type === 'block' && Array.isArray(node.expressions) && node.expressions.length === 1) {
+    return getProcedureName(node.expressions[0]);
+  }
+
+  return null;
 }
 
 function isJsonSerializable(value: unknown): boolean {
