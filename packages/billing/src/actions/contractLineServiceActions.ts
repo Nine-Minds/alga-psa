@@ -22,6 +22,23 @@ import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib
 type TenantScopedKnex = Knex | Knex.Transaction;
 export type ContractLineServiceActionError = ActionMessageError | ActionPermissionError;
 
+export interface ContractLineServiceMembershipAddition {
+  serviceId: string;
+  quantity?: number;
+  customRate?: number | null;
+  configurationType: 'Fixed' | 'Hourly' | 'Usage';
+  typeConfig?: Partial<
+    IContractLineServiceFixedConfig |
+    IContractLineServiceHourlyConfig |
+    IContractLineServiceUsageConfig
+  >;
+}
+
+export interface ContractLineServiceMembershipChanges {
+  additions: ContractLineServiceMembershipAddition[];
+  removals: string[];
+}
+
 type ContractLineServiceWithConfiguration = {
   service: IService & { service_type_name?: string };
   configuration: IContractLineServiceConfiguration;
@@ -49,6 +66,7 @@ function contractLineServiceActionErrorFrom(error: unknown): ContractLineService
   if (error instanceof Error) {
     if (
       error.message === 'Service management for template lines currently supports fixed fee lines only.' ||
+      error.message === 'System-managed default contracts are attribution-only; contract-line service configuration authoring is disabled.' ||
       error.message === 'Products can only be added to fixed-fee contract lines.' ||
       error.message.includes('cannot be attached to contract lines') ||
       error.message.includes('does not have') ||
@@ -330,6 +348,272 @@ async function addServiceToTemplateLine(
   return configId;
 }
 
+async function addServiceToLiveContractLine(
+  trx: Knex.Transaction,
+  tenant: string,
+  contractLineId: string,
+  serviceId: string,
+  quantity?: number,
+  customRate?: number | null,
+  configType?: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket',
+  typeConfig?: Partial<
+    IContractLineServiceFixedConfig |
+    IContractLineServiceHourlyConfig |
+    IContractLineServiceUsageConfig |
+    IContractLineServiceBucketConfig
+  >,
+): Promise<string> {
+  const service = await tenantScopedTable(trx, tenant, 'service_catalog')
+    .where({ service_id: serviceId })
+    .first() as IService | undefined;
+  if (!service) {
+    throw new Error(`Service ${serviceId} not found`);
+  }
+
+  const contractLine = await assertLiveContractLineIsAuthorable(trx, tenant, contractLineId);
+  if (service.is_active === false) {
+    throw new Error(`"${service.service_name}" is inactive and cannot be attached to contract lines.`);
+  }
+
+  if (service.item_kind === 'product') {
+    if (contractLine.contract_line_type !== 'Fixed') {
+      throw new Error('Products can only be added to fixed-fee contract lines.');
+    }
+
+    const contract = contractLine.contract_id
+      ? await tenantScopedTable(trx, tenant, 'contracts')
+          .where({ contract_id: contractLine.contract_id })
+          .select('currency_code')
+          .first()
+      : null;
+    const currencyCode = contract?.currency_code ?? 'USD';
+    const hasOverride = customRate !== undefined && customRate !== null;
+    if (!hasOverride) {
+      const priceRow = await tenantScopedTable(trx, tenant, 'service_prices')
+        .where({ service_id: serviceId, currency_code: currencyCode })
+        .select('price_id')
+        .first();
+      if (!priceRow) {
+        throw new Error(
+          `Product "${service.service_name}" does not have ${currencyCode} pricing. Add a price in the catalog or enter a custom rate.`
+        );
+      }
+    }
+  }
+
+  const allowedConfigTypesByLine: Record<
+    'Fixed' | 'Hourly' | 'Usage',
+    Array<'Fixed' | 'Hourly' | 'Usage' | 'Bucket'>
+  > = {
+    Fixed: ['Fixed', 'Bucket'],
+    Hourly: ['Hourly', 'Bucket'],
+    Usage: ['Usage', 'Bucket'],
+  };
+  const configurationType = configType ?? contractLine.contract_line_type;
+  const allowedConfigTypes = allowedConfigTypesByLine[
+    contractLine.contract_line_type as 'Fixed' | 'Hourly' | 'Usage'
+  ] ?? ['Fixed'];
+  if (!allowedConfigTypes.includes(configurationType)) {
+    throw new Error(
+      `Configuration type ${configurationType} is not valid for ${contractLine.contract_line_type} contract lines. Allowed: ${allowedConfigTypes.join(', ')}.`
+    );
+  }
+
+  let resolvedTypeConfig = typeConfig || {};
+  if (configurationType === 'Bucket') {
+    resolvedTypeConfig = {
+      ...resolvedTypeConfig,
+      overage_rate:
+        (resolvedTypeConfig as Partial<IContractLineServiceBucketConfig>).overage_rate
+        ?? service.default_rate,
+    };
+  } else if (configurationType === 'Hourly') {
+    const providedHourly = resolvedTypeConfig as Partial<IContractLineServiceHourlyConfig>;
+    const hourlyRateValue = providedHourly.hourly_rate ?? service.default_rate;
+    if (hourlyRateValue === undefined || hourlyRateValue === null) {
+      throw new Error(`Service ${service.service_name} requires an hourly rate before it can be added to an hourly contract line.`);
+    }
+    const hourlyRate = Number(hourlyRateValue);
+    if (!Number.isFinite(hourlyRate)) {
+      throw new Error(`Hourly rate for service ${service.service_name} must be a numeric value.`);
+    }
+    resolvedTypeConfig = {
+      ...providedHourly,
+      hourly_rate: hourlyRate,
+      minimum_billable_time:
+        Number(providedHourly.minimum_billable_time) > 0
+          ? Number(providedHourly.minimum_billable_time)
+          : 15,
+      round_up_to_nearest:
+        Number(providedHourly.round_up_to_nearest) > 0
+          ? Number(providedHourly.round_up_to_nearest)
+          : 15,
+    };
+  }
+
+  const existingMembership = await tenantScopedTable(trx, tenant, 'contract_line_services')
+    .where({ contract_line_id: contractLineId, service_id: serviceId })
+    .first();
+  if (!existingMembership) {
+    await tenantScopedTable(trx, tenant, 'contract_line_services').insert({
+      tenant,
+      contract_line_id: contractLineId,
+      service_id: serviceId,
+    });
+  }
+
+  const configurationService = new ContractLineServiceConfigurationService(trx, tenant);
+  const existingConfig = await configurationService.getConfigurationForService(contractLineId, serviceId);
+  if (existingConfig) {
+    await configurationService.updateConfiguration(
+      existingConfig.config_id,
+      {
+        configuration_type: configurationType,
+        custom_rate: customRate,
+        quantity: quantity || 1,
+      },
+      resolvedTypeConfig,
+    );
+    return existingConfig.config_id;
+  }
+
+  return configurationService.createConfiguration(
+    {
+      tenant,
+      contract_line_id: contractLineId,
+      service_id: serviceId,
+      configuration_type: configurationType,
+      custom_rate: customRate,
+      quantity: quantity || 1,
+    },
+    resolvedTypeConfig,
+  );
+}
+
+async function assertLiveContractLineIsAuthorable(
+  trx: Knex.Transaction,
+  tenant: string,
+  contractLineId: string,
+) {
+  const contractLine = await tenantScopedTable(trx, tenant, 'contract_lines')
+    .where({ contract_line_id: contractLineId })
+    .first();
+  if (!contractLine) {
+    throw new Error(`Contract line ${contractLineId} not found`);
+  }
+
+  if (contractLine.contract_id) {
+    const contract = await tenantScopedTable(trx, tenant, 'contracts')
+      .where({ contract_id: contractLine.contract_id })
+      .select('is_system_managed_default')
+      .first();
+    if (contract?.is_system_managed_default === true) {
+      throw new Error('System-managed default contracts are attribution-only; contract-line service configuration authoring is disabled.');
+    }
+  }
+  return contractLine;
+}
+
+async function removeServiceFromTemplateLine(
+  trx: Knex.Transaction,
+  tenant: string,
+  contractLineId: string,
+  serviceId: string,
+): Promise<void> {
+  const templateConfigs = await tenantScopedTable(trx, tenant, 'contract_template_line_service_configuration')
+    .where({ template_line_id: contractLineId, service_id: serviceId })
+    .select('config_id');
+  if (templateConfigs.length > 0) {
+    const configIds = (templateConfigs as Array<{ config_id: string }>).map((config) => config.config_id);
+    await tenantScopedTable(trx, tenant, 'contract_template_line_service_hourly_config')
+      .whereIn('config_id', configIds)
+      .delete();
+    await tenantScopedTable(trx, tenant, 'contract_template_line_service_usage_config')
+      .whereIn('config_id', configIds)
+      .delete();
+    await tenantScopedTable(trx, tenant, 'contract_template_line_service_bucket_config')
+      .whereIn('config_id', configIds)
+      .delete();
+    await tenantScopedTable(trx, tenant, 'contract_template_line_service_configuration')
+      .whereIn('config_id', configIds)
+      .delete();
+  }
+  await tenantScopedTable(trx, tenant, 'contract_template_line_services')
+    .where({ template_line_id: contractLineId, service_id: serviceId })
+    .delete();
+}
+
+async function removeServiceFromLiveContractLine(
+  trx: Knex.Transaction,
+  tenant: string,
+  contractLineId: string,
+  serviceId: string,
+): Promise<void> {
+  await assertLiveContractLineIsAuthorable(trx, tenant, contractLineId);
+  const configurationService = new ContractLineServiceConfigurationService(trx, tenant);
+  const configurations = await configurationService.getConfigurationsForPlan(contractLineId);
+  for (const configuration of configurations) {
+    if (configuration.service_id === serviceId) {
+      await configurationService.deleteConfiguration(configuration.config_id);
+    }
+  }
+  await tenantScopedTable(trx, tenant, 'contract_line_services')
+    .where({ contract_line_id: contractLineId, service_id: serviceId })
+    .delete();
+}
+
+async function addServiceToContractLineInTransaction(
+  trx: Knex.Transaction,
+  tenant: string,
+  contractLineId: string,
+  serviceId: string,
+  quantity?: number,
+  customRate?: number | null,
+  configType?: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket',
+  typeConfig?: Partial<
+    IContractLineServiceFixedConfig |
+    IContractLineServiceHourlyConfig |
+    IContractLineServiceUsageConfig |
+    IContractLineServiceBucketConfig
+  >,
+): Promise<string> {
+  const templateLine = await findTemplateLine(trx, tenant, contractLineId);
+  if (templateLine) {
+    return addServiceToTemplateLine(
+      trx,
+      tenant,
+      templateLine,
+      serviceId,
+      quantity,
+      customRate ?? undefined,
+    );
+  }
+  return addServiceToLiveContractLine(
+    trx,
+    tenant,
+    contractLineId,
+    serviceId,
+    quantity,
+    customRate,
+    configType,
+    typeConfig,
+  );
+}
+
+async function removeServiceFromContractLineInTransaction(
+  trx: Knex.Transaction,
+  tenant: string,
+  contractLineId: string,
+  serviceId: string,
+): Promise<void> {
+  const templateLine = await findTemplateLine(trx, tenant, contractLineId);
+  if (templateLine) {
+    await removeServiceFromTemplateLine(trx, tenant, contractLineId, serviceId);
+    return;
+  }
+  await removeServiceFromLiveContractLine(trx, tenant, contractLineId, serviceId);
+}
+
 /**
  * Add a service to a plan with configuration
  */
@@ -351,203 +635,18 @@ export const addServiceToContractLine = withAuth(async (
     if (!tenant) {
       throw new Error('tenant context not found');
     }
-    return withTransaction(db, async (trx: Knex.Transaction) => {
-      const templateLine = await findTemplateLine(trx, tenant, contractLineId);
-      if (templateLine) {
-        return addServiceToTemplateLine(trx, tenant, templateLine, serviceId, quantity, customRate);
-      }
-
-      const service = await tenantScopedTable(trx, tenant, 'service_catalog')
-        .where({
-          service_id: serviceId,
-        })
-        .first() as IService | undefined;
-
-      if (!service) {
-        throw new Error(`Service ${serviceId} not found`);
-      }
-
-      const plan = await tenantScopedTable(trx, tenant, 'contract_lines')
-        .where({
-          contract_line_id: contractLineId,
-        })
-        .first();
-
-      if (!plan) {
-        throw new Error(`Contract line ${contractLineId} not found`);
-      }
-
-      if (service.is_active === false) {
-        throw new Error(`"${service.service_name}" is inactive and cannot be attached to contract lines.`);
-      }
-
-      if (service.item_kind === 'product') {
-        if (plan.contract_line_type !== 'Fixed') {
-          throw new Error(`Products can only be added to fixed-fee contract lines.`);
-        }
-
-        const contract = plan.contract_id
-          ? await tenantScopedTable(trx, tenant, 'contracts').where({ contract_id: plan.contract_id }).select('currency_code').first()
-          : null;
-        const currencyCode = contract?.currency_code ?? 'USD';
-
-        const hasOverride = customRate !== undefined && customRate !== null;
-        if (!hasOverride) {
-          const priceRow = await tenantScopedTable(trx, tenant, 'service_prices')
-            .where({
-              service_id: serviceId,
-              currency_code: currencyCode
-            })
-            .select('price_id')
-            .first();
-
-          if (!priceRow) {
-            throw new Error(
-              `Product "${service.service_name}" does not have ${currencyCode} pricing. Add a price in the catalog or enter a custom rate.`
-            );
-          }
-        }
-      }
-
-      const allowedConfigTypesByPlan: Record<'Fixed' | 'Hourly' | 'Usage', Array<'Fixed' | 'Hourly' | 'Usage' | 'Bucket'>> = {
-        Fixed: ['Fixed', 'Bucket'],
-        Hourly: ['Hourly', 'Bucket'],
-        Usage: ['Usage', 'Bucket'],
-      };
-
-      if (configType) {
-        const allowedConfigTypes = allowedConfigTypesByPlan[plan.contract_line_type as 'Fixed' | 'Hourly' | 'Usage'] ?? ['Fixed'];
-        if (!allowedConfigTypes.includes(configType)) {
-          throw new Error(
-            `Configuration type ${configType} is not valid for ${plan.contract_line_type} contract lines. Allowed: ${allowedConfigTypes.join(', ')}.`
-          );
-        }
-      }
-
-      const determinedConfigType: 'Fixed' | 'Hourly' | 'Usage' | 'Bucket' = configType
-        ?? (
-          plan.contract_line_type === 'Hourly'
-            ? 'Hourly'
-            : plan.contract_line_type === 'Usage'
-              ? 'Usage'
-              : 'Fixed'
-        );
-
-      const configurationType = determinedConfigType;
-      let hourlyConfigPayload: Partial<IContractLineServiceHourlyConfig> | undefined;
-
-      if (configurationType === 'Bucket') {
-        typeConfig = typeConfig || {};
-        if ((typeConfig as Partial<IContractLineServiceBucketConfig>)?.overage_rate === undefined) {
-          (typeConfig as Partial<IContractLineServiceBucketConfig>).overage_rate = service.default_rate;
-        }
-      } else if (configurationType === 'Hourly') {
-        const providedHourly = (typeConfig as Partial<IContractLineServiceHourlyConfig>) || {};
-        const resolvedHourlyRate =
-          typeof providedHourly.hourly_rate !== 'undefined'
-            ? providedHourly.hourly_rate
-            : service.default_rate;
-
-        if (resolvedHourlyRate === undefined || resolvedHourlyRate === null) {
-          throw new Error(`Service ${service.service_name} requires an hourly rate before it can be added to an hourly contract line.`);
-        }
-
-        const normalizedHourlyRate = Number(resolvedHourlyRate);
-        if (Number.isNaN(normalizedHourlyRate)) {
-          throw new Error(`Hourly rate for service ${service.service_name} must be a numeric value.`);
-        }
-
-        const minimumBillableCandidate = Number(
-          typeof providedHourly.minimum_billable_time !== 'undefined'
-            ? providedHourly.minimum_billable_time
-            : 15
-        );
-        const roundUpCandidate = Number(
-          typeof providedHourly.round_up_to_nearest !== 'undefined'
-            ? providedHourly.round_up_to_nearest
-            : 15
-        );
-
-        const minimumBillableTime = Number.isFinite(minimumBillableCandidate) && minimumBillableCandidate > 0
-          ? minimumBillableCandidate
-          : 15;
-        const roundUpToNearest = Number.isFinite(roundUpCandidate) && roundUpCandidate > 0
-          ? roundUpCandidate
-          : 15;
-
-        hourlyConfigPayload = {
-          hourly_rate: normalizedHourlyRate,
-          minimum_billable_time: minimumBillableTime,
-          round_up_to_nearest: roundUpToNearest,
-        };
-
-        typeConfig = hourlyConfigPayload;
-      }
-
-      const existingPlanService = await getContractLineService(contractLineId, serviceId);
-      if (isReturnedActionError(existingPlanService)) {
-        return existingPlanService;
-      }
-
-      if (!existingPlanService) {
-        await tenantScopedTable(trx, tenant, 'contract_line_services').insert({
-          contract_line_id: contractLineId,
-          service_id: serviceId,
-          tenant: tenant
-        });
-      }
-
-      const existingConfig = await planServiceConfigActions.getConfigurationForService(contractLineId, serviceId);
-      if (isReturnedActionError(existingConfig)) {
-        return existingConfig;
-      }
-
-      let configId: string | ContractLineServiceActionError;
-
-      if (existingConfig) {
-        const updateResult = await planServiceConfigActions.updateConfiguration(
-          existingConfig.config_id,
-          {
-            configuration_type: configurationType,
-            custom_rate: customRate,
-            quantity: quantity || 1
-          },
-          typeConfig || {}
-        );
-        if (isReturnedActionError(updateResult)) {
-          return updateResult;
-        }
-        configId = existingConfig.config_id;
-      } else {
-        configId = await planServiceConfigActions.createConfiguration(
-          {
-            contract_line_id: contractLineId,
-            service_id: serviceId,
-            configuration_type: configurationType,
-            custom_rate: customRate,
-            quantity: quantity || 1,
-            tenant: tenant!
-          },
-          typeConfig || {}
-        );
-        if (isReturnedActionError(configId)) {
-          return configId;
-        }
-      }
-
-      if (configurationType === 'Hourly' && hourlyConfigPayload) {
-        const hourlyResult = await planServiceConfigActions.upsertPlanServiceHourlyConfiguration(
-          contractLineId,
-          serviceId,
-          hourlyConfigPayload
-        );
-        if (isReturnedActionError(hourlyResult)) {
-          return hourlyResult;
-        }
-      }
-
-      return configId;
-    });
+    return await withTransaction(db, (trx: Knex.Transaction) =>
+      addServiceToContractLineInTransaction(
+        trx,
+        tenant,
+        contractLineId,
+        serviceId,
+        quantity,
+        customRate,
+        configType,
+        typeConfig,
+      )
+    );
   } catch (error) {
     console.error(`Error adding service ${serviceId} to contract line ${contractLineId}:`, error);
     const expected = contractLineServiceActionErrorFrom(error);
@@ -656,69 +755,74 @@ export const removeServiceFromContractLine = withAuth(async (
     if (!tenant) {
       throw new Error('tenant context not found');
     }
-    return withTransaction(db, async (trx: Knex.Transaction) => {
-      const templateLine = await findTemplateLine(trx, tenant, contractLineId);
-      if (templateLine) {
-        const templateConfigs = await tenantScopedTable(trx, tenant, 'contract_template_line_service_configuration')
-          .where({
-            template_line_id: contractLineId,
-            service_id: serviceId,
-          })
-          .select('config_id');
-
-        if (templateConfigs.length > 0) {
-          const configIds = (templateConfigs as any[]).map((config: any) => config.config_id);
-
-          await tenantScopedTable(trx, tenant, 'contract_template_line_service_hourly_config')
-            .whereIn('config_id', configIds)
-            .delete();
-
-          await tenantScopedTable(trx, tenant, 'contract_template_line_service_usage_config')
-            .whereIn('config_id', configIds)
-            .delete();
-
-          await tenantScopedTable(trx, tenant, 'contract_template_line_service_bucket_config')
-            .whereIn('config_id', configIds)
-            .delete();
-
-          await tenantScopedTable(trx, tenant, 'contract_template_line_service_configuration')
-            .whereIn('config_id', configIds)
-            .delete();
-        }
-
-        await tenantScopedTable(trx, tenant, 'contract_template_line_services')
-          .where({
-            template_line_id: contractLineId,
-            service_id: serviceId,
-          })
-          .delete();
-
-        return true;
-      }
-
-      const config = await planServiceConfigActions.getConfigurationForService(contractLineId, serviceId);
-      if (isReturnedActionError(config)) {
-        return config;
-      }
-
-      if (config) {
-        const deleteResult = await planServiceConfigActions.deleteConfiguration(config.config_id);
-        if (isReturnedActionError(deleteResult)) {
-          return deleteResult;
-        }
-      }
-
-      await tenantScopedTable(trx, tenant, 'contract_line_services')
-        .where({
-          contract_line_id: contractLineId,
-          service_id: serviceId,
-        })
-        .delete();
-
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      await removeServiceFromContractLineInTransaction(trx, tenant, contractLineId, serviceId);
       return true;
     });
   } catch (error) {
     console.error(`Error removing service ${serviceId} from contract line ${contractLineId}:`, error);
+    const expected = contractLineServiceActionErrorFrom(error);
+    if (expected) {
+      return expected;
+    }
+    throw error;
+  }
+});
+
+/**
+ * Apply all staged membership changes from the contract-line editor in one
+ * transaction. The editor intentionally calls this only from its outer Save
+ * action; opening the picker or pressing Remove never mutates persisted data.
+ */
+export const applyContractLineServiceMembershipChanges = withAuth(async (
+  user,
+  { tenant },
+  contractLineId: string,
+  changes: ContractLineServiceMembershipChanges,
+): Promise<boolean | ContractLineServiceActionError> => {
+  try {
+    if (changes.additions.length > 0 && !await hasPermission(user, 'billing', 'create')) {
+      return permissionError('Permission denied: billing create required');
+    }
+    if (changes.removals.length > 0 && !await hasPermission(user, 'billing', 'delete')) {
+      return permissionError('Permission denied: billing delete required');
+    }
+    if (!tenant) {
+      throw new Error('tenant context not found');
+    }
+
+    const additionIds = changes.additions.map((addition) => addition.serviceId);
+    if (new Set(additionIds).size !== additionIds.length) {
+      return actionError('A service can only be added once in a contract line edit.');
+    }
+    if (new Set(changes.removals).size !== changes.removals.length) {
+      return actionError('A service can only be removed once in a contract line edit.');
+    }
+    if (changes.removals.some((serviceId) => additionIds.includes(serviceId))) {
+      return actionError('The same service cannot be added and removed in one contract line edit.');
+    }
+
+    const { knex: db } = await createTenantKnex();
+    return await withTransaction(db, async (trx: Knex.Transaction) => {
+      for (const serviceId of changes.removals) {
+        await removeServiceFromContractLineInTransaction(trx, tenant, contractLineId, serviceId);
+      }
+      for (const addition of changes.additions) {
+        await addServiceToContractLineInTransaction(
+          trx,
+          tenant,
+          contractLineId,
+          addition.serviceId,
+          addition.quantity,
+          addition.customRate,
+          addition.configurationType,
+          addition.typeConfig,
+        );
+      }
+      return true;
+    });
+  } catch (error) {
+    console.error(`Error applying service membership changes to contract line ${contractLineId}:`, error);
     const expected = contractLineServiceActionErrorFrom(error);
     if (expected) {
       return expected;

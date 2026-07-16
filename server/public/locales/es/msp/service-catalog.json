@@ -169,11 +169,11 @@
       "addSelected": "Agregar servicios seleccionados",
       "adding": "Añadiendo..."
     },
-    "title": "Agregar servicios y productos al plan",
+    "title": "Agregar servicios y productos a la línea de contrato",
     "searchPlaceholder": "Buscar servicios/productos...",
     "errors": {
       "load": "No se pudieron cargar los servicios",
-      "add": "No se pudieron agregar servicios al plan"
+      "add": "No se pudieron agregar servicios a la línea de contrato"
     },
     "states": {
       "loading": "Cargando servicios...",
