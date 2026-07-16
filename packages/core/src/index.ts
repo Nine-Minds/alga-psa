@@ -33,6 +33,9 @@ export * from './lib/templateUtils';
 export * from './lib/formatters';
 export * from './lib/projectBillingStatus';
 
+// Barcode / GTIN utilities
+export * from './lib/gtin';
+
 // UUID utilities
 export { generateUUID } from './lib/uuid';
 

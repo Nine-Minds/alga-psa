@@ -1,8 +1,9 @@
 import type { IService } from '@/interfaces/billing.interfaces';
+import { normalizeGtin } from '@alga-psa/core';
 import { BaseService, ServiceContext, ListResult, tenantDb } from '@alga-psa/db';
 import { ListOptions } from '../controllers/types';
 import { publishServiceCatalogSearchEvent } from './ServiceCatalogService';
-import { NotFoundError } from '../middleware/apiMiddleware';
+import { ConflictError, NotFoundError } from '../middleware/apiMiddleware';
 
 type SortField = 'service_name' | 'billing_method' | 'default_rate';
 
@@ -13,13 +14,32 @@ type FilterOptions = {
   is_license?: boolean;
 };
 
+function rethrowProductUniqueViolation(error: unknown): never {
+  const databaseError = error as { code?: string; constraint?: string };
+
+  if (databaseError?.code === '23505') {
+    if (databaseError.constraint?.includes('service_catalog_product_barcode_unique')) {
+      throw new ConflictError(
+        'A product with this barcode already exists. Use a different barcode or edit the existing product.'
+      );
+    }
+    if (databaseError.constraint?.includes('service_catalog_product_sku_unique')) {
+      throw new ConflictError(
+        'A product with this SKU already exists. Use a different SKU or edit the existing product.'
+      );
+    }
+  }
+
+  throw error;
+}
+
 export class ProductCatalogService extends BaseService<IService> {
   constructor() {
     super({
       tableName: 'service_catalog',
       primaryKey: 'service_id',
       tenantColumn: 'tenant',
-      searchableFields: ['service_name', 'description', 'sku'],
+      searchableFields: ['service_name', 'description', 'sku', 'barcode'],
       defaultSort: 'service_name',
       defaultOrder: 'asc'
     });
@@ -53,13 +73,16 @@ export class ProductCatalogService extends BaseService<IService> {
           query.where('sc.category_id', filters.category_id);
         }
       }
-      if (filters.search) {
-        const term = `%${filters.search}%`;
+      const trimmedSearch = filters.search?.trim();
+      if (trimmedSearch) {
+        const term = `%${trimmedSearch}%`;
+        const barcodeTerm = `%${normalizeGtin(trimmedSearch)}%`;
         query.andWhere((builder: any) => {
           builder
             .whereILike('sc.service_name', term)
             .orWhereILike('sc.description', term)
-            .orWhereILike('sc.sku', term);
+            .orWhereILike('sc.sku', term)
+            .orWhereILike('sc.barcode', barcodeTerm);
         });
       }
       return query;
@@ -95,6 +118,7 @@ export class ProductCatalogService extends BaseService<IService> {
           'sc.item_kind',
           'sc.is_active',
           'sc.sku',
+          'sc.barcode',
           knex.raw('CAST(sc.cost AS FLOAT) as cost'),
           'sc.cost_currency',
           'sc.vendor',
@@ -216,11 +240,17 @@ export class ProductCatalogService extends BaseService<IService> {
         : rest.default_rate,
       tax_rate_id: rest.tax_rate_id || null,
       category_id: rest.category_id ?? null,
+      barcode: normalizeGtin(rest.barcode ?? '') || null,
     };
 
-    const [created] = await tenantDb(knex, tenant).table('service_catalog')
-      .insert(productData)
-      .returning('*');
+    let created: IService;
+    try {
+      [created] = await tenantDb(knex, tenant).table<IService>('service_catalog')
+        .insert(productData)
+        .returning('*');
+    } catch (error) {
+      rethrowProductUniqueViolation(error);
+    }
 
     // Set prices if provided
     if (prices && prices.length > 0) {
@@ -250,14 +280,24 @@ export class ProductCatalogService extends BaseService<IService> {
     }
 
     const { prices, billing_method: _billing_method, service_type_name: _, ...updateData } = data as any;
+    const normalizedUpdateData = {
+      ...updateData,
+      ...(updateData.barcode !== undefined
+        ? { barcode: normalizeGtin(updateData.barcode ?? '') || null }
+        : {}),
+    };
 
-    await tenantDb(knex, tenant).table('service_catalog')
-      .where('service_id', id)
-      .update({
-        ...updateData,
-        item_kind: 'product',
-        billing_method: 'usage'
-      });
+    try {
+      await tenantDb(knex, tenant).table('service_catalog')
+        .where('service_id', id)
+        .update({
+          ...normalizedUpdateData,
+          item_kind: 'product',
+          billing_method: 'usage'
+        });
+    } catch (error) {
+      rethrowProductUniqueViolation(error);
+    }
 
     // Update prices if provided
     if (prices) {
@@ -267,7 +307,7 @@ export class ProductCatalogService extends BaseService<IService> {
     await publishServiceCatalogSearchEvent('SERVICE_CATALOG_UPDATED', tenant, id, {
       userId: context.userId,
       itemKind: 'product',
-      changedFields: Object.keys(updateData),
+      changedFields: Object.keys(normalizedUpdateData),
     });
 
     return this.getById(id, context) as Promise<IService>;
