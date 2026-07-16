@@ -1,13 +1,6 @@
-"use client";
-import { useRouter } from 'next/navigation';
+import BackButton from '@/components/common/BackButton';
 
 export default function PrivacyPolicy() {
-  const router = useRouter();
-
-  const handleBack = () => {
-    router.back();
-  };
-
   return (
     <div className="min-h-screen bg-gray-100 py-12 px-4">
       <div className="bg-white p-8 rounded-lg shadow-lg max-w-4xl mx-auto">
@@ -402,12 +395,12 @@ export default function PrivacyPolicy() {
           </p>
         </div>
 
-        <button
-          onClick={handleBack}
+        <BackButton
+          id="privacy-policy-back-button"
           className="mt-8 px-4 py-2 bg-gray-600 text-white rounded-md shadow hover:bg-gray-700 transition"
         >
           Go Back
-        </button>
+        </BackButton>
       </div>
     </div>
   );
