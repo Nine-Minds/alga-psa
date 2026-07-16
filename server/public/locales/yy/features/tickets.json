@@ -1206,6 +1206,7 @@
   "categoryPicker": {
     "title": "55555",
     "placeholder": "55555",
+    "searchPlaceholder": "55555",
     "noCategory": "55555",
     "addNew": "55555",
     "itilBadge": "55555",

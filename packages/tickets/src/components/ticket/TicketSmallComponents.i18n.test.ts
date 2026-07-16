@@ -72,6 +72,7 @@ describe('small ticket component i18n wiring contract', () => {
     expect(source).toContain("const { t } = useTranslation('features/tickets');");
     expect(source).toContain("t('categoryPicker.title', 'Category Picker')");
     expect(source).toContain("t('categoryPicker.placeholder', 'Select categories...')");
+    expect(source).toContain("t('categoryPicker.searchPlaceholder', 'Search categories...')");
     expect(source).toContain("t('categoryPicker.noCategory', 'No Category')");
     expect(source).toContain("t('categoryPicker.itilBadge', 'ITIL')");
     expect(source).toContain("t('categoryPicker.selectedCount', {");

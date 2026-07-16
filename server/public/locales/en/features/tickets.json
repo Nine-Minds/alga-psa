@@ -1206,6 +1206,7 @@
   "categoryPicker": {
     "title": "Category Picker",
     "placeholder": "Select categories...",
+    "searchPlaceholder": "Search categories...",
     "noCategory": "No Category",
     "addNew": "Add new category",
     "itilBadge": "ITIL",
