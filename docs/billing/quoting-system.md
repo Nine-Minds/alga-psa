@@ -30,7 +30,7 @@ Quotes are pre-sale pricing proposals that MSPs create for clients. A quote cont
 
 Key capabilities:
 - Full CRUD with tenant isolation
-- Sequential numbering (Q-0001, Q-0002, ...) via `SharedNumberingService`
+- Sequential numbering (`QUO-0001`, `QUO-0002`, …) via `SharedNumberingService`; configure prefix and format under **Settings > Billing > Numbering**
 - Status-driven lifecycle with enforced transitions
 - Reusable business templates (predefined line item configurations)
 - Professional PDF generation using the shared AST template engine
@@ -89,7 +89,7 @@ Primary entity table with Citus-compatible composite keys.
 |--------|------|-------------|
 | `tenant` | UUID | Tenant isolation key |
 | `quote_id` | UUID | Primary identifier |
-| `quote_number` | TEXT | Human-readable number (Q-0001) |
+| `quote_number` | TEXT | Human-readable number (QUO-0001) |
 | `client_id` | UUID | Associated client |
 | `contact_id` | UUID | Primary contact |
 | `title` | TEXT | Quote title |
@@ -265,7 +265,7 @@ When a sent or rejected quote needs changes, a **revision** is created rather th
 2. `parent_quote_id` links to the original quote (first version)
 3. All `quote_items` are cloned to the new version
 4. The old version's status is set to `superseded`
-5. The same `quote_number` is reused across versions (displayed as "Q-0042 v2")
+5. The same `quote_number` is reused across versions (displayed as "QUO-0042 v2")
 
 The version history chain can be queried via `parent_quote_id` to display all versions with navigation in the UI.
 
