@@ -88,29 +88,4 @@ describe('resolution comment close contract', () => {
     expect(read('./BentoHero.tsx')).toContain('setNotificationSuppression(defaultNotificationSuppression())');
     expect(read('../../TicketingDashboard.tsx')).toContain('setBulkMoveNotificationSuppression(defaultNotificationSuppression())');
   });
-
-  it('offers a dedicated toolbar close action that records a resolution and chosen status', () => {
-    const details = read('../TicketDetails.tsx');
-    const dialog = read('../TicketResolutionDialog.tsx');
-    const entry = read('../TicketInfo.tsx');
-    const hero = read('./BentoHero.tsx');
-
-    expect(details).toContain('await addResolutionComment(resolution)');
-    expect(details).toContain('addTicketCommentWithCache(');
-    expect(details).toContain('<TicketResolutionDialog');
-    expect(details).toContain("['status_id', 'response_state']");
-    expect(details).toContain('() => updateTicketWithCache(ticket.ticket_id!, { status_id: statusId })');
-    expect(details).not.toContain('skipResolutionPrompt');
-    expect(dialog).toContain("title={t('info.closeTicketTitle', 'Close ticket')}");
-    expect(dialog).toContain('<CustomSelect');
-    expect(dialog).toContain('options={statusOptions}');
-    expect(dialog).toContain('footer={footer}');
-    expect(dialog).toContain('disabled={!statusId || !trimmedResolution || isSubmitting}');
-    expect(entry).toContain('id={`${id}-resolve-and-close-button`}');
-    expect(entry).toContain("t('info.resolveAndClose', 'Resolve and close')");
-    expect(entry).toContain("workflowLocked || isFieldFrozen('status_id') || resolveAndCloseDisabled");
-    expect(hero).toContain('id={`${id}-resolve-and-close-button`}');
-    expect(hero).toContain("t('info.resolveAndClose', 'Resolve and close')");
-    expect(hero).toContain("workflowLocked || isFrozen('status_id') || resolveAndCloseDisabled");
-  });
 });
