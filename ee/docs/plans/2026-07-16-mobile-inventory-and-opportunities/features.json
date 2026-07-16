@@ -1,0 +1,584 @@
+[
+  {
+    "id": "F001",
+    "description": "Migration: add service_catalog.barcode (nullable text) with partial unique index (tenant, barcode) WHERE barcode IS NOT NULL AND item_kind='product'; reversible; uniqueness enforced on normalized GTIN values",
+    "implemented": true,
+    "commitGroup": "barcode-field",
+    "prdRefs": [
+      "FR1"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Shared GTIN normalization function (all-numeric 12-digit zero-padded to 13; single function used by storage, uniqueness checks, and lookup) exported for API layer; IService interface + product Zod schemas include barcode; ProductCatalogService create/update persist normalized barcode",
+    "implemented": true,
+    "commitGroup": "barcode-field",
+    "prdRefs": [
+      "FR1"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Products REST list search matches barcode (alongside service_name/description/sku)",
+    "implemented": true,
+    "commitGroup": "barcode-field",
+    "prdRefs": [
+      "FR1"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Web Products UI (QuickAddProduct create + edit path) exposes Barcode field with duplicate-barcode error surfaced inline",
+    "implemented": true,
+    "commitGroup": "barcode-field",
+    "prdRefs": [
+      "FR1"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Extract session-free core: receiveStock (from receiveStockManual inline txn body) into packages/inventory/src/lib, signature (trx, tenant, userId, input); web action becomes thin wrapper; existing action tests green",
+    "implemented": true,
+    "commitGroup": "inventory-core-extraction",
+    "prdRefs": [
+      "FR2a"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Extract session-free core: adjustStock/retireStock (incl. moving-average math) into lib; thin wrappers; tests green",
+    "implemented": true,
+    "commitGroup": "inventory-core-extraction",
+    "prdRefs": [
+      "FR2a"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Extract session-free cores: cycle counts (start/record/submitForReview; approve stays action-side but shares the adjust core); thin wrappers; tests green",
+    "implemented": true,
+    "commitGroup": "inventory-core-extraction",
+    "prdRefs": [
+      "FR2a"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Extract session-free cores: PO list/get/receivePoLine into lib; receivePoLine core GAINS assertLocationWritable (deliberate web behavior change \u2014 PO receive was the only unscoped write); thin wrappers; tests green",
+    "implemented": true,
+    "commitGroup": "inventory-core-extraction",
+    "prdRefs": [
+      "FR2a",
+      "FR2"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Extract session-free cores: transfer list/receive; unit search/detail (stockUnitActions inline queries); stock levels/locations reads; thin wrappers; tests green",
+    "implemented": true,
+    "commitGroup": "inventory-core-extraction",
+    "prdRefs": [
+      "FR2a"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "interactionSchemas.ts: Zod schemas for interaction create/list filters/response (client_id, contact_id, opportunity_id, ticket_id, project_id, type_id, dates, duration, notes)",
+    "implemented": true,
+    "commitGroup": "interactions-api",
+    "prdRefs": [
+      "FR3"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "InteractionService: list (all filters + pagination), getById, create \u2014 create delegates to session-free createInteractionWithSideEffects (search-index events + opportunity last_activity_at in-trx); no PUT/DELETE in v1",
+    "implemented": true,
+    "commitGroup": "interactions-api",
+    "prdRefs": [
+      "FR3"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "ApiInteractionController + route files: GET/POST /api/v1/interactions, GET /api/v1/interactions/[id]; RBAC resource 'interaction'; /api/v1/interactions added to api_helpdesk_allowed in productSurfaceRegistry (AlgaDesk keeps core-CRM access)",
+    "implemented": true,
+    "commitGroup": "interactions-api",
+    "prdRefs": [
+      "FR3",
+      "Security"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "GET /api/v1/interaction-types returns the UNION of system_interaction_types and tenant interaction_types (id, name, icon, system flag) \u2014 tenant-only model method is insufficient",
+    "implemented": true,
+    "commitGroup": "interactions-api",
+    "prdRefs": [
+      "FR3"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Creating an interaction with opportunity_id over REST updates the opportunity's last_activity_at exactly like the server action path (same helper)",
+    "implemented": true,
+    "commitGroup": "interactions-api",
+    "prdRefs": [
+      "FR3",
+      "Goals#6"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "inventorySchemas.ts: Zod schemas for lookup result union (product|unit|multi|none), stock levels, locations, units, unit detail + movements",
+    "implemented": true,
+    "commitGroup": "inventory-api-read",
+    "prdRefs": [
+      "FR2"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "InventoryService read surface calling FR2a cores: stock levels (filters: location, service, low_stock, search), stock locations, units list (serial/mac/search/status/location/service/client), unit detail with movement history",
+    "implemented": true,
+    "commitGroup": "inventory-api-read",
+    "prdRefs": [
+      "FR2"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "GET /api/v1/inventory/lookup?code= runs all four exact matches together (normalized barcode, SKU, serial, MAC case/separator-insensitive); single-domain hit returns that variant; >1 domain returns 'multi' variant (never silently shadow a unit); zero hits return none+prefix candidates",
+    "implemented": true,
+    "commitGroup": "inventory-api-read",
+    "prdRefs": [
+      "FR2",
+      "Goals#1"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Lookup product hit payload includes product summary + per-location on-hand/available; unit hit includes status/location/client/warranty + product summary",
+    "implemented": true,
+    "commitGroup": "inventory-api-read",
+    "prdRefs": [
+      "FR2"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "ApiInventoryController + route files for read endpoints (lookup, stock, stock-locations, units, units/[unitId]); RBAC inventory:read; API_RULES entries for /api/v1/inventory family in productSurfaceRegistry (PSA-only; AlgaDesk 403 via assertProductApiAccess)",
+    "implemented": true,
+    "commitGroup": "inventory-api-read",
+    "prdRefs": [
+      "FR2",
+      "Security"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "POST /api/v1/inventory/receipts \u2014 manual receive via FR2a core (serialized requires serials.length===quantity; serial+MAC uniqueness errors mapped to 409 with machine-readable code)",
+    "implemented": true,
+    "commitGroup": "inventory-api-write",
+    "prdRefs": [
+      "FR2"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "POST /api/v1/inventory/adjustments \u2014 quantity delta or serialized loss/found with required reason; RBAC inventory:update + assertLocationWritable enforced",
+    "implemented": true,
+    "commitGroup": "inventory-api-write",
+    "prdRefs": [
+      "FR2"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "Cycle count REST: list/start/get/record/submit via FR2a cores (blind counts; approval remains web-only); RBAC cycle_count resource",
+    "implemented": true,
+    "commitGroup": "inventory-api-write",
+    "prdRefs": [
+      "FR2"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "PO receiving REST under inventory family: GET /api/v1/inventory/purchase-orders (status filter, pagination, lines with quantity_ordered/received), GET /[poId], POST /[poId]/lines/[lineId]/receive (qty + serials[]); RBAC purchase_order:update; location-scoped per F008",
+    "implemented": true,
+    "commitGroup": "inventory-api-write",
+    "prdRefs": [
+      "FR2"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "Transfer receiving REST: GET /api/v1/inventory/transfers?status=dispatched, POST /api/v1/inventory/transfers/[id]/receive; RBAC stock_transfer:update; destination location scoping enforced",
+    "implemented": true,
+    "commitGroup": "inventory-api-write",
+    "prdRefs": [
+      "FR2"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "All inventory write endpoints emit the same movements/events/notifications as web actions (FR2a cores are the single code path; no ledger logic in the API layer)",
+    "implemented": true,
+    "commitGroup": "inventory-api-write",
+    "prdRefs": [
+      "FR2",
+      "NFR"
+    ]
+  },
+  {
+    "id": "F036",
+    "description": "cycle_count permission grants verified for seeded tenants; readd migration shipped if missing (20260707120000 omits cycle_count \u2014 mobile counts would 403)",
+    "implemented": true,
+    "commitGroup": "inventory-api-write",
+    "prdRefs": [
+      "FR2"
+    ]
+  },
+  {
+    "id": "F040",
+    "description": "GET /api/v1/opportunities/work-queue wrapping the session-free assembleWorkQueue core (current-user docket; server-composed why-sentences in payload)",
+    "implemented": true,
+    "commitGroup": "opportunity-api",
+    "prdRefs": [
+      "FR4",
+      "Goals#5"
+    ]
+  },
+  {
+    "id": "F041",
+    "description": "Extract small timeline core from opportunityTimeline.ts (query currently inline in withAuth wrapper), then GET /api/v1/opportunities/[id]/timeline (interaction items with type name/icon, user, date, title/notes)",
+    "implemented": true,
+    "commitGroup": "opportunity-api",
+    "prdRefs": [
+      "FR4"
+    ]
+  },
+  {
+    "id": "F042",
+    "description": "OpenAPI generator: register NEW route families (interactions, inventory incl. purchase-orders/transfers/counts, opportunity work-queue/timeline); existing opportunity routes already registered \u2014 regenerate stale artifacts (me/capabilities registration rides with F050 in its own group)",
+    "implemented": true,
+    "commitGroup": "opportunity-api",
+    "prdRefs": [
+      "FR4",
+      "Data/API"
+    ]
+  },
+  {
+    "id": "F050",
+    "description": "New authenticated GET /api/v1/mobile/me/capabilities returning features.inventory + features.opportunities (tenant product 'psa' AND inventory:read / opportunities:read RBAC); existing pre-auth capabilities endpoint untouched; route registered in the OpenAPI generator in this same group",
+    "implemented": true,
+    "commitGroup": "capabilities",
+    "prdRefs": [
+      "FR5"
+    ]
+  },
+  {
+    "id": "F051",
+    "description": "Mobile capabilities plumbing (new mechanism): session-scoped capabilities store/context fetched post-auth + on app-foreground; conditional Drawer.Screen registration (drawer is fully static today); 404-from-old-server degrades to flags false",
+    "implemented": true,
+    "commitGroup": "capabilities",
+    "prdRefs": [
+      "FR5"
+    ]
+  },
+  {
+    "id": "F060",
+    "description": "shared/workflow businessOperations/inventory.ts: inventory.get_availability action (service_id -> per-location on-hand/available/reorder state) with Zod schema + designer metadata",
+    "implemented": true,
+    "commitGroup": "inventory-workflows",
+    "prdRefs": [
+      "FR8"
+    ]
+  },
+  {
+    "id": "F061",
+    "description": "inventory.find_units workflow action (serial/mac/status/location filters -> unit summaries)",
+    "implemented": true,
+    "commitGroup": "inventory-workflows",
+    "prdRefs": [
+      "FR8"
+    ]
+  },
+  {
+    "id": "F062",
+    "description": "inventory.adjust_stock workflow action (service, location, delta, reason) running the FR2a adjust core; designer metadata documents run-actor attribution (performed_by = workflow publisher)",
+    "implemented": true,
+    "commitGroup": "inventory-workflows",
+    "prdRefs": [
+      "FR8"
+    ]
+  },
+  {
+    "id": "F063",
+    "description": "inventory.create_purchase_order_draft workflow action (vendor_id, lines[]) creating a draft PO",
+    "implemented": true,
+    "commitGroup": "inventory-workflows",
+    "prdRefs": [
+      "FR8"
+    ]
+  },
+  {
+    "id": "F064",
+    "description": "SO/PO lifecycle events: add missing emit sites for INVENTORY_SALES_ORDER_DELETED + INVENTORY_PURCHASE_ORDER_DELETED (declared but never published), then catalog all six CREATED/UPDATED/DELETED with all three touch points (schema file + workflowEventPayloadSchemas map + catalog seed)",
+    "implemented": true,
+    "commitGroup": "inventory-workflows",
+    "prdRefs": [
+      "FR8"
+    ]
+  },
+  {
+    "id": "F065",
+    "description": "New events published + three-touch-point registered: INVENTORY_TRANSFER_DISPATCHED, INVENTORY_TRANSFER_RECEIVED, INVENTORY_COUNT_SUBMITTED, INVENTORY_COUNT_APPROVED (RMA_STATUS_CHANGED cut \u2014 moved to loaner/RMA-aging follow-up plan)",
+    "implemented": true,
+    "commitGroup": "inventory-workflows",
+    "prdRefs": [
+      "FR8"
+    ]
+  },
+  {
+    "id": "F066",
+    "description": "adjustStock core and count approval emit INVENTORY_STOCK_LOW when crossing the reorder point (parity with fulfillment/materials paths)",
+    "implemented": true,
+    "commitGroup": "inventory-workflows",
+    "prdRefs": [
+      "FR8"
+    ]
+  },
+  {
+    "id": "F070",
+    "description": "Mobile API module src/api/inventory.ts: lookup, stock, locations, units, unitDetail, receipts, adjustments, counts (list/start/get/record/submit), purchaseOrders (list/get/receiveLine), transfers (list/receive) \u2014 typed, x-api-key pattern",
+    "implemented": true,
+    "commitGroup": "mobile-inventory-core",
+    "prdRefs": [
+      "FR6"
+    ]
+  },
+  {
+    "id": "F071",
+    "description": "InventoryTab drawer section registered (DrawerParamList + DrawerNavigator + icons + i18n title), detail routes in RootStackParamList/RootNavigator; rendered only when capabilities store says features.inventory",
+    "implemented": true,
+    "commitGroup": "mobile-inventory-core",
+    "prdRefs": [
+      "FR6",
+      "FR5"
+    ]
+  },
+  {
+    "id": "F072",
+    "description": "Scan screen: CameraView with expanded barcodeTypes (ean13/ean8/upc_a/upc_e/code128/code39/itf14/codabar/qr; codabar iOS>=15.4), reticle overlay, torch toggle, haptic + debounce (one code -> one resolve), permission-denied state with settings link",
+    "implemented": true,
+    "commitGroup": "mobile-inventory-core",
+    "prdRefs": [
+      "FR6",
+      "UX"
+    ]
+  },
+  {
+    "id": "F073",
+    "description": "Scan result bottom card (camera stays live): product card (levels summary + Receive/Adjust actions), unit card (status/client/warranty + History action), multi card (domain chooser), none card (candidates + manual search + rescan)",
+    "implemented": true,
+    "commitGroup": "mobile-inventory-core",
+    "prdRefs": [
+      "FR6",
+      "UX"
+    ]
+  },
+  {
+    "id": "F074",
+    "description": "Stock segment: tracked-products list with on-hand/available + low-stock badge, debounced search, pagination, pull-to-refresh; product stock detail screen with per-location levels and serialized units list",
+    "implemented": true,
+    "commitGroup": "mobile-inventory-core",
+    "prdRefs": [
+      "FR6"
+    ]
+  },
+  {
+    "id": "F075",
+    "description": "Unit detail screen: product, serial, MAC, status badge, location/client, warranty, movement history list",
+    "implemented": true,
+    "commitGroup": "mobile-inventory-core",
+    "prdRefs": [
+      "FR6"
+    ]
+  },
+  {
+    "id": "F076",
+    "description": "i18n namespace 'inventory' registered (config.ts + i18n.ts + locales/en/inventory.json); all inventory strings translated keys; interactive elements carry kebab-case ids",
+    "implemented": true,
+    "commitGroup": "mobile-inventory-core",
+    "prdRefs": [
+      "FR6",
+      "UX"
+    ]
+  },
+  {
+    "id": "F080",
+    "description": "Receive flow: product picker (or prefilled from scan), location picker, quantity/cost fields; serialized path uses serial-scan accumulator (chip list, dupe rejection with haptic, manual entry fallback); success toast + refreshed levels",
+    "implemented": true,
+    "commitGroup": "mobile-inventory-ops",
+    "prdRefs": [
+      "FR6",
+      "Flows#1"
+    ]
+  },
+  {
+    "id": "F081",
+    "description": "Adjust flow: signed quantity, required reason, location picker; serialized loss/found variants; 403 location-scope error rendered as friendly no-access state",
+    "implemented": true,
+    "commitGroup": "mobile-inventory-ops",
+    "prdRefs": [
+      "FR6"
+    ]
+  },
+  {
+    "id": "F082",
+    "description": "Counts segment: sessions list (status), start session (location picker), record screen with scan-to-count (scanning a code increments/sets its line) + manual quantity entry, submit-for-review with confirmation",
+    "implemented": true,
+    "commitGroup": "mobile-inventory-ops",
+    "prdRefs": [
+      "FR6",
+      "Flows#3"
+    ]
+  },
+  {
+    "id": "F083",
+    "description": "PO receiving flow: open-POs list, PO detail with lines + received progress, line receive via serial accumulator or quantity; over-receipt warning surfaced",
+    "implemented": true,
+    "commitGroup": "mobile-inventory-ops",
+    "prdRefs": [
+      "FR6",
+      "Flows#2"
+    ]
+  },
+  {
+    "id": "F084",
+    "description": "Transfer receive flow: dispatched-transfers list (destination-scoped), receive confirmation moving units/qty into destination",
+    "implemented": true,
+    "commitGroup": "mobile-inventory-ops",
+    "prdRefs": [
+      "FR6"
+    ]
+  },
+  {
+    "id": "F090",
+    "description": "Mobile API modules src/api/opportunities.ts (list, get, workQueue, timeline, completeAction, win, lose) and src/api/interactions.ts (create, list, types) \u2014 typed, colocated tests",
+    "implemented": true,
+    "commitGroup": "mobile-opportunities-core",
+    "prdRefs": [
+      "FR7"
+    ]
+  },
+  {
+    "id": "F091",
+    "description": "OpportunitiesTab drawer section registered + OpportunityDetail route; rendered only when capabilities store says features.opportunities; i18n namespace 'opportunities'",
+    "implemented": true,
+    "commitGroup": "mobile-opportunities-core",
+    "prdRefs": [
+      "FR7",
+      "FR5"
+    ]
+  },
+  {
+    "id": "F092",
+    "description": "Queue screen (default segment): server work-queue sections with why-sentences, overdue/due badges, pull-to-refresh, finishable empty state; row tap -> deal detail",
+    "implemented": true,
+    "commitGroup": "mobile-opportunities-core",
+    "prdRefs": [
+      "FR7",
+      "Goals#5"
+    ]
+  },
+  {
+    "id": "F093",
+    "description": "Pipeline segment: paginated list (stage badge, client, values, staleness), debounced search, status filter",
+    "implemented": true,
+    "commitGroup": "mobile-opportunities-core",
+    "prdRefs": [
+      "FR7"
+    ]
+  },
+  {
+    "id": "F094",
+    "description": "Deal detail screen: header (title/client/stage/values incl. MRR-NRR split), next-action card as the single primary action, contact row (call/email), evidence-stage summary, timeline list from timeline endpoint",
+    "implemented": true,
+    "commitGroup": "mobile-opportunities-core",
+    "prdRefs": [
+      "FR7",
+      "UX"
+    ]
+  },
+  {
+    "id": "F100",
+    "description": "Complete-action flow: completing requires successor action + due date (blocked submit otherwise); queue/list refresh after",
+    "implemented": true,
+    "commitGroup": "mobile-opportunities-actions",
+    "prdRefs": [
+      "FR7",
+      "AC#5"
+    ]
+  },
+  {
+    "id": "F101",
+    "description": "Log-interaction sheet: type picker (system types incl. Call/Email/Note), title/notes, duration, saves via interactions API linked to opportunity+client+contact; timeline refreshes",
+    "implemented": true,
+    "commitGroup": "mobile-opportunities-actions",
+    "prdRefs": [
+      "FR7"
+    ]
+  },
+  {
+    "id": "F102",
+    "description": "Call flow: tel: launch from deal contact; on app resume within window, dismissible 'Log this call?' prompt with duration prefilled from elapsed time; saving creates Call interaction (never auto-logged)",
+    "implemented": true,
+    "commitGroup": "mobile-opportunities-actions",
+    "prdRefs": [
+      "FR7",
+      "Goals#6",
+      "Flows#6"
+    ]
+  },
+  {
+    "id": "F103",
+    "description": "Schedule-follow-up sheet: title prefilled ('Follow up: {deal}'), date/time pickers, POST /api/v1/schedules with work_item_type omitted (server maps to ad_hoc; create-schema enum has no 'ad_hoc'), self-assigned; mobile CreateScheduleEntryInput type corrected to match; success links to Schedule tab",
+    "implemented": true,
+    "commitGroup": "mobile-opportunities-actions",
+    "prdRefs": [
+      "FR7",
+      "Goals#7",
+      "AC#6"
+    ]
+  },
+  {
+    "id": "F104",
+    "description": "Win/Lose flows: Lose requires reason (lost_to only for chose_competitor); Win calls existing win endpoint (close gates + conversion prep run server-side), surfaces gate failures verbatim, success shows 'finish conversion on web' note; both refresh",
+    "implemented": true,
+    "commitGroup": "mobile-opportunities-actions",
+    "prdRefs": [
+      "FR7"
+    ]
+  },
+  {
+    "id": "F110",
+    "description": "Camera permission copy broadened to cover inventory scanning in app.json plugin config (source of truth; regenerate native projects, don't hand-edit the drifted Info.plist)",
+    "implemented": true,
+    "commitGroup": "openapi-docs",
+    "prdRefs": [
+      "Data/API"
+    ]
+  },
+  {
+    "id": "F111",
+    "description": "OpenAPI spec regenerated with all new routes; synced to developer portal (alga-openapi-sync)",
+    "implemented": false,
+    "commitGroup": "openapi-docs",
+    "prdRefs": [
+      "FR4",
+      "Data/API"
+    ]
+  }
+]
