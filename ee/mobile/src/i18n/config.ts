@@ -12,6 +12,8 @@ export const NAMESPACES = [
   "clients",
   "contacts",
   "userActivities",
+  "inventory",
+  "opportunities",
 ] as const;
 export type Namespace = (typeof NAMESPACES)[number];
 export const DEFAULT_NS: Namespace = "common";

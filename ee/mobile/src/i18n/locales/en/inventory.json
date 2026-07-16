@@ -1,0 +1,124 @@
+{
+  "title": "Inventory",
+  "segments": {
+    "scan": "Scan",
+    "stock": "Stock",
+    "counts": "Counts",
+    "pos": "POs"
+  },
+  "scan": {
+    "instruction": "Point the camera at a barcode",
+    "torchOn": "Turn flashlight on",
+    "torchOff": "Turn flashlight off",
+    "manualEntry": "Enter code manually",
+    "manualPlaceholder": "Barcode, SKU, serial, or MAC",
+    "lookupFailed": "Lookup failed. Try again.",
+    "permissionTitle": "Camera access needed",
+    "permissionBody": "Allow camera access to scan barcodes, serial numbers, and MAC labels.",
+    "openSettings": "Open Settings",
+    "noMatchTitle": "No match",
+    "noMatchBody": "Nothing matches \"{{code}}\".",
+    "candidatesTitle": "Close matches",
+    "multiTitle": "Multiple matches",
+    "multiBody": "\"{{code}}\" matches more than one record.",
+    "rescan": "Scan again",
+    "productKind": "Product",
+    "unitKind": "Stock unit"
+  },
+  "stock": {
+    "title": "Stock",
+    "searchPlaceholder": "Search products or SKU",
+    "onHand": "On hand",
+    "available": "Available",
+    "lowStock": "Low stock",
+    "empty": "No stock-tracked products yet.",
+    "byLocation": "By location",
+    "units": "Units",
+    "sku": "SKU",
+    "barcode": "Barcode"
+  },
+  "unit": {
+    "title": "Unit",
+    "serial": "Serial",
+    "mac": "MAC",
+    "status": "Status",
+    "location": "Location",
+    "client": "Client",
+    "warranty": "Warranty",
+    "warrantyUntil": "Until {{date}}",
+    "noWarranty": "No warranty on record",
+    "history": "History",
+    "statusValues": {
+      "in_stock": "In stock",
+      "allocated": "Allocated",
+      "in_transit": "In transit",
+      "on_loan": "On loan",
+      "delivered": "Delivered",
+      "returned": "Returned",
+      "in_rma": "In RMA",
+      "retired": "Retired"
+    }
+  },
+  "receive": {
+    "title": "Receive stock",
+    "product": "Product",
+    "location": "Location",
+    "quantity": "Quantity",
+    "unitCost": "Unit cost",
+    "serials": "Serials",
+    "scanSerials": "Scan serials",
+    "serialsProgress": "{{count}} of {{total}} serials",
+    "duplicateSerial": "Serial already captured",
+    "addManually": "Add manually",
+    "submit": "Receive",
+    "success": "Stock received"
+  },
+  "adjust": {
+    "title": "Adjust stock",
+    "quantity": "Adjustment (+/-)",
+    "reason": "Reason",
+    "reasonRequired": "A reason is required",
+    "submit": "Adjust",
+    "success": "Stock adjusted",
+    "noAccess": "You can't adjust stock at this location."
+  },
+  "counts": {
+    "title": "Counts",
+    "start": "Start count",
+    "location": "Location",
+    "empty": "No count sessions.",
+    "counted": "{{count}} counted",
+    "addLine": "Add product",
+    "submit": "Submit for review",
+    "submitConfirmTitle": "Submit count?",
+    "submitConfirmBody": "Submitted counts are reviewed and approved on the web.",
+    "submitted": "Count submitted for review",
+    "status": {
+      "open": "Open",
+      "submitted": "Submitted",
+      "approved": "Approved",
+      "cancelled": "Cancelled"
+    }
+  },
+  "pos": {
+    "title": "Purchase orders",
+    "empty": "No open purchase orders.",
+    "receivedProgress": "{{received}} of {{ordered}} received",
+    "receiveLine": "Receive",
+    "overReceipt": "This exceeds the remaining quantity on the line.",
+    "received": "Received"
+  },
+  "transfers": {
+    "title": "Transfers",
+    "empty": "No transfers in transit to your locations.",
+    "receive": "Receive transfer",
+    "received": "Transfer received",
+    "from": "From {{location}}"
+  },
+  "common": {
+    "cancel": "Cancel",
+    "done": "Done",
+    "retry": "Retry",
+    "noAccess": "You don't have access to inventory."
+  }
+}

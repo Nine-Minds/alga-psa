@@ -50,7 +50,7 @@
       [
         "expo-camera",
         {
-          "cameraPermission": "Allow AlgaPSA to use the camera to capture photos for tickets and scan your server's connection QR code."
+          "cameraPermission": "Allow AlgaPSA to use the camera to capture photos for tickets, scan inventory barcodes and serial numbers, and scan your server's connection QR code."
         }
       ],
       "expo-document-picker",
