@@ -117,6 +117,8 @@ function salesOrderActionErrorFrom(error: unknown): SalesOrderActionError | null
         return actionError('This sales order has fulfilled lines and cannot be cancelled.');
       case 'Cannot cancel a sales order with invoiced lines':
         return actionError('This sales order has invoiced lines and cannot be cancelled.');
+      case 'Only draft sales orders can be deleted':
+        return actionError('Only draft sales orders can be deleted. Cancel confirmed orders instead.');
       default:
         if (
           error.message.startsWith('Invalid invoice_mode:') ||
@@ -761,6 +763,26 @@ export const removeSoLine = withAuth(
       }));
 
       return { removed: result.removed };
+    });
+  },
+);
+
+export const deleteSalesOrder = withAuth(
+  async (user, { tenant }, soId: string): Promise<{ deleted: boolean } | SalesOrderActionError> => {
+    return withSalesOrderActionErrors(async () => {
+      await requireSoPerm(user, 'delete');
+      const { knex: db } = await createTenantKnex();
+      await withTransaction(db, async (trx: Knex.Transaction) => {
+        const salesOrder = await getSoOrThrow(trx, tenant, soId, { forUpdate: true });
+        if (salesOrder.status !== 'draft') throw new Error('Only draft sales orders can be deleted');
+        await trx('sales_orders').where({ tenant, so_id: soId }).del();
+      });
+      await publishInventoryEvent('INVENTORY_SALES_ORDER_DELETED', timestampPayload({
+        tenant,
+        so_id: soId,
+        user_id: user.user_id,
+      }));
+      return { deleted: true };
     });
   },
 );
