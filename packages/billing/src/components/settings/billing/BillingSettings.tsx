@@ -155,9 +155,10 @@ const BillingSettings: React.FC = () => {
     }
 
     // Keep existing tab parameter
-    const newUrl = currentSearchParams.toString()
-      ? `/msp/settings?${currentSearchParams.toString()}`
-      : '/msp/settings?tab=billing';
+    const query = currentSearchParams.toString();
+    const newUrl = query
+      ? `${window.location.pathname}?${query}`
+      : window.location.pathname;
 
     window.history.pushState({}, '', newUrl);
   };
