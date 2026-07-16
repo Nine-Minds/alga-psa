@@ -3127,12 +3127,14 @@ export const listWorkflowRunStepsAction = withAuth(async (user, { tenant }, inpu
     ? invocations.map((invocation) => ({
         ...invocation,
         input_json: invocation.input_json ? (applyRunStudioRedactions(invocation.input_json, cfg) as any) : null,
-        output_json: invocation.output_json ? (applyRunStudioRedactions(invocation.output_json, cfg) as any) : null
+        output_json: invocation.output_json ? (applyRunStudioRedactions(invocation.output_json, cfg) as any) : null,
+        error_json: invocation.error_json ? (applyRunStudioRedactions(invocation.error_json, cfg) as any) : null
       }))
     : invocations.map((invocation) => ({
         ...invocation,
         input_json: invocation.input_json ? { redacted: true } : null,
-        output_json: invocation.output_json ? { redacted: true } : null
+        output_json: invocation.output_json ? { redacted: true } : null,
+        error_json: invocation.error_json ? (redactSensitiveValues(invocation.error_json) as any) : null
       }));
 
   const sanitizedSnapshots = snapshots.map((snapshot) => ({

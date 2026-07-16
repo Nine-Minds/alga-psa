@@ -15,6 +15,14 @@ const fixture = vi.hoisted(() => ({
   tenant: 'tenant-a',
   events: [] as RuntimeEventRow[],
   simulatedCalls: [] as Array<{ payload: unknown }>,
+  run: {
+    run_id: 'run-1',
+    tenant: 'tenant-a',
+  } as Record<string, unknown>,
+  steps: [] as Array<Record<string, unknown>>,
+  snapshots: [] as Array<Record<string, unknown>>,
+  invocations: [] as Array<Record<string, unknown>>,
+  waits: [] as Array<Record<string, unknown>>,
 }));
 
 const knexMock: any = vi.hoisted(() => vi.fn());
@@ -91,16 +99,26 @@ vi.mock('@alga-psa/workflows/persistence', () => {
     return created !== 0 ? created : b.event_id.localeCompare(a.event_id);
   };
   return {
-    WorkflowActionInvocationModelV2: emptyModel,
+    WorkflowActionInvocationModelV2: {
+      listByRun: vi.fn(async () => fixture.invocations),
+    },
     WorkflowDataStoreModel: emptyModel,
     WorkflowDefinitionModelV2: emptyModel,
     WorkflowDefinitionVersionModelV2: emptyModel,
     WorkflowEntityLinkModel: emptyModel,
     WorkflowRunLogModelV2: emptyModel,
-    WorkflowRunModelV2: emptyModel,
-    WorkflowRunSnapshotModelV2: emptyModel,
-    WorkflowRunStepModelV2: emptyModel,
-    WorkflowRunWaitModelV2: emptyModel,
+    WorkflowRunModelV2: {
+      getById: vi.fn(async () => fixture.run),
+    },
+    WorkflowRunSnapshotModelV2: {
+      listByRun: vi.fn(async () => fixture.snapshots),
+    },
+    WorkflowRunStepModelV2: {
+      listByRun: vi.fn(async () => fixture.steps),
+    },
+    WorkflowRunWaitModelV2: {
+      listByRun: vi.fn(async () => fixture.waits),
+    },
     WorkflowRuntimeEventModelV2: {
       getById: vi.fn(async (_knex: any, eventId: string, tenant: string) =>
         fixture.events.find((event) => event.event_id === eventId && event.tenant === tenant) ?? null
@@ -169,7 +187,7 @@ vi.mock('@alga-psa/workflows/runtime', () => ({
   didYouMean: vi.fn(() => [])
 }));
 
-import { simulateWorkflowDefinitionDraftAction } from './workflow-runtime-v2-actions';
+import { listWorkflowRunStepsAction, simulateWorkflowDefinitionDraftAction } from './workflow-runtime-v2-actions';
 
 const definition = {
   id: 'wf-1',
@@ -203,6 +221,14 @@ describe('simulateWorkflowDefinitionDraftAction replay payload resolution', () =
     fixture.tenant = 'tenant-a';
     fixture.events = [];
     fixture.simulatedCalls = [];
+    fixture.run = {
+      run_id: 'run-1',
+      tenant: 'tenant-a',
+    };
+    fixture.steps = [];
+    fixture.snapshots = [];
+    fixture.invocations = [];
+    fixture.waits = [];
     knexMock.mockClear();
     knexMock.schema.hasTable.mockClear();
   });
@@ -294,5 +320,46 @@ describe('simulateWorkflowDefinitionDraftAction replay payload resolution', () =
       message: 'payload synthesized from schema; no real event of this type has been validated against this definition — consider useLatestEvent: true'
     });
     expect(result.replayedEvent).toBeNull();
+  });
+
+  it('includes structured invocation error_json in run step details', async () => {
+    fixture.invocations = [{
+      invocation_id: 'invocation-1',
+      run_id: 'run-1',
+      tenant: 'tenant-a',
+      step_path: 'root.steps[0]',
+      action_id: 'integration.call',
+      action_version: 1,
+      idempotency_key: 'tenant-a:key-1',
+      status: 'FAILED',
+      attempt: 1,
+      input_json: null,
+      output_json: null,
+      error_message: 'Provider rate limit exceeded',
+      error_json: {
+        category: 'IntegrationError',
+        code: 'RATE_LIMITED',
+        message: 'Provider rate limit exceeded',
+        details: {
+          apiKey: 'stored-secret',
+        },
+        nodePath: 'root.steps[0]',
+        at: '2026-07-16T12:00:00.000Z',
+      },
+      created_at: '2026-07-16T12:00:00.000Z',
+    }];
+
+    const result = await listWorkflowRunStepsAction({ runId: 'run-1' }) as any;
+
+    expect(result.invocations[0].error_json).toEqual({
+      category: 'IntegrationError',
+      code: 'RATE_LIMITED',
+      message: 'Provider rate limit exceeded',
+      details: {
+        apiKey: '[REDACTED]',
+      },
+      nodePath: 'root.steps[0]',
+      at: '2026-07-16T12:00:00.000Z',
+    });
   });
 });

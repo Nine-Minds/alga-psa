@@ -40,6 +40,25 @@ vi.mock('@alga-psa/workflows/runtime/core', () => ({
   generateIdempotencyKey: () => 'generated-idempotency-key',
   initializeWorkflowRuntimeV2: mocks.initializeWorkflowRuntimeV2,
   createSecretResolverFromProvider: (provider: unknown) => provider,
+  applyRedactions: (value: unknown) => {
+    if (Array.isArray(value)) {
+      return value.map((entry) => (entry && typeof entry === 'object' && 'secretRef' in entry ? { ...entry, secretRef: '[REDACTED]' } : entry));
+    }
+    if (value && typeof value === 'object') {
+      const redact = (input: unknown): unknown => {
+        if (Array.isArray(input)) return input.map(redact);
+        if (!input || typeof input !== 'object') return input;
+        const result: Record<string, unknown> = {};
+        for (const [key, val] of Object.entries(input as Record<string, unknown>)) {
+          result[key] = key === 'secretRef' ? '[REDACTED]' : redact(val);
+        }
+        return result;
+      };
+      return redact(value);
+    }
+    return value;
+  },
+  safeSerialize: (value: unknown) => JSON.parse(JSON.stringify(value)),
   workflowStepQuotaService: {
     reserveStepStart: mocks.reserveStepStart,
   },
@@ -206,8 +225,159 @@ describe('workflow-runtime-v2 activities', () => {
         output_json: {
           title_text: 'rendered compose output',
         },
+        error_json: null,
+      }),
+      'tenant-1',
+    );
+    expect(mocks.createInvocation).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        error_json: null,
       }),
     );
+  });
+
+  it('persists normalized structured error_json while keeping error_message unchanged', async () => {
+    const { executeWorkflowRuntimeV2ActionStep } = await import('../workflow-runtime-v2-activities');
+
+    mocks.actionHandler.mockRejectedValueOnce({
+      category: 'IntegrationError',
+      code: 'RATE_LIMITED',
+      message: 'Provider rate limit exceeded',
+      details: {
+        apiKey: 'plain-secret',
+        secretRef: 'provider-secret',
+        nested: {
+          token: 'nested-token',
+          stack: 'nested stack',
+        },
+        stack: 'top stack',
+      },
+      nodePath: 'root.steps[2]',
+      at: '2026-07-16T12:00:00.000Z',
+    });
+
+    await expect(executeWorkflowRuntimeV2ActionStep({
+      runId: 'run-failed-action',
+      stepPath: 'root.steps[1]',
+      stepId: 'step-failed-action',
+      tenantId: 'tenant-1',
+      step: {
+        type: 'action.call',
+        config: {
+          actionId: 'integration.call',
+          version: 1,
+        },
+      },
+      scopes: {
+        payload: {},
+        workflow: {},
+        lexical: [],
+        meta: {},
+        error: null,
+        system: {
+          runId: 'run-failed-action',
+          workflowId: 'workflow-1',
+          workflowVersion: 3,
+          tenantId: 'tenant-1',
+          definitionHash: 'definition-hash',
+          runtimeSemanticsVersion: '2026-04-08.temporal-native.v1',
+        },
+      },
+    })).rejects.toMatchObject({
+      category: 'IntegrationError',
+      code: 'RATE_LIMITED',
+      message: 'Provider rate limit exceeded',
+    });
+
+    expect(mocks.updateInvocation).toHaveBeenCalledWith(
+      expect.anything(),
+      'invocation-1',
+      expect.objectContaining({
+        status: 'FAILED',
+        error_message: 'Provider rate limit exceeded',
+        error_json: {
+          category: 'IntegrationError',
+          code: 'RATE_LIMITED',
+          message: 'Provider rate limit exceeded',
+          nodePath: 'root.steps[2]',
+          at: '2026-07-16T12:00:00.000Z',
+          details: {
+            apiKey: '[REDACTED]',
+            secretRef: '[REDACTED]',
+            nested: {
+              token: '[REDACTED]',
+            },
+          },
+        },
+      }),
+      'tenant-1',
+    );
+  });
+
+  it('truncates oversized structured error details', async () => {
+    const { executeWorkflowRuntimeV2ActionStep } = await import('../workflow-runtime-v2-activities');
+
+    mocks.actionHandler.mockRejectedValueOnce({
+      category: 'ActionError',
+      code: 'INTERNAL_ERROR',
+      message: 'Large failure',
+      details: {
+        body: 'x'.repeat(40 * 1024),
+      },
+      nodePath: 'root.steps[1]',
+      at: '2026-07-16T12:00:00.000Z',
+    });
+
+    await expect(executeWorkflowRuntimeV2ActionStep({
+      runId: 'run-large-error',
+      stepPath: 'root.steps[1]',
+      stepId: 'step-large-error',
+      tenantId: 'tenant-1',
+      step: {
+        type: 'action.call',
+        config: {
+          actionId: 'integration.call',
+          version: 1,
+        },
+      },
+      scopes: {
+        payload: {},
+        workflow: {},
+        lexical: [],
+        meta: {},
+        error: null,
+        system: {
+          runId: 'run-large-error',
+          workflowId: 'workflow-1',
+          workflowVersion: 3,
+          tenantId: 'tenant-1',
+          definitionHash: 'definition-hash',
+          runtimeSemanticsVersion: '2026-04-08.temporal-native.v1',
+        },
+      },
+    })).rejects.toMatchObject({
+      category: 'ActionError',
+      code: 'INTERNAL_ERROR',
+      message: 'Large failure',
+    });
+
+    const failedUpdate = mocks.updateInvocation.mock.calls.find((call) => call[2]?.status === 'FAILED');
+    expect(failedUpdate?.[2]).toMatchObject({
+      error_message: 'Large failure',
+      error_json: {
+        category: 'ActionError',
+        code: 'INTERNAL_ERROR',
+        message: 'Large failure',
+        nodePath: 'root.steps[1]',
+        at: '2026-07-16T12:00:00.000Z',
+        details: {
+          truncated: true,
+          max: 32 * 1024,
+        },
+      },
+    });
+    expect(JSON.stringify(failedUpdate?.[2].error_json).length).toBeLessThanOrEqual(32 * 1024);
   });
 
   it('projects STARTED step only after successful quota reservation', async () => {
