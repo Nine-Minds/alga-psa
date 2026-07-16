@@ -2461,7 +2461,6 @@ export async function updateTicketInTransaction(
     // Check if we're updating the assigned_to field
     const isChangingAssignment = 'assigned_to' in updateData &&
                                 updateData.assigned_to !== currentTicket.assigned_to;
-    const updatedFields = diffTicketFields(currentTicket, updateData as Record<string, unknown>);
     const isBoardChange =
       'board_id' in updateData &&
       !!updateData.board_id &&
@@ -2513,6 +2512,12 @@ export async function updateTicketInTransaction(
         status_id: currentTicket.status_id
       })
       .first();
+    const newStatus = updateData.status_id
+      ? await tenantScopedTable(trx, 'statuses', tenant)
+          .where({ status_id: updateData.status_id })
+          .first()
+      : oldStatus;
+    const isClosingTicket = Boolean(newStatus?.is_closed && !oldStatus?.is_closed);
 
     const isSystemActor = options?.systemActor === true;
 
@@ -2522,10 +2527,7 @@ export async function updateTicketInTransaction(
     // unless gates pass, a permissioned override applies, or the caller is an
     // exempt automation path (bypassCloseRules).
     if ('status_id' in updateData && updateData.status_id && updateData.status_id !== currentTicket.status_id) {
-      const nextStatus = await tenantScopedTable(trx, 'statuses', tenant)
-        .where({ status_id: updateData.status_id })
-        .first();
-      if (nextStatus?.is_closed && !oldStatus?.is_closed) {
+      if (isClosingTicket) {
         const merged = { ...currentTicket, ...updateData };
         await enforceTicketCloseRules(trx, tenant, {
           ticket: {
@@ -2551,6 +2553,17 @@ export async function updateTicketInTransaction(
         });
       }
     }
+
+    // A public resolution comment moves the ticket to awaiting_client just
+    // before the UI closes it. Persist the close and response-state reset in
+    // the same write so a closed ticket never reloads as awaiting a response.
+    const clearsResponseStateOnClose =
+      isClosingTicket &&
+      (currentTicket.response_state != null || updateData.response_state != null);
+    if (clearsResponseStateOnClose) {
+      updateData.response_state = null;
+    }
+    const updatedFields = diffTicketFields(currentTicket, updateData as Record<string, unknown>);
 
     let updatedTicket;
     
@@ -2621,15 +2634,6 @@ export async function updateTicketInTransaction(
     if (!updatedTicket) {
       throw new Error('Ticket not found or update failed');
     }
-
-    // Get the new status if it was updated
-    const newStatus = updateData.status_id ? 
-      await tenantScopedTable(trx, 'statuses', tenant)
-        .where({ 
-          status_id: updateData.status_id
-        })
-        .first() :
-      oldStatus;
 
     // Emit expanded domain transition events for workflow v2 triggers.
     const occurredAt = new Date().toISOString();
@@ -2963,7 +2967,8 @@ export async function updateTicketInTransaction(
       });
     }
 
-    // Publish response state change event if response_state was explicitly changed
+    // Publish response state changes from explicit edits and the automatic
+    // open-to-closed reset.
     if ('response_state' in updateData && updateData.response_state !== currentTicket.response_state) {
       registerAfterCommit(trx, () =>
         publishEvent({
@@ -2974,7 +2979,7 @@ export async function updateTicketInTransaction(
             userId: user.user_id,
             previousState: currentTicket.response_state || null,
             newState: updateData.response_state || null,
-            trigger: 'manual',
+            trigger: clearsResponseStateOnClose ? 'close' : 'manual',
           },
         }),
         `TICKET_RESPONSE_STATE_CHANGED ticket=${id}`

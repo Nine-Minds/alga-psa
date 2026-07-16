@@ -13,6 +13,7 @@ const validateStatusBelongsToBoardMock = vi.fn(
   async (_statusId: string, _boardId: string, _tenant: string, _trx: unknown) => ({ valid: true })
 );
 const auditLogInserts: Record<string, unknown>[] = [];
+const ticketUpdates: Record<string, unknown>[] = [];
 // Queue mirroring @alga-psa/db's after-commit hook registry: hooks registered
 // via registerAfterCommit during a transaction run after the (mocked)
 // transaction resolves, matching production's flush-after-commit semantics.
@@ -183,9 +184,10 @@ function buildTrx(params: {
       if ('ticket_id' in whereArgs) {
         return {
           first: vi.fn(async () => currentTicket),
-          update: vi.fn((data: Record<string, unknown>) =>
-            makeUpdateResult(1, [{ ...currentTicket, ...data, updated_at: '2026-05-07T12:00:00.000Z' }])
-          ),
+          update: vi.fn((data: Record<string, unknown>) => {
+            ticketUpdates.push(data);
+            return makeUpdateResult(1, [{ ...currentTicket, ...data, updated_at: '2026-05-07T12:00:00.000Z' }]);
+          }),
         };
       }
 
@@ -270,6 +272,7 @@ describe('updateTicketWithCache live updates', () => {
     await resetTicketUpdatePublisherClientForTests();
     vi.clearAllMocks();
     auditLogInserts.length = 0;
+    ticketUpdates.length = 0;
     afterCommitHooksQueue.length = 0;
     setTicketUpdateEventBusLoaderForTests(async () => ({
       getRedisClient: vi.fn(async () => ({
@@ -610,5 +613,43 @@ describe('updateTicketWithCache live updates', () => {
         idempotencyKey: 'sla:ticket-1:resolution:met',
       })
     );
+  });
+
+  it('clears a pending response state when closing the ticket', async () => {
+    withTransactionMock.mockImplementation(async (_db: any, callback: (trx: any) => Promise<any>) =>
+      callback(
+        buildTrx({
+          currentTicket: makeTicket({
+            status_id: 'status-1',
+            response_state: 'awaiting_client',
+          }),
+        })
+      )
+    );
+
+    const { updateTicketWithCache } = await import('./optimizedTicketActions');
+    await expect(
+      updateTicketWithCache('ticket-1', { status_id: 'closed-status-1' })
+    ).resolves.toBe('success');
+
+    expect(ticketUpdates[0]).toEqual({
+      status_id: 'closed-status-1',
+      response_state: null,
+    });
+    expect(publishRedisMock).toHaveBeenCalledWith(
+      'alga-psa:ticket-updates:tenant-1:ticket-1',
+      expect.stringContaining('"updatedFields":["status_id","response_state"]')
+    );
+    expect(publishEventMock).toHaveBeenCalledWith({
+      eventType: 'TICKET_RESPONSE_STATE_CHANGED',
+      payload: {
+        tenantId: 'tenant-1',
+        ticketId: 'ticket-1',
+        userId: 'user-1',
+        previousState: 'awaiting_client',
+        newState: null,
+        trigger: 'close',
+      },
+    });
   });
 });
