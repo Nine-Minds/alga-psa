@@ -19,7 +19,9 @@ const isReturnedActionError = (value: unknown): boolean =>
 interface ServiceSelectionDialogProps {
   isOpen: boolean;
   onClose: () => void;
-  planId: string;
+  contractLineId: string;
+  contractLineType: 'Fixed' | 'Hourly' | 'Usage';
+  currencyCode: string;
   onServiceAdded?: () => void;
   existingServiceIds?: string[];
 }
@@ -27,7 +29,9 @@ interface ServiceSelectionDialogProps {
 export function ServiceSelectionDialog({ 
   isOpen, 
   onClose, 
-  planId,
+  contractLineId,
+  contractLineType,
+  currencyCode,
   onServiceAdded,
   existingServiceIds = []
 }: ServiceSelectionDialogProps) {
@@ -51,14 +55,22 @@ export function ServiceSelectionDialog({
         setLoading(true);
         setError(null);
         
-        const servicesResponse = await getServices(1, 999, { item_kind: 'any' });
+        const servicesResponse = await getServices(1, 999, {
+          item_kind: contractLineType === 'Fixed' ? 'any' : 'service',
+          is_active: true,
+        });
+
+        if (isReturnedActionError(servicesResponse)) {
+          setError(getErrorMessage(servicesResponse));
+          return;
+        }
         
         // Extract the services array from the paginated response
         const servicesData = Array.isArray(servicesResponse)
           ? servicesResponse
           : (servicesResponse.services || []);
         
-        // Filter out services that are already in the plan
+        // Filter out services that are already in the contract line.
         const availableServices = servicesData.filter(
           service => !existingServiceIds.includes(service.service_id)
         );
@@ -74,7 +86,7 @@ export function ServiceSelectionDialog({
     };
 
     fetchServices();
-  }, [isOpen, existingServiceIds, t]);
+  }, [contractLineType, existingServiceIds, isOpen, t]);
 
   // Filter services based on search query and selected category
   useEffect(() => {
@@ -90,7 +102,7 @@ export function ServiceSelectionDialog({
     }
     
     if (selectedCategory) {
-      filtered = filtered.filter(service => service.category_id === selectedCategory);
+      filtered = filtered.filter(service => service.service_type_name === selectedCategory);
     }
     
     setFilteredServices(filtered);
@@ -121,11 +133,35 @@ export function ServiceSelectionDialog({
       setAdding(true);
       setError(null);
       
-      // Add each selected service to the plan
+      // Add each selected service with a usable type-specific default so it can
+      // be configured immediately in the contract-line editor after refresh.
       for (const serviceId of selectedServices) {
+        const selectedService = services.find((service) => service.service_id === serviceId);
+        if (!selectedService) {
+          setError(t('serviceSelection.errors.add', { defaultValue: 'Failed to add services to contract line' }));
+          return;
+        }
+
+        const currencyRate = selectedService.prices?.find(
+          (price) => price.currency_code === currencyCode
+        )?.rate;
+        const resolvedRate = Number(currencyRate ?? selectedService.default_rate ?? 0);
+        const typeConfig = contractLineType === 'Hourly'
+          ? { hourly_rate: resolvedRate }
+          : contractLineType === 'Usage'
+            ? {
+                base_rate: resolvedRate,
+                unit_of_measure: selectedService.unit_of_measure || 'unit',
+              }
+            : { base_rate: resolvedRate };
+
         const result = await addServiceToContractLine(
-          planId,
-          serviceId
+          contractLineId,
+          serviceId,
+          1,
+          resolvedRate,
+          contractLineType,
+          typeConfig
         );
         if (isReturnedActionError(result)) {
           setError(getErrorMessage(result));
@@ -136,11 +172,12 @@ export function ServiceSelectionDialog({
       if (onServiceAdded) {
         onServiceAdded();
       }
-      
+
+      setSelectedServices([]);
       onClose();
     } catch (err) {
-      console.error('Error adding services to plan:', err);
-      setError(t('serviceSelection.errors.add', { defaultValue: 'Failed to add services to plan' }));
+      console.error('Error adding services to contract line:', err);
+      setError(t('serviceSelection.errors.add', { defaultValue: 'Failed to add services to contract line' }));
     } finally {
       setAdding(false);
     }
@@ -160,7 +197,8 @@ export function ServiceSelectionDialog({
       isOpen={isOpen}
       onClose={onClose}
       id="service-selection-dialog"
-      title={t('serviceSelection.title', { defaultValue: 'Add Services & Products to Plan' })}
+      title={t('serviceSelection.title', { defaultValue: 'Add Services & Products to Contract Line' })}
+      className="max-w-4xl"
       footer={(
         <div className="flex justify-between w-full">
           <div>
@@ -201,7 +239,7 @@ export function ServiceSelectionDialog({
         </div>
       )}
     >
-      <DialogContent className="max-w-4xl flex flex-col">
+      <DialogContent className="flex flex-col">
 
         <div className="flex flex-col space-y-4 h-full">
           {/* Search and filters */}
@@ -220,10 +258,10 @@ export function ServiceSelectionDialog({
             </div>
             
             <div className="flex flex-wrap gap-2">
-              {serviceTypes.map(type => (
+              {serviceTypes.map((type, index) => (
                 <Button
                   key={type}
-                  id={`filter-${type.toLowerCase()}-button`}
+                  id={`service-type-filter-button-${index}`}
                   variant={selectedCategory === type ? "default" : "outline"}
                   size="sm"
                   onClick={() => handleCategorySelect(type)}
@@ -275,7 +313,9 @@ export function ServiceSelectionDialog({
                   {filteredServices.map(service => (
                     <TableRow 
                       key={service.service_id}
-                      className={selectedServices.includes(service.service_id) ? "bg-blue-50" : ""}
+                      className={selectedServices.includes(service.service_id)
+                        ? 'bg-[rgb(var(--color-primary-50))] dark:bg-[rgb(var(--color-primary-400)/0.20)]'
+                        : ''}
                       onClick={() => toggleServiceSelection(service.service_id)}
                       style={{ cursor: 'pointer' }}
                     >
@@ -302,8 +342,12 @@ export function ServiceSelectionDialog({
                       <TableCell>{service.unit_of_measure}</TableCell>
                       <TableCell>
                         {formatCurrency(
-                          service.default_rate,
-                          service.prices?.[0]?.currency_code || 'USD',
+                          Number(
+                            service.prices?.find((price) => price.currency_code === currencyCode)?.rate
+                              ?? service.default_rate
+                              ?? 0
+                          ) / 100,
+                          currencyCode,
                         )}
                       </TableCell>
                     </TableRow>
@@ -318,10 +362,10 @@ export function ServiceSelectionDialog({
             <span className="text-sm font-medium text-[rgb(var(--color-text-700))] mr-2">
               {t('serviceSelection.quickAdd.label', { defaultValue: 'Quick Add:' })}
             </span>
-            {serviceTypes.map(type => (
+            {serviceTypes.map((type, index) => (
               <Button
                 key={`quick-add-${type}`}
-                id={`quick-add-${type.toLowerCase()}-button`}
+                id={`quick-add-service-type-button-${index}`}
                 variant="soft"
                 size="sm"
                 className="flex items-center gap-1"
