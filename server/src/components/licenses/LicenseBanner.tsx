@@ -44,20 +44,20 @@ export default function LicenseBanner() {
   switch (state) {
     case 'trial':
       if (daysRemaining !== null && daysRemaining <= 7) {
-        message = t('licenseBanner.trialExpiresIn', { defaultValue: 'Enterprise trial expires in {{count}} days. Enter a license key to keep Enterprise features.', count: daysRemaining });
+        message = t('licenseBanner.trialExpiresIn', { defaultValue: 'Premium trial expires in {{count}} days. Enter a license key to keep Premium features.', count: daysRemaining });
         urgency = 'warning';
       } else if (daysRemaining !== null) {
-        message = t('licenseBanner.trialDaysRemaining', { defaultValue: 'Enterprise trial active — {{count}} days remaining.', count: daysRemaining });
+        message = t('licenseBanner.trialDaysRemaining', { defaultValue: 'Premium trial active — {{count}} days remaining.', count: daysRemaining });
         urgency = 'info';
       }
       break;
     case 'trial_available':
       // Fresh install, trial not yet used — invite, don't warn.
-      message = 'Running Essentials features. Start a free 15-day Enterprise trial to unlock all features.';
+      message = t('licenseBanner.trialAvailable', { defaultValue: 'Running Essentials features. Start a free 15-day Premium trial to unlock all features.' });
       urgency = 'info';
       break;
     case 'trial_expired':
-      message = 'Enterprise trial has expired. The install is now running Essentials features.';
+      message = t('licenseBanner.trialExpired', { defaultValue: 'Premium trial has expired. The install is now running Essentials features.' });
       urgency = 'warning';
       break;
     case 'licensed':
@@ -77,7 +77,7 @@ export default function LicenseBanner() {
     case 'ce':
       // CE installs: only show if they haven't used their trial yet.
       if (!status.trialUsed) {
-        message = 'Running Essentials features. Start a free 15-day Enterprise trial to unlock all features.';
+        message = t('licenseBanner.trialAvailable', { defaultValue: 'Running Essentials features. Start a free 15-day Premium trial to unlock all features.' });
         urgency = 'info';
       }
       break;

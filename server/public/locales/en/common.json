@@ -15,10 +15,12 @@
     "expiringForClient_other": "{{count}} credits for {{clientName}} will expire soon"
   },
   "licenseBanner": {
-    "trialExpiresIn_one": "Enterprise trial expires in {{count}} day. Enter a license key to keep Enterprise features.",
-    "trialExpiresIn_other": "Enterprise trial expires in {{count}} days. Enter a license key to keep Enterprise features.",
-    "trialDaysRemaining_one": "Enterprise trial active — {{count}} day remaining.",
-    "trialDaysRemaining_other": "Enterprise trial active — {{count}} days remaining.",
+    "trialExpiresIn_one": "Premium trial expires in {{count}} day. Enter a license key to keep Premium features.",
+    "trialExpiresIn_other": "Premium trial expires in {{count}} days. Enter a license key to keep Premium features.",
+    "trialDaysRemaining_one": "Premium trial active — {{count}} day remaining.",
+    "trialDaysRemaining_other": "Premium trial active — {{count}} days remaining.",
+    "trialAvailable": "Running Essentials features. Start a free 15-day Premium trial to unlock all features.",
+    "trialExpired": "Premium trial has expired. The install is now running Essentials features.",
     "licenseExpiresIn_one": "License expires in {{count}} day. Renew to avoid service interruption.",
     "licenseExpiresIn_other": "License expires in {{count}} days. Renew to avoid service interruption."
   },

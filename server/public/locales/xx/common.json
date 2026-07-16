@@ -19,6 +19,8 @@
     "trialExpiresIn_other": "11111 {{count}} 11111",
     "trialDaysRemaining_one": "11111 {{count}} 11111",
     "trialDaysRemaining_other": "11111 {{count}} 11111",
+    "trialAvailable": "11111",
+    "trialExpired": "11111",
     "licenseExpiresIn_one": "11111 {{count}} 11111",
     "licenseExpiresIn_other": "11111 {{count}} 11111"
   },

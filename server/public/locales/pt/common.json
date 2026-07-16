@@ -15,10 +15,12 @@
     "expiringForClient_other": "Os créditos {{count}} para {{clientName}} expirarão em breve"
   },
   "licenseBanner": {
-    "trialExpiresIn_one": "A avaliação empresarial expira no dia {{count}}. Insira uma chave de licença para manter os recursos empresariais.",
-    "trialExpiresIn_other": "A avaliação empresarial expira em {{count}} dias. Insira uma chave de licença para manter os recursos empresariais.",
-    "trialDaysRemaining_one": "Avaliação empresarial ativa — {{count}} dias restantes.",
-    "trialDaysRemaining_other": "Avaliação empresarial ativa — {{count}} dias restantes.",
+    "trialExpiresIn_one": "A avaliação Premium expira no dia {{count}}. Insira uma chave de licença para manter os recursos Premium.",
+    "trialExpiresIn_other": "A avaliação Premium expira em {{count}} dias. Insira uma chave de licença para manter os recursos Premium.",
+    "trialDaysRemaining_one": "Avaliação Premium ativa — {{count}} dia restante.",
+    "trialDaysRemaining_other": "Avaliação Premium ativa — {{count}} dias restantes.",
+    "trialAvailable": "Os recursos Essentials estão ativos. Inicie uma avaliação Premium gratuita de 15 dias para desbloquear todos os recursos.",
+    "trialExpired": "A avaliação Premium expirou. A instalação agora usa os recursos Essentials.",
     "licenseExpiresIn_one": "A licença expira no dia {{count}}. Renove para evitar interrupção do serviço.",
     "licenseExpiresIn_other": "A licença expira em {{count}} dias. Renove para evitar interrupção do serviço."
   },
