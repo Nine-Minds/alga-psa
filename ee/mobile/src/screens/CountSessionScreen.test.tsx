@@ -30,7 +30,7 @@ const session = {
   session_id: "cs-1",
   location_id: "loc-1",
   location_name: "Main Warehouse",
-  status: "open",
+  status: "in_progress",
   lines: [{ service_id: "svc-1", service_name: "Toner", sku: "TNR-1", counted_quantity: 2 }],
 };
 

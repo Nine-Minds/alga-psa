@@ -99,8 +99,9 @@
     "submitConfirmBody": "Submitted counts are reviewed and approved on the web.",
     "submitted": "Count submitted for review",
     "status": {
-      "open": "Open",
-      "submitted": "Submitted",
+      "draft": "Draft",
+      "in_progress": "Counting",
+      "review": "In review",
       "approved": "Approved",
       "cancelled": "Cancelled"
     },

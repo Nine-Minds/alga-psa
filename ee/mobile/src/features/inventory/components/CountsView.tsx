@@ -22,9 +22,9 @@ import type { RootStackParamList } from "../../../navigation/types";
 const PAGE_SIZE = 30;
 
 function countStatusTone(status: string): "neutral" | "info" | "success" | "warning" {
-  if (status === "submitted") return "info";
+  if (status === "review") return "info";
   if (status === "approved") return "success";
-  if (status === "open") return "warning";
+  if (status === "in_progress") return "warning";
   return "neutral";
 }
 
@@ -89,7 +89,7 @@ export function CountsView() {
       const existingSessions = await listCountSessions(client, { apiKey, page: 1, limit: 50 });
       const open = existingSessions.ok
         ? existingSessions.data.data.find(
-            (session) => session.location_id === startLocationId && session.status === "open",
+            (session) => session.location_id === startLocationId && session.status === "in_progress",
           )
         : undefined;
       if (open) {

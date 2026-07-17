@@ -131,7 +131,7 @@ export function CountSessionScreen({ route, navigation }: Props) {
     );
   }
 
-  const isOpen = session.status === "open";
+  const isOpen = session.status === "in_progress";
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background }}>

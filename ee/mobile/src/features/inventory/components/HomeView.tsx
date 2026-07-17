@@ -62,7 +62,7 @@ export function HomeView({ onOpenSegment }: { onOpenSegment: (segment: Inventory
       lowStock: lowStock.ok ? lowStock.data.data : [],
       pos: pos.ok ? pos.data.data : [],
       transfers: transfers.ok ? transfers.data.data : [],
-      counts: counts.ok ? counts.data.data.filter((session) => session.status === "open") : [],
+      counts: counts.ok ? counts.data.data.filter((session) => session.status === "in_progress") : [],
     });
   }, [client, apiKey]);
 
@@ -184,7 +184,7 @@ export function HomeView({ onOpenSegment }: { onOpenSegment: (segment: Inventory
               <ListRow
                 title={session.location_name ?? session.location_id}
                 subtitle={session.created_at ? formatDateShort(session.created_at) : undefined}
-                rightContent={<Badge label={t("counts.status.open", "Open")} tone="warning" />}
+                rightContent={<Badge label={t("counts.status.in_progress", "Counting")} tone="warning" />}
                 onPress={() =>
                   navigation.navigate("CountSession", { sessionId: session.session_id, locationName: session.location_name })
                 }
