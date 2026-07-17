@@ -61,11 +61,18 @@ describe("SerialAccumulator", () => {
     vi.useRealTimers();
   });
 
-  it("disables done until the chip count matches the target", () => {
-    const tree = renderAccumulator(2);
-    scan(tree, "SN-A");
-    const done = tree.root.find((node) => node.props.accessibilityLabel === "inventory-serials-done");
+  it("disables done only when nothing is scanned; partial counts submit", () => {
+    const onDone = vi.fn();
+    const tree = renderAccumulator(8, onDone);
+    let done = tree.root.find((node) => node.props.accessibilityLabel === "inventory-serials-done");
     expect(done.props.disabled).toBe(true);
+
+    scan(tree, "SN-A");
+    done = tree.root.find((node) => node.props.accessibilityLabel === "inventory-serials-done");
+    expect(done.props.disabled).toBe(false);
+
+    act(() => done.props.onPress());
+    expect(onDone).toHaveBeenCalledWith(["SN-A"]);
     vi.useRealTimers();
   });
 });

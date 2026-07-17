@@ -103,6 +103,9 @@ export function InventoryReceiveScreen({ route, navigation }: Props) {
         initialSerials={serials}
         onDone={(captured) => {
           setSerials(captured);
+          // What you scanned is what arrived: short or over shipments adjust
+          // the receipt quantity rather than blocking it.
+          setQuantityText(String(captured.length));
           setScanningSerials(false);
         }}
         onCancel={() => setScanningSerials(false)}

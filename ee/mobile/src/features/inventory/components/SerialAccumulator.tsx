@@ -158,7 +158,7 @@ export function SerialAccumulator({
           </View>
           <PrimaryButton
             onPress={() => onDone(serials)}
-            disabled={target !== undefined && serials.length !== target}
+            disabled={serials.length === 0}
             accessibilityLabel="inventory-serials-done"
           >
             {t("common.done", "Done")}
