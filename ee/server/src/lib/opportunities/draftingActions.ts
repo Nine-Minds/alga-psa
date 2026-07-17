@@ -52,6 +52,14 @@ const sendDraftSchema = z.object({
   body: z.string().trim().min(1).max(100000),
 });
 
+const generateDraftSchema = z.object({
+  instructions: z.string().trim().min(1).max(1000),
+  current_draft: z.object({
+    subject: z.string().trim().max(500),
+    body: z.string().trim().max(100000),
+  }).optional(),
+});
+
 function userId(user: any): string {
   if (!user?.user_id) throw new Error('User is not logged in');
   return String(user.user_id);
@@ -96,14 +104,20 @@ export const generateFollowUpDraft = withAuth(async (
   user,
   { tenant },
   opportunityId: string,
-  toneAdjustment?: string,
+  input: unknown,
 ): Promise<IOpportunityFollowUpDraft> => {
   await assertOpportunityDraftingAccess(user, tenant);
   await requireOpportunityPermission(user, 'read');
   const id = z.string().uuid().parse(opportunityId);
-  const tone = z.string().trim().max(1000).optional().parse(toneAdjustment);
+  const request = generateDraftSchema.parse(input) as {
+    instructions: string;
+    current_draft?: IOpportunityFollowUpDraft;
+  };
   const { knex } = await createTenantKnex(tenant);
-  return generateFollowUpDraftData(knex, tenant, id, userId(user), tone);
+  return generateFollowUpDraftData(knex, tenant, id, userId(user), {
+    instructions: request.instructions,
+    currentDraft: request.current_draft,
+  });
 });
 
 export const logDraftSent = withAuth(async (
