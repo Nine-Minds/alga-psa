@@ -41,6 +41,16 @@ async function hasSchemaTable(connection: Knex, tableName: string): Promise<bool
   return Boolean(row);
 }
 
+function dateOnly(value: unknown): string | null {
+  if (value instanceof Date) {
+    return value.toISOString().slice(0, 10);
+  }
+  if (typeof value === 'string') {
+    return value.slice(0, 10);
+  }
+  return null;
+}
+
 vi.mock('server/src/lib/db', async () => {
   const actual = await vi.importActual<typeof import('server/src/lib/db')>('server/src/lib/db');
   return {
@@ -216,6 +226,83 @@ describe('createClientContractFromWizard', () => {
     expect(fixedConfig).toBeTruthy();
     expect(Number(fixedConfig?.base_rate ?? 0)).toBe(10000);
 
+  });
+
+  it('bounds client-cadence service periods to an end-dated contract assignment', async () => {
+    createdIds = {};
+    const serviceTypeId = await insertServiceType(db, tenantId, 'fixed');
+    createdIds.serviceTypeId = serviceTypeId;
+
+    const serviceId = await insertCatalogItem(db, tenantId, {
+      serviceTypeId,
+      serviceName: 'Bounded Client Cadence Service',
+      billingMethod: 'fixed',
+      itemKind: 'service',
+      defaultRate: 10000,
+      unitOfMeasure: 'month',
+    });
+    createdIds.serviceId = serviceId;
+
+    const clientId = await insertClient(db, tenantId, 'Bounded Cadence Client');
+    createdIds.clientId = clientId;
+
+    const contractEnd = '2026-09-16';
+    const result = await createClientContractFromWizard({
+      contract_name: 'Bounded Client Cadence Contract',
+      description: 'regression coverage for end-dated recurring periods',
+      client_id: clientId,
+      start_date: '2026-07-18',
+      end_date: contractEnd,
+      billing_frequency: 'monthly',
+      cadence_owner: 'client',
+      enable_proration: true,
+      fixed_base_rate: 10000,
+      fixed_services: [{ service_id: serviceId, quantity: 1 }],
+      hourly_services: [],
+      usage_services: [],
+      po_required: false,
+    });
+
+    expect(result).not.toHaveProperty('actionError');
+    if ('actionError' in result) {
+      throw new Error(result.actionError);
+    }
+
+    createdIds.contractId = result.contract_id;
+    createdIds.contractLineId = result.contract_line_id ?? undefined;
+    const clientContract = await tenantTable(db, tenantId, 'client_contracts')
+      .where({ tenant: tenantId, contract_id: result.contract_id, client_id: clientId })
+      .first('client_contract_id');
+    createdIds.clientContractId = clientContract?.client_contract_id;
+
+    const periods = await tenantTable(db, tenantId, 'recurring_service_periods')
+      .where({
+        tenant: tenantId,
+        obligation_id: result.contract_line_id,
+        cadence_owner: 'client',
+      })
+      .whereNot('lifecycle_state', 'superseded')
+      .orderBy('service_period_start', 'asc');
+
+    expect(periods.length).toBeGreaterThan(0);
+    expect(
+      periods.every((period) => {
+        const start = dateOnly(period.service_period_start);
+        return start !== null && start < contractEnd;
+      }),
+    ).toBe(true);
+
+    const straddlingPeriod = periods.find((period) => {
+      const start = dateOnly(period.service_period_start);
+      const end = dateOnly(period.service_period_end);
+      return start !== null && end !== null && start < contractEnd && end > contractEnd;
+    });
+    expect(straddlingPeriod).toBeDefined();
+    expect(dateOnly(straddlingPeriod?.activity_window_end)).toBe(contractEnd);
+    expect(
+      dateOnly(straddlingPeriod?.activity_window_start)! <
+        dateOnly(straddlingPeriod?.activity_window_end)!,
+    ).toBe(true);
   });
 
   it('T013: accepts fixed services even when catalog billing_method is non-fixed', async () => {
@@ -854,6 +941,10 @@ async function cleanupCreatedRecords(db: Knex, tenantId: string, ids: CreatedIds
   }
 
   if (ids.contractLineId) {
+    await safeDelete('recurring_service_periods', {
+      tenant: tenantId,
+      obligation_id: ids.contractLineId,
+    });
     await safeDelete('contract_line_service_bucket_config', {
       tenant: tenantId,
       contract_line_id: ids.contractLineId

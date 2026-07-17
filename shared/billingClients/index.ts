@@ -25,3 +25,4 @@ export * from './postDropRecurringObligationIdentity';
 export * from './bucketUsageService';
 export * from './clientCadenceScheduleRegeneration';
 export * from './applyClientCadenceChange';
+export * from './clipRecurringCandidatesToObligationBounds';

@@ -287,6 +287,9 @@ export const normalizeClientContract = (row: any): IClientContract => {
     isActive: normalized.is_active === true,
     startDate: normalizedStartDate ?? null,
     endDate: normalizedEndDate ?? null,
+    contractStatus: typeof normalized.contract_status === 'string'
+      ? normalized.contract_status
+      : undefined,
   });
 
   delete normalized.tenant_default_renewal_mode;

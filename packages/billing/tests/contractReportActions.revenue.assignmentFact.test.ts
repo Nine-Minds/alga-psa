@@ -13,6 +13,8 @@ describe('contractReportActions revenue wiring', () => {
     expect(revenueSource).toContain("db.tenantJoin(dataQuery, 'contracts as c', 'cc.contract_id', 'c.contract_id');");
     expect(revenueSource).toContain(".whereNotNull('c.owner_client_id')");
     expect(revenueSource).toContain('deriveClientContractStatus({');
+    expect(revenueSource).toContain("'c.status as contract_status',");
+    expect(revenueSource).toContain('contractStatus: row.contract_status ?? undefined,');
     expect(revenueSource).toContain('const status = mapAssignmentStatusToRevenueStatus(assignmentStatus);');
     expect(revenueSource).not.toContain("const data = await knex('contracts as c')");
     expect(revenueSource).not.toContain("row.is_active ? 'active' : 'expired'");

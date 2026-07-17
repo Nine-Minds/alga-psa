@@ -34,6 +34,8 @@ describe('contractReportActions expiration report wiring', () => {
   it('derives expiration rows from assignment lifecycle and groups them by client assignment id', () => {
     expect(source).toContain("'cc.is_active',");
     expect(source).toContain('const assignmentStatus = deriveClientContractStatus({');
+    expect(source).toContain("'c.status as contract_status',");
+    expect(source).toContain('contractStatus: row.contract_status ?? undefined,');
     expect(source).toContain("if (assignmentStatus !== 'active') {");
     expect(source).toContain('const key = row.client_contract_id;');
     expect(source).toContain('const expirationMap = new Map<string, ContractExpiration>();');
