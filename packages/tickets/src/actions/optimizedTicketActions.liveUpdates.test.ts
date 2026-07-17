@@ -644,8 +644,11 @@ describe('updateTicketWithCache live updates', () => {
       eventType: 'TICKET_RESPONSE_STATE_CHANGED',
       payload: {
         tenantId: 'tenant-1',
+        occurredAt: expect.any(String),
         ticketId: 'ticket-1',
         userId: 'user-1',
+        previousResponseState: 'awaiting_client',
+        newResponseState: null,
         previousState: 'awaiting_client',
         newState: null,
         trigger: 'close',

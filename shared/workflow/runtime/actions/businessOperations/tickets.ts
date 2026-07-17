@@ -1232,6 +1232,15 @@ export function registerTicketActions(): void {
       }
 
       const nowIso = ctx.nowIso();
+      const parsedAttrs = parseJsonMaybe(ticket.attributes);
+      const currentAttributes =
+        parsedAttrs && typeof parsedAttrs === 'object' && !Array.isArray(parsedAttrs) ? parsedAttrs : {};
+      const mergedAttributes = {
+        ...currentAttributes,
+        resolution_code: input.resolution.code,
+        resolution_text: input.resolution.text ?? null
+      } as Record<string, any>;
+      const persistedResolutionCode = mergedAttributes.resolution_code as string;
 
       // Workflow closes are exempt from board close rules; the exemption is
       // recorded as an audited bypass when the board has enabled gates.
@@ -1253,7 +1262,7 @@ export function registerTicketActions(): void {
           is_closed: true,
           closed_at: nowIso,
           closed_by: tx.actorUserId,
-          resolution_code: input.resolution.code,
+          attributes: mergedAttributes,
           updated_at: nowIso,
           updated_by: tx.actorUserId
         });
@@ -1267,7 +1276,7 @@ export function registerTicketActions(): void {
             is_resolution: true,
             author_type: 'system',
             author_id: tx.actorUserId,
-            metadata: { source: 'workflow', run_id: ctx.runId, step_path: ctx.stepPath }
+            metadata: { closes_ticket: true, source: 'workflow', run_id: ctx.runId, step_path: ctx.stepPath }
           },
           tx.tenantId,
           tx.trx,
@@ -1286,7 +1295,7 @@ export function registerTicketActions(): void {
             is_resolution: true,
             author_type: 'system',
             author_id: tx.actorUserId,
-            metadata: { source: 'workflow', run_id: ctx.runId, step_path: ctx.stepPath }
+            metadata: { closes_ticket: true, source: 'workflow', run_id: ctx.runId, step_path: ctx.stepPath }
           },
           tx.tenantId,
           tx.trx,
@@ -1333,14 +1342,14 @@ export function registerTicketActions(): void {
 
       await writeRunAudit(ctx, tx, {
         operation: 'workflow_action:tickets.close',
-        changedData: { ticket_id: input.ticket_id, closed_at: nowIso, resolution_code: input.resolution.code },
+        changedData: { ticket_id: input.ticket_id, closed_at: nowIso, resolution_code: persistedResolutionCode },
         details: { action_id: 'tickets.close', action_version: 1, ticket_id: input.ticket_id, closed_at: nowIso }
       });
 
       return {
         ticket_id: input.ticket_id,
         closed_at: nowIso,
-        resolution_code: input.resolution.code,
+        resolution_code: persistedResolutionCode,
         final_status_id: closedStatus.status_id as string
       };
     })
@@ -1553,6 +1562,7 @@ export function registerTicketActions(): void {
     updated_at: isoDateTimeSchema.nullable(),
     closed_at: isoDateTimeSchema.nullable(),
     is_closed: z.boolean().nullable(),
+    response_state: z.enum(['awaiting_client', 'awaiting_internal']).nullable().optional(),
     attributes: z.record(z.unknown()).optional()
   });
 
@@ -1578,6 +1588,26 @@ export function registerTicketActions(): void {
     associated_at: isoDateTimeSchema.nullable()
   });
 
+  const collectionMetaSchema = z.object({
+    total_count: z.number().int(),
+    returned_count: z.number().int(),
+    truncated: z.boolean()
+  });
+
+  const readCount = (row: any): number => {
+    const value = row?.count ?? row?.['count(*)'] ?? row?.['count'];
+    if (typeof value === 'number') {
+      return value;
+    }
+    if (typeof value === 'bigint') {
+      return Number(value);
+    }
+    if (typeof value === 'string') {
+      return Number.parseInt(value, 10) || 0;
+    }
+    return 0;
+  };
+
   registry.register({
     id: 'tickets.find',
     version: 1,
@@ -1585,37 +1615,57 @@ export function registerTicketActions(): void {
       ticket_id: uuidSchema.optional().describe('Ticket id'),
       ticket_number: z.string().optional().describe('Ticket number'),
       external_ref: z.string().optional().describe('External reference (stored in tickets.attributes.external_ref)'),
+      response_state: z.enum(['awaiting_client', 'awaiting_internal']).optional().describe('Optional response state filter'),
       on_not_found: z.enum(['return_null', 'error']).default('return_null'),
       include: z.object({
         comments: z.boolean().optional(),
         attachments: z.boolean().optional(),
         attributes: z.boolean().optional().describe('Include ticket.attributes (raw JSON)'),
         custom_fields: z.boolean().optional().describe('Alias for include.attributes'),
-        comments_limit: z.number().int().positive().max(200).optional(),
+        comments_limit: z.number().int().positive().max(200).optional().describe('Maximum comments to return (1-200, default 50)'),
+        comments_order: z.enum(['asc', 'desc']).default('asc').describe('Comment ordering by created_at (default asc/oldest first, matching prior behavior; use desc for newest first)'),
+        comments_created_after: z.string().optional().describe('Only include comments created after this ISO datetime'),
         attachments_limit: z.number().int().positive().max(200).optional()
       }).optional()
     }).refine((val) => Boolean(val.ticket_id || val.ticket_number || val.external_ref), { message: 'ticket_id, ticket_number, or external_ref is required' }),
     outputSchema: z.object({
       ticket: ticketSummarySchema.nullable(),
       comments: z.array(ticketCommentSchema).optional(),
-      attachments: z.array(ticketAttachmentSchema).optional()
+      comments_meta: collectionMetaSchema.optional(),
+      attachments: z.array(ticketAttachmentSchema).optional(),
+      attachments_meta: collectionMetaSchema.optional()
     }),
     sideEffectful: false,
     idempotency: { mode: 'engineProvided' },
-    ui: { label: 'Find Ticket', category: 'Business Operations', description: 'Fetch a ticket by id or number' },
+    ui: {
+      label: 'Find Ticket',
+      category: 'Business Operations',
+      description: 'Fetch a ticket by id, number, or external reference with optional response-state filter and bounded comments/attachments includes'
+    },
     handler: async (input, ctx) => withTenantTransaction(ctx, async (tx) => {
       await requirePermission(ctx, tx, { resource: 'ticket', action: 'read' });
 
       const startedAt = Date.now();
       let ticket: any = null;
       if (input.ticket_id) {
-        ticket = await tenantScopedTable(tx, 'tickets').where('ticket_id', input.ticket_id).first();
+        const query = tenantScopedTable(tx, 'tickets').where('ticket_id', input.ticket_id);
+        if (input.response_state) {
+          query.where('response_state', input.response_state);
+        }
+        ticket = await query.first();
       } else if (input.ticket_number) {
-        ticket = await tenantScopedTable(tx, 'tickets').where('ticket_number', input.ticket_number).first();
+        const query = tenantScopedTable(tx, 'tickets').where('ticket_number', input.ticket_number);
+        if (input.response_state) {
+          query.where('response_state', input.response_state);
+        }
+        ticket = await query.first();
       } else if (input.external_ref) {
-        ticket = await tenantScopedTable(tx, 'tickets')
-          .andWhereRaw(`(attributes->>'external_ref') = ?`, [String(input.external_ref)])
-          .first();
+        const query = tenantScopedTable(tx, 'tickets')
+          .andWhereRaw(`(attributes->>'external_ref') = ?`, [String(input.external_ref)]);
+        if (input.response_state) {
+          query.where('response_state', input.response_state);
+        }
+        ticket = await query.first();
       }
 
       if (!ticket) {
@@ -1645,16 +1695,28 @@ export function registerTicketActions(): void {
         updated_at: ticket.updated_at ? new Date(ticket.updated_at).toISOString() : null,
         closed_at: ticket.closed_at ? new Date(ticket.closed_at).toISOString() : null,
         is_closed: ticket.is_closed ?? null,
+        response_state: ticket.response_state ?? null,
         ...(includeAttributes ? { attributes: (attrs && typeof attrs === 'object' && !Array.isArray(attrs)) ? attrs : {} } : {})
       });
 
       const result: any = { ticket: parsedTicket };
 
       if (include.comments) {
-        const rows = await tenantScopedTable(tx, 'comments')
-          .where('ticket_id', ticket.ticket_id)
-          .orderBy('created_at', 'asc')
-          .limit(include.comments_limit ?? 50);
+        const commentLimit = include.comments_limit ?? 50;
+        const applyCommentFilters = (query: Knex.QueryBuilder) => {
+          query.where('ticket_id', ticket.ticket_id);
+          if (include.comments_created_after) {
+            query.andWhere('created_at', '>', include.comments_created_after);
+          }
+          return query;
+        };
+        const totalRow = await applyCommentFilters(tenantScopedTable(tx, 'comments'))
+          .count('* as count')
+          .first();
+        const totalCount = readCount(totalRow);
+        const rows = await applyCommentFilters(tenantScopedTable(tx, 'comments'))
+          .orderBy('created_at', include.comments_order ?? 'asc')
+          .limit(commentLimit);
         result.comments = rows.map((row: any) => ticketCommentSchema.parse({
           comment_id: row.comment_id,
           note: row.note,
@@ -1666,9 +1728,15 @@ export function registerTicketActions(): void {
           contact_name_id: row.contact_id ?? null,
           author_type: row.author_type ?? null
         }));
+        result.comments_meta = {
+          total_count: totalCount,
+          returned_count: result.comments.length,
+          truncated: totalCount > result.comments.length
+        };
       }
 
       if (include.attachments) {
+        const attachmentLimit = include.attachments_limit ?? 50;
         const db = tenantDb(tx.trx, tx.tenantId);
         const attachmentQuery = db.table('document_associations as da');
         db.tenantJoin(attachmentQuery, 'documents as d', 'da.document_id', 'd.document_id', {
@@ -1677,13 +1745,18 @@ export function registerTicketActions(): void {
         const rows = await attachmentQuery
           .where({ 'da.entity_type': 'ticket', 'da.entity_id': ticket.ticket_id })
           .select('d.document_id', 'd.document_name', 'd.file_id', 'd.mime_type', 'da.created_at as associated_at');
-        result.attachments = rows.slice(0, include.attachments_limit ?? 50).map((row: any) => ticketAttachmentSchema.parse({
+        result.attachments = rows.slice(0, attachmentLimit).map((row: any) => ticketAttachmentSchema.parse({
           document_id: row.document_id,
           document_name: row.document_name,
           file_id: row.file_id ?? null,
           mime_type: row.mime_type ?? null,
           associated_at: row.associated_at ? new Date(row.associated_at).toISOString() : null
         }));
+        result.attachments_meta = {
+          total_count: rows.length,
+          returned_count: result.attachments.length,
+          truncated: rows.length > result.attachments.length
+        };
       }
 
       const durationMs = Date.now() - startedAt;

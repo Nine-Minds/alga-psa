@@ -290,8 +290,11 @@ async function publishResponseStateChangedEvent(
       eventType: 'TICKET_RESPONSE_STATE_CHANGED',
       payload: {
         tenantId,
+        occurredAt: new Date().toISOString(),
         ticketId,
         userId,
+        previousResponseState: previousState,
+        newResponseState: newState,
         previousState,
         newState,
         trigger
@@ -1558,7 +1561,9 @@ export const addTicketComment = withAuth(async (user, { tenant }, ticketId: stri
         eventType: 'TICKET_COMMENT_ADDED',
         payload: {
           tenantId: tenant,
+          occurredAt: (newComment as any).created_at ?? new Date().toISOString(),
           ticketId: ticketId,
+          commentId: (newComment as any).comment_id ?? (newComment as any).id,
           userId: user.user_id,
           comment: {
             id: (newComment as any).comment_id ?? (newComment as any).id,

@@ -712,7 +712,7 @@ describe('Schedules', () => {
 
     fireEvent.click(screen.getByText('New Schedule'));
     await screen.findByRole('dialog', { name: 'Create Schedule' });
-    fireEvent.change(screen.getByLabelText('Trigger type'), { target: { value: 'recurring' } });
+    fireEvent.change(await screen.findByLabelText('Trigger type'), { target: { value: 'recurring' } });
 
     expect(screen.getByLabelText('Frequency')).toBeInTheDocument();
     expect(screen.getByLabelText('Time')).toBeInTheDocument();
@@ -726,7 +726,7 @@ describe('Schedules', () => {
 
     fireEvent.click(screen.getByText('New Schedule'));
     await screen.findByRole('dialog', { name: 'Create Schedule' });
-    fireEvent.change(screen.getByLabelText('Trigger type'), { target: { value: 'recurring' } });
+    fireEvent.change(await screen.findByLabelText('Trigger type'), { target: { value: 'recurring' } });
 
     expect(screen.getByLabelText('Run on')).toHaveValue('any');
     expect(screen.queryByLabelText('Calendar source')).not.toBeInTheDocument();
@@ -754,7 +754,7 @@ describe('Schedules', () => {
 
     fireEvent.click(screen.getByText('New Schedule'));
     await screen.findByRole('dialog', { name: 'Create Schedule' });
-    fireEvent.change(screen.getByLabelText('Trigger type'), { target: { value: 'recurring' } });
+    fireEvent.change(await screen.findByLabelText('Trigger type'), { target: { value: 'recurring' } });
     fireEvent.change(screen.getByLabelText('Run on'), { target: { value: 'business' } });
 
     const calendarSource = screen.getByLabelText('Calendar source');
@@ -785,7 +785,7 @@ describe('Schedules', () => {
 
     fireEvent.click(screen.getByText('New Schedule'));
     await screen.findByRole('dialog', { name: 'Create Schedule' });
-    fireEvent.change(screen.getByLabelText('Trigger type'), { target: { value: 'recurring' } });
+    fireEvent.change(await screen.findByLabelText('Trigger type'), { target: { value: 'recurring' } });
 
     expect(screen.getByLabelText('Timezone')).toHaveValue('UTC');
     expect(screen.queryByLabelText('Custom timezone')).not.toBeInTheDocument();
@@ -796,7 +796,7 @@ describe('Schedules', () => {
 
     fireEvent.click(screen.getByText('New Schedule'));
     await screen.findByRole('dialog', { name: 'Create Schedule' });
-    fireEvent.change(screen.getByLabelText('Trigger type'), { target: { value: 'recurring' } });
+    fireEvent.change(await screen.findByLabelText('Trigger type'), { target: { value: 'recurring' } });
     fireEvent.change(screen.getByLabelText('Timezone'), { target: { value: '__custom__' } });
     fireEvent.change(screen.getByLabelText('Custom timezone'), { target: { value: 'Pacific/Niue' } });
 
@@ -808,7 +808,7 @@ describe('Schedules', () => {
 
     fireEvent.click(screen.getByText('New Schedule'));
     await screen.findByRole('dialog', { name: 'Create Schedule' });
-    fireEvent.change(screen.getByLabelText('Trigger type'), { target: { value: 'recurring' } });
+    fireEvent.change(await screen.findByLabelText('Trigger type'), { target: { value: 'recurring' } });
     fireEvent.change(screen.getByLabelText('Timezone'), { target: { value: '__browse_all__' } });
     fireEvent.change(screen.getByLabelText('Browse all time zones'), { target: { value: 'America/Chicago' } });
 
@@ -820,7 +820,7 @@ describe('Schedules', () => {
 
     fireEvent.click(screen.getByText('New Schedule'));
     await screen.findByRole('dialog', { name: 'Create Schedule' });
-    fireEvent.change(screen.getByLabelText('Trigger type'), { target: { value: 'recurring' } });
+    fireEvent.change(await screen.findByLabelText('Trigger type'), { target: { value: 'recurring' } });
     fireEvent.change(screen.getByLabelText('Workflow'), {
       target: { value: workflowFixtures[0].workflow_id }
     });
@@ -852,7 +852,7 @@ describe('Schedules', () => {
 
     fireEvent.click(screen.getByText('New Schedule'));
     await screen.findByRole('dialog', { name: 'Create Schedule' });
-    fireEvent.change(screen.getByLabelText('Trigger type'), { target: { value: 'recurring' } });
+    fireEvent.change(await screen.findByLabelText('Trigger type'), { target: { value: 'recurring' } });
     fireEvent.change(screen.getByLabelText('Workflow'), {
       target: { value: workflowFixtures[0].workflow_id }
     });
@@ -963,7 +963,7 @@ describe('Schedules', () => {
 
     fireEvent.click(screen.getByText('New Schedule'));
     await screen.findByRole('dialog', { name: 'Create Schedule' });
-    fireEvent.change(screen.getByLabelText('Trigger type'), { target: { value: 'recurring' } });
+    fireEvent.change(await screen.findByLabelText('Trigger type'), { target: { value: 'recurring' } });
     fireEvent.change(screen.getByLabelText('Workflow'), {
       target: { value: workflowFixtures[0].workflow_id }
     });

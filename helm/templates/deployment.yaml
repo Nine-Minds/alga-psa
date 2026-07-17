@@ -276,6 +276,13 @@ spec:
           - name: JOB_RUNNER_TYPE
             value: "{{ .Values.temporal.jobRunnerType }}"
           {{- end }}
+          {{- if .Values.correlationPathsJson }}
+          # Event.wait correlation derivation path override. Must match the
+          # workflow-worker chart's correlationPathsJson: publish-time wait
+          # validation runs in the server and evaluates the same config.
+          - name: WORKFLOW_RUNTIME_V2_EVENT_CORRELATION_PATHS_JSON
+            value: {{ .Values.correlationPathsJson | quote }}
+          {{- end }}
 
           # ----------- REDIS ----------------
           {{- if .Values.redis.enabled }}

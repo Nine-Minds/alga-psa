@@ -1,5 +1,10 @@
+import { getWorkflowEventCorrelationPaths } from '@alga-psa/shared/workflow/runtime';
+
 export type WorkflowEventCorrelationResolution = {
+  /** Primary key (first derivable value); persisted on the event row. */
   key: string | null;
+  /** Every derivable key, priority-ordered and deduped. Wait routing must consider all of them. */
+  keys: string[];
   source: 'explicit' | 'derived' | 'missing';
   detail: string;
 };
@@ -17,22 +22,25 @@ export function resolveWorkflowEventCorrelation(
   if (explicit) {
     return {
       key: explicit,
+      keys: [explicit],
       source: 'explicit',
       detail: 'event.workflow_correlation_key',
     };
   }
 
   const derived = resolveDerivedCorrelation(input.eventName, input.payload);
-  if (derived) {
+  if (derived.values.length > 0) {
     return {
-      key: derived.value,
+      key: derived.values[0]!.value,
+      keys: derived.values.map((entry) => entry.value),
       source: 'derived',
-      detail: `path:${derived.path}`,
+      detail: `paths:${derived.values.map((entry) => entry.path).join(',')} (${derived.configSource})`,
     };
   }
 
   return {
     key: null,
+    keys: [],
     source: 'missing',
     detail: 'no explicit key and no configured derivation path produced a value',
   };
@@ -51,43 +59,19 @@ function resolveExplicitCorrelation(
 function resolveDerivedCorrelation(
   eventName: string,
   payload: Record<string, unknown>
-): { value: string; path: string } | null {
-  const configuredPaths = getConfiguredCorrelationPaths(eventName);
-  for (const path of configuredPaths) {
+): { values: Array<{ value: string; path: string }>; configSource: string } {
+  const { paths, source } = getWorkflowEventCorrelationPaths(eventName);
+  const values: Array<{ value: string; path: string }> = [];
+  const seen = new Set<string>();
+  for (const path of paths) {
     const value = readDottedValue(payload, path);
     if (value === null || value === undefined) continue;
     const asString = String(value).trim();
-    if (!asString) continue;
-    return { value: asString, path };
+    if (!asString || seen.has(asString)) continue;
+    seen.add(asString);
+    values.push({ value: asString, path });
   }
-  return null;
-}
-
-function getConfiguredCorrelationPaths(eventName: string): string[] {
-  const raw = process.env.WORKFLOW_RUNTIME_V2_EVENT_CORRELATION_PATHS_JSON;
-  if (!raw) return [];
-
-  try {
-    const parsed = JSON.parse(raw) as Record<string, unknown>;
-    const eventPaths = parsed[eventName];
-    const wildcardPaths = parsed['*'];
-    return normalizePathConfig(eventPaths).concat(normalizePathConfig(wildcardPaths));
-  } catch {
-    return [];
-  }
-}
-
-function normalizePathConfig(value: unknown): string[] {
-  if (typeof value === 'string' && value.trim()) {
-    return [value.trim()];
-  }
-  if (!Array.isArray(value)) {
-    return [];
-  }
-  return value
-    .filter((item): item is string => typeof item === 'string')
-    .map((item) => item.trim())
-    .filter(Boolean);
+  return { values, configSource: source };
 }
 
 function readDottedValue(input: Record<string, unknown>, dottedPath: string): unknown {

@@ -978,13 +978,18 @@ export class InvoiceService extends BaseService<IInvoice> {
       // Publish event
       deferredEvents.push(() => publishEvent({
         eventType: 'INVOICE_FINALIZED',
-        payload: {
-          tenantId: context.tenant,
-          invoiceId: data.invoice_id,
-          totalAmount,
-          userId: context.userId,
-          timestamp: new Date().toISOString()
-        }
+        payload: (() => {
+          const occurredAt = new Date().toISOString();
+          return {
+            tenantId: context.tenant,
+            occurredAt,
+            invoiceId: data.invoice_id,
+            // payload.InvoiceFinalized.v1 types totalAmount as a string
+            totalAmount: String(totalAmount),
+            userId: context.userId,
+            timestamp: occurredAt
+          };
+        })()
       }));
 
       deferredEvents.push(() => publishWorkflowEvent({

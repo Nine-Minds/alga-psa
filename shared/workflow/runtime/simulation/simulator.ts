@@ -843,6 +843,8 @@ export async function applyTriggerPayloadMapping(params: {
   eventName: string;
   eventPayload: Record<string, unknown>;
   correlationKey?: string | null;
+  sourcePayloadSchemaRef?: string | null;
+  secretResolver?: SecretResolver;
 }): Promise<{ payload: Record<string, unknown>; mappingApplied: boolean }> {
   const trigger = params.definition.trigger;
   if (!trigger || trigger.type !== 'event') {
@@ -859,9 +861,10 @@ export async function applyTriggerPayloadMapping(params: {
         name: params.eventName,
         correlationKey: params.correlationKey ?? null,
         payload: params.eventPayload,
-        payloadSchemaRef: trigger.sourcePayloadSchemaRef ?? null,
+        payloadSchemaRef: params.sourcePayloadSchemaRef ?? trigger.sourcePayloadSchemaRef ?? null,
       },
     },
+    secretResolver: params.secretResolver,
   });
   // LEVERAGE: pattern expand-dotted-keys — same expansion exists privately in workflow-runtime-v2-actions.ts
   return { payload: expandDottedKeys(resolved ?? {}), mappingApplied: true };
