@@ -677,7 +677,12 @@ describe('AutomaticInvoices grouped parent rows', () => {
     });
     fireEvent.click(parentCheckbox);
 
-    fireEvent.click(screen.getByRole('button', { name: 'Preview Selected' }));
+    const previewButton = screen.getByRole('button', { name: 'Preview Selected' });
+    await waitFor(() => {
+      expect(previewButton).toBeEnabled();
+      expect(screen.getByRole('button', { name: 'Generate Invoices (1)' })).toBeEnabled();
+    });
+    fireEvent.click(previewButton);
     await waitFor(() => {
       expect(screen.getByTestId('preview-invoice-count-summary')).toHaveTextContent(
         'This selection will generate one combined invoice.',
