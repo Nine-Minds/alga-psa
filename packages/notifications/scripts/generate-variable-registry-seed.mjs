@@ -27,9 +27,33 @@ const contents = `/**
  * Run packages/notifications/scripts/generate-variable-registry-seed.mjs after
  * an approved inventory change; runtime code must not import planning files.
  */
-export const templateVariableSeed = ${JSON.stringify(templateVariableSeed, null, 2)};
+type SeedVariable = {
+  path: string;
+  type: string;
+  description: string;
+  example: string;
+  availability: string;
+  notes?: string;
+};
 
-export const sharedBlockSeed = ${JSON.stringify(inventory.synthesis.sharedBlocks, null, 2)};
+type TemplateVariableSeedCategory = {
+  category: string;
+  templates: Array<{
+    templateName: string;
+    variables: SeedVariable[];
+  }>;
+};
+
+type SharedVariableBlockSeed = {
+  name: string;
+  usedByCategories: string[];
+  notes: string;
+  variables: SeedVariable[];
+};
+
+export const templateVariableSeed: TemplateVariableSeedCategory[] = ${JSON.stringify(templateVariableSeed, null, 2)};
+
+export const sharedBlockSeed: SharedVariableBlockSeed[] = ${JSON.stringify(inventory.synthesis.sharedBlocks, null, 2)};
 `;
 
 fs.writeFileSync(outputPath, contents, "utf8");

@@ -3,7 +3,31 @@
  * Run packages/notifications/scripts/generate-variable-registry-seed.mjs after
  * an approved inventory change; runtime code must not import planning files.
  */
-export const templateVariableSeed = [
+type SeedVariable = {
+  path: string;
+  type: string;
+  description: string;
+  example: string;
+  availability: string;
+  notes?: string;
+};
+
+type TemplateVariableSeedCategory = {
+  category: string;
+  templates: Array<{
+    templateName: string;
+    variables: SeedVariable[];
+  }>;
+};
+
+type SharedVariableBlockSeed = {
+  name: string;
+  usedByCategories: string[];
+  notes: string;
+  variables: SeedVariable[];
+};
+
+export const templateVariableSeed: TemplateVariableSeedCategory[] = [
   {
     "category": "appointments",
     "templates": [
@@ -4097,7 +4121,7 @@ export const templateVariableSeed = [
   }
 ];
 
-export const sharedBlockSeed = [
+export const sharedBlockSeed: SharedVariableBlockSeed[] = [
   {
     "name": "branding",
     "usedByCategories": [

@@ -1,7 +1,8 @@
 'use client';
 
 
-import { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { useState, useEffect, useCallback, useLayoutEffect, useMemo, useRef } from "react";
+import { createPortal } from "react-dom";
 import { useSession } from "next-auth/react";
 import { Button } from "@alga-psa/ui/components/Button";
 import { Dialog, DialogContent, DialogTitle } from "@alga-psa/ui/components/Dialog";
@@ -42,6 +43,7 @@ import {
   TemplateVariablePanel,
   VariableReferenceDialog,
 } from "./TemplateVariableReference";
+import { measureCaretMenuPosition, type CaretMenuPosition } from "./caretPosition";
 
 // Language names mapping (shared across component)
 const LANGUAGE_NAMES: Record<string, string> = {
@@ -810,7 +812,13 @@ function EditTemplateDialog({
   const htmlRef = useRef<HTMLTextAreaElement>(null);
   const textRef = useRef<HTMLTextAreaElement>(null);
   const lastFocusedField = useRef<EditableField>('html_content');
-  const [autocomplete, setAutocomplete] = useState<{ field: EditableField; query: string } | null>(null);
+  const pendingCaret = useRef<{ field: EditableField; offset: number } | null>(null);
+  const [autocomplete, setAutocomplete] = useState<{
+    field: EditableField;
+    query: string;
+    opening: number;
+    position: CaretMenuPosition;
+  } | null>(null);
 
   // Update form data when template changes
   useEffect(() => {
@@ -835,6 +843,18 @@ function EditTemplateDialog({
     return textRef.current;
   };
 
+  useLayoutEffect(() => {
+    if (!pendingCaret.current) return;
+    const { field, offset } = pendingCaret.current;
+    pendingCaret.current = null;
+    const timeout = window.setTimeout(() => {
+      const element = getFieldRef(field);
+      element?.focus();
+      element?.setSelectionRange(offset, offset);
+    }, 0);
+    return () => window.clearTimeout(timeout);
+  }, [formData.subject, formData.html_content, formData.text_content]);
+
   const replaceSelection = (
     field: EditableField,
     replacement: string,
@@ -845,30 +865,36 @@ function EditTemplateDialog({
     const selectionStart = replacementStart ?? element?.selectionStart ?? currentValue.length;
     const selectionEnd = element?.selectionEnd ?? selectionStart;
     const nextValue = `${currentValue.slice(0, selectionStart)}${replacement}${currentValue.slice(selectionEnd)}`;
+    pendingCaret.current = { field, offset: selectionStart + replacement.length };
     setFormData((previous) => ({ ...previous, [field]: nextValue }));
     lastFocusedField.current = field;
     setAutocomplete(null);
-    requestAnimationFrame(() => {
-      const nextElement = getFieldRef(field);
-      const caret = selectionStart + replacement.length;
-      nextElement?.focus();
-      nextElement?.setSelectionRange(caret, caret);
-    });
   };
 
   const insertVariable = (token: string) => replaceSelection(lastFocusedField.current, token);
 
-  const detectAutocomplete = (field: EditableField, value: string, caret: number | null) => {
+  const detectAutocomplete = (
+    field: EditableField,
+    element: HTMLInputElement | HTMLTextAreaElement,
+  ) => {
     lastFocusedField.current = field;
-    const match = value.slice(0, caret ?? value.length).match(/\{\{([a-zA-Z0-9._]*)$/);
-    setAutocomplete(match ? { field, query: match[1] } : null);
+    const caret = element.selectionStart ?? element.value.length;
+    const match = element.value.slice(0, caret).match(/\{\{([a-zA-Z0-9._]*)$/);
+    setAutocomplete(match ? {
+      field,
+      query: match[1],
+      opening: caret - match[0].length,
+      position: measureCaretMenuPosition(element, caret),
+    } : null);
   };
 
   const completeVariable = (field: EditableField, variable: VariableDef) => {
     const element = getFieldRef(field);
     const value = String(formData[field] ?? '');
     const caret = element?.selectionStart ?? value.length;
-    const opening = value.slice(0, caret).lastIndexOf('{{');
+    const opening = autocomplete?.field === field
+      ? autocomplete.opening
+      : value.slice(0, caret).lastIndexOf('{{');
     replaceSelection(field, getTemplateVariableToken(variable), opening >= 0 ? opening : caret);
   };
 
@@ -886,8 +912,13 @@ function EditTemplateDialog({
     }
   };
 
-  const autocompleteMenu = (field: EditableField) => autocomplete?.field === field && autocompleteChoices.length > 0 ? (
-    <div className="relative z-20 mt-1 rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-1 shadow-lg">
+  const autocompleteMenu = (field: EditableField) => typeof document !== 'undefined' && autocomplete?.field === field && autocompleteChoices.length > 0 ? createPortal(
+    <div
+      className="fixed z-[100] max-h-64 w-80 overflow-y-auto rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-1 shadow-lg"
+      style={{ left: autocomplete.position.left, top: autocomplete.position.top }}
+      role="listbox"
+      aria-label="Template variable suggestions"
+    >
       {autocompleteChoices.map((variable) => (
         <button
           id={`autocomplete-${field}-${variable.path.replace(/[^a-zA-Z0-9]+/g, '-')}`}
@@ -901,7 +932,8 @@ function EditTemplateDialog({
           <span className="text-[rgb(var(--color-text-500))]">{variable.type}</span>
         </button>
       ))}
-    </div>
+    </div>,
+    document.body,
   ) : null;
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -993,8 +1025,9 @@ function EditTemplateDialog({
               onFocus={() => { lastFocusedField.current = 'subject'; }}
               onChange={(e) => {
                 setFormData(prev => ({ ...prev, subject: e.target.value }));
-                detectAutocomplete('subject', e.target.value, e.target.selectionStart);
+                detectAutocomplete('subject', e.currentTarget);
               }}
+              onScroll={() => setAutocomplete(null)}
               onKeyDown={(event) => handleAutocompleteKeyDown(event, 'subject')}
               required
             />
@@ -1016,8 +1049,9 @@ function EditTemplateDialog({
                   onFocus={() => { lastFocusedField.current = 'html_content'; }}
                   onChange={(e) => {
                     setFormData(prev => ({ ...prev, html_content: e.target.value }));
-                    detectAutocomplete('html_content', e.target.value, e.target.selectionStart);
+                    detectAutocomplete('html_content', e.currentTarget);
                   }}
+                  onScroll={() => setAutocomplete(null)}
                   onKeyDown={(event) => handleAutocompleteKeyDown(event, 'html_content')}
                   required
                   rows={10}
@@ -1047,8 +1081,9 @@ function EditTemplateDialog({
                 onFocus={() => { lastFocusedField.current = 'text_content'; }}
                 onChange={(e) => {
                   setFormData(prev => ({ ...prev, text_content: e.target.value }));
-                  detectAutocomplete('text_content', e.target.value, e.target.selectionStart);
+                  detectAutocomplete('text_content', e.currentTarget);
                 }}
+                onScroll={() => setAutocomplete(null)}
                 onKeyDown={(event) => handleAutocompleteKeyDown(event, 'text_content')}
                 required
                 rows={10}
