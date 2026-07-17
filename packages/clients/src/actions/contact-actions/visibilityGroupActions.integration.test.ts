@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { getClientContactVisibilityContext } from '../../../../tickets/src/lib/clientPortalVisibility.server';
 
+// Integration-style flow tests: comfortably sub-second locally, but loaded CI
+// runners have blown the 5s default (run 29615580963).
+vi.setConfig({ testTimeout: 20_000 });
+
 const hasPermissionAsyncMock = vi.fn();
 const createTenantKnexMock = vi.fn(async () => ({ knex: {} as any }));
 const withTransactionMock = vi.fn();
