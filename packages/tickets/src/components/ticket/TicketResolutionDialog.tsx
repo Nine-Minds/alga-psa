@@ -42,7 +42,7 @@ interface TicketResolutionDialogProps {
     statusId: string,
     contentBlocks: PartialBlock[],
     suppression: TicketNotificationSuppressionValue,
-  ) => void;
+  ) => Promise<boolean>;
   onClipboardImageUploaded?: () => Promise<void> | void;
   uploadTicketAttachmentAction?: (
     formData: FormData,
@@ -113,11 +113,17 @@ export default function TicketResolutionDialog({
   }, [isOpen, resetDraftTracking, statusOptions]);
 
   const hasContent = JSON.stringify(content) !== JSON.stringify(DEFAULT_BLOCK);
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!statusId || !hasContent || isSubmitting) return;
-    uploadSession.resetDraftTracking();
-    onConfirm(statusId, content, notificationSuppression);
+    const resolutionSaved = await onConfirm(
+      statusId,
+      content,
+      notificationSuppression,
+    );
+    if (resolutionSaved) {
+      uploadSession.resetDraftTracking();
+    }
   };
 
   const footer = (

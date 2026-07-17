@@ -2668,15 +2668,17 @@ const handleClose = () => {
     ) => {
         if (!ticket.ticket_id || !closedStatusOptions.some((option) => option.value === statusId)) {
             toast.error(t('messages.closeFailed', 'Failed to close ticket'));
-            return;
+            return false;
         }
 
         setIsSubmittingResolutionClose(true);
+        let resolutionSaved = false;
         try {
             const resolutionAdded = await addResolutionComment(JSON.stringify(contentBlocks));
             if (!resolutionAdded) {
-                return;
+                return false;
             }
+            resolutionSaved = true;
 
             // The comment is already durable at this point. Close this dialog
             // so a failed or blocked status write cannot accidentally create a
@@ -2694,7 +2696,7 @@ const handleClose = () => {
                         canOverride: check.canOverride,
                         suppression: suppression.suppressContactNotifications ? suppression : null,
                     });
-                    return;
+                    return true;
                 }
             } catch (checkError) {
                 // Fall through to the write; the server still enforces.
@@ -2721,8 +2723,10 @@ const handleClose = () => {
             }));
             setActivityLogRefreshKey((value) => value + 1);
             toast.success(t('messages.ticketClosed', 'Ticket closed'));
+            return true;
         } catch (error) {
             handleTicketActionError(error, t('messages.closeFailed', 'Failed to close ticket'));
+            return resolutionSaved;
         } finally {
             setIsSubmittingResolutionClose(false);
         }

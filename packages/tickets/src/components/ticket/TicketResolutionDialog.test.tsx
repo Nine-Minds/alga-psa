@@ -2,7 +2,7 @@
 /// <reference types="@testing-library/jest-dom/vitest" />
 
 import React from "react";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
 import TicketResolutionDialog from "./TicketResolutionDialog";
@@ -132,8 +132,8 @@ vi.mock("@alga-psa/ui/components/CustomSelect", () => ({
 }));
 
 describe("TicketResolutionDialog", () => {
-  it("requires a close status and non-empty resolution, then submits blocks and suppression", () => {
-    const onConfirm = vi.fn();
+  it("requires a close status and non-empty resolution, then submits blocks and suppression", async () => {
+    const onConfirm = vi.fn().mockResolvedValue(true);
 
     render(
       <TicketResolutionDialog
@@ -148,6 +148,7 @@ describe("TicketResolutionDialog", () => {
         onConfirm={onConfirm}
       />,
     );
+    uploadSessionMock.resetDraftTracking.mockClear();
 
     expect(
       screen.getByText(
@@ -187,6 +188,68 @@ describe("TicketResolutionDialog", () => {
         suppressInternalNotifications: false,
       },
     );
+    await waitFor(() => {
+      expect(uploadSessionMock.resetDraftTracking).toHaveBeenCalledOnce();
+    });
+  });
+
+  it("keeps draft image tracking until the async resolution save succeeds", async () => {
+    let finishSave: ((saved: boolean) => void) | undefined;
+    const onConfirm = vi.fn(
+      () =>
+        new Promise<boolean>((resolve) => {
+          finishSave = resolve;
+        }),
+    );
+
+    render(
+      <TicketResolutionDialog
+        id="ticket-resolution-close"
+        isOpen
+        ticketId="ticket-1"
+        statusOptions={[{ value: "closed", label: "Closed" }]}
+        onClose={vi.fn()}
+        onConfirm={onConfirm}
+      />,
+    );
+    uploadSessionMock.resetDraftTracking.mockClear();
+
+    fireEvent.change(screen.getByLabelText("Resolution"), {
+      target: { value: "Resolved" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Resolve and close" }));
+
+    expect(onConfirm).toHaveBeenCalledOnce();
+    expect(uploadSessionMock.resetDraftTracking).not.toHaveBeenCalled();
+
+    finishSave?.(true);
+    await waitFor(() => {
+      expect(uploadSessionMock.resetDraftTracking).toHaveBeenCalledOnce();
+    });
+  });
+
+  it("keeps uploaded images tracked when the resolution save fails", async () => {
+    const onConfirm = vi.fn().mockResolvedValue(false);
+
+    render(
+      <TicketResolutionDialog
+        id="ticket-resolution-close"
+        isOpen
+        ticketId="ticket-1"
+        statusOptions={[{ value: "closed", label: "Closed" }]}
+        onClose={vi.fn()}
+        onConfirm={onConfirm}
+      />,
+    );
+    uploadSessionMock.resetDraftTracking.mockClear();
+
+    fireEvent.change(screen.getByLabelText("Resolution"), {
+      target: { value: "Resolved" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Resolve and close" }));
+
+    await waitFor(() => expect(onConfirm).toHaveBeenCalledOnce());
+    expect(uploadSessionMock.resetDraftTracking).not.toHaveBeenCalled();
   });
 
   it("resets the draft, status choice, and suppression whenever the dialog is opened again", () => {
@@ -198,7 +261,7 @@ describe("TicketResolutionDialog", () => {
         { value: "closed", label: "Closed" },
       ],
       onClose: vi.fn(),
-      onConfirm: vi.fn(),
+      onConfirm: vi.fn().mockResolvedValue(true),
     };
     const { rerender } = render(<TicketResolutionDialog {...props} isOpen />);
 
@@ -234,7 +297,7 @@ describe("TicketResolutionDialog", () => {
         ticketId="ticket-1"
         statusOptions={[{ value: "closed", label: "Closed" }]}
         onClose={vi.fn()}
-        onConfirm={vi.fn()}
+        onConfirm={vi.fn().mockResolvedValue(true)}
       />,
     );
 
@@ -242,7 +305,7 @@ describe("TicketResolutionDialog", () => {
   });
 
   it("submits contact and internal notification suppression", () => {
-    const onConfirm = vi.fn();
+    const onConfirm = vi.fn().mockResolvedValue(true);
     render(
       <TicketResolutionDialog
         id="ticket-resolution-close"
