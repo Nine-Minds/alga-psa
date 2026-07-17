@@ -180,7 +180,7 @@ const COPY = {
     category: 'Kategoria',
     location: 'Lokalizacja',
     descriptionLabel: 'Podsumowanie zgłoszenia',
-    descriptionVar: '{{ticket.summary}}',
+    descriptionVar: '{{ticket.description}}',
     viewButton: 'Zobacz zgłoszenie',
     footer: 'Powered by Alga PSA',
     textHeader: 'Nowe zgłoszenie',
