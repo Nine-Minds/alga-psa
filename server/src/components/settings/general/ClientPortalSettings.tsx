@@ -1,7 +1,7 @@
 'use client';
 
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useCallback, useState, useEffect, useMemo } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@alga-psa/ui/components/Card";
 import { Globe, Palette } from 'lucide-react';
 import { LanguageHierarchyTable } from '@alga-psa/ui/components/LanguageHierarchyTable';
@@ -34,6 +34,7 @@ import SignInPagePreview from './SignInPagePreview';
 import { getPortalDomainStatusAction } from '@alga-psa/tenancy/actions/tenant-actions/portalDomainActions';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useActionPolling } from '@alga-psa/ui/hooks';
 
 const UNSET_LOCALE_VALUE = '__inherit__';
 const DEFAULT_PORTAL_HERO_GRADIENT: PortalHeroGradient = 'primary-shades';
@@ -103,27 +104,13 @@ const ClientPortalSettings = () => {
     ];
   }, [visibleLocales, orgDefaultLocale, t]);
 
-  // Check if custom domain is configured
-  useEffect(() => {
-    const checkCustomDomain = async () => {
-      try {
-        const status = await getPortalDomainStatusAction();
-        // Enable preview if there's a domain value (regardless of status)
-        setHasCustomDomain(!!status?.domain);
-      } catch (error) {
-        console.error('Failed to check custom domains:', error);
-        setHasCustomDomain(false);
-      }
-    };
-
-    // Check initially
-    checkCustomDomain();
-
-    // Check periodically every 5 seconds to detect domain changes
-    const interval = setInterval(checkCustomDomain, 5000);
-
-    return () => clearInterval(interval);
+  const checkCustomDomain = useCallback(async () => {
+    const status = await getPortalDomainStatusAction();
+    // Enable preview if there's a domain value (regardless of status)
+    setHasCustomDomain(!!status?.domain);
   }, []);
+
+  useActionPolling(checkCustomDomain, { intervalMs: 5000 });
 
   useEffect(() => {
     const loadTenantSettings = async () => {

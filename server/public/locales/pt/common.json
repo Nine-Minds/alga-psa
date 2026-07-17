@@ -14,6 +14,9 @@
     "expiringForClient_one": "O crédito {{count}} para {{clientName}} expirará em breve",
     "expiringForClient_other": "Os créditos {{count}} para {{clientName}} expirarão em breve"
   },
+  "staleAction": {
+    "message": "Esta página está desatualizada. Atualize-a para restaurar atualizações e ações."
+  },
   "licenseBanner": {
     "trialExpiresIn_one": "A avaliação Pro expira no dia {{count}}. Insira uma chave de licença para manter os recursos Pro.",
     "trialExpiresIn_other": "A avaliação Pro expira em {{count}} dias. Insira uma chave de licença para manter os recursos Pro.",

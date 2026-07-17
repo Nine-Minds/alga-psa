@@ -14,6 +14,9 @@
     "expiringForClient_one": "55555 {{count}} 55555 {{clientName}} 55555",
     "expiringForClient_other": "55555 {{count}} 55555 {{clientName}} 55555"
   },
+  "staleAction": {
+    "message": "55555"
+  },
   "licenseBanner": {
     "trialExpiresIn_one": "55555 {{count}} 55555",
     "trialExpiresIn_other": "55555 {{count}} 55555",

@@ -20,6 +20,9 @@
     "expiringForClient_many": "{{count}} kredytów klienta {{clientName}} wkrótce wygaśnie",
     "expiringForClient_other": "{{count}} kredytów klienta {{clientName}} wkrótce wygaśnie"
   },
+  "staleAction": {
+    "message": "Ta strona jest nieaktualna. Odśwież ją, aby przywrócić aktualizacje i działania."
+  },
   "licenseBanner": {
     "trialExpiresIn_one": "Okres próbny Pro wygasa za {{count}} dzień. Wprowadź klucz licencyjny, aby zachować funkcje Pro.",
     "trialExpiresIn_few": "Okres próbny Pro wygasa za {{count}} dni. Wprowadź klucz licencyjny, aby zachować funkcje Pro.",

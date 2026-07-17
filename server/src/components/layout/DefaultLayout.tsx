@@ -24,6 +24,7 @@ import GlobalShortcutLayer from './GlobalShortcutLayer';
 import { isExperimentalFeatureEnabled } from '@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions';
 import { useTier } from 'server/src/context/TierContext';
 import { useCatalogShortcut } from '@alga-psa/ui/keyboard-shortcuts';
+import { StaleActionBanner } from '@alga-psa/ui/components/StaleActionBanner';
 
 interface DefaultLayoutProps {
   children: React.ReactNode;
@@ -435,6 +436,7 @@ export default function DefaultLayout({ children, initialSidebarCollapsed = fals
               setRightSidebarOpen={setRightSidebarOpen}
             />
             <PlatformNotificationBanner />
+            <StaleActionBanner />
             <main className={`flex-1 overflow-hidden flex ${sidebarMode !== 'main' ? 'pt-0 pl-0 pr-3' : 'pt-2 px-3'}`}>
               <Body>{children}</Body>
               {aiAssistantAvailable ? (

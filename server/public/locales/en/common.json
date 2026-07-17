@@ -14,6 +14,9 @@
     "expiringForClient_one": "{{count}} credit for {{clientName}} will expire soon",
     "expiringForClient_other": "{{count}} credits for {{clientName}} will expire soon"
   },
+  "staleAction": {
+    "message": "This page is out of date. Refresh to restore live updates and actions."
+  },
   "licenseBanner": {
     "trialExpiresIn_one": "Pro trial expires in {{count}} day. Enter a license key to keep Pro features.",
     "trialExpiresIn_other": "Pro trial expires in {{count}} days. Enter a license key to keep Pro features.",

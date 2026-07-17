@@ -14,6 +14,9 @@
     "expiringForClient_one": "{{count}} Guthaben für {{clientName}} läuft bald ab",
     "expiringForClient_other": "{{count}} Guthaben für {{clientName}} laufen bald ab"
   },
+  "staleAction": {
+    "message": "Diese Seite ist nicht mehr aktuell. Aktualisieren Sie sie, um Live-Updates und Aktionen wiederherzustellen."
+  },
   "licenseBanner": {
     "trialExpiresIn_one": "Die Pro-Testphase läuft in {{count}} Tag ab. Geben Sie einen Lizenzschlüssel ein, um die Pro-Funktionen zu behalten.",
     "trialExpiresIn_other": "Die Pro-Testphase läuft in {{count}} Tagen ab. Geben Sie einen Lizenzschlüssel ein, um die Pro-Funktionen zu behalten.",

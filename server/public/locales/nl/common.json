@@ -14,6 +14,9 @@
     "expiringForClient_one": "{{count}} tegoed van {{clientName}} verloopt binnenkort",
     "expiringForClient_other": "{{count}} tegoeden van {{clientName}} verlopen binnenkort"
   },
+  "staleAction": {
+    "message": "Deze pagina is verouderd. Vernieuw de pagina om live-updates en acties te herstellen."
+  },
   "licenseBanner": {
     "trialExpiresIn_one": "De Pro-proefperiode verloopt over {{count}} dag. Voer een licentiesleutel in om Pro-functies te behouden.",
     "trialExpiresIn_other": "De Pro-proefperiode verloopt over {{count}} dagen. Voer een licentiesleutel in om Pro-functies te behouden.",
