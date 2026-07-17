@@ -47,6 +47,7 @@ export function ScanResultCard({
   onOpenUnit,
   onManualSearch,
   onDismiss,
+  onAttachBarcode,
 }: {
   code: string;
   result: InventoryLookupResult;
@@ -55,6 +56,7 @@ export function ScanResultCard({
   onOpenUnit: (unitId: string) => void;
   onManualSearch: () => void;
   onDismiss: () => void;
+  onAttachBarcode?: () => void;
 }) {
   const theme = useTheme();
   const { t } = useTranslation("inventory");
@@ -192,13 +194,22 @@ export function ScanResultCard({
           )}
         </View>
       ) : null}
-      <PrimaryButton onPress={onManualSearch} accessibilityLabel="inventory-scan-manual-search">
+      {onAttachBarcode ? (
+        <PrimaryButton onPress={onAttachBarcode} accessibilityLabel="inventory-scan-attach-barcode">
+          {t("scan.attachBarcode", "Add this barcode to a product")}
+        </PrimaryButton>
+      ) : null}
+      <Text
+        onPress={onManualSearch}
+        testID="inventory-scan-manual-search"
+        style={{ ...theme.typography.body, color: theme.colors.primary, textAlign: "center", padding: theme.spacing.sm }}
+      >
         {t("scan.manualEntry", "Enter code manually")}
-      </PrimaryButton>
+      </Text>
       <Text
         onPress={onDismiss}
         testID="inventory-scan-rescan"
-        style={{ ...theme.typography.body, color: theme.colors.primary, textAlign: "center", padding: theme.spacing.sm }}
+        style={{ ...theme.typography.body, color: theme.colors.textSecondary, textAlign: "center", padding: theme.spacing.sm }}
       >
         {t("scan.rescan", "Scan again")}
       </Text>

@@ -32,6 +32,15 @@ vi.mock("../hooks/useInventoryApi", () => ({
   useInventoryApi: () => stableApi,
 }));
 
+vi.mock("../../../ui/toast/ToastProvider", () => ({
+  useToast: () => ({ showToast: vi.fn() }),
+}));
+
+vi.mock("../../../api/materials", () => ({
+  listProducts: vi.fn(async () => ({ ok: true, data: { data: [] } })),
+  setProductBarcode: vi.fn(async () => ({ ok: true, data: { data: {} } })),
+}));
+
 import { ScanView } from "./ScanView";
 
 function renderView(): ReactTestRenderer {

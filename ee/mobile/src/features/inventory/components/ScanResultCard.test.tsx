@@ -40,6 +40,7 @@ function render(result: InventoryLookupResult, handlers: Partial<Record<string, 
         onOpenUnit={handlers.onOpenUnit ?? vi.fn()}
         onManualSearch={handlers.onManualSearch ?? vi.fn()}
         onDismiss={handlers.onDismiss ?? vi.fn()}
+        onAttachBarcode={handlers.onAttachBarcode}
       />,
     );
   });
@@ -98,5 +99,13 @@ describe("ScanResultCard", () => {
     );
     expect(tree.root.findAll((node) => typeof node.type === "string" && node.props.testID === "inventory-scan-card-none")).toHaveLength(1);
     expect(tree.root.findAll((node) => typeof node.type === "string" && node.props.testID === "inventory-scan-candidate-0")).toHaveLength(1);
+  });
+
+  it("invokes onAttachBarcode from the none variant", () => {
+    const onAttachBarcode = vi.fn();
+    const tree = render({ type: "none", candidates: [] }, { onAttachBarcode });
+    const attach = tree.root.findAll((node) => node.props.accessibilityLabel === "inventory-scan-attach-barcode")[0];
+    act(() => attach.props.onPress());
+    expect(onAttachBarcode).toHaveBeenCalled();
   });
 });

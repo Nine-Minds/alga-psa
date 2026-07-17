@@ -84,3 +84,18 @@ export function listProducts(
     },
   });
 }
+
+export function setProductBarcode(
+  client: ApiClient,
+  params: { apiKey: string; productId: string; barcode: string; signal?: AbortSignal },
+): Promise<ApiResult<SuccessResponse<ProductListItem>>> {
+  return client.request<SuccessResponse<ProductListItem>>({
+    method: "PUT",
+    path: `/api/v1/products/${params.productId}`,
+    signal: params.signal,
+    headers: {
+      "x-api-key": params.apiKey,
+    },
+    body: { barcode: params.barcode },
+  });
+}

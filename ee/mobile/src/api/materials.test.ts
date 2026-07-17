@@ -78,3 +78,18 @@ describe("materials api", () => {
     });
   });
 });
+
+describe("setProductBarcode", () => {
+  it("PUTs the barcode to /api/v1/products/{id}", async () => {
+    const client = { request: vi.fn().mockResolvedValue({ ok: true, data: { data: {} } }) } as never;
+    const { setProductBarcode } = await import("./materials");
+    await setProductBarcode(client, { apiKey: "api-key-1", productId: "svc-3", barcode: "0123456789012" });
+    expect((client as { request: ReturnType<typeof vi.fn> }).request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: "PUT",
+        path: "/api/v1/products/svc-3",
+        body: { barcode: "0123456789012" },
+      }),
+    );
+  });
+});

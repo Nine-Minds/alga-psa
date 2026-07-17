@@ -4,7 +4,8 @@
     "scan": "Scan",
     "stock": "Stock",
     "counts": "Counts",
-    "pos": "POs"
+    "pos": "POs",
+    "home": "Today"
   },
   "scan": {
     "instruction": "Point the camera at a barcode",
@@ -23,7 +24,10 @@
     "multiBody": "\"{{code}}\" matches more than one record.",
     "rescan": "Scan again",
     "productKind": "Product",
-    "unitKind": "Stock unit"
+    "unitKind": "Stock unit",
+    "attachBarcode": "Add this barcode to a product",
+    "attachTitle": "Add barcode to which product?",
+    "attachSuccess": "Barcode added to {{name}}"
   },
   "stock": {
     "title": "Stock",
@@ -120,5 +124,17 @@
     "done": "Done",
     "retry": "Retry",
     "noAccess": "You don't have access to inventory."
+  },
+  "home": {
+    "scanCta": "Scan a barcode",
+    "empty": "Nothing needs your attention. Stock is quiet.",
+    "lowStock": "Running low",
+    "reorderAt": "reorder at",
+    "arriving": "Arriving",
+    "expected": "expected",
+    "partial": "Partial",
+    "open": "Open",
+    "inTransit": "In transit to you",
+    "countsInProgress": "Counts in progress"
   }
 }

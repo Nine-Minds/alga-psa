@@ -8,8 +8,11 @@ import { useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useTheme } from "../../../ui/ThemeContext";
 import { IconButton, PrimaryButton, TextInput } from "../../../ui/components";
+import { EntityPickerModal, type EntityPickerItem } from "../../../ui/components/EntityPickerModal";
 import { lookupInventoryCode, type InventoryLookupResult } from "../../../api/inventory";
+import { listProducts, setProductBarcode } from "../../../api/materials";
 import { useInventoryApi } from "../hooks/useInventoryApi";
+import { useToast } from "../../../ui/toast/ToastProvider";
 import { ScanResultCard } from "./ScanResultCard";
 import type { RootStackParamList } from "../../../navigation/types";
 
@@ -31,6 +34,29 @@ export function ScanView() {
   const [lookupError, setLookupError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const lastScanRef = useRef<{ code: string; atMs: number } | null>(null);
+  const { showToast } = useToast();
+  const [attachPickerVisible, setAttachPickerVisible] = useState(false);
+  const [attachItems, setAttachItems] = useState<EntityPickerItem[]>([]);
+  const [attachLoading, setAttachLoading] = useState(false);
+
+  const searchAttachProducts = useCallback(
+    async (query: string) => {
+      if (!client || !apiKey) return;
+      setAttachLoading(true);
+      const result = await listProducts(client, { apiKey, search: query || undefined, limit: 20 });
+      setAttachLoading(false);
+      if (result.ok) {
+        setAttachItems(
+          result.data.data.map((product) => ({
+            id: product.service_id,
+            label: product.service_name,
+            subtitle: product.sku ?? null,
+          })),
+        );
+      }
+    },
+    [client, apiKey],
+  );
 
   const resolveCode = useCallback(
     async (code: string) => {
@@ -48,6 +74,22 @@ export function ScanView() {
     },
     [client, apiKey, t],
   );
+
+  const attachBarcodeToProduct = useCallback(
+    async (productId: string, productLabel: string) => {
+      if (!client || !apiKey || !scannedCode) return;
+      setAttachPickerVisible(false);
+      const result = await setProductBarcode(client, { apiKey, productId, barcode: scannedCode });
+      if (result.ok) {
+        showToast({ tone: "success", message: t("scan.attachSuccess", "Barcode added to {{name}}", { name: productLabel }) });
+        void resolveCode(scannedCode);
+      } else {
+        showToast({ tone: "error", message: result.error.message ?? t("scan.lookupFailed", "Lookup failed. Try again.") });
+      }
+    },
+    [client, apiKey, scannedCode, showToast, t, resolveCode],
+  );
+
 
   const onBarcodeScanned = useCallback(
     ({ data }: { data: string }) => {
@@ -189,8 +231,24 @@ export function ScanView() {
             setManualMode(true);
           }}
           onDismiss={dismissResult}
+          onAttachBarcode={() => {
+            setAttachPickerVisible(true);
+            void searchAttachProducts("");
+          }}
         />
       ) : null}
+      <EntityPickerModal
+        visible={attachPickerVisible}
+        title={t("scan.attachTitle", "Add barcode to which product?")}
+        searchPlaceholder={t("stock.searchPlaceholder", "Search products or SKU")}
+        emptyLabel={t("stock.empty", "No stock-tracked products yet.")}
+        items={attachItems}
+        loading={attachLoading}
+        error={null}
+        onSearch={(query) => void searchAttachProducts(query)}
+        onSelect={(id, label) => void attachBarcodeToProduct(id, label)}
+        onClose={() => setAttachPickerVisible(false)}
+      />
     </View>
   );
 }
