@@ -14,6 +14,9 @@
     "expiringForClient_one": "{{count}} crédito de {{clientName}} vencerá pronto",
     "expiringForClient_other": "{{count}} créditos de {{clientName}} vencerán pronto"
   },
+  "staleAction": {
+    "message": "Esta página está desactualizada. Actualízala para restaurar las actualizaciones y las acciones."
+  },
   "licenseBanner": {
     "trialExpiresIn_one": "La prueba Pro vence en {{count}} día. Introduzca una clave de licencia para conservar las funciones Pro.",
     "trialExpiresIn_other": "La prueba Pro vence en {{count}} días. Introduzca una clave de licencia para conservar las funciones Pro.",

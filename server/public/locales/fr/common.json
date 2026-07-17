@@ -14,6 +14,9 @@
     "expiringForClient_one": "{{count}} crédit pour {{clientName}} expirera bientôt",
     "expiringForClient_other": "{{count}} crédits pour {{clientName}} expireront bientôt"
   },
+  "staleAction": {
+    "message": "Cette page n’est plus à jour. Actualisez-la pour rétablir les mises à jour et les actions."
+  },
   "licenseBanner": {
     "trialExpiresIn_one": "L'essai Pro expire dans {{count}} jour. Saisissez une clé de licence pour conserver les fonctionnalités Pro.",
     "trialExpiresIn_other": "L'essai Pro expire dans {{count}} jours. Saisissez une clé de licence pour conserver les fonctionnalités Pro.",

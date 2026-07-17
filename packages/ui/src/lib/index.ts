@@ -3,6 +3,7 @@ export * from './colorUtils';
 export * from './dateFnsLocale';
 export * from './dateInput';
 export * from './errorHandling';
+export * from './staleActionState';
 export * from './cookies';
 export * from './i18n/client';
 export * from './i18n/config';
