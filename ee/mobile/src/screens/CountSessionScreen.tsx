@@ -161,6 +161,14 @@ export function CountSessionScreen({ route, navigation }: Props) {
           <ListRow
             title={item.service_name ?? item.service_id}
             subtitle={item.sku ?? undefined}
+            onPress={
+              isOpen
+                ? () => {
+                    setEditingLine(item);
+                    setEditValue(String(item.counted_quantity));
+                  }
+                : undefined
+            }
             rightContent={
               isOpen ? (
                 <View style={{ flexDirection: "row", alignItems: "center", gap: theme.spacing.sm }}>
