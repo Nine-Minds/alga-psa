@@ -166,7 +166,8 @@ export const inventoryCountStartSchema = z.object({
 
 export const inventoryCountRecordSchema = z.object({
   service_id: uuidSchema,
-  counted_quantity: z.number().int().nonnegative(),
+  counted_quantity: z.number().int().nonnegative().optional(),
+  serials: z.array(z.string().trim().min(1)).optional(),
 });
 
 const purchaseOrderStatusSchema = z.enum([

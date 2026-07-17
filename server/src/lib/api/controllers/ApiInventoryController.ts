@@ -196,6 +196,15 @@ export class ApiInventoryController extends ApiBaseController {
     ));
   }
 
+  cancelCount() {
+    return this.execute('update', async (request) => createSuccessResponse(
+      await this.inventoryService.cancelCount(await this.routeId(request, 'sessionId'), request.context),
+      200,
+      undefined,
+      request,
+    ));
+  }
+
   listPurchaseOrders() {
     return this.execute('read', async (request) => {
       const query = this.validateQuery(request, inventoryPurchaseOrderListQuerySchema);

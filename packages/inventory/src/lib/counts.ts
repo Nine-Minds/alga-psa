@@ -152,3 +152,20 @@ export async function submitCountForReviewCore(
     .returning('*');
   return row as ICountSession;
 }
+
+/** Discard a count session with no stock effect. Approved sessions cannot be cancelled. */
+export async function cancelCountSessionCore(
+  trx: Knex.Transaction,
+  tenant: string,
+  _userId: string,
+  input: { session_id: string },
+): Promise<ICountSession> {
+  const session = await getCountSessionOrThrow(trx, tenant, input.session_id, true);
+  if (session.status === 'approved') throw new Error('An approved session cannot be cancelled');
+  if (session.status === 'cancelled') return session as ICountSession;
+  const [row] = await trx('count_sessions')
+    .where({ tenant, session_id: input.session_id })
+    .update({ status: 'cancelled', updated_at: trx.fn.now() })
+    .returning('*');
+  return row as ICountSession;
+}

@@ -256,7 +256,12 @@ export type CountLineRow = {
   service_id: string;
   service_name?: string;
   sku?: string | null;
+  is_serialized?: boolean;
   counted_quantity: number;
+  counted_serials?: string[] | null;
+  expected_quantity?: number;
+  variance?: number | null;
+  stale?: boolean;
 };
 
 export function listCountSessions(
@@ -302,7 +307,7 @@ export function recordCount(
   params: {
     apiKey: string;
     sessionId: string;
-    data: { service_id: string; counted_quantity: number };
+    data: { service_id: string; counted_quantity?: number; serials?: string[] };
     signal?: AbortSignal;
   },
 ): Promise<ApiResult<SuccessResponse<CountLineRow>>> {
@@ -322,6 +327,18 @@ export function submitCountSession(
   return client.request<SuccessResponse<CountSessionSummary>>({
     method: "POST",
     path: `/api/v1/inventory/counts/${params.sessionId}/submit`,
+    signal: params.signal,
+    headers: { "x-api-key": params.apiKey },
+  });
+}
+
+export function cancelCountSession(
+  client: ApiClient,
+  params: { apiKey: string; sessionId: string; signal?: AbortSignal },
+): Promise<ApiResult<SuccessResponse<CountSessionSummary>>> {
+  return client.request<SuccessResponse<CountSessionSummary>>({
+    method: "POST",
+    path: `/api/v1/inventory/counts/${params.sessionId}/cancel`,
     signal: params.signal,
     headers: { "x-api-key": params.apiKey },
   });

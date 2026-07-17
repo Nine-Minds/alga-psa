@@ -25,6 +25,7 @@ import {
   recordCountCore,
   startCountSessionCore,
   submitCountForReviewCore,
+  cancelCountSessionCore,
   timestampPayload,
 } from '@alga-psa/inventory';
 import type {
@@ -582,19 +583,60 @@ export class InventoryService extends BaseService<any> {
       .leftJoin('service_catalog as sc', function () {
         this.on('sc.service_id', '=', 'cl.service_id').andOn('sc.tenant', '=', 'cl.tenant');
       })
+      .leftJoin('product_inventory_settings as pis', function () {
+        this.on('pis.service_id', '=', 'cl.service_id').andOn('pis.tenant', '=', 'cl.tenant');
+      })
       .where({ 'cl.tenant': tenant, 'cl.session_id': sessionId })
       .orderBy('sc.service_name', 'asc')
-      .select('cl.service_id', 'sc.service_name', 'sc.sku', 'cl.counted_qty');
+      .select(
+        'cl.service_id',
+        'sc.service_name',
+        'sc.sku',
+        'cl.counted_qty',
+        'cl.counted_serials',
+        'cl.expected_qty',
+        'pis.is_serialized',
+      );
+    // Staleness (F067): the location's current on-hand no longer matches the
+    // snapshot the session was opened against — stock moved mid-count, recount.
+    const closed = session.status === 'approved' || session.status === 'cancelled';
+    const levels = closed
+      ? []
+      : await trx('stock_levels')
+          .where({ tenant, location_id: session.location_id })
+          .select('service_id', 'quantity_on_hand');
+    const onHandById = new Map((levels as any[]).map((level) => [level.service_id, numeric(level.quantity_on_hand)]));
     return {
       ...session,
       line_count: lines.length,
-      lines: (lines as any[]).map((line) => ({
-        service_id: line.service_id,
-        service_name: line.service_name ?? undefined,
-        sku: line.sku ?? null,
-        counted_quantity: numeric(line.counted_qty),
-      })),
+      lines: (lines as any[]).map((line) => {
+        const counted = line.counted_qty == null ? null : numeric(line.counted_qty);
+        const expected = numeric(line.expected_qty);
+        return {
+          service_id: line.service_id,
+          service_name: line.service_name ?? undefined,
+          sku: line.sku ?? null,
+          is_serialized: Boolean(line.is_serialized),
+          counted_quantity: counted ?? 0,
+          counted_serials: (line.counted_serials as string[] | null) ?? null,
+          expected_quantity: expected,
+          variance: counted == null ? null : counted - expected,
+          stale: closed ? false : (onHandById.get(line.service_id) ?? 0) !== expected,
+        };
+      }),
     };
+  }
+
+  async cancelCount(sessionId: string, context: ServiceContext): Promise<any> {
+    const knex = await this.getDbForContext(context);
+    try {
+      return await withTransaction(knex, async (trx) => {
+        await cancelCountSessionCore(trx, context.tenant, context.userId, { session_id: sessionId });
+        return this.hydrateCountSession(trx, context.tenant, sessionId);
+      });
+    } catch (error) {
+      throwInventoryApiError(error);
+    }
   }
 
   async getCount(sessionId: string, context: ServiceContext): Promise<any | null> {
@@ -622,19 +664,21 @@ export class InventoryService extends BaseService<any> {
           session_id: sessionId,
           service_id: data.service_id,
           counted_qty: data.counted_quantity,
+          serials: data.serials,
         });
         const row = await trx('count_lines as cl')
           .leftJoin('service_catalog as sc', function () {
             this.on('sc.service_id', '=', 'cl.service_id').andOn('sc.tenant', '=', 'cl.tenant');
           })
           .where({ 'cl.tenant': context.tenant, 'cl.session_id': sessionId, 'cl.service_id': data.service_id })
-          .select('cl.service_id', 'sc.service_name', 'sc.sku', 'cl.counted_qty')
+          .select('cl.service_id', 'sc.service_name', 'sc.sku', 'cl.counted_qty', 'cl.counted_serials')
           .first();
         return {
           service_id: row.service_id,
           service_name: row.service_name ?? undefined,
           sku: row.sku ?? null,
           counted_quantity: numeric(row.counted_qty),
+          counted_serials: (row.counted_serials as string[] | null) ?? null,
         };
       });
     } catch (error) {

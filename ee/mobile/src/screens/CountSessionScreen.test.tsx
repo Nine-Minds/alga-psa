@@ -6,6 +6,11 @@ vi.mock("react-i18next", () => ({
   useTranslation: () => ({ t: (_key: string, fallback?: string) => fallback ?? _key }),
 }));
 
+vi.mock("expo-camera", () => ({
+  CameraView: () => null,
+  useCameraPermissions: () => [{ granted: true }, () => Promise.resolve({ granted: true })],
+}));
+
 const mockGetSession = vi.fn();
 const mockRecord = vi.fn();
 vi.mock("../api/inventory", () => ({
@@ -40,7 +45,7 @@ async function renderScreen(): Promise<ReactTestRenderer> {
     tree = create(
       <CountSessionScreen
         route={{ key: "r", name: "CountSession", params: { sessionId: "cs-1" } } as never}
-        navigation={{ goBack: vi.fn() } as never}
+        navigation={{ goBack: vi.fn(), setOptions: vi.fn() } as never}
       />,
     );
   });
@@ -62,6 +67,21 @@ describe("CountSessionScreen", () => {
       expect.anything(),
       expect.objectContaining({ data: { service_id: "svc-1", counted_quantity: 3 } }),
     );
+  });
+
+  it("opens the serial accumulator for a serialized line and records serials", async () => {
+    mockGetSession.mockResolvedValue({
+      ok: true,
+      data: {
+        data: {
+          ...session,
+          lines: [{ service_id: "svc-2", service_name: "Phone", sku: "PH-1", is_serialized: true, counted_quantity: 0, expected_quantity: 3, variance: -3, stale: false }],
+        },
+      },
+    });
+    const tree = await renderScreen();
+    const serialButton = tree.root.findAll((node) => node.props.accessibilityLabel === "inventory-count-serials-svc-2")[0];
+    expect(serialButton).toBeTruthy();
   });
 
   it("opens the edit dialog from the quantity chip and saves an exact count", async () => {

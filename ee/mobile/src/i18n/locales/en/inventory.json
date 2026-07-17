@@ -107,7 +107,15 @@
     },
     "resumingOpen": "Resuming the open count for this location",
     "countedLabel": "Counted quantity",
-    "saveCount": "Save count"
+    "saveCount": "Save count",
+    "expected": "Expected {{n}}",
+    "variance": "variance {{v}}",
+    "staleBadge": "Stock moved — recount",
+    "cancelConfirm": "Cancel count",
+    "cancelConfirmTitle": "Cancel this count?",
+    "cancelConfirmBody": "The session is discarded with no effect on stock. This can't be undone.",
+    "cancelKeep": "Keep counting",
+    "cancelled": "Count cancelled"
   },
   "pos": {
     "title": "Purchase orders",
