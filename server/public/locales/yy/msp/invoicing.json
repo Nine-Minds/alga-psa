@@ -2,9 +2,6 @@
   "automaticInvoices": {
     "ready": {
       "title": "55555",
-      "titleFinalize": "55555",
-      "titleDelete": "55555",
-      "titleReverse": "55555",
       "description": "55555",
       "selectAllExplanation": "55555",
       "filterPlaceholder": "55555",
@@ -222,6 +219,9 @@
     },
     "errors": {
       "title": "55555",
+      "titleFinalize": "55555",
+      "titleDelete": "55555",
+      "titleReverse": "55555",
       "loadReady": "55555",
       "loadHistory": "55555"
     },
