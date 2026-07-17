@@ -1,8 +1,9 @@
 import React from "react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Alert, FlatList, Text, View } from "react-native";
+import { Alert, FlatList, Modal, Pressable, Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useTheme } from "../ui/ThemeContext";
 import { ListRow, PrimaryButton, Separator, TextInput } from "../ui/components";
 import { EmptyState, ErrorState, LoadingState } from "../ui/states";
@@ -30,6 +31,8 @@ export function CountSessionScreen({ route, navigation }: Props) {
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [scanCode, setScanCode] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [editingLine, setEditingLine] = useState<CountLineRow | null>(null);
+  const [editValue, setEditValue] = useState("");
   const abortRef = useRef<AbortController | null>(null);
 
   const fetchSession = useCallback(async () => {
@@ -160,15 +163,39 @@ export function CountSessionScreen({ route, navigation }: Props) {
             subtitle={item.sku ?? undefined}
             rightContent={
               isOpen ? (
-                <TextInput
-                  value={String(item.counted_quantity)}
-                  onChangeText={(text) => {
-                    const value = Number.parseInt(text, 10);
-                    if (Number.isFinite(value) && value >= 0) void record(item.service_id, value);
-                  }}
-                  numericMode="integer"
-                  accessibilityLabel={`inventory-count-line-${item.service_id}`}
-                />
+                <View style={{ flexDirection: "row", alignItems: "center", gap: theme.spacing.sm }}>
+                  <Pressable
+                    onPress={() => {
+                      setEditingLine(item);
+                      setEditValue(String(item.counted_quantity));
+                    }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`inventory-count-line-${item.service_id}`}
+                    hitSlop={8}
+                    style={{
+                      minWidth: 56,
+                      alignItems: "center",
+                      paddingVertical: theme.spacing.sm,
+                      paddingHorizontal: theme.spacing.md,
+                      borderWidth: 1,
+                      borderColor: theme.colors.border,
+                      borderRadius: theme.borderRadius.md,
+                      backgroundColor: theme.colors.card,
+                    }}
+                  >
+                    <Text style={{ ...theme.typography.body, color: theme.colors.text, fontWeight: "600" }}>
+                      {item.counted_quantity}
+                    </Text>
+                  </Pressable>
+                  <Pressable
+                    onPress={() => void record(item.service_id, item.counted_quantity + 1)}
+                    accessibilityRole="button"
+                    accessibilityLabel={`inventory-count-increment-${item.service_id}`}
+                    hitSlop={8}
+                  >
+                    <MaterialCommunityIcons name="plus-circle" size={34} color={theme.colors.primary} />
+                  </Pressable>
+                </View>
               ) : (
                 <Text style={{ ...theme.typography.body, color: theme.colors.text }}>{item.counted_quantity}</Text>
               )
@@ -184,6 +211,47 @@ export function CountSessionScreen({ route, navigation }: Props) {
           </PrimaryButton>
         </View>
       ) : null}
+      <Modal
+        visible={editingLine !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setEditingLine(null)}
+      >
+        <View style={{ flex: 1, justifyContent: "center", padding: theme.spacing.xl, backgroundColor: "rgba(0,0,0,0.45)" }}>
+          <View style={{ backgroundColor: theme.colors.card, borderRadius: theme.borderRadius.md, padding: theme.spacing.lg, gap: theme.spacing.md }}>
+            <Text style={{ ...theme.typography.title, color: theme.colors.text }}>
+              {editingLine?.service_name ?? ""}
+            </Text>
+            <TextInput
+              value={editValue}
+              onChangeText={setEditValue}
+              numericMode="integer"
+              label={t("counts.countedLabel", "Counted quantity")}
+              accessibilityLabel="inventory-count-edit-value"
+            />
+            <PrimaryButton
+              onPress={() => {
+                const value = Number.parseInt(editValue, 10);
+                if (editingLine && Number.isFinite(value) && value >= 0) {
+                  void record(editingLine.service_id, value);
+                }
+                setEditingLine(null);
+              }}
+              disabled={editValue.trim() === ""}
+              accessibilityLabel="inventory-count-edit-save"
+            >
+              {t("counts.saveCount", "Save count")}
+            </PrimaryButton>
+            <Text
+              onPress={() => setEditingLine(null)}
+              testID="inventory-count-edit-cancel"
+              style={{ ...theme.typography.body, color: theme.colors.textSecondary, textAlign: "center", padding: theme.spacing.xs }}
+            >
+              {t("common.cancel", "Cancel")}
+            </Text>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
