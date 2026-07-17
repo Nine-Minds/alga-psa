@@ -361,8 +361,8 @@ describe('TicketInfo board change status reselection', () => {
 
     await waitFor(() => {
       expect(getTicketStatusesMock).toHaveBeenCalledWith('board-a');
+      expect(statusSelect).toHaveValue('status-a');
     });
-    expect(statusSelect).toHaveValue('status-a');
     expect(saveButton).not.toBeDisabled();
 
     fireEvent.change(boardSelect, { target: { value: 'board-b' } });
@@ -422,6 +422,9 @@ describe('TicketInfo board change status reselection', () => {
     expect(screen.queryByLabelText("Don't notify the customer")).not.toBeInTheDocument();
 
     const [statusSelect] = screen.getAllByRole('combobox');
+    await waitFor(() => {
+      expect(statusSelect).toHaveValue('status-a');
+    });
     fireEvent.change(statusSelect, { target: { value: 'status-a-closed' } });
 
     const contactSuppression = await screen.findByLabelText("Don't notify the customer");
