@@ -80,9 +80,28 @@ export function CountsView() {
       const session = result.data.data;
       navigation.navigate("CountSession", { sessionId: session.session_id, locationName: session.location_name });
       void fetchSessions();
-    } else {
-      showToast({ tone: "error", message: t("scan.lookupFailed", "Lookup failed. Try again.") });
+      return;
     }
+    const status = "status" in result.error ? result.error.status : undefined;
+    if (status === 409) {
+      // Only one open count per location: a conflict means one already exists,
+      // so resume it instead of surfacing an error.
+      const existingSessions = await listCountSessions(client, { apiKey, page: 1, limit: 50 });
+      const open = existingSessions.ok
+        ? existingSessions.data.data.find(
+            (session) => session.location_id === startLocationId && session.status === "open",
+          )
+        : undefined;
+      if (open) {
+        showToast({ tone: "info", message: t("counts.resumingOpen", "Resuming the open count for this location") });
+        navigation.navigate("CountSession", { sessionId: open.session_id, locationName: open.location_name });
+        return;
+      }
+    }
+    showToast({
+      tone: "error",
+      message: result.error.message || t("scan.lookupFailed", "Lookup failed. Try again."),
+    });
   }, [client, apiKey, startLocationId, navigation, showToast, t, fetchSessions]);
 
   if (status === "no-access") {

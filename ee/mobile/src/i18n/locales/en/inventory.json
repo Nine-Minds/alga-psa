@@ -103,7 +103,8 @@
       "submitted": "Submitted",
       "approved": "Approved",
       "cancelled": "Cancelled"
-    }
+    },
+    "resumingOpen": "Resuming the open count for this location"
   },
   "pos": {
     "title": "Purchase orders",
