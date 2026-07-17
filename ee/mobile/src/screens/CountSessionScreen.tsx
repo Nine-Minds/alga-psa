@@ -16,7 +16,6 @@ import {
 } from "../api/inventory";
 import { useInventoryApi } from "../features/inventory/hooks/useInventoryApi";
 import { useToast } from "../ui/toast/ToastProvider";
-import { sanitizeQuantityInput } from "../features/inventory/numericInput";
 import type { RootStackParamList } from "../navigation/types";
 
 type Props = NativeStackScreenProps<RootStackParamList, "CountSession">;
@@ -164,10 +163,10 @@ export function CountSessionScreen({ route, navigation }: Props) {
                 <TextInput
                   value={String(item.counted_quantity)}
                   onChangeText={(text) => {
-                    const value = Number.parseInt(sanitizeQuantityInput(text), 10);
+                    const value = Number.parseInt(text, 10);
                     if (Number.isFinite(value) && value >= 0) void record(item.service_id, value);
                   }}
-                  keyboardType="number-pad"
+                  numericMode="integer"
                   accessibilityLabel={`inventory-count-line-${item.service_id}`}
                 />
               ) : (

@@ -10,7 +10,6 @@ import { useInventoryApi } from "../features/inventory/hooks/useInventoryApi";
 import { LocationPickerField } from "../features/inventory/components/LocationPickerField";
 import { SerialAccumulator } from "../features/inventory/components/SerialAccumulator";
 import { useToast } from "../ui/toast/ToastProvider";
-import { sanitizeDecimalInput, sanitizeQuantityInput } from "../features/inventory/numericInput";
 import type { RootStackParamList } from "../navigation/types";
 
 type Props = NativeStackScreenProps<RootStackParamList, "InventoryReceive">;
@@ -70,8 +69,8 @@ export function InventoryReceiveScreen({ route, navigation }: Props) {
         <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary }}>{t("receive.quantity", "Quantity")}</Text>
         <TextInput
           value={quantityText}
-          onChangeText={(text) => setQuantityText(sanitizeQuantityInput(text))}
-          keyboardType="number-pad"
+          onChangeText={setQuantityText}
+          numericMode="integer"
           accessibilityLabel="inventory-receive-quantity"
         />
       </View>
@@ -79,8 +78,8 @@ export function InventoryReceiveScreen({ route, navigation }: Props) {
         <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary }}>{t("receive.unitCost", "Unit cost")}</Text>
         <TextInput
           value={unitCostText}
-          onChangeText={(text) => setUnitCostText(sanitizeDecimalInput(text))}
-          keyboardType="decimal-pad"
+          onChangeText={setUnitCostText}
+          numericMode="decimal"
           placeholder="0.00"
           accessibilityLabel="inventory-receive-unit-cost"
         />

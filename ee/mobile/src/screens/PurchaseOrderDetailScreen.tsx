@@ -16,7 +16,6 @@ import { useInventoryApi } from "../features/inventory/hooks/useInventoryApi";
 import { SerialAccumulator } from "../features/inventory/components/SerialAccumulator";
 import { LocationPickerField } from "../features/inventory/components/LocationPickerField";
 import { useToast } from "../ui/toast/ToastProvider";
-import { sanitizeQuantityInput } from "../features/inventory/numericInput";
 import type { RootStackParamList } from "../navigation/types";
 
 type Props = NativeStackScreenProps<RootStackParamList, "PurchaseOrderDetail">;
@@ -143,8 +142,8 @@ export function PurchaseOrderDetailScreen({ route }: Props) {
                       <View style={{ flex: 1 }}>
                         <TextInput
                           value={quantityText}
-                          onChangeText={(text) => setQuantityText(sanitizeQuantityInput(text))}
-                          keyboardType="number-pad"
+                          onChangeText={setQuantityText}
+                          numericMode="integer"
                           placeholder={String(remaining)}
                           accessibilityLabel={`inventory-po-line-qty-${line.po_line_id}`}
                         />
