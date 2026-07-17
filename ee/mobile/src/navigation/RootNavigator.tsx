@@ -21,6 +21,7 @@ import { InventoryReceiveScreen } from "../screens/InventoryReceiveScreen";
 import { InventoryAdjustScreen } from "../screens/InventoryAdjustScreen";
 import { CountSessionScreen } from "../screens/CountSessionScreen";
 import { PurchaseOrderDetailScreen } from "../screens/PurchaseOrderDetailScreen";
+import { AssetDetailScreen } from "../screens/AssetDetailScreen";
 import { OpportunityDetailScreen } from "../screens/OpportunityDetailScreen";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../ui/ThemeContext";
@@ -178,6 +179,14 @@ export function RootNavigator({ isSignedIn }: { isSignedIn: boolean }) {
             component={PurchaseOrderDetailScreen}
             options={({ navigation, route }) => ({
               title: route.params.poNumber ?? tInventory("pos.title", "Purchase orders"),
+              ...headerBackOptions(backLabel, goBackOrTabs(navigation)),
+            })}
+          />
+          <Stack.Screen
+            name="AssetDetail"
+            component={AssetDetailScreen}
+            options={({ navigation, route }) => ({
+              title: route.params.assetName ?? tInventory("asset.title", "Asset"),
               ...headerBackOptions(backLabel, goBackOrTabs(navigation)),
             })}
           />

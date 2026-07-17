@@ -161,6 +161,7 @@
       "expiring_soon": "Warranty expiring",
       "expired": "Out of warranty",
       "unknown": "Warranty unknown"
-    }
+    },
+    "title": "Asset"
   }
 }

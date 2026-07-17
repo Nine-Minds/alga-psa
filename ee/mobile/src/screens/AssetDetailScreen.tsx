@@ -1,0 +1,337 @@
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
+import { useTranslation } from "react-i18next";
+import type { NativeStackScreenProps } from "@react-navigation/native-stack";
+import { useTheme } from "../ui/ThemeContext";
+import type { Theme } from "../ui/themes";
+import { Badge, Card, PrimaryButton, Separator } from "../ui/components";
+import { ErrorState, LoadingState } from "../ui/states";
+import { formatDateShort } from "../ui/formatters/dateTime";
+import {
+  getAsset,
+  getAssetHistory,
+  getAssetMaintenance,
+  getAssetTickets,
+  type AssetDetail,
+  type AssetTicketRow,
+  type AssetWarrantyStatus,
+  type MaintenanceHistoryItem,
+  type MaintenanceSchedule,
+} from "../api/assets";
+import { useInventoryApi } from "../features/inventory/hooks/useInventoryApi";
+import { usePullToRefresh } from "../hooks/usePullToRefresh";
+import { LinkTicketModal } from "../features/assets/LinkTicketModal";
+import { CreateTicketModal } from "../features/assets/CreateTicketModal";
+import type { RootStackParamList } from "../navigation/types";
+
+type Props = NativeStackScreenProps<RootStackParamList, "AssetDetail">;
+
+type BadgeTone = "neutral" | "info" | "success" | "warning" | "danger";
+
+const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
+
+function warrantyBadge(
+  status: AssetWarrantyStatus | undefined,
+  t: (key: string, fallback: string) => string,
+): { label: string; tone: BadgeTone } {
+  switch (status) {
+    case "active":
+      return { label: t("warranty.active", "Under warranty"), tone: "success" };
+    case "expiring_soon":
+      return { label: t("warranty.expiringSoon", "Warranty expiring"), tone: "warning" };
+    case "expired":
+      return { label: t("warranty.expired", "Out of warranty"), tone: "danger" };
+    default:
+      return { label: t("warranty.unknown", "Warranty unknown"), tone: "neutral" };
+  }
+}
+
+function maintenanceDueBadge(
+  nextMaintenance: string | null | undefined,
+  t: (key: string, fallback: string) => string,
+): { label: string; tone: BadgeTone } | null {
+  if (!nextMaintenance) return null;
+  const due = new Date(nextMaintenance).getTime();
+  if (Number.isNaN(due)) return null;
+  const now = Date.now();
+  if (due < now) return { label: t("maintenance.overdue", "Overdue"), tone: "warning" };
+  if (due - now <= SEVEN_DAYS_MS) return { label: t("maintenance.dueSoon", "Due soon"), tone: "warning" };
+  return null;
+}
+
+function FieldRow({ label, value }: { label: string; value: string }) {
+  const theme = useTheme();
+  return (
+    <View style={{ flexDirection: "row", justifyContent: "space-between", paddingVertical: theme.spacing.xs }}>
+      <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary }}>{label}</Text>
+      <Text style={{ ...theme.typography.body, color: theme.colors.text, flexShrink: 1, textAlign: "right" }}>{value}</Text>
+    </View>
+  );
+}
+
+function SectionTitle({ theme, children }: { theme: Theme; children: string }) {
+  return (
+    <Text style={{ ...theme.typography.body, color: theme.colors.text, fontWeight: "600", marginBottom: theme.spacing.sm }}>
+      {children}
+    </Text>
+  );
+}
+
+function EmptyLine({ theme, children }: { theme: Theme; children: string }) {
+  return <Text style={{ ...theme.typography.body, color: theme.colors.textSecondary }}>{children}</Text>;
+}
+
+export function AssetDetailScreen({ route, navigation }: Props) {
+  const { assetId, assetName } = route.params;
+  const theme = useTheme();
+  const { t } = useTranslation("assets");
+  const { client, apiKey } = useInventoryApi();
+
+  const [asset, setAsset] = useState<AssetDetail | null>(null);
+  const [maintenance, setMaintenance] = useState<MaintenanceSchedule[]>([]);
+  const [history, setHistory] = useState<MaintenanceHistoryItem[]>([]);
+  const [tickets, setTickets] = useState<AssetTicketRow[]>([]);
+  const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [linkOpen, setLinkOpen] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
+
+  const fetchAll = useCallback(async () => {
+    if (!client || !apiKey) return;
+    abortRef.current?.abort();
+    const controller = new AbortController();
+    abortRef.current = controller;
+    const [assetResult, maintResult, historyResult, ticketsResult] = await Promise.all([
+      getAsset(client, { apiKey, assetId, signal: controller.signal }),
+      getAssetMaintenance(client, { apiKey, assetId, signal: controller.signal }),
+      getAssetHistory(client, { apiKey, assetId, signal: controller.signal }),
+      getAssetTickets(client, { apiKey, assetId, signal: controller.signal }),
+    ]);
+    if (controller.signal.aborted) return;
+    if (!assetResult.ok) {
+      if (assetResult.error.kind !== "canceled") setStatus("error");
+      return;
+    }
+    setAsset(assetResult.data.data);
+    // Each secondary section degrades to empty on its own failure.
+    setMaintenance(maintResult.ok ? maintResult.data.data : []);
+    setHistory(historyResult.ok ? historyResult.data.data : []);
+    setTickets(ticketsResult.ok ? ticketsResult.data.data : []);
+    setStatus("ready");
+  }, [client, apiKey, assetId]);
+
+  const refetchTickets = useCallback(async () => {
+    if (!client || !apiKey) return;
+    const result = await getAssetTickets(client, { apiKey, assetId });
+    if (result.ok) setTickets(result.data.data);
+  }, [client, apiKey, assetId]);
+
+  const { refreshing, refresh } = usePullToRefresh(fetchAll);
+
+  useEffect(() => {
+    void fetchAll();
+    return () => abortRef.current?.abort();
+  }, [fetchAll]);
+
+  if (status === "loading") return <LoadingState message={t("detail.loading", "Loading device")} />;
+  if (status === "error" || !asset) {
+    return (
+      <ErrorState
+        title={t("errors.unableToLoad", "Unable to load this device.")}
+        action={
+          <Text
+            onPress={() => void fetchAll()}
+            testID="asset-detail-retry"
+            style={{ ...theme.typography.body, color: theme.colors.primary }}
+          >
+            {t("common.retry", "Retry")}
+          </Text>
+        }
+      />
+    );
+  }
+
+  const warranty = warrantyBadge(asset.warranty_status, t);
+  const hasClient = Boolean(asset.client_id);
+
+  return (
+    <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ padding: theme.spacing.md, gap: theme.spacing.md }}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}
+      >
+        {/* Identity */}
+        <Card>
+          <Text style={{ ...theme.typography.title, color: theme.colors.text }}>{asset.name ?? assetName}</Text>
+          <View style={{ flexDirection: "row", flexWrap: "wrap", gap: theme.spacing.sm, marginTop: theme.spacing.sm }}>
+            <Badge label={warranty.label} tone={warranty.tone} />
+            {asset.status ? <Badge label={asset.status} /> : null}
+          </View>
+          <View style={{ marginTop: theme.spacing.md }}>
+            {asset.asset_tag ? <FieldRow label={t("identity.tag", "Tag")} value={asset.asset_tag} /> : null}
+            {asset.serial_number ? <FieldRow label={t("identity.serial", "Serial")} value={asset.serial_number} /> : null}
+            {asset.asset_type ? <FieldRow label={t("identity.type", "Type")} value={asset.asset_type} /> : null}
+            {asset.client_name ? <FieldRow label={t("identity.client", "Client")} value={asset.client_name} /> : null}
+            {asset.location ? <FieldRow label={t("identity.location", "Location")} value={asset.location} /> : null}
+            {asset.warranty_end_date ? (
+              <FieldRow label={t("identity.warrantyEnds", "Warranty ends")} value={asset.warranty_end_date.slice(0, 10)} />
+            ) : null}
+            {asset.purchase_date ? (
+              <FieldRow label={t("identity.purchased", "Purchased")} value={formatDateShort(asset.purchase_date)} />
+            ) : null}
+          </View>
+        </Card>
+
+        {/* Actions */}
+        <Card>
+          <View style={{ gap: theme.spacing.sm }}>
+            <PrimaryButton onPress={() => setLinkOpen(true)} accessibilityLabel="asset-detail-link-ticket">
+              {t("actions.linkTicket", "Link to a ticket")}
+            </PrimaryButton>
+            <PrimaryButton
+              onPress={() => setCreateOpen(true)}
+              disabled={!hasClient}
+              accessibilityLabel="asset-detail-create-ticket"
+            >
+              {t("actions.createTicket", "Create a ticket about this device")}
+            </PrimaryButton>
+            {!hasClient ? (
+              <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, textAlign: "center" }}>
+                {t("actions.noClient", "This device isn't linked to a client, so a ticket can't be created here.")}
+              </Text>
+            ) : null}
+          </View>
+        </Card>
+
+        {/* Linked tickets */}
+        <Card>
+          <SectionTitle theme={theme}>{t("tickets.title", "Linked tickets")}</SectionTitle>
+          {tickets.length === 0 ? (
+            <EmptyLine theme={theme}>{t("tickets.empty", "No tickets linked to this device yet.")}</EmptyLine>
+          ) : (
+            tickets.map((ticket, index) => (
+              <View key={ticket.ticket_id}>
+                {index > 0 ? <Separator /> : null}
+                <Pressable
+                  onPress={() => navigation.navigate("TicketDetail", { ticketId: ticket.ticket_id })}
+                  accessibilityRole="button"
+                  accessibilityLabel={`asset-detail-ticket-${ticket.ticket_id}`}
+                  testID={`asset-detail-ticket-${ticket.ticket_id}`}
+                  style={({ pressed }) => ({ paddingVertical: theme.spacing.sm, opacity: pressed ? 0.7 : 1 })}
+                >
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: theme.spacing.sm }}>
+                    <Text style={{ ...theme.typography.body, color: theme.colors.text, flex: 1 }} numberOfLines={2}>
+                      {ticket.title ?? ticket.ticket_number ?? ticket.ticket_id}
+                    </Text>
+                    {ticket.status_name ? <Badge label={ticket.status_name} /> : null}
+                  </View>
+                  <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: 2 }}>
+                    {[ticket.ticket_number, ticket.relationship_type].filter(Boolean).join(" · ")}
+                  </Text>
+                </Pressable>
+              </View>
+            ))
+          )}
+        </Card>
+
+        {/* Maintenance */}
+        <Card>
+          <SectionTitle theme={theme}>{t("maintenance.title", "Maintenance")}</SectionTitle>
+          {maintenance.length === 0 ? (
+            <EmptyLine theme={theme}>{t("maintenance.empty", "No maintenance scheduled.")}</EmptyLine>
+          ) : (
+            maintenance.map((schedule, index) => {
+              const dueBadge = maintenanceDueBadge(schedule.next_maintenance, t);
+              const meta = [
+                schedule.maintenance_type,
+                schedule.frequency,
+                schedule.next_maintenance
+                  ? t("maintenance.next", "Next {{date}}", { date: formatDateShort(schedule.next_maintenance) })
+                  : null,
+              ]
+                .filter(Boolean)
+                .join(" · ");
+              return (
+                <View key={schedule.schedule_id} testID={`asset-detail-maintenance-${schedule.schedule_id}`}>
+                  {index > 0 ? <Separator /> : null}
+                  <View style={{ paddingVertical: theme.spacing.sm }}>
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: theme.spacing.sm }}>
+                      <Text style={{ ...theme.typography.body, color: theme.colors.text, flex: 1 }}>
+                        {schedule.schedule_name}
+                      </Text>
+                      {dueBadge ? <Badge label={dueBadge.label} tone={dueBadge.tone} /> : null}
+                    </View>
+                    {meta ? (
+                      <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: 2 }}>
+                        {meta}
+                      </Text>
+                    ) : null}
+                    {schedule.description ? (
+                      <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: 2 }}>
+                        {schedule.description}
+                      </Text>
+                    ) : null}
+                  </View>
+                </View>
+              );
+            })
+          )}
+        </Card>
+
+        {/* Service history */}
+        <Card>
+          <SectionTitle theme={theme}>{t("history.title", "Service history")}</SectionTitle>
+          {history.length === 0 ? (
+            <EmptyLine theme={theme}>{t("history.empty", "No service history yet.")}</EmptyLine>
+          ) : (
+            history.map((item, index) => {
+              const meta = [item.performed_at ? formatDateShort(item.performed_at) : null, item.performed_by_user_name]
+                .filter(Boolean)
+                .join(" · ");
+              return (
+                <View key={item.history_id} testID={`asset-detail-history-${item.history_id}`}>
+                  {index > 0 ? <Separator /> : null}
+                  <View style={{ paddingVertical: theme.spacing.sm }}>
+                    <Text style={{ ...theme.typography.body, color: theme.colors.text }}>
+                      {item.maintenance_type ?? item.description ?? t("history.title", "Service history")}
+                    </Text>
+                    {item.description && item.maintenance_type ? (
+                      <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: 2 }}>
+                        {item.description}
+                      </Text>
+                    ) : null}
+                    {meta ? (
+                      <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: 2 }}>
+                        {meta}
+                      </Text>
+                    ) : null}
+                  </View>
+                </View>
+              );
+            })
+          )}
+        </Card>
+      </ScrollView>
+
+      <LinkTicketModal
+        visible={linkOpen}
+        client={client}
+        apiKey={apiKey}
+        assetId={assetId}
+        onClose={() => setLinkOpen(false)}
+        onLinked={() => void refetchTickets()}
+      />
+
+      <CreateTicketModal
+        visible={createOpen}
+        client={client}
+        apiKey={apiKey}
+        assetId={assetId}
+        clientId={asset.client_id}
+        onClose={() => setCreateOpen(false)}
+        onCreated={() => void refetchTickets()}
+      />
+    </View>
+  );
+}
