@@ -195,6 +195,7 @@ vi.mock('@alga-psa/user-composition/actions', () => ({
   findUserById: vi.fn().mockResolvedValue(null),
   getCurrentUser: vi.fn().mockResolvedValue(null),
   getCurrentUserPermissions: vi.fn().mockResolvedValue([]),
+  searchUsersForMentions: vi.fn().mockResolvedValue([]),
 }));
 
 vi.mock('@alga-psa/reference-data/actions', () => ({

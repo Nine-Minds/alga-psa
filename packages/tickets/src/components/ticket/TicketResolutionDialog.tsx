@@ -10,7 +10,7 @@ import { Dialog, DialogContent } from "@alga-psa/ui/components/Dialog";
 import RichTextEditorSkeleton from "@alga-psa/ui/components/skeletons/RichTextEditorSkeleton";
 import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
 import { searchUsersForMentions } from "@alga-psa/user-composition/actions";
-import { DEFAULT_BLOCK } from "./TicketConversation";
+import { createTicketRichTextParagraph } from "../../lib/ticketRichText";
 import TicketNotificationSuppressionControl, {
   type TicketNotificationSuppressionValue,
 } from "./TicketNotificationSuppressionControl";
@@ -23,6 +23,8 @@ const TextEditor = dynamic(
     ssr: false,
   },
 );
+
+const DEFAULT_RESOLUTION_BLOCK = createTicketRichTextParagraph("");
 
 const defaultNotificationSuppression =
   (): TicketNotificationSuppressionValue => ({
@@ -77,7 +79,9 @@ export default function TicketResolutionDialog({
 }: TicketResolutionDialogProps) {
   const { t } = useTranslation("features/tickets");
   const [statusId, setStatusId] = useState<string | null>(null);
-  const [content, setContent] = useState<PartialBlock[]>(DEFAULT_BLOCK);
+  const [content, setContent] = useState<PartialBlock[]>(
+    DEFAULT_RESOLUTION_BLOCK,
+  );
   const [editorKey, setEditorKey] = useState(0);
   const [notificationSuppression, setNotificationSuppression] =
     useState<TicketNotificationSuppressionValue>(
@@ -105,14 +109,15 @@ export default function TicketResolutionDialog({
   useEffect(() => {
     if (isOpen) {
       setStatusId(statusOptions.length === 1 ? statusOptions[0].value : null);
-      setContent(DEFAULT_BLOCK);
+      setContent(DEFAULT_RESOLUTION_BLOCK);
       setEditorKey((currentKey) => currentKey + 1);
       setNotificationSuppression(defaultNotificationSuppression());
       resetDraftTracking();
     }
   }, [isOpen, resetDraftTracking, statusOptions]);
 
-  const hasContent = JSON.stringify(content) !== JSON.stringify(DEFAULT_BLOCK);
+  const hasContent =
+    JSON.stringify(content) !== JSON.stringify(DEFAULT_RESOLUTION_BLOCK);
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!statusId || !hasContent || isSubmitting) return;
@@ -194,7 +199,7 @@ export default function TicketResolutionDialog({
                 <TextEditor
                   id={`${id}-resolution`}
                   key={editorKey}
-                  initialContent={DEFAULT_BLOCK}
+                  initialContent={DEFAULT_RESOLUTION_BLOCK}
                   onContentChange={setContent}
                   searchMentions={searchUsersForMentions}
                   uploadFile={uploadSession.uploadFile}
