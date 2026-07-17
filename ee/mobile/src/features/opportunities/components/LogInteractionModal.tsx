@@ -184,7 +184,7 @@ export function LogInteractionModal({
             label={t("logInteraction.duration", "Duration (minutes)")}
             value={duration}
             onChangeText={setDuration}
-            keyboardType="number-pad"
+            numericMode="integer"
             disabled={submitting}
             accessibilityLabel={t("logInteraction.duration", "Duration (minutes)")}
           />

@@ -16,6 +16,7 @@ import {
 } from "../api/workflowTasks";
 import { extractSimpleFields, isSimpleTaskForm, type SimpleFormField } from "../features/userActivities/formClassifier";
 import { workflowTaskGating } from "../features/userActivities/workflowTaskGating";
+import { sanitizeNumericText } from "../ui/components/TextInput";
 import { useTheme } from "../ui/ThemeContext";
 import type { Theme } from "../ui/themes";
 import { Badge } from "../ui/components/Badge";
@@ -396,7 +397,11 @@ function SimpleField({
       {labelNode}
       <TextInput
         value={value === undefined || value === null ? "" : String(value)}
-        onChangeText={(text) => onChange(field.kind === "number" ? (text === "" ? undefined : Number(text)) : text)}
+        onChangeText={(text) => {
+          if (field.kind !== "number") return onChange(text);
+          const clean = sanitizeNumericText(text, "signedDecimal");
+          onChange(clean === "" ? undefined : Number(clean));
+        }}
         keyboardType={field.kind === "number" ? "numeric" : "default"}
         placeholder={field.description}
         placeholderTextColor={theme.colors.placeholder}

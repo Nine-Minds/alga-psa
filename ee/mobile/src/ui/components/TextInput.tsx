@@ -3,7 +3,7 @@ import type { KeyboardTypeOptions } from "react-native";
 import { Text, TextInput as RNTextInput, View } from "react-native";
 import { useTheme } from "../ThemeContext";
 
-export type NumericMode = "integer" | "signed" | "decimal";
+export type NumericMode = "integer" | "signed" | "decimal" | "signedDecimal";
 
 // iPads present a full keyboard regardless of keyboardType, so numeric fields
 // must sanitize what they accept rather than trust the keyboard layout.
@@ -14,15 +14,18 @@ export function sanitizeNumericText(text: string, mode: NumericMode): string {
     const digits = text.replace(/[^0-9]/g, "");
     return negative ? `-${digits}` : digits;
   }
+  const negative = mode === "signedDecimal" && text.trimStart().startsWith("-");
   const normalized = text.replace(/,/g, ".").replace(/[^0-9.]/g, "");
   const [head, ...rest] = normalized.split(".");
-  return rest.length > 0 ? `${head}.${rest.join("")}` : head;
+  const digits = rest.length > 0 ? `${head}.${rest.join("")}` : head;
+  return negative ? `-${digits}` : digits;
 }
 
 const NUMERIC_KEYBOARDS: Record<NumericMode, KeyboardTypeOptions> = {
   integer: "number-pad",
   signed: "numbers-and-punctuation",
   decimal: "decimal-pad",
+  signedDecimal: "numbers-and-punctuation",
 };
 
 export function TextInput({
