@@ -124,6 +124,7 @@ import { hasAdminSettingsViewAccess } from './commentMetadataDebug';
 import type { TicketScreenBootstrap } from '../../lib/ticketScreenBootstrap';
 import { normalizeTicketLiveField, type TicketLiveConflictState } from './ticketLiveFields';
 import TicketResolutionDialog from './TicketResolutionDialog';
+import { persistResolutionComment } from './resolutionCommentPersistence';
 
 interface PendingCommentDelete {
     commentId: string;
@@ -465,30 +466,41 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
     );
 
     const addResolutionComment = useCallback(async (resolution: string): Promise<boolean> => {
-        if (!ticket.ticket_id) {
+        const ticketId = ticket.ticket_id;
+        if (!ticketId) {
             toast.error(t('messages.closeFailed', 'Failed to close ticket'));
             return false;
         }
 
         try {
-            const result = await addTicketCommentWithCache(
-                ticket.ticket_id,
-                resolution,
-                false,
-                true,
-                true,
-            );
-            if (isReturnedActionError(result)) {
-                throw result;
-            }
-
-            const updatedComments = await findCommentsByTicketId(ticket.ticket_id);
-            if (isReturnedActionError(updatedComments)) {
-                throw updatedComments;
-            }
-            setConversations(updatedComments);
-            setActivityLogRefreshKey((value) => value + 1);
-            return true;
+            return await persistResolutionComment({
+                persistComment: async () => {
+                    const result = await addTicketCommentWithCache(
+                        ticketId,
+                        resolution,
+                        false,
+                        true,
+                        true,
+                    );
+                    if (isReturnedActionError(result)) {
+                        throw result;
+                    }
+                },
+                refreshComments: async () => {
+                    const updatedComments = await findCommentsByTicketId(ticketId);
+                    if (isReturnedActionError(updatedComments)) {
+                        throw updatedComments;
+                    }
+                    return updatedComments;
+                },
+                onCommentsRefreshed: (updatedComments) => {
+                    setConversations(updatedComments);
+                    setActivityLogRefreshKey((value) => value + 1);
+                },
+                onRefreshError: (error) => {
+                    handleTicketActionError(error, t('messages.loadCommentsFailed', 'Failed to load comments'));
+                },
+            });
         } catch (error) {
             handleTicketActionError(error, t('messages.addCommentFailed', 'Failed to add comment'));
             return false;
