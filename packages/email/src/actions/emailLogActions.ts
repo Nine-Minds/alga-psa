@@ -144,7 +144,7 @@ export const getEmailLogs = withAuth(
     const { knex } = await createTenantKnex();
 
     const page = Math.max(1, filters.page ?? 1);
-    const pageSize = Math.min(Math.max(filters.pageSize ?? 25, 1), 200);
+    const pageSize = Math.min(Math.max(filters.pageSize ?? 50, 1), 200);
     const sortDirection = filters.sortDirection === 'asc' ? 'asc' : 'desc';
     const offset = (page - 1) * pageSize;
 
