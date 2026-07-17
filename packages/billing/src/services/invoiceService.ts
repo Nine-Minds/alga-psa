@@ -190,6 +190,10 @@ function getRecurringChargeFamilyForInvoiceLinkage(
   }
 }
 
+function requiresRecurringServicePeriodLinkage(charge: IBillingCharge): boolean {
+  return Boolean(charge.servicePeriodRecordId || charge.client_contract_line_id);
+}
+
 export async function validateSessionAndTenant(): Promise<InvoiceContext> {
   const session = await getSessionAsync();
   if (!session?.user?.id) {
@@ -1020,6 +1024,8 @@ export async function persistInvoiceCharges(
     const shouldPersistDetail =
       recurringChargeFamily !== null
       && Boolean(charge.servicePeriodStart || charge.servicePeriodEnd || charge.billingTiming);
+    const shouldLinkRecurringServicePeriod =
+      shouldPersistDetail && requiresRecurringServicePeriodLinkage(charge);
 
     await linkAndMarkSourceBillingRecord({
       tx,
@@ -1054,29 +1060,31 @@ export async function persistInvoiceCharges(
         tenant
       });
 
-      const linkedCount = await linkRecurringServicePeriodToInvoiceDetail({
-        tx,
-        tenant,
-        clientId: client.client_id,
-        invoiceId,
-        invoiceChargeId: invoiceItem.item_id,
-        invoiceChargeDetailId: detailId,
-        servicePeriodRecordId: charge.servicePeriodRecordId ?? null,
-        configId: charge.config_id,
-        contractLineId: charge.client_contract_line_id ?? null,
-        chargeFamily: recurringChargeFamily,
-        servicePeriodStart: charge.servicePeriodStart ?? null,
-        servicePeriodEnd: charge.servicePeriodEnd ?? null,
-        billingTiming: charge.billingTiming ?? null,
-        linkedAt: now,
-      });
-      assertRecurringPeriodLinked({
-        updatedCount: linkedCount,
-        invoiceId,
-        invoiceChargeId: invoiceItem.item_id,
-        invoiceChargeDetailId: detailId,
-        servicePeriodRecordId: charge.servicePeriodRecordId ?? null,
-      });
+      if (shouldLinkRecurringServicePeriod) {
+        const linkedCount = await linkRecurringServicePeriodToInvoiceDetail({
+          tx,
+          tenant,
+          clientId: client.client_id,
+          invoiceId,
+          invoiceChargeId: invoiceItem.item_id,
+          invoiceChargeDetailId: detailId,
+          servicePeriodRecordId: charge.servicePeriodRecordId ?? null,
+          configId: charge.config_id,
+          contractLineId: charge.client_contract_line_id ?? null,
+          chargeFamily: recurringChargeFamily,
+          servicePeriodStart: charge.servicePeriodStart ?? null,
+          servicePeriodEnd: charge.servicePeriodEnd ?? null,
+          billingTiming: charge.billingTiming ?? null,
+          linkedAt: now,
+        });
+        assertRecurringPeriodLinked({
+          updatedCount: linkedCount,
+          invoiceId,
+          invoiceChargeId: invoiceItem.item_id,
+          invoiceChargeDetailId: detailId,
+          servicePeriodRecordId: charge.servicePeriodRecordId ?? null,
+        });
+      }
     }
 
     otherSubtotal += netAmount;

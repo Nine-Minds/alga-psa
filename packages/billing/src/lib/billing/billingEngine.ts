@@ -3372,6 +3372,7 @@ export class BillingEngine {
           is_taxable: isTaxable, // Use derived value
           servicePeriodStart,
           servicePeriodEnd,
+          servicePeriodRecordId: timingResolution.servicePeriodRecordId ?? null,
           billingTiming: timingResolution.duePosition,
           // Add contract association information when the plan is covered by a contract assignment
           client_contract_id:
@@ -3674,6 +3675,7 @@ export class BillingEngine {
           is_taxable: isTaxable, // Use derived value
           servicePeriodStart,
           servicePeriodEnd,
+          servicePeriodRecordId: timingResolution.servicePeriodRecordId ?? null,
           billingTiming: timingResolution.duePosition,
           // Add contract association information when the plan is covered by a contract assignment
           client_contract_id:
