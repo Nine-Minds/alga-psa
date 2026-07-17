@@ -1,5 +1,5 @@
-import inventory from "../../../../../docs/plans/2026-07-17-email-template-variables-inventory.json";
 import type { VariableDef, VariableType } from "./types";
+import { sharedBlockSeed } from "./seed";
 
 type InventoryVariable = {
   path: string;
@@ -44,7 +44,7 @@ function blockVariable(variable: InventoryVariable): VariableDef {
  * entries remain per-template because availability is never block-global.
  */
 export const sharedVariableBlocks = Object.fromEntries(
-  inventory.synthesis.sharedBlocks.map((block) => [
+  sharedBlockSeed.map((block) => [
     block.name,
     block.variables.map((variable) =>
       blockVariable(variable as InventoryVariable),

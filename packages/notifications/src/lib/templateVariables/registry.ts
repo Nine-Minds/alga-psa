@@ -1,5 +1,5 @@
-import inventory from "../../../../../docs/plans/2026-07-17-email-template-variables-inventory.json";
 import { normalizeVariableType, sharedVariableBlocks } from "./blocks";
+import { templateVariableSeed } from "./seed";
 import type {
   TemplateVariableRegistry,
   VariableAvailability,
@@ -101,7 +101,7 @@ function correctedVariables(
 
 export const templateVariableRegistry: TemplateVariableRegistry =
   Object.fromEntries(
-    inventory.categories.flatMap((category) =>
+  templateVariableSeed.flatMap((category) =>
       category.templates.map((template) => [
         template.templateName,
         {
