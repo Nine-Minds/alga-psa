@@ -174,6 +174,60 @@ function toUnit(row: any): InventoryUnit {
     client_name: row.client_name ?? null,
     warranty_expires_at: row.warranty_expires_at ?? null,
     warranty_term: row.warranty_term ?? null,
+    // Once delivered + converted, a unit links to a managed asset; the scan
+    // card offers "View asset" when this is set.
+    asset_id: row.asset_id ?? null,
+  };
+}
+
+function warrantyStatusFrom(endDate: unknown): 'active' | 'expiring_soon' | 'expired' | 'unknown' {
+  if (!endDate) return 'unknown';
+  const end = new Date(endDate as string).getTime();
+  if (Number.isNaN(end)) return 'unknown';
+  const now = Date.now();
+  if (end < now) return 'expired';
+  if (end < now + 30 * 24 * 60 * 60 * 1000) return 'expiring_soon';
+  return 'active';
+}
+
+// Field-tech scan resolution into the ASSET domain: a scanned serial/tag can
+// belong to a managed asset (delivered inventory that became an asset, or an
+// RMM-discovered device that never touched inventory).
+function assetScanQuery(trx: Knex.Transaction, tenant: string): Knex.QueryBuilder {
+  return trx('assets as a')
+    .leftJoin('clients as c', function () {
+      this.on('c.client_id', '=', 'a.client_id').andOn('c.tenant', '=', 'a.tenant');
+    })
+    .where({ 'a.tenant': tenant })
+    .select(
+      'a.asset_id',
+      'a.asset_tag',
+      'a.name',
+      'a.serial_number',
+      'a.asset_type',
+      'a.status',
+      'a.client_id',
+      'c.client_name',
+      'a.warranty_end_date',
+      'a.location',
+      'a.stock_unit_id',
+    );
+}
+
+function toAssetSummary(row: any) {
+  return {
+    asset_id: row.asset_id,
+    asset_tag: row.asset_tag ?? null,
+    name: row.name,
+    serial_number: row.serial_number ?? null,
+    asset_type: row.asset_type ?? null,
+    status: row.status ?? null,
+    client_id: row.client_id ?? null,
+    client_name: row.client_name ?? null,
+    warranty_end_date: row.warranty_end_date ?? null,
+    warranty_status: warrantyStatusFrom(row.warranty_end_date),
+    location: row.location ?? null,
+    stock_unit_id: row.stock_unit_id ?? null,
   };
 }
 
@@ -268,17 +322,29 @@ export class InventoryService extends BaseService<any> {
             .orderBy('sc.sku', 'asc')
             .first();
 
+      const assetRows = await assetScanQuery(trx, context.tenant)
+        .andWhere((builder) => builder.where('a.serial_number', trimmed).orWhere('a.asset_tag', trimmed));
+
       const productRows = [barcodeProduct, exactSkuProduct ?? fallbackSkuProduct].filter(Boolean);
       const products = [...new Map(productRows.map((row: any) => [row.service_id, row])).values()];
       const unitRows = [...(serialUnits as any[]), ...(macUnits as any[])];
       const units = [...new Map(unitRows.map((row: any) => [row.unit_id, row])).values()];
+      // A found unit already links to its asset via unit.asset_id (the card
+      // offers "View asset"); don't also surface that same asset as a separate
+      // hit. Only directly-matched assets NOT reachable through a found unit.
+      const unitAssetIds = new Set(units.map((row: any) => row.asset_id).filter(Boolean));
+      const assets = [...new Map((assetRows as any[]).map((row) => [row.asset_id, row])).values()]
+        .filter((row: any) => !unitAssetIds.has(row.asset_id));
 
-      if (products.length > 0 && units.length > 0) {
+      const domains = (products.length > 0 ? 1 : 0) + (units.length > 0 ? 1 : 0) + (assets.length > 0 ? 1 : 0);
+
+      if (domains > 1) {
         return {
           type: 'multi',
           matches: [
             ...products.map((row: any) => ({ kind: 'product' as const, product: toProduct(row) })),
             ...units.map((row: any) => ({ kind: 'unit' as const, unit: toUnit(row) })),
+            ...assets.map((row: any) => ({ kind: 'asset' as const, asset: toAssetSummary(row) })),
           ],
         };
       }
@@ -292,6 +358,10 @@ export class InventoryService extends BaseService<any> {
       if (units.length > 0) {
         const row: any = units[0];
         return { type: 'unit', unit: toUnit(row), product: toProduct(row) };
+      }
+
+      if (assets.length > 0) {
+        return { type: 'asset', asset: toAssetSummary(assets[0]) };
       }
 
       const rawPrefix = `${escapeLike(trimmed)}%`;

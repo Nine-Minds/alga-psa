@@ -58,6 +58,22 @@ export const stockUnitSummarySchema = z.object({
   client_name: z.string().nullable().optional(),
   warranty_expires_at: nullableDateSchema,
   warranty_term: z.string().nullable().optional(),
+  asset_id: uuidSchema.nullable().optional(),
+});
+
+export const inventoryAssetSummarySchema = z.object({
+  asset_id: uuidSchema,
+  asset_tag: z.string().nullable().optional(),
+  name: z.string(),
+  serial_number: z.string().nullable().optional(),
+  asset_type: z.string().nullable().optional(),
+  status: z.string().nullable().optional(),
+  client_id: uuidSchema.nullable().optional(),
+  client_name: z.string().nullable().optional(),
+  warranty_end_date: nullableDateSchema,
+  warranty_status: z.enum(['active', 'expiring_soon', 'expired', 'unknown']),
+  location: z.string().nullable().optional(),
+  stock_unit_id: uuidSchema.nullable().optional(),
 });
 
 export const stockMovementSchema = z.object({
@@ -89,6 +105,13 @@ const unitLookupMatchSchema = z.object({
   unit: stockUnitSummarySchema,
 });
 
+const assetLookupMatchSchema = z.object({
+  kind: z.literal('asset'),
+  asset: inventoryAssetSummarySchema,
+});
+
+const lookupMatchSchema = z.union([productLookupMatchSchema, unitLookupMatchSchema, assetLookupMatchSchema]);
+
 export const inventoryLookupResultSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('product'),
@@ -101,12 +124,16 @@ export const inventoryLookupResultSchema = z.discriminatedUnion('type', [
     product: inventoryProductSchema,
   }),
   z.object({
+    type: z.literal('asset'),
+    asset: inventoryAssetSummarySchema,
+  }),
+  z.object({
     type: z.literal('multi'),
-    matches: z.array(z.union([productLookupMatchSchema, unitLookupMatchSchema])).min(2),
+    matches: z.array(lookupMatchSchema).min(2),
   }),
   z.object({
     type: z.literal('none'),
-    candidates: z.array(z.union([productLookupMatchSchema, unitLookupMatchSchema])),
+    candidates: z.array(lookupMatchSchema),
   }),
 ]);
 

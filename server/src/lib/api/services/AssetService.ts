@@ -218,12 +218,23 @@ export class AssetService extends BaseService<any> {
     const asset = await this.getById(id, context);
     if (!asset) return null;
 
+    // The auxiliary sub-objects are best-effort: a failing join (some carry
+    // legacy schema drift) must degrade to empty, never 500 the whole asset.
+    const settle = async <T>(work: Promise<T>, fallback: T): Promise<T> => {
+      try {
+        return await work;
+      } catch (error) {
+        console.error(`[AssetService.getWithDetails] sub-query failed for asset ${id}:`, error);
+        return fallback;
+      }
+    };
+
     const [client, extensionData, relationships, documents, maintenanceSchedules] = await Promise.all([
-      this.getAssetClient(asset.client_id, context),
-      this.getAssetExtensionData(id, asset.asset_type, context),
-      this.getAssetRelationships(id, context),
-      this.getAssetDocuments(id, context),
-      this.getMaintenanceSchedules(id, context)
+      settle(this.getAssetClient(asset.client_id, context), null),
+      settle(this.getAssetExtensionData(id, asset.asset_type, context), null),
+      settle(this.getAssetRelationships(id, context), [] as any[]),
+      settle(this.getAssetDocuments(id, context), [] as any[]),
+      settle(this.getMaintenanceSchedules(id, context), [] as any[]),
     ]);
 
     return {
@@ -735,15 +746,17 @@ export class AssetService extends BaseService<any> {
   // Maintenance management
   async getMaintenanceSchedules(assetId: string, context: ServiceContext): Promise<any[]> {
     const knex = await this.getDbForContext(context);
+    // The schedule table has no assigned_to; it records created_by. Join on
+    // that to surface who set the schedule up (nullable-safe left join).
     const query = scopedTable(knex, context.tenant, 'asset_maintenance_schedules')
       .where({
         'asset_maintenance_schedules.asset_id': assetId
       })
       .select(
         'asset_maintenance_schedules.*',
-        knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as assigned_user_name`)
+        knex.raw(`CONCAT(users.first_name, ' ', users.last_name) as created_by_name`)
       );
-    tenantDb(knex, context.tenant).tenantJoin(query, 'users', 'asset_maintenance_schedules.assigned_to', 'users.user_id', {
+    tenantDb(knex, context.tenant).tenantJoin(query, 'users', 'asset_maintenance_schedules.created_by', 'users.user_id', {
       type: 'left',
     });
     return query;
@@ -1023,7 +1036,9 @@ export class AssetService extends BaseService<any> {
     const knex = await this.getDbForContext(context);
     return scopedTable(knex, context.tenant, 'clients')
       .where({ client_id: clientId })
-      .select('client_id', 'client_name', 'email', 'phone_no')
+      // clients holds only client_name/url/billing_email; contact email/phone
+      // live on the client's locations/contacts, not here.
+      .select('client_id', 'client_name', 'billing_email')
       .first();
   }
 
