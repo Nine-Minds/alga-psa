@@ -7,6 +7,7 @@ import { IService } from '@alga-psa/types';
 
 import { v4 as uuidv4 } from 'uuid';
 import { ContractLineServiceConfigurationService } from '../services/contractLineServiceConfigurationService';
+import { resolveContractLineServiceConfigurationType } from '../lib/contractLineServiceConfigPolicy';
 import * as planServiceConfigActions from './contractLineServiceConfigurationActions';
 import { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth';
@@ -401,23 +402,10 @@ async function addServiceToLiveContractLine(
     }
   }
 
-  const allowedConfigTypesByLine: Record<
-    'Fixed' | 'Hourly' | 'Usage',
-    Array<'Fixed' | 'Hourly' | 'Usage' | 'Bucket'>
-  > = {
-    Fixed: ['Fixed', 'Bucket'],
-    Hourly: ['Hourly', 'Bucket'],
-    Usage: ['Usage', 'Bucket'],
-  };
-  const configurationType = configType ?? contractLine.contract_line_type;
-  const allowedConfigTypes = allowedConfigTypesByLine[
-    contractLine.contract_line_type as 'Fixed' | 'Hourly' | 'Usage'
-  ] ?? ['Fixed'];
-  if (!allowedConfigTypes.includes(configurationType)) {
-    throw new Error(
-      `Configuration type ${configurationType} is not valid for ${contractLine.contract_line_type} contract lines. Allowed: ${allowedConfigTypes.join(', ')}.`
-    );
-  }
+  const configurationType = resolveContractLineServiceConfigurationType(
+    contractLine.contract_line_type,
+    configType,
+  );
 
   let resolvedTypeConfig = typeConfig || {};
   if (configurationType === 'Bucket') {
