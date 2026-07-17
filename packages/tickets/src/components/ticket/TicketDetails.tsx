@@ -123,7 +123,6 @@ import { isBoardLiveTicketTimerEnabled } from '../../lib/boardLiveTicketTimer';
 import { hasAdminSettingsViewAccess } from './commentMetadataDebug';
 import type { TicketScreenBootstrap } from '../../lib/ticketScreenBootstrap';
 import { normalizeTicketLiveField, type TicketLiveConflictState } from './ticketLiveFields';
-import { createTicketRichTextParagraph } from '../../lib/ticketRichText';
 import TicketResolutionDialog from './TicketResolutionDialog';
 
 interface PendingCommentDelete {
@@ -474,7 +473,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         try {
             const result = await addTicketCommentWithCache(
                 ticket.ticket_id,
-                JSON.stringify(createTicketRichTextParagraph(resolution)),
+                resolution,
                 false,
                 true,
                 true,
@@ -2662,7 +2661,11 @@ const handleClose = () => {
         ticket.ticket_id,
     ]);
 
-    const handleResolveAndClose = useCallback(async (statusId: string, resolution: string) => {
+    const handleResolveAndClose = useCallback(async (
+        statusId: string,
+        contentBlocks: PartialBlock[],
+        suppression: TicketNotificationSuppressionValue,
+    ) => {
         if (!ticket.ticket_id || !closedStatusOptions.some((option) => option.value === statusId)) {
             toast.error(t('messages.closeFailed', 'Failed to close ticket'));
             return;
@@ -2670,7 +2673,7 @@ const handleClose = () => {
 
         setIsSubmittingResolutionClose(true);
         try {
-            const resolutionAdded = await addResolutionComment(resolution);
+            const resolutionAdded = await addResolutionComment(JSON.stringify(contentBlocks));
             if (!resolutionAdded) {
                 return;
             }
@@ -2689,7 +2692,7 @@ const handleClose = () => {
                         statusId,
                         failures: check.failures,
                         canOverride: check.canOverride,
-                        suppression: null,
+                        suppression: suppression.suppressContactNotifications ? suppression : null,
                     });
                     return;
                 }
@@ -2700,7 +2703,11 @@ const handleClose = () => {
 
             const result = await runWithPendingLiveFields(
                 ['status_id', 'response_state'],
-                () => updateTicketWithCache(ticket.ticket_id!, { status_id: statusId }),
+                () => updateTicketWithCache(
+                    ticket.ticket_id!,
+                    { status_id: statusId },
+                    suppression.suppressContactNotifications ? suppression : undefined,
+                ),
             );
             if (isReturnedActionError(result)) {
                 throw result;
@@ -3428,6 +3435,8 @@ const handleClose = () => {
                 <TicketResolutionDialog
                     id={`${id}-resolution-close`}
                     isOpen={isResolutionCloseDialogOpen}
+                    ticketId={ticket.ticket_id!}
+                    currentUserId={userId}
                     statusOptions={closedStatusOptions}
                     isSubmitting={isSubmittingResolutionClose}
                     onClose={() => {
@@ -3436,6 +3445,10 @@ const handleClose = () => {
                         }
                     }}
                     onConfirm={handleResolveAndClose}
+                    onClipboardImageUploaded={refreshTicketDocuments}
+                    uploadTicketAttachmentAction={uploadTicketAttachmentAction}
+                    deleteDraftTicketAttachmentImagesAction={deleteDraftTicketAttachmentImagesAction}
+                    resolveTicketAttachmentViewUrl={resolveTicketAttachmentViewUrl}
                 />
                 
                 {/* Blocked-close dialog: unmet close rules with quick actions and

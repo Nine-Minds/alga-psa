@@ -984,7 +984,6 @@
     "resolveAndClose": "Rozwiąż i zamknij",
     "closeTicketResolutionPrompt": "Wybierz status zamknięcia i dodaj rozwiązanie tego zgłoszenia.",
     "selectCloseStatus": "Wybierz status zamknięcia",
-    "closeTicketResolutionPlaceholder": "Podsumuj rozwiązanie na potrzeby historii zgłoszenia i klienta.",
     "cannotCloseYet": "Tego zgłoszenia nie można jeszcze zamknąć",
     "closeRulesIntro": "Reguły zamykania tablicy wymagają spełnienia poniższych warunków przed zamknięciem tego zgłoszenia:",
     "viewChecklist": "Zobacz listę kontrolną",
