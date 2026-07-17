@@ -21,6 +21,7 @@ describe('resolveWorkflowEventCorrelation', () => {
     });
     expect(resolution).toEqual({
       key: 'explicit-key',
+      keys: ['explicit-key'],
       source: 'explicit',
       detail: 'event.workflow_correlation_key',
     });
@@ -33,8 +34,34 @@ describe('resolveWorkflowEventCorrelation', () => {
       payload: { ticketId: 'ticket-42' },
     });
     expect(resolution.key).toBe('ticket-42');
+    expect(resolution.keys).toEqual(['ticket-42']);
     expect(resolution.source).toBe('derived');
-    expect(resolution.detail).toBe('path:ticketId (default)');
+    expect(resolution.detail).toBe('paths:ticketId (default)');
+  });
+
+  it('derives every available path value, not just the first', () => {
+    delete process.env[ENV_KEY];
+    const resolution = resolveWorkflowEventCorrelation({
+      eventName: 'INVOICE_FINALIZED',
+      payload: { invoiceId: 'inv-7', clientId: 'client-3' },
+    });
+    // A wait keyed on clientId must be reachable even though invoiceId is
+    // always present (it is a required payload field).
+    expect(resolution.key).toBe('inv-7');
+    expect(resolution.keys).toEqual(['inv-7', 'client-3']);
+    expect(resolution.source).toBe('derived');
+    expect(resolution.detail).toBe('paths:invoiceId,clientId (default)');
+  });
+
+  it('dedupes repeated values across event-specific and wildcard paths', () => {
+    delete process.env[ENV_KEY];
+    const resolution = resolveWorkflowEventCorrelation({
+      eventName: 'TICKET_CREATED',
+      payload: { ticketId: 'ticket-9', clientId: 'client-2' },
+    });
+    // ticketId appears in both the event-specific and wildcard lists; the
+    // wildcard also derives clientId.
+    expect(resolution.keys).toEqual(['ticket-9', 'client-2']);
   });
 
   it('derives via wildcard defaults for unlisted event types', () => {
@@ -44,6 +71,7 @@ describe('resolveWorkflowEventCorrelation', () => {
       payload: { invoiceId: 'inv-7' },
     });
     expect(resolution.key).toBe('inv-7');
+    expect(resolution.keys).toEqual(['inv-7']);
     expect(resolution.source).toBe('derived');
   });
 
@@ -54,7 +82,8 @@ describe('resolveWorkflowEventCorrelation', () => {
       payload: { nested: { id: 'n-1' } },
     });
     expect(resolution.key).toBe('n-1');
-    expect(resolution.detail).toBe('path:nested.id (env)');
+    expect(resolution.keys).toEqual(['n-1']);
+    expect(resolution.detail).toBe('paths:nested.id (env)');
   });
 
   it('returns missing when no path yields a value', () => {
@@ -64,6 +93,7 @@ describe('resolveWorkflowEventCorrelation', () => {
       payload: { foo: 'bar' },
     });
     expect(resolution.key).toBeNull();
+    expect(resolution.keys).toEqual([]);
     expect(resolution.source).toBe('missing');
   });
 });

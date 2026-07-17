@@ -861,7 +861,7 @@ describe('ticket workflow runtime board-scoped statuses', () => {
     expect(result.ticket.response_state).toBe('awaiting_client');
   });
 
-  it('T043: tickets.find returns newest comments first by default with truncation metadata', async () => {
+  it('T043: tickets.find returns oldest comments first by default with truncation metadata', async () => {
     setTenantTx({
       tickets: [createFindTicket()],
       comments: createFindComments(),
@@ -879,7 +879,9 @@ describe('ticket workflow runtime board-scoped statuses', () => {
       createActionContext()
     );
 
-    expect(result.comments.map((comment: TableRow) => comment.note)).toEqual(['Newest comment', 'Middle comment']);
+    // Default stays asc: published v1 definitions rely on comments[0] being
+    // the oldest comment; newest-first is an explicit opt-in.
+    expect(result.comments.map((comment: TableRow) => comment.note)).toEqual(['Oldest comment', 'Middle comment']);
     expect(result.comments_meta).toEqual({
       total_count: 3,
       returned_count: 2,
@@ -887,7 +889,7 @@ describe('ticket workflow runtime board-scoped statuses', () => {
     });
   });
 
-  it('T044: tickets.find supports ascending comment order', async () => {
+  it('T044: tickets.find supports descending comment order', async () => {
     setTenantTx({
       tickets: [createFindTicket()],
       comments: createFindComments(),
@@ -899,16 +901,16 @@ describe('ticket workflow runtime board-scoped statuses', () => {
         ticket_id: findIds.ticketId,
         include: {
           comments: true,
-          comments_order: 'asc',
+          comments_order: 'desc',
         },
       },
       createActionContext()
     );
 
     expect(result.comments.map((comment: TableRow) => comment.note)).toEqual([
-      'Oldest comment',
-      'Middle comment',
       'Newest comment',
+      'Middle comment',
+      'Oldest comment',
     ]);
     expect(result.comments_meta).toEqual({
       total_count: 3,

@@ -876,7 +876,6 @@ async function executeActionInvocation(input: {
     status: 'STARTED',
     attempt: 1,
     input_json: parsedInput as Record<string, unknown>,
-    error_json: null,
     started_at: new Date().toISOString(),
   });
 
@@ -897,19 +896,30 @@ async function executeActionInvocation(input: {
     await WorkflowActionInvocationModelV2.update(input.knex, invocation.invocation_id, {
       status: 'SUCCEEDED',
       output_json: parsedOutput as Record<string, unknown>,
-      error_json: null,
       completed_at: new Date().toISOString(),
     }, input.tenantId);
     return parsedOutput;
   } catch (error) {
     const runtimeError = normalizeActionRuntimeError(error, input.stepPath);
     const errorJson = prepareActionInvocationErrorJson(runtimeError);
-    await WorkflowActionInvocationModelV2.update(input.knex, invocation.invocation_id, {
+    const failureUpdate = {
       status: 'FAILED',
       error_message: runtimeError.message,
-      error_json: errorJson,
       completed_at: new Date().toISOString(),
-    }, input.tenantId);
+    };
+    try {
+      await WorkflowActionInvocationModelV2.update(input.knex, invocation.invocation_id, {
+        ...failureUpdate,
+        error_json: errorJson,
+      }, input.tenantId);
+    } catch (persistError) {
+      // The worker can deploy ahead of the server migration that adds
+      // error_json; keep the failure record rather than losing it to 42703.
+      if ((persistError as { code?: string } | null)?.code !== '42703') {
+        throw persistError;
+      }
+      await WorkflowActionInvocationModelV2.update(input.knex, invocation.invocation_id, failureUpdate, input.tenantId);
+    }
     throw runtimeError;
   }
 }
@@ -1051,19 +1061,28 @@ function redactActionErrorSensitiveValues(value: unknown): unknown {
 
 function serializedSize(value: unknown): number {
   try {
-    return JSON.stringify(value).length;
+    return Buffer.byteLength(JSON.stringify(value), 'utf8');
   } catch {
     return Number.POSITIVE_INFINITY;
   }
 }
 
+// A slice landing between the halves of a surrogate pair yields a lone
+// surrogate, which JSON.stringify escapes as \udXXX — and Postgres jsonb
+// rejects that, failing the very write that records the failure.
+function sliceWithoutSplittingSurrogates(value: string, length: number): string {
+  const sliced = value.slice(0, length);
+  const lastCode = sliced.charCodeAt(sliced.length - 1);
+  return lastCode >= 0xd800 && lastCode <= 0xdbff ? sliced.slice(0, -1) : sliced;
+}
+
 function truncateStringToJsonBudget(value: string, maxBytes: number, container: Record<string, unknown>): string {
   const marker = '...[truncated]';
   let available = Math.max(0, maxBytes - serializedSize({ ...container, message: '' }) - marker.length - 2);
-  let truncated = `${value.slice(0, available)}${marker}`;
+  let truncated = `${sliceWithoutSplittingSurrogates(value, available)}${marker}`;
   while (serializedSize({ ...container, message: truncated }) > maxBytes && available > 0) {
     available = Math.floor(available * 0.9);
-    truncated = `${value.slice(0, available)}${marker}`;
+    truncated = `${sliceWithoutSplittingSurrogates(value, available)}${marker}`;
   }
   return truncated;
 }

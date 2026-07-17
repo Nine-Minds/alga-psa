@@ -519,6 +519,32 @@ describe('client workflow runtime DB-backed action handlers', () => {
     expect(result.matched_count).toBe(2);
   });
 
+  it('clients.find counts distinct clients, not locations, in matched_count', async () => {
+    const clientId = await createClient(db, runtimeState.tenantId, 'Multi Location Same Phone Client');
+    const defaultLocationId = await createClientLocation(db, clientId, runtimeState.tenantId, {
+      location_name: 'HQ',
+      phone: '555-777-8888',
+      is_default: true,
+      is_active: true,
+    });
+    await createClientLocation(db, clientId, runtimeState.tenantId, {
+      location_name: 'Billing Office',
+      phone: '(555) 777-8888',
+      is_default: false,
+      is_active: true,
+    });
+
+    const result = await invokeAction('clients.find', {
+      phone: '5557778888',
+    });
+
+    // One client listing the same number on two locations is an unambiguous
+    // match; authors branching on matched_count > 1 must not see it as one.
+    expect(result.client.client_id).toBe(clientId);
+    expect(result.matched_location.location_id).toBe(defaultLocationId);
+    expect(result.matched_count).toBe(1);
+  });
+
   it('clients.find excludes inactive locations and applies on_not_found behavior for phone matches', async () => {
     const clientId = await createClient(db, runtimeState.tenantId, 'Inactive Location Client');
     await createClientLocation(db, clientId, runtimeState.tenantId, {

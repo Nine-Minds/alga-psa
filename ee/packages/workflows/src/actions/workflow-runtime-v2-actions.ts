@@ -1716,6 +1716,14 @@ export const simulateWorkflowDefinitionDraftAction = withAuth(async (user, { ten
   const toPayloadRecord = (value: unknown): Record<string, unknown> =>
     value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
 
+  // Production launch paths resolve { $secret } mappings against the tenant
+  // vault. Simulation must not throw on them, but the simulated payload is
+  // echoed back to the caller, so resolve to a placeholder instead of the
+  // real secret material.
+  const simulationSecretResolver = {
+    resolve: async (name: string): Promise<string> => `[secret:${name}]`,
+  };
+
   const replayStoredEvent = async () => {
     if (!tenant) {
       return throwHttpError(400, 'Workflow event replay requires tenant context');
@@ -1740,12 +1748,38 @@ export const simulateWorkflowDefinitionDraftAction = withAuth(async (user, { ten
       return throwHttpError(400, `Workflow runtime event "${event.event_id}" is "${event.event_name}", expected "${replayEventName}"`);
     }
 
+    // Mirror the event stream worker's launch gate: with no trigger mapping,
+    // it only launches when the effective source schema ref matches the
+    // definition's payloadSchemaRef. A replay that skips this gate can report
+    // green for definitions production will silently never launch.
+    const effectiveSourceSchemaRef = eventTrigger.sourcePayloadSchemaRef ?? event.payload_schema_ref ?? null;
+    const triggerMapping = eventTrigger.payloadMapping;
+    const mappingProvided = Boolean(
+      triggerMapping && typeof triggerMapping === 'object' && Object.keys(triggerMapping).length > 0
+    );
+    const definitionSchemaRef = typeof definition.payloadSchemaRef === 'string' ? definition.payloadSchemaRef : null;
+    if (!mappingProvided && definitionSchemaRef && effectiveSourceSchemaRef !== definitionSchemaRef) {
+      payload = toPayloadRecord(event.payload);
+      payloadSource = 'replayed-event';
+      replayedEvent = {
+        event_id: event.event_id,
+        event_type: event.event_name,
+        occurred_at: event.created_at
+      };
+      return {
+        ok: false as const,
+        message: `Production would skip this event: the definition has no trigger payloadMapping and its payloadSchemaRef "${definitionSchemaRef}" does not match the event's source schema ref "${effectiveSourceSchemaRef ?? '<none>'}". Add a payloadMapping or align the schema refs.`,
+        issues: [] as unknown[]
+      };
+    }
+
     const mapped = await applyTriggerPayloadMapping({
       definition,
       eventName: replayEventName,
       eventPayload: toPayloadRecord(event.payload),
       correlationKey: event.correlation_key ?? null,
-      sourcePayloadSchemaRef: event.payload_schema_ref ?? eventTrigger.sourcePayloadSchemaRef ?? null
+      sourcePayloadSchemaRef: eventTrigger.sourcePayloadSchemaRef ?? event.payload_schema_ref ?? null,
+      secretResolver: simulationSecretResolver
     });
 
     payload = mapped.payload;
@@ -1776,7 +1810,8 @@ export const simulateWorkflowDefinitionDraftAction = withAuth(async (user, { ten
       definition,
       eventName,
       eventPayload: parsed.eventPayload,
-      sourcePayloadSchemaRef: sourceRef
+      sourcePayloadSchemaRef: sourceRef,
+      secretResolver: simulationSecretResolver
     });
     payload = mapped.payload;
     mappingApplied = mapped.mappingApplied;
@@ -1791,7 +1826,8 @@ export const simulateWorkflowDefinitionDraftAction = withAuth(async (user, { ten
         definition,
         eventName,
         eventPayload: (sampleEventPayload ?? {}) as Record<string, unknown>,
-        sourcePayloadSchemaRef: sourceRef
+        sourcePayloadSchemaRef: sourceRef,
+        secretResolver: simulationSecretResolver
       });
       payload = mapped.payload;
       mappingApplied = mapped.mappingApplied;
@@ -3108,6 +3144,21 @@ export async function exportWorkflowAuditLogsAction(input: unknown) {
   };
 }
 
+// For viewers who get fully-redacted input/output, error_json must not carry
+// data either: details/message echo the failing input. Keep only the
+// classification fields the error badge renders.
+function stripInvocationErrorForRestrictedViewer(
+  errorJson: Record<string, unknown>
+): Record<string, unknown> {
+  const stripped: Record<string, unknown> = { redacted: true };
+  for (const field of ['category', 'code', 'nodePath', 'at'] as const) {
+    if (typeof errorJson[field] === 'string') {
+      stripped[field] = errorJson[field];
+    }
+  }
+  return stripped;
+}
+
 export const listWorkflowRunStepsAction = withAuth(async (user, { tenant }, input: unknown) => {
   const parsed = RunIdInput.parse(input);
   const { knex } = await createTenantKnex();
@@ -3134,7 +3185,7 @@ export const listWorkflowRunStepsAction = withAuth(async (user, { tenant }, inpu
         ...invocation,
         input_json: invocation.input_json ? { redacted: true } : null,
         output_json: invocation.output_json ? { redacted: true } : null,
-        error_json: invocation.error_json ? (redactSensitiveValues(invocation.error_json) as any) : null
+        error_json: invocation.error_json ? (stripInvocationErrorForRestrictedViewer(invocation.error_json) as any) : null
       }));
 
   const sanitizedSnapshots = snapshots.map((snapshot) => ({
@@ -3178,7 +3229,8 @@ export const exportWorkflowRunDetailAction = withAuth(async (user, { tenant }, i
     : invocations.map((invocation) => ({
         ...invocation,
         input_json: invocation.input_json ? { redacted: true } : null,
-        output_json: invocation.output_json ? { redacted: true } : null
+        output_json: invocation.output_json ? { redacted: true } : null,
+        error_json: invocation.error_json ? (stripInvocationErrorForRestrictedViewer(invocation.error_json) as any) : null
       }));
 
   const sanitizedSnapshots = snapshots.map((snapshot) => ({

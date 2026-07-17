@@ -1623,7 +1623,7 @@ export function registerTicketActions(): void {
         attributes: z.boolean().optional().describe('Include ticket.attributes (raw JSON)'),
         custom_fields: z.boolean().optional().describe('Alias for include.attributes'),
         comments_limit: z.number().int().positive().max(200).optional().describe('Maximum comments to return (1-200, default 50)'),
-        comments_order: z.enum(['asc', 'desc']).default('desc').describe('Comment ordering by created_at (default desc/newest first)'),
+        comments_order: z.enum(['asc', 'desc']).default('asc').describe('Comment ordering by created_at (default asc/oldest first, matching prior behavior; use desc for newest first)'),
         comments_created_after: z.string().optional().describe('Only include comments created after this ISO datetime'),
         attachments_limit: z.number().int().positive().max(200).optional()
       }).optional()
@@ -1715,7 +1715,7 @@ export function registerTicketActions(): void {
           .first();
         const totalCount = readCount(totalRow);
         const rows = await applyCommentFilters(tenantScopedTable(tx, 'comments'))
-          .orderBy('created_at', include.comments_order ?? 'desc')
+          .orderBy('created_at', include.comments_order ?? 'asc')
           .limit(commentLimit);
         result.comments = rows.map((row: any) => ticketCommentSchema.parse({
           comment_id: row.comment_id,

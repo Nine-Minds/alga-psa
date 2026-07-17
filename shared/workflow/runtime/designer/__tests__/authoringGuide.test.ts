@@ -43,7 +43,10 @@ describe('buildWorkflowAuthoringGuide', () => {
     const grammar = guide.expressionLanguage.grammar.join(' ');
 
     expect(grammar).toContain('Only these five functions are allowed, exhaustively: nowIso, coalesce, len, toString, append');
-    expect(grammar).toContain('$not(...)');
+    // $not is not allowlisted; the guide must offer a working negation idiom
+    // instead of recommending a function that fails validation.
+    expect(grammar).toContain('`$not(...)` is NOT allowlisted');
+    expect(grammar).toContain('expr ? false : true');
     expect(grammar).not.toContain('plus JSONata built-ins that they wrap');
   });
 

@@ -82,6 +82,34 @@ describe('workflow event payload schemas: product emitter contracts', () => {
         trigger: 'manual',
       },
     },
+    {
+      name: 'first transition (previous state null)',
+      payload: {
+        tenantId,
+        occurredAt,
+        ticketId,
+        userId,
+        previousResponseState: null,
+        newResponseState: 'awaiting_client',
+        previousState: null,
+        newState: 'awaiting_client',
+        trigger: 'comment',
+      },
+    },
+    {
+      name: 'close clears response state (new state null)',
+      payload: {
+        tenantId,
+        occurredAt,
+        ticketId,
+        userId,
+        previousResponseState: 'awaiting_client',
+        newResponseState: null,
+        previousState: 'awaiting_client',
+        newState: null,
+        trigger: 'status_change',
+      },
+    },
   ])('validates TICKET_RESPONSE_STATE_CHANGED from $name', ({ payload }) => {
     initializeWorkflowRuntimeV2();
     expectPayloadValid('payload.TicketResponseStateChanged.v1', payload);
@@ -189,12 +217,14 @@ describe('workflow event payload schemas: product emitter contracts', () => {
 
   it('validates INVOICE_FINALIZED', () => {
     initializeWorkflowRuntimeV2();
+    // Mirror the emitter: it computes a numeric total and stringifies it
+    // (server/src/lib/api/services/InvoiceService.ts finalizeInvoice).
+    const numericTotalAmount = 100.5 + 24.5;
     expectPayloadValid('payload.InvoiceFinalized.v1', {
-      // server/src/lib/api/services/InvoiceService.ts:979
       tenantId,
       occurredAt,
       invoiceId,
-      totalAmount: '125.00',
+      totalAmount: String(numericTotalAmount),
       userId,
       timestamp: occurredAt,
     });

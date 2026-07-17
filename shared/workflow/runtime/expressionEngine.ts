@@ -112,10 +112,30 @@ function extractFunctionCalls(ast: unknown): string[] {
     }
 
     const astNode = node as Record<string, unknown>;
+    if (astNode.type === 'lambda') {
+      throw new Error('Expression uses a function definition (lambda), which is not allowed');
+    }
+
     if (astNode.type === 'function' || astNode.type === 'partial') {
+      if ((astNode.procedure as Record<string, unknown> | undefined)?.type === 'lambda') {
+        throw new Error('Expression uses a function definition (lambda), which is not allowed');
+      }
       const calleeName = getProcedureName(astNode.procedure);
-      if (calleeName) {
-        calls.push(calleeName);
+      if (!calleeName) {
+        throw new Error('Expression uses a dynamic or computed function call, which is not allowed');
+      }
+      calls.push(calleeName);
+    }
+
+    if (astNode.type === 'apply') {
+      // `x ~> f` is function application: the right-hand side must resolve to
+      // an allowlist-checkable name (or be a call node, validated on visit).
+      const rhs = astNode.rhs as Record<string, unknown> | undefined;
+      const appliedName = getProcedureName(astNode.rhs);
+      if (appliedName) {
+        calls.push(appliedName);
+      } else if (!rhs || (rhs.type !== 'function' && rhs.type !== 'partial' && rhs.type !== 'lambda')) {
+        throw new Error('Expression applies (~>) a value that cannot be validated against the function allowlist');
       }
     }
 

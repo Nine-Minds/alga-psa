@@ -130,6 +130,14 @@ temporal:
   # belt-and-suspenders override of the edition default.
   jobRunnerType: ""
 
+# Optional JSON override for event.wait correlation derivation paths
+# (WORKFLOW_RUNTIME_V2_EVENT_CORRELATION_PATHS_JSON). Empty = built-in
+# defaults from shared/workflow/runtime/correlationDefaults.ts. Keep in
+# lockstep with the workflow-worker chart's correlationPathsJson — the server
+# validates event.wait publishability against the same config the worker
+# routes with.
+correlationPathsJson: ""
+
 # Development Pod Configuration
 devPod:
   enabled: false

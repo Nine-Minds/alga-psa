@@ -481,6 +481,73 @@ describe('WorkflowRuntimeV2EventStreamWorker', () => {
     );
   });
 
+  it('does not stamp a validation error when the event still launches another workflow', async () => {
+    workflowRuntimeEventCreateMock.mockResolvedValue({ event_id: 'event-fanout' });
+    workflowRunWaitListEventWaitCandidatesMock.mockResolvedValue([]);
+    workflowDefinitionListMock.mockResolvedValue([
+      {
+        workflow_id: 'workflow-bad',
+        key: 'workflow-bad-key',
+        status: 'published',
+        trigger: { type: 'event', eventName: 'PING', sourcePayloadSchemaRef: 'payload.Bad.v1' }
+      },
+      {
+        workflow_id: 'workflow-good',
+        key: 'workflow-good-key',
+        status: 'published',
+        trigger: { type: 'event', eventName: 'PING', sourcePayloadSchemaRef: 'payload.WorkflowEvent.v1' }
+      }
+    ]);
+    workflowDefinitionVersionListByWorkflowMock.mockImplementation(async (_knex: unknown, workflowId: string) => ([
+      {
+        version: 7,
+        definition_json: {
+          id: workflowId,
+          version: 7,
+          payloadSchemaRef: workflowId === 'workflow-bad' ? 'payload.Bad.v1' : 'payload.WorkflowEvent.v1',
+          trigger: {
+            type: 'event',
+            eventName: 'PING',
+            sourcePayloadSchemaRef: workflowId === 'workflow-bad' ? 'payload.Bad.v1' : 'payload.WorkflowEvent.v1'
+          },
+          steps: []
+        }
+      }
+    ]));
+    schemaRegistryGetMock.mockImplementation((ref: string) => ({
+      safeParse: () => ref === 'payload.Bad.v1'
+        ? {
+            success: false,
+            error: { issues: [{ path: ['occurredAt'], code: 'invalid_type', message: 'Required' }] },
+          }
+        : { success: true },
+    }));
+
+    const worker = new WorkflowRuntimeV2EventStreamWorker('worker-1');
+    await worker.start();
+
+    await registeredConsumer?.({
+      event_id: 'event-fanout',
+      event_type: 'PING',
+      workflow_correlation_key: 'corr-fanout',
+      tenant: 'tenant-1',
+      payload: { foo: 'bar' }
+    });
+
+    expect(launchPublishedWorkflowRunMock).toHaveBeenCalledTimes(1);
+    expect(launchPublishedWorkflowRunMock).toHaveBeenCalledWith(
+      knexMock,
+      expect.objectContaining({ workflowId: 'workflow-good' })
+    );
+    expect(loggerWarnMock).toHaveBeenCalledWith(
+      '[WorkflowRuntimeV2EventStreamWorker] Payload validation failed; skipping workflow launch',
+      expect.objectContaining({ workflowId: 'workflow-bad' })
+    );
+    for (const call of workflowRuntimeEventUpdateMock.mock.calls) {
+      expect(call[2]).not.toHaveProperty('error_message');
+    }
+  });
+
   it('persists Temporal delivery failures onto the event row', async () => {
     workflowRuntimeEventCreateMock.mockResolvedValue({ event_id: 'event-5' });
     signalWorkflowRuntimeV2EventMock.mockRejectedValueOnce(new Error('temporal signal failed'));

@@ -58,6 +58,9 @@ services:
       WORKFLOW_DISTRIBUTED_MODE: "true"
       WORKFLOW_REDIS_STREAM_PREFIX: "workflow:events:"
       WORKFLOW_REDIS_CONSUMER_GROUP: "workflow-workers"
+      # Same override the workflow-worker gets: publish-time event.wait
+      # validation in the server must see the config the worker routes with.
+      WORKFLOW_RUNTIME_V2_EVENT_CORRELATION_PATHS_JSON: ${WORKFLOW_RUNTIME_V2_EVENT_CORRELATION_PATHS_JSON:-}
       IMAP_WEBHOOK_SECRET: ${IMAP_WEBHOOK_SECRET:-}
       # NinjaOne Integration Configuration
       # These can be set via environment variables OR via secrets files (mounted at /run/secrets/)

@@ -225,16 +225,60 @@ describe('workflow-runtime-v2 activities', () => {
         output_json: {
           title_text: 'rendered compose output',
         },
-        error_json: null,
       }),
       'tenant-1',
     );
-    expect(mocks.createInvocation).toHaveBeenCalledWith(
-      expect.anything(),
-      expect.objectContaining({
-        error_json: null,
+    // error_json must stay out of non-failure writes: the worker can deploy
+    // ahead of the migration that adds the column.
+    expect(mocks.updateInvocation.mock.calls[0][2]).not.toHaveProperty('error_json');
+    expect(mocks.createInvocation.mock.calls[0][1]).not.toHaveProperty('error_json');
+  });
+
+  it('falls back to a plain failure update when error_json column is missing (42703)', async () => {
+    const { executeWorkflowRuntimeV2ActionStep } = await import('../workflow-runtime-v2-activities');
+
+    mocks.actionHandler.mockRejectedValueOnce(new Error('boom'));
+    mocks.updateInvocation.mockImplementationOnce(async () => {
+      const undefinedColumn = new Error('column "error_json" of relation "workflow_action_invocations" does not exist');
+      (undefinedColumn as Error & { code?: string }).code = '42703';
+      throw undefinedColumn;
+    });
+
+    await expect(
+      executeWorkflowRuntimeV2ActionStep({
+        runId: 'run-migration-lag',
+        stepPath: 'root.steps[1]',
+        stepId: 'step-migration-lag',
+        tenantId: 'tenant-1',
+        step: {
+          type: 'action.call',
+          config: {
+            actionId: 'integration.call',
+            version: 1,
+          },
+        },
+        scopes: {
+          payload: {},
+          workflow: {},
+          lexical: [],
+          meta: {},
+          error: null,
+          system: {
+            runId: 'run-migration-lag',
+            workflowId: 'workflow-1',
+            workflowVersion: 3,
+            tenantId: 'tenant-1',
+            definitionHash: 'definition-hash',
+            runtimeSemanticsVersion: '2026-04-08.temporal-native.v1',
+          },
+        },
       }),
-    );
+    ).rejects.toMatchObject({ message: 'boom' });
+
+    expect(mocks.updateInvocation).toHaveBeenCalledTimes(2);
+    const retryPayload = mocks.updateInvocation.mock.calls[1][2];
+    expect(retryPayload).toMatchObject({ status: 'FAILED', error_message: 'boom' });
+    expect(retryPayload).not.toHaveProperty('error_json');
   });
 
   it('persists normalized structured error_json while keeping error_message unchanged', async () => {
@@ -378,6 +422,56 @@ describe('workflow-runtime-v2 activities', () => {
       },
     });
     expect(JSON.stringify(failedUpdate?.[2].error_json).length).toBeLessThanOrEqual(32 * 1024);
+  });
+
+  it('truncates oversized astral-character messages without splitting surrogate pairs', async () => {
+    const { executeWorkflowRuntimeV2ActionStep } = await import('../workflow-runtime-v2-activities');
+
+    mocks.actionHandler.mockRejectedValueOnce({
+      category: 'ActionError',
+      code: 'INTERNAL_ERROR',
+      message: '🍄'.repeat(20 * 1024),
+      nodePath: 'root.steps[1]',
+      at: '2026-07-16T12:00:00.000Z',
+    });
+
+    await expect(executeWorkflowRuntimeV2ActionStep({
+      runId: 'run-emoji-error',
+      stepPath: 'root.steps[1]',
+      stepId: 'step-emoji-error',
+      tenantId: 'tenant-1',
+      step: {
+        type: 'action.call',
+        config: {
+          actionId: 'integration.call',
+          version: 1,
+        },
+      },
+      scopes: {
+        payload: {},
+        workflow: {},
+        lexical: [],
+        meta: {},
+        error: null,
+        system: {
+          runId: 'run-emoji-error',
+          workflowId: 'workflow-1',
+          workflowVersion: 3,
+          tenantId: 'tenant-1',
+          definitionHash: 'definition-hash',
+          runtimeSemanticsVersion: '2026-04-08.temporal-native.v1',
+        },
+      },
+    })).rejects.toMatchObject({ code: 'INTERNAL_ERROR' });
+
+    const failedUpdate = mocks.updateInvocation.mock.calls.find((call) => call[2]?.status === 'FAILED');
+    const persistedMessage = failedUpdate?.[2].error_json.message as string;
+    expect(persistedMessage.endsWith('...[truncated]')).toBe(true);
+    // A lone surrogate would serialize as an unpaired \udXXX escape, which
+    // Postgres jsonb rejects — the failure record itself would fail to write.
+    const loneSurrogate = /[\uD800-\uDBFF](?![\uDC00-\uDFFF])|(^|[^\uD800-\uDBFF])[\uDC00-\uDFFF]/;
+    expect(loneSurrogate.test(persistedMessage)).toBe(false);
+    expect(Buffer.byteLength(JSON.stringify(failedUpdate?.[2].error_json), 'utf8')).toBeLessThanOrEqual(32 * 1024);
   });
 
   it('projects STARTED step only after successful quota reservation', async () => {

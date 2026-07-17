@@ -75,7 +75,7 @@ export function buildNormalizedPhoneMatchCondition(
   digits: string,
   mode: PhoneMatchMode = 'exact'
 ): { sql: string; bindings: Array<string | number> } {
-  const normalizedColumn = `regexp_replace(coalesce(??, ''), '\\\\D', '', 'g')`;
+  const normalizedColumn = `regexp_replace(coalesce(??, ''), '\\D', '', 'g')`;
 
   if (mode === 'last7' || mode === 'last10') {
     const length = mode === 'last7' ? 7 : 10;

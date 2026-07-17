@@ -30,6 +30,23 @@ describe('expressionEngine guardrails', () => {
     expect(() => validateExpressionSource('foo(payload.items)')).toThrow('disallowed function');
   });
 
+  it('rejects lambda definitions, including recursive and immediately-invoked forms', () => {
+    expect(() => validateExpressionSource('function($x){ $x + 1 }(5)')).toThrow('lambda');
+    expect(() =>
+      validateExpressionSource('($f := function($x){ $x ~> $f }; 1 ~> $f)')
+    ).toThrow('lambda');
+    expect(() => validateExpressionSource('$map(payload.items, function($v){ $v })')).toThrow('lambda');
+  });
+
+  it('rejects ~> application of non-allowlisted functions and variables', () => {
+    expect(() => validateExpressionSource('payload.x ~> $uppercase')).toThrow('disallowed function');
+    expect(() => validateExpressionSource('1 ~> $f')).toThrow('disallowed function');
+  });
+
+  it('accepts ~> application of allowlisted helpers', () => {
+    expect(() => validateExpressionSource('payload.name ~> $toString')).not.toThrow();
+  });
+
   it('enforces timeout during evaluation', async () => {
     const compiled = compileExpression({ $expr: 'payload.value' });
     vi.spyOn(Date, 'now').mockReturnValueOnce(1000).mockReturnValueOnce(1026);

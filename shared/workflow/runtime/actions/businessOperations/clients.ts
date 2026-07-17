@@ -1040,7 +1040,9 @@ export function registerClientActions(): void {
             .orderBy('cl.is_default', 'desc')
             .orderBy('cl.location_id', 'asc');
 
-          matchedCount = rows.length;
+          // Ambiguity means multiple CLIENTS matched — one client listing the
+          // same number on several locations is still a unique resolution.
+          matchedCount = new Set(rows.map((r: any) => String(r.client_id))).size;
           const row = rows[0] ?? null;
           if (row) {
             client = row;

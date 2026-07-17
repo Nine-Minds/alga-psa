@@ -304,6 +304,29 @@ describe('simulateWorkflowDefinitionDraftAction replay payload resolution', () =
     expect(fixture.simulatedCalls).toHaveLength(0);
   });
 
+  it('fails replay when production would skip the launch (no mapping, mismatched schema refs)', async () => {
+    fixture.events = [eventRow({ event_id: '66666666-6666-4666-8666-666666666666' })];
+    const unmappedDefinition = {
+      ...definition,
+      trigger: {
+        type: 'event',
+        eventName: 'ticket.created',
+        sourcePayloadSchemaRef: 'payload.Event.v1'
+      }
+    };
+
+    const result = await simulateWorkflowDefinitionDraftAction({
+      definition: unmappedDefinition,
+      eventId: '66666666-6666-4666-8666-666666666666'
+    }) as any;
+
+    expect(result.status).toBe('failed');
+    expect(result.payloadSource).toBe('replayed-event');
+    expect(result.errors[0]?.message).toContain('Production would skip this event');
+    expect(result.replayedEvent?.event_id).toBe('66666666-6666-4666-8666-666666666666');
+    expect(fixture.simulatedCalls).toHaveLength(0);
+  });
+
   it('rejects explicit payload combined with eventId', async () => {
     await expect(simulateWorkflowDefinitionDraftAction({
       definition,

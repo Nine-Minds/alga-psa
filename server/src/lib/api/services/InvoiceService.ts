@@ -984,7 +984,8 @@ export class InvoiceService extends BaseService<IInvoice> {
             tenantId: context.tenant,
             occurredAt,
             invoiceId: data.invoice_id,
-            totalAmount,
+            // payload.InvoiceFinalized.v1 types totalAmount as a string
+            totalAmount: String(totalAmount),
             userId: context.userId,
             timestamp: occurredAt
           };
