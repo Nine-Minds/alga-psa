@@ -124,6 +124,12 @@ const formatPrimitiveValue = (
   if (isNullish(value)) {
     return { text: null, multiline: false };
   }
+  if (value instanceof Date) {
+    if (Number.isNaN(value.getTime())) {
+      return { text: null, multiline: false };
+    }
+    return formatPrimitiveValue(value.toISOString(), format, currencyCode);
+  }
   if (typeof value === 'string') {
     if (value.length === 0) {
       return { text: null, multiline: false };

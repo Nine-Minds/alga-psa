@@ -13,9 +13,12 @@ import {
   resolveTemplateStrategy,
 } from './strategies';
 import { validateTemplateAst } from './schema';
-import { resolveInvoiceTemplateBindingAlias } from './bindingAliases';
 
 type UnknownRecord = Record<string, unknown>;
+
+export interface TemplateEvaluationOptions {
+  bindingAliases?: Record<string, string>;
+}
 
 export interface TemplateEvaluatedGroup {
   key: string;
@@ -97,6 +100,14 @@ const getPathValue = (target: unknown, path: string): unknown => {
   }, target);
 };
 
+const resolveBindingPath = (path: string, bindingAliases?: Record<string, string>): string => {
+  const normalized = path.trim();
+  if (!normalized) {
+    return normalized;
+  }
+  return bindingAliases?.[normalized] ?? normalized;
+};
+
 const safeNumber = (value: unknown): number => {
   if (typeof value === 'number' && Number.isFinite(value)) {
     return value;
@@ -132,20 +143,21 @@ const compareValues = (left: unknown, right: unknown): number => {
 const resolveBindingValue = (
   ast: TemplateAst,
   bindingId: string,
-  invoiceData: UnknownRecord
+  invoiceData: UnknownRecord,
+  bindingAliases?: Record<string, string>
 ): unknown => {
   const valueBinding = ast.bindings?.values?.[bindingId];
   if (valueBinding) {
-    const resolved = getPathValue(invoiceData, resolveInvoiceTemplateBindingAlias(valueBinding.path));
+    const resolved = getPathValue(invoiceData, resolveBindingPath(valueBinding.path, bindingAliases));
     return resolved === undefined ? valueBinding.fallback : resolved;
   }
 
   const collectionBinding = ast.bindings?.collections?.[bindingId];
   if (collectionBinding) {
-    return getPathValue(invoiceData, resolveInvoiceTemplateBindingAlias(collectionBinding.path));
+    return getPathValue(invoiceData, resolveBindingPath(collectionBinding.path, bindingAliases));
   }
 
-  return getPathValue(invoiceData, resolveInvoiceTemplateBindingAlias(bindingId));
+  return getPathValue(invoiceData, resolveBindingPath(bindingId, bindingAliases));
 };
 
 const hasBindingReference = (ast: TemplateAst, bindingId: string): boolean =>
@@ -404,7 +416,8 @@ const deepSortObjectKeys = (value: unknown): unknown => {
 
 export const evaluateTemplateAst = (
   ast: TemplateAst,
-  invoiceDataInput: UnknownRecord
+  invoiceDataInput: UnknownRecord,
+  options?: TemplateEvaluationOptions
 ): TemplateEvaluationResult => {
   const astValidation = validateTemplateAst(ast);
   if (!astValidation.success) {
@@ -430,12 +443,12 @@ export const evaluateTemplateAst = (
   };
 
   for (const [bindingId, binding] of Object.entries(ast.bindings?.values ?? {})) {
-    const resolved = getPathValue(invoiceData, resolveInvoiceTemplateBindingAlias(binding.path));
+    const resolved = getPathValue(invoiceData, resolveBindingPath(binding.path, options?.bindingAliases));
     bindings[bindingId] = resolved === undefined ? binding.fallback : resolved;
   }
   for (const [bindingId, binding] of Object.entries(ast.bindings?.collections ?? {})) {
     bindings[bindingId] = cloneRecordArray(
-      getPathValue(invoiceData, resolveInvoiceTemplateBindingAlias(binding.path))
+      getPathValue(invoiceData, resolveBindingPath(binding.path, options?.bindingAliases))
     );
   }
 
@@ -450,14 +463,25 @@ export const evaluateTemplateAst = (
     };
   }
 
-  if (!hasBindingReference(ast, ast.transforms.sourceBindingId) && getPathValue(invoiceData, ast.transforms.sourceBindingId) === undefined) {
+  if (
+    !hasBindingReference(ast, ast.transforms.sourceBindingId) &&
+    getPathValue(
+      invoiceData,
+      resolveBindingPath(ast.transforms.sourceBindingId, options?.bindingAliases)
+    ) === undefined
+  ) {
     throw new TemplateEvaluationError(
       'MISSING_BINDING',
       `Transform source binding "${ast.transforms.sourceBindingId}" is not defined in bindings and did not resolve from invoice data.`
     );
   }
 
-  const sourceValue = resolveBindingValue(ast, ast.transforms.sourceBindingId, invoiceData);
+  const sourceValue = resolveBindingValue(
+    ast,
+    ast.transforms.sourceBindingId,
+    invoiceData,
+    options?.bindingAliases
+  );
   if (!Array.isArray(sourceValue)) {
     throw new TemplateEvaluationError(
       'INVALID_SOURCE_COLLECTION',

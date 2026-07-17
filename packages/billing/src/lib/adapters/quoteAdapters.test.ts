@@ -7,7 +7,7 @@ vi.mock('./tenantPartyAdapter', () => ({
   fetchTenantParty: (...args: unknown[]) => fetchTenantPartyMock(...args),
 }));
 
-import { mapLoadedQuoteToViewModel } from './quoteAdapters';
+import { mapLoadedQuoteToViewModel, toIsoDateString } from './quoteAdapters';
 
 const fakeKnex = {
   schema: {
@@ -44,6 +44,30 @@ describe('quoteAdapters', () => {
       phone: '555-0100',
       logo_url: null,
     });
+  });
+
+  it('normalizes Date values and preserves trimmed ISO date strings', () => {
+    expect(toIsoDateString(new Date('2026-07-17T12:30:00.000Z'))).toBe('2026-07-17T12:30:00.000Z');
+    expect(toIsoDateString(' 2026-07-31T00:00:00.000Z ')).toBe('2026-07-31T00:00:00.000Z');
+    expect(toIsoDateString(null)).toBeNull();
+    expect(toIsoDateString(new Date('invalid'))).toBeNull();
+    expect(toIsoDateString('   ')).toBeNull();
+  });
+
+  it('normalizes quote view-model dates to ISO strings', async () => {
+    const viewModel = await mapLoadedQuoteToViewModel(
+      fakeKnex,
+      'tenant-1',
+      buildQuote({
+        quote_date: new Date('2026-07-17T12:30:00.000Z') as unknown as string,
+        valid_until: new Date('2026-08-17T12:30:00.000Z') as unknown as string,
+        accepted_at: new Date('2026-07-18T12:30:00.000Z') as unknown as string,
+      })
+    );
+
+    expect(viewModel.quote_date).toBe('2026-07-17T12:30:00.000Z');
+    expect(viewModel.valid_until).toBe('2026-08-17T12:30:00.000Z');
+    expect(viewModel.accepted_at).toBe('2026-07-18T12:30:00.000Z');
   });
 
   it('builds recurring, one-time, service, and product filtered collections from quote line items', async () => {
