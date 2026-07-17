@@ -93,7 +93,10 @@ export type AdjustStockResult = Omit<
   'stock_unit_created_events' | 'stock_unit_updated_events' | 'pending_stock_low_event'
 >;
 export type RetireStockResult = Omit<RetireStockCoreResult, 'stock_unit_updated_events'>;
-export type { StockLevelRow, LocationStockRow };
+// Bare `export type { … };` in a 'use server' module trips Next's server-action
+// validator (it references every export name as a runtime value); the
+// re-export-with-source form below is stripped correctly.
+export type { StockLevelRow, LocationStockRow } from '../lib/stockQueries';
 
 /** Manual ad-hoc receipt with no purchase order. */
 export const receiveStockManual = withAuth(
