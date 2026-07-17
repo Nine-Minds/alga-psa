@@ -249,11 +249,13 @@ describe('TicketInfo board change status reselection', () => {
     });
 
     const [statusSelect] = screen.getAllByRole('combobox');
-    const optionLabels = Array.from(statusSelect.querySelectorAll('option')).map((option) => option.textContent);
-
-    expect(optionLabels).toContain('Board A Default');
-    expect(optionLabels).toContain('Board A Closed');
-    expect(optionLabels).not.toContain('Board B Default');
+    // The mock call resolving is not the render: wait for the options to land.
+    await waitFor(() => {
+      const optionLabels = Array.from(statusSelect.querySelectorAll('option')).map((option) => option.textContent);
+      expect(optionLabels).toContain('Board A Default');
+      expect(optionLabels).toContain('Board A Closed');
+      expect(optionLabels).not.toContain('Board B Default');
+    });
   });
 
   it('T028: disables the status picker when no board is selected', async () => {
@@ -322,10 +324,13 @@ describe('TicketInfo board change status reselection', () => {
       expect(getTicketStatusesMock).toHaveBeenCalledWith('board-b');
     });
 
-    const optionLabels = Array.from(statusSelect.querySelectorAll('option')).map((option) => option.textContent);
-    expect(optionLabels).toContain('Board B Default');
-    expect(optionLabels).toContain('Board B Waiting');
-    expect(optionLabels).not.toContain('Board A Default');
+    // The mock call resolving is not the render: wait for the options to land.
+    await waitFor(() => {
+      const optionLabels = Array.from(statusSelect.querySelectorAll('option')).map((option) => option.textContent);
+      expect(optionLabels).toContain('Board B Default');
+      expect(optionLabels).toContain('Board B Waiting');
+      expect(optionLabels).not.toContain('Board A Default');
+    });
   });
 
   it('clears the current status and blocks save until a destination-board status is selected', async () => {
