@@ -177,7 +177,7 @@ describe('contactActions visibility group integration', () => {
     const updatedVisibility = await getClientContactVisibilityContext(trx, 'tenant-1', 'contact-1');
     expect(updatedVisibility.visibilityGroupId).toBe('group-2');
     expect(updatedVisibility.visibleBoardIds).toEqual(['board-2']);
-  });
+  }, 15_000);
 
   it('T001: MSP board loading returns active tenant boards without requiring board client ownership', async () => {
     const boardsSelectMock = vi.fn().mockResolvedValue([

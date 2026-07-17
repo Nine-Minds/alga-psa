@@ -361,8 +361,8 @@ describe('TicketInfo board change status reselection', () => {
 
     await waitFor(() => {
       expect(getTicketStatusesMock).toHaveBeenCalledWith('board-a');
+      expect(statusSelect).toHaveValue('status-a');
     });
-    expect(statusSelect).toHaveValue('status-a');
     expect(saveButton).not.toBeDisabled();
 
     fireEvent.change(boardSelect, { target: { value: 'board-b' } });
