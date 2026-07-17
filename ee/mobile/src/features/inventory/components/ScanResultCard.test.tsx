@@ -68,9 +68,20 @@ describe("ScanResultCard", () => {
       { onReceiveProduct },
     );
     expect(tree.root.findAll((node) => typeof node.type === "string" && node.props.testID === "inventory-scan-card-product")).toHaveLength(1);
-    const receive = tree.root.find((node) => node.props.testID === "inventory-scan-receive-product");
+    const receive = tree.root.findAll((node) => node.props.accessibilityLabel === "inventory-scan-receive-product")[0];
     act(() => receive.props.onPress());
     expect(onReceiveProduct).toHaveBeenCalledWith("svc-1", "Yealink T54W", true);
+  });
+
+
+  it("shows the untracked hint and still offers receive for untracked products", () => {
+    const tree = render({
+      type: "product",
+      product: { ...product, track_stock: false },
+      levels: [],
+    });
+    expect(tree.root.findAll((node) => typeof node.type === "string" && node.props.testID === "inventory-scan-untracked-hint")).toHaveLength(1);
+    expect(tree.root.findAll((node) => node.props.accessibilityLabel === "inventory-scan-receive-product").length).toBeGreaterThan(0);
   });
 
   it("renders the unit variant and opens unit history", () => {

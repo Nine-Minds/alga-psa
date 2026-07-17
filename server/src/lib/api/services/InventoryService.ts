@@ -100,19 +100,23 @@ export function normalizeMacForLookup(value: string): string {
   return value.toLowerCase().replace(/[:.\- ]/g, '');
 }
 
-function trackedProductQuery(trx: Knex.Transaction, tenant: string): Knex.QueryBuilder {
+// Matches ANY catalog product, tracked or not: a scanned box must resolve even
+// before inventory tracking is enabled (receiving then opts the product in).
+function catalogProductQuery(trx: Knex.Transaction, tenant: string): Knex.QueryBuilder {
   return trx('service_catalog as sc')
-    .join('product_inventory_settings as pis', function () {
+    .leftJoin('product_inventory_settings as pis', function () {
       this.on('pis.service_id', '=', 'sc.service_id').andOn('pis.tenant', '=', 'sc.tenant');
     })
-    .where({ 'sc.tenant': tenant, 'pis.track_stock': true })
+    .where({ 'sc.tenant': tenant, 'sc.item_kind': 'product' })
     .select(
       'sc.service_id',
       'sc.service_name',
       'sc.sku',
       'sc.barcode',
       'sc.unit_of_measure',
+      // Left-join NULLs are coalesced in toProduct (null -> false).
       'pis.is_serialized',
+      'pis.track_stock',
     );
 }
 
@@ -150,6 +154,7 @@ function toProduct(row: any): InventoryProduct {
     sku: row.sku ?? null,
     barcode: row.barcode ?? null,
     is_serialized: Boolean(row.is_serialized),
+    track_stock: row.track_stock === undefined ? true : Boolean(row.track_stock),
     unit_of_measure: row.unit_of_measure ?? null,
   };
 }
@@ -244,8 +249,8 @@ export class InventoryService extends BaseService<any> {
       const normalizedMac = normalizeMacForLookup(trimmed);
 
       const [barcodeProduct, exactSkuProduct, serialUnits, macUnits] = await Promise.all([
-        trackedProductQuery(trx, context.tenant).andWhere('sc.barcode', gtin).first(),
-        trackedProductQuery(trx, context.tenant).andWhere('sc.sku', trimmed).first(),
+        catalogProductQuery(trx, context.tenant).andWhere('sc.barcode', gtin).first(),
+        catalogProductQuery(trx, context.tenant).andWhere('sc.sku', trimmed).first(),
         hydratedUnitQuery(trx, context.tenant).andWhere('su.serial_number', trimmed),
         normalizedMac
           ? hydratedUnitQuery(trx, context.tenant).whereRaw(
@@ -257,7 +262,7 @@ export class InventoryService extends BaseService<any> {
 
       const fallbackSkuProduct = exactSkuProduct
         ? null
-        : await trackedProductQuery(trx, context.tenant)
+        : await catalogProductQuery(trx, context.tenant)
             .whereRaw('LOWER(sc.sku) = LOWER(?)', [trimmed])
             .orderBy('sc.sku', 'asc')
             .first();
@@ -292,7 +297,7 @@ export class InventoryService extends BaseService<any> {
       const barcodePrefix = `${escapeLike(gtin)}%`;
       const macPrefix = `${escapeLike(normalizedMac)}%`;
       const [candidateProducts, candidateUnits] = await Promise.all([
-        trackedProductQuery(trx, context.tenant)
+        catalogProductQuery(trx, context.tenant)
           .andWhere((builder) => builder
             .whereRaw('sc.service_name ILIKE ? ESCAPE ?', [rawPrefix, '\\'])
             .orWhereRaw('sc.sku ILIKE ? ESCAPE ?', [rawPrefix, '\\'])
@@ -462,11 +467,35 @@ export class InventoryService extends BaseService<any> {
     const knex = await this.getDbForContext(context);
     try {
       const core = await withTransaction(knex, async (trx) => {
-        const settings = await trx('product_inventory_settings')
+        let settings = await trx('product_inventory_settings')
           .where({ tenant: context.tenant, service_id: data.service_id })
           .select('is_serialized', 'average_cost', 'cost_currency')
           .first();
-        if (!settings) throw new Error('Inventory not enabled for this product');
+        if (!settings) {
+          // First receipt is the opt-in: a product scanned and received from
+          // the field starts stock tracking on the spot (mobile onboarding
+          // path). Serialization is inferred from whether serials were scanned.
+          const product = await trx('service_catalog')
+            .where({ tenant: context.tenant, service_id: data.service_id, item_kind: 'product' })
+            .select('service_id', 'cost', 'cost_currency')
+            .first();
+          if (!product) throw new NotFoundError('Product not found');
+          const inferredSettings = {
+            tenant: context.tenant,
+            service_id: data.service_id,
+            track_stock: true,
+            is_serialized: (data.serials?.length ?? 0) > 0,
+            average_cost: product.cost ?? null,
+            cost_currency: product.cost_currency ?? 'USD',
+            default_location_id: data.location_id,
+          };
+          await trx('product_inventory_settings').insert(inferredSettings);
+          settings = {
+            is_serialized: inferredSettings.is_serialized,
+            average_cost: inferredSettings.average_cost,
+            cost_currency: inferredSettings.cost_currency,
+          };
+        }
         if (settings.is_serialized && (data.serials?.length ?? 0) !== data.quantity) {
           throw new Error(`Serialized receipt requires exactly ${data.quantity} serial(s); got ${data.serials?.length ?? 0}`);
         }

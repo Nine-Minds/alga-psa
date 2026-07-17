@@ -20,6 +20,7 @@ export const inventoryProductSchema = z.object({
   sku: z.string().nullable().optional(),
   barcode: z.string().nullable().optional(),
   is_serialized: z.boolean(),
+  track_stock: z.boolean().optional().default(true),
   unit_of_measure: z.string().nullable().optional(),
 });
 

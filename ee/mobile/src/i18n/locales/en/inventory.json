@@ -27,7 +27,8 @@
     "unitKind": "Stock unit",
     "attachBarcode": "Add this barcode to a product",
     "attachTitle": "Add barcode to which product?",
-    "attachSuccess": "Barcode added to {{name}}"
+    "attachSuccess": "Barcode added to {{name}}",
+    "untrackedHint": "Not stock-tracked yet. Receiving it will start tracking."
   },
   "stock": {
     "title": "Stock",

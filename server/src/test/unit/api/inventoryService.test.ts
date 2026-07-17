@@ -137,6 +137,7 @@ describe('InventoryService', () => {
       sku: 'SW-1',
       barcode: 'ABC123',
       unit_of_measure: 'each',
+      item_kind: 'product',
       is_serialized: true,
       track_stock: true,
     };

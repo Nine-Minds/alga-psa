@@ -83,21 +83,27 @@ export function ScanResultCard({
           ) : null}
         </View>
         <Text style={{ ...theme.typography.title, color: theme.colors.text }}>{result.product.service_name}</Text>
-        <LevelsSummary levels={result.levels} />
+        {result.product.track_stock === false ? (
+          <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary }} testID="inventory-scan-untracked-hint">
+            {t("scan.untrackedHint", "Not stock-tracked yet. Receiving it will start tracking.")}
+          </Text>
+        ) : (
+          <LevelsSummary levels={result.levels} />
+        )}
         <PrimaryButton
-          onPress={() => onOpenProduct(result.product.service_id, result.product.service_name)}
-          accessibilityLabel="inventory-scan-open-product"
-        >
-          {t("stock.byLocation", "By location")}
-        </PrimaryButton>
-        <Text
           onPress={() =>
             onReceiveProduct(result.product.service_id, result.product.service_name, result.product.is_serialized)
           }
-          testID="inventory-scan-receive-product"
-          style={{ ...theme.typography.body, color: theme.colors.primary, textAlign: "center", padding: theme.spacing.sm }}
+          accessibilityLabel="inventory-scan-receive-product"
         >
           {t("receive.title", "Receive stock")}
+        </PrimaryButton>
+        <Text
+          onPress={() => onOpenProduct(result.product.service_id, result.product.service_name)}
+          testID="inventory-scan-open-product"
+          style={{ ...theme.typography.body, color: theme.colors.primary, textAlign: "center", padding: theme.spacing.sm }}
+        >
+          {t("stock.byLocation", "By location")}
         </Text>
       </View>
     );

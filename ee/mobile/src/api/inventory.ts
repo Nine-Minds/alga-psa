@@ -18,6 +18,7 @@ export type InventoryProductSummary = {
   sku?: string | null;
   barcode?: string | null;
   is_serialized: boolean;
+  track_stock?: boolean;
   unit_of_measure?: string | null;
 };
 
