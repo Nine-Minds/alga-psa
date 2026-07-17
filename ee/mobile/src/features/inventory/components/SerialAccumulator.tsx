@@ -69,7 +69,7 @@ export function SerialAccumulator({
     <Modal visible={visible} animationType="slide" onRequestClose={onCancel}>
       <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
         <View style={{ flex: 1 }}>
-          {permission?.granted ? (
+          {visible && permission?.granted ? (
             <CameraView
               style={{ flex: 1 }}
               facing="back"

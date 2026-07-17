@@ -4,7 +4,7 @@ import { Linking, Text, Vibration, View } from "react-native";
 import { CameraView, useCameraPermissions } from "expo-camera";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
-import { useNavigation } from "@react-navigation/native";
+import { useIsFocused, useNavigation } from "@react-navigation/native";
 import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useTheme } from "../../../ui/ThemeContext";
 import { IconButton, PrimaryButton, TextInput } from "../../../ui/components";
@@ -22,6 +22,10 @@ const SCAN_DEBOUNCE_MS = 1500;
 
 export function ScanView() {
   const theme = useTheme();
+  // Drawer screens stay mounted while other tabs are open; an unmounted-but-live
+  // CameraView holds the iOS camera session and comes back as a black feed.
+  // Only mount the camera while this screen is actually focused.
+  const isFocused = useIsFocused();
   const { t } = useTranslation("inventory");
   const navigation = useNavigation<NativeStackNavigationProp<RootStackParamList>>();
   const { client, apiKey } = useInventoryApi();
@@ -139,7 +143,7 @@ export function ScanView() {
   return (
     <View style={{ flex: 1 }}>
       <View style={{ flex: 1 }}>
-        {!manualMode ? (
+        {!manualMode && isFocused ? (
           <CameraView
             style={{ flex: 1 }}
             facing="back"

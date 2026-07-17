@@ -9,6 +9,7 @@ import { adjustStock } from "../api/inventory";
 import { useInventoryApi } from "../features/inventory/hooks/useInventoryApi";
 import { LocationPickerField } from "../features/inventory/components/LocationPickerField";
 import { useToast } from "../ui/toast/ToastProvider";
+import { sanitizeSignedQuantityInput } from "../features/inventory/numericInput";
 import type { RootStackParamList } from "../navigation/types";
 
 type Props = NativeStackScreenProps<RootStackParamList, "InventoryAdjust">;
@@ -74,7 +75,7 @@ export function InventoryAdjustScreen({ route, navigation }: Props) {
         <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary }}>{t("adjust.quantity", "Adjustment (+/-)")}</Text>
         <TextInput
           value={deltaText}
-          onChangeText={setDeltaText}
+          onChangeText={(text) => setDeltaText(sanitizeSignedQuantityInput(text))}
           keyboardType="numbers-and-punctuation"
           placeholder="-1"
           accessibilityLabel="inventory-adjust-delta"

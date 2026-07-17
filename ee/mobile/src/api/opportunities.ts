@@ -49,11 +49,18 @@ export type OpportunityDetail = OpportunityListItem & {
   contact_name?: string | null;
   contact_phone?: string | null;
   contact_email?: string | null;
+  owner_name?: string | null;
   ladder?: Array<{
     checkpoint: string;
     state: "reached" | "pending" | "skipped";
   }>;
-  linked_quotes?: Array<{ quote_id: string; quote_number?: string; status?: string }>;
+  linked_quotes?: Array<{
+    quote_id: string;
+    quote_number?: string;
+    status?: string;
+    total_amount?: number | null;
+    currency_code?: string | null;
+  }>;
 } & Record<string, unknown>;
 
 export type ListOpportunitiesParams = {
