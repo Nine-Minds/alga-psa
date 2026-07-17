@@ -52,6 +52,21 @@ describe('client contract effective renewal settings normalization', () => {
     expect(normalized.effective_notice_period_days).toBe(60);
   });
 
+  it('preserves draft contract header status when normalizing an inactive assignment', () => {
+    const normalized = normalizeClientContract({
+      contract_id: 'contract-draft',
+      client_contract_id: 'cc-draft',
+      client_id: 'client-draft',
+      tenant: 'tenant-1',
+      start_date: '2026-01-01',
+      end_date: null,
+      is_active: false,
+      contract_status: 'draft',
+    });
+
+    expect(normalized.assignment_status).toBe('draft');
+  });
+
   it('falls back deterministically when explicit override values are partially missing', () => {
     const normalized = normalizeClientContract({
       contract_id: 'contract-3',

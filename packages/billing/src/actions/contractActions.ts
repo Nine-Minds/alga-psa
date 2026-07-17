@@ -763,17 +763,25 @@ export const getContractSummary = withAuth(async (user, { tenant }, contractId: 
     }
 
     const assignmentColumns = [
-      'client_contract_id',
-      'client_id',
-      'is_active',
-      'start_date',
-      'end_date',
-      'po_required',
-      'po_number'
+      'cc.client_contract_id',
+      'cc.client_id',
+      'cc.is_active',
+      'cc.start_date',
+      'cc.end_date',
+      'cc.po_required',
+      'cc.po_number',
+      'co.status as contract_status',
     ];
 
-    const assignmentsRaw = await tenantScopedTable(knex, tenant, 'client_contracts')
-      .where({ contract_id: contractId })
+    const assignmentsQuery = tenantDb(knex, tenant).table('client_contracts as cc');
+    tenantDb(knex, tenant).tenantJoin(
+      assignmentsQuery,
+      'contracts as co',
+      'cc.contract_id',
+      'co.contract_id',
+    );
+    const assignmentsRaw = await assignmentsQuery
+      .where({ 'cc.contract_id': contractId })
       .select(assignmentColumns);
 
     const assignments = (assignmentsRaw as any[]).map((assignment: any) => ({
@@ -787,6 +795,7 @@ export const getContractSummary = withAuth(async (user, { tenant }, contractId: 
         isActive: Boolean(assignment.is_active),
         startDate: assignment.start_date,
         endDate: assignment.end_date,
+        contractStatus: assignment.contract_status,
       }) === 'active'
     ).length;
     const poRequiredAssignments = assignments.filter((assignment) => assignment.po_required).length;
@@ -852,13 +861,15 @@ export const getContractAssignments = withAuth(async (user, { tenant }, contract
       'cc.po_number',
       'cc.po_amount',
       'cc.renewal_ticket_board_id',
-      'cc.renewal_ticket_status_id'
+      'cc.renewal_ticket_status_id',
+      'co.status as contract_status',
     ];
 
     const facade = tenantDb(knex, tenant);
     const query = facade.table('client_contracts as cc');
     facade.tenantJoin(query, 'clients as c', 'cc.client_id', 'c.client_id', { type: 'left' });
     facade.tenantJoin(query, 'default_billing_settings as dbs', 'cc.tenant', 'dbs.tenant', { type: 'left' });
+    facade.tenantJoin(query, 'contracts as co', 'cc.contract_id', 'co.contract_id');
 
     const rows = await query
       .where({ 'cc.contract_id': contractId })
@@ -909,6 +920,7 @@ export const getContractAssignments = withAuth(async (user, { tenant }, contract
           isActive: Boolean(row.is_active),
           startDate: row.start_date,
           endDate: row.end_date,
+          contractStatus: row.contract_status,
         }),
         start_date: row.start_date ?? null,
         end_date: row.end_date ?? null,
