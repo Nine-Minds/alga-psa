@@ -433,6 +433,7 @@ describe('TicketInfo board change status reselection', () => {
 
     const [statusSelect] = screen.getAllByRole('combobox');
     await waitFor(() => {
+      expect(statusSelect).toHaveValue('status-a');
       expect(statusSelect.querySelector('option[value="status-a-closed"]')).not.toBeNull();
     });
     fireEvent.change(statusSelect, { target: { value: 'status-a-closed' } });
