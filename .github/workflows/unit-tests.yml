@@ -102,8 +102,10 @@ jobs:
       # each package's own `npm run test` -> vitest — not the broken
       # @nx/vite:test executor). A red step here is a real test failure; fix the
       # cause, never re-add continue-on-error.
-      - name: Nx affected tests (libraries, parallel)
-        run: npx nx affected -t test --base=$NX_BASE --head=$NX_HEAD --output-style=static --parallel=3 --exclude=server,sebastian-ee,temporal-workflows
+      # Run one package suite at a time. Three concurrent Vitest processes made
+      # otherwise stable async UI tests miss their 5s waits on hosted runners.
+      - name: Nx affected tests (libraries, serial)
+        run: npx nx affected -t test --base=$NX_BASE --head=$NX_HEAD --output-style=static --parallel=1 --exclude=server,sebastian-ee,temporal-workflows
         env:
           NX_DAEMON: 'false'
           NODE_OPTIONS: '--max-old-space-size=4096'
