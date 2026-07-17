@@ -18,10 +18,17 @@ export async function getOpportunityDetail(
   if (!opportunity) return null;
 
   const db = tenantDb(conn, tenant);
-  const [client, contact, owner, evidenceRows, quotes] = await Promise.all([
+  const [client, contact, contactPhone, owner, evidenceRows, quotes] = await Promise.all([
     db.table('clients').where({ client_id: opportunity.client_id }).select('client_name', 'lifecycle_status').first(),
     opportunity.contact_id
-      ? db.table('contacts').where({ contact_name_id: opportunity.contact_id }).select('full_name').first()
+      ? db.table('contacts').where({ contact_name_id: opportunity.contact_id }).select('full_name', 'email').first()
+      : null,
+    opportunity.contact_id
+      ? db.table('contact_phone_numbers')
+          .where({ contact_name_id: opportunity.contact_id })
+          .orderBy([{ column: 'is_default', order: 'desc' }, { column: 'display_order', order: 'asc' }])
+          .select('phone_number')
+          .first()
       : null,
     db.table('users').where({ user_id: opportunity.owner_id }).select('first_name', 'last_name').first(),
     db.table('opportunity_evidence')
@@ -49,6 +56,8 @@ export async function getOpportunityDetail(
     client_name: client?.client_name ?? '',
     client_lifecycle_status: client?.lifecycle_status ?? 'active',
     contact_name: contact?.full_name ?? null,
+    contact_phone: contactPhone?.phone_number ?? null,
+    contact_email: contact?.email ?? null,
     owner_name: [owner?.first_name, owner?.last_name].filter(Boolean).join(' '),
     ladder: [
       { checkpoint: 'identified', state: 'reached', evidence: null },
