@@ -465,7 +465,10 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         [statusOptions, ticket.status_id],
     );
 
-    const addResolutionComment = useCallback(async (resolution: string): Promise<boolean> => {
+    const addResolutionComment = useCallback(async (
+        resolution: string,
+        suppression: TicketNotificationSuppressionValue,
+    ): Promise<boolean> => {
         const ticketId = ticket.ticket_id;
         if (!ticketId) {
             toast.error(t('messages.closeFailed', 'Failed to close ticket'));
@@ -481,6 +484,7 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
                         false,
                         true,
                         true,
+                        suppression,
                     );
                     if (isReturnedActionError(result)) {
                         throw result;
@@ -2686,7 +2690,7 @@ const handleClose = () => {
         setIsSubmittingResolutionClose(true);
         let resolutionSaved = false;
         try {
-            const resolutionAdded = await addResolutionComment(JSON.stringify(contentBlocks));
+            const resolutionAdded = await addResolutionComment(JSON.stringify(contentBlocks), suppression);
             if (!resolutionAdded) {
                 return false;
             }

@@ -3107,9 +3107,19 @@ export const addTicketCommentWithCache = withAuth(async (
   content: string,
   isInternal: boolean,
   isResolution: boolean,
-  closesTicket: boolean = false
+  closesTicket: boolean = false,
+  notificationSuppression?: Pick<
+    UpdateTicketInTransactionOptions,
+    'suppressContactNotifications' | 'suppressInternalNotifications'
+  >,
 ): Promise<IComment | TicketActionError> => {
   const {knex: db} = await createTenantKnex();
+
+  const suppressContactNotifications = notificationSuppression?.suppressContactNotifications === true;
+  const suppressInternalNotifications = notificationSuppression?.suppressInternalNotifications === true;
+  if (suppressInternalNotifications && !suppressContactNotifications) {
+    throw new Error('suppressInternalNotifications requires suppressContactNotifications');
+  }
 
   return withTransaction(db, async (trx): Promise<IComment | TicketActionError> => {
     try {
@@ -3298,7 +3308,9 @@ export const addTicketCommentWithCache = withAuth(async (
             author: `${user.first_name} ${user.last_name}`,
             isInternal,
             authorType,
-          }
+          },
+          suppressContactNotifications,
+          suppressInternalNotifications,
         }
       }),
       `TICKET_COMMENT_ADDED ticket=${ticketId}`
@@ -3405,9 +3417,20 @@ export async function addTicketCommentWithCacheForCurrentUser(
   content: string,
   isInternal: boolean,
   isResolution: boolean,
-  closesTicket: boolean = false
+  closesTicket: boolean = false,
+  notificationSuppression?: Pick<
+    UpdateTicketInTransactionOptions,
+    'suppressContactNotifications' | 'suppressInternalNotifications'
+  >,
 ): Promise<IComment | TicketActionError> {
-  return addTicketCommentWithCache(ticketId, content, isInternal, isResolution, closesTicket);
+  return addTicketCommentWithCache(
+    ticketId,
+    content,
+    isInternal,
+    isResolution,
+    closesTicket,
+    notificationSuppression,
+  );
 }
 
 /**

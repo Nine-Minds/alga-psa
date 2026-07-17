@@ -120,7 +120,8 @@ Decisions made in the design session:
 
 ## Out of scope
 
-- Backend/notification-subscriber changes (none needed).
+- Backend/notification-subscriber changes (initially believed unnecessary; superseded by
+  the review mitigation below).
 - Extracting a shared "resolution composer" from `TicketConversation` (approach C —
   deliberately rejected as a larger refactor than the feature warrants).
 - The conversation composer and bulk-move suppression flows (already shipped).
@@ -140,3 +141,22 @@ Decisions made in the design session:
    verify no contact notification is recorded (internal notification still sent);
    repeat with both checked and verify neither is sent. Verify the blocked-close
    "Close anyway" override after a suppressed popup close also suppresses.
+
+## Review mitigation: resolution-comment event suppression
+
+The close operation writes its resolution comment and status in separate transactions.
+The original implementation applied suppression only to the status write, so the
+resolution comment's `TICKET_COMMENT_ADDED` event remained loud. The mitigation:
+
+- passes the selected suppression value into `addTicketCommentWithCache` when the close
+  popup persists its resolution;
+- publishes both suppression flags on that comment event (defaulting to false for all
+  existing callers and enforcing the existing contact-before-internal invariant);
+- applies contact suppression to contact/portal recipients and external watchers in
+  comment notification subscribers; and
+- classifies mentions by the mentioned user's type, then applies contact or internal
+  suppression as appropriate; assigned/additional agents and internal watchers use
+  internal suppression.
+
+Behavioral coverage verifies both contact-only and full suppression on closing
+resolution comment events and on each subscriber's recipient policy.
