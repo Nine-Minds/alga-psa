@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { useTheme } from "../../../ui/ThemeContext";
 import { Badge } from "../../../ui/components";
 import { PrimaryButton } from "../../../ui/components";
-import type { InventoryLookupResult, StockLevelRow, StockUnitSummary } from "../../../api/inventory";
+import type { InventoryLookupResult, ScanAssetSummary, ScanMatch, StockLevelRow, StockUnitSummary } from "../../../api/inventory";
 
 function LevelsSummary({ levels }: { levels: StockLevelRow[] }) {
   const theme = useTheme();
@@ -39,12 +39,20 @@ function UnitLine({ unit }: { unit: StockUnitSummary }) {
   );
 }
 
+const WARRANTY_TONE: Record<ScanAssetSummary["warranty_status"], "neutral" | "success" | "warning" | "danger"> = {
+  active: "success",
+  expiring_soon: "warning",
+  expired: "danger",
+  unknown: "neutral",
+};
+
 export function ScanResultCard({
   code,
   result,
   onOpenProduct,
   onReceiveProduct,
   onOpenUnit,
+  onOpenAsset,
   onManualSearch,
   onDismiss,
   onAttachBarcode,
@@ -54,12 +62,51 @@ export function ScanResultCard({
   onOpenProduct: (serviceId: string, serviceName?: string) => void;
   onReceiveProduct: (serviceId: string, serviceName?: string, isSerialized?: boolean) => void;
   onOpenUnit: (unitId: string) => void;
+  onOpenAsset: (assetId: string, assetName?: string) => void;
   onManualSearch: () => void;
   onDismiss: () => void;
   onAttachBarcode?: () => void;
 }) {
   const theme = useTheme();
   const { t } = useTranslation("inventory");
+
+  const renderChoice = (match: ScanMatch, index: number) => {
+    const linkStyle = { ...theme.typography.body, color: theme.colors.primary, paddingVertical: theme.spacing.xs };
+    if (match.kind === "product") {
+      return (
+        <Text
+          key={`product-${match.product.service_id}`}
+          testID={`inventory-scan-choice-${index}`}
+          onPress={() => onOpenProduct(match.product.service_id, match.product.service_name)}
+          style={linkStyle}
+        >
+          {t("scan.productKind", "Product")}: {match.product.service_name}
+        </Text>
+      );
+    }
+    if (match.kind === "unit") {
+      return (
+        <Text
+          key={`unit-${match.unit.unit_id}`}
+          testID={`inventory-scan-choice-${index}`}
+          onPress={() => onOpenUnit(match.unit.unit_id)}
+          style={linkStyle}
+        >
+          {t("scan.unitKind", "Stock unit")}: {match.unit.serial_number}
+        </Text>
+      );
+    }
+    return (
+      <Text
+        key={`asset-${match.asset.asset_id}`}
+        testID={`inventory-scan-choice-${index}`}
+        onPress={() => onOpenAsset(match.asset.asset_id, match.asset.name)}
+        style={linkStyle}
+      >
+        {t("scan.assetKind", "Asset")}: {match.asset.name}
+      </Text>
+    );
+  };
 
   const container = {
     backgroundColor: theme.colors.card,
@@ -125,8 +172,51 @@ export function ScanResultCard({
             {t("unit.warranty", "Warranty")}: {t("unit.warrantyUntil", "Until {{date}}", { date: result.unit.warranty_expires_at.slice(0, 10) })}
           </Text>
         ) : null}
-        <PrimaryButton onPress={() => onOpenUnit(result.unit.unit_id)} accessibilityLabel="inventory-scan-open-unit">
+        {result.unit.asset_id ? (
+          <PrimaryButton
+            onPress={() => onOpenAsset(result.unit.asset_id as string, result.unit.service_name)}
+            accessibilityLabel="inventory-scan-open-asset-from-unit"
+          >
+            {t("scan.viewAsset", "View asset")}
+          </PrimaryButton>
+        ) : null}
+        <Text
+          onPress={() => onOpenUnit(result.unit.unit_id)}
+          testID="inventory-scan-open-unit"
+          style={{ ...theme.typography.body, color: theme.colors.primary, textAlign: "center", padding: theme.spacing.sm }}
+        >
           {t("unit.history", "History")}
+        </Text>
+      </View>
+    );
+  }
+
+  if (result.type === "asset") {
+    const asset = result.asset;
+    return (
+      <View style={container} testID="inventory-scan-card-asset">
+        <View style={{ flexDirection: "row", alignItems: "center", gap: theme.spacing.sm }}>
+          <Badge label={t("scan.assetKind", "Asset")} />
+          {asset.status ? <Badge label={asset.status} /> : null}
+          <Badge label={t(`asset.warranty.${asset.warranty_status}`, asset.warranty_status)} tone={WARRANTY_TONE[asset.warranty_status]} />
+        </View>
+        <Text style={{ ...theme.typography.title, color: theme.colors.text }}>{asset.name}</Text>
+        <View style={{ gap: 2 }}>
+          {asset.asset_tag ? (
+            <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary }}>
+              {t("asset.tag", "Tag")}: {asset.asset_tag}
+              {asset.serial_number ? `  ·  ${asset.serial_number}` : ""}
+            </Text>
+          ) : null}
+          {asset.client_name ? (
+            <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary }}>
+              {t("asset.client", "Client")}: {asset.client_name}
+              {asset.location ? `  ·  ${asset.location}` : ""}
+            </Text>
+          ) : null}
+        </View>
+        <PrimaryButton onPress={() => onOpenAsset(asset.asset_id, asset.name)} accessibilityLabel="inventory-scan-open-asset">
+          {t("asset.open", "Open asset")}
         </PrimaryButton>
       </View>
     );
@@ -141,27 +231,7 @@ export function ScanResultCard({
         <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary }}>
           {t("scan.multiBody", '"{{code}}" matches more than one record.', { code })}
         </Text>
-        {result.matches.map((match, index) =>
-          match.kind === "product" ? (
-            <Text
-              key={`product-${match.product.service_id}`}
-              testID={`inventory-scan-multi-${index}`}
-              onPress={() => onOpenProduct(match.product.service_id, match.product.service_name)}
-              style={{ ...theme.typography.body, color: theme.colors.primary, paddingVertical: theme.spacing.xs }}
-            >
-              {t("scan.productKind", "Product")}: {match.product.service_name}
-            </Text>
-          ) : (
-            <Text
-              key={`unit-${match.unit.unit_id}`}
-              testID={`inventory-scan-multi-${index}`}
-              onPress={() => onOpenUnit(match.unit.unit_id)}
-              style={{ ...theme.typography.body, color: theme.colors.primary, paddingVertical: theme.spacing.xs }}
-            >
-              {t("scan.unitKind", "Stock unit")}: {match.unit.serial_number}
-            </Text>
-          ),
-        )}
+        {result.matches.map((match, index) => renderChoice(match, index))}
       </View>
     );
   }
@@ -177,27 +247,7 @@ export function ScanResultCard({
           <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginBottom: theme.spacing.xs }}>
             {t("scan.candidatesTitle", "Close matches")}
           </Text>
-          {result.candidates.slice(0, 5).map((candidate, index) =>
-            candidate.kind === "product" ? (
-              <Text
-                key={`candidate-product-${candidate.product.service_id}`}
-                testID={`inventory-scan-candidate-${index}`}
-                onPress={() => onOpenProduct(candidate.product.service_id, candidate.product.service_name)}
-                style={{ ...theme.typography.body, color: theme.colors.primary, paddingVertical: theme.spacing.xs }}
-              >
-                {candidate.product.service_name}
-              </Text>
-            ) : (
-              <Text
-                key={`candidate-unit-${candidate.unit.unit_id}`}
-                testID={`inventory-scan-candidate-${index}`}
-                onPress={() => onOpenUnit(candidate.unit.unit_id)}
-                style={{ ...theme.typography.body, color: theme.colors.primary, paddingVertical: theme.spacing.xs }}
-              >
-                {candidate.unit.serial_number}
-              </Text>
-            ),
-          )}
+          {result.candidates.slice(0, 5).map((candidate, index) => renderChoice(candidate, index))}
         </View>
       ) : null}
       {onAttachBarcode ? (

@@ -230,6 +230,10 @@ export function ScanView() {
             dismissResult();
             navigation.navigate("StockUnitDetail", { unitId });
           }}
+          onOpenAsset={(assetId, assetName) => {
+            dismissResult();
+            navigation.navigate("AssetDetail", { assetId, assetName });
+          }}
           onManualSearch={() => {
             dismissResult();
             setManualMode(true);

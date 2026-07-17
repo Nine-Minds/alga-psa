@@ -35,6 +35,7 @@ export type RootStackParamList = {
   InventoryAdjust: { serviceId?: string; serviceName?: string } | undefined;
   CountSession: { sessionId: string; locationName?: string };
   PurchaseOrderDetail: { poId: string; poNumber?: string };
+  AssetDetail: { assetId: string; assetName?: string };
   OpportunityDetail: { opportunityId: string; title?: string };
 };
 

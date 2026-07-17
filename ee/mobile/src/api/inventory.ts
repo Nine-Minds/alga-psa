@@ -49,6 +49,22 @@ export type StockUnitSummary = {
   client_name?: string | null;
   warranty_expires_at?: string | null;
   warranty_term?: string | null;
+  asset_id?: string | null;
+};
+
+export type ScanAssetSummary = {
+  asset_id: string;
+  asset_tag?: string | null;
+  name: string;
+  serial_number?: string | null;
+  asset_type?: string | null;
+  status?: string | null;
+  client_id?: string | null;
+  client_name?: string | null;
+  warranty_end_date?: string | null;
+  warranty_status: "active" | "expiring_soon" | "expired" | "unknown";
+  location?: string | null;
+  stock_unit_id?: string | null;
 };
 
 export type StockMovementRow = {
@@ -77,23 +93,17 @@ export type StockLocation = {
   is_default?: boolean;
 };
 
+export type ScanMatch =
+  | { kind: "product"; product: InventoryProductSummary }
+  | { kind: "unit"; unit: StockUnitSummary }
+  | { kind: "asset"; asset: ScanAssetSummary };
+
 export type InventoryLookupResult =
   | { type: "product"; product: InventoryProductSummary; levels: StockLevelRow[] }
   | { type: "unit"; unit: StockUnitSummary; product: InventoryProductSummary }
-  | {
-      type: "multi";
-      matches: Array<
-        | { kind: "product"; product: InventoryProductSummary }
-        | { kind: "unit"; unit: StockUnitSummary }
-      >;
-    }
-  | {
-      type: "none";
-      candidates: Array<
-        | { kind: "product"; product: InventoryProductSummary }
-        | { kind: "unit"; unit: StockUnitSummary }
-      >;
-    };
+  | { type: "asset"; asset: ScanAssetSummary }
+  | { type: "multi"; matches: ScanMatch[] }
+  | { type: "none"; candidates: ScanMatch[] };
 
 export function lookupInventoryCode(
   client: ApiClient,

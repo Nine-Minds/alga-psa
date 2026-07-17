@@ -38,6 +38,7 @@ function render(result: InventoryLookupResult, handlers: Partial<Record<string, 
         onOpenProduct={handlers.onOpenProduct ?? vi.fn()}
         onReceiveProduct={handlers.onReceiveProduct ?? vi.fn()}
         onOpenUnit={handlers.onOpenUnit ?? vi.fn()}
+        onOpenAsset={handlers.onOpenAsset ?? vi.fn()}
         onManualSearch={handlers.onManualSearch ?? vi.fn()}
         onDismiss={handlers.onDismiss ?? vi.fn()}
         onAttachBarcode={handlers.onAttachBarcode}
@@ -99,7 +100,7 @@ describe("ScanResultCard", () => {
       ],
     });
     expect(tree.root.findAll((node) => typeof node.type === "string" && node.props.testID === "inventory-scan-card-multi")).toHaveLength(1);
-    expect(tree.root.findAll((node) => typeof node.type === "string" && typeof node.props.testID === "string" && node.props.testID.startsWith("inventory-scan-multi-"))).toHaveLength(2);
+    expect(tree.root.findAll((node) => typeof node.type === "string" && typeof node.props.testID === "string" && node.props.testID.startsWith("inventory-scan-choice-"))).toHaveLength(2);
   });
 
   it("renders the none variant with candidates and manual search", () => {
@@ -109,7 +110,19 @@ describe("ScanResultCard", () => {
       { onManualSearch },
     );
     expect(tree.root.findAll((node) => typeof node.type === "string" && node.props.testID === "inventory-scan-card-none")).toHaveLength(1);
-    expect(tree.root.findAll((node) => typeof node.type === "string" && node.props.testID === "inventory-scan-candidate-0")).toHaveLength(1);
+    expect(tree.root.findAll((node) => typeof node.type === "string" && node.props.testID === "inventory-scan-choice-0")).toHaveLength(1);
+  });
+
+  it("renders the asset variant and opens the asset", () => {
+    const onOpenAsset = vi.fn();
+    const tree = render(
+      { type: "asset", asset: { asset_id: "ast-1", asset_tag: "AST-1", name: "Reception Phone", serial_number: "SN-5", status: "active", client_name: "Emerald City", warranty_status: "active" } },
+      { onOpenAsset },
+    );
+    expect(tree.root.findAll((node) => typeof node.type === "string" && node.props.testID === "inventory-scan-card-asset")).toHaveLength(1);
+    const open = tree.root.findAll((node) => node.props.accessibilityLabel === "inventory-scan-open-asset")[0];
+    act(() => open.props.onPress());
+    expect(onOpenAsset).toHaveBeenCalledWith("ast-1", "Reception Phone");
   });
 
   it("invokes onAttachBarcode from the none variant", () => {

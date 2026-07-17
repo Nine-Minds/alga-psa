@@ -28,7 +28,9 @@
     "attachBarcode": "Add this barcode to a product",
     "attachTitle": "Add barcode to which product?",
     "attachSuccess": "Barcode added to {{name}}",
-    "untrackedHint": "Not stock-tracked yet. Receiving it will start tracking."
+    "untrackedHint": "Not stock-tracked yet. Receiving it will start tracking.",
+    "assetKind": "Asset",
+    "viewAsset": "View asset"
   },
   "stock": {
     "title": "Stock",
@@ -149,5 +151,16 @@
     "open": "Open",
     "inTransit": "In transit to you",
     "countsInProgress": "Counts in progress"
+  },
+  "asset": {
+    "tag": "Tag",
+    "client": "Client",
+    "open": "Open asset",
+    "warranty": {
+      "active": "Under warranty",
+      "expiring_soon": "Warranty expiring",
+      "expired": "Out of warranty",
+      "unknown": "Warranty unknown"
+    }
   }
 }
