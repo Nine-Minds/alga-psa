@@ -32,7 +32,7 @@
     "test:unit": "vitest src/test/unit",
     "test:integration": "vitest src/test/integration",
     "test:integration:ci": "vitest run src/test/integration --coverage.enabled=false",
-    "test:integration:tier1": "vitest run src/test/integration/billing src/test/integration/accounting src/test/integration/authorization src/test/integration/billingInvoiceTiming.integration.test.ts --coverage.enabled=false",
+    "test:integration:tier1": "node ../scripts/run-tier1-integration.mjs",
     "test:infrastructure": "vitest src/test/infrastructure",
     "test:infrastructure:ci": "vitest run src/test/infrastructure --coverage.enabled=false",
     "test:infrastructure:tier1": "vitest run src/test/infrastructure/billing/invoices/invoiceDueDate.test.ts src/test/infrastructure/billing/invoices/manualInvoice.test.ts src/test/infrastructure/billing/tax/taxRoundingBehavior.test.ts src/test/infrastructure/billing/credits/creditApplication.test.ts --coverage.enabled=false",

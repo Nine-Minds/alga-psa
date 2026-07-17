@@ -155,6 +155,7 @@ const servicePeriodPostInventoryRefs = new Set([
   'server/src/test/infrastructure/billing/invoices/clientBillingCycleAnchors.test.ts',
   'server/src/test/integration/api/invoiceService.recurringCoexistence.integration.test.ts',
   'server/src/test/integration/billing/creditReconciliation.integration.test.ts',
+  'server/src/test/integration/contractWizard.integration.test.ts',
   'server/src/test/integration/billing/profitabilityReporting.integration.test.ts',
   'server/src/test/unit/api/invoiceRecurringList.contract.test.ts',
   'server/src/test/unit/billing/automaticInvoices.nonContractSelection.ui.test.tsx',
