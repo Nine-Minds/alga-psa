@@ -43,7 +43,10 @@ const formatQuoteAmount = (quote: LinkableOpportunityQuote) =>
   formatCurrencyFromMinorUnits(quote.total_amount, undefined, quote.currency_code);
 
 export interface OpportunityDraftingCallbacks {
-  generate: (opportunityId: string, toneAdjustment?: string) => Promise<IOpportunityFollowUpDraft>;
+  generate: (opportunityId: string, request: {
+    instructions: string;
+    current_draft?: IOpportunityFollowUpDraft;
+  }) => Promise<IOpportunityFollowUpDraft>;
   getRecipient: (opportunityId: string) => Promise<string | null>;
   send: (opportunityId: string, input: { subject: string; body: string }) => Promise<{
     recipient: string;
@@ -232,7 +235,7 @@ export function OpportunityDetailHost({
         <DraftEditorDialog
           isOpen={draftOpen}
           onClose={() => setDraftOpen(false)}
-          onGenerate={(tone) => drafting.generate(detail.opportunity_id, tone)}
+          onGenerate={(request) => drafting.generate(detail.opportunity_id, request)}
           onGetRecipient={() => drafting.getRecipient(detail.opportunity_id)}
           onSend={async (input) => {
             const result = await drafting.send(detail.opportunity_id, input);

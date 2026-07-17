@@ -33,7 +33,7 @@ export function OpportunityDetailWithDrafting({
       drafting={
         draftingAvailable
           ? {
-              generate: (opportunityId, tone) => generateFollowUpDraft(opportunityId, tone),
+              generate: (opportunityId, request) => generateFollowUpDraft(opportunityId, request),
               getRecipient: (opportunityId) => getOpportunityFollowUpRecipient(opportunityId),
               send: (opportunityId, input) => sendOpportunityFollowUp(opportunityId, input),
             }
