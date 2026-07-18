@@ -122,15 +122,13 @@ jobs:
           NODE_OPTIONS: '--max-old-space-size=14336'
           VITEST_SEED: '20260610'
 
-  # Coverage report for the full server unit suite. Push-to-main only (it
-  # re-runs the whole suite with instrumentation, too slow for every PR). This
-  # is the only gate that runs the entire server suite, so it fails loudly:
-  # a red run here means main has real test failures — triage the same day.
+  # Coverage report for the full server unit suite. This is the only gate that
+  # runs the entire server suite, so it fails loudly on PRs and protected-branch
+  # pushes rather than leaving a required check in the skipped state.
   # Scope is src/test/unit only: src/test/infrastructure is DB-backed and runs
   # in its own job below with a Postgres service.
   coverage-report:
     name: Server unit suite + coverage
-    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
