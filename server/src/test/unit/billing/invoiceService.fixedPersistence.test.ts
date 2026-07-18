@@ -368,7 +368,7 @@ describe("invoiceService fixed recurring persistence", () => {
         {
           record_id: "rsp-product-1",
           tenant: "tenant-1",
-          charge_family: "product",
+          charge_family: "fixed",
           due_position: "arrears",
           lifecycle_state: "generated",
           invoice_charge_detail_id: null,
@@ -432,7 +432,7 @@ describe("invoiceService fixed recurring persistence", () => {
         {
           record_id: "rsp-license-1",
           tenant: "tenant-1",
-          charge_family: "license",
+          charge_family: "fixed",
           due_position: "advance",
           lifecycle_state: "generated",
           invoice_charge_detail_id: null,

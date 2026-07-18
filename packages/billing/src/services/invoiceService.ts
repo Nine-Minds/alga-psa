@@ -46,7 +46,6 @@ async function linkRecurringServicePeriodToInvoiceDetail(params: {
   servicePeriodRecordId?: string | null;
   configId?: string | null;
   contractLineId?: string | null;
-  chargeFamily: RecurringChargeFamily;
   servicePeriodStart?: string | null;
   servicePeriodEnd?: string | null;
   billingTiming?: 'arrears' | 'advance' | null;
@@ -62,7 +61,6 @@ async function linkRecurringServicePeriodToInvoiceDetail(params: {
     servicePeriodRecordId,
     configId,
     contractLineId,
-    chargeFamily,
     servicePeriodStart,
     servicePeriodEnd,
     billingTiming,
@@ -80,8 +78,6 @@ async function linkRecurringServicePeriodToInvoiceDetail(params: {
   return tenantScopedTable(tx, tenant, 'recurring_service_periods')
     .where({
       record_id: servicePeriodRecordId,
-      charge_family: chargeFamily,
-      due_position: billingTiming,
     })
     .whereIn('lifecycle_state', ['generated', 'edited', 'locked'])
     .whereNull('invoice_charge_detail_id')
@@ -913,7 +909,6 @@ async function persistFixedInvoiceCharges(
           servicePeriodRecordId: detail.servicePeriodRecordId ?? null,
           configId: detail.config_id,
           contractLineId: detail.client_contract_line_id ?? null,
-          chargeFamily: 'fixed',
           servicePeriodStart: detail.servicePeriodStart ?? null,
           servicePeriodEnd: detail.servicePeriodEnd ?? null,
           billingTiming: detail.billingTiming ?? null,
@@ -1071,7 +1066,6 @@ export async function persistInvoiceCharges(
           servicePeriodRecordId: charge.servicePeriodRecordId ?? null,
           configId: charge.config_id,
           contractLineId: charge.client_contract_line_id ?? null,
-          chargeFamily: recurringChargeFamily,
           servicePeriodStart: charge.servicePeriodStart ?? null,
           servicePeriodEnd: charge.servicePeriodEnd ?? null,
           billingTiming: charge.billingTiming ?? null,
