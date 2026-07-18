@@ -1,4 +1,4 @@
-import axios, { AxiosInstance } from 'axios';
+import axios, { AxiosInstance, AxiosResponse } from 'axios';
 import { randomUUID } from 'crypto';
 import { BaseEmailAdapter } from './base/BaseEmailAdapter';
 import { EmailMessageDetails, EmailProviderConfig } from '../../../interfaces/inbound-email.interfaces';
@@ -369,7 +369,10 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
     };
 
     while (url && messages.length < maxCount) {
-      const response = await this.httpClient.get(url, { params });
+      const response: AxiosResponse<{
+        value?: Array<{ id?: string; receivedDateTime?: string }>;
+        '@odata.nextLink'?: string;
+      }> = await this.httpClient.get(url, { params });
       params = undefined;
       for (const message of response.data?.value || []) {
         if (message?.id) messages.push({ id: String(message.id), receivedDateTime: message.receivedDateTime });
