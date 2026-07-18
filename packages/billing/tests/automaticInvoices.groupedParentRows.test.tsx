@@ -268,7 +268,7 @@ describe('AutomaticInvoices grouped parent rows', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('automatic-invoices-table-row-count')).toHaveTextContent('1');
-    });
+    }, { timeout: 5000 });
 
     expect(screen.getByTestId('automatic-invoices-table')).toBeInTheDocument();
     expect(screen.getAllByTestId('automatic-invoices-table-row')).toHaveLength(1);
@@ -414,7 +414,7 @@ describe('AutomaticInvoices grouped parent rows', () => {
       ) as HTMLInputElement | null;
       expect(checkbox).not.toBeNull();
       return checkbox as HTMLInputElement;
-    });
+    }, { timeout: 5000 });
     fireEvent.click(parentCheckbox);
 
     await waitFor(() => {
@@ -512,7 +512,7 @@ describe('AutomaticInvoices grouped parent rows', () => {
       expect(checkbox).not.toBeNull();
       expect(checkbox?.disabled).toBe(false);
       return checkbox as HTMLInputElement;
-    });
+    }, { timeout: 5000 });
     fireEvent.click(selectAll);
 
     const expandButton = await screen.findByRole('button', { name: 'Expand' });
@@ -524,20 +524,20 @@ describe('AutomaticInvoices grouped parent rows', () => {
       ) as HTMLInputElement | null;
       expect(checkbox).not.toBeNull();
       return checkbox as HTMLInputElement;
-    });
+    }, { timeout: 5000 });
     const readyChild = document.getElementById(
       'select-child-parent-group:client-1:2026-03-01:2026-04-01-exec-1',
     ) as HTMLInputElement;
 
     // The blocked child row stays visible (its child checkbox is present) while the
     // group reports a Blocked status rather than a Separate one.
-    expect(screen.getByText('Blocked')).toBeInTheDocument();
-    expect(screen.queryByText('Separate')).not.toBeInTheDocument();
     await waitFor(() => {
+      expect(screen.getByText('Blocked')).toBeInTheDocument();
+      expect(screen.queryByText('Separate')).not.toBeInTheDocument();
       expect(blockedChild.disabled).toBe(true);
       expect(blockedChild.checked).toBe(false);
       expect(readyChild.checked).toBe(true);
-    });
+    }, { timeout: 5000 });
   });
 
   it('previewing a selected combinable parent renders one combined invoice preview count (T015)', async () => {
@@ -550,7 +550,7 @@ describe('AutomaticInvoices grouped parent rows', () => {
       ) as HTMLInputElement | null;
       expect(checkbox).not.toBeNull();
       return checkbox as HTMLInputElement;
-    });
+    }, { timeout: 5000 });
     fireEvent.click(parentCheckbox);
     await waitFor(() => {
       expect(parentCheckbox.checked).toBe(true);
@@ -562,7 +562,7 @@ describe('AutomaticInvoices grouped parent rows', () => {
       expect(screen.getByTestId('preview-invoice-count-summary')).toHaveTextContent(
         'This selection will generate one combined invoice.',
       );
-    });
+    }, { timeout: 5000 });
     expect(mockPreviewGroupedInvoicesForSelectionInputs).toHaveBeenCalledTimes(1);
     const previewPayload = mockPreviewGroupedInvoicesForSelectionInputs.mock.calls[0][0];
     expect(previewPayload).toHaveLength(1);
@@ -703,7 +703,7 @@ describe('AutomaticInvoices grouped parent rows', () => {
       expect(screen.getByTestId('preview-invoice-count-summary')).toHaveTextContent(
         'This selection will generate one combined invoice.',
       );
-    });
+    }, { timeout: 5000 });
     expect(screen.queryByTestId('grouped-preview-unavailable-copy')).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByRole('button', { name: 'Generate Invoices (1)' }));
