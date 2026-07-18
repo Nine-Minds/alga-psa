@@ -186,6 +186,7 @@ describe('resolveMicrosoftConsumerProfileConfig', () => {
       profileId: 'profile-email',
       clientId: 'bound-client-id',
       clientSecret: 'bound-secret',
+      clientSecretRef: 'bound-secret-ref',
       microsoftTenantId: 'bound-tenant-id',
       credentialSource: 'binding',
     });
@@ -384,6 +385,7 @@ describe('resolveMicrosoftConsumerProfileConfig', () => {
       profileId: hoisted.state.microsoftProfiles[0].profile_id,
       clientId: 'legacy-client',
       clientSecret: 'legacy-secret',
+      clientSecretRef: hoisted.state.microsoftProfiles[0].client_secret_ref,
       microsoftTenantId: 'legacy-tenant',
       credentialSource: 'binding',
     });
