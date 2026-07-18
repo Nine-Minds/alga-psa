@@ -888,6 +888,19 @@ function EditTemplateDialog({
     } : null);
   };
 
+  const repositionAutocomplete = (
+    field: EditableField,
+    element: HTMLInputElement | HTMLTextAreaElement,
+  ) => {
+    setAutocomplete((current) => current?.field === field ? {
+      ...current,
+      position: measureCaretMenuPosition(
+        element,
+        element.selectionStart ?? element.value.length,
+      ),
+    } : current);
+  };
+
   const completeVariable = (field: EditableField, variable: VariableDef) => {
     const element = getFieldRef(field);
     const value = String(formData[field] ?? '');
@@ -1027,7 +1040,7 @@ function EditTemplateDialog({
                 setFormData(prev => ({ ...prev, subject: e.target.value }));
                 detectAutocomplete('subject', e.currentTarget);
               }}
-              onScroll={() => setAutocomplete(null)}
+              onScroll={(event) => repositionAutocomplete('subject', event.currentTarget)}
               onKeyDown={(event) => handleAutocompleteKeyDown(event, 'subject')}
               required
             />
