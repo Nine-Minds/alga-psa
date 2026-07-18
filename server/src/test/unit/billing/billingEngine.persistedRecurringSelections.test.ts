@@ -64,6 +64,7 @@ describe('billing engine persisted recurring selections', () => {
     ]);
 
     expect(selections['fixed-line']).toEqual({
+      servicePeriodRecordId: fixed.recordId,
       duePosition: 'advance',
       servicePeriodStart: '2025-01-01',
       servicePeriodEnd: '2025-01-31',
@@ -73,6 +74,7 @@ describe('billing engine persisted recurring selections', () => {
     });
 
     expect(selections['product-line']).toMatchObject({
+      servicePeriodRecordId: product.recordId,
       duePosition: 'arrears',
       servicePeriodStart: '2025-02-10',
       servicePeriodEnd: '2025-02-19',
@@ -82,6 +84,7 @@ describe('billing engine persisted recurring selections', () => {
     expect(selections['product-line'].coverageRatio).toBeCloseTo(10 / 28);
 
     expect(selections['license-line']).toEqual({
+      servicePeriodRecordId: license.recordId,
       duePosition: 'advance',
       servicePeriodStart: '2025-03-08',
       servicePeriodEnd: '2025-04-07',
