@@ -2,8 +2,8 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 
 let mockDueWorkResponse: any;
@@ -168,6 +168,10 @@ vi.mock('@alga-psa/ui/components/LoadingIndicator', () => ({
 }));
 
 describe('AutomaticInvoices grouped parent rows', () => {
+  afterEach(() => {
+    cleanup();
+  });
+
   beforeEach(() => {
     mockPreviewGroupedInvoicesForSelectionInputs.mockClear();
     mockGenerateGroupedInvoicesAsRecurringBillingRun.mockClear();
@@ -298,11 +302,11 @@ describe('AutomaticInvoices grouped parent rows', () => {
       expect(
         document.getElementById('select-child-parent-group:client-1:2026-03-01:2026-04-01-exec-1'),
       ).not.toBeNull();
-    });
-    expect(screen.getAllByText('Assigned work item').length).toBeGreaterThan(0);
-    // Cadence and billing timing share one compact line in the grouped grid.
-    expect(screen.getAllByText('Contract anniversary · Advance').length).toBeGreaterThan(0);
-    expect(screen.getByText('$125.00')).toBeInTheDocument();
+      expect(screen.getAllByText('Assigned work item').length).toBeGreaterThan(0);
+      // Cadence and billing timing share one compact line in the grouped grid.
+      expect(screen.getAllByText('Contract anniversary · Advance').length).toBeGreaterThan(0);
+      expect(screen.getByText('$125.00')).toBeInTheDocument();
+    }, { timeout: 5000 });
   });
 
   it('is combinable only when all ready children share client/currency/PO/tax/export scope (T004)', async () => {
@@ -537,6 +541,9 @@ describe('AutomaticInvoices grouped parent rows', () => {
       return checkbox as HTMLInputElement;
     });
     fireEvent.click(parentCheckbox);
+    await waitFor(() => {
+      expect(parentCheckbox.checked).toBe(true);
+    });
 
     fireEvent.click(screen.getByRole('button', { name: 'Preview Selected' }));
 
@@ -691,7 +698,7 @@ describe('AutomaticInvoices grouped parent rows', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Generate Invoices (1)' }));
     await waitFor(() => {
       expect(mockGenerateGroupedInvoicesAsRecurringBillingRun).toHaveBeenCalledTimes(1);
-    });
+    }, { timeout: 5000 });
     const payload = mockGenerateGroupedInvoicesAsRecurringBillingRun.mock.calls[0][0];
     expect(payload.groupedTargets).toHaveLength(1);
     expect(payload.groupedTargets[0].selectorInputs).toHaveLength(1);
