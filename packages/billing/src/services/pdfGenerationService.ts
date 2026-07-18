@@ -16,6 +16,7 @@ import { mapDbQuoteToViewModel } from '../lib/adapters/quoteAdapters';
 import { mapDbSalesOrderToViewModel } from '../lib/adapters/salesOrderAdapters';
 import { fetchTenantParty } from '../lib/adapters/tenantPartyAdapter';
 import { evaluateTemplateAst } from '../lib/invoice-template-ast/evaluator';
+import { INVOICE_TEMPLATE_BINDING_ALIASES } from '../lib/invoice-template-ast/bindingAliases';
 import { resolvePdfPrintOptionsFromAst } from '../lib/invoice-template-ast/printSettings';
 import { renderEvaluatedTemplateAst } from '../lib/invoice-template-ast/react-renderer';
 import { renderTemplateAstHtmlDocument } from '../lib/invoice-template-ast/server-render';
@@ -228,7 +229,8 @@ export class PDFGenerationService {
 
       const evaluation = evaluateTemplateAst(
         templateAst,
-        invoiceViewModel as unknown as Record<string, unknown>
+        invoiceViewModel as unknown as Record<string, unknown>,
+        { bindingAliases: INVOICE_TEMPLATE_BINDING_ALIASES }
       );
       const rendered = await renderEvaluatedTemplateAst(templateAst, evaluation);
       return { html: rendered.html, css: rendered.css, templateAst };
@@ -352,7 +354,8 @@ export class PDFGenerationService {
 
       const evaluation = evaluateTemplateAst(
         templateAst,
-        invoiceViewModel as unknown as Record<string, unknown>
+        invoiceViewModel as unknown as Record<string, unknown>,
+        { bindingAliases: INVOICE_TEMPLATE_BINDING_ALIASES }
       );
 
       const htmlContent = await renderTemplateAstHtmlDocument(templateAst, evaluation, {
@@ -459,7 +462,8 @@ export class PDFGenerationService {
 
       const evaluation = evaluateTemplateAst(
         templateAst,
-        viewModel as unknown as Record<string, unknown>
+        viewModel as unknown as Record<string, unknown>,
+        { bindingAliases: INVOICE_TEMPLATE_BINDING_ALIASES }
       );
 
       const htmlContent = await renderTemplateAstHtmlDocument(templateAst, evaluation, {
