@@ -366,6 +366,7 @@ describe('BoardsSettings ticket status copy flow', () => {
     });
     await waitFor(() => {
       expect(getBoardTicketStatusesMock).toHaveBeenCalledWith('board-source');
+      expect(document.getElementById('inline-ticket-status-name-0')).toBeTruthy();
     });
 
     fireEvent.change(document.getElementById('inline-ticket-status-name-0') as HTMLInputElement, {

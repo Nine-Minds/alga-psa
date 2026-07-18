@@ -1,47 +1,134 @@
-'use client';
+"use client";
 
-import React, { useEffect, useState } from 'react';
-import { Button } from '@alga-psa/ui/components/Button';
-import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
-import { TextArea } from '@alga-psa/ui/components/TextArea';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import React, { Suspense, useCallback, useEffect, useState } from "react";
+import dynamic from "next/dynamic";
+import type { PartialBlock } from "@blocknote/core";
+import { Button } from "@alga-psa/ui/components/Button";
+import CustomSelect from "@alga-psa/ui/components/CustomSelect";
+import { ConfirmationDialog } from "@alga-psa/ui/components/ConfirmationDialog";
+import { Dialog, DialogContent } from "@alga-psa/ui/components/Dialog";
+import RichTextEditorSkeleton from "@alga-psa/ui/components/skeletons/RichTextEditorSkeleton";
+import { useTranslation } from "@alga-psa/ui/lib/i18n/client";
+import { searchUsersForMentions } from "@alga-psa/user-composition/actions";
+import { createTicketRichTextParagraph } from "../../lib/ticketRichText";
+import TicketNotificationSuppressionControl, {
+  type TicketNotificationSuppressionValue,
+} from "./TicketNotificationSuppressionControl";
+import { useTicketRichTextUploadSession } from "./useTicketRichTextUploadSession";
+
+const TextEditor = dynamic(
+  () => import("@alga-psa/ui/editor").then((mod) => mod.TextEditor),
+  {
+    loading: () => <RichTextEditorSkeleton height="200px" />,
+    ssr: false,
+  },
+);
+
+const DEFAULT_RESOLUTION_BLOCK = createTicketRichTextParagraph("");
+
+const defaultNotificationSuppression =
+  (): TicketNotificationSuppressionValue => ({
+    suppressContactNotifications: false,
+    suppressInternalNotifications: false,
+  });
 
 interface TicketResolutionDialogProps {
   id: string;
   isOpen: boolean;
+  ticketId: string;
+  currentUserId?: string | null;
   statusOptions: { value: string; label: string }[];
   isSubmitting?: boolean;
   onClose: () => void;
-  onConfirm: (statusId: string, resolution: string) => void;
+  onConfirm: (
+    statusId: string,
+    contentBlocks: PartialBlock[],
+    suppression: TicketNotificationSuppressionValue,
+  ) => Promise<boolean>;
+  onClipboardImageUploaded?: () => Promise<void> | void;
+  uploadTicketAttachmentAction?: (
+    formData: FormData,
+    params: { userId: string; ticketId: string },
+  ) => Promise<unknown>;
+  deleteDraftTicketAttachmentImagesAction?: (input: {
+    ticketId: string;
+    documentIds: string[];
+  }) => Promise<{
+    deletedDocumentIds: string[];
+    failures: Array<{ documentId: string; reason: string }>;
+  }>;
+  resolveTicketAttachmentViewUrl?: (document: {
+    document_id?: string;
+    file_id?: string;
+  }) => string;
 }
 
 export default function TicketResolutionDialog({
   id,
   isOpen,
+  ticketId,
+  currentUserId,
   statusOptions,
   isSubmitting = false,
   onClose,
   onConfirm,
+  onClipboardImageUploaded,
+  uploadTicketAttachmentAction,
+  deleteDraftTicketAttachmentImagesAction,
+  resolveTicketAttachmentViewUrl,
 }: TicketResolutionDialogProps) {
-  const { t } = useTranslation('features/tickets');
+  const { t } = useTranslation("features/tickets");
   const [statusId, setStatusId] = useState<string | null>(null);
-  const [resolution, setResolution] = useState('');
+  const [content, setContent] = useState<PartialBlock[]>(
+    DEFAULT_RESOLUTION_BLOCK,
+  );
+  const [editorKey, setEditorKey] = useState(0);
+  const [notificationSuppression, setNotificationSuppression] =
+    useState<TicketNotificationSuppressionValue>(
+      defaultNotificationSuppression,
+    );
   const formId = `${id}-form`;
-  const resolutionLabel = t('conversation.resolution', 'Resolution');
+
+  const discardEditor = useCallback(() => {
+    onClose();
+  }, [onClose]);
+
+  const uploadSession = useTicketRichTextUploadSession({
+    componentLabel: "TicketResolutionDialog",
+    ticketId,
+    userId: currentUserId,
+    trackDraftUploads: true,
+    onDocumentsChanged: onClipboardImageUploaded,
+    onDiscard: discardEditor,
+    uploadDocumentAction: uploadTicketAttachmentAction,
+    deleteDraftClipboardImagesAction: deleteDraftTicketAttachmentImagesAction,
+    resolveDocumentViewUrl: resolveTicketAttachmentViewUrl,
+  });
+  const resetDraftTracking = uploadSession.resetDraftTracking;
 
   useEffect(() => {
     if (isOpen) {
       setStatusId(statusOptions.length === 1 ? statusOptions[0].value : null);
-      setResolution('');
+      setContent(DEFAULT_RESOLUTION_BLOCK);
+      setEditorKey((currentKey) => currentKey + 1);
+      setNotificationSuppression(defaultNotificationSuppression());
+      resetDraftTracking();
     }
-  }, [isOpen, statusOptions]);
+  }, [isOpen, resetDraftTracking, statusOptions]);
 
-  const trimmedResolution = resolution.trim();
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const hasContent =
+    JSON.stringify(content) !== JSON.stringify(DEFAULT_RESOLUTION_BLOCK);
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!statusId || !trimmedResolution || isSubmitting) return;
-    onConfirm(statusId, trimmedResolution);
+    if (!statusId || !hasContent || isSubmitting) return;
+    const resolutionSaved = await onConfirm(
+      statusId,
+      content,
+      notificationSuppression,
+    );
+    if (resolutionSaved) {
+      uploadSession.resetDraftTracking();
+    }
   };
 
   const footer = (
@@ -50,68 +137,104 @@ export default function TicketResolutionDialog({
         id={`${id}-cancel`}
         type="button"
         variant="ghost"
-        onClick={onClose}
+        onClick={uploadSession.requestDiscard}
         disabled={isSubmitting}
       >
-        {t('actions.cancel', 'Cancel')}
+        {t("actions.cancel", "Cancel")}
       </Button>
       <Button
         id={`${id}-confirm`}
         type="button"
-        disabled={!statusId || !trimmedResolution || isSubmitting}
-        onClick={() => (document.getElementById(formId) as HTMLFormElement | null)?.requestSubmit()}
+        disabled={!statusId || !hasContent || isSubmitting}
+        onClick={() =>
+          (
+            document.getElementById(formId) as HTMLFormElement | null
+          )?.requestSubmit()
+        }
       >
         {isSubmitting
-          ? t('info.closing', 'Closing…')
-          : t('info.resolveAndClose', 'Resolve and close')}
+          ? t("info.closing", "Closing…")
+          : t("info.resolveAndClose", "Resolve and close")}
       </Button>
     </div>
   );
 
   return (
-    <Dialog
-      id={id}
-      isOpen={isOpen}
-      onClose={onClose}
-      title={t('info.closeTicketTitle', 'Close ticket')}
-      className="max-w-lg"
-      footer={footer}
-    >
-      <DialogContent>
-        <form id={formId} className="space-y-4" onSubmit={handleSubmit}>
-          <p className="mb-4 text-sm text-[rgb(var(--color-text-600))]">
-            {t(
-              'info.closeTicketResolutionPrompt',
-              'Choose a close status and add a resolution for this ticket.',
-            )}
-          </p>
-          <CustomSelect
-            id={`${id}-status`}
-            label={t('conversation.closeStatus', 'Close status')}
-            value={statusId}
-            options={statusOptions}
-            onValueChange={setStatusId}
-            placeholder={t('info.selectCloseStatus', 'Select a close status')}
-            required
-            disabled={isSubmitting}
-          />
-          <TextArea
-            id={`${id}-resolution`}
-            label={resolutionLabel}
-            aria-label={resolutionLabel}
-            value={resolution}
-            onChange={(event) => setResolution(event.target.value)}
-            placeholder={t(
-              'info.closeTicketResolutionPlaceholder',
-              'Summarize the resolution for the ticket history and customer.',
-            )}
-            rows={4}
-            required
-            disabled={isSubmitting}
-            wrapperClassName="mb-0"
-          />
-        </form>
-      </DialogContent>
-    </Dialog>
+    <>
+      <Dialog
+        id={id}
+        isOpen={isOpen}
+        onClose={uploadSession.requestDiscard}
+        title={t("info.closeTicketTitle", "Close ticket")}
+        className="max-w-2xl"
+        footer={footer}
+      >
+        <DialogContent>
+          <form id={formId} className="space-y-4" onSubmit={handleSubmit}>
+            <p className="mb-4 text-sm text-[rgb(var(--color-text-600))]">
+              {t(
+                "info.closeTicketResolutionPrompt",
+                "Choose a close status and add a resolution for this ticket.",
+              )}
+            </p>
+            <CustomSelect
+              id={`${id}-status`}
+              label={t("conversation.closeStatus", "Close status")}
+              value={statusId}
+              options={statusOptions}
+              onValueChange={setStatusId}
+              placeholder={t("info.selectCloseStatus", "Select a close status")}
+              required
+              disabled={isSubmitting}
+            />
+            <div>
+              <Suspense
+                fallback={
+                  <RichTextEditorSkeleton
+                    height="200px"
+                    title={t("conversation.commentEditor", "Comment Editor")}
+                  />
+                }
+              >
+                <TextEditor
+                  id={`${id}-resolution`}
+                  key={editorKey}
+                  initialContent={DEFAULT_RESOLUTION_BLOCK}
+                  onContentChange={setContent}
+                  searchMentions={searchUsersForMentions}
+                  uploadFile={uploadSession.uploadFile}
+                  autoFocus
+                />
+              </Suspense>
+            </div>
+            <TicketNotificationSuppressionControl
+              idPrefix={`${id}-notification-suppression`}
+              value={notificationSuppression}
+              onChange={setNotificationSuppression}
+              disabled={isSubmitting}
+            />
+          </form>
+        </DialogContent>
+      </Dialog>
+      <ConfirmationDialog
+        id={`${id}-clipboard-draft-cancel-dialog`}
+        isOpen={uploadSession.showDraftCancelDialog}
+        onClose={() => uploadSession.setShowDraftCancelDialog(false)}
+        onConfirm={uploadSession.deleteTrackedDraftClipboardImages}
+        onCancel={uploadSession.keepDraftClipboardImages}
+        title={t(
+          "conversation.clipboardDraftCancelTitle",
+          "Pasted Images Detected",
+        )}
+        message={t(
+          "conversation.clipboardDraftCancelMessage",
+          "This draft includes pasted images that were already uploaded as ticket documents. Keep them, or delete them permanently?",
+        )}
+        confirmLabel={t("conversation.deleteUploadedImages", "Delete Images")}
+        thirdButtonLabel={t("conversation.keepUploadedImages", "Keep Images")}
+        cancelLabel={t("common.continueEditing", "Continue Editing")}
+        isConfirming={uploadSession.isDeletingDraftImages}
+      />
+    </>
   );
 }

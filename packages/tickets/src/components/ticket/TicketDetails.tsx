@@ -123,8 +123,8 @@ import { isBoardLiveTicketTimerEnabled } from '../../lib/boardLiveTicketTimer';
 import { hasAdminSettingsViewAccess } from './commentMetadataDebug';
 import type { TicketScreenBootstrap } from '../../lib/ticketScreenBootstrap';
 import { normalizeTicketLiveField, type TicketLiveConflictState } from './ticketLiveFields';
-import { createTicketRichTextParagraph } from '../../lib/ticketRichText';
 import TicketResolutionDialog from './TicketResolutionDialog';
+import { persistResolutionComment } from './resolutionCommentPersistence';
 
 interface PendingCommentDelete {
     commentId: string;
@@ -465,31 +465,46 @@ const TicketDetails: React.FC<TicketDetailsProps> = ({
         [statusOptions, ticket.status_id],
     );
 
-    const addResolutionComment = useCallback(async (resolution: string): Promise<boolean> => {
-        if (!ticket.ticket_id) {
+    const addResolutionComment = useCallback(async (
+        resolution: string,
+        suppression: TicketNotificationSuppressionValue,
+    ): Promise<boolean> => {
+        const ticketId = ticket.ticket_id;
+        if (!ticketId) {
             toast.error(t('messages.closeFailed', 'Failed to close ticket'));
             return false;
         }
 
         try {
-            const result = await addTicketCommentWithCache(
-                ticket.ticket_id,
-                JSON.stringify(createTicketRichTextParagraph(resolution)),
-                false,
-                true,
-                true,
-            );
-            if (isReturnedActionError(result)) {
-                throw result;
-            }
-
-            const updatedComments = await findCommentsByTicketId(ticket.ticket_id);
-            if (isReturnedActionError(updatedComments)) {
-                throw updatedComments;
-            }
-            setConversations(updatedComments);
-            setActivityLogRefreshKey((value) => value + 1);
-            return true;
+            return await persistResolutionComment({
+                persistComment: async () => {
+                    const result = await addTicketCommentWithCache(
+                        ticketId,
+                        resolution,
+                        false,
+                        true,
+                        true,
+                        suppression,
+                    );
+                    if (isReturnedActionError(result)) {
+                        throw result;
+                    }
+                },
+                refreshComments: async () => {
+                    const updatedComments = await findCommentsByTicketId(ticketId);
+                    if (isReturnedActionError(updatedComments)) {
+                        throw updatedComments;
+                    }
+                    return updatedComments;
+                },
+                onCommentsRefreshed: (updatedComments) => {
+                    setConversations(updatedComments);
+                    setActivityLogRefreshKey((value) => value + 1);
+                },
+                onRefreshError: (error) => {
+                    handleTicketActionError(error, t('messages.loadCommentsFailed', 'Failed to load comments'));
+                },
+            });
         } catch (error) {
             handleTicketActionError(error, t('messages.addCommentFailed', 'Failed to add comment'));
             return false;
@@ -2662,18 +2677,24 @@ const handleClose = () => {
         ticket.ticket_id,
     ]);
 
-    const handleResolveAndClose = useCallback(async (statusId: string, resolution: string) => {
+    const handleResolveAndClose = useCallback(async (
+        statusId: string,
+        contentBlocks: PartialBlock[],
+        suppression: TicketNotificationSuppressionValue,
+    ) => {
         if (!ticket.ticket_id || !closedStatusOptions.some((option) => option.value === statusId)) {
             toast.error(t('messages.closeFailed', 'Failed to close ticket'));
-            return;
+            return false;
         }
 
         setIsSubmittingResolutionClose(true);
+        let resolutionSaved = false;
         try {
-            const resolutionAdded = await addResolutionComment(resolution);
+            const resolutionAdded = await addResolutionComment(JSON.stringify(contentBlocks), suppression);
             if (!resolutionAdded) {
-                return;
+                return false;
             }
+            resolutionSaved = true;
 
             // The comment is already durable at this point. Close this dialog
             // so a failed or blocked status write cannot accidentally create a
@@ -2689,9 +2710,9 @@ const handleClose = () => {
                         statusId,
                         failures: check.failures,
                         canOverride: check.canOverride,
-                        suppression: null,
+                        suppression: suppression.suppressContactNotifications ? suppression : null,
                     });
-                    return;
+                    return true;
                 }
             } catch (checkError) {
                 // Fall through to the write; the server still enforces.
@@ -2700,7 +2721,11 @@ const handleClose = () => {
 
             const result = await runWithPendingLiveFields(
                 ['status_id', 'response_state'],
-                () => updateTicketWithCache(ticket.ticket_id!, { status_id: statusId }),
+                () => updateTicketWithCache(
+                    ticket.ticket_id!,
+                    { status_id: statusId },
+                    suppression.suppressContactNotifications ? suppression : undefined,
+                ),
             );
             if (isReturnedActionError(result)) {
                 throw result;
@@ -2714,8 +2739,10 @@ const handleClose = () => {
             }));
             setActivityLogRefreshKey((value) => value + 1);
             toast.success(t('messages.ticketClosed', 'Ticket closed'));
+            return true;
         } catch (error) {
             handleTicketActionError(error, t('messages.closeFailed', 'Failed to close ticket'));
+            return resolutionSaved;
         } finally {
             setIsSubmittingResolutionClose(false);
         }
@@ -3428,6 +3455,8 @@ const handleClose = () => {
                 <TicketResolutionDialog
                     id={`${id}-resolution-close`}
                     isOpen={isResolutionCloseDialogOpen}
+                    ticketId={ticket.ticket_id!}
+                    currentUserId={userId}
                     statusOptions={closedStatusOptions}
                     isSubmitting={isSubmittingResolutionClose}
                     onClose={() => {
@@ -3436,6 +3465,10 @@ const handleClose = () => {
                         }
                     }}
                     onConfirm={handleResolveAndClose}
+                    onClipboardImageUploaded={refreshTicketDocuments}
+                    uploadTicketAttachmentAction={uploadTicketAttachmentAction}
+                    deleteDraftTicketAttachmentImagesAction={deleteDraftTicketAttachmentImagesAction}
+                    resolveTicketAttachmentViewUrl={resolveTicketAttachmentViewUrl}
                 />
                 
                 {/* Blocked-close dialog: unmet close rules with quick actions and
