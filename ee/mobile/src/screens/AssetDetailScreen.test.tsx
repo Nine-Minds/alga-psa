@@ -12,6 +12,8 @@ const mockGetHistory = vi.fn();
 const mockGetTickets = vi.fn();
 const mockGetSoftware = vi.fn();
 const mockRecordMaintenance = vi.fn();
+const mockGetNotes = vi.fn();
+const mockSaveNotes = vi.fn();
 const mockLink = vi.fn();
 const mockCreate = vi.fn();
 vi.mock("../api/assets", () => ({
@@ -21,6 +23,8 @@ vi.mock("../api/assets", () => ({
   getAssetTickets: (...args: unknown[]) => mockGetTickets(...args),
   getAssetSoftware: (...args: unknown[]) => mockGetSoftware(...args),
   recordAssetMaintenance: (...args: unknown[]) => mockRecordMaintenance(...args),
+  getAssetNotes: (...args: unknown[]) => mockGetNotes(...args),
+  saveAssetNotes: (...args: unknown[]) => mockSaveNotes(...args),
   linkAssetToTicket: (...args: unknown[]) => mockLink(...args),
   createTicketFromAsset: (...args: unknown[]) => mockCreate(...args),
 }));
@@ -152,6 +156,8 @@ describe("AssetDetailScreen", () => {
     mockGetTickets.mockResolvedValue(ok({ data: [linkedTicket] }));
     mockGetSoftware.mockResolvedValue(ok({ data: [] }));
     mockRecordMaintenance.mockResolvedValue(ok({ data: {} }));
+    mockGetNotes.mockResolvedValue(ok({ data: { document: null, blockData: null, lastUpdated: null } }));
+    mockSaveNotes.mockResolvedValue(ok({ data: {} }));
     mockLink.mockResolvedValue(ok({ data: {} }));
     mockCreate.mockResolvedValue(ok({ data: { ticket_id: "t-100", ticket_number: "TK-100" } }));
     mockListTickets.mockResolvedValue(
@@ -283,5 +289,54 @@ describe("AssetDetailScreen", () => {
     );
     // Records refetch maintenance + history after a successful write.
     expect(mockGetMaintenance).toHaveBeenCalledTimes(2);
+  });
+
+  it("renders existing notes flattened from BlockNote content", async () => {
+    mockGetNotes.mockResolvedValue(
+      ok({
+        data: {
+          document: {},
+          blockData: [{ type: "paragraph", content: [{ type: "text", text: "Left in rack B4" }] }],
+          lastUpdated: "2026-07-17T00:00:00Z",
+        },
+      }),
+    );
+    const tree = await renderScreen();
+    expect(allText(tree)).toContain("Left in rack B4");
+  });
+
+  it("shows an empty state when the device has no notes", async () => {
+    const tree = await renderScreen();
+    expect(allText(tree)).toContain("No notes on this device yet.");
+  });
+
+  it("appends a new note without clobbering existing content", async () => {
+    mockGetNotes.mockResolvedValue(
+      ok({
+        data: {
+          document: {},
+          blockData: [{ type: "heading", content: [{ type: "text", text: "Runbook" }] }],
+          lastUpdated: null,
+        },
+      }),
+    );
+    const tree = await renderScreen();
+
+    await act(async () => hosts(tree, "asset-detail-add-note")[0].props.onPress());
+    act(() => byLabel(tree, "asset-detail-note-input")[0].props.onChangeText("Swapped PSU"));
+    await act(async () => byLabel(tree, "asset-detail-note-submit")[0].props.onPress());
+
+    expect(mockSaveNotes).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        assetId: "asset-1",
+        blockData: [
+          { type: "heading", content: [{ type: "text", text: "Runbook" }] },
+          expect.objectContaining({ type: "paragraph", content: [expect.objectContaining({ text: "Swapped PSU" })] }),
+        ],
+      }),
+    );
+    // Refetches after a successful save.
+    expect(mockGetNotes).toHaveBeenCalledTimes(2);
   });
 });

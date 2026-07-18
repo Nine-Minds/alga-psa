@@ -12,9 +12,11 @@ import {
   getAsset,
   getAssetHistory,
   getAssetMaintenance,
+  getAssetNotes,
   getAssetSoftware,
   getAssetTickets,
   recordAssetMaintenance,
+  saveAssetNotes,
   type AssetDetail,
   type AssetSoftwareItem,
   type AssetTicketRow,
@@ -22,6 +24,7 @@ import {
   type MaintenanceHistoryItem,
   type MaintenanceSchedule,
 } from "../api/assets";
+import { appendNoteBlock, blockDataToText } from "../features/assets/blockNote";
 import { useInventoryApi } from "../features/inventory/hooks/useInventoryApi";
 import { usePullToRefresh } from "../hooks/usePullToRefresh";
 import { LinkTicketModal } from "../features/assets/LinkTicketModal";
@@ -97,12 +100,16 @@ export function AssetDetailScreen({ route, navigation }: Props) {
   const [history, setHistory] = useState<MaintenanceHistoryItem[]>([]);
   const [tickets, setTickets] = useState<AssetTicketRow[]>([]);
   const [software, setSoftware] = useState<AssetSoftwareItem[]>([]);
+  const [notesBlockData, setNotesBlockData] = useState<unknown | null>(null);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [linkOpen, setLinkOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
   const [recordSchedule, setRecordSchedule] = useState<MaintenanceSchedule | null>(null);
   const [recordNote, setRecordNote] = useState("");
   const [recording, setRecording] = useState(false);
+  const [noteOpen, setNoteOpen] = useState(false);
+  const [noteDraft, setNoteDraft] = useState("");
+  const [savingNote, setSavingNote] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
   const fetchAll = useCallback(async () => {
@@ -110,12 +117,13 @@ export function AssetDetailScreen({ route, navigation }: Props) {
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
-    const [assetResult, maintResult, historyResult, ticketsResult, softwareResult] = await Promise.all([
+    const [assetResult, maintResult, historyResult, ticketsResult, softwareResult, notesResult] = await Promise.all([
       getAsset(client, { apiKey, assetId, signal: controller.signal }),
       getAssetMaintenance(client, { apiKey, assetId, signal: controller.signal }),
       getAssetHistory(client, { apiKey, assetId, signal: controller.signal }),
       getAssetTickets(client, { apiKey, assetId, signal: controller.signal }),
       getAssetSoftware(client, { apiKey, assetId, signal: controller.signal }),
+      getAssetNotes(client, { apiKey, assetId, signal: controller.signal }),
     ]);
     if (controller.signal.aborted) return;
     if (!assetResult.ok) {
@@ -128,6 +136,7 @@ export function AssetDetailScreen({ route, navigation }: Props) {
     setHistory(historyResult.ok ? historyResult.data.data : []);
     setTickets(ticketsResult.ok ? ticketsResult.data.data : []);
     setSoftware(softwareResult.ok ? softwareResult.data.data : []);
+    setNotesBlockData(notesResult.ok ? notesResult.data.data.blockData : null);
     setStatus("ready");
   }, [client, apiKey, assetId]);
 
@@ -156,6 +165,31 @@ export function AssetDetailScreen({ route, navigation }: Props) {
       });
     }
   }, [client, apiKey, assetId, recordSchedule, recordNote, showToast, t, fetchAll]);
+
+  const submitAddNote = useCallback(async () => {
+    if (!client || !apiKey) return;
+    const note = noteDraft.trim();
+    if (!note) return;
+    setSavingNote(true);
+    // Append to the existing document so web-authored rich content survives.
+    const result = await saveAssetNotes(client, {
+      apiKey,
+      assetId,
+      blockData: appendNoteBlock(notesBlockData, note),
+    });
+    setSavingNote(false);
+    if (result.ok) {
+      showToast({ tone: "success", message: t("notes.saved", "Note added") });
+      setNoteOpen(false);
+      setNoteDraft("");
+      void fetchAll();
+    } else {
+      showToast({
+        tone: "error",
+        message: result.error.message || t("notes.saveFailed", "Couldn't save note"),
+      });
+    }
+  }, [client, apiKey, assetId, noteDraft, notesBlockData, showToast, t, fetchAll]);
 
   const refetchTickets = useCallback(async () => {
     if (!client || !apiKey) return;
@@ -190,6 +224,7 @@ export function AssetDetailScreen({ route, navigation }: Props) {
 
   const warranty = warrantyBadge(asset.warranty_status, t);
   const hasClient = Boolean(asset.client_id);
+  const notesText = blockDataToText(notesBlockData);
 
   return (
     <View style={{ flex: 1, backgroundColor: theme.colors.background }}>
@@ -326,6 +361,27 @@ export function AssetDetailScreen({ route, navigation }: Props) {
           )}
         </Card>
 
+        {/* Notes — a single BlockNote document shared with the web asset page */}
+        <Card>
+          <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+            <SectionTitle theme={theme}>{t("notes.title", "Notes")}</SectionTitle>
+            <Text
+              onPress={() => { setNoteDraft(""); setNoteOpen(true); }}
+              testID="asset-detail-add-note"
+              style={{ ...theme.typography.body, color: theme.colors.primary }}
+            >
+              {t("notes.add", "Add note")}
+            </Text>
+          </View>
+          {notesText ? (
+            <Text testID="asset-detail-notes-body" style={{ ...theme.typography.body, color: theme.colors.text, marginTop: theme.spacing.xs }}>
+              {notesText}
+            </Text>
+          ) : (
+            <EmptyLine theme={theme}>{t("notes.empty", "No notes on this device yet.")}</EmptyLine>
+          )}
+        </Card>
+
         {/* Service history */}
         <Card>
           <SectionTitle theme={theme}>{t("history.title", "Service history")}</SectionTitle>
@@ -416,6 +472,43 @@ export function AssetDetailScreen({ route, navigation }: Props) {
             <Text
               onPress={() => setRecordSchedule(null)}
               testID="asset-detail-maintenance-record-cancel"
+              style={{ ...theme.typography.body, color: theme.colors.textSecondary, textAlign: "center", padding: theme.spacing.xs }}
+            >
+              {t("common.cancel", "Cancel")}
+            </Text>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal
+        visible={noteOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setNoteOpen(false)}
+      >
+        <View style={{ flex: 1, justifyContent: "center", padding: theme.spacing.xl, backgroundColor: "rgba(0,0,0,0.45)" }}>
+          <View style={{ backgroundColor: theme.colors.card, borderRadius: theme.borderRadius.md, padding: theme.spacing.lg, gap: theme.spacing.md }}>
+            <Text style={{ ...theme.typography.title, color: theme.colors.text }}>
+              {t("notes.addTitle", "Add a note")}
+            </Text>
+            <TextInput
+              value={noteDraft}
+              onChangeText={setNoteDraft}
+              label={t("notes.label", "Note")}
+              placeholder={t("notes.placeholder", "What should the team know about this device?")}
+              multiline
+              accessibilityLabel="asset-detail-note-input"
+            />
+            <PrimaryButton
+              onPress={() => void submitAddNote()}
+              disabled={savingNote || noteDraft.trim().length === 0}
+              accessibilityLabel="asset-detail-note-submit"
+            >
+              {t("notes.save", "Save note")}
+            </PrimaryButton>
+            <Text
+              onPress={() => setNoteOpen(false)}
+              testID="asset-detail-note-cancel"
               style={{ ...theme.typography.body, color: theme.colors.textSecondary, textAlign: "center", padding: theme.spacing.xs }}
             >
               {t("common.cancel", "Cancel")}

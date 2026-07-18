@@ -113,6 +113,42 @@ export function getAssetSoftware(
   });
 }
 
+// Asset notes are a single BlockNote (rich-text) document per asset — GET reads
+// it, PUT replaces it. Mobile flattens blockData to text for display and appends
+// paragraph blocks for new notes (see features/assets/blockNote).
+export type AssetNoteContent = {
+  document: unknown | null;
+  blockData: unknown | null;
+  lastUpdated: string | null;
+};
+
+export function getAssetNotes(
+  client: ApiClient,
+  params: { apiKey: string; assetId: string; signal?: AbortSignal },
+): Promise<ApiResult<{ data: AssetNoteContent }>> {
+  return client.request<{ data: AssetNoteContent }>({
+    method: "GET",
+    path: `/api/v1/assets/${params.assetId}/notes`,
+    signal: params.signal,
+    headers: { "x-api-key": params.apiKey },
+  });
+}
+
+/** Replace the asset's notes document. Callers must pass the full block array,
+ *  including any pre-existing blocks (appendNoteBlock handles that). */
+export function saveAssetNotes(
+  client: ApiClient,
+  params: { apiKey: string; assetId: string; blockData: unknown; signal?: AbortSignal },
+): Promise<ApiResult<{ data: unknown }>> {
+  return client.request<{ data: unknown }>({
+    method: "PUT",
+    path: `/api/v1/assets/${params.assetId}/notes`,
+    signal: params.signal,
+    headers: { "x-api-key": params.apiKey },
+    body: { blockData: params.blockData },
+  });
+}
+
 export function getAssetHistory(
   client: ApiClient,
   params: { apiKey: string; assetId: string; signal?: AbortSignal },

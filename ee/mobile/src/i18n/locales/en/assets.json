@@ -77,5 +77,16 @@
   },
   "software": {
     "title": "Installed software"
+  },
+  "notes": {
+    "title": "Notes",
+    "add": "Add note",
+    "addTitle": "Add a note",
+    "label": "Note",
+    "placeholder": "What should the team know about this device?",
+    "save": "Save note",
+    "saved": "Note added",
+    "saveFailed": "Couldn't save note",
+    "empty": "No notes on this device yet."
   }
 }
