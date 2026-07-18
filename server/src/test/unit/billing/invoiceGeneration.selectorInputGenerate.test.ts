@@ -116,6 +116,7 @@ function createQueryBuilder(rows: Row[], tableName: string) {
       resultRows = resultRows.filter((row) => !values.includes(row[normalizeColumn(column)]));
       return builder;
     }),
+    distinct: vi.fn(() => builder),
     select: vi.fn(() => builder),
     first: vi.fn(async () => resultRows[0]),
     join: vi.fn(() => builder),
