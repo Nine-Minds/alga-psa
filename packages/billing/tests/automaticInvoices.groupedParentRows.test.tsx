@@ -173,6 +173,7 @@ describe('AutomaticInvoices grouped parent rows', () => {
   });
 
   beforeEach(() => {
+    cleanup();
     mockPreviewGroupedInvoicesForSelectionInputs.mockClear();
     mockGenerateGroupedInvoicesAsRecurringBillingRun.mockClear();
     mockDueWorkResponse = {
@@ -506,27 +507,37 @@ describe('AutomaticInvoices grouped parent rows', () => {
     const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
     render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
 
-    const [selectAll] = await screen.findAllByRole('checkbox');
+    const selectAll = await waitFor(() => {
+      const checkbox = document.getElementById('select-all') as HTMLInputElement | null;
+      expect(checkbox).not.toBeNull();
+      expect(checkbox?.disabled).toBe(false);
+      return checkbox as HTMLInputElement;
+    });
     fireEvent.click(selectAll);
 
     const expandButton = await screen.findByRole('button', { name: 'Expand' });
     fireEvent.click(expandButton);
 
-    const blockedChild = document.getElementById(
-      'select-child-parent-group:client-1:2026-03-01:2026-04-01-exec-2',
-    ) as HTMLInputElement;
+    const blockedChild = await waitFor(() => {
+      const checkbox = document.getElementById(
+        'select-child-parent-group:client-1:2026-03-01:2026-04-01-exec-2',
+      ) as HTMLInputElement | null;
+      expect(checkbox).not.toBeNull();
+      return checkbox as HTMLInputElement;
+    });
     const readyChild = document.getElementById(
       'select-child-parent-group:client-1:2026-03-01:2026-04-01-exec-1',
     ) as HTMLInputElement;
 
     // The blocked child row stays visible (its child checkbox is present) while the
     // group reports a Blocked status rather than a Separate one.
-    expect(blockedChild).not.toBeNull();
     expect(screen.getByText('Blocked')).toBeInTheDocument();
     expect(screen.queryByText('Separate')).not.toBeInTheDocument();
-    expect(blockedChild.disabled).toBe(true);
-    expect(blockedChild.checked).toBe(false);
-    expect(readyChild.checked).toBe(true);
+    await waitFor(() => {
+      expect(blockedChild.disabled).toBe(true);
+      expect(blockedChild.checked).toBe(false);
+      expect(readyChild.checked).toBe(true);
+    });
   });
 
   it('previewing a selected combinable parent renders one combined invoice preview count (T015)', async () => {
