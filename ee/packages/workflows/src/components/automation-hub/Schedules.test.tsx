@@ -648,8 +648,10 @@ describe('Schedules', () => {
     fireEvent.click(within(row as HTMLTableRowElement).getByText('Edit'));
 
     await screen.findByRole('dialog', { name: 'Edit Schedule' });
-    expect(screen.getByLabelText('Schedule name')).toHaveValue('Weekday billing');
-    expect(screen.getByLabelText('Trigger type')).toHaveValue('recurring');
+    await waitFor(() => {
+      expect(screen.getByLabelText('Schedule name')).toHaveValue('Weekday billing');
+      expect(screen.getByLabelText('Trigger type')).toHaveValue('recurring');
+    });
     expect(screen.getByLabelText('Frequency')).toHaveValue('weekly');
     expect(screen.getByLabelText('Time')).toHaveValue('09:00');
     expect(screen.getByLabelText('Timezone')).toHaveValue('America/New_York');
@@ -695,7 +697,7 @@ describe('Schedules', () => {
 
     fireEvent.click(screen.getByText('New Schedule'));
     await screen.findByRole('dialog', { name: 'Create Schedule' });
-    expect(screen.getByLabelText('Run at')).toBeInTheDocument();
+    expect(await screen.findByLabelText('Run at')).toBeInTheDocument();
     expect(screen.getByText('Create Schedule', { selector: 'button' })).toBeDisabled();
   });
 
@@ -704,7 +706,7 @@ describe('Schedules', () => {
 
     fireEvent.click(screen.getByText('New Schedule'));
     await screen.findByRole('dialog', { name: 'Create Schedule' });
-    expect(screen.getByLabelText('Run at')).toBeInTheDocument();
+    expect(await screen.findByLabelText('Run at')).toBeInTheDocument();
   });
 
   it('shows the recurring schedule builder and timezone input for recurring schedules', async () => {
@@ -762,7 +764,7 @@ describe('Schedules', () => {
     expect(within(calendarSource).getByRole('option', { name: /tenant default business hours \(not configured\)/i })).toBeDisabled();
     expect(screen.getByText('No tenant default business-hours schedule is configured yet. Choose a specific business-hours schedule or set a tenant default first.')).toBeInTheDocument();
 
-    fireEvent.change(screen.getByLabelText('Workflow'), {
+    fireEvent.change(await screen.findByLabelText('Workflow'), {
       target: { value: workflowFixtures[0].workflow_id }
     });
     await screen.findByLabelText('customerId');
@@ -821,7 +823,7 @@ describe('Schedules', () => {
     fireEvent.click(screen.getByText('New Schedule'));
     await screen.findByRole('dialog', { name: 'Create Schedule' });
     fireEvent.change(await screen.findByLabelText('Trigger type'), { target: { value: 'recurring' } });
-    fireEvent.change(screen.getByLabelText('Workflow'), {
+    fireEvent.change(await screen.findByLabelText('Workflow'), {
       target: { value: workflowFixtures[0].workflow_id }
     });
     await screen.findByLabelText('customerId');
@@ -853,7 +855,7 @@ describe('Schedules', () => {
     fireEvent.click(screen.getByText('New Schedule'));
     await screen.findByRole('dialog', { name: 'Create Schedule' });
     fireEvent.change(await screen.findByLabelText('Trigger type'), { target: { value: 'recurring' } });
-    fireEvent.change(screen.getByLabelText('Workflow'), {
+    fireEvent.change(await screen.findByLabelText('Workflow'), {
       target: { value: workflowFixtures[0].workflow_id }
     });
     await screen.findByLabelText('customerId');
@@ -874,7 +876,7 @@ describe('Schedules', () => {
 
     fireEvent.click(screen.getByText('New Schedule'));
     await screen.findByRole('dialog', { name: 'Create Schedule' });
-    fireEvent.change(screen.getByLabelText('Workflow'), {
+    fireEvent.change(await screen.findByLabelText('Workflow'), {
       target: { value: workflowFixtures[0].workflow_id }
     });
 
@@ -887,7 +889,7 @@ describe('Schedules', () => {
 
     fireEvent.click(screen.getByText('New Schedule'));
     await screen.findByRole('dialog', { name: 'Create Schedule' });
-    fireEvent.change(screen.getByLabelText('Workflow'), {
+    fireEvent.change(await screen.findByLabelText('Workflow'), {
       target: { value: workflowFixtures[0].workflow_id }
     });
     await screen.findByLabelText('customerId');
@@ -901,7 +903,7 @@ describe('Schedules', () => {
 
     fireEvent.click(screen.getByText('New Schedule'));
     await screen.findByRole('dialog', { name: 'Create Schedule' });
-    fireEvent.change(screen.getByLabelText('Workflow'), {
+    fireEvent.change(await screen.findByLabelText('Workflow'), {
       target: { value: workflowFixtures[0].workflow_id }
     });
     await screen.findByLabelText('customerId');
@@ -920,7 +922,7 @@ describe('Schedules', () => {
 
     fireEvent.click(screen.getByText('New Schedule'));
     await screen.findByRole('dialog', { name: 'Create Schedule' });
-    fireEvent.change(screen.getByLabelText('Workflow'), {
+    fireEvent.change(await screen.findByLabelText('Workflow'), {
       target: { value: workflowFixtures[0].workflow_id }
     });
     await screen.findByLabelText('customerId');
@@ -943,7 +945,7 @@ describe('Schedules', () => {
 
     fireEvent.click(screen.getByText('New Schedule'));
     await screen.findByRole('dialog', { name: 'Create Schedule' });
-    fireEvent.change(screen.getByLabelText('Workflow'), {
+    fireEvent.change(await screen.findByLabelText('Workflow'), {
       target: { value: workflowFixtures[2].workflow_id }
     });
 
@@ -964,7 +966,7 @@ describe('Schedules', () => {
     fireEvent.click(screen.getByText('New Schedule'));
     await screen.findByRole('dialog', { name: 'Create Schedule' });
     fireEvent.change(await screen.findByLabelText('Trigger type'), { target: { value: 'recurring' } });
-    fireEvent.change(screen.getByLabelText('Workflow'), {
+    fireEvent.change(await screen.findByLabelText('Workflow'), {
       target: { value: workflowFixtures[0].workflow_id }
     });
     await screen.findByLabelText('customerId');
