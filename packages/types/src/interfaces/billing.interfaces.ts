@@ -83,6 +83,7 @@ export interface IBillingCharge extends TenantEntity {
   location_id?: string | null;
   servicePeriodStart?: ISO8601String;
   servicePeriodEnd?: ISO8601String;
+  servicePeriodRecordId?: string | null;
   billingTiming?: 'arrears' | 'advance';
   recurringDetailPeriods?: IRecurringChargeDetailPeriod[];
 }

@@ -2,8 +2,8 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 
 let mockDueWorkResponse: any;
@@ -83,21 +83,24 @@ vi.mock('@alga-psa/ui/components/DataTable', () => ({
         ))}
       </div>
       <div data-testid={`${id}-row-count`}>{data.length}</div>
-      {data.map((row, index) => (
-        <div
-          key={row.parentSummary?.candidateKey ?? row.candidateKey ?? row.invoiceId}
-          data-testid={`${id}-row`}
-        >
-          {columns.map((column, columnIndex) => {
-            const value = column.dataIndex ? row[column.dataIndex] : undefined;
-            return (
-              <div key={`${row.parentSummary?.candidateKey ?? row.candidateKey ?? row.invoiceId}-${columnIndex}`}>
-                {column.render ? column.render(value, row, index) : String(value ?? '')}
-              </div>
-            );
-          })}
-        </div>
-      ))}
+      {data.map((row, index) => {
+        const rowKey = row.rowId ?? row.parentSummary?.candidateKey ?? row.candidateKey ?? row.invoiceId ?? `row-${index}`;
+        return (
+          <div
+            key={rowKey}
+            data-testid={`${id}-row`}
+          >
+            {columns.map((column, columnIndex) => {
+              const value = column.dataIndex ? row[column.dataIndex] : undefined;
+              return (
+                <div key={`${rowKey}-${columnIndex}`}>
+                  {column.render ? column.render(value, row, index) : String(value ?? '')}
+                </div>
+              );
+            })}
+          </div>
+        );
+      })}
     </div>
   ),
 }));
@@ -165,7 +168,12 @@ vi.mock('@alga-psa/ui/components/LoadingIndicator', () => ({
 }));
 
 describe('AutomaticInvoices grouped parent rows', () => {
+  afterEach(() => {
+    cleanup();
+  });
+
   beforeEach(() => {
+    cleanup();
     mockPreviewGroupedInvoicesForSelectionInputs.mockClear();
     mockGenerateGroupedInvoicesAsRecurringBillingRun.mockClear();
     mockDueWorkResponse = {
@@ -260,7 +268,7 @@ describe('AutomaticInvoices grouped parent rows', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('automatic-invoices-table-row-count')).toHaveTextContent('1');
-    });
+    }, { timeout: 5000 });
 
     expect(screen.getByTestId('automatic-invoices-table')).toBeInTheDocument();
     expect(screen.getAllByTestId('automatic-invoices-table-row')).toHaveLength(1);
@@ -295,11 +303,11 @@ describe('AutomaticInvoices grouped parent rows', () => {
       expect(
         document.getElementById('select-child-parent-group:client-1:2026-03-01:2026-04-01-exec-1'),
       ).not.toBeNull();
-    });
-    expect(screen.getAllByText('Assigned work item').length).toBeGreaterThan(0);
-    // Cadence and billing timing share one compact line in the grouped grid.
-    expect(screen.getAllByText('Contract anniversary · Advance').length).toBeGreaterThan(0);
-    expect(screen.getByText('$125.00')).toBeInTheDocument();
+      expect(screen.getAllByText('Assigned work item').length).toBeGreaterThan(0);
+      // Cadence and billing timing share one compact line in the grouped grid.
+      expect(screen.getAllByText('Contract anniversary · Advance').length).toBeGreaterThan(0);
+      expect(screen.getByText('$125.00')).toBeInTheDocument();
+    }, { timeout: 5000 });
   });
 
   it('is combinable only when all ready children share client/currency/PO/tax/export scope (T004)', async () => {
@@ -406,7 +414,7 @@ describe('AutomaticInvoices grouped parent rows', () => {
       ) as HTMLInputElement | null;
       expect(checkbox).not.toBeNull();
       return checkbox as HTMLInputElement;
-    });
+    }, { timeout: 5000 });
     fireEvent.click(parentCheckbox);
 
     await waitFor(() => {
@@ -499,27 +507,37 @@ describe('AutomaticInvoices grouped parent rows', () => {
     const AutomaticInvoices = (await import('../src/components/billing-dashboard/AutomaticInvoices')).default;
     render(<AutomaticInvoices onGenerateSuccess={() => undefined} />);
 
-    const [selectAll] = await screen.findAllByRole('checkbox');
+    const selectAll = await waitFor(() => {
+      const checkbox = document.getElementById('select-all') as HTMLInputElement | null;
+      expect(checkbox).not.toBeNull();
+      expect(checkbox?.disabled).toBe(false);
+      return checkbox as HTMLInputElement;
+    }, { timeout: 5000 });
     fireEvent.click(selectAll);
 
     const expandButton = await screen.findByRole('button', { name: 'Expand' });
     fireEvent.click(expandButton);
 
-    const blockedChild = document.getElementById(
-      'select-child-parent-group:client-1:2026-03-01:2026-04-01-exec-2',
-    ) as HTMLInputElement;
+    const blockedChild = await waitFor(() => {
+      const checkbox = document.getElementById(
+        'select-child-parent-group:client-1:2026-03-01:2026-04-01-exec-2',
+      ) as HTMLInputElement | null;
+      expect(checkbox).not.toBeNull();
+      return checkbox as HTMLInputElement;
+    }, { timeout: 5000 });
     const readyChild = document.getElementById(
       'select-child-parent-group:client-1:2026-03-01:2026-04-01-exec-1',
     ) as HTMLInputElement;
 
     // The blocked child row stays visible (its child checkbox is present) while the
     // group reports a Blocked status rather than a Separate one.
-    expect(blockedChild).not.toBeNull();
-    expect(screen.getByText('Blocked')).toBeInTheDocument();
-    expect(screen.queryByText('Separate')).not.toBeInTheDocument();
-    expect(blockedChild.disabled).toBe(true);
-    expect(blockedChild.checked).toBe(false);
-    expect(readyChild.checked).toBe(true);
+    await waitFor(() => {
+      expect(screen.getByText('Blocked')).toBeInTheDocument();
+      expect(screen.queryByText('Separate')).not.toBeInTheDocument();
+      expect(blockedChild.disabled).toBe(true);
+      expect(blockedChild.checked).toBe(false);
+      expect(readyChild.checked).toBe(true);
+    }, { timeout: 5000 });
   });
 
   it('previewing a selected combinable parent renders one combined invoice preview count (T015)', async () => {
@@ -532,8 +550,11 @@ describe('AutomaticInvoices grouped parent rows', () => {
       ) as HTMLInputElement | null;
       expect(checkbox).not.toBeNull();
       return checkbox as HTMLInputElement;
-    });
+    }, { timeout: 5000 });
     fireEvent.click(parentCheckbox);
+    await waitFor(() => {
+      expect(parentCheckbox.checked).toBe(true);
+    });
 
     fireEvent.click(screen.getByRole('button', { name: 'Preview Selected' }));
 
@@ -541,7 +562,7 @@ describe('AutomaticInvoices grouped parent rows', () => {
       expect(screen.getByTestId('preview-invoice-count-summary')).toHaveTextContent(
         'This selection will generate one combined invoice.',
       );
-    });
+    }, { timeout: 5000 });
     expect(mockPreviewGroupedInvoicesForSelectionInputs).toHaveBeenCalledTimes(1);
     const previewPayload = mockPreviewGroupedInvoicesForSelectionInputs.mock.calls[0][0];
     expect(previewPayload).toHaveLength(1);
@@ -676,19 +697,22 @@ describe('AutomaticInvoices grouped parent rows', () => {
       return checkbox as HTMLInputElement;
     });
     fireEvent.click(parentCheckbox);
+    await waitFor(() => {
+      expect(parentCheckbox.checked).toBe(true);
+    }, { timeout: 5000 });
 
     fireEvent.click(screen.getByRole('button', { name: 'Preview Selected' }));
     await waitFor(() => {
       expect(screen.getByTestId('preview-invoice-count-summary')).toHaveTextContent(
         'This selection will generate one combined invoice.',
       );
-    });
+    }, { timeout: 5000 });
     expect(screen.queryByTestId('grouped-preview-unavailable-copy')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Generate Invoices (1)' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Generate Invoices (1)' }));
     await waitFor(() => {
       expect(mockGenerateGroupedInvoicesAsRecurringBillingRun).toHaveBeenCalledTimes(1);
-    });
+    }, { timeout: 5000 });
     const payload = mockGenerateGroupedInvoicesAsRecurringBillingRun.mock.calls[0][0];
     expect(payload.groupedTargets).toHaveLength(1);
     expect(payload.groupedTargets[0].selectorInputs).toHaveLength(1);

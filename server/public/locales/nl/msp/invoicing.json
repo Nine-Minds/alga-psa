@@ -219,6 +219,9 @@
     },
     "errors": {
       "title": "Er zijn fouten opgetreden bij het finaliseren van facturen:",
+      "titleFinalize": "Er zijn fouten opgetreden bij het finaliseren van facturen:",
+      "titleDelete": "Er zijn fouten opgetreden bij het verwijderen van facturen:",
+      "titleReverse": "Er zijn fouten opgetreden bij het terugdraaien van facturen:",
       "loadReady": "Kan factureringsperioden niet laden. Probeer het opnieuw.",
       "loadHistory": "Kan terugkerende factuurgeschiedenis niet laden. Probeer het opnieuw."
     },
