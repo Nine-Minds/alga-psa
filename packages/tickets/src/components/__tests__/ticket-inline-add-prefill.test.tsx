@@ -712,7 +712,7 @@ describe('QuickAddTicket prefills', () => {
     );
 
     await waitFor(() => expect(getTicketFormDataMock).toHaveBeenCalled());
-    expect(screen.getByTestId('due-date')).toHaveValue('2026-02-05T12:00:00.000Z');
+    expect(await screen.findByTestId('due-date')).toHaveValue('2026-02-05T12:00:00.000Z');
   });
 
   it('navigates to the created ticket when Create + View Ticket is clicked', async () => {
@@ -728,6 +728,7 @@ describe('QuickAddTicket prefills', () => {
 
     await waitFor(() => expect(getTicketFormDataMock).toHaveBeenCalled());
     await waitFor(() => expect(getTicketStatusesMock).toHaveBeenCalledWith('board-1'));
+    await waitForDefaultStatusSelected();
 
     fireEvent.change(screen.getByPlaceholderText('Ticket Title *'), {
       target: { value: 'New ticket from quick add' }
