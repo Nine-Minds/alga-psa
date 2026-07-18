@@ -7,7 +7,7 @@ vi.mock('./tenantPartyAdapter', () => ({
   fetchTenantParty: (...args: unknown[]) => fetchTenantPartyMock(...args),
 }));
 
-import { mapLoadedQuoteToViewModel, toIsoDateString } from './quoteAdapters';
+import { mapLoadedQuoteToViewModel, toDateOnlyString, toIsoDateString } from './quoteAdapters';
 
 const fakeKnex = {
   schema: {
@@ -54,7 +54,14 @@ describe('quoteAdapters', () => {
     expect(toIsoDateString('   ')).toBeNull();
   });
 
-  it('normalizes quote view-model dates to ISO strings', async () => {
+  it('normalizes quote calendar dates without retaining a timezone-bearing time', () => {
+    expect(toDateOnlyString(new Date('2026-07-13T00:00:00.000Z'))).toBe('2026-07-13');
+    expect(toDateOnlyString(' 2026-08-12T00:00:00.000Z ')).toBe('2026-08-12');
+    expect(toDateOnlyString('2026-08-12')).toBe('2026-08-12');
+    expect(toDateOnlyString(null)).toBeNull();
+  });
+
+  it('normalizes quote calendar dates separately from acceptance timestamps', async () => {
     const viewModel = await mapLoadedQuoteToViewModel(
       fakeKnex,
       'tenant-1',
@@ -65,8 +72,8 @@ describe('quoteAdapters', () => {
       })
     );
 
-    expect(viewModel.quote_date).toBe('2026-07-17T12:30:00.000Z');
-    expect(viewModel.valid_until).toBe('2026-08-17T12:30:00.000Z');
+    expect(viewModel.quote_date).toBe('2026-07-17');
+    expect(viewModel.valid_until).toBe('2026-08-17');
     expect(viewModel.accepted_at).toBe('2026-07-18T12:30:00.000Z');
   });
 

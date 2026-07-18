@@ -23,6 +23,19 @@ const formatCurrency = (value: number, currencyCode: string) => {
 };
 
 const formatDate = (value: string) => {
+  const dateOnlyMatch = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (dateOnlyMatch) {
+    const [, year, month, day] = dateOnlyMatch;
+    const parsedDateOnly = new Date(Date.UTC(Number(year), Number(month) - 1, Number(day)));
+    const isValidDateOnly =
+      parsedDateOnly.getUTCFullYear() === Number(year) &&
+      parsedDateOnly.getUTCMonth() === Number(month) - 1 &&
+      parsedDateOnly.getUTCDate() === Number(day);
+    if (isValidDateOnly) {
+      return parsedDateOnly.toLocaleDateString('en-US', { timeZone: 'UTC' });
+    }
+  }
+
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) {
     return value;

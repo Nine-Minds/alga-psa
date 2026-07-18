@@ -132,8 +132,8 @@ describe('quote-template-ast – standardTemplates', () => {
 
     const evaluation = evaluateTemplateAst(ast, {
       quote_number: 'Q-0003',
-      quote_date: '2026-07-17T12:30:00.000Z',
-      valid_until: '2026-08-17T12:30:00.000Z',
+      quote_date: '2026-07-13',
+      valid_until: '2026-08-12',
       title: 'Managed Services Proposal',
       currency_code: 'USD',
       subtotal: 0,
@@ -150,8 +150,8 @@ describe('quote-template-ast – standardTemplates', () => {
     expect(html).toContain('123 Main St');
     expect(html).toContain('Northwind MSP');
     expect(html).toContain('400 SW Main');
-    expect(html).toContain('7/17/2026');
-    expect(html).toContain('8/17/2026');
+    expect(html).toContain('7/13/2026');
+    expect(html).toContain('8/12/2026');
     expect(html).not.toContain('Your Company');
   });
 });

@@ -26,6 +26,16 @@ export const toIsoDateString = (value: unknown): string | null => {
   return null;
 };
 
+export const toDateOnlyString = (value: unknown): string | null => {
+  const normalized = toIsoDateString(value);
+  if (!normalized) {
+    return null;
+  }
+
+  const dateOnlyMatch = normalized.match(/^(\d{4}-\d{2}-\d{2})(?:$|T)/);
+  return dateOnlyMatch?.[1] ?? normalized;
+};
+
 const toFiniteNumber = (value: unknown): number => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
@@ -389,8 +399,8 @@ export async function mapLoadedQuoteToViewModel(
     title: quote.title,
     description: quote.description ?? null,
     scope_of_work: quote.description ?? null,
-    quote_date: toIsoDateString(quote.quote_date),
-    valid_until: toIsoDateString(quote.valid_until),
+    quote_date: toDateOnlyString(quote.quote_date),
+    valid_until: toDateOnlyString(quote.valid_until),
     status: quote.status ?? null,
     version: Number(quote.version ?? 1),
     po_number: quote.po_number ?? null,
