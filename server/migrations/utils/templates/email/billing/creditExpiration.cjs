@@ -12,20 +12,20 @@ const TEMPLATE_NAME = 'credit-expiring';
 const SUBTYPE_NAME = 'Credit Expiring';
 
 const SUBJECTS = {
-  en: 'Credits Expiring Soon: {{company.name}}',
-  fr: 'Cr\u00e9dits expirant bient\u00f4t : {{company.name}}',
-  es: 'Cr\u00e9ditos por vencer pronto: {{company.name}}',
-  de: 'Guthaben l\u00e4uft bald ab: {{company.name}}',
-  nl: 'Tegoed verloopt binnenkort: {{company.name}}',
-  it: 'Crediti in scadenza a breve: {{company.name}}',
-  pl: 'Kredyty wkr\u00f3tce wygasaj\u0105: {{company.name}}',
+  en: 'Credits Expiring Soon: {{client.name}}',
+  fr: 'Cr\u00e9dits expirant bient\u00f4t : {{client.name}}',
+  es: 'Cr\u00e9ditos por vencer pronto: {{client.name}}',
+  de: 'Guthaben l\u00e4uft bald ab: {{client.name}}',
+  nl: 'Tegoed verloopt binnenkort: {{client.name}}',
+  it: 'Crediti in scadenza a breve: {{client.name}}',
+  pl: 'Kredyty wkr\u00f3tce wygasaj\u0105: {{client.name}}',
 };
 
 /* eslint-disable max-len */
 const COPY = {
   en: {
     headerLabel: 'Credits Expiring Soon',
-    intro: 'The following credits for <strong>{{company.name}}</strong> will expire soon.',
+    intro: 'The following credits for <strong>{{client.name}}</strong> will expire soon.',
     company: 'Company',
     totalAmount: 'Total Expiring Amount',
     expirationDate: 'Expiration Date',
@@ -38,14 +38,14 @@ const COPY = {
     viewButton: 'View Credits',
     footer: 'Powered by Alga PSA &middot; Keeping teams aligned',
     textHeader: 'Credits Expiring Soon',
-    textIntro: 'The following credits for {{company.name}} will expire soon:',
+    textIntro: 'The following credits for {{client.name}} will expire soon:',
     textCreditDetails: 'Credit Details',
     textClosingNote: 'Please use these credits before they expire to avoid losing them.',
     textView: 'View credits at',
   },
   fr: {
     headerLabel: 'Cr\u00e9dits expirant bient\u00f4t',
-    intro: 'Les cr\u00e9dits suivants pour <strong>{{company.name}}</strong> expireront bient\u00f4t.',
+    intro: 'Les cr\u00e9dits suivants pour <strong>{{client.name}}</strong> expireront bient\u00f4t.',
     company: 'Soci\u00e9t\u00e9',
     totalAmount: 'Montant total expirant',
     expirationDate: 'Date d\'expiration',
@@ -58,14 +58,14 @@ const COPY = {
     viewButton: 'Voir les cr\u00e9dits',
     footer: 'Powered by Alga PSA &middot; Gardons les \u00e9quipes align\u00e9es',
     textHeader: 'Cr\u00e9dits expirant bient\u00f4t',
-    textIntro: 'Les cr\u00e9dits suivants pour {{company.name}} expireront bient\u00f4t :',
+    textIntro: 'Les cr\u00e9dits suivants pour {{client.name}} expireront bient\u00f4t :',
     textCreditDetails: 'D\u00e9tails des cr\u00e9dits',
     textClosingNote: 'Veuillez utiliser ces cr\u00e9dits avant leur expiration pour \u00e9viter de les perdre.',
     textView: 'Voir les cr\u00e9dits sur',
   },
   es: {
     headerLabel: 'Cr\u00e9ditos por vencer pronto',
-    intro: 'Los siguientes cr\u00e9ditos de <strong>{{company.name}}</strong> vencer\u00e1n pronto.',
+    intro: 'Los siguientes cr\u00e9ditos de <strong>{{client.name}}</strong> vencer\u00e1n pronto.',
     company: 'Empresa',
     totalAmount: 'Monto total por vencer',
     expirationDate: 'Fecha de vencimiento',
@@ -78,14 +78,14 @@ const COPY = {
     viewButton: 'Ver cr\u00e9ditos',
     footer: 'Powered by Alga PSA &middot; Manteniendo a los equipos alineados',
     textHeader: 'Cr\u00e9ditos por vencer pronto',
-    textIntro: 'Los siguientes cr\u00e9ditos de {{company.name}} vencer\u00e1n pronto:',
+    textIntro: 'Los siguientes cr\u00e9ditos de {{client.name}} vencer\u00e1n pronto:',
     textCreditDetails: 'Detalles del cr\u00e9dito',
     textClosingNote: 'Utilice estos cr\u00e9ditos antes de que venzan para evitar perderlos.',
     textView: 'Ver cr\u00e9ditos en',
   },
   de: {
     headerLabel: 'Guthaben l\u00e4uft bald ab',
-    intro: 'Das folgende Guthaben f\u00fcr <strong>{{company.name}}</strong> l\u00e4uft bald ab.',
+    intro: 'Das folgende Guthaben f\u00fcr <strong>{{client.name}}</strong> l\u00e4uft bald ab.',
     company: 'Unternehmen',
     totalAmount: 'Ablaufender Gesamtbetrag',
     expirationDate: 'Ablaufdatum',
@@ -98,14 +98,14 @@ const COPY = {
     viewButton: 'Guthaben anzeigen',
     footer: 'Powered by Alga PSA &middot; Teams auf Kurs halten',
     textHeader: 'Guthaben l\u00e4uft bald ab',
-    textIntro: 'Das folgende Guthaben f\u00fcr {{company.name}} l\u00e4uft bald ab:',
+    textIntro: 'Das folgende Guthaben f\u00fcr {{client.name}} l\u00e4uft bald ab:',
     textCreditDetails: 'Guthabendetails',
     textClosingNote: 'Bitte verwenden Sie dieses Guthaben vor dem Ablauf, damit es nicht verf\u00e4llt.',
     textView: 'Guthaben ansehen unter',
   },
   nl: {
     headerLabel: 'Tegoed verloopt binnenkort',
-    intro: 'Het volgende tegoed voor <strong>{{company.name}}</strong> verloopt binnenkort.',
+    intro: 'Het volgende tegoed voor <strong>{{client.name}}</strong> verloopt binnenkort.',
     company: 'Bedrijf',
     totalAmount: 'Totaal verlopend bedrag',
     expirationDate: 'Vervaldatum',
@@ -118,14 +118,14 @@ const COPY = {
     viewButton: 'Tegoed bekijken',
     footer: 'Powered by Alga PSA &middot; Teams op \u00e9\u00e9n lijn houden',
     textHeader: 'Tegoed verloopt binnenkort',
-    textIntro: 'Het volgende tegoed voor {{company.name}} verloopt binnenkort:',
+    textIntro: 'Het volgende tegoed voor {{client.name}} verloopt binnenkort:',
     textCreditDetails: 'Tegoeddetails',
     textClosingNote: 'Gebruik dit tegoed v\u00f3\u00f3r de vervaldatum om te voorkomen dat het verloopt.',
     textView: 'Tegoed bekijken op',
   },
   it: {
     headerLabel: 'Crediti in scadenza a breve',
-    intro: 'I seguenti crediti per <strong>{{company.name}}</strong> scadranno a breve.',
+    intro: 'I seguenti crediti per <strong>{{client.name}}</strong> scadranno a breve.',
     company: 'Azienda',
     totalAmount: 'Importo totale in scadenza',
     expirationDate: 'Data di scadenza',
@@ -138,14 +138,14 @@ const COPY = {
     viewButton: 'Visualizza crediti',
     footer: 'Powered by Alga PSA &middot; Manteniamo i team allineati',
     textHeader: 'Crediti in scadenza a breve',
-    textIntro: 'I seguenti crediti per {{company.name}} scadranno a breve:',
+    textIntro: 'I seguenti crediti per {{client.name}} scadranno a breve:',
     textCreditDetails: 'Dettagli credito',
     textClosingNote: 'La preghiamo di utilizzare questi crediti prima della scadenza per evitare di perderli.',
     textView: 'Visualizza crediti su',
   },
   pl: {
     headerLabel: 'Kredyty wkr\u00f3tce wygasaj\u0105',
-    intro: 'Poni\u017csze kredyty dla <strong>{{company.name}}</strong> wkr\u00f3tce wygasn\u0105.',
+    intro: 'Poni\u017csze kredyty dla <strong>{{client.name}}</strong> wkr\u00f3tce wygasn\u0105.',
     company: 'Firma',
     totalAmount: 'Ca\u0142kowita kwota wygasaj\u0105ca',
     expirationDate: 'Data wyga\u015bni\u0119cia',
@@ -158,16 +158,16 @@ const COPY = {
     viewButton: 'Zobacz kredyty',
     footer: 'Powered by Alga PSA',
     textHeader: 'Kredyty wkr\u00f3tce wygasaj\u0105',
-    textIntro: 'Poni\u017csze kredyty dla {{company.name}} wkr\u00f3tce wygasn\u0105:',
+    textIntro: 'Poni\u017csze kredyty dla {{client.name}} wkr\u00f3tce wygasn\u0105:',
     textCreditDetails: 'Szczeg\u00f3\u0142y kredytu',
     textClosingNote: 'Prosimy o wykorzystanie tych kredyt\u00f3w przed ich wyga\u015bni\u0119ciem, aby ich nie utraci\u0107.',
     textView: 'Zobacz kredyty pod adresem',
   },
 };
-SUBJECTS.pt = 'Créditos expiram em breve: {{company.name}}';
+SUBJECTS.pt = 'Créditos expiram em breve: {{client.name}}';
 COPY.pt = {
   headerLabel: 'Créditos expiram em breve',
-  intro: 'Os créditos abaixo de <strong>{{company.name}}</strong> expirarão em breve.',
+  intro: 'Os créditos abaixo de <strong>{{client.name}}</strong> expirarão em breve.',
   company: 'Empresa',
   totalAmount: 'Valor total a expirar',
   expirationDate: 'Data de expiração',
@@ -180,7 +180,7 @@ COPY.pt = {
   viewButton: 'Ver créditos',
   footer: 'Powered by Alga PSA &middot; Mantendo as equipes alinhadas',
   textHeader: 'Créditos expiram em breve',
-  textIntro: 'Os créditos abaixo de {{company.name}} expirarão em breve:',
+  textIntro: 'Os créditos abaixo de {{client.name}} expirarão em breve:',
   textCreditDetails: 'Detalhes dos créditos',
   textClosingNote: 'Use estes créditos antes que expirem para evitar perdê-los.',
   textView: 'Ver créditos em',
@@ -193,7 +193,7 @@ function buildBodyHtml(c) {
                 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="border-collapse:collapse;font-size:14px;color:#1f2933;">
                   <tr>
                     <td style="padding:12px 0;border-bottom:1px solid #eef2ff;width:160px;font-weight:600;color:#475467;">${c.company}</td>
-                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">{{company.name}}</td>
+                    <td style="padding:12px 0;border-bottom:1px solid #eef2ff;">{{client.name}}</td>
                   </tr>
                   <tr>
                     <td style="padding:12px 0;border-bottom:1px solid #eef2ff;font-weight:600;color:#475467;">${c.totalAmount}</td>
@@ -237,7 +237,7 @@ function buildText(c) {
 
 ${c.textIntro}
 
-${c.company}: {{company.name}}
+${c.company}: {{client.name}}
 ${c.totalAmount}: {{credits.totalAmount}}
 ${c.expirationDate}: {{credits.expirationDate}}
 ${c.daysRemaining}: {{credits.daysRemaining}}
@@ -265,7 +265,7 @@ function getTemplate() {
       htmlContent: wrapEmailLayout({
         language: lang,
         headerLabel: copy.headerLabel,
-        headerTitle: '{{company.name}}',
+        headerTitle: '{{client.name}}',
         bodyHtml: buildBodyHtml(copy),
         footerText: copy.footer,
       }),

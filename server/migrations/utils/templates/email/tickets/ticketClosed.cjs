@@ -193,7 +193,7 @@ const COPY = {
     status: 'Status',
     closedStatusLabel: 'Zamknięte',
     closedBy: 'Zamknięto',
-    closedByVar: '{{ticket.closedAt}} &middot; {{ticket.closedBy}}',
+    closedByVar: '{{ticket.closedBy}}',
     assignedTo: 'Przypisane do',
     requester: 'Zgłaszający',
     board: 'Tablica',
