@@ -83,21 +83,24 @@ vi.mock('@alga-psa/ui/components/DataTable', () => ({
         ))}
       </div>
       <div data-testid={`${id}-row-count`}>{data.length}</div>
-      {data.map((row, index) => (
-        <div
-          key={row.parentSummary?.candidateKey ?? row.candidateKey ?? row.invoiceId}
-          data-testid={`${id}-row`}
-        >
-          {columns.map((column, columnIndex) => {
-            const value = column.dataIndex ? row[column.dataIndex] : undefined;
-            return (
-              <div key={`${row.parentSummary?.candidateKey ?? row.candidateKey ?? row.invoiceId}-${columnIndex}`}>
-                {column.render ? column.render(value, row, index) : String(value ?? '')}
-              </div>
-            );
-          })}
-        </div>
-      ))}
+      {data.map((row, index) => {
+        const rowKey = row.rowId ?? row.parentSummary?.candidateKey ?? row.candidateKey ?? row.invoiceId ?? `row-${index}`;
+        return (
+          <div
+            key={rowKey}
+            data-testid={`${id}-row`}
+          >
+            {columns.map((column, columnIndex) => {
+              const value = column.dataIndex ? row[column.dataIndex] : undefined;
+              return (
+                <div key={`${rowKey}-${columnIndex}`}>
+                  {column.render ? column.render(value, row, index) : String(value ?? '')}
+                </div>
+              );
+            })}
+          </div>
+        );
+      })}
     </div>
   ),
 }));
