@@ -153,10 +153,10 @@ export async function handleMicrosoftWebhookPost(request: NextRequest) {
             );
 
         if (!row) {
-          console.error(`❌ Provider not found for subscription: ${providerId}`);
-          console.error('This subscription may not exist in the database. Check:');
-          console.error(`  1. Is webhook_subscription_id="${providerId}" in microsoft_email_provider_config?`);
-          console.error(`  2. Has the email_provider been created?`);
+          console.warn('[MicrosoftWebhook] Ignoring notification for unknown subscription', {
+            subscriptionId: providerId,
+            event: 'microsoft_email_unknown_subscription',
+          });
           return;
         }
 

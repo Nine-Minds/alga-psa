@@ -16,12 +16,20 @@ describe('microsoft consumer runtime resolution contracts', () => {
       repoPath('packages/integrations/src/actions/email-actions/oauthActions.ts'),
       'utf8'
     );
+    const emailProviderActionSource = fs.readFileSync(
+      repoPath('packages/integrations/src/actions/email-actions/emailProviderActions.ts'),
+      'utf8'
+    );
     const emailCallbackSource = fs.readFileSync(
       repoPath('server/src/app/api/auth/microsoft/callback/route.ts'),
       'utf8'
     );
     const emailAdapterSource = fs.readFileSync(
-      repoPath('server/src/services/email/providers/MicrosoftGraphAdapter.ts'),
+      repoPath('shared/services/email/providers/MicrosoftGraphAdapter.ts'),
+      'utf8'
+    );
+    const emailConfigBuilderSource = fs.readFileSync(
+      repoPath('shared/services/email/microsoftEmailProviderConfig.ts'),
       'utf8'
     );
     // The concrete EE calendar action + adapter sources were relocated from
@@ -62,6 +70,8 @@ describe('microsoft consumer runtime resolution contracts', () => {
     expect(emailOauthActionSource).toContain('resolveMicrosoftConsumerProfileConfig(tenant, \'email\')');
     expect(emailOauthActionSource).not.toContain("getTenantSecret(tenant, 'microsoft_client_id')");
     expect(emailOauthActionSource).not.toContain('process.env.MICROSOFT_CLIENT_ID');
+    expect(emailProviderActionSource).toContain('preserveIssuingApp');
+    expect(emailProviderActionSource).toContain('existingConfig?.refresh_token && !config.refresh_token');
 
     expect(emailCallbackSource).toContain("resolveMicrosoftConsumerProfileConfig(stateData.tenant, 'email')");
     expect(emailCallbackSource).toContain('persistProviderError');
@@ -71,8 +81,10 @@ describe('microsoft consumer runtime resolution contracts', () => {
     expect(emailCallbackSource).not.toContain("getTenantSecret(stateData.tenant, 'microsoft_client_id')");
     expect(emailCallbackSource).not.toContain('process.env.MICROSOFT_CLIENT_ID');
 
-    expect(emailAdapterSource).toContain("resolveMicrosoftConsumerProfileConfig(this.config.tenant, 'email')");
-    expect(emailAdapterSource).not.toContain('process.env.MICROSOFT_CLIENT_ID');
+    expect(emailConfigBuilderSource).toContain(".where('binding.consumer_type', 'email')");
+    expect(emailConfigBuilderSource).toContain('profileCredentials.clientId === issuingClientId');
+    expect(emailAdapterSource).toContain('vendorConfig.resolved_client_id');
+    expect(fs.existsSync(repoPath('server/src/services/email/providers/MicrosoftGraphAdapter.ts'))).toBe(false);
 
     expect(eeCalendarActionSource).toContain("resolveMicrosoftConsumerProfileConfig(tenant, 'calendar')");
     expect(eeCalendarActionSource).not.toContain("getTenantSecret(tenant, 'microsoft_client_id')");
