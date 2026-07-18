@@ -697,6 +697,9 @@ describe('AutomaticInvoices grouped parent rows', () => {
       return checkbox as HTMLInputElement;
     });
     fireEvent.click(parentCheckbox);
+    await waitFor(() => {
+      expect(parentCheckbox.checked).toBe(true);
+    }, { timeout: 5000 });
 
     fireEvent.click(screen.getByRole('button', { name: 'Preview Selected' }));
     await waitFor(() => {
@@ -706,7 +709,7 @@ describe('AutomaticInvoices grouped parent rows', () => {
     }, { timeout: 5000 });
     expect(screen.queryByTestId('grouped-preview-unavailable-copy')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Generate Invoices (1)' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Generate Invoices (1)' }));
     await waitFor(() => {
       expect(mockGenerateGroupedInvoicesAsRecurringBillingRun).toHaveBeenCalledTimes(1);
     }, { timeout: 5000 });
