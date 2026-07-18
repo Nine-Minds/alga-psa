@@ -1,18 +1,22 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import { Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
+import { Modal, Pressable, RefreshControl, ScrollView, Text, View } from "react-native";
 import { useTranslation } from "react-i18next";
 import type { NativeStackScreenProps } from "@react-navigation/native-stack";
 import { useTheme } from "../ui/ThemeContext";
 import type { Theme } from "../ui/themes";
-import { Badge, Card, PrimaryButton, Separator } from "../ui/components";
+import { Badge, Card, PrimaryButton, Separator, TextInput } from "../ui/components";
 import { ErrorState, LoadingState } from "../ui/states";
 import { formatDateShort } from "../ui/formatters/dateTime";
+import { useToast } from "../ui/toast/ToastProvider";
 import {
   getAsset,
   getAssetHistory,
   getAssetMaintenance,
+  getAssetSoftware,
   getAssetTickets,
+  recordAssetMaintenance,
   type AssetDetail,
+  type AssetSoftwareItem,
   type AssetTicketRow,
   type AssetWarrantyStatus,
   type MaintenanceHistoryItem,
@@ -86,14 +90,19 @@ export function AssetDetailScreen({ route, navigation }: Props) {
   const theme = useTheme();
   const { t } = useTranslation("assets");
   const { client, apiKey } = useInventoryApi();
+  const { showToast } = useToast();
 
   const [asset, setAsset] = useState<AssetDetail | null>(null);
   const [maintenance, setMaintenance] = useState<MaintenanceSchedule[]>([]);
   const [history, setHistory] = useState<MaintenanceHistoryItem[]>([]);
   const [tickets, setTickets] = useState<AssetTicketRow[]>([]);
+  const [software, setSoftware] = useState<AssetSoftwareItem[]>([]);
   const [status, setStatus] = useState<"loading" | "ready" | "error">("loading");
   const [linkOpen, setLinkOpen] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
+  const [recordSchedule, setRecordSchedule] = useState<MaintenanceSchedule | null>(null);
+  const [recordNote, setRecordNote] = useState("");
+  const [recording, setRecording] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
   const fetchAll = useCallback(async () => {
@@ -101,11 +110,12 @@ export function AssetDetailScreen({ route, navigation }: Props) {
     abortRef.current?.abort();
     const controller = new AbortController();
     abortRef.current = controller;
-    const [assetResult, maintResult, historyResult, ticketsResult] = await Promise.all([
+    const [assetResult, maintResult, historyResult, ticketsResult, softwareResult] = await Promise.all([
       getAsset(client, { apiKey, assetId, signal: controller.signal }),
       getAssetMaintenance(client, { apiKey, assetId, signal: controller.signal }),
       getAssetHistory(client, { apiKey, assetId, signal: controller.signal }),
       getAssetTickets(client, { apiKey, assetId, signal: controller.signal }),
+      getAssetSoftware(client, { apiKey, assetId, signal: controller.signal }),
     ]);
     if (controller.signal.aborted) return;
     if (!assetResult.ok) {
@@ -117,8 +127,35 @@ export function AssetDetailScreen({ route, navigation }: Props) {
     setMaintenance(maintResult.ok ? maintResult.data.data : []);
     setHistory(historyResult.ok ? historyResult.data.data : []);
     setTickets(ticketsResult.ok ? ticketsResult.data.data : []);
+    setSoftware(softwareResult.ok ? softwareResult.data.data : []);
     setStatus("ready");
   }, [client, apiKey, assetId]);
+
+  const submitMaintenanceDone = useCallback(async () => {
+    if (!client || !apiKey || !recordSchedule) return;
+    setRecording(true);
+    const result = await recordAssetMaintenance(client, {
+      apiKey,
+      assetId,
+      data: {
+        schedule_id: recordSchedule.schedule_id,
+        maintenance_type: (recordSchedule.maintenance_type as "preventive") ?? "preventive",
+        description: recordNote.trim() || undefined,
+      },
+    });
+    setRecording(false);
+    if (result.ok) {
+      showToast({ tone: "success", message: t("maintenance.recorded", "Maintenance recorded") });
+      setRecordSchedule(null);
+      setRecordNote("");
+      void fetchAll();
+    } else {
+      showToast({
+        tone: "error",
+        message: result.error.message || t("maintenance.recordFailed", "Couldn't record maintenance"),
+      });
+    }
+  }, [client, apiKey, assetId, recordSchedule, recordNote, showToast, t, fetchAll]);
 
   const refetchTickets = useCallback(async () => {
     if (!client || !apiKey) return;
@@ -272,6 +309,16 @@ export function AssetDetailScreen({ route, navigation }: Props) {
                         {schedule.description}
                       </Text>
                     ) : null}
+                    <Text
+                      onPress={() => {
+                        setRecordSchedule(schedule);
+                        setRecordNote("");
+                      }}
+                      testID={`asset-detail-maintenance-done-${schedule.schedule_id}`}
+                      style={{ ...theme.typography.body, color: theme.colors.primary, marginTop: theme.spacing.xs }}
+                    >
+                      {t("maintenance.markDone", "Mark done")}
+                    </Text>
                   </View>
                 </View>
               );
@@ -312,7 +359,70 @@ export function AssetDetailScreen({ route, navigation }: Props) {
             })
           )}
         </Card>
+
+        {/* Installed software (RMM-discovered; empty for unmanaged devices) */}
+        {software.length > 0 ? (
+          <Card>
+            <SectionTitle theme={theme}>{t("software.title", "Installed software")}</SectionTitle>
+            {software.map((item, index) => (
+              <View key={item.software_id} testID={`asset-detail-software-${item.software_id}`}>
+                {index > 0 ? <Separator /> : null}
+                <View style={{ paddingVertical: theme.spacing.sm }}>
+                  <Text style={{ ...theme.typography.body, color: theme.colors.text }}>
+                    {item.name}
+                    {item.version ? `  ${item.version}` : ""}
+                  </Text>
+                  {item.publisher ? (
+                    <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, marginTop: 2 }}>
+                      {item.publisher}
+                    </Text>
+                  ) : null}
+                </View>
+              </View>
+            ))}
+          </Card>
+        ) : null}
       </ScrollView>
+
+      <Modal
+        visible={recordSchedule !== null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setRecordSchedule(null)}
+      >
+        <View style={{ flex: 1, justifyContent: "center", padding: theme.spacing.xl, backgroundColor: "rgba(0,0,0,0.45)" }}>
+          <View style={{ backgroundColor: theme.colors.card, borderRadius: theme.borderRadius.md, padding: theme.spacing.lg, gap: theme.spacing.md }}>
+            <Text style={{ ...theme.typography.title, color: theme.colors.text }}>
+              {t("maintenance.markDoneTitle", "Record maintenance")}
+            </Text>
+            <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary }}>
+              {recordSchedule?.schedule_name ?? ""}
+            </Text>
+            <TextInput
+              value={recordNote}
+              onChangeText={setRecordNote}
+              label={t("maintenance.noteLabel", "What did you do?")}
+              placeholder={t("maintenance.notePlaceholder", "Optional note")}
+              multiline
+              accessibilityLabel="asset-detail-maintenance-note"
+            />
+            <PrimaryButton
+              onPress={() => void submitMaintenanceDone()}
+              disabled={recording}
+              accessibilityLabel="asset-detail-maintenance-record-submit"
+            >
+              {t("maintenance.recordDone", "Record as done")}
+            </PrimaryButton>
+            <Text
+              onPress={() => setRecordSchedule(null)}
+              testID="asset-detail-maintenance-record-cancel"
+              style={{ ...theme.typography.body, color: theme.colors.textSecondary, textAlign: "center", padding: theme.spacing.xs }}
+            >
+              {t("common.cancel", "Cancel")}
+            </Text>
+          </View>
+        </View>
+      </Modal>
 
       <LinkTicketModal
         visible={linkOpen}

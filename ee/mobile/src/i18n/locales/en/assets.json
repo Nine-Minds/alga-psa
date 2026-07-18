@@ -38,7 +38,14 @@
     "empty": "No maintenance scheduled.",
     "dueSoon": "Due soon",
     "overdue": "Overdue",
-    "next": "Next {{date}}"
+    "next": "Next {{date}}",
+    "markDone": "Mark done",
+    "markDoneTitle": "Record maintenance",
+    "noteLabel": "What did you do?",
+    "notePlaceholder": "Optional note",
+    "recordDone": "Record as done",
+    "recorded": "Maintenance recorded",
+    "recordFailed": "Couldn't record maintenance"
   },
   "history": {
     "title": "Service history",
@@ -67,5 +74,8 @@
     "success": "Ticket {{number}} created",
     "successNoNumber": "Ticket created",
     "error": "Couldn't create the ticket. Try again."
+  },
+  "software": {
+    "title": "Installed software"
   }
 }

@@ -10,6 +10,8 @@ const mockGetAsset = vi.fn();
 const mockGetMaintenance = vi.fn();
 const mockGetHistory = vi.fn();
 const mockGetTickets = vi.fn();
+const mockGetSoftware = vi.fn();
+const mockRecordMaintenance = vi.fn();
 const mockLink = vi.fn();
 const mockCreate = vi.fn();
 vi.mock("../api/assets", () => ({
@@ -17,6 +19,8 @@ vi.mock("../api/assets", () => ({
   getAssetMaintenance: (...args: unknown[]) => mockGetMaintenance(...args),
   getAssetHistory: (...args: unknown[]) => mockGetHistory(...args),
   getAssetTickets: (...args: unknown[]) => mockGetTickets(...args),
+  getAssetSoftware: (...args: unknown[]) => mockGetSoftware(...args),
+  recordAssetMaintenance: (...args: unknown[]) => mockRecordMaintenance(...args),
   linkAssetToTicket: (...args: unknown[]) => mockLink(...args),
   createTicketFromAsset: (...args: unknown[]) => mockCreate(...args),
 }));
@@ -146,6 +150,8 @@ describe("AssetDetailScreen", () => {
     mockGetMaintenance.mockResolvedValue(ok({ data: [maintenance] }));
     mockGetHistory.mockResolvedValue(ok({ data: [history] }));
     mockGetTickets.mockResolvedValue(ok({ data: [linkedTicket] }));
+    mockGetSoftware.mockResolvedValue(ok({ data: [] }));
+    mockRecordMaintenance.mockResolvedValue(ok({ data: {} }));
     mockLink.mockResolvedValue(ok({ data: {} }));
     mockCreate.mockResolvedValue(ok({ data: { ticket_id: "t-100", ticket_number: "TK-100" } }));
     mockListTickets.mockResolvedValue(
@@ -246,5 +252,36 @@ describe("AssetDetailScreen", () => {
         }),
       }),
     );
+  });
+
+  it("renders installed software when the RMM reports it", async () => {
+    mockGetSoftware.mockResolvedValue(
+      ok({ data: [{ software_id: "sw-1", name: "Google Chrome", version: "120.0", publisher: "Google LLC" }] }),
+    );
+    const tree = await renderScreen();
+    const text = allText(tree);
+    expect(text).toContain("Google Chrome");
+    expect(text).toContain("Google LLC");
+    expect(hosts(tree, "asset-detail-software-sw-1").length).toBe(1);
+  });
+
+  it("records a scheduled maintenance task as done", async () => {
+    const tree = await renderScreen();
+
+    await act(async () => hosts(tree, "asset-detail-maintenance-done-sch-1")[0].props.onPress());
+    await act(async () => {});
+
+    act(() => byLabel(tree, "asset-detail-maintenance-note")[0].props.onChangeText("Blew out dust"));
+    await act(async () => byLabel(tree, "asset-detail-maintenance-record-submit")[0].props.onPress());
+
+    expect(mockRecordMaintenance).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        assetId: "asset-1",
+        data: expect.objectContaining({ schedule_id: "sch-1", description: "Blew out dust" }),
+      }),
+    );
+    // Records refetch maintenance + history after a successful write.
+    expect(mockGetMaintenance).toHaveBeenCalledTimes(2);
   });
 });

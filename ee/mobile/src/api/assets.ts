@@ -70,6 +70,49 @@ export type MaintenanceHistoryItem = {
   performed_by_user_name?: string | null;
 };
 
+export type RecordMaintenanceInput = {
+  schedule_id: string;
+  maintenance_type: "preventive" | "corrective" | "inspection" | "calibration" | "replacement";
+  description?: string;
+  duration_hours?: number;
+};
+
+/** Log a scheduled maintenance task as done (advances the schedule's next-due date). */
+export function recordAssetMaintenance(
+  client: ApiClient,
+  params: { apiKey: string; assetId: string; data: RecordMaintenanceInput; signal?: AbortSignal },
+): Promise<ApiResult<AssetEnvelope<unknown>>> {
+  return client.request<AssetEnvelope<unknown>>({
+    method: "POST",
+    path: `/api/v1/assets/${params.assetId}/maintenance/record`,
+    signal: params.signal,
+    headers: { "x-api-key": params.apiKey },
+    body: params.data,
+  });
+}
+
+export type AssetSoftwareItem = {
+  software_id: string;
+  name: string;
+  publisher?: string | null;
+  version?: string | null;
+  category?: string | null;
+  software_type?: string | null;
+  install_date?: string | null;
+};
+
+export function getAssetSoftware(
+  client: ApiClient,
+  params: { apiKey: string; assetId: string; signal?: AbortSignal },
+): Promise<ApiResult<{ data: AssetSoftwareItem[]; summary?: { total_installed?: number } }>> {
+  return client.request<{ data: AssetSoftwareItem[]; summary?: { total_installed?: number } }>({
+    method: "GET",
+    path: `/api/v1/assets/${params.assetId}/software`,
+    signal: params.signal,
+    headers: { "x-api-key": params.apiKey },
+  });
+}
+
 export function getAssetHistory(
   client: ApiClient,
   params: { apiKey: string; assetId: string; signal?: AbortSignal },
