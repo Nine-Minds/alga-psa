@@ -34029,10 +34029,10 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "name": "types",
         "in": "query",
         "required": false,
-        "description": "Comma-separated list of object types to restrict the search (e.g. \"ticket,project\"). Omit to search every type the API key's user is permitted to read. Allowed values: client, contact, user, ticket, ticket_comment, project, project_phase, project_task, project_task_comment, asset, sales_order, purchase_order, stock_unit, invoice, invoice_item, invoice_annotation, contract, client_contract, document, kb_article, service_catalog, service_request_submission, service_request_definition, workflow_task, interaction, schedule_entry, time_entry, board, category, tag, status.",
+        "description": "Comma-separated list of object types to restrict the search (e.g. \"ticket,project\"). Omit to search every type the API key's user is permitted to read. Allowed values: client, contact, user, ticket, ticket_comment, project, project_phase, project_task, project_task_comment, asset, invoice, invoice_item, invoice_annotation, contract, client_contract, document, kb_article, service_catalog, service_request_submission, service_request_definition, workflow_task, interaction, schedule_entry, time_entry, board, category, tag, status.",
         "schema": {
           "type": "string",
-          "description": "Comma-separated list of object types to restrict the search (e.g. \"ticket,project\"). Omit to search every type the API key's user is permitted to read. Allowed values: client, contact, user, ticket, ticket_comment, project, project_phase, project_task, project_task_comment, asset, sales_order, purchase_order, stock_unit, invoice, invoice_item, invoice_annotation, contract, client_contract, document, kb_article, service_catalog, service_request_submission, service_request_definition, workflow_task, interaction, schedule_entry, time_entry, board, category, tag, status."
+          "description": "Comma-separated list of object types to restrict the search (e.g. \"ticket,project\"). Omit to search every type the API key's user is permitted to read. Allowed values: client, contact, user, ticket, ticket_comment, project, project_phase, project_task, project_task_comment, asset, invoice, invoice_item, invoice_annotation, contract, client_contract, document, kb_article, service_catalog, service_request_submission, service_request_definition, workflow_task, interaction, schedule_entry, time_entry, board, category, tag, status."
         }
       },
       {
@@ -51331,6 +51331,2776 @@ export const chatApiRegistry: ChatApiRegistryEntry[] = [
         "data"
       ]
     }
+  },
+  {
+    "id": "get-_api_v1_opportunities",
+    "method": "get",
+    "path": "/api/v1/opportunities",
+    "displayName": "List opportunities",
+    "summary": "List opportunities",
+    "description": "Lists tenant opportunities using the OpportunityListFilters contract.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "status",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "open",
+            "won",
+            "lost",
+            "all"
+          ]
+        }
+      },
+      {
+        "name": "stage",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "identified",
+            "qualified",
+            "assessment",
+            "proposed",
+            "verbal",
+            "won",
+            "lost"
+          ]
+        }
+      },
+      {
+        "name": "owner_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "client_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "opportunity_type",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "new_logo",
+            "expansion",
+            "renewal",
+            "project"
+          ]
+        }
+      },
+      {
+        "name": "stalled_only",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ]
+        }
+      },
+      {
+        "name": "search",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      {
+        "name": "page",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "pattern": "^\\d+$",
+          "default": "1"
+        }
+      },
+      {
+        "name": "page_size",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "pattern": "^\\d+$",
+          "default": "25"
+        }
+      },
+      {
+        "name": "sort_by",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "next_action_due",
+            "expected_close_date",
+            "mrr_cents",
+            "last_activity_at",
+            "created_at"
+          ],
+          "default": "next_action_due"
+        }
+      },
+      {
+        "name": "sort_direction",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "asc",
+            "desc"
+          ],
+          "default": "asc"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "pagination": {
+          "type": "object",
+          "properties": {
+            "page": {
+              "type": "integer"
+            },
+            "limit": {
+              "type": "integer"
+            },
+            "total": {
+              "type": "integer"
+            },
+            "totalPages": {
+              "type": "integer"
+            }
+          },
+          "required": [
+            "page",
+            "limit",
+            "total",
+            "totalPages"
+          ]
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "_links": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_opportunities",
+    "method": "post",
+    "path": "/api/v1/opportunities",
+    "displayName": "Create opportunity",
+    "summary": "Create opportunity",
+    "description": "Creates an open opportunity with a required next action.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "client_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "contact_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "opportunity_type": {
+          "type": "string",
+          "enum": [
+            "new_logo",
+            "expansion",
+            "renewal",
+            "project"
+          ]
+        },
+        "owner_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "confidence": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "committed"
+          ],
+          "default": "medium"
+        },
+        "mrr_cents": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0
+        },
+        "nrr_cents": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0
+        },
+        "hardware_cents": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0
+        },
+        "currency_code": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 3
+        },
+        "expected_close_date": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "next_action": {
+          "type": "string",
+          "minLength": 1
+        },
+        "next_action_due": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "generator_key": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "renewal",
+            "tm_conversion",
+            "whitespace",
+            "asset_aging",
+            "inbound-lead"
+          ]
+        },
+        "generator_context": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {}
+        },
+        "suggestion_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        }
+      },
+      "required": [
+        "client_id",
+        "title",
+        "opportunity_type",
+        "currency_code",
+        "next_action",
+        "next_action_due"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_opportunities_id",
+    "method": "get",
+    "path": "/api/v1/opportunities/{id}",
+    "displayName": "Get opportunity",
+    "summary": "Get opportunity",
+    "description": "Gets one opportunity by UUID.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Opportunity UUID from opportunities.opportunity_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Opportunity UUID from opportunities.opportunity_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "put-_api_v1_opportunities_id",
+    "method": "put",
+    "path": "/api/v1/opportunities/{id}",
+    "displayName": "Update opportunity",
+    "summary": "Update opportunity",
+    "description": "Updates editable opportunity fields; status and stage use dedicated flows.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Opportunity UUID from opportunities.opportunity_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Opportunity UUID from opportunities.opportunity_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "client_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "contact_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "opportunity_type": {
+          "type": "string",
+          "enum": [
+            "new_logo",
+            "expansion",
+            "renewal",
+            "project"
+          ]
+        },
+        "owner_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "confidence": {
+          "type": "string",
+          "enum": [
+            "low",
+            "medium",
+            "high",
+            "committed"
+          ],
+          "default": "medium"
+        },
+        "mrr_cents": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0
+        },
+        "nrr_cents": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0
+        },
+        "hardware_cents": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0
+        },
+        "currency_code": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 3
+        },
+        "expected_close_date": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "next_action": {
+          "type": "string",
+          "minLength": 1
+        },
+        "next_action_due": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "generator_key": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "enum": [
+            "renewal",
+            "tm_conversion",
+            "whitespace",
+            "asset_aging",
+            "inbound-lead"
+          ]
+        },
+        "generator_context": {
+          "type": [
+            "object",
+            "null"
+          ],
+          "additionalProperties": {}
+        },
+        "suggestion_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_opportunities_id",
+    "method": "delete",
+    "path": "/api/v1/opportunities/{id}",
+    "displayName": "Delete opportunity",
+    "summary": "Delete opportunity",
+    "description": "Deletes an open opportunity after linked quotes are removed.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Opportunity UUID from opportunities.opportunity_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Opportunity UUID from opportunities.opportunity_id."
+        }
+      }
+    ]
+  },
+  {
+    "id": "post-_api_v1_opportunities_id_win",
+    "method": "post",
+    "path": "/api/v1/opportunities/{id}/win",
+    "displayName": "Win opportunity",
+    "summary": "Win opportunity",
+    "description": "Marks an open opportunity won, optionally converting an accepted linked quote to a draft agreement.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Opportunity UUID from opportunities.opportunity_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Opportunity UUID from opportunities.opportunity_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "convert_quote_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "project_template_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "project_name": {
+          "type": "string",
+          "minLength": 1
+        },
+        "project_status_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "project_start_date": {
+          "type": "string",
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        }
+      },
+      "additionalProperties": false
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_opportunities_id_lose",
+    "method": "post",
+    "path": "/api/v1/opportunities/{id}/lose",
+    "displayName": "Lose opportunity",
+    "summary": "Lose opportunity",
+    "description": "Marks an open opportunity lost with a required loss reason.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Opportunity UUID from opportunities.opportunity_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Opportunity UUID from opportunities.opportunity_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "loss_reason": {
+          "type": "string",
+          "enum": [
+            "no_response",
+            "chose_competitor",
+            "price",
+            "timing",
+            "no_budget",
+            "not_a_fit",
+            "other"
+          ]
+        },
+        "loss_notes": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "lost_to": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "loss_reason"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_opportunities_id_completeaction",
+    "method": "post",
+    "path": "/api/v1/opportunities/{id}/complete-action",
+    "displayName": "Complete next action",
+    "summary": "Complete next action",
+    "description": "Records the completed action as an interaction and installs the replacement action.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Opportunity UUID from opportunities.opportunity_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Opportunity UUID from opportunities.opportunity_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "next_action": {
+          "type": "string",
+          "minLength": 1
+        },
+        "next_action_due": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "next_action",
+        "next_action_due"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_opportunities_id_evidence",
+    "method": "get",
+    "path": "/api/v1/opportunities/{id}/evidence",
+    "displayName": "List opportunity evidence",
+    "summary": "List opportunity evidence",
+    "description": "Lists append-only evidence and corrected records in recorded order.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Opportunity UUID from opportunities.opportunity_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Opportunity UUID from opportunities.opportunity_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_opportunities_id_evidence",
+    "method": "post",
+    "path": "/api/v1/opportunities/{id}/evidence",
+    "displayName": "Record declared evidence",
+    "summary": "Record declared evidence",
+    "description": "Records the declared qualified checkpoint only.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Opportunity UUID from opportunities.opportunity_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Opportunity UUID from opportunities.opportunity_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "checkpoint": {
+          "type": "string",
+          "enum": [
+            "qualified"
+          ]
+        },
+        "detail": {
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "checkpoint"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_opportunities_id_evidence_evidenceid_correct",
+    "method": "post",
+    "path": "/api/v1/opportunities/{id}/evidence/{evidenceId}/correct",
+    "displayName": "Correct evidence",
+    "summary": "Correct evidence",
+    "description": "Corrects active evidence with an append-only audit note.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Opportunity UUID from opportunities.opportunity_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Opportunity UUID from opportunities.opportunity_id."
+        }
+      },
+      {
+        "name": "evidenceId",
+        "in": "path",
+        "required": true,
+        "description": "Evidence UUID from opportunity_evidence.evidence_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Evidence UUID from opportunity_evidence.evidence_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "correction_note": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "required": [
+        "correction_note"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_opportunities_id_quotes_quoteid_link",
+    "method": "post",
+    "path": "/api/v1/opportunities/{id}/quotes/{quoteId}/link",
+    "displayName": "Link quote",
+    "summary": "Link quote",
+    "description": "Links a same-client quote and applies quote lifecycle evidence.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Opportunity UUID from opportunities.opportunity_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Opportunity UUID from opportunities.opportunity_id."
+        }
+      },
+      {
+        "name": "quoteId",
+        "in": "path",
+        "required": true,
+        "description": "Quote UUID from quotes.quote_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Quote UUID from quotes.quote_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_opportunities_id_quotes_quoteid_unlink",
+    "method": "post",
+    "path": "/api/v1/opportunities/{id}/quotes/{quoteId}/unlink",
+    "displayName": "Unlink quote",
+    "summary": "Unlink quote",
+    "description": "Unlinks a quote, corrects its evidence, and recomputes opportunity values.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Opportunity UUID from opportunities.opportunity_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Opportunity UUID from opportunities.opportunity_id."
+        }
+      },
+      {
+        "name": "quoteId",
+        "in": "path",
+        "required": true,
+        "description": "Quote UUID from quotes.quote_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Quote UUID from quotes.quote_id."
+        }
+      }
+    ]
+  },
+  {
+    "id": "get-_api_v1_opportunities_suggestions",
+    "method": "get",
+    "path": "/api/v1/opportunities/suggestions",
+    "displayName": "List opportunity suggestions",
+    "summary": "List opportunity suggestions",
+    "description": "Lists generator suggestions, optionally filtered by lifecycle status.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "status",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "pending",
+            "accepted",
+            "dismissed",
+            "snoozed"
+          ]
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_opportunities_suggestions_id_accept",
+    "method": "post",
+    "path": "/api/v1/opportunities/suggestions/{id}/accept",
+    "displayName": "Accept opportunity suggestion",
+    "summary": "Accept opportunity suggestion",
+    "description": "Creates a prefilled opportunity and atomically marks the suggestion accepted.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Suggestion UUID from opportunity_suggestions.suggestion_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Suggestion UUID from opportunity_suggestions.suggestion_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1
+        },
+        "contact_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "owner_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "mrr_cents": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "nrr_cents": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "hardware_cents": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "currency_code": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 3
+        },
+        "expected_close_date": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "next_action": {
+          "type": "string",
+          "minLength": 1
+        },
+        "next_action_due": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "additionalProperties": false
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_opportunities_suggestions_id_dismiss",
+    "method": "post",
+    "path": "/api/v1/opportunities/suggestions/{id}/dismiss",
+    "displayName": "Dismiss opportunity suggestion",
+    "summary": "Dismiss opportunity suggestion",
+    "description": "Dismisses the suggestion and permanently preserves its dedupe key.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Suggestion UUID from opportunity_suggestions.suggestion_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Suggestion UUID from opportunity_suggestions.suggestion_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_opportunities_suggestions_id_snooze",
+    "method": "post",
+    "path": "/api/v1/opportunities/suggestions/{id}/snooze",
+    "displayName": "Snooze opportunity suggestion",
+    "summary": "Snooze opportunity suggestion",
+    "description": "Hides the suggestion until the requested future timestamp.",
+    "tags": [
+      "Opportunities v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Suggestion UUID from opportunity_suggestions.suggestion_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Suggestion UUID from opportunity_suggestions.suggestion_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "snoozed_until": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "snoozed_until"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_marketing_campaigns",
+    "method": "get",
+    "path": "/api/v1/marketing/campaigns",
+    "displayName": "List marketing campaigns",
+    "summary": "List marketing campaigns",
+    "description": "Lists all marketing campaigns for the tenant, newest first. Marketing campaigns group content, social posts, capture forms, and nurture sequences for attribution and funnel reporting.",
+    "tags": [
+      "Marketing v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_marketing_campaigns",
+    "method": "post",
+    "path": "/api/v1/marketing/campaigns",
+    "displayName": "Create marketing campaign",
+    "summary": "Create marketing campaign",
+    "description": "Creates a marketing campaign. Campaigns anchor attribution: social posts, capture form submissions, and nurture sequence engagements roll up into the campaign funnel.",
+    "tags": [
+      "Marketing v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "goal": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 2000
+        },
+        "source_channel": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 100
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "draft",
+            "active",
+            "completed",
+            "archived"
+          ]
+        },
+        "start_date": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "end_date": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        }
+      },
+      "required": [
+        "name"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_marketing_campaigns_id",
+    "method": "get",
+    "path": "/api/v1/marketing/campaigns/{id}",
+    "displayName": "Get marketing campaign",
+    "summary": "Get marketing campaign",
+    "description": "Gets one marketing campaign by UUID.",
+    "tags": [
+      "Marketing v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Campaign UUID from marketing_campaigns.campaign_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Campaign UUID from marketing_campaigns.campaign_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "put-_api_v1_marketing_campaigns_id",
+    "method": "put",
+    "path": "/api/v1/marketing/campaigns/{id}",
+    "displayName": "Update marketing campaign",
+    "summary": "Update marketing campaign",
+    "description": "Updates editable marketing campaign fields (name, goal, source channel, status, start/end dates).",
+    "tags": [
+      "Marketing v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Campaign UUID from marketing_campaigns.campaign_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Campaign UUID from marketing_campaigns.campaign_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "goal": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 2000
+        },
+        "source_channel": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 100
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "draft",
+            "active",
+            "completed",
+            "archived"
+          ]
+        },
+        "start_date": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "end_date": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_marketing_campaigns_id_funnel",
+    "method": "get",
+    "path": "/api/v1/marketing/campaigns/{id}/funnel",
+    "displayName": "Get campaign funnel",
+    "summary": "Get campaign funnel",
+    "description": "Returns the marketing campaign funnel: posts published, emails sent/opened/clicked, capture forms submitted, and inbound-lead opportunity suggestions created/accepted for the campaign.",
+    "tags": [
+      "Marketing v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Campaign UUID from marketing_campaigns.campaign_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Campaign UUID from marketing_campaigns.campaign_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_marketing_content",
+    "method": "get",
+    "path": "/api/v1/marketing/content",
+    "displayName": "List marketing content",
+    "summary": "List marketing content",
+    "description": "Lists marketing content pieces (title, markdown body, per-channel variant text). Optionally filter by campaign_id. Content is the source material scheduled to channels as social posts.",
+    "tags": [
+      "Marketing v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "campaign_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_marketing_content",
+    "method": "post",
+    "path": "/api/v1/marketing/content",
+    "displayName": "Create marketing content",
+    "summary": "Create marketing content",
+    "description": "Creates a marketing content piece with a markdown body and optional per-platform channel_variants overrides used when rendering social posts per channel.",
+    "tags": [
+      "Marketing v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "body_markdown": {
+          "type": "string",
+          "maxLength": 50000,
+          "default": ""
+        },
+        "channel_variants": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "maxLength": 10000
+          },
+          "default": {}
+        },
+        "campaign_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        }
+      },
+      "required": [
+        "title"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_marketing_content_id",
+    "method": "get",
+    "path": "/api/v1/marketing/content/{id}",
+    "displayName": "Get marketing content",
+    "summary": "Get marketing content",
+    "description": "Gets one marketing content piece by UUID, including its channel_variants.",
+    "tags": [
+      "Marketing v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Content UUID from marketing_content.content_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Content UUID from marketing_content.content_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "put-_api_v1_marketing_content_id",
+    "method": "put",
+    "path": "/api/v1/marketing/content/{id}",
+    "displayName": "Update marketing content",
+    "summary": "Update marketing content",
+    "description": "Updates a marketing content piece (title, body_markdown, channel_variants, campaign assignment).",
+    "tags": [
+      "Marketing v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Content UUID from marketing_content.content_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Content UUID from marketing_content.content_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 300
+        },
+        "body_markdown": {
+          "type": "string",
+          "maxLength": 50000,
+          "default": ""
+        },
+        "channel_variants": {
+          "type": "object",
+          "additionalProperties": {
+            "type": "string",
+            "maxLength": 10000
+          },
+          "default": {}
+        },
+        "campaign_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "delete-_api_v1_marketing_content_id",
+    "method": "delete",
+    "path": "/api/v1/marketing/content/{id}",
+    "displayName": "Delete marketing content",
+    "summary": "Delete marketing content",
+    "description": "Deletes a marketing content piece. Content referenced by social posts cannot be deleted (returns 409).",
+    "tags": [
+      "Marketing v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Content UUID from marketing_content.content_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Content UUID from marketing_content.content_id."
+        }
+      }
+    ]
+  },
+  {
+    "id": "get-_api_v1_marketing_channels",
+    "method": "get",
+    "path": "/api/v1/marketing/channels",
+    "displayName": "List marketing channels",
+    "summary": "List marketing channels",
+    "description": "Lists marketing channels — named publishing destinations (e.g. LinkedIn, X) that social posts target. Channels never hold credentials; publishing is manual or agent-delegated via the publish loop.",
+    "tags": [
+      "Marketing v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "active_only",
+        "in": "query",
+        "required": false,
+        "description": "When \"true\", only active channels are returned. Omit for all channels.",
+        "schema": {
+          "type": "string",
+          "enum": [
+            "true",
+            "false"
+          ],
+          "description": "When \"true\", only active channels are returned. Omit for all channels."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_marketing_channels",
+    "method": "post",
+    "path": "/api/v1/marketing/channels",
+    "displayName": "Create marketing channel",
+    "summary": "Create marketing channel",
+    "description": "Creates a marketing channel (name, platform, optional handle_or_url) that social posts can be scheduled to.",
+    "tags": [
+      "Marketing v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "platform": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "handle_or_url": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 500
+        },
+        "is_active": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "platform"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "put-_api_v1_marketing_channels_id",
+    "method": "put",
+    "path": "/api/v1/marketing/channels/{id}",
+    "displayName": "Update marketing channel",
+    "summary": "Update marketing channel",
+    "description": "Updates a marketing channel, including activating/deactivating it. Inactive channels reject new social posts.",
+    "tags": [
+      "Marketing v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Channel UUID from marketing_channels.channel_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Channel UUID from marketing_channels.channel_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "platform": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+        },
+        "handle_or_url": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 500
+        },
+        "is_active": {
+          "type": "boolean"
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_marketing_forms",
+    "method": "get",
+    "path": "/api/v1/marketing/forms",
+    "displayName": "List capture forms",
+    "summary": "List capture forms",
+    "description": "Lists marketing capture forms (lead-capture definitions with public slugs). Each active form accepts public submissions at its capture URL and can create inbound-lead opportunity suggestions.",
+    "tags": [
+      "Marketing v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_marketing_forms",
+    "method": "post",
+    "path": "/api/v1/marketing/forms",
+    "displayName": "Create capture form",
+    "summary": "Create capture form",
+    "description": "Creates a marketing capture form with a URL-safe slug. The public submission endpoint is /api/marketing/capture/{tenant}/{slug}.",
+    "tags": [
+      "Marketing v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "slug": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]{1,60}[a-z0-9]$"
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 2000
+        },
+        "campaign_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "creates_suggestion": {
+          "type": "boolean"
+        },
+        "is_active": {
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "slug"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "put-_api_v1_marketing_forms_id",
+    "method": "put",
+    "path": "/api/v1/marketing/forms/{id}",
+    "displayName": "Update capture form",
+    "summary": "Update capture form",
+    "description": "Updates a marketing capture form (name, description, campaign, creates_suggestion, is_active). The slug is immutable.",
+    "tags": [
+      "Marketing v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Capture form UUID from marketing_capture_forms.form_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Capture form UUID from marketing_capture_forms.form_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 2000
+        },
+        "campaign_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "creates_suggestion": {
+          "type": "boolean"
+        },
+        "is_active": {
+          "type": "boolean"
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_marketing_posts_queue",
+    "method": "get",
+    "path": "/api/v1/marketing/posts/queue",
+    "displayName": "List social post queue",
+    "summary": "List social post queue",
+    "description": "Lists social post targets joined with rendered per-channel text, content, channel, and campaign — the marketing publish queue. Filter by target status, channel_id, campaign_id, or scheduled date range. Use status=awaiting-manual-publish for the publish loop reading list.",
+    "tags": [
+      "Marketing v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "status",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "enum": [
+            "scheduled",
+            "awaiting-manual-publish",
+            "published",
+            "skipped",
+            "expired"
+          ]
+        }
+      },
+      {
+        "name": "channel_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "campaign_id",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      {
+        "name": "date_from",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      },
+      {
+        "name": "date_to",
+        "in": "query",
+        "required": false,
+        "schema": {
+          "type": "string"
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_marketing_posts_awaitingpublish",
+    "method": "get",
+    "path": "/api/v1/marketing/posts/awaiting-publish",
+    "displayName": "List posts awaiting manual publish",
+    "summary": "List posts awaiting manual publish",
+    "description": "The agent publish loop reading list: every social post target in awaiting-manual-publish state, with rendered_text ready to post on the target channel platform. An agent reads this list, publishes each item on the platform, then calls the publish endpoint with the resulting permalink.",
+    "tags": [
+      "Marketing v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_marketing_posts",
+    "method": "post",
+    "path": "/api/v1/marketing/posts",
+    "displayName": "Create social post",
+    "summary": "Create social post",
+    "description": "Creates a social post from a marketing content piece, fanning out one target per channel_id. When scheduled_at is set the post enters the publish loop: at due time its targets flip to awaiting-manual-publish.",
+    "tags": [
+      "Marketing v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "content_id": {
+          "type": "string",
+          "format": "uuid"
+        },
+        "campaign_id": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "uuid"
+        },
+        "channel_ids": {
+          "type": "array",
+          "items": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "minItems": 1
+        },
+        "scheduled_at": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "content_id",
+        "channel_ids"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_marketing_posts_id_reschedule",
+    "method": "post",
+    "path": "/api/v1/marketing/posts/{id}/reschedule",
+    "displayName": "Reschedule social post",
+    "summary": "Reschedule social post",
+    "description": "Reschedules a draft or scheduled social post to a new scheduled_at. Posts already in the publish loop (awaiting-manual-publish/published/expired) cannot be rescheduled.",
+    "tags": [
+      "Marketing v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Social post UUID from social_posts.post_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Social post UUID from social_posts.post_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "scheduled_at": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "scheduled_at"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_marketing_posts_targets_targetid_publish",
+    "method": "post",
+    "path": "/api/v1/marketing/posts/targets/{targetId}/publish",
+    "displayName": "Mark post target published",
+    "summary": "Mark post target published",
+    "description": "Completes one publish loop step: marks a social post target published, recording the permalink and published_via=api provenance. Idempotent — republishing an already-published target returns it unchanged. Read GET /api/v1/marketing/posts/awaiting-publish first to find targets awaiting manual publish.",
+    "tags": [
+      "Marketing v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "targetId",
+        "in": "path",
+        "required": true,
+        "description": "Post target UUID from social_post_targets.target_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Post target UUID from social_post_targets.target_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "permalink": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 1000,
+          "format": "uri"
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_marketing_posts_targets_targetid_skip",
+    "method": "post",
+    "path": "/api/v1/marketing/posts/targets/{targetId}/skip",
+    "displayName": "Skip post target",
+    "summary": "Skip post target",
+    "description": "Skips a scheduled or awaiting-manual-publish social post target, removing it from the publish loop without publishing.",
+    "tags": [
+      "Marketing v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "targetId",
+        "in": "path",
+        "required": true,
+        "description": "Post target UUID from social_post_targets.target_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Post target UUID from social_post_targets.target_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_marketing_sequences",
+    "method": "get",
+    "path": "/api/v1/marketing/sequences",
+    "displayName": "List nurture sequences",
+    "summary": "List nurture sequences",
+    "description": "Lists marketing nurture sequences — ordered, timed email steps sent to enrolled contacts.",
+    "tags": [
+      "Marketing v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": {}
+          }
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_marketing_sequences",
+    "method": "post",
+    "path": "/api/v1/marketing/sequences",
+    "displayName": "Create nurture sequence",
+    "summary": "Create nurture sequence",
+    "description": "Creates a marketing nurture sequence with steps. Step order must be contiguous starting at 1; delay_minutes is the wait after the previous send (or enrollment for step 1). Subjects and body templates support {{merge.fields}}.",
+    "tags": [
+      "Marketing v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 2000
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "draft",
+            "active",
+            "paused",
+            "archived"
+          ]
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "step_order": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "delay_minutes": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 525600
+              },
+              "subject": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 300
+              },
+              "body_template": {
+                "type": "string",
+                "maxLength": 50000,
+                "default": ""
+              }
+            },
+            "required": [
+              "step_order",
+              "delay_minutes",
+              "subject"
+            ]
+          },
+          "maxItems": 50,
+          "default": []
+        }
+      },
+      "required": [
+        "name"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "get-_api_v1_marketing_sequences_id",
+    "method": "get",
+    "path": "/api/v1/marketing/sequences/{id}",
+    "displayName": "Get nurture sequence detail",
+    "summary": "Get nurture sequence detail",
+    "description": "Gets one marketing nurture sequence with its steps, per-step send/open/click stats, and current enrollments.",
+    "tags": [
+      "Marketing v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Sequence UUID from marketing_sequences.sequence_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Sequence UUID from marketing_sequences.sequence_id."
+        }
+      }
+    ],
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "put-_api_v1_marketing_sequences_id",
+    "method": "put",
+    "path": "/api/v1/marketing/sequences/{id}",
+    "displayName": "Update nurture sequence",
+    "summary": "Update nurture sequence",
+    "description": "Updates a marketing nurture sequence. Supplying steps replaces the full step list (order must be contiguous from 1). Set status to active to accept enrollments.",
+    "tags": [
+      "Marketing v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Sequence UUID from marketing_sequences.sequence_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Sequence UUID from marketing_sequences.sequence_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "description": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "maxLength": 2000
+        },
+        "status": {
+          "type": "string",
+          "enum": [
+            "draft",
+            "active",
+            "paused",
+            "archived"
+          ]
+        },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "step_order": {
+                "type": "integer",
+                "minimum": 1
+              },
+              "delay_minutes": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 525600
+              },
+              "subject": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 300
+              },
+              "body_template": {
+                "type": "string",
+                "maxLength": 50000,
+                "default": ""
+              }
+            },
+            "required": [
+              "step_order",
+              "delay_minutes",
+              "subject"
+            ]
+          },
+          "maxItems": 50,
+          "default": []
+        }
+      }
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_marketing_sequences_id_enroll",
+    "method": "post",
+    "path": "/api/v1/marketing/sequences/{id}/enroll",
+    "displayName": "Enroll contact in sequence",
+    "summary": "Enroll contact in sequence",
+    "description": "Enrolls a contact in an active marketing nurture sequence. The contact must have an email address and not be suppressed; duplicate active enrollments are rejected.",
+    "tags": [
+      "Marketing v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "id",
+        "in": "path",
+        "required": true,
+        "description": "Sequence UUID from marketing_sequences.sequence_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Sequence UUID from marketing_sequences.sequence_id."
+        }
+      }
+    ],
+    "requestBodySchema": {
+      "type": "object",
+      "properties": {
+        "contact_id": {
+          "type": "string",
+          "format": "uuid"
+        }
+      },
+      "required": [
+        "contact_id"
+      ]
+    },
+    "responseBodySchema": {
+      "type": "object",
+      "properties": {
+        "data": {
+          "type": "object",
+          "additionalProperties": {}
+        },
+        "meta": {
+          "type": "object",
+          "additionalProperties": {}
+        }
+      },
+      "required": [
+        "data"
+      ]
+    }
+  },
+  {
+    "id": "post-_api_v1_marketing_sequences_enrollments_enrollmentid_unenroll",
+    "method": "post",
+    "path": "/api/v1/marketing/sequences/enrollments/{enrollmentId}/unenroll",
+    "displayName": "Unenroll contact",
+    "summary": "Unenroll contact",
+    "description": "Stops an active nurture sequence enrollment; no further sequence emails are sent to the contact for that enrollment.",
+    "tags": [
+      "Marketing v1"
+    ],
+    "approvalRequired": false,
+    "parameters": [
+      {
+        "name": "enrollmentId",
+        "in": "path",
+        "required": true,
+        "description": "Enrollment UUID from marketing_sequence_enrollments.enrollment_id.",
+        "schema": {
+          "type": "string",
+          "format": "uuid",
+          "description": "Enrollment UUID from marketing_sequence_enrollments.enrollment_id."
+        }
+      }
+    ]
   },
   {
     "id": "post-_api_v1_featureaccess",

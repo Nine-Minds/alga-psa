@@ -53,9 +53,7 @@ export async function getCampaignFunnelInternal(db: Db, tenant: string, campaign
     .join('interactions as i', function joinInteraction() {
       this.on('i.tenant', '=', 'e.tenant').andOn('i.interaction_id', '=', 'e.interaction_id');
     })
-    .join('interaction_types as it', function joinType() {
-      this.on('it.tenant', '=', 'i.tenant').andOn('it.type_id', '=', 'i.type_id');
-    })
+    .join('system_interaction_types as it', 'it.type_id', '=', 'i.type_id')
     .where({ 'e.tenant': tenant, 'e.campaign_id': campaignId })
     .groupBy('it.type_name')
     .select('it.type_name')

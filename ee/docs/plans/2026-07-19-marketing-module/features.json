@@ -1,76 +1,536 @@
 [
-  { "id": "F001", "description": "Migration: marketing_campaigns table (tenant-scoped, RLS, additive)", "implemented": false, "prdRefs": ["Data / API / Integrations", "NFR1"] },
-  { "id": "F002", "description": "Migration: marketing_content table with channel variants (jsonb)", "implemented": false, "prdRefs": ["Data / API / Integrations"] },
-  { "id": "F003", "description": "Migration: marketing_channels table (platform label + handle/URL; no credential columns)", "implemented": false, "prdRefs": ["Data / API / Integrations", "Security / Permissions"] },
-  { "id": "F004", "description": "Migration: social_posts table (content ref, campaign ref, status, scheduled_at)", "implemented": false, "prdRefs": ["Data / API / Integrations"] },
-  { "id": "F005", "description": "Migration: social_post_targets table (post × channel: permalink, published_at, published_by)", "implemented": false, "prdRefs": ["Data / API / Integrations"] },
-  { "id": "F006", "description": "Migration: marketing_sequences + marketing_sequence_steps tables (step order, delay, template)", "implemented": false, "prdRefs": ["Data / API / Integrations"] },
-  { "id": "F007", "description": "Migration: marketing_sequence_enrollments table (contact, sequence, current step, state, next_send_at)", "implemented": false, "prdRefs": ["Data / API / Integrations"] },
-  { "id": "F008", "description": "Migration: marketing_contact_state table (contact ref, consent, source, unsubscribed_at)", "implemented": false, "prdRefs": ["Data / API / Integrations"] },
-  { "id": "F009", "description": "Migration: marketing_suppressions table (email/contact, reason, source)", "implemented": false, "prdRefs": ["Data / API / Integrations"] },
-  { "id": "F010", "description": "Migration: marketing_engagements join table (interaction_id ↔ campaign/content/post/sequence-step)", "implemented": false, "prdRefs": ["Data / API / Integrations"] },
-  { "id": "F011", "description": "Migration: seed marketing interaction types (post_published, email_sent, email_opened, email_clicked, form_submitted)", "implemented": false, "prdRefs": ["FR8"] },
-  { "id": "F012", "description": "Migration: seed marketing:read + marketing:manage permissions and assign to standard roles", "implemented": false, "prdRefs": ["NFR3", "Security / Permissions"] },
-  { "id": "F064", "description": "Migration: marketing_capture_forms table (slug-keyed public endpoint definitions with campaign attribution)", "implemented": false, "prdRefs": ["FR4", "Data / API / Integrations"] },
-  { "id": "F013", "description": "marketing_module feature flag gates nav section and every marketing surface/endpoint", "implemented": false, "prdRefs": ["FR10", "Rollout / Migration"] },
-
-  { "id": "F014", "description": "Campaign CRUD server actions + API endpoints", "implemented": false, "prdRefs": ["FR1"] },
-  { "id": "F015", "description": "Campaigns list UI", "implemented": false, "prdRefs": ["UX / UI Notes"] },
-  { "id": "F016", "description": "Campaign detail UI with funnel summary (sent → opened → clicked → captured → suggested → accepted)", "implemented": false, "prdRefs": ["UX / UI Notes"] },
-  { "id": "F017", "description": "Campaign status lifecycle (draft/active/completed/archived)", "implemented": false, "prdRefs": ["FR1"] },
-
-  { "id": "F018", "description": "Content piece CRUD with per-channel variants", "implemented": false, "prdRefs": ["FR1"] },
-  { "id": "F019", "description": "Content library UI (list/create/edit)", "implemented": false, "prdRefs": ["UX / UI Notes"] },
-  { "id": "F020", "description": "Markdown rendering + preview for content pieces", "implemented": false, "prdRefs": ["UX / UI Notes"] },
-
-  { "id": "F021", "description": "Channel CRUD (named destination; platform label + handle/URL only)", "implemented": false, "prdRefs": ["FR1"] },
-  { "id": "F022", "description": "Channels management UI", "implemented": false, "prdRefs": ["UX / UI Notes"] },
-
-  { "id": "F023", "description": "Create post from content piece targeting one or more channels with scheduled time", "implemented": false, "prdRefs": ["FR1"] },
-  { "id": "F024", "description": "Per-target state machine: draft → scheduled → awaiting-manual-publish → published / expired", "implemented": false, "prdRefs": ["FR2"] },
-  { "id": "F025", "description": "Scheduled job flips due targets to awaiting-manual-publish (idempotent on re-run)", "implemented": false, "prdRefs": ["FR2", "NFR2"] },
-  { "id": "F026", "description": "Mark-published action with optional permalink and published_by (user or API token)", "implemented": false, "prdRefs": ["FR2"] },
-  { "id": "F027", "description": "Skip action + grace-period job auto-expires stale awaiting-manual-publish targets", "implemented": false, "prdRefs": ["FR2"] },
-  { "id": "F028", "description": "Posts queue UI with filters (state, channel, date range)", "implemented": false, "prdRefs": ["UX / UI Notes"] },
-  { "id": "F029", "description": "Rendered per-channel post text with copy-to-clipboard in queue UI", "implemented": false, "prdRefs": ["FR2", "UX / UI Notes"] },
-  { "id": "F030", "description": "Calendar surface (Concept B, ux/calendar.html): agenda-forward — Today card with inline copy/mark-published, day groups for upcoming posts, published-this-week log, 'Needs publishing' rail; month grid as secondary toggle", "implemented": false, "prdRefs": ["UX / UI Notes"] },
-
-  { "id": "F031", "description": "API endpoint: list due/awaiting-manual-publish posts (agent-oriented)", "implemented": false, "prdRefs": ["FR3"] },
-  { "id": "F032", "description": "API endpoint: get rendered post content per channel target", "implemented": false, "prdRefs": ["FR3"] },
-  { "id": "F033", "description": "API endpoint: mark target published (permalink) or skipped/expired", "implemented": false, "prdRefs": ["FR3"] },
-  { "id": "F034", "description": "Publish-loop endpoints registered in API registry with agent-discoverable descriptions", "implemented": false, "prdRefs": ["FR3", "Data / API / Integrations"] },
-  { "id": "F035", "description": "Publish-loop endpoints enforce marketing permissions (MCP callers ACL-scoped)", "implemented": false, "prdRefs": ["FR3", "NFR3"] },
-
-  { "id": "F036", "description": "Capture form definition CRUD (e.g. newsletter, demo-request) with embeddable URL", "implemented": false, "prdRefs": ["FR4"] },
-  { "id": "F037", "description": "Public unauthenticated capture endpoint: validated, rate-limited, suppression list not enumerable", "implemented": false, "prdRefs": ["FR4", "Security / Permissions"] },
-  { "id": "F038", "description": "Capture creates/updates marketing contact linked to contacts (no contacts table changes)", "implemented": false, "prdRefs": ["FR4", "Data / API / Integrations"] },
-  { "id": "F039", "description": "Capture records form_submitted interaction with campaign/source attribution", "implemented": false, "prdRefs": ["FR4", "FR8"] },
-  { "id": "F040", "description": "Forms management UI (definitions + URLs)", "implemented": false, "prdRefs": ["UX / UI Notes"] },
-
-  { "id": "F041", "description": "Register inbound-lead generator (generator_key: 'inbound-lead') with opportunity_suggestions", "implemented": false, "prdRefs": ["FR5"] },
-  { "id": "F042", "description": "Capture events produce opportunity_suggestions carrying attribution in generator_context", "implemented": false, "prdRefs": ["FR5"] },
-  { "id": "F043", "description": "Accepting an inbound-lead suggestion creates opportunity with source attribution intact (existing Opportunities UI)", "implemented": false, "prdRefs": ["FR5"] },
-  { "id": "F044", "description": "Suggestion payload references campaign/content/form for downstream reporting", "implemented": false, "prdRefs": ["FR5"] },
-
-  { "id": "F045", "description": "Sequence CRUD: ordered steps with delay + markdown template", "implemented": false, "prdRefs": ["FR6"] },
-  { "id": "F046", "description": "Manual enrollment add/remove per contact", "implemented": false, "prdRefs": ["FR6"] },
-  { "id": "F047", "description": "Enrollment state machine (active/completed/stopped) with next_send_at tracking", "implemented": false, "prdRefs": ["FR6"] },
-  { "id": "F048", "description": "Scheduled send job: due steps sent via outbound email abstraction (idempotent; no double-sends)", "implemented": false, "prdRefs": ["FR6", "NFR2"] },
-  { "id": "F049", "description": "Unsubscribe link injected into every sequence email", "implemented": false, "prdRefs": ["FR7"] },
-  { "id": "F050", "description": "Unsubscribe endpoint: immediate suppression + stops all active enrollments for that address", "implemented": false, "prdRefs": ["FR7", "NFR4"] },
-  { "id": "F051", "description": "Suppression list checked by every send (hard guard, including re-imported contacts)", "implemented": false, "prdRefs": ["FR7", "NFR4"] },
-  { "id": "F052", "description": "Sequences UI (Concept B, ux/sequences.html): horizontal journey cards with delay-arrow connectors and per-step stats; enrollment table with per-contact progress bars; sending-config side tile", "implemented": false, "prdRefs": ["FR6", "UX / UI Notes"] },
-  { "id": "F053", "description": "Merge fields in sequence templates (contact name, company, etc.)", "implemented": false, "prdRefs": ["FR6"] },
-
-  { "id": "F054", "description": "Post published → post_published interaction recorded + linked via marketing_engagements", "implemented": false, "prdRefs": ["FR8"] },
-  { "id": "F055", "description": "Sequence email sent → email_sent interaction recorded + linked", "implemented": false, "prdRefs": ["FR8"] },
-  { "id": "F056", "description": "PostHog tracking pixel for email opens", "implemented": false, "prdRefs": ["FR9"] },
-  { "id": "F057", "description": "PostHog redirect-link tracking for email clicks", "implemented": false, "prdRefs": ["FR9"] },
-  { "id": "F058", "description": "Open/click events recorded as email_opened/email_clicked interactions", "implemented": false, "prdRefs": ["FR8", "FR9"] },
-  { "id": "F059", "description": "Marketing engagements visible on contact timeline", "implemented": false, "prdRefs": ["FR8", "G2"] },
-  { "id": "F060", "description": "Marketing engagements visible on opportunity timeline after suggestion accept", "implemented": false, "prdRefs": ["FR8", "G2"] },
-
-  { "id": "F061", "description": "Marketing state (consent, source, unsubscribed) visible on contact record", "implemented": false, "prdRefs": ["FR7", "UX / UI Notes"] },
-  { "id": "F062", "description": "Docs: automation recipe — Claude Desktop + @alga-psa/mcp-connector config and publish-loop prompt playbook", "implemented": false, "prdRefs": ["FR3", "Open Questions"] },
-  { "id": "F063", "description": "User Activities integration: fetchMarketingActivities aggregation source maps awaiting-manual-publish targets to generic activities (title, due date, overdue→HIGH priority, link to posts queue); visible to marketing:manage holders; returns nothing when flag off (pattern: fetchOpportunityActivities)", "implemented": false, "prdRefs": ["FR11", "UX / UI Notes"] }
+  {
+    "id": "F001",
+    "description": "Migration: marketing_campaigns table (tenant-scoped, RLS, additive)",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "NFR1"
+    ]
+  },
+  {
+    "id": "F002",
+    "description": "Migration: marketing_content table with channel variants (jsonb)",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F003",
+    "description": "Migration: marketing_channels table (platform label + handle/URL; no credential columns)",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F004",
+    "description": "Migration: social_posts table (content ref, campaign ref, status, scheduled_at)",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F005",
+    "description": "Migration: social_post_targets table (post \u00d7 channel: permalink, published_at, published_by)",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F006",
+    "description": "Migration: marketing_sequences + marketing_sequence_steps tables (step order, delay, template)",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F007",
+    "description": "Migration: marketing_sequence_enrollments table (contact, sequence, current step, state, next_send_at)",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F008",
+    "description": "Migration: marketing_contact_state table (contact ref, consent, source, unsubscribed_at)",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F009",
+    "description": "Migration: marketing_suppressions table (email/contact, reason, source)",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F010",
+    "description": "Migration: marketing_engagements join table (interaction_id \u2194 campaign/content/post/sequence-step)",
+    "implemented": true,
+    "prdRefs": [
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F011",
+    "description": "Migration: seed marketing interaction types (post_published, email_sent, email_opened, email_clicked, form_submitted)",
+    "implemented": true,
+    "prdRefs": [
+      "FR8"
+    ]
+  },
+  {
+    "id": "F012",
+    "description": "Migration: seed marketing:read + marketing:manage permissions and assign to standard roles",
+    "implemented": true,
+    "prdRefs": [
+      "NFR3",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F064",
+    "description": "Migration: marketing_capture_forms table (slug-keyed public endpoint definitions with campaign attribution)",
+    "implemented": true,
+    "prdRefs": [
+      "FR4",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F013",
+    "description": "marketing_module feature flag gates nav section and every marketing surface/endpoint",
+    "implemented": true,
+    "prdRefs": [
+      "FR10",
+      "Rollout / Migration"
+    ]
+  },
+  {
+    "id": "F014",
+    "description": "Campaign CRUD server actions + API endpoints",
+    "implemented": true,
+    "prdRefs": [
+      "FR1"
+    ]
+  },
+  {
+    "id": "F015",
+    "description": "Campaigns list UI",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F016",
+    "description": "Campaign detail UI with funnel summary (sent \u2192 opened \u2192 clicked \u2192 captured \u2192 suggested \u2192 accepted)",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F017",
+    "description": "Campaign status lifecycle (draft/active/completed/archived)",
+    "implemented": true,
+    "prdRefs": [
+      "FR1"
+    ]
+  },
+  {
+    "id": "F018",
+    "description": "Content piece CRUD with per-channel variants",
+    "implemented": true,
+    "prdRefs": [
+      "FR1"
+    ]
+  },
+  {
+    "id": "F019",
+    "description": "Content library UI (list/create/edit)",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F020",
+    "description": "Markdown rendering + preview for content pieces",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F021",
+    "description": "Channel CRUD (named destination; platform label + handle/URL only)",
+    "implemented": true,
+    "prdRefs": [
+      "FR1"
+    ]
+  },
+  {
+    "id": "F022",
+    "description": "Channels management UI",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F023",
+    "description": "Create post from content piece targeting one or more channels with scheduled time",
+    "implemented": true,
+    "prdRefs": [
+      "FR1"
+    ]
+  },
+  {
+    "id": "F024",
+    "description": "Per-target state machine: draft \u2192 scheduled \u2192 awaiting-manual-publish \u2192 published / expired",
+    "implemented": true,
+    "prdRefs": [
+      "FR2"
+    ]
+  },
+  {
+    "id": "F025",
+    "description": "Scheduled job flips due targets to awaiting-manual-publish (idempotent on re-run)",
+    "implemented": true,
+    "prdRefs": [
+      "FR2",
+      "NFR2"
+    ]
+  },
+  {
+    "id": "F026",
+    "description": "Mark-published action with optional permalink and published_by (user or API token)",
+    "implemented": true,
+    "prdRefs": [
+      "FR2"
+    ]
+  },
+  {
+    "id": "F027",
+    "description": "Skip action + grace-period job auto-expires stale awaiting-manual-publish targets",
+    "implemented": true,
+    "prdRefs": [
+      "FR2"
+    ]
+  },
+  {
+    "id": "F028",
+    "description": "Posts queue UI with filters (state, channel, date range)",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F029",
+    "description": "Rendered per-channel post text with copy-to-clipboard in queue UI",
+    "implemented": true,
+    "prdRefs": [
+      "FR2",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F030",
+    "description": "Calendar surface (Concept B, ux/calendar.html): agenda-forward \u2014 Today card with inline copy/mark-published, day groups for upcoming posts, published-this-week log, 'Needs publishing' rail; month grid as secondary toggle",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F031",
+    "description": "API endpoint: list due/awaiting-manual-publish posts (agent-oriented)",
+    "implemented": true,
+    "prdRefs": [
+      "FR3"
+    ]
+  },
+  {
+    "id": "F032",
+    "description": "API endpoint: get rendered post content per channel target",
+    "implemented": true,
+    "prdRefs": [
+      "FR3"
+    ]
+  },
+  {
+    "id": "F033",
+    "description": "API endpoint: mark target published (permalink) or skipped/expired",
+    "implemented": true,
+    "prdRefs": [
+      "FR3"
+    ]
+  },
+  {
+    "id": "F034",
+    "description": "Publish-loop endpoints registered in API registry with agent-discoverable descriptions",
+    "implemented": true,
+    "prdRefs": [
+      "FR3",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F035",
+    "description": "Publish-loop endpoints enforce marketing permissions (MCP callers ACL-scoped)",
+    "implemented": true,
+    "prdRefs": [
+      "FR3",
+      "NFR3"
+    ]
+  },
+  {
+    "id": "F036",
+    "description": "Capture form definition CRUD (e.g. newsletter, demo-request) with embeddable URL",
+    "implemented": true,
+    "prdRefs": [
+      "FR4"
+    ]
+  },
+  {
+    "id": "F037",
+    "description": "Public unauthenticated capture endpoint: validated, rate-limited, suppression list not enumerable",
+    "implemented": true,
+    "prdRefs": [
+      "FR4",
+      "Security / Permissions"
+    ]
+  },
+  {
+    "id": "F038",
+    "description": "Capture creates/updates marketing contact linked to contacts (no contacts table changes)",
+    "implemented": true,
+    "prdRefs": [
+      "FR4",
+      "Data / API / Integrations"
+    ]
+  },
+  {
+    "id": "F039",
+    "description": "Capture records form_submitted interaction with campaign/source attribution",
+    "implemented": true,
+    "prdRefs": [
+      "FR4",
+      "FR8"
+    ]
+  },
+  {
+    "id": "F040",
+    "description": "Forms management UI (definitions + URLs)",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F041",
+    "description": "Register inbound-lead generator (generator_key: 'inbound-lead') with opportunity_suggestions",
+    "implemented": true,
+    "prdRefs": [
+      "FR5"
+    ]
+  },
+  {
+    "id": "F042",
+    "description": "Capture events produce opportunity_suggestions carrying attribution in generator_context",
+    "implemented": true,
+    "prdRefs": [
+      "FR5"
+    ]
+  },
+  {
+    "id": "F043",
+    "description": "Accepting an inbound-lead suggestion creates opportunity with source attribution intact (existing Opportunities UI)",
+    "implemented": true,
+    "prdRefs": [
+      "FR5"
+    ]
+  },
+  {
+    "id": "F044",
+    "description": "Suggestion payload references campaign/content/form for downstream reporting",
+    "implemented": true,
+    "prdRefs": [
+      "FR5"
+    ]
+  },
+  {
+    "id": "F045",
+    "description": "Sequence CRUD: ordered steps with delay + markdown template",
+    "implemented": true,
+    "prdRefs": [
+      "FR6"
+    ]
+  },
+  {
+    "id": "F046",
+    "description": "Manual enrollment add/remove per contact",
+    "implemented": true,
+    "prdRefs": [
+      "FR6"
+    ]
+  },
+  {
+    "id": "F047",
+    "description": "Enrollment state machine (active/completed/stopped) with next_send_at tracking",
+    "implemented": true,
+    "prdRefs": [
+      "FR6"
+    ]
+  },
+  {
+    "id": "F048",
+    "description": "Scheduled send job: due steps sent via outbound email abstraction (idempotent; no double-sends)",
+    "implemented": true,
+    "prdRefs": [
+      "FR6",
+      "NFR2"
+    ]
+  },
+  {
+    "id": "F049",
+    "description": "Unsubscribe link injected into every sequence email",
+    "implemented": true,
+    "prdRefs": [
+      "FR7"
+    ]
+  },
+  {
+    "id": "F050",
+    "description": "Unsubscribe endpoint: immediate suppression + stops all active enrollments for that address",
+    "implemented": true,
+    "prdRefs": [
+      "FR7",
+      "NFR4"
+    ]
+  },
+  {
+    "id": "F051",
+    "description": "Suppression list checked by every send (hard guard, including re-imported contacts)",
+    "implemented": true,
+    "prdRefs": [
+      "FR7",
+      "NFR4"
+    ]
+  },
+  {
+    "id": "F052",
+    "description": "Sequences UI (Concept B, ux/sequences.html): horizontal journey cards with delay-arrow connectors and per-step stats; enrollment table with per-contact progress bars; sending-config side tile",
+    "implemented": true,
+    "prdRefs": [
+      "FR6",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F053",
+    "description": "Merge fields in sequence templates (contact name, company, etc.)",
+    "implemented": true,
+    "prdRefs": [
+      "FR6"
+    ]
+  },
+  {
+    "id": "F054",
+    "description": "Post published \u2192 post_published interaction recorded + linked via marketing_engagements",
+    "implemented": true,
+    "prdRefs": [
+      "FR8"
+    ]
+  },
+  {
+    "id": "F055",
+    "description": "Sequence email sent \u2192 email_sent interaction recorded + linked",
+    "implemented": true,
+    "prdRefs": [
+      "FR8"
+    ]
+  },
+  {
+    "id": "F056",
+    "description": "PostHog tracking pixel for email opens",
+    "implemented": true,
+    "prdRefs": [
+      "FR9"
+    ]
+  },
+  {
+    "id": "F057",
+    "description": "PostHog redirect-link tracking for email clicks",
+    "implemented": true,
+    "prdRefs": [
+      "FR9"
+    ]
+  },
+  {
+    "id": "F058",
+    "description": "Open/click events recorded as email_opened/email_clicked interactions",
+    "implemented": true,
+    "prdRefs": [
+      "FR8",
+      "FR9"
+    ]
+  },
+  {
+    "id": "F059",
+    "description": "Marketing engagements visible on contact timeline",
+    "implemented": true,
+    "prdRefs": [
+      "FR8",
+      "G2"
+    ]
+  },
+  {
+    "id": "F060",
+    "description": "Marketing engagements visible on opportunity timeline after suggestion accept",
+    "implemented": true,
+    "prdRefs": [
+      "FR8",
+      "G2"
+    ]
+  },
+  {
+    "id": "F061",
+    "description": "Marketing state (consent, source, unsubscribed) visible on contact record",
+    "implemented": true,
+    "prdRefs": [
+      "FR7",
+      "UX / UI Notes"
+    ]
+  },
+  {
+    "id": "F062",
+    "description": "Docs: automation recipe \u2014 Claude Desktop + @alga-psa/mcp-connector config and publish-loop prompt playbook",
+    "implemented": true,
+    "prdRefs": [
+      "FR3",
+      "Open Questions"
+    ]
+  },
+  {
+    "id": "F063",
+    "description": "User Activities integration: fetchMarketingActivities aggregation source maps awaiting-manual-publish targets to generic activities (title, due date, overdue\u2192HIGH priority, link to posts queue); visible to marketing:manage holders; returns nothing when flag off (pattern: fetchOpportunityActivities)",
+    "implemented": true,
+    "prdRefs": [
+      "FR11",
+      "UX / UI Notes"
+    ]
+  }
 ]

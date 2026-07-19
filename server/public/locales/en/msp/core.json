@@ -98,6 +98,326 @@
     "emailLogs": "Email Logs",
     "extensions": "Extensions"
   },
+  "marketing": {
+    "dialogs": {
+      "cancel": "Cancel",
+      "save": "Save",
+      "create": "Create"
+    },
+    "actions": {
+      "edit": "Edit",
+      "delete": "Delete"
+    },
+    "calendar": {
+      "title": "Marketing calendar",
+      "newPost": "New post",
+      "today": "Today",
+      "tomorrow": "Tomorrow",
+      "dueAt": "due {{time}}",
+      "needsPublishing": "Needs publishing",
+      "needsPublishingCount": "{{total}} waiting · {{overdue}} overdue",
+      "needsPublishingCountSimple": "{{total}} waiting",
+      "needsPublishingHint": "Copy the text, publish on the platform, then mark it published.",
+      "thisWeek": "This week",
+      "stats": {
+        "published": "Published",
+        "scheduled": "Scheduled",
+        "awaiting": "Awaiting publish"
+      },
+      "channels": "Channels",
+      "manageChannels": "Manage",
+      "noChannels": "No channels yet.",
+      "publishedRecently": "Published recently",
+      "noUpcoming": "Nothing scheduled in this range.",
+      "emptyTitle": "Nothing on the calendar yet",
+      "emptyBody": "Create a post from the Posts page and it will show up here on its scheduled day.",
+      "toast": {
+        "skipped": "Skipped"
+      }
+    },
+    "posts": {
+      "title": "Posts",
+      "new": "New post",
+      "copyText": "Copy text",
+      "skip": "Skip",
+      "reschedule": "Reschedule",
+      "emptyTitle": "No posts yet",
+      "emptyBody": "Create a post from your content library and it will appear in this queue.",
+      "status": {
+        "scheduled": "scheduled",
+        "awaiting-manual-publish": "awaiting publish",
+        "published": "published",
+        "skipped": "skipped",
+        "expired": "expired"
+      },
+      "columns": {
+        "content": "Content",
+        "channel": "Channel",
+        "campaign": "Campaign",
+        "scheduled": "Scheduled",
+        "status": "Status",
+        "actions": "Actions"
+      },
+      "filters": {
+        "status": "Status",
+        "channel": "Channel",
+        "campaign": "Campaign",
+        "all": "All"
+      },
+      "createDialog": {
+        "title": "New post",
+        "content": "Content",
+        "contentPlaceholder": "Select content…",
+        "channels": "Channels",
+        "noChannels": "No active channels — add one on the Channels page first.",
+        "campaign": "Campaign (optional)",
+        "noCampaign": "No campaign",
+        "scheduledAt": "Schedule for (optional)",
+        "submit": "Create post"
+      },
+      "rescheduleDialog": {
+        "title": "Reschedule post",
+        "scheduledAt": "New time",
+        "submit": "Reschedule"
+      },
+      "markPublished": {
+        "title": "Mark published",
+        "permalink": "Permalink (optional)",
+        "confirm": "Mark published"
+      },
+      "toast": {
+        "created": "Post created",
+        "rescheduled": "Post rescheduled",
+        "markedPublished": "Marked as published",
+        "copied": "Copied to clipboard",
+        "copyFailed": "Could not copy to clipboard"
+      }
+    },
+    "content": {
+      "title": "Content",
+      "new": "New content",
+      "emptyTitle": "No content yet",
+      "emptyBody": "Write the posts you want to publish, then schedule them from the Posts page.",
+      "columns": {
+        "title": "Title",
+        "campaign": "Campaign",
+        "variants": "Variants",
+        "updated": "Updated",
+        "actions": "Actions"
+      },
+      "dialog": {
+        "createTitle": "New content",
+        "editTitle": "Edit content",
+        "title": "Title",
+        "body": "Body (markdown)",
+        "campaign": "Campaign (optional)",
+        "noCampaign": "No campaign",
+        "variants": "Channel variants",
+        "variantsHint": "Override the base text for specific platforms. Empty variants are ignored.",
+        "addVariant": "Add platform variant…",
+        "addVariantButton": "Add"
+      },
+      "deleteDialog": {
+        "title": "Delete content",
+        "message": "Delete \"{{title}}\"? This cannot be undone."
+      },
+      "toast": {
+        "created": "Content created",
+        "updated": "Content updated",
+        "deleted": "Content deleted"
+      }
+    },
+    "campaigns": {
+      "title": "Campaigns",
+      "new": "New campaign",
+      "view": "View",
+      "emptyTitle": "No campaigns yet",
+      "emptyBody": "Campaigns group posts, content, forms, and sequences so you can see the funnel in one place.",
+      "status": {
+        "draft": "draft",
+        "active": "active",
+        "completed": "completed",
+        "archived": "archived"
+      },
+      "columns": {
+        "name": "Name",
+        "status": "Status",
+        "startDate": "Start",
+        "endDate": "End",
+        "actions": "Actions"
+      },
+      "dialog": {
+        "createTitle": "New campaign",
+        "editTitle": "Edit campaign",
+        "name": "Name",
+        "goal": "Goal (optional)",
+        "sourceChannel": "Source channel (optional)",
+        "status": "Status",
+        "startDate": "Start date",
+        "endDate": "End date"
+      },
+      "funnel": {
+        "loading": "Loading funnel…",
+        "postsPublished": "Posts published",
+        "emailsSent": "Emails sent",
+        "emailsOpened": "Opened",
+        "emailsClicked": "Clicked",
+        "formsSubmitted": "Forms submitted",
+        "suggestionsCreated": "Suggestions",
+        "suggestionsAccepted": "Accepted"
+      },
+      "toast": {
+        "created": "Campaign created",
+        "updated": "Campaign updated"
+      }
+    },
+    "sequences": {
+      "title": "Sequences",
+      "new": "New sequence",
+      "pickerLabel": "Sequence",
+      "emptyTitle": "No sequences yet",
+      "emptyBody": "Sequences send a timed series of emails to enrolled contacts.",
+      "headerSummary": "{{steps}} steps · {{active}} active enrollments",
+      "headerOpenRate": "{{rate}}% open rate",
+      "journey": "Journey",
+      "noSteps": "No steps yet — edit the sequence to add steps.",
+      "enroll": "Enroll contacts",
+      "performance": {
+        "title": "Performance",
+        "openRate": "Open rate",
+        "clickRate": "Click rate",
+        "stopped": "Unsubscribed / stopped"
+      },
+      "stepStats": {
+        "sent": "{{count}} sent",
+        "opened": "{{rate}}% opened"
+      },
+      "status": {
+        "draft": "draft",
+        "active": "active",
+        "paused": "paused",
+        "archived": "archived"
+      },
+      "enrollments": {
+        "title": "Enrollments",
+        "empty": "No enrollments yet.",
+        "contact": "Contact",
+        "progress": "Progress",
+        "nextSend": "Next send",
+        "state": "State",
+        "actions": "Actions",
+        "unenroll": "Unenroll"
+      },
+      "dialog": {
+        "createTitle": "New sequence",
+        "editTitle": "Edit sequence",
+        "name": "Name",
+        "description": "Description (optional)",
+        "status": "Status",
+        "steps": "Steps",
+        "subjectPlaceholder": "Subject",
+        "delay": "Wait",
+        "delayAfterEnroll": "after enrollment",
+        "delayAfterPrevious": "after previous step",
+        "bodyPlaceholder": "Body (markdown, {{merge.fields}} supported)",
+        "addStep": "Add step",
+        "unit": {
+          "minutes": "minutes",
+          "hours": "hours",
+          "days": "days"
+        }
+      },
+      "enrollDialog": {
+        "title": "Enroll contact",
+        "contact": "Contact",
+        "contactPlaceholder": "Select a contact…",
+        "submit": "Enroll"
+      },
+      "toast": {
+        "created": "Sequence created",
+        "updated": "Sequence updated",
+        "enrolled": "Contact enrolled",
+        "unenrolled": "Contact unenrolled"
+      }
+    },
+    "forms": {
+      "title": "Capture forms",
+      "new": "New form",
+      "active": "active",
+      "inactive": "inactive",
+      "createsSuggestion": "suggestion",
+      "copyUrl": "Copy",
+      "emptyTitle": "No capture forms yet",
+      "emptyBody": "Public forms turn inbound leads into contacts — and optionally into opportunity suggestions.",
+      "columns": {
+        "name": "Name",
+        "slug": "Slug",
+        "campaign": "Campaign",
+        "status": "Status",
+        "captureUrl": "Capture URL",
+        "actions": "Actions"
+      },
+      "dialog": {
+        "createTitle": "New capture form",
+        "editTitle": "Edit form",
+        "name": "Name",
+        "slug": "Slug",
+        "slugHint": "Lowercase letters, digits, and dashes (e.g. demo-request). Used in the public capture URL.",
+        "slugInvalid": "Invalid slug",
+        "description": "Description (optional)",
+        "campaign": "Campaign (optional)",
+        "noCampaign": "No campaign",
+        "createsSuggestion": "Create an opportunity suggestion per submission",
+        "isActive": "Active (accepts submissions)"
+      },
+      "toast": {
+        "created": "Form created",
+        "updated": "Form updated",
+        "urlCopied": "Capture URL copied"
+      }
+    },
+    "channels": {
+      "title": "Channels",
+      "new": "New channel",
+      "emptyTitle": "No channels yet",
+      "emptyBody": "Channels are the places you publish — a LinkedIn profile, a YouTube channel, a blog.",
+      "columns": {
+        "name": "Name",
+        "platform": "Platform",
+        "handle": "Handle / URL",
+        "active": "Active",
+        "actions": "Actions"
+      },
+      "dialog": {
+        "createTitle": "New channel",
+        "editTitle": "Edit channel",
+        "name": "Name",
+        "namePlaceholder": "e.g. Robert’s LinkedIn",
+        "platform": "Platform",
+        "platformPlaceholder": "Select a platform…",
+        "handle": "Handle or URL (optional)",
+        "isActive": "Active"
+      },
+      "toast": {
+        "created": "Channel created",
+        "updated": "Channel updated",
+        "activated": "Channel activated",
+        "deactivated": "Channel deactivated"
+      }
+    },
+    "contact": {
+      "title": "Marketing",
+      "loading": "Loading marketing activity…",
+      "consentGiven": "consent",
+      "noConsent": "no consent",
+      "suppressed": "suppressed",
+      "activeEnrollments": "Active enrollments",
+      "noEnrollments": "Not enrolled in any sequence.",
+      "enrollmentMeta": "step {{step}} · next {{date}}",
+      "recentEngagements": "Recent engagements",
+      "noEngagements": "No marketing touches yet."
+    }
+  },
   "sidebar": {
     "backToMain": "Back to Main",
     "searchPlaceholder": "Search",

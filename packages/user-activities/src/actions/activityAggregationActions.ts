@@ -21,6 +21,7 @@ import {
 // already gated `targetUserId` via resolveActivityTarget.
 import { getScheduleActivityEntriesForUser } from '@alga-psa/scheduling/actions/scheduleActivityCore';
 import { withAuth, hasPermission } from '@alga-psa/auth';
+import { isFeatureFlagEnabled } from '@alga-psa/core';
 import { ISO8601String } from '@alga-psa/types';
 import { IProjectTask } from '@alga-psa/types';
 
@@ -237,6 +238,8 @@ async function collectProcessedActivities(
     // Opportunity next actions use the schedule-compatible activity shape so
     // they render in the existing feed without adding a UI section in this lane.
     promises.push(fetchOpportunityActivities(effectiveUserId, tenantId, filters));
+    // Marketing manual-publish queue (flag + marketing:manage gated inside).
+    promises.push(fetchMarketingActivities(effectiveUserId, tenantId, filters, user));
   }
   if (typesToFetch.includes(ActivityType.PROJECT_TASK)) {
     promises.push(fetchProjectActivities(effectiveUserId, tenantId, filters));
@@ -1654,6 +1657,111 @@ export async function fetchOpportunityActivities(
     return activities;
   } catch (error) {
     console.error('Error fetching opportunity activities:', error);
+    return [];
+  }
+}
+
+/**
+ * Fetch awaiting-manual-publish social post targets as schedule activities
+ * (marketing module F062). Surfaced next to opportunity next actions so the
+ * manual publish queue shows up in the unified activities feed. Returns []
+ * unless the `marketing-module` feature flag is on for the tenant AND the
+ * caller holds marketing:manage; never throws.
+ */
+export async function fetchMarketingActivities(
+  userId: string,
+  tenantId: string,
+  filters: ActivityFilters,
+  user?: any
+): Promise<Activity[]> {
+  try {
+    const enabled = await isFeatureFlagEnabled('marketing-module', { tenantId, userId });
+    if (!enabled) return [];
+
+    const { knex, tenant } = await createTenantKnex(tenantId);
+    if (!tenant) throw new Error('Tenant is required');
+
+    if (user) {
+      const allowed = await hasPermission(user, 'marketing', 'manage', knex);
+      if (!allowed) return [];
+    }
+
+    const db = tenantDb(knex, tenant);
+    const query = db.table('social_post_targets as t')
+      .join('social_posts as p', function joinPost() {
+        this.on('p.tenant', '=', 't.tenant').andOn('p.post_id', '=', 't.post_id');
+      })
+      .join('marketing_content as c', function joinContent() {
+        this.on('c.tenant', '=', 'p.tenant').andOn('c.content_id', '=', 'p.content_id');
+      })
+      .join('marketing_channels as ch', function joinChannel() {
+        this.on('ch.tenant', '=', 't.tenant').andOn('ch.channel_id', '=', 't.channel_id');
+      })
+      .where({ 't.tenant': tenant, 't.status': 'awaiting-manual-publish' });
+
+    if (filters.dueDateStart) query.where('p.scheduled_at', '>=', filters.dueDateStart);
+    if (filters.dueDateEnd) query.where('p.scheduled_at', '<=', filters.dueDateEnd);
+    if (filters.createdAtStart) query.where('t.created_at', '>=', filters.createdAtStart);
+    if (filters.createdAtEnd) query.where('t.created_at', '<=', filters.createdAtEnd);
+    if (filters.search) {
+      const term = `%${filters.search}%`;
+      query.where(function marketingSearch() {
+        this.whereILike('c.title', term)
+          .orWhereILike('ch.name', term);
+      });
+    }
+
+    const rows = await query.select(
+      't.target_id',
+      't.post_id',
+      'p.scheduled_at',
+      'c.title as content_title',
+      'ch.name as channel_name',
+      't.created_at',
+      't.updated_at'
+    );
+    const now = Date.now();
+    const link = '/msp/marketing/calendar';
+    let activities: Activity[] = rows.map((row: any) => {
+      const dueDate = row.scheduled_at ? new Date(row.scheduled_at).toISOString() : new Date(row.updated_at).toISOString();
+      const overdue = new Date(dueDate).getTime() < now;
+      return {
+        id: row.target_id,
+        title: `Publish to ${row.channel_name}`,
+        description: row.content_title,
+        type: ActivityType.SCHEDULE,
+        status: overdue ? 'overdue' : 'open',
+        priority: overdue ? ActivityPriority.HIGH : ActivityPriority.MEDIUM,
+        dueDate,
+        assignedTo: [userId],
+        relatedEntities: [{
+          id: row.post_id,
+          type: 'marketing_post',
+          name: row.content_title,
+          url: link,
+        }],
+        sourceId: row.target_id,
+        sourceType: ActivityType.SCHEDULE,
+        workItemId: row.post_id,
+        workItemType: 'marketing_post',
+        link,
+        actions: [{ id: 'view', label: 'View queue' }],
+        isClosed: false,
+        tenant,
+        createdAt: new Date(row.created_at).toISOString(),
+        updatedAt: new Date(row.updated_at).toISOString(),
+      };
+    });
+
+    if (filters.status?.length) {
+      activities = activities.filter((activity) => filters.status!.includes(activity.status));
+    }
+    if (filters.priority?.length) {
+      activities = activities.filter((activity) => filters.priority!.includes(activity.priority));
+    }
+    return activities;
+  } catch (error) {
+    console.error('Error fetching marketing activities:', error);
     return [];
   }
 }

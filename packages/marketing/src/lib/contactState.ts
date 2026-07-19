@@ -41,9 +41,7 @@ export async function getContactMarketingProfileInternal(
     .join('interactions as i', function joinInteraction() {
       this.on('i.tenant', '=', 'e.tenant').andOn('i.interaction_id', '=', 'e.interaction_id');
     })
-    .join('interaction_types as it', function joinType() {
-      this.on('it.tenant', '=', 'i.tenant').andOn('it.type_id', '=', 'i.type_id');
-    })
+    .join('system_interaction_types as it', 'it.type_id', '=', 'i.type_id')
     .where({ 'e.tenant': tenant, 'i.contact_name_id': contactId })
     .orderBy('i.interaction_date', 'desc')
     .limit(50)

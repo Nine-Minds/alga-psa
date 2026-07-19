@@ -107,3 +107,82 @@ Rolling notes: decisions, discoveries, links, commands, gotchas.
 
 - Branch: `feature/marketing-module` (off main @ 4b8bd96a68, created 2026-07-19).
 - Plan folder: `ee/docs/plans/2026-07-19-marketing-module/`.
+
+## Implementation log (2026-07-19)
+
+### Landed (commit: schema+core checkpoint on feature/marketing-module)
+- 4 migrations: 12 marketing tables (`20260719100000`), `inbound-lead` generator key
+  (`...101000`), permissions (`...102000`), interaction types (`...103000`). All tables
+  Citus-distributed before composite FKs; tenant metadata registered in BOTH
+  `packages/db/src/lib/tenantTableMetadata.ts` and `server/migrations/utils/tenantDb.cjs`.
+  NO RLS — current post-Citus convention is app-layer tenantDb (opportunities precedent);
+  PRD's "standard RLS" line reconciled to this.
+- `packages/types`: marketing.interfaces.ts (12 entities + view models ISocialPostQueueItem,
+  IMarketingCampaignFunnel, IMarketingSequenceStepStats, IMarketingEnrollmentWithContact).
+- Opportunities package: `inbound-lead` threaded through every exhaustiveness point
+  (type union, zod enum, opportunityTypeByGenerator='new_logo', nextActionByGenerator,
+  WhyFacts union + composer case, workQueue suggestionCopy). `SweepGeneratorKey =
+  Exclude<OpportunityGeneratorKey,'inbound-lead'>` — sweep generators can't run it;
+  `runGeneratorNow` throws for it. Package typechecks clean.
+- `packages/marketing` (@alga-psa/marketing) — full package core, tsc clean:
+  schemas (zod), guards (guardMarketing = flag + permission + actorId), interactionTypes
+  (cached type_id resolution), engagements (interactions + marketing_engagements in caller's
+  trx), render (merge fields, channel-variant resolution, escape-first markdown→HTML),
+  suppression (email-normalized, stops enrollments by contact AND email join — survives
+  contact delete/re-import), campaigns/content/channels/forms CRUD, capture (single-trx
+  contact+prospect-client find-or-create → engagement → persistGeneratedSuggestions OUTSIDE
+  trx with dedupe_key `inbound-lead:{formId}:{email}`), posts state machine
+  (create/reschedule/flip/expire/mark-published/skip + rollup), sequences (CRUD, enroll,
+  sendDueSequenceStepsInternal via TenantEmailService + inline ITemplateProcessor, tracking
+  pixel/click-rewrite/unsubscribe footer injected at render, optimistic current_step_order
+  guard against double-send, 30-min backoff on failure), tracking (open/click recorders),
+  contactState (contact-record profile). 7 action files with 'use server' + withAuth.
+- Nav: Marketing section (7 subitems) behind `marketing-module` PostHog flag;
+  en/msp/core.json strings.
+- Public tracking/unsubscribe URLs carry tenant in path (no session to derive it):
+  /api/marketing/{track/open,track/click,unsubscribe,capture}/{tenant}/...
+- Automation recipe doc: docs/marketing/automation-recipe.md (F063 docs half).
+
+### Discoveries while implementing
+- `@alga-psa/opportunities` was NOT linked in node_modules (workspace added after last
+  npm install on this machine) — root `npm install` fixed linking for both opportunities
+  and marketing. If tsc reports "Cannot find module '@alga-psa/...'", run npm install first.
+- interactions.user_id is NOT NULL — engagement recording always needs an owning user
+  (enrollment.enrolled_by, falling back to sequence.created_by; form.created_by for captures).
+- Test env: no local Postgres, no Docker daemon — DB integration tests authored but executed
+  only in CI; unit tests (pure render/suppression logic) run locally.
+- Send-loop claim pattern: prepare in trx with forUpdate (render + stop/complete decisions),
+  send OUTSIDE trx (SMTP latency), advance with optimistic `where current_step_order = n`
+  guard — overlapping runners can't double-send.
+
+### Parallel build-out (2026-07-19, four workstreams)
+- **UI**: packages/marketing/src/components (calendar w/ Needs-publishing rail, posts queue,
+  content library, campaigns+funnel strip, sequences journey cards + progress-bar enrollment
+  table, forms, channels, ContactMarketingSection) + 7 pages under server/src/app/msp/marketing/.
+  Contact integration = flag-gated card below ContactBentoLayout (bento has no extension slot).
+  Intentional mockup gaps: no "Sequence sends due" rail card (no backend query), agenda-only
+  calendar, sequences switcher is a top CustomSelect.
+- **API**: 24 v1 endpoints (ApiMarketingController extends ApiBaseController, flag→404,
+  marketing:read/manage→403, tenant stripped from DTOs); OpenAPI + MCP chat registries
+  regenerated. Agent fixed a PRE-EXISTING generator breakage (since 2026-07-13): tsx resolves
+  package exports to dist/, needing "type":"module" + tsup addJsExtensions on
+  opportunities+marketing package.json/tsup.config.ts.
+- **Jobs/endpoints**: 3 per-tenant recurring jobs (flip */5m, send */5m, expire hourly :11
+  48h grace); public routes capture (honeypot pre-zod silent-drop, 10/min ip:tenant, uniform
+  {ok:true}), track/open gif, track/click 302 (PostHog gets destination HOST only), unsubscribe
+  HTML page; fetchMarketingActivities in collectProcessedActivities (flag + marketing:manage,
+  never throws). Base URL: NEXTAUTH_URL (notificationLinkResolver precedent).
+- **Tests**: render.test.ts 27/27 passing; T001–T008 DB suites authored (describeWithDb guard,
+  REQUIRE_DB=1 to hard-fail), load-verified, unexecutable locally (no PG/Docker).
+
+### Design corrections during test/implementation review
+- **Sequence completion bug (found by test agent)**: after the final step sent, enrollment
+  stayed active with next_send_at=null — 'completed' branch unreachable. Fixed: advance now
+  sets state='completed' when no following step exists.
+- **Interaction types moved to system_interaction_types**: per-tenant seeding leaves tenants
+  created post-deploy without the types (nothing re-seeds; opportunities' permission seed has
+  the same known gap). Marketing follows the opportunities 'Note' precedent — interactions
+  reference system_interaction_types.type_id directly. Seed migration rewritten (global,
+  idempotent); interactionTypes.ts resolver + 3 stats joins switched; tests updated.
+- package.json "type": "module" on marketing+opportunities is load-bearing for the OpenAPI
+  generator — do not remove.

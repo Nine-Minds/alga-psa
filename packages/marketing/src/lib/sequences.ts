@@ -91,9 +91,7 @@ export async function getSequenceDetailInternal(knex: Knex, tenant: string, sequ
     .join('interactions as i', function joinInteraction() {
       this.on('i.tenant', '=', 'e.tenant').andOn('i.interaction_id', '=', 'e.interaction_id');
     })
-    .join('interaction_types as it', function joinType() {
-      this.on('it.tenant', '=', 'i.tenant').andOn('it.type_id', '=', 'i.type_id');
-    })
+    .join('system_interaction_types as it', 'it.type_id', '=', 'i.type_id')
     .where({ 'e.tenant': tenant })
     .whereIn('e.step_id', steps.map((s) => s.step_id).concat(['__none__']))
     .groupBy('e.step_id', 'it.type_name')
@@ -360,6 +358,7 @@ async function sendOneEnrollmentStep(
 
   await withTransaction(knex, async (trx) => {
     const db = tenantDb(trx, tenant);
+    const following = await nextSendAt(db, tenant, enrollment.sequence_id, step.step_order, now);
     const advanced = await db.table('marketing_sequence_enrollments')
       .where({
         tenant,
@@ -369,7 +368,10 @@ async function sendOneEnrollmentStep(
       })
       .update({
         current_step_order: step.step_order,
-        next_send_at: await nextSendAt(db, tenant, enrollment.sequence_id, step.step_order, now),
+        // No following step: the sequence is finished — mark completed, not
+        // merely unscheduled, so the completed branch is reachable.
+        state: following ? 'active' : 'completed',
+        next_send_at: following,
         updated_at: now.toISOString(),
       });
     if (!advanced) return; // another runner advanced it; the engagement below would double-log, so stop here
