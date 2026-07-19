@@ -695,7 +695,11 @@ describe('AutomaticInvoices grouped parent rows', () => {
     });
     expect(screen.queryByTestId('grouped-preview-unavailable-copy')).not.toBeInTheDocument();
 
-    fireEvent.click(generateButton);
+    const liveGenerateButton = await screen.findByRole('button', { name: 'Generate Invoices (1)' });
+    await waitFor(() => {
+      expect(liveGenerateButton).toBeEnabled();
+    });
+    fireEvent.click(liveGenerateButton);
     await waitFor(() => {
       expect(mockGenerateGroupedInvoicesAsRecurringBillingRun).toHaveBeenCalledTimes(1);
     });
