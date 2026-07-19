@@ -14,14 +14,21 @@ import { createMarketingCampaign, updateMarketingCampaign } from '../actions/cam
 
 const STATUSES: MarketingCampaignStatus[] = ['draft', 'active', 'completed', 'archived'];
 
+// Campaign dates are date-only values: parse and serialize them in local
+// calendar terms. `new Date('YYYY-MM-DD')` (UTC midnight) and
+// `toISOString()` (UTC calendar) each shift the date by a day for users on
+// the wrong side of UTC.
 function toDateValue(value?: string | null): Date | undefined {
   if (!value) return undefined;
-  const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? undefined : date;
+  const [year, month, day] = value.slice(0, 10).split('-').map(Number);
+  if (!year || !month || !day) return undefined;
+  return new Date(year, month - 1, day);
 }
 
 function toDateString(date?: Date): string | undefined {
-  return date ? date.toISOString().slice(0, 10) : undefined;
+  if (!date) return undefined;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
 export function CampaignDialog({

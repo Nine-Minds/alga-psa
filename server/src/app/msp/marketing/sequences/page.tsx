@@ -1,9 +1,10 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { getSession } from '@alga-psa/auth';
+import { getMarketingAccess } from '@alga-psa/marketing/actions';
 import { getMarketingSequenceDetail, listMarketingSequences } from '@alga-psa/marketing/actions';
 import type { SequenceDetail } from '@alga-psa/marketing/lib';
-import { SequencesView } from '@alga-psa/marketing/components';
+import { SequencesView, MarketingAccessBoundary } from '@alga-psa/marketing/components';
 import { getAllContacts } from '@alga-psa/clients/actions';
 import type { IContact, IMarketingSequence } from '@alga-psa/types';
 import { enforceServerProductRoute } from '@/lib/serverProductRouteGuard';
@@ -21,6 +22,12 @@ export default async function MarketingSequencesPage() {
   const session = await getSession();
   if (!session?.user) {
     redirect('/auth/msp/signin');
+  }
+
+  // M10: a failed guard renders a boundary, not a fake-working empty module.
+  const access = await getMarketingAccess();
+  if (!access.allowed) {
+    return <MarketingAccessBoundary reason={access.reason ?? 'permission'} />;
   }
 
   let sequences: IMarketingSequence[] = [];

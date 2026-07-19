@@ -1,8 +1,9 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { getSession } from '@alga-psa/auth';
+import { getMarketingAccess } from '@alga-psa/marketing/actions';
 import { listMarketingChannels } from '@alga-psa/marketing/actions';
-import { ChannelsList } from '@alga-psa/marketing/components';
+import { ChannelsList, MarketingAccessBoundary } from '@alga-psa/marketing/components';
 import type { IMarketingChannel } from '@alga-psa/types';
 import { enforceServerProductRoute } from '@/lib/serverProductRouteGuard';
 
@@ -19,6 +20,12 @@ export default async function MarketingChannelsPage() {
   const session = await getSession();
   if (!session?.user) {
     redirect('/auth/msp/signin');
+  }
+
+  // M10: a failed guard renders a boundary, not a fake-working empty module.
+  const access = await getMarketingAccess();
+  if (!access.allowed) {
+    return <MarketingAccessBoundary reason={access.reason ?? 'permission'} />;
   }
 
   let items: IMarketingChannel[] = [];

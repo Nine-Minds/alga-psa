@@ -1,8 +1,9 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { getSession } from '@alga-psa/auth';
+import { getMarketingAccess } from '@alga-psa/marketing/actions';
 import { listCaptureForms, listMarketingCampaigns } from '@alga-psa/marketing/actions';
-import { CaptureFormsList } from '@alga-psa/marketing/components';
+import { CaptureFormsList, MarketingAccessBoundary } from '@alga-psa/marketing/components';
 import type { IMarketingCampaign, IMarketingCaptureForm } from '@alga-psa/types';
 import { enforceServerProductRoute } from '@/lib/serverProductRouteGuard';
 
@@ -19,6 +20,12 @@ export default async function MarketingFormsPage() {
   const session = await getSession();
   if (!session?.user) {
     redirect('/auth/msp/signin');
+  }
+
+  // M10: a failed guard renders a boundary, not a fake-working empty module.
+  const access = await getMarketingAccess();
+  if (!access.allowed) {
+    return <MarketingAccessBoundary reason={access.reason ?? 'permission'} />;
   }
 
   let items: IMarketingCaptureForm[] = [];

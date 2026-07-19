@@ -5,14 +5,37 @@ import type { CampaignInput } from '../schemas/marketingSchemas';
 
 type Db = Knex | Knex.Transaction;
 
+// pg parses DATE columns to a Date at the server's local midnight; JSON
+// serialization would then shift the calendar day for clients on the other
+// side of UTC. Normalize campaign dates back to plain 'YYYY-MM-DD' strings
+// at this boundary so date-only values stay timezone-neutral on the wire.
+function toDateOnlyString(value: unknown): string | null {
+  if (!value) return null;
+  if (value instanceof Date) {
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}`;
+  }
+  return String(value).slice(0, 10);
+}
+
+function normalizeCampaign(row: IMarketingCampaign): IMarketingCampaign {
+  return {
+    ...row,
+    start_date: toDateOnlyString(row.start_date),
+    end_date: toDateOnlyString(row.end_date),
+  };
+}
+
 export async function listCampaignsInternal(knex: Knex, tenant: string): Promise<IMarketingCampaign[]> {
   const db = tenantDb(knex, tenant);
-  return db.table('marketing_campaigns').where({ tenant }).orderBy('created_at', 'desc');
+  const rows = await db.table('marketing_campaigns').where({ tenant }).orderBy('created_at', 'desc');
+  return rows.map(normalizeCampaign);
 }
 
 export async function getCampaignInternal(knex: Knex, tenant: string, campaignId: string): Promise<IMarketingCampaign | null> {
   const db = tenantDb(knex, tenant);
-  return (await db.table('marketing_campaigns').where({ tenant, campaign_id: campaignId }).first()) ?? null;
+  const row = await db.table('marketing_campaigns').where({ tenant, campaign_id: campaignId }).first();
+  return row ? normalizeCampaign(row) : null;
 }
 
 export async function createCampaignInternal(knex: Knex, tenant: string, input: CampaignInput, createdBy: string): Promise<IMarketingCampaign> {
@@ -29,7 +52,7 @@ export async function createCampaignInternal(knex: Knex, tenant: string, input: 
       created_by: createdBy,
     })
     .returning('*');
-  return row;
+  return normalizeCampaign(row);
 }
 
 export async function updateCampaignInternal(knex: Knex, tenant: string, campaignId: string, input: Partial<CampaignInput>): Promise<IMarketingCampaign> {
@@ -39,7 +62,7 @@ export async function updateCampaignInternal(knex: Knex, tenant: string, campaig
     .update({ ...input, updated_at: new Date().toISOString() })
     .returning('*');
   if (!row) throw new Error('Campaign not found');
-  return row;
+  return normalizeCampaign(row);
 }
 
 /**

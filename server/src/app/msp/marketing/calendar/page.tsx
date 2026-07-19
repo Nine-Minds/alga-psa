@@ -1,12 +1,13 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { getSession } from '@alga-psa/auth';
+import { getMarketingAccess } from '@alga-psa/marketing/actions';
 import {
   getAwaitingPublishQueue,
   getMarketingCalendarItems,
 } from '@alga-psa/marketing/actions';
 import { listMarketingChannels } from '@alga-psa/marketing/actions';
-import { MarketingCalendar } from '@alga-psa/marketing/components';
+import { MarketingCalendar, MarketingAccessBoundary } from '@alga-psa/marketing/components';
 import type { IMarketingChannel, ISocialPostQueueItem } from '@alga-psa/types';
 import { enforceServerProductRoute } from '@/lib/serverProductRouteGuard';
 
@@ -23,6 +24,12 @@ export default async function MarketingCalendarPage() {
   const session = await getSession();
   if (!session?.user) {
     redirect('/auth/msp/signin');
+  }
+
+  // M10: a failed guard renders a boundary, not a fake-working empty module.
+  const access = await getMarketingAccess();
+  if (!access.allowed) {
+    return <MarketingAccessBoundary reason={access.reason ?? 'permission'} />;
   }
 
   // One week back (published-recently), two weeks forward (agenda).

@@ -1,3 +1,4 @@
+export * from './accessActions';
 export * from './campaignActions';
 export * from './contentActions';
 export * from './channelActions';

@@ -166,13 +166,13 @@ export function SequencesView({
     },
   ];
 
-  // Cumulative delay for the "day N" chip on each journey card.
+  // Cumulative delay for the "day N" chip on each journey card — the step's
+  // own delay counts toward its label (a step sent 2 days in is "day 2").
   const journeyDays = useMemo(() => {
     let cumulative = 0;
     return (detail?.steps ?? []).map((step) => {
-      const label = journeyDayLabel(cumulative);
       cumulative += step.delay_minutes;
-      return label;
+      return journeyDayLabel(cumulative);
     });
   }, [detail]);
 

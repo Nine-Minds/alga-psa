@@ -1,13 +1,14 @@
 import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { getSession } from '@alga-psa/auth';
+import { getMarketingAccess } from '@alga-psa/marketing/actions';
 import {
   getSocialPostQueue,
   listMarketingCampaigns,
   listMarketingChannels,
   listMarketingContent,
 } from '@alga-psa/marketing/actions';
-import { PostsQueue } from '@alga-psa/marketing/components';
+import { PostsQueue, MarketingAccessBoundary } from '@alga-psa/marketing/components';
 import type {
   IMarketingCampaign,
   IMarketingChannel,
@@ -29,6 +30,12 @@ export default async function MarketingPostsPage() {
   const session = await getSession();
   if (!session?.user) {
     redirect('/auth/msp/signin');
+  }
+
+  // M10: a failed guard renders a boundary, not a fake-working empty module.
+  const access = await getMarketingAccess();
+  if (!access.allowed) {
+    return <MarketingAccessBoundary reason={access.reason ?? 'permission'} />;
   }
 
   let items: ISocialPostQueueItem[] = [];

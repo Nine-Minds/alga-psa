@@ -97,11 +97,20 @@ export async function reschedulePostInternal(
 ): Promise<void> {
   await withTransaction(knex, async (trx) => {
     const db = tenantDb(trx, tenant);
+    // awaiting-manual-publish is the "I'll publish this tomorrow" case:
+    // rescheduling flips the waiting targets back to scheduled so the flip
+    // job picks them up again at the new time.
+    const now = new Date().toISOString();
     const updated = await db.table('social_posts')
       .where({ tenant, post_id: postId })
-      .whereIn('status', ['draft', 'scheduled'])
-      .update({ scheduled_at: scheduledAt, status: 'scheduled', updated_at: new Date().toISOString() });
+      .whereIn('status', ['draft', 'scheduled', 'awaiting-manual-publish'])
+      .update({ scheduled_at: scheduledAt, status: 'scheduled', updated_at: now });
     if (!updated) throw new Error('Post cannot be rescheduled in its current state');
+
+    await db.table('social_post_targets')
+      .where({ tenant, post_id: postId, status: 'awaiting-manual-publish' })
+      .update({ status: 'scheduled', updated_at: now });
+    await rollupPostStatus(trx, tenant, postId);
   });
 }
 

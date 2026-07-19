@@ -16,3 +16,4 @@ export { ReschedulePostDialog } from './ReschedulePostDialog';
 export { MarkPublishedDialog } from './MarkPublishedDialog';
 export { CopyTextButton } from './CopyTextButton';
 export { ContactMarketingSection } from './ContactMarketingSection';
+export { MarketingAccessBoundary } from './MarketingAccessBoundary';

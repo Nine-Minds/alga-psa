@@ -2,7 +2,13 @@
 
 export function formatDate(value?: string | null): string {
   if (!value) return '—';
-  const date = new Date(value);
+  // Date-only values (campaign start/end) must not pass through the Date
+  // UTC parser — 'YYYY-MM-DD' parses as UTC midnight and renders as the
+  // previous day west of UTC. Build them in local calendar terms.
+  const dateOnly = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  const date = dateOnly
+    ? new Date(Number(dateOnly[1]), Number(dateOnly[2]) - 1, Number(dateOnly[3]))
+    : new Date(value);
   if (Number.isNaN(date.getTime())) return '—';
   return date.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
 }
@@ -64,11 +70,15 @@ export function delayLabel(minutes: number): string {
   return days === 1 ? '1 day' : `${days} days`;
 }
 
-/** "day 5" style chip for journey cards: cumulative days from step 1. */
+/**
+ * "day 5" style chip for journey cards: cumulative days from enrollment,
+ * including the step's own delay (mockup indexing: delays of 0/2d/3d label
+ * "immediately" / "day 2" / "day 5").
+ */
 export function journeyDayLabel(cumulativeMinutes: number): string {
   if (cumulativeMinutes <= 0) return 'immediately';
   const days = Math.round(cumulativeMinutes / 1440);
-  return days <= 0 ? 'day 1' : `day ${days + 1}`;
+  return days <= 0 ? 'day 1' : `day ${days}`;
 }
 
 export async function copyToClipboard(text: string): Promise<boolean> {
