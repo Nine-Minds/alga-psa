@@ -106,9 +106,12 @@ export async function reschedulePostInternal(
 }
 
 /**
- * Due-flip job body: targets on posts whose scheduled_at has passed move
- * scheduled -> awaiting-manual-publish. Idempotent — only touches rows still
- * in 'scheduled', so re-runs are no-ops.
+ * Due-flip job body: targets still in 'scheduled' on posts whose scheduled_at
+ * has passed move to awaiting-manual-publish. Driven off target state (the
+ * authoritative machine), not the rolled-up post status — a sibling target
+ * published early rolls the post to 'published' without hiding the remaining
+ * scheduled targets from this job. Idempotent — only touches rows still in
+ * 'scheduled', so re-runs are no-ops.
  */
 export async function flipDuePostsInternal(
   knex: Knex,
@@ -117,18 +120,25 @@ export async function flipDuePostsInternal(
 ): Promise<{ flipped: number }> {
   return withTransaction(knex, async (trx) => {
     const db = tenantDb(trx, tenant);
-    const duePosts = await db.table('social_posts')
-      .where({ tenant, status: 'scheduled' })
-      .whereNotNull('scheduled_at')
-      .where('scheduled_at', '<=', now.toISOString())
-      .select('post_id');
+    const dueTargets = await db.table('social_post_targets as t')
+      .join('social_posts as p', function joinPost() {
+        this.on('p.tenant', '=', 't.tenant').andOn('p.post_id', '=', 't.post_id');
+      })
+      .where({ 't.tenant': tenant, 't.status': 'scheduled' })
+      .whereNot('p.status', 'draft')
+      .whereNotNull('p.scheduled_at')
+      .where('p.scheduled_at', '<=', now.toISOString())
+      .select('t.target_id', 't.post_id') as Array<{ target_id: string; post_id: string }>;
 
     let flipped = 0;
-    for (const post of duePosts) {
-      flipped += await db.table('social_post_targets')
-        .where({ tenant, post_id: post.post_id, status: 'scheduled' })
+    if (dueTargets.length > 0) {
+      flipped = await db.table('social_post_targets')
+        .where({ tenant, status: 'scheduled' })
+        .whereIn('target_id', dueTargets.map((t) => t.target_id))
         .update({ status: 'awaiting-manual-publish', updated_at: now.toISOString() });
-      await rollupPostStatus(trx, tenant, post.post_id);
+      for (const postId of new Set(dueTargets.map((t) => t.post_id))) {
+        await rollupPostStatus(trx, tenant, postId);
+      }
     }
     return { flipped };
   });
@@ -170,18 +180,14 @@ export async function markTargetPublishedInternal(
 ): Promise<ISocialPostTarget> {
   return withTransaction(knex, async (trx) => {
     const db = tenantDb(trx, tenant);
-    const target = await db.table('social_post_targets')
-      .where({ tenant, target_id: targetId })
-      .first();
-    if (!target) throw new Error('Post target not found');
-    if (target.status === 'published') return target as ISocialPostTarget; // idempotent replay
-    if (target.status !== 'awaiting-manual-publish' && target.status !== 'scheduled') {
-      throw new Error(`Target cannot be published from state ${target.status}`);
-    }
-
+    // The state check lives in the UPDATE's WHERE: concurrent publishers
+    // (UI + MCP agent) race on the row itself, so only the one that actually
+    // transitions it records the engagement — and a just-expired/skipped
+    // target can never be overwritten.
     const now = new Date().toISOString();
     const [updated] = await db.table('social_post_targets')
       .where({ tenant, target_id: targetId })
+      .whereIn('status', ['awaiting-manual-publish', 'scheduled'])
       .update({
         status: 'published',
         permalink: input.permalink ?? null,
@@ -192,8 +198,17 @@ export async function markTargetPublishedInternal(
       })
       .returning('*');
 
+    if (!updated) {
+      const target = await db.table('social_post_targets')
+        .where({ tenant, target_id: targetId })
+        .first();
+      if (!target) throw new Error('Post target not found');
+      if (target.status === 'published') return target as ISocialPostTarget; // idempotent replay
+      throw new Error(`Target cannot be published from state ${target.status}`);
+    }
+
     const post = await db.table('social_posts')
-      .where({ tenant, post_id: target.post_id })
+      .where({ tenant, post_id: updated.post_id })
       .first('post_id', 'content_id', 'campaign_id');
     await recordMarketingEngagement(trx, tenant, {
       typeName: 'Marketing: Post Published',
@@ -204,11 +219,11 @@ export async function markTargetPublishedInternal(
       userId: input.publishedBy,
       campaignId: post?.campaign_id ?? null,
       contentId: post?.content_id ?? null,
-      postId: target.post_id,
+      postId: updated.post_id,
       occurredAt: now,
     });
 
-    await rollupPostStatus(trx, tenant, target.post_id);
+    await rollupPostStatus(trx, tenant, updated.post_id);
     return updated as ISocialPostTarget;
   });
 }

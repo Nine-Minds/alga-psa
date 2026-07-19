@@ -167,4 +167,95 @@ describeDb('T008: social post state machine', () => {
     const expireRerun = await expireStaleTargetsInternal(db, tenantId, 48, new Date());
     expect(expireRerun).toEqual({ expired: 0 });
   });
+
+  it('M2: an early-published sibling does not hide remaining scheduled targets from the flip job', async () => {
+    const content = await createContentInternal(db, tenantId, {
+      title: 'Early publish',
+      body_markdown: 'One target jumps the gun',
+      channel_variants: {},
+    }, userId);
+    const chanA = await createChannelInternal(db, tenantId, { name: 'Chan A', platform: 'linkedin' }, userId);
+    const chanB = await createChannelInternal(db, tenantId, { name: 'Chan B', platform: 'mastodon' }, userId);
+
+    const post = await createPostInternal(db, tenantId, {
+      content_id: content.content_id,
+      channel_ids: [chanA.channel_id, chanB.channel_id],
+      scheduled_at: new Date(Date.now() - 60_000).toISOString(),
+      created_by: userId,
+    });
+    const targets = await tenantTable('social_post_targets')
+      .where({ tenant: tenantId, post_id: post.post_id })
+      .orderBy('channel_id', 'asc');
+
+    // Publish target A straight from 'scheduled' — the rollup makes the post
+    // 'published' while B is still scheduled.
+    await markTargetPublishedInternal(db, tenantId, targets[0].target_id, {
+      permalink: 'https://example.com/early',
+      publishedBy: userId,
+      publishedVia: 'ui',
+    });
+    const rolledUp = await tenantTable('social_posts')
+      .where({ tenant: tenantId, post_id: post.post_id })
+      .first();
+    expect(rolledUp.status).toBe('published');
+
+    // The flip job is driven off target state, so B still flips when due.
+    const flip = await flipDuePostsInternal(db, tenantId, new Date());
+    expect(flip.flipped).toBeGreaterThanOrEqual(1);
+    const siblingAfterFlip = await tenantTable('social_post_targets')
+      .where({ tenant: tenantId, target_id: targets[1].target_id })
+      .first();
+    expect(siblingAfterFlip.status).toBe('awaiting-manual-publish');
+
+    // ...and B is independently publishable.
+    const publishedB = await markTargetPublishedInternal(db, tenantId, targets[1].target_id, {
+      permalink: 'https://example.com/late',
+      publishedBy: userId,
+      publishedVia: 'ui',
+    });
+    expect(publishedB.status).toBe('published');
+  });
+
+  it('M4: publishing a terminal target is refused without overwriting it or double-recording', async () => {
+    const content = await createContentInternal(db, tenantId, {
+      title: 'Terminal target',
+      body_markdown: 'Expired means expired',
+      channel_variants: {},
+    }, userId);
+    const channel = await createChannelInternal(db, tenantId, { name: 'Chan T', platform: 'linkedin' }, userId);
+    const post = await createPostInternal(db, tenantId, {
+      content_id: content.content_id,
+      channel_ids: [channel.channel_id],
+      scheduled_at: new Date(Date.now() - 60_000).toISOString(),
+      created_by: userId,
+    });
+    const [target] = await tenantTable('social_post_targets')
+      .where({ tenant: tenantId, post_id: post.post_id });
+    await tenantTable('social_post_targets')
+      .where({ tenant: tenantId, target_id: target.target_id })
+      .update({ status: 'expired' });
+
+    const publishedType = await db('system_interaction_types')
+      .where({ type_name: 'Marketing: Post Published' })
+      .first('type_id');
+    const interactionsBefore = await tenantTable('interactions')
+      .where({ tenant: tenantId, type_id: publishedType.type_id });
+
+    await expect(
+      markTargetPublishedInternal(db, tenantId, target.target_id, {
+        permalink: 'https://example.com/too-late',
+        publishedBy: userId,
+        publishedVia: 'api',
+      }),
+    ).rejects.toThrow(/cannot be published/i);
+
+    const after = await tenantTable('social_post_targets')
+      .where({ tenant: tenantId, target_id: target.target_id })
+      .first();
+    expect(after.status).toBe('expired');
+    expect(after.permalink).toBeNull();
+    const interactionsAfter = await tenantTable('interactions')
+      .where({ tenant: tenantId, type_id: publishedType.type_id });
+    expect(interactionsAfter).toHaveLength(interactionsBefore.length);
+  });
 });

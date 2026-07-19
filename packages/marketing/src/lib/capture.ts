@@ -54,7 +54,9 @@ export async function submitCaptureInternal(
         campaignName = campaign?.name ?? null;
       }
 
-      // 1. Find the contact by email, or create them (and their client).
+      // 1. Find the contact by email, or create them (and their client). An
+      // existing contact without a client (imported, portal-created) gets a
+      // prospect client attached the same way a brand-new contact does.
       let contact = await db.table('contacts')
         .where({ tenant })
         .whereRaw('lower(email) = ?', [email])
@@ -64,7 +66,7 @@ export async function submitCaptureInternal(
       let contactCreated = false;
       let clientId: string;
 
-      if (contact) {
+      if (contact?.client_id) {
         clientId = String(contact.client_id);
       } else {
         const companyName = payload.company?.trim() || null;
@@ -91,16 +93,23 @@ export async function submitCaptureInternal(
         }
         clientId = String(client.client_id);
 
-        const [createdContact] = await db.table('contacts')
-          .insert({
-            tenant,
-            full_name: payload.name.trim(),
-            email,
-            client_id: clientId,
-          })
-          .returning(['contact_name_id', 'full_name']);
-        contact = { ...createdContact, client_id: clientId };
-        contactCreated = true;
+        if (contact) {
+          await db.table('contacts')
+            .where({ tenant, contact_name_id: contact.contact_name_id })
+            .update({ client_id: clientId, updated_at: now });
+          contact = { ...contact, client_id: clientId };
+        } else {
+          const [createdContact] = await db.table('contacts')
+            .insert({
+              tenant,
+              full_name: payload.name.trim(),
+              email,
+              client_id: clientId,
+            })
+            .returning(['contact_name_id', 'full_name']);
+          contact = { ...createdContact, client_id: clientId };
+          contactCreated = true;
+        }
       }
 
       const contactId = String(contact.contact_name_id);

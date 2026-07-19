@@ -35,6 +35,7 @@ import { createTenant, createUser, createClient } from '../../../test-utils/test
 
 import {
   createSequenceInternal,
+  updateSequenceInternal,
   enrollContactInternal,
   sendDueSequenceStepsInternal,
   unsubscribeEnrollmentInternal,
@@ -207,6 +208,45 @@ describeDb('T005-T007: marketing sequences', () => {
     expect(afterSecond.next_send_at).toBeNull();
 
     expect(await marketingInteractionCount('Marketing: Email Sent', contactId)).toBe(2);
+  });
+
+  it('M3: editing a sequence preserves step identity (step_ids survive by step_order)', async () => {
+    const { sequence, steps } = await createActiveSequence('Editable drip', [
+      { step_order: 1, delay_minutes: 0, subject: 'First' },
+      { step_order: 2, delay_minutes: 60, subject: 'Second' },
+    ]);
+
+    await updateSequenceInternal(db, tenantId, sequence.sequence_id, {
+      steps: [
+        { step_order: 1, delay_minutes: 0, subject: 'First (edited)', body_template: 'body' },
+        { step_order: 2, delay_minutes: 120, subject: 'Second', body_template: 'body' },
+        { step_order: 3, delay_minutes: 240, subject: 'Third (new)', body_template: 'body' },
+      ],
+    });
+
+    const after = await tenantTable('marketing_sequence_steps')
+      .where({ tenant: tenantId, sequence_id: sequence.sequence_id })
+      .orderBy('step_order', 'asc');
+    expect(after).toHaveLength(3);
+    // Existing orders kept their ids — historical stats and delivered
+    // tracking URLs stay valid.
+    expect(after[0].step_id).toBe(steps[0].step_id);
+    expect(after[1].step_id).toBe(steps[1].step_id);
+    expect(after[0].subject).toBe('First (edited)');
+    expect(after[1].delay_minutes).toBe(120);
+    expect(after[2].subject).toBe('Third (new)');
+
+    // Dropping a trailing step deletes only that step.
+    await updateSequenceInternal(db, tenantId, sequence.sequence_id, {
+      steps: [
+        { step_order: 1, delay_minutes: 0, subject: 'First (edited)', body_template: 'body' },
+        { step_order: 2, delay_minutes: 120, subject: 'Second', body_template: 'body' },
+      ],
+    });
+    const trimmed = await tenantTable('marketing_sequence_steps')
+      .where({ tenant: tenantId, sequence_id: sequence.sequence_id })
+      .orderBy('step_order', 'asc');
+    expect(trimmed.map((s: { step_id: string }) => s.step_id)).toEqual([steps[0].step_id, steps[1].step_id]);
   });
 
   it('B2: an existing claim for the due step is skipped without a second send', async () => {

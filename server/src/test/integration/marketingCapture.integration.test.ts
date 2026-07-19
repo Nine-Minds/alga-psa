@@ -193,4 +193,64 @@ describeDb('T003: marketing capture form submission', () => {
       .where({ tenant: tenantId, type_id: formType.type_id, contact_name_id: first.contactId });
     expect(interactions).toHaveLength(2);
   });
+
+  it('M1: an existing contact without a client gets a prospect client attached and the full pipeline', async () => {
+    const form = await createFormInternal(db, tenantId, {
+      name: 'Orphan Contact Form',
+      slug: 'orphan-contact',
+      creates_suggestion: true,
+    }, userId);
+
+    // Imported/portal-created contact with no client.
+    const [orphan] = await tenantTable('contacts')
+      .insert({
+        tenant: tenantId,
+        full_name: 'Orphan Contact',
+        email: 'orphan@example.com',
+        client_id: null,
+      })
+      .returning(['contact_name_id']);
+
+    const result = await submitCaptureInternal(db, tenantId, 'orphan-contact', {
+      name: 'Orphan Contact',
+      email: 'orphan@example.com',
+      company: 'Orphanage LLC',
+      message: 'please call me',
+    });
+
+    expect(result.contactCreated).toBe(false);
+    expect(result.contactId).toBe(String(orphan.contact_name_id));
+    expect(result.clientCreated).toBe(true);
+    expect(result.suggestionCreated).toBe(true);
+
+    const contactAfter = await tenantTable('contacts')
+      .where({ tenant: tenantId, contact_name_id: orphan.contact_name_id })
+      .first();
+    expect(String(contactAfter.client_id)).toBe(result.clientId);
+
+    const client = await tenantTable('clients')
+      .where({ tenant: tenantId, client_id: result.clientId })
+      .first();
+    expect(client).toMatchObject({ client_name: 'Orphanage LLC', lifecycle_status: 'prospect' });
+
+    // Consent + interaction + suggestion all landed (previously the whole
+    // engagement insert threw on the 'null' pseudo-uuid and the route
+    // swallowed it).
+    const state = await tenantTable('marketing_contact_state')
+      .where({ tenant: tenantId, contact_id: orphan.contact_name_id })
+      .first();
+    expect(state?.consent).toBe(true);
+
+    const formType = await db('system_interaction_types')
+      .where({ type_name: 'Marketing: Form Submitted' })
+      .first('type_id');
+    const interactions = await tenantTable('interactions')
+      .where({ tenant: tenantId, type_id: formType.type_id, contact_name_id: orphan.contact_name_id });
+    expect(interactions).toHaveLength(1);
+
+    const suggestions = await tenantTable('opportunity_suggestions')
+      .where({ tenant: tenantId, generator_key: 'inbound-lead' })
+      .where('dedupe_key', `inbound-lead:${form.form_id}:orphan@example.com`);
+    expect(suggestions).toHaveLength(1);
+  });
 });

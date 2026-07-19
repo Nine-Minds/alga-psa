@@ -72,9 +72,36 @@ export async function updateSequenceInternal(knex: Knex, tenant: string, sequenc
       .returning('*');
     if (!sequence) throw new Error('Sequence not found');
     if (steps) {
-      await db.table('marketing_sequence_steps').where({ tenant, sequence_id: sequenceId }).del();
+      // Diff in place by step_order: step_ids must survive edits — historical
+      // per-step stats and tracking URLs already delivered in emails reference
+      // them (marketing_engagements.step_id).
+      const existing = await db.table('marketing_sequence_steps')
+        .where({ tenant, sequence_id: sequenceId })
+        .select('step_id', 'step_order') as Array<{ step_id: string; step_order: number }>;
+      const existingByOrder = new Map(existing.map((s) => [s.step_order, s.step_id]));
+      const incomingOrders = new Set(steps.map((s) => s.step_order));
+
+      const removed = existing.filter((s) => !incomingOrders.has(s.step_order));
+      if (removed.length > 0) {
+        await db.table('marketing_sequence_steps')
+          .where({ tenant, sequence_id: sequenceId })
+          .whereIn('step_id', removed.map((s) => s.step_id))
+          .del();
+      }
       for (const step of steps) {
-        await db.table('marketing_sequence_steps').insert({ tenant, sequence_id: sequenceId, ...step });
+        const stepId = existingByOrder.get(step.step_order);
+        if (stepId) {
+          await db.table('marketing_sequence_steps')
+            .where({ tenant, step_id: stepId })
+            .update({
+              delay_minutes: step.delay_minutes,
+              subject: step.subject,
+              body_template: step.body_template,
+              updated_at: new Date().toISOString(),
+            });
+        } else {
+          await db.table('marketing_sequence_steps').insert({ tenant, sequence_id: sequenceId, ...step });
+        }
       }
     }
     return sequence as IMarketingSequence;
