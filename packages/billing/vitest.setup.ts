@@ -5,8 +5,13 @@ if (typeof window !== 'undefined') {
   // stretch renders past testing-library's 1s default async timeout (waitFor,
   // findBy*) and flake component suites that pass everywhere else. Genuinely
   // failing waits just take longer to report; passing waits are unaffected.
+  // @testing-library/react ships its own nested copy of @testing-library/dom,
+  // so configure through the react entry point (which re-exports configure from
+  // the copy it actually uses) as well as the top-level dom package.
   const { configure } = await import('@testing-library/dom');
   configure({ asyncUtilTimeout: 10_000 });
+  const { configure: configureReact } = await import('@testing-library/react');
+  configureReact({ asyncUtilTimeout: 10_000 });
 
   const storage = new Map<string, string>();
   const localStorageMock: Storage = {
