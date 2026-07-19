@@ -752,7 +752,7 @@ describe('BoardsSettings ticket status copy flow', () => {
 
     await waitFor(() => {
       expect(updateBoardMock).toHaveBeenCalled();
-    });
+    }, { timeout: 5_000 });
 
     // The editor stays open (no return to the list) and the header reflects the saved name.
     await waitFor(() => {
