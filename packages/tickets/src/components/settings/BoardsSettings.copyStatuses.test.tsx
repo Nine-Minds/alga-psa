@@ -748,7 +748,11 @@ describe('BoardsSettings ticket status copy flow', () => {
     fireEvent.change(screen.getByLabelText('ticketing.boards.fields.boardName.label'), {
       target: { value: 'Support Renamed' },
     });
-    fireEvent.click(screen.getByTestId('save-board-button'));
+    const saveButton = screen.getByTestId('save-board-button');
+    await waitFor(() => {
+      expect(saveButton).toBeEnabled();
+    });
+    fireEvent.click(saveButton);
 
     await waitFor(() => {
       expect(updateBoardMock).toHaveBeenCalled();
