@@ -256,6 +256,9 @@ describe('ContactPortalTab visibility groups', () => {
       });
     });
 
+    await waitFor(() => {
+      expect(screen.getAllByRole('button', { name: 'Edit' })).toHaveLength(2);
+    }, { timeout: 5_000 });
     fireEvent.click(screen.getAllByRole('button', { name: 'Edit' })[1]);
 
     await waitFor(() => {

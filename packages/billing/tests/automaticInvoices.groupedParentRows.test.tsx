@@ -296,10 +296,10 @@ describe('AutomaticInvoices grouped parent rows', () => {
         document.getElementById('select-child-parent-group:client-1:2026-03-01:2026-04-01-exec-1'),
       ).not.toBeNull();
     });
-    expect(screen.getAllByText('Assigned work item').length).toBeGreaterThan(0);
+    expect((await screen.findAllByText('Assigned work item')).length).toBeGreaterThan(0);
     // Cadence and billing timing share one compact line in the grouped grid.
-    expect(screen.getAllByText('Contract anniversary · Advance').length).toBeGreaterThan(0);
-    expect(screen.getByText('$125.00')).toBeInTheDocument();
+    expect((await screen.findAllByText('Contract anniversary · Advance')).length).toBeGreaterThan(0);
+    expect(await screen.findByText('$125.00')).toBeInTheDocument();
   });
 
   it('is combinable only when all ready children share client/currency/PO/tax/export scope (T004)', async () => {
