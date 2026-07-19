@@ -186,3 +186,13 @@ Rolling notes: decisions, discoveries, links, commands, gotchas.
   idempotent); interactionTypes.ts resolver + 3 stats joins switched; tests updated.
 - package.json "type": "module" on marketing+opportunities is load-bearing for the OpenAPI
   generator — do not remove.
+
+### Test completion + close-out (2026-07-19)
+- T009–T013 landed: 36 executable tests passing (registry/discovery + controller guard
+  pipeline, tracking routes, capture hardening incl. rate-limit + enumeration-safety,
+  nav flag gating, activities gating/mapping). T013(b) activities e2e authored DB-only.
+- tests.json: all 13 marked implemented. Honest execution status: unit/handler-level tests
+  RAN green locally; DB-backed suites (T001–T008, T013b) are authored + load-verified but
+  have never executed — no Postgres/Docker in this environment. First CI run with the
+  standard test DB is the real gate (`REQUIRE_DB=1 npx vitest run src/test/integration/marketing*`).
+- validate_plan.py: clean (64 features / 13 tests).

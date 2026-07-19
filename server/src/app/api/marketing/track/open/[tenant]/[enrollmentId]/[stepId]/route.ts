@@ -4,7 +4,7 @@ import { resolvePublicMarketingTenant } from '@/lib/marketing/publicEndpoints';
 import { analytics } from '@/lib/analytics/server';
 import logger from '@alga-psa/core/logger';
 
-// 1x1 transparent GIF (43 bytes)
+// 1x1 transparent GIF (42 bytes)
 const TRANSPARENT_GIF = Buffer.from(
   'R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
   'base64'
