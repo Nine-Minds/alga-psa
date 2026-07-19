@@ -73,6 +73,9 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
   const opportunitiesFlag = useFeatureFlag('opportunities-module', { defaultValue: false });
   const opportunitiesEnabled =
     typeof opportunitiesFlag === 'boolean' ? opportunitiesFlag : opportunitiesFlag?.enabled ?? false;
+  const marketingFlag = useFeatureFlag('marketing-module', { defaultValue: false });
+  const marketingEnabled =
+    typeof marketingFlag === 'boolean' ? marketingFlag : marketingFlag?.enabled ?? false;
   const [userPermissions, setUserPermissions] = useState<string[]>([]);
   const [selfHostMode, setSelfHostMode] = useState(false);
   const { hasFeature } = useTier();
@@ -133,6 +136,7 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
       ...section,
       items: section.items
         .filter((item) => item.name !== 'Opportunities' || opportunitiesEnabled)
+        .filter((item) => item.name !== 'Marketing' || marketingEnabled)
         .map((item) => {
         if (item.name === 'Workflows') {
           const filteredSubItems = item.subItems?.filter((subItem) => {
@@ -150,7 +154,7 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
       productCode,
       filterNavigationSectionsByFeatureAccess(filteredSections, hasFeature),
     );
-  }, [canWorkflowAdmin, useNavigationSections, hasFeature, productCode, opportunitiesEnabled]);
+  }, [canWorkflowAdmin, useNavigationSections, hasFeature, productCode, opportunitiesEnabled, marketingEnabled]);
 
   const settingsSections = useMemo<NavigationSection[]>(() => {
     const productSections = filterMenuSectionsByProduct(productCode, settingsNavigationSections);

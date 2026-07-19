@@ -43,7 +43,7 @@ export type OpportunityLossReason =
   | 'not_a_fit'
   | 'other';
 
-export type OpportunityGeneratorKey = 'renewal' | 'tm_conversion' | 'whitespace' | 'asset_aging';
+export type OpportunityGeneratorKey = 'renewal' | 'tm_conversion' | 'whitespace' | 'asset_aging' | 'inbound-lead';
 
 export type OpportunitySuggestionStatus = 'pending' | 'accepted' | 'dismissed' | 'snoozed';
 

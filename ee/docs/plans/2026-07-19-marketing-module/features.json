@@ -11,6 +11,7 @@
   { "id": "F010", "description": "Migration: marketing_engagements join table (interaction_id ↔ campaign/content/post/sequence-step)", "implemented": false, "prdRefs": ["Data / API / Integrations"] },
   { "id": "F011", "description": "Migration: seed marketing interaction types (post_published, email_sent, email_opened, email_clicked, form_submitted)", "implemented": false, "prdRefs": ["FR8"] },
   { "id": "F012", "description": "Migration: seed marketing:read + marketing:manage permissions and assign to standard roles", "implemented": false, "prdRefs": ["NFR3", "Security / Permissions"] },
+  { "id": "F064", "description": "Migration: marketing_capture_forms table (slug-keyed public endpoint definitions with campaign attribution)", "implemented": false, "prdRefs": ["FR4", "Data / API / Integrations"] },
   { "id": "F013", "description": "marketing_module feature flag gates nav section and every marketing surface/endpoint", "implemented": false, "prdRefs": ["FR10", "Rollout / Migration"] },
 
   { "id": "F014", "description": "Campaign CRUD server actions + API endpoints", "implemented": false, "prdRefs": ["FR1"] },

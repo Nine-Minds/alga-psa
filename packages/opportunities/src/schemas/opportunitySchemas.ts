@@ -41,6 +41,7 @@ export const opportunityGeneratorKeySchema: z.ZodType<OpportunityGeneratorKey> =
   'tm_conversion',
   'whitespace',
   'asset_aging',
+  'inbound-lead',
 ]);
 export const opportunitySuggestionStatusSchema = z.enum([
   'pending',

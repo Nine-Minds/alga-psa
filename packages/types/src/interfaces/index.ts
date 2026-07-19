@@ -54,6 +54,7 @@ export * from './projectTaskComment.interface';
 export * from './projectTemplate.interfaces';
 export * from './quote.interfaces';
 export * from './opportunity.interfaces';
+export * from './marketing.interfaces';
 export * from './salesOrderDocument.interfaces';
 export * from './recurringTiming.interfaces';
 export * from './schedule.interfaces';

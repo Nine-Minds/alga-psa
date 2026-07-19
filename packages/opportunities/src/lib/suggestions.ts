@@ -20,6 +20,7 @@ const opportunityTypeByGenerator: Record<OpportunityGeneratorKey, OpportunityTyp
   tm_conversion: 'expansion',
   whitespace: 'expansion',
   asset_aging: 'project',
+  'inbound-lead': 'new_logo',
 };
 
 const nextActionByGenerator: Record<OpportunityGeneratorKey, string> = {
@@ -27,6 +28,7 @@ const nextActionByGenerator: Record<OpportunityGeneratorKey, string> = {
   tm_conversion: 'Review the T&M comparison with the client',
   whitespace: 'Discuss the missing service category',
   asset_aging: 'Scope the asset refresh',
+  'inbound-lead': 'Follow up on the inbound enquiry',
 };
 
 type SuggestionOpportunitySource = Pick<

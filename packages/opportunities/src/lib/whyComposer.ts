@@ -51,6 +51,11 @@ export type WhyFacts =
       oldestYears: number;
     }
   | {
+      kind: 'suggestion_inbound_lead';
+      clientName: string;
+      formName: string;
+    }
+  | {
       kind: 'lesson_assessment_conversion';
       wonPerFive: number;
       monthsSinceLastProposed: number;
@@ -143,6 +148,14 @@ export function composeWhy(facts: WhyFacts): WhySentence {
         segments: [
           seg(`${facts.clientName} does not buy ${facts.missingServiceName}`, true),
           seg(' from you yet. Every comparable client does.'),
+        ],
+      };
+
+    case 'suggestion_inbound_lead':
+      return {
+        segments: [
+          seg(`${facts.clientName} raised their hand`, true),
+          seg(` via ${facts.formName}. Inbound interest cools fast.`),
         ],
       };
 

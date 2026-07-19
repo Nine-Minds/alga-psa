@@ -10,6 +10,16 @@
     "projectsTemplates": "Templates",
     "clients": "Clients",
     "opportunities": "Opportunities",
+    "marketing": {
+      "label": "Marketing",
+      "calendar": "Calendar",
+      "posts": "Posts",
+      "content": "Content",
+      "campaigns": "Campaigns",
+      "sequences": "Sequences",
+      "forms": "Forms",
+      "channels": "Channels"
+    },
     "contacts": "Contacts",
     "documents": "Documents",
     "documentsAll": "All Documents",
