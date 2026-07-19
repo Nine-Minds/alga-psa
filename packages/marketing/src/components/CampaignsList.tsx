@@ -8,10 +8,20 @@ import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { EmptyState } from '@alga-psa/ui/components/EmptyState';
 import { Target, X } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import type { ColumnDefinition, IMarketingCampaign, IMarketingCampaignFunnel } from '@alga-psa/types';
+import type {
+  ColumnDefinition,
+  IMarketingCampaign,
+  IMarketingCampaignFunnel,
+  IMarketingCaptureForm,
+  IMarketingSequence,
+  ISocialPostQueueItem,
+} from '@alga-psa/types';
 import { getCampaignFunnel } from '../actions/campaignActions';
+import { getSocialPostQueue } from '../actions/postActions';
+import { listMarketingSequences } from '../actions/sequenceActions';
+import { listCaptureForms } from '../actions/formActions';
 import { CampaignDialog } from './CampaignDialog';
-import { CampaignStatusBadge } from './StatusBadge';
+import { CampaignStatusBadge, PostTargetStatusBadge, SequenceStatusBadge } from './StatusBadge';
 import { formatDate } from './format';
 
 function FunnelStrip({ funnel }: { funnel: IMarketingCampaignFunnel }): React.ReactElement {
@@ -49,16 +59,32 @@ export function CampaignsList({ items }: { items: IMarketingCampaign[] }): React
   const [dialogOpen, setDialogOpen] = useState(false);
   const [selected, setSelected] = useState<IMarketingCampaign | null>(null);
   const [funnel, setFunnel] = useState<IMarketingCampaignFunnel | null>(null);
+  const [campaignPosts, setCampaignPosts] = useState<ISocialPostQueueItem[]>([]);
+  const [campaignSequences, setCampaignSequences] = useState<IMarketingSequence[]>([]);
+  const [campaignForms, setCampaignForms] = useState<IMarketingCaptureForm[]>([]);
 
   useEffect(() => {
     if (!selected) {
       setFunnel(null);
+      setCampaignPosts([]);
+      setCampaignSequences([]);
+      setCampaignForms([]);
       return;
     }
     let cancelled = false;
-    getCampaignFunnel(selected.campaign_id)
-      .then((result) => {
-        if (!cancelled) setFunnel(result);
+    const campaignId = selected.campaign_id;
+    Promise.all([
+      getCampaignFunnel(campaignId),
+      getSocialPostQueue({ campaign_id: campaignId }),
+      listMarketingSequences(),
+      listCaptureForms(),
+    ])
+      .then(([funnelResult, posts, sequences, forms]) => {
+        if (cancelled) return;
+        setFunnel(funnelResult);
+        setCampaignPosts(posts);
+        setCampaignSequences(sequences.filter((sequence) => sequence.campaign_id === campaignId));
+        setCampaignForms(forms.filter((form) => form.campaign_id === campaignId));
       })
       .catch((err) => {
         if (!cancelled) toast.error(err instanceof Error ? err.message : String(err));
@@ -193,6 +219,76 @@ export function CampaignsList({ items }: { items: IMarketingCampaign[] }): React
                   {t('marketing.campaigns.funnel.loading', 'Loading funnel…')}
                 </p>
               )}
+
+              {/* Campaign contents: posts, sequences, forms (N17). */}
+              <div className="mt-4 grid grid-cols-1 gap-3 lg:grid-cols-3">
+                <div className="rounded-md border border-[rgb(var(--color-border-100))] p-3">
+                  <div className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[rgb(var(--color-text-400))]">
+                    {t('marketing.campaigns.detail.posts', 'Posts')}
+                  </div>
+                  {campaignPosts.length === 0 ? (
+                    <p className="text-xs text-[rgb(var(--color-text-400))]">
+                      {t('marketing.campaigns.detail.noPosts', 'No posts in this campaign.')}
+                    </p>
+                  ) : (
+                    <ul className="space-y-1.5">
+                      {campaignPosts.slice(0, 8).map((item) => (
+                        <li key={item.target_id} className="flex items-center gap-2 text-sm">
+                          <span className="min-w-0 truncate text-[rgb(var(--color-text-700))]">
+                            {item.content_title}
+                          </span>
+                          <span className="text-xs text-[rgb(var(--color-text-400))]">{item.channel_name}</span>
+                          <span className="ml-auto flex-shrink-0">
+                            <PostTargetStatusBadge status={item.status} />
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+                <div className="rounded-md border border-[rgb(var(--color-border-100))] p-3">
+                  <div className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[rgb(var(--color-text-400))]">
+                    {t('marketing.campaigns.detail.sequences', 'Sequences')}
+                  </div>
+                  {campaignSequences.length === 0 ? (
+                    <p className="text-xs text-[rgb(var(--color-text-400))]">
+                      {t('marketing.campaigns.detail.noSequences', 'No sequences linked to this campaign.')}
+                    </p>
+                  ) : (
+                    <ul className="space-y-1.5">
+                      {campaignSequences.map((sequence) => (
+                        <li key={sequence.sequence_id} className="flex items-center gap-2 text-sm">
+                          <span className="min-w-0 truncate text-[rgb(var(--color-text-700))]">{sequence.name}</span>
+                          <span className="ml-auto flex-shrink-0">
+                            <SequenceStatusBadge status={sequence.status} />
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+                <div className="rounded-md border border-[rgb(var(--color-border-100))] p-3">
+                  <div className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[rgb(var(--color-text-400))]">
+                    {t('marketing.campaigns.detail.forms', 'Capture forms')}
+                  </div>
+                  {campaignForms.length === 0 ? (
+                    <p className="text-xs text-[rgb(var(--color-text-400))]">
+                      {t('marketing.campaigns.detail.noForms', 'No forms attributed to this campaign.')}
+                    </p>
+                  ) : (
+                    <ul className="space-y-1.5">
+                      {campaignForms.map((form) => (
+                        <li key={form.form_id} className="flex items-center gap-2 text-sm">
+                          <span className="min-w-0 truncate text-[rgb(var(--color-text-700))]">{form.name}</span>
+                          <span className="ml-auto flex-shrink-0 text-xs text-[rgb(var(--color-text-400))]">
+                            /{form.slug}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </div>
+              </div>
             </div>
           )}
         </>

@@ -2,6 +2,7 @@
 
 import { createTenantKnex } from '@alga-psa/db';
 import { withAuth } from '@alga-psa/auth';
+import { TenantEmailService } from '@alga-psa/email';
 import type { IMarketingSequence, IMarketingSequenceEnrollment } from '@alga-psa/types';
 import { guardMarketing } from '../lib/guards';
 import {
@@ -14,6 +15,25 @@ import {
   type SequenceDetail,
 } from '../lib/sequences';
 import { enrollContactSchema, sequenceInputSchema, sequenceUpdateSchema } from '../schemas/marketingSchemas';
+
+export interface MarketingSendingConfig {
+  fromAddress: string | null;
+  provider: string | null;
+}
+
+/** Read-only summary for the sequences "Sending" side tile. */
+export const getMarketingSendingConfig = withAuth(async (user, { tenant }): Promise<MarketingSendingConfig> => {
+  await guardMarketing(user, tenant, 'read');
+  const { knex } = await createTenantKnex();
+  const settings = await TenantEmailService.getTenantEmailSettings(tenant, knex);
+  const fromAddress =
+    settings?.ticketingFromEmail
+    ?? (settings?.defaultFromDomain ? `noreply@${settings.defaultFromDomain}` : null);
+  return {
+    fromAddress,
+    provider: settings?.emailProvider ?? null,
+  };
+});
 
 export const listMarketingSequences = withAuth(async (user, { tenant }): Promise<IMarketingSequence[]> => {
   await guardMarketing(user, tenant, 'read');

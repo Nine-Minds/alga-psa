@@ -9,7 +9,7 @@ import { TextArea } from '@alga-psa/ui/components/TextArea';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Plus, X } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import type { IMarketingSequence, IMarketingSequenceStep, MarketingSequenceStatus } from '@alga-psa/types';
+import type { IMarketingCampaign, IMarketingSequence, IMarketingSequenceStep, MarketingSequenceStatus } from '@alga-psa/types';
 import { createMarketingSequence, updateMarketingSequence } from '../actions/sequenceActions';
 
 const STATUSES: MarketingSequenceStatus[] = ['draft', 'active', 'paused', 'archived'];
@@ -42,12 +42,14 @@ function toDraft(step: IMarketingSequenceStep): StepDraft {
 export function SequenceDialog({
   sequence,
   steps,
+  campaigns,
   isOpen,
   onClose,
   onCompleted,
 }: {
   sequence: IMarketingSequence | null;
   steps: IMarketingSequenceStep[];
+  campaigns: IMarketingCampaign[];
   isOpen: boolean;
   onClose: () => void;
   onCompleted: () => void;
@@ -56,6 +58,7 @@ export function SequenceDialog({
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [status, setStatus] = useState<MarketingSequenceStatus>('draft');
+  const [campaignId, setCampaignId] = useState('');
   const [stepDrafts, setStepDrafts] = useState<StepDraft[]>([]);
   const [saving, setSaving] = useState(false);
 
@@ -64,6 +67,7 @@ export function SequenceDialog({
       setName(sequence?.name ?? '');
       setDescription(sequence?.description ?? '');
       setStatus(sequence?.status ?? 'draft');
+      setCampaignId(sequence?.campaign_id ?? '');
       setStepDrafts(steps.map(toDraft));
     }
   }, [isOpen, sequence, steps]);
@@ -81,6 +85,7 @@ export function SequenceDialog({
       name: name.trim(),
       description: description.trim() || null,
       status,
+      campaign_id: campaignId || null,
       steps: stepDrafts.map((step, index) => ({
         step_order: index + 1,
         delay_minutes: Math.max(0, Math.round(Number(step.delayValue) || 0)) * UNIT_MINUTES[step.delayUnit],
@@ -141,6 +146,15 @@ export function SequenceDialog({
           }))}
           value={status}
           onValueChange={(value: string) => setStatus(value as MarketingSequenceStatus)}
+        />
+        <CustomSelect
+          id="marketing-sequence-campaign"
+          label={t('marketing.sequences.dialog.campaign', 'Campaign (optional)')}
+          options={campaigns.map((campaign) => ({ value: campaign.campaign_id, label: campaign.name }))}
+          value={campaignId}
+          onValueChange={setCampaignId}
+          placeholder={t('marketing.sequences.dialog.noCampaign', 'None')}
+          allowClear
         />
 
         <div>

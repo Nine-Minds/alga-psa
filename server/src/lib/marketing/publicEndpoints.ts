@@ -2,6 +2,8 @@ import { NextRequest } from 'next/server';
 import type { Knex } from 'knex';
 import { getConnection } from '@/lib/db/db';
 import { tenantDb } from '@alga-psa/db';
+import { isFeatureFlagEnabled } from '@alga-psa/core';
+import { MARKETING_MODULE_FLAG } from '@alga-psa/marketing/lib';
 import logger from '@alga-psa/core/logger';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -14,9 +16,11 @@ export interface PublicMarketingContext {
 /**
  * Resolve the tenant for a public (unauthenticated) marketing endpoint.
  *
- * Returns null for any malformed or unknown tenant so callers can answer
- * with a generic 404 and never leak whether a tenant exists. Mirrors the
- * tenant-verification approach used by the public appointment-request route.
+ * Returns null for any malformed or unknown tenant — or a tenant with the
+ * marketing module off (FR10: the flag gates every surface, public ones
+ * included) — so callers can answer with a generic 404 and never leak
+ * whether a tenant exists. Mirrors the tenant-verification approach used by
+ * the public appointment-request route.
  */
 export async function resolvePublicMarketingTenant(
   tenantParam: string
@@ -27,6 +31,9 @@ export async function resolvePublicMarketingTenant(
     const db = tenantDb(knex, tenantParam);
     const tenant = await db.table('tenants').first('tenant');
     if (!tenant) return null;
+    if (!await isFeatureFlagEnabled(MARKETING_MODULE_FLAG, { tenantId: tenantParam })) {
+      return null;
+    }
     return { knex, tenantId: tenantParam };
   } catch (error) {
     logger.warn('[marketing-public] Failed to resolve tenant', {

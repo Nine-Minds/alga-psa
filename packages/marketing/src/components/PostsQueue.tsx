@@ -1,11 +1,12 @@
 'use client';
 
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { toast } from 'react-hot-toast';
 import { Button } from '@alga-psa/ui/components/Button';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { EmptyState } from '@alga-psa/ui/components/EmptyState';
 import { Share2 } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -46,10 +47,13 @@ export function PostsQueue({
 }): React.ReactElement {
   const { t } = useTranslation('msp/core');
   const router = useRouter();
+  const pathname = usePathname();
   const [items, setItems] = useState<ISocialPostQueueItem[]>(initialItems);
   const [status, setStatus] = useState('');
   const [channelId, setChannelId] = useState('');
   const [campaignId, setCampaignId] = useState('');
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(undefined);
+  const [dateTo, setDateTo] = useState<Date | undefined>(undefined);
   const [createOpen, setCreateOpen] = useState(false);
   const [rescheduleFor, setRescheduleFor] = useState<ISocialPostQueueItem | null>(null);
   const [markFor, setMarkFor] = useState<ISocialPostQueueItem | null>(null);
@@ -62,10 +66,17 @@ export function PostsQueue({
     }
   }, []);
 
+  // Whole scheduled days: from = local start of day, to = end of that day.
   const filters = {
     status: (status || undefined) as SocialPostTargetStatus | undefined,
     channel_id: channelId || undefined,
     campaign_id: campaignId || undefined,
+    date_from: dateFrom
+      ? new Date(dateFrom.getFullYear(), dateFrom.getMonth(), dateFrom.getDate()).toISOString()
+      : undefined,
+    date_to: dateTo
+      ? new Date(dateTo.getFullYear(), dateTo.getMonth(), dateTo.getDate() + 1).toISOString()
+      : undefined,
   };
 
   const refresh = useCallback(async () => {
@@ -75,7 +86,7 @@ export function PostsQueue({
       toast.error(err instanceof Error ? err.message : String(err));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status, channelId, campaignId]);
+  }, [status, channelId, campaignId, dateFrom, dateTo]);
 
   useEffect(() => {
     if (skipInitialFetch.current) {
@@ -209,6 +220,18 @@ export function PostsQueue({
           allowClear
           size="sm"
         />
+        <DatePicker
+          id="marketing-posts-filter-date-from"
+          label={t('marketing.posts.filters.dateFrom', 'Scheduled from')}
+          value={dateFrom}
+          onChange={(date?: Date) => setDateFrom(date)}
+        />
+        <DatePicker
+          id="marketing-posts-filter-date-to"
+          label={t('marketing.posts.filters.dateTo', 'Scheduled to')}
+          value={dateTo}
+          onChange={(date?: Date) => setDateTo(date)}
+        />
       </div>
 
       {items.length === 0 ? (
@@ -231,7 +254,13 @@ export function PostsQueue({
 
       <CreatePostDialog
         isOpen={createOpen}
-        onClose={() => setCreateOpen(false)}
+        onClose={() => {
+          setCreateOpen(false);
+          // Clear the ?create=1 deep link so refresh/back doesn't reopen it.
+          if (typeof window !== 'undefined' && new URLSearchParams(window.location.search).get('create') === '1') {
+            router.replace(pathname);
+          }
+        }}
         content={content}
         channels={channels.filter((channel) => channel.is_active)}
         campaigns={campaigns}

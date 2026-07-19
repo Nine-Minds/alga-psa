@@ -54,7 +54,12 @@ export const postRescheduleSchema = z.object({
 });
 
 export const markPublishedSchema = z.object({
-  permalink: z.string().trim().url().max(1000).optional().nullable(),
+  // http(s) only: permalinks are rendered as hrefs, so a javascript: URL
+  // here would be stored XSS.
+  permalink: z.string().trim().url().max(1000)
+    .refine((value) => /^https?:\/\//i.test(value), 'Permalink must be an http(s) URL')
+    .optional()
+    .nullable(),
 });
 
 export const queueFiltersSchema = z.object({

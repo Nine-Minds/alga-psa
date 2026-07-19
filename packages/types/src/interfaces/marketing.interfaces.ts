@@ -30,7 +30,7 @@ export type MarketingSuppressionReason = 'unsubscribe' | 'bounce' | 'complaint' 
 
 export type MarketingSuppressionSource = 'link' | 'reply' | 'import' | 'admin';
 
-/** Tenant interaction type_names seeded by 20260719103000; resolved per tenant. */
+/** Global system interaction type_names (system_interaction_types) seeded once by 20260719103000. */
 export type MarketingInteractionTypeName =
   | 'Marketing: Post Published'
   | 'Marketing: Email Sent'

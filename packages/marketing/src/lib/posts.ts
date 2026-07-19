@@ -57,6 +57,13 @@ export async function createPostInternal(
       .first('content_id', 'campaign_id');
     if (!content) throw new Error('Content piece not found');
 
+    if (input.campaign_id) {
+      const campaign = await db.table('marketing_campaigns')
+        .where({ tenant, campaign_id: input.campaign_id })
+        .first('campaign_id');
+      if (!campaign) throw new Error('Campaign not found');
+    }
+
     const channels = await db.table('marketing_channels')
       .where({ tenant, is_active: true })
       .whereIn('channel_id', input.channel_ids)

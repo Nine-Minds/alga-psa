@@ -32,13 +32,13 @@ export default async function MarketingCalendarPage() {
     return <MarketingAccessBoundary reason={access.reason ?? 'permission'} />;
   }
 
-  // One week back (published-recently), two weeks forward (agenda).
+  // Wide enough for both views: the agenda (a week back for
+  // published-recently, two weeks forward) and the current-month grid.
   const now = new Date();
-  const dateFrom = new Date(now.getTime() - 7 * 86_400_000).toISOString();
-  const dateTo = new Date(now.getTime() + 14 * 86_400_000).toISOString();
-  const weekStart = new Date(now);
-  weekStart.setDate(now.getDate() - now.getDay());
-  const rangeLabel = `Week of ${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+  const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+  const dateFrom = new Date(Math.min(monthStart.getTime() - 7 * 86_400_000, now.getTime() - 7 * 86_400_000)).toISOString();
+  const dateTo = new Date(Math.max(monthEnd.getTime() + 7 * 86_400_000, now.getTime() + 14 * 86_400_000)).toISOString();
 
   let awaiting: ISocialPostQueueItem[] = [];
   let items: ISocialPostQueueItem[] = [];
@@ -53,14 +53,7 @@ export default async function MarketingCalendarPage() {
     console.error('marketing calendar: initial load failed', err);
   }
 
-  return (
-    <MarketingCalendar
-      awaiting={awaiting}
-      items={items}
-      channels={channels}
-      rangeLabel={rangeLabel}
-    />
-  );
+  return <MarketingCalendar awaiting={awaiting} items={items} channels={channels} />;
 }
 
 export const dynamic = 'force-dynamic';

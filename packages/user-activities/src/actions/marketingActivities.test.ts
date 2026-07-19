@@ -153,7 +153,7 @@ describe('marketing activity aggregation gating', () => {
       status: 'overdue',
       priority: ActivityPriority.HIGH,
       dueDate: '2000-01-01T12:00:00.000Z',
-      link: '/msp/marketing/calendar',
+      link: '/msp/marketing/posts',
       workItemType: 'marketing_post',
     }));
 
@@ -163,7 +163,7 @@ describe('marketing activity aggregation gating', () => {
       type: ActivityType.SCHEDULE,
       status: 'open',
       priority: ActivityPriority.MEDIUM,
-      link: '/msp/marketing/calendar',
+      link: '/msp/marketing/posts',
     }));
   });
 });

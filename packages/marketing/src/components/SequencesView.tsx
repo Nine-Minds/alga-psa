@@ -12,11 +12,16 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type {
   ColumnDefinition,
   IContact,
+  IMarketingCampaign,
   IMarketingEnrollmentWithContact,
   IMarketingSequence,
   IMarketingSequenceStepStats,
 } from '@alga-psa/types';
-import { getMarketingSequenceDetail, unenrollContactFromSequence } from '../actions/sequenceActions';
+import {
+  getMarketingSequenceDetail,
+  unenrollContactFromSequence,
+  type MarketingSendingConfig,
+} from '../actions/sequenceActions';
 import type { SequenceDetail } from '../lib/sequences';
 import { SequenceDialog } from './SequenceDialog';
 import { EnrollContactDialog } from './EnrollContactDialog';
@@ -45,10 +50,14 @@ export function SequencesView({
   sequences,
   initialDetail,
   contacts,
+  campaigns,
+  sendingConfig,
 }: {
   sequences: IMarketingSequence[];
   initialDetail: SequenceDetail | null;
   contacts: IContact[];
+  campaigns: IMarketingCampaign[];
+  sendingConfig: MarketingSendingConfig | null;
 }): React.ReactElement {
   const { t } = useTranslation('msp/core');
   const router = useRouter();
@@ -352,8 +361,37 @@ export function SequencesView({
                   )}
                 </div>
 
-                {/* Performance rail */}
-                <div className="w-72 flex-shrink-0">
+                {/* Sending + performance rail */}
+                <div className="w-72 flex-shrink-0 space-y-4">
+                  <div className="rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4">
+                    <div className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[rgb(var(--color-text-400))]">
+                      {t('marketing.sequences.sending', 'Sending')}
+                    </div>
+                    <div className="space-y-1.5 text-sm">
+                      <div className="flex justify-between gap-2">
+                        <span className="text-[rgb(var(--color-text-500))]">{t('marketing.sequences.sending.from', 'From')}</span>
+                        <span className="truncate font-medium text-[rgb(var(--color-text-800))]">
+                          {sendingConfig?.fromAddress ?? '—'}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-[rgb(var(--color-text-500))]">{t('marketing.sequences.sending.provider', 'Provider')}</span>
+                        <span className="font-medium text-[rgb(var(--color-text-800))]">
+                          {sendingConfig?.provider
+                            ? sendingConfig.provider.toUpperCase()
+                            : t('marketing.sequences.sending.notConfigured', 'Not configured')}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-[rgb(var(--color-text-500))]">{t('marketing.sequences.sending.unsubscribe', 'Unsubscribe link')}</span>
+                        <span className="font-medium text-emerald-600">{t('marketing.sequences.sending.on', 'On')}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="text-[rgb(var(--color-text-500))]">{t('marketing.sequences.sending.tracking', 'Tracking')}</span>
+                        <span className="font-medium text-[rgb(var(--color-text-800))]">PostHog</span>
+                      </div>
+                    </div>
+                  </div>
                   <div className="rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4">
                     <div className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[rgb(var(--color-text-400))]">
                       {t('marketing.sequences.performance', 'Performance')}
@@ -389,6 +427,7 @@ export function SequencesView({
       <SequenceDialog
         sequence={dialogMode === 'edit' ? selectedSequence : null}
         steps={dialogMode === 'edit' ? detail?.steps ?? [] : []}
+        campaigns={campaigns}
         isOpen={dialogMode != null}
         onClose={() => setDialogMode(null)}
         onCompleted={() => {

@@ -114,7 +114,9 @@ export async function submitCaptureInternal(
 
       const contactId = String(contact.contact_name_id);
 
-      // 2. Marketing contact state: form submission is consent to follow up.
+      // 2. Marketing contact state: form submission is consent to follow up —
+      // including a re-submission after an earlier opt-out (the suppression
+      // table stays authoritative for sends either way).
       await db.table('marketing_contact_state')
         .insert({
           tenant,
@@ -123,7 +125,7 @@ export async function submitCaptureInternal(
           source: `capture:${slug}`,
         })
         .onConflict(['tenant', 'contact_id'])
-        .merge({ source: `capture:${slug}`, updated_at: now });
+        .merge({ consent: true, source: `capture:${slug}`, updated_at: now });
 
       // 3. Engagement log entry.
       await recordMarketingEngagement(trx, tenant, {

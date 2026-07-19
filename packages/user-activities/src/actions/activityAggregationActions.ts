@@ -1672,7 +1672,7 @@ export async function fetchMarketingActivities(
   userId: string,
   tenantId: string,
   filters: ActivityFilters,
-  user?: any
+  user: any
 ): Promise<Activity[]> {
   try {
     const enabled = await isFeatureFlagEnabled('marketing-module', { tenantId, userId });
@@ -1681,10 +1681,10 @@ export async function fetchMarketingActivities(
     const { knex, tenant } = await createTenantKnex(tenantId);
     if (!tenant) throw new Error('Tenant is required');
 
-    if (user) {
-      const allowed = await hasPermission(user, 'marketing', 'manage', knex);
-      if (!allowed) return [];
-    }
+    // user is required: the permission check must never be skippable
+    // (fail-open export).
+    const allowed = await hasPermission(user, 'marketing', 'manage', knex);
+    if (!allowed) return [];
 
     const db = tenantDb(knex, tenant);
     const query = db.table('social_post_targets as t')
@@ -1721,7 +1721,7 @@ export async function fetchMarketingActivities(
       't.updated_at'
     );
     const now = Date.now();
-    const link = '/msp/marketing/calendar';
+    const link = '/msp/marketing/posts';
     let activities: Activity[] = rows.map((row: any) => {
       const dueDate = row.scheduled_at ? new Date(row.scheduled_at).toISOString() : new Date(row.updated_at).toISOString();
       const overdue = new Date(dueDate).getTime() < now;

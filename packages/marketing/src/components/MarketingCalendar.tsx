@@ -33,16 +33,26 @@ export function MarketingCalendar({
   awaiting,
   items,
   channels,
-  rangeLabel,
 }: {
   awaiting: ISocialPostQueueItem[];
   items: ISocialPostQueueItem[];
   channels: IMarketingChannel[];
-  rangeLabel: string;
 }): React.ReactElement {
   const { t } = useTranslation('msp/core');
   const router = useRouter();
   const [markFor, setMarkFor] = useState<ISocialPostQueueItem | null>(null);
+  const [view, setView] = useState<'agenda' | 'month'>('agenda');
+
+  // Labeled week (local, Sunday-based) — the "This week" stats are bounded
+  // to exactly this window so the header and the numbers agree.
+  const weekStart = useMemo(() => {
+    const start = dayStart(new Date());
+    start.setDate(start.getDate() - start.getDay());
+    return start;
+  }, []);
+  const rangeLabel = t('marketing.calendar.weekOf', 'Week of {{date}}', {
+    date: weekStart.toLocaleDateString(undefined, { month: 'short', day: 'numeric' }),
+  });
 
   const refresh = () => router.refresh();
 
@@ -95,18 +105,54 @@ export function MarketingCalendar({
   }, [items, t]);
 
   const stats = useMemo(() => {
-    const weekEnd = Date.now() + 7 * 86_400_000;
-    const inWeek = items.filter((item) => {
-      if (!item.scheduled_at) return false;
-      const due = new Date(item.scheduled_at).getTime();
-      return due <= weekEnd;
-    });
+    const windowStart = weekStart.getTime();
+    const windowEnd = windowStart + 7 * 86_400_000;
+    const within = (value?: string | null) => {
+      if (!value) return false;
+      const at = new Date(value).getTime();
+      return at >= windowStart && at < windowEnd;
+    };
     return {
-      published: inWeek.filter((item) => item.status === 'published').length,
-      scheduled: inWeek.filter((item) => item.status === 'scheduled').length,
+      published: items.filter((item) => item.status === 'published' && within(item.published_at ?? item.scheduled_at)).length,
+      scheduled: items.filter((item) => item.status === 'scheduled' && within(item.scheduled_at)).length,
       awaiting: awaiting.length,
     };
-  }, [items, awaiting]);
+  }, [items, awaiting, weekStart]);
+
+  // Month grid (N15): weeks covering the current month, items bucketed by
+  // scheduled day.
+  const monthGrid = useMemo(() => {
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+    const gridStart = new Date(monthStart);
+    gridStart.setDate(gridStart.getDate() - gridStart.getDay());
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    const gridEnd = new Date(monthEnd);
+    gridEnd.setDate(gridEnd.getDate() + (6 - gridEnd.getDay()));
+
+    const byDay = new Map<string, ISocialPostQueueItem[]>();
+    for (const item of items) {
+      if (!item.scheduled_at) continue;
+      const key = dayStart(item.scheduled_at).toISOString();
+      byDay.set(key, [...(byDay.get(key) ?? []), item]);
+    }
+
+    const weeks: Array<Array<{ date: Date; inMonth: boolean; items: ISocialPostQueueItem[] }>> = [];
+    for (let cursor = new Date(gridStart); cursor <= gridEnd; ) {
+      const week: Array<{ date: Date; inMonth: boolean; items: ISocialPostQueueItem[] }> = [];
+      for (let i = 0; i < 7; i += 1) {
+        const date = new Date(cursor);
+        week.push({
+          date,
+          inMonth: date.getMonth() === now.getMonth(),
+          items: byDay.get(dayStart(date).toISOString()) ?? [],
+        });
+        cursor.setDate(cursor.getDate() + 1);
+      }
+      weeks.push(week);
+    }
+    return { weeks, monthLabel: now.toLocaleDateString(undefined, { month: 'long', year: 'numeric' }) };
+  }, [items]);
 
   const overdueCount = useMemo(
     () => awaiting.filter((item) => overdueLabel(item.scheduled_at) !== null).length,
@@ -184,6 +230,32 @@ export function MarketingCalendar({
           <p className="text-xs text-[rgb(var(--color-text-500))]">{rangeLabel}</p>
         </div>
         <div className="ml-auto flex flex-shrink-0 items-center gap-2">
+          <div className="flex overflow-hidden rounded-md border border-[rgb(var(--color-border-200))] text-xs font-medium">
+            <button
+              id="marketing-calendar-view-month"
+              type="button"
+              className={`px-3 py-1.5 ${
+                view === 'month'
+                  ? 'bg-[rgb(var(--color-primary-50))] text-[rgb(var(--color-primary-600))]'
+                  : 'text-[rgb(var(--color-text-500))]'
+              }`}
+              onClick={() => setView('month')}
+            >
+              {t('marketing.calendar.viewMonth', 'Month')}
+            </button>
+            <button
+              id="marketing-calendar-view-agenda"
+              type="button"
+              className={`border-l border-[rgb(var(--color-border-200))] px-3 py-1.5 ${
+                view === 'agenda'
+                  ? 'bg-[rgb(var(--color-primary-50))] text-[rgb(var(--color-primary-600))]'
+                  : 'text-[rgb(var(--color-text-500))]'
+              }`}
+              onClick={() => setView('agenda')}
+            >
+              {t('marketing.calendar.viewAgenda', 'Agenda')}
+            </button>
+          </div>
           <Button
             id="marketing-calendar-new-post"
             type="button"
@@ -216,7 +288,63 @@ export function MarketingCalendar({
         />
       ) : (
         <div className="flex items-start gap-4">
-          {/* Agenda column */}
+          {view === 'month' ? (
+            <div className="min-w-0 flex-1 rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4">
+              <div className="mb-3 text-sm font-semibold text-[rgb(var(--color-text-800))]">
+                {monthGrid.monthLabel}
+              </div>
+              <div className="grid grid-cols-7 gap-px overflow-hidden rounded-md border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-200))] text-xs">
+                {[0, 1, 2, 3, 4, 5, 6].map((weekday) => (
+                  <div
+                    key={weekday}
+                    className="bg-[rgb(var(--color-border-50))] px-2 py-1 text-center text-[10px] font-semibold uppercase tracking-wider text-[rgb(var(--color-text-400))]"
+                  >
+                    {new Date(2024, 0, 7 + weekday).toLocaleDateString(undefined, { weekday: 'short' })}
+                  </div>
+                ))}
+                {monthGrid.weeks.flat().map((cell) => (
+                  <div
+                    key={cell.date.toISOString()}
+                    className={`min-h-[5.5rem] bg-[rgb(var(--color-card))] p-1.5 ${
+                      cell.inMonth ? '' : 'opacity-40'
+                    }`}
+                  >
+                    <div
+                      className={`mb-1 text-[10px] font-semibold ${
+                        isSameDay(cell.date, new Date())
+                          ? 'text-[rgb(var(--color-primary-600))]'
+                          : 'text-[rgb(var(--color-text-400))]'
+                      }`}
+                    >
+                      {cell.date.getDate()}
+                    </div>
+                    <div className="space-y-0.5">
+                      {cell.items.slice(0, 3).map((item) => (
+                        <div
+                          key={item.target_id}
+                          className={`truncate rounded px-1 py-0.5 text-[10px] font-medium ${
+                            item.status === 'published'
+                              ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-300'
+                              : item.status === 'awaiting-manual-publish'
+                                ? 'bg-amber-50 text-amber-800 dark:bg-amber-900/20 dark:text-amber-300'
+                                : 'bg-[rgb(var(--color-primary-50))] text-[rgb(var(--color-primary-600))]'
+                          }`}
+                          title={`${item.content_title} · ${item.channel_name}`}
+                        >
+                          {item.content_title}
+                        </div>
+                      ))}
+                      {cell.items.length > 3 && (
+                        <div className="px-1 text-[10px] text-[rgb(var(--color-text-400))]">
+                          {t('marketing.calendar.moreItems', '+{{count}} more', { count: cell.items.length - 3 })}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ) : (
           <div className="min-w-0 flex-1 space-y-4">
             {upcomingGroups.length === 0 && (
               <div className="rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4 text-sm text-[rgb(var(--color-text-500))]">
@@ -257,6 +385,7 @@ export function MarketingCalendar({
               </div>
             )}
           </div>
+          )}
 
           {/* Right rail */}
           <div className="w-72 flex-shrink-0 space-y-4">

@@ -2,11 +2,17 @@ import type { Metadata } from 'next';
 import { redirect } from 'next/navigation';
 import { getSession } from '@alga-psa/auth';
 import { getMarketingAccess } from '@alga-psa/marketing/actions';
-import { getMarketingSequenceDetail, listMarketingSequences } from '@alga-psa/marketing/actions';
+import {
+  getMarketingSendingConfig,
+  getMarketingSequenceDetail,
+  listMarketingCampaigns,
+  listMarketingSequences,
+  type MarketingSendingConfig,
+} from '@alga-psa/marketing/actions';
 import type { SequenceDetail } from '@alga-psa/marketing/lib';
 import { SequencesView, MarketingAccessBoundary } from '@alga-psa/marketing/components';
 import { getAllContacts } from '@alga-psa/clients/actions';
-import type { IContact, IMarketingSequence } from '@alga-psa/types';
+import type { IContact, IMarketingCampaign, IMarketingSequence } from '@alga-psa/types';
 import { enforceServerProductRoute } from '@/lib/serverProductRouteGuard';
 
 export const metadata: Metadata = {
@@ -33,8 +39,15 @@ export default async function MarketingSequencesPage() {
   let sequences: IMarketingSequence[] = [];
   let initialDetail: SequenceDetail | null = null;
   let contacts: IContact[] = [];
+  let campaigns: IMarketingCampaign[] = [];
+  let sendingConfig: MarketingSendingConfig | null = null;
   try {
-    [sequences, contacts] = await Promise.all([listMarketingSequences(), getAllContacts('all')]);
+    [sequences, contacts, campaigns, sendingConfig] = await Promise.all([
+      listMarketingSequences(),
+      getAllContacts('all'),
+      listMarketingCampaigns(),
+      getMarketingSendingConfig(),
+    ]);
     if (sequences.length > 0) {
       initialDetail = await getMarketingSequenceDetail(sequences[0].sequence_id);
     }
@@ -42,7 +55,15 @@ export default async function MarketingSequencesPage() {
     console.error('marketing sequences: initial load failed', err);
   }
 
-  return <SequencesView sequences={sequences} initialDetail={initialDetail} contacts={contacts} />;
+  return (
+    <SequencesView
+      sequences={sequences}
+      initialDetail={initialDetail}
+      contacts={contacts}
+      campaigns={campaigns}
+      sendingConfig={sendingConfig}
+    />
+  );
 }
 
 export const dynamic = 'force-dynamic';
