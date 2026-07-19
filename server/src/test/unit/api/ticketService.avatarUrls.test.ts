@@ -18,12 +18,15 @@ vi.mock('@alga-psa/formatting/avatarUtils', async () => {
 function createQueryChain(ticket: Record<string, unknown> | null) {
   const chain = {
     leftJoin: vi.fn(() => chain),
+    distinctOn: vi.fn(() => chain),
     modify: vi.fn((callback: (builder: typeof chain) => void) => {
       callback(chain);
       return chain;
     }),
+    orderBy: vi.fn(() => chain),
     select: vi.fn(() => chain),
     where: vi.fn(() => chain),
+    as: vi.fn(() => chain),
     first: vi.fn().mockResolvedValue(ticket),
   };
 
