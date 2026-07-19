@@ -35,6 +35,15 @@ export interface EmailProviderConfig {
     pubsub_subscription_name?: string;
     client_id?: string;
     client_secret?: string;
+    tenant_id?: string;
+    microsoft_profile_id?: string;
+    client_secret_ref?: string;
+    resolved_client_id?: string;
+    resolved_client_secret?: string;
+    resolved_tenant_id?: string;
+    resolved_credential_source?: 'profile' | 'vendor' | 'environment' | 'legacy';
+    resolved_profile_id?: string;
+    resolved_client_secret_ref?: string;
     access_token?: string;
     refresh_token?: string;
     token_expires_at?: string;

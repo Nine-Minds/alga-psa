@@ -3,6 +3,7 @@ import * as React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { flushSync } from 'react-dom';
 import { createRoot, Root } from 'react-dom/client';
+import { waitFor } from '@testing-library/react';
 
 // useFormatters requires an I18nProvider; these tests render the component
 // standalone, so substitute locale-stable formatters.
@@ -169,10 +170,11 @@ describe('TimeSheetApproval', () => {
 
     await flushUi();
 
-    const toggleButton = container.querySelector('button[title="Show Details"]');
-    if (!toggleButton) {
-      throw new Error('Show Details button not found');
-    }
+    const toggleButton = await waitFor(() => {
+      const button = container.querySelector('button[title="Show Details"]');
+      expect(button).not.toBeNull();
+      return button as HTMLButtonElement;
+    });
     toggleButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     await flushUi();
 
@@ -340,10 +342,11 @@ describe('TimeSheetApproval', () => {
 
     await flushUi();
 
-    const toggleButton = container.querySelector('button[title="Show Details"]');
-    if (!toggleButton) {
-      throw new Error('Show Details button not found');
-    }
+    const toggleButton = await waitFor(() => {
+      const button = container.querySelector('button[title="Show Details"]');
+      expect(button).not.toBeNull();
+      return button as HTMLButtonElement;
+    });
     toggleButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     await flushUi();
 

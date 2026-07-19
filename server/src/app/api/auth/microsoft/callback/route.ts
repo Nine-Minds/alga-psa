@@ -8,6 +8,7 @@ import { resolveMicrosoftConsumerProfileConfig } from '@alga-psa/integrations/li
 import { getWebhookBaseUrl } from '../../../../../utils/email/webhookHelpers';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import axios from 'axios';
+import { getMicrosoftTokenUrl } from '@alga-psa/shared/services/email/microsoftGraphEndpoints';
 
 export const dynamic = 'force-dynamic';
 
@@ -259,7 +260,7 @@ export async function GET(request: NextRequest) {
 
     // Exchange authorization code for tokens
     try {
-      const tokenUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/token`;
+      const tokenUrl = getMicrosoftTokenUrl('common');
       const params = new URLSearchParams({
         client_id: clientId,
         client_secret: clientSecret,
@@ -293,6 +294,11 @@ export async function GET(request: NextRequest) {
                 access_token: access_token,
                 refresh_token: refresh_token || null,
                 token_expires_at: expiresAt.toISOString(),
+                client_id: clientId,
+                client_secret: clientSecret,
+                tenant_id: microsoftProfile.status === 'ready' ? microsoftProfile.microsoftTenantId || 'common' : 'common',
+                microsoft_profile_id: microsoftProfile.status === 'ready' ? microsoftProfile.profileId || null : null,
+                client_secret_ref: microsoftProfile.status === 'ready' ? microsoftProfile.clientSecretRef || null : null,
                 updated_at: new Date().toISOString(),
               });
 
@@ -350,6 +356,8 @@ export async function GET(request: NextRequest) {
                     access_token: access_token,
                     refresh_token: refresh_token || null,
                     token_expires_at: expiresAt.toISOString(),
+                    microsoft_profile_id: microsoftProfile.status === 'ready' ? microsoftProfile.profileId : undefined,
+                    client_secret_ref: microsoftProfile.status === 'ready' ? microsoftProfile.clientSecretRef : undefined,
                   },
                 };
 

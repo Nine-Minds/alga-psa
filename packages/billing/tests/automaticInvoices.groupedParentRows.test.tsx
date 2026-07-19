@@ -3,7 +3,7 @@
  */
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 
 let mockDueWorkResponse: any;
@@ -673,14 +673,23 @@ describe('AutomaticInvoices grouped parent rows', () => {
         'select-parent-group:client-1:2026-03-01:2026-04-01',
       ) as HTMLInputElement | null;
       expect(checkbox).not.toBeNull();
+      expect(checkbox).toBeEnabled();
       return checkbox as HTMLInputElement;
     });
     fireEvent.click(parentCheckbox);
 
-    const previewButton = screen.getByRole('button', { name: 'Preview Selected' });
+    await waitFor(() => {
+      expect(parentCheckbox).toBeChecked();
+    });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 350));
+    });
+    expect(parentCheckbox).toBeChecked();
+    const previewButton = await screen.findByRole('button', { name: 'Preview Selected' });
+    const generateButton = await screen.findByRole('button', { name: 'Generate Invoices (1)' });
     await waitFor(() => {
       expect(previewButton).toBeEnabled();
-      expect(screen.getByRole('button', { name: 'Generate Invoices (1)' })).toBeEnabled();
+      expect(generateButton).toBeEnabled();
     });
     fireEvent.click(previewButton);
     await waitFor(() => {
@@ -690,7 +699,11 @@ describe('AutomaticInvoices grouped parent rows', () => {
     });
     expect(screen.queryByTestId('grouped-preview-unavailable-copy')).not.toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Generate Invoices (1)' }));
+    const liveGenerateButton = await screen.findByRole('button', { name: 'Generate Invoices (1)' });
+    await waitFor(() => {
+      expect(liveGenerateButton).toBeEnabled();
+    });
+    fireEvent.click(liveGenerateButton);
     await waitFor(() => {
       expect(mockGenerateGroupedInvoicesAsRecurringBillingRun).toHaveBeenCalledTimes(1);
     });

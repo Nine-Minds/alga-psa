@@ -24,6 +24,8 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 import { MicrosoftGraphAdapter } from '@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter';
 import type { Microsoft365DiagnosticsReport } from '@alga-psa/shared/interfaces/microsoft365-diagnostics.interfaces';
+import { buildMicrosoftEmailProviderConfig } from '@alga-psa/shared/services/email/microsoftEmailProviderConfig';
+import { resolveMicrosoftConsumerProfileConfig } from '../../lib/microsoftConsumerProfileResolution';
 
 type EmailProviderActionError = ActionMessageError;
 type EmailProviderSetupActionResult = EmailProviderSetupResult | EmailProviderActionError;
@@ -328,22 +330,17 @@ async function persistMicrosoftConfig(
   if (!config) return undefined;
   if (!tenant) throwExpectedEmailProviderError('Tenant context is required to save Microsoft email configuration');
 
-  // Check if we should use hosted configuration for Enterprise Edition
-  const hostedConfig = await getHostedMicrosoftConfig();
+  const microsoftProfile = await resolveMicrosoftConsumerProfileConfig(tenant, 'email');
+  if (microsoftProfile.status !== 'ready') {
+    throwExpectedEmailProviderError(
+      microsoftProfile.message || 'Microsoft Email profile is not configured'
+    );
+  }
 
-  // Save secrets to tenant-specific secret store
-  const secretProvider = await getSecretProviderInstance();
-  const [tenantClientId, tenantClientSecret, tenantTenantId] = await Promise.all([
-    secretProvider.getTenantSecret(tenant, 'microsoft_client_id'),
-    secretProvider.getTenantSecret(tenant, 'microsoft_client_secret'),
-    secretProvider.getTenantSecret(tenant, 'microsoft_tenant_id')
-  ]);
-  
-  // Use hosted credentials if available; otherwise prefer tenant provider secrets and then per-provider values.
-  const effectiveClientId = hostedConfig?.client_id || tenantClientId || config.client_id || '';
-  const effectiveClientSecret = hostedConfig?.client_secret || tenantClientSecret || config.client_secret || '';
-  const effectiveTenantId = hostedConfig?.tenant_id || tenantTenantId || config.tenant_id || 'common';
-  const effectiveRedirectUri = hostedConfig?.redirect_uri || config.redirect_uri;
+  const effectiveClientId = microsoftProfile.clientId || '';
+  const effectiveClientSecret = microsoftProfile.clientSecret || '';
+  const effectiveTenantId = microsoftProfile.microsoftTenantId || 'common';
+  const effectiveRedirectUri = config.redirect_uri;
   
   // Ensure required fields are not undefined
   if (!effectiveTenantId) {
@@ -353,16 +350,21 @@ async function persistMicrosoftConfig(
     throwExpectedEmailProviderError('Redirect URI is required for Microsoft configuration');
   }
   
-  if (effectiveClientId && typeof effectiveClientId === 'string' && !hostedConfig?.client_id) {
-    // Only store user-provided secrets, not hosted ones
-    await secretProvider.setTenantSecret(tenant, 'microsoft_client_id', effectiveClientId);
-  }
-  if (effectiveClientSecret && typeof effectiveClientSecret === 'string' && !hostedConfig?.client_secret) {
-    // Only store user-provided secrets, not hosted ones
-    await secretProvider.setTenantSecret(tenant, 'microsoft_client_secret', effectiveClientSecret);
-  }
-  
   const now = new Date();
+  const existingConfig = await tenantDb(trx, tenant)
+    .table('microsoft_email_provider_config')
+    .where({ email_provider_id: providerId })
+    .first();
+  const preserveIssuingApp = Boolean(existingConfig?.refresh_token && !config.refresh_token);
+  const pinnedClientId = preserveIssuingApp ? existingConfig.client_id : effectiveClientId;
+  const pinnedClientSecret = preserveIssuingApp ? existingConfig.client_secret : effectiveClientSecret;
+  const pinnedProfileId = preserveIssuingApp
+    ? existingConfig.microsoft_profile_id
+    : microsoftProfile.profileId || null;
+  const pinnedClientSecretRef = preserveIssuingApp
+    ? existingConfig.client_secret_ref
+    : microsoftProfile.clientSecretRef || null;
+  const pinnedTenantId = preserveIssuingApp ? existingConfig.tenant_id : effectiveTenantId;
 
   // Upsert config while preserving existing sensitive/webhook fields when incoming values are NULL
   const msConfigRows = await tenantDb(trx, tenant)
@@ -370,9 +372,11 @@ async function persistMicrosoftConfig(
     .insert({
       email_provider_id: providerId,
       tenant,
-      client_id: effectiveClientId,
-      client_secret: effectiveClientSecret,
-      tenant_id: effectiveTenantId,
+      client_id: pinnedClientId,
+      client_secret: pinnedClientSecret,
+      microsoft_profile_id: pinnedProfileId,
+      client_secret_ref: pinnedClientSecretRef,
+      tenant_id: pinnedTenantId,
       redirect_uri: effectiveRedirectUri,
       auto_process_emails: config.auto_process_emails,
       max_emails_per_sync: config.max_emails_per_sync,
@@ -388,9 +392,14 @@ async function persistMicrosoftConfig(
     })
     .onConflict(['email_provider_id', 'tenant'])
     .merge({
-      client_id: effectiveClientId,
-      client_secret: effectiveClientSecret,
-      tenant_id: effectiveTenantId,
+      // A settings save commonly has no new token. In that case retain the
+      // credentials that issued the stored refresh token; switching the pin to
+      // a newly-bound profile would make that token irredeemable.
+      client_id: pinnedClientId,
+      client_secret: pinnedClientSecret,
+      microsoft_profile_id: pinnedProfileId,
+      client_secret_ref: pinnedClientSecretRef,
+      tenant_id: pinnedTenantId,
       redirect_uri: effectiveRedirectUri,
       auto_process_emails: config.auto_process_emails,
       max_emails_per_sync: config.max_emails_per_sync,
@@ -1230,11 +1239,52 @@ export const testEmailProviderConnection = withAuth(async (
       }
     }
 
+    if (provider.provider_type === 'microsoft') {
+      const vendorConfig = await db.table('microsoft_email_provider_config')
+        .where({ email_provider_id: providerId })
+        .first();
+      if (!vendorConfig) {
+        return emailProviderOperationError('Microsoft provider configuration not found.', 'missing_config');
+      }
+
+      const adapterConfig = await buildMicrosoftEmailProviderConfig({
+        id: provider.id,
+        tenant: provider.tenant,
+        name: provider.provider_name || provider.mailbox,
+        provider_type: 'microsoft',
+        mailbox: provider.mailbox,
+        folder_to_monitor: Array.isArray(vendorConfig.folder_filters)
+          ? vendorConfig.folder_filters[0] || 'Inbox'
+          : 'Inbox',
+        active: provider.is_active,
+        webhook_notification_url: `${getWebhookBaseUrl()}/api/email/webhooks/microsoft`,
+        webhook_subscription_id: vendorConfig.webhook_subscription_id || undefined,
+        webhook_verification_token: vendorConfig.webhook_verification_token || undefined,
+        webhook_expires_at: vendorConfig.webhook_expires_at || undefined,
+        connection_status: provider.status || 'disconnected',
+        created_at: provider.created_at,
+        updated_at: provider.updated_at,
+        provider_config: vendorConfig,
+      });
+      const result = await new MicrosoftGraphAdapter(adapterConfig).testConnection();
+      if (!result.success) {
+        await db.table('email_providers').where({ id: providerId }).update({
+          status: 'error',
+          error_message: result.error || 'Microsoft connection test failed',
+          updated_at: knex.fn.now(),
+        });
+        return emailProviderOperationError(
+          'Microsoft 365 authentication failed. Reconnect the mailbox and try again.',
+          'connection_failed'
+        );
+      }
+    }
+
     await db.table('email_providers')
       .where({ id: providerId })
       .update({
         status: 'connected',
-        last_sync_at: knex.fn.now(),
+        error_message: null,
         updated_at: knex.fn.now()
       });
 
@@ -1337,7 +1387,9 @@ export const runMicrosoft365Diagnostics = withAuth(async (
       updated_at: provider.updated_at,
     };
 
-    const adapter = new MicrosoftGraphAdapter(adapterConfig as any);
+    const adapter = new MicrosoftGraphAdapter(
+      await buildMicrosoftEmailProviderConfig(adapterConfig as any)
+    );
 
     const report = await adapter.runMicrosoft365Diagnostics({
       includeIdentifiers: true,
