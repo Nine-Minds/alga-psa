@@ -205,13 +205,21 @@ export interface SequenceSendSummary {
   completed: number;
   stopped: number;
   failed: number;
+  /** Steps another runner had already claimed or delivered (idempotent replay). */
+  skipped: number;
 }
 
 /**
- * Sends every due sequence step for the tenant. Claimed per enrollment with
- * row locks (skipLocked) and advanced with an optimistic current_step_order
- * guard, so overlapping job runs cannot double-send. Failed sends back off
- * 30 minutes without advancing; the enrollment stays visibly on its step.
+ * Sends every due sequence step for the tenant. Each (enrollment, step) pair
+ * is claimed by inserting into the idempotent send log
+ * (`marketing_sequence_sends`, unique per tenant/enrollment/step) inside the
+ * row-locking claim transaction, and the enrollment advances before that
+ * transaction commits — so overlapping job runs (pg-boss is at-least-once), a
+ * crash between send and advance, or a retried run can never deliver the same
+ * step twice. A definitively failed send releases its claim (row marked
+ * 'failed'), rewinds the enrollment, and backs off 30 minutes; a crash after
+ * the claim commits but before SMTP accepts drops that one email
+ * (at-most-once by design).
  */
 export async function sendDueSequenceStepsInternal(
   knex: Knex,
@@ -220,7 +228,7 @@ export async function sendDueSequenceStepsInternal(
 ): Promise<SequenceSendSummary> {
   const now = options.now ?? new Date();
   const limit = options.limit ?? 50;
-  const summary: SequenceSendSummary = { sent: 0, completed: 0, stopped: 0, failed: 0 };
+  const summary: SequenceSendSummary = { sent: 0, completed: 0, stopped: 0, failed: 0, skipped: 0 };
 
   const due = await tenantDb(knex, tenant).table('marketing_sequence_enrollments as e')
     .join('marketing_sequences as s', function joinSequence() {
@@ -254,10 +262,11 @@ async function sendOneEnrollmentStep(
   enrollmentId: string,
   baseUrl: string,
   now: Date,
-): Promise<'sent' | 'completed' | 'stopped'> {
-  // Claim and render inside a transaction; send outside it so SMTP latency
-  // doesn't hold the lock. The optimistic guard on advance prevents a
-  // double-send if two runners race past the lock window.
+): Promise<'sent' | 'completed' | 'stopped' | 'skipped'> {
+  // Claim, advance, and render inside one transaction; send outside it so
+  // SMTP latency doesn't hold the row lock. The claim is durable (send-log
+  // row + advanced enrollment committed together), so once this transaction
+  // commits no other runner — concurrent or retried — can pick the step up.
   const prepared = await withTransaction(knex, async (trx) => {
     const db = tenantDb(trx, tenant);
     const enrollment = await db.table('marketing_sequence_enrollments')
@@ -265,6 +274,13 @@ async function sendOneEnrollmentStep(
       .forUpdate()
       .first();
     if (!enrollment) return null;
+
+    // Re-verify dueness under the lock: a concurrent runner may have
+    // advanced this enrollment between the due-list query and lock acquisition,
+    // in which case the next step is not due yet.
+    if (!enrollment.next_send_at || new Date(enrollment.next_send_at) > now) {
+      return { kind: 'skipped' as const };
+    }
 
     const step = await db.table('marketing_sequence_steps')
       .where({ tenant, sequence_id: enrollment.sequence_id, step_order: enrollment.current_step_order + 1 })
@@ -312,6 +328,38 @@ async function sendOneEnrollmentStep(
       return { kind: 'stopped' as const };
     }
 
+    // Idempotent claim: at most one delivery per (enrollment, step), ever.
+    // A 'failed' claim may be retaken (the earlier send definitively did not
+    // happen); an existing 'claimed'/'sent' row means another runner owns or
+    // already delivered this step — skip without touching the enrollment.
+    const claimed = await db.table('marketing_sequence_sends')
+      .insert({
+        tenant,
+        enrollment_id: enrollmentId,
+        step_id: step.step_id,
+        status: 'claimed',
+        claimed_at: now.toISOString(),
+      })
+      .onConflict(['tenant', 'enrollment_id', 'step_id'])
+      .merge({ status: 'claimed', claimed_at: now.toISOString(), error: null })
+      .where('marketing_sequence_sends.status', '=', 'failed')
+      .returning('send_id');
+    if (claimed.length === 0) return { kind: 'skipped' as const };
+
+    // Advance before the claim transaction commits: from this point the step
+    // can never be re-sent, even if the process dies before SMTP accepts.
+    const following = await nextSendAt(db, tenant, enrollment.sequence_id, step.step_order, now);
+    await db.table('marketing_sequence_enrollments')
+      .where({ tenant, enrollment_id: enrollmentId, state: 'active' })
+      .update({
+        current_step_order: step.step_order,
+        // No following step: the sequence is finished — mark completed, not
+        // merely unscheduled, so the completed branch is reachable.
+        state: following ? 'active' : 'completed',
+        next_send_at: following,
+        updated_at: now.toISOString(),
+      });
+
     const unsubscribeUrl = `${baseUrl}/api/marketing/unsubscribe/${tenant}/${enrollmentId}`;
     const clickBase = `${baseUrl}/api/marketing/track/click/${tenant}/${enrollmentId}/${step.step_id}`;
     const openPixel = `${baseUrl}/api/marketing/track/open/${tenant}/${enrollmentId}/${step.step_id}`;
@@ -337,45 +385,65 @@ async function sendOneEnrollmentStep(
       subject,
       html,
       text,
+      unsubscribeUrl,
     };
   });
 
   if (!prepared) return 'stopped';
   if (prepared.kind === 'completed') return 'completed';
   if (prepared.kind === 'stopped') return 'stopped';
+  if (prepared.kind === 'skipped') return 'skipped';
 
   const { enrollment, step, contact, sendUserId, subject, html, text } = prepared;
 
   const emailService = TenantEmailService.getInstance(tenant);
   await emailService.initialize();
-  await emailService.sendEmail({
-    to: contact.email,
-    templateProcessor: inlineTemplate(subject, html, text),
-    contactId: contact.contact_name_id,
-    entityType: 'marketing_sequence_step',
-    entityId: step.step_id,
-  });
+  try {
+    const result = await emailService.sendEmail({
+      to: contact.email,
+      templateProcessor: inlineTemplate(subject, html, text),
+      contactId: contact.contact_name_id,
+      entityType: 'marketing_sequence_step',
+      entityId: step.step_id,
+      headers: {
+        'List-Unsubscribe': `<${prepared.unsubscribeUrl}>`,
+        'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+      },
+    });
+    if (result && result.success === false) {
+      throw new Error(result.error ?? 'Email provider reported send failure');
+    }
+  } catch (error) {
+    // The send definitively did not happen: release the claim, rewind the
+    // enrollment to the step it was on, and back off 30 minutes for a retry.
+    await withTransaction(knex, async (trx) => {
+      const db = tenantDb(trx, tenant);
+      await db.table('marketing_sequence_sends')
+        .where({ tenant, enrollment_id: enrollmentId, step_id: step.step_id, status: 'claimed' })
+        .update({
+          status: 'failed',
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      await db.table('marketing_sequence_enrollments')
+        .where({ tenant, enrollment_id: enrollmentId })
+        // Only rewind states this run produced; a concurrent stop (e.g.
+        // unsubscribe) must not be resurrected.
+        .whereIn('state', ['active', 'completed'])
+        .update({
+          current_step_order: enrollment.current_step_order,
+          state: 'active',
+          next_send_at: new Date(now.getTime() + 30 * 60_000).toISOString(),
+          updated_at: now.toISOString(),
+        });
+    });
+    throw error;
+  }
 
   await withTransaction(knex, async (trx) => {
     const db = tenantDb(trx, tenant);
-    const following = await nextSendAt(db, tenant, enrollment.sequence_id, step.step_order, now);
-    const advanced = await db.table('marketing_sequence_enrollments')
-      .where({
-        tenant,
-        enrollment_id: enrollmentId,
-        state: 'active',
-        current_step_order: enrollment.current_step_order,
-      })
-      .update({
-        current_step_order: step.step_order,
-        // No following step: the sequence is finished — mark completed, not
-        // merely unscheduled, so the completed branch is reachable.
-        state: following ? 'active' : 'completed',
-        next_send_at: following,
-        updated_at: now.toISOString(),
-      });
-    if (!advanced) return; // another runner advanced it; the engagement below would double-log, so stop here
-
+    await db.table('marketing_sequence_sends')
+      .where({ tenant, enrollment_id: enrollmentId, step_id: step.step_id })
+      .update({ status: 'sent', sent_at: now.toISOString() });
     await recordMarketingEngagement(trx, tenant, {
       typeName: 'Marketing: Email Sent',
       title: `Sequence email sent: ${subject}`,

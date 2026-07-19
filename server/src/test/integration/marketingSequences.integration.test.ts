@@ -143,7 +143,13 @@ describeDb('T005-T007: marketing sequences', () => {
 
     const t0 = new Date();
     const firstRun = await sendDueSequenceStepsInternal(db, tenantId, { baseUrl: BASE_URL, now: t0 });
-    expect(firstRun).toEqual({ sent: 1, completed: 0, stopped: 0, failed: 0 });
+    expect(firstRun).toEqual({ sent: 1, completed: 0, stopped: 0, failed: 0, skipped: 0 });
+
+    // The idempotent send log carries the delivered claim (B2).
+    const sendLog = await tenantTable('marketing_sequence_sends')
+      .where({ tenant: tenantId, enrollment_id: enrollment.enrollment_id, step_id: steps[0].step_id })
+      .first();
+    expect(sendLog).toMatchObject({ status: 'sent' });
 
     // The send went through the outbound email abstraction, to the contact.
     expect(sendEmailMock).toHaveBeenCalledTimes(1);
@@ -181,14 +187,14 @@ describeDb('T005-T007: marketing sequences', () => {
 
     // Not yet due: an immediate re-run sends nothing (idempotence between runs).
     const immediateRerun = await sendDueSequenceStepsInternal(db, tenantId, { baseUrl: BASE_URL, now: new Date(t0.getTime() + 60_000) });
-    expect(immediateRerun).toEqual({ sent: 0, completed: 0, stopped: 0, failed: 0 });
+    expect(immediateRerun).toEqual({ sent: 0, completed: 0, stopped: 0, failed: 0, skipped: 0 });
     expect(sendEmailMock).toHaveBeenCalledTimes(1);
 
     // Advance past step 2's delay: the final step sends and — per the F047
     // state machine — the enrollment completes with nothing left to send.
     const t1 = new Date(t0.getTime() + 61 * 60_000);
     const secondRun = await sendDueSequenceStepsInternal(db, tenantId, { baseUrl: BASE_URL, now: t1 });
-    expect(secondRun).toEqual({ sent: 1, completed: 0, stopped: 0, failed: 0 });
+    expect(secondRun).toEqual({ sent: 1, completed: 0, stopped: 0, failed: 0, skipped: 0 });
     expect(sendEmailMock).toHaveBeenCalledTimes(2);
     expect(sendEmailMock.mock.calls[1][0]).toMatchObject({
       to: 'ada@example.com',
@@ -201,6 +207,67 @@ describeDb('T005-T007: marketing sequences', () => {
     expect(afterSecond.next_send_at).toBeNull();
 
     expect(await marketingInteractionCount('Marketing: Email Sent', contactId)).toBe(2);
+  });
+
+  it('B2: an existing claim for the due step is skipped without a second send', async () => {
+    const contactId = await createContactWithEmail('Claimed Contact', 'claimed@example.com');
+    const { sequence, steps } = await createActiveSequence('Claimed drip', [
+      { step_order: 1, delay_minutes: 0, subject: 'Only once' },
+    ]);
+    const enrollment = await enrollContactInternal(db, tenantId, sequence.sequence_id, contactId, userId);
+
+    // Simulate another runner having already delivered this step.
+    await tenantTable('marketing_sequence_sends').insert({
+      tenant: tenantId,
+      enrollment_id: enrollment.enrollment_id,
+      step_id: steps[0].step_id,
+      status: 'sent',
+      claimed_at: new Date().toISOString(),
+      sent_at: new Date().toISOString(),
+    });
+
+    const summary = await sendDueSequenceStepsInternal(db, tenantId, { baseUrl: BASE_URL, now: new Date() });
+    expect(summary.sent).toBe(0);
+    expect(summary.skipped).toBe(1);
+    expect(sendEmailMock).not.toHaveBeenCalled();
+  });
+
+  it('B2: a failed send releases the claim, rewinds the enrollment, and retries after backoff', async () => {
+    const contactId = await createContactWithEmail('Flaky SMTP', 'flaky@example.com');
+    const { sequence, steps } = await createActiveSequence('Flaky drip', [
+      { step_order: 1, delay_minutes: 0, subject: 'Eventually delivered' },
+    ]);
+    const enrollment = await enrollContactInternal(db, tenantId, sequence.sequence_id, contactId, userId);
+
+    sendEmailMock.mockResolvedValueOnce({ success: false, error: 'SMTP rejected' });
+    const t0 = new Date();
+    const failedRun = await sendDueSequenceStepsInternal(db, tenantId, { baseUrl: BASE_URL, now: t0 });
+    expect(failedRun.failed).toBe(1);
+    expect(failedRun.sent).toBe(0);
+
+    // Claim released ('failed'), enrollment rewound to its pre-claim step
+    // with a 30-minute backoff.
+    const failedLog = await tenantTable('marketing_sequence_sends')
+      .where({ tenant: tenantId, enrollment_id: enrollment.enrollment_id, step_id: steps[0].step_id })
+      .first();
+    expect(failedLog).toMatchObject({ status: 'failed', error: 'SMTP rejected' });
+    const afterFailure = await getEnrollment(enrollment.enrollment_id);
+    expect(afterFailure).toMatchObject({ current_step_order: 0, state: 'active' });
+    expect(Math.abs(new Date(afterFailure.next_send_at).getTime() - (t0.getTime() + 30 * 60_000))).toBeLessThan(5_000);
+
+    // No email interaction was recorded for the failed attempt.
+    expect(await marketingInteractionCount('Marketing: Email Sent', contactId)).toBe(0);
+
+    // After the backoff the same step is retaken and delivered exactly once.
+    const t1 = new Date(t0.getTime() + 31 * 60_000);
+    const retryRun = await sendDueSequenceStepsInternal(db, tenantId, { baseUrl: BASE_URL, now: t1 });
+    expect(retryRun.sent).toBe(1);
+    expect(sendEmailMock).toHaveBeenCalledTimes(2);
+    const retriedLog = await tenantTable('marketing_sequence_sends')
+      .where({ tenant: tenantId, enrollment_id: enrollment.enrollment_id, step_id: steps[0].step_id })
+      .first();
+    expect(retriedLog).toMatchObject({ status: 'sent', error: null });
+    expect(await marketingInteractionCount('Marketing: Email Sent', contactId)).toBe(1);
   });
 
   it('T006: a suppressed contact receives zero sends and the enrollment is stopped', async () => {

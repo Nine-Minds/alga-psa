@@ -48,8 +48,8 @@ export async function addSuppression(
     .onConflict(['tenant', 'email'])
     .ignore();
 
+  const now = new Date().toISOString();
   if (input.contactId) {
-    const now = new Date().toISOString();
     await db.table('marketing_contact_state')
       .insert({
         tenant,
@@ -62,13 +62,23 @@ export async function addSuppression(
 
     await db.table('marketing_sequence_enrollments')
       .where({ tenant, contact_id: input.contactId, state: 'active' })
-      .update({ state: 'stopped', updated_at: now });
+      .update({ state: 'stopped', next_send_at: null, updated_at: now });
   }
-  await db.table('marketing_sequence_enrollments as e')
+
+  // Stop every other active enrollment for the address (duplicate contacts
+  // sharing one email). Postgres cannot UPDATE through a knex join, so
+  // resolve the enrollment ids first, then update by key.
+  const emailMatched = await db.table('marketing_sequence_enrollments as e')
     .join('contacts as c', function joinContact() {
       this.on('c.tenant', '=', 'e.tenant').andOn('c.contact_name_id', '=', 'e.contact_id');
     })
     .where({ 'e.tenant': tenant, 'e.state': 'active' })
     .whereRaw('lower(c.email) = ?', [email])
-    .update({ 'e.state': 'stopped', 'e.updated_at': new Date().toISOString() });
+    .pluck('e.enrollment_id');
+  if (emailMatched.length > 0) {
+    await db.table('marketing_sequence_enrollments')
+      .where({ tenant, state: 'active' })
+      .whereIn('enrollment_id', emailMatched)
+      .update({ state: 'stopped', next_send_at: null, updated_at: now });
+  }
 }
