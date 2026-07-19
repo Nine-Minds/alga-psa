@@ -3,7 +3,7 @@
  */
 import React from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom/vitest';
 
 let mockDueWorkResponse: any;
@@ -681,6 +681,10 @@ describe('AutomaticInvoices grouped parent rows', () => {
     await waitFor(() => {
       expect(parentCheckbox).toBeChecked();
     });
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 350));
+    });
+    expect(parentCheckbox).toBeChecked();
     const previewButton = await screen.findByRole('button', { name: 'Preview Selected' });
     const generateButton = await screen.findByRole('button', { name: 'Generate Invoices (1)' });
     await waitFor(() => {
