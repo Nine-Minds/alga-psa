@@ -14,11 +14,13 @@ exports.up = async function up(knex) {
              location_id,
              ROW_NUMBER() OVER (
                PARTITION BY tenant, client_id
-               ORDER BY updated_at DESC, created_at DESC, location_id DESC
+               ORDER BY (is_active IS TRUE) DESC,
+                        updated_at DESC NULLS LAST,
+                        created_at DESC NULLS LAST,
+                        location_id DESC
              ) AS default_rank
       FROM client_locations
       WHERE is_default = true
-        AND is_active = true
     )
     UPDATE client_locations AS location
     SET is_default = false,
