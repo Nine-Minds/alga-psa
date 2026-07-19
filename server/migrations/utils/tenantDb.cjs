@@ -274,6 +274,7 @@ const TENANT_TABLE_METADATA = {
   marketing_sequences: { scope: 'tenant' },
   marketing_sequence_steps: { scope: 'tenant' },
   marketing_sequence_enrollments: { scope: 'tenant' },
+  marketing_sequence_sends: { scope: 'tenant' },
   marketing_contact_state: { scope: 'tenant' },
   marketing_suppressions: { scope: 'tenant' },
   marketing_engagements: { scope: 'tenant' },

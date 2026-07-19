@@ -6,6 +6,7 @@ interface EnrollmentContext {
   contactId: string;
   clientId: string | null;
   userId: string;
+  campaignId: string | null;
 }
 
 async function loadEnrollmentContext(
@@ -22,19 +23,18 @@ async function loadEnrollmentContext(
     .where({ tenant, contact_name_id: enrollment.contact_id })
     .first('contact_name_id', 'client_id');
 
-  let userId = enrollment.enrolled_by as string | null;
-  if (!userId) {
-    const sequence = await db.table('marketing_sequences')
-      .where({ tenant, sequence_id: enrollment.sequence_id })
-      .first('created_by');
-    userId = sequence?.created_by ?? null;
-  }
+  const sequence = await db.table('marketing_sequences')
+    .where({ tenant, sequence_id: enrollment.sequence_id })
+    .first('created_by', 'campaign_id');
+
+  const userId = (enrollment.enrolled_by as string | null) ?? sequence?.created_by ?? null;
   if (!contact || !userId) return null;
 
   return {
     contactId: contact.contact_name_id,
     clientId: contact.client_id ?? null,
     userId,
+    campaignId: (sequence?.campaign_id as string | null) ?? null,
   };
 }
 
@@ -55,6 +55,7 @@ export async function recordSequenceOpenInternal(
       contactId: ctx.contactId,
       clientId: ctx.clientId,
       userId: ctx.userId,
+      campaignId: ctx.campaignId,
       stepId,
     });
   });
@@ -78,6 +79,7 @@ export async function recordSequenceClickInternal(
       contactId: ctx.contactId,
       clientId: ctx.clientId,
       userId: ctx.userId,
+      campaignId: ctx.campaignId,
       stepId,
     });
   });

@@ -3,7 +3,7 @@
  *
  * Asserts the marketing schema applies cleanly on the standard test database
  * (createTestDbConnection drops/recreates it and runs ALL migrations + dev
- * seeds): all 12 marketing tables exist, every one carries `tenant` in its
+ * seeds): all 13 marketing tables exist, every one carries `tenant` in its
  * primary key, and the seed migrations install the 5 marketing interaction
  * types (globally, in system_interaction_types) plus the marketing
  * read/manage permissions for a tenant.
@@ -41,6 +41,7 @@ const MARKETING_TABLES = [
   'marketing_sequences',
   'marketing_sequence_steps',
   'marketing_sequence_enrollments',
+  'marketing_sequence_sends',
   'marketing_contact_state',
   'marketing_suppressions',
   'marketing_engagements',
@@ -65,7 +66,7 @@ describeDb('T001: marketing migrations', () => {
     await db?.destroy();
   });
 
-  it('creates all 12 marketing tables', async () => {
+  it('creates all 13 marketing tables', async () => {
     const rows = await db('information_schema.tables')
       .where({ table_schema: 'public' })
       .whereIn('table_name', MARKETING_TABLES as unknown as string[])

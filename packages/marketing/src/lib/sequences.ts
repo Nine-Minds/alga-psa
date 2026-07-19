@@ -31,16 +31,25 @@ function assertContiguousSteps(steps: SequenceInput['steps']): void {
   });
 }
 
+async function assertCampaignInTenant(db: ReturnType<typeof tenantDb>, tenant: string, campaignId: string): Promise<void> {
+  const campaign = await db.table('marketing_campaigns')
+    .where({ tenant, campaign_id: campaignId })
+    .first('campaign_id');
+  if (!campaign) throw new Error('Campaign not found');
+}
+
 export async function createSequenceInternal(knex: Knex, tenant: string, input: SequenceInput, createdBy: string): Promise<IMarketingSequence> {
   assertContiguousSteps(input.steps);
   return withTransaction(knex, async (trx) => {
     const db = tenantDb(trx, tenant);
+    if (input.campaign_id) await assertCampaignInTenant(db, tenant, input.campaign_id);
     const [sequence] = await db.table('marketing_sequences')
       .insert({
         tenant,
         name: input.name,
         description: input.description ?? null,
         status: input.status ?? 'draft',
+        campaign_id: input.campaign_id ?? null,
         created_by: createdBy,
       })
       .returning('*');
@@ -56,6 +65,7 @@ export async function updateSequenceInternal(knex: Knex, tenant: string, sequenc
   return withTransaction(knex, async (trx) => {
     const db = tenantDb(trx, tenant);
     const { steps, ...fields } = input;
+    if (fields.campaign_id) await assertCampaignInTenant(db, tenant, fields.campaign_id);
     const [sequence] = await db.table('marketing_sequences')
       .where({ tenant, sequence_id: sequenceId })
       .update({ ...fields, updated_at: new Date().toISOString() })
@@ -159,11 +169,9 @@ export async function enrollContactInternal(
       throw new Error('Contact is suppressed from marketing email');
     }
 
-    const existing = await db.table('marketing_sequence_enrollments')
-      .where({ tenant, sequence_id: sequenceId, contact_id: contactId, state: 'active' })
-      .first('enrollment_id');
-    if (existing) throw new Error('Contact is already enrolled in this sequence');
-
+    // The partial unique index (one active enrollment per tenant/sequence/
+    // contact) is the enforcement; ON CONFLICT turns the losing side of a
+    // race into the same friendly error a pre-check would give.
     const nextSendAt = new Date(Date.now() + firstStep.delay_minutes * 60_000).toISOString();
     const [enrollment] = await db.table('marketing_sequence_enrollments')
       .insert({
@@ -175,7 +183,10 @@ export async function enrollContactInternal(
         next_send_at: nextSendAt,
         enrolled_by: enrolledBy,
       })
+      .onConflict(trx.raw(`(tenant, sequence_id, contact_id) WHERE state = 'active'`))
+      .ignore()
       .returning('*');
+    if (!enrollment) throw new Error('Contact is already enrolled in this sequence');
     return enrollment as IMarketingSequenceEnrollment;
   });
 }
@@ -312,15 +323,13 @@ async function sendOneEnrollmentStep(
       clientName = client?.client_name ?? '';
     }
 
+    const sequence = await db.table('marketing_sequences')
+      .where({ tenant, sequence_id: enrollment.sequence_id })
+      .first('created_by', 'campaign_id');
+
     // interactions.user_id is NOT NULL; fall back to the sequence owner for
     // enrollments that were created without an actor.
-    let sendUserId = enrollment.enrolled_by as string | null;
-    if (!sendUserId) {
-      const sequence = await db.table('marketing_sequences')
-        .where({ tenant, sequence_id: enrollment.sequence_id })
-        .first('created_by');
-      sendUserId = sequence?.created_by ?? null;
-    }
+    const sendUserId = (enrollment.enrolled_by as string | null) ?? sequence?.created_by ?? null;
     if (!sendUserId) {
       await db.table('marketing_sequence_enrollments')
         .where({ tenant, enrollment_id: enrollmentId, state: 'active' })
@@ -386,6 +395,7 @@ async function sendOneEnrollmentStep(
       html,
       text,
       unsubscribeUrl,
+      campaignId: (sequence?.campaign_id as string | null) ?? null,
     };
   });
 
@@ -394,7 +404,7 @@ async function sendOneEnrollmentStep(
   if (prepared.kind === 'stopped') return 'stopped';
   if (prepared.kind === 'skipped') return 'skipped';
 
-  const { enrollment, step, contact, sendUserId, subject, html, text } = prepared;
+  const { enrollment, step, contact, sendUserId, subject, html, text, campaignId } = prepared;
 
   const emailService = TenantEmailService.getInstance(tenant);
   await emailService.initialize();
@@ -450,6 +460,7 @@ async function sendOneEnrollmentStep(
       contactId: contact.contact_name_id,
       clientId: contact.client_id ?? null,
       userId: sendUserId,
+      campaignId,
       stepId: step.step_id,
       occurredAt: now.toISOString(),
     });

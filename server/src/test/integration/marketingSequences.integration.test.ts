@@ -325,16 +325,17 @@ describeDb('T005-T007: marketing sequences', () => {
     expect((await getEnrollment(enrollmentA.enrollment_id)).state).toBe('stopped');
     expect((await getEnrollment(enrollmentB.enrollment_id)).state).toBe('stopped');
 
-    // Delete contact A (the suppression list must survive this): enrollments
-    // reference contacts without CASCADE, so remove A's stopped enrollment
-    // first; marketing_contact_state cascades and the suppression's
-    // contact_id is SET NULL by its own FK.
-    await tenantTable('marketing_sequence_enrollments')
-      .where({ tenant: tenantId, enrollment_id: enrollmentA.enrollment_id })
-      .del();
+    // Delete contact A outright (M12): enrollments and marketing_contact_state
+    // cascade away with the contact; the suppression's contact_id is SET NULL
+    // by its own FK, so the email-keyed suppression survives.
     await tenantTable('contacts')
       .where({ tenant: tenantId, contact_name_id: contactA })
       .del();
+    expect(
+      await tenantTable('marketing_sequence_enrollments')
+        .where({ tenant: tenantId, enrollment_id: enrollmentA.enrollment_id })
+        .first(),
+    ).toBeUndefined();
 
     const survivingSuppression = await tenantTable('marketing_suppressions')
       .where({ tenant: tenantId, email: 'shared@example.com' })

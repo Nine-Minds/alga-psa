@@ -76,6 +76,7 @@ export const sequenceInputSchema = z.object({
   name: z.string().trim().min(1).max(200),
   description: z.string().trim().max(2000).optional().nullable(),
   status: marketingSequenceStatusSchema.optional(),
+  campaign_id: z.string().uuid().optional().nullable(),
   steps: z.array(sequenceStepInputSchema).max(50).default([]),
 });
 export const sequenceUpdateSchema = sequenceInputSchema.partial();

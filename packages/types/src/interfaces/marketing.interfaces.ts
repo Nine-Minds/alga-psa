@@ -121,6 +121,7 @@ export interface IMarketingSequence extends TenantEntity {
   name: string;
   description?: string | null;
   status: MarketingSequenceStatus;
+  campaign_id?: string | null;
   created_by: string;
   created_at: ISO8601String;
   updated_at: ISO8601String;

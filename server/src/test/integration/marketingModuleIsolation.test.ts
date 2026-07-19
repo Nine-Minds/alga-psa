@@ -9,7 +9,7 @@
  *    core. If a future migration adds a core -> marketing edge, the module is
  *    no longer droppable and this test fails.
  *
- * 2. tenantDb metadata coverage (no DB): all 12 marketing tables must be
+ * 2. tenantDb metadata coverage (no DB): all 13 marketing tables must be
  *    registered in the tenantDb metadata with scope 'tenant', or the
  *    app-layer tenant isolation facade would refuse/mis-scope queries.
  *
@@ -35,6 +35,7 @@ const MARKETING_TABLES = [
   'marketing_sequences',
   'marketing_sequence_steps',
   'marketing_sequence_enrollments',
+  'marketing_sequence_sends',
   'marketing_contact_state',
   'marketing_suppressions',
   'marketing_engagements',
@@ -50,7 +51,7 @@ const CORE_TABLES = [
 ] as const;
 
 describe('T002: tenantDb metadata coverage (no DB required)', () => {
-  it('registers all 12 marketing tables with tenant scope', () => {
+  it('registers all 13 marketing tables with tenant scope', () => {
     for (const table of MARKETING_TABLES) {
       expect(
         tenantTableMetadata[table],
