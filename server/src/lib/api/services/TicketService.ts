@@ -142,12 +142,15 @@ function applyDefaultContactPhoneJoin(
 ): Knex.QueryBuilder {
   const scopedDb = tenantDb(knex, tenant);
   scopedDb.tenantJoin(query, `contacts as ${contactAlias}`, `${ticketAlias}.contact_name_id`, `${contactAlias}.contact_name_id`, { type: 'left' });
-  scopedDb.tenantJoin(query, `contact_phone_numbers as ${phoneAlias}`, `${contactAlias}.contact_name_id`, `${phoneAlias}.contact_name_id`, {
+  scopedDb.tenantJoinFirstMatching(query, 'contact_phone_numbers', phoneAlias, `${contactAlias}.contact_name_id`, 'contact_name_id', {
     type: 'left',
     rootTenantColumn: `${contactAlias}.tenant`,
-    on(join) {
-      join.andOn(`${phoneAlias}.is_default`, '=', knex.raw('true'));
-    },
+    where: (childQuery, alias) => childQuery.where(`${alias}.is_default`, true),
+    orderBy: [
+      { column: 'updated_at', order: 'desc' },
+      { column: 'created_at', order: 'desc' },
+      { column: 'contact_phone_number_id', order: 'desc' },
+    ],
   });
   return query;
 }
@@ -487,6 +490,8 @@ export class TicketService extends BaseService<ITicket> {
     scopedDb.tenantJoin(ticketQuery, 'client_locations as cl', 't.client_id', 'cl.client_id', {
       type: 'left',
       on(join) {
+        // The default branch is single-row by ux_client_locations_default_per_client;
+        // the explicit location branch joins the tenant-qualified primary key.
         join.andOn(function() {
           this.on('t.location_id', '=', 'cl.location_id')
               .orOn(function() {
