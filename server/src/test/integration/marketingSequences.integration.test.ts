@@ -41,11 +41,13 @@ import {
   unsubscribeEnrollmentInternal,
 } from '../../../../packages/marketing/src/lib/sequences';
 import { addSuppression, isSuppressed } from '../../../../packages/marketing/src/lib/suppression';
+import { verifyTrackingDestination } from '../../../../packages/marketing/src/lib/signing';
 
 const describeDb = await describeWithDb();
 const requireCjs = createRequire(import.meta.url);
 
 const BASE_URL = 'https://test.example.com';
+const SIGNING_SECRET = 'integration-test-signing-secret';
 
 // Capture-double for the outbound email abstraction (see header).
 const sendEmailMock = vi.hoisted(() => vi.fn());
@@ -133,7 +135,7 @@ describeDb('T005-T007: marketing sequences', () => {
   it('T005: sends due steps in order, advances the enrollment, links the email_sent interaction, and completes', async () => {
     const contactId = await createContactWithEmail('Ada Lovelace', 'ada@example.com');
     const { sequence, steps } = await createActiveSequence('Welcome drip', [
-      { step_order: 1, delay_minutes: 0, subject: 'Welcome {{contact.first_name}}', body_template: 'Hi {{contact.first_name}} from {{client.name}}' },
+      { step_order: 1, delay_minutes: 0, subject: 'Welcome {{contact.first_name}}', body_template: 'Hi {{contact.first_name}} from {{client.name}} — [read more](https://example.com/article)' },
       { step_order: 2, delay_minutes: 60, subject: 'Following up', body_template: 'Second touch' },
     ]);
 
@@ -143,7 +145,7 @@ describeDb('T005-T007: marketing sequences', () => {
     expect(Math.abs(new Date(enrollment.next_send_at).getTime() - Date.now())).toBeLessThan(10_000);
 
     const t0 = new Date();
-    const firstRun = await sendDueSequenceStepsInternal(db, tenantId, { baseUrl: BASE_URL, now: t0 });
+    const firstRun = await sendDueSequenceStepsInternal(db, tenantId, { baseUrl: BASE_URL, signingSecret: SIGNING_SECRET, now: t0 });
     expect(firstRun).toEqual({ sent: 1, completed: 0, stopped: 0, failed: 0, skipped: 0 });
 
     // The idempotent send log carries the delivered claim (B2).
@@ -167,6 +169,19 @@ describeDb('T005-T007: marketing sequences', () => {
     // Unsubscribe link (F049) points at this enrollment.
     expect(rendered.html).toContain(`/api/marketing/unsubscribe/${tenantId}/${enrollment.enrollment_id}`);
 
+    // Click links are HMAC-signed at send time (M5) and the signature
+    // verifies for this tenant/enrollment/step.
+    const clickMatch = rendered.html.match(/href="[^"]*\/api\/marketing\/track\/click\/[^"?]+\?u=([^&"]+)&s=([0-9a-f]+)"/);
+    expect(clickMatch).toBeTruthy();
+    const signedUrl = decodeURIComponent(clickMatch![1]);
+    expect(signedUrl).toBe('https://example.com/article');
+    expect(verifyTrackingDestination(SIGNING_SECRET, {
+      tenant: tenantId,
+      enrollmentId: enrollment.enrollment_id,
+      stepId: steps[0].step_id,
+      url: signedUrl,
+    }, clickMatch![2])).toBe(true);
+
     // Enrollment advanced to step 1, next send scheduled from step 2's delay.
     const afterFirst = await getEnrollment(enrollment.enrollment_id);
     expect(afterFirst).toMatchObject({ current_step_order: 1, state: 'active' });
@@ -187,14 +202,14 @@ describeDb('T005-T007: marketing sequences', () => {
     expect(sentEngagement).toMatchObject({ step_id: steps[0].step_id });
 
     // Not yet due: an immediate re-run sends nothing (idempotence between runs).
-    const immediateRerun = await sendDueSequenceStepsInternal(db, tenantId, { baseUrl: BASE_URL, now: new Date(t0.getTime() + 60_000) });
+    const immediateRerun = await sendDueSequenceStepsInternal(db, tenantId, { baseUrl: BASE_URL, signingSecret: SIGNING_SECRET, now: new Date(t0.getTime() + 60_000) });
     expect(immediateRerun).toEqual({ sent: 0, completed: 0, stopped: 0, failed: 0, skipped: 0 });
     expect(sendEmailMock).toHaveBeenCalledTimes(1);
 
     // Advance past step 2's delay: the final step sends and — per the F047
     // state machine — the enrollment completes with nothing left to send.
     const t1 = new Date(t0.getTime() + 61 * 60_000);
-    const secondRun = await sendDueSequenceStepsInternal(db, tenantId, { baseUrl: BASE_URL, now: t1 });
+    const secondRun = await sendDueSequenceStepsInternal(db, tenantId, { baseUrl: BASE_URL, signingSecret: SIGNING_SECRET, now: t1 });
     expect(secondRun).toEqual({ sent: 1, completed: 0, stopped: 0, failed: 0, skipped: 0 });
     expect(sendEmailMock).toHaveBeenCalledTimes(2);
     expect(sendEmailMock.mock.calls[1][0]).toMatchObject({
@@ -266,7 +281,7 @@ describeDb('T005-T007: marketing sequences', () => {
       sent_at: new Date().toISOString(),
     });
 
-    const summary = await sendDueSequenceStepsInternal(db, tenantId, { baseUrl: BASE_URL, now: new Date() });
+    const summary = await sendDueSequenceStepsInternal(db, tenantId, { baseUrl: BASE_URL, signingSecret: SIGNING_SECRET, now: new Date() });
     expect(summary.sent).toBe(0);
     expect(summary.skipped).toBe(1);
     expect(sendEmailMock).not.toHaveBeenCalled();
@@ -281,7 +296,7 @@ describeDb('T005-T007: marketing sequences', () => {
 
     sendEmailMock.mockResolvedValueOnce({ success: false, error: 'SMTP rejected' });
     const t0 = new Date();
-    const failedRun = await sendDueSequenceStepsInternal(db, tenantId, { baseUrl: BASE_URL, now: t0 });
+    const failedRun = await sendDueSequenceStepsInternal(db, tenantId, { baseUrl: BASE_URL, signingSecret: SIGNING_SECRET, now: t0 });
     expect(failedRun.failed).toBe(1);
     expect(failedRun.sent).toBe(0);
 
@@ -300,7 +315,7 @@ describeDb('T005-T007: marketing sequences', () => {
 
     // After the backoff the same step is retaken and delivered exactly once.
     const t1 = new Date(t0.getTime() + 31 * 60_000);
-    const retryRun = await sendDueSequenceStepsInternal(db, tenantId, { baseUrl: BASE_URL, now: t1 });
+    const retryRun = await sendDueSequenceStepsInternal(db, tenantId, { baseUrl: BASE_URL, signingSecret: SIGNING_SECRET, now: t1 });
     expect(retryRun.sent).toBe(1);
     expect(sendEmailMock).toHaveBeenCalledTimes(2);
     const retriedLog = await tenantTable('marketing_sequence_sends')
@@ -327,7 +342,7 @@ describeDb('T005-T007: marketing sequences', () => {
       }),
     );
 
-    const summary = await sendDueSequenceStepsInternal(db, tenantId, { baseUrl: BASE_URL, now: new Date() });
+    const summary = await sendDueSequenceStepsInternal(db, tenantId, { baseUrl: BASE_URL, signingSecret: SIGNING_SECRET, now: new Date() });
     expect(summary.sent).toBe(0);
     expect(summary.failed).toBe(0);
     expect(sendEmailMock).not.toHaveBeenCalled();
@@ -406,7 +421,7 @@ describeDb('T005-T007: marketing sequences', () => {
       enrolled_by: userId,
     });
 
-    const summary = await sendDueSequenceStepsInternal(db, tenantId, { baseUrl: BASE_URL, now: new Date() });
+    const summary = await sendDueSequenceStepsInternal(db, tenantId, { baseUrl: BASE_URL, signingSecret: SIGNING_SECRET, now: new Date() });
     expect(summary.sent).toBe(0);
     expect(summary.stopped).toBe(1);
     expect(sendEmailMock).not.toHaveBeenCalled();

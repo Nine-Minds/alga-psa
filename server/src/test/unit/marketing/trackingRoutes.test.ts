@@ -27,9 +27,15 @@ const mocks = vi.hoisted(() => ({
   resolvePublicMarketingTenant: vi.fn(),
 }));
 
-vi.mock('@alga-psa/marketing/lib', () => ({
+vi.mock('@alga-psa/marketing/lib', async (importOriginal) => ({
+  // Keep the real signing helpers — the click route verifies real HMACs.
+  ...await importOriginal<typeof import('@alga-psa/marketing/lib')>(),
   recordSequenceOpenInternal: mocks.recordSequenceOpenInternal,
   recordSequenceClickInternal: mocks.recordSequenceClickInternal,
+}));
+
+vi.mock('@/lib/marketing/signingSecret', () => ({
+  getMarketingSigningSecret: vi.fn(async () => 'unit-test-signing-secret'),
 }));
 
 vi.mock('@/lib/analytics/server', () => ({
@@ -43,6 +49,9 @@ vi.mock('@/lib/marketing/publicEndpoints', async (importOriginal) => ({
 
 import { GET as trackOpen } from '../../../app/api/marketing/track/open/[tenant]/[enrollmentId]/[stepId]/route';
 import { GET as trackClick } from '../../../app/api/marketing/track/click/[tenant]/[enrollmentId]/[stepId]/route';
+import { signTrackingDestination } from '../../../../../packages/marketing/src/lib/signing';
+
+const SIGNING_SECRET = 'unit-test-signing-secret';
 
 const TENANT_ID = '11111111-1111-1111-1111-111111111111';
 const ENROLLMENT_ID = '22222222-2222-2222-2222-222222222222';
@@ -53,10 +62,23 @@ function params() {
   return { params: Promise.resolve({ tenant: TENANT_ID, enrollmentId: ENROLLMENT_ID, stepId: STEP_ID }) };
 }
 
-function clickRequest(u?: string) {
-  const url = u === undefined
-    ? `http://localhost/api/marketing/track/click/${TENANT_ID}/${ENROLLMENT_ID}/${STEP_ID}`
-    : `http://localhost/api/marketing/track/click/${TENANT_ID}/${ENROLLMENT_ID}/${STEP_ID}?u=${encodeURIComponent(u)}`;
+function signFor(u: string): string {
+  return signTrackingDestination(SIGNING_SECRET, {
+    tenant: TENANT_ID,
+    enrollmentId: ENROLLMENT_ID,
+    stepId: STEP_ID,
+    url: u,
+  });
+}
+
+function clickRequest(u?: string, signature?: string | null) {
+  // signature: undefined -> sign correctly; null -> omit `s` entirely.
+  let url = `http://localhost/api/marketing/track/click/${TENANT_ID}/${ENROLLMENT_ID}/${STEP_ID}`;
+  if (u !== undefined) {
+    url += `?u=${encodeURIComponent(u)}`;
+    const s = signature === undefined ? signFor(u) : signature;
+    if (s !== null) url += `&s=${s}`;
+  }
   return new NextRequest(url) as any;
 }
 
@@ -169,6 +191,26 @@ describe('T010: track/click redirect', () => {
 
   it('400s when u is missing', async () => {
     const response = await trackClick(clickRequest(undefined), params());
+
+    expect(response.status).toBe(400);
+    expect(mocks.recordSequenceClickInternal).not.toHaveBeenCalled();
+  });
+
+  it('M5: refuses a destination with a tampered signature — no open redirect', async () => {
+    // Signature minted for a different URL: swapping in an attacker URL fails.
+    const response = await trackClick(
+      clickRequest('https://evil.example.com/phish', signFor('https://legit.example.com/article')),
+      params(),
+    );
+
+    expect(response.status).toBe(400);
+    expect(await response.json()).toEqual({ ok: false, error: 'Invalid destination URL' });
+    expect(mocks.recordSequenceClickInternal).not.toHaveBeenCalled();
+    expect(mocks.analyticsCapture).not.toHaveBeenCalled();
+  });
+
+  it('M5: refuses a destination with no signature at all', async () => {
+    const response = await trackClick(clickRequest('https://example.com/landing', null), params());
 
     expect(response.status).toBe(400);
     expect(mocks.recordSequenceClickInternal).not.toHaveBeenCalled();

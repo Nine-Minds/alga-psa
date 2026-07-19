@@ -10,6 +10,7 @@ import type {
 } from '@alga-psa/types';
 import { applyMergeFields, markdownToHtml, markdownToText } from './render';
 import { recordMarketingEngagement } from './engagements';
+import { signTrackingDestination } from './signing';
 import { addSuppression, isSuppressed, normalizeEmail } from './suppression';
 import type { SequenceInput } from '../schemas/marketingSchemas';
 
@@ -233,9 +234,9 @@ function inlineTemplate(subject: string, html: string, text: string): ITemplateP
   return { process: async () => ({ subject, html, text }) };
 }
 
-function trackableLinks(html: string, clickBase: string): string {
+function trackableLinks(html: string, clickBase: string, sign: (url: string) => string): string {
   return html.replace(/href="(https?:\/\/[^"]+)"/g, (_m, url: string) =>
-    `href="${clickBase}?u=${encodeURIComponent(url)}"`);
+    `href="${clickBase}?u=${encodeURIComponent(url)}&s=${sign(url)}"`);
 }
 
 export interface SequenceSendSummary {
@@ -262,7 +263,7 @@ export interface SequenceSendSummary {
 export async function sendDueSequenceStepsInternal(
   knex: Knex,
   tenant: string,
-  options: { baseUrl: string; now?: Date; limit?: number },
+  options: { baseUrl: string; signingSecret: string; now?: Date; limit?: number },
 ): Promise<SequenceSendSummary> {
   const now = options.now ?? new Date();
   const limit = options.limit ?? 50;
@@ -280,7 +281,7 @@ export async function sendDueSequenceStepsInternal(
 
   for (const row of due) {
     try {
-      const outcome = await sendOneEnrollmentStep(knex, tenant, row.enrollment_id, options.baseUrl, now);
+      const outcome = await sendOneEnrollmentStep(knex, tenant, row.enrollment_id, options.baseUrl, options.signingSecret, now);
       summary[outcome] += 1;
     } catch (error) {
       summary.failed += 1;
@@ -299,6 +300,7 @@ async function sendOneEnrollmentStep(
   tenant: string,
   enrollmentId: string,
   baseUrl: string,
+  signingSecret: string,
   now: Date,
 ): Promise<'sent' | 'completed' | 'stopped' | 'skipped'> {
   // Claim, advance, and render inside one transaction; send outside it so
@@ -409,7 +411,9 @@ async function sendOneEnrollmentStep(
     const mergedBody = applyMergeFields(step.body_template, mergeContext);
 
     const footer = `<p style="font-size:12px;color:#64748b">You are receiving this because you asked to hear from us. <a href="${unsubscribeUrl}">Unsubscribe</a></p>`;
-    const html = `${trackableLinks(markdownToHtml(mergedBody), clickBase)}${footer}<img src="${openPixel}" width="1" height="1" alt="" />`;
+    const signDestination = (url: string) =>
+      signTrackingDestination(signingSecret, { tenant, enrollmentId, stepId: step.step_id, url });
+    const html = `${trackableLinks(markdownToHtml(mergedBody), clickBase, signDestination)}${footer}<img src="${openPixel}" width="1" height="1" alt="" />`;
     const text = `${markdownToText(mergedBody)}\n\n---\nUnsubscribe: ${unsubscribeUrl}`;
 
     return {

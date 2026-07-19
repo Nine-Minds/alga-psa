@@ -11,4 +11,5 @@ export * from './forms';
 export * from './capture';
 export * from './posts';
 export * from './sequences';
+export * from './signing';
 export * from './tracking';

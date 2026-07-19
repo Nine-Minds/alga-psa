@@ -13,6 +13,14 @@ const captureLimiter = new RateLimiterMemory({
   duration: 60, // 1 minute window
 });
 
+// Per-form global backstop: even with rotating source IPs a single form
+// can't be flooded (each accepted submission can create a prospect client,
+// contact, and opportunity suggestion).
+const formLimiter = new RateLimiterMemory({
+  points: 30,
+  duration: 60,
+});
+
 /**
  * POST /api/marketing/capture/[tenant]/[slug]
  *
@@ -37,10 +45,11 @@ export async function POST(
     return NextResponse.json({ ok: false, error: 'Not found' }, { status: 404 });
   }
 
-  // Rate limit per IP+tenant
+  // Rate limit per IP+tenant, with a per-form global cap as backstop.
   const clientIp = getClientIp(req);
   try {
     await captureLimiter.consume(`${clientIp}:${ctx.tenantId}`);
+    await formLimiter.consume(`${ctx.tenantId}:${slug}`);
   } catch {
     logger.warn('[marketing-capture] Rate limit exceeded', { tenantId: ctx.tenantId, ip: clientIp });
     return NextResponse.json(

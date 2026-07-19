@@ -37,17 +37,17 @@ export async function resolvePublicMarketingTenant(
 }
 
 /**
- * Get client IP address from request (proxy-aware). Same header precedence
- * as the public appointment-request route.
+ * Get the client IP for rate-limiting. Only the rightmost x-forwarded-for
+ * entry is used: it was appended by the trusted proxy hop in front of this
+ * server (Next itself stamps it for direct connections). Earlier entries —
+ * and x-real-ip / cf-connecting-ip — are client-controlled, and trusting
+ * them would let an attacker mint a fresh rate-limit bucket per request.
  */
 export function getClientIp(req: NextRequest): string {
   const forwarded = req.headers.get('x-forwarded-for');
-  const realIp = req.headers.get('x-real-ip');
-  const cfConnectingIp = req.headers.get('cf-connecting-ip');
-
-  if (cfConnectingIp) return cfConnectingIp;
-  if (realIp) return realIp;
-  if (forwarded) return forwarded.split(',')[0].trim();
-
+  if (forwarded) {
+    const hops = forwarded.split(',').map((part) => part.trim()).filter(Boolean);
+    if (hops.length > 0) return hops[hops.length - 1];
+  }
   return 'unknown';
 }

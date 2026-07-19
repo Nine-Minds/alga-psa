@@ -8,6 +8,7 @@ import {
 } from '@alga-psa/marketing/lib';
 import { runWithTenant } from 'server/src/lib/db';
 import { getConnection } from 'server/src/lib/db/db';
+import { getMarketingSigningSecret } from 'server/src/lib/marketing/signingSecret';
 
 export const MARKETING_FLIP_DUE_POSTS_JOB = 'marketing:flip-due-posts';
 export const MARKETING_EXPIRE_STALE_TARGETS_JOB = 'marketing:expire-stale-targets';
@@ -85,10 +86,17 @@ export async function marketingExpireStaleTargetsHandler(data: MarketingJobData)
 export async function marketingSendSequenceStepsHandler(data: MarketingJobData): Promise<void> {
   if (!data.tenantId) throw new Error('Tenant ID is required for the marketing send-sequence-steps job');
   if (!await isMarketingEnabled(data.tenantId)) return;
+  const signingSecret = await getMarketingSigningSecret();
+  if (!signingSecret) {
+    // Fail closed: unsigned tracking links would be refused by the click
+    // redirect anyway, so don't send at all.
+    throw new Error('No marketing signing secret available (NEXTAUTH_SECRET); refusing to send sequence steps');
+  }
   await runWithTenant(data.tenantId, async () => {
     const knex = await getConnection(data.tenantId);
     const result = await sendDueSequenceStepsInternal(knex, data.tenantId, {
       baseUrl: getPublicBaseUrl(),
+      signingSecret,
     });
     logger.info('[marketingSendSequenceStepsHandler] Sequence send pass complete', {
       tenantId: data.tenantId,
