@@ -149,8 +149,10 @@ alternatives were considered and rejected — see SCRATCHPAD.
 
 ### Non-functional Requirements
 
-- NFR1: All migrations additive; marketing tables tenant-scoped with standard RLS; module is
-  drop-safe (FK direction marketing → core only).
+- NFR1: All migrations additive; marketing tables tenant-scoped via the platform's standard
+  app-layer isolation — `tenantDb` query scoping, composite `(tenant, id)` PKs, tenant-inclusive
+  FKs and unique indexes (the codebase does not use RLS); module is drop-safe (FK direction
+  marketing → core only). Verified by the T002 schema guard test.
 - NFR2: Scheduled transitions (post due, sequence step due) run as scheduled jobs with
   at-least-once semantics and idempotent effects (no double-sends, no duplicate interactions).
 - NFR3: Standard Alga permissions: `marketing:read`, `marketing:manage` (new), enforced in
@@ -198,7 +200,9 @@ Reused core infrastructure (build nothing new here):
 - No third-party credentials stored anywhere in the module (no platform OAuth).
 - Capture endpoints are unauthenticated by nature: rate-limit, validate, and treat all input
   as hostile; suppression list can never be enumerated via the endpoint.
-- Standard tenant RLS on every marketing table.
+- Standard tenant isolation on every marketing table: `tenantDb` app-layer scoping with
+  composite tenant PKs/FKs and tenant-inclusive unique indexes (no RLS — not used in this
+  codebase; the T002 guard test verifies coverage).
 
 ## Observability
 
@@ -227,6 +231,156 @@ Reused core infrastructure (build nothing new here):
 - The opportunity aggregation source reuses `ActivityType.SCHEDULE` as its type rather than
   adding an enum member; follow suit for marketing, or is it time for a generic `actionItem`
   type? (Note at implementation with a LEVERAGE marker if the enum wants generalizing.)
+
+## Code Review Findings — Pre-Smoke Fix List (2026-07-19)
+
+Four-area review of the implementation commits (`7e17ec6a14..c9e2ad548d`): data layer,
+business logic/jobs, API/public endpoints, UI/integrations. Both blockers were independently
+verified (B1 by compiling the query against the project's knex; B2 by inspecting the claim
+transaction and confirming the `skipLocked` comment has no implementation). **All findings
+below are in scope to fix before smoke testing begins.** Clean areas verified by the review:
+tenant scoping on every query path, permission/flag pipeline on all 28 v1 endpoints,
+suppression semantics (modulo B1), attribution handoff to opportunities, OpenAPI/MCP registry
+sync, capture enumeration-oracle closure, house UI component usage, nav gating.
+
+### Blockers
+
+- **B1 — every suppression write throws at runtime.** `packages/marketing/src/lib/suppression.ts:67-73`
+  stops email-matched enrollments with a knex update-with-join; the pg dialect silently drops
+  the join, leaving an illegally qualified `SET "e"."state"` and a dangling `c.email` — Postgres
+  rejects it at parse time, rolling back the whole suppression transaction (unsubscribe endpoint,
+  manual suppression, T006/T007 flows). Slipped through because DB-gated tests auto-skip without
+  a reachable database. **Fix:** select matching `enrollment_id`s via the join first, then
+  `whereIn(...).update(...)`.
+- **B2 — sequence send loop can double-send emails.** `packages/marketing/src/lib/sequences.ts:251-390`:
+  the claim transaction (`forUpdate`) commits before the SMTP send having persisted nothing, so
+  overlapping job runs (pg-boss is at-least-once), a crash between send and advance, or a failed
+  post-send advance (caught and retried in 30 min) all re-send the same step. The doc comment
+  claims `skipLocked` protection that does not exist. **Fix:** persist the claim inside the claim
+  transaction — insert into a new idempotent send-log table (e.g. `marketing_sequence_sends`,
+  unique `(tenant, enrollment_id, step_id)`) and advance `next_send_at` before releasing the
+  lock; skip when the key already exists; record the interaction after a successful send.
+
+### Majors
+
+- **M1 — capture silently drops submissions for contacts without a client.**
+  `packages/marketing/src/lib/capture.ts:68`: `String(contact.client_id)` turns null into the
+  string `"null"` (invalid uuid) → engagement insert throws → route swallows it as a generic
+  200; no consent update, no interaction, no inbound-lead suggestion. **Fix:** branch on null —
+  create/attach a prospect client as the new-contact path does, or carry null through.
+- **M2 — sibling post targets get permanently wedged in `scheduled`.**
+  `packages/marketing/src/lib/posts.ts:113-135` + `rollupPostStatus`: publishing one target
+  directly from `scheduled` rolls the post up to `published`, hiding sibling targets from both
+  the flip job (selects posts by `status='scheduled'`) and the expiry job. **Fix:** drive the
+  flip off target state joined to `posts.scheduled_at <= now`, not the rolled-up post status.
+- **M3 — sequence edits destroy step identity.** `packages/marketing/src/lib/sequences.ts:54-72`
+  deletes and re-inserts all steps; `marketing_engagements.step_id` is `ON DELETE SET NULL`, so
+  historical per-step stats zero out, and tracking URLs already delivered in emails carry dead
+  `step_id`s whose open/click recording then fails on FK. **Fix:** diff/update steps in place by
+  `step_order` so `step_id`s survive edits.
+- **M4 — mark-published race double-records engagements.**
+  `packages/marketing/src/lib/posts.ts:165-214` is read-then-write with no status predicate on
+  the UPDATE; concurrent UI + MCP-agent publishes both pass the guard (duplicate "Post
+  Published" interactions, double-counted funnel), and a publish can overwrite a
+  just-expired target. **Fix:** move the state check into the UPDATE's WHERE, branch on row
+  count, record the engagement only when a row actually transitioned.
+- **M5 — open redirect in click tracking.**
+  `server/src/app/api/marketing/track/click/.../route.ts:21-65`: the `u` destination is only
+  protocol-checked and the 302 fires even for unknown enrollments — anyone can mint
+  phishing links on the MSP's domain. **Fix:** HMAC-sign the destination (or full tracking
+  path) at send time in `trackableLinks()`; verify before redirecting.
+- **M6 — unsubscribe is a state-mutating GET.**
+  `server/src/app/api/marketing/unsubscribe/.../route.ts:47-81`: mail scanners/link-prefetchers
+  fetch every URL in an email and will silently unsubscribe recipients; also not RFC 8058
+  one-click compliant. **Fix:** GET renders a confirmation page; POST performs the mutation;
+  emit `List-Unsubscribe` + `List-Unsubscribe-Post: List-Unsubscribe=One-Click` headers from
+  the send path.
+- **M7 — capture rate-limit key is client-controlled.**
+  `server/src/lib/marketing/publicEndpoints.ts:43-53` trusts the first `x-forwarded-for`/
+  `x-real-ip`/`cf-connecting-ip` header, so an attacker rotates headers for unlimited buckets;
+  each accepted submission creates a prospect client + contact + suggestion (pipeline junk).
+  **Fix:** derive the client IP only from the trusted proxy hop; add a per-form global rate
+  cap as a backstop.
+- **M8 — Reschedule button always errors for awaiting-publish posts.**
+  `packages/marketing/src/components/PostsQueue.tsx:151` + `posts.ts:100-104`: the exact
+  "I'll publish this tomorrow" flow is a dead button (`reschedulePostInternal` only accepts
+  draft/scheduled, but the rollup puts the post in `awaiting-manual-publish`). **Fix:** allow
+  reschedule from awaiting — flip targets back to `scheduled` and re-rollup.
+- **M9 — sequence journey day-chips are off by one step.**
+  `packages/marketing/src/components/SequencesView.tsx:170-177`: the label uses the cumulative
+  delay *before* adding the step's own `delay_minutes`, so every card shows the previous card's
+  send day; `journeyDayLabel` (`format.ts:68-72`) additionally disagrees with the mockup's day
+  indexing. **Fix:** accumulate the step's own delay before labeling; align with
+  `ux/sequences.html` numbering.
+- **M10 — marketing pages render a fake-working module when the guard fails.**
+  All 7 `server/src/app/msp/marketing/*/page.tsx` catch the `guardMarketing` error (flag off /
+  no permission) and render the full UI with empty arrays; every action then fails with raw
+  toasts. **Fix:** distinguish guard failure from empty data — render a not-enabled/permission
+  boundary (or redirect) instead.
+- **M11 — campaign date-only values drift a day across timezones.**
+  `packages/marketing/src/components/CampaignDialog.tsx:17-25` (+ `format.ts:3-8` display):
+  `new Date('YYYY-MM-DD')` parses as UTC midnight and `toISOString().slice(0,10)` serializes
+  to the previous UTC day. **Fix:** handle date-only values timezone-neutrally (string split /
+  house date-only helper).
+- **M12 — deleting a once-enrolled contact fails on FK.**
+  `server/migrations/20260719100000_create_marketing_tables.cjs:336`: the enrollments→contacts
+  FK has no ON DELETE behavior; `ContactService.delete` does a bare delete and core cannot know
+  about marketing tables — blocking the PRD's "suppression survives contact deletion" flow (the
+  T007 test hand-deletes the enrollment to work around it). **Fix:** new migration altering the
+  FK to `ON DELETE CASCADE` (the durable record is the email-keyed suppression row).
+
+### Minors
+
+- **N1** — public endpoints (capture/track/unsubscribe) never check the `marketing-module`
+  flag (`publicEndpoints.ts:21-37`); FR10 says the flag gates everything. Fix: evaluate the
+  flag in `resolvePublicMarketingTenant`, 404 when off.
+- **N2** — `markPublishedSchema` permalink accepts `javascript:` URLs (stored-XSS risk when
+  rendered as href). Fix: restrict to http/https (`marketingSchemas.ts:57`).
+- **N3** — `createPost` inserts `campaign_id` without verifying it belongs to the tenant
+  (`posts.ts:41-78`). Fix: in-tenant existence check like content/channels get.
+- **N4** — duplicate active enrollments possible: check-then-insert with no partial unique
+  index. Fix: migration adding `UNIQUE (tenant, sequence_id, contact_id) WHERE state='active'`
+  and conflict handling in `enrollContactInternal`.
+- **N5** — suppression uniqueness is plain `(tenant, email)`; nothing structural enforces
+  lowercasing, so a future direct insert could bypass `isSuppressed`. Fix: functional unique
+  index on `(tenant, lower(email))` or `CHECK (email = lower(email))`.
+- **N6** — missing index for the sequence step-stats query. Fix: add
+  `marketing_engagements (tenant, step_id)`.
+- **N7** — campaign funnel email metrics are structurally always zero: sequence engagements
+  never carry `campaign_id` (sequences have no campaign link). Fix: additive `campaign_id` on
+  `marketing_sequences`, stamp it on sequence engagements, surface in the funnel.
+- **N8** — repeat form submission doesn't restore consent (`capture.ts:109-117` merges only
+  source/updated_at). Fix: merge `consent: true` on resubmission; the suppression table stays
+  authoritative for sends.
+- **N9** — stale comment: `marketing.interfaces.ts:33` claims interaction type_names are
+  per-tenant; they're seeded globally into `system_interaction_types`. Fix wording.
+- **N10** — user-activities deep-link goes to `/msp/marketing/calendar`; FR11 and UX notes say
+  the posts queue. Fix: link to `/msp/marketing/posts` and update the T013 unit test.
+- **N11** — `fetchMarketingActivities` silently skips the `marketing:manage` check when the
+  optional `user` param is omitted (fail-open export). Fix: make `user` required.
+- **N12** — calendar "This week" stats have no lower bound, counting last week's published
+  posts under a "Week of X" header (`MarketingCalendar.tsx:97-109`). Fix: bound to the labeled
+  week.
+- **N13** — `rangeLabel` hardcodes `'en-US'` and untranslated "Week of"
+  (`calendar/page.tsx:35`). Fix: build client-side via i18n.
+- **N14** — posts queue lacks the date filter the PRD lists (state/channel/date). Fix: add it.
+- **N15** — month-grid secondary toggle from the PRD/mockup is absent (agenda-only calendar).
+  Fix: add the toggle per `ux/calendar.html`.
+- **N16** — sequences "Sending" config side tile (from-address, provider, unsubscribe, PostHog)
+  from the PRD/mockup is missing. Fix: add per `ux/sequences.html`.
+- **N17** — campaign detail shows only the funnel; PRD says posts, sequences, forms + funnel.
+  Fix: add the three lists.
+- **N18** — `?create=1` deep link never cleared after the dialog closes
+  (`PostsQueue.tsx:59-63`); refresh/back reopens it. Fix: strip the param on close.
+- **N19** — T012's "core flows complete without errors" half has no automated coverage (only
+  nav gating is tested). Resolution: covered by the Phase 1 agent-driven smoke test in
+  `docs/plans/2026-07-19-marketing-smoke-test-plan.md`; no separate code change.
+
+### Process note
+
+The DB-backed marketing integration suite auto-skips when no database is reachable — the
+mechanism by which B1 shipped green. The fix phase must run it against a real database and
+fail if the suite skips (assert executed-test count > 0).
 
 ## Acceptance Criteria (Definition of Done)
 
