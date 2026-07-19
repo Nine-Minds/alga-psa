@@ -285,6 +285,11 @@ describeDb('T005-T007: marketing sequences', () => {
     expect(summary.sent).toBe(0);
     expect(summary.skipped).toBe(1);
     expect(sendEmailMock).not.toHaveBeenCalled();
+
+    // Shuffle hygiene: don't leave an eternally-due enrollment for other tests.
+    await tenantTable('marketing_sequence_enrollments')
+      .where({ tenant: tenantId, enrollment_id: enrollment.enrollment_id })
+      .update({ state: 'stopped', next_send_at: null });
   });
 
   it('B2: a failed send releases the claim, rewinds the enrollment, and retries after backoff', async () => {
@@ -353,11 +358,12 @@ describeDb('T005-T007: marketing sequences', () => {
   });
 
   it('T007: unsubscribe suppresses immediately, stops all enrollments for the address, and survives contact re-import', async () => {
-    // Two contacts sharing one address, each actively enrolled: stopping by
-    // contact_id alone would miss the second enrollment — the email join in
-    // addSuppression is what catches it.
+    // Two contacts sharing one address (differing only in case — contacts
+    // carries an exact-case UNIQUE (tenant, email)), each actively enrolled:
+    // stopping by contact_id alone would miss the second enrollment — the
+    // lower(email) join in addSuppression is what catches it.
     const contactA = await createContactWithEmail('Original Contact', 'shared@example.com');
-    const contactB = await createContactWithEmail('Duplicate Contact', 'shared@example.com');
+    const contactB = await createContactWithEmail('Duplicate Contact', 'SHARED@example.com');
     const { sequence: sequenceOne } = await createActiveSequence('Drip one', [
       { step_order: 1, delay_minutes: 0, subject: 'One' },
     ]);
@@ -399,8 +405,9 @@ describeDb('T005-T007: marketing sequences', () => {
     expect(survivingSuppression.contact_id).toBeNull();
     expect(await isSuppressed(db, tenantId, 'shared@example.com')).toBe(true);
 
-    // Re-import the same address as a brand-new contact.
-    const contactC = await createContactWithEmail('Reimported Contact', 'SHARED@example.com');
+    // Re-import the same address as a brand-new contact (case-varied again:
+    // contact B still exists with 'SHARED@example.com').
+    const contactC = await createContactWithEmail('Reimported Contact', 'Shared@Example.com');
 
     // The enrollment path refuses suppressed addresses outright...
     await expect(

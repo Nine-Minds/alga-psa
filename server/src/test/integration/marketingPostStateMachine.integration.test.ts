@@ -64,6 +64,15 @@ describeDb('T008: social post state machine', () => {
     const linkedin = await createChannelInternal(db, tenantId, { name: 'LinkedIn', platform: 'linkedin' }, userId);
     const mastodon = await createChannelInternal(db, tenantId, { name: 'Mastodon', platform: 'mastodon' }, userId);
 
+    // Baseline-relative counting: the suite shuffles, and sibling tests
+    // record their own 'Post Published' interactions.
+    const publishedType = await db('system_interaction_types')
+      .where({ type_name: 'Marketing: Post Published' })
+      .first('type_id');
+    const publishCount = async () =>
+      (await tenantTable('interactions').where({ tenant: tenantId, type_id: publishedType.type_id })).length;
+    const baselinePublished = await publishCount();
+
     const scheduledAt = new Date(Date.now() - 60 * 60_000).toISOString(); // one hour ago: due
     const post = await createPostInternal(db, tenantId, {
       content_id: content.content_id,
@@ -93,12 +102,7 @@ describeDb('T008: social post state machine', () => {
     // records interactions in the first place.
     const secondFlip = await flipDuePostsInternal(db, tenantId, new Date());
     expect(secondFlip).toEqual({ flipped: 0 });
-    const publishedType = await db('system_interaction_types')
-      .where({ type_name: 'Marketing: Post Published' })
-      .first('type_id');
-    expect(
-      await tenantTable('interactions').where({ tenant: tenantId, type_id: publishedType.type_id }),
-    ).toHaveLength(0);
+    expect(await publishCount()).toBe(baselinePublished);
 
     // Publish one target with a permalink.
     const targetToPublish = targetsAfterFlip[0];
@@ -116,7 +120,7 @@ describeDb('T008: social post state machine', () => {
     expect(published.published_at).toBeTruthy();
 
     const publishInteraction = await tenantTable('interactions')
-      .where({ tenant: tenantId, type_id: publishedType.type_id })
+      .where({ tenant: tenantId, type_id: publishedType.type_id, notes: 'Permalink: https://linkedin.com/posts/launch-1' })
       .first();
     expect(publishInteraction).toMatchObject({
       title: 'Social post published',
@@ -138,9 +142,7 @@ describeDb('T008: social post state machine', () => {
       publishedVia: 'ui',
     });
     expect(replayed.status).toBe('published');
-    expect(
-      await tenantTable('interactions').where({ tenant: tenantId, type_id: publishedType.type_id }),
-    ).toHaveLength(1);
+    expect(await publishCount()).toBe(baselinePublished + 1);
 
     // The other target sits awaiting well past the 48h grace period.
     const staleTarget = targetsAfterFlip[1];

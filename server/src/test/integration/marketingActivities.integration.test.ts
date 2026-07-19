@@ -133,7 +133,7 @@ describeDb('T013: awaiting-publish targets in the activities feed', () => {
       status: 'overdue',
       priority: ActivityPriority.HIGH,
       dueDate: new Date(scheduledAt).toISOString(),
-      link: '/msp/marketing/calendar',
+      link: '/msp/marketing/posts',
       workItemType: 'marketing_post',
       tenant: tenantId,
     });

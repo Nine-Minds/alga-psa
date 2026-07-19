@@ -130,13 +130,14 @@ describeDb('T003: marketing capture form submission', () => {
       .first();
     expect(engagement).toMatchObject({ campaign_id: campaign.campaign_id });
 
-    // Inbound-lead suggestion carries the capture attribution.
+    // Inbound-lead suggestion carries the capture attribution (scoped by
+    // dedupe key — the suite shuffles and sibling tests create their own).
     const suggestions = await tenantTable('opportunity_suggestions')
-      .where({ tenant: tenantId, generator_key: 'inbound-lead' });
+      .where({ tenant: tenantId, generator_key: 'inbound-lead' })
+      .where('dedupe_key', `inbound-lead:${form.form_id}:grace.hopper@example.com`);
     expect(suggestions).toHaveLength(1);
     const suggestion = suggestions[0];
     expect(suggestion.client_id).toBe(result.clientId);
-    expect(suggestion.dedupe_key).toBe(`inbound-lead:${form.form_id}:grace.hopper@example.com`);
     expect(suggestion.evidence).toMatchObject({
       source: 'capture_form',
       formId: form.form_id,
