@@ -20,6 +20,11 @@ import { renewGoogleGmailWatchSubscriptions, GoogleGmailWatchRenewalJobData } fr
 import { processRenewalQueueHandler, RenewalQueueProcessorJobData } from '@alga-psa/jobs/handlers/processRenewalQueueHandler';
 import { autoCloseTicketsHandler, AutoCloseTicketsJobData } from '@alga-psa/jobs/handlers/autoCloseTicketsHandler';
 import { lowStockNotificationHandler, LowStockNotificationJobData } from './handlers/lowStockNotificationHandler';
+import {
+  PROJECT_DATE_READINESS_JOB,
+  projectDateReadinessHandler,
+  ProjectDateReadinessJobData,
+} from './handlers/projectDateReadinessHandler';
 import { cleanupTemporaryFormsJob } from '@alga-psa/jobs/handlers/cleanupTemporaryFormsJob';
 import { cleanupWebhookDeliveriesJob, scheduleCleanupWebhookDeliveriesJob } from '@alga-psa/jobs/handlers/cleanupWebhookDeliveriesJob';
 import { cleanupAiSessionKeysHandler, CleanupAiSessionKeysJobData } from '@alga-psa/jobs/handlers/cleanupAiSessionKeysHandler';
@@ -139,6 +144,10 @@ export const initializeScheduler = async (storageService?: StorageService) => {
     // Register per-location low-stock alert handler (inventory F037/F038)
     jobScheduler.registerJobHandler<LowStockNotificationJobData>('inventory-low-stock-notification', async (job: Job<LowStockNotificationJobData>) => {
       await lowStockNotificationHandler(job.data);
+    });
+
+    jobScheduler.registerJobHandler<ProjectDateReadinessJobData>(PROJECT_DATE_READINESS_JOB, async (job: Job<ProjectDateReadinessJobData>) => {
+      await projectDateReadinessHandler(job.data);
     });
     
     jobScheduler.registerJobHandler<ExpireQuotesJobData>('expire-quotes', async (job: Job<ExpireQuotesJobData>) => {
@@ -526,6 +535,20 @@ export const scheduleOpportunityGeneratorsJob = async (
     { tenantId },
     cronExpression,
     { singletonKey: `opportunity-generators:${tenantId}` }
+  );
+  return result.jobId;
+};
+
+export const scheduleProjectDateReadinessJob = async (
+  tenantId: string,
+  cronExpression: string = '15 0 * * *'
+): Promise<string | null> => {
+  const runner = await getJobRunnerInstance();
+  const result = await runner.scheduleRecurringJob<ProjectDateReadinessJobData>(
+    PROJECT_DATE_READINESS_JOB,
+    { tenantId },
+    cronExpression,
+    { singletonKey: `${PROJECT_DATE_READINESS_JOB}:${tenantId}` }
   );
   return result.jobId;
 };

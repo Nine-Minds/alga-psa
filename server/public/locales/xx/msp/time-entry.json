@@ -168,7 +168,9 @@
     "empty": {
       "searching": "11111",
       "noWorkItems": "11111"
-    }
+    },
+    "paymentWarningTitle": "11111",
+    "paymentWarning": "11111"
   },
   "workItemList": {
     "meta": {

@@ -10,6 +10,7 @@ export { default as AutomaticInvoices } from './billing-dashboard/AutomaticInvoi
 export { default as PaperInvoice } from './billing-dashboard/PaperInvoice';
 export { TemplateRenderer } from './billing-dashboard/TemplateRenderer';
 export { PurchaseOrderSummaryBanner } from './billing-dashboard/invoicing/PurchaseOrderSummaryBanner';
+export { default as InvoicePreviewDrawerContent } from './billing-dashboard/invoicing/InvoicePreviewDrawerContent';
 export { ServiceCatalogPicker, type ServiceCatalogPickerItem } from './billing-dashboard/contracts/ServiceCatalogPicker';
 export { ContractWizard } from './billing-dashboard/contracts/ContractWizard';
 export { ContractDialog } from './billing-dashboard/contracts/ContractDialog';

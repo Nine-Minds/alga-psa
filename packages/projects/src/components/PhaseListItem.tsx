@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { IProjectPhase } from '@alga-psa/types';
-import { Pencil, Trash2, GripVertical, Columns3 } from 'lucide-react';
+import { Pencil, Trash2, GripVertical, Columns3, CheckCircle2, RotateCcw } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
@@ -11,6 +11,7 @@ import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { ProjectTaskStatusSettings } from './settings/projects/ProjectTaskStatusSettings';
 import { getProjectStatusMappings } from '../actions/projectTaskStatusActions';
+import { phaseBadgeClasses, formatCents, type PhaseBillingBadge } from '@alga-psa/core';
 import styles from './ProjectDetail.module.css';
 
 interface PhaseListItemProps {
@@ -41,6 +42,14 @@ interface PhaseListItemProps {
   onDragEnd: (e: React.DragEvent) => void;
   onStatusesChanged?: () => void;
   phases: IProjectPhase[];
+  /** Billing badge for a phase linked to schedule entries (F136). */
+  billingBadge?: PhaseBillingBadge;
+  /** Whether the current user can mark phases complete / reopen them (F137). */
+  canCompletePhase?: boolean;
+  /** True when every task in the phase is in a closed status (F138 nudge). */
+  allTasksClosed?: boolean;
+  onMarkComplete?: (phase: IProjectPhase) => void;
+  onReopen?: (phase: IProjectPhase) => void;
 }
 
 export const PhaseListItem: React.FC<PhaseListItemProps> = ({
@@ -71,8 +80,15 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
   onStatusesChanged,
   phases,
   taskDraggingOverPhaseId,
+  billingBadge,
+  canCompletePhase,
+  allTasksClosed,
+  onMarkComplete,
+  onReopen,
 }) => {
   const { t } = useTranslation('features/projects');
+  const isCompleted = Boolean(phase.completed_at);
+  const showCompletionNudge = !isCompleted && Boolean(allTasksClosed) && (taskCount ?? 0) > 0;
   const [isDragging, setIsDragging] = useState(false);
   const [showStatusDialog, setShowStatusDialog] = useState(false);
   const [customStatusCount, setCustomStatusCount] = useState<number | null>(null);
@@ -376,10 +392,39 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
           <div className="flex flex-col w-full min-w-0">
             <div className="flex items-start justify-between gap-2">
               <span className="text-lg font-bold text-gray-900 dark:text-gray-100 min-w-0 break-words">{phase.phase_name}</span>
-              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300 shrink-0">
-                {t('phases.taskCount', { count: taskCount ?? 0 })}
-              </span>
+              <div className="flex shrink-0 items-center gap-1.5">
+                {billingBadge && (
+                  <Tooltip content={formatCents(billingBadge.amountCents, billingBadge.currency)}>
+                    <span
+                      className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold ${phaseBadgeClasses(billingBadge.status)}`}
+                      aria-label={t('billing.phaseBadge.label', 'Billing milestone')}
+                    >
+                      $
+                    </span>
+                  </Tooltip>
+                )}
+                {isCompleted && (
+                  <Tooltip content={t('phases.completedOn', 'Completed {{date}}', { date: new Date(phase.completed_at as string).toLocaleDateString() })}>
+                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                  </Tooltip>
+                )}
+                <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 dark:bg-purple-500/20 text-purple-700 dark:text-purple-300">
+                  {t('phases.taskCount', { count: taskCount ?? 0 })}
+                </span>
+              </div>
             </div>
+            {showCompletionNudge && (
+              <button
+                type="button"
+                id={`phase-complete-nudge-${phase.phase_id}`}
+                onClick={(e) => { e.stopPropagation(); onMarkComplete?.(phase); }}
+                disabled={!canCompletePhase}
+                className="mt-1 inline-flex w-fit items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 hover:bg-amber-100 disabled:cursor-default disabled:hover:bg-amber-50 dark:bg-amber-500/10 dark:text-amber-300"
+              >
+                <CheckCircle2 className="h-3 w-3" />
+                {t('phases.allTasksClosedNudge', 'All tasks done — mark complete?')}
+              </button>
+            )}
             {phase.description && (
               <span className="text-sm text-gray-600 dark:text-gray-400 mt-1">{phase.description}</span>
             )}
@@ -398,6 +443,25 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
           </div>
           {/* Hover Action Buttons — absolutely positioned so they don't consume layout space */}
           <div className="absolute right-2 bottom-2 flex gap-1 opacity-0 group-hover:opacity-100 bg-inherit rounded">
+            {canCompletePhase && (isCompleted ? (
+              <button
+                id={`reopen-phase-${phase.phase_id}`}
+                onClick={(e) => { e.stopPropagation(); onReopen?.(phase); }}
+                className="p-1 rounded hover:bg-gray-200 dark:hover:bg-[rgb(var(--color-border-200))]"
+                title={t('phases.reopenPhase', 'Reopen phase')}
+              >
+                <RotateCcw className="w-3 h-3" />
+              </button>
+            ) : (
+              <button
+                id={`complete-phase-${phase.phase_id}`}
+                onClick={(e) => { e.stopPropagation(); onMarkComplete?.(phase); }}
+                className="p-1 rounded text-green-600 hover:bg-green-50 dark:hover:bg-green-500/10"
+                title={t('phases.markComplete', 'Mark phase complete')}
+              >
+                <CheckCircle2 className="w-3 h-3" />
+              </button>
+            ))}
             <button
               onClick={(e) => {
                 e.stopPropagation();

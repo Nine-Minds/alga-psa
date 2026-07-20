@@ -68,6 +68,11 @@ export interface AccountingExportLinePayload {
     multi_period?: boolean;
     credit_memo?: boolean;
     zero_amount?: boolean;
+    charge_type?: 'project_milestone' | 'project_deposit';
+    project_id?: string;
+    project_number?: string | null;
+    project_name?: string;
+    schedule_entry_id?: string;
   } | null;
   transaction_ids?: string[];
 }

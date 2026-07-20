@@ -374,6 +374,13 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
           servicePeriodEnd: summaryEnd,
           billingTiming: summaryBillingTiming,
           recurringDetailPeriods: normalizedDetailPeriods,
+          ...((item as any).item_type === 'project'
+            ? {
+                category: (item as any).category ?? undefined,
+                itemType: 'project' as const,
+                projectPhaseName: (item as any).project_phase_name ?? null,
+              }
+            : {}),
           location_id: item.location_id ?? null,
           location: null,
         };
@@ -393,6 +400,14 @@ export function mapDbInvoiceToWasmViewModel(inputData: DbInvoiceViewModel | Wasm
           address: String(dbData.client?.address ?? 'N/A'),
         },
         poNumber: (dbData as any).po_number ?? null,
+        ...((dbData as any).project_name
+          ? {
+              projectName: String((dbData as any).project_name),
+              projectNumber: (dbData as any).project_number
+                ? String((dbData as any).project_number)
+                : null,
+            }
+          : {}),
         recurringServicePeriodStart: recurringServicePeriodSummary.recurringServicePeriodStart,
         recurringServicePeriodEnd: recurringServicePeriodSummary.recurringServicePeriodEnd,
         recurringServicePeriodLabel: recurringServicePeriodSummary.recurringServicePeriodLabel,

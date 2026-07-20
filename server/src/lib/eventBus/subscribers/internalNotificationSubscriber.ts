@@ -1,7 +1,7 @@
 import { getEventBus } from '../index';
 import {
-  EventType, BaseEvent, EventSchemas, TicketCreatedEvent, TicketUpdatedEvent, TicketClosedEvent, TicketAssignedEvent, TicketAdditionalAgentAssignedEvent, TicketCommentAddedEvent, TicketCommentUpdatedEvent, ProjectCreatedEvent, ProjectAssignedEvent, ProjectTaskAssignedEvent, ProjectTaskAdditionalAgentAssignedEvent, TaskCommentAddedEvent, TaskCommentUpdatedEvent, InvoiceGeneratedEvent, MessageSentEvent, UserMentionedInDocumentEvent, AppointmentRequestCreatedEvent, AppointmentRequestApprovedEvent, AppointmentRequestDeclinedEvent, AppointmentRequestCancelledEvent
-} from '@alga-psa/event-schemas';
+  EventType, BaseEvent, EventSchemas, TicketCreatedEvent, TicketUpdatedEvent, TicketClosedEvent, TicketAssignedEvent, TicketAdditionalAgentAssignedEvent, TicketCommentAddedEvent, TicketCommentUpdatedEvent, ProjectCreatedEvent, ProjectAssignedEvent, ProjectTaskAssignedEvent, ProjectTaskAdditionalAgentAssignedEvent, TaskCommentAddedEvent, TaskCommentUpdatedEvent, InvoiceGeneratedEvent, MessageSentEvent, UserMentionedInDocumentEvent, AppointmentRequestCreatedEvent, AppointmentRequestApprovedEvent, AppointmentRequestDeclinedEvent, AppointmentRequestCancelledEvent, ProjectMilestoneReadyEvent, ProjectBudgetThresholdReachedEvent, ProjectBudgetExceededEvent
+} from '@alga-psa/event-bus/events';
 import { createNotificationFromTemplateInternal } from '@alga-psa/notifications/actions';
 import logger from '@alga-psa/core/logger';
 import { getConnection } from '../../db/db';
@@ -2181,6 +2181,120 @@ async function handleProjectAssigned(event: ProjectAssignedEvent): Promise<void>
   }
 }
 
+function formatInternalProjectBillingAmount(amountCents: number, currency: string | null): string {
+  const currencyCode = currency?.trim() || 'USD';
+  try {
+    return new Intl.NumberFormat('en-US', { style: 'currency', currency: currencyCode })
+      .format(amountCents / 100);
+  } catch {
+    return `${currencyCode} ${(amountCents / 100).toFixed(2)}`;
+  }
+}
+
+async function handleProjectBillingInternalNotification(
+  event: ProjectMilestoneReadyEvent | ProjectBudgetThresholdReachedEvent | ProjectBudgetExceededEvent,
+): Promise<void> {
+  const { tenantId, projectId } = event.payload;
+  const db = await getConnection(tenantId);
+  const scopedDb = tenantDb(db, tenantId);
+  const projectQuery = scopedDb.table('projects as p')
+    .select(
+      'p.project_id',
+      'p.project_name',
+      'p.project_number',
+      'p.assigned_to',
+      'c.account_manager_id',
+      'pbc.currency'
+    );
+  scopedDb.tenantJoin(projectQuery, 'clients as c', 'p.client_id', 'c.client_id', { type: 'left' });
+  scopedDb.tenantJoin(projectQuery, 'project_billing_configs as pbc', 'p.project_id', 'pbc.project_id', { type: 'left' });
+  const project = await projectQuery.where('p.project_id', projectId).first();
+  if (!project) {
+    logger.warn('[InternalNotificationSubscriber] Project billing event project not found', {
+      eventId: event.id,
+      projectId,
+      tenantId,
+    });
+    return;
+  }
+
+  const recipients = Array.from(new Set<string>([
+    project.assigned_to,
+    project.account_manager_id,
+  ].filter(Boolean)));
+  const { internalUrl } = await resolveNotificationLinks(db, tenantId, {
+    type: 'project',
+    projectId,
+  });
+
+  for (const userId of recipients) {
+    if (event.eventType === 'PROJECT_MILESTONE_READY') {
+      await createNotificationFromTemplateInternal(db, {
+        tenant: tenantId,
+        user_id: userId,
+        template_name: 'project-milestone-ready',
+        type: 'info',
+        category: 'projects',
+        link: internalUrl,
+        data: {
+          projectName: project.project_name,
+          entryDescription: event.payload.description,
+          amount: formatInternalProjectBillingAmount(event.payload.computedAmount, project.currency),
+        },
+        metadata: {
+          projectId,
+          projectNumber: project.project_number,
+          scheduleEntryId: event.payload.entryId,
+          trigger: event.payload.trigger,
+        },
+      });
+      continue;
+    }
+
+    if (event.eventType === 'PROJECT_BUDGET_EXCEEDED') {
+      await createNotificationFromTemplateInternal(db, {
+        tenant: tenantId,
+        user_id: userId,
+        template_name: 'project-budget-exceeded',
+        type: 'warning',
+        category: 'projects',
+        link: internalUrl,
+        data: {
+          projectName: project.project_name,
+          billed: formatInternalProjectBillingAmount(event.payload.billed, project.currency),
+          cap: formatInternalProjectBillingAmount(event.payload.cap, project.currency),
+          writtenDown: formatInternalProjectBillingAmount(event.payload.writtenDown, project.currency),
+        },
+        metadata: {
+          projectId,
+          projectNumber: project.project_number,
+        },
+      });
+      continue;
+    }
+
+    await createNotificationFromTemplateInternal(db, {
+      tenant: tenantId,
+      user_id: userId,
+      template_name: 'project-budget-threshold-reached',
+      type: 'warning',
+      category: 'projects',
+      link: internalUrl,
+      data: {
+        projectName: project.project_name,
+        threshold: `${event.payload.threshold}%`,
+        billed: formatInternalProjectBillingAmount(event.payload.billed, project.currency),
+        cap: formatInternalProjectBillingAmount(event.payload.cap, project.currency),
+      },
+      metadata: {
+        projectId,
+        projectNumber: project.project_number,
+        threshold: event.payload.threshold,
+      },
+    });
+  }
+}
+
 /**
  * Handle task assigned events (user or team assignment)
  */
@@ -2853,6 +2967,15 @@ async function handleInternalNotificationEvent(event: BaseEvent): Promise<void> 
     case 'PROJECT_TASK_ADDITIONAL_AGENT_ASSIGNED':
       await handleProjectTaskAdditionalAgentAssigned(validatedEvent as ProjectTaskAdditionalAgentAssignedEvent);
       break;
+    case 'PROJECT_MILESTONE_READY':
+      await handleProjectBillingInternalNotification(validatedEvent as ProjectMilestoneReadyEvent);
+      break;
+    case 'PROJECT_BUDGET_THRESHOLD_REACHED':
+      await handleProjectBillingInternalNotification(validatedEvent as ProjectBudgetThresholdReachedEvent);
+      break;
+    case 'PROJECT_BUDGET_EXCEEDED':
+      await handleProjectBillingInternalNotification(validatedEvent as ProjectBudgetExceededEvent);
+      break;
     case 'INVOICE_GENERATED':
       await handleInvoiceGenerated(validatedEvent as InvoiceGeneratedEvent);
       break;
@@ -2912,6 +3035,9 @@ export async function registerInternalNotificationSubscriber(): Promise<void> {
       'PROJECT_ASSIGNED',
       'PROJECT_TASK_ASSIGNED',
       'PROJECT_TASK_ADDITIONAL_AGENT_ASSIGNED',
+      'PROJECT_MILESTONE_READY',
+      'PROJECT_BUDGET_THRESHOLD_REACHED',
+      'PROJECT_BUDGET_EXCEEDED',
       'INVOICE_GENERATED',
       'MESSAGE_SENT',
       'USER_MENTIONED_IN_DOCUMENT',
@@ -2955,6 +3081,9 @@ export async function unregisterInternalNotificationSubscriber(): Promise<void> 
       'PROJECT_ASSIGNED',
       'PROJECT_TASK_ASSIGNED',
       'PROJECT_TASK_ADDITIONAL_AGENT_ASSIGNED',
+      'PROJECT_MILESTONE_READY',
+      'PROJECT_BUDGET_THRESHOLD_REACHED',
+      'PROJECT_BUDGET_EXCEEDED',
       'INVOICE_GENERATED',
       'MESSAGE_SENT',
       'USER_MENTIONED_IN_DOCUMENT',

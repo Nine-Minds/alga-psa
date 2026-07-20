@@ -4,7 +4,8 @@ import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { IProjectPhase, IProjectTask, ProjectStatus, IProjectTaskDependency, IPriority, IStandardPriority, ITaskType } from '@alga-psa/types';
 import { ITag } from '@alga-psa/types';
 import { ITaskResource } from '@alga-psa/types';
-import { ChevronDown, ChevronRight, Pencil, Copy, Trash2, Link2, Ban, GitBranch, Calendar, GripVertical, Plus, CheckSquare, Paperclip, Zap, ClipboardList, Bug, Sparkles, TrendingUp, Flag, BookOpen } from 'lucide-react';
+import { ChevronDown, ChevronRight, Pencil, Copy, Trash2, Link2, Ban, GitBranch, Calendar, GripVertical, Plus, CheckSquare, Paperclip, Zap, ClipboardList, Bug, Sparkles, TrendingUp, Flag, BookOpen, CheckCircle2, RotateCcw } from 'lucide-react';
+import { phaseBadgeClasses, formatCents, type PhaseBillingBadge } from '@alga-psa/core';
 import { extractTaskDescriptionText } from '../lib/taskRichText';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -197,6 +198,14 @@ interface TaskListViewProps {
   onTaskMove?: (taskId: string, newStatusMappingId: string, newPhaseId: string, beforeTaskId: string | null, afterTaskId: string | null) => Promise<void>;
   onAddPhase?: () => void;
   onAddTask?: (phaseId: string) => void;
+  /** Per-phase billing badges keyed by phase_id (F136). */
+  phaseBillingBadges?: Record<string, PhaseBillingBadge>;
+  /** Per-phase "all tasks closed" flags for the completion nudge (F138). */
+  phaseAllTasksClosed?: Record<string, boolean>;
+  /** Whether the user can mark phases complete / reopen them (F137). */
+  canCompletePhase?: boolean;
+  onMarkPhaseComplete?: (phase: IProjectPhase) => void;
+  onReopenPhase?: (phase: IProjectPhase) => void;
   onTaskTagsChange?: (taskId: string, tags: ITag[]) => void;
   onAssigneeChange?: (taskId: string, newAssigneeId: string | null) => void;
   onTeamAssign?: (taskId: string, teamId: string) => void | Promise<void>;
@@ -251,6 +260,11 @@ export default function TaskListView({
   onTaskMove,
   onAddPhase,
   onAddTask,
+  phaseBillingBadges,
+  phaseAllTasksClosed,
+  canCompletePhase,
+  onMarkPhaseComplete,
+  onReopenPhase,
   onTaskTagsChange,
   onAssigneeChange,
   onTeamAssign,
@@ -1407,6 +1421,28 @@ export default function TaskListView({
                                 <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-purple-100 text-purple-700">
                                   {phaseGroup.totalTasks} {t(phaseGroup.totalTasks === 1 ? 'task' : 'tasks.title', phaseGroup.totalTasks === 1 ? 'task' : 'tasks')}
                                 </span>
+                                {phaseBillingBadges?.[phaseGroup.phase.phase_id] && (
+                                  <Tooltip content={formatCents(phaseBillingBadges[phaseGroup.phase.phase_id].amountCents, phaseBillingBadges[phaseGroup.phase.phase_id].currency)}>
+                                    <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold ${phaseBadgeClasses(phaseBillingBadges[phaseGroup.phase.phase_id].status)}`}>$</span>
+                                  </Tooltip>
+                                )}
+                                {phaseGroup.phase.completed_at && (
+                                  <Tooltip content={t('phases.completedOn', 'Completed {{date}}', { date: new Date(phaseGroup.phase.completed_at as string).toLocaleDateString() })}>
+                                    <CheckCircle2 className="h-4 w-4 text-green-500" />
+                                  </Tooltip>
+                                )}
+                                {!phaseGroup.phase.completed_at && phaseAllTasksClosed?.[phaseGroup.phase.phase_id] && phaseGroup.totalTasks > 0 && (
+                                  <button
+                                    type="button"
+                                    id={`phase-complete-nudge-list-${phaseGroup.phase.phase_id}`}
+                                    onClick={(e) => { e.stopPropagation(); onMarkPhaseComplete?.(phaseGroup.phase); }}
+                                    disabled={!canCompletePhase}
+                                    className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700 hover:bg-amber-100 disabled:cursor-default dark:bg-amber-500/10 dark:text-amber-300"
+                                  >
+                                    <CheckCircle2 className="h-3 w-3" />
+                                    {t('phases.allTasksClosedNudge', 'All tasks done — mark complete?')}
+                                  </button>
+                                )}
                               </div>
 
                               {/* Phase description */}
@@ -1445,6 +1481,29 @@ export default function TaskListView({
                                   </div>
                                 </div>
                               )}
+
+                              {/* Mark phase complete / reopen (F137) */}
+                              {canCompletePhase && (phaseGroup.phase.completed_at ? (
+                                <Button
+                                  id={`reopen-phase-list-${phaseGroup.phase.phase_id}`}
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={(e) => { e.stopPropagation(); onReopenPhase?.(phaseGroup.phase); }}
+                                >
+                                  <RotateCcw className="h-4 w-4 mr-1" />
+                                  {t('phases.reopen', 'Reopen')}
+                                </Button>
+                              ) : (
+                                <Button
+                                  id={`complete-phase-list-${phaseGroup.phase.phase_id}`}
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={(e) => { e.stopPropagation(); onMarkPhaseComplete?.(phaseGroup.phase); }}
+                                >
+                                  <CheckCircle2 className="h-4 w-4 mr-1" />
+                                  {t('phases.markComplete', 'Mark complete')}
+                                </Button>
+                              ))}
 
                               {/* Add Task button */}
                               {onAddTask && (
