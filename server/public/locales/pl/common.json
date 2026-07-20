@@ -20,15 +20,20 @@
     "expiringForClient_many": "{{count}} kredytów klienta {{clientName}} wkrótce wygaśnie",
     "expiringForClient_other": "{{count}} kredytów klienta {{clientName}} wkrótce wygaśnie"
   },
+  "staleAction": {
+    "message": "Ta strona jest nieaktualna. Odśwież ją, aby przywrócić aktualizacje i działania."
+  },
   "licenseBanner": {
-    "trialExpiresIn_one": "Okres próbny Enterprise wygasa za {{count}} dzień. Wprowadź klucz licencyjny, aby zachować funkcje Enterprise.",
-    "trialExpiresIn_few": "Okres próbny Enterprise wygasa za {{count}} dni. Wprowadź klucz licencyjny, aby zachować funkcje Enterprise.",
-    "trialExpiresIn_many": "Okres próbny Enterprise wygasa za {{count}} dni. Wprowadź klucz licencyjny, aby zachować funkcje Enterprise.",
-    "trialExpiresIn_other": "Okres próbny Enterprise wygasa za {{count}} dni. Wprowadź klucz licencyjny, aby zachować funkcje Enterprise.",
-    "trialDaysRemaining_one": "Okres próbny Enterprise aktywny — pozostał {{count}} dzień.",
-    "trialDaysRemaining_few": "Okres próbny Enterprise aktywny — pozostały {{count}} dni.",
-    "trialDaysRemaining_many": "Okres próbny Enterprise aktywny — pozostało {{count}} dni.",
-    "trialDaysRemaining_other": "Okres próbny Enterprise aktywny — pozostało {{count}} dni.",
+    "trialExpiresIn_one": "Okres próbny Pro wygasa za {{count}} dzień. Wprowadź klucz licencyjny, aby zachować funkcje Pro.",
+    "trialExpiresIn_few": "Okres próbny Pro wygasa za {{count}} dni. Wprowadź klucz licencyjny, aby zachować funkcje Pro.",
+    "trialExpiresIn_many": "Okres próbny Pro wygasa za {{count}} dni. Wprowadź klucz licencyjny, aby zachować funkcje Pro.",
+    "trialExpiresIn_other": "Okres próbny Pro wygasa za {{count}} dni. Wprowadź klucz licencyjny, aby zachować funkcje Pro.",
+    "trialDaysRemaining_one": "Okres próbny Pro aktywny — pozostał {{count}} dzień.",
+    "trialDaysRemaining_few": "Okres próbny Pro aktywny — pozostały {{count}} dni.",
+    "trialDaysRemaining_many": "Okres próbny Pro aktywny — pozostało {{count}} dni.",
+    "trialDaysRemaining_other": "Okres próbny Pro aktywny — pozostało {{count}} dni.",
+    "trialAvailable": "Funkcje Essentials są aktywne. Rozpocznij bezpłatny 15-dniowy okres próbny Pro, aby odblokować wszystkie funkcje.",
+    "trialExpired": "Okres próbny Pro wygasł. Instalacja korzysta teraz z funkcji Essentials.",
     "licenseExpiresIn_one": "Licencja wygasa za {{count}} dzień. Odnów, aby uniknąć przerwy w działaniu usługi.",
     "licenseExpiresIn_few": "Licencja wygasa za {{count}} dni. Odnów, aby uniknąć przerwy w działaniu usługi.",
     "licenseExpiresIn_many": "Licencja wygasa za {{count}} dni. Odnów, aby uniknąć przerwy w działaniu usługi.",

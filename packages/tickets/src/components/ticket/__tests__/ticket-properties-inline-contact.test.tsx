@@ -79,6 +79,7 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
 
 vi.mock('@alga-psa/ui/components', () => ({
   ContentCard: ({ children }: any) => <div>{children}</div>,
+  useContentCardVariant: () => 'default',
 }));
 
 vi.mock('@alga-psa/core', () => ({

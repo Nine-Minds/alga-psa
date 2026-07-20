@@ -5,6 +5,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga
 import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
+import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import { dateFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@alga-psa/ui/components/Table';
@@ -469,22 +471,28 @@ export default function AccountingExportsTab(): React.JSX.Element {
                 <Label htmlFor="accounting-export-start-date">
                   {t('accountingExports.createDialog.fields.startDate', { defaultValue: 'Start Date' })}
                 </Label>
-                <Input
+                <DatePicker
                   id="accounting-export-start-date"
-                  type="date"
-                  value={startDate}
-                  onChange={(e) => setStartDate(e.target.value)}
+                  label={t('accountingExports.createDialog.fields.startDate', { defaultValue: 'Start Date' })}
+                  placeholder={t('accountingExports.createDialog.fields.startDate', { defaultValue: 'Start Date' })}
+                  clearable
+                  className="w-full"
+                  value={dateFromString(startDate)}
+                  onChange={(date) => setStartDate(dateToString(date))}
                 />
               </div>
               <div className="space-y-2">
                 <Label htmlFor="accounting-export-end-date">
                   {t('accountingExports.createDialog.fields.endDate', { defaultValue: 'End Date' })}
                 </Label>
-                <Input
+                <DatePicker
                   id="accounting-export-end-date"
-                  type="date"
-                  value={endDate}
-                  onChange={(e) => setEndDate(e.target.value)}
+                  label={t('accountingExports.createDialog.fields.endDate', { defaultValue: 'End Date' })}
+                  placeholder={t('accountingExports.createDialog.fields.endDate', { defaultValue: 'End Date' })}
+                  clearable
+                  className="w-full"
+                  value={dateFromString(endDate)}
+                  onChange={(date) => setEndDate(dateToString(date))}
                 />
               </div>
             </div>

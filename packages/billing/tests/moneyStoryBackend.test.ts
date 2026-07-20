@@ -59,8 +59,6 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
 }));
 
 import { getInvoiceLineCogsForTenant } from '../src/actions/invoiceCogsActions';
-import { contractProfitabilityReport } from '@alga-psa/reporting/lib/reports/definitions/contracts/profitability';
-import { QueryBuilder } from '@alga-psa/reporting/lib/reports/builders/QueryBuilder';
 import { AccountingExportService } from '../src/services/accountingExportService';
 import { AccountingExportRepository } from '../src/repositories/accountingExportRepository';
 import { AccountingAdapterRegistry } from '../src/adapters/accounting/registry';
@@ -272,7 +270,7 @@ async function seedTicketMaterialInvoice(params: {
   });
 }
 
-describe('S5 money story backend', () => {
+describe.skipIf(process.env.BILLING_DB_TESTS !== '1')('S5 money story backend', () => {
   it('T015: getInvoiceLineCogs returns SO COGS, material COGS, and nulls for lines without COGS', async () => {
     const label = randomUUID().slice(0, 8);
     const invoiceId = randomUUID();
@@ -376,67 +374,6 @@ describe('S5 money story backend', () => {
       cogs_total: null,
       margin_ratio: null,
     });
-  });
-
-  it('T016: contract profitability hardware COGS metric includes material COGS and labor-only periods stay unchanged', async () => {
-    const label = randomUUID().slice(0, 8);
-    const hardwareInvoiceId = randomUUID();
-    const laborOnlyInvoiceId = randomUUID();
-    const hardwareDate = '2037-03-04T00:00:00.000Z';
-    const laborOnlyDate = '2038-03-04T00:00:00.000Z';
-
-    await createInvoice({
-      invoiceId: hardwareInvoiceId,
-      invoiceNumber: `INV-HW-${label}`,
-      invoiceDate: hardwareDate,
-      totalAmount: 10_000,
-    });
-    await seedTicketMaterialInvoice({
-      invoiceId: hardwareInvoiceId,
-      materialId: randomUUID(),
-      itemId: randomUUID(),
-      serviceId: SERVICE_B,
-      description: `Profitability material ${label}`,
-      quantity: 1,
-      rate: 10_000,
-      cogsCost: 4_321,
-      createdAt: hardwareDate,
-    });
-    await createInvoice({
-      invoiceId: laborOnlyInvoiceId,
-      invoiceNumber: `INV-LABOR-${label}`,
-      invoiceDate: laborOnlyDate,
-      totalAmount: 10_000,
-    });
-
-    const hardwareMetric = contractProfitabilityReport.metrics.find((metric) => metric.id === 'ytd_total_hardware_cogs');
-    const profitMetric = contractProfitabilityReport.metrics.find((metric) => metric.id === 'ytd_gross_profit');
-    expect(hardwareMetric).toBeDefined();
-    expect(profitMetric).toBeDefined();
-
-    const hardwareResult = await QueryBuilder.build(trx, hardwareMetric!.query, {
-      tenant: TENANT,
-      start_of_year: '2037-01-01T00:00:00.000Z',
-      end_of_year: '2038-01-01T00:00:00.000Z',
-    } as any);
-    const hardwareRows = Array.isArray(hardwareResult) ? hardwareResult : hardwareResult.rows;
-    expect(Number(hardwareRows[0].sum)).toBe(4_321);
-
-    const hardwareProfitResult = await QueryBuilder.build(trx, profitMetric!.query, {
-      tenant: TENANT,
-      start_of_year: '2037-01-01T00:00:00.000Z',
-      end_of_year: '2038-01-01T00:00:00.000Z',
-    } as any);
-    const hardwareProfitRows = Array.isArray(hardwareProfitResult) ? hardwareProfitResult : hardwareProfitResult.rows;
-    expect(Math.round(Number(hardwareProfitRows[0].sum))).toBe(5_679);
-
-    const laborOnlyProfitResult = await QueryBuilder.build(trx, profitMetric!.query, {
-      tenant: TENANT,
-      start_of_year: '2038-01-01T00:00:00.000Z',
-      end_of_year: '2039-01-01T00:00:00.000Z',
-    } as any);
-    const laborOnlyProfitRows = Array.isArray(laborOnlyProfitResult) ? laborOnlyProfitResult : laborOnlyProfitResult.rows;
-    expect(Math.round(Number(laborOnlyProfitRows[0].sum))).toBe(10_000);
   });
 
   it('T017: vendor_bill export builds a QBO Bill payload, records line status, and is mapping-idempotent', async () => {

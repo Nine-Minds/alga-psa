@@ -81,7 +81,8 @@ vi.mock('@alga-psa/workflows/persistence', () => ({
   },
 }));
 
-vi.mock('@alga-psa/workflow-streams', () => ({
+vi.mock('@alga-psa/workflow-streams', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/workflow-streams')>()),
   getRedisStreamClient: () => ({
     publishEvent: vi.fn(),
   }),

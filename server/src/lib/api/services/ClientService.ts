@@ -10,7 +10,12 @@ import { getClientLogoUrl } from '@alga-psa/formatting/avatarUtils';
 import { createDefaultTaxSettingsInternal } from '@alga-psa/billing/actions';
 import { isEnterprise } from '@alga-psa/core';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
-import { NotFoundError, ValidationError } from '../../api/middleware/apiMiddleware';
+import { ConflictError, NotFoundError, ValidationError } from '../../api/middleware/apiMiddleware';
+import {
+  createLocation as createClientLocation,
+  deleteLocation as deleteClientLocation,
+  updateLocation as updateClientLocation,
+} from '@alga-psa/clients/models';
 import {
   CreateClientData,
   UpdateClientData,
@@ -36,6 +41,34 @@ import {
 function maybeUserActorFromContext(context: ServiceContext) {
   if (typeof context.userId !== 'string' || !context.userId) return undefined;
   return { actorType: 'USER' as const, actorUserId: context.userId };
+}
+
+function throwClientLocationApiError(error: unknown): never {
+  if ((error as { code?: string })?.code === '23505') {
+    throw new ConflictError('Another location is already the default for this client');
+  }
+
+  if (error instanceof Error) {
+    if (error.message === 'Client not found') {
+      throw new NotFoundError('Client not found');
+    }
+    if (error.message === 'Location not found') {
+      throw new NotFoundError('Client location not found');
+    }
+    if (error.message === 'A default location must be active') {
+      throw new ValidationError('Validation failed', [
+        { path: ['is_default'], message: error.message },
+      ]);
+    }
+    if (
+      error.message === 'Cannot unset default: no other active location available' ||
+      error.message.startsWith('Cannot delete location: it has associated ')
+    ) {
+      throw new ConflictError(error.message);
+    }
+  }
+
+  throw error;
 }
 
 function scopedTable<Row extends object = Record<string, any>>(
@@ -173,19 +206,33 @@ export class ClientService extends BaseService<IClient> {
       // Build base query with account manager and location joins
       let dataQuery = db.table('clients as c');
       db.tenantJoin(dataQuery, 'users as u', 'c.account_manager_id', 'u.user_id', { type: 'left' });
-      db.tenantJoin(dataQuery, 'client_locations as cl', 'c.client_id', 'cl.client_id', {
+      db.tenantJoinFirstMatching(dataQuery, 'client_locations', 'cl', 'c.client_id', 'client_id', {
         type: 'left',
-        on(join) {
-          join.andOn('cl.is_default', '=', trx.raw('true'));
-        },
+        rootTenantColumn: 'c.tenant',
+        where: (query, alias) => query.where({
+          [`${alias}.is_default`]: true,
+          [`${alias}.is_active`]: true,
+        }),
+        orderBy: [
+          { column: 'updated_at', order: 'desc' },
+          { column: 'created_at', order: 'desc' },
+          { column: 'location_id', order: 'desc' },
+        ],
       });
 
       let countQuery = db.table('clients as c');
-      db.tenantJoin(countQuery, 'client_locations as cl', 'c.client_id', 'cl.client_id', {
+      db.tenantJoinFirstMatching(countQuery, 'client_locations', 'cl', 'c.client_id', 'client_id', {
         type: 'left',
-        on(join) {
-          join.andOn('cl.is_default', '=', trx.raw('true'));
-        },
+        rootTenantColumn: 'c.tenant',
+        where: (query, alias) => query.where({
+          [`${alias}.is_default`]: true,
+          [`${alias}.is_active`]: true,
+        }),
+        orderBy: [
+          { column: 'updated_at', order: 'desc' },
+          { column: 'created_at', order: 'desc' },
+          { column: 'location_id', order: 'desc' },
+        ],
       });
 
       // Apply filters
@@ -738,31 +785,22 @@ export class ClientService extends BaseService<IClient> {
     context: ServiceContext
   ): Promise<IClientLocation> {
     const { knex } = await this.getKnex();
-    return withTransaction(knex, async (trx) => {
-      // Verify client exists
-      const client = await scopedTable(trx, context.tenant, 'clients')
-        .where({ client_id: clientId })
-        .first();
+    try {
+      return await withTransaction(knex, async (trx) => {
+        // Verify client exists before entering the shared mutation layer.
+        const client = await scopedTable(trx, context.tenant, 'clients')
+          .where({ client_id: clientId })
+          .first();
 
-      if (!client) {
-        throw new NotFoundError('Client not found');
-      }
+        if (!client) {
+          throw new NotFoundError('Client not found');
+        }
 
-      const locationData = {
-        location_id: knex.raw('gen_random_uuid()'),
-        client_id: clientId,
-        ...data,
-        tenant: context.tenant,
-        created_at: knex.raw('now()'),
-        updated_at: knex.raw('now()')
-      };
-
-      const [location] = await tenantDb(trx, context.tenant).table('client_locations')
-        .insert(locationData)
-        .returning('*');
-
-      return location as IClientLocation;
-    });
+        return createClientLocation(trx, context.tenant, clientId, data);
+      });
+    } catch (error) {
+      throwClientLocationApiError(error);
+    }
   }
 
   /**
@@ -774,32 +812,13 @@ export class ClientService extends BaseService<IClient> {
     context: ServiceContext
   ): Promise<IClientLocation> {
     const { knex } = await this.getKnex();
-    return withTransaction(knex, async (trx) => {
-      const db = tenantDb(trx, context.tenant);
-      const updateData: any = {
-        ...data,
-        updated_at: knex.raw('now()')
-      };
-
-      // Remove undefined values
-      Object.keys(updateData).forEach(key => {
-        if (updateData[key] === undefined) {
-          delete updateData[key];
-        }
-      });
-
-      const [location] = await db.table('client_locations')
-        .where('location_id', locationId)
-        .where('client_id', clientId)
-        .update(updateData)
-        .returning('*');
-
-      if (!location) {
-        throw new NotFoundError('Client location not found');
-      }
-
-      return location as IClientLocation;
-    });
+    try {
+      return await withTransaction(knex, (trx) =>
+        updateClientLocation(trx, context.tenant, clientId, locationId, data)
+      );
+    } catch (error) {
+      throwClientLocationApiError(error);
+    }
   }
 
   /**
@@ -810,19 +829,13 @@ export class ClientService extends BaseService<IClient> {
     context: ServiceContext
   ): Promise<void> {
     const { knex } = await this.getKnex();
-    return withTransaction(knex, async (trx) => {
-      const result = await scopedTable(trx, context.tenant, 'client_locations')
-        .where({
-          location_id: locationId,
-          client_id: clientId
-        })
-        .delete();
-
-      if (result === 0) {
-        throw new NotFoundError('Location not found');
-      }
-
-    });
+    try {
+      await withTransaction(knex, (trx) =>
+        deleteClientLocation(trx, context.tenant, clientId, locationId)
+      );
+    } catch (error) {
+      throwClientLocationApiError(error);
+    }
   }
 
   /**

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pencil, SlidersHorizontal, Flame, Save } from 'lucide-react';
+import { Pencil, SlidersHorizontal, Flame, Save, CheckCircle } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect, { type SelectOption } from '@alga-psa/ui/components/CustomSelect';
@@ -101,6 +101,9 @@ interface BentoHeroProps {
   onTagsChange?: (tags: ITag[]) => void;
   /** Rendered create-task / link-task actions (injected node). */
   taskActions?: React.ReactNode;
+  /** Opens the dedicated resolution-and-close dialog. */
+  onResolveAndClose?: () => void;
+  resolveAndCloseDisabled?: boolean;
   // Live collaboration signals (subset of the full TicketInfo treatment).
   liveHighlightedFields?: string[];
   liveFrozenFields?: string[];
@@ -159,6 +162,8 @@ export function BentoHero({
   tags,
   onTagsChange,
   taskActions,
+  onResolveAndClose,
+  resolveAndCloseDisabled = false,
   liveHighlightedFields = [],
   liveFrozenFields = [],
   liveFieldConflicts,
@@ -810,6 +815,20 @@ export function BentoHero({
               </span>
             ) : null}
             {taskActions}
+            {onResolveAndClose ? (
+              <Button
+                id={`${id}-resolve-and-close-button`}
+                type="button"
+                variant="soft"
+                size="sm"
+                onClick={onResolveAndClose}
+                disabled={workflowLocked || isFrozen('status_id') || resolveAndCloseDisabled}
+                className="flex items-center gap-1.5"
+              >
+                <CheckCircle className="h-3.5 w-3.5" />
+                {t('info.resolveAndClose', 'Resolve and close')}
+              </Button>
+            ) : null}
             <Button
               id={`${id}-all-fields-button`}
               variant="outline"

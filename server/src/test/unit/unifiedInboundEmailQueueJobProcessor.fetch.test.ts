@@ -34,6 +34,10 @@ vi.mock('@alga-psa/shared/services/email/processInboundEmailInApp', () => ({
   processInboundEmailInApp: (...args: any[]) => processInboundEmailInAppMock(...args),
 }));
 
+vi.mock('@alga-psa/shared/services/email/microsoftEmailProviderConfig', () => ({
+  buildMicrosoftEmailProviderConfig: vi.fn(async (config) => config),
+}));
+
 vi.mock('@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter', () => ({
   MicrosoftGraphAdapter: class MicrosoftGraphAdapter {
     connect(...args: any[]) {
@@ -68,7 +72,6 @@ vi.mock('mailparser', () => ({
 
 vi.mock('imapflow', () => ({
   ImapFlow: class ImapFlow {
-    on() {}
     connect(...args: any[]) {
       return imapConnectMock(...args);
     }
@@ -135,6 +138,9 @@ function createDbMock(params: {
         },
         async first() {
           return params.googleProviderRow || null;
+        },
+        async update() {
+          return 1;
         },
       };
       return builder;

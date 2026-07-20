@@ -169,11 +169,11 @@
       "addSelected": "Ajouter les services sélectionnés",
       "adding": "Ajout..."
     },
-    "title": "Ajouter des services et des produits au plan",
+    "title": "Ajouter des services et des produits à la ligne de contrat",
     "searchPlaceholder": "Rechercher des services/produits...",
     "errors": {
       "load": "Échec du chargement des services",
-      "add": "Échec de l'ajout de services au plan"
+      "add": "Échec de l'ajout de services à la ligne de contrat"
     },
     "states": {
       "loading": "Chargement des services...",

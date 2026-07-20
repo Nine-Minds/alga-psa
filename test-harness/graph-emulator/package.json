@@ -1,0 +1,9 @@
+{
+  "name": "alga-microsoft-graph-emulator",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test smoke.test.mjs"
+  }
+}

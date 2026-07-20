@@ -26,6 +26,7 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 
 import { evaluateTemplateAst } from '../lib/invoice-template-ast/evaluator';
+import { INVOICE_TEMPLATE_BINDING_ALIASES } from '../lib/invoice-template-ast/bindingAliases';
 import { renderEvaluatedTemplateAst } from '../lib/invoice-template-ast/react-renderer';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 
@@ -431,7 +432,8 @@ export const renderTemplateOnServer = withAuth(async (
 
         const evaluation = evaluateTemplateAst(
           templateAst,
-          invoiceData as unknown as Record<string, unknown>
+          invoiceData as unknown as Record<string, unknown>,
+          { bindingAliases: INVOICE_TEMPLATE_BINDING_ALIASES }
         );
         const { html, css } = await renderEvaluatedTemplateAst(templateAst, evaluation);
 

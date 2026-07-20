@@ -6,9 +6,12 @@
 
 import type { Knex } from 'knex';
 import { tenantDb } from '@alga-psa/db';
+import { NUMBERING_DEFAULTS, type EntityType } from './numberingDefaults';
 
-// Define supported entity types
-export type EntityType = 'TICKET' | 'INVOICE' | 'PROJECT' | 'QUOTE' | 'CREDIT_NOTE';
+// Re-exported so existing server-side callers keep importing from here; the
+// definitions live in the client-safe numberingDefaults module.
+export { NUMBERING_DEFAULTS };
+export type { EntityType };
 
 export interface NumberingServiceDependencies {
   knex: Knex | Knex.Transaction;
@@ -35,33 +38,16 @@ export class SharedNumberingService {
 
     try {
       const db = tenantDb(knex, tenant);
-      if (entityType === 'QUOTE') {
-        await db.table('next_number')
-          .insert({
-            tenant,
-            entity_type: 'QUOTE',
-            last_number: 0,
-            initial_value: 1,
-            prefix: 'Q-',
-            padding_length: 4,
-          })
-          .onConflict(['tenant', 'entity_type'])
-          .ignore();
-      }
-
-      if (entityType === 'CREDIT_NOTE') {
-        await db.table('next_number')
-          .insert({
-            tenant,
-            entity_type: 'CREDIT_NOTE',
-            last_number: 0,
-            initial_value: 1,
-            prefix: 'CM-',
-            padding_length: 6,
-          })
-          .onConflict(['tenant', 'entity_type'])
-          .ignore();
-      }
+      const defaults = NUMBERING_DEFAULTS[entityType];
+      await db.table('next_number')
+        .insert({
+          tenant,
+          entity_type: entityType,
+          last_number: 0,
+          ...defaults,
+        })
+        .onConflict(['tenant', 'entity_type'])
+        .ignore();
 
       // Use parameterized query for CitusDB compatibility
       const result = await knex.raw(

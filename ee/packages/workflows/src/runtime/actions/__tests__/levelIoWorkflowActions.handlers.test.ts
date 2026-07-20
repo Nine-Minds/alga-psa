@@ -113,8 +113,8 @@ describe('Level workflow action handlers (T009)', () => {
     const result = await action.handler({ alert_id: 'alert-5' }, { ...baseCtx, tenantId: 'tenant-1', knex } as any);
 
     expect(resolveAlert).toHaveBeenCalledWith('alert-5');
-    expect(alertsBuilder.where).toHaveBeenCalledWith({
-      tenant: 'tenant-1',
+    expect(alertsBuilder.where).toHaveBeenNthCalledWith(1, 'rmm_alerts.tenant', 'tenant-1');
+    expect(alertsBuilder.where).toHaveBeenNthCalledWith(2, {
       integration_id: 'int-9',
       external_alert_id: 'alert-5'
     });

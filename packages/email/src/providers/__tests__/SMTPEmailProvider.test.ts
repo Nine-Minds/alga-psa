@@ -140,8 +140,15 @@ describe('SMTPEmailProvider mail options construction', () => {
     const result = await provider.sendEmail(baseMessage(), 'tenant-1');
 
     expect(result.success).toBe(false);
-    expect(result.error).toBe('connection reset');
-    expect(result.metadata).toMatchObject({ errorCode: 'ECONNRESET', retryable: true });
+    expect(result.error).toBe(
+      'SMTP send failed. Check the SMTP host, port, credentials, and TLS settings.'
+    );
+    expect(result.error).not.toContain('connection reset');
+    expect(result.metadata).toMatchObject({
+      errorCode: 'ECONNRESET',
+      command: 'CONN',
+      retryable: true
+    });
   });
 
   it('flags 4xx SMTP response codes as retryable and 5xx as permanent', async () => {

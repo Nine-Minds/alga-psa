@@ -97,15 +97,12 @@ jobs:
       # 71 tests fail without them) and its clients reconnect forever, so the
       # vitest process never exits and hangs the job. It has no place in a
       # unit-test gate until its tests stub their connections.
-      # Non-blocking until the runner layer is repaired: the @nx/vite:test
-      # executor is broken under vitest 4 (fails even fully-green suites, and
-      # reports "Unable to load test config from config file undefined" for
-      # the ~20 projects with no vitest.config), so a red step here measures
-      # the executor, not the tests. Past green runs were Nx cache replays.
-      # Restore blocking once the executor is fixed and a real failure
-      # baseline exists.
+      # Blocking since 2026-07-17: the known-red package suites were burned down
+      # and the runner layer is sound (test targets resolve via nx:run-script —
+      # each package's own `npm run test` -> vitest — not the broken
+      # @nx/vite:test executor). A red step here is a real test failure; fix the
+      # cause, never re-add continue-on-error.
       - name: Nx affected tests (libraries, parallel)
-        continue-on-error: true
         run: npx nx affected -t test --base=$NX_BASE --head=$NX_HEAD --output-style=static --parallel=3 --exclude=server,sebastian-ee,temporal-workflows
         env:
           NX_DAEMON: 'false'
@@ -119,23 +116,20 @@ jobs:
       # before that was fixed). Excluded until the suite gets a bounded
       # unit-test target that fits a PR gate.
       - name: Nx affected tests (apps, isolated & serial)
-        continue-on-error: true
         run: npx nx affected -t test --base=$NX_BASE --head=$NX_HEAD --output-style=static --parallel=1 --exclude=temporal-workflows,sebastian-ee
         env:
           NX_DAEMON: 'false'
           NODE_OPTIONS: '--max-old-space-size=14336'
           VITEST_SEED: '20260610'
 
-  # Informational coverage report for the server unit suite. Push-to-main only
-  # (it re-runs the whole suite with instrumentation, too slow for every PR) and
-  # non-blocking while baselines are established.
+  # Coverage report for the full server unit suite. This is the only gate that
+  # runs the entire server suite, so it fails loudly on PRs and protected-branch
+  # pushes rather than leaving a required check in the skipped state.
   # Scope is src/test/unit only: src/test/infrastructure is DB-backed and runs
   # in its own job below with a Postgres service.
   coverage-report:
-    name: Server unit coverage (informational)
-    if: github.event_name == 'push'
+    name: Server unit suite + coverage
     runs-on: ubuntu-latest
-    continue-on-error: true
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4

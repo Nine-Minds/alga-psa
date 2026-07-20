@@ -36,8 +36,8 @@ describe('deletion configs', () => {
     await documentDep?.countQuery?.(trx, { tenant: 'tenant-1', entityId: 'client-1' });
 
     expect(trx).toHaveBeenCalledWith('document_associations');
-    expect(builder.where).toHaveBeenCalledWith({
-      tenant: 'tenant-1',
+    expect(builder.where).toHaveBeenNthCalledWith(1, 'document_associations.tenant', 'tenant-1');
+    expect(builder.where).toHaveBeenNthCalledWith(2, {
       entity_id: 'client-1',
       entity_type: 'company'
     });
@@ -66,8 +66,8 @@ describe('deletion configs', () => {
     await portalDep?.countQuery?.(trx, { tenant: 'tenant-1', entityId: 'contact-1' });
 
     expect(trx).toHaveBeenCalledWith('users');
-    expect(builder.where).toHaveBeenCalledWith({
-      tenant: 'tenant-1',
+    expect(builder.where).toHaveBeenNthCalledWith(1, 'users.tenant', 'tenant-1');
+    expect(builder.where).toHaveBeenNthCalledWith(2, {
       contact_id: 'contact-1',
       user_type: 'client'
     });
@@ -109,8 +109,8 @@ describe('deletion configs', () => {
     await scheduleDep?.countQuery?.(trx, { tenant: 'tenant-1', entityId: 'ticket-1' });
 
     expect(trx).toHaveBeenCalledWith('schedule_entries');
-    expect(builder.where).toHaveBeenCalledWith({
-      tenant: 'tenant-1',
+    expect(builder.where).toHaveBeenNthCalledWith(1, 'schedule_entries.tenant', 'tenant-1');
+    expect(builder.where).toHaveBeenNthCalledWith(2, {
       work_item_id: 'ticket-1',
       work_item_type: 'ticket'
     });
@@ -159,8 +159,8 @@ describe('deletion configs', () => {
       const { trx, builder } = makeTrx();
       await dep?.countQuery?.(trx, { tenant: 't', entityId: 'id-1' });
       expect(trx).toHaveBeenCalledWith('asset_associations');
-      expect(builder.where).toHaveBeenCalledWith({
-        tenant: 't',
+      expect(builder.where).toHaveBeenNthCalledWith(1, 'asset_associations.tenant', 't');
+      expect(builder.where).toHaveBeenNthCalledWith(2, {
         entity_id: 'id-1',
         entity_type: entityType
       });
@@ -176,8 +176,8 @@ describe('deletion configs', () => {
     const { trx, builder } = makeTrx();
     await dep?.countQuery?.(trx, { tenant: 't', entityId: 'id-1' });
     expect(trx).toHaveBeenCalledWith('ticket_entity_links');
-    expect(builder.where).toHaveBeenCalledWith({
-      tenant: 't',
+    expect(builder.where).toHaveBeenNthCalledWith(1, 'ticket_entity_links.tenant', 't');
+    expect(builder.where).toHaveBeenNthCalledWith(2, {
       entity_id: 'id-1',
       entity_type: 'project'
     });

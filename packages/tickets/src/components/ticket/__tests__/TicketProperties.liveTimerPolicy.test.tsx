@@ -21,6 +21,7 @@ vi.mock('../../../actions/ticketDisplaySettings', () => ({
 
 vi.mock('@alga-psa/ui/components', () => ({
   ContentCard: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  useContentCardVariant: () => 'default',
 }));
 
 vi.mock('@alga-psa/ui/components/Button', () => ({

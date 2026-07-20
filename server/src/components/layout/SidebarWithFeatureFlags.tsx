@@ -153,11 +153,17 @@ export default function SidebarWithFeatureFlags(props: SidebarWithFeatureFlagsPr
   }, [canWorkflowAdmin, useNavigationSections, hasFeature, productCode, opportunitiesEnabled]);
 
   const settingsSections = useMemo<NavigationSection[]>(() => {
+    const productSections = filterMenuSectionsByProduct(productCode, settingsNavigationSections);
+    const opportunitiesFilteredSections = productSections.map((section) => ({
+      ...section,
+      items: section.items.filter((item) => item.name !== 'Opportunities' || opportunitiesEnabled),
+    }));
+
     return filterNavigationSectionsBySelfHost(
-      filterMenuSectionsByProduct(productCode, settingsNavigationSections),
+      opportunitiesFilteredSections,
       selfHostMode,
     );
-  }, [productCode, selfHostMode]);
+  }, [opportunitiesEnabled, productCode, selfHostMode]);
 
   return (
     <Sidebar

@@ -10,6 +10,10 @@ const boardActions = source('board-actions/boardActions.ts');
 const exportActions = source('ticketExportActions.ts');
 const formActions = source('ticketFormActions.ts');
 const importActions = source('ticketImportActions.ts');
+const boardStatsStart = boardActions.indexOf('export const getBoardListStats');
+const boardStatsEnd = boardActions.indexOf('\nexport const createBoard', boardStatsStart);
+const boardStatsSource = boardActions.slice(boardStatsStart, boardStatsEnd);
+const boardActionsWithoutStats = `${boardActions.slice(0, boardStatsStart)}${boardActions.slice(boardStatsEnd)}`;
 
 const tenantOwnedRoots = [
   'boards',
@@ -49,10 +53,17 @@ describe('ticket peripheral action tenant-scoped query contract', () => {
   });
 
   it('does not leave direct query roots for tenant-owned peripheral tables', () => {
-    expectNoDirectTenantRoots(boardActions);
+    expectNoDirectTenantRoots(boardActionsWithoutStats);
     expectNoDirectTenantRoots(exportActions);
     expectNoDirectTenantRoots(formActions);
     expectNoDirectTenantRoots(importActions);
+  });
+
+  it('keeps aggregate board statistics explicitly tenant-scoped and tenant-joins statuses', () => {
+    expect(boardStatsSource).toContain(".where('t.tenant', tenant)");
+    expect(boardStatsSource).toContain(".andOn('t.tenant', 's.tenant')");
+    expect(boardStatsSource).toContain(".where({ tenant, status_type: 'ticket' })");
+    expect(boardStatsSource.match(/\.where\(\{ tenant \}\)/g)).toHaveLength(2);
   });
 
   it('keeps board schema/reference access outside the tenant facade', () => {

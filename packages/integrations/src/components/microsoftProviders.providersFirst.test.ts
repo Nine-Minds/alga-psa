@@ -46,13 +46,14 @@ describe('Microsoft providers-first form contracts', () => {
   });
 
   it('T022: Microsoft email persistence derives credentials from tenant providers secrets instead of form fields', () => {
-    expect(emailActionsSource).toContain("getTenantSecret(tenant, 'microsoft_client_id')");
-    expect(emailActionsSource).toContain("getTenantSecret(tenant, 'microsoft_client_secret')");
+    expect(emailActionsSource).toContain("resolveMicrosoftConsumerProfileConfig(tenant, 'email')");
     expect(emailActionsSource).toContain(
-      "const effectiveClientId = hostedConfig?.client_id || tenantClientId || config.client_id || '';"
+      "const effectiveClientId = microsoftProfile.clientId || '';"
     );
     expect(emailActionsSource).toContain(
-      "const effectiveClientSecret = hostedConfig?.client_secret || tenantClientSecret || config.client_secret || '';"
+      "const effectiveClientSecret = microsoftProfile.clientSecret || '';"
     );
+    expect(emailActionsSource).toContain('microsoft_profile_id: pinnedProfileId');
+    expect(emailActionsSource).toContain('client_secret_ref: pinnedClientSecretRef');
   });
 });

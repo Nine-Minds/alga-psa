@@ -7,12 +7,17 @@ export type ClientAssignmentStatus = Extract<
 
 type DeriveClientContractStatusParams = {
   isActive: boolean;
-  startDate: string | null | undefined;
-  endDate: string | null | undefined;
+  startDate: string | Date | null | undefined;
+  endDate: string | Date | null | undefined;
+  contractStatus?: string;
   now?: string | Date;
 };
 
-const normalizeDateOnly = (value: string | null | undefined): string | null => {
+const normalizeDateOnly = (value: string | Date | null | undefined): string | null => {
+  if (value instanceof Date) {
+    return value.toISOString().slice(0, 10);
+  }
+
   if (typeof value !== 'string') {
     return null;
   }
@@ -45,6 +50,10 @@ const normalizeNowDateOnly = (value?: string | Date): string => {
 export function deriveClientContractStatus(
   params: DeriveClientContractStatusParams
 ): ClientAssignmentStatus {
+  if (params.contractStatus === 'draft') {
+    return 'draft';
+  }
+
   const startDate = normalizeDateOnly(params.startDate);
   const endDate = normalizeDateOnly(params.endDate);
   const nowDate = normalizeNowDateOnly(params.now);

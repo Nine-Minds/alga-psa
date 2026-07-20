@@ -338,7 +338,7 @@ describe('InvoiceEmailHandler', () => {
     // before its own createJobDetail calls run (e.g. getInvoiceForRendering returns null), the catch
     // block (lines 301-324) updates the PREVIOUS invoice's detail records to 'failed' even though that
     // invoice was already processed and marked 'completed'. Skipped until the product bug is fixed.
-    it.skip('should not overwrite a completed invoice\'s step details when a later invoice fails early', async () => {
+    it('should not overwrite a completed invoice\'s step details when a later invoice fails early', async () => {
       mocks.getInvoiceForRendering
         .mockResolvedValueOnce(buildInvoice()) // invoice-1 succeeds
         .mockResolvedValueOnce(null) // invoice-2 fails before job details are created

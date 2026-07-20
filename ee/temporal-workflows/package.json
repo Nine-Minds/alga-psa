@@ -27,6 +27,7 @@
   "dependencies": {
     "@alga-psa/core": "file:../../packages/core",
     "@alga-psa/db": "file:../../packages/db",
+    "@alga-psa/email": "file:../../packages/email",
     "@alga-psa/event-bus": "file:../../packages/event-bus",
     "@alga-psa/jobs": "file:../../packages/jobs",
     "@alga-psa/licensing": "file:../../packages/licensing",

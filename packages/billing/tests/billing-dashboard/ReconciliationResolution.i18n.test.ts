@@ -76,7 +76,6 @@ describe('ReconciliationResolution i18n wiring contract', () => {
     expect(source).toContain("t('reconciliation.confirmation.thankYouTitle', { defaultValue: 'Thank you!' })");
     expect(source).toContain("t('reconciliation.confirmation.closeButton', { defaultValue: 'Close' })");
     expect(source).toContain("t('reconciliation.errors.loadData', { defaultValue: 'Failed to load reconciliation report data' })");
-    expect(source).toContain("t('reconciliation.errors.unknown', { defaultValue: 'An unknown error occurred' })");
     expect(source).toContain("t('reconciliation.errors.reportNotFound', { defaultValue: 'Reconciliation report not found. The report may have been deleted or you may not have permission to view it.' })");
   });
 

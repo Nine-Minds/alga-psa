@@ -8,7 +8,8 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Card } from '@alga-psa/ui/components/Card';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
-import { Input } from '@alga-psa/ui/components/Input';
+import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import { dateFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -409,20 +410,26 @@ const ProfitabilityReport: React.FC = () => {
         <form className="flex flex-wrap items-end gap-2" onSubmit={applyDateRange}>
           <div className="space-y-1">
             <Label htmlFor="profitability-start-date">{t('contractReports.profitability.filters.startDate', { defaultValue: 'Start Date' })}</Label>
-            <Input
+            <DatePicker
               id="profitability-start-date"
-              type="date"
-              value={draftRange.startDate}
-              onChange={(event) => setDraftRange((current) => ({ ...current, startDate: event.target.value }))}
+              label={t('contractReports.profitability.filters.startDate', { defaultValue: 'Start Date' })}
+              placeholder={t('contractReports.profitability.filters.startDate', { defaultValue: 'Start Date' })}
+              clearable
+              className="w-full"
+              value={dateFromString(draftRange.startDate)}
+              onChange={(date) => setDraftRange((current) => ({ ...current, startDate: dateToString(date) }))}
             />
           </div>
           <div className="space-y-1">
             <Label htmlFor="profitability-end-date">{t('contractReports.profitability.filters.endDate', { defaultValue: 'End Date' })}</Label>
-            <Input
+            <DatePicker
               id="profitability-end-date"
-              type="date"
-              value={draftRange.endDate}
-              onChange={(event) => setDraftRange((current) => ({ ...current, endDate: event.target.value }))}
+              label={t('contractReports.profitability.filters.endDate', { defaultValue: 'End Date' })}
+              placeholder={t('contractReports.profitability.filters.endDate', { defaultValue: 'End Date' })}
+              clearable
+              className="w-full"
+              value={dateFromString(draftRange.endDate)}
+              onChange={(date) => setDraftRange((current) => ({ ...current, endDate: dateToString(date) }))}
             />
           </div>
           <Button id="profitability-apply-date-range" type="submit">

@@ -169,11 +169,11 @@
       "addSelected": "Voeg geselecteerde services toe",
       "adding": "Toevoegen..."
     },
-    "title": "Diensten en producten toevoegen aan plan",
+    "title": "Diensten en producten toevoegen aan contractregel",
     "searchPlaceholder": "Diensten/producten zoeken...",
     "errors": {
       "load": "Kan services niet laden",
-      "add": "Het is niet gelukt om services aan het plan toe te voegen"
+      "add": "Het is niet gelukt om services aan de contractregel toe te voegen"
     },
     "states": {
       "loading": "Diensten laden...",

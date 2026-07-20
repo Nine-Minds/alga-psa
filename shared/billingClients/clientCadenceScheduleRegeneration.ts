@@ -13,6 +13,7 @@ import {
   type NormalizedBillingCycleAnchorSettings,
 } from './billingCycleAnchors';
 import { materializeClientCadenceServicePeriods } from './materializeClientCadenceServicePeriods';
+import { clipRecurringCandidatesToObligationBounds } from './clipRecurringCandidatesToObligationBounds';
 import { getClientBillingCycleAnchor } from './billingSchedule';
 import {
   backfillRecurringServicePeriods,
@@ -33,6 +34,7 @@ type ClientCadenceRecurringObligationRow = {
 
 const recurringServicePeriodRecordIdFactory = () => uuidv4();
 
+// LEVERAGE: pattern recurring-period-row-mapping
 type RecurringServicePeriodDbRow = {
   record_id: string;
   tenant: string;
@@ -381,41 +383,6 @@ async function persistRecurringServicePeriodRegeneration(
   }
 }
 
-/**
- * A client-cadence obligation that starts or ends inside a schedule period is
- * only active for part of that period. The invoice engine derives coverage
- * (and proration / canonical detail periods) from the persisted activity
- * window, so regeneration must clip the first/last periods to the assignment
- * bounds; otherwise mid-period contract starts are billed for the full period.
- */
-function clipRecordActivityWindowToObligationBounds(
-  record: IRecurringServicePeriodRecord,
-  obligationStart: ISO8601String,
-  obligationEnd: ISO8601String | null,
-): IRecurringServicePeriodRecord {
-  const clipStart =
-    compareIsoDateOnly(obligationStart, record.servicePeriod.start) > 0
-      ? obligationStart
-      : null;
-  const clipEnd =
-    obligationEnd && compareIsoDateOnly(obligationEnd, record.servicePeriod.end) < 0
-      ? obligationEnd
-      : null;
-
-  if (!clipStart && !clipEnd) {
-    return record;
-  }
-
-  return {
-    ...record,
-    activityWindow: {
-      start: clipStart ?? record.servicePeriod.start,
-      end: clipEnd ?? record.servicePeriod.end,
-      semantics: record.servicePeriod.semantics,
-    },
-  };
-}
-
 type ClientCadenceScheduleChangeParams = {
   tenant: string;
   clientId: string;
@@ -491,8 +458,10 @@ async function computeClientCadenceRegeneration(
       recordIdFactory: recurringServicePeriodRecordIdFactory,
     });
 
-    const candidateRecords = materialized.records.map((record) =>
-      clipRecordActivityWindowToObligationBounds(record, obligationStart, obligationEnd),
+    const candidateRecords = clipRecurringCandidatesToObligationBounds(
+      materialized.records,
+      obligationStart,
+      obligationEnd,
     );
 
     const plan = backfillRecurringServicePeriods({

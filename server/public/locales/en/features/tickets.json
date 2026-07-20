@@ -878,6 +878,10 @@
     "contactLoadFailed": "Failed to load contact.",
     "tenantNotDefined": "Error: tenant is not defined",
     "noContact": "No contact",
+    "closeTicketTitle": "Close ticket",
+    "resolveAndClose": "Resolve and close",
+    "closeTicketResolutionPrompt": "Choose a close status and add a resolution for this ticket.",
+    "selectCloseStatus": "Select a close status",
     "cannotCloseYet": "This ticket can't be closed yet",
     "closeRulesIntro": "The board's close rules require the following before this ticket can be closed:",
     "viewChecklist": "View checklist",
@@ -1206,6 +1210,7 @@
   "categoryPicker": {
     "title": "Category Picker",
     "placeholder": "Select categories...",
+    "searchPlaceholder": "Search categories...",
     "noCategory": "No Category",
     "addNew": "Add new category",
     "itilBadge": "ITIL",

@@ -7,6 +7,7 @@ import { tenantDb } from '@alga-psa/db';
 import { createTenantKnex } from '../../lib/db';
 import { EmailProviderConfig } from '@alga-psa/shared/interfaces/inbound-email.interfaces';
 import { MicrosoftGraphAdapter } from '@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter';
+import { buildMicrosoftEmailProviderConfig } from '@alga-psa/shared/services/email/microsoftEmailProviderConfig';
 import { GmailAdapter } from './providers/GmailAdapter';
 import { GmailWebhookService } from './GmailWebhookService';
 import { getWebhookBaseUrl } from '../../utils/email/webhookHelpers';
@@ -421,7 +422,7 @@ export class EmailProviderService {
       console.log(`🔗 Initializing webhook for provider: ${provider.name}`);
 
       if (provider.provider_type === 'microsoft') {
-        const adapter = new MicrosoftGraphAdapter(provider);
+        const adapter = new MicrosoftGraphAdapter(await buildMicrosoftEmailProviderConfig(provider));
         const webhookUrl = this.generateWebhookUrl('/api/email/webhooks/microsoft');
         const result = await adapter.initializeWebhook(webhookUrl);
         

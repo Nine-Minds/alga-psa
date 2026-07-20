@@ -68,7 +68,7 @@ vi.mock('@alga-psa/ui/components/TextArea', () => ({
   TextArea: (props: any) => <textarea {...props} />,
 }));
 
-vi.mock('@alga-psa/client-portal/actions', () => ({
+vi.mock('../../actions/client-portal-actions/visibilityGroupActions', () => ({
   assignClientPortalVisibilityGroupToContact: (...args: any[]) =>
     assignClientPortalVisibilityGroupToContactMock(...args),
   createClientPortalVisibilityGroup: (...args: any[]) =>

@@ -17,9 +17,9 @@ import {
   ensureClientPlanBundlesTable
 } from '../../../../../test-utils/billingTestHelpers';
 
-// Force connection directly to PostgreSQL on port 5432 (not pgbouncer on 6432)
+// Force connection directly to PostgreSQL (not pgbouncer on 6432)
 // This is required for tests that need direct database access
-process.env.DB_PORT = '5432';
+process.env.DB_PORT = process.env.DB_PORT === '6432' ? '5432' : process.env.DB_PORT;
 
 let mockedTenantId = '11111111-1111-1111-1111-111111111111';
 let mockedUserId = 'mock-user-id';
@@ -81,7 +81,8 @@ vi.mock('@alga-psa/workflows/persistence', () => ({
   },
 }));
 
-vi.mock('@alga-psa/workflow-streams', () => ({
+vi.mock('@alga-psa/workflow-streams', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('@alga-psa/workflow-streams')>()),
   getRedisStreamClient: () => ({
     publishEvent: vi.fn(),
   }),

@@ -79,6 +79,7 @@ export const ticketSchema = z.object({
   attributes: z.record(z.unknown()).nullable(),
   email_metadata: z.unknown().nullable().optional(),
   priority_id: z.string().uuid().nullable().optional(), // Optional for ITIL tickets
+  response_state: z.enum(['awaiting_client', 'awaiting_internal']).nullable().optional(),
   // ITIL-specific fields
   itil_impact: z.number().int().min(1).max(5).nullable().optional(),
   itil_urgency: z.number().int().min(1).max(5).nullable().optional(),

@@ -24,16 +24,18 @@ import { CommonActions } from '../ui-reflection/actionBuilders';
 
 type ButtonVariant = VariantProps<typeof buttonVariants>['variant'];
 type ButtonSize = VariantProps<typeof buttonVariants>['size'];
+type ClientFilterState = 'all' | 'active' | 'inactive';
+type ClientTypeFilter = 'all' | 'company' | 'individual';
 
 interface ClientPickerProps {
   id?: string;
   clients?: IClient[];
   onSelect: (clientId: string | null) => void;
   selectedClientId: string | null;
-  filterState: 'all' | 'active' | 'inactive';
-  onFilterStateChange: (state: 'all' | 'active' | 'inactive') => void;
-  clientTypeFilter: 'all' | 'company' | 'individual';
-  onClientTypeFilterChange: (type: 'all' | 'company' | 'individual') => void;
+  filterState?: ClientFilterState;
+  onFilterStateChange?: (state: ClientFilterState) => void;
+  clientTypeFilter?: ClientTypeFilter;
+  onClientTypeFilterChange?: (type: ClientTypeFilter) => void;
   disabledClientIds?: Set<string>;
   disabledTooltip?: string;
   fitContent?: boolean;
@@ -120,6 +122,8 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
   const { fetchClientTags } = useClientTags();
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [internalFilterState, setInternalFilterState] = useState<ClientFilterState>(filterState ?? 'active');
+  const [internalClientTypeFilter, setInternalClientTypeFilter] = useState<ClientTypeFilter>(clientTypeFilter ?? 'all');
   const [clientTags, setClientTags] = useState<ITag[]>([]);
   const [selectedTagFilters, setSelectedTagFilters] = useState<string[]>([]);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -174,25 +178,41 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
   }, [clientTags]);
 
   const showTagFilter = uniqueFilterTags.length > 0;
+  const resolvedFilterState = filterState ?? internalFilterState;
+  const resolvedClientTypeFilter = clientTypeFilter ?? internalClientTypeFilter;
+
+  const handleFilterStateChange = (state: ClientFilterState) => {
+    if (filterState === undefined) {
+      setInternalFilterState(state);
+    }
+    onFilterStateChange?.(state);
+  };
+
+  const handleClientTypeFilterChange = (type: ClientTypeFilter) => {
+    if (clientTypeFilter === undefined) {
+      setInternalClientTypeFilter(type);
+    }
+    onClientTypeFilterChange?.(type);
+  };
 
   const filteredClients = useMemo(() => {
     return clients
       .filter((client) => {
         const matchesSearch = client.client_name.toLowerCase().includes(searchTerm.toLowerCase());
         const matchesState =
-          filterState === 'all'
+          resolvedFilterState === 'all'
             ? true
-            : filterState === 'active'
+            : resolvedFilterState === 'active'
               ? !client.is_inactive
-              : filterState === 'inactive'
+              : resolvedFilterState === 'inactive'
                 ? client.is_inactive
                 : true;
         const matchesClientType =
-          clientTypeFilter === 'all'
+          resolvedClientTypeFilter === 'all'
             ? true
-            : clientTypeFilter === 'company'
+            : resolvedClientTypeFilter === 'company'
               ? client.client_type === 'company'
-              : clientTypeFilter === 'individual'
+              : resolvedClientTypeFilter === 'individual'
                 ? client.client_type === 'individual'
                 : true;
         const matchesTags =
@@ -210,7 +230,7 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
         if (aDisabled !== bDisabled) return aDisabled ? 1 : -1;
         return a.client_name.localeCompare(b.client_name);
       });
-  }, [clients, filterState, clientTypeFilter, searchTerm, disabledClientIds, selectedTagFilters, tagTextsByClientId]);
+  }, [clients, resolvedFilterState, resolvedClientTypeFilter, searchTerm, disabledClientIds, selectedTagFilters, tagTextsByClientId]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -444,15 +464,17 @@ export const ClientPicker: React.FC<ClientPickerProps & AutomationProps> = ({
           </div>
           <div className="flex items-center gap-2 mt-2">
             <CustomSelect
-              value={filterState}
-              onValueChange={(value) => onFilterStateChange(value as any)}
+              id={`${id}-state-filter`}
+              value={resolvedFilterState}
+              onValueChange={(value) => handleFilterStateChange(value as ClientFilterState)}
               options={opts}
               placeholder="Filter"
               className="flex-1 min-w-0"
             />
             <CustomSelect
-              value={clientTypeFilter}
-              onValueChange={(value) => onClientTypeFilterChange(value as any)}
+              id={`${id}-type-filter`}
+              value={resolvedClientTypeFilter}
+              onValueChange={(value) => handleClientTypeFilterChange(value as ClientTypeFilter)}
               options={clientTypes}
               placeholder="Type"
               className="flex-1 min-w-0"

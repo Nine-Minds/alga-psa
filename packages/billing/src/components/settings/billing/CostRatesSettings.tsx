@@ -12,6 +12,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Label } from '@alga-psa/ui/components/Label';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { handleError } from '@alga-psa/ui/lib/errorHandling';
+import { dateFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import {
   checkCostRateWorkedTimeImpact,
@@ -72,17 +73,6 @@ function rateStatus(rate: IUserCostRate, today: string): RateStatus {
   return 'current';
 }
 
-function dateFromString(value: string): Date | undefined {
-  return value ? new Date(`${value}T00:00:00`) : undefined;
-}
-
-function dateToString(date: Date | null | undefined): string {
-  if (!date) {
-    return '';
-  }
-
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-}
 
 function userLabel(user: Pick<CostRateUserRow, 'first_name' | 'last_name' | 'username'>): string {
   const fullName = [user.first_name, user.last_name].filter(Boolean).join(' ').trim();

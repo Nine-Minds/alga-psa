@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
+import { ChevronDown } from 'lucide-react';
+import { useCollapsiblePreference } from '@alga-psa/ui/hooks';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import Spinner from '@alga-psa/ui/components/Spinner';
@@ -84,12 +86,44 @@ const PaymentSettingsConfig = dynamic(
 
 const DEFAULT_BILLING_SECTION = 'general';
 
+// Numbering cards start collapsed (and remember the user's choice) so the
+// Numbering tab reads as a compact list of document types.
+const CollapsibleNumberingCard: React.FC<{
+  id: string;
+  preferenceKey: string;
+  title: string;
+  description: string;
+  children: React.ReactNode;
+}> = ({ id, preferenceKey, title, description, children }) => {
+  const { isCollapsed, setIsCollapsed } = useCollapsiblePreference(preferenceKey, true);
+  return (
+    <Card>
+      <button
+        id={id}
+        type="button"
+        onClick={() => setIsCollapsed((prev) => !prev)}
+        aria-expanded={!isCollapsed}
+        className="flex w-full items-start gap-3 p-6 text-left"
+      >
+        <ChevronDown
+          className={`mt-1 h-4 w-4 shrink-0 text-gray-400 transition-transform ${isCollapsed ? '-rotate-90' : ''}`}
+        />
+        <div className="space-y-1.5">
+          <CardTitle>{title}</CardTitle>
+          <CardDescription>{description}</CardDescription>
+        </div>
+      </button>
+      {!isCollapsed && <CardContent>{children}</CardContent>}
+    </Card>
+  );
+};
+
 const BillingSettings: React.FC = () => {
   const { t } = useTranslation('msp/billing-settings');
   const searchParams = useSearchParams();
   const sectionParam = searchParams?.get('section');
 
-  const billingSectionIds: readonly string[] = ['general', 'cost-rates', 'quoting', 'tax', 'payments'];
+  const billingSectionIds: readonly string[] = ['general', 'cost-rates', 'numbering', 'tax', 'payments'];
 
   // Determine initial active tab based on URL parameter
   const [activeTab, setActiveTab] = useState<string>(() => {
@@ -121,9 +155,10 @@ const BillingSettings: React.FC = () => {
     }
 
     // Keep existing tab parameter
-    const newUrl = currentSearchParams.toString()
-      ? `/msp/settings?${currentSearchParams.toString()}`
-      : '/msp/settings?tab=billing';
+    const query = currentSearchParams.toString();
+    const newUrl = query
+      ? `${window.location.pathname}?${query}`
+      : window.location.pathname;
 
     window.history.pushState({}, '', newUrl);
   };
@@ -145,20 +180,6 @@ const BillingSettings: React.FC = () => {
             </CardHeader>
             <CardContent>
               <DefaultCurrencySettings />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('general.invoiceNumbering.title', { defaultValue: 'Invoice Numbering' })}</CardTitle>
-              <CardDescription>
-                {t('general.invoiceNumbering.description', {
-                  defaultValue: 'Customize how invoice numbers are generated and displayed.'
-                })}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <NumberingSettings entityType="INVOICE" />
             </CardContent>
           </Card>
 
@@ -226,23 +247,53 @@ const BillingSettings: React.FC = () => {
       ),
     },
     {
-      id: 'quoting',
-      label: t('tabs.quoting', { defaultValue: 'Quoting' }),
+      id: 'numbering',
+      label: t('tabs.numbering', { defaultValue: 'Numbering' }),
       content: (
         <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('quoting.quoteNumbering.title', { defaultValue: 'Quote Numbering' })}</CardTitle>
-              <CardDescription>
-                {t('quoting.quoteNumbering.description', {
-                  defaultValue: 'Customize how quote numbers are generated and displayed.'
-                })}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <NumberingSettings entityType="QUOTE" />
-            </CardContent>
-          </Card>
+          <CollapsibleNumberingCard
+            id="billing-numbering-invoice"
+            preferenceKey="billing_numbering_invoice_collapsed"
+            title={t('general.invoiceNumbering.title', { defaultValue: 'Invoice Numbering' })}
+            description={t('general.invoiceNumbering.description', {
+              defaultValue: 'Customize how invoice numbers are generated and displayed.'
+            })}
+          >
+            <NumberingSettings entityType="INVOICE" />
+          </CollapsibleNumberingCard>
+
+          <CollapsibleNumberingCard
+            id="billing-numbering-credit-note"
+            preferenceKey="billing_numbering_credit_note_collapsed"
+            title={t('general.creditNoteNumbering.title', { defaultValue: 'Credit Note Numbering' })}
+            description={t('general.creditNoteNumbering.description', {
+              defaultValue: 'Customize how credit note numbers are generated and displayed.'
+            })}
+          >
+            <NumberingSettings entityType="CREDIT_NOTE" />
+          </CollapsibleNumberingCard>
+
+          <CollapsibleNumberingCard
+            id="billing-numbering-quote"
+            preferenceKey="billing_numbering_quote_collapsed"
+            title={t('quoting.quoteNumbering.title', { defaultValue: 'Quote Numbering' })}
+            description={t('quoting.quoteNumbering.description', {
+              defaultValue: 'Customize how quote numbers are generated and displayed.'
+            })}
+          >
+            <NumberingSettings entityType="QUOTE" />
+          </CollapsibleNumberingCard>
+
+          <CollapsibleNumberingCard
+            id="billing-numbering-sales-order"
+            preferenceKey="billing_numbering_sales_order_collapsed"
+            title={t('quoting.salesOrderNumbering.title', { defaultValue: 'Sales Order Numbering' })}
+            description={t('quoting.salesOrderNumbering.description', {
+              defaultValue: 'Customize how sales order numbers are generated and displayed.'
+            })}
+          >
+            <NumberingSettings entityType="SALES_ORDER" />
+          </CollapsibleNumberingCard>
         </div>
       ),
     },

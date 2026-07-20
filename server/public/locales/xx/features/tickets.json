@@ -878,6 +878,10 @@
     "contactLoadFailed": "11111",
     "tenantNotDefined": "11111",
     "noContact": "11111",
+    "closeTicketTitle": "11111",
+    "resolveAndClose": "11111",
+    "closeTicketResolutionPrompt": "11111",
+    "selectCloseStatus": "11111",
     "cannotCloseYet": "11111",
     "closeRulesIntro": "11111",
     "viewChecklist": "11111",
@@ -1206,6 +1210,7 @@
   "categoryPicker": {
     "title": "11111",
     "placeholder": "11111",
+    "searchPlaceholder": "11111",
     "noCategory": "11111",
     "addNew": "11111",
     "itilBadge": "11111",

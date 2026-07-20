@@ -1,6 +1,7 @@
 {
   "tabs": {
     "general": "Général",
+    "numbering": "Numérotation",
     "quoting": "Citation",
     "tax": "Impôt",
     "payments": "Paiements",
@@ -27,6 +28,10 @@
     "invoiceNumbering": {
       "title": "Numérotation des factures",
       "description": "Personnalisez la façon dont les numéros de facture sont générés et affichés."
+    },
+    "creditNoteNumbering": {
+      "title": "Numérotation des avoirs",
+      "description": "Personnalisez la façon dont les numéros d'avoir sont générés et affichés."
     },
     "zeroDollar": {
       "title": "Factures à zéro dollar",
@@ -129,6 +134,10 @@
     "quoteNumbering": {
       "title": "Numérotation des devis",
       "description": "Personnalisez la façon dont les numéros de devis sont générés et affichés."
+    },
+    "salesOrderNumbering": {
+      "title": "Numérotation des commandes",
+      "description": "Personnalisez la façon dont les numéros de commande sont générés et affichés."
     }
   },
   "tax": {

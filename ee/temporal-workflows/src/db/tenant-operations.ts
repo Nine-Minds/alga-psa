@@ -13,6 +13,7 @@ import { getSecret } from '@alga-psa/core/secrets';
 import { tierFromStripeProduct } from '@ee/lib/stripe/stripeTierMapping.js';
 import { normalizeProductCode } from './product-bootstrap-resolver.js';
 import type { SeedRunLog } from './onboarding-seeds-operations.js';
+import { createDefaultProviderConfig } from '@alga-psa/email/providerConfig';
 
 const logger = () => Context.current().log;
 const TENANT_CREATION_SUBSCRIPTION_DISCOVERY_CONTEXT = 'tenant-creation-subscription-discovery';
@@ -423,10 +424,14 @@ export async function setupTenantDataInDB(
       const db = tenantDb(trx, input.tenantId);
       // Set up tenant email settings with defaults (simple insert, no ON CONFLICT to avoid distributed table issues)
       try {
+        const emailProvider = input.emailProvider ?? 'resend';
         await db.table('tenant_email_settings')
           .insert({
             tenant: input.tenantId,
-            email_provider: 'resend',
+            email_provider: emailProvider,
+            provider_configs: JSON.stringify([
+              createDefaultProviderConfig(emailProvider, { isEnabled: false }),
+            ]),
             fallback_enabled: true,
             tracking_enabled: false
           });

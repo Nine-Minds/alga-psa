@@ -39,6 +39,15 @@ function shouldCreateStaffTicketNotification(suppression: TicketNotificationSupp
   return !suppression.suppressInternalNotifications;
 }
 
+function shouldCreateTicketCommentNotification(
+  suppression: TicketNotificationSuppression,
+  recipientType: 'contact' | 'internal',
+): boolean {
+  return recipientType === 'internal'
+    ? shouldCreateStaffTicketNotification(suppression)
+    : shouldCreateContactPortalTicketNotification(suppression);
+}
+
 /**
  * Handle ticket created events
  */
@@ -1560,6 +1569,7 @@ async function handleTaskCommentUpdated(event: TaskCommentUpdatedEvent): Promise
 async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise<void> {
   const { payload } = event;
   const { tenantId, ticketId, userId, comment } = payload;
+  const suppression = resolveTicketNotificationSuppression(payload);
 
   console.log('[InternalNotificationSubscriber] handleTicketCommentAdded START', {
     ticketId,
@@ -1620,10 +1630,20 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
 
       if (resolvedMentionedUserIds.length > 0) {
         const mentionedUsers = await tenantScopedTable(db, 'users', tenantId)
-          .select('user_id', 'username', db.raw("CONCAT(first_name, ' ', last_name) as display_name"))
+          .select(
+            'user_id',
+            'username',
+            'user_type',
+            db.raw("CONCAT(first_name, ' ', last_name) as display_name"),
+          )
           .whereIn('user_id', resolvedMentionedUserIds);
+        const mentionedUsersToNotify = mentionedUsers.filter((mentionedUser) =>
+          shouldCreateTicketCommentNotification(
+            suppression,
+            mentionedUser.user_type === 'client' ? 'contact' : 'internal',
+          ));
 
-        if (mentionedUsers.length > 0) {
+        if (mentionedUsersToNotify.length > 0) {
           const { internalUrl } = await resolveNotificationLinks(db, tenantId, {
             type: 'ticket',
             ticketId,
@@ -1631,7 +1651,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
             commentId: comment?.id
           });
 
-          await Promise.all(mentionedUsers.map(mentionedUser => {
+          await Promise.all(mentionedUsersToNotify.map(mentionedUser => {
             notifiedUserIds.add(mentionedUser.user_id);
             return createNotificationFromTemplateInternal(db, {
               tenant: tenantId,
@@ -1662,7 +1682,7 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
 
           logger.info('[InternalNotificationSubscriber] Created mention notifications for ticket comment', {
             ticketId,
-            notifiedCount: mentionedUsers.length,
+            notifiedCount: mentionedUsersToNotify.length,
             tenantId
           });
         }
@@ -1677,7 +1697,10 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
     });
 
     // Notify all assigned agents (if not internal comment)
-    if (!comment?.isInternal) {
+    if (
+      !comment?.isInternal &&
+      shouldCreateTicketCommentNotification(suppression, 'internal')
+    ) {
       const allAssignees = await getAllTicketAssignees(db, tenantId, ticketId);
 
       for (const assigneeId of allAssignees) {
@@ -1719,7 +1742,12 @@ async function handleTicketCommentAdded(event: TicketCommentAddedEvent): Promise
 
     // Create notification for client contact if they have portal access (and are not the comment author)
     // Skip if comment is internal - internal comments are not visible to client portal users
-    if (ticket.contact_name_id && !comment?.isInternal && ticketPortalUrl) {
+    if (
+      ticket.contact_name_id &&
+      !comment?.isInternal &&
+      ticketPortalUrl &&
+      shouldCreateTicketCommentNotification(suppression, 'contact')
+    ) {
       const contactUser = await tenantScopedTable(db, 'users', tenantId)
         .select('user_id', 'user_type')
         .where({
@@ -2979,6 +3007,7 @@ export const internalNotificationSubscriberTestHarness = {
   resolveTicketNotificationSuppression,
   shouldCreateContactPortalTicketNotification,
   shouldCreateStaffTicketNotification,
+  shouldCreateTicketCommentNotification,
   handleTicketAssigned,
   handleTicketUpdated,
   handleTicketClosed,

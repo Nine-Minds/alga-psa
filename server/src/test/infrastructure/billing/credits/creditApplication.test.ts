@@ -23,7 +23,8 @@ import { createClient } from '../../../../../test-utils/testDataFactory';
 let mockedTenantId = '11111111-1111-1111-1111-111111111111';
 let mockedUserId = 'mock-user-id';
 
-process.env.DB_PORT = '5432';
+process.env.DB_PORT = process.env.DB_PORT === '6432' ? '5432' : process.env.DB_PORT;
+
 process.env.DB_HOST = process.env.DB_HOST === 'pgbouncer' ? 'localhost' : process.env.DB_HOST;
 
 vi.mock('server/src/lib/analytics/posthog', () => ({

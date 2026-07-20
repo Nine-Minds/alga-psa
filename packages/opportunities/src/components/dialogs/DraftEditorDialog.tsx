@@ -12,7 +12,8 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { IOpportunityFollowUpDraft } from '@alga-psa/types';
 
 /**
- * The draft editor. The AI writes, the user reviews and edits, then an explicit
+ * The draft editor. The user writes; the agent only runs when the user enters
+ * instructions and clicks Rewrite — never automatically on open. An explicit
  * action sends through the tenant's configured outbound email provider.
  */
 export function DraftEditorDialog({
@@ -24,7 +25,10 @@ export function DraftEditorDialog({
 }: {
   isOpen: boolean;
   onClose: () => void;
-  onGenerate: (toneAdjustment?: string) => Promise<IOpportunityFollowUpDraft>;
+  onGenerate: (request: {
+    instructions: string;
+    current_draft?: IOpportunityFollowUpDraft;
+  }) => Promise<IOpportunityFollowUpDraft>;
   onGetRecipient: () => Promise<string | null>;
   onSend: (input: { subject: string; body: string }) => Promise<{
     recipient: string;
@@ -34,17 +38,23 @@ export function DraftEditorDialog({
   const { t } = useTranslation();
   const [subject, setSubject] = useState('');
   const [body, setBody] = useState('');
-  const [tone, setTone] = useState('');
+  const [instructions, setInstructions] = useState('');
   const [generating, setGenerating] = useState(false);
   const [sending, setSending] = useState(false);
   const [recipient, setRecipient] = useState<string | null>(null);
   const [recipientLoaded, setRecipientLoaded] = useState(false);
 
   const generate = useCallback(
-    async (toneAdjustment?: string) => {
+    async (rawInstructions: string) => {
+      const trimmed = rawInstructions.trim();
+      if (!trimmed) return;
       setGenerating(true);
       try {
-        const draft = await onGenerate(toneAdjustment);
+        const hasDraft = Boolean(subject.trim() || body.trim());
+        const draft = await onGenerate({
+          instructions: trimmed,
+          current_draft: hasDraft ? { subject, body } : undefined,
+        });
         setSubject(draft.subject);
         setBody(draft.body);
       } catch (err) {
@@ -53,11 +63,10 @@ export function DraftEditorDialog({
         setGenerating(false);
       }
     },
-    [onGenerate]
+    [onGenerate, subject, body]
   );
 
   useEffect(() => {
-    if (isOpen && !subject && !body) void generate();
     if (isOpen) {
       setRecipientLoaded(false);
       void onGetRecipient()
@@ -83,7 +92,7 @@ export function DraftEditorDialog({
       toast.success(t('opportunities.draft.sent', 'Follow-up sent and logged on the deal.'));
       setSubject('');
       setBody('');
-      setTone('');
+      setInstructions('');
       onClose();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : String(err));
@@ -120,19 +129,19 @@ export function DraftEditorDialog({
             <div className="flex items-end gap-2">
               <div className="flex-1">
                 <Input
-                  id="opportunity-draft-tone"
-                  label={t('opportunities.draft.tone', 'Adjust the tone')}
-                  placeholder={t('opportunities.draft.tonePlaceholder', 'e.g. shorter, warmer, more formal')}
-                  value={tone}
-                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTone(e.target.value)}
+                  id="opportunity-draft-instructions"
+                  label={t('opportunities.draft.instructions', 'Tell the agent what to change')}
+                  placeholder={t('opportunities.draft.instructionsPlaceholder', 'e.g. shorter, warmer, more formal')}
+                  value={instructions}
+                  onChange={(e: React.ChangeEvent<HTMLInputElement>) => setInstructions(e.target.value)}
                 />
               </div>
               <Button
                 id="opportunity-draft-regenerate"
                 size="sm"
                 variant="outline"
-                disabled={generating}
-                onClick={() => void generate(tone.trim() || undefined)}
+                disabled={generating || !instructions.trim()}
+                onClick={() => void generate(instructions)}
               >
                 {t('opportunities.draft.regenerate', 'Rewrite')}
               </Button>

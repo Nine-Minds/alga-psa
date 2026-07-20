@@ -11,6 +11,8 @@ import {
   STANDARD_QUOTE_TEMPLATE_ASTS,
   getStandardQuoteTemplateAstByCode,
 } from '../../src/lib/quote-template-ast/standardTemplates';
+import { evaluateTemplateAst } from '../../src/lib/invoice-template-ast/evaluator';
+import { renderTemplateAstHtmlDocument } from '../../src/lib/invoice-template-ast/server-render';
 
 // ── bindings ─────────────────────────────────────────────────────────
 describe('quote-template-ast – bindings', () => {
@@ -119,6 +121,38 @@ describe('quote-template-ast – standardTemplates', () => {
       expect(bindings.values?.subtotal).toBeDefined();
       expect(bindings.collections?.lineItems).toBeDefined();
     }
+  });
+
+  it('renders native quote party and date bindings without invoice aliases', async () => {
+    const ast = getStandardQuoteTemplateAstByCode('standard-quote-default');
+    expect(ast).not.toBeNull();
+    if (!ast) {
+      throw new Error('Expected the standard quote template to exist.');
+    }
+
+    const evaluation = evaluateTemplateAst(ast, {
+      quote_number: 'Q-0003',
+      quote_date: '2026-07-13',
+      valid_until: '2026-08-12',
+      title: 'Managed Services Proposal',
+      currency_code: 'USD',
+      subtotal: 0,
+      discount_total: 0,
+      tax: 0,
+      total_amount: 0,
+      line_items: [],
+      client: { name: 'Acme Corp', address: '123 Main St' },
+      tenant: { name: 'Northwind MSP', address: '400 SW Main' },
+    });
+    const html = await renderTemplateAstHtmlDocument(ast, evaluation, { title: 'Quote Q-0003' });
+
+    expect(html).toContain('Acme Corp');
+    expect(html).toContain('123 Main St');
+    expect(html).toContain('Northwind MSP');
+    expect(html).toContain('400 SW Main');
+    expect(html).toContain('7/13/2026');
+    expect(html).toContain('8/12/2026');
+    expect(html).not.toContain('Your Company');
   });
 });
 

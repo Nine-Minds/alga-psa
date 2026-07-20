@@ -169,11 +169,11 @@
       "addSelected": "Dodaj wybrane usługi",
       "adding": "Dodawanie..."
     },
-    "title": "Dodaj usługi i produkty do planu",
+    "title": "Dodaj usługi i produkty do pozycji umowy",
     "searchPlaceholder": "Wyszukaj usługi/produkty...",
     "errors": {
       "load": "Nie udało się załadować usług",
-      "add": "Nie udało się dodać usług do planu"
+      "add": "Nie udało się dodać usług do pozycji umowy"
     },
     "states": {
       "loading": "Ładowanie usług...",

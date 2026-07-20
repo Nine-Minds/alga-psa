@@ -54,10 +54,6 @@ export class InvoiceEmailHandler {
     if (!tenantId) throw new Error('Tenant ID is required');
     if (!invoiceIds || !invoiceIds.length) throw new Error('No invoice IDs provided');
     
-    // Track job detail IDs for error handling
-    let pdfDetailId: string | undefined;
-    let emailDetailId: string | undefined;
-    
     console.log(`Starting invoice email job: Processing ${invoiceIds.length} invoice(s) for tenant ${tenantId}`);
 
     const jobService = await JobService.create();
@@ -68,6 +64,9 @@ export class InvoiceEmailHandler {
     try {
       // Process each invoice
       for (let i = 0; i < invoiceIds.length; i++) {
+        // Track job detail IDs for error handling for this invoice only
+        let pdfDetailId: string | undefined;
+        let emailDetailId: string | undefined;
         const invoiceId = invoiceIds[i];
         const pdfStep = steps[i * 2]; // PDF generation step
         const emailStep = steps[i * 2 + 1]; // Email sending step
@@ -348,28 +347,6 @@ export class InvoiceEmailHandler {
 
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-      
-      // Update any existing job details to failed status
-      if (pdfDetailId) {
-        await jobService.updateJobDetailRecord(
-          pdfDetailId,
-          'failed',
-          {
-            error: errorMessage,
-            details: 'Failed to process invoice email job'
-          }
-        );
-      }
-      if (emailDetailId) {
-        await jobService.updateJobDetailRecord(
-          emailDetailId,
-          'failed',
-          {
-            error: errorMessage,
-            details: 'Failed to process invoice email job'
-          }
-        );
-      }
 
       await jobService.updateJobStatus(jobServiceId, JobStatus.Failed, {
         error: errorMessage,

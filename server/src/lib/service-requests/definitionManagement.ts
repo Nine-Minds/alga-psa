@@ -8,6 +8,7 @@ import {
 import { listServiceRequestTemplateProviders } from './providers/registry';
 import type { ServiceRequestTemplateDefinition } from './providers/contracts';
 import { isLicenseDistributionTenant } from '@alga-psa/licensing';
+import { ServiceRequestDefinitionBusinessError } from './definitionErrors';
 
 /**
  * Template provider whose templates author the in-app appliance-license purchase
@@ -273,7 +274,10 @@ export async function createServiceRequestDefinitionFromTemplate({
     templateProviderKey === DISTRIBUTION_ONLY_TEMPLATE_PROVIDER_KEY &&
     !isLicenseDistributionTenant(tenant)
   ) {
-    throw new Error('This template is not available for this tenant');
+    throw new ServiceRequestDefinitionBusinessError(
+      'TEMPLATE_UNAVAILABLE',
+      'This template is not available for this tenant'
+    );
   }
 
   const template = findTemplateDefinition(templateProviderKey, templateId);
@@ -329,7 +333,10 @@ export async function duplicateServiceRequestDefinition({
     .first()) as ServiceRequestDefinitionSourceRow | undefined;
 
   if (!source) {
-    throw new Error('Source service request definition not found');
+    throw new ServiceRequestDefinitionBusinessError(
+      'SOURCE_DEFINITION_NOT_FOUND',
+      'Source service request definition not found'
+    );
   }
 
   const [created] = (await db.table('service_request_definitions')

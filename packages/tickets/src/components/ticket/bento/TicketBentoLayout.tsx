@@ -89,6 +89,8 @@ export interface TicketBentoLayoutProps {
   tags?: any[];
   onTagsChange?: (tags: any[]) => void;
   taskActions?: React.ReactNode;
+  onResolveAndClose?: () => void;
+  resolveAndCloseDisabled?: boolean;
   liveHighlightedFields?: string[];
   liveFrozenFields?: string[];
   liveFieldConflicts?: Partial<Record<string, TicketLiveConflictState>>;
@@ -911,6 +913,8 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
           tags={props.tags}
           onTagsChange={props.onTagsChange}
           taskActions={props.taskActions}
+          onResolveAndClose={props.onResolveAndClose}
+          resolveAndCloseDisabled={props.resolveAndCloseDisabled}
           liveHighlightedFields={props.liveHighlightedFields}
           liveFrozenFields={props.liveFrozenFields}
           liveFieldConflicts={props.liveFieldConflicts}

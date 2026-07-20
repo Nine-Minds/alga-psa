@@ -1,19 +1,20 @@
-"use client";
-import React from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import Image from 'next/image';
 import { Button } from '@alga-psa/ui/components/Button';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 
-const PasswordResetConfirmation: React.FC = () => {
-  const { t } = useTranslation('msp/auth');
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const portal = searchParams?.get('portal') || 'msp';
+interface PasswordResetConfirmationProps {
+  searchParams?: Promise<{ portal?: string }>;
+}
 
-  const handleContinue = () => {
-    router.push(portal === 'client' ? '/auth/client-portal/signin' : '/auth/msp/signin'); 
-  };
+export default async function PasswordResetConfirmation({
+  searchParams,
+}: PasswordResetConfirmationProps) {
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const portal = resolvedSearchParams?.portal || 'msp';
+  const signinHref =
+    portal === 'client' ? '/auth/client-portal/signin' : '/auth/msp/signin';
+  const { t } = await getServerTranslation(undefined, 'msp/auth');
 
   return (
     <div className="flex flex-col items-center p-20 min-h-screen bg-[rgb(var(--color-background-50))] dark:bg-[rgb(var(--color-background))]">
@@ -33,17 +34,16 @@ const PasswordResetConfirmation: React.FC = () => {
           <br />
           {t('passwordReset.confirmation.subtitleContinue', 'Click below to sign in with your new password.')}
         </p>
-        <Button
-          id="proceed-to-sign-in-btn"
-          variant="default"
-          onClick={handleContinue}
-          className="w-full px-4 py-2 text-sm font-medium text-white bg-[rgb(var(--color-primary-600))] rounded-md hover:bg-[rgb(var(--color-primary-700))] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[rgb(var(--color-primary-500))]"
-        >
-          {t('passwordReset.confirmation.continue', 'Continue')}
-        </Button>
+        <Link href={signinHref} className="block">
+          <Button
+            id="proceed-to-sign-in-btn"
+            variant="default"
+            className="w-full px-4 py-2 text-sm font-medium text-white bg-[rgb(var(--color-primary-600))] rounded-md hover:bg-[rgb(var(--color-primary-700))] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[rgb(var(--color-primary-500))]"
+          >
+            {t('passwordReset.confirmation.continue', 'Continue')}
+          </Button>
+        </Link>
       </div>
     </div>
   );
-};
-
-export default PasswordResetConfirmation;
+}

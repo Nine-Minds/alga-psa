@@ -17,6 +17,7 @@ describe('Contract.getAllWithClients assignment-first wiring', () => {
   it('T024: derives list status from assignment lifecycle and preserves header status separately', () => {
     expect(source).toContain('deriveClientContractStatus({');
     expect(source).toContain('const assignmentStatus = deriveClientContractStatus({');
+    expect(source).toContain('contractStatus: row.contract_header_status,');
     expect(source).toContain('status: assignmentStatus,');
     expect(source).toContain('assignment_status: assignmentStatus,');
     expect(source).toContain('contract_header_status: row.contract_header_status ?? row.status,');

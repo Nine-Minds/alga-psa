@@ -6,6 +6,8 @@ import { toast } from 'react-hot-toast';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
+import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import { dateFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
@@ -43,7 +45,10 @@ const formatQuoteAmount = (quote: LinkableOpportunityQuote) =>
   formatCurrencyFromMinorUnits(quote.total_amount, undefined, quote.currency_code);
 
 export interface OpportunityDraftingCallbacks {
-  generate: (opportunityId: string, toneAdjustment?: string) => Promise<IOpportunityFollowUpDraft>;
+  generate: (opportunityId: string, request: {
+    instructions: string;
+    current_draft?: IOpportunityFollowUpDraft;
+  }) => Promise<IOpportunityFollowUpDraft>;
   getRecipient: (opportunityId: string) => Promise<string | null>;
   send: (opportunityId: string, input: { subject: string; body: string }) => Promise<{
     recipient: string;
@@ -232,7 +237,7 @@ export function OpportunityDetailHost({
         <DraftEditorDialog
           isOpen={draftOpen}
           onClose={() => setDraftOpen(false)}
-          onGenerate={(tone) => drafting.generate(detail.opportunity_id, tone)}
+          onGenerate={(request) => drafting.generate(detail.opportunity_id, request)}
           onGetRecipient={() => drafting.getRecipient(detail.opportunity_id)}
           onSend={async (input) => {
             const result = await drafting.send(detail.opportunity_id, input);
@@ -397,11 +402,14 @@ export function OpportunityDetailHost({
                   <Label htmlFor="opportunity-win-project-start">
                     {t('opportunities.winDialog.projectStart', 'Start date')}
                   </Label>
-                  <Input
+                  <DatePicker
                     id="opportunity-win-project-start"
-                    type="date"
-                    value={winProjectStartDate}
-                    onChange={(event) => setWinProjectStartDate(event.target.value)}
+                    label={t('opportunities.winDialog.projectStart', 'Start date')}
+                    placeholder={t('opportunities.winDialog.projectStart', 'Start date')}
+                    clearable
+                    className="w-full"
+                    value={dateFromString(winProjectStartDate)}
+                    onChange={(date) => setWinProjectStartDate(dateToString(date))}
                   />
                 </div>
               </div>

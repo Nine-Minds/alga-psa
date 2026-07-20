@@ -13,7 +13,7 @@ import {
 } from '../../../../../test-utils/billingTestHelpers';
 
 // Override DB_PORT to connect directly to PostgreSQL instead of pgbouncer
-process.env.DB_PORT = '5432';
+process.env.DB_PORT = process.env.DB_PORT === '6432' ? '5432' : process.env.DB_PORT;
 process.env.DB_HOST = process.env.DB_HOST === 'pgbouncer' ? 'localhost' : process.env.DB_HOST;
 
 

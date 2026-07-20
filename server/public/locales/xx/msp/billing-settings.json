@@ -1,6 +1,7 @@
 {
   "tabs": {
     "general": "11111",
+    "numbering": "11111",
     "quoting": "11111",
     "tax": "11111",
     "payments": "11111",
@@ -25,6 +26,10 @@
       }
     },
     "invoiceNumbering": {
+      "title": "11111",
+      "description": "11111"
+    },
+    "creditNoteNumbering": {
       "title": "11111",
       "description": "11111"
     },
@@ -127,6 +132,10 @@
   },
   "quoting": {
     "quoteNumbering": {
+      "title": "11111",
+      "description": "11111"
+    },
+    "salesOrderNumbering": {
       "title": "11111",
       "description": "11111"
     }

@@ -980,6 +980,10 @@
     "contactLoadFailed": "Nie udało się wczytać kontaktu.",
     "tenantNotDefined": "Błąd: tenant nie jest zdefiniowany",
     "noContact": "Brak kontaktu",
+    "closeTicketTitle": "Zamknij zgłoszenie",
+    "resolveAndClose": "Rozwiąż i zamknij",
+    "closeTicketResolutionPrompt": "Wybierz status zamknięcia i dodaj rozwiązanie tego zgłoszenia.",
+    "selectCloseStatus": "Wybierz status zamknięcia",
     "cannotCloseYet": "Tego zgłoszenia nie można jeszcze zamknąć",
     "closeRulesIntro": "Reguły zamykania tablicy wymagają spełnienia poniższych warunków przed zamknięciem tego zgłoszenia:",
     "viewChecklist": "Zobacz listę kontrolną",
@@ -1324,6 +1328,7 @@
   "categoryPicker": {
     "title": "Wybór kategorii",
     "placeholder": "Wybierz kategorie...",
+    "searchPlaceholder": "Szukaj kategorii...",
     "noCategory": "Brak kategorii",
     "addNew": "Dodaj nową kategorię",
     "itilBadge": "ITIL",

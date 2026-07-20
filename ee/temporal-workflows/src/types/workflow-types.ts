@@ -34,6 +34,7 @@ export interface TenantCreationInput {
   companyName?: string;
   clientName?: string;
   contractLine?: string;
+  emailProvider?: 'smtp' | 'resend';
   licenseCount?: number; // Number of licenses for the tenant
   checkoutSessionId?: string; // Stripe checkout session ID for status updates
 
@@ -133,6 +134,7 @@ export interface SetupTenantDataActivityInput {
   adminUserId: string;
   clientId?: string;
   contractLine?: string;
+  emailProvider?: 'smtp' | 'resend';
 }
 
 export interface SetupTenantDataActivityResult {

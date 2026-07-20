@@ -8,6 +8,7 @@ import { WORKFLOW_RUNTIME_ALLOWED_FUNCTIONS } from '../expressionFunctions';
 import { zodToJsonSchema } from 'zod-to-json-schema';
 import { didYouMean } from './didYouMean';
 import { validateInputMapping, validateInputMappingSchema, collectSecretRefsFromConfig } from './mappingValidator';
+import { getWorkflowEventCorrelationPaths } from '../correlationDefaults';
 import {
   isWorkflowAiInferAction,
   resolveWorkflowAiSchemaFromConfig,
@@ -307,10 +308,30 @@ function validateNodeStep(
     }
 
     if (step.type === 'event.wait') {
-      const config = step.config as { assign?: Record<string, { $expr: string }> };
+      const config = step.config as { eventName?: string; assign?: Record<string, { $expr: string }> };
       if (config?.assign) {
         for (const path of Object.keys(config.assign)) {
           validateAssignmentPath(path, stepPath, step.id, errors);
+        }
+      }
+      if (config?.eventName) {
+        const correlation = getWorkflowEventCorrelationPaths(config.eventName);
+        if (correlation.paths.length === 0) {
+          errors.push({
+            severity: 'error',
+            stepPath,
+            stepId: step.id,
+            code: 'EVENT_WAIT_UNCORRELATABLE',
+            message: `event.wait on "${config.eventName}" can never resume: no correlation derivation paths are configured for this event (event-specific or wildcard). The wait would always run to timeout.`
+          });
+        } else {
+          warnings.push({
+            severity: 'warning',
+            stepPath,
+            stepId: step.id,
+            code: 'EVENT_WAIT_CORRELATION_CONTRACT',
+            message: `event.wait on "${config.eventName}" resumes only if the wait's correlationKey equals a value the event derives from [${correlation.paths.join(', ')}] (${correlation.source} config). Ensure the correlationKey expression yields one of these payload values.`
+          });
         }
       }
     }

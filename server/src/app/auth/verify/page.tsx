@@ -1,12 +1,8 @@
-'use client';
-
-import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 
 export default function VerifyPage() {
-  const router = useRouter();
-
   return (
     <div className="flex min-h-screen flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="w-full max-w-md space-y-8">
@@ -27,14 +23,15 @@ export default function VerifyPage() {
           </AlertDescription>
         </Alert>
         <div className="text-center">
-          <Button
-            id="return-to-signin-button"
-            variant="outline"
-            onClick={() => router.push('/auth/msp/signin')}
-            className="mt-4"
-          >
-            Return to Sign In
-          </Button>
+          <Link href="/auth/msp/signin">
+            <Button
+              id="return-to-signin-button"
+              variant="outline"
+              className="mt-4"
+            >
+              Return to Sign In
+            </Button>
+          </Link>
         </div>
       </div>
     </div>

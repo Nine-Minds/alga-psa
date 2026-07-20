@@ -733,10 +733,13 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
 
   const initialLoadDone = useRef(false);
   const invoicedInitialLoadDone = useRef(false);
+  const lastAppliedClientFilter = useRef(clientFilter);
 
   // Debounce client filter for local ready/blocked row filtering and persist it in the URL.
   useEffect(() => {
     const timer = setTimeout(() => {
+      const filterChanged = lastAppliedClientFilter.current !== clientFilter;
+      lastAppliedClientFilter.current = clientFilter;
       setDebouncedClientFilter(clientFilter);
       if (typeof window !== 'undefined') {
         const params = new URLSearchParams(window.location.search);
@@ -755,7 +758,7 @@ const AutomaticInvoices: React.FC<AutomaticInvoicesProps> = ({ onGenerateSuccess
         }
       }
 
-      if (initialLoadDone.current) {
+      if (initialLoadDone.current && filterChanged) {
         setCurrentReadyPage(1);
         setSelectedTargets(new Set()); // Clear selection when filter changes
         setExpandedParentGroups(new Set());

@@ -717,8 +717,7 @@ export async function convertQuoteToDraftSalesOrder(
   }
 
   const nowIso = new Date().toISOString();
-  const numberResult = await knexOrTrx.raw('SELECT generate_next_number(?::uuid, ?) as number', [tenant, 'SALES_ORDER']);
-  const soNumber: string = numberResult.rows[0].number;
+  const soNumber = await SharedNumberingService.getNextNumber('SALES_ORDER', { knex: knexOrTrx, tenant });
 
   const [salesOrder] = await knexOrTrx('sales_orders')
     .insert({

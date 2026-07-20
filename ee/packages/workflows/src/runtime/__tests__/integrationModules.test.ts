@@ -30,14 +30,16 @@ const fakeModule = (key: string, availabilityKey: string | undefined) => ({
 });
 
 const rmmKnexStub = (connectedProviders: Record<string, boolean>) => {
-  const calls: Array<Record<string, unknown>> = [];
+  const calls: unknown[][] = [];
   const knex: any = vi.fn((table: string) => {
     if (table !== 'rmm_integrations') throw new Error(`Unexpected table ${table}`);
     let filters: Record<string, unknown> = {};
     const builder: any = {
-      where: vi.fn().mockImplementation((args: Record<string, unknown>) => {
-        filters = args;
+      where: vi.fn().mockImplementation((...args: unknown[]) => {
         calls.push(args);
+        if (typeof args[0] === 'object' && args[0] !== null) {
+          filters = args[0] as Record<string, unknown>;
+        }
         return builder;
       }),
       whereNotNull: vi.fn().mockReturnValue({
@@ -129,8 +131,12 @@ describe('rmmIntegrationAvailability', () => {
     await expect(rmmIntegrationAvailability('tacticalrmm')(knex, 'tenant-1')).resolves.toBe(true);
     await expect(rmmIntegrationAvailability('levelio')(knex, 'tenant-1')).resolves.toBe(false);
 
-    expect(calls[0]).toEqual({ tenant: 'tenant-1', provider: 'tacticalrmm', is_active: true });
-    expect(calls[1]).toEqual({ tenant: 'tenant-1', provider: 'levelio', is_active: true });
+    expect(calls).toEqual([
+      ['rmm_integrations.tenant', 'tenant-1'],
+      [{ provider: 'tacticalrmm', is_active: true }],
+      ['rmm_integrations.tenant', 'tenant-1'],
+      [{ provider: 'levelio', is_active: true }]
+    ]);
   });
 });
 
@@ -215,6 +221,9 @@ describe('NinjaOne module migration parity', () => {
     expect(resolver).toBeDefined();
     const { knex, calls } = rmmKnexStub({ ninjaone: true });
     await expect(resolver!(knex, 'tenant-1')).resolves.toBe(true);
-    expect(calls[0]).toEqual({ tenant: 'tenant-1', provider: 'ninjaone', is_active: true });
+    expect(calls).toEqual([
+      ['rmm_integrations.tenant', 'tenant-1'],
+      [{ provider: 'ninjaone', is_active: true }]
+    ]);
   });
 });

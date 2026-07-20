@@ -870,6 +870,10 @@
     "contactLoadFailed": "Kan contact niet laden.",
     "tenantNotDefined": "Fout: tenant is niet gedefinieerd",
     "noContact": "Geen contact",
+    "closeTicketTitle": "Ticket sluiten",
+    "resolveAndClose": "Oplossen en sluiten",
+    "closeTicketResolutionPrompt": "Kies een afsluitstatus en voeg een oplossing voor dit ticket toe.",
+    "selectCloseStatus": "Selecteer een afsluitstatus",
     "cannotCloseYet": "Dit ticket kan nog niet worden gesloten",
     "closeRulesIntro": "De sluitregels van het board vereisen het volgende voordat dit ticket kan worden gesloten:",
     "viewChecklist": "Checklist bekijken",
@@ -1198,6 +1202,7 @@
   "categoryPicker": {
     "title": "Categoriekiezer",
     "placeholder": "Categorieën selecteren...",
+    "searchPlaceholder": "Categorieën zoeken...",
     "noCategory": "Geen categorie",
     "addNew": "Nieuwe categorie toevoegen",
     "itilBadge": "ITIL",

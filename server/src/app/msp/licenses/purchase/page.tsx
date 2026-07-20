@@ -1,30 +1,24 @@
-'use client';
-
-import React from 'react';
-import LicensePurchaseForm from '@enterprise/components/licensing/LicensePurchaseForm';
 import { ArrowLeft } from 'lucide-react';
-import { Button } from '@alga-psa/ui/components/Button';
-import { useRouter } from 'next/navigation';
-import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import LicensePurchaseForm from '@enterprise/components/licensing/LicensePurchaseForm';
+import BackButton from '@/components/common/BackButton';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 
-export default function LicensePurchasePage() {
-  const router = useRouter();
-  const { t } = useTranslation('msp/licensing');
-  const { t: tCommon } = useTranslation('common');
+export const dynamic = 'force-dynamic';
+
+export default async function LicensePurchasePage() {
+  const [{ t }, { t: tCommon }] = await Promise.all([
+    getServerTranslation(undefined, 'msp/licensing'),
+    getServerTranslation(undefined, 'common'),
+  ]);
 
   return (
     <div className="container mx-auto p-4 max-w-4xl">
       {/* Back Button */}
       <div className="mb-6">
-        <Button
-          id="back-button"
-          variant="outline"
-          className="gap-2"
-          onClick={() => router.back()}
-        >
+        <BackButton id="back-button" variant="outline" className="gap-2">
           <ArrowLeft className="h-4 w-4" />
           {tCommon('actions.back', { defaultValue: 'Back' })}
-        </Button>
+        </BackButton>
       </div>
 
       {/* Page Header */}

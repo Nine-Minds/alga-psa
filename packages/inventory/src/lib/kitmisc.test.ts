@@ -29,16 +29,9 @@ vi.mock('next/cache', () => ({
 vi.mock('@alga-psa/event-bus/publishers', () => ({
   publishEvent: vi.fn(),
 }));
+import { getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
 
-function readEnv(): Record<string, string> {
-  const p = path.resolve(__dirname, '../../../../server/.env.local');
-  const e: Record<string, string> = {};
-  for (const line of fs.readFileSync(p, 'utf8').split('\n')) {
-    const m = line.match(/^([A-Z_]+)=(.*)$/);
-    if (m) e[m[1]] = m[2];
-  }
-  return e;
-}
+const databaseConnection = getInventoryTestDatabaseConnection();
 
 let knex: Knex;
 let TENANT: string;
@@ -48,10 +41,10 @@ let COMP_B: string;
 let CLIENT: string;
 
 beforeAll(async () => {
-  const e = readEnv();
+  if (!databaseConnection) return;
   knex = knexLib({
     client: 'pg',
-    connection: { host: 'localhost', port: 5432, user: e.DB_USER_ADMIN, password: e.DB_PASSWORD_ADMIN, database: 'server' },
+    connection: databaseConnection,
     pool: { min: 1, max: 4 },
   });
   TENANT = (await knex('tenants').select('tenant').first()).tenant;
@@ -75,7 +68,7 @@ async function inTx(fn: (trx: Knex.Transaction) => Promise<void>) {
   }
 }
 
-describe('kit explosion + contract no-consume (real server DB, rolled back)', () => {
+describe.skipIf(!databaseConnection)('kit explosion + contract no-consume (real server DB, rolled back)', () => {
   it('T007: resolves sum pricing from component selling prices without a kit catalog fallback', async () => {
     await inTx(async (trx) => {
       await trx('kit_components').where({ tenant: TENANT, kit_service_id: KIT_SERVICE }).del();

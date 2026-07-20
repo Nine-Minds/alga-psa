@@ -16,18 +16,19 @@
  * so forks and local runs are unaffected. Pass --dry-run to print the row
  * instead of sending it.
  */
-import { readFileSync, existsSync, readdirSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync, appendFileSync } from 'node:fs';
 import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
 import crypto from 'node:crypto';
 
-const HEADER = [
+export const HEADER = [
   'timestamp_utc', 'suite', 'branch', 'commit',
   'passed', 'failed', 'skipped', 'todo', 'total', 'pass_pct',
   'lines_pct', 'statements_pct', 'branches_pct', 'functions_pct',
   'duration_s', 'run_url',
 ];
 
-const DETAIL_HEADER = [
+export const DETAIL_HEADER = [
   'timestamp_utc', 'suite', 'commit', 'directory',
   'lines_pct', 'lines_covered', 'lines_total',
   'statements_pct', 'branches_pct', 'functions_pct',
@@ -44,7 +45,7 @@ function readJson(path) {
   }
 }
 
-function testCounts(results) {
+export function testCounts(results) {
   if (!results) return null;
   const passed = results.numPassedTests ?? 0;
   const failed = results.numFailedTests ?? 0;
@@ -64,7 +65,7 @@ function testCounts(results) {
   return { passed, failed, skipped, todo, total, passPct, durationS };
 }
 
-function coveragePcts(summary) {
+export function coveragePcts(summary) {
   const t = summary?.total;
   const pct = (k) => (typeof t?.[k]?.pct === 'number' ? t[k].pct : '');
   return { lines: pct('lines'), statements: pct('statements'), branches: pct('branches'), functions: pct('functions') };
@@ -73,7 +74,7 @@ function coveragePcts(summary) {
 // Group per-file coverage into directory buckets: 4 path segments under
 // server/src/lib (its subtrees are whole subsystems), 3 under the rest of
 // server/src, 2 for packages/shared/ee.
-function coverageGroupKey(rel) {
+export function coverageGroupKey(rel) {
   const parts = rel.split('/');
   let depth = 2;
   if (rel.startsWith('server/src/lib/')) depth = 4;
@@ -108,12 +109,11 @@ function walkSourceFiles(absDir, relDir, counts) {
   }
 }
 
-function sourceFileCounts() {
-  const cwd = process.cwd();
+function sourceFileCounts(repoRoot) {
   const counts = new Map();
-  walkSourceFiles(join(cwd, 'server/src'), 'server/src', counts);
-  walkSourceFiles(join(cwd, 'shared'), 'shared', counts);
-  const pkgRoot = join(cwd, 'packages');
+  walkSourceFiles(join(repoRoot, 'server/src'), 'server/src', counts);
+  walkSourceFiles(join(repoRoot, 'shared'), 'shared', counts);
+  const pkgRoot = join(repoRoot, 'packages');
   let pkgs = [];
   try {
     pkgs = readdirSync(pkgRoot, { withFileTypes: true }).filter((e) => e.isDirectory());
@@ -124,9 +124,9 @@ function sourceFileCounts() {
   return counts;
 }
 
-function coverageByDirectory(summary) {
+export function coverageByDirectory(summary, repoRoot = process.cwd()) {
   if (!summary) return [];
-  const cwd = process.cwd() + '/';
+  const cwd = repoRoot.replace(/\/$/, '') + '/';
   const groups = new Map();
   for (const [file, m] of Object.entries(summary)) {
     if (file === 'total' || !m?.lines) continue;
@@ -142,7 +142,7 @@ function coverageByDirectory(summary) {
     }
     groups.set(key, g);
   }
-  const onDisk = sourceFileCounts();
+  const onDisk = sourceFileCounts(repoRoot.replace(/\/$/, ''));
   const pct = (g, k) => (g[k].total ? Math.round((g[k].covered / g[k].total) * 10000) / 100 : '');
   const rows = [...groups.entries()].map(([dir, g]) => ({
     dir,
@@ -165,7 +165,7 @@ function coverageByDirectory(summary) {
   return rows.sort((a, b) => a.dir.localeCompare(b.dir));
 }
 
-function buildRow() {
+export function buildRow() {
   const suite = process.env.TEST_METRICS_SUITE;
   if (!suite) {
     console.error('test-metrics: TEST_METRICS_SUITE is required');
@@ -268,38 +268,64 @@ async function appendRows(token, sheetId, tab, header, rows) {
   if (!append.ok) throw new Error(`append to "${tab}" failed: ${append.status} ${JSON.stringify(append.json)}`);
 }
 
-const row = buildRow();
-const wantDetail = process.env.TEST_METRICS_DETAIL === '1';
-const detailRows = wantDetail
-  ? coverageByDirectory(readJson(process.env.TEST_METRICS_COVERAGE)).map((d) => [
-      row[0], row[1], row[3], d.dir,
-      d.lines, d.linesCovered, d.linesTotal,
-      d.statements, d.branches, d.functions,
-      d.filesMeasured, d.filesTotal, row[15],
-    ])
-  : [];
+// One-glance result table in the Actions run page, independent of the
+// Google credentials being configured.
+function writeJobSummary(row) {
+  if (!process.env.GITHUB_STEP_SUMMARY) return;
+  const cell = (v) => (v === '' || v === undefined ? '—' : v);
+  appendFileSync(
+    process.env.GITHUB_STEP_SUMMARY,
+    [
+      `### Test metrics — ${row[1]}`,
+      '',
+      '| passed | failed | skipped | pass % | lines % | branches % | duration |',
+      '|---|---|---|---|---|---|---|',
+      `| ${cell(row[4])} | ${cell(row[5])} | ${cell(row[6])} | ${cell(row[9])} | ${cell(row[10])} | ${cell(row[12])} | ${row[14] !== '' ? `${row[14]}s` : '—'} |`,
+      '',
+    ].join('\n'),
+  );
+}
 
-if (process.argv.includes('--dry-run')) {
-  console.log('test-metrics dry run:');
-  HEADER.forEach((col, i) => console.log(`  ${col}: ${row[i]}`));
-  if (wantDetail) {
-    console.log(`coverage_by_dir rows (${detailRows.length}):`);
-    for (const d of detailRows) console.log(`  ${d[3]}: ${d[4]}% lines (${d[5]}/${d[6]}), files ${d[10]}/${d[11]}`);
+async function main() {
+  const row = buildRow();
+  const wantDetail = process.env.TEST_METRICS_DETAIL === '1';
+  const detailRows = wantDetail
+    ? coverageByDirectory(readJson(process.env.TEST_METRICS_COVERAGE)).map((d) => [
+        row[0], row[1], row[3], d.dir,
+        d.lines, d.linesCovered, d.linesTotal,
+        d.statements, d.branches, d.functions,
+        d.filesMeasured, d.filesTotal, row[15],
+      ])
+    : [];
+
+  if (process.argv.includes('--dry-run')) {
+    console.log('test-metrics dry run:');
+    HEADER.forEach((col, i) => console.log(`  ${col}: ${row[i]}`));
+    if (wantDetail) {
+      console.log(`coverage_by_dir rows (${detailRows.length}):`);
+      for (const d of detailRows) console.log(`  ${d[3]}: ${d[4]}% lines (${d[5]}/${d[6]}), files ${d[10]}/${d[11]}`);
+    }
+    return;
   }
-  process.exit(0);
+
+  writeJobSummary(row);
+
+  const rawKey = process.env.GOOGLE_SA_KEY;
+  const sheetId = process.env.TEST_METRICS_SHEET_ID;
+  if (!rawKey || !sheetId) {
+    console.log('test-metrics: GOOGLE_SA_KEY / TEST_METRICS_SHEET_ID not configured, skipping');
+    return;
+  }
+
+  const tab = process.env.TEST_METRICS_SHEET_TAB || 'metrics';
+  const token = await getAccessToken(parseServiceAccountKey(rawKey));
+  await appendRows(token, sheetId, tab, HEADER, [row]);
+  if (detailRows.length) {
+    await appendRows(token, sheetId, 'coverage_by_dir', DETAIL_HEADER, detailRows);
+  }
+  console.log(`test-metrics: recorded ${row[1]} run (${row[4]} passed / ${row[5]} failed)${detailRows.length ? ` + ${detailRows.length} directory rows` : ''} to sheet`);
 }
 
-const rawKey = process.env.GOOGLE_SA_KEY;
-const sheetId = process.env.TEST_METRICS_SHEET_ID;
-if (!rawKey || !sheetId) {
-  console.log('test-metrics: GOOGLE_SA_KEY / TEST_METRICS_SHEET_ID not configured, skipping');
-  process.exit(0);
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  await main();
 }
-
-const tab = process.env.TEST_METRICS_SHEET_TAB || 'metrics';
-const token = await getAccessToken(parseServiceAccountKey(rawKey));
-await appendRows(token, sheetId, tab, HEADER, [row]);
-if (detailRows.length) {
-  await appendRows(token, sheetId, 'coverage_by_dir', DETAIL_HEADER, detailRows);
-}
-console.log(`test-metrics: recorded ${row[1]} run (${row[4]} passed / ${row[5]} failed)${detailRows.length ? ` + ${detailRows.length} directory rows` : ''} to sheet`);

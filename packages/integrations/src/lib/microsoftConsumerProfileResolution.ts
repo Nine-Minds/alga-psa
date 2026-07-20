@@ -66,6 +66,7 @@ export interface MicrosoftConsumerProfileResolution {
   profileId?: string;
   clientId?: string;
   clientSecret?: string;
+  clientSecretRef?: string;
   microsoftTenantId?: string;
   credentialSource?: MicrosoftCredentialSource;
   message?: string;
@@ -498,6 +499,7 @@ export async function resolveMicrosoftConsumerProfileConfig(
     profileId: profile.profile_id,
     clientId: profile.client_id,
     clientSecret: clientSecret || undefined,
+    clientSecretRef: profile.client_secret_ref,
     microsoftTenantId: normalizeTenantId(profile.tenant_id),
     credentialSource: 'binding',
   };

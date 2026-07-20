@@ -11,6 +11,8 @@ import {
   generateIdempotencyKey,
   initializeWorkflowRuntimeV2,
   createSecretResolverFromProvider,
+  applyRedactions,
+  safeSerialize,
   type Envelope,
   type InputMapping,
   type SecretResolver,
@@ -35,6 +37,8 @@ import {
 import { workflowStepQuotaService } from '@alga-psa/workflows/runtime/core';
 
 const WORKFLOW_RUNTIME_SYSTEM_CATALOG_TENANT = '__workflow_runtime_system_catalog__';
+const ACTION_ERROR_JSON_MAX_BYTES = 32 * 1024;
+const ACTION_ERROR_SENSITIVE_KEY_PATTERN = /(secret|token|password|api[_-]?key|authorization)/i;
 
 const systemCatalogTenant = (tenantId: string | null | undefined): string => {
   const tenant = String(tenantId ?? '').trim();
@@ -897,11 +901,25 @@ async function executeActionInvocation(input: {
     return parsedOutput;
   } catch (error) {
     const runtimeError = normalizeActionRuntimeError(error, input.stepPath);
-    await WorkflowActionInvocationModelV2.update(input.knex, invocation.invocation_id, {
+    const errorJson = prepareActionInvocationErrorJson(runtimeError);
+    const failureUpdate = {
       status: 'FAILED',
       error_message: runtimeError.message,
       completed_at: new Date().toISOString(),
-    }, input.tenantId);
+    };
+    try {
+      await WorkflowActionInvocationModelV2.update(input.knex, invocation.invocation_id, {
+        ...failureUpdate,
+        error_json: errorJson,
+      }, input.tenantId);
+    } catch (persistError) {
+      // The worker can deploy ahead of the server migration that adds
+      // error_json; keep the failure record rather than losing it to 42703.
+      if ((persistError as { code?: string } | null)?.code !== '42703') {
+        throw persistError;
+      }
+      await WorkflowActionInvocationModelV2.update(input.knex, invocation.invocation_id, failureUpdate, input.tenantId);
+    }
     throw runtimeError;
   }
 }
@@ -944,4 +962,127 @@ function isRuntimeErrorPayload(value: unknown): value is RuntimeErrorPayload {
     && typeof value === 'object'
     && typeof (value as Record<string, unknown>).category === 'string'
     && typeof (value as Record<string, unknown>).message === 'string';
+}
+
+function prepareActionInvocationErrorJson(error: RuntimeErrorPayload): Record<string, unknown> {
+  const base = redactActionErrorSensitiveValues(
+    stripStackProperties(applyRedactions(safeSerializeActionError(error), []))
+  ) as RuntimeErrorPayload;
+  const prepared: Record<string, unknown> = {
+    category: base.category,
+    message: base.message,
+    nodePath: base.nodePath,
+    at: base.at,
+  };
+  if (typeof base.code === 'string') {
+    prepared.code = base.code;
+  }
+  if ('details' in base && base.details !== undefined) {
+    prepared.details = base.details;
+  }
+
+  const size = serializedSize(prepared);
+  if (size <= ACTION_ERROR_JSON_MAX_BYTES) {
+    return prepared;
+  }
+
+  const truncated: Record<string, unknown> = {
+    ...prepared,
+    details: {
+      truncated: true,
+      size,
+      max: ACTION_ERROR_JSON_MAX_BYTES,
+    },
+  };
+
+  if (serializedSize(truncated) <= ACTION_ERROR_JSON_MAX_BYTES) {
+    return truncated;
+  }
+
+  const message = typeof truncated.message === 'string' ? truncated.message : String(truncated.message ?? '');
+  return {
+    ...truncated,
+    message: truncateStringToJsonBudget(message, ACTION_ERROR_JSON_MAX_BYTES, truncated),
+  };
+}
+
+function safeSerializeActionError(error: RuntimeErrorPayload): unknown {
+  try {
+    return safeSerialize(error);
+  } catch {
+    return {
+      category: error.category,
+      code: error.code,
+      message: error.message,
+      nodePath: error.nodePath,
+      at: error.at,
+      details: {
+        truncated: true,
+        reason: 'serialization_failed',
+      },
+    };
+  }
+}
+
+function stripStackProperties(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((entry) => stripStackProperties(entry));
+  }
+  if (!value || typeof value !== 'object') {
+    return value;
+  }
+  const result: Record<string, unknown> = {};
+  for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
+    if (key === 'stack') {
+      continue;
+    }
+    result[key] = stripStackProperties(val);
+  }
+  return result;
+}
+
+function redactActionErrorSensitiveValues(value: unknown): unknown {
+  if (Array.isArray(value)) {
+    return value.map((entry) => redactActionErrorSensitiveValues(entry));
+  }
+  if (!value || typeof value !== 'object') {
+    return value;
+  }
+  const result: Record<string, unknown> = {};
+  for (const [key, val] of Object.entries(value as Record<string, unknown>)) {
+    if (ACTION_ERROR_SENSITIVE_KEY_PATTERN.test(key)) {
+      result[key] = '[REDACTED]';
+      continue;
+    }
+    result[key] = redactActionErrorSensitiveValues(val);
+  }
+  return result;
+}
+
+function serializedSize(value: unknown): number {
+  try {
+    return Buffer.byteLength(JSON.stringify(value), 'utf8');
+  } catch {
+    return Number.POSITIVE_INFINITY;
+  }
+}
+
+// A slice landing between the halves of a surrogate pair yields a lone
+// surrogate, which JSON.stringify escapes as \udXXX — and Postgres jsonb
+// rejects that, failing the very write that records the failure.
+function sliceWithoutSplittingSurrogates(value: string, length: number): string {
+  const sliced = value.slice(0, length);
+  const lastCode = sliced.charCodeAt(sliced.length - 1);
+  return lastCode >= 0xd800 && lastCode <= 0xdbff ? sliced.slice(0, -1) : sliced;
+}
+
+function truncateStringToJsonBudget(value: string, maxBytes: number, container: Record<string, unknown>): string {
+  const marker = '...[truncated]';
+  let available = Math.max(0, maxBytes - serializedSize({ ...container, message: '' }) - marker.length - 2);
+  let truncated = `${sliceWithoutSplittingSurrogates(value, available)}${marker}`;
+  while (serializedSize({ ...container, message: truncated }) > maxBytes && available > 0) {
+    available = Math.floor(available * 0.9);
+    truncated = `${sliceWithoutSplittingSurrogates(value, available)}${marker}`;
+  }
+  return truncated;
 }

@@ -155,11 +155,11 @@
     }
   },
   "serviceSelection": {
-    "title": "Add Services & Products to Plan",
+    "title": "Add Services & Products to Contract Line",
     "searchPlaceholder": "Search services/products...",
     "errors": {
       "load": "Failed to load services",
-      "add": "Failed to add services to plan"
+      "add": "Failed to add services to contract line"
     },
     "states": {
       "loading": "Loading services...",

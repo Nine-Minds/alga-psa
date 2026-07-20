@@ -8,6 +8,7 @@ const {
   resolveTicketNotificationSuppression,
   shouldCreateContactPortalTicketNotification,
   shouldCreateStaffTicketNotification,
+  shouldCreateTicketCommentNotification,
 } = internalNotificationSubscriberTestHarness;
 
 describe('internalNotificationSubscriber ticket suppression policy', () => {
@@ -56,5 +57,20 @@ describe('internalNotificationSubscriber ticket suppression policy', () => {
     expect(shouldCreateContactPortalTicketNotification(contactOnly)).toBe(false);
     expect(shouldCreateStaffTicketNotification(contactOnly)).toBe(true);
     expect(shouldCreateStaffTicketNotification(full)).toBe(false);
+  });
+
+  it('suppresses closing-resolution comment notifications for the selected recipient classes', () => {
+    const contactOnly = resolveTicketNotificationSuppression({
+      suppressContactNotifications: true,
+    });
+    const full = resolveTicketNotificationSuppression({
+      suppressContactNotifications: true,
+      suppressInternalNotifications: true,
+    });
+
+    expect(shouldCreateTicketCommentNotification(contactOnly, 'contact')).toBe(false);
+    expect(shouldCreateTicketCommentNotification(contactOnly, 'internal')).toBe(true);
+    expect(shouldCreateTicketCommentNotification(full, 'contact')).toBe(false);
+    expect(shouldCreateTicketCommentNotification(full, 'internal')).toBe(false);
   });
 });

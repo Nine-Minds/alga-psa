@@ -870,6 +870,10 @@
     "contactLoadFailed": "Falha ao carregar o contato.",
     "tenantNotDefined": "Erro: tenant não está definido",
     "noContact": "Sem contato",
+    "closeTicketTitle": "Fechar ticket",
+    "resolveAndClose": "Resolver e fechar",
+    "closeTicketResolutionPrompt": "Escolha um status de fechamento e adicione uma resolução para este ticket.",
+    "selectCloseStatus": "Selecione um status de fechamento",
     "cannotCloseYet": "Este ticket ainda não pode ser fechado",
     "closeRulesIntro": "As regras de fechamento do quadro exigem o seguinte antes que este ticket possa ser fechado:",
     "viewChecklist": "Ver checklist",
@@ -1198,6 +1202,7 @@
   "categoryPicker": {
     "title": "Seletor de categoria",
     "placeholder": "Selecione categorias...",
+    "searchPlaceholder": "Pesquisar categorias...",
     "noCategory": "Nenhuma categoria",
     "addNew": "Adicionar nova categoria",
     "itilBadge": "ITIL",

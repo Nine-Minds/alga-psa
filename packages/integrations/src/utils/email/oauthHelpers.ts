@@ -3,6 +3,7 @@
  */
 
 import { randomBytes } from 'crypto';
+import { getMicrosoftAuthorizeUrl } from '@alga-psa/shared/services/email/microsoftGraphEndpoints';
 
 export interface OAuthState {
   tenant: string;
@@ -25,7 +26,7 @@ export function generateMicrosoftAuthUrl(
   scopes: string[] = ['https://graph.microsoft.com/Mail.Read', 'https://graph.microsoft.com/Mail.Read.Shared', 'offline_access'],
   tenantAuthority: string = 'common'
 ): string {
-  const baseUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/authorize`;
+  const baseUrl = getMicrosoftAuthorizeUrl(tenantAuthority);
 
   const params = new URLSearchParams({
     client_id: clientId,

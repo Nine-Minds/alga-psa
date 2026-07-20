@@ -23,6 +23,10 @@ import {
   throwActionError,
   rethrowAsStandardError,
   parseJsonMaybe,
+  normalizePhoneDigits,
+  buildNormalizedPhoneMatchCondition,
+  phoneMatchModes,
+  type PhoneMatchMode,
   type TenantTxContext,
 } from './shared';
 
@@ -685,6 +689,10 @@ export function registerContactActions(): void {
         contact_id: withWorkflowPicker(uuidSchema.optional(), 'Contact id', 'contact'),
         email: z.string().email().optional(),
         phone: z.string().optional().describe('Phone number (normalized digits match)'),
+        phone_match: z
+          .enum(phoneMatchModes)
+          .default('exact')
+          .describe('Phone matching mode. last7/last10 can match multiple contacts.'),
         client_id: withWorkflowPicker(uuidSchema.optional(), 'Optional client scope', 'client'),
         on_not_found: z.enum(['return_null', 'error']).default('return_null'),
         match_strategy: z
@@ -700,7 +708,7 @@ export function registerContactActions(): void {
     }),
     sideEffectful: false,
     idempotency: { mode: 'engineProvided' },
-    ui: { label: 'Find Contact', category: 'Business Operations', description: 'Find a contact by id or email' },
+    ui: { label: 'Find Contact', category: 'Business Operations', description: 'Find a contact by id, email, or phone' },
     handler: async (input, ctx) =>
       withTenantTransaction(ctx, async (tx) => {
         await requirePermission(ctx, tx, { resource: 'contact', action: 'read' });
@@ -719,8 +727,10 @@ export function registerContactActions(): void {
             contacts = [contact];
           }
         } else if (input.phone) {
-          const digits = String(input.phone).replace(/\D/g, '');
-          if (digits.length < 7) {
+          const digits = normalizePhoneDigits(input.phone);
+          const phoneMatch = (input.phone_match ?? 'exact') as PhoneMatchMode;
+          const requiredDigits = phoneMatch === 'last10' ? 10 : 7;
+          if (digits.length < requiredDigits) {
             throwActionError(ctx, {
               category: 'ValidationError',
               code: 'VALIDATION_ERROR',
@@ -728,8 +738,9 @@ export function registerContactActions(): void {
             });
           }
           matchedBy = 'phone';
+          const phoneCondition = buildNormalizedPhoneMatchCondition('phone', digits, phoneMatch);
           contacts = await tenantScopedTable(tx, 'contacts')
-            .andWhereRaw(`regexp_replace(coalesce(phone,''), '\\\\D', '', 'g') = ?`, [digits])
+            .andWhereRaw(phoneCondition.sql, phoneCondition.bindings)
             .orderBy('is_inactive', 'asc')
             .orderBy(
               input.match_strategy === 'most_recent' ? 'created_at' : 'created_at',

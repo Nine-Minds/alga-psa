@@ -420,9 +420,9 @@ describe('client portal ticket visibility enforcement', () => {
 
     const { getClientTicketDetails } = await import('./client-tickets');
 
-    await expect(getClientTicketDetails('ticket-hidden')).rejects.toThrow(
-      'Failed to fetch ticket details'
-    );
+    await expect(getClientTicketDetails('ticket-hidden')).resolves.toEqual({
+      actionError: 'Ticket not found or access denied',
+    });
   });
 
   it('T012: client portal ticket documents reject hidden-board access', async () => {
@@ -463,9 +463,9 @@ describe('client portal ticket visibility enforcement', () => {
 
     const { getClientTicketDocuments } = await import('./client-tickets');
 
-    await expect(getClientTicketDocuments('ticket-hidden')).rejects.toThrow(
-      'Failed to fetch ticket documents'
-    );
+    await expect(getClientTicketDocuments('ticket-hidden')).resolves.toEqual({
+      actionError: 'Ticket not found or access denied',
+    });
   });
 
   it('T015: client portal ticket creation rejects manually submitted disallowed boards', async () => {
@@ -523,9 +523,9 @@ describe('client portal ticket visibility enforcement', () => {
 
     const { createClientTicket } = await import('./client-tickets');
 
-    await expect(createClientTicket(formData)).rejects.toThrow(
-      'Visibility group assignment is invalid for this contact.'
-    );
+    await expect(createClientTicket(formData)).resolves.toEqual({
+      actionError: 'Visibility group assignment is invalid for this contact.',
+    });
     expect(createTicketWithRetryMock).not.toHaveBeenCalled();
   });
 
@@ -573,9 +573,9 @@ describe('client portal ticket visibility enforcement', () => {
 
     const { createClientTicket } = await import('./client-tickets');
 
-    await expect(createClientTicket(formData)).rejects.toThrow(
-      'Visibility group assignment is invalid for this contact.'
-    );
+    await expect(createClientTicket(formData)).resolves.toEqual({
+      actionError: 'Visibility group assignment is invalid for this contact.',
+    });
     expect(createTicketWithRetryMock).not.toHaveBeenCalled();
   });
 

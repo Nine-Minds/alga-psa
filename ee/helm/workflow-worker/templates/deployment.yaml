@@ -180,6 +180,12 @@ spec:
                   key: CRYPTO_KEY
             {{- end }}
 
+            {{- if .Values.correlationPathsJson }}
+            # Event.wait correlation derivation path override
+            - name: WORKFLOW_RUNTIME_V2_EVENT_CORRELATION_PATHS_JSON
+              value: {{ .Values.correlationPathsJson | quote }}
+            {{- end }}
+
             # Additional environment variables
             {{- range .Values.extraEnv }}
             - name: {{ .name }}

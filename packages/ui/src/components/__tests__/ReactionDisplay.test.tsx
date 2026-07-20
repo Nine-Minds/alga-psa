@@ -91,7 +91,7 @@ describe('ReactionDisplay', () => {
       />
     );
 
-    const addButton = screen.getByLabelText('Add reaction');
+    const addButton = screen.getByRole('button', { name: 'React' });
     expect(addButton).toBeTruthy();
   });
 

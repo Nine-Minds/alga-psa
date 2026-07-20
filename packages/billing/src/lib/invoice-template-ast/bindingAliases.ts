@@ -1,4 +1,4 @@
-const BINDING_ALIASES: Record<string, string> = {
+export const INVOICE_TEMPLATE_BINDING_ALIASES: Record<string, string> = {
   'client.name': 'customer.name',
   'client.address': 'customer.address',
   'tenant.name': 'tenantClient.name',
@@ -10,5 +10,5 @@ export const resolveInvoiceTemplateBindingAlias = (bindingPath: string): string 
   if (!normalized) {
     return normalized;
   }
-  return BINDING_ALIASES[normalized] ?? normalized;
+  return INVOICE_TEMPLATE_BINDING_ALIASES[normalized] ?? normalized;
 };

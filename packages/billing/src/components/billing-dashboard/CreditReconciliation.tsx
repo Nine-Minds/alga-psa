@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useSession } from 'next-auth/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import { dateFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
 import { Button } from '@alga-psa/ui/components/Button';
 import { CustomTabs } from '@alga-psa/ui/components/CustomTabs';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
@@ -377,12 +378,14 @@ const CreditReconciliation: React.FC = () => {
                 <label htmlFor="date-from" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
                   {t('reconciliation.fromDate', { defaultValue: 'From Date' })}
                 </label>
-                <input
+                <DatePicker
                   id="date-from"
-                  type="date"
-                  value={dateRange.startDate || ''}
-                  onChange={(e) => setDateRange({...dateRange, startDate: e.target.value || null})}
-                  className="border border-[rgb(var(--color-border-300))] rounded-md px-3 py-2 text-sm text-[rgb(var(--color-text-700))] bg-card"
+                  label={t('reconciliation.fromDate', { defaultValue: 'From Date' })}
+                  placeholder={t('reconciliation.fromDate', { defaultValue: 'From Date' })}
+                  clearable
+                  className="w-full"
+                  value={dateFromString(dateRange.startDate)}
+                  onChange={(date) => setDateRange({ ...dateRange, startDate: dateToString(date) || null })}
                 />
               </div>
               
@@ -390,12 +393,14 @@ const CreditReconciliation: React.FC = () => {
                 <label htmlFor="date-to" className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
                   {t('reconciliation.toDate', { defaultValue: 'To Date' })}
                 </label>
-                <input
+                <DatePicker
                   id="date-to"
-                  type="date"
-                  value={dateRange.endDate || ''}
-                  onChange={(e) => setDateRange({...dateRange, endDate: e.target.value || null})}
-                  className="border border-[rgb(var(--color-border-300))] rounded-md px-3 py-2 text-sm text-[rgb(var(--color-text-700))] bg-card"
+                  label={t('reconciliation.toDate', { defaultValue: 'To Date' })}
+                  placeholder={t('reconciliation.toDate', { defaultValue: 'To Date' })}
+                  clearable
+                  className="w-full"
+                  value={dateFromString(dateRange.endDate)}
+                  onChange={(date) => setDateRange({ ...dateRange, endDate: dateToString(date) || null })}
                 />
               </div>
               

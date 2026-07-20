@@ -870,6 +870,10 @@
     "contactLoadFailed": "Échec du chargement du contact.",
     "tenantNotDefined": "Erreur : le locataire n'est pas défini",
     "noContact": "Aucun contact",
+    "closeTicketTitle": "Fermer le ticket",
+    "resolveAndClose": "Résoudre et fermer",
+    "closeTicketResolutionPrompt": "Choisissez un statut de clôture et ajoutez une résolution pour ce ticket.",
+    "selectCloseStatus": "Sélectionner un statut de clôture",
     "cannotCloseYet": "Ce ticket ne peut pas encore être fermé",
     "closeRulesIntro": "Les règles de fermeture du tableau exigent les éléments suivants avant que ce ticket puisse être fermé :",
     "viewChecklist": "Voir la liste de contrôle",
@@ -1198,6 +1202,7 @@
   "categoryPicker": {
     "title": "Sélecteur de catégorie",
     "placeholder": "Sélectionnez les catégories...",
+    "searchPlaceholder": "Rechercher des catégories...",
     "noCategory": "Aucune catégorie",
     "addNew": "Ajouter une nouvelle catégorie",
     "itilBadge": "ITIL",

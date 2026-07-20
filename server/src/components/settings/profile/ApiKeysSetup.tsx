@@ -12,6 +12,8 @@ import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
+import { DateTimePicker } from '@alga-psa/ui/components/DateTimePicker';
+import { dateTimeFromString, dateTimeToString } from '@alga-psa/ui/lib/dateInput';
 import type { ColumnDefinition } from '@alga-psa/types';
 import { createApiKey, deactivateApiKey, listApiKeys } from '@/lib/actions/apiKeyActions';
 import { useRouter } from 'next/navigation';
@@ -269,12 +271,14 @@ export default function ApiKeysSetup() {
           </div>
           <div>
             <Label htmlFor="api-key-expiration">{t('security.apiKeys.generate.expiration', 'Expiration Date (Optional)')}</Label>
-            <Input
+            <DateTimePicker
               id="api-key-expiration"
-              type="datetime-local"
-              value={expirationDate}
-              onChange={(e) => setExpirationDate(e.target.value)}
+              label={t('security.apiKeys.generate.expiration', 'Expiration Date (Optional)')}
+              placeholder={t('security.apiKeys.generate.expiration', 'Expiration Date (Optional)')}
+              clearable
               className="mt-1"
+              value={dateTimeFromString(expirationDate)}
+              onChange={(date) => setExpirationDate(dateTimeToString(date))}
             />
           </div>
           <Button

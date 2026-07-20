@@ -15,6 +15,27 @@ type QuoteItemGroupSummary = {
 
 const asTrimmedString = (value: unknown): string => (typeof value === 'string' ? value.trim() : '');
 
+export const toIsoDateString = (value: unknown): string | null => {
+  if (value instanceof Date) {
+    return Number.isNaN(value.getTime()) ? null : value.toISOString();
+  }
+  if (typeof value === 'string') {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+  return null;
+};
+
+export const toDateOnlyString = (value: unknown): string | null => {
+  const normalized = toIsoDateString(value);
+  if (!normalized) {
+    return null;
+  }
+
+  const dateOnlyMatch = normalized.match(/^(\d{4}-\d{2}-\d{2})(?:$|T)/);
+  return dateOnlyMatch?.[1] ?? normalized;
+};
+
 const toFiniteNumber = (value: unknown): number => {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : 0;
@@ -378,8 +399,8 @@ export async function mapLoadedQuoteToViewModel(
     title: quote.title,
     description: quote.description ?? null,
     scope_of_work: quote.description ?? null,
-    quote_date: quote.quote_date ?? null,
-    valid_until: quote.valid_until ?? null,
+    quote_date: toDateOnlyString(quote.quote_date),
+    valid_until: toDateOnlyString(quote.valid_until),
     status: quote.status ?? null,
     version: Number(quote.version ?? 1),
     po_number: quote.po_number ?? null,
@@ -416,7 +437,7 @@ export async function mapLoadedQuoteToViewModel(
     groups_by_location: buildLocationGroups(lineItems),
     has_multiple_locations: locationsById.size >= 2,
     accepted_by_name: acceptedByName,
-    accepted_at: quote.accepted_at ?? null,
+    accepted_at: toIsoDateString(quote.accepted_at),
   };
 }
 

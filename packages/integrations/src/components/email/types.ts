@@ -28,6 +28,8 @@ export interface MicrosoftEmailProviderConfig {
   tenant: string;
   client_id: string | null;
   client_secret: string | null;
+  microsoft_profile_id?: string | null;
+  client_secret_ref?: string | null;
   tenant_id: string;
   redirect_uri: string;
   auto_process_emails: boolean;

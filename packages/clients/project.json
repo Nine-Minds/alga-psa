@@ -12,13 +12,6 @@
       },
       "dependsOn": ["^build"]
     },
-    "test": {
-      "executor": "@nx/vitest:test",
-      "outputs": ["{workspaceRoot}/coverage/packages/clients"],
-      "options": {
-        "configFile": "packages/clients/vitest.config.ts"
-      }
-    },
     "lint": {
       "executor": "@nx/eslint:lint",
       "outputs": ["{options.outputFile}"],

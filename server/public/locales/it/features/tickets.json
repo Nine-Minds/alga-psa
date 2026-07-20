@@ -870,6 +870,10 @@
     "contactLoadFailed": "Impossibile caricare il contatto.",
     "tenantNotDefined": "Errore: tenant non definito",
     "noContact": "Nessun contatto",
+    "closeTicketTitle": "Chiudi ticket",
+    "resolveAndClose": "Risolvi e chiudi",
+    "closeTicketResolutionPrompt": "Scegli uno stato di chiusura e aggiungi una risoluzione per questo ticket.",
+    "selectCloseStatus": "Seleziona uno stato di chiusura",
     "cannotCloseYet": "Questo ticket non può ancora essere chiuso",
     "closeRulesIntro": "Le regole di chiusura della bacheca richiedono quanto segue prima di poter chiudere questo ticket:",
     "viewChecklist": "Visualizza checklist",
@@ -1198,6 +1202,7 @@
   "categoryPicker": {
     "title": "Selettore categorie",
     "placeholder": "Seleziona categorie...",
+    "searchPlaceholder": "Cerca categorie...",
     "noCategory": "Nessuna categoria",
     "addNew": "Aggiungi nuova categoria",
     "itilBadge": "ITIL",

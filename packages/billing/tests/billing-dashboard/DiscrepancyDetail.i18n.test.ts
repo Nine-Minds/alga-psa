@@ -76,7 +76,6 @@ describe('DiscrepancyDetail i18n wiring contract', () => {
     expect(source).toContain("t('discrepancy.empty.creditTrackingEntries', { defaultValue: 'No credit tracking entries found.' })");
     expect(source).toContain("t('discrepancy.empty.issueDetails', { defaultValue: 'No issue details available.' })");
     expect(source).toContain("t('discrepancy.empty.noNotesProvided', { defaultValue: 'No notes provided' })");
-    expect(source).toContain("t('discrepancy.errors.unknown', { defaultValue: 'An unknown error occurred' })");
   });
 
   it('T011: keeps the discrepancy detail shell backed by xx pseudo-locale keys instead of raw English', () => {

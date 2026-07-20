@@ -162,5 +162,53 @@ describe('contact service normalized phone search and sort integration', () => {
       '111-0000',
       '999-0000',
     ]);
+    expect(result.total).toBe(2);
+  });
+
+  it('returns one list row for a contact with default and secondary phone rows', async () => {
+    const tenantId = uuidv4();
+    const clientId = uuidv4();
+    const service = new ContactService();
+
+    await createTenant(db, tenantId);
+    await createClient(db, tenantId, clientId);
+    vi.spyOn(service as any, 'getKnex').mockResolvedValue({ knex: db, tenant: tenantId });
+
+    const contact = await db.transaction((trx) => ContactModel.createContact({
+      full_name: 'Sibling Join Contact',
+      email: `sibling-${tenantId}@example.com`,
+      client_id: clientId,
+      phone_numbers: [
+        {
+          phone_number: '555-0100',
+          canonical_type: 'work',
+          is_default: true,
+          display_order: 0,
+        },
+        {
+          phone_number: '555-0101',
+          canonical_type: 'mobile',
+          is_default: false,
+          display_order: 1,
+        },
+      ],
+    }, tenantId, trx));
+
+    const result = await service.list({
+      page: 1,
+      limit: 10,
+      filters: { client_id: clientId },
+    }, {
+      tenant: tenantId,
+      userId: 'test-user',
+    });
+
+    expect(result.total).toBe(1);
+    expect(result.data).toHaveLength(1);
+    expect(result.data[0]).toMatchObject({
+      contact_name_id: contact.contact_name_id,
+      default_phone_number: '555-0100',
+    });
+    expect(result.data[0]?.phone_numbers).toHaveLength(2);
   });
 });
