@@ -1,5 +1,25 @@
 
 exports.up = async function up(knex) {
+  // On Citus, create_distributed_table() leaves the pre-distribution rows in the
+  // coordinator's local heap. They are invisible to all Citus-planned queries
+  // (including the dedupe UPDATEs below) but CREATE INDEX still scans them, so
+  // stale duplicates fail the unique index build. Truncate the leftover local
+  // data first; this cascades to local heaps of FK-referencing tables and never
+  // touches distributed (shard) data.
+  const citusInstalled = await knex.raw(
+    "SELECT to_regclass('pg_catalog.pg_dist_partition') IS NOT NULL AS has_citus"
+  );
+  if (citusInstalled.rows[0].has_citus) {
+    const distributed = await knex.raw(
+      "SELECT 1 FROM pg_dist_partition WHERE logicalrelid = 'public.client_locations'::regclass"
+    );
+    if (distributed.rows.length > 0) {
+      await knex.raw(
+        "SELECT truncate_local_data_after_distributing_table('public.client_locations')"
+      );
+    }
+  }
+
   await knex.raw(`
     UPDATE client_locations
     SET is_default = false,
@@ -14,11 +34,13 @@ exports.up = async function up(knex) {
              location_id,
              ROW_NUMBER() OVER (
                PARTITION BY tenant, client_id
-               ORDER BY updated_at DESC, created_at DESC, location_id DESC
+               ORDER BY (is_active IS TRUE) DESC,
+                        updated_at DESC NULLS LAST,
+                        created_at DESC NULLS LAST,
+                        location_id DESC
              ) AS default_rank
       FROM client_locations
       WHERE is_default = true
-        AND is_active = true
     )
     UPDATE client_locations AS location
     SET is_default = false,
