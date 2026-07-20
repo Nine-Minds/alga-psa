@@ -661,8 +661,8 @@ describe('AutomaticInvoices recurring due-work UI', () => {
       });
     });
 
+    expect(await screen.findByText('Zenith Health')).toBeInTheDocument();
     expect(getAvailableBillingPeriodsMock).not.toHaveBeenCalled();
-    expect(screen.getByText('Zenith Health')).toBeInTheDocument();
   });
 
   it('handles an empty recurring due-work and history page', async () => {
