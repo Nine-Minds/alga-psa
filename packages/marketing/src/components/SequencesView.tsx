@@ -365,7 +365,7 @@ export function SequencesView({
                 <div className="w-72 flex-shrink-0 space-y-4">
                   <div className="rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4">
                     <div className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[rgb(var(--color-text-400))]">
-                      {t('marketing.sequences.sending', 'Sending')}
+                      {t('marketing.sequences.sending.title', 'Sending')}
                     </div>
                     <div className="space-y-1.5 text-sm">
                       <div className="flex justify-between gap-2">

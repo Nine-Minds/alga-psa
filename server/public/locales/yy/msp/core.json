@@ -10,6 +10,16 @@
     "projectsTemplates": "55555",
     "clients": "55555",
     "opportunities": "55555",
+    "marketing": {
+      "label": "55555",
+      "calendar": "55555",
+      "posts": "55555",
+      "content": "55555",
+      "campaigns": "55555",
+      "sequences": "55555",
+      "forms": "55555",
+      "channels": "55555"
+    },
     "contacts": "55555",
     "documents": "55555",
     "documentsAll": "55555",
@@ -87,6 +97,358 @@
     "jobs": "55555",
     "emailLogs": "55555",
     "extensions": "55555"
+  },
+  "marketing": {
+    "dialogs": {
+      "cancel": "55555",
+      "save": "55555",
+      "create": "55555"
+    },
+    "actions": {
+      "edit": "55555",
+      "delete": "55555"
+    },
+    "calendar": {
+      "title": "55555",
+      "newPost": "55555",
+      "today": "55555",
+      "tomorrow": "55555",
+      "dueAt": "55555 {{time}} 55555",
+      "needsPublishing": "55555",
+      "needsPublishingCount": "55555 {{total}} 55555 {{overdue}} 55555",
+      "needsPublishingCountSimple": "55555 {{total}} 55555",
+      "needsPublishingHint": "55555",
+      "thisWeek": "55555",
+      "stats": {
+        "published": "55555",
+        "scheduled": "55555",
+        "awaiting": "55555"
+      },
+      "channels": "55555",
+      "manageChannels": "55555",
+      "noChannels": "55555",
+      "publishedRecently": "55555",
+      "noUpcoming": "55555",
+      "emptyTitle": "55555",
+      "emptyBody": "55555",
+      "toast": {
+        "skipped": "55555"
+      },
+      "weekOf": "55555 {{date}} 55555",
+      "viewMonth": "55555",
+      "viewAgenda": "55555",
+      "moreItems": "55555 {{count}} 55555"
+    },
+    "posts": {
+      "title": "55555",
+      "new": "55555",
+      "copyText": "55555",
+      "skip": "55555",
+      "reschedule": "55555",
+      "emptyTitle": "55555",
+      "emptyBody": "55555",
+      "status": {
+        "scheduled": "55555",
+        "awaiting-manual-publish": "55555",
+        "published": "55555",
+        "skipped": "55555",
+        "expired": "55555"
+      },
+      "columns": {
+        "content": "55555",
+        "channel": "55555",
+        "campaign": "55555",
+        "scheduled": "55555",
+        "status": "55555",
+        "actions": "55555"
+      },
+      "filters": {
+        "status": "55555",
+        "channel": "55555",
+        "campaign": "55555",
+        "all": "55555",
+        "dateFrom": "55555",
+        "dateTo": "55555"
+      },
+      "createDialog": {
+        "title": "55555",
+        "content": "55555",
+        "contentPlaceholder": "55555",
+        "channels": "55555",
+        "noChannels": "55555",
+        "campaign": "55555",
+        "noCampaign": "55555",
+        "scheduledAt": "55555",
+        "submit": "55555"
+      },
+      "rescheduleDialog": {
+        "title": "55555",
+        "scheduledAt": "55555",
+        "submit": "55555"
+      },
+      "markPublished": {
+        "title": "55555",
+        "permalink": "55555",
+        "confirm": "55555"
+      },
+      "toast": {
+        "created": "55555",
+        "rescheduled": "55555",
+        "markedPublished": "55555",
+        "copied": "55555",
+        "copyFailed": "55555"
+      }
+    },
+    "content": {
+      "title": "55555",
+      "new": "55555",
+      "emptyTitle": "55555",
+      "emptyBody": "55555",
+      "columns": {
+        "title": "55555",
+        "campaign": "55555",
+        "variants": "55555",
+        "updated": "55555",
+        "actions": "55555"
+      },
+      "dialog": {
+        "createTitle": "55555",
+        "editTitle": "55555",
+        "title": "55555",
+        "body": "55555",
+        "campaign": "55555",
+        "noCampaign": "55555",
+        "variants": "55555",
+        "variantsHint": "55555",
+        "addVariant": "55555",
+        "addVariantButton": "55555"
+      },
+      "deleteDialog": {
+        "title": "55555",
+        "message": "55555 {{title}} 55555"
+      },
+      "toast": {
+        "created": "55555",
+        "updated": "55555",
+        "deleted": "55555"
+      }
+    },
+    "campaigns": {
+      "title": "55555",
+      "new": "55555",
+      "view": "55555",
+      "emptyTitle": "55555",
+      "emptyBody": "55555",
+      "status": {
+        "draft": "55555",
+        "active": "55555",
+        "completed": "55555",
+        "archived": "55555"
+      },
+      "columns": {
+        "name": "55555",
+        "status": "55555",
+        "startDate": "55555",
+        "endDate": "55555",
+        "actions": "55555"
+      },
+      "dialog": {
+        "createTitle": "55555",
+        "editTitle": "55555",
+        "name": "55555",
+        "goal": "55555",
+        "sourceChannel": "55555",
+        "status": "55555",
+        "startDate": "55555",
+        "endDate": "55555"
+      },
+      "funnel": {
+        "loading": "55555",
+        "postsPublished": "55555",
+        "emailsSent": "55555",
+        "emailsOpened": "55555",
+        "emailsClicked": "55555",
+        "formsSubmitted": "55555",
+        "suggestionsCreated": "55555",
+        "suggestionsAccepted": "55555"
+      },
+      "toast": {
+        "created": "55555",
+        "updated": "55555"
+      },
+      "detail": {
+        "posts": "55555",
+        "noPosts": "55555",
+        "sequences": "55555",
+        "noSequences": "55555",
+        "forms": "55555",
+        "noForms": "55555"
+      }
+    },
+    "sequences": {
+      "title": "55555",
+      "new": "55555",
+      "pickerLabel": "55555",
+      "emptyTitle": "55555",
+      "emptyBody": "55555",
+      "headerSummary": "55555 {{steps}} 55555 {{active}} 55555",
+      "headerOpenRate": "55555 {{rate}} 55555",
+      "journey": "55555",
+      "noSteps": "55555",
+      "enroll": "55555",
+      "performance": {
+        "title": "55555",
+        "openRate": "55555",
+        "clickRate": "55555",
+        "stopped": "55555"
+      },
+      "stepStats": {
+        "sent": "55555 {{count}} 55555",
+        "opened": "55555 {{rate}} 55555"
+      },
+      "status": {
+        "draft": "55555",
+        "active": "55555",
+        "paused": "55555",
+        "archived": "55555"
+      },
+      "enrollments": {
+        "title": "55555",
+        "empty": "55555",
+        "contact": "55555",
+        "progress": "55555",
+        "nextSend": "55555",
+        "state": "55555",
+        "actions": "55555",
+        "unenroll": "55555"
+      },
+      "dialog": {
+        "createTitle": "55555",
+        "editTitle": "55555",
+        "name": "55555",
+        "description": "55555",
+        "status": "55555",
+        "steps": "55555",
+        "subjectPlaceholder": "55555",
+        "delay": "55555",
+        "delayAfterEnroll": "55555",
+        "delayAfterPrevious": "55555",
+        "bodyPlaceholder": "55555 {{merge.fields}} 55555",
+        "addStep": "55555",
+        "unit": {
+          "minutes": "55555",
+          "hours": "55555",
+          "days": "55555"
+        },
+        "campaign": "55555",
+        "noCampaign": "55555"
+      },
+      "enrollDialog": {
+        "title": "55555",
+        "contact": "55555",
+        "contactPlaceholder": "55555",
+        "submit": "55555"
+      },
+      "toast": {
+        "created": "55555",
+        "updated": "55555",
+        "enrolled": "55555",
+        "unenrolled": "55555"
+      },
+      "sending": {
+        "title": "55555",
+        "from": "55555",
+        "provider": "55555",
+        "notConfigured": "55555",
+        "unsubscribe": "55555",
+        "on": "55555",
+        "tracking": "55555"
+      }
+    },
+    "forms": {
+      "title": "55555",
+      "new": "55555",
+      "active": "55555",
+      "inactive": "55555",
+      "createsSuggestion": "55555",
+      "copyUrl": "55555",
+      "emptyTitle": "55555",
+      "emptyBody": "55555",
+      "columns": {
+        "name": "55555",
+        "slug": "55555",
+        "campaign": "55555",
+        "status": "55555",
+        "captureUrl": "55555",
+        "actions": "55555"
+      },
+      "dialog": {
+        "createTitle": "55555",
+        "editTitle": "55555",
+        "name": "55555",
+        "slug": "55555",
+        "slugHint": "55555",
+        "slugInvalid": "55555",
+        "description": "55555",
+        "campaign": "55555",
+        "noCampaign": "55555",
+        "createsSuggestion": "55555",
+        "isActive": "55555"
+      },
+      "toast": {
+        "created": "55555",
+        "updated": "55555",
+        "urlCopied": "55555"
+      }
+    },
+    "channels": {
+      "title": "55555",
+      "new": "55555",
+      "emptyTitle": "55555",
+      "emptyBody": "55555",
+      "columns": {
+        "name": "55555",
+        "platform": "55555",
+        "handle": "55555",
+        "active": "55555",
+        "actions": "55555"
+      },
+      "dialog": {
+        "createTitle": "55555",
+        "editTitle": "55555",
+        "name": "55555",
+        "namePlaceholder": "55555",
+        "platform": "55555",
+        "platformPlaceholder": "55555",
+        "handle": "55555",
+        "isActive": "55555"
+      },
+      "toast": {
+        "created": "55555",
+        "updated": "55555",
+        "activated": "55555",
+        "deactivated": "55555"
+      }
+    },
+    "contact": {
+      "title": "55555",
+      "loading": "55555",
+      "consentGiven": "55555",
+      "noConsent": "55555",
+      "suppressed": "55555",
+      "activeEnrollments": "55555",
+      "noEnrollments": "55555",
+      "enrollmentMeta": "55555 {{step}} 55555 {{date}} 55555",
+      "recentEngagements": "55555",
+      "noEngagements": "55555"
+    },
+    "boundary": {
+      "disabledTitle": "55555",
+      "disabledDescription": "55555",
+      "permissionTitle": "55555",
+      "permissionDescription": "55555",
+      "backToDashboard": "55555"
+    }
   },
   "sidebar": {
     "backToMain": "55555",

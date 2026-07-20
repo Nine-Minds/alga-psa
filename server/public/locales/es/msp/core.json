@@ -86,7 +86,17 @@
     "jobMonitoring": "Monitoreo de trabajos",
     "jobs": "Trabajos",
     "emailLogs": "Registros de correo",
-    "extensions": "Extensiones"
+    "extensions": "Extensiones",
+    "marketing": {
+      "label": "Marketing",
+      "calendar": "Calendario",
+      "posts": "Publicaciones",
+      "content": "Contenido",
+      "campaigns": "Campañas",
+      "sequences": "Secuencias",
+      "forms": "Formularios",
+      "channels": "Canales"
+    }
   },
   "sidebar": {
     "backToMain": "Volver al inicio",
@@ -367,5 +377,357 @@
     "title": "Te llevamos a la configuración",
     "description": "Tu espacio de trabajo necesita una configuración rápida antes de que puedas usar el panel.",
     "action": "Continuar a la configuración"
+  },
+  "marketing": {
+    "dialogs": {
+      "cancel": "Cancelar",
+      "save": "Guardar",
+      "create": "Crear"
+    },
+    "actions": {
+      "edit": "Editar",
+      "delete": "Eliminar"
+    },
+    "calendar": {
+      "title": "Calendario de marketing",
+      "newPost": "Nueva publicación",
+      "today": "Hoy",
+      "tomorrow": "Mañana",
+      "dueAt": "vence {{time}}",
+      "needsPublishing": "Pendientes de publicar",
+      "needsPublishingCount": "{{total}} en espera · {{overdue}} atrasadas",
+      "needsPublishingCountSimple": "{{total}} en espera",
+      "needsPublishingHint": "Copia el texto, publícalo en la plataforma y luego márcalo como publicado.",
+      "thisWeek": "Esta semana",
+      "stats": {
+        "published": "Publicadas",
+        "scheduled": "Programadas",
+        "awaiting": "Pendientes de publicar"
+      },
+      "channels": "Canales",
+      "manageChannels": "Gestionar",
+      "noChannels": "Aún no hay canales.",
+      "publishedRecently": "Publicadas recientemente",
+      "noUpcoming": "Nada programado en este rango.",
+      "emptyTitle": "Aún no hay nada en el calendario",
+      "emptyBody": "Crea una publicación desde la página Publicaciones y aparecerá aquí en su día programado.",
+      "toast": {
+        "skipped": "Omitida"
+      },
+      "weekOf": "Semana del {{date}}",
+      "viewMonth": "Mes",
+      "viewAgenda": "Agenda",
+      "moreItems": "+{{count}} más"
+    },
+    "posts": {
+      "title": "Publicaciones",
+      "new": "Nueva publicación",
+      "copyText": "Copiar texto",
+      "skip": "Omitir",
+      "reschedule": "Reprogramar",
+      "emptyTitle": "Aún no hay publicaciones",
+      "emptyBody": "Crea una publicación desde tu biblioteca de contenido y aparecerá en esta cola.",
+      "status": {
+        "scheduled": "programada",
+        "awaiting-manual-publish": "pendiente de publicar",
+        "published": "publicada",
+        "skipped": "omitida",
+        "expired": "vencida"
+      },
+      "columns": {
+        "content": "Contenido",
+        "channel": "Canal",
+        "campaign": "Campaña",
+        "scheduled": "Programada",
+        "status": "Estado",
+        "actions": "Acciones"
+      },
+      "filters": {
+        "status": "Estado",
+        "channel": "Canal",
+        "campaign": "Campaña",
+        "all": "Todas",
+        "dateFrom": "Programada desde",
+        "dateTo": "Programada hasta"
+      },
+      "createDialog": {
+        "title": "Nueva publicación",
+        "content": "Contenido",
+        "contentPlaceholder": "Seleccionar contenido…",
+        "channels": "Canales",
+        "noChannels": "No hay canales activos — añade uno primero en la página Canales.",
+        "campaign": "Campaña (opcional)",
+        "noCampaign": "Sin campaña",
+        "scheduledAt": "Programar para (opcional)",
+        "submit": "Crear publicación"
+      },
+      "rescheduleDialog": {
+        "title": "Reprogramar publicación",
+        "scheduledAt": "Nueva hora",
+        "submit": "Reprogramar"
+      },
+      "markPublished": {
+        "title": "Marcar como publicada",
+        "permalink": "Enlace permanente (opcional)",
+        "confirm": "Marcar como publicada"
+      },
+      "toast": {
+        "created": "Publicación creada",
+        "rescheduled": "Publicación reprogramada",
+        "markedPublished": "Marcada como publicada",
+        "copied": "Copiado al portapapeles",
+        "copyFailed": "No se pudo copiar al portapapeles"
+      }
+    },
+    "content": {
+      "title": "Contenido",
+      "new": "Nuevo contenido",
+      "emptyTitle": "Aún no hay contenido",
+      "emptyBody": "Escribe las publicaciones que quieres publicar y luego prográmalas desde la página Publicaciones.",
+      "columns": {
+        "title": "Título",
+        "campaign": "Campaña",
+        "variants": "Variantes",
+        "updated": "Actualizado",
+        "actions": "Acciones"
+      },
+      "dialog": {
+        "createTitle": "Nuevo contenido",
+        "editTitle": "Editar contenido",
+        "title": "Título",
+        "body": "Cuerpo (markdown)",
+        "campaign": "Campaña (opcional)",
+        "noCampaign": "Sin campaña",
+        "variants": "Variantes por canal",
+        "variantsHint": "Sobrescribe el texto base para plataformas específicas. Las variantes vacías se ignoran.",
+        "addVariant": "Añadir variante de plataforma…",
+        "addVariantButton": "Añadir"
+      },
+      "deleteDialog": {
+        "title": "Eliminar contenido",
+        "message": "¿Eliminar \"{{title}}\"? Esta acción no se puede deshacer."
+      },
+      "toast": {
+        "created": "Contenido creado",
+        "updated": "Contenido actualizado",
+        "deleted": "Contenido eliminado"
+      }
+    },
+    "campaigns": {
+      "title": "Campañas",
+      "new": "Nueva campaña",
+      "view": "Ver",
+      "emptyTitle": "Aún no hay campañas",
+      "emptyBody": "Las campañas agrupan publicaciones, contenido, formularios y secuencias para ver el embudo en un solo lugar.",
+      "status": {
+        "draft": "borrador",
+        "active": "activa",
+        "completed": "completada",
+        "archived": "archivada"
+      },
+      "columns": {
+        "name": "Nombre",
+        "status": "Estado",
+        "startDate": "Inicio",
+        "endDate": "Fin",
+        "actions": "Acciones"
+      },
+      "dialog": {
+        "createTitle": "Nueva campaña",
+        "editTitle": "Editar campaña",
+        "name": "Nombre",
+        "goal": "Objetivo (opcional)",
+        "sourceChannel": "Canal de origen (opcional)",
+        "status": "Estado",
+        "startDate": "Fecha de inicio",
+        "endDate": "Fecha de fin"
+      },
+      "funnel": {
+        "loading": "Cargando embudo…",
+        "postsPublished": "Publicaciones publicadas",
+        "emailsSent": "Correos enviados",
+        "emailsOpened": "Abiertos",
+        "emailsClicked": "Con clics",
+        "formsSubmitted": "Formularios enviados",
+        "suggestionsCreated": "Sugerencias",
+        "suggestionsAccepted": "Aceptadas"
+      },
+      "toast": {
+        "created": "Campaña creada",
+        "updated": "Campaña actualizada"
+      },
+      "detail": {
+        "posts": "Publicaciones",
+        "noPosts": "No hay publicaciones en esta campaña.",
+        "sequences": "Secuencias",
+        "noSequences": "No hay secuencias vinculadas a esta campaña.",
+        "forms": "Formularios de captación",
+        "noForms": "No hay formularios atribuidos a esta campaña."
+      }
+    },
+    "sequences": {
+      "title": "Secuencias",
+      "new": "Nueva secuencia",
+      "pickerLabel": "Secuencia",
+      "emptyTitle": "Aún no hay secuencias",
+      "emptyBody": "Las secuencias envían una serie programada de correos a los contactos inscritos.",
+      "headerSummary": "{{steps}} pasos · {{active}} inscripciones activas",
+      "headerOpenRate": "{{rate}}% de apertura",
+      "journey": "Recorrido",
+      "noSteps": "Aún no hay pasos — edita la secuencia para añadirlos.",
+      "enroll": "Inscribir contactos",
+      "performance": {
+        "title": "Rendimiento",
+        "openRate": "Tasa de apertura",
+        "clickRate": "Tasa de clics",
+        "stopped": "Bajas / detenidas"
+      },
+      "stepStats": {
+        "sent": "{{count}} enviados",
+        "opened": "{{rate}}% abiertos"
+      },
+      "status": {
+        "draft": "borrador",
+        "active": "activa",
+        "paused": "pausada",
+        "archived": "archivada"
+      },
+      "enrollments": {
+        "title": "Inscripciones",
+        "empty": "Aún no hay inscripciones.",
+        "contact": "Contacto",
+        "progress": "Progreso",
+        "nextSend": "Próximo envío",
+        "state": "Estado",
+        "actions": "Acciones",
+        "unenroll": "Dar de baja"
+      },
+      "dialog": {
+        "createTitle": "Nueva secuencia",
+        "editTitle": "Editar secuencia",
+        "name": "Nombre",
+        "description": "Descripción (opcional)",
+        "status": "Estado",
+        "steps": "Pasos",
+        "subjectPlaceholder": "Asunto",
+        "delay": "Esperar",
+        "delayAfterEnroll": "tras la inscripción",
+        "delayAfterPrevious": "tras el paso anterior",
+        "bodyPlaceholder": "Cuerpo (markdown, admite {{merge.fields}})",
+        "addStep": "Añadir paso",
+        "unit": {
+          "minutes": "minutos",
+          "hours": "horas",
+          "days": "días"
+        },
+        "campaign": "Campaña (opcional)",
+        "noCampaign": "Ninguna"
+      },
+      "enrollDialog": {
+        "title": "Inscribir contacto",
+        "contact": "Contacto",
+        "contactPlaceholder": "Seleccionar un contacto…",
+        "submit": "Inscribir"
+      },
+      "toast": {
+        "created": "Secuencia creada",
+        "updated": "Secuencia actualizada",
+        "enrolled": "Contacto inscrito",
+        "unenrolled": "Contacto dado de baja"
+      },
+      "sending": {
+        "title": "Envío",
+        "from": "De",
+        "provider": "Proveedor",
+        "notConfigured": "Sin configurar",
+        "unsubscribe": "Enlace de baja",
+        "on": "Activado",
+        "tracking": "Seguimiento"
+      }
+    },
+    "forms": {
+      "title": "Formularios de captación",
+      "new": "Nuevo formulario",
+      "active": "activo",
+      "inactive": "inactivo",
+      "createsSuggestion": "sugerencia",
+      "copyUrl": "Copiar",
+      "emptyTitle": "Aún no hay formularios de captación",
+      "emptyBody": "Los formularios públicos convierten leads entrantes en contactos — y, opcionalmente, en sugerencias de oportunidad.",
+      "columns": {
+        "name": "Nombre",
+        "slug": "Slug",
+        "campaign": "Campaña",
+        "status": "Estado",
+        "captureUrl": "URL de captación",
+        "actions": "Acciones"
+      },
+      "dialog": {
+        "createTitle": "Nuevo formulario de captación",
+        "editTitle": "Editar formulario",
+        "name": "Nombre",
+        "slug": "Slug",
+        "slugHint": "Letras minúsculas, dígitos y guiones (p. ej. solicitud-demo). Se usa en la URL pública de captación.",
+        "slugInvalid": "Slug no válido",
+        "description": "Descripción (opcional)",
+        "campaign": "Campaña (opcional)",
+        "noCampaign": "Sin campaña",
+        "createsSuggestion": "Crear una sugerencia de oportunidad por cada envío",
+        "isActive": "Activo (acepta envíos)"
+      },
+      "toast": {
+        "created": "Formulario creado",
+        "updated": "Formulario actualizado",
+        "urlCopied": "URL de captación copiada"
+      }
+    },
+    "channels": {
+      "title": "Canales",
+      "new": "Nuevo canal",
+      "emptyTitle": "Aún no hay canales",
+      "emptyBody": "Los canales son los lugares donde publicas — un perfil de LinkedIn, un canal de YouTube, un blog.",
+      "columns": {
+        "name": "Nombre",
+        "platform": "Plataforma",
+        "handle": "Usuario / URL",
+        "active": "Activo",
+        "actions": "Acciones"
+      },
+      "dialog": {
+        "createTitle": "Nuevo canal",
+        "editTitle": "Editar canal",
+        "name": "Nombre",
+        "namePlaceholder": "p. ej. LinkedIn de Robert",
+        "platform": "Plataforma",
+        "platformPlaceholder": "Seleccionar una plataforma…",
+        "handle": "Usuario o URL (opcional)",
+        "isActive": "Activo"
+      },
+      "toast": {
+        "created": "Canal creado",
+        "updated": "Canal actualizado",
+        "activated": "Canal activado",
+        "deactivated": "Canal desactivado"
+      }
+    },
+    "contact": {
+      "title": "Marketing",
+      "loading": "Cargando actividad de marketing…",
+      "consentGiven": "consentimiento",
+      "noConsent": "sin consentimiento",
+      "suppressed": "suprimido",
+      "activeEnrollments": "Inscripciones activas",
+      "noEnrollments": "No está inscrito en ninguna secuencia.",
+      "enrollmentMeta": "paso {{step}} · próximo {{date}}",
+      "recentEngagements": "Interacciones recientes",
+      "noEngagements": "Aún no hay contactos de marketing."
+    },
+    "boundary": {
+      "disabledTitle": "Marketing no está habilitado",
+      "disabledDescription": "El módulo de marketing no está habilitado para esta cuenta.",
+      "permissionTitle": "Sin acceso a Marketing",
+      "permissionDescription": "No tienes permiso para ver marketing. Pide a un administrador el permiso de lectura de marketing.",
+      "backToDashboard": "Ir al panel"
+    }
   }
 }

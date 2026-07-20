@@ -133,7 +133,11 @@
       "emptyBody": "Create a post from the Posts page and it will show up here on its scheduled day.",
       "toast": {
         "skipped": "Skipped"
-      }
+      },
+      "weekOf": "Week of {{date}}",
+      "viewMonth": "Month",
+      "viewAgenda": "Agenda",
+      "moreItems": "+{{count}} more"
     },
     "posts": {
       "title": "Posts",
@@ -162,7 +166,9 @@
         "status": "Status",
         "channel": "Channel",
         "campaign": "Campaign",
-        "all": "All"
+        "all": "All",
+        "dateFrom": "Scheduled from",
+        "dateTo": "Scheduled to"
       },
       "createDialog": {
         "title": "New post",
@@ -269,6 +275,14 @@
       "toast": {
         "created": "Campaign created",
         "updated": "Campaign updated"
+      },
+      "detail": {
+        "posts": "Posts",
+        "noPosts": "No posts in this campaign.",
+        "sequences": "Sequences",
+        "noSequences": "No sequences linked to this campaign.",
+        "forms": "Capture forms",
+        "noForms": "No forms attributed to this campaign."
       }
     },
     "sequences": {
@@ -325,7 +339,9 @@
           "minutes": "minutes",
           "hours": "hours",
           "days": "days"
-        }
+        },
+        "campaign": "Campaign (optional)",
+        "noCampaign": "None"
       },
       "enrollDialog": {
         "title": "Enroll contact",
@@ -338,6 +354,15 @@
         "updated": "Sequence updated",
         "enrolled": "Contact enrolled",
         "unenrolled": "Contact unenrolled"
+      },
+      "sending": {
+        "title": "Sending",
+        "from": "From",
+        "provider": "Provider",
+        "notConfigured": "Not configured",
+        "unsubscribe": "Unsubscribe link",
+        "on": "On",
+        "tracking": "Tracking"
       }
     },
     "forms": {
@@ -416,6 +441,13 @@
       "enrollmentMeta": "step {{step}} · next {{date}}",
       "recentEngagements": "Recent engagements",
       "noEngagements": "No marketing touches yet."
+    },
+    "boundary": {
+      "disabledTitle": "Marketing is not enabled",
+      "disabledDescription": "The marketing module is not enabled for this account.",
+      "permissionTitle": "No access to Marketing",
+      "permissionDescription": "You do not have permission to view marketing. Ask an administrator for the marketing read permission.",
+      "backToDashboard": "Go to dashboard"
     }
   },
   "sidebar": {
