@@ -43,6 +43,14 @@ describe('AI consent actions', () => {
     mocks.checkAccountManagementPermission.mockResolvedValue(true);
     mocks.aiGatewayFetchAccount.mockResolvedValue({
       consentStatus: 'granted',
+      consent: {
+        status: 'granted',
+        grantedBy: 'admin@example.test',
+        termsVersion: '2026-07',
+        grantedAt: '2026-07-01T00:00:00.000Z',
+        revokedAt: null,
+        revokedBy: null,
+      },
     });
     mocks.aiGatewayGrantConsent.mockResolvedValue(undefined);
     mocks.aiGatewayRevokeConsent.mockResolvedValue(undefined);
@@ -56,11 +64,11 @@ describe('AI consent actions', () => {
     ]);
   });
 
-  it('returns gateway consent status with pending detail fields', async () => {
+  it('returns gateway consent status with detail fields', async () => {
     await expect(actions.getAiConsentStatus()).resolves.toEqual({
       status: 'granted',
-      termsVersion: null,
-      grantedAt: null,
+      termsVersion: '2026-07',
+      grantedAt: '2026-07-01T00:00:00.000Z',
     });
     expect(mocks.aiGatewayFetchAccount).toHaveBeenCalledWith('tenant-appliance');
     expect(mocks.checkAccountManagementPermission).not.toHaveBeenCalled();

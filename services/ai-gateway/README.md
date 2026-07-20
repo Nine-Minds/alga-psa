@@ -29,7 +29,8 @@ poller initiates configured off-session auto-top-ups.
 | `AI_GATEWAY_AUTO_TOPUP_POLL_INTERVAL_MS` | `5000` | Interval between durable auto-top-up job claims. |
 | `AI_GATEWAY_AUTO_TOPUP_MAX_ATTEMPTS` | `3` | Maximum PaymentIntent initiation attempts before auto-top-up is disabled. |
 | `AI_GATEWAY_AUTO_TOPUP_RETRY_BASE_MS` | `60000` | Initial retry delay; subsequent failures use exponential backoff. |
-| `AI_GATEWAY_EVENTS_WEBHOOK_URL` | none | Optional destination for non-blocking gateway event POSTs; every event is always logged as structured JSON. |
+| `AI_GATEWAY_EVENTS_WEBHOOK_URL` | none | Optional destination for non-blocking gateway event POSTs; every event is always logged as structured JSON. The hosted app consumes these at `/api/webhooks/ai-gateway`. |
+| `AI_GATEWAY_EVENTS_WEBHOOK_SECRET` | none | Shared secret sent as `X-Alga-Webhook-Secret` on event POSTs; the receiver rejects deliveries without it. |
 | `AI_GATEWAY_MODEL_ROUTES` | `{}` | JSON object mapping case-sensitive model globs to `openrouter` or `vertex`, for example `{"gemini-*":"vertex"}`. |
 | `AI_GATEWAY_DEFAULT_PROVIDER` | `openrouter` | Provider used when no model route matches: `openrouter` or `vertex`. |
 | `OPENROUTER_API_KEY` | none | OpenRouter bearer credential. |

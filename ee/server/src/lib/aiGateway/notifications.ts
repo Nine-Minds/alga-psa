@@ -9,6 +9,50 @@ import type { AiCreditsError, AiFeature } from './types';
 
 type BackgroundAiFeature = Exclude<AiFeature, 'chat' | 'chat-title'>;
 
+export type AiGatewayEventType =
+  | 'low_balance_crossed'
+  | 'entered_grace'
+  | 'hard_stop'
+  | 'auto_topup_succeeded'
+  | 'auto_topup_failed'
+  | 'auto_topup_disabled';
+
+export const AI_GATEWAY_EVENT_TYPES: readonly AiGatewayEventType[] = [
+  'low_balance_crossed',
+  'entered_grace',
+  'hard_stop',
+  'auto_topup_succeeded',
+  'auto_topup_failed',
+  'auto_topup_disabled',
+];
+
+const GATEWAY_EVENT_MESSAGES: Record<AiGatewayEventType, { title: string; type: 'info' | 'warning' }> = {
+  low_balance_crossed: {
+    title: 'AI credits are running low. Review AI Usage in billing settings to top up.',
+    type: 'warning',
+  },
+  entered_grace: {
+    title: 'AI credits are exhausted; requests are drawing on the grace buffer. Top up now to avoid interruption.',
+    type: 'warning',
+  },
+  hard_stop: {
+    title: 'AI features are paused: the credit balance and grace buffer are exhausted. Top up to restore AI.',
+    type: 'warning',
+  },
+  auto_topup_succeeded: {
+    title: 'AI auto-top-up succeeded and credits were added to the account.',
+    type: 'info',
+  },
+  auto_topup_failed: {
+    title: 'An AI auto-top-up payment failed and will be retried.',
+    type: 'warning',
+  },
+  auto_topup_disabled: {
+    title: 'AI auto-top-up was disabled after repeated payment failures. Update the payment method and re-enable it in AI Usage settings.',
+    type: 'warning',
+  },
+};
+
 const NOTIFICATION_THROTTLE_MS = 24 * 60 * 60 * 1000;
 const lastNotificationAt = new Map<string, number>();
 
@@ -76,6 +120,33 @@ export async function notifyAiCreditsUnavailable(
       error: notificationError instanceof Error
         ? notificationError.message
         : String(notificationError),
+    });
+  }
+}
+
+/** Fan a gateway money/credit event out to the tenant's admins as an in-app notification. */
+export async function notifyAiGatewayEvent(
+  tenantId: string,
+  eventType: AiGatewayEventType,
+  eventId: string,
+): Promise<void> {
+  const message = GATEWAY_EVENT_MESSAGES[eventType];
+  const knex = await getConnection(tenantId);
+  const userIds = await findAdminUserIds(knex, tenantId);
+
+  for (const userId of userIds) {
+    await createNotificationFromTemplateInternal(knex, {
+      tenant: tenantId,
+      user_id: userId,
+      template_name: 'system-announcement',
+      type: message.type,
+      category: 'system',
+      link: '/msp/settings?tab=account',
+      data: { announcementTitle: message.title },
+      metadata: {
+        ai_gateway_event_type: eventType,
+        ai_gateway_event_id: eventId,
+      },
     });
   }
 }

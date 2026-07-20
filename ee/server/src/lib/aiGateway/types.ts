@@ -56,6 +56,18 @@ export interface AiAccountSummary {
   };
   /** Appliance accounts only; hosted accounts always report 'granted'. */
   consentStatus: 'granted' | 'revoked' | 'missing';
+  /**
+   * Detail view of the latest consent record. Hosted accounts report
+   * status 'granted' with all detail fields null.
+   */
+  consent: {
+    status: 'granted' | 'revoked' | 'missing';
+    grantedBy: string | null;
+    termsVersion: string | null;
+    grantedAt: string | null; // ISO 8601
+    revokedAt: string | null; // ISO 8601
+    revokedBy: string | null;
+  };
 }
 
 /** GET /v1/account/usage */

@@ -12,6 +12,15 @@ import type {
 
 export type ConsentStatus = 'granted' | 'revoked' | 'missing';
 
+export interface AiConsentDetails {
+  status: ConsentStatus;
+  grantedBy: string | null;
+  termsVersion: string | null;
+  grantedAt: string | null;
+  revokedAt: string | null;
+  revokedBy: string | null;
+}
+
 export type AiSubscriptionStatus =
   | 'none'
   | 'active'
@@ -34,6 +43,7 @@ export interface AiAccountSummary {
     packPriceId: string | null;
   };
   consentStatus: ConsentStatus;
+  consent: AiConsentDetails;
 }
 
 export interface AiUsageEvent {
@@ -139,12 +149,19 @@ export async function loadAccount(database: Knex, accountId: string): Promise<Ai
   return account;
 }
 
-export async function getConsentStatus(
+export async function getConsentDetails(
   database: Knex,
   account: AiAccountRow,
-): Promise<ConsentStatus> {
+): Promise<AiConsentDetails> {
   if (account.deployment_type === 'hosted') {
-    return 'granted';
+    return {
+      status: 'granted',
+      grantedBy: null,
+      termsVersion: null,
+      grantedAt: null,
+      revokedAt: null,
+      revokedBy: null,
+    };
   }
 
   const latest = await database<ConsentRecordRow>('consent_records')
@@ -153,9 +170,23 @@ export async function getConsentStatus(
     .orderBy('consent_id', 'desc')
     .first();
   if (!latest) {
-    return 'missing';
+    return {
+      status: 'missing',
+      grantedBy: null,
+      termsVersion: null,
+      grantedAt: null,
+      revokedAt: null,
+      revokedBy: null,
+    };
   }
-  return latest.revoked_at === null ? 'granted' : 'revoked';
+  return {
+    status: latest.revoked_at === null ? 'granted' : 'revoked',
+    grantedBy: latest.granted_by,
+    termsVersion: latest.terms_version,
+    grantedAt: asDate(latest.granted_at).toISOString(),
+    revokedAt: latest.revoked_at === null ? null : asDate(latest.revoked_at).toISOString(),
+    revokedBy: latest.revoked_by,
+  };
 }
 
 export async function hasActiveConsent(database: Knex, accountId: string): Promise<boolean> {
@@ -177,6 +208,7 @@ export async function buildAccountSummary(
     account.low_balance_threshold,
     'low_balance_threshold',
   );
+  const consent = await getConsentDetails(database, account);
 
   return {
     subscriptionStatus: normalizeSubscriptionStatus(account.subscription_status),
@@ -199,7 +231,8 @@ export async function buildAccountSummary(
             ),
       packPriceId: account.auto_topup_pack_price_id,
     },
-    consentStatus: await getConsentStatus(database, account),
+    consentStatus: consent.status,
+    consent,
   };
 }
 

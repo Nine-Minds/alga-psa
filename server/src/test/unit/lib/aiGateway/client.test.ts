@@ -27,6 +27,14 @@ const accountSummary = {
     packPriceId: null,
   },
   consentStatus: 'granted' as const,
+  consent: {
+    status: 'granted' as const,
+    grantedBy: null,
+    termsVersion: null,
+    grantedAt: null,
+    revokedAt: null,
+    revokedBy: null,
+  },
 };
 
 describe('AI gateway client', () => {

@@ -49,11 +49,10 @@ async function requireConsentManager(): Promise<ApplianceSession> {
 export async function getAiConsentStatus(): Promise<AiConsentStatus> {
   const { tenantId } = await requireApplianceSession();
   const account = await aiGatewayFetchAccount(tenantId);
-  // TODO(ai-gateway): expose consent details on /v1/account
   return {
-    status: account.consentStatus,
-    termsVersion: null,
-    grantedAt: null,
+    status: account.consent.status,
+    termsVersion: account.consent.termsVersion,
+    grantedAt: account.consent.grantedAt,
   };
 }
 

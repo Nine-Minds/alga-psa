@@ -30,18 +30,22 @@ export interface GatewayEventEmitter {
 
 export interface StructuredGatewayEventEmitterOptions {
   webhookUrl?: string;
+  webhookSecret?: string;
   fetchImplementation?: typeof fetch;
   timeoutMs?: number;
 }
 
 export class StructuredGatewayEventEmitter implements GatewayEventEmitter {
   private readonly webhookUrl: string | undefined;
+  private readonly webhookSecret: string | undefined;
   private readonly fetchImplementation: typeof fetch;
   private readonly timeoutMs: number;
 
   constructor(options: StructuredGatewayEventEmitterOptions = {}) {
     this.webhookUrl =
       options.webhookUrl?.trim() || process.env.AI_GATEWAY_EVENTS_WEBHOOK_URL?.trim();
+    this.webhookSecret =
+      options.webhookSecret?.trim() || process.env.AI_GATEWAY_EVENTS_WEBHOOK_SECRET?.trim();
     this.fetchImplementation = options.fetchImplementation ?? fetch;
     this.timeoutMs = options.timeoutMs ?? 2_000;
   }
@@ -72,7 +76,10 @@ export class StructuredGatewayEventEmitter implements GatewayEventEmitter {
     try {
       const response = await this.fetchImplementation(webhookUrl, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          ...(this.webhookSecret ? { 'X-Alga-Webhook-Secret': this.webhookSecret } : {}),
+        },
         body: JSON.stringify(event),
         signal: controller.signal,
       });

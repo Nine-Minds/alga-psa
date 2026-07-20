@@ -421,6 +421,14 @@ describeWithDatabase('AI gateway HTTP API', () => {
       cycleStartedAt: '2026-07-01T00:00:00.000Z',
       autoTopup: { enabled: false, thresholdCredits: null, packPriceId: null },
       consentStatus: 'granted',
+      consent: {
+        status: 'granted',
+        grantedBy: null,
+        termsVersion: null,
+        grantedAt: null,
+        revokedAt: null,
+        revokedBy: null,
+      },
     });
 
     const updateResponse = await fetch(`${gatewayUrl}/v1/account/auto-topup`, {
@@ -549,7 +557,16 @@ describeWithDatabase('AI gateway HTTP API', () => {
       body: JSON.stringify({ grantedBy: 'admin@example.test', termsVersion: '2026-07-20' }),
     });
     expect(granted.status).toBe(200);
-    expect(await granted.json()).toMatchObject({ consentStatus: 'granted' });
+    expect(await granted.json()).toMatchObject({
+      consentStatus: 'granted',
+      consent: {
+        status: 'granted',
+        grantedBy: 'admin@example.test',
+        termsVersion: '2026-07-20',
+        revokedAt: null,
+        revokedBy: null,
+      },
+    });
 
     expect((await fetch(`${gatewayUrl}/v1/chat/completions`, requestOptions)).status).toBe(200);
     expect(await usageCount(database, accountId)).toBe(1);
@@ -559,7 +576,10 @@ describeWithDatabase('AI gateway HTTP API', () => {
       headers: { Authorization: `Bearer ${APPLIANCE_CREDENTIAL}` },
     });
     expect(revoked.status).toBe(200);
-    expect(await revoked.json()).toMatchObject({ consentStatus: 'revoked' });
+    expect(await revoked.json()).toMatchObject({
+      consentStatus: 'revoked',
+      consent: { status: 'revoked', termsVersion: '2026-07-20' },
+    });
     const deniedAgain = await fetch(`${gatewayUrl}/v1/chat/completions`, requestOptions);
     expect(deniedAgain.status).toBe(402);
     expect(await deniedAgain.json()).toMatchObject({ error: { code: 'consent_required' } });
