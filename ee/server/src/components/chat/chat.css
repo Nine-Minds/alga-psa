@@ -625,3 +625,51 @@
     padding: 0.875rem 1rem;
   }
 }
+
+/* AI-credits blocked states (402 { type: 'ai_credits', reason }) */
+.ai-credits-block {
+  padding: 1rem;
+}
+
+.ai-credits-block__panel {
+  border: 1px solid rgb(var(--color-border-200));
+  border-radius: 0.5rem;
+  padding: 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  background: rgb(var(--color-card));
+}
+
+.ai-credits-block__panel--empty {
+  border-color: rgb(var(--color-border-300));
+  background: rgb(var(--color-background-100));
+}
+
+.ai-credits-block__title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: rgb(var(--color-text-900));
+  margin: 0;
+  line-height: 1.4;
+}
+
+.ai-credits-block__body {
+  color: rgb(var(--color-text-700));
+  margin: 0;
+  line-height: 1.5;
+  font-size: 0.875rem;
+}
+
+.ai-credits-block__link {
+  align-self: flex-start;
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: rgb(var(--color-primary-600));
+  text-decoration: none;
+}
+
+.ai-credits-block__link:hover {
+  text-decoration: underline;
+}

@@ -2,6 +2,8 @@ import OpenAI from 'openai';
 import { GoogleAuth } from 'google-auth-library';
 
 import { getSecret } from '@alga-psa/core/secrets';
+import { mintGatewayToken } from '../lib/aiGateway/client';
+import type { AiFeature } from '../lib/aiGateway/types';
 
 const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
 const OPENROUTER_DEFAULT_MODEL = 'minimax/minimax-m2';
@@ -11,7 +13,7 @@ const VERTEX_PLACEHOLDER_API_KEY = 'vertex-managed-access-token';
 
 let googleAuthClient: GoogleAuth | null = null;
 
-export type ChatProviderId = 'openrouter' | 'vertex';
+export type ChatProviderId = 'gateway' | 'openrouter' | 'vertex';
 
 export type ChatProviderRequestOverrides = {
   resolveTurnOverrides: () => Record<string, unknown>;
@@ -29,6 +31,9 @@ const normalizeProvider = (providerValue: unknown): ChatProviderId => {
   if (value === 'vertex') {
     return 'vertex';
   }
+  if (value === 'gateway') {
+    return 'gateway';
+  }
   return 'openrouter';
 };
 
@@ -44,6 +49,10 @@ const trimString = (value: unknown): string | undefined => {
 const readSecret = async (key: string): Promise<string | undefined> => {
   return trimString(await getSecret(key, key, ''));
 };
+
+const featureHeaders = (feature: AiFeature): Record<string, string> => ({
+  'X-Alga-AI-Feature': feature,
+});
 
 const getGoogleAuth = (): GoogleAuth => {
   if (!googleAuthClient) {
@@ -97,7 +106,7 @@ const resolveVertexBaseUrl = ({
   return `https://${host}/v1/projects/${normalizedProject}/locations/${normalizedLocation}/endpoints/openapi`;
 };
 
-const resolveOpenRouterProvider = async (): Promise<ResolvedChatProvider> => {
+const resolveOpenRouterProvider = async (feature: AiFeature): Promise<ResolvedChatProvider> => {
   const apiKey = await readSecret('OPENROUTER_API_KEY');
   if (!apiKey) {
     throw new Error('OpenRouter API key is not configured');
@@ -109,6 +118,7 @@ const resolveOpenRouterProvider = async (): Promise<ResolvedChatProvider> => {
     client: new OpenAI({
       apiKey,
       baseURL: OPENROUTER_BASE_URL,
+      defaultHeaders: featureHeaders(feature),
     }),
     requestOverrides: {
       resolveTurnOverrides: () => ({}),
@@ -116,7 +126,7 @@ const resolveOpenRouterProvider = async (): Promise<ResolvedChatProvider> => {
   };
 };
 
-const resolveVertexProvider = async (): Promise<ResolvedChatProvider> => {
+const resolveVertexProvider = async (feature: AiFeature): Promise<ResolvedChatProvider> => {
   const explicitBaseUrl = await readSecret('VERTEX_OPENAPI_BASE_URL');
   const projectId = await readSecret('VERTEX_PROJECT_ID');
   const location = await readSecret('VERTEX_LOCATION');
@@ -169,6 +179,7 @@ const resolveVertexProvider = async (): Promise<ResolvedChatProvider> => {
     client: new OpenAI({
       apiKey: VERTEX_PLACEHOLDER_API_KEY,
       baseURL,
+      defaultHeaders: featureHeaders(feature),
       fetch: async (...args: unknown[]) => {
         const [input, init] = args as [RequestInfo | URL, RequestInit | undefined];
         const primaryAuth = await resolvePrimaryBearerToken();
@@ -195,13 +206,58 @@ const resolveVertexProvider = async (): Promise<ResolvedChatProvider> => {
   };
 };
 
-export async function resolveChatProvider(
-  providerOverride?: ChatProviderId,
-): Promise<ResolvedChatProvider> {
-  const providerId = normalizeProvider(providerOverride ?? process.env.AI_CHAT_PROVIDER);
-  if (providerId === 'vertex') {
-    return resolveVertexProvider();
+const resolveGatewayProvider = async (
+  gatewayUrl: string,
+  tenantId: string | null | undefined,
+  feature: AiFeature,
+): Promise<ResolvedChatProvider> => {
+  const normalizedTenantId = trimString(tenantId);
+  if (!normalizedTenantId) {
+    throw new Error('AI gateway provider requires a tenant id');
   }
 
-  return resolveOpenRouterProvider();
+  return {
+    providerId: 'gateway',
+    model:
+      (await readSecret('AI_GATEWAY_MODEL')) ??
+      (await readSecret('OPENROUTER_CHAT_MODEL')) ??
+      OPENROUTER_DEFAULT_MODEL,
+    client: new OpenAI({
+      apiKey: mintGatewayToken(normalizedTenantId),
+      baseURL: `${gatewayUrl.replace(/\/+$/, '')}/v1`,
+      defaultHeaders: featureHeaders(feature),
+    }),
+    requestOverrides: {
+      resolveTurnOverrides: () => ({}),
+    },
+  };
+};
+
+export async function resolveChatProvider(
+  tenantId: string | null | undefined,
+  feature: AiFeature,
+  providerOverride?: ChatProviderId,
+): Promise<ResolvedChatProvider> {
+  const gatewayUrl = trimString(process.env.AI_GATEWAY_URL);
+  const gatewayBypassed = process.env.AI_GATEWAY_BYPASS === 'true';
+  if (!providerOverride && gatewayUrl && !gatewayBypassed) {
+    return resolveGatewayProvider(gatewayUrl, tenantId, feature);
+  }
+
+  let providerId = normalizeProvider(providerOverride ?? process.env.AI_CHAT_PROVIDER);
+  if (providerId === 'gateway') {
+    if (!gatewayBypassed) {
+      if (!gatewayUrl) {
+        throw new Error('Gateway provider is missing configuration. Set AI_GATEWAY_URL.');
+      }
+      return resolveGatewayProvider(gatewayUrl, tenantId, feature);
+    }
+    providerId = 'openrouter';
+  }
+
+  if (providerId === 'vertex') {
+    return resolveVertexProvider(feature);
+  }
+
+  return resolveOpenRouterProvider(feature);
 }

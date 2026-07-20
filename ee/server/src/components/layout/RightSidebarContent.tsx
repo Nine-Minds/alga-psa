@@ -3,6 +3,7 @@
 // ee/server/src/components/layout/RightSidebarContent.tsx
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Chat } from '../chat/Chat';
+import { ChatCreditsIndicator } from '../chat/ChatCreditsIndicator';
 import * as Collapsible from '@radix-ui/react-collapsible';
 import { History, MoreHorizontal, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
@@ -471,6 +472,7 @@ const RightSidebarContent: React.FC<RightSidebarProps> = ({
                   </p>
                 </div>
                 <div className="flex items-center gap-1">
+                  <ChatCreditsIndicator className="mr-1" />
                   <button
                     className={[
                       'rounded p-1.5 transition-colors',

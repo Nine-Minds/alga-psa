@@ -11,7 +11,8 @@ export type AiFeature =
   | 'email-rule-classifier'
   | 'opportunity-drafting'
   | 'workflow-inference'
-  | 'inventory-classifier';
+  | 'inventory-classifier'
+  | 'document-assist';
 
 export type AiCreditsErrorReason =
   | 'no_subscription'

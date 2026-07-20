@@ -1,3 +1,4 @@
+import { toAiCreditsError } from '../../lib/aiGateway/errors';
 import { resolveChatProvider } from '../chatProviderResolver';
 
 /**
@@ -86,6 +87,11 @@ async function classifyOne(
       error: null,
     };
   } catch (error) {
+    const creditsError = toAiCreditsError(error);
+    if (creditsError) {
+      const { notifyAiCreditsUnavailable } = await import('../../lib/aiGateway/notifications');
+      await notifyAiCreditsUnavailable(tenantId, 'inventory-classifier', creditsError);
+    }
     return {
       ticket_id: input.ticket_id,
       raw: null,
@@ -101,8 +107,13 @@ const classifier: GhostUsageTicketClassifier = {
 
     let provider: ResolvedProvider;
     try {
-      provider = await resolveChatProvider();
+      provider = await resolveChatProvider(tenantId, 'inventory-classifier');
     } catch (error) {
+      const creditsError = toAiCreditsError(error);
+      if (creditsError) {
+        const { notifyAiCreditsUnavailable } = await import('../../lib/aiGateway/notifications');
+        await notifyAiCreditsUnavailable(tenantId, 'inventory-classifier', creditsError);
+      }
       const message = error instanceof Error ? error.message : String(error);
       return inputs.map((input) => ({
         ticket_id: input.ticket_id,

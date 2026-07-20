@@ -83,6 +83,9 @@ vi.mock('google-auth-library', () => ({
 
 const MANAGED_ENV_KEYS = [
   'AI_CHAT_PROVIDER',
+  'AI_GATEWAY_BYPASS',
+  'AI_GATEWAY_SERVICE_SECRET',
+  'AI_GATEWAY_URL',
   'OPENROUTER_API_KEY',
   'OPENROUTER_CHAT_MODEL',
   'VERTEX_PROJECT_ID',
@@ -1781,6 +1784,33 @@ describe('ChatCompletionsService (unit)', () => {
     expect(response.status).toBe(400);
     await expect(response.json()).resolves.toMatchObject({
       error: 'Missing function call information',
+    });
+  });
+
+  it('handleRequest returns a structured 402 for gateway credit rejection', async () => {
+    process.env.EDITION = 'ee';
+    process.env.AI_CHAT_PROVIDER = 'openrouter';
+    setSecrets({ OPENROUTER_API_KEY: 'openrouter-key' });
+    openAiCreateSpy.mockRejectedValue({
+      status: 402,
+      error: { code: 'no_subscription' },
+    });
+
+    const { ChatCompletionsService } = await import('@ee/services/chatCompletionsService');
+    const request = new NextRequest(
+      new Request('https://example.invalid/api/chat/v1/completions', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ messages: [{ role: 'user', content: 'Hello' }] }),
+      }),
+    );
+
+    const response = await ChatCompletionsService.handleRequest(request);
+
+    expect(response.status).toBe(402);
+    await expect(response.json()).resolves.toEqual({
+      type: 'ai_credits',
+      reason: 'no_subscription',
     });
   });
 
