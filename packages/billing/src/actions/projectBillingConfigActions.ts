@@ -199,8 +199,12 @@ async function listScheduleEntryViews(
         .whereIn('invoice_id', invoiceIds)
         .select<{ invoice_id: string; invoice_number: string }[]>('invoice_id', 'invoice_number'),
   ]);
-  const phaseNames = new Map(phaseRows.map((row) => [row.phase_id, row.phase_name]));
-  const invoiceNumbers = new Map(invoiceRows.map((row) => [row.invoice_id, row.invoice_number]));
+  const phaseNames = new Map<string, string>(
+    phaseRows.map((row): [string, string] => [row.phase_id, row.phase_name]),
+  );
+  const invoiceNumbers = new Map<string, string>(
+    invoiceRows.map((row): [string, string] => [row.invoice_id, row.invoice_number]),
+  );
   const computedAmounts = computeEntryAmounts(config, entries);
 
   return entries.map((entry, index) => {

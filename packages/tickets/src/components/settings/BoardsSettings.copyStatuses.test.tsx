@@ -749,9 +749,11 @@ describe('BoardsSettings ticket status copy flow', () => {
       target: { value: 'Support Renamed' },
     });
     const saveButton = screen.getByTestId('save-board-button');
+    // Generous timeout: under Nx parallel load the dirty-state re-render that
+    // enables the button can outlast waitFor's 1s default.
     await waitFor(() => {
       expect(saveButton).toBeEnabled();
-    });
+    }, { timeout: 5_000 });
     fireEvent.click(saveButton);
 
     await waitFor(() => {
