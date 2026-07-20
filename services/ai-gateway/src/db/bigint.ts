@@ -27,3 +27,11 @@ export function requirePositiveBigint(value: BigintValue, fieldName: string): bi
   }
   return parsed;
 }
+
+export function requireNonZeroBigint(value: BigintValue, fieldName: string): bigint {
+  const parsed = parseBigint(value, fieldName);
+  if (parsed === 0n) {
+    throw new Error(`${fieldName} must not be zero`);
+  }
+  return parsed;
+}

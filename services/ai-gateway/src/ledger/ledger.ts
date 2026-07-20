@@ -5,6 +5,7 @@ import type { Knex } from 'knex';
 import {
   parseBigint,
   requireNonNegativeBigint,
+  requireNonZeroBigint,
   requirePositiveBigint,
   type BigintValue,
 } from '../db/bigint.js';
@@ -54,6 +55,21 @@ export interface MonthlyRenewalResult {
   topupBalance: bigint;
   totalBalance: bigint;
   ledgerMovements: PersistedLedgerMovement[];
+}
+
+export interface CreditAdjustmentInput {
+  accountId: string;
+  credits: BigintValue;
+  bucket: LedgerBucket;
+  note: string;
+  createdAt?: Date;
+}
+
+export interface CreditAdjustmentResult {
+  entryId: string;
+  includedBalance: bigint;
+  topupBalance: bigint;
+  totalBalance: bigint;
 }
 
 async function loadAccountForUpdate(
@@ -239,6 +255,65 @@ export async function renewMonthlyCycle(
       topupBalance: plan.topupBalance,
       totalBalance: plan.includedBalance + plan.topupBalance,
       ledgerMovements,
+    };
+  });
+}
+
+export async function adjustCredits(
+  database: Knex,
+  input: CreditAdjustmentInput,
+): Promise<CreditAdjustmentResult> {
+  requireText(input.accountId, 'accountId');
+  requireText(input.note, 'note');
+  const credits = requireNonZeroBigint(input.credits, 'credits');
+  if (input.bucket !== 'included' && input.bucket !== 'topup') {
+    throw new Error('bucket must be included or topup');
+  }
+
+  return database.transaction(async (transaction) => {
+    const account = await loadAccountForUpdate(transaction, input.accountId);
+    let includedBalance = parseBigint(account.included_balance, 'account.included_balance');
+    let topupBalance = parseBigint(account.topup_balance, 'account.topup_balance');
+    if (input.bucket === 'included') {
+      includedBalance += credits;
+    } else {
+      topupBalance += credits;
+    }
+
+    const createdAt = input.createdAt ?? new Date();
+    const [movement] = await insertLedgerMovements(
+      transaction,
+      input.accountId,
+      [
+        {
+          entryType: 'adjustment',
+          bucket: input.bucket,
+          credits,
+          balanceAfter: includedBalance + topupBalance,
+        },
+      ],
+      { note: input.note, createdAt },
+    );
+    if (!movement) {
+      throw new Error('Adjustment ledger movement was not persisted');
+    }
+
+    const updatedCount = await transaction('ai_accounts')
+      .where({ account_id: input.accountId })
+      .update({
+        included_balance: includedBalance.toString(),
+        topup_balance: topupBalance.toString(),
+        updated_at: createdAt,
+      });
+    if (updatedCount !== 1) {
+      throw new Error(`Expected to update one AI account, updated ${updatedCount}`);
+    }
+
+    return {
+      entryId: movement.entryId,
+      includedBalance,
+      topupBalance,
+      totalBalance: includedBalance + topupBalance,
     };
   });
 }

@@ -29,6 +29,31 @@ export interface PricingConfigRow {
   created_at: Date;
 }
 
+export interface AiUsageEventRow {
+  usage_id: string;
+  account_id: string;
+  feature: string;
+  model: string;
+  provider: string;
+  prompt_tokens: string;
+  completion_tokens: string;
+  total_tokens: string;
+  credits_charged: string;
+  request_id: string;
+  duration_ms: string;
+  created_at: Date;
+}
+
+export interface ConsentRecordRow {
+  consent_id: string;
+  account_id: string;
+  granted_by: string;
+  terms_version: string;
+  granted_at: Date;
+  revoked_at: Date | null;
+  revoked_by: string | null;
+}
+
 export type LedgerBucket = 'included' | 'topup';
 export type LedgerEntryType =
   | 'grant_included'

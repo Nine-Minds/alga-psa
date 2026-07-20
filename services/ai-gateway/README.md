@@ -1,8 +1,10 @@
 # AI gateway
 
-Standalone service for AI credit pricing, admission, and ledger persistence. In
-this implementation stage its only HTTP route is `GET /healthz`; provider
-proxying and billing webhooks are intentionally not present yet.
+Standalone service for authenticated AI provider proxying, account state,
+credit pricing, admission, and ledger persistence. It exposes the
+OpenAI-compatible `POST /v1/chat/completions` route plus account, usage,
+auto-top-up settings, appliance consent, manual grant, and health APIs. Stripe
+webhooks and the auto-top-up job are intentionally not present yet.
 
 ## Environment
 
@@ -18,6 +20,23 @@ proxying and billing webhooks are intentionally not present yet.
 | `AI_GATEWAY_DB_PASSWORD_FILE` | none | Docker-secret file used when the password variable is absent. |
 | `AI_GATEWAY_DEFAULT_INPUT_CREDITS_PER_1K_TOKENS` | none | Required positive bigint fallback input rate before metered traffic is enabled. |
 | `AI_GATEWAY_DEFAULT_OUTPUT_CREDITS_PER_1K_TOKENS` | none | Required positive bigint fallback output rate before metered traffic is enabled. |
+| `AI_GATEWAY_SERVICE_SECRET` | none | Shared HMAC secret used to verify short-lived hosted HS256 JWTs. |
+| `AI_GATEWAY_ADMIN_TOKEN` | none | Bearer token protecting `POST /v1/admin/grants`. The endpoint returns 503 when unset. |
+| `AI_GATEWAY_MODEL_ROUTES` | `{}` | JSON object mapping case-sensitive model globs to `openrouter` or `vertex`, for example `{"gemini-*":"vertex"}`. |
+| `AI_GATEWAY_DEFAULT_PROVIDER` | `openrouter` | Provider used when no model route matches: `openrouter` or `vertex`. |
+| `OPENROUTER_API_KEY` | none | OpenRouter bearer credential. |
+| `OPENROUTER_BASE_URL` | `https://openrouter.ai/api/v1` | OpenRouter-compatible API base URL; useful for compatible providers and tests. |
+| `OPENROUTER_API` | none | Legacy base-URL alias used only when `OPENROUTER_BASE_URL` is unset. |
+| `VERTEX_OPENAPI_BASE_URL` | none | Explicit Vertex OpenAI-compatible base URL. Takes precedence over project/location construction. |
+| `VERTEX_PROJECT_ID` | none | Google Cloud project used to construct the Vertex base URL. |
+| `VERTEX_LOCATION` | none | Vertex location used with `VERTEX_PROJECT_ID`; `global` selects the global host. |
+| `GOOGLE_CLOUD_ACCESS_TOKEN` | none | Optional configured Vertex bearer token. A 401 retries once with ADC when ADC yields a different token. |
+| `GOOGLE_APPLICATION_CREDENTIALS` | Google ADC default | Optional path used by `google-auth-library` for Vertex Application Default Credentials. |
+| `ALGA_LICENSE_URL` | none | Base URL for alga-license; appliance credentials are posted to `/verify-appliance`. |
+| `ALGA_LICENSE_SERVICE_TOKEN` | none | Service bearer token sent to alga-license. |
+| `ALGA_LICENSE_STUB` | `false` | When `true`, accepts non-JWT appliance credentials locally without calling alga-license. |
+| `ALGA_LICENSE_STUB_TENANT_ID` | `00000000-0000-4000-8000-000000000001` | Fixed tenant UUID returned by the appliance stub. |
+| `ALGA_LICENSE_STUB_EDITION` | `enterprise` | Fixed edition returned by the appliance stub. |
 | `AI_GATEWAY_TEST_DATABASE_URL` | none | Scratch PostgreSQL URL for DB-backed integration and concurrency tests. |
 
 The default pricing variables deliberately have no built-in numeric value.
@@ -27,6 +46,13 @@ Configured `model_pattern` values use case-sensitive glob syntax: `*` matches
 zero or more characters and `?` matches one character. More literal characters
 make a match more specific; equally specific matches use the latest effective
 date that is not in the future.
+
+Hosted callers send a short-lived HS256 JWT with `tenant_id`, `iat`, and `exp`
+claims as a bearer token. Non-JWT bearer credentials use the appliance
+verification path. Successful appliance verifications are cached in memory for
+five minutes under a SHA-256 credential hash; raw credentials are never cache
+keys. Appliance accounts also require an active consent record before metered
+traffic is admitted.
 
 ## Local commands
 
