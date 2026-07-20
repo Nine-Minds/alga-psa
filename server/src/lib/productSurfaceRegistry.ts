@@ -75,6 +75,7 @@ export const MSP_ROUTE_RULES: readonly RouteRule[] = [
       '/msp/extensions',
       '/msp/service-requests',
       '/msp/opportunities',
+      '/msp/marketing',
     ],
     behaviorByProduct: { psa: 'allowed', algadesk: 'upgrade_boundary' },
   },
@@ -177,9 +178,21 @@ export const API_RULES: readonly ApiRule[] = [
       '/api/v1/time-sheet-approvals',
       '/api/v1/project',
       '/api/v1/integrations',
+      '/api/v1/marketing',
     ],
     behaviorByProduct: { psa: 'allowed', algadesk: 'denied' },
     visibleInMetadataByProduct: { psa: true, algadesk: false },
+  },
+  {
+    // Public (unauthenticated) marketing endpoints: capture-form submission,
+    // email open/click tracking, unsubscribe. PSA-only like the module; they
+    // are not v1 API surface, so they never appear in /api/v1/meta metadata.
+    group: 'api_marketing_public',
+    staticPrefixes: [
+      '/api/marketing',
+    ],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'denied' },
+    visibleInMetadataByProduct: { psa: false, algadesk: false },
   },
 ];
 
