@@ -172,7 +172,15 @@ const RenewalAutomationSettings = (): React.JSX.Element => {
   const handleSave = async () => {
     try {
       setSaving(true);
-      const result = await updateDefaultBillingSettings(settings);
+      const result = await updateDefaultBillingSettings({
+        defaultRenewalMode: settings.defaultRenewalMode,
+        defaultNoticePeriodDays: settings.defaultNoticePeriodDays,
+        renewalDueDateActionPolicy: settings.renewalDueDateActionPolicy,
+        renewalTicketBoardId: settings.renewalTicketBoardId,
+        renewalTicketStatusId: settings.renewalTicketStatusId,
+        renewalTicketPriority: settings.renewalTicketPriority,
+        renewalTicketAssigneeId: settings.renewalTicketAssigneeId,
+      });
       if (isActionPermissionError(result)) {
         handleError(result.permissionError);
         return;

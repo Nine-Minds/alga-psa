@@ -22,8 +22,8 @@ import { generateProjectInvoice } from './invoiceGeneration';
 import {
   assertProjectBillingMutationPermission,
   type ReadyQueueRow,
-  type ScheduleEntryView,
 } from './projectBillingConfigActions';
+import type { ScheduleEntryView } from '@alga-psa/types';
 import { withProjectBillingActionErrors } from './projectBillingActionErrors';
 
 export interface CreateScheduleEntryActionInput {

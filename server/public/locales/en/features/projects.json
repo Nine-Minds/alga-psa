@@ -1714,7 +1714,7 @@
       "marginValue": "{{pct}}%",
       "marginUnavailable": "—",
       "currencyMismatch": "Costs are recorded in {{costCurrency}}, while project revenue is in {{revenueCurrency}}. Projected margin is unavailable without an exchange rate.",
-      "uncostedHours": "{{hours}} logged hours have no effective employee or default cost rate and contribute $0 to labor cost."
+      "uncostedHours": "{{hours}} logged hours have no effective employee or default cost rate and contribute nothing to labor cost."
     },
     "paymentWarning": {
       "title": "Payment prerequisite warning",

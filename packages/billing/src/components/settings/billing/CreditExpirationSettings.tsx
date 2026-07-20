@@ -41,7 +41,7 @@ const CreditExpirationSettings = (): React.JSX.Element => {
         ...settings,
         enableCreditExpiration: checked,
       };
-      const result = await updateDefaultBillingSettings(newSettings);
+      const result = await updateDefaultBillingSettings({ enableCreditExpiration: checked });
       if (isActionPermissionError(result)) {
         handleError(result.permissionError);
         return;
@@ -85,7 +85,11 @@ const CreditExpirationSettings = (): React.JSX.Element => {
         creditExpirationNotificationDays: days
       };
 
-      const result = await updateDefaultBillingSettings(newSettings);
+      const result = await updateDefaultBillingSettings({
+        enableCreditExpiration: newSettings.enableCreditExpiration,
+        creditExpirationDays: newSettings.creditExpirationDays,
+        creditExpirationNotificationDays: days,
+      });
       if (isActionPermissionError(result)) {
         handleError(result.permissionError);
         return;

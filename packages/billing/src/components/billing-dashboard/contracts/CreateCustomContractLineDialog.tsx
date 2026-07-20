@@ -16,6 +16,7 @@ import { BucketOverlayFields } from './BucketOverlayFields';
 import { BucketOverlayInput } from './ContractWizard';
 import { ServiceCatalogPicker } from './ServiceCatalogPicker';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import {
   getErrorMessage,
   isActionMessageError,
@@ -41,6 +42,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
   onCreated,
 }) => {
   const { t } = useTranslation('msp/contracts');
+  const { money, symbol } = useCurrencyFormat();
   const billingFrequencyOptions = useBillingFrequencyOptions();
   const [planName, setPlanName] = useState('');
   const [planType, setPlanType] = useState<PlanType | null>(null);
@@ -292,8 +294,8 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
   };
 
   const formatCurrency = (cents: number | undefined) => {
-    if (!cents) return '$0.00';
-    return `$${(cents / 100).toFixed(2)}`;
+    if (!cents) return money(0);
+    return money(Number(cents));
   };
 
   const renderFixedConfig = () => {
@@ -556,7 +558,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                     })}
                   </Label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">{symbol()}</span>
                     <Input
                       id={`hourly-rate-${index}`}
                       type="text"
@@ -780,7 +782,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                       })}
                     </Label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">{symbol()}</span>
                       <Input
                         id={`unit-rate-${index}`}
                         type="text"
@@ -1137,7 +1139,7 @@ export const CreateCustomContractLineDialog: React.FC<CreateCustomContractLineDi
                       {t('createCustomLine.recurringBaseRateLabel', { defaultValue: 'Recurring Base Rate' })}
                     </Label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">{symbol()}</span>
                       <Input
                         id="base-rate"
                         type="text"

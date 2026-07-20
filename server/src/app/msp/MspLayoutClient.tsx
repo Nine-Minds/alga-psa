@@ -22,11 +22,14 @@ import type { ProductCode } from '@alga-psa/types';
 import { resolveProductRouteBehavior } from '@/lib/productSurfaceRegistry';
 import { ProductRouteBoundary } from '@/components/product/ProductRouteBoundary';
 import { KeyboardShortcutsProvider } from '@alga-psa/ui/keyboard-shortcuts';
+import { CurrencyFormatProvider } from '@alga-psa/ui/lib';
 import { useKeyboardShortcutPreferenceStorage } from '@/hooks/useKeyboardShortcutPreferenceStorage';
 
 interface Props {
   children: React.ReactNode;
   session: Session | null;
+  /** Tenant default currency (default_billing_settings) for CurrencyFormatProvider. */
+  currencyCode?: string;
   productCode: ProductCode;
   needsOnboarding: boolean;
   initialSidebarCollapsed: boolean;
@@ -71,6 +74,7 @@ function OnboardingRedirectFallback() {
 export function MspLayoutClient({
   children,
   session,
+  currencyCode,
   productCode,
   needsOnboarding,
   initialSidebarCollapsed,
@@ -206,7 +210,9 @@ export function MspLayoutClient({
 
   return (
     <I18nWrapper portal="msp" initialLocale={initialLocale || undefined} preloadedResources={preloadedLocaleResources}>
-      {content}
+      <CurrencyFormatProvider currencyCode={currencyCode || 'USD'}>
+        {content}
+      </CurrencyFormatProvider>
     </I18nWrapper>
   );
 }

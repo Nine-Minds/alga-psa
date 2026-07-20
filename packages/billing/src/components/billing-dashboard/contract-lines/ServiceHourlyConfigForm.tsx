@@ -10,6 +10,7 @@ import { getCurrencySymbol } from '@alga-psa/core';
 import { IContractLineServiceHourlyConfig, IUserTypeRate } from '@alga-psa/types';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect'; // Import CustomSelect
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 
 // Define the structure for the configuration object (using imported interface)
 // export interface IServiceHourlyConfig { ... } // Removed local definition
@@ -51,6 +52,7 @@ export function ServiceHourlyConfigForm({
   className = '',
 }: ServiceHourlyConfigFormProps) {
   const { t } = useTranslation('msp/contract-lines');
+  const { symbol } = useCurrencyFormat();
   // Local state for input values (hourly_rate is handled specially for display)
   // Local state for input values (hourly_rate is handled specially for display)
   const [displayHourlyRate, setDisplayHourlyRate] = useState<string>('');
@@ -228,7 +230,7 @@ export function ServiceHourlyConfigForm({
 
         {/* This section was incorrectly placed here by the previous diff, removing it */}
         <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">{symbol()}</span>
           <Input
             id="hourly-rate"
             type="text"
@@ -366,7 +368,7 @@ export function ServiceHourlyConfigForm({
                          {t('forms.hourlyConfig.userTypeRates.rateSrLabel', { defaultValue: 'Rate ($/hr)' })}
                        </Label>
                        <div className="relative">
-                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                         <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">{symbol()}</span>
                          <Input
                              id={`new-user-type-rate-${configId}`}
                              type="text"

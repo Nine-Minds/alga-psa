@@ -5,6 +5,7 @@ import { ClientPortalLayoutClient } from "./ClientPortalLayoutClient";
 import { getTenantBrandingByTenantId } from "@alga-psa/tenancy/actions";
 import { getHierarchicalLocaleAction } from "@alga-psa/tenancy/actions";
 import { getCurrentTenantProduct } from "@/lib/productAccess";
+import { getTenantDefaultCurrencyCode } from "@alga-psa/billing/actions/billingCurrencyActions";
 import type { Metadata } from 'next';
 
 const CLIENT_SIDEBAR_COOKIE = 'client_portal_sidebar_collapsed';
@@ -55,12 +56,14 @@ export default async function Layout({
   const initialSidebarCollapsed =
     cookieStore.get(CLIENT_SIDEBAR_COOKIE)?.value === 'true';
   const productCode = await getCurrentTenantProduct();
+  const currencyCode = await getTenantDefaultCurrencyCode().catch(() => 'USD');
 
   return (
     <ClientPortalLayoutClient
       session={session}
       branding={branding}
       productCode={productCode}
+      currencyCode={currencyCode}
       initialLocale={locale}
       initialSidebarCollapsed={initialSidebarCollapsed}
     >

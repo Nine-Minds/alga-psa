@@ -11,7 +11,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { toast } from 'react-hot-toast';
 import { currencyFractionDigits, toMinorUnits } from '@alga-psa/core';
 import type { IProjectPhase, ProjectBillingInvoiceMode } from '@alga-psa/types';
-import type { ProjectBillingOverview } from '../../actions/projectBillingConfigActions';
+import type { ProjectBillingOverview } from '@alga-psa/types';
 import { updateProjectBillingConfig } from '../../actions/projectBillingConfigActions';
 import { generateProjectInvoice } from '../../actions/invoiceGeneration';
 import { useDrawer } from '@alga-psa/ui';

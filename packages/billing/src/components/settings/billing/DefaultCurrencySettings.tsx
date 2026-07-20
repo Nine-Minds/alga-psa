@@ -34,7 +34,7 @@ const DefaultCurrencySettings = (): React.JSX.Element => {
         ...settings,
         defaultCurrencyCode: value,
       };
-      const result = await updateDefaultBillingSettings(newSettings);
+      const result = await updateDefaultBillingSettings({ defaultCurrencyCode: value });
       if (isActionPermissionError(result)) {
         handleError(result.permissionError);
         return;

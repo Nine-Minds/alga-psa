@@ -29,6 +29,7 @@ import ContractLineServiceForm from './ContractLineServiceForm'; // Adjusted pat
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { IContractLineServiceConfiguration } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import {
   getErrorMessage,
   isActionMessageError,
@@ -66,6 +67,7 @@ interface EnhancedPlanService extends IContractLineService {
 
 const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contractLineId, onServicesChanged, disableEditing = false }) => {
   const { t } = useTranslation('msp/contract-lines');
+  const { money } = useCurrencyFormat();
   const [planServices, setPlanServices] = useState<EnhancedPlanService[]>([]);
   const [availableServices, setAvailableServices] = useState<IService[]>([]);
   // Removed serviceCategories state
@@ -352,7 +354,7 @@ const GenericPlanServicesList: React.FC<GenericPlanServicesListProps> = ({ contr
       render: (value, record) => {
         const rate = value !== undefined ? value : record.default_rate;
         // Display rate directly as decimal
-        return rate !== undefined ? `$${parseFloat(rate).toFixed(2)}` : t('common.notAvailable', { defaultValue: 'N/A' });
+        return rate !== undefined ? money(Math.round(Number(rate) * 100)) : t('common.notAvailable', { defaultValue: 'N/A' });
       },
     },
     {

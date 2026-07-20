@@ -8,7 +8,6 @@ import type { Knex } from 'knex';
 import { withProjectBillingActionErrors } from './projectBillingActionErrors';
 
 // DTOs live in @alga-psa/types; re-exported here for existing consumers.
-export type { ProjectPaymentWarning, ProjectPaymentWarningKind };
 
 interface PaymentWarningRow {
   invoice_id: string;

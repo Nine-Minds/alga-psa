@@ -8,6 +8,7 @@ import { CustomTabs } from '@alga-psa/ui/components/CustomTabs';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { formatCurrency } from '@alga-psa/core';
 import { formatDateOnly } from '@alga-psa/core';
 import { ColumnDefinition } from '@alga-psa/types';
@@ -286,6 +287,7 @@ const CreditManagement: React.FC = () => {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { t } = useTranslation('msp/credits');
+  const { money } = useCurrencyFormat();
   const columns = createColumns(t);
   const tabParam = searchParams?.get('creditTab');
 
@@ -562,7 +564,7 @@ const CreditManagement: React.FC = () => {
                 >
                   <CartesianGrid strokeDasharray="3 3" />
                   <XAxis dataKey="month" />
-                  <YAxis tickFormatter={(value) => `$${value}`} />
+                  <YAxis tickFormatter={(value) => money(Math.round(Number(value) * 100))} />
                   <Tooltip formatter={(value) => formatCurrency(value as number)} />
                   <Legend />
                   <Bar

@@ -5,6 +5,7 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 
 interface EditPlanServiceQuantityDialogProps {
   isOpen: boolean;
@@ -29,6 +30,7 @@ export const EditPlanServiceQuantityDialog: React.FC<EditPlanServiceQuantityDial
   onSave
 }) => {
   const { t } = useTranslation('msp/contract-lines');
+  const { symbol } = useCurrencyFormat();
   const [quantity, setQuantity] = useState<number>(currentQuantity);
   const [rateInput, setRateInput] = useState<string>('');
   const [saving, setSaving] = useState(false);
@@ -111,7 +113,7 @@ export const EditPlanServiceQuantityDialog: React.FC<EditPlanServiceQuantityDial
                 </label>
                 <div className="relative">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
-                    {currencySymbol ?? '$'}
+                    {currencySymbol ?? symbol()}
                   </span>
                   <Input
                     id="service-rate-input"

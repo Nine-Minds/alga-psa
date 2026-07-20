@@ -12,7 +12,7 @@ import type { IProjectBillingConfig, IProjectPhase } from '@alga-psa/types';
 import type {
   ProjectBillingRollup,
   ScheduleEntryView,
-} from '../../actions/projectBillingConfigActions';
+} from '@alga-psa/types';
 import {
   approveScheduleEntry,
   approveAndInvoiceNow,

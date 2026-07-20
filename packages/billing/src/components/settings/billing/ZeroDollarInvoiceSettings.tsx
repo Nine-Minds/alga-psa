@@ -34,7 +34,9 @@ const ZeroDollarInvoiceSettings = (): React.JSX.Element => {
         ...settings,
         zeroDollarInvoiceHandling: value as 'normal' | 'finalized',
       };
-      const result = await updateDefaultBillingSettings(newSettings);
+      const result = await updateDefaultBillingSettings({
+        zeroDollarInvoiceHandling: newSettings.zeroDollarInvoiceHandling,
+      });
       if (isActionPermissionError(result)) {
         handleError(result.permissionError);
         return;
@@ -56,7 +58,7 @@ const ZeroDollarInvoiceSettings = (): React.JSX.Element => {
         ...settings,
         suppressZeroDollarInvoices: checked,
       };
-      const result = await updateDefaultBillingSettings(newSettings);
+      const result = await updateDefaultBillingSettings({ suppressZeroDollarInvoices: checked });
       if (isActionPermissionError(result)) {
         handleError(result.permissionError);
         return;

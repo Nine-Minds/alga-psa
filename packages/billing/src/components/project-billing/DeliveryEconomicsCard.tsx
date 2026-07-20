@@ -2,7 +2,7 @@
 
 import { useTranslation } from 'react-i18next';
 import { Card } from '@alga-psa/ui/components/Card';
-import type { ProjectBillingEconomics } from '../../actions/projectBillingConfigActions';
+import type { ProjectBillingEconomics } from '@alga-psa/types';
 import type { ProjectBillingModel } from '@alga-psa/types';
 import { formatCents } from './billingViewHelpers';
 
@@ -73,7 +73,7 @@ export default function DeliveryEconomicsCard({ economics, currency, billingMode
         <p className="mt-2 text-xs text-amber-700 dark:text-amber-300">
           {t(
             'billing.economics.uncostedHours',
-            '{{hours}} logged hours have no effective employee or default cost rate and contribute $0 to labor cost.',
+            '{{hours}} logged hours have no effective employee or default cost rate and contribute nothing to labor cost.',
             { hours: economics.uncosted_hours.toFixed(1) },
           )}
         </p>

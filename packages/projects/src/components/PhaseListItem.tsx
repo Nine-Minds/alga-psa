@@ -12,6 +12,7 @@ import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { ProjectTaskStatusSettings } from './settings/projects/ProjectTaskStatusSettings';
 import { getProjectStatusMappings } from '../actions/projectTaskStatusActions';
 import { phaseBadgeClasses, formatCents, type PhaseBillingBadge } from '@alga-psa/core';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import styles from './ProjectDetail.module.css';
 
 interface PhaseListItemProps {
@@ -87,6 +88,7 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
   onReopen,
 }) => {
   const { t } = useTranslation('features/projects');
+  const { symbol } = useCurrencyFormat();
   const isCompleted = Boolean(phase.completed_at);
   const showCompletionNudge = !isCompleted && Boolean(allTasksClosed) && (taskCount ?? 0) > 0;
   const [isDragging, setIsDragging] = useState(false);
@@ -399,7 +401,7 @@ export const PhaseListItem: React.FC<PhaseListItemProps> = ({
                       className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold ${phaseBadgeClasses(billingBadge.status)}`}
                       aria-label={t('billing.phaseBadge.label', 'Billing milestone')}
                     >
-                      $
+                      {symbol(billingBadge.currency ?? undefined)}
                     </span>
                   </Tooltip>
                 )}

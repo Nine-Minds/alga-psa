@@ -32,6 +32,7 @@ import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions
 import { getTeamAvatarUrlsBatchAction } from '@alga-psa/teams/actions';
 import { highlightSearchMatch } from '../lib/searchUtils';
 import { useTranslation } from 'react-i18next';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { useTaskSelection } from './TaskSelectionContext';
 
@@ -283,6 +284,7 @@ export default function TaskListView({
   searchCaseSensitive = false
 }: TaskListViewProps) {
   const { t } = useTranslation(['features/projects', 'common']);
+  const { symbol } = useCurrencyFormat();
   const { isSelected, toggleTask, setTasksSelected, selectedTaskIds } = useTaskSelection();
   const [expandedPhases, setExpandedPhases] = useState<Set<string>>(new Set());
   const [expandedStatuses, setExpandedStatuses] = useState<Set<string>>(new Set());
@@ -1423,7 +1425,7 @@ export default function TaskListView({
                                 </span>
                                 {phaseBillingBadges?.[phaseGroup.phase.phase_id] && (
                                   <Tooltip content={formatCents(phaseBillingBadges[phaseGroup.phase.phase_id].amountCents, phaseBillingBadges[phaseGroup.phase.phase_id].currency)}>
-                                    <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold ${phaseBadgeClasses(phaseBillingBadges[phaseGroup.phase.phase_id].status)}`}>$</span>
+                                    <span className={`inline-flex items-center rounded px-1.5 py-0.5 text-[10px] font-bold ${phaseBadgeClasses(phaseBillingBadges[phaseGroup.phase.phase_id].status)}`}>{symbol()}</span>
                                   </Tooltip>
                                 )}
                                 {phaseGroup.phase.completed_at && (

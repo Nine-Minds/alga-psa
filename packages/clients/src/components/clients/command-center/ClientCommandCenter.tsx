@@ -34,6 +34,7 @@ import {
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 
 type TFn = (key: string, options?: Record<string, unknown>) => string;
 
@@ -177,6 +178,7 @@ export default function ClientCommandCenter({
     return target ? () => openFocus(target) : null;
   }, [resolveTab, openFocus]);
 
+  const { money } = useCurrencyFormat();
   const currencyCode = pulse?.money?.currencyCode ?? 'USD';
   const formatMoney = useCallback((cents: number) => {
     try {
@@ -186,9 +188,9 @@ export default function ClientCommandCenter({
         maximumFractionDigits: cents % 100 === 0 ? 0 : 2,
       }).format(cents / 100);
     } catch {
-      return `$${(cents / 100).toFixed(2)}`;
+      return money(cents);
     }
-  }, [currencyCode]);
+  }, [currencyCode, money]);
 
   const navigateToRef = useCallback((refType: string, refId: string) => {
     switch (refType) {

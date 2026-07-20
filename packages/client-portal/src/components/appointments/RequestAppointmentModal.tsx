@@ -10,6 +10,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { AlertCircle, CheckCircle2, Calendar as CalendarIcon, Clock, User, FileText } from 'lucide-react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { format } from 'date-fns';
 import { WizardProgress } from '@alga-psa/ui/components/onboarding/WizardProgress';
@@ -79,6 +80,7 @@ export function RequestAppointmentModal({
 }: RequestAppointmentModalProps) {
   const { t } = useTranslation('features/appointments');
   const { t: tCommon } = useTranslation('common');
+  const { money } = useCurrencyFormat();
   const isEditMode = !!editingAppointment;
 
   const STEP_LABELS = useMemo(
@@ -489,7 +491,7 @@ export function RequestAppointmentModal({
                       <div className="flex items-center gap-2">
                         <Badge variant="primary">{selectedService.service_type}</Badge>
                         {selectedService.default_rate && (
-                          <span>${selectedService.default_rate}/{selectedService.unit_of_measure || 'hour'}</span>
+                          <span>{money(Number(selectedService.default_rate))}/{selectedService.unit_of_measure || 'hour'}</span>
                         )}
                       </div>
                     )}
