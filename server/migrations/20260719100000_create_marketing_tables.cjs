@@ -1,3 +1,8 @@
+// marketing_engagements is deliberately NOT distributed: it cascades from
+// interactions, which is a plain (coordinator-local) table on Citus, and a
+// distributed table cannot reference a local one. As a local table it may
+// reference both interactions (local -> local) and the distributed marketing
+// tables (local -> distributed, same shape as interactions -> opportunities).
 const MARKETING_TABLES = [
   'marketing_campaigns',
   'marketing_content',
@@ -10,7 +15,6 @@ const MARKETING_TABLES = [
   'marketing_sequence_enrollments',
   'marketing_contact_state',
   'marketing_suppressions',
-  'marketing_engagements',
 ];
 
 async function hasCitus(knex) {
@@ -30,6 +34,24 @@ async function distributeMarketingTables(knex) {
       [table],
     );
   }
+}
+
+// Composite (tenant, X) FKs must never use bare ON DELETE SET NULL: Postgres
+// nulls EVERY referencing column, including tenant, silently stripping
+// tenancy (see 20260611150000_fix_tenant_nulling_foreign_keys.cjs). PG 15+
+// on plain Postgres gets the column-targeted SET NULL (X); Citus refuses
+// SET NULL when the distribution key is part of the FK, so there the FK
+// degrades to NO ACTION and unlinking stays app-level.
+async function addUnlinkOnDeleteFk(knex, table, column, refTable, refColumn) {
+  const versionRow = await knex.raw("SELECT current_setting('server_version_num')::int AS v");
+  const columnTargeted = versionRow.rows[0].v >= 150000 && !(await hasCitus(knex));
+  const action = columnTargeted ? ` ON DELETE SET NULL (${column})` : '';
+  await knex.raw(`
+    ALTER TABLE ${table}
+    ADD CONSTRAINT ${table}_tenant_${column}_foreign
+    FOREIGN KEY (tenant, ${column})
+    REFERENCES ${refTable} (tenant, ${refColumn})${action}
+  `);
 }
 
 /**
@@ -298,24 +320,24 @@ exports.up = async function up(knex) {
   });
   await knex.schema.alterTable('marketing_content', (table) => {
     table.foreign('tenant').references('tenants.tenant');
-    table.foreign(['tenant', 'campaign_id']).references(['tenant', 'campaign_id']).inTable('marketing_campaigns').onDelete('SET NULL');
     table.foreign(['tenant', 'created_by']).references(['tenant', 'user_id']).inTable('users');
   });
+  await addUnlinkOnDeleteFk(knex, 'marketing_content', 'campaign_id', 'marketing_campaigns', 'campaign_id');
   await knex.schema.alterTable('marketing_channels', (table) => {
     table.foreign('tenant').references('tenants.tenant');
     table.foreign(['tenant', 'created_by']).references(['tenant', 'user_id']).inTable('users');
   });
   await knex.schema.alterTable('marketing_capture_forms', (table) => {
     table.foreign('tenant').references('tenants.tenant');
-    table.foreign(['tenant', 'campaign_id']).references(['tenant', 'campaign_id']).inTable('marketing_campaigns').onDelete('SET NULL');
     table.foreign(['tenant', 'created_by']).references(['tenant', 'user_id']).inTable('users');
   });
+  await addUnlinkOnDeleteFk(knex, 'marketing_capture_forms', 'campaign_id', 'marketing_campaigns', 'campaign_id');
   await knex.schema.alterTable('social_posts', (table) => {
     table.foreign('tenant').references('tenants.tenant');
     table.foreign(['tenant', 'content_id']).references(['tenant', 'content_id']).inTable('marketing_content');
-    table.foreign(['tenant', 'campaign_id']).references(['tenant', 'campaign_id']).inTable('marketing_campaigns').onDelete('SET NULL');
     table.foreign(['tenant', 'created_by']).references(['tenant', 'user_id']).inTable('users');
   });
+  await addUnlinkOnDeleteFk(knex, 'social_posts', 'campaign_id', 'marketing_campaigns', 'campaign_id');
   await knex.schema.alterTable('social_post_targets', (table) => {
     table.foreign('tenant').references('tenants.tenant');
     table.foreign(['tenant', 'post_id']).references(['tenant', 'post_id']).inTable('social_posts').onDelete('CASCADE');
@@ -342,16 +364,16 @@ exports.up = async function up(knex) {
   });
   await knex.schema.alterTable('marketing_suppressions', (table) => {
     table.foreign('tenant').references('tenants.tenant');
-    table.foreign(['tenant', 'contact_id']).references(['tenant', 'contact_name_id']).inTable('contacts').onDelete('SET NULL');
   });
+  await addUnlinkOnDeleteFk(knex, 'marketing_suppressions', 'contact_id', 'contacts', 'contact_name_id');
   await knex.schema.alterTable('marketing_engagements', (table) => {
     table.foreign('tenant').references('tenants.tenant');
     table.foreign(['tenant', 'interaction_id']).references(['tenant', 'interaction_id']).inTable('interactions').onDelete('CASCADE');
-    table.foreign(['tenant', 'campaign_id']).references(['tenant', 'campaign_id']).inTable('marketing_campaigns').onDelete('SET NULL');
-    table.foreign(['tenant', 'content_id']).references(['tenant', 'content_id']).inTable('marketing_content').onDelete('SET NULL');
-    table.foreign(['tenant', 'post_id']).references(['tenant', 'post_id']).inTable('social_posts').onDelete('SET NULL');
-    table.foreign(['tenant', 'step_id']).references(['tenant', 'step_id']).inTable('marketing_sequence_steps').onDelete('SET NULL');
   });
+  await addUnlinkOnDeleteFk(knex, 'marketing_engagements', 'campaign_id', 'marketing_campaigns', 'campaign_id');
+  await addUnlinkOnDeleteFk(knex, 'marketing_engagements', 'content_id', 'marketing_content', 'content_id');
+  await addUnlinkOnDeleteFk(knex, 'marketing_engagements', 'post_id', 'social_posts', 'post_id');
+  await addUnlinkOnDeleteFk(knex, 'marketing_engagements', 'step_id', 'marketing_sequence_steps', 'step_id');
 };
 
 /**

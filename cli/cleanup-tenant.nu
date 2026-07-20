@@ -453,6 +453,13 @@ def "main cleanup" [
         # Contract Lines
         "contract_lines" "payment_methods"
         
+        # Marketing module (children first; campaigns/channels last)
+        "marketing_sequence_sends" "marketing_engagements" "social_post_targets"
+        "social_posts" "marketing_sequence_enrollments" "marketing_sequence_steps"
+        "marketing_sequences" "marketing_capture_forms" "marketing_content"
+        "marketing_contact_state" "marketing_suppressions" "marketing_channels"
+        "marketing_campaigns"
+
         # Interactions must come BEFORE tickets (tickets reference interactions in some cases)
         "interactions" "interaction_types"
         

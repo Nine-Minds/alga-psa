@@ -93,11 +93,21 @@ exports.up = async function up(knex) {
     ON marketing_engagements (tenant, step_id)
   `);
 
-  // N7 — sequences can belong to a campaign.
+  // N7 — sequences can belong to a campaign. Bare composite SET NULL would
+  // null tenant too; PG 15+ plain Postgres gets the column-targeted form,
+  // Citus (which refuses SET NULL over the distribution key) gets NO ACTION
+  // (see 20260611150000_fix_tenant_nulling_foreign_keys.cjs).
   await knex.schema.alterTable('marketing_sequences', (table) => {
     table.uuid('campaign_id').nullable();
-    table.foreign(['tenant', 'campaign_id']).references(['tenant', 'campaign_id']).inTable('marketing_campaigns').onDelete('SET NULL');
   });
+  const versionRow = await knex.raw("SELECT current_setting('server_version_num')::int AS v");
+  const columnTargeted = versionRow.rows[0].v >= 150000 && !(await hasCitus(knex));
+  await knex.raw(`
+    ALTER TABLE marketing_sequences
+    ADD CONSTRAINT marketing_sequences_tenant_campaign_id_foreign
+    FOREIGN KEY (tenant, campaign_id)
+    REFERENCES marketing_campaigns (tenant, campaign_id)${columnTargeted ? ' ON DELETE SET NULL (campaign_id)' : ''}
+  `);
   await knex.raw(`
     CREATE INDEX idx_marketing_sequences_tenant_campaign
     ON marketing_sequences (tenant, campaign_id)

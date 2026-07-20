@@ -71,6 +71,15 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'workflow_data_store', 'workflow_entity_links',
   'workflow_runs', 'tenant_workflow_schedule', 'workflow_definitions',
 
+  // === Marketing module (children first; campaigns/channels last).
+  // Engagements cascade from interactions, but the whole module block sits
+  // ahead of interactions/contacts/users, which its NO ACTION FKs reference.
+  'marketing_sequence_sends', 'marketing_engagements', 'social_post_targets',
+  'social_posts', 'marketing_sequence_enrollments', 'marketing_sequence_steps',
+  'marketing_sequences', 'marketing_capture_forms', 'marketing_content',
+  'marketing_contact_state', 'marketing_suppressions', 'marketing_channels',
+  'marketing_campaigns',
+
   // Interactions reference opportunities, while opportunities can reference
   // converted contracts. Keep the complete sales chain child-first here.
   'interactions', 'interaction_types',
