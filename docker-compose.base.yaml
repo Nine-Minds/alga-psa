@@ -104,6 +104,46 @@ secrets:
     file: ./secrets/ninjaone_client_secret
 
 services:
+  ai-gateway:
+    build:
+      context: .
+      dockerfile: services/ai-gateway/Dockerfile
+    environment:
+      NODE_ENV: ${APP_ENV:-development}
+      PORT: 8080
+      AI_GATEWAY_DATABASE_URL: ${AI_GATEWAY_DATABASE_URL:-}
+      AI_GATEWAY_DB_HOST: ${AI_GATEWAY_DB_HOST:-ai-gateway-postgres}
+      AI_GATEWAY_DB_PORT: ${AI_GATEWAY_DB_PORT:-5432}
+      AI_GATEWAY_DB_NAME: ${AI_GATEWAY_DB_NAME:-ai_gateway}
+      AI_GATEWAY_DB_USER: ${AI_GATEWAY_DB_USER:-postgres}
+      AI_GATEWAY_DB_PASSWORD_FILE: /run/secrets/postgres_password
+      AI_GATEWAY_DEFAULT_INPUT_CREDITS_PER_1K_TOKENS: ${AI_GATEWAY_DEFAULT_INPUT_CREDITS_PER_1K_TOKENS:-}
+      AI_GATEWAY_DEFAULT_OUTPUT_CREDITS_PER_1K_TOKENS: ${AI_GATEWAY_DEFAULT_OUTPUT_CREDITS_PER_1K_TOKENS:-}
+    secrets:
+      - postgres_password
+    ports:
+      - "${EXPOSE_AI_GATEWAY_PORT:-8081}:8080"
+    networks:
+      - app-network
+    depends_on:
+      ai-gateway-postgres:
+        condition: service_started
+
+  ai-gateway-postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ai_gateway
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD_FILE: /run/secrets/postgres_password
+    secrets:
+      - postgres_password
+    ports:
+      - "${EXPOSE_AI_GATEWAY_DB_PORT:-5433}:5432"
+    volumes:
+      - ai-gateway-postgres-data:/var/lib/postgresql/data
+    networks:
+      - app-network
+
   postgres: # Renamed from postgres-base
     image: ankane/pgvector:latest
     #container_name: ${APP_NAME:-sebastian}_postgres
@@ -150,3 +190,6 @@ services:
 networks:
   app-network:
     driver: bridge
+
+volumes:
+  ai-gateway-postgres-data:
