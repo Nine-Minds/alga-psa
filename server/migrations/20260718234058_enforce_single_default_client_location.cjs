@@ -4,8 +4,17 @@ exports.up = async function up(knex) {
   // coordinator's local heap. They are invisible to all Citus-planned queries
   // (including the dedupe UPDATEs below) but CREATE INDEX still scans them, so
   // stale duplicates fail the unique index build. Truncate the leftover local
-  // data first; this cascades to local heaps of FK-referencing tables and never
-  // touches distributed (shard) data.
+  // data first.
+  //
+  // ⚠️ UNSAFE PATTERN — do not copy into new migrations.
+  // truncate_local_data_after_distributing_table() issues a TRUNCATE that
+  // CASCADEs across the whole FK graph. It is NOT harmless: while distributed
+  // tables in the cascade only lose stranded coordinator-local rows (shard
+  // data is untouched), any NON-distributed table in the recursive FK closure
+  // loses ALL of its data — a local table's coordinator heap is its only copy.
+  // Before ever calling this again, walk the FK closure (pg_constraint) and
+  // abort unless every member is distributed (pg_dist_partition). Retained as
+  // history, not as an example.
   const citusInstalled = await knex.raw(
     "SELECT to_regclass('pg_catalog.pg_dist_partition') IS NOT NULL AS has_citus"
   );
