@@ -6,6 +6,12 @@ import { toAiCreditsError } from '../../../../../../ee/server/src/lib/aiGateway/
 import { AiCreditsError } from '../../../../../../ee/server/src/lib/aiGateway/types';
 
 const fetchMock = vi.fn<typeof fetch>();
+const licensingMocks = vi.hoisted(() => ({
+  getLicenseStateRow: vi.fn(),
+  isSelfHostLicensing: vi.fn(),
+}));
+
+vi.mock('@alga-psa/licensing', () => licensingMocks);
 
 const accountSummary = {
   subscriptionStatus: 'active' as const,
@@ -27,6 +33,10 @@ describe('AI gateway client', () => {
   beforeEach(() => {
     vi.resetModules();
     fetchMock.mockReset();
+    licensingMocks.getLicenseStateRow.mockReset();
+    licensingMocks.isSelfHostLicensing.mockReset();
+    licensingMocks.getLicenseStateRow.mockResolvedValue(null);
+    licensingMocks.isSelfHostLicensing.mockResolvedValue(false);
     vi.stubGlobal('fetch', fetchMock);
     process.env.AI_GATEWAY_URL = 'https://gateway.example.test/';
     process.env.AI_GATEWAY_SERVICE_SECRET = 'gateway-test-secret';
@@ -43,8 +53,11 @@ describe('AI gateway client', () => {
     expect(Object.keys(client).sort()).toEqual([
       'aiGatewayFetchAccount',
       'aiGatewayFetchUsage',
+      'aiGatewayGrantConsent',
+      'aiGatewayRevokeConsent',
       'aiGatewaySetAutoTopup',
       'mintGatewayToken',
+      'resolveGatewayAuthToken',
     ]);
   });
 
@@ -62,6 +75,46 @@ describe('AI gateway client', () => {
     expect(decoded.exp! - decoded.iat!).toBe(300);
     expect(decoded.jti).toBeTypeOf('string');
     expect(second).not.toBe(first);
+  });
+
+  it('resolves a hosted gateway token as a tenant JWT', async () => {
+    const { resolveGatewayAuthToken } = await import(
+      '../../../../../../ee/server/src/lib/aiGateway/client'
+    );
+
+    const token = await resolveGatewayAuthToken('tenant-hosted');
+    const decoded = jwt.verify(token, 'gateway-test-secret', {
+      algorithms: ['HS256'],
+    }) as jwt.JwtPayload;
+
+    expect(decoded.tenant_id).toBe('tenant-hosted');
+    expect(licensingMocks.getLicenseStateRow).not.toHaveBeenCalled();
+  });
+
+  it('resolves the opaque appliance credential for a self-hosted install', async () => {
+    licensingMocks.isSelfHostLicensing.mockResolvedValue(true);
+    licensingMocks.getLicenseStateRow.mockResolvedValue({
+      appliance_credential: 'a'.repeat(64),
+    });
+    const { resolveGatewayAuthToken } = await import(
+      '../../../../../../ee/server/src/lib/aiGateway/client'
+    );
+
+    await expect(resolveGatewayAuthToken('tenant-appliance')).resolves.toBe('a'.repeat(64));
+  });
+
+  it('rejects a self-hosted install without an appliance credential', async () => {
+    licensingMocks.isSelfHostLicensing.mockResolvedValue(true);
+    licensingMocks.getLicenseStateRow.mockResolvedValue({
+      appliance_credential: null,
+    });
+    const { resolveGatewayAuthToken } = await import(
+      '../../../../../../ee/server/src/lib/aiGateway/client'
+    );
+
+    await expect(resolveGatewayAuthToken('tenant-appliance')).rejects.toThrow(
+      'AI gateway authentication requires an appliance credential',
+    );
   });
 
   it('fetches the account with a bearer tenant token', async () => {
@@ -113,6 +166,30 @@ describe('AI gateway client', () => {
       }),
       headers: expect.objectContaining({ 'Content-Type': 'application/json' }),
     });
+  });
+
+  it('grants and revokes appliance consent through the gateway', async () => {
+    fetchMock
+      .mockResolvedValueOnce(new Response(null, { status: 204 }))
+      .mockResolvedValueOnce(new Response(null, { status: 204 }));
+    const {
+      aiGatewayGrantConsent,
+      aiGatewayRevokeConsent,
+    } = await import('../../../../../../ee/server/src/lib/aiGateway/client');
+
+    await aiGatewayGrantConsent('tenant-consent', 'admin@example.test', '2026-07');
+    await aiGatewayRevokeConsent('tenant-consent');
+
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('https://gateway.example.test/v1/consent');
+    expect(fetchMock.mock.calls[0]?.[1]).toMatchObject({
+      method: 'POST',
+      body: JSON.stringify({
+        grantedBy: 'admin@example.test',
+        termsVersion: '2026-07',
+      }),
+    });
+    expect(fetchMock.mock.calls[1]?.[0]).toBe('https://gateway.example.test/v1/consent');
+    expect(fetchMock.mock.calls[1]?.[1]).toMatchObject({ method: 'DELETE' });
   });
 
   it('maps a gateway HTTP 402 body to AiCreditsError', async () => {

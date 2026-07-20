@@ -1,0 +1,40 @@
+/**
+ * CE stub of the frozen AI gateway contract types.
+ *
+ * The authoritative definitions live in
+ * `ee/server/src/lib/aiGateway/types.ts` and are used at EE build/runtime via
+ * the `@ee` webpack alias. In Community Edition builds `@ee` resolves to
+ * `packages/ee/src`, so this file supplies the same type shapes to CE-tree
+ * components (e.g. the appliance AI section on the licenses page) for
+ * type-checking. Keep the subset used by the UI in sync with the frozen
+ * contract; changing the contract requires touching both files deliberately.
+ */
+
+export type AiSubscriptionStatus =
+  | 'none'
+  | 'active'
+  | 'trialing'
+  | 'past_due'
+  | 'canceled'
+  | 'unpaid';
+
+/** GET /v1/account */
+export interface AiAccountSummary {
+  subscriptionStatus: AiSubscriptionStatus;
+  /** Monthly allotment bucket; may be negative while in grace. */
+  includedBalanceCredits: number;
+  /** Purchased top-up bucket; persists across cycles. */
+  topupBalanceCredits: number;
+  graceLimitCredits: number;
+  /** includedBalance + topupBalance (may be negative while in grace). */
+  totalBalanceCredits: number;
+  lowBalance: boolean;
+  cycleStartedAt: string | null; // ISO 8601
+  autoTopup: {
+    enabled: boolean;
+    thresholdCredits: number | null;
+    packPriceId: string | null;
+  };
+  /** Appliance accounts only; hosted accounts always report 'granted'. */
+  consentStatus: 'granted' | 'revoked' | 'missing';
+}

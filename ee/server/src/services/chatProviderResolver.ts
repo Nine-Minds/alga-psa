@@ -2,7 +2,8 @@ import OpenAI from 'openai';
 import { GoogleAuth } from 'google-auth-library';
 
 import { getSecret } from '@alga-psa/core/secrets';
-import { mintGatewayToken } from '../lib/aiGateway/client';
+import { isSelfHostLicensing } from '@alga-psa/licensing';
+import { resolveGatewayAuthToken } from '../lib/aiGateway/client';
 import { isAiUsageBillingEnabled } from '../lib/aiGateway/rollout';
 import type { AiFeature } from '../lib/aiGateway/types';
 
@@ -224,7 +225,7 @@ const resolveGatewayProvider = async (
       (await readSecret('OPENROUTER_CHAT_MODEL')) ??
       OPENROUTER_DEFAULT_MODEL,
     client: new OpenAI({
-      apiKey: mintGatewayToken(normalizedTenantId),
+      apiKey: await resolveGatewayAuthToken(normalizedTenantId),
       baseURL: `${gatewayUrl.replace(/\/+$/, '')}/v1`,
       defaultHeaders: featureHeaders(feature),
     }),
@@ -246,7 +247,8 @@ export async function resolveChatProvider(
     if (!normalizedTenantId) {
       throw new Error('AI gateway provider requires a tenant id');
     }
-    if (await isAiUsageBillingEnabled(normalizedTenantId)) {
+    const selfHosted = await isSelfHostLicensing();
+    if (selfHosted || (await isAiUsageBillingEnabled(normalizedTenantId))) {
       return resolveGatewayProvider(gatewayUrl, normalizedTenantId, feature);
     }
     // Tenant not in the ai-usage-billing rollout: legacy direct-provider path.

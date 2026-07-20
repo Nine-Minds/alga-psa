@@ -4,6 +4,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 const openAiConfigs = vi.hoisted(() => [] as Array<Record<string, unknown>>);
 const getSecretMock = vi.hoisted(() => vi.fn());
 const googleAccessTokenState = vi.hoisted(() => ({ token: 'adc-token' as string | undefined }));
+const licensingMocks = vi.hoisted(() => ({
+  getLicenseStateRow: vi.fn(),
+  isSelfHostLicensing: vi.fn(),
+}));
 
 vi.mock('openai', () => {
   class OpenAI {
@@ -24,6 +28,8 @@ vi.mock('openai', () => {
 vi.mock('@alga-psa/core/secrets', () => ({
   getSecret: getSecretMock,
 }));
+
+vi.mock('@alga-psa/licensing', () => licensingMocks);
 
 vi.mock('google-auth-library', () => ({
   GoogleAuth: class {
@@ -90,6 +96,10 @@ describe('resolveChatProvider()', () => {
     vi.resetModules();
     getSecretMock.mockReset();
     openAiConfigs.splice(0, openAiConfigs.length);
+    licensingMocks.getLicenseStateRow.mockReset();
+    licensingMocks.isSelfHostLicensing.mockReset();
+    licensingMocks.getLicenseStateRow.mockResolvedValue(null);
+    licensingMocks.isSelfHostLicensing.mockResolvedValue(false);
     resetManagedEnv();
     googleAccessTokenState.token = 'adc-token';
   });
@@ -370,6 +380,28 @@ describe('resolveChatProvider()', () => {
     });
     expect(decoded.tenant_id).toBe('tenant-gateway');
     expect(secondConfig?.apiKey).not.toBe(firstConfig?.apiKey);
+  });
+
+  it('routes a self-hosted install through the gateway without the rollout flag', async () => {
+    process.env.AI_GATEWAY_URL = 'https://gateway.example.test/';
+    licensingMocks.isSelfHostLicensing.mockResolvedValue(true);
+    licensingMocks.getLicenseStateRow.mockResolvedValue({
+      appliance_credential: 'b'.repeat(64),
+    });
+    setSecrets({ AI_GATEWAY_MODEL: 'gateway/appliance-model' });
+
+    const { resolveChatProvider } = await import('@ee/services/chatProviderResolver');
+    const provider = await resolveChatProvider('tenant-appliance', 'chat');
+
+    expect(provider.providerId).toBe('gateway');
+    expect(provider.model).toBe('gateway/appliance-model');
+    expect(openAiConfigs.at(-1)).toMatchObject({
+      apiKey: 'b'.repeat(64),
+      baseURL: 'https://gateway.example.test/v1',
+      defaultHeaders: {
+        'X-Alga-AI-Feature': 'chat',
+      },
+    });
   });
 
   it('falls back to the legacy provider when the tenant is not in the rollout', async () => {

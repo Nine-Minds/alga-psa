@@ -1,6 +1,10 @@
 import { randomUUID } from 'node:crypto';
 import jwt from 'jsonwebtoken';
 
+import {
+  getLicenseStateRow,
+  isSelfHostLicensing,
+} from '@alga-psa/licensing';
 import { toAiCreditsError } from './errors';
 import {
   type AiAccountSummary,
@@ -41,11 +45,12 @@ async function gatewayRequest<T>(
   path: string,
   init?: RequestInit,
 ): Promise<T> {
+  const authToken = await resolveGatewayAuthToken(tenantId);
   const response = await fetch(`${gatewayBaseUrl()}${path}`, {
     ...init,
     headers: {
       Accept: 'application/json',
-      Authorization: `Bearer ${mintGatewayToken(tenantId)}`,
+      Authorization: `Bearer ${authToken}`,
       ...(init?.body === undefined ? {} : { 'Content-Type': 'application/json' }),
       ...(init?.headers ?? {}),
     },
@@ -83,6 +88,21 @@ export function mintGatewayToken(tenantId: string): string {
   );
 }
 
+export async function resolveGatewayAuthToken(tenantId: string): Promise<string> {
+  if (!(await isSelfHostLicensing())) {
+    return mintGatewayToken(tenantId);
+  }
+
+  const licenseState = await getLicenseStateRow();
+  const applianceCredential = licenseState?.appliance_credential?.trim();
+  if (!applianceCredential) {
+    throw new Error(
+      'AI gateway authentication requires an appliance credential on self-hosted installs',
+    );
+  }
+  return applianceCredential;
+}
+
 export async function aiGatewayFetchAccount(tenantId: string): Promise<AiAccountSummary> {
   return gatewayRequest<AiAccountSummary>(tenantId, '/v1/account');
 }
@@ -108,5 +128,40 @@ export async function aiGatewaySetAutoTopup(
   return gatewayRequest<AiAccountSummary>(tenantId, '/v1/account/auto-topup', {
     method: 'POST',
     body: JSON.stringify(settings),
+  });
+}
+
+export async function aiGatewayGrantConsent(
+  tenantId: string,
+  grantedBy: string,
+  termsVersion: string,
+): Promise<void> {
+  if (typeof grantedBy !== 'string') {
+    throw new Error('grantedBy is required to grant AI consent');
+  }
+  if (typeof termsVersion !== 'string') {
+    throw new Error('termsVersion is required to grant AI consent');
+  }
+  const normalizedGrantedBy = grantedBy.trim();
+  const normalizedTermsVersion = termsVersion.trim();
+  if (!normalizedGrantedBy) {
+    throw new Error('grantedBy is required to grant AI consent');
+  }
+  if (!normalizedTermsVersion) {
+    throw new Error('termsVersion is required to grant AI consent');
+  }
+
+  await gatewayRequest(tenantId, '/v1/consent', {
+    method: 'POST',
+    body: JSON.stringify({
+      grantedBy: normalizedGrantedBy,
+      termsVersion: normalizedTermsVersion,
+    }),
+  });
+}
+
+export async function aiGatewayRevokeConsent(tenantId: string): Promise<void> {
+  await gatewayRequest(tenantId, '/v1/consent', {
+    method: 'DELETE',
   });
 }

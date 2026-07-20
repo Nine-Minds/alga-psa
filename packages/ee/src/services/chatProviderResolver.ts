@@ -2,11 +2,12 @@ import OpenAI from 'openai';
 import { GoogleAuth } from 'google-auth-library';
 
 import { getSecret } from '@alga-psa/core/secrets';
+import { isSelfHostLicensing } from '@alga-psa/licensing';
 // LEVERAGE: friction duplicated-chat-provider-resolver — this file duplicates
 // ee/server/src/services/chatProviderResolver.ts (and now deep-imports the
 // aiGateway client across package boundaries); the resolver + gateway client
 // belong in one shared package consumed by both.
-import { mintGatewayToken } from '../../../../ee/server/src/lib/aiGateway/client';
+import { resolveGatewayAuthToken } from '../../../../ee/server/src/lib/aiGateway/client';
 import type { AiFeature } from '../../../../ee/server/src/lib/aiGateway/types';
 import { isAiUsageBillingEnabled } from './aiGatewayRollout';
 
@@ -186,7 +187,7 @@ const resolveGatewayProvider = async (
       (await readSecret('OPENROUTER_CHAT_MODEL')) ??
       OPENROUTER_DEFAULT_MODEL,
     client: new OpenAI({
-      apiKey: mintGatewayToken(normalizedTenantId),
+      apiKey: await resolveGatewayAuthToken(normalizedTenantId),
       baseURL: `${gatewayUrl.replace(/\/+$/, '')}/v1`,
       defaultHeaders: featureHeaders(feature),
     }),
@@ -208,7 +209,8 @@ export async function resolveChatProvider(
     if (!normalizedTenantId) {
       throw new Error('AI gateway provider requires a tenant id');
     }
-    if (await isAiUsageBillingEnabled(normalizedTenantId)) {
+    const selfHosted = await isSelfHostLicensing();
+    if (selfHosted || (await isAiUsageBillingEnabled(normalizedTenantId))) {
       return resolveGatewayProvider(gatewayUrl, normalizedTenantId, feature);
     }
     // Tenant not in the ai-usage-billing rollout: legacy direct-provider path.
