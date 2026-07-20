@@ -3,6 +3,7 @@ import { GoogleAuth } from 'google-auth-library';
 
 import { getSecret } from '@alga-psa/core/secrets';
 import { mintGatewayToken } from '../lib/aiGateway/client';
+import { isAiUsageBillingEnabled } from '../lib/aiGateway/rollout';
 import type { AiFeature } from '../lib/aiGateway/types';
 
 const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';
@@ -241,7 +242,14 @@ export async function resolveChatProvider(
   const gatewayUrl = trimString(process.env.AI_GATEWAY_URL);
   const gatewayBypassed = process.env.AI_GATEWAY_BYPASS === 'true';
   if (!providerOverride && gatewayUrl && !gatewayBypassed) {
-    return resolveGatewayProvider(gatewayUrl, tenantId, feature);
+    const normalizedTenantId = trimString(tenantId);
+    if (!normalizedTenantId) {
+      throw new Error('AI gateway provider requires a tenant id');
+    }
+    if (await isAiUsageBillingEnabled(normalizedTenantId)) {
+      return resolveGatewayProvider(gatewayUrl, normalizedTenantId, feature);
+    }
+    // Tenant not in the ai-usage-billing rollout: legacy direct-provider path.
   }
 
   let providerId = normalizeProvider(providerOverride ?? process.env.AI_CHAT_PROVIDER);

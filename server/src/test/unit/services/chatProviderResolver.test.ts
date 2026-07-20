@@ -44,6 +44,7 @@ const MANAGED_ENV_KEYS = [
   'AI_CHAT_PROVIDER',
   'AI_GATEWAY_BYPASS',
   'AI_GATEWAY_MODEL',
+  'AI_GATEWAY_ROLLOUT_ALL',
   'AI_GATEWAY_SERVICE_SECRET',
   'AI_GATEWAY_URL',
   'GOOGLE_CLOUD_ACCESS_TOKEN',
@@ -342,6 +343,7 @@ describe('resolveChatProvider()', () => {
 
   it('defaults to the gateway with a fresh tenant token and feature header', async () => {
     process.env.AI_GATEWAY_URL = 'https://gateway.example.test/';
+    process.env.AI_GATEWAY_ROLLOUT_ALL = 'true';
     process.env.AI_GATEWAY_SERVICE_SECRET = 'resolver-gateway-secret';
     setSecrets({ AI_GATEWAY_MODEL: 'gateway/model' });
 
@@ -368,6 +370,24 @@ describe('resolveChatProvider()', () => {
     });
     expect(decoded.tenant_id).toBe('tenant-gateway');
     expect(secondConfig?.apiKey).not.toBe(firstConfig?.apiKey);
+  });
+
+  it('falls back to the legacy provider when the tenant is not in the rollout', async () => {
+    process.env.AI_GATEWAY_URL = 'https://gateway.example.test/';
+    process.env.AI_GATEWAY_SERVICE_SECRET = 'resolver-gateway-secret';
+    // AI_GATEWAY_ROLLOUT_ALL unset and no flag client configured → flag off.
+    setSecrets({ OPENROUTER_API_KEY: 'legacy-openrouter-key' });
+
+    const { resolveChatProvider } = await import('@ee/services/chatProviderResolver');
+    const provider = await resolveChatProvider('tenant-unflagged', 'chat');
+
+    expect(provider.providerId).toBe('openrouter');
+    expect(openAiConfigs.at(-1)).toMatchObject({
+      apiKey: 'legacy-openrouter-key',
+      defaultHeaders: {
+        'X-Alga-AI-Feature': 'chat',
+      },
+    });
   });
 
   it('uses the configured direct-provider fallback when the gateway is bypassed', async () => {
