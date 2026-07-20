@@ -4,6 +4,7 @@
 
 
 import React, { createContext, useContext, useState, useCallback, ReactNode, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
 import { Activity, ActivityType } from "@alga-psa/types";
 import { useDrawer } from "@alga-psa/ui";
 import { ActivityDetailViewerDrawer } from "./ActivityDetailViewerDrawer";
@@ -26,6 +27,7 @@ const ActivityDrawerContext = createContext<ActivityDrawerContextType | undefine
  */
 export function ActivityDrawerProvider({ children }: { children: ReactNode }) {
   const { openDrawer, closeDrawer } = useDrawer();
+  const router = useRouter();
   const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const { invalidateCache } = useActivitiesCache();
   
@@ -51,7 +53,17 @@ export function ActivityDrawerProvider({ children }: { children: ReactNode }) {
   }, [closeDrawer, invalidateCache, selectedActivity]);
   
   const openActivityDrawer = useCallback((activity: Activity) => {
-    
+    // Marketing publish items are not schedule entries, so the schedule drawer
+    // cannot load them — their "view" is the posts queue they link to.
+    if (
+      activity.type === ActivityType.SCHEDULE &&
+      (activity as any).workItemType === 'marketing_post' &&
+      activity.link
+    ) {
+      router.push(activity.link);
+      return;
+    }
+
     setSelectedActivity(activity);
     openDrawer(
       <ActivityDetailViewerDrawer
@@ -62,7 +74,7 @@ export function ActivityDrawerProvider({ children }: { children: ReactNode }) {
         onActionComplete={handleActionComplete}
       />
     );
-  }, [openDrawer, handleClose, handleActionComplete]);
+  }, [openDrawer, handleClose, handleActionComplete, router]);
   
   // Memoize the context value to prevent unnecessary re-renders
   const contextValue = useMemo(() => ({
