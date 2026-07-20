@@ -1519,6 +1519,11 @@
   "loadError": "Projekte konnten nicht geladen werden",
   "billingView": "Abrechnung",
   "billing": {
+    "title": "Abrechnung",
+    "totalPrice": "Gesamtpreis",
+    "invoicedToDate": "Bisher abgerechnet",
+    "paymentSchedule": "Zahlungsplan",
+    "invoicedOn": "Abgerechnet am {{date}}",
     "loading": "Abrechnung wird geladen...",
     "status": {
       "pending": "Ausstehend",
@@ -1526,7 +1531,8 @@
       "held": "Zurückgestellt",
       "approved": "Genehmigt",
       "invoiced": "In Rechnung gestellt",
-      "canceled": "Storniert"
+      "canceled": "Storniert",
+      "upcoming": "Bevorstehend"
     },
     "mode": {
       "standalone": "eigenständig",

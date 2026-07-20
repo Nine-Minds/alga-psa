@@ -11,7 +11,7 @@ import { Dialog } from '@alga-psa/ui/components/Dialog';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { ProjectTaskStatusSettings } from './settings/projects/ProjectTaskStatusSettings';
 import { getProjectStatusMappings } from '../actions/projectTaskStatusActions';
-import { phaseBadgeClasses, formatCents, type PhaseBillingBadge } from './billing/billingViewHelpers';
+import { phaseBadgeClasses, formatCents, type PhaseBillingBadge } from '@alga-psa/core';
 import styles from './ProjectDetail.module.css';
 
 interface PhaseListItemProps {

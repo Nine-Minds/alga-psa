@@ -3,7 +3,7 @@
 import { useTranslation } from 'react-i18next';
 import { Card } from '@alga-psa/ui/components/Card';
 import type { IProjectBillingCapUsage, IProjectBillingConfig } from '@alga-psa/types';
-import type { ProjectBillingRollup } from '@alga-psa/billing/actions/projectBillingConfigActions';
+import type { ProjectBillingRollup } from '../../actions/projectBillingConfigActions';
 import { formatCents } from './billingViewHelpers';
 
 interface BudgetVsActualCardProps {

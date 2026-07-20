@@ -9,7 +9,7 @@ import {
 import {
   getProjectPaymentWarning,
   type ProjectPaymentWarning,
-} from '@alga-psa/billing/actions/projectBillingWarningActions';
+} from '../../actions/projectBillingWarningActions';
 import { useTranslation } from 'react-i18next';
 
 interface ProjectPaymentWarningBannerProps {

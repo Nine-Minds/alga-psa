@@ -1,8 +1,13 @@
-import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
-import type {
-  ProjectBillingScheduleStatus,
-} from '@alga-psa/types';
-import type { ScheduleEntryView } from '@alga-psa/billing/actions/projectBillingConfigActions';
+import type { ProjectBillingScheduleStatus, ScheduleEntryView } from '@alga-psa/types';
+import { formatCurrencyFromMinorUnits } from './formatters';
+
+/**
+ * Shared project-billing status presentation + phase badge derivation.
+ *
+ * Lives in core (horizontal) because both billing (schedule UI) and projects
+ * (phase badges) render these statuses, and vertical feature packages must not
+ * import each other.
+ */
 
 /**
  * Format an integer-cents amount using the config currency (falling back to USD).

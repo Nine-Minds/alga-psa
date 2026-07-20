@@ -16,9 +16,9 @@ import type {
   ProjectBillingInvoiceMode,
   ProjectBillingModel,
 } from '@alga-psa/types';
-import { createProjectBillingConfig } from '@alga-psa/billing/actions/projectBillingConfigActions';
-import { getContractsWithClients } from '@alga-psa/billing/actions/contractActions';
-import { resolveClientBillingCurrency } from '@alga-psa/billing/actions/billingCurrencyActions';
+import { createProjectBillingConfig } from '../../actions/projectBillingConfigActions';
+import { getContractsWithClients } from '../../actions/contractActions';
+import { resolveClientBillingCurrency } from '../../actions/billingCurrencyActions';
 import {
   getErrorMessage,
   isActionMessageError,

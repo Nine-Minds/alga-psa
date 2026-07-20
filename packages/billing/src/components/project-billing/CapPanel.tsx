@@ -9,7 +9,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { toast } from 'react-hot-toast';
 import { currencyFractionDigits, toMinorUnits } from '@alga-psa/core';
 import type { IProjectBillingConfig } from '@alga-psa/types';
-import { updateProjectBillingConfig } from '@alga-psa/billing/actions/projectBillingConfigActions';
+import { updateProjectBillingConfig } from '../../actions/projectBillingConfigActions';
 import {
   getErrorMessage,
   isActionMessageError,

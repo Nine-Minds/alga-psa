@@ -684,6 +684,8 @@
     "error": "Kan voorbeeld niet weergeven",
     "errorDescription": "Kan voorbeeld niet weergeven. Er ontbreken mogelijk gegevens.",
     "errors": {
+      "notFound": "Factuur niet gevonden.",
+      "noTemplates": "Er zijn geen factuursjablonen beschikbaar.",
       "loadFailed": "Kan voorbeeld niet laden: {{message}}",
       "actionFailed": "Kan {{action}} niet uitvoeren. Probeer het opnieuw.",
       "actionLabels": {

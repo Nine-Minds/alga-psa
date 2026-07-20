@@ -11,11 +11,11 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { toast } from 'react-hot-toast';
 import { currencyFractionDigits, toMinorUnits } from '@alga-psa/core';
 import type { IProjectPhase, ProjectBillingInvoiceMode } from '@alga-psa/types';
-import type { ProjectBillingOverview } from '@alga-psa/billing/actions/projectBillingConfigActions';
-import { updateProjectBillingConfig } from '@alga-psa/billing/actions/projectBillingConfigActions';
-import { generateProjectInvoice } from '@alga-psa/billing/actions/invoiceGeneration';
+import type { ProjectBillingOverview } from '../../actions/projectBillingConfigActions';
+import { updateProjectBillingConfig } from '../../actions/projectBillingConfigActions';
+import { generateProjectInvoice } from '../../actions/invoiceGeneration';
 import { useDrawer } from '@alga-psa/ui';
-import { InvoicePreviewDrawerContent } from '@alga-psa/billing/components';
+import InvoicePreviewDrawerContent from '../billing-dashboard/invoicing/InvoicePreviewDrawerContent';
 import {
   getErrorMessage,
   isActionMessageError,

@@ -684,6 +684,8 @@
     "error": "No se pudo mostrar la vista previa",
     "errorDescription": "No se pudo mostrar la vista previa. Es posible que falten datos.",
     "errors": {
+      "notFound": "Factura no encontrada.",
+      "noTemplates": "No hay plantillas de factura disponibles.",
       "loadFailed": "No se pudo cargar la vista previa: {{message}}",
       "actionFailed": "No se pudo realizar {{action}}. Por favor inténtalo de nuevo.",
       "actionLabels": {

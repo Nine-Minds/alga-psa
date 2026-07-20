@@ -1519,6 +1519,11 @@
   "loadError": "Projecten konden niet worden geladen",
   "billingView": "Facturering",
   "billing": {
+    "title": "Facturatie",
+    "totalPrice": "Totaalprijs",
+    "invoicedToDate": "Gefactureerd tot heden",
+    "paymentSchedule": "Betalingsschema",
+    "invoicedOn": "Gefactureerd op {{date}}",
     "loading": "Facturering laden...",
     "status": {
       "pending": "In behandeling",
@@ -1526,7 +1531,8 @@
       "held": "Aangehouden",
       "approved": "Goedgekeurd",
       "invoiced": "Gefactureerd",
-      "canceled": "Geannuleerd"
+      "canceled": "Geannuleerd",
+      "upcoming": "Aankomend"
     },
     "mode": {
       "standalone": "zelfstandig",

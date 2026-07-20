@@ -292,6 +292,12 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // mappings live in tenant_external_entity_mappings (deleted below).
   'hudu_integrations',
 
+  // Project billing: schedule entries and cap usage reference project_billing_configs;
+  // configs reference projects; phase rate overrides reference project_phases and
+  // service_catalog. All must be deleted before those parents.
+  'project_billing_schedule_entries', 'project_billing_cap_usage',
+  'project_billing_configs', 'project_phase_rate_overrides',
+
   // Project/task entities
   'project_tasks', 'project_phases', 'project_status_mappings',
 

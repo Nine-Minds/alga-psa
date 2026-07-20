@@ -3,24 +3,12 @@
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { createTenantKnex } from '@alga-psa/db';
-import type { IUserWithRoles } from '@alga-psa/types';
+import type { IUserWithRoles, ProjectPaymentWarning, ProjectPaymentWarningKind } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import { withProjectBillingActionErrors } from './projectBillingActionErrors';
 
-export type ProjectPaymentWarningKind =
-  | 'invoice_preparation'
-  | 'payment_outstanding'
-  | 'replacement_needed';
-
-export interface ProjectPaymentWarning {
-  kind: ProjectPaymentWarningKind;
-  /** Billing identifiers are omitted unless the caller can read billing. */
-  has_billing_details: boolean;
-  invoice_id?: string;
-  invoice_number?: string;
-  invoice_status?: string;
-  schedule_description?: string;
-}
+// DTOs live in @alga-psa/types; re-exported here for existing consumers.
+export type { ProjectPaymentWarning, ProjectPaymentWarningKind };
 
 interface PaymentWarningRow {
   invoice_id: string;

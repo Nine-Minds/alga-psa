@@ -1519,6 +1519,11 @@
   "loadError": "Failed to load projects",
   "billingView": "Billing",
   "billing": {
+    "title": "Billing",
+    "totalPrice": "Total Price",
+    "invoicedToDate": "Invoiced to Date",
+    "paymentSchedule": "Payment Schedule",
+    "invoicedOn": "Invoiced {{date}}",
     "loading": "Loading billing...",
     "status": {
       "pending": "Pending",
@@ -1526,7 +1531,8 @@
       "held": "Held",
       "approved": "Approved",
       "invoiced": "Invoiced",
-      "canceled": "Canceled"
+      "canceled": "Canceled",
+      "upcoming": "Upcoming"
     },
     "mode": {
       "standalone": "standalone",

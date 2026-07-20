@@ -684,6 +684,8 @@
     "error": "Vorschau konnte nicht angezeigt werden",
     "errorDescription": "Vorschau konnte nicht angezeigt werden. Möglicherweise fehlen Daten.",
     "errors": {
+      "notFound": "Rechnung nicht gefunden.",
+      "noTemplates": "Keine Rechnungsvorlagen verfügbar.",
       "loadFailed": "Vorschau konnte nicht geladen werden: {{message}}",
       "actionFailed": "Fehler bei {{action}}. Bitte versuchen Sie es erneut.",
       "actionLabels": {

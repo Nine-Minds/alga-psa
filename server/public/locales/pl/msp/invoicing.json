@@ -714,6 +714,8 @@
     "error": "Nie można wyświetlić podglądu",
     "errorDescription": "Nie można wyświetlić podglądu. Może brakować danych.",
     "errors": {
+      "notFound": "Nie znaleziono faktury.",
+      "noTemplates": "Brak dostępnych szablonów faktur.",
       "loadFailed": "Nie udało się załadować podglądu: {{message}}",
       "actionFailed": "Nie udało się wykonać {{action}}. Spróbuj ponownie.",
       "actionLabels": {

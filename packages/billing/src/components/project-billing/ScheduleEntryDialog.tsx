@@ -12,11 +12,11 @@ import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { toast } from 'react-hot-toast';
 import { currencyFractionDigits, toMinorUnits } from '@alga-psa/core';
 import type { IProjectPhase } from '@alga-psa/types';
-import type { ScheduleEntryView } from '@alga-psa/billing/actions/projectBillingConfigActions';
+import type { ScheduleEntryView } from '../../actions/projectBillingConfigActions';
 import {
   createScheduleEntry,
   updateScheduleEntry,
-} from '@alga-psa/billing/actions/projectBillingScheduleActions';
+} from '../../actions/projectBillingScheduleActions';
 import {
   getErrorMessage,
   isActionMessageError,

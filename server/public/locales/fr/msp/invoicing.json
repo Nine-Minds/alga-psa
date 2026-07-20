@@ -684,6 +684,8 @@
     "error": "Impossible d'afficher l'aperçu",
     "errorDescription": "Impossible d'afficher l'aperçu. Des données peuvent être manquantes.",
     "errors": {
+      "notFound": "Facture introuvable.",
+      "noTemplates": "Aucun modèle de facture disponible.",
       "loadFailed": "Échec du chargement de l'aperçu : {{message}}",
       "actionFailed": "Échec de {{action}}. Veuillez réessayer.",
       "actionLabels": {

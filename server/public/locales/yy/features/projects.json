@@ -1519,6 +1519,11 @@
   "loadError": "55555",
   "billingView": "55555",
   "billing": {
+    "title": "55555",
+    "totalPrice": "55555",
+    "invoicedToDate": "55555",
+    "paymentSchedule": "55555",
+    "invoicedOn": "55555 {{date}} 55555",
     "loading": "55555",
     "status": {
       "pending": "55555",
@@ -1526,7 +1531,8 @@
       "held": "55555",
       "approved": "55555",
       "invoiced": "55555",
-      "canceled": "55555"
+      "canceled": "55555",
+      "upcoming": "55555"
     },
     "mode": {
       "standalone": "55555",
@@ -1640,8 +1646,8 @@
       "errorPercentage": "55555",
       "errorPhase": "55555",
       "errorDate": "55555",
-      "requiresPaymentBeforeWork": "55555 55555 55555 55555 55555",
-      "requiresPaymentBeforeWorkHint": "55555 55555 55555 55555 55555 55555 55555 55555 55555 55555 55555 55555 55555"
+      "requiresPaymentBeforeWork": "55555",
+      "requiresPaymentBeforeWorkHint": "55555"
     },
     "cap": {
       "title": "55555",

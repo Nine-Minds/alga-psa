@@ -12,7 +12,7 @@ import type { IProjectBillingConfig, IProjectPhase } from '@alga-psa/types';
 import type {
   ProjectBillingRollup,
   ScheduleEntryView,
-} from '@alga-psa/billing/actions/projectBillingConfigActions';
+} from '../../actions/projectBillingConfigActions';
 import {
   approveScheduleEntry,
   approveAndInvoiceNow,
@@ -21,7 +21,7 @@ import {
   holdScheduleEntry,
   markEntryReady,
   releaseScheduleEntryHold,
-} from '@alga-psa/billing/actions/projectBillingScheduleActions';
+} from '../../actions/projectBillingScheduleActions';
 import StatusChip from './StatusChip';
 import ScheduleEntryDialog from './ScheduleEntryDialog';
 import { formatCents } from './billingViewHelpers';

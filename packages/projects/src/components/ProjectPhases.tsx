@@ -5,7 +5,7 @@ import type { IProjectPhase } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Upload } from 'lucide-react';
 import PhaseListItem from './PhaseListItem';
-import type { PhaseBillingBadge } from './billing/billingViewHelpers';
+import type { PhaseBillingBadge } from '@alga-psa/core';
 import styles from './ProjectDetail.module.css';
 import { useTranslation } from 'react-i18next';
 

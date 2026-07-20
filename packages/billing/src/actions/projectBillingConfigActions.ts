@@ -9,6 +9,10 @@ import type {
   IProjectBillingScheduleEntry,
   IProjectPhaseRateOverride,
   IUserWithRoles,
+  ProjectBillingEconomics,
+  ProjectBillingOverview,
+  ProjectBillingRollup,
+  ScheduleEntryView,
 } from '@alga-psa/types';
 import type { Knex } from 'knex';
 import { revalidatePath } from 'next/cache';
@@ -24,44 +28,14 @@ import {
 import { computeEntryAmounts, validateAllocation } from '../services/projectBillingService';
 import { withProjectBillingActionErrors } from './projectBillingActionErrors';
 
-export interface ProjectBillingRollup {
-  total_price: number | null;
-  invoiced_amount: number;
-  ready_amount: number;
-  approved_amount: number;
-  remaining_amount: number;
-  allocated_pct: number | null;
-}
-
-export interface ProjectBillingEconomics {
-  hours_logged: number;
-  uncosted_hours: number;
-  labor_cost: number;
-  materials_cost: number;
-  cost_currency: string;
-  currency_mismatch: boolean;
-  projected_margin_pct: number | null;
-}
-
-export interface ScheduleEntryView extends IProjectBillingScheduleEntry {
-  computed_amount: number;
-  phase_name: string | null;
-  invoice_number: string | null;
-  phase_deleted: boolean;
-}
-
-export interface ProjectBillingOverview {
-  config: IProjectBillingConfig | null;
-  entries: ScheduleEntryView[];
-  rollup: ProjectBillingRollup | null;
-  cap_usage: IProjectBillingCapUsage | null;
-  economics: ProjectBillingEconomics;
-  overrides: (IProjectPhaseRateOverride & {
-    phase_name: string;
-    service_name: string | null;
-    override_service_name: string | null;
-  })[];
-}
+// View DTOs live in @alga-psa/types so cross-feature composition (projects,
+// scheduling, msp-composition) can reference them without importing billing.
+export type {
+  ProjectBillingEconomics,
+  ProjectBillingOverview,
+  ProjectBillingRollup,
+  ScheduleEntryView,
+};
 
 export interface ReadyQueueRow {
   entry: ScheduleEntryView;
@@ -384,8 +358,12 @@ async function listOverrideViews(
         .whereIn('service_id', serviceIds)
         .select<{ service_id: string; service_name: string }[]>('service_id', 'service_name'),
   ]);
-  const phaseNames = new Map(phases.map((phase) => [phase.phase_id, phase.phase_name]));
-  const serviceNames = new Map(services.map((service) => [service.service_id, service.service_name]));
+  const phaseNames = new Map<string, string>(
+    phases.map((phase): [string, string] => [phase.phase_id, phase.phase_name]),
+  );
+  const serviceNames = new Map<string, string>(
+    services.map((service): [string, string] => [service.service_id, service.service_name]),
+  );
 
   return overrides.map((override) => ({
     ...override,

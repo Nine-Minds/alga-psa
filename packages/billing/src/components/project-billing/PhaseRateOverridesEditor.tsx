@@ -14,8 +14,8 @@ import type { IProjectPhase, IProjectPhaseRateOverride } from '@alga-psa/types';
 import {
   upsertPhaseRateOverride,
   deletePhaseRateOverride,
-} from '@alga-psa/billing/actions/projectBillingConfigActions';
-import { getServices } from '../../actions/serviceCatalogActions';
+} from '../../actions/projectBillingConfigActions';
+import { getServices } from '../../actions/serviceActions';
 import { formatCents } from './billingViewHelpers';
 import {
   getErrorMessage,
@@ -66,6 +66,10 @@ export default function PhaseRateOverridesEditor({
     getServices(1, 999)
       .then((res) => {
         if (cancelled) return;
+        if (!('services' in res)) {
+          setServices([]);
+          return;
+        }
         setServices(res.services.map((s) => ({ value: s.service_id, label: s.service_name })));
       })
       .catch(() => { if (!cancelled) setServices([]); });

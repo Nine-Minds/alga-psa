@@ -32,7 +32,7 @@ describe('project-billing UI-only feature flag contract', () => {
     expect(projectDetail).toContain("!projectBillingUiEnabled && initialViewMode !== 'billing'");
     expect(projectDetail).toContain('projectBillingUiEnabled && billingOverview?.config');
     expect(projectDetail).toContain('readyEntry && canViewBilling && projectBillingUiEnabled');
-    expect(projectDetail).toContain('projectBillingUiEnabled && (');
+    expect(projectDetail).toContain('projectBillingUiEnabled && billingIntegration && (');
     expect(projectDetail).toContain("if (viewMode === 'billing')");
     expect(projectDetail).not.toContain("viewMode === 'billing' && projectBillingUiEnabled");
   });
@@ -48,8 +48,9 @@ describe('project-billing UI-only feature flag contract', () => {
   });
 
   it('guards every embedded project-billing trace at its owning client component', () => {
-    expect(projectInfo).toContain('projectBillingUiEnabled && billedSummary');
-    expect(taskForm).toContain('projectBillingUiEnabled && <ProjectPaymentWarningBanner');
+    expect(projectInfo).toContain('projectBillingUiEnabled && billingIntegration && billedSummary');
+    expect(taskForm).toContain('projectBillingUiEnabled && billingIntegration && (');
+    expect(taskForm).toContain('<billingIntegration.PaymentWarningBanner');
     expect(timeEntryDialog).toContain('projectBillingUiEnabled && hasProjectPaymentWarning');
     expect(clientConfig).toContain('projectBillingUiEnabled && config.show_billing');
     expect(clientConfig).toContain('{projectBillingUiEnabled && (');

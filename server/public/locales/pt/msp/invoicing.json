@@ -684,6 +684,8 @@
     "error": "Não foi possível exibir a visualização",
     "errorDescription": "Não foi possível exibir a visualização. Os dados podem estar faltando.",
     "errors": {
+      "notFound": "Fatura não encontrada.",
+      "noTemplates": "Não existem modelos de fatura disponíveis.",
       "loadFailed": "Falha ao carregar visualização: {{message}}",
       "actionFailed": "Falha em {{action}}. Por favor, tente novamente.",
       "actionLabels": {

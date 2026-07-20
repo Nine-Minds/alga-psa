@@ -457,7 +457,7 @@
       "bulkPdfFailed": "11111",
       "unfinalizeFailed": "11111",
       "bulkUnfinalizeFailed": "11111",
-      "bulkUnfinalizeInvoiceFailed": "11111 {{invoiceNumber}} {{reason}}"
+      "bulkUnfinalizeInvoiceFailed": "11111 {{invoiceNumber}} 11111 {{reason}} 11111"
     }
   },
   "recurringServicePeriods": {
@@ -684,6 +684,8 @@
     "error": "11111",
     "errorDescription": "11111",
     "errors": {
+      "notFound": "11111",
+      "noTemplates": "11111",
       "loadFailed": "11111 {{message}} 11111",
       "actionFailed": "11111 {{action}} 11111",
       "actionLabels": {

@@ -684,6 +684,8 @@
     "error": "Could not display preview",
     "errorDescription": "Could not display preview. Data might be missing.",
     "errors": {
+      "notFound": "Invoice not found.",
+      "noTemplates": "No invoice templates are available.",
       "loadFailed": "Failed to load preview: {{message}}",
       "actionFailed": "Failed to {{action}}. Please try again.",
       "actionLabels": {

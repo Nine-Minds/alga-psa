@@ -16,8 +16,7 @@ import { toast } from 'react-hot-toast';
 import CreateTemplateDialog from './project-templates/CreateTemplateDialog';
 import ProjectMaterialsDrawer from './ProjectMaterialsDrawer';
 import ProjectTaskExportDialog from './ProjectTaskExportDialog';
-import ProjectBilledBar from './billing/ProjectBilledBar';
-import { getProjectBillingOverview } from '@alga-psa/billing/actions/projectBillingConfigActions';
+import { useProjectBillingIntegration } from '../context/ProjectBillingIntegrationContext';
 import { useTaskShareActions } from './TaskShareActionsContext';
 import { useTaskSelection } from './TaskSelectionContext';
 import { useTranslation } from 'react-i18next';
@@ -65,6 +64,7 @@ export default function ProjectInfo({
 }: ProjectInfoProps) {
   const { t } = useTranslation(['features/projects', 'common']);
   const { enabled: projectBillingUiEnabled } = useFeatureFlag('project-billing-ui', { defaultValue: false });
+  const billingIntegration = useProjectBillingIntegration();
   const { openDrawer, closeDrawer } = useDrawer();
   const { selectedTaskIds } = useTaskSelection();
   const selectedTaskCount = selectedTaskIds.size;
@@ -90,7 +90,9 @@ export default function ProjectInfo({
     const fetchProjectMetrics = async () => {
       const [metricsResult, billingResult] = await Promise.allSettled([
         calculateProjectCompletion(project.project_id),
-        getProjectBillingOverview(project.project_id),
+        billingIntegration
+          ? billingIntegration.fetchOverview(project.project_id)
+          : Promise.resolve(null),
       ]);
       if (stale) return;
 
@@ -109,6 +111,7 @@ export default function ProjectInfo({
 
       if (
         billingResult.status === 'fulfilled'
+        && billingResult.value
         && !isActionMessageError(billingResult.value)
         && !isActionPermissionError(billingResult.value)
         && billingResult.value.config
@@ -128,7 +131,7 @@ export default function ProjectInfo({
 
     fetchProjectMetrics();
     return () => { stale = true; };
-  }, [project.project_id]);
+  }, [project.project_id, billingIntegration]);
 
   useEffect(() => {
     setCurrentProject(project);
@@ -283,8 +286,8 @@ export default function ProjectInfo({
         )}
 
         {/* Billed bar (F135) — only when project billing is enabled */}
-        {projectBillingUiEnabled && billedSummary && (
-          <ProjectBilledBar
+        {projectBillingUiEnabled && billingIntegration && billedSummary && (
+          <billingIntegration.BilledBar
             invoicedCents={billedSummary.invoicedCents}
             readyCents={billedSummary.readyCents}
             approvedCents={billedSummary.approvedCents}

@@ -2,7 +2,7 @@
 
 import { useTranslation } from 'react-i18next';
 import { Card } from '@alga-psa/ui/components/Card';
-import type { ProjectBillingEconomics } from '@alga-psa/billing/actions/projectBillingConfigActions';
+import type { ProjectBillingEconomics } from '../../actions/projectBillingConfigActions';
 import type { ProjectBillingModel } from '@alga-psa/types';
 import { formatCents } from './billingViewHelpers';
 

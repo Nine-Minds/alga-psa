@@ -1519,6 +1519,11 @@
   "loadError": "11111",
   "billingView": "11111",
   "billing": {
+    "title": "11111",
+    "totalPrice": "11111",
+    "invoicedToDate": "11111",
+    "paymentSchedule": "11111",
+    "invoicedOn": "11111 {{date}} 11111",
     "loading": "11111",
     "status": {
       "pending": "11111",
@@ -1526,7 +1531,8 @@
       "held": "11111",
       "approved": "11111",
       "invoiced": "11111",
-      "canceled": "11111"
+      "canceled": "11111",
+      "upcoming": "11111"
     },
     "mode": {
       "standalone": "11111",
@@ -1640,8 +1646,8 @@
       "errorPercentage": "11111",
       "errorPhase": "11111",
       "errorDate": "11111",
-      "requiresPaymentBeforeWork": "11111 11111 11111 11111 11111",
-      "requiresPaymentBeforeWorkHint": "11111 11111 11111 11111 11111 11111 11111 11111 11111 11111 11111 11111 11111"
+      "requiresPaymentBeforeWork": "11111",
+      "requiresPaymentBeforeWorkHint": "11111"
     },
     "cap": {
       "title": "11111",

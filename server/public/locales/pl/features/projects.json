@@ -1545,6 +1545,11 @@
   "loadError": "Nie udało się wczytać projektów",
   "billingView": "Rozliczenia",
   "billing": {
+    "title": "Fakturowanie",
+    "totalPrice": "Cena całkowita",
+    "invoicedToDate": "Zafakturowane do dziś",
+    "paymentSchedule": "Harmonogram płatności",
+    "invoicedOn": "Zafakturowano {{date}}",
     "loading": "Wczytywanie rozliczeń...",
     "status": {
       "pending": "Oczekujące",
@@ -1552,7 +1557,8 @@
       "held": "Wstrzymane",
       "approved": "Zatwierdzone",
       "invoiced": "Zafakturowane",
-      "canceled": "Anulowane"
+      "canceled": "Anulowane",
+      "upcoming": "Nadchodzące"
     },
     "mode": {
       "standalone": "niezależne",

@@ -1519,6 +1519,11 @@
   "loadError": "Impossible de charger les projets",
   "billingView": "Facturation",
   "billing": {
+    "title": "Facturation",
+    "totalPrice": "Prix total",
+    "invoicedToDate": "Facturé à ce jour",
+    "paymentSchedule": "Calendrier de paiement",
+    "invoicedOn": "Facturé le {{date}}",
     "loading": "Chargement de la facturation...",
     "status": {
       "pending": "En attente",
@@ -1526,7 +1531,8 @@
       "held": "Suspendu",
       "approved": "Approuvé",
       "invoiced": "Facturé",
-      "canceled": "Annulé"
+      "canceled": "Annulé",
+      "upcoming": "À venir"
     },
     "mode": {
       "standalone": "autonome",

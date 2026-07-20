@@ -27,9 +27,8 @@ import { TimeEntryProvider, useTimeEntry } from './TimeEntryProvider';
 import TimeEntrySkeletons from './TimeEntrySkeletons';
 import SingleTimeEntryForm from './SingleTimeEntryForm';
 import { validateTimeEntry } from './utils';
-// eslint-disable-next-line custom-rules/no-feature-to-feature-imports -- payment prerequisite is billing-owned; time entry only consumes the warning action
-import { getProjectTaskPaymentWarning } from '@alga-psa/billing/actions';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
+import { useSchedulingCrossFeatureOptional } from '../../../../context/SchedulingCrossFeatureContext';
 
 function isReturnedActionError(value: unknown): value is { actionError: string } | { permissionError: string } {
   return isActionMessageError(value) || isActionPermissionError(value);
@@ -74,6 +73,8 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
   } = props;
   const { t } = useTranslation('msp/time-entry');
   const { enabled: projectBillingUiEnabled } = useFeatureFlag('project-billing-ui', { defaultValue: false });
+  // Injected from the composition layer (billing owns the warning action).
+  const getProjectTaskPaymentWarning = useSchedulingCrossFeatureOptional()?.getProjectTaskPaymentWarning;
   const {
     entries,
     services,
@@ -99,7 +100,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
   useEffect(() => {
     let stale = false;
 
-    if (!isOpen || workItem.type !== 'project_task') {
+    if (!isOpen || workItem.type !== 'project_task' || !getProjectTaskPaymentWarning) {
       setHasProjectPaymentWarning(false);
       return () => {
         stale = true;
@@ -118,7 +119,7 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
     return () => {
       stale = true;
     };
-  }, [isOpen, workItem.type, workItem.work_item_id]);
+  }, [isOpen, workItem.type, workItem.work_item_id, getProjectTaskPaymentWarning]);
 
   // Initialize a single-entry form whenever the dialog opens.
   useEffect(() => {

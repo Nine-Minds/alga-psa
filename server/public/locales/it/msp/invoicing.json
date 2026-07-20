@@ -684,6 +684,8 @@
     "error": "Impossibile visualizzare l'anteprima",
     "errorDescription": "Impossibile visualizzare l'anteprima. Potrebbero mancare dei dati.",
     "errors": {
+      "notFound": "Fattura non trovata.",
+      "noTemplates": "Nessun modello di fattura disponibile.",
       "loadFailed": "Impossibile caricare l'anteprima: {{message}}",
       "actionFailed": "Impossibile eseguire {{action}}. Per favore riprova.",
       "actionLabels": {

@@ -136,6 +136,10 @@ const billingCycleAlignmentPostInventoryRemovals = new Set([
 const servicePeriodPostInventoryRefs = new Set([
   'packages/billing/src/actions/billingAndTax.ts',
   'packages/billing/src/actions/billingCycleActions.ts',
+  // Project-billing wave tests (feature/project-billing) landed after the
+  // pass-0 snapshot and reference service-period fields in fixtures/assertions.
+  'packages/billing/src/actions/accountingExportActions.test.ts',
+  'packages/billing/src/actions/recurringApprovalBlockers.warning.test.ts',
   'shared/billingClients/clientCadenceScheduleRegeneration.ts',
   'packages/billing/src/actions/contractCadenceServicePeriodMaterialization.ts',
   'packages/billing/src/actions/profitabilityReportActions.static.test.ts',
