@@ -28,14 +28,9 @@ import {
 import { computeEntryAmounts, validateAllocation } from '../services/projectBillingService';
 import { withProjectBillingActionErrors } from './projectBillingActionErrors';
 
-// View DTOs live in @alga-psa/types so cross-feature composition (projects,
-// scheduling, msp-composition) can reference them without importing billing.
-export type {
-  ProjectBillingEconomics,
-  ProjectBillingOverview,
-  ProjectBillingRollup,
-  ScheduleEntryView,
-};
+// View DTOs live in @alga-psa/types — import them from there. A type re-export
+// here breaks at runtime: the 'use server' transform registers every export as
+// a server reference, emitting value references to type-only names.
 
 export interface ReadyQueueRow {
   entry: ScheduleEntryView;

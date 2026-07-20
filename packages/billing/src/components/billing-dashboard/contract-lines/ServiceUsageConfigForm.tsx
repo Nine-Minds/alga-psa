@@ -10,6 +10,7 @@ import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Info } from 'lucide-react';
 import { ServiceTierEditor, TierConfig } from './ServiceTierEditor'; // Import the tier editor and its config type
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 
 // Define the shape of the configuration for a single service
 export interface ServiceUsageConfig {
@@ -50,6 +51,7 @@ export function ServiceUsageConfigForm({
     onTiersChange,
 }: ServiceUsageConfigFormProps) {
     const { t } = useTranslation('msp/contract-lines');
+    const { symbol } = useCurrencyFormat();
     // Local state for formatted rate input
     const [baseRateInput, setBaseRateInput] = React.useState<string>('');
 
@@ -103,7 +105,7 @@ export function ServiceUsageConfigForm({
                         </Tooltip>
                     </Label>
                     <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">{symbol()}</span>
                         <Input
                             id={`usage-contract-line-base-rate-${serviceId}`}
                             type="text"

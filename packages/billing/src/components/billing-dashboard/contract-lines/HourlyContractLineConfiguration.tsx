@@ -23,6 +23,7 @@ import GenericPlanServicesList from './GenericContractLineServicesList';
 import { IContractLine, IService as IBillingService } from '@alga-psa/types'; // Use IService from billing.interfaces
 import { ServiceHourlyConfigForm } from './ServiceHourlyConfigForm';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import {
     upsertPlanServiceHourlyConfiguration, // Correct action import
     upsertUserTypeRatesForConfig // Added import for user type rates action
@@ -109,6 +110,7 @@ export function HourlyPlanConfiguration({
   className = '',
 }: HourlyPlanConfigurationProps) {
   const { t } = useTranslation('msp/contract-lines');
+  const { symbol } = useCurrencyFormat();
   const billingFrequencyOptions = useBillingFrequencyOptions();
   // Plan-wide state
   const [plan, setPlan] = useState<HourlyPlanData | null>(null);
@@ -673,7 +675,7 @@ export function HourlyPlanConfiguration({
                                       })}
                                     </Label>
                                     <div className="relative">
-                                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">{symbol()}</span>
                                       <Input
                                         id="overtime-rate"
                                         type="text"

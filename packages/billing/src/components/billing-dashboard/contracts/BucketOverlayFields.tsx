@@ -8,6 +8,7 @@ import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Info, Coins } from 'lucide-react';
 import { BucketOverlayInput } from './ContractWizard';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 
 type BucketOverlayMode = 'hours' | 'usage';
 
@@ -31,6 +32,7 @@ export function BucketOverlayFields({
   billingFrequency = 'monthly'
 }: BucketOverlayFieldsProps) {
   const { t } = useTranslation('msp/contracts');
+  const { symbol } = useCurrencyFormat();
   const [overageRateInput, setOverageRateInput] = useState<string>('');
 
   useEffect(() => {
@@ -154,7 +156,7 @@ export function BucketOverlayFields({
           </Tooltip>
         </div>
         <div className="relative">
-          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">{symbol()}</span>
           <Input
             id={automationId ? `${automationId}-overage` : undefined}
             data-automation-id={automationId ? `${automationId}-overage` : undefined}

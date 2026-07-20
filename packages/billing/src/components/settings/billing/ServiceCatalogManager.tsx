@@ -36,6 +36,7 @@ import {
 } from '@alga-psa/ui/components/DropdownMenu';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 
 // Removed old SERVICE_TYPE_OPTIONS
 
@@ -47,6 +48,7 @@ const LICENSE_TERM_OPTION_VALUES = ['monthly', 'annual', 'perpetual'] as const;
 
 const ServiceCatalogManager: React.FC = () => {
   const { t } = useTranslation('msp/billing-settings');
+  const { money } = useCurrencyFormat();
   const [defaultCurrency, setDefaultCurrency] = useState('USD');
   const [services, setServices] = useState<IService[]>([]);
   // Note: Categories are currently hidden in favor of using Service Types for organization
@@ -504,7 +506,7 @@ const ServiceCatalogManager: React.FC = () => {
         render: (prices: IServicePrice[] | undefined, record) => {
           if (!prices || prices.length === 0) {
             // Fall back to default_rate if no prices exist
-            return `$${(record.default_rate / 100).toFixed(2)}`;
+            return money(Number(record.default_rate));
           }
           // Show primary price (first one, typically USD)
           const primaryPrice = prices[0];

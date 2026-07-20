@@ -74,6 +74,20 @@ describe('multi-active contracts docs and static guards', () => {
     expect(assignmentWritesSource).not.toContain('hasActiveContractForClient');
   });
 
+  // Thrown server-action errors are masked by Next.js in production; the
+  // mixed-currency guard message reaches the user only if every action
+  // boundary converts it to a returned actionError.
+  it('T062b: every action boundary translates the mixed-currency guard into a returned actionError', () => {
+    const guardMessage = 'Mixed-currency contracts for the same client are not supported';
+    for (const source of [
+      read('packages', 'billing', 'src', 'actions', 'billingClientsActions.ts'),
+      read('packages', 'billing', 'src', 'actions', 'contractWizardActionErrors.ts'),
+      read('packages', 'clients', 'src', 'actions', 'clientContractActions.ts'),
+    ]) {
+      expect(source).toContain(guardMessage);
+    }
+  });
+
   it('T071: migration/runbook notes explicitly record invoice assignment snapshots as the preserved boundary', () => {
     const scratchpad = read('ee', 'docs', 'plans', '2026-03-20-multi-active-contracts-per-client', 'SCRATCHPAD.md');
     expect(scratchpad).toContain('Invoice tables already snapshot `client_contract_id`');

@@ -32,6 +32,7 @@ import {
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 
 const isReturnedActionError = (value: unknown) =>
   isActionMessageError(value) || isActionPermissionError(value);
@@ -54,6 +55,7 @@ interface SimplePresetService {
 
 const FixedContractLinePresetServicesList: React.FC<FixedContractLinePresetServicesListProps> = ({ planId, onServiceAdded }) => {
   const { t } = useTranslation('msp/billing');
+  const { money } = useCurrencyFormat();
   const [presetServices, setPresetServices] = useState<SimplePresetService[]>([]);
   const [originalServices, setOriginalServices] = useState<SimplePresetService[]>([]);
   const [availableServices, setAvailableServices] = useState<IService[]>([]);
@@ -311,7 +313,7 @@ const FixedContractLinePresetServicesList: React.FC<FixedContractLinePresetServi
         </Tooltip>
       ),
       dataIndex: 'default_rate',
-      render: (value) => value !== undefined ? `$${(Number(value) / 100).toFixed(2)}` : t('common.notAvailable', { defaultValue: 'N/A' }),
+      render: (value) => value !== undefined ? money(Number(value)) : t('common.notAvailable', { defaultValue: 'N/A' }),
     },
     {
       title: t('presetServices.table.actions', { defaultValue: 'Actions' }),

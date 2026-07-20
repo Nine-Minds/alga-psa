@@ -25,6 +25,7 @@ import { TierConfig } from './ServiceTierEditor'; // Import TierConfig type
 import { useBillingFrequencyOptions } from '@alga-psa/billing/hooks/useBillingEnumOptions';
 import { useTenant } from '@alga-psa/ui/components/providers/TenantProvider';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import {
   getErrorMessage,
   isActionMessageError,
@@ -70,6 +71,7 @@ export function UsagePresetConfiguration({
   className = '',
 }: UsagePresetConfigurationProps) {
   const { t } = useTranslation('msp/contract-lines');
+  const { money } = useCurrencyFormat();
   const billingFrequencyOptions = useBillingFrequencyOptions();
   // State for the base plan details
   const [plan, setPlan] = useState<IContractLinePreset | null>(null);
@@ -841,7 +843,7 @@ export function UsagePresetConfiguration({
                             });
                           } else {
                             const rate = config.base_rate !== undefined
-                              ? `$${config.base_rate.toFixed(2)}`
+                              ? money(Math.round(Number(config.base_rate) * 100))
                               : t('preset.usage.services.summary.notSet', { defaultValue: 'Not Set' });
                             const unit = config.unit_of_measure || t('preset.usage.services.summary.defaultUnit', { defaultValue: 'Unit' });
                             return t('preset.usage.services.summary.ratePerUnit', {

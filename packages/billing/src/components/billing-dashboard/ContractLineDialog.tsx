@@ -28,6 +28,7 @@ import { BucketOverlayInput } from './contracts/ContractWizard';
 import { ServiceCatalogPicker } from './contracts/ServiceCatalogPicker';
 import { resolveBillingCycleAlignmentForCompatibility } from '@alga-psa/shared/billingClients/billingCycleAlignmentCompatibility';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import {
   getErrorMessage,
   isActionMessageError,
@@ -62,6 +63,7 @@ interface ContractLineDialogProps {
 
 export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerButton }: ContractLineDialogProps) {
   const { t } = useTranslation('msp/contract-lines');
+  const { symbol } = useCurrencyFormat();
   const billingFrequencyOptions = useBillingFrequencyOptions();
   const [open, setOpen] = useState(false);
   const [planName, setPlanName] = useState('');
@@ -795,7 +797,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                     {t('dialog.hourly.hourlyRateLabel', { defaultValue: 'Hourly Rate' })}
                   </Label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">{symbol()}</span>
                     <Input
                       id={`hourly-rate-${index}`}
                       type="text"
@@ -1030,7 +1032,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                       {t('dialog.usage.ratePerUnitLabel', { defaultValue: 'Rate per Unit' })}
                     </Label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">{symbol()}</span>
                       <Input
                         id={`unit-rate-${index}`}
                         type="text"
@@ -1435,7 +1437,7 @@ export function ContractLineDialog({ onPlanAdded, editingPlan, onClose, triggerB
                         })}
                       </Label>
                       <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">{symbol()}</span>
                         <Input
                           id="base-rate"
                           type="text"

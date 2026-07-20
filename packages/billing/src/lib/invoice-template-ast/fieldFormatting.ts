@@ -1,3 +1,4 @@
+import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 import type { TemplateFieldDisplayFormat, TemplateValueFormat } from '@alga-psa/types';
 
 type AddressRecord = Record<string, unknown>;
@@ -18,7 +19,7 @@ const formatCurrency = (value: number, currencyCode: string) => {
       currency: currencyCode || 'USD',
     }).format(value / 100);
   } catch {
-    return `$${(value / 100).toFixed(2)}`;
+    return formatCurrencyFromMinorUnits(value, 'en-US', 'USD');
   }
 };
 

@@ -39,6 +39,7 @@ import {
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 
 const LICENSE_TERM_OPTION_VALUES = ['monthly', 'annual', 'perpetual'] as const;
 const BILLING_METHOD_OPTION_VALUES = ['usage'] as const;
@@ -73,6 +74,7 @@ interface QuickAddProductProps {
 
 export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: QuickAddProductProps) {
   const { t } = useTranslation('msp/billing-settings');
+  const { money } = useCurrencyFormat();
   const isEditMode = !!product;
   const [error, setError] = useState<string | null>(null);
   const [defaultCurrency, setDefaultCurrency] = useState('USD');
@@ -1074,7 +1076,7 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
                                 <span className="font-medium">{o.vendor_name || o.vendor_id}</span>
                                 {o.vendor_sku && <span className="font-mono text-xs text-gray-500">{o.vendor_sku}</span>}
                                 <span className="ml-auto tabular-nums">
-                                  {o.unit_cost != null ? `$${(Number(o.unit_cost) / 100).toFixed(2)} ${o.cost_currency}` : '—'}
+                                  {o.unit_cost != null ? money(Number(o.unit_cost), o.cost_currency) : '—'}
                                 </span>
                                 {o.is_preferred && (
                                   <span className="text-xs rounded bg-green-100 text-green-800 px-1.5 py-0.5">Preferred</span>

@@ -14,6 +14,7 @@ export function contractWizardActionErrorFrom(error: unknown): ContractWizardAct
     error.message.startsWith('Catalog item "') ||
     error.message.startsWith('Product "') ||
     error.message.startsWith('Cannot create contract in') ||
+    error.message.includes('Mixed-currency contracts for the same client are not supported') ||
     error.message === 'Contract start date is required' ||
     error.message === 'Draft contract not found' ||
     error.message === 'Only draft contracts can be updated via the wizard' ||

@@ -43,6 +43,7 @@ const isReturnedActionError = (value: unknown) =>
   isActionMessageError(value) || isActionPermissionError(value);
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 // Removed ContractLineServiceForm import as 'Configure' is removed
 
 interface FixedPlanServicesListProps {
@@ -70,6 +71,7 @@ type PlanServiceWithConfig = {
 };
 const FixedPlanServicesList: React.FC<FixedPlanServicesListProps> = ({ planId, onServiceAdded }) => {
   const { t } = useTranslation('msp/billing');
+  const { money } = useCurrencyFormat();
   const [planServices, setPlanServices] = useState<SimplePlanService[]>([]);
   const [availableServices, setAvailableServices] = useState<IService[]>([]);
   const [serviceCategories, setServiceCategories] = useState<IServiceCategory[]>([]); // Added state for categories
@@ -361,7 +363,7 @@ const planServiceColumns: ColumnDefinition<SimplePlanService>[] = [
         }
 
         return record.default_rate !== undefined
-          ? `$${Number(record.default_rate).toFixed(2)}`
+          ? money(Math.round(Number(record.default_rate) * 100))
           : t('common.notAvailable', { defaultValue: 'N/A' });
       },
     },
@@ -532,7 +534,7 @@ const planServiceColumns: ColumnDefinition<SimplePlanService>[] = [
                                         {' | '}
                                         {t('contractLineServices.addSection.rate', {
                                           defaultValue: 'Rate: {{value}}',
-                                          value: `$${Number(service.default_rate).toFixed(2)}`,
+                                          value: money(Math.round(Number(service.default_rate) * 100)),
                                         })}
                                       </>
                                     )}

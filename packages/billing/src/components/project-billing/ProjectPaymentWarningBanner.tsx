@@ -6,10 +6,8 @@ import {
   isActionMessageError,
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
-import {
-  getProjectPaymentWarning,
-  type ProjectPaymentWarning,
-} from '../../actions/projectBillingWarningActions';
+import { getProjectPaymentWarning } from '../../actions/projectBillingWarningActions';
+import type { ProjectPaymentWarning } from '@alga-psa/types';
 import { useTranslation } from 'react-i18next';
 
 interface ProjectPaymentWarningBannerProps {
