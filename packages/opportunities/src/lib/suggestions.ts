@@ -185,6 +185,20 @@ export async function acceptSuggestionInternal(
         created_opportunity_id: opportunity.opportunity_id,
         updated_at: nowIso,
       });
+
+    // Marketing touchpoints logged before the deal existed are its courtship
+    // record: link the suggestion contact's marketing interactions to the new
+    // opportunity so its timeline starts at first touch.
+    const evidenceContactId = overrides.contact_id
+      ?? (suggestion.evidence && typeof suggestion.evidence === 'object'
+        ? (suggestion.evidence as { contactId?: string }).contactId ?? null
+        : null);
+    if (evidenceContactId) {
+      await db.table('interactions')
+        .where({ contact_name_id: evidenceContactId, category: 'marketing' })
+        .whereNull('opportunity_id')
+        .update({ opportunity_id: opportunity.opportunity_id });
+    }
     publishOpportunityEventAfterCommit(
       trx,
       tenant,
