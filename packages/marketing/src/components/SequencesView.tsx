@@ -394,7 +394,7 @@ export function SequencesView({
                   </div>
                   <div className="rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4">
                     <div className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-[rgb(var(--color-text-400))]">
-                      {t('marketing.sequences.performance', 'Performance')}
+                      {t('marketing.sequences.performance.title', 'Performance')}
                     </div>
                     <div className="space-y-1.5 text-sm">
                       <div className="flex justify-between">

@@ -125,13 +125,15 @@ export async function getSequenceDetailInternal(knex: Knex, tenant: string, sequ
     .where({ tenant, sequence_id: sequenceId })
     .orderBy('step_order', 'asc') as IMarketingSequenceStep[];
 
-  const statRows = await db.table('marketing_engagements as e')
+  // step_id is a uuid column, so an empty-IN sentinel string would fail the
+  // cast — skip the query outright when the sequence has no steps.
+  const statRows = steps.length === 0 ? [] : await db.table('marketing_engagements as e')
     .join('interactions as i', function joinInteraction() {
       this.on('i.tenant', '=', 'e.tenant').andOn('i.interaction_id', '=', 'e.interaction_id');
     })
     .join('system_interaction_types as it', 'it.type_id', '=', 'i.type_id')
     .where({ 'e.tenant': tenant })
-    .whereIn('e.step_id', steps.map((s) => s.step_id).concat(['__none__']))
+    .whereIn('e.step_id', steps.map((s) => s.step_id))
     .groupBy('e.step_id', 'it.type_name')
     .select('e.step_id', 'it.type_name')
     .count('* as count') as Array<{ step_id: string; type_name: string; count: string | number }>;
