@@ -54,6 +54,28 @@ export interface ConsentRecordRow {
   revoked_by: string | null;
 }
 
+export type AutoTopupJobStatus =
+  | 'pending'
+  | 'processing'
+  | 'awaiting_webhook'
+  | 'succeeded'
+  | 'failed';
+
+export interface AutoTopupJobRow {
+  job_id: string;
+  account_id: string;
+  pack_price_id: string;
+  status: AutoTopupJobStatus;
+  attempt_count: number;
+  next_attempt_at: Date;
+  payment_intent_id: string | null;
+  last_error: string | null;
+  locked_at: Date | null;
+  completed_at: Date | null;
+  created_at: Date;
+  updated_at: Date;
+}
+
 export type LedgerBucket = 'included' | 'topup';
 export type LedgerEntryType =
   | 'grant_included'

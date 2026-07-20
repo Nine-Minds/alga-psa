@@ -5,6 +5,7 @@ import type { NextFunction, Request, RequestHandler, Response } from 'express';
 import type { Knex } from 'knex';
 
 import { hasActiveConsent } from '../accounts/accountService.js';
+import type { PostDebitHandler } from '../autoTopup/postDebit.js';
 import { checkAdmission, type AdmissionDenialReason } from '../ledger/admission.js';
 import { debitUsage } from '../ledger/ledger.js';
 import { calculateCredits, type DefaultPricingRate } from '../pricing/pricing.js';
@@ -20,6 +21,7 @@ export interface ChatCompletionsHandlerOptions {
   database: Knex;
   providerRouter: ProviderRouter;
   getDefaultPricingRate: () => DefaultPricingRate;
+  afterDebit?: PostDebitHandler;
 }
 
 const ADMISSION_MESSAGES: Record<AdmissionDenialReason, string> = {
@@ -64,6 +66,7 @@ async function persistUsage(options: {
   pricingRate: DefaultPricingRate;
   requestId: string;
   durationMs: bigint;
+  afterDebit?: PostDebitHandler;
 }): Promise<void> {
   const creditsCharged = calculateCredits(
     {
@@ -76,7 +79,7 @@ async function persistUsage(options: {
     throw new HttpError(502, 'invalid_provider_usage', 'The upstream provider returned empty usage.');
   }
 
-  await debitUsage(options.database, {
+  const debitResult = await debitUsage(options.database, {
     accountId: options.accountId,
     feature: options.feature,
     model: options.model,
@@ -88,6 +91,13 @@ async function persistUsage(options: {
     requestId: options.requestId,
     durationMs: options.durationMs,
   });
+  if (options.afterDebit) {
+    try {
+      await options.afterDebit(debitResult);
+    } catch (error) {
+      console.error('[ai-gateway] Post-debit processing failed', error);
+    }
+  }
 }
 
 async function proxyNonStreaming(options: {
@@ -101,6 +111,7 @@ async function proxyNonStreaming(options: {
   pricingRate: DefaultPricingRate;
   requestId: string;
   startedAt: bigint;
+  afterDebit?: PostDebitHandler;
 }): Promise<void> {
   const responseText = await options.upstream.text();
   let responseBody: unknown;
@@ -134,6 +145,7 @@ async function proxyNonStreaming(options: {
     pricingRate: options.pricingRate,
     requestId: options.requestId,
     durationMs: elapsedMilliseconds(options.startedAt),
+    afterDebit: options.afterDebit,
   });
 
   copyUpstreamResponseHeaders(options.upstream, options.response);
@@ -151,6 +163,7 @@ async function proxyStreaming(options: {
   pricingRate: DefaultPricingRate;
   requestId: string;
   startedAt: bigint;
+  afterDebit?: PostDebitHandler;
 }): Promise<void> {
   if (!options.upstream.body) {
     throw new HttpError(502, 'invalid_provider_response', 'The upstream stream has no response body.');
@@ -201,6 +214,7 @@ async function proxyStreaming(options: {
     pricingRate: options.pricingRate,
     requestId: options.requestId,
     durationMs: elapsedMilliseconds(options.startedAt),
+    afterDebit: options.afterDebit,
   });
 
   if (clientConnected) {
@@ -295,6 +309,7 @@ export function createChatCompletionsHandler(
         pricingRate,
         requestId,
         startedAt,
+        afterDebit: options.afterDebit,
       };
       if (stream) {
         await proxyStreaming(common);

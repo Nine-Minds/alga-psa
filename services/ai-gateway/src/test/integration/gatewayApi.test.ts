@@ -21,12 +21,20 @@ import { createApp } from '../../http/app.js';
 import { debitUsage } from '../../ledger/ledger.js';
 import { OpenRouterProvider } from '../../providers/openRouter.js';
 import type { ProviderRouter } from '../../providers/types.js';
+import type { TierConfig } from '../../tier/tierConfig.js';
 
 const testDatabaseUrl = process.env.AI_GATEWAY_TEST_DATABASE_URL;
 const describeWithDatabase = testDatabaseUrl ? describe : describe.skip;
 const SERVICE_SECRET = 'integration-service-secret-with-enough-entropy';
 const ADMIN_TOKEN = 'integration-admin-token';
 const APPLIANCE_CREDENTIAL = 'integration-appliance-credential';
+const TEST_TIER_CONFIG: TierConfig = {
+  monthlyIncludedCredits: 100n,
+  gracePercentBasisPoints: 1_000n,
+  topupPacks: [{ priceId: 'price_topup_test', credits: 25n }],
+  lowBalanceThreshold: 10n,
+};
+const getTestTierConfig = async (): Promise<TierConfig> => TEST_TIER_CONFIG;
 
 type ProviderMode = 'nonstream' | 'stream' | 'disconnect' | 'error';
 
@@ -137,7 +145,11 @@ async function activateAccount(
   deploymentType: 'hosted' | 'appliance' = 'hosted',
   includedBalance = 100n,
 ): Promise<string> {
-  const account = await findOrCreateAccount(database, { tenantId, deploymentType });
+  const account = await findOrCreateAccount(
+    database,
+    { tenantId, deploymentType },
+    getTestTierConfig,
+  );
   await database('ai_accounts').where({ account_id: account.account_id }).update({
     subscription_status: 'active',
     included_balance: includedBalance.toString(),
@@ -237,6 +249,7 @@ describeWithDatabase('AI gateway HTTP API', () => {
         outputCreditsPer1kTokens: 1_000n,
       },
       adminToken: ADMIN_TOKEN,
+      getTierConfig: getTestTierConfig,
     }).listen(0, '127.0.0.1');
     const gatewayPort = await new Promise<number>((resolve, reject) => {
       gatewayServer.once('listening', () => {
@@ -258,6 +271,7 @@ describeWithDatabase('AI gateway HTTP API', () => {
     providerState.lastHeaders = null;
     await database.raw(`
       TRUNCATE TABLE
+        auto_topup_jobs,
         credit_ledger,
         ai_usage_events,
         consent_records,
@@ -568,10 +582,11 @@ describeWithDatabase('AI gateway HTTP API', () => {
     expect(noSubscription.status).toBe(402);
     expect(await noSubscription.json()).toMatchObject({ error: { code: 'no_subscription' } });
 
-    const account = await findOrCreateAccount(database, {
-      tenantId,
-      deploymentType: 'hosted',
-    });
+    const account = await findOrCreateAccount(
+      database,
+      { tenantId, deploymentType: 'hosted' },
+      getTestTierConfig,
+    );
     await database('ai_accounts').where({ account_id: account.account_id }).update({
       subscription_status: 'active',
       included_balance: '-5',

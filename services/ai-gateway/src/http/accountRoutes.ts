@@ -13,6 +13,7 @@ import {
   updateAutoTopup,
 } from '../accounts/accountService.js';
 import { adjustCredits } from '../ledger/ledger.js';
+import { resolveTopupPack, type TierConfigLoader } from '../tier/tierConfig.js';
 import { getAuthenticatedContext } from './authMiddleware.js';
 import { HttpError } from './errors.js';
 import { parseJsonInteger, readRequiredString, requireObject } from './input.js';
@@ -72,6 +73,7 @@ export interface AccountRouteHandlers {
 export function createAccountRouteHandlers(
   database: Knex,
   getAdminToken: () => string,
+  getTierConfig: TierConfigLoader,
 ): AccountRouteHandlers {
   return {
     getAccount: asyncHandler(async (_request, response) => {
@@ -124,6 +126,14 @@ export function createAccountRouteHandlers(
         body.packPriceId === undefined
           ? undefined
           : readRequiredString(body.packPriceId, 'packPriceId');
+      const effectivePackPriceId = packPriceId ?? account.auto_topup_pack_price_id;
+      if (body.enabled && effectivePackPriceId !== null) {
+        try {
+          resolveTopupPack(await getTierConfig(), effectivePackPriceId);
+        } catch (error) {
+          throw new HttpError(400, 'invalid_request', (error as Error).message);
+        }
+      }
       let updated;
       try {
         updated = await updateAutoTopup(database, account.account_id, {

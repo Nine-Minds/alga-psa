@@ -40,6 +40,19 @@ export interface UsageDebitResult {
   topupBalance: bigint;
   totalBalance: bigint;
   ledgerMovements: PersistedLedgerMovement[];
+  transition: {
+    accountId: string;
+    tenantId: string;
+    deploymentType: AiAccountRow['deployment_type'];
+    beforeTotalBalance: bigint;
+    afterTotalBalance: bigint;
+    beforeAvailableCredits: bigint;
+    afterAvailableCredits: bigint;
+    lowBalanceThreshold: bigint;
+    autoTopupEnabled: boolean;
+    autoTopupThresholdCredits: bigint | null;
+    autoTopupPackPriceId: string | null;
+  };
 }
 
 export interface MonthlyRenewalInput {
@@ -51,10 +64,27 @@ export interface MonthlyRenewalInput {
 }
 
 export interface MonthlyRenewalResult {
+  applied: boolean;
   includedBalance: bigint;
   topupBalance: bigint;
   totalBalance: bigint;
   ledgerMovements: PersistedLedgerMovement[];
+}
+
+export interface TopupGrantInput {
+  accountId: string;
+  credits: BigintValue;
+  stripeRef: string;
+  note?: string;
+  createdAt?: Date;
+}
+
+export interface TopupGrantResult {
+  applied: boolean;
+  includedBalance: bigint;
+  topupBalance: bigint;
+  totalBalance: bigint;
+  ledgerMovement: PersistedLedgerMovement | null;
 }
 
 export interface CreditAdjustmentInput {
@@ -161,6 +191,21 @@ export async function debitUsage(database: Knex, input: UsageDebitInput): Promis
     const account = await loadAccountForUpdate(transaction, input.accountId);
     const includedBalance = parseBigint(account.included_balance, 'account.included_balance');
     const topupBalance = parseBigint(account.topup_balance, 'account.topup_balance');
+    const graceLimitCredits = parseBigint(
+      account.grace_limit_credits,
+      'account.grace_limit_credits',
+    );
+    const lowBalanceThreshold = parseBigint(
+      account.low_balance_threshold,
+      'account.low_balance_threshold',
+    );
+    const autoTopupThresholdCredits =
+      account.auto_topup_threshold_credits === null
+        ? null
+        : parseBigint(
+            account.auto_topup_threshold_credits,
+            'account.auto_topup_threshold_credits',
+          );
     const plan = planUsageDebit(includedBalance, topupBalance, creditsCharged);
     const usageId = randomUUID();
     const createdAt = input.createdAt ?? new Date();
@@ -208,6 +253,20 @@ export async function debitUsage(database: Knex, input: UsageDebitInput): Promis
       topupBalance: plan.topupBalance,
       totalBalance: plan.includedBalance + plan.topupBalance,
       ledgerMovements,
+      transition: {
+        accountId: account.account_id,
+        tenantId: account.tenant_id,
+        deploymentType: account.deployment_type,
+        beforeTotalBalance: includedBalance + topupBalance,
+        afterTotalBalance: plan.includedBalance + plan.topupBalance,
+        beforeAvailableCredits: includedBalance + topupBalance + graceLimitCredits,
+        afterAvailableCredits:
+          plan.includedBalance + plan.topupBalance + graceLimitCredits,
+        lowBalanceThreshold,
+        autoTopupEnabled: account.auto_topup_enabled,
+        autoTopupThresholdCredits,
+        autoTopupPackPriceId: account.auto_topup_pack_price_id,
+      },
     };
   });
 }
@@ -221,6 +280,25 @@ export async function renewMonthlyCycle(
 
   return database.transaction(async (transaction) => {
     const account = await loadAccountForUpdate(transaction, input.accountId);
+    if (input.stripeRef) {
+      const existingGrant = await transaction('credit_ledger')
+        .where({ entry_type: 'grant_included', stripe_ref: input.stripeRef })
+        .first('entry_id');
+      if (existingGrant) {
+        const includedBalance = parseBigint(
+          account.included_balance,
+          'account.included_balance',
+        );
+        const topupBalance = parseBigint(account.topup_balance, 'account.topup_balance');
+        return {
+          applied: false,
+          includedBalance,
+          topupBalance,
+          totalBalance: includedBalance + topupBalance,
+          ledgerMovements: [],
+        };
+      }
+    }
     const includedBalance = parseBigint(account.included_balance, 'account.included_balance');
     const topupBalance = parseBigint(account.topup_balance, 'account.topup_balance');
     const plan = planMonthlyRenewal(includedBalance, topupBalance, monthlyAllotment);
@@ -251,10 +329,73 @@ export async function renewMonthlyCycle(
     }
 
     return {
+      applied: true,
       includedBalance: plan.includedBalance,
       topupBalance: plan.topupBalance,
       totalBalance: plan.includedBalance + plan.topupBalance,
       ledgerMovements,
+    };
+  });
+}
+
+export async function grantTopup(
+  database: Knex,
+  input: TopupGrantInput,
+): Promise<TopupGrantResult> {
+  requireText(input.accountId, 'accountId');
+  const credits = requirePositiveBigint(input.credits, 'credits');
+  const stripeRef = requireText(input.stripeRef, 'stripeRef');
+
+  return database.transaction(async (transaction) => {
+    const account = await loadAccountForUpdate(transaction, input.accountId);
+    const includedBalance = parseBigint(account.included_balance, 'account.included_balance');
+    const topupBalance = parseBigint(account.topup_balance, 'account.topup_balance');
+    const existingGrant = await transaction('credit_ledger')
+      .where({ entry_type: 'grant_topup', stripe_ref: stripeRef })
+      .first('entry_id');
+    if (existingGrant) {
+      return {
+        applied: false,
+        includedBalance,
+        topupBalance,
+        totalBalance: includedBalance + topupBalance,
+        ledgerMovement: null,
+      };
+    }
+
+    const nextTopupBalance = topupBalance + credits;
+    const createdAt = input.createdAt ?? new Date();
+    const [ledgerMovement] = await insertLedgerMovements(
+      transaction,
+      input.accountId,
+      [
+        {
+          entryType: 'grant_topup',
+          bucket: 'topup',
+          credits,
+          balanceAfter: includedBalance + nextTopupBalance,
+        },
+      ],
+      {
+        stripeRef,
+        note: input.note ?? 'Stripe top-up grant',
+        createdAt,
+      },
+    );
+    if (!ledgerMovement) {
+      throw new Error('Top-up grant ledger movement was not persisted');
+    }
+
+    await transaction('ai_accounts').where({ account_id: input.accountId }).update({
+      topup_balance: nextTopupBalance.toString(),
+      updated_at: createdAt,
+    });
+    return {
+      applied: true,
+      includedBalance,
+      topupBalance: nextTopupBalance,
+      totalBalance: includedBalance + nextTopupBalance,
+      ledgerMovement,
     };
   });
 }

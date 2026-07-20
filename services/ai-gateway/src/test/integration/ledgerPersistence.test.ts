@@ -7,9 +7,17 @@ import { afterAll, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { findOrCreateAccount } from '../../accounts/accounts.js';
 import { createDatabase } from '../../db/client.js';
 import { debitUsage, renewMonthlyCycle } from '../../ledger/ledger.js';
+import type { TierConfig } from '../../tier/tierConfig.js';
 
 const testDatabaseUrl = process.env.AI_GATEWAY_TEST_DATABASE_URL;
 const describeWithDatabase = testDatabaseUrl ? describe : describe.skip;
+const TEST_TIER_CONFIG: TierConfig = {
+  monthlyIncludedCredits: 100n,
+  gracePercentBasisPoints: 1_000n,
+  topupPacks: [{ priceId: 'price_test', credits: 25n }],
+  lowBalanceThreshold: 10n,
+};
+const getTestTierConfig = async (): Promise<TierConfig> => TEST_TIER_CONFIG;
 
 interface AccountBalances {
   included_balance: string;
@@ -70,6 +78,7 @@ describeWithDatabase('ledger persistence', () => {
   beforeEach(async () => {
     await database.raw(`
       TRUNCATE TABLE
+        auto_topup_jobs,
         credit_ledger,
         ai_usage_events,
         consent_records,
@@ -96,6 +105,7 @@ describeWithDatabase('ledger persistence', () => {
       'consent_records',
       'stripe_webhook_events',
       'tier_config',
+      'auto_topup_jobs',
     ];
     const tableRows = await database('information_schema.tables')
       .where({ table_schema: 'public' })
@@ -139,14 +149,16 @@ describeWithDatabase('ledger persistence', () => {
 
   it('creates one lazy account per tenant and deployment with status none', async () => {
     const tenantId = randomUUID();
-    const first = await findOrCreateAccount(database, {
-      tenantId,
-      deploymentType: 'hosted',
-    });
-    const second = await findOrCreateAccount(database, {
-      tenantId,
-      deploymentType: 'hosted',
-    });
+    const first = await findOrCreateAccount(
+      database,
+      { tenantId, deploymentType: 'hosted' },
+      getTestTierConfig,
+    );
+    const second = await findOrCreateAccount(
+      database,
+      { tenantId, deploymentType: 'hosted' },
+      getTestTierConfig,
+    );
 
     expect(second.account_id).toBe(first.account_id);
     expect(first).toMatchObject({
@@ -158,10 +170,11 @@ describeWithDatabase('ledger persistence', () => {
   });
 
   it('locks the account and persists included-then-topup debit movements plus usage', async () => {
-    const account = await findOrCreateAccount(database, {
-      tenantId: randomUUID(),
-      deploymentType: 'hosted',
-    });
+    const account = await findOrCreateAccount(
+      database,
+      { tenantId: randomUUID(), deploymentType: 'hosted' },
+      getTestTierConfig,
+    );
     await setAccountState(database, account.account_id, 100n, 50n);
 
     const result = await debitUsage(database, usageDebitInput(account.account_id, 120n));
@@ -196,10 +209,11 @@ describeWithDatabase('ledger persistence', () => {
   });
 
   it('carries an included deficit into renewal and does not change top-up credits', async () => {
-    const account = await findOrCreateAccount(database, {
-      tenantId: randomUUID(),
-      deploymentType: 'hosted',
-    });
+    const account = await findOrCreateAccount(
+      database,
+      { tenantId: randomUUID(), deploymentType: 'hosted' },
+      getTestTierConfig,
+    );
     await setAccountState(database, account.account_id, -25n, 30n);
 
     const result = await renewMonthlyCycle(database, {
@@ -224,10 +238,11 @@ describeWithDatabase('ledger persistence', () => {
   });
 
   it('maintains an exact balance_after chain across grants, expiry, and a split debit', async () => {
-    const account = await findOrCreateAccount(database, {
-      tenantId: randomUUID(),
-      deploymentType: 'hosted',
-    });
+    const account = await findOrCreateAccount(
+      database,
+      { tenantId: randomUUID(), deploymentType: 'hosted' },
+      getTestTierConfig,
+    );
 
     await renewMonthlyCycle(database, {
       accountId: account.account_id,
@@ -271,10 +286,11 @@ describeWithDatabase('ledger persistence', () => {
   });
 
   it('serializes parallel debits without lost updates', async () => {
-    const account = await findOrCreateAccount(database, {
-      tenantId: randomUUID(),
-      deploymentType: 'hosted',
-    });
+    const account = await findOrCreateAccount(
+      database,
+      { tenantId: randomUUID(), deploymentType: 'hosted' },
+      getTestTierConfig,
+    );
     await setAccountState(database, account.account_id, 1_000n, 0n);
 
     await Promise.all(

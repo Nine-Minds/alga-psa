@@ -3,8 +3,15 @@ import 'dotenv/config';
 import type { Server } from 'node:http';
 import process from 'node:process';
 
+import {
+  createAutoTopupWorkerFromEnvironment,
+  startAutoTopupPoller,
+} from './autoTopup/worker.js';
 import { closeDatabase, getDatabase } from './db/client.js';
+import { StructuredGatewayEventEmitter } from './events/events.js';
 import { createApp } from './http/app.js';
+import { OfficialGatewayStripeClient } from './stripe/stripeClient.js';
+import { loadTierConfig } from './tier/tierConfig.js';
 
 function readPort(): number {
   const port = Number.parseInt(process.env.PORT ?? '8080', 10);
@@ -18,7 +25,13 @@ async function start(): Promise<void> {
   const database = getDatabase();
   await database.raw('select 1');
 
-  const app = createApp();
+  const stripe = new OfficialGatewayStripeClient();
+  const events = new StructuredGatewayEventEmitter();
+  const getTierConfig = () => loadTierConfig(database);
+  const app = createApp({ database, stripe, events, getTierConfig });
+  const autoTopupPoller = startAutoTopupPoller(
+    createAutoTopupWorkerFromEnvironment({ database, stripe, events, getTierConfig }),
+  );
   const port = readPort();
   const host = '0.0.0.0';
 
@@ -31,6 +44,7 @@ async function start(): Promise<void> {
 
   const shutdown = async (signal: 'SIGINT' | 'SIGTERM'): Promise<void> => {
     console.info(`Received ${signal}; shutting down AI gateway`);
+    autoTopupPoller.stop();
     await new Promise<void>((resolve, reject) => {
       server.close((error) => (error ? reject(error) : resolve()));
     });
