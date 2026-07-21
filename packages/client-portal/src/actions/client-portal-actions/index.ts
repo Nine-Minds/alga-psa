@@ -5,6 +5,7 @@ export * from './client-client';
 export * from './client-documents';
 // Note: client-payment re-exports from clientPaymentActions, excluded to avoid duplicates
 export * from './client-project-details';
+export * from './client-project-billing';
 export * from './client-projects';
 export * from './client-tickets';
 export * from './clientUserActions';

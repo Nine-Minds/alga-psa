@@ -456,7 +456,8 @@
       "pdfFailed": "Kan geen PDF genereren. Probeer het opnieuw.",
       "bulkPdfFailed": "Kan geen PDF's genereren. Probeer het opnieuw.",
       "unfinalizeFailed": "Kan de finalisatie van de factuur niet ongedaan maken. Probeer het opnieuw.",
-      "bulkUnfinalizeFailed": "Kan de finalisatie van facturen niet ongedaan maken. Probeer het opnieuw."
+      "bulkUnfinalizeFailed": "Kan de finalisatie van facturen niet ongedaan maken. Probeer het opnieuw.",
+      "bulkUnfinalizeInvoiceFailed": "{{invoiceNumber}} kon niet worden heropend: {{reason}}"
     }
   },
   "recurringServicePeriods": {
@@ -683,6 +684,8 @@
     "error": "Kan voorbeeld niet weergeven",
     "errorDescription": "Kan voorbeeld niet weergeven. Er ontbreken mogelijk gegevens.",
     "errors": {
+      "notFound": "Factuur niet gevonden.",
+      "noTemplates": "Er zijn geen factuursjablonen beschikbaar.",
       "loadFailed": "Kan voorbeeld niet laden: {{message}}",
       "actionFailed": "Kan {{action}} niet uitvoeren. Probeer het opnieuw.",
       "actionLabels": {
@@ -1022,7 +1025,8 @@
     "tabs": {
       "generate": "Genereer",
       "drafts": "Concepten",
-      "finalized": "Afgerond"
+      "finalized": "Afgerond",
+      "projectBilling": "Project Billing"
     }
   },
   "invoiceSyncBadge": {
@@ -1657,6 +1661,66 @@
     },
     "dragOverlay": {
       "component": "Component"
+    }
+  },
+  "projectBilling": {
+    "subtitle": "Ready milestones and deposits awaiting approval across all projects.",
+    "bulkActions": "Actions ({{count}})",
+    "loading": "Loading project billing queue...",
+    "empty": "Nothing is waiting for review. Ready milestones and deposits will appear here.",
+    "columns": {
+      "project": "Project",
+      "client": "Client",
+      "description": "Description",
+      "amount": "Amount",
+      "trigger": "Trigger",
+      "daysWaiting": "Days waiting",
+      "actions": "Actions"
+    },
+    "trigger": {
+      "phase": "Phase {{phase}} completed {{date}}",
+      "date": "Date reached",
+      "manual": "Manual"
+    },
+    "actions": {
+      "approve": "Approve",
+      "approveInvoiceNow": "Approve & invoice now",
+      "hold": "Hold",
+      "cancel": "Cancel",
+      "approveSelected": "Approve selected",
+      "holdSelected": "Hold selected"
+    },
+    "toasts": {
+      "approved": "Entry approved.",
+      "approvedWithWarning": "Entry approved. {{warning}}",
+      "invoiced": "Entry approved and invoiced.",
+      "bulkApproved": "{{count}} entries approved.",
+      "bulkApproveFailed": "{{count}} entries could not be approved (e.g. {{reason}}).",
+      "held": "Entry placed on hold.",
+      "bulkHeld": "{{count}} entries placed on hold.",
+      "bulkHoldFailed": "{{count}} entries could not be held (e.g. {{reason}}).",
+      "canceled": "Entry canceled."
+    },
+    "errors": {
+      "loadFailed": "Failed to load the project billing review queue. Please try again.",
+      "approveFailed": "Failed to approve the entry.",
+      "invoiceFailed": "Failed to approve and invoice the entry.",
+      "holdFailed": "Failed to place the entry on hold.",
+      "cancelFailed": "Failed to cancel the entry."
+    },
+    "holdDialog": {
+      "title": "Hold entry",
+      "titlePlural": "Hold {{count}} entries",
+      "description": "Holding returns the entry to pending until it is made ready again. A reason is required.",
+      "reasonPlaceholder": "Reason for holding...",
+      "cancel": "Cancel",
+      "confirm": "Hold"
+    },
+    "cancelDialog": {
+      "title": "Cancel entry",
+      "message": "Canceling this schedule entry removes it from billing. This cannot be undone.",
+      "confirm": "Cancel entry",
+      "dismiss": "Keep entry"
     }
   }
 }

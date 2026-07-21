@@ -155,5 +155,23 @@
   },
   "mention": {
     "noResultsFound": "No se encontraron resultados"
+  },
+  "aiCredits": {
+    "indicatorTooltip": "{{credits}} créditos de IA restantes",
+    "noSubscription": {
+      "title": "La IA es un complemento de pago",
+      "body": "Suscríbase al complemento de IA para usar Alga AI. Su plan incluye una asignación mensual de créditos.",
+      "cta": "Ver ajustes de uso de IA"
+    },
+    "outOfCredits": {
+      "title": "Sin créditos de IA",
+      "body": "Recargue para seguir usando Alga AI.",
+      "bodyWithBalance": "Su saldo es de {{balance}} créditos. Recargue para seguir usando Alga AI.",
+      "cta": "Comprar créditos de recarga"
+    },
+    "consentRequired": {
+      "title": "Se requiere consentimiento para compartir datos",
+      "body": "Un administrador debe aceptar los términos de compartición de datos de IA en este dispositivo antes de poder usar la IA."
+    }
   }
 }

@@ -512,8 +512,22 @@ async function initializeJobScheduler(storageService: StorageService) {
     }
 
     let jobRecordId: string | null = null;
+    let tenantExists = true;
 
     try {
+      // A deleted tenant must end the chain here, before the finally block
+      // re-enqueues and before a jobs row is written for it.
+      const tenantCheckKnex = await getConnection(tenantId);
+      const tenantRow = await tenantCheckKnex('tenants').where({ tenant: tenantId }).first();
+      if (!tenantRow) {
+        tenantExists = false;
+        logger.warn('createNextTimePeriods: tenant no longer exists, ending job chain', {
+          tenantId,
+          jobId: job.id
+        });
+        return;
+      }
+
       jobRecordId = await jobService.createJob('createNextTimePeriods', {
         tenantId,
         metadata: {
@@ -575,36 +589,38 @@ async function initializeJobScheduler(storageService: StorageService) {
 
       throw error;
     } finally {
-      // Always enqueue the next run so the job continues daily even after archives are cleaned
-      // Use UTC to avoid DST drift issues
-      try {
-        const nextRunInstant = Temporal.Now.instant().add({ hours: 24 });
-        const nextRun = new Date(nextRunInstant.epochMilliseconds);
-        const singletonKey = `createNextTimePeriods:${tenantId}`;
+      // Always enqueue the next run so the job continues daily even after archives are cleaned,
+      // unless the tenant is gone. Use UTC to avoid DST drift issues
+      if (tenantExists) {
+        try {
+          const nextRunInstant = Temporal.Now.instant().add({ hours: 24 });
+          const nextRun = new Date(nextRunInstant.epochMilliseconds);
+          const singletonKey = `createNextTimePeriods:${tenantId}`;
 
-        // Use scheduleRecurringJob which has singleton deduplication built-in
-        // This prevents duplicate jobs from stacking up on retries
-        const nextJobId = await jobScheduler.scheduleRecurringJob(
-          'createNextTimePeriods',
-          '24 hours',
-          { tenantId }
-        );
+          // Use scheduleRecurringJob which has singleton deduplication built-in
+          // This prevents duplicate jobs from stacking up on retries
+          const nextJobId = await jobScheduler.scheduleRecurringJob(
+            'createNextTimePeriods',
+            '24 hours',
+            { tenantId }
+          );
 
-        if (nextJobId) {
-          logger.debug('Queued next createNextTimePeriods job', {
-            tenantId,
-            jobId: nextJobId,
-            nextRun: nextRun.toISOString(),
-            singletonKey
-          });
-        } else {
-          logger.debug('createNextTimePeriods job already queued (singleton active)', {
-            tenantId,
-            singletonKey
-          });
+          if (nextJobId) {
+            logger.debug('Queued next createNextTimePeriods job', {
+              tenantId,
+              jobId: nextJobId,
+              nextRun: nextRun.toISOString(),
+              singletonKey
+            });
+          } else {
+            logger.debug('createNextTimePeriods job already queued (singleton active)', {
+              tenantId,
+              singletonKey
+            });
+          }
+        } catch (scheduleError) {
+          logger.error('Failed to enqueue next createNextTimePeriods job', { tenantId, scheduleError });
         }
-      } catch (scheduleError) {
-        logger.error('Failed to enqueue next createNextTimePeriods job', { tenantId, scheduleError });
       }
     }
   });

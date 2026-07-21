@@ -27,18 +27,38 @@ interface ApplyCreditPayload {
 /** How long an apply_credit op may wait on missing mappings before we surface it. */
 export const STALLED_APPLY_CREDIT_AGE_MS = 7 * 24 * 60 * 60 * 1000;
 
-/** True when the credit's source document is a prepayment (which never exports). */
-async function isPrepaymentSourced(deps: DrainDeps, creditNoteInvoiceId: string): Promise<boolean> {
+type NonCreditMemoSource = 'prepayment' | 'project_deposit';
+
+/**
+ * Credits backed by these positive invoices never produce a QBO CreditMemo.
+ * Treating their invoice mapping as one would submit an invalid linked payment.
+ */
+async function resolveNonCreditMemoSource(
+  deps: DrainDeps,
+  creditNoteInvoiceId: string
+): Promise<NonCreditMemoSource | null> {
   try {
     const sourceInvoice = await deps.knex('invoices')
       .where({ invoice_id: creditNoteInvoiceId, tenant: deps.tenantId })
       .select('invoice_type', 'is_prepayment')
       .first();
-    return Boolean(sourceInvoice && (sourceInvoice.invoice_type === 'prepayment' || sourceInvoice.is_prepayment));
+    if (sourceInvoice && (sourceInvoice.invoice_type === 'prepayment' || sourceInvoice.is_prepayment)) {
+      return 'prepayment';
+    }
+
+    const projectDepositCredit = await deps.knex('transactions')
+      .where({
+        invoice_id: creditNoteInvoiceId,
+        tenant: deps.tenantId,
+        type: 'credit_issuance',
+      })
+      .whereRaw("metadata->>'project_billing_credit_kind' = ?", ['project_deposit'])
+      .first('transaction_id');
+    return projectDepositCredit ? 'project_deposit' : null;
   } catch {
-    // Infra failure: treat as not-prepayment so the op stays pending rather
+    // Infra failure: treat as a normal credit-note source so the op stays pending rather
     // than terminally failing on a lookup error.
-    return false;
+    return null;
   }
 }
 
@@ -105,45 +125,50 @@ export async function drainApplyCreditOps(deps: DrainDeps): Promise<void> {
       continue;
     }
 
+    const nonCreditMemoSource = await resolveNonCreditMemoSource(
+      deps,
+      payload.creditNoteInvoiceId
+    );
+    if (nonCreditMemoSource) {
+      const isProjectDeposit = nonCreditMemoSource === 'project_deposit';
+      const message = isProjectDeposit
+        ? 'Credit drawn from a project deposit cannot sync as a QuickBooks CreditMemo because its source document exports as a positive invoice.'
+        : 'Credit drawn from a prepayment cannot sync because prepayment invoices are not exported to QuickBooks.';
+      const result = await deps.exceptions.createOrUpdate({
+        type: 'accounting_sync_export_error',
+        entityType: 'credit_allocation',
+        entityId: op.alga_entity_id,
+        title: isProjectDeposit
+          ? 'Project deposit credit applied to a synced invoice — QuickBooks not updated'
+          : 'Prepayment credit applied to a synced invoice — QuickBooks not updated',
+        context: {
+          reason: isProjectDeposit
+            ? 'project_deposit_credit_not_syncable'
+            : 'prepayment_credit_not_syncable',
+          alga_entity_id: op.alga_entity_id,
+          alga_credit_note_invoice_id: payload.creditNoteInvoiceId,
+          alga_target_invoice_id: payload.targetInvoiceId,
+          requested_amount_cents: payload.amountCents,
+          message,
+          details:
+            `${message} Settle the invoice inside QuickBooks (apply the customer's credit or record the ` +
+            'payment there) so both systems agree, then resolve this exception.',
+          realm: deps.targetRealm
+        }
+      });
+      if (result.created) {
+        deps.stats.exceptionsCreated += 1;
+      }
+      await deps.ops.markFailed(deps.tenantId, op.op_id, message);
+      deps.stats.opsFailed += 1;
+      continue;
+    }
+
     // ── Resolve both QBO entity IDs ────────────────────────────────────
     const creditMemoMapping = await deps.ledger.findByAlgaId('invoice', payload.creditNoteInvoiceId);
     const invoiceMapping = await deps.ledger.findByAlgaId('invoice', payload.targetInvoiceId);
 
     if (!creditMemoMapping || !invoiceMapping) {
-      // Doomed op check: credit drawn from a PREPAYMENT invoice can never map,
-      // because prepayments are not exported to QBO. Without this, the op
-      // pends silently forever while the QBO invoice shows an open balance
-      // Alga believes is settled.
-      if (!creditMemoMapping && (await isPrepaymentSourced(deps, payload.creditNoteInvoiceId))) {
-        const message =
-          'Credit drawn from a prepayment cannot sync: prepayment invoices are not exported to QuickBooks, ' +
-          'so the QuickBooks invoice balance will not reflect this application.';
-        const result = await deps.exceptions.createOrUpdate({
-          type: 'accounting_sync_export_error',
-          entityType: 'credit_allocation',
-          entityId: op.alga_entity_id,
-          title: 'Prepayment credit applied to a synced invoice — QuickBooks not updated',
-          context: {
-            reason: 'prepayment_credit_not_syncable',
-            alga_entity_id: op.alga_entity_id,
-            alga_credit_note_invoice_id: payload.creditNoteInvoiceId,
-            alga_target_invoice_id: payload.targetInvoiceId,
-            requested_amount_cents: payload.amountCents,
-            message,
-            details:
-              `${message} Settle the invoice inside QuickBooks (apply the customer's credit or record the ` +
-              'payment there) so both systems agree, then resolve this exception.',
-            realm: deps.targetRealm
-          }
-        });
-        if (result.created) {
-          deps.stats.exceptionsCreated += 1;
-        }
-        await deps.ops.markFailed(deps.tenantId, op.op_id, message);
-        deps.stats.opsFailed += 1;
-        continue;
-      }
-
       // Otherwise an export simply hasn't drained yet — leave pending without
       // burning attempts. But waiting is only healthy for so long: past the
       // stall window, surface an exception instead of hiding behind the

@@ -31,6 +31,7 @@ export * from './lib/templateUtils';
 
 // Formatting utilities
 export * from './lib/formatters';
+export * from './lib/projectBillingStatus';
 
 // UUID utilities
 export { generateUUID } from './lib/uuid';

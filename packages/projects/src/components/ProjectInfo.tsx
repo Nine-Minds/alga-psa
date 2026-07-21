@@ -16,9 +16,20 @@ import { toast } from 'react-hot-toast';
 import CreateTemplateDialog from './project-templates/CreateTemplateDialog';
 import ProjectMaterialsDrawer from './ProjectMaterialsDrawer';
 import ProjectTaskExportDialog from './ProjectTaskExportDialog';
+import { useProjectBillingIntegration } from '../context/ProjectBillingIntegrationContext';
 import { useTaskShareActions } from './TaskShareActionsContext';
 import { useTaskSelection } from './TaskSelectionContext';
 import { useTranslation } from 'react-i18next';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
+import { isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
+
+interface ProjectBilledSummary {
+  invoicedCents: number;
+  readyCents: number;
+  approvedCents: number;
+  totalCents: number | null;
+  currency: string | null;
+}
 
 interface ProjectInfoProps {
   project: IProject;
@@ -52,6 +63,8 @@ export default function ProjectInfo({
   onTagsChange
 }: ProjectInfoProps) {
   const { t } = useTranslation(['features/projects', 'common']);
+  const { enabled: projectBillingUiEnabled } = useFeatureFlag('project-billing-ui', { defaultValue: false });
+  const billingIntegration = useProjectBillingIntegration();
   const { openDrawer, closeDrawer } = useDrawer();
   const { selectedTaskIds } = useTaskSelection();
   const selectedTaskCount = selectedTaskIds.size;
@@ -66,26 +79,59 @@ export default function ProjectInfo({
     spentHours: number;
     remainingHours: number;
   } | null>(null);
+  const [billedSummary, setBilledSummary] = useState<ProjectBilledSummary | null>(null);
 
   useEffect(() => {
+    let stale = false;
+    // Fetch project metrics and the ambient billing summary concurrently so the
+    // billed bar (F135) extends the existing metadata load rather than adding a
+    // second waterfall. The overview action enforces billing:read and throws for
+    // users without it — that simply leaves the bar hidden.
     const fetchProjectMetrics = async () => {
-      try {
-        const metrics = await calculateProjectCompletion(project.project_id);
-        // Store metrics returned by calculateProjectCompletion (already in hours)
+      const [metricsResult, billingResult] = await Promise.allSettled([
+        calculateProjectCompletion(project.project_id),
+        billingIntegration
+          ? billingIntegration.fetchOverview(project.project_id)
+          : Promise.resolve(null),
+      ]);
+      if (stale) return;
+
+      if (metricsResult.status === 'fulfilled') {
+        const metrics = metricsResult.value;
         setProjectMetrics({
           taskCompletionPercentage: metrics.taskCompletionPercentage,
           hoursCompletionPercentage: metrics.hoursCompletionPercentage,
           budgetedHours: metrics.budgetedHours || 0,
           spentHours: metrics.spentHours || 0,
-          remainingHours: metrics.remainingHours || 0 
+          remainingHours: metrics.remainingHours || 0
         });
-      } catch (error) {
-        console.error('Error fetching project metrics:', error);
+      } else {
+        console.error('Error fetching project metrics:', metricsResult.reason);
+      }
+
+      if (
+        billingResult.status === 'fulfilled'
+        && billingResult.value
+        && !isActionMessageError(billingResult.value)
+        && !isActionPermissionError(billingResult.value)
+        && billingResult.value.config
+      ) {
+        const { config, rollup } = billingResult.value;
+        setBilledSummary({
+          invoicedCents: rollup?.invoiced_amount ?? 0,
+          readyCents: rollup?.ready_amount ?? 0,
+          approvedCents: rollup?.approved_amount ?? 0,
+          totalCents: rollup?.total_price ?? config.total_price ?? null,
+          currency: config.currency,
+        });
+      } else {
+        setBilledSummary(null);
       }
     };
-    
+
     fetchProjectMetrics();
-  }, [project.project_id]);
+    return () => { stale = true; };
+  }, [project.project_id, billingIntegration]);
 
   useEffect(() => {
     setCurrentProject(project);
@@ -237,6 +283,17 @@ export default function ProjectInfo({
               </div>
             </div>
           </div>
+        )}
+
+        {/* Billed bar (F135) — only when project billing is enabled */}
+        {projectBillingUiEnabled && billingIntegration && billedSummary && (
+          <billingIntegration.BilledBar
+            invoicedCents={billedSummary.invoicedCents}
+            readyCents={billedSummary.readyCents}
+            approvedCents={billedSummary.approvedCents}
+            totalCents={billedSummary.totalCents}
+            currency={billedSummary.currency}
+          />
         )}
       </div>
 

@@ -748,7 +748,13 @@ describe('BoardsSettings ticket status copy flow', () => {
     fireEvent.change(screen.getByLabelText('ticketing.boards.fields.boardName.label'), {
       target: { value: 'Support Renamed' },
     });
-    fireEvent.click(screen.getByTestId('save-board-button'));
+    const saveButton = screen.getByTestId('save-board-button');
+    // Generous timeout: under Nx parallel load the dirty-state re-render that
+    // enables the button can outlast waitFor's 1s default.
+    await waitFor(() => {
+      expect(saveButton).toBeEnabled();
+    }, { timeout: 5_000 });
+    fireEvent.click(saveButton);
 
     await waitFor(() => {
       expect(updateBoardMock).toHaveBeenCalled();

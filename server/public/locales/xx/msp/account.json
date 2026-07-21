@@ -425,5 +425,75 @@
       "noLongerNeed": "11111",
       "other": "11111"
     }
+  },
+  "aiUsage": {
+    "title": "11111",
+    "subtitle": "11111",
+    "refresh": "11111",
+    "errors": {
+      "loadSummary": "11111",
+      "loadHistory": "11111",
+      "subscribe": "11111",
+      "topup": "11111",
+      "autoTopup": "11111",
+      "unavailable": "11111"
+    },
+    "upsell": {
+      "heading": "11111",
+      "body": "11111",
+      "subscribe": "11111",
+      "subscribing": "11111"
+    },
+    "grace": {
+      "title": "11111",
+      "body": "11111 {{grace}} 11111"
+    },
+    "lowBalance": {
+      "title": "11111",
+      "body": "11111"
+    },
+    "balance": {
+      "total": "11111",
+      "creditsUnit": "11111",
+      "included": "11111",
+      "resetsMonthly": "11111",
+      "topup": "11111",
+      "carriesOver": "11111"
+    },
+    "cycle": {
+      "label": "11111",
+      "resetsIn": "11111 {{days}} 11111"
+    },
+    "topup": {
+      "title": "11111",
+      "description": "11111",
+      "noPacks": "11111",
+      "packWithCredits": "11111 {{label}} 11111 {{credits}} 11111"
+    },
+    "autoTopup": {
+      "title": "11111",
+      "description": "11111",
+      "enable": "11111",
+      "enableHelp": "11111",
+      "threshold": "11111",
+      "pack": "11111",
+      "selectPack": "11111",
+      "save": "11111",
+      "saved": "11111",
+      "saving": "11111"
+    },
+    "history": {
+      "title": "11111",
+      "description": "11111",
+      "allFeatures": "11111",
+      "date": "11111",
+      "feature": "11111",
+      "model": "11111",
+      "tokens": "11111",
+      "credits": "11111",
+      "empty": "11111",
+      "loading": "11111",
+      "loadMore": "11111"
+    }
   }
 }

@@ -684,7 +684,7 @@ describe('QuickAddTicket prefills', () => {
     );
 
     await waitFor(() => expect(getTicketFormDataMock).toHaveBeenCalled());
-    expect(screen.getByPlaceholderText('Ticket Title *')).toHaveValue('Prefilled Title');
+    expect(await screen.findByPlaceholderText('Ticket Title *')).toHaveValue('Prefilled Title');
   });
 
   it('initializes assigned user from prefilledAssignedTo', async () => {
@@ -697,6 +697,7 @@ describe('QuickAddTicket prefills', () => {
       />
     );
 
+    await waitFor(() => expect(getTicketFormDataMock).toHaveBeenCalled());
     expect(await screen.findByTestId('user-picker')).toBeInTheDocument();
   });
 

@@ -17,8 +17,14 @@ describe('recurring due-work reader source', () => {
     expect(billingAndTaxSource).not.toContain('mergeRecurringDueWorkRows');
     expect(billingAndTaxSource).not.toContain('buildClientScheduleDueWorkRow');
     expect(billingAndTaxSource).toContain(
-      'invoiceCandidates: approvalBlockedInvoiceCandidates.slice(offset, offset + pageSize)',
+      'invoiceCandidates: warnedInvoiceCandidates.slice(offset, offset + pageSize)',
     );
+    // The paginated list must still derive from the approval-blocked set (the
+    // stale-ready warning pass wraps it without changing membership).
+    expect(billingAndTaxSource).toContain(
+      'const warnedInvoiceCandidates = applyRecurringApprovalWarningsToInvoiceCandidates(',
+    );
+    expect(billingAndTaxSource).toContain('approvalBlockedInvoiceCandidates,');
   });
 
   it('T005: recurring due-work code no longer accepts missing-table or missing-column schema fallback paths', () => {

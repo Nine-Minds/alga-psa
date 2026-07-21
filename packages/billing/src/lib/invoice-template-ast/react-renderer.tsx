@@ -1,4 +1,5 @@
 import React from 'react';
+import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 import type {
   TemplateAst,
   TemplateFieldBorderStyle,
@@ -227,7 +228,7 @@ const formatValue = (value: unknown, format: TemplateValueFormat | undefined, ct
         currency: ctx.currencyCode || 'USD',
       }).format(numeric / 100);
     } catch {
-      return `$${(numeric / 100).toFixed(2)}`;
+      return formatCurrencyFromMinorUnits(numeric, 'en-US', 'USD');
     }
   }
 

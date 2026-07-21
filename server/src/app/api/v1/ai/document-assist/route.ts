@@ -159,7 +159,7 @@ export async function POST(req: NextRequest) {
   // Resolve AI provider and stream response
   try {
     const { resolveChatProvider } = await import('@ee/services/chatProviderResolver');
-    const provider = await resolveChatProvider();
+    const provider = await resolveChatProvider(tenantId, 'document-assist');
 
     const messages = [
       { role: 'system' as const, content: DOCUMENT_ASSIST_SYSTEM_PROMPT },

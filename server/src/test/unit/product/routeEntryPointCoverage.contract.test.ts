@@ -64,6 +64,7 @@ const SOURCE_FILE = /\.(t|j)sx?$/;
 const INTERPOLATION = /\$\{[^}]*\}/g;
 const MSP_PATH = /\/msp\/[A-Za-z0-9_\-./]+/g;
 
+// LEVERAGE: pattern source-tree-walker — same recursive walker as hardcodedCurrency
 function collectSourceFiles(absDir: string, out: string[]): void {
   let entries: fs.Dirent[];
   try {

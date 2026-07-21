@@ -278,6 +278,15 @@ exports.up = async function up(knex) {
   // 4. Distribute, then immediately truncate the leftover LOCAL coordinator data —
   //    it otherwise blocks the constraint re-adds below. Cast to ::regclass so the
   //    Citus functions resolve unambiguously.
+  //
+  //    ⚠️ UNSAFE PATTERN — do not copy into new migrations.
+  //    truncate_local_data_after_distributing_table() issues a TRUNCATE that
+  //    CASCADEs across the whole FK graph. Distributed tables in the cascade
+  //    only lose stranded coordinator-local rows, but any NON-distributed table
+  //    in the recursive FK closure loses ALL of its data (a local table's
+  //    coordinator heap is its only copy). Before ever calling this again, walk
+  //    the FK closure (pg_constraint) and abort unless every member is
+  //    distributed (pg_dist_partition). Retained as history, not as an example.
   if (toPrep.length) {
     console.log(`Colocating workflow v2 tables with ${COLOCATE_WITH}`);
   }

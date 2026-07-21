@@ -425,5 +425,75 @@
       "noLongerNeed": "Dienst wird nicht mehr benötigt",
       "other": "Sonstiges"
     }
+  },
+  "aiUsage": {
+    "title": "KI-Nutzung",
+    "subtitle": "Guthabenbasierte Abrechnung für Alga-KI-Funktionen",
+    "refresh": "Aktualisieren",
+    "errors": {
+      "loadSummary": "KI-Nutzungsdetails konnten nicht geladen werden",
+      "loadHistory": "Nutzungsverlauf konnte nicht geladen werden",
+      "subscribe": "Checkout konnte nicht gestartet werden",
+      "topup": "Aufladungs-Checkout konnte nicht gestartet werden",
+      "autoTopup": "Einstellungen für automatisches Aufladen konnten nicht gespeichert werden",
+      "unavailable": "KI-Nutzungsdetails sind derzeit nicht verfügbar. Bitte versuchen Sie es in Kürze erneut."
+    },
+    "upsell": {
+      "heading": "KI zu Ihrem Arbeitsbereich hinzufügen",
+      "body": "Abonnieren Sie das KI-Add-on, um Alga-KI für Chat, E-Mail-Triage und mehr freizuschalten. Ihr Monatsplan enthält ein Guthabenkontingent; kaufen Sie jederzeit einmalige Aufladungen oder aktivieren Sie automatisches Aufladen.",
+      "subscribe": "KI-Add-on abonnieren",
+      "subscribing": "Weiterleitung…"
+    },
+    "grace": {
+      "title": "Guthaben aufgebraucht — Kulanzpuffer in Nutzung",
+      "body": "Die KI funktioniert weiterhin innerhalb eines kleinen Kulanzpuffers von {{grace}} Credits. Laden Sie auf, um einen harten Stopp zu vermeiden."
+    },
+    "lowBalance": {
+      "title": "Niedriger Guthabenstand",
+      "body": "Erwägen Sie eine Aufladung oder aktivieren Sie automatisches Aufladen, um Unterbrechungen zu vermeiden."
+    },
+    "balance": {
+      "total": "Gesamtguthaben",
+      "creditsUnit": "Credits",
+      "included": "Inklusive (monatlich)",
+      "resetsMonthly": "wird jeden Zyklus zurückgesetzt",
+      "topup": "Aufladung (bleibt bestehen)",
+      "carriesOver": "wird übertragen"
+    },
+    "cycle": {
+      "label": "Abrechnungszyklus",
+      "resetsIn": "Zurücksetzung in {{days}} Tagen"
+    },
+    "topup": {
+      "title": "Aufladungs-Credits kaufen",
+      "description": "Einmalige Guthabenpakete, die nie verfallen.",
+      "noPacks": "Es sind noch keine Aufladungspakete konfiguriert.",
+      "packWithCredits": "{{label}} ({{credits}} Credits)"
+    },
+    "autoTopup": {
+      "title": "Automatisches Aufladen",
+      "description": "Kauft automatisch ein Paket, wenn Ihr Guthaben unter einen Schwellenwert fällt.",
+      "enable": "Automatisches Aufladen aktivieren",
+      "enableHelp": "Verwendet Ihre gespeicherte Zahlungsmethode für Abbuchungen außerhalb der Sitzung.",
+      "threshold": "Schwellenwert (Credits)",
+      "pack": "Zu kaufendes Paket",
+      "selectPack": "Paket auswählen",
+      "save": "Automatisches Aufladen speichern",
+      "saved": "Einstellungen für automatisches Aufladen gespeichert",
+      "saving": "Wird gespeichert…"
+    },
+    "history": {
+      "title": "Nutzungsverlauf",
+      "description": "Guthabenverbrauch pro Anfrage.",
+      "allFeatures": "Alle Funktionen",
+      "date": "Datum",
+      "feature": "Funktion",
+      "model": "Modell",
+      "tokens": "Tokens",
+      "credits": "Credits",
+      "empty": "Noch keine Nutzung erfasst.",
+      "loading": "Wird geladen…",
+      "loadMore": "Mehr laden"
+    }
   }
 }

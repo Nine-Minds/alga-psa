@@ -41,6 +41,10 @@ function billingClientsActionErrorFrom(error: unknown): BillingClientsActionErro
     if (error.message.includes('System-managed default contracts are attribution-only')) {
       return actionError(error.message);
     }
+    // LEVERAGE: pattern expected-action-error-matchers — same entry needed in contractWizardActionErrors and clients/clientContractActions
+    if (error.message.includes('Mixed-currency contracts for the same client are not supported')) {
+      return actionError(error.message);
+    }
     if (/client contract.*not found/i.test(error.message) || /assignment.*not found/i.test(error.message)) {
       return actionError('Client contract assignment not found. It may have been updated or deleted. Please refresh and try again.');
     }

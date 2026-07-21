@@ -425,5 +425,75 @@
       "noLongerNeed": "Dienst niet langer nodig",
       "other": "Anders"
     }
+  },
+  "aiUsage": {
+    "title": "AI-gebruik",
+    "subtitle": "Facturering op basis van credits voor Alga AI-functies",
+    "refresh": "Vernieuwen",
+    "errors": {
+      "loadSummary": "Kan AI-gebruiksdetails niet laden",
+      "loadHistory": "Kan gebruiksgeschiedenis niet laden",
+      "subscribe": "Kan het afrekenen niet starten",
+      "topup": "Kan het afrekenen van de opwaardering niet starten",
+      "autoTopup": "Kan instellingen voor automatisch opwaarderen niet opslaan",
+      "unavailable": "AI-gebruiksdetails zijn momenteel niet beschikbaar. Probeer het zo weer."
+    },
+    "upsell": {
+      "heading": "Voeg AI toe aan uw werkruimte",
+      "body": "Abonneer u op de AI-add-on om Alga AI te ontgrendelen voor chat, e-mailtriage en meer. Uw maandplan bevat een credittegoed; koop eenmalige opwaarderingen of schakel automatisch opwaarderen op elk moment in.",
+      "subscribe": "Abonneren op AI-add-on",
+      "subscribing": "Doorsturen…"
+    },
+    "grace": {
+      "title": "Credits op — respijtbuffer in gebruik",
+      "body": "AI blijft werken binnen een kleine respijtbuffer van {{grace}} credits. Waardeer op om een volledige stop te voorkomen."
+    },
+    "lowBalance": {
+      "title": "Laag creditsaldo",
+      "body": "Overweeg op te waarderen of automatisch opwaarderen in te schakelen om onderbrekingen te voorkomen."
+    },
+    "balance": {
+      "total": "Totaal saldo",
+      "creditsUnit": "credits",
+      "included": "Inbegrepen (maandelijks)",
+      "resetsMonthly": "wordt elke cyclus gereset",
+      "topup": "Opwaardering (blijft behouden)",
+      "carriesOver": "wordt meegenomen"
+    },
+    "cycle": {
+      "label": "Factureringscyclus",
+      "resetsIn": "Reset over {{days}} dagen"
+    },
+    "topup": {
+      "title": "Opwaardeercredits kopen",
+      "description": "Eenmalige creditpakketten die nooit verlopen.",
+      "noPacks": "Er zijn nog geen opwaardeerpakketten geconfigureerd.",
+      "packWithCredits": "{{label}} ({{credits}} credits)"
+    },
+    "autoTopup": {
+      "title": "Automatisch opwaarderen",
+      "description": "Koopt automatisch een pakket wanneer uw saldo onder een drempel zakt.",
+      "enable": "Automatisch opwaarderen inschakelen",
+      "enableHelp": "Gebruikt uw opgeslagen betaalmethode voor afschrijvingen buiten de sessie.",
+      "threshold": "Drempel (credits)",
+      "pack": "Aan te schaffen pakket",
+      "selectPack": "Selecteer een pakket",
+      "save": "Automatisch opwaarderen opslaan",
+      "saved": "Instellingen voor automatisch opwaarderen opgeslagen",
+      "saving": "Opslaan…"
+    },
+    "history": {
+      "title": "Gebruiksgeschiedenis",
+      "description": "Creditverbruik per aanvraag.",
+      "allFeatures": "Alle functies",
+      "date": "Datum",
+      "feature": "Functie",
+      "model": "Model",
+      "tokens": "Tokens",
+      "credits": "Credits",
+      "empty": "Nog geen gebruik geregistreerd.",
+      "loading": "Laden…",
+      "loadMore": "Meer laden"
+    }
   }
 }

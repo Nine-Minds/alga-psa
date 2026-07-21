@@ -30,6 +30,7 @@ import { getContractLinePresetServices, getContractLinePresetFixedConfig } from 
 import { IContractLinePresetService, IContractLinePresetFixedConfig } from '@alga-psa/types';
 import { getServices } from '@alga-psa/billing/actions/serviceActions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import {
   getErrorMessage,
   isActionMessageError,
@@ -69,6 +70,7 @@ export function ContractDialog({
   initialClientId,
 }: ContractDialogProps) {
   const { t } = useTranslation('msp/contracts');
+  const { money, symbol } = useCurrencyFormat();
   const billingFrequencyOptions = useBillingFrequencyOptions();
   const contractLineTypeOptions = useContractLineTypeOptions();
   const renewalModeOptions = [
@@ -1040,7 +1042,7 @@ export function ContractDialog({
                                         </span>
                                         <span className="ml-2 text-[rgb(var(--color-text-900))] font-semibold">
                                           {fixedConfig?.base_rate !== null && fixedConfig?.base_rate !== undefined
-                                            ? `$${(fixedConfig.base_rate / 100).toFixed(2)}`
+                                            ? money(Number(fixedConfig.base_rate))
                                             : t('contractDialog.presetDetails.notSet', {
                                               defaultValue: 'Not set',
                                             })}
@@ -1053,7 +1055,7 @@ export function ContractDialog({
                                           })}
                                         </Label>
                                         <div className="relative mt-1.5">
-                                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                                          <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{symbol()}</span>
                                           <Input
                                             id={`rate-override-${preset.preset_id}`}
                                             type="text"
@@ -1282,7 +1284,7 @@ export function ContractDialog({
                                                     })}
                                                   </Label>
                                                   <div className="relative mt-1">
-                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{symbol()}</span>
                                                     <Input
                                                       id={`hourly-rate-${preset.preset_id}-${service.service_id}`}
                                                       type="text"
@@ -1420,7 +1422,7 @@ export function ContractDialog({
                                                   })}
                                                 </Label>
                                                 <div className="relative mt-1">
-                                                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                                                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">{symbol()}</span>
                                                   <Input
                                                     id={`rate-${preset.preset_id}-${service.service_id}`}
                                                     type="text"
@@ -1597,7 +1599,7 @@ export function ContractDialog({
                       {t('contractDialog.po.amountLabel', { defaultValue: 'PO Amount (Optional)' })}
                     </Label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">{symbol()}</span>
                       <Input
                         id="po_amount"
                         type="text"

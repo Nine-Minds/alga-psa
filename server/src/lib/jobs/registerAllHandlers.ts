@@ -7,6 +7,11 @@ import { JobService } from '../../services/job.service';
 
 // Import all job handlers
 import { generateInvoiceHandler, GenerateInvoiceData } from './handlers/generateInvoiceHandler';
+import {
+  PROJECT_DATE_READINESS_JOB,
+  projectDateReadinessHandler,
+  ProjectDateReadinessJobData,
+} from './handlers/projectDateReadinessHandler';
 import { handleAssetImportJob, AssetImportJobData } from './handlers/assetImportHandler';
 import { expiredCreditsHandler, ExpiredCreditsJobData } from '@alga-psa/jobs/handlers/expiredCreditsHandler';
 import {
@@ -171,6 +176,18 @@ export async function registerAllJobHandlers(
       },
       retry: { maxAttempts: 3 },
       timeoutMs: 300000, // 5 minutes
+    },
+    registerOpts
+  );
+
+  JobHandlerRegistry.register<ProjectDateReadinessJobData & BaseJobData>(
+    {
+      name: PROJECT_DATE_READINESS_JOB,
+      handler: async (_jobId, data) => {
+        await projectDateReadinessHandler(data);
+      },
+      retry: { maxAttempts: 3 },
+      timeoutMs: 300000,
     },
     registerOpts
   );
@@ -677,6 +694,7 @@ export function getAvailableJobHandlers(): string[] {
     'generate-invoice',
     'invoice_zip',
     'invoice_email',
+    PROJECT_DATE_READINESS_JOB,
     // Credits
     'expired-credits',
     'expiring-credits-notification',

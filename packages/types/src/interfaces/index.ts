@@ -49,6 +49,7 @@ export * from './online-meeting.interfaces';
 export * from './payment.interfaces';
 export * from './phaseTaskImport.interfaces';
 export * from './project.interfaces';
+export * from './projectBilling.interfaces';
 export * from './ticketImport.interfaces';
 export * from './projectTaskComment.interface';
 export * from './projectTemplate.interfaces';

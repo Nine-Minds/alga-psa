@@ -5,6 +5,7 @@ import type { IProjectPhase } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Upload } from 'lucide-react';
 import PhaseListItem from './PhaseListItem';
+import type { PhaseBillingBadge } from '@alga-psa/core';
 import styles from './ProjectDetail.module.css';
 import { useTranslation } from 'react-i18next';
 
@@ -43,6 +44,14 @@ interface ProjectPhasesProps {
   onDragEnd: (e: React.DragEvent) => void;
   onStatusesChanged?: () => void;
   onImport?: () => void;
+  /** Per-phase billing badges keyed by phase_id (F136). */
+  phaseBillingBadges?: Record<string, PhaseBillingBadge>;
+  /** Per-phase "all tasks closed" flags for the completion nudge (F138). */
+  phaseAllTasksClosed?: Record<string, boolean>;
+  /** Whether the user can mark phases complete / reopen them (F137). */
+  canCompletePhase?: boolean;
+  onMarkPhaseComplete?: (phase: IProjectPhase) => void;
+  onReopenPhase?: (phase: IProjectPhase) => void;
 }
 
 export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
@@ -77,6 +86,11 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
   onDragEnd,
   onStatusesChanged,
   onImport,
+  phaseBillingBadges,
+  phaseAllTasksClosed,
+  canCompletePhase,
+  onMarkPhaseComplete,
+  onReopenPhase,
 }) => {
   const { t } = useTranslation(['features/projects', 'common']);
   const handleContainerDragOver = (e: React.DragEvent) => {
@@ -259,6 +273,11 @@ export const ProjectPhases: React.FC<ProjectPhasesProps> = ({
               onDragStart={onDragStart}
               onDragEnd={onDragEnd}
               onStatusesChanged={onStatusesChanged}
+              billingBadge={phaseBillingBadges?.[phase.phase_id]}
+              allTasksClosed={phaseAllTasksClosed?.[phase.phase_id]}
+              canCompletePhase={canCompletePhase}
+              onMarkComplete={onMarkPhaseComplete}
+              onReopen={onReopenPhase}
             />
             {/* Drop placeholder after phase */}
             {phaseDropTarget?.phaseId === phase.phase_id && phaseDropTarget.position === 'after' && (

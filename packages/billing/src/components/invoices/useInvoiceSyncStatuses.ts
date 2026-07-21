@@ -18,7 +18,7 @@ export interface UseInvoiceSyncStatusesResult {
 
 /**
  * Fetches sync statuses for a list of invoice IDs, non-blocking.
- * If the action throws (CE / no permission) the `hidden` flag is set and
+ * If the action reports the capability unavailable or throws, the `hidden` flag is set and
  * the caller should render no QuickBooks column.
  */
 export function useInvoiceSyncStatuses(invoiceIds: string[]): UseInvoiceSyncStatusesResult {
@@ -41,6 +41,9 @@ export function useInvoiceSyncStatuses(invoiceIds: string[]): UseInvoiceSyncStat
     getInvoiceSyncStatuses(invoiceIds)
       .then((result) => {
         if (!isMounted) return;
+        if (invoiceIds.length > 0 && Object.keys(result).length === 0) {
+          setHidden(true);
+        }
         setStatuses(result);
         setLoading(false);
       })

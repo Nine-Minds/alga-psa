@@ -9,9 +9,13 @@ import { type LucideIcon, ChevronDown } from 'lucide-react';
 
 export interface TabContent {
   id: string;
-  label: string;
+  // ReactNode (not just string) so a trigger can carry inline chrome such as a
+  // count pill next to its label; existing string labels remain valid.
+  label: React.ReactNode;
   content: React.ReactNode;
   icon?: LucideIcon | React.ReactNode;
+  /** Hide only the tab trigger while keeping its URL-addressable content mounted. */
+  hideTrigger?: boolean;
 }
 
 export interface TabGroup {
@@ -221,7 +225,7 @@ export const CustomTabs = ({
                     </p>
                   </button>
                 )}
-                {isExpanded && group.tabs.map((tab, tabIndex): React.JSX.Element => {
+                {isExpanded && group.tabs.filter((tab) => !tab.hideTrigger).map((tab, tabIndex): React.JSX.Element => {
                   const IconComponent = tab.icon;
                   const hasIcon = !!IconComponent;
                   const iconClassName = hasIcon ? 'flex items-center gap-2' : '';
@@ -242,7 +246,7 @@ export const CustomTabs = ({
             );
           })
         ) : (
-          allTabs.map((tab, index): React.JSX.Element => {
+          allTabs.filter((tab) => !tab.hideTrigger).map((tab, index): React.JSX.Element => {
             const IconComponent = tab.icon;
             const hasIcon = !!IconComponent;
             const iconClassName = hasIcon 

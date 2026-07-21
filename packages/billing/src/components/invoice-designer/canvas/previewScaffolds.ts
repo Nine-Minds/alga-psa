@@ -1,5 +1,6 @@
 import type { DesignerNode } from '../state/designerStore';
 import { resolveLabelText } from '../labelText';
+import { formatBoundValue } from '../preview/previewBindings';
 import { getNodeMetadata } from '../utils/nodeProps';
 
 type NodeMetadata = Record<string, unknown>;
@@ -69,6 +70,7 @@ const inferContextualValueScaffold = (input: {
   placeholderHint: string;
   labelHint: string;
   format: string;
+  currencyCode: string;
 }): string => {
   const contextHaystack = normalizeHintText(`${input.bindingKey} ${input.labelHint}`);
   if (
@@ -98,7 +100,7 @@ const inferContextualValueScaffold = (input: {
     return 'MM/DD/YYYY';
   }
   if (input.format === 'currency') {
-    return '$0.00';
+    return formatBoundValue(0, 'currency', input.currencyCode) ?? '';
   }
   if (input.placeholderHint.length > 0) {
     return input.placeholderHint;
@@ -127,7 +129,7 @@ const resolveFieldLabelHint = (metadata: NodeMetadata): string =>
   asTrimmedString(metadata.label) ||
   asTrimmedString(metadata.text);
 
-export const resolveFieldPreviewScaffold = (node: DesignerNode): EditorPreviewScaffold => {
+export const resolveFieldPreviewScaffold = (node: DesignerNode, currencyCode: string = 'USD'): EditorPreviewScaffold => {
   const metadata = getNodeMetadata(node) as NodeMetadata;
   const sampleValue = resolveSampleValue(metadata);
   if (sampleValue.length > 0) {
@@ -150,6 +152,7 @@ export const resolveFieldPreviewScaffold = (node: DesignerNode): EditorPreviewSc
       placeholderHint,
       labelHint: resolveFieldLabelHint(metadata),
       format,
+      currencyCode,
     }),
     isPlaceholder: true,
   };

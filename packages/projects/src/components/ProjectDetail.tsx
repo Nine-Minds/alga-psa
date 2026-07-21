@@ -32,7 +32,11 @@ import TaskEdit from './TaskEdit';
 import PhaseQuickAdd from './PhaseQuickAdd';
 import TaskListView from './TaskListView';
 import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
-import { getProjectTaskStatuses, getProjectStatusesByPhase, updatePhase, deletePhase, getProjectTreeData, reorderPhase } from '../actions/projectActions';
+import { getProjectTaskStatuses, getProjectStatusesByPhase, updatePhase, deletePhase, getProjectTreeData, reorderPhase, markPhaseComplete, reopenPhase } from '../actions/projectActions';
+import { checkCurrentUserPermissions } from '@alga-psa/auth/actions';
+import type { ProjectBillingOverview } from '@alga-psa/types';
+import { useProjectBillingIntegration } from '../context/ProjectBillingIntegrationContext';
+import { derivePhaseBillingBadges, formatCurrencyFromMinorUnits } from '@alga-psa/core';
 import { updateTaskStatus, reorderTask, reorderTasksInStatus, moveTaskToPhase, updateTaskWithChecklist, getTaskChecklistItems, getTaskResourcesAction, getTaskTicketLinksAction, duplicateTaskToPhase, deleteTask as deleteTaskAction, getTasksForPhase, getTaskById, getProjectTaskData, assignTeamToProjectTask, removeTeamFromProjectTask, bulkAddTagsToTasks } from '../actions/projectTaskActions';
 import styles from './ProjectDetail.module.css';
 import { toast } from 'react-hot-toast';
@@ -59,7 +63,7 @@ import ViewDensityControl from '@alga-psa/ui/components/ViewDensityControl';
 import DonutChart from './DonutChart';
 import { calculateProjectCompletion } from '@alga-psa/projects/lib/projectUtils';
 import { IClient } from '@alga-psa/types';
-import { HelpCircle, LayoutGrid, List, Search, Pin, X, XCircle, ClipboardList, Bug, Sparkles, TrendingUp, Flag, BookOpen, Columns3, Plus, EyeOff, Eye } from 'lucide-react';
+import { HelpCircle, LayoutGrid, List, Search, Pin, X, XCircle, ClipboardList, Bug, Sparkles, TrendingUp, Flag, BookOpen, Columns3, Plus, EyeOff, Eye, Receipt } from 'lucide-react';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Popover, PopoverTrigger, PopoverContent } from '@alga-psa/ui/components/Popover';
@@ -72,6 +76,7 @@ import type { ITeam } from '@alga-psa/types';
 import RemoveTeamDialog from './RemoveTeamDialog';
 import { useTheme } from 'next-themes';
 import { useTranslation } from 'react-i18next';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
 
 const PROJECT_VIEW_MODE_SETTING = 'project_detail_view_mode';
 const PROJECT_PHASES_PANEL_VISIBLE_SETTING = 'project_phases_panel_visible';
@@ -216,6 +221,7 @@ interface ProjectDetailProps {
   onTagsUpdate?: (tags: ITag[], allTagTexts: string[]) => void;
   initialTaskId?: string | null;
   initialPhaseId?: string | null;
+  initialViewMode?: 'kanban' | 'list' | 'billing' | null;
   onUrlUpdate?: (phaseId: string | null, taskId: string | null) => void;
 }
 
@@ -230,16 +236,24 @@ export default function ProjectDetail({
   onTagsUpdate,
   initialTaskId,
   initialPhaseId,
+  initialViewMode,
   onUrlUpdate
 }: ProjectDetailProps) {
   const { t } = useTranslation(['features/projects', 'common']);
+  const {
+    enabled: projectBillingUiEnabled,
+    loading: projectBillingUiLoading,
+  } = useFeatureFlag('project-billing-ui', { defaultValue: false });
+  // Billing surfaces are injected from the composition layer (billing package
+  // implements them); null when no provider is mounted → billing UI hidden.
+  const billingIntegration = useProjectBillingIntegration();
   useTagPermissions(['project', 'project_task']);
   const { getDocumentCountsForEntities } = useDocumentsCrossFeature();
   const { resolvedTheme } = useTheme();
   const isDark = resolvedTheme === 'dark';
 
   // Batch-load all user preferences in a single server action (instead of 5 separate calls)
-  type ProjectViewMode = 'kanban' | 'list';
+  type ProjectViewMode = 'kanban' | 'list' | 'billing';
   // Column widths are scoped per project (each project can show different
   // columns), so the preference key includes the project id.
   const columnWidthsPrefKey = `${PROJECT_LIST_COLUMN_WIDTHS_SETTING}:${project.project_id}`;
@@ -338,7 +352,15 @@ export default function ProjectDetail({
     spentHours: number;
     remainingHours: number;
   } | null>(null);
- 
+
+  // Project billing (option 3 — "Billing" as a third view + ambient signals)
+  const [canViewBilling, setCanViewBilling] = useState(false);
+  const [canManageBilling, setCanManageBilling] = useState(false);
+  const [canCompletePhase, setCanCompletePhase] = useState(false);
+  const [billingOverview, setBillingOverview] = useState<ProjectBillingOverview | null>(null);
+  const [billingLoading, setBillingLoading] = useState(false);
+  const [billingHighlightEntryId, setBillingHighlightEntryId] = useState<string | null>(null);
+
   // State for the Move Task Dialog
   const [isMoveTaskDialogOpen, setIsMoveTaskDialogOpen] = useState(false);
   const [taskToMove, setTaskToMove] = useState<IProjectTask | null>(null);
@@ -595,6 +617,180 @@ export default function ProjectDetail({
       phaseStatusLookup.get(task.project_status_mapping_id)?.is_closed === true
     ).length;
   }, [filteredTasks, phaseStatusLookup]);
+
+  // Resolve the viewer's billing/phase permissions once. Billing read gates the
+  // whole view + ambient signals (F115); the invoice create/generate set gates
+  // mutations; project:update gates phase completion (F154 — not billing).
+  useEffect(() => {
+    let stale = false;
+    checkCurrentUserPermissions([
+      { resource: 'billing', action: 'read' },
+      { resource: 'invoice', action: 'create' },
+      { resource: 'invoice', action: 'generate' },
+      { resource: 'project', action: 'update' },
+    ]).then((results) => {
+      if (stale) return;
+      const granted = (resource: string, action: string) =>
+        results.some((r) => r.resource === resource && r.action === action && r.granted);
+      setCanViewBilling(granted('billing', 'read'));
+      setCanManageBilling(granted('invoice', 'create') || granted('invoice', 'generate'));
+      setCanCompletePhase(granted('project', 'update'));
+    }).catch(() => { if (!stale) { setCanViewBilling(false); setCanManageBilling(false); } });
+    return () => { stale = true; };
+  }, [project.project_id]);
+
+  // Load the billing overview for the badges, chips, and billing view. Refreshed
+  // after any billing mutation so the whole screen reflects the new state.
+  const refreshBilling = useCallback(async () => {
+    if (!canViewBilling || !billingIntegration) { setBillingOverview(null); return; }
+    setBillingLoading(true);
+    try {
+      const overview = await billingIntegration.fetchOverview(project.project_id);
+      if (isActionMessageError(overview) || isActionPermissionError(overview)) {
+        console.error('Error loading project billing overview:', getErrorMessage(overview));
+        setBillingOverview(null);
+        return;
+      }
+      setBillingOverview(overview);
+    } catch (error) {
+      console.error('Error loading project billing overview:', error);
+      setBillingOverview(null);
+    } finally {
+      setBillingLoading(false);
+    }
+  }, [canViewBilling, billingIntegration, project.project_id]);
+
+  useEffect(() => { void refreshBilling(); }, [refreshBilling]);
+
+  // Phase → billing badge (F136) and phase → "all tasks closed" (F138) maps.
+  const phaseBillingBadges = useMemo(() => (
+    projectBillingUiEnabled && billingOverview?.config
+      ? derivePhaseBillingBadges(billingOverview.entries, billingOverview.config.currency)
+      : {}
+  ), [billingOverview, projectBillingUiEnabled]);
+
+  const phaseAllTasksClosed = useMemo(() => {
+    const result: Record<string, boolean> = {};
+    const perPhase: Record<string, { total: number; closed: number }> = {};
+    for (const task of projectTasks) {
+      const phaseId = task.phase_id;
+      if (!phaseId) continue;
+      const bucket = perPhase[phaseId] ?? (perPhase[phaseId] = { total: 0, closed: 0 });
+      bucket.total += 1;
+      if (phaseStatusLookup.get(task.project_status_mapping_id)?.is_closed === true) bucket.closed += 1;
+    }
+    for (const [phaseId, counts] of Object.entries(perPhase)) {
+      result[phaseId] = counts.total > 0 && counts.closed === counts.total;
+    }
+    return result;
+  }, [projectTasks, phaseStatusLookup]);
+
+  // A persisted Billing preference is ambient discovery, not direct access.
+  // Keep explicit ?view=billing links functional while the UI flag is off.
+  useEffect(() => {
+    if (
+      !isViewModeLoading
+      && !projectBillingUiLoading
+      && viewMode === 'billing'
+      && (!canViewBilling || !billingIntegration || (!projectBillingUiEnabled && initialViewMode !== 'billing'))
+    ) {
+      setViewMode('kanban');
+    }
+  }, [
+    isViewModeLoading,
+    projectBillingUiLoading,
+    viewMode,
+    canViewBilling,
+    billingIntegration,
+    projectBillingUiEnabled,
+    initialViewMode,
+    setViewMode,
+  ]);
+
+  // A ?view= URL parameter (e.g. the Invoicing Hub's review-queue links)
+  // overrides the persisted view preference once per navigation; the billing
+  // target additionally waits for the permission check so the RBAC fallback
+  // above cannot race it.
+  const appliedInitialViewRef = useRef(false);
+  useEffect(() => {
+    if (appliedInitialViewRef.current || !initialViewMode || isViewModeLoading) return;
+    if (initialViewMode === 'billing' && !canViewBilling) return;
+    appliedInitialViewRef.current = true;
+    if (viewMode !== initialViewMode) {
+      setViewMode(initialViewMode);
+    }
+  }, [initialViewMode, isViewModeLoading, canViewBilling, viewMode, setViewMode]);
+
+  const handleMarkPhaseComplete = useCallback(async (phase: IProjectPhase) => {
+    try {
+      const result = await markPhaseComplete(phase.phase_id);
+      setProjectPhases((prev) => prev.map((p) => (p.phase_id === phase.phase_id ? result.phase : p)));
+      void refreshBilling();
+      const readyEntry = result.ready_entries[0];
+      if (readyEntry && canViewBilling && projectBillingUiEnabled) {
+        // F139 — deep link into the billing view and highlight the freshly ready entry.
+        toast.success(
+          (toastRef) => (
+            <span className="flex items-center gap-2">
+              {t('phases.completeReadyToast', '{{description}} is ready to bill', { description: readyEntry.description })}
+              <button
+                type="button"
+                className="font-semibold text-primary-600 underline"
+                onClick={() => {
+                  setBillingHighlightEntryId(readyEntry.entry_id);
+                  setViewMode('billing');
+                  toast.dismiss(toastRef.id);
+                }}
+              >
+                {t('phases.viewInBilling', 'View')}
+              </button>
+            </span>
+          ),
+          { duration: 8000 },
+        );
+      } else {
+        toast.success(t('phases.markedComplete', 'Phase marked complete'));
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
+    }
+  }, [refreshBilling, canViewBilling, projectBillingUiEnabled, t, setViewMode]);
+
+  const handleReopenPhase = useCallback(async (phase: IProjectPhase) => {
+    try {
+      const updated = await reopenPhase(phase.phase_id);
+      setProjectPhases((prev) => prev.map((p) => (p.phase_id === phase.phase_id ? updated : p)));
+      void refreshBilling();
+      toast.success(t('phases.reopened', 'Phase reopened'));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
+    }
+  }, [refreshBilling, t]);
+
+  // Shared ViewSwitcher options; the Billing option appears only with billing
+  // read permission (F113/F115).
+  const viewSwitcherOptions = useMemo(() => {
+    const options: { value: ProjectViewMode; label: string; icon: typeof LayoutGrid }[] = [
+      { value: 'kanban', label: t('kanbanView', 'Kanban'), icon: LayoutGrid },
+      { value: 'list', label: t('listView', 'List'), icon: List },
+    ];
+    if (canViewBilling && projectBillingUiEnabled && billingIntegration) {
+      options.push({ value: 'billing', label: t('billingView', 'Billing'), icon: Receipt });
+    }
+    return options;
+  }, [t, canViewBilling, projectBillingUiEnabled, billingIntegration]);
+
+  const readyEntryCount = useMemo(
+    () => (billingOverview?.entries ?? []).filter((entry) => entry.status === 'ready').length,
+    [billingOverview],
+  );
+
+  // The deep-link highlight is a one-shot cue; clear it after a few seconds.
+  useEffect(() => {
+    if (!billingHighlightEntryId) return;
+    const timer = setTimeout(() => setBillingHighlightEntryId(null), 6000);
+    return () => clearTimeout(timer);
+  }, [billingHighlightEntryId]);
 
   // Fetch all project task data on mount (shared by list view, sidebar counts, and filtering)
   useEffect(() => {
@@ -3254,6 +3450,42 @@ export default function ProjectDetail({
   const renderHeader = () => {
     const completionPercentage = (completedTasksCount / filteredTasks.length) * 100 || 0;
 
+    // Billing view header (F114): "Billing" heading + model/ready chips; task
+    // search and filters are intentionally hidden.
+    if (viewMode === 'billing') {
+      const config = billingOverview?.config;
+      const modelChipLabel = !config
+        ? t('billing.header.notEnabled', 'Not enabled')
+        : config.billing_model === 'fixed_price'
+          ? t('billing.header.fixedChip', 'Fixed price · {{total}}', {
+            total: formatCurrencyFromMinorUnits(config.total_price ?? 0, 'en-US', config.currency ?? 'USD'),
+          })
+          : t('billing.header.tmChip', 'Time & materials');
+      return (
+        <div className="mb-4 flex-shrink-0">
+          <div className="flex flex-wrap items-center gap-3">
+            <h2 className="text-xl font-bold">{t('billing.header.title', 'Billing')}</h2>
+            <span className="inline-flex items-center rounded-full bg-[rgb(var(--color-border-100))] px-2.5 py-0.5 text-xs font-semibold text-[rgb(var(--color-text-600))]">
+              {modelChipLabel}
+            </span>
+            {readyEntryCount > 0 && (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-semibold text-amber-700 dark:bg-amber-500/10 dark:text-amber-300">
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-500" />
+                {t('billing.header.readyChip', '{{count}} ready to bill', { count: readyEntryCount })}
+              </span>
+            )}
+            <div className="ml-auto">
+              <ViewSwitcher
+                currentView={viewMode}
+                onChange={(v) => setViewMode(v as ProjectViewMode)}
+                options={viewSwitcherOptions}
+              />
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     if (viewMode === 'list') {
       return (
         <div className="mb-4 space-y-3 flex-shrink-0">
@@ -3292,10 +3524,7 @@ export default function ProjectDetail({
               <ViewSwitcher
                 currentView={viewMode}
                 onChange={(v) => setViewMode(v as ProjectViewMode)}
-                options={[
-                  { value: 'kanban', label: t('kanbanView', 'Kanban'), icon: LayoutGrid },
-                  { value: 'list', label: t('listView', 'List'), icon: List }
-                ]}
+                options={viewSwitcherOptions}
               />
             </div>
           </div>
@@ -3592,10 +3821,7 @@ export default function ProjectDetail({
             <ViewSwitcher
               currentView={viewMode}
               onChange={(v) => setViewMode(v as ProjectViewMode)}
-              options={[
-                { value: 'kanban', label: t('kanbanView', 'Kanban'), icon: LayoutGrid },
-                { value: 'list', label: t('listView', 'List'), icon: List }
-              ]}
+              options={viewSwitcherOptions}
             />
           </div>
         </div>
@@ -3789,6 +4015,23 @@ export default function ProjectDetail({
 
   // Render the scrollable content (kanban board or list view)
   const renderContent = () => {
+    // Billing view rendering (option 3): billing workspace replaces the board.
+    if (viewMode === 'billing') {
+      if (!billingIntegration) return null;
+      return (
+        <billingIntegration.BillingView
+          projectId={project.project_id}
+          clientId={project.client_id ?? null}
+          phases={projectPhases}
+          overview={billingOverview}
+          loading={billingLoading && billingOverview === null}
+          canManage={canManageBilling}
+          highlightEntryId={billingHighlightEntryId}
+          onChanged={() => { void refreshBilling(); }}
+        />
+      );
+    }
+
     // List view rendering
     if (viewMode === 'list') {
       if (!projectTaskDataLoaded) {
@@ -3840,6 +4083,11 @@ export default function ProjectDetail({
               setShowQuickAdd(true);
             }
           }}
+          phaseBillingBadges={phaseBillingBadges}
+          phaseAllTasksClosed={phaseAllTasksClosed}
+          canCompletePhase={canCompletePhase}
+          onMarkPhaseComplete={handleMarkPhaseComplete}
+          onReopenPhase={handleReopenPhase}
           onTaskTagsChange={handleTaskTagsChange}
           onAssigneeChange={(taskId, newAssigneeId) => handleAssigneeChange(taskId, newAssigneeId)}
           onTeamAssign={handleTeamAssign}
@@ -3963,13 +4211,16 @@ export default function ProjectDetail({
         className={styles.mainContent}
         onDragOver={handleDragOver}
       >
+        {projectBillingUiEnabled && billingIntegration && (
+          <billingIntegration.PaymentWarningBanner projectId={project.project_id} className="mb-3 flex-shrink-0" />
+        )}
         <div className={styles.contentWrapper}>
           {/* Phases panel - collapsible in kanban view */}
-          {viewMode === 'kanban' && (
+          {(viewMode === 'kanban' || viewMode === 'billing') && (
             <div
                 ref={phasesContainerRef}
                 className={`${styles.phasesContainer} ${isPhasesPanelVisible ? styles.phasesContainerExpanded : styles.phasesContainerCollapsed}`}
-                style={phasesPanelHeight && isPhasesPanelVisible ? { height: `${phasesPanelHeight}px`, maxHeight: `${phasesPanelHeight}px` } : undefined}
+                style={viewMode === 'kanban' && phasesPanelHeight && isPhasesPanelVisible ? { height: `${phasesPanelHeight}px`, maxHeight: `${phasesPanelHeight}px` } : undefined}
               >
               {/* Toggle button */}
               <CollapseToggleButton
@@ -4022,6 +4273,11 @@ export default function ProjectDetail({
                   onDragEnd={handlePhaseDragEnd}
                   onStatusesChanged={() => setStatusVersion(v => v + 1)}
                   onImport={() => setShowImportDialog(true)}
+                  phaseBillingBadges={phaseBillingBadges}
+                  phaseAllTasksClosed={phaseAllTasksClosed}
+                  canCompletePhase={canCompletePhase}
+                  onMarkPhaseComplete={handleMarkPhaseComplete}
+                  onReopenPhase={handleReopenPhase}
                 />
               </div>
             </div>
@@ -4032,28 +4288,30 @@ export default function ProjectDetail({
               className={`${styles.kanbanHeader} ${isHeaderPinned ? styles.kanbanHeaderPinned : ''}`}
             >
               {renderHeader()}
-              <div className={styles.kanbanScrollbarShell}>
-                <div
-                  ref={scrollbarTrackRef}
-                  className={styles.kanbanScrollbarTrack}
-                  onPointerDown={handleKanbanScrollbarTrackPointerDown}
-                >
+              {viewMode !== 'billing' && (
+                <div className={styles.kanbanScrollbarShell}>
                   <div
-                    data-kanban-scrollbar-thumb="true"
-                    ref={scrollbarThumbRef}
-                    className={styles.kanbanScrollbarThumb}
-                    onPointerDown={handleKanbanScrollbarThumbPointerDown}
-                    onKeyDown={handleKanbanScrollbarKeyDown}
-                    role="scrollbar"
-                    aria-controls="kanban-scroll-container"
-                    aria-orientation="horizontal"
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                    aria-valuenow={0}
-                    tabIndex={0}
-                  />
+                    ref={scrollbarTrackRef}
+                    className={styles.kanbanScrollbarTrack}
+                    onPointerDown={handleKanbanScrollbarTrackPointerDown}
+                  >
+                    <div
+                      data-kanban-scrollbar-thumb="true"
+                      ref={scrollbarThumbRef}
+                      className={styles.kanbanScrollbarThumb}
+                      onPointerDown={handleKanbanScrollbarThumbPointerDown}
+                      onKeyDown={handleKanbanScrollbarKeyDown}
+                      role="scrollbar"
+                      aria-controls="kanban-scroll-container"
+                      aria-orientation="horizontal"
+                      aria-valuemin={0}
+                      aria-valuemax={100}
+                      aria-valuenow={0}
+                      tabIndex={0}
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
             {/* Independent sticky status strip */}
             {showStickyStatusNames && viewMode === 'kanban' && (

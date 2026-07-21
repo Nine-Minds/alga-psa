@@ -35,6 +35,8 @@ import {
   getErrorMessage,
   isActionPermissionError,
 } from "@alga-psa/ui/lib/errorHandling";
+import { isEnterpriseEdition } from "@/lib/features";
+import ApplianceAiSection from "@/components/licenses/ApplianceAiSection";
 
 type Tone = "neutral" | "success" | "warning" | "danger" | "premium";
 
@@ -562,6 +564,12 @@ export default function LicenseManagementPage() {
           )}
         </CardContent>
       </Card>
+
+      {/* Appliance AI add-on: data-sharing consent + credits balance.
+          Enterprise-only surface; the section itself self-manages loading and
+          gateway-unreachable states so a gateway problem never breaks this
+          page. Renders on this self-host page by construction. */}
+      {isEnterpriseEdition() ? <ApplianceAiSection /> : null}
 
       <details
         className="group rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] shadow-sm"

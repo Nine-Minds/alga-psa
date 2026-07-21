@@ -3,6 +3,7 @@ import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { StorageService } from 'server/src/lib/storage/StorageService';
 import { InvoiceViewModel } from 'server/src/interfaces/invoice.interfaces';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 
 interface EmailAttachment {
   filename: string;
@@ -176,7 +177,14 @@ export class EmailService {
     let result = template
       .replace(/{{client_name}}/g, invoice.client.name)
       .replace(/{{invoice_number}}/g, invoice.invoice_number)
-      .replace(/{{total_amount}}/g, `$${((invoice.total_amount - (invoice.credit_applied ?? 0)) / 100).toFixed(2)}`)
+      .replace(
+        /{{total_amount}}/g,
+        formatCurrencyFromMinorUnits(
+          invoice.total_amount - (invoice.credit_applied ?? 0),
+          'en-US',
+          invoice.currencyCode || 'USD',
+        ),
+      )
       .replace(/{{company_name}}/g, options?.companyName || 'Your Company');
 
     if (options?.paymentLink) {

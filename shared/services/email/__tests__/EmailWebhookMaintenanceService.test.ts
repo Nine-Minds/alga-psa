@@ -6,6 +6,12 @@ import { MicrosoftGraphAdapter } from '../providers/MicrosoftGraphAdapter';
 // Mock dependencies
 vi.mock('../../../db/admin');
 vi.mock('../providers/MicrosoftGraphAdapter');
+vi.mock('../microsoftEmailProviderConfig', () => ({
+  buildMicrosoftEmailProviderConfig: vi.fn(async (config) => config),
+}));
+vi.mock('../unifiedInboundEmailQueue', () => ({
+  enqueueUnifiedInboundEmailQueueJob: vi.fn(),
+}));
 vi.mock('../../../core/logger', () => ({
   default: {
     info: vi.fn(),
@@ -66,6 +72,9 @@ describe('EmailWebhookMaintenanceService', () => {
 
     // Setup Adapter mock
     (MicrosoftGraphAdapter as any).mockImplementation(() => ({
+      ensureTokenHealthy: vi.fn().mockResolvedValue(undefined),
+      cleanupOrphanedSubscriptions: vi.fn().mockResolvedValue(0),
+      listMessagesReceivedSince: vi.fn().mockResolvedValue([]),
       renewWebhookSubscription: vi.fn().mockResolvedValue(undefined),
       initializeWebhook: vi.fn().mockResolvedValue({ success: true }),
       getConfig: vi.fn().mockReturnValue({ webhook_expires_at: '2099-01-01T00:00:00.000Z' }),
@@ -106,6 +115,9 @@ describe('EmailWebhookMaintenanceService', () => {
   it('should recreate subscription if renewal fails with 404', async () => {
     // Mock renewal failure
     const mockAdapterInstance = {
+      ensureTokenHealthy: vi.fn().mockResolvedValue(undefined),
+      cleanupOrphanedSubscriptions: vi.fn().mockResolvedValue(0),
+      listMessagesReceivedSince: vi.fn().mockResolvedValue([]),
       renewWebhookSubscription: vi.fn().mockRejectedValue({ response: { status: 404 }, message: 'ResourceNotFound' }),
       initializeWebhook: vi.fn().mockResolvedValue({ success: true }),
       getConfig: vi.fn().mockReturnValue({ webhook_expires_at: '2099-01-01T00:00:00.000Z' }),
@@ -131,6 +143,9 @@ describe('EmailWebhookMaintenanceService', () => {
   it('should handle unexpected errors gracefully', async () => {
     // Mock renewal failure with generic error
     const mockAdapterInstance = {
+      ensureTokenHealthy: vi.fn().mockResolvedValue(undefined),
+      cleanupOrphanedSubscriptions: vi.fn().mockResolvedValue(0),
+      listMessagesReceivedSince: vi.fn().mockResolvedValue([]),
       renewWebhookSubscription: vi.fn().mockRejectedValue(new Error('Random API Error')),
     };
     (MicrosoftGraphAdapter as any).mockImplementation(() => mockAdapterInstance);

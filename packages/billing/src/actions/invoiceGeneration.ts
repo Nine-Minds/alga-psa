@@ -9,6 +9,14 @@ import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getAnalyticsAsync } from '../lib/authHelpers';
 import { BillingEngine } from '../lib/billing/billingEngine';
+import ProjectBillingCapUsage from '../models/projectBillingCapUsage';
+import ProjectBillingConfig from '../models/projectBillingConfig';
+import ProjectBillingScheduleEntry from '../models/projectBillingScheduleEntry';
+import {
+  computeCapWriteDown,
+  detectThresholdCrossings,
+  isFirstProjectCapOverage,
+} from '../services/projectBillingService';
 import ClientContractLine from '../models/clientContractLine';
 import { Session } from 'next-auth';
 import {
@@ -70,6 +78,7 @@ import {
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+import { publishEvent } from '@alga-psa/event-bus/publishers';
 // TODO: Move these type guards to billingAndTax.ts or a shared utility file
 const POSTGRES_UNDEFINED_TABLE = '42P01';
 type InvoiceGenerationActionError = ActionMessageError | ActionPermissionError;
@@ -124,6 +133,30 @@ function isProductCharge(charge: IBillingCharge): charge is IProductCharge {
 
 function isLicenseCharge(charge: IBillingCharge): charge is ILicenseCharge {
   return charge.type === 'license';
+}
+
+function isProjectScheduleCharge(charge: IBillingCharge): boolean {
+  return charge.type === 'project_milestone' || charge.type === 'project_deposit';
+}
+
+function getProjectChargeMetadata(charge: IBillingCharge): {
+  projectId: string;
+  projectName: string;
+  projectNumber: string;
+} | null {
+  const candidate = charge as IBillingCharge & {
+    project_id?: string;
+    project_name?: string;
+    project_number?: string;
+  };
+  if (!candidate.project_id || !candidate.project_name) {
+    return null;
+  }
+  return {
+    projectId: candidate.project_id,
+    projectName: candidate.project_name,
+    projectNumber: candidate.project_number ?? '',
+  };
 }
 
 function getSingleClientContractIdFromCharges(charges: IBillingCharge[]): string | null {
@@ -251,6 +284,247 @@ function hasPersistedInvoiceContent(billingResult: IBillingResult): boolean {
   );
 }
 
+type ProjectCapPersistenceDelta = {
+  configId: string;
+  projectId: string;
+  cap: number;
+  billedAfter: number;
+  billed: number;
+  writtenDown: number;
+  writtenDownBefore: number;
+  writtenDownAfter: number;
+  notifiedThresholds: number[];
+};
+
+async function prepareProjectCapChargesForPersistence(
+  trx: Knex.Transaction,
+  charges: IBillingCharge[],
+): Promise<ProjectCapPersistenceDelta[]> {
+  type ProjectCapCharge = IBillingCharge & {
+    project_billing_config_id: string;
+    project_cap_original_amount?: number;
+    project_cap_original_tax_amount?: number;
+    write_down_amount?: number;
+    write_down_reason?: 'project_cap';
+  };
+  const chargesByConfig = new Map<string, ProjectCapCharge[]>();
+
+  for (const charge of charges) {
+    const candidate = charge as IBillingCharge & {
+      project_billing_config_id?: string;
+      project_cap_original_amount?: number;
+      project_cap_original_tax_amount?: number;
+      write_down_amount?: number;
+      write_down_reason?: 'project_cap';
+    };
+    if (!candidate.project_billing_config_id) {
+      continue;
+    }
+    const grouped = chargesByConfig.get(candidate.project_billing_config_id) ?? [];
+    grouped.push(candidate as ProjectCapCharge);
+    chargesByConfig.set(candidate.project_billing_config_id, grouped);
+  }
+
+  const deltas: ProjectCapPersistenceDelta[] = [];
+  for (const [configId, configCharges] of chargesByConfig) {
+    const config = await ProjectBillingConfig.getById(configId, trx);
+    if (!config || config.cap_amount === null) {
+      continue;
+    }
+
+    await ProjectBillingCapUsage.ensureRow(configId, trx);
+    const usage = await ProjectBillingCapUsage.getForUpdate(configId, trx);
+    if (!usage) {
+      throw new Error(`Project billing cap usage ${configId} could not be locked`);
+    }
+
+    const previousBilled = usage.billed_amount;
+    const previousWrittenDown = usage.written_down_amount;
+    let runningBilled = previousBilled;
+    let billedDelta = 0;
+    let writtenDownDelta = 0;
+
+    for (const charge of configCharges) {
+      const originalAmount = charge.project_cap_original_amount
+        ?? charge.total + (charge.write_down_amount ?? 0);
+      const originalTaxAmount = charge.project_cap_original_tax_amount
+        ?? charge.tax_amount
+        ?? 0;
+      charge.project_cap_original_amount = originalAmount;
+      charge.project_cap_original_tax_amount = originalTaxAmount;
+
+      const result = computeCapWriteDown(
+        config.cap_amount,
+        runningBilled,
+        originalAmount,
+      );
+      charge.total = result.billable;
+      charge.write_down_amount = result.writtenDown;
+      charge.write_down_reason = result.writtenDown > 0 ? 'project_cap' : undefined;
+      charge.tax_amount = originalAmount > 0
+        ? Math.round(originalTaxAmount * (result.billable / originalAmount))
+        : 0;
+      runningBilled += result.billable;
+      billedDelta += result.billable;
+      writtenDownDelta += result.writtenDown;
+    }
+
+    const notifiedThresholds = detectThresholdCrossings(
+      config.cap_amount,
+      previousBilled,
+      runningBilled,
+      config.cap_notify_thresholds,
+      usage.notified_thresholds,
+    );
+
+    await ProjectBillingCapUsage.increment(
+      configId,
+      { billed: billedDelta, writtenDown: writtenDownDelta },
+      trx,
+    );
+    for (const threshold of notifiedThresholds) {
+      await ProjectBillingCapUsage.recordNotifiedThreshold(configId, threshold, trx);
+    }
+
+    deltas.push({
+      configId,
+      projectId: config.project_id,
+      cap: config.cap_amount,
+      billedAfter: runningBilled,
+      billed: billedDelta,
+      writtenDown: writtenDownDelta,
+      writtenDownBefore: previousWrittenDown,
+      writtenDownAfter: previousWrittenDown + writtenDownDelta,
+      notifiedThresholds,
+    });
+  }
+
+  return deltas;
+}
+
+async function persistProjectScheduleCharges(
+  trx: Knex.Transaction,
+  invoiceId: string,
+  charges: IBillingCharge[],
+  client: IClient,
+  tenant: string,
+  userId: string,
+): Promise<number> {
+  if (charges.length === 0) {
+    return 0;
+  }
+
+  let subtotal = 0;
+  const now = Temporal.Now.instant().toString();
+  const exportServiceIds = await ensureProjectScheduleExportServices(trx, tenant);
+
+  for (const charge of charges) {
+    const projectCharge = charge as IBillingCharge & {
+      schedule_entry_id: string;
+    };
+    const itemId = uuidv4();
+    await tenantDb(trx, tenant).table('invoice_charges').insert({
+      item_id: itemId,
+      invoice_id: invoiceId,
+      service_id: charge.serviceId ?? exportServiceIds[charge.type as 'project_milestone' | 'project_deposit'],
+      description: charge.serviceName,
+      quantity: charge.quantity ?? 1,
+      unit_price: charge.rate,
+      net_amount: charge.total,
+      tax_amount: charge.tax_amount || 0,
+      tax_region: charge.tax_region || client.tax_region,
+      tax_rate: charge.tax_rate || 0,
+      total_price: charge.total + (charge.tax_amount || 0),
+      is_manual: false,
+      is_discount: false,
+      is_taxable: charge.is_taxable ?? false,
+      created_by: userId,
+      created_at: now,
+      tenant,
+    });
+
+    const transitioned = await ProjectBillingScheduleEntry.transitionStatus(
+      projectCharge.schedule_entry_id,
+      'approved',
+      'invoiced',
+      {
+        invoice_id: invoiceId,
+        invoice_charge_id: itemId,
+      },
+      trx,
+    );
+    if (!transitioned) {
+      throw new Error(
+        `Project billing schedule entry ${projectCharge.schedule_entry_id} is no longer approved`,
+      );
+    }
+    subtotal += charge.total;
+  }
+
+  return subtotal;
+}
+
+async function ensureProjectScheduleExportServices(
+  trx: Knex.Transaction,
+  tenant: string,
+): Promise<Record<'project_milestone' | 'project_deposit', string>> {
+  await trx.raw('SELECT pg_advisory_xact_lock(hashtext(?))', [`project-billing-export-services:${tenant}`]);
+  const db = tenantDb(trx, tenant);
+  let serviceType = await db.table('service_types')
+    .where({ name: 'Project Billing' })
+    .first('id');
+  if (!serviceType) {
+    const maxOrder = await db.table('service_types').max({ max_order: 'order_number' }).first();
+    [serviceType] = await db.table('service_types').insert({
+      id: uuidv4(),
+      tenant,
+      name: 'Project Billing',
+      description: 'System services used to map project billing charges to accounting items',
+      is_active: true,
+      order_number: Number(maxOrder?.max_order ?? 0) + 1,
+    }).returning('id');
+  }
+
+  const definitions = [
+    {
+      chargeType: 'project_milestone' as const,
+      serviceName: 'Project Milestone',
+      description: 'Project milestone billing charge',
+    },
+    {
+      chargeType: 'project_deposit' as const,
+      serviceName: 'Project Deposit',
+      description: 'Project deposit billing charge',
+    },
+  ];
+  const result = {} as Record<'project_milestone' | 'project_deposit', string>;
+  for (const definition of definitions) {
+    let service = await db.table('service_catalog')
+      .where({
+        service_name: definition.serviceName,
+        item_kind: 'service',
+        custom_service_type_id: serviceType.id,
+      })
+      .first('service_id');
+    if (!service) {
+      [service] = await db.table('service_catalog').insert({
+        service_id: uuidv4(),
+        tenant,
+        service_name: definition.serviceName,
+        description: definition.description,
+        custom_service_type_id: serviceType.id,
+        billing_method: 'fixed',
+        default_rate: 0,
+        unit_of_measure: 'Each',
+        item_kind: 'service',
+        is_active: true,
+      }).returning('service_id');
+    }
+    result[definition.chargeType] = String(service.service_id);
+  }
+  return result;
+}
+
 type RecurringBridgeMetadata = {
   billingCycleId?: string | null;
 };
@@ -356,6 +630,8 @@ function invoiceGenerationActionErrorFrom(error: unknown): InvoiceGenerationActi
       error.message === 'No recurring execution windows selected' ||
       error.message === 'No billing settings found' ||
       error.message === 'Nothing to bill' ||
+      error.message === 'Project billing configuration not found' ||
+      error.message === 'Project is configured for recurring invoice generation' ||
       error.message === 'Recurring selector input execution window kind is not supported.' ||
       error.message === 'Unable to generate a unique invoice number after multiple attempts.' ||
       error.message.startsWith('Purchase Order is required') ||
@@ -1438,10 +1714,17 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
   const previewInvoiceDate = Temporal.Now.plainDateISO().toString();
   const due_date = unwrapBillingHelperResult(await getDueDate(client_id, previewInvoiceDate));
   const chargesByContractGroup: { [key: string]: IBillingCharge[] } = {};
+  const chargesByProjectGroup: { [key: string]: IBillingCharge[] } = {};
   const nonContractAssociatedCharges: IBillingCharge[] = [];
 
   for (const charge of billingResult.charges) {
-    if (charge.client_contract_id && charge.contract_name) {
+    const projectMetadata = getProjectChargeMetadata(charge);
+    if (projectMetadata) {
+      if (!chargesByProjectGroup[projectMetadata.projectId]) {
+        chargesByProjectGroup[projectMetadata.projectId] = [];
+      }
+      chargesByProjectGroup[projectMetadata.projectId].push(charge);
+    } else if (charge.client_contract_id && charge.contract_name) {
       const contractKey = charge.contract_name;
       if (!chargesByContractGroup[contractKey]) {
         chargesByContractGroup[contractKey] = [];
@@ -1543,6 +1826,55 @@ async function buildPreviewInvoiceForSelectionInputs(params: {
         client_contract_id: clientContractGroupId,
         contract_name: contractGroupName,
         parent_item_id: contractGroupHeaderId,
+        rate: charge.rate,
+        service_period_start: recurringSummary.servicePeriodStart,
+        service_period_end: recurringSummary.servicePeriodEnd,
+        billing_timing: recurringSummary.billingTiming,
+        recurring_detail_periods: recurringSummary.recurringDetailPeriods?.map((period) => ({
+          service_period_start: period.servicePeriodStart ?? null,
+          service_period_end: period.servicePeriodEnd ?? null,
+          billing_timing: period.billingTiming ?? null,
+        })),
+      });
+    });
+  }
+
+  for (const charges of Object.values(chargesByProjectGroup)) {
+    const metadata = getProjectChargeMetadata(charges[0]);
+    if (!metadata) continue;
+
+    const projectGroupHeaderId = 'preview-' + uuidv4();
+    invoiceItems.push({
+      item_id: projectGroupHeaderId,
+      invoice_id: `preview-${previewInvoiceKey}`,
+      description: `Project: ${metadata.projectName}`,
+      quantity: 1,
+      unit_price: 0,
+      total_price: 0,
+      net_amount: 0,
+      tax_amount: 0,
+      tax_rate: 0,
+      is_manual: false,
+      is_bundle_header: true,
+      rate: 0,
+    });
+
+    charges.forEach((charge) => {
+      const recurringSummary = resolvePreviewRecurringSummary(charge);
+      invoiceItems.push({
+        item_id: 'preview-' + uuidv4(),
+        invoice_id: `preview-${previewInvoiceKey}`,
+        service_id: charge.serviceId,
+        description: charge.serviceName || 'Project charge',
+        quantity: getChargeQuantity(charge),
+        unit_price: getChargeUnitPrice(charge),
+        total_price: charge.total,
+        tax_amount: charge.tax_amount || 0,
+        tax_rate: charge.tax_rate || 0,
+        tax_region: charge.tax_region || '',
+        net_amount: charge.total - (charge.tax_amount || 0),
+        is_manual: false,
+        parent_item_id: projectGroupHeaderId,
         rate: charge.rate,
         service_period_start: recurringSummary.servicePeriodStart,
         service_period_end: recurringSummary.servicePeriodEnd,
@@ -1774,6 +2106,64 @@ export const previewInvoice = withAuth(async (
 });
 
 // Update return type to the interface InvoiceViewModel
+export const generateProjectInvoice = withAuth(async (
+  user,
+  { tenant },
+  projectId: string,
+  entryIds?: string[],
+): Promise<{ invoice_id: string } | InvoiceGenerationActionError> => {
+  return withInvoiceGenerationActionErrors(async () => {
+  if (!await hasPermission(user, 'invoice', 'create') && !await hasPermission(user, 'invoice', 'generate')) {
+    throw new Error('Permission denied: Cannot generate invoices');
+  }
+
+  const { knex } = await createTenantKnex();
+  const db = tenantDb(knex, tenant);
+  const projectQuery = db.table('projects as project');
+  db.tenantJoin(projectQuery, 'project_billing_configs as config', 'project.project_id', 'config.project_id');
+  const project = await projectQuery
+    .where('project.project_id', projectId)
+    .select(
+      'project.project_id',
+      'project.client_id',
+      'project.start_date',
+      'project.created_at',
+      'config.invoice_mode',
+    )
+    .first();
+
+  if (!project) {
+    throw new Error('Project billing configuration not found');
+  }
+  if (project.invoice_mode !== 'standalone') {
+    throw new Error('Project is configured for recurring invoice generation');
+  }
+
+  const billingEngine = new BillingEngine();
+  const billingResult = await billingEngine.calculateProjectBilling(projectId, entryIds);
+  if (billingResult.error) {
+    throw new Error(billingResult.error);
+  }
+  if (billingResult.charges.length === 0) {
+    throw new Error('Nothing to bill');
+  }
+
+  const cycleStart = toISOTimestamp(toPlainDate(project.start_date ?? project.created_at));
+  const cycleEnd = toISOTimestamp(Temporal.Now.plainDateISO().add({ days: 1 }));
+  const createdInvoice = await createInvoiceFromBillingResult(
+    billingResult,
+    project.client_id,
+    cycleStart,
+    cycleEnd,
+    null,
+    user.user_id,
+    { projectId },
+  );
+
+  return { invoice_id: createdInvoice.invoice_id };
+  });
+});
+
 export const generateInvoice = withAuth(async (
   user,
   { tenant },
@@ -2226,7 +2616,8 @@ export const createInvoiceFromBillingResult = withAuth(async (
   cycleStart: ISO8601String,
   cycleEnd: ISO8601String,
   billing_cycle_id: string | null,
-  userId: string
+  userId: string,
+  options: { projectId?: string } = {},
 ): Promise<IInvoice> => {
   // Verify that the userId matches the current user
   if (user.user_id !== userId) {
@@ -2270,6 +2661,7 @@ export const createInvoiceFromBillingResult = withAuth(async (
   // Create base invoice object
   const invoiceData = {
     client_id: clientId,
+    ...(options.projectId ? { project_id: options.projectId } : {}),
     client_contract_id: clientContractId,
     po_number: invoicePoNumber,
     invoice_date: toISODate(Temporal.PlainDate.from(currentDate)),
@@ -2331,6 +2723,7 @@ export const createInvoiceFromBillingResult = withAuth(async (
     throw new Error('Invoice creation completed without returning an invoice.');
   }
 
+  let persistedCapDeltas: ProjectCapPersistenceDelta[] = [];
   await withTransaction(knex, async (trx: Knex.Transaction) => {
     // Permission already checked in previous transaction, no need to recheck
     // Just use currentUser that we already validated
@@ -2351,42 +2744,74 @@ export const createInvoiceFromBillingResult = withAuth(async (
       },
       expires: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() // 24 hours from now
     };
-    const calculatedSubtotal = await persistInvoiceCharges(
+    const capDeltas = await prepareProjectCapChargesForPersistence(
+      trx,
+      billingResult.charges,
+    );
+    persistedCapDeltas = capDeltas;
+    const projectScheduleCharges = billingResult.charges.filter(isProjectScheduleCharge);
+    const standardCharges = billingResult.charges.filter((charge) => !isProjectScheduleCharge(charge));
+    const standardSubtotal = await persistInvoiceCharges(
       trx,
       newInvoice!.invoice_id,
-      billingResult.charges,
+      standardCharges,
       client,
       sessionObject,
       tenant
     );
+    const projectScheduleSubtotal = await persistProjectScheduleCharges(
+      trx,
+      newInvoice!.invoice_id,
+      projectScheduleCharges,
+      client,
+      tenant,
+      userId,
+    );
+    const calculatedSubtotal = standardSubtotal + projectScheduleSubtotal;
 
     // Mark ticket/project materials in this billing window as billed by this invoice.
     // These materials were included by BillingEngine as non-contract charges (like usage/time).
     try {
       const billedAt = Temporal.Now.instant().toString();
-      await tenantDb(trx, tenant).table('ticket_materials')
-        .where({ client_id: client.client_id, is_billed: false })
-        .andWhere('currency_code', '=', billingResult.currency_code || 'USD')
-        .andWhere('created_at', '>=', cycleStart)
-        .andWhere('created_at', '<', cycleEnd)
-        .update({
-          is_billed: true,
-          billed_invoice_id: newInvoice!.invoice_id,
-          billed_at: billedAt,
-          updated_at: billedAt
-        });
+      if (options.projectId) {
+        await tenantDb(trx, tenant).table('project_materials')
+          .where({
+            client_id: client.client_id,
+            project_id: options.projectId,
+            is_billed: false,
+          })
+          .andWhere('currency_code', '=', billingResult.currency_code || 'USD')
+          .update({
+            is_billed: true,
+            billed_invoice_id: newInvoice!.invoice_id,
+            billed_at: billedAt,
+            updated_at: billedAt
+          });
+      } else {
+        await tenantDb(trx, tenant).table('ticket_materials')
+          .where({ client_id: client.client_id, is_billed: false })
+          .andWhere('currency_code', '=', billingResult.currency_code || 'USD')
+          .andWhere('created_at', '>=', cycleStart)
+          .andWhere('created_at', '<', cycleEnd)
+          .update({
+            is_billed: true,
+            billed_invoice_id: newInvoice!.invoice_id,
+            billed_at: billedAt,
+            updated_at: billedAt
+          });
 
-      await tenantDb(trx, tenant).table('project_materials')
-        .where({ client_id: client.client_id, is_billed: false })
-        .andWhere('currency_code', '=', billingResult.currency_code || 'USD')
-        .andWhere('created_at', '>=', cycleStart)
-        .andWhere('created_at', '<', cycleEnd)
-        .update({
-          is_billed: true,
-          billed_invoice_id: newInvoice!.invoice_id,
-          billed_at: billedAt,
-          updated_at: billedAt
-        });
+        await tenantDb(trx, tenant).table('project_materials')
+          .where({ client_id: client.client_id, is_billed: false })
+          .andWhere('currency_code', '=', billingResult.currency_code || 'USD')
+          .andWhere('created_at', '>=', cycleStart)
+          .andWhere('created_at', '<', cycleEnd)
+          .update({
+            is_billed: true,
+            billed_invoice_id: newInvoice!.invoice_id,
+            billed_at: billedAt,
+            updated_at: billedAt
+          });
+      }
     } catch (err) {
       if (!isMissingRelationError(err)) {
         throw err;
@@ -2455,7 +2880,129 @@ export const createInvoiceFromBillingResult = withAuth(async (
       invoiceData.invoice_number
       // expirationDate is optional and not needed here
     );
+
+    // Keep the action result aligned with the totals committed above. This is
+    // especially important when persistence re-applies a project cap and
+    // changes the previewed charge totals.
+    newInvoice = {
+      ...newInvoice!,
+      subtotal: finalSubtotal,
+      tax: finalTax,
+      total_amount: Math.ceil(totalAmount),
+      credit_applied: 0,
+    };
+
+    if (capDeltas.length > 0) {
+      const invoiceTransaction = await tenantDb(trx, tenant).table('transactions')
+        .where({
+          invoice_id: newInvoice!.invoice_id,
+          type: 'invoice_generated',
+        })
+        .orderBy('created_at', 'desc')
+        .first('transaction_id', 'metadata');
+      if (!invoiceTransaction) {
+        throw new Error(`Invoice transaction for ${newInvoice!.invoice_id} was not found`);
+      }
+      const existingMetadata = invoiceTransaction.metadata
+        && typeof invoiceTransaction.metadata === 'object'
+        ? invoiceTransaction.metadata
+        : {};
+      await tenantDb(trx, tenant).table('transactions')
+        .where({ transaction_id: invoiceTransaction.transaction_id })
+        .update({
+          metadata: {
+            ...existingMetadata,
+            project_billing_cap_deltas: capDeltas,
+            project_billing_cap_rolled_back: false,
+          },
+        });
+    }
+
+  }).catch(async (error) => {
+    // The invoice header is allocated separately so unique invoice-number
+    // retries stay small. Compensate a failed content transaction immediately;
+    // callers must never be left with an empty orphan draft.
+    try {
+      await withTransaction(knex, async (trx: Knex.Transaction) => {
+        await tenantDb(trx, tenant).table('invoices')
+          .where({ invoice_id: newInvoice!.invoice_id, status: 'draft' })
+          .delete();
+      });
+    } catch (cleanupError) {
+      console.error(
+        `[createInvoiceFromBillingResult] Failed to remove orphan invoice ${newInvoice.invoice_id}`,
+        cleanupError,
+      );
+    }
+    throw error;
   });
+
+  const invoicedScheduleRows = await knex('project_billing_schedule_entries as entry')
+    .join('project_billing_configs as config', function joinProjectBillingConfig() {
+      this.on('config.tenant', '=', 'entry.tenant')
+        .andOn('config.config_id', '=', 'entry.config_id');
+    })
+    .where('entry.tenant', tenant)
+    .andWhere('entry.invoice_id', newInvoice.invoice_id)
+    .select<Array<{
+      schedule_entry_id: string;
+      config_id: string;
+      project_id: string;
+      description: string;
+      requires_payment_before_work: boolean;
+    }>>(
+      'entry.schedule_entry_id',
+      'entry.config_id',
+      'config.project_id',
+      'entry.description',
+      'entry.requires_payment_before_work',
+    );
+  for (const entry of invoicedScheduleRows) {
+    await publishEvent({
+      eventType: 'PROJECT_BILLING_SCHEDULE_STATUS_CHANGED',
+      payload: {
+        tenantId: tenant,
+        projectId: entry.project_id,
+        configId: entry.config_id,
+        entryId: entry.schedule_entry_id,
+        description: entry.description,
+        status: 'invoiced',
+        previousStatus: 'approved',
+        requiresPaymentBeforeWork: entry.requires_payment_before_work,
+        userId,
+        changes: { invoiceId: newInvoice.invoice_id },
+      },
+    });
+  }
+
+  for (const delta of persistedCapDeltas) {
+    for (const threshold of delta.notifiedThresholds) {
+      await publishEvent({
+        eventType: 'PROJECT_BUDGET_THRESHOLD_REACHED',
+        payload: {
+          tenantId: tenant,
+          projectId: delta.projectId,
+          threshold,
+          billed: delta.billedAfter,
+          cap: delta.cap,
+        },
+      });
+    }
+    if (isFirstProjectCapOverage(delta.writtenDownBefore, delta.writtenDownAfter)) {
+      await publishEvent({
+        eventType: 'PROJECT_BUDGET_EXCEEDED',
+        payload: {
+          tenantId: tenant,
+          projectId: delta.projectId,
+          invoiceId: newInvoice.invoice_id,
+          billed: delta.billedAfter,
+          attempted: delta.billedAfter + delta.writtenDownAfter,
+          cap: delta.cap,
+          writtenDown: delta.writtenDownAfter,
+        },
+      });
+    }
+  }
 
   // Track analytics
   const { analytics, AnalyticsEvents } = await getAnalyticsAsync();

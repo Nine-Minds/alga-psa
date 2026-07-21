@@ -425,5 +425,75 @@
       "noLongerNeed": "Non ho più bisogno del servizio",
       "other": "Altro"
     }
+  },
+  "aiUsage": {
+    "title": "Utilizzo IA",
+    "subtitle": "Fatturazione a crediti per le funzionalità IA di Alga",
+    "refresh": "Aggiorna",
+    "errors": {
+      "loadSummary": "Impossibile caricare i dettagli di utilizzo dell'IA",
+      "loadHistory": "Impossibile caricare la cronologia di utilizzo",
+      "subscribe": "Impossibile avviare il checkout",
+      "topup": "Impossibile avviare il checkout della ricarica",
+      "autoTopup": "Impossibile salvare le impostazioni di ricarica automatica",
+      "unavailable": "I dettagli di utilizzo dell'IA non sono al momento disponibili. Riprova a breve."
+    },
+    "upsell": {
+      "heading": "Aggiungi l'IA al tuo spazio di lavoro",
+      "body": "Abbonati al componente aggiuntivo IA per sbloccare Alga AI in chat, smistamento e-mail e altro. Il piano mensile include una dotazione di crediti; acquista ricariche una tantum o attiva la ricarica automatica in qualsiasi momento.",
+      "subscribe": "Abbonati al componente IA",
+      "subscribing": "Reindirizzamento…"
+    },
+    "grace": {
+      "title": "Crediti esauriti — margine di tolleranza in uso",
+      "body": "L'IA continua a funzionare entro un piccolo margine di tolleranza di {{grace}} crediti. Ricarica per evitare un arresto totale."
+    },
+    "lowBalance": {
+      "title": "Saldo crediti basso",
+      "body": "Valuta una ricarica o attiva la ricarica automatica per evitare interruzioni."
+    },
+    "balance": {
+      "total": "Saldo totale",
+      "creditsUnit": "crediti",
+      "included": "Inclusi (mensile)",
+      "resetsMonthly": "si azzera a ogni ciclo",
+      "topup": "Ricarica (persistente)",
+      "carriesOver": "viene riportato"
+    },
+    "cycle": {
+      "label": "Ciclo di fatturazione",
+      "resetsIn": "Si azzera tra {{days}} giorni"
+    },
+    "topup": {
+      "title": "Acquista crediti di ricarica",
+      "description": "Pacchetti di crediti una tantum che non scadono mai.",
+      "noPacks": "Nessun pacchetto di ricarica è ancora configurato.",
+      "packWithCredits": "{{label}} ({{credits}} crediti)"
+    },
+    "autoTopup": {
+      "title": "Ricarica automatica",
+      "description": "Acquista automaticamente un pacchetto quando il saldo scende sotto una soglia.",
+      "enable": "Attiva ricarica automatica",
+      "enableHelp": "Utilizza il metodo di pagamento salvato per addebiti fuori sessione.",
+      "threshold": "Soglia (crediti)",
+      "pack": "Pacchetto da acquistare",
+      "selectPack": "Seleziona un pacchetto",
+      "save": "Salva ricarica automatica",
+      "saved": "Impostazioni di ricarica automatica salvate",
+      "saving": "Salvataggio…"
+    },
+    "history": {
+      "title": "Cronologia di utilizzo",
+      "description": "Consumo di crediti per richiesta.",
+      "allFeatures": "Tutte le funzionalità",
+      "date": "Data",
+      "feature": "Funzionalità",
+      "model": "Modello",
+      "tokens": "Token",
+      "credits": "Crediti",
+      "empty": "Nessun utilizzo registrato finora.",
+      "loading": "Caricamento…",
+      "loadMore": "Carica altro"
+    }
   }
 }

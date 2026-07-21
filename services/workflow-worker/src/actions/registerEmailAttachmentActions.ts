@@ -535,7 +535,12 @@ async function downloadAttachmentBuffer(args: {
     const { MicrosoftGraphAdapter } = await import(
       '@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter'
     );
-    const providerConfig = await buildMicrosoftProviderConfig(args.knex, args.tenant, providerRow);
+    const { buildMicrosoftEmailProviderConfig } = await import(
+      '@alga-psa/shared/services/email/microsoftEmailProviderConfig'
+    );
+    const providerConfig = await buildMicrosoftEmailProviderConfig(
+      await buildMicrosoftProviderConfig(args.knex, args.tenant, providerRow)
+    );
     const adapter = new MicrosoftGraphAdapter(providerConfig);
     await adapter.connect();
     const downloaded = await adapter.downloadAttachmentBytes(args.emailId, args.providerAttachmentId);
@@ -583,7 +588,12 @@ async function downloadOriginalMime(args: {
     const { MicrosoftGraphAdapter } = await import(
       '@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter'
     );
-    const providerConfig = await buildMicrosoftProviderConfig(args.knex, args.tenant, providerRow);
+    const { buildMicrosoftEmailProviderConfig } = await import(
+      '@alga-psa/shared/services/email/microsoftEmailProviderConfig'
+    );
+    const providerConfig = await buildMicrosoftEmailProviderConfig(
+      await buildMicrosoftProviderConfig(args.knex, args.tenant, providerRow)
+    );
     const adapter = new MicrosoftGraphAdapter(providerConfig);
     await adapter.connect();
     return await adapter.downloadMessageSource(args.emailId);

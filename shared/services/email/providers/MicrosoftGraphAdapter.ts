@@ -1,4 +1,4 @@
-import axios, { AxiosInstance } from 'axios';
+import axios, { AxiosInstance, AxiosResponse } from 'axios';
 import { randomUUID } from 'crypto';
 import { BaseEmailAdapter } from './base/BaseEmailAdapter';
 import { EmailMessageDetails, EmailProviderConfig } from '../../../interfaces/inbound-email.interfaces';
@@ -11,6 +11,7 @@ import type {
 import { getSecretProviderInstance } from '../../../core/secretProvider';
 import { getAdminConnection } from '../../../db/admin';
 import { tenantDb } from '@alga-psa/db';
+import { getMicrosoftGraphBaseUrl, getMicrosoftTokenUrl } from '../microsoftGraphEndpoints';
 
 /**
  * Microsoft Graph API adapter for email processing
@@ -18,7 +19,7 @@ import { tenantDb } from '@alga-psa/db';
  */
 export class MicrosoftGraphAdapter extends BaseEmailAdapter {
   private httpClient: AxiosInstance;
-  private baseUrl = 'https://graph.microsoft.com/v1.0';
+  private baseUrl = getMicrosoftGraphBaseUrl();
   private authenticatedUserEmail: string | undefined; // Email of the user who authorized the app
 
   constructor(config: EmailProviderConfig) {
@@ -238,9 +239,11 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
 
       const vendorConfig = this.config.provider_config || {};
 
-      // Prefer env or provider_config, then fallback to tenant secrets
-      let clientId = vendorConfig.client_id || process.env.MICROSOFT_CLIENT_ID;
-      let clientSecret = vendorConfig.client_secret || process.env.MICROSOFT_CLIENT_SECRET;
+      // Runtime config builders resolve the Email-bound profile and enforce the
+      // issuing-client pin before constructing the adapter. Keep the legacy
+      // fallbacks for callers that have not yet migrated to the builder.
+      let clientId = vendorConfig.resolved_client_id || vendorConfig.client_id || process.env.MICROSOFT_CLIENT_ID;
+      let clientSecret = vendorConfig.resolved_client_secret || vendorConfig.client_secret || process.env.MICROSOFT_CLIENT_SECRET;
 
       if (!clientId || !clientSecret) {
         const secretProvider = await getSecretProviderInstance();
@@ -253,7 +256,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       }
 
       // Determine tenant authority for single-tenant apps
-      const vendorTenantId = (this.config.provider_config as any)?.tenant_id || this.config.provider_config?.tenantId;
+      const vendorTenantId = vendorConfig.resolved_tenant_id || vendorConfig.tenant_id || vendorConfig.tenantId;
       let tenantAuthority = vendorTenantId || process.env.MICROSOFT_TENANT_ID;
       if (!tenantAuthority) {
         try {
@@ -266,7 +269,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         }
       }
 
-      const tokenUrl = `https://login.microsoftonline.com/common/oauth2/v2.0/token`;
+      const tokenUrl = getMicrosoftTokenUrl(tenantAuthority || 'common');
       const params = new URLSearchParams({
         client_id: clientId,
         client_secret: clientSecret,
@@ -346,6 +349,81 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
     }
   }
 
+  /** Proactively load and refresh credentials when they are near expiry. */
+  async ensureTokenHealthy(bufferMinutes = 30): Promise<void> {
+    if (!this.accessToken) await this.loadCredentials();
+    if (this.isTokenExpired(bufferMinutes)) await this.refreshAccessToken();
+  }
+
+  /** List messages received since the supplied cursor, oldest first and capped. */
+  async listMessagesReceivedSince(since: Date, maxCount: number): Promise<Array<{ id: string; receivedDateTime?: string }>> {
+    const desiredFolder = (this.config.folder_to_monitor || 'Inbox').trim();
+    const { resource } = await this.buildFolderResourcePath(desiredFolder);
+    const messages: Array<{ id: string; receivedDateTime?: string }> = [];
+    let url: string | null = resource;
+    let params: Record<string, string | number> | undefined = {
+      $filter: `receivedDateTime ge ${since.toISOString()}`,
+      $select: 'id,receivedDateTime',
+      $orderby: 'receivedDateTime asc',
+      $top: Math.min(Math.max(maxCount, 1), 100),
+    };
+
+    while (url && messages.length < maxCount) {
+      const response: AxiosResponse<{
+        value?: Array<{ id?: string; receivedDateTime?: string }>;
+        '@odata.nextLink'?: string;
+      }> = await this.httpClient.get(url, { params });
+      params = undefined;
+      for (const message of response.data?.value || []) {
+        if (message?.id) messages.push({ id: String(message.id), receivedDateTime: message.receivedDateTime });
+        if (messages.length >= maxCount) break;
+      }
+      url = response.data?.['@odata.nextLink'] || null;
+    }
+
+    return messages;
+  }
+
+  /** Delete app-owned subscriptions for this webhook URL that are not the DB cursor. */
+  async cleanupOrphanedSubscriptions(): Promise<number> {
+    const webhookUrl = this.config.webhook_notification_url;
+    if (!webhookUrl) return 0;
+    const response = await this.httpClient.get('/subscriptions');
+    const currentId = this.config.webhook_subscription_id;
+    const orphans = (response.data?.value || []).filter(
+      (subscription: any) => subscription?.notificationUrl === webhookUrl && subscription?.id !== currentId
+    );
+
+    let deleted = 0;
+    for (const orphan of orphans) {
+      try {
+        await this.httpClient.delete(`/subscriptions/${encodeURIComponent(String(orphan.id))}`);
+        deleted += 1;
+      } catch (error) {
+        this.log('warn', 'Failed to delete orphaned Microsoft subscription', {
+          subscriptionId: orphan.id,
+          error: error instanceof Error ? error.message : String(error),
+        });
+      }
+    }
+    return deleted;
+  }
+
+  private async deletePreviousSubscription(): Promise<void> {
+    const oldSubscriptionId = this.config.webhook_subscription_id;
+    if (!oldSubscriptionId) return;
+    try {
+      await this.httpClient.delete(`/subscriptions/${encodeURIComponent(oldSubscriptionId)}`);
+    } catch (error: any) {
+      if (error?.response?.status !== 404) {
+        this.log('warn', 'Failed to delete previous Microsoft subscription before replacement', {
+          subscriptionId: oldSubscriptionId,
+          error: error?.message || String(error),
+        });
+      }
+    }
+  }
+
   /**
    * Register webhook subscription for incoming messages
    */
@@ -385,6 +463,7 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         folder: resolvedFolder,
       });
 
+      await this.deletePreviousSubscription();
       const response = await this.httpClient.post('/subscriptions', subscription);
       
       // Update config with subscription ID
@@ -1241,53 +1320,9 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
   async initializeWebhook(webhookUrl: string): Promise<{ success: boolean; subscriptionId?: string; error?: string }> {
     try {
       this.log('info', `Initializing webhook subscription to ${webhookUrl}`);
-
-      const expirationMs = 60 * 60 * 1000 * 60; // ~60 hours within Graph limits
-      const desiredFolder = (this.config.folder_to_monitor || 'Inbox').trim();
-      const { resource, resolvedFolder } = await this.buildFolderResourcePath(desiredFolder);
-      const mailboxBase = this.getMailboxBasePath();
-      const subscription = {
-        changeType: 'created',
-        notificationUrl: webhookUrl,
-        resource,
-        expirationDateTime: new Date(Date.now() + expirationMs).toISOString(),
-        clientState: this.config.webhook_verification_token || 'email-webhook-verification',
-      };
-
-      this.log('info', 'Posting Microsoft subscription payload', {
-        notificationUrl: subscription.notificationUrl,
-        resource: subscription.resource,
-        expirationDateTime: subscription.expirationDateTime,
-        clientState: subscription.clientState ? '**masked**' : 'none',
-        mailboxBase,
-        folder: resolvedFolder,
-      });
-
-      const response = await this.httpClient.post('/subscriptions', subscription);
-      
-      // Update config with subscription ID
-      this.config.webhook_subscription_id = response.data.id;
-      this.config.webhook_expires_at = response.data.expirationDateTime;
-
-      // Persist webhook details only in microsoft vendor config
-      try {
-        const knex = await getAdminConnection();
-        await tenantDb(knex, this.config.tenant).table('microsoft_email_provider_config')
-          .where('email_provider_id', this.config.id)
-          .update({
-            webhook_subscription_id: response.data.id,
-            webhook_expires_at: response.data.expirationDateTime,
-            webhook_verification_token: this.config.webhook_verification_token || null,
-            updated_at: new Date().toISOString(),
-          });
-      } catch (dbErr: any) {
-        this.log('warn', `Failed to persist Microsoft webhook subscription: ${dbErr?.message}`);
-      }
-
-      this.log('info', `Webhook subscription created: ${response.data.id}`);
-
-      // Return success with subscription id
-      return { success: true, subscriptionId: response.data.id };
+      this.config.webhook_notification_url = webhookUrl;
+      await this.registerWebhookSubscription();
+      return { success: true, subscriptionId: this.config.webhook_subscription_id };
     } catch (error) {
       // Enrich/log details (status, request-id, body) before throwing
       const enriched = this.handleError(error, 'initializeWebhook');

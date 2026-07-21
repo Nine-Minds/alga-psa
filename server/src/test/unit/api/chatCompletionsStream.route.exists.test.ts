@@ -108,6 +108,36 @@ describe('POST /api/chat/v1/completions/stream', () => {
     expect(createStructuredCompletionStreamMock).toHaveBeenCalledTimes(1);
   });
 
+  it('returns a structured 402 when the gateway rejects the stream', async () => {
+    isExperimentalFeatureEnabledMock.mockResolvedValue(true);
+    createStructuredCompletionStreamMock.mockResolvedValue(
+      (async function* () {
+        throw Object.assign(new Error('402 out of credits'), {
+          name: 'AiCreditsError',
+          reason: 'out_of_credits',
+        });
+      })(),
+    );
+
+    vi.resetModules();
+    const { POST } = await import('@/app/api/chat/v1/completions/stream/route');
+    const request = new NextRequest(
+      new Request('http://example.com/api/chat/v1/completions/stream', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ messages: [{ role: 'user', content: 'Hello' }] }),
+      }),
+    );
+
+    const response = await POST(request);
+
+    expect(response.status).toBe(402);
+    await expect(response.json()).resolves.toEqual({
+      type: 'ai_credits',
+      reason: 'out_of_credits',
+    });
+  });
+
   it('returns Content-Type: text/event-stream', async () => {
     isExperimentalFeatureEnabledMock.mockResolvedValue(true);
     createStructuredCompletionStreamMock.mockResolvedValue(

@@ -456,7 +456,8 @@
       "pdfFailed": "55555",
       "bulkPdfFailed": "55555",
       "unfinalizeFailed": "55555",
-      "bulkUnfinalizeFailed": "55555"
+      "bulkUnfinalizeFailed": "55555",
+      "bulkUnfinalizeInvoiceFailed": "55555 {{invoiceNumber}} 55555 {{reason}} 55555"
     }
   },
   "recurringServicePeriods": {
@@ -683,6 +684,8 @@
     "error": "55555",
     "errorDescription": "55555",
     "errors": {
+      "notFound": "55555",
+      "noTemplates": "55555",
       "loadFailed": "55555 {{message}} 55555",
       "actionFailed": "55555 {{action}} 55555",
       "actionLabels": {
@@ -1022,7 +1025,8 @@
     "tabs": {
       "generate": "55555",
       "drafts": "55555",
-      "finalized": "55555"
+      "finalized": "55555",
+      "projectBilling": "55555"
     }
   },
   "invoiceSyncBadge": {
@@ -1657,6 +1661,66 @@
     },
     "dragOverlay": {
       "component": "55555"
+    }
+  },
+  "projectBilling": {
+    "subtitle": "55555",
+    "bulkActions": "55555 {{count}} 55555",
+    "loading": "55555",
+    "empty": "55555",
+    "columns": {
+      "project": "55555",
+      "client": "55555",
+      "description": "55555",
+      "amount": "55555",
+      "trigger": "55555",
+      "daysWaiting": "55555",
+      "actions": "55555"
+    },
+    "trigger": {
+      "phase": "55555 {{phase}} 55555 {{date}} 55555",
+      "date": "55555",
+      "manual": "55555"
+    },
+    "actions": {
+      "approve": "55555",
+      "approveInvoiceNow": "55555",
+      "hold": "55555",
+      "cancel": "55555",
+      "approveSelected": "55555",
+      "holdSelected": "55555"
+    },
+    "toasts": {
+      "approved": "55555",
+      "approvedWithWarning": "55555 {{warning}} 55555",
+      "invoiced": "55555",
+      "bulkApproved": "55555 {{count}} 55555",
+      "bulkApproveFailed": "55555 {{count}} 55555 {{reason}} 55555",
+      "held": "55555",
+      "bulkHeld": "55555 {{count}} 55555",
+      "bulkHoldFailed": "55555 {{count}} 55555 {{reason}} 55555",
+      "canceled": "55555"
+    },
+    "errors": {
+      "loadFailed": "55555",
+      "approveFailed": "55555",
+      "invoiceFailed": "55555",
+      "holdFailed": "55555",
+      "cancelFailed": "55555"
+    },
+    "holdDialog": {
+      "title": "55555",
+      "titlePlural": "55555 {{count}} 55555",
+      "description": "55555",
+      "reasonPlaceholder": "55555",
+      "cancel": "55555",
+      "confirm": "55555"
+    },
+    "cancelDialog": {
+      "title": "55555",
+      "message": "55555",
+      "confirm": "55555",
+      "dismiss": "55555"
     }
   }
 }

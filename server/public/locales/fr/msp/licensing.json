@@ -172,5 +172,58 @@
   },
   "runStudio": {
     "unavailable": "Workflow Run Studio n'est pas disponible dans cette édition. (runId : {{runId}})"
+  },
+  "aiConsent": {
+    "title": "Partage de données IA",
+    "subtitle": "Requis pour les fonctionnalités d'IA sur cette appliance. Vérifiez ce qui quitte votre réseau avant d'activer l'IA.",
+    "status": {
+      "granted": "Consentement accordé",
+      "revoked": "Consentement révoqué",
+      "missing": "Non accordé"
+    },
+    "unreachable": "Impossible de joindre le service d'IA pour charger l'état actuel du consentement. Réessayez sous peu.",
+    "explainer": "Lorsque l'IA est activée, le contenu sur lequel elle travaille — y compris le texte des tickets, le corps des e-mails et les messages de chat — est envoyé depuis cette appliance vers le service d'IA cloud de Nine Minds, puis vers des fournisseurs de modèles tiers pour générer des réponses. Rien n'est envoyé tant que vous n'avez pas donné votre consentement ci-dessous.",
+    "termsVersion": "Version des conditions",
+    "grantedAt": "Accordé",
+    "revoke": "Révoquer le consentement",
+    "accept": "Accepter et activer l'IA",
+    "acceptDialog": {
+      "title": "Activer le partage de données IA ?",
+      "confirming": "Activation…",
+      "confirm": "J'accepte, activer l'IA",
+      "body": "En continuant, vous acceptez que les fonctionnalités d'IA puissent transmettre le contenu des tickets, des e-mails et des chats depuis cette appliance vers le service d'IA cloud de Nine Minds, puis vers des fournisseurs de modèles tiers pour traitement.",
+      "termsVersion": "Version des conditions de partage de données : {{version}}"
+    },
+    "revokeDialog": {
+      "title": "Révoquer le partage de données IA ?",
+      "confirming": "Révocation…",
+      "confirm": "Révoquer le consentement",
+      "body": "Les fonctionnalités d'IA cessent immédiatement de fonctionner sur cette appliance. Plus aucun contenu ne sera envoyé au service d'IA cloud tant que le consentement n'aura pas été accordé à nouveau."
+    }
+  },
+  "aiBalance": {
+    "title": "Crédits IA",
+    "subtitle": "Des crédits prépayés financent les fonctionnalités d'IA sur cette appliance. Les achats s'effectuent dans la boutique Nine Minds.",
+    "refresh": "Actualiser",
+    "unreachable": "Impossible de joindre le service d'IA pour charger votre solde de crédits. Réessayez sous peu.",
+    "blockedPendingConsent": "L'IA est bloquée tant que le consentement au partage de données n'a pas été accordé ci-dessus. Aucun crédit n'est consommé tant que l'IA est désactivée.",
+    "upsell": {
+      "heading": "S'abonner au module IA",
+      "body": "Aucun abonnement IA actif pour cette appliance. Abonnez-vous dans la boutique Nine Minds pour recevoir une dotation mensuelle de crédits ; la boutique gère le paiement et les recharges.",
+      "subscribe": "S'abonner dans la boutique"
+    },
+    "grace": "Les crédits sont épuisés. L'IA continue de fonctionner dans une petite marge de tolérance de {{grace}} crédits avant de s'arrêter complètement — rechargez pour éviter toute interruption.",
+    "low": "Le solde de crédits devient faible. Rechargez dans la boutique pour éviter les interruptions.",
+    "total": "Solde total",
+    "creditsUnit": "crédits",
+    "included": "Inclus (mensuel)",
+    "resetsMonthly": "réinitialisé à chaque cycle",
+    "topup": "Recharge (persistante)",
+    "carriesOver": "reporté",
+    "manage": {
+      "heading": "Acheter des crédits ou gérer l'abonnement",
+      "body": "Les recharges, la recharge automatique et les changements d'abonnement sont gérés dans la boutique Nine Minds.",
+      "openStore": "Ouvrir la boutique"
+    }
   }
 }

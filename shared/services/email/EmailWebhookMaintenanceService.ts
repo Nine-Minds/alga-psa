@@ -3,6 +3,8 @@ import { tenantDb } from '@alga-psa/db';
 import { EmailProviderConfig } from '../../interfaces/inbound-email.interfaces';
 import { MicrosoftGraphAdapter } from './providers/MicrosoftGraphAdapter';
 import logger from '../../core/logger';
+import { buildMicrosoftEmailProviderConfig } from './microsoftEmailProviderConfig';
+import { enqueueUnifiedInboundEmailQueueJob } from './unifiedInboundEmailQueue';
 
 const PROVIDER_TENANT_DISCOVERY = 'tenant-discovery';
 
@@ -21,6 +23,11 @@ interface RenewalResult {
   error?: string;
 }
 
+const TOKEN_REFRESH_LOOK_AHEAD_MINUTES = 30;
+const RECONCILE_WINDOW_CAP_MS = 7 * 24 * 60 * 60 * 1000;
+const RECONCILE_SAFETY_MARGIN_MS = 15 * 60 * 1000;
+const DEFAULT_RECONCILE_MAX_MESSAGES = 50;
+
 export class EmailWebhookMaintenanceService {
   
   constructor() {
@@ -35,14 +42,14 @@ export class EmailWebhookMaintenanceService {
     logger.info('Starting Microsoft webhook renewal check', { tenantId, providerId, lookAheadMinutes });
 
     try {
-      const candidates = await this.findRenewalCandidates(lookAheadMinutes, tenantId, providerId);
-      logger.info(`Found ${candidates.length} renewal candidates`);
+      const candidates = await this.findActiveMicrosoftProviders(tenantId, providerId);
+      logger.info(`Found ${candidates.length} active Microsoft email providers`);
 
       const results: RenewalResult[] = [];
 
       for (const candidate of candidates) {
         try {
-          const result = await this.processCandidate(candidate);
+          const result = await this.processCandidate(candidate, lookAheadMinutes, Boolean(providerId));
           results.push(result);
         } catch (error: any) {
           logger.error(`Unexpected error processing provider ${candidate.id}`, error);
@@ -66,10 +73,11 @@ export class EmailWebhookMaintenanceService {
   /**
    * Find providers that need renewal
    */
-  private async findRenewalCandidates(lookAheadMinutes: number, tenantId?: string, providerId?: string): Promise<EmailProviderConfig[]> {
+  private async findActiveMicrosoftProviders(
+    tenantId?: string,
+    providerId?: string
+  ): Promise<EmailProviderConfig[]> {
     const knex = await getAdminConnection();
-    const now = new Date();
-    const threshold = new Date(now.getTime() + lookAheadMinutes * 60000);
 
     const providerRoot = tenantId
       ? tenantDb(knex, tenantId).table('email_providers as ep')
@@ -102,15 +110,6 @@ export class EmailWebhookMaintenanceService {
       .where('ep.provider_type', 'microsoft')
       .andWhere('ep.is_active', true);
 
-    // If providerId is specified, we ignore expiration/missing subscription logic and force check/renew
-    if (!providerId) {
-      query = query.andWhere(function() {
-        this.whereNull('mpc.webhook_expires_at')
-          .orWhere('mpc.webhook_expires_at', '<=', threshold.toISOString())
-          .orWhereNull('mpc.webhook_subscription_id');
-      });
-    }
-
     if (providerId) {
       query = query.andWhere('ep.id', providerId);
     }
@@ -139,7 +138,11 @@ export class EmailWebhookMaintenanceService {
       'mpc.tenant_id',
       'mpc.access_token',
       'mpc.refresh_token',
-      'mpc.token_expires_at'
+      'mpc.token_expires_at',
+      'mpc.folder_filters',
+      'mpc.max_emails_per_sync',
+      'mpc.microsoft_profile_id',
+      'mpc.client_secret_ref'
     );
 
     return rows.map(row => this.mapRowToConfig(row));
@@ -148,15 +151,52 @@ export class EmailWebhookMaintenanceService {
   /**
    * Process a single renewal candidate
    */
-  private async processCandidate(config: EmailProviderConfig): Promise<RenewalResult> {
+  private async processCandidate(
+    config: EmailProviderConfig,
+    lookAheadMinutes: number,
+    forceRenewal: boolean
+  ): Promise<RenewalResult> {
     logger.info(`Processing renewal for ${config.name} (${config.id})`, { 
       tenant: config.tenant,
       currentExpiry: config.webhook_expires_at 
     });
 
-    const adapter = new MicrosoftGraphAdapter(config);
-
     try {
+      const resolvedConfig = await buildMicrosoftEmailProviderConfig(config);
+      const adapter = new MicrosoftGraphAdapter(resolvedConfig);
+
+      try {
+        await adapter.ensureTokenHealthy(TOKEN_REFRESH_LOOK_AHEAD_MINUTES);
+        await this.updateProviderConnectionStatus(config.id, config.tenant, 'connected', null);
+      } catch (error: any) {
+        const message = error?.message || 'Microsoft token refresh failed';
+        await this.updateProviderConnectionStatus(config.id, config.tenant, 'error', message);
+        await this.updateHealthStatus(config.id, config.tenant, {
+          subscription_status: 'error',
+          last_renewal_result: 'failure',
+          failure_reason: message,
+        });
+        throw error;
+      }
+
+      await adapter.cleanupOrphanedSubscriptions();
+      await this.reconcileMissedMessages(adapter, resolvedConfig);
+
+      const expiryMs = config.webhook_expires_at
+        ? new Date(config.webhook_expires_at).getTime()
+        : 0;
+      const renewalDue = forceRenewal || !config.webhook_subscription_id ||
+        expiryMs <= Date.now() + lookAheadMinutes * 60 * 1000;
+      if (!renewalDue) {
+        return {
+          providerId: config.id,
+          tenant: config.tenant,
+          success: true,
+          action: 'skipped',
+          newExpiration: config.webhook_expires_at,
+        };
+      }
+
       // Case 1: No subscription ID -> Register new
       if (!config.webhook_subscription_id) {
         logger.info(`No subscription ID for ${config.id}, registering new webhook`);
@@ -191,6 +231,12 @@ export class EmailWebhookMaintenanceService {
       }
     } catch (error: any) {
       logger.error(`Failed to renew/recreate subscription for ${config.id}`, error);
+      await this.updateProviderConnectionStatus(
+        config.id,
+        config.tenant,
+        'error',
+        error?.message || 'Microsoft email maintenance failed'
+      );
       
       await this.updateHealthStatus(config.id, config.tenant, {
         subscription_status: 'error',
@@ -249,6 +295,69 @@ export class EmailWebhookMaintenanceService {
       action: 'recreated',
       newExpiration: adapter.getConfig().webhook_expires_at
     };
+  }
+
+  private async reconcileMissedMessages(
+    adapter: MicrosoftGraphAdapter,
+    config: EmailProviderConfig
+  ): Promise<void> {
+    const knex = await getAdminConnection();
+    const db = tenantDb(knex, config.tenant);
+    const provider = await db.table('email_providers')
+      .where({ id: config.id })
+      .first('last_sync_at');
+    const lastSyncMs = provider?.last_sync_at
+      ? new Date(provider.last_sync_at).getTime() - RECONCILE_SAFETY_MARGIN_MS
+      : Date.now() - RECONCILE_WINDOW_CAP_MS;
+    const since = new Date(Math.max(lastSyncMs, Date.now() - RECONCILE_WINDOW_CAP_MS));
+    const maxCount = Math.max(
+      1,
+      Number(config.provider_config?.max_emails_per_sync || DEFAULT_RECONCILE_MAX_MESSAGES)
+    );
+    const messages = await adapter.listMessagesReceivedSince(since, maxCount);
+
+    if (messages.length > 0) {
+      const processedRows = await db.table('email_processed_messages')
+        .where({ provider_id: config.id })
+        .whereIn('message_id', messages.map((message) => message.id))
+        .select('message_id');
+      const processed = new Set(processedRows.map((row: any) => String(row.message_id)));
+      for (const message of messages) {
+        if (processed.has(message.id)) continue;
+        await enqueueUnifiedInboundEmailQueueJob({
+          tenantId: config.tenant,
+          providerId: config.id,
+          provider: 'microsoft',
+          pointer: {
+            subscriptionId: config.webhook_subscription_id || 'reconcile',
+            messageId: message.id,
+            resource: 'maintenance-reconcile',
+            changeType: 'created',
+          },
+        });
+      }
+    }
+
+    await db.table('email_providers').where({ id: config.id }).update({
+      last_sync_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+  }
+
+  private async updateProviderConnectionStatus(
+    providerId: string,
+    tenant: string,
+    status: 'connected' | 'error',
+    errorMessage: string | null
+  ): Promise<void> {
+    const knex = await getAdminConnection();
+    await tenantDb(knex, tenant).table('email_providers')
+      .where({ id: providerId })
+      .update({
+        status,
+        error_message: errorMessage,
+        updated_at: new Date().toISOString(),
+      });
   }
 
   private isResourceNotFoundError(error: any): boolean {
@@ -348,6 +457,10 @@ export class EmailWebhookMaintenanceService {
         access_token: row.access_token,
         refresh_token: row.refresh_token,
         token_expires_at: row.token_expires_at,
+        folder_filters: row.folder_filters,
+        max_emails_per_sync: row.max_emails_per_sync,
+        microsoft_profile_id: row.microsoft_profile_id,
+        client_secret_ref: row.client_secret_ref,
       }
     };
   }

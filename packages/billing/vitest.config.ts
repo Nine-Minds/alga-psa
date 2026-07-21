@@ -6,7 +6,12 @@ export default defineConfig({
     globals: true,
     environment: 'node',
     setupFiles: [path.resolve(__dirname, './vitest.setup.ts')],
-    include: ['tests/**/*.test.ts', 'tests/**/*.test.tsx'],
+    include: [
+      'tests/**/*.test.ts',
+      'tests/**/*.test.tsx',
+      'src/actions/projectBillingActions.contract.test.ts',
+      'src/schemas/**/*.test.ts',
+    ],
     testTimeout: 20000,
     // Inline next-auth/@auth/core/next so vite transforms them and the next/server
     // alias below applies to next-auth's internal `import "next/server"`. Without it

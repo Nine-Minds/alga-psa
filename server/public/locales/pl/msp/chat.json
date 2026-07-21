@@ -155,5 +155,23 @@
   },
   "mention": {
     "noResultsFound": "Nie znaleziono wyników"
+  },
+  "aiCredits": {
+    "indicatorTooltip": "Pozostało {{credits}} kredytów AI",
+    "noSubscription": {
+      "title": "AI to płatny dodatek",
+      "body": "Subskrybuj dodatek AI, aby korzystać z Alga AI. Twój plan obejmuje miesięczny przydział kredytów.",
+      "cta": "Zobacz ustawienia użycia AI"
+    },
+    "outOfCredits": {
+      "title": "Brak kredytów AI",
+      "body": "Doładuj, aby dalej korzystać z Alga AI.",
+      "bodyWithBalance": "Twoje saldo to {{balance}} kredytów. Doładuj, aby dalej korzystać z Alga AI.",
+      "cta": "Kup kredyty doładowania"
+    },
+    "consentRequired": {
+      "title": "Wymagana zgoda na udostępnianie danych",
+      "body": "Administrator musi zaakceptować warunki udostępniania danych AI na tym urządzeniu, zanim będzie można korzystać z AI."
+    }
   }
 }

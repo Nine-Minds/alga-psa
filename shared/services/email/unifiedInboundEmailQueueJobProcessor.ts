@@ -9,6 +9,7 @@ import type {
   UnifiedInboundEmailQueueJob,
 } from '@alga-psa/shared/interfaces/inbound-email.interfaces';
 import { MicrosoftGraphAdapter } from '@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter';
+import { buildMicrosoftEmailProviderConfig } from '@alga-psa/shared/services/email/microsoftEmailProviderConfig';
 import {
   processInboundEmailInApp,
   type ProcessInboundEmailInAppDiagnostics,
@@ -306,7 +307,7 @@ async function fetchMicrosoftProviderConfig(job: UnifiedInboundEmailQueueJob): P
         }
       })();
 
-  return {
+  return buildMicrosoftEmailProviderConfig({
     id: row.id,
     tenant: row.tenant,
     name: row.provider_name || row.mailbox,
@@ -328,7 +329,7 @@ async function fetchMicrosoftProviderConfig(job: UnifiedInboundEmailQueueJob): P
       refresh_token: (row as any).mc_refresh_token,
       token_expires_at: (row as any).mc_token_expires_at,
     },
-  } as any;
+  } as any);
 }
 
 async function fetchGoogleProviderConfig(job: UnifiedInboundEmailQueueJob): Promise<{
@@ -763,6 +764,16 @@ async function persistGoogleHistoryCursor(job: UnifiedInboundEmailQueueJob): Pro
     });
 }
 
+async function recordSuccessfulProviderSync(job: UnifiedInboundEmailQueueJob): Promise<void> {
+  const db = await getAdminConnection();
+  await tenantDb(db, job.tenantId).table('email_providers')
+    .where({ id: job.providerId })
+    .update({
+      last_sync_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    });
+}
+
 async function insertProcessingRecord(params: {
   job: UnifiedInboundEmailQueueJob;
   externalIdentity: string;
@@ -999,6 +1010,7 @@ export async function processUnifiedInboundEmailQueueJob(
 
   if (payloads.length > 0) {
     await persistGoogleHistoryCursor(job);
+    await recordSuccessfulProviderSync(job);
   }
 
   return {

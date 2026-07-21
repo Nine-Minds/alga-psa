@@ -899,7 +899,7 @@ export const applyCreditToInvoice = withAuth(async (
                 invoice_id: invoiceId,
                 tenant
             })
-            .select('credit_applied', 'currency_code')
+            .select('credit_applied', 'currency_code', 'project_id')
             .first();
 
         if (!invoice) {
@@ -966,7 +966,7 @@ export const applyCreditToInvoice = withAuth(async (
         
         // Get all active credit tracking entries for this client in the same currency as the invoice
         const now = new Date().toISOString();
-        const creditEntries = await tenantScopedTable(trx, tenant, 'credit_tracking')
+        let creditEntries = await tenantScopedTable(trx, tenant, 'credit_tracking')
             .where({
                 client_id: clientId,
                 tenant,
@@ -1001,6 +1001,49 @@ export const applyCreditToInvoice = withAuth(async (
 
             console.log(`No valid credit entries found for client ${clientId}`);
             return;
+        }
+
+        const invoiceProjectId = invoice.project_id ?? null;
+        if (invoiceProjectId) {
+            const transactionIds = creditEntries.map((credit) => credit.transaction_id);
+            const creditTransactions = transactionIds.length > 0
+                ? await tenantScopedTable(trx, tenant, 'transactions')
+                    .whereIn('transaction_id', transactionIds)
+                    .select('transaction_id', 'metadata')
+                : [];
+            const projectIdByTransaction = new Map(
+                creditTransactions.map((transaction) => {
+                    const metadata = typeof transaction.metadata === 'string'
+                        ? (() => {
+                            try { return JSON.parse(transaction.metadata); } catch { return {}; }
+                        })()
+                        : transaction.metadata ?? {};
+                    return [
+                        transaction.transaction_id,
+                        metadata.project_billing_credit_kind === 'project_deposit'
+                            ? metadata.project_id ?? null
+                            : null,
+                    ];
+                }),
+            );
+            creditEntries = creditEntries
+                .map((credit, index) => ({
+                    credit,
+                    index,
+                    projectId: projectIdByTransaction.get(credit.transaction_id) ?? null,
+                }))
+                .filter(({ projectId }) => !projectId || projectId === invoiceProjectId)
+                .sort((left, right) => {
+                    const leftPreferred = left.projectId === invoiceProjectId ? 0 : 1;
+                    const rightPreferred = right.projectId === invoiceProjectId ? 0 : 1;
+                    return leftPreferred - rightPreferred || left.index - right.index;
+                })
+                .map(({ credit }) => credit);
+
+            if (creditEntries.length === 0) {
+                console.log(`No credits eligible for invoice ${invoiceId}`);
+                return;
+            }
         }
         
         let remainingRequestedAmount = requestedAmount;

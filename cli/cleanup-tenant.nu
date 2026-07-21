@@ -420,7 +420,7 @@ def "main cleanup" [
         "contract_line_preset_fixed_config" "contract_line_preset_services" "contract_line_presets"
 
         # Contract templates (must be deleted before contracts)
-        "contract_template_compare_view" "contract_template_line_defaults"
+        "contract_template_line_defaults"
         "contract_template_line_fixed_config" "contract_template_line_service_bucket_config"
         "contract_template_line_service_configuration" "contract_template_line_service_hourly_config"
         "contract_template_line_service_usage_config" "contract_template_line_services"
@@ -650,11 +650,15 @@ def "main cleanup" [
     for table in $tables {
         # Check if table has tenant column
         let check_query = (
-            "SELECT column_name " +
-            "FROM information_schema.columns " +
-            "WHERE table_name = '" + $table + "' " +
-            "AND column_name IN ('tenant', 'tenant_id') " +
-            "AND table_schema = 'public' " +
+            "SELECT c.column_name " +
+            "FROM information_schema.columns c " +
+            "JOIN information_schema.tables t " +
+            "ON t.table_schema = c.table_schema AND t.table_name = c.table_name " +
+            "WHERE c.table_name = '" + $table + "' " +
+            "AND c.column_name IN ('tenant', 'tenant_id') " +
+            "AND c.table_schema = 'public' " +
+            "AND t.table_type = 'BASE TABLE' " +
+            "ORDER BY CASE c.column_name WHEN 'tenant' THEN 1 WHEN 'tenant_id' THEN 2 END " +
             "LIMIT 1"
         )
         

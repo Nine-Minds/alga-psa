@@ -46,6 +46,7 @@ import { actionError, isActionMessageError, isActionPermissionError, permissionE
 import type { ActionMessageError, ActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 import { filterAuthorizedTicketIds } from './projectTaskActions';
 import { applyTicketLinkRestriction } from '../lib/taskTicketMapping';
+import { revalidatePath } from 'next/cache';
 import {
   BuiltinAuthorizationKernelProvider,
   BundleAuthorizationKernelProvider,
@@ -57,6 +58,69 @@ import {
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 
 type ProjectActionError = ActionMessageError | ActionPermissionError;
+
+type ProjectScheduleAmountRow = {
+    schedule_entry_id: string;
+    amount: number | string | null;
+    percentage: number | string | null;
+    status: string;
+    display_order: number;
+    created_at: Date | string;
+};
+
+function computeProjectScheduleAmountsForNotification(
+    totalPriceValue: number | string | null,
+    entries: ProjectScheduleAmountRow[]
+): Map<string, number> {
+    const totalPrice = totalPriceValue == null ? null : Number(totalPriceValue);
+    const result = new Map<string, number>();
+    if (totalPrice == null) {
+        for (const entry of entries) {
+            result.set(entry.schedule_entry_id, entry.amount == null ? 0 : Number(entry.amount));
+        }
+        return result;
+    }
+
+    const percentageScale = 10_000n;
+    const denominator = 100n * percentageScale;
+    const activeEntries = entries.filter((entry) => entry.status !== 'canceled');
+    const baseAmounts: number[] = [];
+    let exactNumerator = 0n;
+    for (const entry of activeEntries) {
+        if (entry.amount != null) {
+            const amount = Number(entry.amount);
+            baseAmounts.push(amount);
+            exactNumerator += BigInt(amount) * denominator;
+            continue;
+        }
+        const scaledPercentage = BigInt(Math.round(Number(entry.percentage ?? 0) * Number(percentageScale)));
+        const numerator = BigInt(totalPrice) * scaledPercentage;
+        baseAmounts.push(Number((numerator + denominator / 2n) / denominator));
+        exactNumerator += numerator;
+    }
+    if (baseAmounts.length > 0 && exactNumerator === BigInt(totalPrice) * denominator) {
+        baseAmounts[baseAmounts.length - 1] = totalPrice
+            - baseAmounts.slice(0, -1).reduce((sum, amount) => sum + amount, 0);
+    }
+
+    let activeIndex = 0;
+    for (const entry of entries) {
+        if (entry.status === 'canceled') {
+            const amount = entry.amount != null
+                ? Number(entry.amount)
+                : Number((BigInt(totalPrice) * BigInt(Math.round(Number(entry.percentage ?? 0) * Number(percentageScale)))
+                    + denominator / 2n) / denominator);
+            result.set(entry.schedule_entry_id, amount);
+        } else {
+            result.set(entry.schedule_entry_id, baseAmounts[activeIndex++] ?? 0);
+        }
+    }
+    return result;
+}
+
+export type ProjectUpdateResult = IProject & {
+    deposit_reconciliation_needed?: boolean;
+};
 
 const PROJECT_LIST_SEARCH_TSQUERY_UNSAFE_RE = /[^\p{L}\p{N}\s]+/gu;
 const PROJECT_LIST_SEARCH_IDENTIFIER_TOKEN_PATTERN = /\b[A-Z]+-?\d+\b/i;
@@ -893,6 +957,168 @@ export const updatePhase = withAuth(async (user, { tenant }, phaseId: string, ph
     }
 });
 
+export const markPhaseComplete = withAuth(async (
+    user,
+    { tenant },
+    phaseId: string
+): Promise<{
+    phase: IProjectPhase;
+    ready_entries: { entry_id: string; description: string }[];
+}> => {
+    const { knex } = await createTenantKnex();
+    if (!await hasPermission(user, 'project', 'update', knex)) {
+        throw new Error('Permission denied: Cannot update project');
+    }
+
+    const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+        const projectId = await resolveProjectIdForPhase(trx, tenant, phaseId);
+        if (!projectId) throw new Error('Project phase not found');
+        await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
+
+        const completedAt = new Date().toISOString();
+        const [updatedPhase] = await tenantScopedTable(trx, 'project_phases', tenant)
+            .where({ phase_id: phaseId })
+            .whereNull('completed_at')
+            .update({ completed_at: completedAt, updated_at: completedAt })
+            .returning('*') as IProjectPhase[];
+        const phase = updatedPhase ?? await ProjectModel.getPhaseById(trx, tenant, phaseId);
+        if (!phase) throw new Error('Project phase not found');
+
+        // projects cannot depend on @alga-psa/billing without introducing a
+        // feature-package dependency cycle, so readiness is evaluated here
+        // with the same optimistic pending predicate as the billing service.
+        const readyRows = await tenantScopedTable(trx, 'project_billing_schedule_entries', tenant)
+            .where({
+                phase_id: phaseId,
+                trigger_type: 'phase',
+                status: 'pending',
+            })
+            .update({
+                status: 'ready',
+                ready_at: completedAt,
+                updated_at: completedAt,
+            })
+            .returning(['schedule_entry_id', 'config_id', 'description', 'requires_payment_before_work', 'display_order', 'created_at']) as Array<{
+                schedule_entry_id: string;
+                config_id: string;
+                description: string;
+                requires_payment_before_work: boolean;
+                display_order: number;
+                created_at: Date | string;
+            }>;
+        readyRows.sort((left, right) => left.display_order - right.display_order
+            || String(left.created_at).localeCompare(String(right.created_at))
+            || left.schedule_entry_id.localeCompare(right.schedule_entry_id));
+
+        const configIds = Array.from(new Set((await tenantScopedTable(trx, 'project_billing_schedule_entries', tenant)
+            .whereIn('schedule_entry_id', readyRows.map((entry) => entry.schedule_entry_id))
+            .select('config_id') as Array<{ config_id: string }>).map((entry) => entry.config_id)));
+        const computedAmountByEntryId = new Map<string, number>();
+        for (const configId of configIds) {
+            const config = await tenantScopedTable(trx, 'project_billing_configs', tenant)
+                .where({ config_id: configId })
+                .select('total_price')
+                .first() as { total_price: number | string | null } | undefined;
+            const entries = await tenantScopedTable(trx, 'project_billing_schedule_entries', tenant)
+                .where({ config_id: configId })
+                .select('schedule_entry_id', 'amount', 'percentage', 'status', 'display_order', 'created_at')
+                .orderBy('display_order', 'asc')
+                .orderBy('created_at', 'asc')
+                .orderBy('schedule_entry_id', 'asc') as ProjectScheduleAmountRow[];
+            for (const [entryId, amount] of computeProjectScheduleAmountsForNotification(config?.total_price ?? null, entries)) {
+                computedAmountByEntryId.set(entryId, amount);
+            }
+        }
+
+        return {
+            phase,
+            projectId,
+            ready_entries: readyRows.map((entry) => ({
+                entry_id: entry.schedule_entry_id,
+                description: entry.description,
+            })),
+            ready_events: readyRows.map((entry) => ({
+                entryId: entry.schedule_entry_id,
+                configId: entry.config_id,
+                description: entry.description,
+                requiresPaymentBeforeWork: entry.requires_payment_before_work,
+                computedAmount: computedAmountByEntryId.get(entry.schedule_entry_id) ?? 0,
+            })),
+        };
+    });
+
+    for (const entry of result.ready_events) {
+        await publishEvent({
+            eventType: 'PROJECT_MILESTONE_READY',
+            payload: {
+                tenantId: tenant,
+                projectId: result.projectId,
+                entryId: entry.entryId,
+                description: entry.description,
+                computedAmount: entry.computedAmount,
+                trigger: 'phase',
+            },
+        });
+        await publishEvent({
+            eventType: 'PROJECT_BILLING_SCHEDULE_STATUS_CHANGED',
+            payload: {
+                tenantId: tenant,
+                projectId: result.projectId,
+                configId: entry.configId,
+                entryId: entry.entryId,
+                description: entry.description,
+                status: 'ready',
+                previousStatus: 'pending',
+                requiresPaymentBeforeWork: entry.requiresPaymentBeforeWork,
+                userId: user.user_id,
+            },
+        });
+    }
+
+    revalidatePath(`/msp/projects/${result.projectId}`);
+    return { phase: result.phase, ready_entries: result.ready_entries };
+});
+
+export const reopenPhase = withAuth(async (
+    user,
+    { tenant },
+    phaseId: string
+): Promise<IProjectPhase> => {
+    const { knex } = await createTenantKnex();
+    if (!await hasPermission(user, 'project', 'update', knex)) {
+        throw new Error('Permission denied: Cannot update project');
+    }
+
+    const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
+        const projectId = await resolveProjectIdForPhase(trx, tenant, phaseId);
+        if (!projectId) throw new Error('Project phase not found');
+        await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
+
+        const reopenedAt = new Date().toISOString();
+        const [phase] = await tenantScopedTable(trx, 'project_phases', tenant)
+            .where({ phase_id: phaseId })
+            .update({ completed_at: null, updated_at: reopenedAt })
+            .returning('*') as IProjectPhase[];
+        if (!phase) throw new Error('Project phase not found');
+
+        await tenantScopedTable(trx, 'project_billing_schedule_entries', tenant)
+            .where({
+                phase_id: phaseId,
+                trigger_type: 'phase',
+                status: 'ready',
+            })
+            .update({
+                status: 'pending',
+                ready_at: null,
+                updated_at: reopenedAt,
+            });
+        return { phase, projectId };
+    });
+
+    revalidatePath(`/msp/projects/${result.projectId}`);
+    return result.phase;
+});
+
 export const deletePhase = withAuth(async (user, { tenant }, phaseId: string): Promise<void | ProjectActionError> => {
     try {
         const { knex } = await createTenantKnex();
@@ -1377,7 +1603,55 @@ async function getProjectStatusesInternal(tenant: string, user: IUser): Promise<
     });
 }
 
-export const updateProject = withAuth(async (user, { tenant }, projectId: string, projectData: Partial<IProject>): Promise<IProject | ProjectActionError> => {
+async function closeProjectBillingSchedule(
+    trx: Knex.Transaction,
+    tenant: string,
+    projectId: string
+): Promise<boolean> {
+    const config = await tenantScopedTable(trx, 'project_billing_configs', tenant)
+        .where({ project_id: projectId })
+        .select('config_id', 'total_price')
+        .first<{ config_id: string; total_price: string | number | null }>();
+    if (!config) return false;
+
+    const db = tenantDb(trx, tenant);
+    const totalsQuery = tenantScopedTable(trx, 'project_billing_schedule_entries as entry', tenant);
+    db.tenantJoin(
+        totalsQuery,
+        'invoice_charges as charge',
+        'entry.invoice_charge_id',
+        'charge.item_id',
+        { type: 'left' }
+    );
+    const totals = await totalsQuery
+        .where({
+            'entry.config_id': config.config_id,
+            'entry.status': 'invoiced',
+        })
+        .select(
+            trx.raw(`COALESCE(SUM(
+                CASE WHEN entry.entry_type = 'deposit' THEN
+                    COALESCE(charge.total_price, entry.amount, ROUND((entry.percentage * ?) / 100), 0)
+                ELSE 0 END
+            ), 0) AS invoiced_deposits`, [Number(config.total_price ?? 0)]),
+            trx.raw(`COALESCE(SUM(
+                CASE WHEN entry.entry_type = 'milestone' THEN
+                    COALESCE(charge.total_price, entry.amount, ROUND((entry.percentage * ?) / 100), 0)
+                ELSE 0 END
+            ), 0) AS invoiced_milestones`, [Number(config.total_price ?? 0)])
+        )
+        .first<{ invoiced_deposits: string | number; invoiced_milestones: string | number }>();
+
+    const canceledAt = new Date().toISOString();
+    await tenantScopedTable(trx, 'project_billing_schedule_entries', tenant)
+        .where({ config_id: config.config_id })
+        .whereIn('status', ['pending', 'ready', 'approved'])
+        .update({ status: 'canceled', updated_at: canceledAt });
+
+    return Number(totals?.invoiced_deposits ?? 0) > Number(totals?.invoiced_milestones ?? 0);
+}
+
+export const updateProject = withAuth(async (user, { tenant }, projectId: string, projectData: Partial<IProject>): Promise<ProjectUpdateResult | ProjectActionError> => {
     try {
         // Remove tenant field if present in projectData
         const { tenant: tenantField, ...safeProjectData } = projectData;
@@ -1388,7 +1662,7 @@ export const updateProject = withAuth(async (user, { tenant }, projectId: string
         const denied = await checkPermission(user, 'project', 'update', knex);
         if (denied) return denied;
 
-        const { beforeProject, updatedProject } = await withTransaction(knex, async (trx: Knex.Transaction) => {
+        const { beforeProject, updatedProject, depositReconciliationNeeded } = await withTransaction(knex, async (trx: Knex.Transaction) => {
             const beforeProject = await assertProjectReadAllowed(trx, tenant, user as IUserWithRoles, projectId);
             let project = await ProjectModel.update(trx, tenant, projectId, validatedData);
 
@@ -1403,7 +1677,11 @@ export const updateProject = withAuth(async (user, { tenant }, projectId: string
                     });
                 }
             }
-            return { beforeProject, updatedProject: project };
+            const transitionedToClosed = beforeProject.is_closed !== true && project.is_closed === true;
+            const depositReconciliationNeeded = transitionedToClosed
+                ? await closeProjectBillingSchedule(trx, tenant, projectId)
+                : undefined;
+            return { beforeProject, updatedProject: project, depositReconciliationNeeded };
         });
 
         // If assigned_to was updated, fetch the full user details and publish event
@@ -1474,7 +1752,15 @@ export const updateProject = withAuth(async (user, { tenant }, projectId: string
             }),
         });
 
-        return updatedProject;
+        revalidatePath(`/msp/projects/${projectId}`);
+        if (depositReconciliationNeeded !== undefined) {
+            revalidatePath('/msp/billing');
+        }
+        return depositReconciliationNeeded === undefined
+            ? updatedProject
+            : Object.assign(updatedProject, {
+                deposit_reconciliation_needed: depositReconciliationNeeded,
+            });
     } catch (error) {
         console.error('Error updating project:', error);
         const expected = projectActionErrorFrom(error);

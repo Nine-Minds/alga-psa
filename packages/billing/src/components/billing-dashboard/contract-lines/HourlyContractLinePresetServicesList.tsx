@@ -33,6 +33,7 @@ import {
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 
 const isReturnedActionError = (value: unknown) =>
   isActionMessageError(value) || isActionPermissionError(value);
@@ -58,6 +59,7 @@ interface PresetServiceWithBucket extends IContractLinePresetService {
 
 const HourlyContractLinePresetServicesList: React.FC<HourlyContractLinePresetServicesListProps> = ({ presetId, onServiceAdded }) => {
   const { t } = useTranslation('msp/contract-lines');
+  const { money, symbol } = useCurrencyFormat();
   const [presetServices, setPresetServices] = useState<PresetServiceWithBucket[]>([]);
   const [originalServices, setOriginalServices] = useState<PresetServiceWithBucket[]>([]);
   const [availableServices, setAvailableServices] = useState<IService[]>([]);
@@ -435,7 +437,7 @@ const HourlyContractLinePresetServicesList: React.FC<HourlyContractLinePresetSer
                       <label className="text-sm font-medium w-24">
                         {t('services.hourlyPreset.hourlyRateLabel', { defaultValue: 'Hourly Rate:' })}
                       </label>
-                      <span className="text-muted-foreground">$</span>
+                      <span className="text-muted-foreground">{symbol()}</span>
                       <Input
                         type="text"
                         inputMode="decimal"
@@ -522,7 +524,7 @@ const HourlyContractLinePresetServicesList: React.FC<HourlyContractLinePresetSer
                                 defaultValue: 'Service Type: {{type}} | Method: {{method}} | Default Rate: {{rate}}',
                                 type: serviceTypeName,
                                 method: billingMethod,
-                                rate: `$${(Number(service.default_rate) / 100).toFixed(2)}`,
+                                rate: money(Number(service.default_rate)),
                               })}
                             </span>
                           </div>

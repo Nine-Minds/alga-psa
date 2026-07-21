@@ -52,6 +52,7 @@ import { ILicenseInfo, IPaymentMethod, ISubscriptionInfo, IInvoiceInfo, ISchedul
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import ReduceLicensesModal from '@ee/components/licensing/ReduceLicensesModal';
 import CancellationFeedbackModal from './CancellationFeedbackModal';
+import AiUsageSection from './AiUsageSection';
 import { signOut, useSession } from 'next-auth/react';
 import { useTier } from 'server/src/context/TierContext';
 import { useProduct } from 'server/src/context/ProductContext';
@@ -112,6 +113,10 @@ export default function AccountManagement() {
   const tierUpgradeFlowEnabled = typeof upgradeFlowFlag === 'boolean'
     ? upgradeFlowFlag
     : upgradeFlowFlag?.enabled ?? false;
+  const aiUsageBillingFlag = useFeatureFlag('ai-usage-billing');
+  const aiUsageBillingEnabled = typeof aiUsageBillingFlag === 'boolean'
+    ? aiUsageBillingFlag
+    : aiUsageBillingFlag?.enabled ?? false;
   const { isAlgaDesk } = useProduct();
   const { update: updateSession } = useSession();
 
@@ -1922,6 +1927,9 @@ export default function AccountManagement() {
           </CardContent>
         )}
       </Card>
+
+      {/* AI Usage billing (add-on) — gated by the ai-usage-billing rollout flag */}
+      {aiUsageBillingEnabled && <AiUsageSection />}
 
       {/* Danger Zone */}
       <Card className="border-destructive/50">

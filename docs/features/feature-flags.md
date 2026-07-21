@@ -163,6 +163,23 @@ Controls access to the new service request definition and client portal request-
 - When enabled: The full service request UI is accessible.
 - Backend (tables, actions, provider execution, portal submission processing) remains active regardless of flag state.
 
+### 11. `project-billing-ui`
+Temporarily controls discovery and ambient UI for project billing before release.
+
+**Affected Areas:**
+- **MSP Portal:**
+  - Project Billing view option, billed header, phase billing badges/toast, and project/task/time-entry payment warnings
+  - Invoicing Hub Project Billing tab and ready-count badge
+  - Project client-portal Show Billing configuration
+- **Client Portal:**
+  - Embedded project billing summary
+
+**Behavior:**
+- When disabled (default): Ambient project-billing controls and signals are hidden.
+- Explicit `?view=billing` and `?tab=invoicing&subtab=project-billing` URLs remain functional.
+- A persisted Billing view preference without an explicit billing URL falls back to Kanban.
+- Backend actions, APIs, services, events, jobs, invoice behavior, database logic, and authorization are always available regardless of flag state.
+
 ## Implementation Details
 
 ### User Identification

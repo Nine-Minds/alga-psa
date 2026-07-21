@@ -276,7 +276,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Contract templates (must be deleted before contracts)
   // Hourly/usage configs reference contract_template_line_service_configuration
   // with NO ACTION and must be deleted before it.
-  'contract_template_compare_view', 'contract_template_line_defaults',
+  'contract_template_line_defaults',
   'contract_template_line_fixed_config', 'contract_template_line_service_bucket_config',
   'contract_template_line_service_hourly_config',
   'contract_template_line_service_usage_config',
@@ -300,6 +300,12 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // but delete it explicitly so cleanup doesn't rely on the cascade). Hudu
   // mappings live in tenant_external_entity_mappings (deleted below).
   'hudu_integrations',
+
+  // Project billing: schedule entries and cap usage reference project_billing_configs;
+  // configs reference projects; phase rate overrides reference project_phases and
+  // service_catalog. All must be deleted before those parents.
+  'project_billing_schedule_entries', 'project_billing_cap_usage',
+  'project_billing_configs', 'project_phase_rate_overrides',
 
   // Project/task entities
   'project_tasks', 'project_phases', 'project_status_mappings',
@@ -1271,12 +1277,15 @@ async function getTableTenantColumn(
 ): Promise<TenantColumnName | null> {
   try {
     const result = await knex.raw(`
-      SELECT column_name
-      FROM information_schema.columns
-      WHERE table_name = ?
-        AND column_name IN ('tenant', 'tenant_id')
-        AND table_schema = 'public'
-      ORDER BY CASE column_name WHEN 'tenant' THEN 1 WHEN 'tenant_id' THEN 2 END
+      SELECT c.column_name
+      FROM information_schema.columns c
+      JOIN information_schema.tables t
+        ON t.table_schema = c.table_schema AND t.table_name = c.table_name
+      WHERE c.table_name = ?
+        AND c.column_name IN ('tenant', 'tenant_id')
+        AND c.table_schema = 'public'
+        AND t.table_type = 'BASE TABLE'
+      ORDER BY CASE c.column_name WHEN 'tenant' THEN 1 WHEN 'tenant_id' THEN 2 END
       LIMIT 1
     `, [tableName]);
 
