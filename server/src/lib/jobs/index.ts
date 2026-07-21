@@ -52,6 +52,12 @@ import {
 } from '@alga-psa/jobs/handlers/teamsMeetingSweepHandler';
 import { slaTimerHandler, SlaTimerJobData } from './handlers/slaTimerHandler';
 import {
+  MARKETING_FLIP_DUE_POSTS_JOB,
+  MARKETING_EXPIRE_STALE_TARGETS_JOB,
+  MARKETING_SEND_SEQUENCE_STEPS_JOB,
+  MarketingJobData,
+} from './handlers/marketingJobs';
+import {
   workflowQuotaResumeScanHandler,
   WorkflowQuotaResumeScanJobData,
 } from '@alga-psa/jobs/handlers/workflowQuotaResumeScanHandler';
@@ -549,6 +555,53 @@ export const scheduleProjectDateReadinessJob = async (
     { tenantId },
     cronExpression,
     { singletonKey: `${PROJECT_DATE_READINESS_JOB}:${tenantId}` }
+  );
+  return result.jobId;
+};
+
+/**
+ * Marketing module recurring jobs (F027/F049). Every handler self-gates on the
+ * `marketing-module` feature flag, so these are scheduled for all tenants and
+ * no-op where the module is off.
+ */
+export const scheduleMarketingFlipDuePostsJob = async (
+  tenantId: string,
+  cronExpression: string = '*/5 * * * *'
+): Promise<string | null> => {
+  const runner = await getJobRunnerInstance();
+  const result = await runner.scheduleRecurringJob<MarketingJobData>(
+    MARKETING_FLIP_DUE_POSTS_JOB,
+    { tenantId },
+    cronExpression,
+    { singletonKey: `${MARKETING_FLIP_DUE_POSTS_JOB}:${tenantId}` }
+  );
+  return result.jobId;
+};
+
+export const scheduleMarketingExpireStaleTargetsJob = async (
+  tenantId: string,
+  cronExpression: string = '11 * * * *'
+): Promise<string | null> => {
+  const runner = await getJobRunnerInstance();
+  const result = await runner.scheduleRecurringJob<MarketingJobData>(
+    MARKETING_EXPIRE_STALE_TARGETS_JOB,
+    { tenantId },
+    cronExpression,
+    { singletonKey: `${MARKETING_EXPIRE_STALE_TARGETS_JOB}:${tenantId}` }
+  );
+  return result.jobId;
+};
+
+export const scheduleMarketingSendSequenceStepsJob = async (
+  tenantId: string,
+  cronExpression: string = '*/5 * * * *'
+): Promise<string | null> => {
+  const runner = await getJobRunnerInstance();
+  const result = await runner.scheduleRecurringJob<MarketingJobData>(
+    MARKETING_SEND_SEQUENCE_STEPS_JOB,
+    { tenantId },
+    cronExpression,
+    { singletonKey: `${MARKETING_SEND_SEQUENCE_STEPS_JOB}:${tenantId}` }
   );
   return result.jobId;
 };

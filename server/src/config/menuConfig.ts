@@ -11,6 +11,7 @@ import {
   Calendar,
   CalendarClock,
   CheckCircle,
+  ClipboardList,
   Clock,
   CreditCard,
   Download,
@@ -34,6 +35,7 @@ import {
   ListTree,
   Mail,
   MapPin,
+  Megaphone,
   Monitor,
   Package,
   Percent,
@@ -43,6 +45,7 @@ import {
   ReceiptText,
   Rocket,
   Settings,
+  Share2,
   Shield,
   SlidersHorizontal,
   SquareDashedKanban,
@@ -130,6 +133,20 @@ export const navigationSections: NavigationSection[] = [
         translationKey: 'nav.opportunities',
         icon: Target,
         href: '/msp/opportunities'
+      },
+      {
+        name: 'Marketing',
+        translationKey: 'nav.marketing.label',
+        icon: Megaphone,
+        subItems: [
+          { name: 'Calendar', translationKey: 'nav.marketing.calendar', icon: Calendar, href: '/msp/marketing/calendar' },
+          { name: 'Posts', translationKey: 'nav.marketing.posts', icon: Share2, href: '/msp/marketing/posts' },
+          { name: 'Content', translationKey: 'nav.marketing.content', icon: FileText, href: '/msp/marketing/content' },
+          { name: 'Campaigns', translationKey: 'nav.marketing.campaigns', icon: Target, href: '/msp/marketing/campaigns' },
+          { name: 'Sequences', translationKey: 'nav.marketing.sequences', icon: Mail, href: '/msp/marketing/sequences' },
+          { name: 'Forms', translationKey: 'nav.marketing.forms', icon: ClipboardList, href: '/msp/marketing/forms' },
+          { name: 'Channels', translationKey: 'nav.marketing.channels', icon: AtSign, href: '/msp/marketing/channels' }
+        ]
       },
       {
         name: 'Contacts',

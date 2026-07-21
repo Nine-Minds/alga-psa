@@ -179,6 +179,8 @@ export default defineConfig({
       { find: /^@alga-psa\/billing\/(.*)$/, replacement: path.resolve(__dirname, '../packages/billing/src/$1') },
       { find: /^@alga-psa\/opportunities$/, replacement: path.resolve(__dirname, '../packages/opportunities/src/index.ts') },
       { find: /^@alga-psa\/opportunities\/(.*)$/, replacement: path.resolve(__dirname, '../packages/opportunities/src/$1') },
+      { find: /^@alga-psa\/marketing$/, replacement: path.resolve(__dirname, '../packages/marketing/src/index.ts') },
+      { find: /^@alga-psa\/marketing\/(.*)$/, replacement: path.resolve(__dirname, '../packages/marketing/src/$1') },
       { find: /^@alga-psa\/inventory$/, replacement: path.resolve(__dirname, '../packages/inventory/src/index.ts') },
       { find: /^@alga-psa\/inventory\/(.*)$/, replacement: path.resolve(__dirname, '../packages/inventory/src/$1') },
       { find: /^@alga-psa\/formatting$/, replacement: path.resolve(__dirname, '../packages/formatting/src/index.ts') },

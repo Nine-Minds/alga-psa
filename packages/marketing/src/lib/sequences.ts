@@ -1,0 +1,548 @@
+import type { Knex } from 'knex';
+import { tenantDb, withTransaction } from '@alga-psa/db';
+import { TenantEmailService, type ITemplateProcessor } from '@alga-psa/email';
+import type {
+  IMarketingEnrollmentWithContact,
+  IMarketingSequence,
+  IMarketingSequenceEnrollment,
+  IMarketingSequenceStep,
+  IMarketingSequenceStepStats,
+} from '@alga-psa/types';
+import { applyMergeFields, markdownToHtml, markdownToText } from './render';
+import { recordMarketingEngagement } from './engagements';
+import { signTrackingDestination } from './signing';
+import { addSuppression, isSuppressed, normalizeEmail } from './suppression';
+import type { SequenceInput } from '../schemas/marketingSchemas';
+
+// ---------------------------------------------------------------------------
+// CRUD
+// ---------------------------------------------------------------------------
+
+export async function listSequencesInternal(knex: Knex, tenant: string): Promise<IMarketingSequence[]> {
+  const db = tenantDb(knex, tenant);
+  return db.table('marketing_sequences').where({ tenant }).orderBy('created_at', 'desc');
+}
+
+function assertContiguousSteps(steps: SequenceInput['steps']): void {
+  const orders = steps.map((s) => s.step_order).sort((a, b) => a - b);
+  orders.forEach((order, index) => {
+    if (order !== index + 1) {
+      throw new Error('Step order must be contiguous starting at 1');
+    }
+  });
+}
+
+async function assertCampaignInTenant(db: ReturnType<typeof tenantDb>, tenant: string, campaignId: string): Promise<void> {
+  const campaign = await db.table('marketing_campaigns')
+    .where({ tenant, campaign_id: campaignId })
+    .first('campaign_id');
+  if (!campaign) throw new Error('Campaign not found');
+}
+
+export async function createSequenceInternal(knex: Knex, tenant: string, input: SequenceInput, createdBy: string): Promise<IMarketingSequence> {
+  assertContiguousSteps(input.steps);
+  return withTransaction(knex, async (trx) => {
+    const db = tenantDb(trx, tenant);
+    if (input.campaign_id) await assertCampaignInTenant(db, tenant, input.campaign_id);
+    const [sequence] = await db.table('marketing_sequences')
+      .insert({
+        tenant,
+        name: input.name,
+        description: input.description ?? null,
+        status: input.status ?? 'draft',
+        campaign_id: input.campaign_id ?? null,
+        created_by: createdBy,
+      })
+      .returning('*');
+    for (const step of input.steps) {
+      await db.table('marketing_sequence_steps').insert({ tenant, sequence_id: sequence.sequence_id, ...step });
+    }
+    return sequence as IMarketingSequence;
+  });
+}
+
+export async function updateSequenceInternal(knex: Knex, tenant: string, sequenceId: string, input: Partial<SequenceInput>): Promise<IMarketingSequence> {
+  if (input.steps) assertContiguousSteps(input.steps);
+  return withTransaction(knex, async (trx) => {
+    const db = tenantDb(trx, tenant);
+    const { steps, ...fields } = input;
+    if (fields.campaign_id) await assertCampaignInTenant(db, tenant, fields.campaign_id);
+    const [sequence] = await db.table('marketing_sequences')
+      .where({ tenant, sequence_id: sequenceId })
+      .update({ ...fields, updated_at: new Date().toISOString() })
+      .returning('*');
+    if (!sequence) throw new Error('Sequence not found');
+    if (steps) {
+      // Diff in place by step_order: step_ids must survive edits — historical
+      // per-step stats and tracking URLs already delivered in emails reference
+      // them (marketing_engagements.step_id).
+      const existing = await db.table('marketing_sequence_steps')
+        .where({ tenant, sequence_id: sequenceId })
+        .select('step_id', 'step_order') as Array<{ step_id: string; step_order: number }>;
+      const existingByOrder = new Map(existing.map((s) => [s.step_order, s.step_id]));
+      const incomingOrders = new Set(steps.map((s) => s.step_order));
+
+      const removed = existing.filter((s) => !incomingOrders.has(s.step_order));
+      if (removed.length > 0) {
+        await db.table('marketing_sequence_steps')
+          .where({ tenant, sequence_id: sequenceId })
+          .whereIn('step_id', removed.map((s) => s.step_id))
+          .del();
+      }
+      for (const step of steps) {
+        const stepId = existingByOrder.get(step.step_order);
+        if (stepId) {
+          await db.table('marketing_sequence_steps')
+            .where({ tenant, step_id: stepId })
+            .update({
+              delay_minutes: step.delay_minutes,
+              subject: step.subject,
+              body_template: step.body_template,
+              updated_at: new Date().toISOString(),
+            });
+        } else {
+          await db.table('marketing_sequence_steps').insert({ tenant, sequence_id: sequenceId, ...step });
+        }
+      }
+    }
+    return sequence as IMarketingSequence;
+  });
+}
+
+export interface SequenceDetail {
+  sequence: IMarketingSequence;
+  steps: IMarketingSequenceStep[];
+  stepStats: IMarketingSequenceStepStats[];
+  enrollments: IMarketingEnrollmentWithContact[];
+}
+
+export async function getSequenceDetailInternal(knex: Knex, tenant: string, sequenceId: string): Promise<SequenceDetail | null> {
+  const db = tenantDb(knex, tenant);
+  const sequence = await db.table('marketing_sequences').where({ tenant, sequence_id: sequenceId }).first();
+  if (!sequence) return null;
+
+  const steps = await db.table('marketing_sequence_steps')
+    .where({ tenant, sequence_id: sequenceId })
+    .orderBy('step_order', 'asc') as IMarketingSequenceStep[];
+
+  // step_id is a uuid column, so an empty-IN sentinel string would fail the
+  // cast — skip the query outright when the sequence has no steps.
+  const statRows = steps.length === 0 ? [] : await db.table('marketing_engagements as e')
+    .join('interactions as i', function joinInteraction() {
+      this.on('i.tenant', '=', 'e.tenant').andOn('i.interaction_id', '=', 'e.interaction_id');
+    })
+    .join('system_interaction_types as it', 'it.type_id', '=', 'i.type_id')
+    .where({ 'e.tenant': tenant })
+    .whereIn('e.step_id', steps.map((s) => s.step_id))
+    .groupBy('e.step_id', 'it.type_name')
+    .select('e.step_id', 'it.type_name')
+    .count('* as count') as Array<{ step_id: string; type_name: string; count: string | number }>;
+
+  const stepStats: IMarketingSequenceStepStats[] = steps.map((step) => {
+    const rows = statRows.filter((r) => r.step_id === step.step_id);
+    const countOf = (name: string) => Number(rows.find((r) => r.type_name === name)?.count ?? 0);
+    return {
+      step_id: step.step_id,
+      step_order: step.step_order,
+      sent: countOf('Marketing: Email Sent'),
+      opened: countOf('Marketing: Email Opened'),
+      clicked: countOf('Marketing: Email Clicked'),
+    };
+  });
+
+  const enrollments = await db.table('marketing_sequence_enrollments as e')
+    .join('contacts as c', function joinContact() {
+      this.on('c.tenant', '=', 'e.tenant').andOn('c.contact_name_id', '=', 'e.contact_id');
+    })
+    .where({ 'e.tenant': tenant, 'e.sequence_id': sequenceId })
+    .select('e.*', 'c.full_name as contact_name', 'c.email as contact_email')
+    .orderBy('e.created_at', 'desc') as Array<IMarketingSequenceEnrollment & { contact_name: string; contact_email: string }>;
+
+  return {
+    sequence: sequence as IMarketingSequence,
+    steps,
+    stepStats,
+    enrollments: enrollments.map((row) => ({ ...row, step_count: steps.length })),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Enrollment
+// ---------------------------------------------------------------------------
+
+export async function enrollContactInternal(
+  knex: Knex,
+  tenant: string,
+  sequenceId: string,
+  contactId: string,
+  enrolledBy: string,
+): Promise<IMarketingSequenceEnrollment> {
+  return withTransaction(knex, async (trx) => {
+    const db = tenantDb(trx, tenant);
+    const sequence = await db.table('marketing_sequences')
+      .where({ tenant, sequence_id: sequenceId })
+      .first();
+    if (!sequence) throw new Error('Sequence not found');
+    if (sequence.status !== 'active') throw new Error('Only active sequences accept enrollments');
+
+    const firstStep = await db.table('marketing_sequence_steps')
+      .where({ tenant, sequence_id: sequenceId })
+      .orderBy('step_order', 'asc')
+      .first();
+    if (!firstStep) throw new Error('Sequence has no steps');
+
+    const contact = await db.table('contacts')
+      .where({ tenant, contact_name_id: contactId })
+      .first('email');
+    if (!contact?.email) throw new Error('Contact has no email address');
+    if (await isSuppressed(trx, tenant, contact.email)) {
+      throw new Error('Contact is suppressed from marketing email');
+    }
+
+    // The partial unique index (one active enrollment per tenant/sequence/
+    // contact) is the enforcement; ON CONFLICT turns the losing side of a
+    // race into the same friendly error a pre-check would give.
+    const nextSendAt = new Date(Date.now() + firstStep.delay_minutes * 60_000).toISOString();
+    const [enrollment] = await db.table('marketing_sequence_enrollments')
+      .insert({
+        tenant,
+        sequence_id: sequenceId,
+        contact_id: contactId,
+        current_step_order: 0,
+        state: 'active',
+        next_send_at: nextSendAt,
+        enrolled_by: enrolledBy,
+      })
+      .onConflict(trx.raw(`(tenant, sequence_id, contact_id) WHERE state = 'active'`))
+      .ignore()
+      .returning('*');
+    if (!enrollment) throw new Error('Contact is already enrolled in this sequence');
+    return enrollment as IMarketingSequenceEnrollment;
+  });
+}
+
+export async function unenrollContactInternal(knex: Knex, tenant: string, enrollmentId: string): Promise<void> {
+  const db = tenantDb(knex, tenant);
+  await db.table('marketing_sequence_enrollments')
+    .where({ tenant, enrollment_id: enrollmentId, state: 'active' })
+    .update({ state: 'stopped', updated_at: new Date().toISOString() });
+}
+
+// ---------------------------------------------------------------------------
+// Send loop (scheduled job body)
+// ---------------------------------------------------------------------------
+
+function inlineTemplate(subject: string, html: string, text: string): ITemplateProcessor {
+  return { process: async () => ({ subject, html, text }) };
+}
+
+function trackableLinks(html: string, clickBase: string, sign: (url: string) => string): string {
+  return html.replace(/href="(https?:\/\/[^"]+)"/g, (_m, url: string) =>
+    `href="${clickBase}?u=${encodeURIComponent(url)}&s=${sign(url)}"`);
+}
+
+export interface SequenceSendSummary {
+  sent: number;
+  completed: number;
+  stopped: number;
+  failed: number;
+  /** Steps another runner had already claimed or delivered (idempotent replay). */
+  skipped: number;
+}
+
+/**
+ * Sends every due sequence step for the tenant. Each (enrollment, step) pair
+ * is claimed by inserting into the idempotent send log
+ * (`marketing_sequence_sends`, unique per tenant/enrollment/step) inside the
+ * row-locking claim transaction, and the enrollment advances before that
+ * transaction commits — so overlapping job runs (pg-boss is at-least-once), a
+ * crash between send and advance, or a retried run can never deliver the same
+ * step twice. A definitively failed send releases its claim (row marked
+ * 'failed'), rewinds the enrollment, and backs off 30 minutes; a crash after
+ * the claim commits but before SMTP accepts drops that one email
+ * (at-most-once by design).
+ */
+export async function sendDueSequenceStepsInternal(
+  knex: Knex,
+  tenant: string,
+  options: { baseUrl: string; signingSecret: string; now?: Date; limit?: number },
+): Promise<SequenceSendSummary> {
+  const now = options.now ?? new Date();
+  const limit = options.limit ?? 50;
+  const summary: SequenceSendSummary = { sent: 0, completed: 0, stopped: 0, failed: 0, skipped: 0 };
+
+  const due = await tenantDb(knex, tenant).table('marketing_sequence_enrollments as e')
+    .join('marketing_sequences as s', function joinSequence() {
+      this.on('s.tenant', '=', 'e.tenant').andOn('s.sequence_id', '=', 'e.sequence_id');
+    })
+    .where({ 'e.tenant': tenant, 'e.state': 'active', 's.status': 'active' })
+    .where('e.next_send_at', '<=', now.toISOString())
+    .orderBy('e.next_send_at', 'asc')
+    .limit(limit)
+    .select('e.enrollment_id') as Array<{ enrollment_id: string }>;
+
+  for (const row of due) {
+    try {
+      const outcome = await sendOneEnrollmentStep(knex, tenant, row.enrollment_id, options.baseUrl, options.signingSecret, now);
+      summary[outcome] += 1;
+    } catch (error) {
+      summary.failed += 1;
+      // Back off without advancing; next run retries.
+      await tenantDb(knex, tenant).table('marketing_sequence_enrollments')
+        .where({ tenant, enrollment_id: row.enrollment_id, state: 'active' })
+        .update({ next_send_at: new Date(now.getTime() + 30 * 60_000).toISOString() })
+        .catch(() => {});
+    }
+  }
+  return summary;
+}
+
+async function sendOneEnrollmentStep(
+  knex: Knex,
+  tenant: string,
+  enrollmentId: string,
+  baseUrl: string,
+  signingSecret: string,
+  now: Date,
+): Promise<'sent' | 'completed' | 'stopped' | 'skipped'> {
+  // Claim, advance, and render inside one transaction; send outside it so
+  // SMTP latency doesn't hold the row lock. The claim is durable (send-log
+  // row + advanced enrollment committed together), so once this transaction
+  // commits no other runner — concurrent or retried — can pick the step up.
+  const prepared = await withTransaction(knex, async (trx) => {
+    const db = tenantDb(trx, tenant);
+    const enrollment = await db.table('marketing_sequence_enrollments')
+      .where({ tenant, enrollment_id: enrollmentId, state: 'active' })
+      .forUpdate()
+      .first();
+    if (!enrollment) return null;
+
+    // Re-verify dueness under the lock: a concurrent runner may have
+    // advanced this enrollment between the due-list query and lock acquisition,
+    // in which case the next step is not due yet.
+    if (!enrollment.next_send_at || new Date(enrollment.next_send_at) > now) {
+      return { kind: 'skipped' as const };
+    }
+
+    const step = await db.table('marketing_sequence_steps')
+      .where({ tenant, sequence_id: enrollment.sequence_id, step_order: enrollment.current_step_order + 1 })
+      .first();
+
+    if (!step) {
+      await db.table('marketing_sequence_enrollments')
+        .where({ tenant, enrollment_id: enrollmentId, state: 'active' })
+        .update({ state: 'completed', next_send_at: null, updated_at: now.toISOString() });
+      return { kind: 'completed' as const };
+    }
+
+    const contact = await db.table('contacts')
+      .where({ tenant, contact_name_id: enrollment.contact_id })
+      .first('contact_name_id', 'full_name', 'email', 'client_id');
+
+    if (!contact?.email || await isSuppressed(trx, tenant, contact.email)) {
+      await db.table('marketing_sequence_enrollments')
+        .where({ tenant, enrollment_id: enrollmentId, state: 'active' })
+        .update({ state: 'stopped', next_send_at: null, updated_at: now.toISOString() });
+      return { kind: 'stopped' as const };
+    }
+
+    let clientName = '';
+    if (contact.client_id) {
+      const client = await db.table('clients')
+        .where({ tenant, client_id: contact.client_id })
+        .first('client_name');
+      clientName = client?.client_name ?? '';
+    }
+
+    const sequence = await db.table('marketing_sequences')
+      .where({ tenant, sequence_id: enrollment.sequence_id })
+      .first('created_by', 'campaign_id');
+
+    // interactions.user_id is NOT NULL; fall back to the sequence owner for
+    // enrollments that were created without an actor.
+    const sendUserId = (enrollment.enrolled_by as string | null) ?? sequence?.created_by ?? null;
+    if (!sendUserId) {
+      await db.table('marketing_sequence_enrollments')
+        .where({ tenant, enrollment_id: enrollmentId, state: 'active' })
+        .update({ state: 'stopped', next_send_at: null, updated_at: now.toISOString() });
+      return { kind: 'stopped' as const };
+    }
+
+    // Idempotent claim: at most one delivery per (enrollment, step), ever.
+    // A 'failed' claim may be retaken (the earlier send definitively did not
+    // happen); an existing 'claimed'/'sent' row means another runner owns or
+    // already delivered this step — skip without touching the enrollment.
+    const claimed = await db.table('marketing_sequence_sends')
+      .insert({
+        tenant,
+        enrollment_id: enrollmentId,
+        step_id: step.step_id,
+        status: 'claimed',
+        claimed_at: now.toISOString(),
+      })
+      .onConflict(['tenant', 'enrollment_id', 'step_id'])
+      .merge({ status: 'claimed', claimed_at: now.toISOString(), error: null })
+      .where('marketing_sequence_sends.status', '=', 'failed')
+      .returning('send_id');
+    if (claimed.length === 0) return { kind: 'skipped' as const };
+
+    // Advance before the claim transaction commits: from this point the step
+    // can never be re-sent, even if the process dies before SMTP accepts.
+    const following = await nextSendAt(db, tenant, enrollment.sequence_id, step.step_order, now);
+    await db.table('marketing_sequence_enrollments')
+      .where({ tenant, enrollment_id: enrollmentId, state: 'active' })
+      .update({
+        current_step_order: step.step_order,
+        // No following step: the sequence is finished — mark completed, not
+        // merely unscheduled, so the completed branch is reachable.
+        state: following ? 'active' : 'completed',
+        next_send_at: following,
+        updated_at: now.toISOString(),
+      });
+
+    const unsubscribeUrl = `${baseUrl}/api/marketing/unsubscribe/${tenant}/${enrollmentId}`;
+    const clickBase = `${baseUrl}/api/marketing/track/click/${tenant}/${enrollmentId}/${step.step_id}`;
+    const openPixel = `${baseUrl}/api/marketing/track/open/${tenant}/${enrollmentId}/${step.step_id}`;
+
+    const mergeContext = {
+      contact: { full_name: contact.full_name, email: contact.email },
+      client: { client_name: clientName },
+      extra: { unsubscribe_url: unsubscribeUrl },
+    };
+    const subject = applyMergeFields(step.subject, mergeContext);
+    const mergedBody = applyMergeFields(step.body_template, mergeContext);
+
+    const footer = `<p style="font-size:12px;color:#64748b">You are receiving this because you asked to hear from us. <a href="${unsubscribeUrl}">Unsubscribe</a></p>`;
+    const signDestination = (url: string) =>
+      signTrackingDestination(signingSecret, { tenant, enrollmentId, stepId: step.step_id, url });
+    const html = `${trackableLinks(markdownToHtml(mergedBody), clickBase, signDestination)}${footer}<img src="${openPixel}" width="1" height="1" alt="" />`;
+    const text = `${markdownToText(mergedBody)}\n\n---\nUnsubscribe: ${unsubscribeUrl}`;
+
+    return {
+      kind: 'send' as const,
+      enrollment,
+      step,
+      contact,
+      sendUserId,
+      subject,
+      html,
+      text,
+      unsubscribeUrl,
+      campaignId: (sequence?.campaign_id as string | null) ?? null,
+    };
+  });
+
+  if (!prepared) return 'stopped';
+  if (prepared.kind === 'completed') return 'completed';
+  if (prepared.kind === 'stopped') return 'stopped';
+  if (prepared.kind === 'skipped') return 'skipped';
+
+  const { enrollment, step, contact, sendUserId, subject, html, text, campaignId } = prepared;
+
+  const emailService = TenantEmailService.getInstance(tenant);
+  await emailService.initialize();
+  try {
+    const result = await emailService.sendEmail({
+      to: contact.email,
+      templateProcessor: inlineTemplate(subject, html, text),
+      contactId: contact.contact_name_id,
+      entityType: 'marketing_sequence_step',
+      entityId: step.step_id,
+      headers: {
+        'List-Unsubscribe': `<${prepared.unsubscribeUrl}>`,
+        'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+      },
+    });
+    if (result && result.success === false) {
+      throw new Error(result.error ?? 'Email provider reported send failure');
+    }
+  } catch (error) {
+    // The send definitively did not happen: release the claim, rewind the
+    // enrollment to the step it was on, and back off 30 minutes for a retry.
+    await withTransaction(knex, async (trx) => {
+      const db = tenantDb(trx, tenant);
+      await db.table('marketing_sequence_sends')
+        .where({ tenant, enrollment_id: enrollmentId, step_id: step.step_id, status: 'claimed' })
+        .update({
+          status: 'failed',
+          error: error instanceof Error ? error.message : 'Unknown error',
+        });
+      await db.table('marketing_sequence_enrollments')
+        .where({ tenant, enrollment_id: enrollmentId })
+        // Only rewind states this run produced; a concurrent stop (e.g.
+        // unsubscribe) must not be resurrected.
+        .whereIn('state', ['active', 'completed'])
+        .update({
+          current_step_order: enrollment.current_step_order,
+          state: 'active',
+          next_send_at: new Date(now.getTime() + 30 * 60_000).toISOString(),
+          updated_at: now.toISOString(),
+        });
+    });
+    throw error;
+  }
+
+  await withTransaction(knex, async (trx) => {
+    const db = tenantDb(trx, tenant);
+    await db.table('marketing_sequence_sends')
+      .where({ tenant, enrollment_id: enrollmentId, step_id: step.step_id })
+      .update({ status: 'sent', sent_at: now.toISOString() });
+    await recordMarketingEngagement(trx, tenant, {
+      typeName: 'Marketing: Email Sent',
+      title: `Sequence email sent: ${subject}`,
+      contactId: contact.contact_name_id,
+      clientId: contact.client_id ?? null,
+      userId: sendUserId,
+      campaignId,
+      stepId: step.step_id,
+      occurredAt: now.toISOString(),
+    });
+  });
+
+  return 'sent';
+}
+
+async function nextSendAt(
+  db: ReturnType<typeof tenantDb>,
+  tenant: string,
+  sequenceId: string,
+  justSentOrder: number,
+  now: Date,
+): Promise<string | null> {
+  const next = await db.table('marketing_sequence_steps')
+    .where({ tenant, sequence_id: sequenceId, step_order: justSentOrder + 1 })
+    .first('delay_minutes');
+  if (!next) return null;
+  return new Date(now.getTime() + next.delay_minutes * 60_000).toISOString();
+}
+
+// ---------------------------------------------------------------------------
+// Unsubscribe (public endpoint body)
+// ---------------------------------------------------------------------------
+
+export async function unsubscribeEnrollmentInternal(
+  knex: Knex,
+  tenant: string,
+  enrollmentId: string,
+): Promise<{ email: string } | null> {
+  return withTransaction(knex, async (trx) => {
+    const db = tenantDb(trx, tenant);
+    const enrollment = await db.table('marketing_sequence_enrollments')
+      .where({ tenant, enrollment_id: enrollmentId })
+      .first('enrollment_id', 'contact_id');
+    if (!enrollment) return null;
+
+    const contact = await db.table('contacts')
+      .where({ tenant, contact_name_id: enrollment.contact_id })
+      .first('contact_name_id', 'email');
+    if (!contact?.email) return null;
+
+    await addSuppression(trx, tenant, {
+      email: normalizeEmail(contact.email),
+      contactId: contact.contact_name_id,
+      reason: 'unsubscribe',
+      source: 'link',
+    });
+    return { email: normalizeEmail(contact.email) };
+  });
+}

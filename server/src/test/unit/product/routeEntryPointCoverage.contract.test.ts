@@ -23,6 +23,7 @@ const KNOWN_UNLINKED_ROUTES: Record<string, string> = {
   // TODO: real gap — the KB review queue (KnowledgeBasePage activeTab="review")
   // has no entry point anywhere in the app. Add one, then drop this entry.
   '/msp/knowledge-base/review': 'REPORTED GAP: no entry point; the review queue is unreachable until one is added',
+  '/msp/marketing': 'index-only redirect to /msp/marketing/calendar; the nav sub-items link to the marketing subpages directly',
   '/msp/settings/mcp-server': 'deliberate: the MCP settings link is delivered by email, not surfaced in the settings rail',
   '/msp/share_document': 'emailed document-share links land here; no in-app entry point',
   '/msp/surveys/responses/dynamic-segment': 'deliberate: survey response links are delivered by email',

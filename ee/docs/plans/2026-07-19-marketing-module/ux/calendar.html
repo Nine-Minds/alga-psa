@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Concept B — Calendar (queue-forward agenda)</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --color-background: 248 250 252;
+    --color-card: 255 255 255;
+    --color-border-50: 248 250 252; --color-border-100: 241 245 249; --color-border-200: 226 232 240; --color-border-300: 203 213 225;
+    --color-text-400: 148 163 184; --color-text-500: 100 116 139; --color-text-600: 71 85 105; --color-text-700: 51 65 85; --color-text-800: 30 41 59; --color-text-900: 15 23 42;
+    --color-primary-50: 245 243 255; --color-primary-100: 237 233 254; --color-primary-200: 221 214 254; --color-primary-300: 196 181 253; --color-primary-400: 167 139 250; --color-primary-500: 139 92 246; --color-primary-600: 124 58 237;
+  }
+  body { font-family: 'Inter', system-ui, sans-serif; background: rgb(var(--color-background)); }
+</style>
+</head>
+<body class="min-h-screen flex">
+
+<!-- Sidebar stub -->
+<aside class="w-52 flex-shrink-0 bg-white border-r border-[rgb(var(--color-border-200))] flex flex-col py-4 px-3">
+  <div class="flex items-center gap-2 px-2 mb-6">
+    <div class="h-7 w-7 rounded-md bg-[rgb(var(--color-primary-500))] flex items-center justify-center text-white text-xs font-bold">A</div>
+    <span class="text-sm font-bold text-[rgb(var(--color-text-900))]">Alga PSA</span>
+  </div>
+  <nav class="space-y-0.5 text-sm">
+    <div class="px-2 py-1.5 rounded-md text-[rgb(var(--color-text-500))]">Dashboard</div>
+    <div class="px-2 py-1.5 rounded-md text-[rgb(var(--color-text-500))]">Tickets</div>
+    <div class="px-2 py-1.5 rounded-md text-[rgb(var(--color-text-500))]">Schedule</div>
+    <div class="px-2 py-1.5 rounded-md text-[rgb(var(--color-text-500))]">Opportunities</div>
+    <div class="px-2 py-1.5 rounded-md font-medium text-[rgb(var(--color-text-800))] bg-[rgb(var(--color-border-100))]">Marketing</div>
+    <div class="ml-4 mt-0.5 space-y-0.5 border-l border-[rgb(var(--color-border-200))] pl-2">
+      <div class="px-2 py-1 rounded-md text-[rgb(var(--color-primary-600))] bg-[rgb(var(--color-primary-50))] font-medium">Calendar</div>
+      <div class="px-2 py-1 rounded-md text-[rgb(var(--color-text-500))]">Posts</div>
+      <div class="px-2 py-1 rounded-md text-[rgb(var(--color-text-500))]">Content</div>
+      <div class="px-2 py-1 rounded-md text-[rgb(var(--color-text-500))]">Campaigns</div>
+      <div class="px-2 py-1 rounded-md text-[rgb(var(--color-text-500))]">Sequences</div>
+      <div class="px-2 py-1 rounded-md text-[rgb(var(--color-text-500))]">Forms</div>
+      <div class="px-2 py-1 rounded-md text-[rgb(var(--color-text-500))]">Channels</div>
+    </div>
+  </nav>
+  <div class="mt-auto px-2 flex items-center gap-2">
+    <div class="h-7 w-7 rounded-full bg-[rgb(var(--color-primary-100))] text-[rgb(var(--color-primary-600))] flex items-center justify-center text-[10px] font-semibold">RI</div>
+    <span class="text-xs text-[rgb(var(--color-text-500))] truncate">Robert Isaacs</span>
+  </div>
+</aside>
+
+<!-- Main -->
+<main class="flex-1 min-w-0 p-6">
+  <!-- Page header -->
+  <div class="flex items-center mb-4">
+    <div class="min-w-0">
+      <h1 class="text-lg font-bold text-[rgb(var(--color-text-900))]">Marketing calendar</h1>
+      <p class="text-xs text-[rgb(var(--color-text-500))]">Week of Jul 19 · agenda</p>
+    </div>
+    <div class="ml-auto flex items-center gap-2 flex-shrink-0">
+      <div class="flex rounded-md border border-[rgb(var(--color-border-200))] overflow-hidden text-xs font-medium">
+        <span class="px-3 py-1.5 text-[rgb(var(--color-text-500))]">Month</span>
+        <span class="px-3 py-1.5 bg-[rgb(var(--color-primary-50))] text-[rgb(var(--color-primary-600))] border-l border-[rgb(var(--color-border-200))]">Agenda</span>
+      </div>
+      <button class="text-xs font-medium px-3 py-1.5 rounded-md bg-[rgb(var(--color-primary-600))] text-white">+ New post</button>
+    </div>
+  </div>
+
+  <div class="flex gap-4 items-start">
+    <!-- Agenda column -->
+    <div class="flex-1 min-w-0 space-y-4">
+
+      <!-- Today group -->
+      <div class="rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4">
+        <div class="text-[10px] font-semibold uppercase tracking-wider text-[rgb(var(--color-primary-500))] mb-2">Today · Sun Jul 19</div>
+        <div class="rounded-md border border-amber-200 bg-amber-50 p-3 flex items-start gap-3">
+          <span class="text-[9px] font-semibold tracking-wide border border-[rgb(var(--color-border-200))] bg-white rounded px-1.5 py-0.5 flex-shrink-0 text-[rgb(var(--color-text-500))] mt-0.5">in</span>
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-2">
+              <span class="text-sm font-semibold text-[rgb(var(--color-text-800))] truncate">War story: pricing my first contract</span>
+              <span class="text-[10px] font-semibold rounded-full bg-amber-100 text-amber-800 px-2 py-0.5 flex-shrink-0">awaiting publish</span>
+            </div>
+            <p class="text-sm text-[rgb(var(--color-text-600))] mt-1 line-clamp-2">I priced my first MSP contract by guessing. It took three years and one painful renewal to fix it. Here's the math I wish someone had shown me…</p>
+            <div class="flex items-center gap-2 mt-2">
+              <button class="text-xs font-medium px-2.5 py-1 rounded-md bg-[rgb(var(--color-primary-600))] text-white">Copy text</button>
+              <button class="text-xs font-medium px-2.5 py-1 rounded-md border border-[rgb(var(--color-border-200))] text-[rgb(var(--color-text-700))] bg-white">Mark published</button>
+              <span class="ml-auto text-xs text-[rgb(var(--color-text-400))] flex-shrink-0">due 9:00</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tomorrow group -->
+      <div class="rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4">
+        <div class="text-[10px] font-semibold uppercase tracking-wider text-[rgb(var(--color-text-400))] mb-2">Tomorrow · Mon Jul 20</div>
+        <div class="rounded-md border border-[rgb(var(--color-border-100))] p-3 flex items-start gap-3">
+          <span class="text-[9px] font-semibold tracking-wide border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] rounded px-1.5 py-0.5 flex-shrink-0 text-[rgb(var(--color-text-500))] mt-0.5">in</span>
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-2">
+              <span class="text-sm font-medium text-[rgb(var(--color-text-800))] truncate">War story: losing a client the right way</span>
+              <span class="text-[10px] font-semibold rounded-full bg-[rgb(var(--color-border-100))] text-[rgb(var(--color-text-500))] px-2 py-0.5 flex-shrink-0">scheduled</span>
+            </div>
+            <p class="text-sm text-[rgb(var(--color-text-500))] mt-1 truncate">The hardest email I ever sent as an MSP owner started with "we're not the right fit"…</p>
+            <div class="text-xs text-[rgb(var(--color-text-400))] mt-1.5">9:00 · Robert's LinkedIn</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Later this week -->
+      <div class="rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4">
+        <div class="text-[10px] font-semibold uppercase tracking-wider text-[rgb(var(--color-text-400))] mb-1">Later this week</div>
+        <ul class="divide-y divide-[rgb(var(--color-border-100))]">
+          <li class="py-2 flex items-center gap-2">
+            <div class="w-10 flex-shrink-0 rounded bg-[rgb(var(--color-primary-50))] text-center py-0.5">
+              <div class="text-[10px] font-semibold uppercase tracking-wide text-[rgb(var(--color-primary-500))]">Jul</div>
+              <div class="text-base font-semibold text-[rgb(var(--color-primary-600))] leading-4">22</div>
+            </div>
+            <span class="text-[9px] font-semibold tracking-wide border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] rounded px-1 flex-shrink-0 text-[rgb(var(--color-text-500))]">YT</span>
+            <span class="text-sm text-[rgb(var(--color-text-700))] truncate">AlgaBob ep. 15 — reading a P&amp;L</span>
+            <span class="ml-auto text-xs text-[rgb(var(--color-text-400))] flex-shrink-0">Nine Minds YouTube</span>
+          </li>
+          <li class="py-2 flex items-center gap-2">
+            <div class="w-10 flex-shrink-0 rounded bg-[rgb(var(--color-primary-50))] text-center py-0.5">
+              <div class="text-[10px] font-semibold uppercase tracking-wide text-[rgb(var(--color-primary-500))]">Jul</div>
+              <div class="text-base font-semibold text-[rgb(var(--color-primary-600))] leading-4">24</div>
+            </div>
+            <span class="text-[9px] font-semibold tracking-wide border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] rounded px-1 flex-shrink-0 text-[rgb(var(--color-text-500))]">in</span>
+            <span class="text-sm text-[rgb(var(--color-text-700))] truncate">"What a seasoned shop does differently"</span>
+            <span class="ml-auto text-xs text-[rgb(var(--color-text-400))] flex-shrink-0">Robert's LinkedIn</span>
+          </li>
+          <li class="py-2 flex items-center gap-2">
+            <div class="w-10 flex-shrink-0 rounded bg-[rgb(var(--color-border-50))] text-center py-0.5">
+              <div class="text-[10px] font-semibold uppercase tracking-wide text-[rgb(var(--color-text-400))]">Jul</div>
+              <div class="text-base font-semibold text-[rgb(var(--color-text-500))] leading-4">27</div>
+            </div>
+            <span class="text-[9px] font-semibold tracking-wide border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] rounded px-1 flex-shrink-0 text-[rgb(var(--color-text-400))]">in</span>
+            <span class="text-sm text-[rgb(var(--color-text-400))] truncate">Draft: referral ask playbook</span>
+            <span class="ml-auto text-[10px] font-semibold rounded-full bg-[rgb(var(--color-border-100))] text-[rgb(var(--color-text-400))] px-2 py-0.5 flex-shrink-0">draft</span>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Published recently -->
+      <div class="rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4">
+        <div class="text-[10px] font-semibold uppercase tracking-wider text-[rgb(var(--color-text-400))] mb-1">Published this week</div>
+        <ul class="divide-y divide-[rgb(var(--color-border-100))]">
+          <li class="py-1.5 flex items-center gap-2">
+            <svg class="h-3.5 w-3.5 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
+            <span class="text-sm text-[rgb(var(--color-text-600))] truncate">On-prem appliance walkthrough</span>
+            <span class="ml-auto text-xs text-[rgb(var(--color-text-400))] flex-shrink-0">Jul 17 · via Claude (MCP)</span>
+          </li>
+          <li class="py-1.5 flex items-center gap-2">
+            <svg class="h-3.5 w-3.5 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
+            <span class="text-sm text-[rgb(var(--color-text-600))] truncate">"Your first 90 days as an MSP"</span>
+            <span class="ml-auto text-xs text-[rgb(var(--color-text-400))] flex-shrink-0">Jul 16 · permalink ✓</span>
+          </li>
+          <li class="py-1.5 flex items-center gap-2">
+            <svg class="h-3.5 w-3.5 text-emerald-500 flex-shrink-0" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
+            <span class="text-sm text-[rgb(var(--color-text-600))] truncate">AlgaBob ep. 14 — SLA basics</span>
+            <span class="ml-auto text-xs text-[rgb(var(--color-text-400))] flex-shrink-0">Jul 15 · permalink ✓</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Right rail -->
+    <div class="w-72 flex-shrink-0 space-y-4">
+      <!-- Needs publishing hero -->
+      <div class="rounded-lg border border-amber-200 bg-amber-50 p-4 flex flex-col min-w-0">
+        <div class="flex items-center mb-1">
+          <span class="text-sm font-semibold text-amber-900">Needs publishing</span>
+          <span class="ml-auto text-[10px] font-semibold rounded-full bg-amber-100 text-amber-800 px-2 py-0.5">1 now · 1 overdue</span>
+        </div>
+        <p class="text-xs text-amber-800">Publish from here, or ask Claude: <span class="font-medium">"publish my due Alga posts"</span></p>
+        <div class="mt-2 rounded-md bg-white border border-amber-200 p-2.5">
+          <div class="text-sm font-medium text-[rgb(var(--color-text-800))] truncate">On-prem appliance walkthrough</div>
+          <div class="text-xs text-[rgb(var(--color-text-500))]">Robert's LinkedIn · overdue 2d</div>
+          <div class="flex gap-1.5 mt-2">
+            <button class="text-xs font-medium px-2.5 py-1 rounded-md bg-[rgb(var(--color-primary-600))] text-white">Copy text</button>
+            <button class="text-xs font-medium px-2.5 py-1 rounded-md border border-[rgb(var(--color-border-200))] text-[rgb(var(--color-text-700))]">Skip</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- This week stats -->
+      <div class="rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4">
+        <div class="text-[10px] font-semibold uppercase tracking-wider text-[rgb(var(--color-text-400))] mb-2">This week</div>
+        <div class="space-y-1.5 text-sm">
+          <div class="flex justify-between"><span class="text-[rgb(var(--color-text-500))]">Published</span><span class="font-medium text-[rgb(var(--color-text-800))]">3</span></div>
+          <div class="flex justify-between"><span class="text-[rgb(var(--color-text-500))]">Scheduled</span><span class="font-medium text-[rgb(var(--color-text-800))]">4</span></div>
+          <div class="flex justify-between"><span class="text-[rgb(var(--color-text-500))]">Awaiting publish</span><span class="font-medium text-amber-700">2</span></div>
+          <div class="flex justify-between"><span class="text-[rgb(var(--color-text-500))]">Sequence sends due</span><span class="font-medium text-[rgb(var(--color-text-800))]">14</span></div>
+        </div>
+      </div>
+
+      <!-- Channels tile -->
+      <div class="rounded-lg border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4">
+        <div class="flex items-center mb-2">
+          <span class="text-sm font-semibold text-[rgb(var(--color-text-800))] truncate">Channels</span>
+          <a class="ml-auto text-xs font-medium text-[rgb(var(--color-primary-600))] hover:underline" href="#">Manage</a>
+        </div>
+        <ul class="divide-y divide-[rgb(var(--color-border-100))]">
+          <li class="py-1.5 flex items-center gap-2">
+            <span class="text-[9px] font-semibold tracking-wide border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] rounded px-1 flex-shrink-0 text-[rgb(var(--color-text-500))]">in</span>
+            <span class="text-sm text-[rgb(var(--color-text-700))] truncate">Robert's LinkedIn</span>
+            <span class="ml-auto text-xs text-[rgb(var(--color-text-400))] flex-shrink-0">Mon / Fri</span>
+          </li>
+          <li class="py-1.5 flex items-center gap-2">
+            <span class="text-[9px] font-semibold tracking-wide border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-50))] rounded px-1 flex-shrink-0 text-[rgb(var(--color-text-500))]">YT</span>
+            <span class="text-sm text-[rgb(var(--color-text-700))] truncate">Nine Minds YouTube</span>
+            <span class="ml-auto text-xs text-[rgb(var(--color-text-400))] flex-shrink-0">Wed</span>
+          </li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</main>
+</body>
+</html>

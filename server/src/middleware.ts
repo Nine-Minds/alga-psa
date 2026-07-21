@@ -80,6 +80,12 @@ const apiKeySkipPaths = [
   '/api/v1/mobile/iap/',
   // Mobile account endpoints use Bearer auth (validated in route handler)
   '/api/v1/mobile/account/',
+  // Public marketing endpoints (capture forms, email open/click tracking,
+  // unsubscribe) are unauthenticated by design: rate-limited, honeypotted,
+  // HMAC-signed where applicable, and deliberately oracle-free in-route.
+  '/api/marketing/capture/',
+  '/api/marketing/track/',
+  '/api/marketing/unsubscribe/',
   '/api/integrations/ninjaone/callback',
   '/api/integrations/xero/connect',
   '/api/integrations/xero/callback',

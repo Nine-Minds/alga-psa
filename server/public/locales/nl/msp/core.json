@@ -86,7 +86,17 @@
     "jobMonitoring": "Jobbewaking",
     "jobs": "Taken",
     "emailLogs": "E-maillogs",
-    "extensions": "Extensies"
+    "extensions": "Extensies",
+    "marketing": {
+      "label": "Marketing",
+      "calendar": "Kalender",
+      "posts": "Berichten",
+      "content": "Content",
+      "campaigns": "Campagnes",
+      "sequences": "Sequenties",
+      "forms": "Formulieren",
+      "channels": "Kanalen"
+    }
   },
   "sidebar": {
     "backToMain": "Terug naar hoofd",
@@ -367,5 +377,357 @@
     "title": "We brengen je naar de configuratie",
     "description": "Je werkruimte heeft een korte configuratie nodig voordat je het dashboard kunt gebruiken.",
     "action": "Doorgaan naar configuratie"
+  },
+  "marketing": {
+    "dialogs": {
+      "cancel": "Annuleren",
+      "save": "Opslaan",
+      "create": "Aanmaken"
+    },
+    "actions": {
+      "edit": "Bewerken",
+      "delete": "Verwijderen"
+    },
+    "calendar": {
+      "title": "Marketingkalender",
+      "newPost": "Nieuw bericht",
+      "today": "Vandaag",
+      "tomorrow": "Morgen",
+      "dueAt": "uiterlijk {{time}}",
+      "needsPublishing": "Te publiceren",
+      "needsPublishingCount": "{{total}} wachtend · {{overdue}} te laat",
+      "needsPublishingCountSimple": "{{total}} wachtend",
+      "needsPublishingHint": "Kopieer de tekst, publiceer op het platform en markeer het bericht daarna als gepubliceerd.",
+      "thisWeek": "Deze week",
+      "stats": {
+        "published": "Gepubliceerd",
+        "scheduled": "Gepland",
+        "awaiting": "Wacht op publicatie"
+      },
+      "channels": "Kanalen",
+      "manageChannels": "Beheren",
+      "noChannels": "Nog geen kanalen.",
+      "publishedRecently": "Onlangs gepubliceerd",
+      "noUpcoming": "Niets gepland in deze periode.",
+      "emptyTitle": "Nog niets op de kalender",
+      "emptyBody": "Maak een bericht aan via de pagina Berichten; het verschijnt hier op de geplande dag.",
+      "toast": {
+        "skipped": "Overgeslagen"
+      },
+      "weekOf": "Week van {{date}}",
+      "viewMonth": "Maand",
+      "viewAgenda": "Agenda",
+      "moreItems": "+{{count}} meer"
+    },
+    "posts": {
+      "title": "Berichten",
+      "new": "Nieuw bericht",
+      "copyText": "Tekst kopiëren",
+      "skip": "Overslaan",
+      "reschedule": "Herplannen",
+      "emptyTitle": "Nog geen berichten",
+      "emptyBody": "Maak een bericht aan vanuit je contentbibliotheek en het verschijnt in deze wachtrij.",
+      "status": {
+        "scheduled": "gepland",
+        "awaiting-manual-publish": "wacht op publicatie",
+        "published": "gepubliceerd",
+        "skipped": "overgeslagen",
+        "expired": "verlopen"
+      },
+      "columns": {
+        "content": "Content",
+        "channel": "Kanaal",
+        "campaign": "Campagne",
+        "scheduled": "Gepland",
+        "status": "Status",
+        "actions": "Acties"
+      },
+      "filters": {
+        "status": "Status",
+        "channel": "Kanaal",
+        "campaign": "Campagne",
+        "all": "Alle",
+        "dateFrom": "Gepland vanaf",
+        "dateTo": "Gepland tot"
+      },
+      "createDialog": {
+        "title": "Nieuw bericht",
+        "content": "Content",
+        "contentPlaceholder": "Selecteer content…",
+        "channels": "Kanalen",
+        "noChannels": "Geen actieve kanalen — voeg er eerst een toe op de pagina Kanalen.",
+        "campaign": "Campagne (optioneel)",
+        "noCampaign": "Geen campagne",
+        "scheduledAt": "Plannen voor (optioneel)",
+        "submit": "Bericht aanmaken"
+      },
+      "rescheduleDialog": {
+        "title": "Bericht herplannen",
+        "scheduledAt": "Nieuwe tijd",
+        "submit": "Herplannen"
+      },
+      "markPublished": {
+        "title": "Markeren als gepubliceerd",
+        "permalink": "Permalink (optioneel)",
+        "confirm": "Markeren als gepubliceerd"
+      },
+      "toast": {
+        "created": "Bericht aangemaakt",
+        "rescheduled": "Bericht herpland",
+        "markedPublished": "Gemarkeerd als gepubliceerd",
+        "copied": "Gekopieerd naar klembord",
+        "copyFailed": "Kopiëren naar klembord is mislukt"
+      }
+    },
+    "content": {
+      "title": "Content",
+      "new": "Nieuwe content",
+      "emptyTitle": "Nog geen content",
+      "emptyBody": "Schrijf de berichten die je wilt publiceren en plan ze daarna in via de pagina Berichten.",
+      "columns": {
+        "title": "Titel",
+        "campaign": "Campagne",
+        "variants": "Varianten",
+        "updated": "Bijgewerkt",
+        "actions": "Acties"
+      },
+      "dialog": {
+        "createTitle": "Nieuwe content",
+        "editTitle": "Content bewerken",
+        "title": "Titel",
+        "body": "Tekst (markdown)",
+        "campaign": "Campagne (optioneel)",
+        "noCampaign": "Geen campagne",
+        "variants": "Kanaalvarianten",
+        "variantsHint": "Overschrijf de basistekst voor specifieke platformen. Lege varianten worden genegeerd.",
+        "addVariant": "Platformvariant toevoegen…",
+        "addVariantButton": "Toevoegen"
+      },
+      "deleteDialog": {
+        "title": "Content verwijderen",
+        "message": "\"{{title}}\" verwijderen? Dit kan niet ongedaan worden gemaakt."
+      },
+      "toast": {
+        "created": "Content aangemaakt",
+        "updated": "Content bijgewerkt",
+        "deleted": "Content verwijderd"
+      }
+    },
+    "campaigns": {
+      "title": "Campagnes",
+      "new": "Nieuwe campagne",
+      "view": "Bekijken",
+      "emptyTitle": "Nog geen campagnes",
+      "emptyBody": "Campagnes groeperen berichten, content, formulieren en sequenties, zodat je de funnel op één plek ziet.",
+      "status": {
+        "draft": "concept",
+        "active": "actief",
+        "completed": "afgerond",
+        "archived": "gearchiveerd"
+      },
+      "columns": {
+        "name": "Naam",
+        "status": "Status",
+        "startDate": "Start",
+        "endDate": "Einde",
+        "actions": "Acties"
+      },
+      "dialog": {
+        "createTitle": "Nieuwe campagne",
+        "editTitle": "Campagne bewerken",
+        "name": "Naam",
+        "goal": "Doel (optioneel)",
+        "sourceChannel": "Bronkanaal (optioneel)",
+        "status": "Status",
+        "startDate": "Startdatum",
+        "endDate": "Einddatum"
+      },
+      "funnel": {
+        "loading": "Funnel laden…",
+        "postsPublished": "Berichten gepubliceerd",
+        "emailsSent": "E-mails verzonden",
+        "emailsOpened": "Geopend",
+        "emailsClicked": "Geklikt",
+        "formsSubmitted": "Formulieren ingezonden",
+        "suggestionsCreated": "Suggesties",
+        "suggestionsAccepted": "Geaccepteerd"
+      },
+      "toast": {
+        "created": "Campagne aangemaakt",
+        "updated": "Campagne bijgewerkt"
+      },
+      "detail": {
+        "posts": "Berichten",
+        "noPosts": "Geen berichten in deze campagne.",
+        "sequences": "Sequenties",
+        "noSequences": "Geen sequenties gekoppeld aan deze campagne.",
+        "forms": "Leadformulieren",
+        "noForms": "Geen formulieren toegewezen aan deze campagne."
+      }
+    },
+    "sequences": {
+      "title": "Sequenties",
+      "new": "Nieuwe sequentie",
+      "pickerLabel": "Sequentie",
+      "emptyTitle": "Nog geen sequenties",
+      "emptyBody": "Sequenties versturen een getimede reeks e-mails naar ingeschreven contacten.",
+      "headerSummary": "{{steps}} stappen · {{active}} actieve inschrijvingen",
+      "headerOpenRate": "{{rate}}% openratio",
+      "journey": "Traject",
+      "noSteps": "Nog geen stappen — bewerk de sequentie om stappen toe te voegen.",
+      "enroll": "Contacten inschrijven",
+      "performance": {
+        "title": "Prestaties",
+        "openRate": "Openratio",
+        "clickRate": "Klikratio",
+        "stopped": "Afgemeld / gestopt"
+      },
+      "stepStats": {
+        "sent": "{{count}} verzonden",
+        "opened": "{{rate}}% geopend"
+      },
+      "status": {
+        "draft": "concept",
+        "active": "actief",
+        "paused": "gepauzeerd",
+        "archived": "gearchiveerd"
+      },
+      "enrollments": {
+        "title": "Inschrijvingen",
+        "empty": "Nog geen inschrijvingen.",
+        "contact": "Contact",
+        "progress": "Voortgang",
+        "nextSend": "Volgende verzending",
+        "state": "Status",
+        "actions": "Acties",
+        "unenroll": "Uitschrijven"
+      },
+      "dialog": {
+        "createTitle": "Nieuwe sequentie",
+        "editTitle": "Sequentie bewerken",
+        "name": "Naam",
+        "description": "Beschrijving (optioneel)",
+        "status": "Status",
+        "steps": "Stappen",
+        "subjectPlaceholder": "Onderwerp",
+        "delay": "Wacht",
+        "delayAfterEnroll": "na inschrijving",
+        "delayAfterPrevious": "na vorige stap",
+        "bodyPlaceholder": "Tekst (markdown, {{merge.fields}} ondersteund)",
+        "addStep": "Stap toevoegen",
+        "unit": {
+          "minutes": "minuten",
+          "hours": "uur",
+          "days": "dagen"
+        },
+        "campaign": "Campagne (optioneel)",
+        "noCampaign": "Geen"
+      },
+      "enrollDialog": {
+        "title": "Contact inschrijven",
+        "contact": "Contact",
+        "contactPlaceholder": "Selecteer een contact…",
+        "submit": "Inschrijven"
+      },
+      "toast": {
+        "created": "Sequentie aangemaakt",
+        "updated": "Sequentie bijgewerkt",
+        "enrolled": "Contact ingeschreven",
+        "unenrolled": "Contact uitgeschreven"
+      },
+      "sending": {
+        "title": "Verzending",
+        "from": "Afzender",
+        "provider": "Provider",
+        "notConfigured": "Niet geconfigureerd",
+        "unsubscribe": "Afmeldlink",
+        "on": "Aan",
+        "tracking": "Tracking"
+      }
+    },
+    "forms": {
+      "title": "Leadformulieren",
+      "new": "Nieuw formulier",
+      "active": "actief",
+      "inactive": "inactief",
+      "createsSuggestion": "suggestie",
+      "copyUrl": "Kopiëren",
+      "emptyTitle": "Nog geen leadformulieren",
+      "emptyBody": "Openbare formulieren zetten inkomende leads om in contacten — en optioneel in verkoopkanssuggesties.",
+      "columns": {
+        "name": "Naam",
+        "slug": "Slug",
+        "campaign": "Campagne",
+        "status": "Status",
+        "captureUrl": "Formulier-URL",
+        "actions": "Acties"
+      },
+      "dialog": {
+        "createTitle": "Nieuw leadformulier",
+        "editTitle": "Formulier bewerken",
+        "name": "Naam",
+        "slug": "Slug",
+        "slugHint": "Kleine letters, cijfers en streepjes (bijv. demo-aanvraag). Wordt gebruikt in de openbare formulier-URL.",
+        "slugInvalid": "Ongeldige slug",
+        "description": "Beschrijving (optioneel)",
+        "campaign": "Campagne (optioneel)",
+        "noCampaign": "Geen campagne",
+        "createsSuggestion": "Maak per inzending een verkoopkanssuggestie aan",
+        "isActive": "Actief (accepteert inzendingen)"
+      },
+      "toast": {
+        "created": "Formulier aangemaakt",
+        "updated": "Formulier bijgewerkt",
+        "urlCopied": "Formulier-URL gekopieerd"
+      }
+    },
+    "channels": {
+      "title": "Kanalen",
+      "new": "Nieuw kanaal",
+      "emptyTitle": "Nog geen kanalen",
+      "emptyBody": "Kanalen zijn de plekken waar je publiceert — een LinkedIn-profiel, een YouTube-kanaal, een blog.",
+      "columns": {
+        "name": "Naam",
+        "platform": "Platform",
+        "handle": "Handle / URL",
+        "active": "Actief",
+        "actions": "Acties"
+      },
+      "dialog": {
+        "createTitle": "Nieuw kanaal",
+        "editTitle": "Kanaal bewerken",
+        "name": "Naam",
+        "namePlaceholder": "bijv. Roberts LinkedIn",
+        "platform": "Platform",
+        "platformPlaceholder": "Selecteer een platform…",
+        "handle": "Handle of URL (optioneel)",
+        "isActive": "Actief"
+      },
+      "toast": {
+        "created": "Kanaal aangemaakt",
+        "updated": "Kanaal bijgewerkt",
+        "activated": "Kanaal geactiveerd",
+        "deactivated": "Kanaal gedeactiveerd"
+      }
+    },
+    "contact": {
+      "title": "Marketing",
+      "loading": "Marketingactiviteit laden…",
+      "consentGiven": "toestemming",
+      "noConsent": "geen toestemming",
+      "suppressed": "onderdrukt",
+      "activeEnrollments": "Actieve inschrijvingen",
+      "noEnrollments": "Niet ingeschreven voor een sequentie.",
+      "enrollmentMeta": "stap {{step}} · volgende {{date}}",
+      "recentEngagements": "Recente interacties",
+      "noEngagements": "Nog geen marketingcontactmomenten."
+    },
+    "boundary": {
+      "disabledTitle": "Marketing is niet ingeschakeld",
+      "disabledDescription": "De marketingmodule is niet ingeschakeld voor dit account.",
+      "permissionTitle": "Geen toegang tot Marketing",
+      "permissionDescription": "Je hebt geen rechten om marketing te bekijken. Vraag een beheerder om het leesrecht voor marketing.",
+      "backToDashboard": "Ga naar dashboard"
+    }
   }
 }

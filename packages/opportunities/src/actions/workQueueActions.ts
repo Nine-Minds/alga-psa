@@ -106,6 +106,13 @@ function suggestionCopy(
         how: `Scope a refresh for ${assetCount} aging asset${assetCount === 1 ? '' : 's'}.`,
       };
     }
+    case 'inbound-lead': {
+      const formName = stringEvidence(evidence, 'formName', 'form_name') ?? 'a capture form';
+      return {
+        facts: { kind: 'suggestion_inbound_lead', clientName, formName },
+        how: 'Follow up while the interest is warm.',
+      };
+    }
   }
 }
 

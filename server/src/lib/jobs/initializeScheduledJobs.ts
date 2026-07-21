@@ -1,4 +1,4 @@
-import { initializeScheduler, scheduleExpiredCreditsJob, scheduleExpiringCreditsNotificationJob, scheduleCreditReconciliationJob, scheduleQuoteAutoExpirationJob, scheduleReconcileBucketUsageJob, scheduleCleanupTemporaryFormsJob, scheduleCleanupWebhookDeliveriesJob, scheduleCleanupAiSessionKeysJob, scheduleMicrosoftWebhookRenewalJob, scheduleTeamsMeetingArtifactSubscriptionRenewalJob, scheduleTeamsMeetingSweepJob, scheduleGooglePubSubVerificationJob, scheduleGoogleGmailWatchRenewalJob, scheduleEmailWebhookMaintenanceJob, scheduleRenewalQueueProcessingJob, scheduleSlaTimerJob, scheduleWorkflowQuotaResumeScanJob, scheduleSearchReconcileJob, scheduleAutoCloseTicketsJob, scheduleLowStockNotificationJob, scheduleOpportunityDisciplineJob, scheduleOpportunityWeeklyDigestJob, scheduleOpportunityGeneratorsJob, scheduleProjectDateReadinessJob } from './index';
+import { initializeScheduler, scheduleExpiredCreditsJob, scheduleExpiringCreditsNotificationJob, scheduleCreditReconciliationJob, scheduleQuoteAutoExpirationJob, scheduleReconcileBucketUsageJob, scheduleCleanupTemporaryFormsJob, scheduleCleanupWebhookDeliveriesJob, scheduleCleanupAiSessionKeysJob, scheduleMicrosoftWebhookRenewalJob, scheduleTeamsMeetingArtifactSubscriptionRenewalJob, scheduleTeamsMeetingSweepJob, scheduleGooglePubSubVerificationJob, scheduleGoogleGmailWatchRenewalJob, scheduleEmailWebhookMaintenanceJob, scheduleRenewalQueueProcessingJob, scheduleSlaTimerJob, scheduleWorkflowQuotaResumeScanJob, scheduleSearchReconcileJob, scheduleAutoCloseTicketsJob, scheduleLowStockNotificationJob, scheduleOpportunityDisciplineJob, scheduleOpportunityWeeklyDigestJob, scheduleOpportunityGeneratorsJob, scheduleMarketingFlipDuePostsJob, scheduleMarketingExpireStaleTargetsJob, scheduleMarketingSendSequenceStepsJob, scheduleProjectDateReadinessJob } from './index';
 import { scheduleAccountingSyncCycleJob } from './handlers/accountingSyncCycleHandler';
 import { scheduleHuduAutoSyncJob } from './handlers/huduAutoSyncHandler';
 import logger from '@alga-psa/core/logger';
@@ -105,6 +105,28 @@ export async function initializeScheduledJobs(): Promise<void> {
         logger.info('Opportunity weekly digest schedule converged', { tenantId, digestJobId });
       } catch (error) {
         logger.error(`Failed to schedule opportunity weekly digest job for tenant ${tenantId}`, error);
+      }
+
+      // Marketing module jobs (flag-gated no-ops when the module is off)
+      try {
+        const flipJobId = await scheduleMarketingFlipDuePostsJob(tenantId, '*/5 * * * *');
+        logger.info('Marketing flip-due-posts schedule converged', { tenantId, flipJobId });
+      } catch (error) {
+        logger.error(`Failed to schedule marketing flip-due-posts job for tenant ${tenantId}`, error);
+      }
+
+      try {
+        const expireJobId = await scheduleMarketingExpireStaleTargetsJob(tenantId, '11 * * * *');
+        logger.info('Marketing expire-stale-targets schedule converged', { tenantId, expireJobId });
+      } catch (error) {
+        logger.error(`Failed to schedule marketing expire-stale-targets job for tenant ${tenantId}`, error);
+      }
+
+      try {
+        const sendJobId = await scheduleMarketingSendSequenceStepsJob(tenantId, '*/5 * * * *');
+        logger.info('Marketing send-sequence-steps schedule converged', { tenantId, sendJobId });
+      } catch (error) {
+        logger.error(`Failed to schedule marketing send-sequence-steps job for tenant ${tenantId}`, error);
       }
 
       // Schedule daily job to run credit reconciliation (runs at 2:00 AM)

@@ -109,6 +109,15 @@ import {
   searchReconcileHandler,
   SearchReconcileJobData,
 } from '@alga-psa/jobs/handlers/searchReconcileHandler';
+import {
+  MARKETING_FLIP_DUE_POSTS_JOB,
+  MARKETING_EXPIRE_STALE_TARGETS_JOB,
+  MARKETING_SEND_SEQUENCE_STEPS_JOB,
+  marketingFlipDuePostsHandler,
+  marketingExpireStaleTargetsHandler,
+  marketingSendSequenceStepsHandler,
+  MarketingJobData,
+} from './handlers/marketingJobs';
 
 /**
  * Options for registering handlers
@@ -627,6 +636,46 @@ export async function registerAllJobHandlers(
     registerOpts
   );
 
+  // ============================================================================
+  // MARKETING HANDLERS
+  // ============================================================================
+  // Each handler self-gates on the `marketing-module` feature flag and no-ops
+  // when the module is off for the tenant.
+
+  JobHandlerRegistry.register<MarketingJobData & BaseJobData>(
+    {
+      name: MARKETING_FLIP_DUE_POSTS_JOB,
+      handler: async (_jobId, data) => {
+        await marketingFlipDuePostsHandler(data);
+      },
+      retry: { maxAttempts: 3 },
+    },
+    registerOpts
+  );
+
+  JobHandlerRegistry.register<MarketingJobData & BaseJobData>(
+    {
+      name: MARKETING_EXPIRE_STALE_TARGETS_JOB,
+      handler: async (_jobId, data) => {
+        await marketingExpireStaleTargetsHandler(data);
+      },
+      retry: { maxAttempts: 3 },
+    },
+    registerOpts
+  );
+
+  JobHandlerRegistry.register<MarketingJobData & BaseJobData>(
+    {
+      name: MARKETING_SEND_SEQUENCE_STEPS_JOB,
+      handler: async (_jobId, data) => {
+        await marketingSendSequenceStepsHandler(data);
+      },
+      retry: { maxAttempts: 3 },
+      timeoutMs: 300000, // 5 minutes
+    },
+    registerOpts
+  );
+
   // Mark registry as initialized
   JobHandlerRegistry.markInitialized();
 
@@ -660,6 +709,10 @@ export function getAvailableJobHandlers(): string[] {
     SEARCH_RECONCILE_JOB_NAME,
     'reconcile-bucket-usage',
     'process-renewal-queue',
+    // Marketing
+    MARKETING_FLIP_DUE_POSTS_JOB,
+    MARKETING_EXPIRE_STALE_TARGETS_JOB,
+    MARKETING_SEND_SEQUENCE_STEPS_JOB,
     // Cleanup
     'cleanup-temporary-workflow-forms',
     // Calendar
