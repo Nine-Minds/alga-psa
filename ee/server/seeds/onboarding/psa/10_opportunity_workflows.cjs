@@ -177,6 +177,10 @@ exports.seed = async function seed(knex, tenantId) {
   // workflow (runOnboardingSeeds) calls seed(trx, tenantId), but the standard
   // knex seed runner invokes seed(knex) with no tenantId — mirror the sibling
   // onboarding seeds (e.g. 09_asset_type_registry.cjs) rather than throwing.
+  // LEVERAGE: friction builtin-content-distribution — this fallback is an unwritten
+  // contract every onboarding seed must hand-copy (the appliance replays seeds via
+  // knex seed:run with no tenantId on every upgrade); omitting it broke appliance
+  // upgrades (#2989). The runner should inject tenant resolution once, centrally.
   if (!tenantId) {
     const tenant = await knex('tenants').select('tenant').first();
     if (!tenant) {
