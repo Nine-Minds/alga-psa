@@ -51,6 +51,23 @@ webhook is edition-gated. The CE test bootstrap never creates the table, so
 the test mirrors the EE schema locally (`ensureInvoicePaymentsTable`) to
 exercise the service-level seam.
 
+### `invoiceRenderToDelivery`
+Finalized invoice → `createPDFGenerationService` renders it through the real
+pipeline (standard template AST shipped by the migrations → server-rendered
+HTML → headless Chromium print via puppeteer) → real local storage →
+`external_files` row → `DOCUMENT_GENERATED` workflow event.
+Pins: the bytes are a structurally complete PDF (`%PDF-` header, xref
+trailer, >2KB); the invoice number lands in the rendered HTML (no PDF
+text-extraction dependency is usable in the runner — `pdf-lib` is stubbed to
+`empty-module` in `vitest.config.ts` — so the pin sits on the same template-AST
+evaluation that feeds the print); the stored row is tenant-scoped and invisible
+from another tenant's scope; the file↔invoice linkage is the event payload
+plus the invoice-number-derived `original_name` — this path writes **no**
+`documents`/`document_associations` row; a re-render always stores a
+brand-new file and row (no versioning or reuse; the service's `version` option
+is accepted but never read). The only mocked seam is the event-bus publisher,
+so the linkage payload can be asserted instead of disappearing into Redis.
+
 ### `portalServiceRequestToTicket`
 Client-portal user submits a published service-request form → the ticket-only
 execution provider creates the ticket at submit time (`created_ticket_id`
@@ -60,14 +77,16 @@ Pins: the client/contact chain on both records, and the scoping negative — a
 sibling client's portal user gets empty lists and "access denied" on the same
 tenant.
 
-## Known gap: PDF generation
+## Known gap: email delivery of rendered invoices
 
-The money journeys stop at invoice rows and charge details. Rendering the
-invoice — `createPDFGenerationService` → wasm template → PDF bytes → document
-row → email attachment — has only unit-level coverage (tenant-scoping
-contract, mocked-PDF email-handler tests). No test produces a real PDF. This
-is the first candidate extension for `invoiceLifecycleToPayment` or a
-dedicated `invoiceRenderToDelivery` journey.
+`invoiceRenderToDelivery` closes the render-and-store half of the old PDF gap:
+a real Chromium-rendered PDF, the `external_files` row, tenant scoping, and
+the `DOCUMENT_GENERATED` linkage event are all journey-covered. Still
+uncovered above that seam: emailing the PDF. `sendInvoiceEmailAction` and the
+invoice email job handler — recipient resolution (billing contact →
+billing_email → location email), the Handlebars invoice-email template, and
+the attachment round-trip through `StorageService.downloadFile` — have only
+unit-level coverage with mocked PDFs.
 
 ## Running locally
 
@@ -101,4 +120,9 @@ quote→contract, client onboarding; P2 is imports, docs/KB, workflows,
 notifications, assets, tenant onboarding, auth. Two rules earned the hard way:
 actions frequently *return* `{ actionError }` objects instead of throwing, and
 scheduling actions import `withAuth` from the `@alga-psa/auth` barrel — mock
-both the barrel and the subpath, keeping `getCurrentUser` a `vi.fn`.
+both the barrel and the subpath, keeping `getCurrentUser` a `vi.fn`. A third,
+from `invoiceRenderToDelivery`: when a mocked module is called from package
+code (not server code), the mock factory's closure does not reliably share
+module-scope state with the test body — a capture array stays empty even
+though the mock records the call. Assert through the mock's own `mock.calls`
+instead of a closure-captured array.
