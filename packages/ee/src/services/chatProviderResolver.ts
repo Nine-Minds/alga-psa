@@ -4,11 +4,10 @@ import { GoogleAuth } from 'google-auth-library';
 import { getSecret } from '@alga-psa/core/secrets';
 import { isSelfHostLicensing } from '@alga-psa/licensing';
 // LEVERAGE: friction duplicated-chat-provider-resolver — this file duplicates
-// ee/server/src/services/chatProviderResolver.ts (and now deep-imports the
-// aiGateway client across package boundaries); the resolver + gateway client
-// belong in one shared package consumed by both.
-import { resolveGatewayAuthToken } from '../../../../ee/server/src/lib/aiGateway/client';
-import type { AiFeature } from '../../../../ee/server/src/lib/aiGateway/types';
+// ee/server/src/services/chatProviderResolver.ts; the resolver + gateway
+// client belong in one shared package consumed by both.
+import { resolveGatewayAuthToken } from '../lib/aiGateway/client';
+import type { AiFeature } from '../lib/aiGateway/types';
 import { isAiUsageBillingEnabled } from './aiGatewayRollout';
 
 const OPENROUTER_BASE_URL = 'https://openrouter.ai/api/v1';

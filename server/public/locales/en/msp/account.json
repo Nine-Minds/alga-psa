@@ -425,5 +425,75 @@
       "noLongerNeed": "No longer need the service",
       "other": "Other"
     }
+  },
+  "aiUsage": {
+    "title": "AI Usage",
+    "subtitle": "Credit-based billing for Alga AI features",
+    "refresh": "Refresh",
+    "errors": {
+      "loadSummary": "Failed to load AI usage details",
+      "loadHistory": "Failed to load usage history",
+      "subscribe": "Failed to start checkout",
+      "topup": "Failed to start top-up checkout",
+      "autoTopup": "Failed to save auto top-up settings",
+      "unavailable": "AI usage details are currently unavailable. Please try again shortly."
+    },
+    "upsell": {
+      "heading": "Add AI to your workspace",
+      "body": "Subscribe to the AI add-on to unlock Alga AI across chat, email triage, and more. Your monthly plan includes a credit allotment; buy one-time top-ups or enable auto top-up any time.",
+      "subscribe": "Subscribe to AI add-on",
+      "subscribing": "Redirecting…"
+    },
+    "grace": {
+      "title": "Credits exhausted — grace buffer in use",
+      "body": "AI keeps working within a small grace buffer of {{grace}} credits. Top up to avoid a hard stop."
+    },
+    "lowBalance": {
+      "title": "Low credit balance",
+      "body": "Consider topping up or enabling auto top-up to avoid interruptions."
+    },
+    "balance": {
+      "total": "Total balance",
+      "creditsUnit": "credits",
+      "included": "Included (monthly)",
+      "resetsMonthly": "resets each cycle",
+      "topup": "Top-up (persists)",
+      "carriesOver": "carries over"
+    },
+    "cycle": {
+      "label": "Billing cycle",
+      "resetsIn": "Resets in {{days}} days"
+    },
+    "topup": {
+      "title": "Buy top-up credits",
+      "description": "One-time credit packs that never expire.",
+      "noPacks": "No top-up packs are configured yet.",
+      "packWithCredits": "{{label}} ({{credits}} credits)"
+    },
+    "autoTopup": {
+      "title": "Auto top-up",
+      "description": "Automatically buy a pack when your balance drops below a threshold.",
+      "enable": "Enable auto top-up",
+      "enableHelp": "Uses your saved payment method for off-session charges.",
+      "threshold": "Threshold (credits)",
+      "pack": "Pack to purchase",
+      "selectPack": "Select a pack",
+      "save": "Save auto top-up",
+      "saved": "Auto top-up settings saved",
+      "saving": "Saving…"
+    },
+    "history": {
+      "title": "Usage history",
+      "description": "Per-request credit consumption.",
+      "allFeatures": "All features",
+      "date": "Date",
+      "feature": "Feature",
+      "model": "Model",
+      "tokens": "Tokens",
+      "credits": "Credits",
+      "empty": "No usage recorded yet.",
+      "loading": "Loading…",
+      "loadMore": "Load more"
+    }
   }
 }

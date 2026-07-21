@@ -1,7 +1,7 @@
 import Ajv from 'ajv';
 import addFormats from 'ajv-formats';
 
-import { toAiCreditsError } from '../../../../ee/server/src/lib/aiGateway/errors';
+import { toAiCreditsError } from '../lib/aiGateway/errors';
 import { resolveChatProvider, type ChatProviderId, type ResolvedChatProvider } from './chatProviderResolver';
 
 type WorkflowJsonSchema = {
@@ -255,8 +255,10 @@ export async function inferWorkflowStructuredOutput(
       const creditsError = toAiCreditsError(error);
       if (creditsError) {
         if (request.tenantId) {
+          // Resolved by the `@alga-psa/ee-stubs` build alias: the EE server
+          // implementation in EE builds, the log-only CE stub otherwise.
           const { notifyAiCreditsUnavailable } = await import(
-            '../../../../ee/server/src/lib/aiGateway/notifications'
+            '@alga-psa/ee-stubs/lib/aiGateway/notifications'
           );
           await notifyAiCreditsUnavailable(
             request.tenantId,

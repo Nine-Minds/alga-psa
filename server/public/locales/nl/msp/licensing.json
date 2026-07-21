@@ -172,5 +172,58 @@
   },
   "runStudio": {
     "unavailable": "Workflow Run Studio is niet beschikbaar in deze editie. (runId: {{runId}})"
+  },
+  "aiConsent": {
+    "title": "AI-gegevensdeling",
+    "subtitle": "Vereist voor AI-functies op deze appliance. Controleer wat uw netwerk verlaat voordat u AI inschakelt.",
+    "status": {
+      "granted": "Toestemming verleend",
+      "revoked": "Toestemming ingetrokken",
+      "missing": "Niet verleend"
+    },
+    "unreachable": "Kan de AI-service niet bereiken om de huidige toestemmingsstatus te laden. Probeer het zo weer.",
+    "explainer": "Wanneer AI is ingeschakeld, wordt de inhoud waarmee AI werkt — waaronder tickettekst, e-mailinhoud en chatberichten — vanaf deze appliance naar de cloud-AI-service van Nine Minds gestuurd en van daaruit naar externe modelproviders om antwoorden te genereren. Er wordt niets verzonden totdat u hieronder toestemming geeft.",
+    "termsVersion": "Versie van de voorwaarden",
+    "grantedAt": "Verleend",
+    "revoke": "Toestemming intrekken",
+    "accept": "Accepteren en AI inschakelen",
+    "acceptDialog": {
+      "title": "AI-gegevensdeling inschakelen?",
+      "confirming": "Inschakelen…",
+      "confirm": "Ik ga akkoord, AI inschakelen",
+      "body": "Door verder te gaan stemt u ermee in dat AI-functies ticket-, e-mail- en chatinhoud vanaf deze appliance naar de cloud-AI-service van Nine Minds en vervolgens naar externe modelproviders mogen verzenden voor verwerking.",
+      "termsVersion": "Versie voorwaarden gegevensdeling: {{version}}"
+    },
+    "revokeDialog": {
+      "title": "AI-gegevensdeling intrekken?",
+      "confirming": "Intrekken…",
+      "confirm": "Toestemming intrekken",
+      "body": "AI-functies stoppen onmiddellijk met werken op deze appliance. Er wordt geen inhoud meer naar de cloud-AI-service verzonden totdat opnieuw toestemming is verleend."
+    }
+  },
+  "aiBalance": {
+    "title": "AI-credits",
+    "subtitle": "Vooruitbetaalde credits financieren AI-functies op deze appliance. Aankopen verlopen via de Nine Minds-store.",
+    "refresh": "Vernieuwen",
+    "unreachable": "Kan de AI-service niet bereiken om uw creditsaldo te laden. Probeer het zo weer.",
+    "blockedPendingConsent": "AI is geblokkeerd totdat hierboven toestemming voor gegevensdeling is verleend. Er worden geen credits verbruikt zolang AI uit staat.",
+    "upsell": {
+      "heading": "Abonneren op de AI-add-on",
+      "body": "Er is geen actief AI-abonnement voor deze appliance. Abonneer u in de Nine Minds-store om een maandelijks credittegoed te ontvangen; de store beheert betaling en opwaarderingen.",
+      "subscribe": "Abonneren in de store"
+    },
+    "grace": "De credits zijn op. AI blijft werken binnen een kleine respijtbuffer van {{grace}} credits voordat het volledig stopt — waardeer op om onderbreking te voorkomen.",
+    "low": "Het creditsaldo raakt op. Waardeer op in de store om onderbrekingen te voorkomen.",
+    "total": "Totaal saldo",
+    "creditsUnit": "credits",
+    "included": "Inbegrepen (maandelijks)",
+    "resetsMonthly": "wordt elke cyclus gereset",
+    "topup": "Opwaardering (blijft behouden)",
+    "carriesOver": "wordt meegenomen",
+    "manage": {
+      "heading": "Credits kopen of het abonnement beheren",
+      "body": "Opwaarderingen, automatisch opwaarderen en abonnementswijzigingen worden in de Nine Minds-store beheerd.",
+      "openStore": "Store openen"
+    }
   }
 }

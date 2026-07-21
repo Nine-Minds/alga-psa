@@ -425,5 +425,75 @@
       "noLongerNeed": "Plus besoin du service",
       "other": "Autre"
     }
+  },
+  "aiUsage": {
+    "title": "Utilisation de l'IA",
+    "subtitle": "Facturation à base de crédits pour les fonctionnalités d'IA d'Alga",
+    "refresh": "Actualiser",
+    "errors": {
+      "loadSummary": "Échec du chargement des détails d'utilisation de l'IA",
+      "loadHistory": "Échec du chargement de l'historique d'utilisation",
+      "subscribe": "Échec du démarrage du paiement",
+      "topup": "Échec du démarrage du paiement de la recharge",
+      "autoTopup": "Échec de l'enregistrement des paramètres de recharge automatique",
+      "unavailable": "Les détails d'utilisation de l'IA sont momentanément indisponibles. Veuillez réessayer sous peu."
+    },
+    "upsell": {
+      "heading": "Ajoutez l'IA à votre espace de travail",
+      "body": "Abonnez-vous au module complémentaire IA pour débloquer Alga AI dans le chat, le tri des e-mails et plus encore. Votre forfait mensuel inclut une dotation de crédits ; achetez des recharges ponctuelles ou activez la recharge automatique à tout moment.",
+      "subscribe": "S'abonner au module IA",
+      "subscribing": "Redirection…"
+    },
+    "grace": {
+      "title": "Crédits épuisés — marge de tolérance en cours d'utilisation",
+      "body": "L'IA continue de fonctionner dans une petite marge de tolérance de {{grace}} crédits. Rechargez pour éviter un arrêt complet."
+    },
+    "lowBalance": {
+      "title": "Solde de crédits faible",
+      "body": "Envisagez de recharger ou d'activer la recharge automatique pour éviter les interruptions."
+    },
+    "balance": {
+      "total": "Solde total",
+      "creditsUnit": "crédits",
+      "included": "Inclus (mensuel)",
+      "resetsMonthly": "réinitialisé à chaque cycle",
+      "topup": "Recharge (persistante)",
+      "carriesOver": "reporté"
+    },
+    "cycle": {
+      "label": "Cycle de facturation",
+      "resetsIn": "Réinitialisation dans {{days}} jours"
+    },
+    "topup": {
+      "title": "Acheter des crédits de recharge",
+      "description": "Packs de crédits ponctuels qui n'expirent jamais.",
+      "noPacks": "Aucun pack de recharge n'est encore configuré.",
+      "packWithCredits": "{{label}} ({{credits}} crédits)"
+    },
+    "autoTopup": {
+      "title": "Recharge automatique",
+      "description": "Achète automatiquement un pack lorsque votre solde passe sous un seuil.",
+      "enable": "Activer la recharge automatique",
+      "enableHelp": "Utilise votre moyen de paiement enregistré pour des débits hors session.",
+      "threshold": "Seuil (crédits)",
+      "pack": "Pack à acheter",
+      "selectPack": "Sélectionnez un pack",
+      "save": "Enregistrer la recharge automatique",
+      "saved": "Paramètres de recharge automatique enregistrés",
+      "saving": "Enregistrement…"
+    },
+    "history": {
+      "title": "Historique d'utilisation",
+      "description": "Consommation de crédits par requête.",
+      "allFeatures": "Toutes les fonctionnalités",
+      "date": "Date",
+      "feature": "Fonctionnalité",
+      "model": "Modèle",
+      "tokens": "Jetons",
+      "credits": "Crédits",
+      "empty": "Aucune utilisation enregistrée pour l'instant.",
+      "loading": "Chargement…",
+      "loadMore": "Charger plus"
+    }
   }
 }

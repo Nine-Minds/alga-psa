@@ -172,5 +172,58 @@
   },
   "runStudio": {
     "unavailable": "55555 {{runId}} 55555"
+  },
+  "aiConsent": {
+    "title": "55555",
+    "subtitle": "55555",
+    "status": {
+      "granted": "55555",
+      "revoked": "55555",
+      "missing": "55555"
+    },
+    "unreachable": "55555",
+    "explainer": "55555",
+    "termsVersion": "55555",
+    "grantedAt": "55555",
+    "revoke": "55555",
+    "accept": "55555",
+    "acceptDialog": {
+      "title": "55555",
+      "confirming": "55555",
+      "confirm": "55555",
+      "body": "55555",
+      "termsVersion": "55555 {{version}} 55555"
+    },
+    "revokeDialog": {
+      "title": "55555",
+      "confirming": "55555",
+      "confirm": "55555",
+      "body": "55555"
+    }
+  },
+  "aiBalance": {
+    "title": "55555",
+    "subtitle": "55555",
+    "refresh": "55555",
+    "unreachable": "55555",
+    "blockedPendingConsent": "55555",
+    "upsell": {
+      "heading": "55555",
+      "body": "55555",
+      "subscribe": "55555"
+    },
+    "grace": "55555 {{grace}} 55555",
+    "low": "55555",
+    "total": "55555",
+    "creditsUnit": "55555",
+    "included": "55555",
+    "resetsMonthly": "55555",
+    "topup": "55555",
+    "carriesOver": "55555",
+    "manage": {
+      "heading": "55555",
+      "body": "55555",
+      "openStore": "55555"
+    }
   }
 }

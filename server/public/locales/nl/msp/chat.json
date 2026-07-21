@@ -155,5 +155,23 @@
   },
   "mention": {
     "noResultsFound": "Geen resultaten gevonden"
+  },
+  "aiCredits": {
+    "indicatorTooltip": "{{credits}} AI-credits resterend",
+    "noSubscription": {
+      "title": "AI is een betaalde add-on",
+      "body": "Abonneer u op de AI-add-on om Alga AI te gebruiken. Uw plan bevat een maandelijks credittegoed.",
+      "cta": "AI-gebruiksinstellingen bekijken"
+    },
+    "outOfCredits": {
+      "title": "Geen AI-credits meer",
+      "body": "Waardeer op om Alga AI te blijven gebruiken.",
+      "bodyWithBalance": "Uw saldo is {{balance}} credits. Waardeer op om Alga AI te blijven gebruiken.",
+      "cta": "Opwaardeercredits kopen"
+    },
+    "consentRequired": {
+      "title": "Toestemming voor gegevensdeling vereist",
+      "body": "Een beheerder moet de voorwaarden voor AI-gegevensdeling op deze appliance accepteren voordat AI kan worden gebruikt."
+    }
   }
 }

@@ -10,6 +10,31 @@
  * contract; changing the contract requires touching both files deliberately.
  */
 
+export type AiFeature =
+  | 'chat'
+  | 'chat-title'
+  | 'email-reply-ack'
+  | 'email-rule-classifier'
+  | 'opportunity-drafting'
+  | 'workflow-inference'
+  | 'inventory-classifier'
+  | 'document-assist';
+
+export type AiCreditsErrorReason =
+  | 'no_subscription'
+  | 'out_of_credits'
+  | 'consent_required';
+
+export class AiCreditsError extends Error {
+  readonly reason: AiCreditsErrorReason;
+
+  constructor(reason: AiCreditsErrorReason, message?: string) {
+    super(message ?? `AI request rejected: ${reason}`);
+    this.name = 'AiCreditsError';
+    this.reason = reason;
+  }
+}
+
 export type AiSubscriptionStatus =
   | 'none'
   | 'active'

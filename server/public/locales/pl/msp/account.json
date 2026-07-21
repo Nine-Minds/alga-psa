@@ -425,5 +425,75 @@
       "noLongerNeed": "Nie potrzebuję już usługi",
       "other": "Inne"
     }
+  },
+  "aiUsage": {
+    "title": "Użycie AI",
+    "subtitle": "Rozliczenia oparte na kredytach za funkcje AI Alga",
+    "refresh": "Odśwież",
+    "errors": {
+      "loadSummary": "Nie udało się załadować szczegółów użycia AI",
+      "loadHistory": "Nie udało się załadować historii użycia",
+      "subscribe": "Nie udało się rozpocząć płatności",
+      "topup": "Nie udało się rozpocząć płatności za doładowanie",
+      "autoTopup": "Nie udało się zapisać ustawień automatycznego doładowania",
+      "unavailable": "Szczegóły użycia AI są obecnie niedostępne. Spróbuj ponownie za chwilę."
+    },
+    "upsell": {
+      "heading": "Dodaj AI do swojego obszaru roboczego",
+      "body": "Subskrybuj dodatek AI, aby odblokować Alga AI w czacie, segregowaniu e-maili i nie tylko. Twój plan miesięczny obejmuje przydział kredytów; kupuj jednorazowe doładowania lub włącz automatyczne doładowanie w dowolnym momencie.",
+      "subscribe": "Subskrybuj dodatek AI",
+      "subscribing": "Przekierowywanie…"
+    },
+    "grace": {
+      "title": "Kredyty wyczerpane — używany jest bufor bezpieczeństwa",
+      "body": "AI nadal działa w ramach niewielkiego buforu bezpieczeństwa wynoszącego {{grace}} kredytów. Doładuj, aby uniknąć całkowitego zatrzymania."
+    },
+    "lowBalance": {
+      "title": "Niski stan kredytów",
+      "body": "Rozważ doładowanie lub włączenie automatycznego doładowania, aby uniknąć przerw."
+    },
+    "balance": {
+      "total": "Łączne saldo",
+      "creditsUnit": "kredyty",
+      "included": "W pakiecie (miesięcznie)",
+      "resetsMonthly": "resetuje się co cykl",
+      "topup": "Doładowanie (nie wygasa)",
+      "carriesOver": "przechodzi dalej"
+    },
+    "cycle": {
+      "label": "Cykl rozliczeniowy",
+      "resetsIn": "Reset za {{days}} dni"
+    },
+    "topup": {
+      "title": "Kup kredyty doładowania",
+      "description": "Jednorazowe pakiety kredytów, które nigdy nie wygasają.",
+      "noPacks": "Nie skonfigurowano jeszcze pakietów doładowań.",
+      "packWithCredits": "{{label}} ({{credits}} kredytów)"
+    },
+    "autoTopup": {
+      "title": "Automatyczne doładowanie",
+      "description": "Automatycznie kupuje pakiet, gdy saldo spadnie poniżej progu.",
+      "enable": "Włącz automatyczne doładowanie",
+      "enableHelp": "Używa zapisanej metody płatności do obciążeń poza sesją.",
+      "threshold": "Próg (kredyty)",
+      "pack": "Pakiet do zakupu",
+      "selectPack": "Wybierz pakiet",
+      "save": "Zapisz automatyczne doładowanie",
+      "saved": "Zapisano ustawienia automatycznego doładowania",
+      "saving": "Zapisywanie…"
+    },
+    "history": {
+      "title": "Historia użycia",
+      "description": "Zużycie kredytów na żądanie.",
+      "allFeatures": "Wszystkie funkcje",
+      "date": "Data",
+      "feature": "Funkcja",
+      "model": "Model",
+      "tokens": "Tokeny",
+      "credits": "Kredyty",
+      "empty": "Nie zarejestrowano jeszcze użycia.",
+      "loading": "Ładowanie…",
+      "loadMore": "Załaduj więcej"
+    }
   }
 }
