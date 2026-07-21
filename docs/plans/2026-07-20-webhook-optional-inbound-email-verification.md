@@ -2,7 +2,7 @@
 
 Verified on 2026-07-21 in the `improve/premise-microsoft-polling`
 worktree. These results cover the initial implementation plus the silence
-detection concurrency/idempotency mitigation.
+detection concurrency/idempotency mitigation and enqueue-failure follow-up.
 
 ## Focused automated tests
 
@@ -18,15 +18,18 @@ npx vitest run \
   --coverage.enabled=false --silent=passed-only
 ```
 
-Result: **5 files passed, 22 tests passed**.
+Result: **5 files passed, 23 tests passed**.
 
 Coverage includes Graph validation-versus-auth classification, healthy polling
 fallback, polling reconciliation, daily recovery, Test Connection recovery
 wiring, Temporal schedule wiring, webhook delivery stamping/queue ingress,
 healthy UI status, and the following silence-detector guards:
 
-- an overlapping run that loses the `last_sync_at` compare-and-set does not
-  enqueue or increment;
+- polling runners lock and compare the provider cursor before enqueueing, so
+  an overlapping run that observes a committed cursor does not enqueue or
+  increment;
+- a failed Redis enqueue occurs before the transactional `last_sync_at` update,
+  leaving the polling window retryable;
 - a safety-margin retry can be re-enqueued but is not counted as a new silent
   run;
 - a webhook counter reset that wins the conditional mode-transition update

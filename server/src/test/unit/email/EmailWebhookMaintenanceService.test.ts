@@ -67,6 +67,7 @@ describe('EmailWebhookMaintenanceService Microsoft recovery sweep', () => {
       whereNull: vi.fn().mockReturnThis(),
       orWhere: vi.fn().mockReturnThis(),
       whereIn: vi.fn().mockReturnThis(),
+      forUpdate: vi.fn().mockReturnThis(),
       first: vi.fn().mockImplementation((...columns: string[]) => {
         if (columns.includes('webhook_silent_runs')) {
           return Promise.resolve({
@@ -93,6 +94,7 @@ describe('EmailWebhookMaintenanceService Microsoft recovery sweep', () => {
     const knex: any = vi.fn(() => query);
     knex.fn = { now: vi.fn(() => new Date()) };
     knex.raw = vi.fn((sql: string) => sql);
+    knex.transaction = vi.fn(async (callback: (trx: any) => Promise<unknown>) => callback(knex));
     mocks.getAdminConnection.mockResolvedValue(knex);
     mocks.adapter.ensureTokenHealthy.mockResolvedValue(undefined);
     mocks.adapter.cleanupOrphanedSubscriptions.mockResolvedValue(1);
@@ -222,13 +224,19 @@ describe('EmailWebhookMaintenanceService Microsoft recovery sweep', () => {
     expect(results[0]).toMatchObject({ success: true, action: 'skipped' });
   });
 
-  it('does not enqueue or count a reconciliation window already claimed by an overlapping run', async () => {
+  it('does not enqueue or count a reconciliation window locked and committed by an overlapping run', async () => {
     provider.delivery_mode = 'webhook';
     provider.webhook_silent_runs = 2;
     const knex = await mocks.getAdminConnection();
     const query = knex();
-    query.update.mockImplementationOnce(async () => 1) // connected status
-      .mockImplementationOnce(async () => 0); // last_sync_at compare-and-set loses
+    query.first
+      .mockResolvedValueOnce({
+        last_sync_at: provider.last_sync_at,
+        last_sync_cursor: provider.last_sync_at,
+      })
+      .mockResolvedValueOnce({
+        last_sync_cursor: new Date().toISOString(),
+      });
 
     const results = await new EmailWebhookMaintenanceService().renewMicrosoftWebhooks({
       tenantId: provider.tenant,
@@ -238,11 +246,29 @@ describe('EmailWebhookMaintenanceService Microsoft recovery sweep', () => {
     expect(mocks.enqueue).not.toHaveBeenCalled();
     expect(mocks.adapter.deleteWebhookSubscription).not.toHaveBeenCalled();
     expect(provider.webhook_silent_runs).toBe(2);
-    expect(query.andWhereRaw).toHaveBeenCalledWith(
-      'last_sync_at = ?::timestamptz',
-      [provider.last_sync_at]
-    );
+    expect(query.forUpdate).toHaveBeenCalledOnce();
     expect(results[0]).toMatchObject({ success: true, action: 'skipped' });
+  });
+
+  it('does not commit the polling cursor when enqueue fails', async () => {
+    provider.delivery_mode = 'polling';
+    mocks.enqueue.mockRejectedValueOnce(new Error('Redis unavailable'));
+    const knex = await mocks.getAdminConnection();
+    const query = knex();
+
+    const results = await new EmailWebhookMaintenanceService().reconcilePollingProviders({
+      tenantId: provider.tenant,
+    });
+
+    expect(query.forUpdate).toHaveBeenCalledOnce();
+    expect(query.update).not.toHaveBeenCalledWith(expect.objectContaining({
+      last_sync_at: expect.any(String),
+    }));
+    expect(results[0]).toMatchObject({
+      success: false,
+      action: 'failed',
+      error: 'Redis unavailable',
+    });
   });
 
   it('does not count safety-margin retries as a second silent run', async () => {

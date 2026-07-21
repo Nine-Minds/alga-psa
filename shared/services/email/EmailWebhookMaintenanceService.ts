@@ -537,25 +537,70 @@ export class EmailWebhookMaintenanceService {
       unprocessedMessages = messages.filter((message) => !processed.has(message.id));
     }
 
+    const previousSyncMs = provider?.last_sync_at
+      ? new Date(provider.last_sync_at).getTime()
+      : null;
     const completedAt = new Date().toISOString();
-    const cursorClaim = db.table('email_providers').where({ id: config.id });
-    if (provider?.last_sync_cursor) {
-      // Compare the exact PostgreSQL text value. The pg driver's Date parser
-      // truncates sub-millisecond precision, which would make a Date equality
-      // compare lose every claim for cursors written with microseconds.
-      cursorClaim.andWhereRaw('last_sync_at = ?::timestamptz', [provider.last_sync_cursor]);
-    } else {
-      cursorClaim.whereNull('last_sync_at');
-    }
-    const claimedRows = await cursorClaim.update({
-      last_sync_at: completedAt,
-      updated_at: completedAt,
+    const completedAtMs = new Date(completedAt).getTime();
+    const enqueueResult = await knex.transaction(async (trx) => {
+      const transactionDb = tenantDb(trx, config.tenant);
+      const lockedProvider = await transactionDb.table('email_providers')
+        .where({ id: config.id })
+        .forUpdate()
+        .first(trx.raw('last_sync_at::text as last_sync_cursor'));
+      const observedCursor = provider?.last_sync_cursor || null;
+      const lockedCursor = lockedProvider?.last_sync_cursor || null;
+
+      // Serialize runners that observed the same window, but do not commit the
+      // cursor claim until every queue write succeeds. An enqueue exception
+      // rolls this transaction back so the same window remains retryable.
+      if (lockedCursor !== observedCursor) {
+        return { claimed: false as const, queuedMessages: 0, silenceEvidenceCount: 0 };
+      }
+
+      let queuedMessages = 0;
+      const silenceEvidenceMessageIds = new Set<string>();
+      for (const message of unprocessedMessages) {
+        await enqueueUnifiedInboundEmailQueueJob({
+          tenantId: config.tenant,
+          providerId: config.id,
+          provider: 'microsoft',
+          pointer: {
+            subscriptionId: config.webhook_subscription_id || 'reconcile',
+            messageId: message.id,
+            resource: 'maintenance-reconcile',
+            changeType: 'created',
+          },
+        });
+        queuedMessages += 1;
+
+        const receivedAtMs = message.receivedDateTime
+          ? new Date(message.receivedDateTime).getTime()
+          : NaN;
+        if (
+          Number.isFinite(receivedAtMs) &&
+          receivedAtMs <= completedAtMs &&
+          (previousSyncMs === null || receivedAtMs > previousSyncMs)
+        ) {
+          silenceEvidenceMessageIds.add(message.id);
+        }
+      }
+
+      await transactionDb.table('email_providers')
+        .where({ id: config.id })
+        .update({
+          last_sync_at: completedAt,
+          updated_at: completedAt,
+        });
+
+      return {
+        claimed: true as const,
+        queuedMessages,
+        silenceEvidenceCount: silenceEvidenceMessageIds.size,
+      };
     });
 
-    // last_sync_at is the reconciliation-window claim. A retry or overlapping
-    // workflow that observed the same cursor loses this compare-and-set and
-    // must not enqueue the same window or count it as another silent run.
-    if (Number(claimedRows) !== 1) {
+    if (!enqueueResult.claimed) {
       logger.info('Skipped an already-claimed Microsoft reconciliation window', {
         providerId: config.id,
         tenant: config.tenant,
@@ -564,39 +609,9 @@ export class EmailWebhookMaintenanceService {
       return { queuedMessages: 0, switchedToPolling: false };
     }
 
-    let queuedMessages = 0;
-    const silenceEvidenceMessageIds = new Set<string>();
-    const previousSyncMs = provider?.last_sync_at
-      ? new Date(provider.last_sync_at).getTime()
-      : null;
-    const completedAtMs = new Date(completedAt).getTime();
-    for (const message of unprocessedMessages) {
-      await enqueueUnifiedInboundEmailQueueJob({
-        tenantId: config.tenant,
-        providerId: config.id,
-        provider: 'microsoft',
-        pointer: {
-          subscriptionId: config.webhook_subscription_id || 'reconcile',
-          messageId: message.id,
-          resource: 'maintenance-reconcile',
-          changeType: 'created',
-        },
-      });
-      queuedMessages += 1;
+    const { queuedMessages, silenceEvidenceCount } = enqueueResult;
 
-      const receivedAtMs = message.receivedDateTime
-        ? new Date(message.receivedDateTime).getTime()
-        : NaN;
-      if (
-        Number.isFinite(receivedAtMs) &&
-        receivedAtMs <= completedAtMs &&
-        (previousSyncMs === null || receivedAtMs > previousSyncMs)
-      ) {
-        silenceEvidenceMessageIds.add(message.id);
-      }
-    }
-
-    if (!detectWebhookSilence || silenceEvidenceMessageIds.size === 0) {
+    if (!detectWebhookSilence || silenceEvidenceCount === 0) {
       return { queuedMessages, switchedToPolling: false };
     }
 
