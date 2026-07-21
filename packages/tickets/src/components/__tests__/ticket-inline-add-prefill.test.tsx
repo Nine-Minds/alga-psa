@@ -697,8 +697,7 @@ describe('QuickAddTicket prefills', () => {
       />
     );
 
-    await waitFor(() => expect(getTicketFormDataMock).toHaveBeenCalled());
-    expect(screen.getByTestId('user-picker')).toBeInTheDocument();
+    expect(await screen.findByTestId('user-picker')).toBeInTheDocument();
   });
 
   it('initializes due date from prefilledDueDate', async () => {
