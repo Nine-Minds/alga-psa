@@ -68,6 +68,23 @@ brand-new file and row (no versioning or reuse; the service's `version` option
 is accepted but never read). The only mocked seam is the event-bus publisher,
 so the linkage payload can be asserted instead of disappearing into Redis.
 
+### `documentTypesRender`
+Quote, Sales Order confirmation, and Packing Slip rendered through the same
+shared engine as the invoice journey (`createPDFGenerationService` → template
+AST resolution → server-rendered HTML → shared Chromium pool → PDF bytes).
+Pins per type: structurally complete PDF bytes plus the identifying number in
+the rendered HTML (same HTML-not-PDF-bytes rule as `invoiceRenderToDelivery`),
+then one family invariant — quote: expiry date and the quotes-row header
+totals render (no recompute); sales order: per-line amounts are qty × unit
+price with a pre-tax total (Phase 1 puts tax on the invoice); packing slip:
+ordered/shipped quantities, SKU, and drop-ship source render while **no price
+or `$` appears anywhere** (the classic packing-slip leak). Template
+resolution runs as shipped: quotes fall back to the migration-seeded standard
+catalog, sales-order documents resolve through the generic document-type
+registry. Sales-order HTML pins call the service's private
+`getSalesOrderHtml` (the exact method `generatePDF` uses) because no public
+preview seam exists for that family.
+
 ### `portalServiceRequestToTicket`
 Client-portal user submits a published service-request form → the ticket-only
 execution provider creates the ticket at submit time (`created_ticket_id`
