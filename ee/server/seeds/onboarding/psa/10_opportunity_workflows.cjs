@@ -173,7 +173,18 @@ async function seedWorkflow(knex, tenantId, workflow) {
 }
 
 exports.seed = async function seed(knex, tenantId) {
-  if (!tenantId) throw new Error('tenantId is required for opportunity workflow seeding');
+  // Use provided tenantId or fall back to first tenant. The onboarding Temporal
+  // workflow (runOnboardingSeeds) calls seed(trx, tenantId), but the standard
+  // knex seed runner invokes seed(knex) with no tenantId — mirror the sibling
+  // onboarding seeds (e.g. 09_asset_type_registry.cjs) rather than throwing.
+  if (!tenantId) {
+    const tenant = await knex('tenants').select('tenant').first();
+    if (!tenant) {
+      console.log('No tenant found, skipping opportunity workflow seed');
+      return;
+    }
+    tenantId = tenant.tenant;
+  }
   for (const workflow of WORKFLOWS) await seedWorkflow(knex, tenantId, workflow);
 };
 
