@@ -138,6 +138,11 @@ export async function handleMicrosoftWebhookPost(request: NextRequest) {
           const row: any = await providerQuery
             .where('mc.webhook_subscription_id', providerId)
             .andWhere('ep.provider_type', 'microsoft')
+            // Serialize accepted-delivery stamping with the silence detector's
+            // conditional counter/mode updates. Without this lock, a handler
+            // could validate the old subscription, pause, and reset the counter
+            // only after reconciliation had already culled it.
+            .forUpdate('mc')
             .first(
               'ep.*',
               trx.raw('mc.client_id as mc_client_id'),

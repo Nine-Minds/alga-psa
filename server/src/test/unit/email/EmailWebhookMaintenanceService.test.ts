@@ -63,28 +63,43 @@ describe('EmailWebhookMaintenanceService Microsoft recovery sweep', () => {
       join: vi.fn().mockReturnThis(),
       where: vi.fn().mockReturnThis(),
       andWhere: vi.fn().mockReturnThis(),
+      andWhereRaw: vi.fn().mockReturnThis(),
+      whereNull: vi.fn().mockReturnThis(),
+      orWhere: vi.fn().mockReturnThis(),
       whereIn: vi.fn().mockReturnThis(),
       first: vi.fn().mockImplementation((...columns: string[]) => {
-        if (columns.includes('last_webhook_delivery_at')) {
+        if (columns.includes('webhook_silent_runs')) {
           return Promise.resolve({
             last_webhook_delivery_at: provider.last_webhook_delivery_at || null,
             webhook_silent_runs: provider.webhook_silent_runs || 0,
           });
         }
-        return Promise.resolve({ last_sync_at: provider.last_sync_at });
+        return Promise.resolve({
+          last_sync_at: provider.last_sync_at,
+          last_sync_cursor: provider.last_sync_at,
+        });
       }),
       select: vi.fn()
         .mockResolvedValueOnce([provider])
         .mockResolvedValueOnce([]),
-      update: vi.fn().mockResolvedValue(1),
+      update: vi.fn().mockImplementation(async (values: Record<string, unknown>) => {
+        if (values.webhook_silent_runs === 'webhook_silent_runs + 1') {
+          provider.webhook_silent_runs = Number(provider.webhook_silent_runs || 0) + 1;
+        }
+        return 1;
+      }),
       insert: vi.fn().mockResolvedValue([1]),
     };
     const knex: any = vi.fn(() => query);
     knex.fn = { now: vi.fn(() => new Date()) };
+    knex.raw = vi.fn((sql: string) => sql);
     mocks.getAdminConnection.mockResolvedValue(knex);
     mocks.adapter.ensureTokenHealthy.mockResolvedValue(undefined);
     mocks.adapter.cleanupOrphanedSubscriptions.mockResolvedValue(1);
-    mocks.adapter.listMessagesReceivedSince.mockResolvedValue([{ id: 'missed-message' }]);
+    mocks.adapter.listMessagesReceivedSince.mockResolvedValue([{
+      id: 'missed-message',
+      receivedDateTime: new Date().toISOString(),
+    }]);
     mocks.enqueue.mockResolvedValue({ queueDepth: 1 });
   });
 
@@ -134,6 +149,65 @@ describe('EmailWebhookMaintenanceService Microsoft recovery sweep', () => {
     expect(results[0]).toMatchObject({ success: true, action: 'skipped' });
   });
 
+  it('falls back to healthy polling mode on endpoint validation failure', async () => {
+    provider.delivery_mode = 'webhook';
+    provider.webhook_subscription_id = null;
+    provider.webhook_expires_at = null;
+    mocks.adapter.initializeWebhook.mockResolvedValueOnce({
+      success: false,
+      errorKind: 'validation',
+      error: 'Notification URL validation failed',
+    });
+
+    const results = await new EmailWebhookMaintenanceService().renewMicrosoftWebhooks({
+      tenantId: provider.tenant,
+      lookAheadMinutes: 60,
+    });
+
+    const knex = await mocks.getAdminConnection();
+    const query = knex();
+    expect(query.update).toHaveBeenCalledWith(expect.objectContaining({
+      delivery_mode: 'polling',
+      webhook_subscription_id: null,
+      webhook_silent_runs: 0,
+    }));
+    expect(results[0]).toMatchObject({ success: true, action: 'skipped' });
+  });
+
+  it('restores webhook mode when a due polling recovery probe succeeds', async () => {
+    provider.delivery_mode = 'polling';
+    provider.next_subscription_probe_at = new Date(Date.now() - 1_000).toISOString();
+    mocks.adapter.initializeWebhook.mockResolvedValueOnce({ success: true });
+    mocks.adapter.getConfig.mockReturnValueOnce({
+      webhook_expires_at: new Date(Date.now() + 60 * 60 * 1000).toISOString(),
+    });
+
+    const results = await new EmailWebhookMaintenanceService().renewMicrosoftWebhooks({
+      tenantId: provider.tenant,
+    });
+
+    const knex = await mocks.getAdminConnection();
+    const query = knex();
+    expect(query.update).toHaveBeenCalledWith(expect.objectContaining({
+      delivery_mode: 'webhook',
+      webhook_silent_runs: 0,
+      next_subscription_probe_at: null,
+    }));
+    expect(results[0]).toMatchObject({ success: true, action: 'recreated' });
+  });
+
+  it('polling reconciliation imports missed messages without silence detection', async () => {
+    provider.delivery_mode = 'polling';
+
+    const results = await new EmailWebhookMaintenanceService().reconcilePollingProviders({
+      tenantId: provider.tenant,
+    });
+
+    expect(mocks.enqueue).toHaveBeenCalledOnce();
+    expect(mocks.adapter.deleteWebhookSubscription).not.toHaveBeenCalled();
+    expect(results[0]).toMatchObject({ success: true, action: 'skipped' });
+  });
+
   it('culls a webhook after the third reconciliation run that imports missed mail', async () => {
     provider.delivery_mode = 'webhook';
     provider.webhook_silent_runs = 2;
@@ -146,5 +220,74 @@ describe('EmailWebhookMaintenanceService Microsoft recovery sweep', () => {
 
     expect(mocks.adapter.deleteWebhookSubscription).toHaveBeenCalledOnce();
     expect(results[0]).toMatchObject({ success: true, action: 'skipped' });
+  });
+
+  it('does not enqueue or count a reconciliation window already claimed by an overlapping run', async () => {
+    provider.delivery_mode = 'webhook';
+    provider.webhook_silent_runs = 2;
+    const knex = await mocks.getAdminConnection();
+    const query = knex();
+    query.update.mockImplementationOnce(async () => 1) // connected status
+      .mockImplementationOnce(async () => 0); // last_sync_at compare-and-set loses
+
+    const results = await new EmailWebhookMaintenanceService().renewMicrosoftWebhooks({
+      tenantId: provider.tenant,
+      lookAheadMinutes: 60,
+    });
+
+    expect(mocks.enqueue).not.toHaveBeenCalled();
+    expect(mocks.adapter.deleteWebhookSubscription).not.toHaveBeenCalled();
+    expect(provider.webhook_silent_runs).toBe(2);
+    expect(query.andWhereRaw).toHaveBeenCalledWith(
+      'last_sync_at = ?::timestamptz',
+      [provider.last_sync_at]
+    );
+    expect(results[0]).toMatchObject({ success: true, action: 'skipped' });
+  });
+
+  it('does not count safety-margin retries as a second silent run', async () => {
+    provider.delivery_mode = 'webhook';
+    provider.webhook_silent_runs = 2;
+    mocks.adapter.listMessagesReceivedSince.mockResolvedValueOnce([{
+      id: 'retried-message',
+      receivedDateTime: new Date(new Date(provider.last_sync_at).getTime() - 1_000).toISOString(),
+    }]);
+
+    await new EmailWebhookMaintenanceService().renewMicrosoftWebhooks({
+      tenantId: provider.tenant,
+      lookAheadMinutes: 60,
+    });
+
+    expect(mocks.enqueue).toHaveBeenCalledOnce();
+    expect(provider.webhook_silent_runs).toBe(2);
+    expect(mocks.adapter.deleteWebhookSubscription).not.toHaveBeenCalled();
+  });
+
+  it('does not delete a webhook when its reset wins the polling-transition compare-and-set', async () => {
+    provider.delivery_mode = 'webhook';
+    provider.webhook_silent_runs = 2;
+    const knex = await mocks.getAdminConnection();
+    const query = knex();
+    const defaultUpdate = query.update.getMockImplementation();
+    query.update.mockImplementation(async (values: Record<string, unknown>) => {
+      if (values.delivery_mode === 'polling') {
+        provider.webhook_silent_runs = 0;
+        provider.last_webhook_delivery_at = new Date().toISOString();
+        return 0;
+      }
+      return defaultUpdate?.(values);
+    });
+
+    await new EmailWebhookMaintenanceService().renewMicrosoftWebhooks({
+      tenantId: provider.tenant,
+      lookAheadMinutes: 60,
+    });
+
+    expect(provider.webhook_silent_runs).toBe(0);
+    expect(query.update).toHaveBeenCalledWith(expect.objectContaining({
+      delivery_mode: 'polling',
+      webhook_subscription_id: null,
+    }));
+    expect(mocks.adapter.deleteWebhookSubscription).not.toHaveBeenCalled();
   });
 });

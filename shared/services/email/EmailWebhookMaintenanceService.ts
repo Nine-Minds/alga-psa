@@ -513,7 +513,10 @@ export class EmailWebhookMaintenanceService {
     const db = tenantDb(knex, config.tenant);
     const provider = await db.table('email_providers')
       .where({ id: config.id })
-      .first('last_sync_at');
+      .first(
+        'last_sync_at',
+        knex.raw('last_sync_at::text as last_sync_cursor')
+      );
     const lastSyncMs = provider?.last_sync_at
       ? new Date(provider.last_sync_at).getTime() - RECONCILE_SAFETY_MARGIN_MS
       : Date.now() - RECONCILE_WINDOW_CAP_MS;
@@ -523,7 +526,7 @@ export class EmailWebhookMaintenanceService {
       Number(config.provider_config?.max_emails_per_sync || DEFAULT_RECONCILE_MAX_MESSAGES)
     );
     const messages = await adapter.listMessagesReceivedSince(since, maxCount);
-    let queuedMessages = 0;
+    let unprocessedMessages = messages;
 
     if (messages.length > 0) {
       const processedRows = await db.table('email_processed_messages')
@@ -531,58 +534,154 @@ export class EmailWebhookMaintenanceService {
         .whereIn('message_id', messages.map((message) => message.id))
         .select('message_id');
       const processed = new Set(processedRows.map((row: any) => String(row.message_id)));
-      for (const message of messages) {
-        if (processed.has(message.id)) continue;
-        await enqueueUnifiedInboundEmailQueueJob({
-          tenantId: config.tenant,
-          providerId: config.id,
-          provider: 'microsoft',
-          pointer: {
-            subscriptionId: config.webhook_subscription_id || 'reconcile',
-            messageId: message.id,
-            resource: 'maintenance-reconcile',
-            changeType: 'created',
-          },
-        });
-        queuedMessages += 1;
-      }
+      unprocessedMessages = messages.filter((message) => !processed.has(message.id));
     }
 
     const completedAt = new Date().toISOString();
-    await db.table('email_providers').where({ id: config.id }).update({
+    const cursorClaim = db.table('email_providers').where({ id: config.id });
+    if (provider?.last_sync_cursor) {
+      // Compare the exact PostgreSQL text value. The pg driver's Date parser
+      // truncates sub-millisecond precision, which would make a Date equality
+      // compare lose every claim for cursors written with microseconds.
+      cursorClaim.andWhereRaw('last_sync_at = ?::timestamptz', [provider.last_sync_cursor]);
+    } else {
+      cursorClaim.whereNull('last_sync_at');
+    }
+    const claimedRows = await cursorClaim.update({
       last_sync_at: completedAt,
       updated_at: completedAt,
     });
 
-    if (!detectWebhookSilence || queuedMessages === 0) {
+    // last_sync_at is the reconciliation-window claim. A retry or overlapping
+    // workflow that observed the same cursor loses this compare-and-set and
+    // must not enqueue the same window or count it as another silent run.
+    if (Number(claimedRows) !== 1) {
+      logger.info('Skipped an already-claimed Microsoft reconciliation window', {
+        providerId: config.id,
+        tenant: config.tenant,
+        observedLastSyncAt: provider?.last_sync_at || null,
+      });
+      return { queuedMessages: 0, switchedToPolling: false };
+    }
+
+    let queuedMessages = 0;
+    const silenceEvidenceMessageIds = new Set<string>();
+    const previousSyncMs = provider?.last_sync_at
+      ? new Date(provider.last_sync_at).getTime()
+      : null;
+    const completedAtMs = new Date(completedAt).getTime();
+    for (const message of unprocessedMessages) {
+      await enqueueUnifiedInboundEmailQueueJob({
+        tenantId: config.tenant,
+        providerId: config.id,
+        provider: 'microsoft',
+        pointer: {
+          subscriptionId: config.webhook_subscription_id || 'reconcile',
+          messageId: message.id,
+          resource: 'maintenance-reconcile',
+          changeType: 'created',
+        },
+      });
+      queuedMessages += 1;
+
+      const receivedAtMs = message.receivedDateTime
+        ? new Date(message.receivedDateTime).getTime()
+        : NaN;
+      if (
+        Number.isFinite(receivedAtMs) &&
+        receivedAtMs <= completedAtMs &&
+        (previousSyncMs === null || receivedAtMs > previousSyncMs)
+      ) {
+        silenceEvidenceMessageIds.add(message.id);
+      }
+    }
+
+    if (!detectWebhookSilence || silenceEvidenceMessageIds.size === 0) {
       return { queuedMessages, switchedToPolling: false };
     }
 
-    const latestMicrosoftConfig = await db.table('microsoft_email_provider_config')
+    const silenceUpdate = db.table('microsoft_email_provider_config')
       .where({ email_provider_id: config.id })
-      .first('last_webhook_delivery_at', 'webhook_silent_runs');
-    const previousSyncAt = provider?.last_sync_at ? new Date(provider.last_sync_at).getTime() : 0;
-    const webhookDeliveryAt = latestMicrosoftConfig?.last_webhook_delivery_at
-      ? new Date(latestMicrosoftConfig.last_webhook_delivery_at).getTime()
-      : 0;
-    if (webhookDeliveryAt > previousSyncAt) {
-      await db.table('microsoft_email_provider_config')
-        .where({ email_provider_id: config.id })
-        .update({ webhook_silent_runs: 0, updated_at: completedAt });
-      return { queuedMessages, switchedToPolling: false };
+      .andWhere('delivery_mode', 'webhook');
+    if (provider?.last_sync_at) {
+      silenceUpdate.andWhere((query: any) => {
+        query.whereNull('last_webhook_delivery_at')
+          .orWhere('last_webhook_delivery_at', '<=', provider.last_sync_at);
+      });
+    } else {
+      silenceUpdate.whereNull('last_webhook_delivery_at');
     }
 
-    const silentRuns = Number(latestMicrosoftConfig?.webhook_silent_runs || 0) + 1;
-    await db.table('microsoft_email_provider_config')
+    // Increment in SQL so a webhook's atomic reset cannot be overwritten by a
+    // stale read. The timestamp predicate makes an interceding delivery win.
+    const updatedSilenceRows = await silenceUpdate.update({
+      webhook_silent_runs: knex.raw('webhook_silent_runs + 1'),
+      updated_at: completedAt,
+    });
+    if (Number(updatedSilenceRows) !== 1) {
+      return { queuedMessages, switchedToPolling: false };
+    }
+    const latestSilenceState = await db.table('microsoft_email_provider_config')
       .where({ email_provider_id: config.id })
-      .update({ webhook_silent_runs: silentRuns, updated_at: completedAt });
+      .first('webhook_silent_runs');
+    const silentRuns = Number(latestSilenceState?.webhook_silent_runs || 0);
     if (silentRuns < WEBHOOK_SILENT_RUN_THRESHOLD) {
       return { queuedMessages, switchedToPolling: false };
     }
 
-    await adapter.deleteWebhookSubscription();
+    const nextProbeAt = new Date(Date.now() + SUBSCRIPTION_PROBE_INTERVAL_MS).toISOString();
+    const pollingTransition = db.table('microsoft_email_provider_config')
+      .where({ email_provider_id: config.id })
+      .andWhere('delivery_mode', 'webhook')
+      .andWhere('webhook_silent_runs', silentRuns);
+    if (provider?.last_sync_at) {
+      pollingTransition.andWhere((query: any) => {
+        query.whereNull('last_webhook_delivery_at')
+          .orWhere('last_webhook_delivery_at', '<=', provider.last_sync_at);
+      });
+    } else {
+      pollingTransition.whereNull('last_webhook_delivery_at');
+    }
+    const transitionedRows = await pollingTransition.update({
+      delivery_mode: 'polling',
+      webhook_subscription_id: null,
+      webhook_expires_at: null,
+      webhook_silent_runs: 0,
+      next_subscription_probe_at: nextProbeAt,
+      updated_at: completedAt,
+    });
+    if (Number(transitionedRows) !== 1) {
+      // A webhook reset or another mode transition won the race after the
+      // increment. Never delete the subscription from stale state.
+      return { queuedMessages, switchedToPolling: false };
+    }
+
     const reason = `${silentRuns} reconciliation runs imported messages without a webhook delivery`;
-    await this.enterPollingMode(config, reason);
+    try {
+      await adapter.deleteWebhookSubscription();
+    } catch (error: any) {
+      // The local subscription id is already cleared, so Graph can no longer
+      // route accepted notifications to this provider. Its remote expiry is a
+      // cleanup concern and must not make supported polling mode unhealthy.
+      logger.warn('Failed to delete silent Microsoft webhook subscription', {
+        providerId: config.id,
+        tenant: config.tenant,
+        error: error?.message || String(error),
+      });
+    }
+    await this.updateProviderConnectionStatus(config.id, config.tenant, 'connected', null);
+    await this.updateHealthStatus(config.id, config.tenant, {
+      subscription_status: 'polling',
+      last_renewal_result: 'polling_enabled',
+      failure_reason: reason,
+      is_healthy: true,
+    });
+    logger.info('Microsoft email delivery mode is polling', {
+      providerId: config.id,
+      tenant: config.tenant,
+      reason,
+      nextProbeAt,
+    });
     return { queuedMessages, switchedToPolling: true };
   }
 

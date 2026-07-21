@@ -17,6 +17,9 @@ const providerQueryMock = {
   andWhere: vi.fn(function andWhere() {
     return this;
   }),
+  forUpdate: vi.fn(function forUpdate() {
+    return this;
+  }),
   first: vi.fn(),
 };
 // tenantDb(trx, tenant).table('tenants') → conn('tenants').where(tenant).first(...)
@@ -61,6 +64,7 @@ describe('Microsoft unified inbound pointer queue ingress', () => {
     providerQueryMock.join.mockClear();
     providerQueryMock.where.mockClear();
     providerQueryMock.andWhere.mockClear();
+    providerQueryMock.forUpdate.mockClear();
     providerQueryMock.first.mockReset();
 
     enqueueUnifiedInboundEmailQueueJobMock.mockResolvedValue({
@@ -143,6 +147,7 @@ describe('Microsoft unified inbound pointer queue ingress', () => {
 
     // Provider lookup stays tenant-scoped through the facade join.
     expect(providerQueryMock.join).toHaveBeenCalledWith('email_providers as ep', expect.any(Function));
+    expect(providerQueryMock.forUpdate).toHaveBeenCalledWith('mc');
 
     expect(enqueueUnifiedInboundEmailQueueJobMock).toHaveBeenCalledTimes(1);
     const enqueuePayload = enqueueUnifiedInboundEmailQueueJobMock.mock.calls[0][0];
