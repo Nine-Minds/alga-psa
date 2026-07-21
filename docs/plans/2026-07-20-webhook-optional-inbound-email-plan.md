@@ -119,11 +119,18 @@ there; revisit promotion to `email_providers` if/when the Google plan lands):
   runs that imported mail with no interceding webhook delivery; reset on any
   webhook delivery.
 - `next_subscription_probe_at` timestamptz — recovery-probe scheduling.
+- `last_reconciliation_at` timestamptz — Graph reconciliation window and
+  overlap-claim cursor. This is deliberately separate from
+  `email_providers.last_sync_at`, which unified queue consumers advance after
+  successful ingestion.
 
 Migration follows existing tenant-scoped (Citus) migration patterns in
 `server/migrations/`.
 
 Note: `Last ingested` uses the existing `email_providers.last_sync_at`.
+Reconciliation must never use that ingestion timestamp to decide that a Graph
+polling window was claimed; webhook/queue ingestion can advance it while a
+polling runner is in flight.
 
 ## Implementation Steps
 
@@ -163,6 +170,9 @@ Note: `Last ingested` uses the existing `email_providers.last_sync_at`.
      failure → advance probe ~24h, single info log, health stays green.
    - New entry point for the polling loop: reconcile `polling`-mode
      providers only (reuses `reconcileMissedMessages`).
+   - Lock, compare, and advance `last_reconciliation_at` to serialize Graph
+     windows. Commit it only after queue writes succeed; leave `last_sync_at`
+     to the unified queue consumer.
 6. **Temporal schedule** —
    `ee/temporal-workflows/src/schedules/setupSchedules.ts`: add
    `email-polling-reconcile-schedule` (interval from env,
@@ -210,6 +220,7 @@ mailboxes during implementation.
 - F020 appliance docs: egress-only requirement
 - F021 mode transitions logged (info, provider id + tenant, reason)
 - F022 reconciliation run recording feeds silence counter idempotently
+- F023 dedicated reconciliation cursor cannot be advanced by queue ingestion
 
 ## Test Plan
 
@@ -247,6 +258,9 @@ mailboxes during implementation.
   polling mode → message becomes ticket within 2 polling cycles → endpoint
   becomes reachable → probe restores webhook mode → webhook-delivered
   message creates ticket.
+- T015 unit/concurrency: a queue consumer advances `last_sync_at` while
+  reconciliation is deciding whether to enqueue/commit; the Graph window is
+  still enqueued and the dedicated cursor advances.
 
 ## Acceptance Criteria
 

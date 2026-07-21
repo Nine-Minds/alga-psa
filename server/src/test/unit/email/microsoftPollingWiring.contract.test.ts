@@ -39,6 +39,17 @@ describe('Microsoft polling delivery wiring', () => {
     expect(testConnection).not.toContain('last_sync_at');
   });
 
+  it('adds a dedicated reconciliation cursor and backfills it from the legacy ingestion timestamp', () => {
+    const migration = readRepoFile(
+      'server/migrations/20260721120000_add_microsoft_email_reconciliation_cursor.cjs'
+    );
+
+    expect(migration).toContain("table.timestamp('last_reconciliation_at', { useTz: true }).nullable()");
+    expect(migration).toContain('SET last_reconciliation_at = ep.last_sync_at');
+    expect(migration).toContain('mpc.tenant = ep.tenant');
+    expect(migration).toContain("table.dropColumn('last_reconciliation_at')");
+  });
+
   it('registers a config-backed three-minute non-overlapping Temporal schedule', () => {
     const schedules = readRepoFile(
       'ee/temporal-workflows/src/schedules/setupSchedules.ts'

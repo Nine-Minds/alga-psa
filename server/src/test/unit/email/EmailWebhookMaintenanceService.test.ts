@@ -46,6 +46,7 @@ describe('EmailWebhookMaintenanceService Microsoft recovery sweep', () => {
       is_active: true,
       status: 'error',
       last_sync_at: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
+      last_reconciliation_at: new Date(Date.now() - 60 * 60 * 1000).toISOString(),
       webhook_subscription_id: 'current-subscription',
       webhook_expires_at: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
       client_id: 'premise-app',
@@ -76,8 +77,8 @@ describe('EmailWebhookMaintenanceService Microsoft recovery sweep', () => {
           });
         }
         return Promise.resolve({
-          last_sync_at: provider.last_sync_at,
-          last_sync_cursor: provider.last_sync_at,
+          last_reconciliation_at: provider.last_reconciliation_at,
+          last_reconciliation_cursor: provider.last_reconciliation_at,
         });
       }),
       select: vi.fn()
@@ -231,11 +232,11 @@ describe('EmailWebhookMaintenanceService Microsoft recovery sweep', () => {
     const query = knex();
     query.first
       .mockResolvedValueOnce({
-        last_sync_at: provider.last_sync_at,
-        last_sync_cursor: provider.last_sync_at,
+        last_reconciliation_at: provider.last_reconciliation_at,
+        last_reconciliation_cursor: provider.last_reconciliation_at,
       })
       .mockResolvedValueOnce({
-        last_sync_cursor: new Date().toISOString(),
+        last_reconciliation_cursor: new Date().toISOString(),
       });
 
     const results = await new EmailWebhookMaintenanceService().renewMicrosoftWebhooks({
@@ -247,6 +248,39 @@ describe('EmailWebhookMaintenanceService Microsoft recovery sweep', () => {
     expect(mocks.adapter.deleteWebhookSubscription).not.toHaveBeenCalled();
     expect(provider.webhook_silent_runs).toBe(2);
     expect(query.forUpdate).toHaveBeenCalledOnce();
+    expect(results[0]).toMatchObject({ success: true, action: 'skipped' });
+  });
+
+  it('does not treat a queue consumer last_sync_at update as a claimed polling window', async () => {
+    provider.delivery_mode = 'polling';
+    provider.last_reconciliation_at = new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString();
+    const expectedWindowStart = new Date(
+      new Date(provider.last_reconciliation_at).getTime() - 15 * 60 * 1000
+    );
+    const consumerSyncAt = new Date().toISOString();
+    mocks.adapter.listMessagesReceivedSince.mockImplementationOnce(async () => {
+      // A unified queue consumer finishes webhook ingestion while Graph
+      // reconciliation is deciding whether to enqueue and commit its window.
+      provider.last_sync_at = consumerSyncAt;
+      return [{ id: 'polling-window-message', receivedDateTime: new Date().toISOString() }];
+    });
+    const knex = await mocks.getAdminConnection();
+    const query = knex();
+
+    const results = await new EmailWebhookMaintenanceService().reconcilePollingProviders({
+      tenantId: provider.tenant,
+    });
+
+    expect(mocks.adapter.listMessagesReceivedSince).toHaveBeenCalledWith(expectedWindowStart, 50);
+    expect(mocks.enqueue).toHaveBeenCalledWith(expect.objectContaining({
+      pointer: expect.objectContaining({ messageId: 'polling-window-message' }),
+    }));
+    expect(query.update).toHaveBeenCalledWith(expect.objectContaining({
+      last_reconciliation_at: expect.any(String),
+    }));
+    expect(query.update).not.toHaveBeenCalledWith(expect.objectContaining({
+      last_sync_at: expect.any(String),
+    }));
     expect(results[0]).toMatchObject({ success: true, action: 'skipped' });
   });
 
@@ -262,7 +296,7 @@ describe('EmailWebhookMaintenanceService Microsoft recovery sweep', () => {
 
     expect(query.forUpdate).toHaveBeenCalledOnce();
     expect(query.update).not.toHaveBeenCalledWith(expect.objectContaining({
-      last_sync_at: expect.any(String),
+      last_reconciliation_at: expect.any(String),
     }));
     expect(results[0]).toMatchObject({
       success: false,
@@ -276,7 +310,7 @@ describe('EmailWebhookMaintenanceService Microsoft recovery sweep', () => {
     provider.webhook_silent_runs = 2;
     mocks.adapter.listMessagesReceivedSince.mockResolvedValueOnce([{
       id: 'retried-message',
-      receivedDateTime: new Date(new Date(provider.last_sync_at).getTime() - 1_000).toISOString(),
+      receivedDateTime: new Date(new Date(provider.last_reconciliation_at).getTime() - 1_000).toISOString(),
     }]);
 
     await new EmailWebhookMaintenanceService().renewMicrosoftWebhooks({

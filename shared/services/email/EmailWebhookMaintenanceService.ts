@@ -511,16 +511,16 @@ export class EmailWebhookMaintenanceService {
   ): Promise<ReconciliationResult> {
     const knex = await getAdminConnection();
     const db = tenantDb(knex, config.tenant);
-    const provider = await db.table('email_providers')
-      .where({ id: config.id })
+    const reconciliationState = await db.table('microsoft_email_provider_config')
+      .where({ email_provider_id: config.id })
       .first(
-        'last_sync_at',
-        knex.raw('last_sync_at::text as last_sync_cursor')
+        'last_reconciliation_at',
+        knex.raw('last_reconciliation_at::text as last_reconciliation_cursor')
       );
-    const lastSyncMs = provider?.last_sync_at
-      ? new Date(provider.last_sync_at).getTime() - RECONCILE_SAFETY_MARGIN_MS
+    const lastReconciliationMs = reconciliationState?.last_reconciliation_at
+      ? new Date(reconciliationState.last_reconciliation_at).getTime() - RECONCILE_SAFETY_MARGIN_MS
       : Date.now() - RECONCILE_WINDOW_CAP_MS;
-    const since = new Date(Math.max(lastSyncMs, Date.now() - RECONCILE_WINDOW_CAP_MS));
+    const since = new Date(Math.max(lastReconciliationMs, Date.now() - RECONCILE_WINDOW_CAP_MS));
     const maxCount = Math.max(
       1,
       Number(config.provider_config?.max_emails_per_sync || DEFAULT_RECONCILE_MAX_MESSAGES)
@@ -537,23 +537,24 @@ export class EmailWebhookMaintenanceService {
       unprocessedMessages = messages.filter((message) => !processed.has(message.id));
     }
 
-    const previousSyncMs = provider?.last_sync_at
-      ? new Date(provider.last_sync_at).getTime()
+    const previousReconciliationMs = reconciliationState?.last_reconciliation_at
+      ? new Date(reconciliationState.last_reconciliation_at).getTime()
       : null;
     const completedAt = new Date().toISOString();
     const completedAtMs = new Date(completedAt).getTime();
     const enqueueResult = await knex.transaction(async (trx) => {
       const transactionDb = tenantDb(trx, config.tenant);
-      const lockedProvider = await transactionDb.table('email_providers')
-        .where({ id: config.id })
+      const lockedState = await transactionDb.table('microsoft_email_provider_config')
+        .where({ email_provider_id: config.id })
         .forUpdate()
-        .first(trx.raw('last_sync_at::text as last_sync_cursor'));
-      const observedCursor = provider?.last_sync_cursor || null;
-      const lockedCursor = lockedProvider?.last_sync_cursor || null;
+        .first(trx.raw('last_reconciliation_at::text as last_reconciliation_cursor'));
+      const observedCursor = reconciliationState?.last_reconciliation_cursor || null;
+      const lockedCursor = lockedState?.last_reconciliation_cursor || null;
 
-      // Serialize runners that observed the same window, but do not commit the
-      // cursor claim until every queue write succeeds. An enqueue exception
-      // rolls this transaction back so the same window remains retryable.
+      // This cursor belongs only to Graph reconciliation. Queue consumers also
+      // advance email_providers.last_sync_at after ingestion, so that timestamp
+      // cannot safely claim a polling window. Commit this dedicated cursor only
+      // after every queue write succeeds so enqueue failures remain retryable.
       if (lockedCursor !== observedCursor) {
         return { claimed: false as const, queuedMessages: 0, silenceEvidenceCount: 0 };
       }
@@ -580,16 +581,16 @@ export class EmailWebhookMaintenanceService {
         if (
           Number.isFinite(receivedAtMs) &&
           receivedAtMs <= completedAtMs &&
-          (previousSyncMs === null || receivedAtMs > previousSyncMs)
+          (previousReconciliationMs === null || receivedAtMs > previousReconciliationMs)
         ) {
           silenceEvidenceMessageIds.add(message.id);
         }
       }
 
-      await transactionDb.table('email_providers')
-        .where({ id: config.id })
+      await transactionDb.table('microsoft_email_provider_config')
+        .where({ email_provider_id: config.id })
         .update({
-          last_sync_at: completedAt,
+          last_reconciliation_at: completedAt,
           updated_at: completedAt,
         });
 
@@ -604,7 +605,7 @@ export class EmailWebhookMaintenanceService {
       logger.info('Skipped an already-claimed Microsoft reconciliation window', {
         providerId: config.id,
         tenant: config.tenant,
-        observedLastSyncAt: provider?.last_sync_at || null,
+        observedLastReconciliationAt: reconciliationState?.last_reconciliation_at || null,
       });
       return { queuedMessages: 0, switchedToPolling: false };
     }
@@ -618,10 +619,10 @@ export class EmailWebhookMaintenanceService {
     const silenceUpdate = db.table('microsoft_email_provider_config')
       .where({ email_provider_id: config.id })
       .andWhere('delivery_mode', 'webhook');
-    if (provider?.last_sync_at) {
+    if (reconciliationState?.last_reconciliation_at) {
       silenceUpdate.andWhere((query: any) => {
         query.whereNull('last_webhook_delivery_at')
-          .orWhere('last_webhook_delivery_at', '<=', provider.last_sync_at);
+          .orWhere('last_webhook_delivery_at', '<=', reconciliationState.last_reconciliation_at);
       });
     } else {
       silenceUpdate.whereNull('last_webhook_delivery_at');
@@ -649,10 +650,10 @@ export class EmailWebhookMaintenanceService {
       .where({ email_provider_id: config.id })
       .andWhere('delivery_mode', 'webhook')
       .andWhere('webhook_silent_runs', silentRuns);
-    if (provider?.last_sync_at) {
+    if (reconciliationState?.last_reconciliation_at) {
       pollingTransition.andWhere((query: any) => {
         query.whereNull('last_webhook_delivery_at')
-          .orWhere('last_webhook_delivery_at', '<=', provider.last_sync_at);
+          .orWhere('last_webhook_delivery_at', '<=', reconciliationState.last_reconciliation_at);
       });
     } else {
       pollingTransition.whereNull('last_webhook_delivery_at');
