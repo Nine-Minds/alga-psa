@@ -172,10 +172,16 @@
     "fields": {
       "status": "Statut",
       "lastSync": "Dernière synchronisation",
+      "lastIngested": "Dernière ingestion",
+      "delivery": "Livraison",
       "created": "Créé",
       "subscription": "Abonnement",
       "defaults": "Valeurs par défaut des tickets",
       "error": "Erreur:"
+    },
+    "delivery": {
+      "polling": "Interrogation toutes les 3 minutes",
+      "webhook": "Livraison en temps réel : active"
     },
     "values": {
       "active": "Actif",
