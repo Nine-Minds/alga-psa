@@ -7,6 +7,7 @@ const mocks = vi.hoisted(() => ({
     listMessagesReceivedSince: vi.fn(),
     renewWebhookSubscription: vi.fn(),
     initializeWebhook: vi.fn(),
+    deleteWebhookSubscription: vi.fn(),
     getConfig: vi.fn(),
   },
   enqueue: vi.fn(),
@@ -32,9 +33,11 @@ vi.mock('@alga-psa/core/logger', () => ({
 import { EmailWebhookMaintenanceService } from '@alga-psa/shared/services/email/EmailWebhookMaintenanceService';
 
 describe('EmailWebhookMaintenanceService Microsoft recovery sweep', () => {
+  let provider: any;
+
   beforeEach(() => {
     vi.clearAllMocks();
-    const provider = {
+    provider = {
       id: '11111111-1111-4111-8111-111111111111',
       tenant: '22222222-2222-4222-8222-222222222222',
       provider_name: 'Support',
@@ -61,7 +64,15 @@ describe('EmailWebhookMaintenanceService Microsoft recovery sweep', () => {
       where: vi.fn().mockReturnThis(),
       andWhere: vi.fn().mockReturnThis(),
       whereIn: vi.fn().mockReturnThis(),
-      first: vi.fn().mockResolvedValue({ last_sync_at: provider.last_sync_at }),
+      first: vi.fn().mockImplementation((...columns: string[]) => {
+        if (columns.includes('last_webhook_delivery_at')) {
+          return Promise.resolve({
+            last_webhook_delivery_at: provider.last_webhook_delivery_at || null,
+            webhook_silent_runs: provider.webhook_silent_runs || 0,
+          });
+        }
+        return Promise.resolve({ last_sync_at: provider.last_sync_at });
+      }),
       select: vi.fn()
         .mockResolvedValueOnce([provider])
         .mockResolvedValueOnce([]),
@@ -105,5 +116,35 @@ describe('EmailWebhookMaintenanceService Microsoft recovery sweep', () => {
       action: 'failed',
       error: 'invalid_grant',
     });
+  });
+
+  it('does not renew, recreate, or reconcile polling providers before their probe is due', async () => {
+    provider.delivery_mode = 'polling';
+    provider.next_subscription_probe_at = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+
+    const results = await new EmailWebhookMaintenanceService().renewMicrosoftWebhooks({
+      tenantId: '22222222-2222-4222-8222-222222222222',
+      lookAheadMinutes: 60,
+    });
+
+    expect(mocks.adapter.cleanupOrphanedSubscriptions).not.toHaveBeenCalled();
+    expect(mocks.adapter.listMessagesReceivedSince).not.toHaveBeenCalled();
+    expect(mocks.adapter.renewWebhookSubscription).not.toHaveBeenCalled();
+    expect(mocks.adapter.initializeWebhook).not.toHaveBeenCalled();
+    expect(results[0]).toMatchObject({ success: true, action: 'skipped' });
+  });
+
+  it('culls a webhook after the third reconciliation run that imports missed mail', async () => {
+    provider.delivery_mode = 'webhook';
+    provider.webhook_silent_runs = 2;
+    provider.last_webhook_delivery_at = null;
+
+    const results = await new EmailWebhookMaintenanceService().renewMicrosoftWebhooks({
+      tenantId: '22222222-2222-4222-8222-222222222222',
+      lookAheadMinutes: 60,
+    });
+
+    expect(mocks.adapter.deleteWebhookSubscription).toHaveBeenCalledOnce();
+    expect(results[0]).toMatchObject({ success: true, action: 'skipped' });
   });
 });

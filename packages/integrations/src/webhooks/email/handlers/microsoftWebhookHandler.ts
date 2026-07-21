@@ -186,6 +186,22 @@ export async function handleMicrosoftWebhookPost(request: NextRequest) {
             console.warn(`⚠️ No stored verification token for provider ${row.id} - skipping client state validation`);
           }
 
+          const acceptedAt = new Date().toISOString();
+          const providerDb = tenantDb(trx, row.tenant);
+          await providerDb.table('microsoft_email_provider_config')
+            .where({ email_provider_id: row.id })
+            .update({
+              last_webhook_delivery_at: acceptedAt,
+              webhook_silent_runs: 0,
+              updated_at: acceptedAt,
+            });
+          await providerDb.table('email_provider_health')
+            .where({ provider_id: row.id })
+            .update({
+              last_notification_received_at: acceptedAt,
+              updated_at: acceptedAt,
+            });
+
           // Extract message ID from resource
           const messageId = notification.resourceData?.id || extractMessageId(notification.resource);
           if (!messageId) {

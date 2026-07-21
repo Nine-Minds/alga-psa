@@ -26,6 +26,12 @@ const tenantsQueryMock = {
   }),
   first: vi.fn(async () => ({ product_code: 'psa' })),
 };
+const updateQueryMock = {
+  where: vi.fn(function where() {
+    return this;
+  }),
+  update: vi.fn().mockResolvedValue(1),
+};
 
 vi.mock('@alga-psa/shared/services/email/unifiedInboundEmailQueue', () => ({
   enqueueUnifiedInboundEmailQueueJob: (...args: any[]) => enqueueUnifiedInboundEmailQueueJobMock(...args),
@@ -72,6 +78,8 @@ describe('Microsoft unified inbound pointer queue ingress', () => {
 
     tenantsQueryMock.where.mockClear();
     tenantsQueryMock.first.mockClear();
+    updateQueryMock.where.mockClear();
+    updateQueryMock.update.mockClear();
 
     trxMock.mockImplementation((table: string) => {
       if (table === 'microsoft_email_provider_config as mc') {
@@ -79,6 +87,9 @@ describe('Microsoft unified inbound pointer queue ingress', () => {
       }
       if (table === 'tenants') {
         return tenantsQueryMock;
+      }
+      if (table === 'microsoft_email_provider_config' || table === 'email_provider_health') {
+        return updateQueryMock;
       }
       throw new Error(`Unexpected table in test transaction: ${table}`);
     });
@@ -149,6 +160,10 @@ describe('Microsoft unified inbound pointer queue ingress', () => {
     expect(enqueuePayload).not.toHaveProperty('emailData');
     expect(enqueuePayload).not.toHaveProperty('attachments');
     expect(enqueuePayload).not.toHaveProperty('rawMimeBase64');
+    expect(updateQueryMock.update).toHaveBeenCalledWith(expect.objectContaining({
+      last_webhook_delivery_at: expect.any(String),
+      webhook_silent_runs: 0,
+    }));
   });
 
   it('T004: Microsoft callback success waits for durable enqueue completion', async () => {
