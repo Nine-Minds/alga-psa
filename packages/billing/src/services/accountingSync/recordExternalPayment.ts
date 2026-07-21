@@ -9,8 +9,10 @@ import { enqueueExternalPaymentPush } from './syncProducers';
  * every provider produces identical AR records: an invoice_payments row, a
  * 'payment' transaction, and a status flip driven by computeBalanceDue.
  *
- * Note: invoice_payments is created by an EE migration; all callers are
- * EE-gated (Stripe payments, accounting sync).
+ * Note: invoice_payments is created by an EE migration
+ * (ee/server/migrations/20251203120000); all callers are EE-gated — Stripe
+ * payments, accounting sync, and the alternative-payments webhook (edition
+ * check in its route handler).
  */
 
 export interface InvoiceBalanceInputs {

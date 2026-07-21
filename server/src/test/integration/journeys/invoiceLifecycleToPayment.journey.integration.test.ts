@@ -104,7 +104,6 @@ describe('journey: invoice lifecycle → payment', () => {
     db = await createTestDbConnection();
     await db.migrate.latest();
     tenantId = await ensureTenant(db);
-    await ensureInvoicePaymentsTable(db);
     setupCommonMocks({ tenantId, userId: 'journey-test-user', permissionCheck: () => true });
     ({ generateInvoice } = await import('@alga-psa/billing/actions/invoiceGeneration'));
     ({ finalizeInvoice } = await import('@alga-psa/billing/actions/invoiceModification'));
@@ -151,6 +150,7 @@ describe('journey: invoice lifecycle → payment', () => {
     const contextLike = { db, tenantId, clientId } as const;
     await ensureDefaultBillingSettings(contextLike as any);
     await ensureClientPlanBundlesTable(contextLike as any);
+    await ensureInvoicePaymentsTable(db);
     await setupClientTaxConfiguration(contextLike as any, {
       regionCode: 'US-NY',
       regionName: 'New York',
@@ -185,14 +185,10 @@ describe('journey: invoice lifecycle → payment', () => {
     // The service was created after the initial '*' assignment — pick it up.
     await assignServiceTaxRate(contextLike as any, '*', 'US-NY', { onlyUnset: true });
 
-    // Fixture quirk: createFixedPlanAssignment stores baseRateCents / 100 into
-    // fixed-config base_rate, but the invoice engine (and the wizard's writes)
-    // treat that column as cents. Feed it x100 so the invoice carries real
-    // cent amounts and the payment math below stays honest.
     const line = await createFixedPlanAssignment(contextLike as any, serviceId, {
       planName: 'Journey Lifecycle Plan',
       billingFrequency: 'monthly',
-      baseRateCents: BASE_RATE_CENTS * 100,
+      baseRateCents: BASE_RATE_CENTS,
       startDate: DECEMBER_START,
       endDate: null,
       billingTiming: 'arrears',
@@ -351,7 +347,6 @@ async function ensureTenant(connection: Knex): Promise<string> {
   });
   return newTenantId;
 }
-
 // invoice_payments ships from an EE migration
 // (ee/server/migrations/20251203120000_create_invoice_payments_table.cjs); the
 // CE chain this test DB runs never creates it, even though the payment landing
