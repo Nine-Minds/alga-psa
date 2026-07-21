@@ -1,8 +1,13 @@
+import jwt from 'jsonwebtoken';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 const openAiConfigs = vi.hoisted(() => [] as Array<Record<string, unknown>>);
 const getSecretMock = vi.hoisted(() => vi.fn());
 const googleAccessTokenState = vi.hoisted(() => ({ token: 'adc-token' as string | undefined }));
+const licensingMocks = vi.hoisted(() => ({
+  getLicenseStateRow: vi.fn(),
+  isSelfHostLicensing: vi.fn(),
+}));
 
 vi.mock('openai', () => {
   class OpenAI {
@@ -24,6 +29,8 @@ vi.mock('@alga-psa/core/secrets', () => ({
   getSecret: getSecretMock,
 }));
 
+vi.mock('@alga-psa/licensing', () => licensingMocks);
+
 vi.mock('google-auth-library', () => ({
   GoogleAuth: class {
     constructor(_config: unknown) {}
@@ -41,6 +48,11 @@ vi.mock('google-auth-library', () => ({
 
 const MANAGED_ENV_KEYS = [
   'AI_CHAT_PROVIDER',
+  'AI_GATEWAY_BYPASS',
+  'AI_GATEWAY_MODEL',
+  'AI_GATEWAY_ROLLOUT_ALL',
+  'AI_GATEWAY_SERVICE_SECRET',
+  'AI_GATEWAY_URL',
   'GOOGLE_CLOUD_ACCESS_TOKEN',
   'OPENROUTER_API_KEY',
   'OPENROUTER_CHAT_MODEL',
@@ -84,6 +96,10 @@ describe('resolveChatProvider()', () => {
     vi.resetModules();
     getSecretMock.mockReset();
     openAiConfigs.splice(0, openAiConfigs.length);
+    licensingMocks.getLicenseStateRow.mockReset();
+    licensingMocks.isSelfHostLicensing.mockReset();
+    licensingMocks.getLicenseStateRow.mockResolvedValue(null);
+    licensingMocks.isSelfHostLicensing.mockResolvedValue(false);
     resetManagedEnv();
     googleAccessTokenState.token = 'adc-token';
   });
@@ -98,7 +114,7 @@ describe('resolveChatProvider()', () => {
 
     const { resolveChatProvider } = await import('@ee/services/chatProviderResolver');
 
-    const provider = await resolveChatProvider();
+    const provider = await resolveChatProvider('tenant-1', 'chat');
 
     expect(provider.providerId).toBe('openrouter');
     expect(provider.model).toBe('minimax/minimax-m2');
@@ -117,7 +133,7 @@ describe('resolveChatProvider()', () => {
 
     const { resolveChatProvider } = await import('@ee/services/chatProviderResolver');
 
-    const provider = await resolveChatProvider();
+    const provider = await resolveChatProvider('tenant-1', 'chat');
 
     expect(provider.providerId).toBe('openrouter');
     expect(provider.model).toBe('openrouter/custom-model');
@@ -137,7 +153,7 @@ describe('resolveChatProvider()', () => {
 
     const { resolveChatProvider } = await import('@ee/services/chatProviderResolver');
 
-    const provider = await resolveChatProvider();
+    const provider = await resolveChatProvider('tenant-1', 'chat');
 
     expect(provider.providerId).toBe('vertex');
     expect(provider.model).toBe('glm-5-maas-custom');
@@ -157,7 +173,7 @@ describe('resolveChatProvider()', () => {
 
     const { resolveChatProvider } = await import('@ee/services/chatProviderResolver');
 
-    const provider = await resolveChatProvider();
+    const provider = await resolveChatProvider('tenant-1', 'chat');
 
     expect(provider.providerId).toBe('vertex');
     expect(openAiConfigs.at(-1)).toMatchObject({
@@ -175,7 +191,7 @@ describe('resolveChatProvider()', () => {
     });
 
     const { resolveChatProvider } = await import('@ee/services/chatProviderResolver');
-    await resolveChatProvider();
+    await resolveChatProvider('tenant-1', 'chat');
 
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } }),
@@ -208,7 +224,7 @@ describe('resolveChatProvider()', () => {
     });
 
     const { resolveChatProvider } = await import('@ee/services/chatProviderResolver');
-    await resolveChatProvider();
+    await resolveChatProvider('tenant-1', 'chat');
 
     const fetchSpy = vi
       .spyOn(globalThis, 'fetch')
@@ -245,7 +261,7 @@ describe('resolveChatProvider()', () => {
 
     const { resolveChatProvider } = await import('@ee/services/chatProviderResolver');
 
-    await resolveChatProvider();
+    await resolveChatProvider('tenant-1', 'chat');
 
     expect(openAiConfigs.at(-1)).toMatchObject({
       baseURL: 'https://example.invalid/custom/openapi',
@@ -261,7 +277,7 @@ describe('resolveChatProvider()', () => {
 
     const { resolveChatProvider } = await import('@ee/services/chatProviderResolver');
 
-    await resolveChatProvider();
+    await resolveChatProvider('tenant-1', 'chat');
 
     expect(openAiConfigs.at(-1)).toMatchObject({
       baseURL:
@@ -278,7 +294,7 @@ describe('resolveChatProvider()', () => {
     });
 
     const { resolveChatProvider } = await import('@ee/services/chatProviderResolver');
-    const provider = await resolveChatProvider();
+    const provider = await resolveChatProvider('tenant-1', 'chat');
 
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
       new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } }),
@@ -305,7 +321,7 @@ describe('resolveChatProvider()', () => {
 
     const { resolveChatProvider } = await import('@ee/services/chatProviderResolver');
 
-    const provider = await resolveChatProvider();
+    const provider = await resolveChatProvider('tenant-1', 'chat');
     expect(provider.requestOverrides.resolveTurnOverrides()).toEqual({});
   });
 
@@ -315,7 +331,7 @@ describe('resolveChatProvider()', () => {
 
     const { resolveChatProvider } = await import('@ee/services/chatProviderResolver');
 
-    const provider = await resolveChatProvider();
+    const provider = await resolveChatProvider('tenant-1', 'chat');
 
     expect(provider.providerId).toBe('openrouter');
     expect(provider.requestOverrides.resolveTurnOverrides()).toEqual({});
@@ -327,11 +343,101 @@ describe('resolveChatProvider()', () => {
 
     const { resolveChatProvider } = await import('@ee/services/chatProviderResolver');
 
-    const provider = await resolveChatProvider();
+    const provider = await resolveChatProvider('tenant-1', 'chat');
 
     expect(provider.providerId).toBe('openrouter');
     expect(openAiConfigs.at(-1)).toMatchObject({
       baseURL: 'https://openrouter.ai/api/v1',
+    });
+  });
+
+  it('defaults to the gateway with a fresh tenant token and feature header', async () => {
+    process.env.AI_GATEWAY_URL = 'https://gateway.example.test/';
+    process.env.AI_GATEWAY_ROLLOUT_ALL = 'true';
+    process.env.AI_GATEWAY_SERVICE_SECRET = 'resolver-gateway-secret';
+    setSecrets({ AI_GATEWAY_MODEL: 'gateway/model' });
+
+    const { resolveChatProvider } = await import('@ee/services/chatProviderResolver');
+
+    const first = await resolveChatProvider('tenant-gateway', 'email-rule-classifier');
+    const second = await resolveChatProvider('tenant-gateway', 'email-rule-classifier');
+    const firstConfig = openAiConfigs.at(-2);
+    const secondConfig = openAiConfigs.at(-1);
+    const decoded = jwt.verify(
+      String(firstConfig?.apiKey),
+      'resolver-gateway-secret',
+      { algorithms: ['HS256'] },
+    ) as jwt.JwtPayload;
+
+    expect(first.providerId).toBe('gateway');
+    expect(first.model).toBe('gateway/model');
+    expect(second.providerId).toBe('gateway');
+    expect(firstConfig).toMatchObject({
+      baseURL: 'https://gateway.example.test/v1',
+      defaultHeaders: {
+        'X-Alga-AI-Feature': 'email-rule-classifier',
+      },
+    });
+    expect(decoded.tenant_id).toBe('tenant-gateway');
+    expect(secondConfig?.apiKey).not.toBe(firstConfig?.apiKey);
+  });
+
+  it('routes a self-hosted install through the gateway without the rollout flag', async () => {
+    process.env.AI_GATEWAY_URL = 'https://gateway.example.test/';
+    licensingMocks.isSelfHostLicensing.mockResolvedValue(true);
+    licensingMocks.getLicenseStateRow.mockResolvedValue({
+      appliance_credential: 'b'.repeat(64),
+    });
+    setSecrets({ AI_GATEWAY_MODEL: 'gateway/appliance-model' });
+
+    const { resolveChatProvider } = await import('@ee/services/chatProviderResolver');
+    const provider = await resolveChatProvider('tenant-appliance', 'chat');
+
+    expect(provider.providerId).toBe('gateway');
+    expect(provider.model).toBe('gateway/appliance-model');
+    expect(openAiConfigs.at(-1)).toMatchObject({
+      apiKey: 'b'.repeat(64),
+      baseURL: 'https://gateway.example.test/v1',
+      defaultHeaders: {
+        'X-Alga-AI-Feature': 'chat',
+      },
+    });
+  });
+
+  it('falls back to the legacy provider when the tenant is not in the rollout', async () => {
+    process.env.AI_GATEWAY_URL = 'https://gateway.example.test/';
+    process.env.AI_GATEWAY_SERVICE_SECRET = 'resolver-gateway-secret';
+    // AI_GATEWAY_ROLLOUT_ALL unset and no flag client configured → flag off.
+    setSecrets({ OPENROUTER_API_KEY: 'legacy-openrouter-key' });
+
+    const { resolveChatProvider } = await import('@ee/services/chatProviderResolver');
+    const provider = await resolveChatProvider('tenant-unflagged', 'chat');
+
+    expect(provider.providerId).toBe('openrouter');
+    expect(openAiConfigs.at(-1)).toMatchObject({
+      apiKey: 'legacy-openrouter-key',
+      defaultHeaders: {
+        'X-Alga-AI-Feature': 'chat',
+      },
+    });
+  });
+
+  it('uses the configured direct-provider fallback when the gateway is bypassed', async () => {
+    process.env.AI_GATEWAY_URL = 'https://gateway.example.test';
+    process.env.AI_GATEWAY_BYPASS = 'true';
+    process.env.AI_CHAT_PROVIDER = 'openrouter';
+    setSecrets({ OPENROUTER_API_KEY: 'bypass-openrouter-key' });
+
+    const { resolveChatProvider } = await import('@ee/services/chatProviderResolver');
+    const provider = await resolveChatProvider('tenant-bypass', 'chat-title');
+
+    expect(provider.providerId).toBe('openrouter');
+    expect(openAiConfigs.at(-1)).toMatchObject({
+      apiKey: 'bypass-openrouter-key',
+      baseURL: 'https://openrouter.ai/api/v1',
+      defaultHeaders: {
+        'X-Alga-AI-Feature': 'chat-title',
+      },
     });
   });
 });

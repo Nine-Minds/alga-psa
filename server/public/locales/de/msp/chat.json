@@ -155,5 +155,23 @@
   },
   "mention": {
     "noResultsFound": "Keine Ergebnisse gefunden"
+  },
+  "aiCredits": {
+    "indicatorTooltip": "{{credits}} KI-Credits verbleibend",
+    "noSubscription": {
+      "title": "KI ist ein kostenpflichtiges Add-on",
+      "body": "Abonnieren Sie das KI-Add-on, um Alga-KI zu nutzen. Ihr Plan enthält ein monatliches Guthabenkontingent.",
+      "cta": "KI-Nutzungseinstellungen anzeigen"
+    },
+    "outOfCredits": {
+      "title": "Keine KI-Credits mehr",
+      "body": "Laden Sie auf, um Alga-KI weiter zu nutzen.",
+      "bodyWithBalance": "Ihr Guthaben beträgt {{balance}} Credits. Laden Sie auf, um Alga-KI weiter zu nutzen.",
+      "cta": "Aufladungs-Credits kaufen"
+    },
+    "consentRequired": {
+      "title": "Zustimmung zur Datenweitergabe erforderlich",
+      "body": "Ein Administrator muss die KI-Datenweitergabebedingungen auf dieser Appliance akzeptieren, bevor KI genutzt werden kann."
+    }
   }
 }

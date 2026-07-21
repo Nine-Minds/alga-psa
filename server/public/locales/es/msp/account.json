@@ -425,5 +425,75 @@
       "noLongerNeed": "Ya no necesito el servicio",
       "other": "Otro"
     }
+  },
+  "aiUsage": {
+    "title": "Uso de IA",
+    "subtitle": "Facturación basada en créditos para las funciones de IA de Alga",
+    "refresh": "Actualizar",
+    "errors": {
+      "loadSummary": "No se pudieron cargar los detalles de uso de IA",
+      "loadHistory": "No se pudo cargar el historial de uso",
+      "subscribe": "No se pudo iniciar el pago",
+      "topup": "No se pudo iniciar el pago de la recarga",
+      "autoTopup": "No se pudieron guardar los ajustes de recarga automática",
+      "unavailable": "Los detalles de uso de IA no están disponibles en este momento. Inténtelo de nuevo en breve."
+    },
+    "upsell": {
+      "heading": "Añada IA a su espacio de trabajo",
+      "body": "Suscríbase al complemento de IA para desbloquear Alga AI en el chat, el triaje de correo y más. Su plan mensual incluye una asignación de créditos; compre recargas puntuales o active la recarga automática en cualquier momento.",
+      "subscribe": "Suscribirse al complemento de IA",
+      "subscribing": "Redirigiendo…"
+    },
+    "grace": {
+      "title": "Créditos agotados — usando el margen de gracia",
+      "body": "La IA sigue funcionando dentro de un pequeño margen de gracia de {{grace}} créditos. Recargue para evitar una parada total."
+    },
+    "lowBalance": {
+      "title": "Saldo de créditos bajo",
+      "body": "Considere recargar o activar la recarga automática para evitar interrupciones."
+    },
+    "balance": {
+      "total": "Saldo total",
+      "creditsUnit": "créditos",
+      "included": "Incluido (mensual)",
+      "resetsMonthly": "se restablece cada ciclo",
+      "topup": "Recarga (persistente)",
+      "carriesOver": "se conserva"
+    },
+    "cycle": {
+      "label": "Ciclo de facturación",
+      "resetsIn": "Se restablece en {{days}} días"
+    },
+    "topup": {
+      "title": "Comprar créditos de recarga",
+      "description": "Paquetes de créditos de un solo uso que nunca caducan.",
+      "noPacks": "Aún no hay paquetes de recarga configurados.",
+      "packWithCredits": "{{label}} ({{credits}} créditos)"
+    },
+    "autoTopup": {
+      "title": "Recarga automática",
+      "description": "Compra automáticamente un paquete cuando su saldo cae por debajo de un umbral.",
+      "enable": "Activar recarga automática",
+      "enableHelp": "Usa su método de pago guardado para cargos fuera de sesión.",
+      "threshold": "Umbral (créditos)",
+      "pack": "Paquete a comprar",
+      "selectPack": "Seleccione un paquete",
+      "save": "Guardar recarga automática",
+      "saved": "Ajustes de recarga automática guardados",
+      "saving": "Guardando…"
+    },
+    "history": {
+      "title": "Historial de uso",
+      "description": "Consumo de créditos por solicitud.",
+      "allFeatures": "Todas las funciones",
+      "date": "Fecha",
+      "feature": "Función",
+      "model": "Modelo",
+      "tokens": "Tokens",
+      "credits": "Créditos",
+      "empty": "Aún no se ha registrado uso.",
+      "loading": "Cargando…",
+      "loadMore": "Cargar más"
+    }
   }
 }

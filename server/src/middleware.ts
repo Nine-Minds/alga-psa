@@ -107,6 +107,9 @@ const apiKeySkipPaths = [
   '/api/webhooks/alternative-payments',
   '/api/webhooks/ninjaone',
   '/api/webhooks/tacticalrmm',
+  // AI gateway money/credit lifecycle events; authenticated via the
+  // X-Alga-Webhook-Secret shared secret verified in the route handler.
+  '/api/webhooks/ai-gateway',
   // Server-to-server webhooks from nm-store. Authenticated via HMAC
   // x-webhook-signature using ALGA_WEBHOOK_SECRET (verified in route handlers).
   '/api/billing/check-tenant',

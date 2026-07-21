@@ -172,5 +172,58 @@
   },
   "runStudio": {
     "unavailable": "Workflow Run Studio is not available in this edition. (runId: {{runId}})"
+  },
+  "aiConsent": {
+    "title": "AI data sharing",
+    "subtitle": "Required for AI features on this appliance. Review what leaves your network before turning AI on.",
+    "status": {
+      "granted": "Consent granted",
+      "revoked": "Consent revoked",
+      "missing": "Not granted"
+    },
+    "unreachable": "Could not reach the AI service to load the current consent status. Try again shortly.",
+    "explainer": "When AI is enabled, the content AI works on — including ticket text, email bodies, and chat messages — is sent from this appliance to the Nine Minds cloud AI service, and from there to third-party model providers to generate responses. Nothing is sent until you grant consent below.",
+    "termsVersion": "Terms version",
+    "grantedAt": "Granted",
+    "revoke": "Revoke consent",
+    "accept": "Accept and enable AI",
+    "acceptDialog": {
+      "title": "Enable AI data sharing?",
+      "confirming": "Enabling…",
+      "confirm": "I agree, enable AI",
+      "body": "By continuing you agree that AI features may transmit ticket, email, and chat content from this appliance to the Nine Minds cloud AI service and onward to third-party model providers for processing.",
+      "termsVersion": "Data-sharing terms version: {{version}}"
+    },
+    "revokeDialog": {
+      "title": "Revoke AI data sharing?",
+      "confirming": "Revoking…",
+      "confirm": "Revoke consent",
+      "body": "AI features stop working immediately across this appliance. No further content will be sent to the cloud AI service until consent is granted again."
+    }
+  },
+  "aiBalance": {
+    "title": "AI credits",
+    "subtitle": "Prepaid credits fund AI features on this appliance. Purchases are made in the Nine Minds store.",
+    "refresh": "Refresh",
+    "unreachable": "Could not reach the AI service to load your credit balance. Try again shortly.",
+    "blockedPendingConsent": "AI is blocked until data-sharing consent is granted above. Credits are not consumed while AI is off.",
+    "upsell": {
+      "heading": "Subscribe to the AI add-on",
+      "body": "There is no active AI subscription for this appliance. Subscribe in the Nine Minds store to receive a monthly credit allotment; the store manages payment and top-ups.",
+      "subscribe": "Subscribe in the store"
+    },
+    "grace": "Credits are exhausted. AI keeps working within a small grace buffer of {{grace}} credits before it hard-stops — top up to avoid interruption.",
+    "low": "Credit balance is running low. Top up in the store to avoid interruptions.",
+    "total": "Total balance",
+    "creditsUnit": "credits",
+    "included": "Included (monthly)",
+    "resetsMonthly": "resets each cycle",
+    "topup": "Top-up (persists)",
+    "carriesOver": "carries over",
+    "manage": {
+      "heading": "Buy credits or manage the subscription",
+      "body": "Top-ups, auto-top-up, and subscription changes are handled in the Nine Minds store.",
+      "openStore": "Open the store"
+    }
   }
 }
