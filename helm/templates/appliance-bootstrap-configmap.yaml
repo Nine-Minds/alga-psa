@@ -369,10 +369,11 @@ data:
       log "license_state seeded (edition_choice=${edition_choice})"
     }
 
-    # LEVERAGE: friction builtin-content-distribution — this seed:run is UNGATED and this
-    # Job is a post-install,post-upgrade hook, so the appliance replays ALL onboarding
-    # seeds via plain knex (seed(knex), no tenantId → first-tenant fallback) on every
-    # upgrade, and a second time on fresh install (ensure_initial_tenant already ran them
+    # LEVERAGE: friction builtin-content-distribution — this seed:run is UNGATED, and the
+    # appliance bootstrap Job is re-created on every helm upgrade (regular Job +
+    # ttlSecondsAfterFinished; the post-upgrade hook is SaaS-only), so the appliance
+    # replays ALL onboarding seeds via plain knex (seed(knex), no tenantId → first-tenant
+    # fallback) on every upgrade, and a second time on fresh install (ensure_initial_tenant already ran them
     # via Temporal runOnboardingSeeds with tenantId). Hosted gates this off (jobs.yaml)
     # and ships built-in content to existing tenants via readd_* migrations instead: two
     # divergent mechanisms + an unenforced seed contract that #2989 showed is easy to
