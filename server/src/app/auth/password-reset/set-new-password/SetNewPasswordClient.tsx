@@ -180,7 +180,7 @@ const SetNewPasswordClient: React.FC<SetNewPasswordClientProps> = ({ branding, p
           {branding?.logoUrl && (
             <img
               src={branding.logoUrl}
-              alt={branding.clientName || t('passwordReset.setNew.logoAlt', 'Client logo')}
+              alt={branding.clientName || t('passwordReset.confirmation.logoAlt', 'Client logo')}
               width={60}
               height={60}
               className="mx-auto mb-6 h-[60px] w-[60px] rounded-full object-contain"
