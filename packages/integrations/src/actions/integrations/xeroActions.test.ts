@@ -22,7 +22,9 @@ const getXeroRedirectUriMock = vi.hoisted(() => vi.fn(async () => 'https://examp
 const getXeroOAuthScopesMock = vi.hoisted(() => vi.fn(() => [
   'offline_access',
   'accounting.settings',
-  'accounting.transactions',
+  'accounting.invoices',
+  'accounting.banktransactions',
+  'accounting.payments',
   'accounting.contacts'
 ]));
 const resolveXeroOAuthCredentialsMock = vi.hoisted(() => vi.fn(async () => ({
@@ -105,7 +107,9 @@ describe('Xero integration actions', () => {
     getXeroOAuthScopesMock.mockReturnValue([
       'offline_access',
       'accounting.settings',
-      'accounting.transactions',
+      'accounting.invoices',
+      'accounting.banktransactions',
+      'accounting.payments',
       'accounting.contacts'
     ]);
     resolveXeroOAuthCredentialsMock.mockResolvedValue({
@@ -142,7 +146,10 @@ describe('Xero integration actions', () => {
     expect(result.credentials.clientSecretMasked).not.toContain('super-secret-value');
     expect(JSON.stringify(result)).not.toContain('super-secret-value');
     expect(result.redirectUri).toBe('https://example.com/api/integrations/xero/callback');
-    expect(result.scopes).toContain('accounting.transactions');
+    expect(result.scopes).toContain('accounting.invoices');
+    expect(result.scopes).toContain('accounting.banktransactions');
+    expect(result.scopes).toContain('accounting.payments');
+    expect(result.scopes).not.toContain('accounting.transactions');
     expect(result.defaultConnectionId).toBe('connection-1');
     expect(result.defaultConnection?.tenantName).toBe('Acme Holdings');
     expect(result.connected).toBe(true);
