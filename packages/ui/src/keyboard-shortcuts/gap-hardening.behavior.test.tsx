@@ -160,6 +160,39 @@ describe('gap hardening behavioral coverage', () => {
     expect(redo).toHaveBeenCalledTimes(1);
   });
 
+  it('suppresses editor.deleteSelection and editor.cancel in editable targets', () => {
+    const deleteSelection = vi.fn();
+    const cancel = vi.fn();
+
+    render(
+      <KeyboardShortcutsProvider platform="other">
+        <EditorScope>
+          <RegisteredCatalogShortcut actionId="editor.deleteSelection" handler={deleteSelection} />
+          <RegisteredCatalogShortcut actionId="editor.cancel" handler={cancel} />
+          <input aria-label="palette text field" />
+          <button type="button">canvas surface</button>
+        </EditorScope>
+      </KeyboardShortcutsProvider>,
+    );
+
+    // Typing in a text field must not delete the selected block or clear its selection.
+    const input = screen.getByLabelText('palette text field');
+    input.focus();
+    fireEvent.keyDown(input, { key: 'Backspace', code: 'Backspace' });
+    fireEvent.keyDown(input, { key: 'Delete', code: 'Delete' });
+    fireEvent.keyDown(input, { key: 'Escape', code: 'Escape' });
+    expect(deleteSelection).not.toHaveBeenCalled();
+    expect(cancel).not.toHaveBeenCalled();
+
+    // On a non-editable canvas surface the same keys keep their editor behavior.
+    const button = screen.getByRole('button', { name: 'canvas surface' });
+    button.focus();
+    fireEvent.keyDown(button, { key: 'Backspace', code: 'Backspace' });
+    fireEvent.keyDown(button, { key: 'Escape', code: 'Escape' });
+    expect(deleteSelection).toHaveBeenCalledTimes(1);
+    expect(cancel).toHaveBeenCalledTimes(1);
+  });
+
   it('fires record.previous from page scope when registered on a record-detail page', () => {
     const recordPrevious = vi.fn();
 
