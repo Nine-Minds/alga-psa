@@ -2,7 +2,7 @@
 
 **Date:** 2026-07-22
 **Branch:** `feature/cipp-pro-migration`
-**Status:** Approved design, ready for implementation
+**Status:** Draft implemented
 
 ## Intent
 
@@ -85,6 +85,28 @@ Every hit must be either (a) changed per this plan, (b) verified UI-display-only
    a. flag `entra-integration-cipp` off → only "Direct Microsoft Partner" offered;
    b. flag on → CIPP option appears; connect dialog accepts base URL + token; validation runs; status shows `cippBaseUrl`.
 5. Confirm a Solo-tier tenant still gets 403 from Entra routes and no Entra UI.
+
+### CIPP emulator follow-up
+
+Build later CIPP smoke and integration automation around a small, deterministic CIPP
+API emulator rather than requiring a live CIPP deployment for every run. Follow the
+same test-double approach used by the QuickBooks harnesses and the checked-in
+`test-harness/graph-emulator/`:
+
+- Add a growable `test-harness/cipp-emulator/` with a standalone server, Compose
+  entry point, seeded fixtures, README, and self-contained smoke test.
+- Start with the classic CIPP endpoints the current adapter calls for managed
+  tenants and tenant users. Emulate static-token authorization, representative
+  response shapes, pagination if the live API requires it, and deterministic
+  authentication/rate-limit/server failures.
+- Point the existing configurable CIPP base URL at the emulator; do not add a
+  production-only bypass or weaken token validation for tests.
+- Use emulator-backed automation for connect/validate, discovery, mapping, and
+  sync flows. Keep one opt-in live-CIPP smoke as a fidelity check before rollout.
+
+The emulator itself is not required for this tier-gating draft, but it is the
+preferred prerequisite for expanding CIPP smoke coverage beyond the focused unit
+tests in this branch.
 
 ## Rollout
 
