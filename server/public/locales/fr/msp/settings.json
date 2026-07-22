@@ -150,6 +150,7 @@
       "copying": "Copie en cours...",
       "createUser": "Créer un utilisateur",
       "sendInvitation": "Envoyer l'invitation au portail",
+      "sendTeamInvitation": "Envoyer l'invitation",
       "cancel": "Annuler"
     },
     "form": {
@@ -183,7 +184,8 @@
       },
       "passwordAlert": {
         "withPassword": "La définition d'un mot de passe créera l'utilisateur immédiatement. Il pourra se connecter tout de suite.",
-        "withoutPassword": "Aucun mot de passe requis — nous enverrons une invitation au portail pour que l'utilisateur le définisse."
+        "withoutPassword": "Aucun mot de passe requis — nous enverrons une invitation au portail pour que l'utilisateur le définisse.",
+        "withoutPasswordMsp": "Aucun mot de passe requis — nous lui enverrons une invitation par e-mail pour qu'il ou elle le définisse lui-même."
       },
       "requirePasswordChange": "Exiger le changement de mot de passe à la première connexion"
     },
@@ -208,6 +210,7 @@
     "messages": {
       "success": {
         "portalInvitationSent": "Invitation au portail envoyée avec succès !",
+        "teamInvitationSent": "Invitation envoyée avec succès !",
         "clientPortalUserCreated": "Utilisateur du portail client créé avec succès !",
         "copiedVanityLink": "Lien de connexion personnalisé au portail copié dans le presse-papiers",
         "copiedCanonicalLink": "Lien de connexion canonique au portail copié dans le presse-papiers"
@@ -237,6 +240,7 @@
         "contactNotFound": "Contact introuvable.",
         "contactMissingEmailGeneric": "Le contact n'a pas d'adresse e-mail. Ajoutez une adresse e-mail au contact avant d'envoyer une invitation.",
         "contactInvalidEmail": "Le contact a une adresse e-mail invalide. Mettez à jour le contact avec une adresse e-mail valide avant d'envoyer une invitation.",
+        "invalidEmail": "Veuillez saisir une adresse e-mail valide",
         "noDefaultClient": "Aucun client par défaut n'est configuré pour ce tenant. Veuillez définir un client par défaut dans les paramètres généraux.",
         "noDefaultLocation": "Le client par défaut doit avoir un emplacement par défaut configuré pour envoyer des invitations au portail.",
         "noLocationEmail": "L'emplacement du client par défaut doit avoir une adresse e-mail de contact configurée.",

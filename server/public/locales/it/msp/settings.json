@@ -150,6 +150,7 @@
       "copying": "Copia in corso...",
       "createUser": "Crea utente",
       "sendInvitation": "Invia invito al portale",
+      "sendTeamInvitation": "Invia invito",
       "cancel": "Annulla"
     },
     "form": {
@@ -183,7 +184,8 @@
       },
       "passwordAlert": {
         "withPassword": "L'impostazione di una password creera immediatamente l'utente. Potra accedere subito.",
-        "withoutPassword": "Nessuna password richiesta: invieremo un invito al portale per consentire all'utente di impostarla."
+        "withoutPassword": "Nessuna password richiesta: invieremo un invito al portale per consentire all'utente di impostarla.",
+        "withoutPasswordMsp": "Nessuna password richiesta: invieremo un invito via e-mail affinché la persona la imposti da sé."
       },
       "requirePasswordChange": "Richiedi cambio password al primo accesso"
     },
@@ -208,6 +210,7 @@
     "messages": {
       "success": {
         "portalInvitationSent": "Invito al portale inviato con successo!",
+        "teamInvitationSent": "Invito inviato con successo!",
         "clientPortalUserCreated": "Utente del portale clienti creato con successo!",
         "copiedVanityLink": "Link personalizzato di accesso al portale copiato negli appunti",
         "copiedCanonicalLink": "Link canonico di accesso al portale copiato negli appunti"
@@ -237,6 +240,7 @@
         "contactNotFound": "Contatto non trovato.",
         "contactMissingEmailGeneric": "Il contatto non ha un indirizzo e-mail. Aggiungi un indirizzo e-mail al contatto prima di inviare un invito.",
         "contactInvalidEmail": "Il contatto ha un indirizzo e-mail non valido. Aggiorna il contatto con un indirizzo e-mail valido prima di inviare un invito.",
+        "invalidEmail": "Inserisci un indirizzo e-mail valido",
         "noDefaultClient": "Nessun client predefinito configurato per questo tenant. Imposta un client predefinito nelle Impostazioni generali.",
         "noDefaultLocation": "Il client predefinito deve avere una sede predefinita configurata per inviare inviti al portale.",
         "noLocationEmail": "La sede del client predefinito deve avere un indirizzo e-mail di contatto configurato.",

@@ -150,6 +150,7 @@
       "copying": "Kopiëren...",
       "createUser": "Gebruiker aanmaken",
       "sendInvitation": "Portaaluitnodiging verzenden",
+      "sendTeamInvitation": "Uitnodiging verzenden",
       "cancel": "Annuleren"
     },
     "form": {
@@ -183,7 +184,8 @@
       },
       "passwordAlert": {
         "withPassword": "Door een wachtwoord in te stellen wordt de gebruiker direct aangemaakt. De gebruiker kan meteen inloggen.",
-        "withoutPassword": "Geen wachtwoord vereist — wij sturen een portaaluitnodiging zodat de gebruiker het zelf kan instellen."
+        "withoutPassword": "Geen wachtwoord vereist — wij sturen een portaaluitnodiging zodat de gebruiker het zelf kan instellen.",
+        "withoutPasswordMsp": "Geen wachtwoord vereist — we sturen een e-mailuitnodiging zodat de persoon het zelf kan instellen."
       },
       "requirePasswordChange": "Wachtwoordwijziging vereisen bij eerste aanmelding"
     },
@@ -208,6 +210,7 @@
     "messages": {
       "success": {
         "portalInvitationSent": "Portaaluitnodiging succesvol verzonden!",
+        "teamInvitationSent": "Uitnodiging succesvol verzonden!",
         "clientPortalUserCreated": "Klantenportaalgebruiker succesvol aangemaakt!",
         "copiedVanityLink": "Aangepaste portaalinloglink gekopieerd naar klembord",
         "copiedCanonicalLink": "Canonieke portaalinloglink gekopieerd naar klembord"
@@ -237,6 +240,7 @@
         "contactNotFound": "Contactpersoon niet gevonden.",
         "contactMissingEmailGeneric": "Het contactpersoon heeft geen e-mailadres. Voeg een e-mailadres toe aan het contactpersoon voordat u een uitnodiging verstuurt.",
         "contactInvalidEmail": "Het contactpersoon heeft een ongeldig e-mailadres. Werk het contactpersoon bij met een geldig e-mailadres voordat u een uitnodiging verstuurt.",
+        "invalidEmail": "Voer een geldig e-mailadres in",
         "noDefaultClient": "Geen standaardklant geconfigureerd voor deze tenant. Stel een standaardklant in bij Algemene instellingen.",
         "noDefaultLocation": "De standaardklant moet een standaardlocatie hebben om portaluitnodigingen te versturen.",
         "noLocationEmail": "De locatie van de standaardklant moet een contact-e-mailadres hebben geconfigureerd.",

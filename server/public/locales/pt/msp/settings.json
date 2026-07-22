@@ -150,6 +150,7 @@
       "copying": "Copiando...",
       "createUser": "Criar usuário",
       "sendInvitation": "Enviar convite do portal",
+      "sendTeamInvitation": "Enviar convite",
       "cancel": "Cancelar"
     },
     "form": {
@@ -183,7 +184,8 @@
       },
       "passwordAlert": {
         "withPassword": "Definir uma senha criará o usuário imediatamente. Eles podem fazer login imediatamente.",
-        "withoutPassword": "Não é necessária senha — enviaremos um convite do portal para o usuário configurá-la."
+        "withoutPassword": "Não é necessária senha — enviaremos um convite do portal para o usuário configurá-la.",
+        "withoutPasswordMsp": "Não é necessária senha — enviaremos um convite por e-mail para que a pessoa a defina."
       },
       "requirePasswordChange": "Exigir alteração de senha no primeiro login"
     },
@@ -208,6 +210,7 @@
     "messages": {
       "success": {
         "portalInvitationSent": "Convite do portal enviado com sucesso!",
+        "teamInvitationSent": "Convite enviado com sucesso!",
         "clientPortalUserCreated": "Usuário do portal do cliente criado com sucesso!",
         "copiedVanityLink": "Link de login do portal personalizado copiado para a área de transferência",
         "copiedCanonicalLink": "Link de login do portal canônico copiado para a área de transferência"
@@ -237,6 +240,7 @@
         "contactNotFound": "Contato não encontrado.",
         "contactMissingEmailGeneric": "O contato não possui um endereço de e-mail. Adicione um endereço de e-mail ao contato antes de enviar um convite.",
         "contactInvalidEmail": "O contato tem um endereço de e-mail inválido. Atualize o contato com um endereço de e-mail válido antes de enviar um convite.",
+        "invalidEmail": "Por favor, insira um endereço de e-mail válido",
         "noDefaultClient": "Nenhum cliente padrão configurado para este locatário. Defina um cliente padrão nas Configurações Gerais.",
         "noDefaultLocation": "O cliente padrão deve ter um local padrão configurado para enviar convites do portal.",
         "noLocationEmail": "A localização padrão do cliente deve ter um email de contato configurado.",

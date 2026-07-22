@@ -150,6 +150,7 @@
       "copying": "55555",
       "createUser": "55555",
       "sendInvitation": "55555",
+      "sendTeamInvitation": "55555",
       "cancel": "55555"
     },
     "form": {
@@ -183,7 +184,8 @@
       },
       "passwordAlert": {
         "withPassword": "55555",
-        "withoutPassword": "55555"
+        "withoutPassword": "55555",
+        "withoutPasswordMsp": "55555"
       },
       "requirePasswordChange": "55555"
     },
@@ -208,6 +210,7 @@
     "messages": {
       "success": {
         "portalInvitationSent": "55555",
+        "teamInvitationSent": "55555",
         "clientPortalUserCreated": "55555",
         "copiedVanityLink": "55555",
         "copiedCanonicalLink": "55555"
@@ -237,6 +240,7 @@
         "contactNotFound": "55555",
         "contactMissingEmailGeneric": "55555",
         "contactInvalidEmail": "55555",
+        "invalidEmail": "55555",
         "noDefaultClient": "55555",
         "noDefaultLocation": "55555",
         "noLocationEmail": "55555",

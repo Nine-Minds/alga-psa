@@ -150,6 +150,7 @@
       "copying": "Copying...",
       "createUser": "Create User",
       "sendInvitation": "Send Portal Invitation",
+      "sendTeamInvitation": "Send Invitation",
       "cancel": "Cancel"
     },
     "form": {
@@ -183,7 +184,8 @@
       },
       "passwordAlert": {
         "withPassword": "Setting a password will create the user immediately. They can log in right away.",
-        "withoutPassword": "No password required — we will send a portal invitation for the user to set it."
+        "withoutPassword": "No password required — we will send a portal invitation for the user to set it.",
+        "withoutPasswordMsp": "No password required — we will send them an email invitation to set it themselves."
       },
       "requirePasswordChange": "Require password change on first login"
     },
@@ -208,6 +210,7 @@
     "messages": {
       "success": {
         "portalInvitationSent": "Portal invitation sent successfully!",
+        "teamInvitationSent": "Invitation sent successfully!",
         "clientPortalUserCreated": "Client portal user created successfully!",
         "copiedVanityLink": "Copied vanity portal login link to clipboard",
         "copiedCanonicalLink": "Copied canonical portal login link to clipboard"
@@ -237,6 +240,7 @@
         "contactNotFound": "Contact not found.",
         "contactMissingEmailGeneric": "Contact does not have an email address. Please add an email address to the contact before sending an invitation.",
         "contactInvalidEmail": "Contact has an invalid email address. Please update the contact with a valid email address before sending an invitation.",
+        "invalidEmail": "Please enter a valid email address",
         "noDefaultClient": "No default client configured for this tenant. Please set a default client in General Settings.",
         "noDefaultLocation": "Default client must have a default location configured to send portal invitations.",
         "noLocationEmail": "Default client's location must have a contact email configured.",

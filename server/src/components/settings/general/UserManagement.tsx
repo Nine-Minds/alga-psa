@@ -13,6 +13,7 @@ import { addContact, getContactsEligibleForInvitation } from '@alga-psa/clients/
 import { sendPortalInvitation, createClientPortalUser } from '@alga-psa/client-portal/actions/portal-actions/portalInvitationActions';
 import type { PortalInvitationErrorCode } from '@alga-psa/portal-shared/types';
 import { getTenantPortalLoginLink } from '@alga-psa/client-portal/actions/portal-actions/clientPortalLinkActions';
+import { sendUserInvitation, type UserInvitationErrorCode } from '@alga-psa/users/actions/user-actions/userInvitationActions';
 
 const PORTAL_INVITE_ERROR_KEYS: Partial<Record<PortalInvitationErrorCode, string>> = {
   PERMISSION_DENIED_INVITE: 'users.messages.error.permissionDeniedInvite',
@@ -38,6 +39,24 @@ const PORTAL_INVITE_ERROR_KEYS: Partial<Record<PortalInvitationErrorCode, string
 const GENERIC_PORTAL_INVITE_ERROR_CODES: ReadonlySet<PortalInvitationErrorCode> = new Set([
   'INVITATION_FAILED',
   'CREATE_USER_FAILED'
+]);
+
+// Same idea as PORTAL_INVITE_ERROR_KEYS, but for the internal-team-member
+// email invite flow (sendUserInvitation) — mirrors the client-portal mapping
+// so the same "create user" form can show either flavor of invitation error.
+const USER_INVITE_ERROR_KEYS: Partial<Record<UserInvitationErrorCode, string>> = {
+  PERMISSION_DENIED_INVITE: 'users.messages.error.permissionDeniedInvite',
+  EMAIL_NOT_CONFIGURED: 'users.messages.error.emailNotConfigured',
+  EMAIL_ALREADY_EXISTS: 'users.messages.error.emailAlreadyInUse',
+  INVALID_EMAIL: 'users.messages.error.invalidEmail',
+  ROLE_REQUIRED: 'users.messages.error.roleRequired',
+  INVALID_ROLE: 'users.messages.error.invalidRole',
+  BASE_URL_NOT_CONFIGURED: 'users.messages.error.noBaseUrl',
+  INVITATION_FAILED: 'users.messages.error.sendInvitation'
+};
+
+const GENERIC_USER_INVITE_ERROR_CODES: ReadonlySet<UserInvitationErrorCode> = new Set([
+  'INVITATION_FAILED'
 ]);
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
 import { ContactPicker } from '@alga-psa/ui/components/ContactPicker';
@@ -74,6 +93,22 @@ const UserManagement = (): React.JSX.Element => {
         return result.error;
       }
       const key = PORTAL_INVITE_ERROR_KEYS[result.errorCode];
+      if (key) {
+        return t(key, { defaultValue: result.error ?? undefined });
+      }
+    }
+    return result.error || t(defaultKey);
+  };
+
+  const translateUserInvitationError = (
+    result: { error?: string; errorCode?: UserInvitationErrorCode },
+    defaultKey: string
+  ): string => {
+    if (result.errorCode) {
+      if (GENERIC_USER_INVITE_ERROR_CODES.has(result.errorCode) && result.error) {
+        return result.error;
+      }
+      const key = USER_INVITE_ERROR_KEYS[result.errorCode];
       if (key) {
         return t(key, { defaultValue: result.error ?? undefined });
       }
@@ -415,18 +450,12 @@ const fetchContacts = async (): Promise<void> => {
         return;
       }
       
-      // Validate required fields based on portal type
-      if (portalType === 'msp') {
-        if (!newUser.firstName || !newUser.lastName || !newUser.email || !newUser.password) {
-          setError(t('users.messages.error.fillRequiredFields'));
-          return;
-        }
-      } else {
-        // For client portal, password is optional (they'll set it via invitation)
-        if (!newUser.firstName || !newUser.lastName || !newUser.email) {
-          setError(t('users.messages.error.fillRequiredFields'));
-          return;
-        }
+      // Password is optional for both portal types — leaving it blank sends
+      // an email invitation (client-portal or internal-team) instead of
+      // requiring the admin to invent and hand over a temporary password.
+      if (!newUser.firstName || !newUser.lastName || !newUser.email) {
+        setError(t('users.messages.error.fillRequiredFields'));
+        return;
       }
 
       if (portalType === 'client') {
@@ -512,8 +541,34 @@ const fetchContacts = async (): Promise<void> => {
           }
           await fetchUsers();
         }
+      } else if (!newUser.password) {
+        // No password entered — send an email invite instead of forcing the
+        // admin to invent and hand over a temporary password. Mirrors the
+        // client-portal invitation flow and the onboarding wizard's Team
+        // Members step, which use the same sendUserInvitation action.
+        const invitationResult = await sendUserInvitation({
+          email: newUser.email,
+          firstName: newUser.firstName,
+          lastName: newUser.lastName,
+          roleId: newUser.role || (roles.length > 0 ? roles[0].role_id : '')
+        });
+
+        if (!invitationResult.success) {
+          const message = translateUserInvitationError(invitationResult, 'users.messages.error.sendInvitation');
+          toast.error(message);
+          setError(message);
+          return;
+        }
+
+        toast.success(t('users.messages.success.teamInvitationSent', { defaultValue: 'Invitation sent successfully!' }));
       } else {
-        // Create MSP user
+        // Create MSP user immediately with the admin-provided password
+        const passwordError = validatePassword(newUser.password);
+        if (passwordError) {
+          toast.error(passwordError);
+          return;
+        }
+
         const result = await addUser({
           firstName: newUser.firstName,
           lastName: newUser.lastName,
@@ -818,7 +873,7 @@ const fetchContacts = async (): Promise<void> => {
             )}
             <div>
               <Label htmlFor="password">
-                {t('users.form.fields.password')} {portalType === 'msp' && <span className="text-destructive">*</span>} {portalType === 'client' && <span className="text-sm text-gray-500">{t('users.form.fields.passwordOptional')}</span>}
+                {t('users.form.fields.password')} <span className="text-sm text-gray-500">{t('users.form.fields.passwordOptional')}</span>
               </Label>
               <div className="relative">
                 <Input
@@ -833,7 +888,7 @@ const fetchContacts = async (): Promise<void> => {
                     }
                   }}
                   className="pr-10"
-                  placeholder={portalType === 'client' ? t('users.form.fields.passwordPlaceholder.client') : t('users.form.fields.passwordPlaceholder.msp')}
+                  placeholder={t('users.form.fields.passwordPlaceholder.client')}
                   autoComplete="new-password"
                 />
                 <button
@@ -849,15 +904,17 @@ const fetchContacts = async (): Promise<void> => {
                   )}
                 </button>
               </div>
-              {portalType === 'client' && (
-                <Alert variant={newUser.password ? 'info' : 'warning'} className="mt-2">
-                  <AlertDescription>
-                    {newUser.password
-                      ? t('users.form.passwordAlert.withPassword')
-                      : t('users.form.passwordAlert.withoutPassword')}
-                  </AlertDescription>
-                </Alert>
-              )}
+              <Alert variant={newUser.password ? 'info' : 'warning'} className="mt-2">
+                <AlertDescription>
+                  {newUser.password
+                    ? t('users.form.passwordAlert.withPassword')
+                    : portalType === 'client'
+                      ? t('users.form.passwordAlert.withoutPassword')
+                      : t('users.form.passwordAlert.withoutPasswordMsp', {
+                          defaultValue: 'No password required — we will send them an email invitation to set it themselves.'
+                        })}
+                </AlertDescription>
+              </Alert>
             </div>
           </div>
         </div>
@@ -878,11 +935,11 @@ const fetchContacts = async (): Promise<void> => {
           >
             {portalType === 'msp' && licenseUsage?.limit !== null && licenseUsage?.remaining === 0
               ? t('users.license.addLicense')
-              : portalType === 'msp'
+              : newUser.password
                 ? t('users.actions.createUser')
-                : newUser.password
-                  ? t('users.actions.createUser')
-                  : t('users.actions.sendInvitation')}
+                : portalType === 'client'
+                  ? t('users.actions.sendInvitation')
+                  : t('users.actions.sendTeamInvitation', { defaultValue: 'Send Invitation' })}
           </Button>
           <Button
             id={`cancel-new-${portalType}-user-btn`}
