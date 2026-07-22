@@ -609,7 +609,9 @@ export abstract class BaseEmailService {
       const result = await this.emailProvider.sendEmail(emailMessage, params.tenantId || 'system');
 
       // Best-effort: persist provider-level send result for auditing/debugging.
-      void this.logEmailSendResult({
+      // Awaited: inbound reply matching reads email_sending_logs immediately after
+      // a send returns — fire-and-forget raced it.
+      await this.logEmailSendResult({
         tenantId: typeof params.tenantId === 'string' ? params.tenantId : null,
         providerResult: result,
         message: emailMessage,
@@ -695,7 +697,9 @@ export abstract class BaseEmailService {
         const providerId = this.emailProvider?.providerId ?? 'unknown';
         const providerType = this.emailProvider?.providerType ?? 'unknown';
 
-        void this.logEmailSendResult({
+        // Awaited: inbound reply matching reads email_sending_logs immediately after
+        // a send returns — fire-and-forget raced it.
+        await this.logEmailSendResult({
           tenantId: typeof params.tenantId === 'string' ? params.tenantId : null,
           providerResult: {
             success: false,

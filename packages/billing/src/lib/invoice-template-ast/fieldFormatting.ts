@@ -41,7 +41,8 @@ const formatDate = (value: string) => {
   if (Number.isNaN(parsed.getTime())) {
     return value;
   }
-  return parsed.toLocaleDateString('en-US');
+  // Pin UTC so rendered dates don't depend on the server process timezone.
+  return parsed.toLocaleDateString('en-US', { timeZone: 'UTC' });
 };
 
 export const normalizeFieldFormat = (value: unknown): TemplateValueFormat => {

@@ -248,11 +248,13 @@ describe('TimeSheetApproval', () => {
     requestChangesButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     await flushUi();
 
-    expect(updateTimeEntryApprovalStatus).toHaveBeenLastCalledWith({
+    // Generous wait: under Nx parallel CI load the async click handler can
+    // outlast a single-tick flush (observed CI-only act-warning failures).
+    await waitFor(() => expect(updateTimeEntryApprovalStatus).toHaveBeenLastCalledWith({
       entryId: 'entry-1',
       approvalStatus: 'CHANGES_REQUESTED',
       changeRequestComment: 'Please break out travel time separately.',
-    });
+    }), { timeout: 5_000 });
 
     updateTimeEntryApprovalStatus.mockClear();
 
@@ -281,11 +283,11 @@ describe('TimeSheetApproval', () => {
     requestChangesButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     await flushUi();
 
-    expect(updateTimeEntryApprovalStatus).toHaveBeenLastCalledWith({
+    await waitFor(() => expect(updateTimeEntryApprovalStatus).toHaveBeenLastCalledWith({
       entryId: 'entry-1',
       approvalStatus: 'CHANGES_REQUESTED',
       changeRequestComment: undefined,
-    });
+    }), { timeout: 5_000 });
   });
 
   it('shows existing per-entry feedback in the manager approval drawer', async () => {

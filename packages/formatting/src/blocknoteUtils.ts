@@ -102,9 +102,10 @@ export function convertBlockNoteToMarkdown(blocks: any): string {
   if (typeof blocks === 'string') {
     try {
       blockData = JSON.parse(blocks);
-    } catch (e) {
-      console.error("[BlockNoteUtils] Failed to parse BlockNote JSON string:", e);
-      return "[Invalid content format]";
+    } catch {
+      // Not BlockNote JSON — the string IS the content (plain-text comments
+      // land here). Surface it rather than a debug sentinel.
+      return blocks;
     }
   } else {
     blockData = blocks;

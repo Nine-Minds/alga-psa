@@ -160,6 +160,9 @@ const servicePeriodPostInventoryRefs = new Set([
   'server/src/test/integration/api/invoiceService.recurringCoexistence.integration.test.ts',
   'server/src/test/integration/billing/creditReconciliation.integration.test.ts',
   'server/src/test/integration/contractWizard.integration.test.ts',
+  // P0 journey suites (tests/p0_journeys) landed after the pass-0 snapshot and
+  // assert persisted service-period columns on generated invoices.
+  'server/src/test/integration/journeys/contractWizardToInvoice.journey.integration.test.ts',
   'server/src/test/integration/billing/profitabilityReporting.integration.test.ts',
   'server/src/test/unit/api/invoiceRecurringList.contract.test.ts',
   'server/src/test/unit/billing/automaticInvoices.nonContractSelection.ui.test.tsx',

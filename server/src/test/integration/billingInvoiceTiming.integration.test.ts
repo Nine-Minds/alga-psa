@@ -216,7 +216,7 @@ describe('Billing Invoice Timing Integration', () => {
     const { clientContractLineId } = await createFixedContractLine(contextLike, {
       serviceName: 'Integration Arrears Support',
       planName: 'Integration Arrears Plan',
-      baseRateCents: 20000,
+      baseRateCents: 200,
       startDate: '2024-12-01',
       billingTiming: 'arrears'
     });
@@ -260,7 +260,7 @@ describe('Billing Invoice Timing Integration', () => {
     const { serviceId, contractLineId } = await createFixedContractLine(contextLike, {
       serviceName: 'Arrears Invoice Support',
       planName: 'Arrears Invoice Plan',
-      baseRateCents: 15000,
+      baseRateCents: 150,
       startDate: '2024-12-01',
       billingTiming: 'arrears'
     });
@@ -290,7 +290,7 @@ describe('Billing Invoice Timing Integration', () => {
     const { serviceId, contractLineId } = await createFixedContractLine(contextLike, {
       serviceName: 'Advance Invoice Support',
       planName: 'Advance Invoice Plan',
-      baseRateCents: 18000,
+      baseRateCents: 180,
       startDate: '2024-12-01',
       billingTiming: 'advance'
     });
@@ -322,7 +322,7 @@ describe('Billing Invoice Timing Integration', () => {
     const arrearsLine = await createFixedContractLine(contextLike, {
       serviceName: 'Mixed Arrears Service',
       planName: 'Mixed Arrears Plan',
-      baseRateCents: 21000,
+      baseRateCents: 210,
       startDate: '2024-12-01',
       billingTiming: 'arrears'
     });
@@ -330,7 +330,7 @@ describe('Billing Invoice Timing Integration', () => {
   const advanceLine = await createFixedContractLine(contextLike, {
     serviceName: 'Mixed Advance Service',
     planName: 'Mixed Advance Plan',
-    baseRateCents: 22000,
+    baseRateCents: 220,
     startDate: '2024-12-01',
     billingTiming: 'advance',
     contractId: arrearsLine.contractId,
@@ -382,7 +382,7 @@ it('T152: DB-backed monthly client-cadence recurring invoices preserve mixed adv
   const arrearsLine = await createFixedContractLine(contextLike, {
     serviceName: 'Monthly Parity Arrears Service',
     planName: 'Monthly Parity Arrears Plan',
-    baseRateCents: 15000,
+    baseRateCents: 150,
     startDate: previousPeriodStart,
     billingTiming: 'arrears',
     billingFrequency: 'monthly'
@@ -391,7 +391,7 @@ it('T152: DB-backed monthly client-cadence recurring invoices preserve mixed adv
   const advanceLine = await createFixedContractLine(contextLike, {
     serviceName: 'Monthly Parity Advance Service',
     planName: 'Monthly Parity Advance Plan',
-    baseRateCents: 18000,
+    baseRateCents: 180,
     startDate: previousPeriodStart,
     billingTiming: 'advance',
     billingFrequency: 'monthly',
@@ -447,7 +447,7 @@ it('T153: DB-backed annual client-cadence recurring invoices preserve longer-fre
   const arrearsLine = await createFixedContractLine(contextLike, {
     serviceName: 'Annual Parity Arrears Service',
     planName: 'Annual Parity Arrears Plan',
-    baseRateCents: 120000,
+    baseRateCents: 1200,
     startDate: previousPeriodStart,
     billingTiming: 'arrears',
     billingFrequency: 'annually'
@@ -456,7 +456,7 @@ it('T153: DB-backed annual client-cadence recurring invoices preserve longer-fre
   const advanceLine = await createFixedContractLine(contextLike, {
     serviceName: 'Annual Parity Advance Service',
     planName: 'Annual Parity Advance Plan',
-    baseRateCents: 240000,
+    baseRateCents: 2400,
     startDate: previousPeriodStart,
     billingTiming: 'advance',
     billingFrequency: 'annually',
@@ -538,7 +538,7 @@ it('T171: DB-backed monthly client-cadence recurring fixed invoice generation st
   const fixedLine = await createFixedContractLine(contextLike, {
     serviceName: 'Monthly Sanity Fixed Service',
     planName: 'Monthly Sanity Fixed Plan',
-    baseRateCents: 17500,
+    baseRateCents: 175,
     startDate: currentPeriodStart,
     billingTiming: 'advance',
     billingFrequency: 'monthly'
@@ -582,7 +582,7 @@ it('T029: billed recurring service periods link back to invoice charge detail ro
   const fixedLine = await createFixedContractLine(contextLike, {
     serviceName: 'Client Linkage Service',
     planName: 'Client Linkage Plan',
-    baseRateCents: 18500,
+    baseRateCents: 185,
     startDate: currentPeriodStart,
     billingTiming: 'advance',
     billingFrequency: 'monthly',
@@ -669,7 +669,7 @@ it('T172: DB-backed quarterly client-cadence recurring fixed invoice generation 
   const fixedLine = await createFixedContractLine(contextLike, {
     serviceName: 'Quarterly Sanity Fixed Service',
     planName: 'Quarterly Sanity Fixed Plan',
-    baseRateCents: 54000,
+    baseRateCents: 540,
     startDate: previousPeriodStart,
     billingTiming: 'arrears',
     billingFrequency: 'quarterly'
@@ -814,7 +814,7 @@ it('F221: DB-backed recurring invoice generation succeeds while dropped recurren
   const fixedLine = await createFixedContractLine(contextLike, {
     serviceName: 'Dropped Table Validation Service',
     planName: 'Dropped Table Validation Plan',
-    baseRateCents: 19000,
+    baseRateCents: 190,
     startDate: currentPeriodStart,
     billingTiming: 'advance',
     billingFrequency: 'monthly',
@@ -862,7 +862,7 @@ it('T166: DB-backed recurring outputs stay stable across billing_cycle_alignment
     const line = await createFixedContractLine(contextLike, {
       serviceName: `Alignment ${variant.suffix} Service`,
       planName: `Alignment ${variant.suffix} Plan`,
-      baseRateCents: 28000,
+      baseRateCents: 280,
       startDate: '2025-02-10',
       billingTiming: 'advance',
       billingFrequency: 'monthly',
@@ -926,7 +926,7 @@ it('T111: billing engine contract resolution joins only on instantiated client_c
   const fixedLine = await createFixedContractLine(contextLike, {
     serviceName: 'Template Join Removal Service',
     planName: 'Template Join Removal Plan',
-    baseRateCents: 25000,
+    baseRateCents: 250,
     startDate: currentPeriodStart,
     billingTiming: 'advance',
     billingFrequency: 'monthly',
@@ -987,7 +987,7 @@ it('T167: DB-backed recurring outputs still persist canonical partial service pe
   const line = await createFixedContractLine(contextLike, {
     serviceName: 'Resolve Cleanup Service',
     planName: 'Resolve Cleanup Plan',
-    baseRateCents: 28000,
+    baseRateCents: 280,
     startDate: '2025-02-10',
     billingTiming: 'arrears',
     billingFrequency: 'monthly'
@@ -1034,7 +1034,7 @@ it('T140/T175/T252: DB-backed monthly contract-cadence billing persists contract
   const fixedLine = await createFixedContractLine(contextLike, {
     serviceName: 'Contract Cadence Window Service',
     planName: 'Contract Cadence Window Plan',
-    baseRateCents: 21000,
+    baseRateCents: 210,
     startDate: currentPeriodStart,
     billingTiming: 'advance',
     billingFrequency: 'monthly',
@@ -1087,7 +1087,7 @@ it('T020/T030: billed recurring service periods link back to invoice charge deta
   const fixedLine = await createFixedContractLine(contextLike, {
     serviceName: 'Contract Linkage Service',
     planName: 'Contract Linkage Plan',
-    baseRateCents: 22500,
+    baseRateCents: 225,
     startDate: currentPeriodStart,
     billingTiming: 'advance',
     billingFrequency: 'monthly',
@@ -1561,7 +1561,7 @@ it('T003/T008/T017: mixed-charge recurring windows are blocked in full by matchi
   const fixedLine = await createFixedContractLine(contextLike, {
     serviceName: 'Approval Mixed Fixed Service',
     planName: 'Approval Mixed Fixed Plan',
-    baseRateCents: 18000,
+    baseRateCents: 180,
     startDate: '2025-02-08',
     billingTiming: 'advance',
     billingFrequency: 'monthly',
@@ -1877,7 +1877,7 @@ it('T073: mixed recurring invoice generation can combine fixed, hourly, and usag
   const fixedLine = await createFixedContractLine(contextLike, {
     serviceName: 'Mixed Fixed Service',
     planName: 'Mixed Window Contract',
-    baseRateCents: 15000,
+    baseRateCents: 150,
     startDate: currentPeriodStart,
     billingTiming: 'advance',
     billingFrequency: 'monthly',
@@ -1971,7 +1971,7 @@ it('T021: deleting a recurring invoice clears service-period invoice linkage and
   const fixedLine = await createFixedContractLine(contextLike, {
     serviceName: 'Contract Delete Service',
     planName: 'Contract Delete Plan',
-    baseRateCents: 24500,
+    baseRateCents: 245,
     startDate: currentPeriodStart,
     billingTiming: 'advance',
     billingFrequency: 'monthly',
@@ -2074,7 +2074,7 @@ it('T051/T078: invoiced-history reader returns client-cadence recurring invoices
   const fixedLine = await createFixedContractLine(contextLike, {
     serviceName: 'Client History Service',
     planName: 'Client History Plan',
-    baseRateCents: 19900,
+    baseRateCents: 199,
     startDate: currentPeriodStart,
     billingTiming: 'advance',
     billingFrequency: 'monthly',
@@ -2157,7 +2157,7 @@ it('T052/T079/T084: invoiced-history reader returns bridge-free contract-cadence
   const fixedLine = await createFixedContractLine(contextLike, {
     serviceName: 'Contract History Service',
     planName: 'Contract History Plan',
-    baseRateCents: 22100,
+    baseRateCents: 221,
     startDate: currentPeriodStart,
     billingTiming: 'advance',
     billingFrequency: 'monthly',
@@ -2239,7 +2239,7 @@ it('T082: DB-backed recurring invoice code treats materialized service periods a
   const fixedLine = await createFixedContractLine(contextLike, {
     serviceName: 'Required Schema Service',
     planName: 'Required Schema Plan',
-    baseRateCents: 18800,
+    baseRateCents: 188,
     startDate: currentPeriodStart,
     billingTiming: 'advance',
     billingFrequency: 'monthly',
@@ -2326,7 +2326,7 @@ it('T105: due-work candidates are non-generateable when a client-cadence window 
   const firstLine = await createFixedContractLine(contextLike, {
     serviceName: 'Partial Materialization Service A',
     planName: 'Partial Materialization Plan A',
-    baseRateCents: 15600,
+    baseRateCents: 156,
     startDate: currentPeriodStart,
     billingTiming: 'advance',
     billingFrequency: 'monthly',
@@ -2335,7 +2335,7 @@ it('T105: due-work candidates are non-generateable when a client-cadence window 
   const secondLine = await createFixedContractLine(contextLike, {
     serviceName: 'Partial Materialization Service B',
     planName: 'Partial Materialization Plan B',
-    baseRateCents: 16400,
+    baseRateCents: 164,
     startDate: currentPeriodStart,
     billingTiming: 'advance',
     billingFrequency: 'monthly',
@@ -2430,7 +2430,7 @@ it('T104: generation blocks partially materialized client-cadence windows when e
   const firstLine = await createFixedContractLine(contextLike, {
     serviceName: 'Partial Generate Service A',
     planName: 'Partial Generate Plan A',
-    baseRateCents: 17600,
+    baseRateCents: 176,
     startDate: currentPeriodStart,
     billingTiming: 'advance',
     billingFrequency: 'monthly',
@@ -2439,7 +2439,7 @@ it('T104: generation blocks partially materialized client-cadence windows when e
   const secondLine = await createFixedContractLine(contextLike, {
     serviceName: 'Partial Generate Service B',
     planName: 'Partial Generate Plan B',
-    baseRateCents: 18600,
+    baseRateCents: 186,
     startDate: currentPeriodStart,
     billingTiming: 'advance',
     billingFrequency: 'monthly',
@@ -2534,7 +2534,7 @@ it('T033/T078: reversing a client-cadence recurring invoice repairs service-peri
   const fixedLine = await createFixedContractLine(contextLike, {
     serviceName: 'Client Reverse Service',
     planName: 'Client Reverse Plan',
-    baseRateCents: 20100,
+    baseRateCents: 201,
     startDate: currentPeriodStart,
     billingTiming: 'advance',
     billingFrequency: 'monthly',
@@ -2603,7 +2603,7 @@ it('T034/T079: reversing a contract-cadence recurring invoice repairs service-pe
   const fixedLine = await createFixedContractLine(contextLike, {
     serviceName: 'Contract Reverse Service',
     planName: 'Contract Reverse Plan',
-    baseRateCents: 24500,
+    baseRateCents: 245,
     startDate: currentPeriodStart,
     billingTiming: 'advance',
     billingFrequency: 'monthly',
@@ -2668,7 +2668,7 @@ it('T085: hard-deleting recurring invoices reopens linked service periods withou
   const clientFixedLine = await createFixedContractLine(clientSetup.contextLike, {
     serviceName: 'Client Hard Delete Service',
     planName: 'Client Hard Delete Plan',
-    baseRateCents: 20500,
+    baseRateCents: 205,
     startDate: clientSetup.currentPeriodStart,
     billingTiming: 'advance',
     billingFrequency: 'monthly',
@@ -2729,7 +2729,7 @@ it('T085: hard-deleting recurring invoices reopens linked service periods withou
   const contractFixedLine = await createFixedContractLine(contractSetup.contextLike, {
     serviceName: 'Contract Hard Delete Service',
     planName: 'Contract Hard Delete Plan',
-    baseRateCents: 24700,
+    baseRateCents: 247,
     startDate: contractSetup.currentPeriodStart,
     billingTiming: 'advance',
     billingFrequency: 'monthly',
@@ -2799,7 +2799,7 @@ it('T017/T019/T050/T077/T080/T084: recurring contract-cadence preview, generatio
   const fixedLine = await createFixedContractLine(contextLike, {
     serviceName: 'Contract Happy Path Service',
     planName: 'Contract Happy Path Plan',
-    baseRateCents: 21400,
+    baseRateCents: 214,
     startDate: contractPeriodStart,
     billingTiming: 'advance',
     billingFrequency: 'monthly',
@@ -2913,7 +2913,7 @@ it('T345: invoicing a second contract-cadence contract in the same window does n
   const firstLine = await createFixedContractLine(contextLike, {
     serviceName: 'Sequential Window Contract Service A',
     planName: 'Sequential Window Contract Plan A',
-    baseRateCents: 12100,
+    baseRateCents: 121,
     startDate: currentPeriodStart,
     billingTiming: 'advance',
     billingFrequency: 'monthly',
@@ -2966,7 +2966,7 @@ it('T345: invoicing a second contract-cadence contract in the same window does n
   const secondLine = await createFixedContractLine(contextLike, {
     serviceName: 'Sequential Window Contract Service B',
     planName: 'Sequential Window Contract Plan B',
-    baseRateCents: 17700,
+    baseRateCents: 177,
     startDate: currentPeriodStart,
     billingTiming: 'advance',
     billingFrequency: 'monthly',
@@ -3077,7 +3077,7 @@ it('T016/T018/T049/T076/T080/T087: recurring client-cadence preview, generation,
   const happyPathLine = await createFixedContractLine(contextLike, {
     serviceName: 'Client Happy Path Service',
     planName: 'Client Happy Path Plan',
-    baseRateCents: 19800,
+    baseRateCents: 198,
     startDate: currentPeriodStart,
     billingTiming: 'advance',
     billingFrequency: 'monthly',
@@ -3178,7 +3178,7 @@ it('T108: recurring due-work assertions validate candidate-level contracts direc
   const fixedLine = await createFixedContractLine(contextLike, {
     serviceName: 'Candidate Contract Assertions Service',
     planName: 'Candidate Contract Assertions Plan',
-    baseRateCents: 20300,
+    baseRateCents: 203,
     startDate: currentPeriodStart,
     billingTiming: 'advance',
     billingFrequency: 'monthly',
@@ -3250,7 +3250,7 @@ it('T080: mixed batch generation from AutomaticInvoices discovers and generates 
   const clientLine = await createFixedContractLine(clientSetup.contextLike, {
     serviceName: 'Mixed Batch Client Service',
     planName: 'Mixed Batch Client Plan',
-    baseRateCents: 16200,
+    baseRateCents: 162,
     startDate: clientSetup.currentPeriodStart,
     billingTiming: 'advance',
     billingFrequency: 'monthly',
@@ -3292,7 +3292,7 @@ it('T080: mixed batch generation from AutomaticInvoices discovers and generates 
   const contractLine = await createFixedContractLine(contractSetup.contextLike, {
     serviceName: 'Mixed Batch Contract Service',
     planName: 'Mixed Batch Contract Plan',
-    baseRateCents: 23600,
+    baseRateCents: 236,
     startDate: contractPeriodStart,
     billingTiming: 'advance',
     billingFrequency: 'monthly',
@@ -3387,7 +3387,7 @@ it('T079: deleting a contract-cadence recurring invoice makes the same execution
   const fixedLine = await createFixedContractLine(contextLike, {
     serviceName: 'Contract Delete Reappear Service',
     planName: 'Contract Delete Reappear Plan',
-    baseRateCents: 24300,
+    baseRateCents: 243,
     startDate: contractPeriodStart,
     billingTiming: 'advance',
     billingFrequency: 'monthly',
@@ -3472,7 +3472,7 @@ it('T078: reversing a client-cadence recurring invoice restores due selection by
   const fixedLine = await createFixedContractLine(contextLike, {
     serviceName: 'Client Reverse Reappear Service',
     planName: 'Client Reverse Reappear Plan',
-    baseRateCents: 20700,
+    baseRateCents: 207,
     startDate: currentPeriodStart,
     billingTiming: 'advance',
     billingFrequency: 'monthly',
@@ -3552,7 +3552,7 @@ it('T276: DB-backed monthly contract-cadence scheduling, grouping, invoice gener
   const fixedLine = await createFixedContractLine(contextLike, {
     serviceName: 'Contract Cadence Monthly Hydration Service',
     planName: 'Contract Cadence Monthly Hydration Plan',
-    baseRateCents: 24000,
+    baseRateCents: 240,
     startDate: currentPeriodStart,
     billingTiming: 'advance',
     billingFrequency: 'monthly',
@@ -3620,7 +3620,7 @@ it('T277: DB-backed annual contract-cadence scheduling, invoice generation, and 
   const fixedLine = await createFixedContractLine(contextLike, {
     serviceName: 'Contract Cadence Annual Service',
     planName: 'Contract Cadence Annual Plan',
-    baseRateCents: 96000,
+    baseRateCents: 960,
     startDate: currentPeriodStart,
     billingTiming: 'advance',
     billingFrequency: 'annually',
@@ -3683,7 +3683,7 @@ it('T176: DB-backed mixed cadence-owner billing groups same-window due work into
   const clientCadenceLine = await createFixedContractLine(contextLike, {
     serviceName: 'Mixed Client Cadence Service',
     planName: 'Mixed Client Cadence Plan',
-    baseRateCents: 12000,
+    baseRateCents: 120,
     startDate: '2024-12-01',
     billingTiming: 'advance',
     billingFrequency: 'monthly',
@@ -3693,7 +3693,7 @@ it('T176: DB-backed mixed cadence-owner billing groups same-window due work into
   const contractCadenceLine = await createFixedContractLine(contextLike, {
     serviceName: 'Mixed Contract Cadence Service',
     planName: 'Mixed Contract Cadence Plan',
-    baseRateCents: 18000,
+    baseRateCents: 180,
     startDate: currentPeriodStart,
     billingTiming: 'advance',
     billingFrequency: 'monthly',
@@ -3785,7 +3785,7 @@ it('T264: generateInvoice to persistence to getFullInvoiceById round-trips canon
   const fixedLine = await createFixedContractLine(contextLike, {
     serviceName: 'Invoice Roundtrip Service',
     planName: 'Invoice Roundtrip Plan',
-    baseRateCents: 17500,
+    baseRateCents: 175,
     startDate: '2024-12-01',
     billingTiming: 'advance',
     billingFrequency: 'monthly',
@@ -3846,7 +3846,7 @@ it('T316/T323/T324/T327: DB-backed persisted service-period regeneration, billed
   const fixedLine = await createFixedContractLine(contextLike, {
     serviceName: 'Persisted Ledger Service',
     planName: 'Persisted Ledger Plan',
-    baseRateCents: 19500,
+    baseRateCents: 195,
     startDate: '2024-12-01',
     billingTiming: 'advance',
     billingFrequency: 'monthly',
@@ -4153,7 +4153,7 @@ it('T320/T301: DB-backed billing-staff inspection and edit flows list future cli
   const fixedLine = await createFixedContractLine(contextLike, {
     serviceName: 'Persisted Ledger Listing Service',
     planName: 'Persisted Ledger Listing Plan',
-    baseRateCents: 20500,
+    baseRateCents: 205,
     startDate: '2024-12-01',
     billingTiming: 'advance',
     billingFrequency: 'monthly',
@@ -4282,7 +4282,7 @@ it('T321: DB-backed boundary edits move due selection without rewriting already 
   const fixedLine = await createFixedContractLine(contextLike, {
     serviceName: 'Persisted Ledger Boundary Service',
     planName: 'Persisted Ledger Boundary Plan',
-    baseRateCents: 21500,
+    baseRateCents: 215,
     startDate: '2024-12-01',
     billingTiming: 'advance',
     billingFrequency: 'monthly',
@@ -4435,7 +4435,7 @@ it('T322/T328: DB-backed skipped client-cadence periods block invoice generation
   const fixedLine = await createFixedContractLine(contextLike, {
     serviceName: 'Persisted Ledger Skip Service',
     planName: 'Persisted Ledger Skip Plan',
-    baseRateCents: 22500,
+    baseRateCents: 225,
     startDate: '2024-12-01',
     billingTiming: 'advance',
     billingFrequency: 'monthly',
@@ -4548,7 +4548,7 @@ it('T325: DB-backed future contract-cadence service periods can be inspected and
   const fixedLine = await createFixedContractLine(contextLike, {
     serviceName: 'Persisted Contract Ledger Service',
     planName: 'Persisted Contract Ledger Plan',
-    baseRateCents: 23500,
+    baseRateCents: 235,
     startDate: '2025-01-08',
     billingTiming: 'advance',
     billingFrequency: 'monthly',
@@ -4681,7 +4681,7 @@ it('T326: DB-backed mixed cadence-owner recurring obligations materialize distin
   const clientCadenceLine = await createFixedContractLine(contextLike, {
     serviceName: 'Persisted Mixed Client Service',
     planName: 'Persisted Mixed Client Plan',
-    baseRateCents: 24500,
+    baseRateCents: 245,
     startDate: '2024-12-01',
     billingTiming: 'advance',
     billingFrequency: 'monthly',
@@ -4690,7 +4690,7 @@ it('T326: DB-backed mixed cadence-owner recurring obligations materialize distin
   const contractCadenceLine = await createFixedContractLine(contextLike, {
     serviceName: 'Persisted Mixed Contract Service',
     planName: 'Persisted Mixed Contract Plan',
-    baseRateCents: 25500,
+    baseRateCents: 255,
     startDate: '2025-01-08',
     billingTiming: 'advance',
     billingFrequency: 'monthly',

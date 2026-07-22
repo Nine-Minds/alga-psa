@@ -57,8 +57,28 @@ export function parseTicketStatusFilterValue(statusId?: string | null): ParsedTi
     };
   }
 
+  // Anything else is only a status id if it looks like one. Bare "open"/
+  // "closed"/"all" map to the sentinel kinds, and other non-UUID strings fall
+  // back to a name match — previously they flowed into a uuid-typed SQL
+  // comparison and died in the database instead of at this boundary.
+  const bareAlias = BARE_STATUS_ALIASES[statusId.toLowerCase()];
+  if (bareAlias) {
+    return bareAlias;
+  }
+  if (!UUID_PATTERN.test(statusId)) {
+    return { kind: 'name', statusName: statusId };
+  }
+
   return { kind: 'id', statusId };
 }
+
+const BARE_STATUS_ALIASES: Record<string, ParsedTicketStatusFilter> = {
+  open: { kind: 'open' },
+  all: { kind: 'all' },
+  closed: { kind: 'closed' },
+};
+
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export function buildTicketStatusFilterOptions(
   statusOptions: TicketStatusFilterOption[],

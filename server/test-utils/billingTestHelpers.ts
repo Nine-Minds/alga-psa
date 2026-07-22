@@ -553,9 +553,7 @@ export async function createFixedPlanAssignment(
   const clientContractId = options.clientContractId ?? uuidv4();
   const configId = uuidv4();
   const baseRateCents = options.baseRateCents ?? 1000;
-  const baseRateDollars = baseRateCents / 100;
   const detailBaseRateCents = options.detailBaseRateCents ?? baseRateCents;
-  const detailBaseRateDollars = detailBaseRateCents / 100;
   const enableProration = options.enableProration ?? false;
   const billingCycleAlignment: 'start' | 'end' | 'prorated' = options.billingCycleAlignment ?? 'start';
   const quantity = options.quantity ?? 1;
@@ -651,7 +649,7 @@ export async function createFixedPlanAssignment(
     billing_frequency: billingFrequency,
     is_custom: false,
     contract_line_type: 'Fixed',
-    custom_rate: baseRateDollars,
+    custom_rate: baseRateCents,
     enable_proration: enableProration,
     billing_cycle_alignment: billingCycleAlignment,
     billing_timing: billingTiming,
@@ -673,7 +671,7 @@ export async function createFixedPlanAssignment(
       contract_line_name: planName,
       billing_frequency: billingFrequency,
       contract_line_type: 'Fixed',
-      custom_rate: baseRateDollars,
+      custom_rate: baseRateCents,
       enable_proration: enableProration,
       billing_cycle_alignment: billingCycleAlignment,
       billing_timing: billingTiming,
@@ -704,10 +702,10 @@ export async function createFixedPlanAssignment(
     .insert({
       config_id: configId,
       tenant: context.tenantId,
-      base_rate: baseRateDollars
+      base_rate: baseRateCents
     })
     .onConflict(['tenant', 'config_id'])
-    .merge({ base_rate: baseRateDollars });
+    .merge({ base_rate: baseRateCents });
 
   await tenantTable(context, 'contract_line_services')
     .insert({
@@ -764,13 +762,13 @@ export async function createFixedPlanAssignment(
       .insert({
         plan_id: legacyPlanId,
         tenant: context.tenantId,
-        base_rate: baseRateDollars,
+        base_rate: baseRateCents,
         enable_proration: enableProration,
         billing_cycle_alignment: billingCycleAlignment
       })
       .onConflict(['tenant', 'plan_id'])
       .merge({
-        base_rate: baseRateDollars,
+        base_rate: baseRateCents,
         enable_proration: enableProration,
         billing_cycle_alignment: billingCycleAlignment
       });
@@ -798,10 +796,10 @@ export async function createFixedPlanAssignment(
       .insert({
         config_id: configId,
         tenant: context.tenantId,
-        base_rate: detailBaseRateDollars
+        base_rate: detailBaseRateCents
       })
       .onConflict(['tenant', 'config_id'])
-      .merge({ base_rate: detailBaseRateDollars });
+      .merge({ base_rate: detailBaseRateCents });
 
     await context.db('plan_services')
       .insert({
@@ -838,9 +836,7 @@ export async function createFixedPlanAssignment(
 
   const now = context.db.fn.now();
   const effectiveDate = `${options.startDate ?? '2025-02-01'}T00:00:00Z`;
-  const customRateDollars = options.customRateCents !== undefined
-    ? options.customRateCents / 100
-    : null;
+  const customRateCentsValue = options.customRateCents ?? null;
 
   const hasLegacyClientServiceTables =
     (await context.db.schema.hasTable('client_contract_services')) &&
@@ -883,7 +879,7 @@ export async function createFixedPlanAssignment(
         })
         .update({
           quantity,
-          custom_rate: customRateDollars,
+          custom_rate: customRateCentsValue,
           updated_at: now
         });
     } else {
@@ -893,7 +889,7 @@ export async function createFixedPlanAssignment(
         client_contract_line_id: clientContractLineId,
         service_id: serviceId,
         quantity,
-        custom_rate: customRateDollars,
+        custom_rate: customRateCentsValue,
         effective_date: effectiveDate,
         created_at: now,
         updated_at: now
@@ -915,7 +911,7 @@ export async function createFixedPlanAssignment(
         })
         .update({
           configuration_type: 'Fixed',
-          custom_rate: customRateDollars,
+          custom_rate: customRateCentsValue,
           quantity,
           updated_at: now
         });
@@ -925,7 +921,7 @@ export async function createFixedPlanAssignment(
         config_id: clientConfigId,
         client_contract_service_id: clientContractServiceId,
         configuration_type: 'Fixed',
-        custom_rate: customRateDollars,
+        custom_rate: customRateCentsValue,
         quantity,
         created_at: now,
         updated_at: now
@@ -936,7 +932,7 @@ export async function createFixedPlanAssignment(
       .insert({
         tenant: context.tenantId,
         config_id: clientConfigId,
-        base_rate: baseRateDollars,
+        base_rate: baseRateCents,
         enable_proration: enableProration,
         billing_cycle_alignment: billingCycleAlignment,
         created_at: now,
@@ -944,7 +940,7 @@ export async function createFixedPlanAssignment(
       })
       .onConflict(['tenant', 'config_id'])
       .merge({
-        base_rate: baseRateDollars,
+        base_rate: baseRateCents,
         enable_proration: enableProration,
         billing_cycle_alignment: billingCycleAlignment,
         updated_at: now
@@ -1152,7 +1148,6 @@ export async function addServiceToFixedPlan(
   const configId = uuidv4();
   const quantity = options.quantity ?? 1;
   const detailBaseRateCents = options.detailBaseRateCents ?? 0;
-  const detailBaseRateDollars = detailBaseRateCents / 100;
 
   // Insert into new contract line tables
   await tenantTable(context, 'contract_line_service_configuration')
@@ -1170,7 +1165,7 @@ export async function addServiceToFixedPlan(
     .insert({
       config_id: configId,
       tenant: context.tenantId,
-      base_rate: detailBaseRateDollars
+      base_rate: detailBaseRateCents
     });
 
   await tenantTable(context, 'contract_line_services')
@@ -1205,7 +1200,7 @@ export async function addServiceToFixedPlan(
       .insert({
         config_id: configId,
         tenant: context.tenantId,
-        base_rate: detailBaseRateDollars
+        base_rate: detailBaseRateCents
       });
 
     await context.db('plan_services')
