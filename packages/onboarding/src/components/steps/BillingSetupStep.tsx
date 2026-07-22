@@ -753,7 +753,7 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
               })}
             </span>{' '}
             {t('billingSetupStep.validation.actionRequiredDescription', {
-              defaultValue: 'Click "Manage Service Types" above to create or import at least one service type before creating a service.'
+              defaultValue: 'Confirm a suggested service type below, or add your own, before creating a service.'
             })}
           </AlertDescription>
         </Alert>

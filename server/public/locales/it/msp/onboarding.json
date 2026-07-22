@@ -237,7 +237,7 @@
     },
     "validation": {
       "actionRequiredLabel": "Azione richiesta:",
-      "actionRequiredDescription": "Fai clic su \"Gestisci tipi di servizio\" qui sopra per creare o importare almeno un tipo di servizio prima di creare un servizio."
+      "actionRequiredDescription": "Conferma un tipo di servizio suggerito qui sotto, oppure aggiungine uno tuo, prima di creare un servizio."
     }
   },
   "clientContactStep": {
@@ -653,9 +653,11 @@
           "displayOrder": {
             "label": "Ordine di visualizzazione",
             "placeholder": "Lascia vuoto per generare automaticamente",
-            "help": "Controlla l'ordine in cui gli stati appaiono nei menu a discesa in tutta la piattaforma. I numeri più bassi vengono mostrati per primi."
+            "help": "Controlla l'ordine in cui gli stati appaiono nei menu a discesa in tutta la piattaforma. I numeri più bassi vengono mostrati per primi.",
+            "reassigned": "L'ordine di visualizzazione {{requested}} è già utilizzato in questa board — è stato usato {{assigned}} al suo posto."
           },
           "state": {
+            "label": "Tipo di stato",
             "closedLabel": "Stato chiuso",
             "openLabel": "Stato aperto",
             "closedHelp": "Questo stato indica che il ticket è risolto e chiuso",

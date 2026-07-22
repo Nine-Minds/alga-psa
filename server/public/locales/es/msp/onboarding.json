@@ -237,7 +237,7 @@
     },
     "validation": {
       "actionRequiredLabel": "Acción requerida:",
-      "actionRequiredDescription": "Haz clic arriba en \"Gestionar tipos de servicio\" para crear o importar al menos un tipo de servicio antes de crear un servicio."
+      "actionRequiredDescription": "Confirma un tipo de servicio sugerido a continuación, o añade el tuyo propio, antes de crear un servicio."
     }
   },
   "clientContactStep": {
@@ -653,9 +653,11 @@
           "displayOrder": {
             "label": "Orden de visualización",
             "placeholder": "Dejar vacío para autogenerar",
-            "help": "Controla el orden en que los estados aparecen en los menús desplegables de la plataforma. Los números más bajos aparecen primero."
+            "help": "Controla el orden en que los estados aparecen en los menús desplegables de la plataforma. Los números más bajos aparecen primero.",
+            "reassigned": "El orden de visualización {{requested}} ya se está usando en este tablero — se usó {{assigned}} en su lugar."
           },
           "state": {
+            "label": "Tipo de estado",
             "closedLabel": "Estado cerrado",
             "openLabel": "Estado abierto",
             "closedHelp": "Este estado indica que el ticket está resuelto y cerrado",

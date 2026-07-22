@@ -383,9 +383,12 @@
     },
     "errors": {
       "requiredFields": "11111",
+      "requiredFieldsNoPassword": "11111",
       "invalidEmail": "11111",
       "passwordLength": "11111",
       "saveFailed": "11111",
+      "inviteFailed": "11111",
+      "roleRequired": "11111",
       "generic": "11111"
     },
     "header": {
@@ -397,12 +400,20 @@
       "titleOther": "11111 {{count}} 11111",
       "users": "11111 {{users}} 11111"
     },
+    "invited": {
+      "titleOne": "11111",
+      "titleOther": "11111 {{count}} 11111",
+      "users": "11111 {{users}} 11111"
+    },
     "member": {
       "title": "11111 {{index}} 11111",
       "createdBadge": "11111",
+      "invitedBadge": "11111",
       "actions": {
         "saving": "11111",
-        "save": "11111"
+        "save": "11111",
+        "sending": "11111",
+        "sendInvite": "11111"
       }
     },
     "fields": {
@@ -420,6 +431,13 @@
       },
       "role": {
         "label": "11111"
+      },
+      "setupMethod": {
+        "label": "11111",
+        "email": "11111",
+        "password": "11111",
+        "emailHelp": "11111",
+        "passwordHelp": "11111"
       },
       "password": {
         "label": "11111",
@@ -635,9 +653,11 @@
           "displayOrder": {
             "label": "11111",
             "placeholder": "11111",
-            "help": "11111"
+            "help": "11111",
+            "reassigned": "11111 {{requested}} 11111 {{assigned}} 11111"
           },
           "state": {
+            "label": "11111",
             "closedLabel": "11111",
             "openLabel": "11111",
             "closedHelp": "11111",

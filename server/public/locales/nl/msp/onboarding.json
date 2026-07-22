@@ -237,7 +237,7 @@
     },
     "validation": {
       "actionRequiredLabel": "Actie vereist:",
-      "actionRequiredDescription": "Klik hierboven op \"Servicetypen beheren\" om minstens één servicetype aan te maken of te importeren voordat je een service aanmaakt."
+      "actionRequiredDescription": "Bevestig hieronder een voorgesteld servicetype, of voeg je eigen type toe, voordat je een service aanmaakt."
     }
   },
   "clientContactStep": {
@@ -383,9 +383,12 @@
     },
     "errors": {
       "requiredFields": "Vul alle verplichte velden in, inclusief wachtwoord",
+      "requiredFieldsNoPassword": "Vul alle verplichte velden in",
       "invalidEmail": "Voer een geldig e-mailadres in",
       "passwordLength": "Wachtwoord moet minstens 8 tekens lang zijn",
       "saveFailed": "Teamlid opslaan mislukt",
+      "inviteFailed": "Versturen van uitnodiging mislukt",
+      "roleRequired": "Selecteer een rol",
       "generic": "Er is een fout opgetreden"
     },
     "header": {
@@ -397,12 +400,20 @@
       "titleOther": "{{count}} teamleden succesvol aangemaakt!",
       "users": "Aangemaakte gebruikers: {{users}}"
     },
+    "invited": {
+      "titleOne": "1 uitnodiging succesvol verzonden!",
+      "titleOther": "{{count}} uitnodigingen succesvol verzonden!",
+      "users": "Uitgenodigd: {{users}}. Ze ontvangen een e-mail met een link om hun eigen wachtwoord in te stellen."
+    },
     "member": {
       "title": "Teamlid {{index}}",
       "createdBadge": "Aangemaakt",
+      "invitedBadge": "Uitgenodigd",
       "actions": {
         "saving": "Opslaan...",
-        "save": "Opslaan"
+        "save": "Opslaan",
+        "sending": "Bezig met versturen...",
+        "sendInvite": "Uitnodiging versturen"
       }
     },
     "fields": {
@@ -420,6 +431,13 @@
       },
       "role": {
         "label": "Rol"
+      },
+      "setupMethod": {
+        "label": "Hoe moeten ze toegang krijgen?",
+        "email": "E-mailuitnodiging versturen",
+        "password": "Ik stel zelf een wachtwoord in",
+        "emailHelp": "Ze ontvangen een e-mail met een link om hun eigen wachtwoord in te stellen. Geen wachtwoorden om door te geven.",
+        "passwordHelp": "Je stelt nu een tijdelijk wachtwoord in en geeft het rechtstreeks aan hen door."
       },
       "password": {
         "label": "Tijdelijk wachtwoord",
@@ -635,9 +653,11 @@
           "displayOrder": {
             "label": "Weergavevolgorde",
             "placeholder": "Laat leeg voor automatisch genereren",
-            "help": "Bepaalt de volgorde waarin statussen in keuzelijsten door het platform verschijnen. Lagere nummers komen eerst."
+            "help": "Bepaalt de volgorde waarin statussen in keuzelijsten door het platform verschijnen. Lagere nummers komen eerst.",
+            "reassigned": "Weergavevolgorde {{requested}} wordt al gebruikt op dit bord — in plaats daarvan is {{assigned}} gebruikt."
           },
           "state": {
+            "label": "Statustype",
             "closedLabel": "Gesloten status",
             "openLabel": "Open status",
             "closedHelp": "Deze status geeft aan dat de ticket is opgelost en gesloten",

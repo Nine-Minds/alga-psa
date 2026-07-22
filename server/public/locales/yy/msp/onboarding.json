@@ -383,9 +383,12 @@
     },
     "errors": {
       "requiredFields": "55555",
+      "requiredFieldsNoPassword": "55555",
       "invalidEmail": "55555",
       "passwordLength": "55555",
       "saveFailed": "55555",
+      "inviteFailed": "55555",
+      "roleRequired": "55555",
       "generic": "55555"
     },
     "header": {
@@ -397,12 +400,20 @@
       "titleOther": "55555 {{count}} 55555",
       "users": "55555 {{users}} 55555"
     },
+    "invited": {
+      "titleOne": "55555",
+      "titleOther": "55555 {{count}} 55555",
+      "users": "55555 {{users}} 55555"
+    },
     "member": {
       "title": "55555 {{index}} 55555",
       "createdBadge": "55555",
+      "invitedBadge": "55555",
       "actions": {
         "saving": "55555",
-        "save": "55555"
+        "save": "55555",
+        "sending": "55555",
+        "sendInvite": "55555"
       }
     },
     "fields": {
@@ -420,6 +431,13 @@
       },
       "role": {
         "label": "55555"
+      },
+      "setupMethod": {
+        "label": "55555",
+        "email": "55555",
+        "password": "55555",
+        "emailHelp": "55555",
+        "passwordHelp": "55555"
       },
       "password": {
         "label": "55555",
@@ -635,9 +653,11 @@
           "displayOrder": {
             "label": "55555",
             "placeholder": "55555",
-            "help": "55555"
+            "help": "55555",
+            "reassigned": "55555 {{requested}} 55555 {{assigned}} 55555"
           },
           "state": {
+            "label": "55555",
             "closedLabel": "55555",
             "openLabel": "55555",
             "closedHelp": "55555",

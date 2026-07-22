@@ -237,7 +237,7 @@
     },
     "validation": {
       "actionRequiredLabel": "Action Required:",
-      "actionRequiredDescription": "Click \"Manage Service Types\" above to create or import at least one service type before creating a service."
+      "actionRequiredDescription": "Confirm a suggested service type below, or add your own, before creating a service."
     }
   },
   "clientContactStep": {

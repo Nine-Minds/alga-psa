@@ -237,7 +237,7 @@
     },
     "validation": {
       "actionRequiredLabel": "Aktion erforderlich:",
-      "actionRequiredDescription": "Klicken Sie oben auf „Diensttypen verwalten“, um mindestens einen Diensttyp zu erstellen oder zu importieren, bevor Sie einen Dienst anlegen."
+      "actionRequiredDescription": "Bestätige unten einen vorgeschlagenen Diensttyp oder füge einen eigenen hinzu, bevor du einen Dienst anlegst."
     }
   },
   "clientContactStep": {
@@ -653,9 +653,11 @@
           "displayOrder": {
             "label": "Anzeigereihenfolge",
             "placeholder": "Leer lassen für automatische Vergabe",
-            "help": "Steuert die Reihenfolge, in der Status in Dropdown-Menüs auf der Plattform erscheinen. Niedrigere Zahlen erscheinen zuerst."
+            "help": "Steuert die Reihenfolge, in der Status in Dropdown-Menüs auf der Plattform erscheinen. Niedrigere Zahlen erscheinen zuerst.",
+            "reassigned": "Anzeigereihenfolge {{requested}} wird auf diesem Board bereits verwendet — verwendet wurde stattdessen {{assigned}}."
           },
           "state": {
+            "label": "Statustyp",
             "closedLabel": "Geschlossener Status",
             "openLabel": "Offener Status",
             "closedHelp": "Dieser Status zeigt an, dass das Ticket gelöst und geschlossen ist",

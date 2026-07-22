@@ -237,7 +237,7 @@
     },
     "validation": {
       "actionRequiredLabel": "Ação necessária:",
-      "actionRequiredDescription": "Clique em “Gerenciar tipos de serviço” acima para criar ou importar pelo menos um tipo de serviço antes de criar um serviço."
+      "actionRequiredDescription": "Confirme um tipo de serviço sugerido abaixo, ou adicione o seu próprio, antes de criar um serviço."
     }
   },
   "clientContactStep": {
@@ -383,9 +383,12 @@
     },
     "errors": {
       "requiredFields": "Por favor preencha todos os campos obrigatórios, incluindo senha",
+      "requiredFieldsNoPassword": "Por favor preencha todos os campos obrigatórios",
       "invalidEmail": "Por favor insira um endereço de e-mail válido",
       "passwordLength": "A senha deve ter pelo menos 8 caracteres",
       "saveFailed": "Falha ao salvar membro da equipe",
+      "inviteFailed": "Falha ao enviar convite",
+      "roleRequired": "Selecione uma função",
       "generic": "Ocorreu um erro"
     },
     "header": {
@@ -397,12 +400,20 @@
       "titleOther": "Membros da equipe {{count}} criados com sucesso!",
       "users": "Usuários criados: {{users}}"
     },
+    "invited": {
+      "titleOne": "1 convite enviado com sucesso!",
+      "titleOther": "{{count}} convites enviados com sucesso!",
+      "users": "Convidados: {{users}}. Eles receberão um e-mail com um link para definir sua própria senha."
+    },
     "member": {
       "title": "Membro da equipe {{index}}",
       "createdBadge": "Criado",
+      "invitedBadge": "Convidado",
       "actions": {
         "saving": "Salvando...",
-        "save": "Salvar"
+        "save": "Salvar",
+        "sending": "Enviando...",
+        "sendInvite": "Enviar convite"
       }
     },
     "fields": {
@@ -420,6 +431,13 @@
       },
       "role": {
         "label": "Papel"
+      },
+      "setupMethod": {
+        "label": "Como eles devem obter acesso?",
+        "email": "Enviar convite por e-mail",
+        "password": "Vou definir uma senha eu mesmo",
+        "emailHelp": "Eles receberão um e-mail com um link para definir sua própria senha. Nenhuma senha para compartilhar.",
+        "passwordHelp": "Você define uma senha temporária agora e a compartilha diretamente com eles."
       },
       "password": {
         "label": "Senha temporária",
@@ -635,9 +653,11 @@
           "displayOrder": {
             "label": "Ordem de exibição",
             "placeholder": "Deixe em branco para geração automática",
-            "help": "Controla a ordem em que os status aparecem nos menus suspensos em toda a plataforma. Os números mais baixos aparecem primeiro."
+            "help": "Controla a ordem em que os status aparecem nos menus suspensos em toda a plataforma. Os números mais baixos aparecem primeiro.",
+            "reassigned": "A ordem de exibição {{requested}} já está em uso neste quadro — foi usada {{assigned}} em vez disso."
           },
           "state": {
+            "label": "Tipo de status",
             "closedLabel": "Status Fechado",
             "openLabel": "Status aberto",
             "closedHelp": "Este status indica que o ticket foi resolvido e fechado",

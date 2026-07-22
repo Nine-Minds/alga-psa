@@ -239,7 +239,7 @@
     },
     "validation": {
       "actionRequiredLabel": "Wymagane działanie:",
-      "actionRequiredDescription": "Kliknij powyżej \"Zarządzaj typami usług\", aby utworzyć lub zaimportować co najmniej jeden typ usługi przed utworzeniem usługi."
+      "actionRequiredDescription": "Potwierdź sugerowany typ usługi poniżej lub dodaj własny, zanim utworzysz usługę."
     }
   },
   "clientContactStep": {
@@ -385,9 +385,12 @@
     },
     "errors": {
       "requiredFields": "Wypełnij wszystkie wymagane pola, w tym hasło",
+      "requiredFieldsNoPassword": "Wypełnij wszystkie wymagane pola",
       "invalidEmail": "Wprowadź prawidłowy adres e-mail",
       "passwordLength": "Hasło musi mieć co najmniej 8 znaków",
       "saveFailed": "Nie udało się zapisać członka zespołu",
+      "inviteFailed": "Nie udało się wysłać zaproszenia",
+      "roleRequired": "Wybierz rolę",
       "generic": "Wystąpił błąd"
     },
     "header": {
@@ -399,12 +402,20 @@
       "titleOther": "{{count}} członków zespołu zostało utworzonych!",
       "users": "Utworzeni użytkownicy: {{users}}"
     },
+    "invited": {
+      "titleOne": "1 zaproszenie zostało wysłane!",
+      "titleOther": "{{count}} zaproszeń zostało wysłanych!",
+      "users": "Zaproszono: {{users}}. Otrzymają e-mail z linkiem do ustawienia własnego hasła."
+    },
     "member": {
       "title": "Członek zespołu {{index}}",
       "createdBadge": "Utworzony",
+      "invitedBadge": "Zaproszony",
       "actions": {
         "saving": "Zapisywanie...",
-        "save": "Zapisz"
+        "save": "Zapisz",
+        "sending": "Wysyłanie...",
+        "sendInvite": "Wyślij zaproszenie"
       }
     },
     "fields": {
@@ -422,6 +433,13 @@
       },
       "role": {
         "label": "Rola"
+      },
+      "setupMethod": {
+        "label": "Jak mają uzyskać dostęp?",
+        "email": "Wyślij zaproszenie e-mail",
+        "password": "Ustawię hasło samodzielnie",
+        "emailHelp": "Otrzymają e-mail z linkiem do ustawienia własnego hasła. Żadnych haseł do przekazywania.",
+        "passwordHelp": "Ustawiasz teraz hasło tymczasowe i przekazujesz je bezpośrednio."
       },
       "password": {
         "label": "Hasło tymczasowe",
@@ -637,9 +655,11 @@
           "displayOrder": {
             "label": "Kolejność wyświetlania",
             "placeholder": "Pozostaw puste, aby wygenerować automatycznie",
-            "help": "Określa kolejność pojawiania się statusów na listach rozwijanych w całej platformie. Niższe numery pojawiają się wcześniej."
+            "help": "Określa kolejność pojawiania się statusów na listach rozwijanych w całej platformie. Niższe numery pojawiają się wcześniej.",
+            "reassigned": "Kolejność wyświetlania {{requested}} jest już używana na tej tablicy — użyto zamiast tego {{assigned}}."
           },
           "state": {
+            "label": "Typ statusu",
             "closedLabel": "Status zamknięty",
             "openLabel": "Status otwarty",
             "closedHelp": "Ten status oznacza, że zgłoszenie zostało rozwiązane i zamknięte",
