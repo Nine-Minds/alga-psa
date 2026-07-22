@@ -217,10 +217,11 @@ describe('TimeSheetApproval', () => {
 
     await flushUi();
 
-    const toggleButton = container.querySelector('button[title="Show Details"]');
-    if (!toggleButton) {
-      throw new Error('Show Details button not found');
-    }
+    const toggleButton = await waitFor(() => {
+      const button = container.querySelector('button[title="Show Details"]');
+      expect(button).not.toBeNull();
+      return button as HTMLButtonElement;
+    }, { timeout: 5_000 });
     toggleButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     await flushUi();
 
@@ -376,7 +377,9 @@ describe('TimeSheetApproval', () => {
     requestChangesButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     await flushUi();
 
-    expect(container.textContent).toContain('Please correct the service classification.');
-    expect(container.querySelector('[data-feedback-state="unresolved"]')).not.toBeNull();
+    await waitFor(() => {
+      expect(container.textContent).toContain('Please correct the service classification.');
+      expect(container.querySelector('[data-feedback-state="unresolved"]')).not.toBeNull();
+    }, { timeout: 5_000 });
   });
 });
