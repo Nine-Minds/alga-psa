@@ -42,6 +42,10 @@ export interface MicrosoftEmailProviderConfig {
   webhook_verification_token?: string; // Added to match database
   webhook_expires_at?: string;
   last_subscription_renewal?: string; // Added to match database
+  delivery_mode?: 'webhook' | 'polling';
+  last_webhook_delivery_at?: string;
+  webhook_silent_runs?: number;
+  next_subscription_probe_at?: string;
   created_at: string;
   updated_at: string;
 }

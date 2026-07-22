@@ -14,6 +14,10 @@ export interface EmailProviderConfig {
   webhook_verification_token?: string;
   webhook_expires_at?: string; // ISO date
   last_subscription_renewal?: string; // ISO date
+  delivery_mode?: 'webhook' | 'polling';
+  last_webhook_delivery_at?: string;
+  webhook_silent_runs?: number;
+  next_subscription_probe_at?: string;
   // Connection status fields
   connection_status: 'connected' | 'disconnected' | 'error';
   last_connection_test?: string; // ISO date

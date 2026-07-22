@@ -172,10 +172,16 @@
     "fields": {
       "status": "Status",
       "lastSync": "Last Sync",
+      "lastIngested": "Last ingested",
+      "delivery": "Delivery",
       "created": "Created",
       "subscription": "Subscription",
       "defaults": "Ticket Defaults",
       "error": "Error:"
+    },
+    "delivery": {
+      "polling": "Polling every 3 minutes",
+      "webhook": "Real-time delivery: active"
     },
     "values": {
       "active": "Active",

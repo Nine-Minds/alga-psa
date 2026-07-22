@@ -172,10 +172,16 @@
     "fields": {
       "status": "Stato",
       "lastSync": "Ultima sincronizzazione",
+      "lastIngested": "Ultima acquisizione",
+      "delivery": "Consegna",
       "created": "Creato",
       "subscription": "Sottoscrizione",
       "defaults": "Impostazioni predefinite dei ticket",
       "error": "Errore:"
+    },
+    "delivery": {
+      "polling": "Polling ogni 3 minuti",
+      "webhook": "Consegna in tempo reale: attiva"
     },
     "values": {
       "active": "Attivo",

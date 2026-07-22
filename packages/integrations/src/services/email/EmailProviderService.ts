@@ -7,6 +7,7 @@ import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { EmailProviderConfig } from '@alga-psa/shared/interfaces/inbound-email.interfaces';
 import { MicrosoftGraphAdapter } from '@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter';
 import { buildMicrosoftEmailProviderConfig } from '@alga-psa/shared/services/email/microsoftEmailProviderConfig';
+import { EmailWebhookMaintenanceService } from '@alga-psa/shared/services/email/EmailWebhookMaintenanceService';
 import { GmailAdapter } from './providers/GmailAdapter';
 import { GmailWebhookService } from './GmailWebhookService';
 import { getWebhookBaseUrl } from '../../utils/email/webhookHelpers';
@@ -415,8 +416,22 @@ export class EmailProviderService {
         const result = await adapter.initializeWebhook(webhookUrl);
         
         if (!result.success) {
+          if (result.errorKind === 'validation') {
+            await new EmailWebhookMaintenanceService().usePollingDelivery({
+              providerId,
+              tenant,
+              reason: result.error || 'Microsoft webhook endpoint validation failed',
+            });
+            return;
+          }
           throw new Error(result.error);
         }
+
+        await new EmailWebhookMaintenanceService().recordWebhookDeliveryMode({
+          providerId,
+          tenant,
+          reason: 'provider configuration subscription succeeded',
+        });
 
         // Update provider with webhook subscription ID
         await this.updateProvider(providerId, tenant, {
@@ -543,6 +558,11 @@ export class EmailProviderService {
       webhook_verification_token: vendorConfig?.webhook_verification_token || null,
       webhook_expires_at: vendorConfig?.webhook_expires_at || null,
       last_subscription_renewal: vendorConfig?.last_subscription_renewal || null,
+      delivery_mode: vendorConfig?.delivery_mode ||
+        (vendorConfig?.webhook_subscription_id ? 'webhook' : 'polling'),
+      last_webhook_delivery_at: vendorConfig?.last_webhook_delivery_at || null,
+      webhook_silent_runs: vendorConfig?.webhook_silent_runs || 0,
+      next_subscription_probe_at: vendorConfig?.next_subscription_probe_at || null,
       connection_status: row.status || 'configuring',
       last_connection_test: row.last_sync_at || null,
       connection_error_message: row.error_message || null,

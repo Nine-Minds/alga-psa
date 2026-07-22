@@ -172,10 +172,16 @@
     "fields": {
       "status": "Status",
       "lastSync": "Laatste synchronisatie",
+      "lastIngested": "Laatst ingelezen",
+      "delivery": "Levering",
       "created": "Gemaakt",
       "subscription": "Abonnement",
       "defaults": "Ticketstandaarden",
       "error": "Fout:"
+    },
+    "delivery": {
+      "polling": "Polling elke 3 minuten",
+      "webhook": "Realtime levering: actief"
     },
     "values": {
       "active": "Actief",

@@ -172,10 +172,16 @@
     "fields": {
       "status": "55555",
       "lastSync": "55555",
+      "lastIngested": "55555",
+      "delivery": "55555",
       "created": "55555",
       "subscription": "55555",
       "defaults": "55555",
       "error": "55555"
+    },
+    "delivery": {
+      "polling": "55555",
+      "webhook": "55555"
     },
     "values": {
       "active": "55555",

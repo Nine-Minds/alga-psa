@@ -23,10 +23,17 @@ interface RenewalResult {
   error?: string;
 }
 
+interface ReconciliationResult {
+  queuedMessages: number;
+  switchedToPolling: boolean;
+}
+
 const TOKEN_REFRESH_LOOK_AHEAD_MINUTES = 30;
 const RECONCILE_WINDOW_CAP_MS = 7 * 24 * 60 * 60 * 1000;
 const RECONCILE_SAFETY_MARGIN_MS = 15 * 60 * 1000;
 const DEFAULT_RECONCILE_MAX_MESSAGES = 50;
+const WEBHOOK_SILENT_RUN_THRESHOLD = 3;
+const SUBSCRIPTION_PROBE_INTERVAL_MS = 24 * 60 * 60 * 1000;
 
 export class EmailWebhookMaintenanceService {
   
@@ -70,12 +77,114 @@ export class EmailWebhookMaintenanceService {
     }
   }
 
+  /** Reconcile only providers explicitly operating without webhooks. */
+  async reconcilePollingProviders(options: Pick<RenewalOptions, 'tenantId' | 'providerId'> = {}): Promise<RenewalResult[]> {
+    const candidates = await this.findActiveMicrosoftProviders(
+      options.tenantId,
+      options.providerId,
+      'polling'
+    );
+    const results: RenewalResult[] = [];
+
+    for (const candidate of candidates) {
+      try {
+        const resolvedConfig = await buildMicrosoftEmailProviderConfig(candidate);
+        const adapter = new MicrosoftGraphAdapter(resolvedConfig);
+        await adapter.ensureTokenHealthy(TOKEN_REFRESH_LOOK_AHEAD_MINUTES);
+        await this.updateProviderConnectionStatus(candidate.id, candidate.tenant, 'connected', null);
+        await this.reconcileMissedMessages(adapter, resolvedConfig, false);
+        results.push({
+          providerId: candidate.id,
+          tenant: candidate.tenant,
+          success: true,
+          action: 'skipped',
+        });
+      } catch (error: any) {
+        const message = error?.message || 'Microsoft polling reconciliation failed';
+        await this.updateProviderConnectionStatus(candidate.id, candidate.tenant, 'error', message);
+        logger.error('Microsoft polling reconciliation failed', {
+          providerId: candidate.id,
+          tenant: candidate.tenant,
+          error: message,
+        });
+        results.push({
+          providerId: candidate.id,
+          tenant: candidate.tenant,
+          success: false,
+          action: 'failed',
+          error: message,
+        });
+      }
+    }
+
+    return results;
+  }
+
+  async usePollingDelivery(params: {
+    providerId: string;
+    tenant: string;
+    reason: string;
+    probeFailure?: boolean;
+  }): Promise<string> {
+    const knex = await getAdminConnection();
+    const nextProbeAt = new Date(Date.now() + SUBSCRIPTION_PROBE_INTERVAL_MS).toISOString();
+    await tenantDb(knex, params.tenant).table('microsoft_email_provider_config')
+      .where({ email_provider_id: params.providerId })
+      .update({
+        delivery_mode: 'polling',
+        webhook_subscription_id: null,
+        webhook_expires_at: null,
+        webhook_silent_runs: 0,
+        next_subscription_probe_at: nextProbeAt,
+        updated_at: new Date().toISOString(),
+      });
+    await this.updateProviderConnectionStatus(params.providerId, params.tenant, 'connected', null);
+    await this.updateHealthStatus(params.providerId, params.tenant, {
+      subscription_status: 'polling',
+      last_renewal_result: params.probeFailure ? 'probe_validation_failed' : 'polling_enabled',
+      failure_reason: params.reason,
+      is_healthy: true,
+    });
+    logger.info('Microsoft email delivery mode is polling', {
+      providerId: params.providerId,
+      tenant: params.tenant,
+      reason: params.reason,
+      nextProbeAt,
+    });
+    return nextProbeAt;
+  }
+
+  async recordWebhookDeliveryMode(params: {
+    providerId: string;
+    tenant: string;
+    reason: string;
+  }): Promise<void> {
+    const knex = await getAdminConnection();
+    await tenantDb(knex, params.tenant).table('microsoft_email_provider_config')
+      .where({ email_provider_id: params.providerId })
+      .update({
+        delivery_mode: 'webhook',
+        webhook_silent_runs: 0,
+        next_subscription_probe_at: null,
+        updated_at: new Date().toISOString(),
+      });
+    await this.updateProviderConnectionStatus(params.providerId, params.tenant, 'connected', null);
+    await this.updateHealthStatus(params.providerId, params.tenant, {
+      subscription_status: 'healthy',
+      last_renewal_result: 'webhook_enabled',
+      failure_reason: null,
+      is_healthy: true,
+    });
+    logger.info('Microsoft email delivery mode changed to webhook', params);
+  }
+
   /**
    * Find providers that need renewal
    */
   private async findActiveMicrosoftProviders(
     tenantId?: string,
-    providerId?: string
+    providerId?: string,
+    deliveryMode?: 'webhook' | 'polling'
   ): Promise<EmailProviderConfig[]> {
     const knex = await getAdminConnection();
 
@@ -113,6 +222,9 @@ export class EmailWebhookMaintenanceService {
     if (providerId) {
       query = query.andWhere('ep.id', providerId);
     }
+    if (deliveryMode) {
+      query = query.andWhere('mpc.delivery_mode', deliveryMode);
+    }
 
     // Select all columns needed to construct EmailProviderConfig
     const rows = await query.select(
@@ -131,6 +243,10 @@ export class EmailWebhookMaintenanceService {
       'mpc.webhook_verification_token',
       'mpc.webhook_expires_at',
       'mpc.last_subscription_renewal',
+      'mpc.delivery_mode',
+      'mpc.last_webhook_delivery_at',
+      'mpc.webhook_silent_runs',
+      'mpc.next_subscription_probe_at',
       // Select all vendor config columns as an object if possible, or spread them
       // For simplicity, we'll select the raw columns and map them manually as needed by the adapter
       'mpc.client_id',
@@ -175,12 +291,38 @@ export class EmailWebhookMaintenanceService {
           subscription_status: 'error',
           last_renewal_result: 'failure',
           failure_reason: message,
+          is_healthy: false,
         });
         throw error;
       }
 
+      const deliveryMode = config.delivery_mode ||
+        (config.webhook_subscription_id ? 'webhook' : 'polling');
+      if (deliveryMode === 'polling') {
+        const probeAt = config.next_subscription_probe_at
+          ? new Date(config.next_subscription_probe_at).getTime()
+          : 0;
+        if (forceRenewal || probeAt <= Date.now()) {
+          return await this.probeSubscription(adapter, config);
+        }
+        return {
+          providerId: config.id,
+          tenant: config.tenant,
+          success: true,
+          action: 'skipped',
+        };
+      }
+
       await adapter.cleanupOrphanedSubscriptions();
-      await this.reconcileMissedMessages(adapter, resolvedConfig);
+      const reconciliation = await this.reconcileMissedMessages(adapter, resolvedConfig, true);
+      if (reconciliation.switchedToPolling) {
+        return {
+          providerId: config.id,
+          tenant: config.tenant,
+          success: true,
+          action: 'skipped',
+        };
+      }
 
       const expiryMs = config.webhook_expires_at
         ? new Date(config.webhook_expires_at).getTime()
@@ -210,7 +352,8 @@ export class EmailWebhookMaintenanceService {
         await this.updateHealthStatus(config.id, config.tenant, {
           subscription_status: 'healthy',
           last_renewal_result: 'success',
-          failure_reason: null
+          failure_reason: null,
+          is_healthy: true,
         });
 
         return {
@@ -241,7 +384,8 @@ export class EmailWebhookMaintenanceService {
       await this.updateHealthStatus(config.id, config.tenant, {
         subscription_status: 'error',
         last_renewal_result: 'failure',
-        failure_reason: error.message
+        failure_reason: error.message,
+        is_healthy: false,
       });
 
       return {
@@ -268,7 +412,7 @@ export class EmailWebhookMaintenanceService {
     if (config.webhook_notification_url.includes('localhost') || !config.webhook_notification_url.startsWith('https://')) {
       const msg = `Invalid webhook URL detected: ${config.webhook_notification_url}. Microsoft requires a public HTTPS endpoint. Check APPLICATION_URL env var.`;
       logger.error(msg, { providerId: config.id, tenant: config.tenant });
-      throw new Error(msg);
+      return this.enterPollingMode(config, msg);
     }
 
     logger.info(`Attempting to recreate subscription with URL: ${config.webhook_notification_url}`, { 
@@ -279,13 +423,17 @@ export class EmailWebhookMaintenanceService {
     const result = await adapter.initializeWebhook(config.webhook_notification_url);
     
     if (!result.success) {
+      if (result.errorKind === 'validation') {
+        return this.enterPollingMode(config, result.error || 'Microsoft webhook endpoint validation failed');
+      }
       throw new Error(result.error || 'Failed to initialize webhook');
     }
 
     await this.updateHealthStatus(config.id, config.tenant, {
       subscription_status: 'healthy',
       last_renewal_result: 'success',
-      failure_reason: null
+      failure_reason: null,
+      is_healthy: true,
     });
 
     return {
@@ -297,33 +445,161 @@ export class EmailWebhookMaintenanceService {
     };
   }
 
-  private async reconcileMissedMessages(
+  private async probeSubscription(
     adapter: MicrosoftGraphAdapter,
     config: EmailProviderConfig
-  ): Promise<void> {
+  ): Promise<RenewalResult> {
+    if (!config.webhook_notification_url ||
+        config.webhook_notification_url.includes('localhost') ||
+        !config.webhook_notification_url.startsWith('https://')) {
+      return this.enterPollingMode(
+        config,
+        'Microsoft webhook endpoint is not a public HTTPS URL',
+        true
+      );
+    }
+
+    const result = await adapter.initializeWebhook(config.webhook_notification_url);
+    if (result.success) {
+      await this.recordWebhookDeliveryMode({
+        providerId: config.id,
+        tenant: config.tenant,
+        reason: 'subscription probe succeeded',
+      });
+      return {
+        providerId: config.id,
+        tenant: config.tenant,
+        success: true,
+        action: 'recreated',
+        newExpiration: adapter.getConfig().webhook_expires_at,
+      };
+    }
+
+    if (result.errorKind === 'validation') {
+      return this.enterPollingMode(
+        config,
+        result.error || 'Microsoft webhook endpoint validation failed',
+        true
+      );
+    }
+    throw new Error(result.error || 'Microsoft subscription recovery probe failed');
+  }
+
+  private async enterPollingMode(
+    config: EmailProviderConfig,
+    reason: string,
+    probeFailure = false
+  ): Promise<RenewalResult> {
+    await this.usePollingDelivery({
+      providerId: config.id,
+      tenant: config.tenant,
+      reason,
+      probeFailure,
+    });
+    return {
+      providerId: config.id,
+      tenant: config.tenant,
+      success: true,
+      action: 'skipped',
+    };
+  }
+
+  private async reconcileMissedMessages(
+    adapter: MicrosoftGraphAdapter,
+    config: EmailProviderConfig,
+    detectWebhookSilence: boolean
+  ): Promise<ReconciliationResult> {
     const knex = await getAdminConnection();
     const db = tenantDb(knex, config.tenant);
-    const provider = await db.table('email_providers')
-      .where({ id: config.id })
-      .first('last_sync_at');
-    const lastSyncMs = provider?.last_sync_at
-      ? new Date(provider.last_sync_at).getTime() - RECONCILE_SAFETY_MARGIN_MS
+    const reconciliationState = await db.table('microsoft_email_provider_config')
+      .where({ email_provider_id: config.id })
+      .first(
+        'last_reconciliation_at',
+        knex.raw('last_reconciliation_at::text as last_reconciliation_cursor')
+      );
+    const lastReconciliationMs = reconciliationState?.last_reconciliation_at
+      ? new Date(reconciliationState.last_reconciliation_at).getTime() - RECONCILE_SAFETY_MARGIN_MS
       : Date.now() - RECONCILE_WINDOW_CAP_MS;
-    const since = new Date(Math.max(lastSyncMs, Date.now() - RECONCILE_WINDOW_CAP_MS));
+    const since = new Date(Math.max(lastReconciliationMs, Date.now() - RECONCILE_WINDOW_CAP_MS));
     const maxCount = Math.max(
       1,
       Number(config.provider_config?.max_emails_per_sync || DEFAULT_RECONCILE_MAX_MESSAGES)
     );
-    const messages = await adapter.listMessagesReceivedSince(since, maxCount);
+    let fetchLimit = maxCount;
+    let messages: Array<{ id: string; receivedDateTime?: string }> = [];
+    let unprocessedMessages: Array<{ id: string; receivedDateTime?: string }> = [];
+    const processedMessageIds = new Set<string>();
+    const checkedMessageIds = new Set<string>();
 
-    if (messages.length > 0) {
-      const processedRows = await db.table('email_processed_messages')
-        .where({ provider_id: config.id })
-        .whereIn('message_id', messages.map((message) => message.id))
-        .select('message_id');
-      const processed = new Set(processedRows.map((row: any) => String(row.message_id)));
-      for (const message of messages) {
-        if (processed.has(message.id)) continue;
+    // A capped oldest-first query can initially contain only messages from the
+    // safety-margin overlap. Expand the read until either maxCount unprocessed
+    // messages are visible or Graph is exhausted; otherwise the same processed
+    // boundary batch could permanently hide newer overflow messages.
+    while (true) {
+      messages = await adapter.listMessagesReceivedSince(since, fetchLimit);
+      const uncheckedMessageIds = messages
+        .map((message) => message.id)
+        .filter((messageId) => !checkedMessageIds.has(messageId));
+
+      if (uncheckedMessageIds.length > 0) {
+        const processedRows = await db.table('email_processed_messages')
+          .where({ provider_id: config.id })
+          .whereIn('message_id', uncheckedMessageIds)
+          .select('message_id');
+        for (const messageId of uncheckedMessageIds) checkedMessageIds.add(messageId);
+        for (const row of processedRows) processedMessageIds.add(String(row.message_id));
+      }
+
+      unprocessedMessages = messages
+        .filter((message) => !processedMessageIds.has(message.id))
+        .slice(0, maxCount);
+      if (unprocessedMessages.length >= maxCount || messages.length < fetchLimit) break;
+      fetchLimit *= 2;
+    }
+
+    const previousReconciliationMs = reconciliationState?.last_reconciliation_at
+      ? new Date(reconciliationState.last_reconciliation_at).getTime()
+      : null;
+    const completedAt = new Date().toISOString();
+    const completedAtMs = new Date(completedAt).getTime();
+    const graphBatchMayHaveOverflow = unprocessedMessages.length >= maxCount && messages.length >= fetchLimit;
+    let nextReconciliationAt = completedAt;
+    if (graphBatchMayHaveOverflow) {
+      const newestQueuedAtMs = Math.max(...unprocessedMessages.map((message) => {
+        const receivedAtMs = message.receivedDateTime
+          ? new Date(message.receivedDateTime).getTime()
+          : NaN;
+        return receivedAtMs;
+      }));
+      if (!Number.isFinite(newestQueuedAtMs)) {
+        throw new Error('Cannot safely advance a capped Microsoft reconciliation batch without receivedDateTime');
+      }
+
+      // Keep the cursor at the newest queued message. The next query's safety
+      // margin may replay this batch, but the processed-message expansion above
+      // lets it reach overflow without ever advancing past unfetched mail.
+      nextReconciliationAt = new Date(newestQueuedAtMs).toISOString();
+    }
+    const enqueueResult = await knex.transaction(async (trx) => {
+      const transactionDb = tenantDb(trx, config.tenant);
+      const lockedState = await transactionDb.table('microsoft_email_provider_config')
+        .where({ email_provider_id: config.id })
+        .forUpdate()
+        .first(trx.raw('last_reconciliation_at::text as last_reconciliation_cursor'));
+      const observedCursor = reconciliationState?.last_reconciliation_cursor || null;
+      const lockedCursor = lockedState?.last_reconciliation_cursor || null;
+
+      // This cursor belongs only to Graph reconciliation. Queue consumers also
+      // advance email_providers.last_sync_at after ingestion, so that timestamp
+      // cannot safely claim a polling window. Commit this dedicated cursor only
+      // after every queue write succeeds so enqueue failures remain retryable.
+      if (lockedCursor !== observedCursor) {
+        return { claimed: false as const, queuedMessages: 0, silenceEvidenceCount: 0 };
+      }
+
+      let queuedMessages = 0;
+      const silenceEvidenceMessageIds = new Set<string>();
+      for (const message of unprocessedMessages) {
         await enqueueUnifiedInboundEmailQueueJob({
           tenantId: config.tenant,
           providerId: config.id,
@@ -335,13 +611,132 @@ export class EmailWebhookMaintenanceService {
             changeType: 'created',
           },
         });
+        queuedMessages += 1;
+
+        const receivedAtMs = message.receivedDateTime
+          ? new Date(message.receivedDateTime).getTime()
+          : NaN;
+        if (
+          Number.isFinite(receivedAtMs) &&
+          receivedAtMs <= completedAtMs &&
+          (previousReconciliationMs === null || receivedAtMs > previousReconciliationMs)
+        ) {
+          silenceEvidenceMessageIds.add(message.id);
+        }
       }
+
+      await transactionDb.table('microsoft_email_provider_config')
+        .where({ email_provider_id: config.id })
+        .update({
+          last_reconciliation_at: nextReconciliationAt,
+          updated_at: completedAt,
+        });
+
+      return {
+        claimed: true as const,
+        queuedMessages,
+        silenceEvidenceCount: silenceEvidenceMessageIds.size,
+      };
+    });
+
+    if (!enqueueResult.claimed) {
+      logger.info('Skipped an already-claimed Microsoft reconciliation window', {
+        providerId: config.id,
+        tenant: config.tenant,
+        observedLastReconciliationAt: reconciliationState?.last_reconciliation_at || null,
+      });
+      return { queuedMessages: 0, switchedToPolling: false };
     }
 
-    await db.table('email_providers').where({ id: config.id }).update({
-      last_sync_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
+    const { queuedMessages, silenceEvidenceCount } = enqueueResult;
+
+    if (!detectWebhookSilence || silenceEvidenceCount === 0) {
+      return { queuedMessages, switchedToPolling: false };
+    }
+
+    const silenceUpdate = db.table('microsoft_email_provider_config')
+      .where({ email_provider_id: config.id })
+      .andWhere('delivery_mode', 'webhook');
+    if (reconciliationState?.last_reconciliation_at) {
+      silenceUpdate.andWhere((query: any) => {
+        query.whereNull('last_webhook_delivery_at')
+          .orWhere('last_webhook_delivery_at', '<=', reconciliationState.last_reconciliation_at);
+      });
+    } else {
+      silenceUpdate.whereNull('last_webhook_delivery_at');
+    }
+
+    // Increment in SQL so a webhook's atomic reset cannot be overwritten by a
+    // stale read. The timestamp predicate makes an interceding delivery win.
+    const updatedSilenceRows = await silenceUpdate.update({
+      webhook_silent_runs: knex.raw('webhook_silent_runs + 1'),
+      updated_at: completedAt,
     });
+    if (Number(updatedSilenceRows) !== 1) {
+      return { queuedMessages, switchedToPolling: false };
+    }
+    const latestSilenceState = await db.table('microsoft_email_provider_config')
+      .where({ email_provider_id: config.id })
+      .first('webhook_silent_runs');
+    const silentRuns = Number(latestSilenceState?.webhook_silent_runs || 0);
+    if (silentRuns < WEBHOOK_SILENT_RUN_THRESHOLD) {
+      return { queuedMessages, switchedToPolling: false };
+    }
+
+    const nextProbeAt = new Date(Date.now() + SUBSCRIPTION_PROBE_INTERVAL_MS).toISOString();
+    const pollingTransition = db.table('microsoft_email_provider_config')
+      .where({ email_provider_id: config.id })
+      .andWhere('delivery_mode', 'webhook')
+      .andWhere('webhook_silent_runs', silentRuns);
+    if (reconciliationState?.last_reconciliation_at) {
+      pollingTransition.andWhere((query: any) => {
+        query.whereNull('last_webhook_delivery_at')
+          .orWhere('last_webhook_delivery_at', '<=', reconciliationState.last_reconciliation_at);
+      });
+    } else {
+      pollingTransition.whereNull('last_webhook_delivery_at');
+    }
+    const transitionedRows = await pollingTransition.update({
+      delivery_mode: 'polling',
+      webhook_subscription_id: null,
+      webhook_expires_at: null,
+      webhook_silent_runs: 0,
+      next_subscription_probe_at: nextProbeAt,
+      updated_at: completedAt,
+    });
+    if (Number(transitionedRows) !== 1) {
+      // A webhook reset or another mode transition won the race after the
+      // increment. Never delete the subscription from stale state.
+      return { queuedMessages, switchedToPolling: false };
+    }
+
+    const reason = `${silentRuns} reconciliation runs imported messages without a webhook delivery`;
+    try {
+      await adapter.deleteWebhookSubscription();
+    } catch (error: any) {
+      // The local subscription id is already cleared, so Graph can no longer
+      // route accepted notifications to this provider. Its remote expiry is a
+      // cleanup concern and must not make supported polling mode unhealthy.
+      logger.warn('Failed to delete silent Microsoft webhook subscription', {
+        providerId: config.id,
+        tenant: config.tenant,
+        error: error?.message || String(error),
+      });
+    }
+    await this.updateProviderConnectionStatus(config.id, config.tenant, 'connected', null);
+    await this.updateHealthStatus(config.id, config.tenant, {
+      subscription_status: 'polling',
+      last_renewal_result: 'polling_enabled',
+      failure_reason: reason,
+      is_healthy: true,
+    });
+    logger.info('Microsoft email delivery mode is polling', {
+      providerId: config.id,
+      tenant: config.tenant,
+      reason,
+      nextProbeAt,
+    });
+    return { queuedMessages, switchedToPolling: true };
   }
 
   private async updateProviderConnectionStatus(
@@ -373,6 +768,7 @@ export class EmailWebhookMaintenanceService {
     subscription_status: string;
     last_renewal_result: string;
     failure_reason: string | null;
+    is_healthy?: boolean;
   }): Promise<void> {
     try {
       const knex = await getAdminConnection();
@@ -445,6 +841,10 @@ export class EmailWebhookMaintenanceService {
       webhook_verification_token: row.webhook_verification_token,
       webhook_expires_at: row.webhook_expires_at,
       last_subscription_renewal: row.last_subscription_renewal,
+      delivery_mode: row.delivery_mode,
+      last_webhook_delivery_at: row.last_webhook_delivery_at,
+      webhook_silent_runs: row.webhook_silent_runs,
+      next_subscription_probe_at: row.next_subscription_probe_at,
       connection_status: row.status || 'connected',
       last_connection_test: row.last_sync_at,
       connection_error_message: row.error_message,

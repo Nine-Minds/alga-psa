@@ -8,6 +8,7 @@ import {
   applianceCheckInWorkflow,
   calendarWebhookMaintenanceWorkflow,
   emailWebhookMaintenanceWorkflow,
+  emailPollingReconcileWorkflow,
   entraAllTenantsSyncWorkflow,
   maintenanceJobWorkflow,
   premiumTrialExpiryWorkflow,
@@ -70,6 +71,11 @@ function normalizeIntervalMinutes(rawValue: unknown): number {
   }
 
   return Math.max(5, Math.floor(parsed));
+}
+
+function microsoftEmailPollingIntervalMinutes(): number {
+  const parsed = Number(process.env.MICROSOFT_EMAIL_POLLING_INTERVAL_MINUTES || 3);
+  return Number.isFinite(parsed) && parsed >= 1 ? Math.floor(parsed) : 3;
 }
 
 function parseSettings(value: unknown): Record<string, unknown> {
@@ -269,6 +275,24 @@ export async function setupSchedules() {
         type: 'startWorkflow',
         workflowType: emailWebhookMaintenanceWorkflow,
         args: [{ lookAheadMinutes: 1440 }],
+        taskQueue: EMAIL_WORKFLOW_TASK_QUEUE,
+        workflowExecutionTimeout: '10m',
+      },
+      policies: {
+        overlap: ScheduleOverlapPolicy.SKIP,
+        catchupWindow: '1m',
+      },
+    });
+
+    const pollingScheduleId = 'email-polling-reconcile-schedule';
+    await upsertSchedule(client, pollingScheduleId, {
+      spec: {
+        intervals: [{ every: `${microsoftEmailPollingIntervalMinutes()}m` }],
+      },
+      action: {
+        type: 'startWorkflow',
+        workflowType: emailPollingReconcileWorkflow,
+        args: [{}],
         taskQueue: EMAIL_WORKFLOW_TASK_QUEUE,
         workflowExecutionTimeout: '10m',
       },

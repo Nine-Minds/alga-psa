@@ -29,7 +29,10 @@ vi.mock('@alga-psa/shared/db/admin', () => ({
   }),
 }));
 
-import { MicrosoftGraphAdapter } from '@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter';
+import {
+  MicrosoftGraphAdapter,
+  MicrosoftSubscriptionError,
+} from '@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter';
 
 function config() {
   return {
@@ -88,5 +91,31 @@ describe('MicrosoftGraphAdapter subscription hygiene', () => {
     await expect(adapter.cleanupOrphanedSubscriptions()).resolves.toBe(1);
     expect(mocks.client.delete).toHaveBeenCalledTimes(1);
     expect(mocks.client.delete).toHaveBeenCalledWith('/subscriptions/orphan');
+  });
+
+  it('classifies endpoint validation failures separately from authentication failures', async () => {
+    mocks.client.post.mockRejectedValueOnce({
+      message: 'Request failed with status code 400',
+      response: {
+        status: 400,
+        data: { error: { code: 'ValidationError', message: 'Notification URL validation failed' } },
+        headers: {},
+      },
+    });
+
+    await expect(new MicrosoftGraphAdapter(config()).registerWebhookSubscription())
+      .rejects.toMatchObject<Partial<MicrosoftSubscriptionError>>({ kind: 'validation', status: 400 });
+
+    mocks.client.post.mockRejectedValueOnce({
+      message: 'Request failed with status code 403',
+      response: {
+        status: 403,
+        data: { error: { code: 'ErrorAccessDenied', message: 'Access denied' } },
+        headers: {},
+      },
+    });
+
+    await expect(new MicrosoftGraphAdapter(config()).registerWebhookSubscription())
+      .rejects.toMatchObject<Partial<MicrosoftSubscriptionError>>({ kind: 'authentication', status: 403 });
   });
 });
