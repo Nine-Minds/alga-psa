@@ -345,6 +345,11 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
     try {
       const boards = await getAvailableReferenceData('boards');
       setAvailableBoards(boards);
+      // Pre-check the standard catalog when the tenant has no boards yet, so
+      // confirming is a single click instead of "select all" + "import".
+      if (importedBoards.length === 0 && boards.length > 0) {
+        setSelectedBoards(boards.map((b: any) => b.id));
+      }
     } catch (error) {
       console.error('Error loading available boards:', error);
     }
@@ -368,6 +373,11 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
         });
         
         setAvailableCategories(sortedCategories);
+        // Pre-check the standard catalog when the tenant has no categories
+        // yet, so confirming is a single click instead of "select all" + "import".
+        if (data.categories.length === 0 && sortedCategories.length > 0) {
+          setSelectedCategories(sortedCategories.map((c: any) => c.id));
+        }
       }
     } catch (error) {
       console.error('Error loading available categories:', error);
@@ -387,6 +397,11 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
         board_id: activeBoardId
       });
       setAvailableStatuses(statuses);
+      // Pre-check the standard catalog when this board has no statuses yet,
+      // so confirming is a single click instead of "select all" + "import".
+      if (statusesForSelectedBoard.length === 0 && statuses.length > 0) {
+        setSelectedStatuses(statuses.map((s: any) => s.standard_status_id));
+      }
     } catch (error) {
       console.error('Error loading available statuses:', error);
     }
@@ -404,6 +419,11 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
     try {
       const priorities = await getAvailableReferenceData('priorities', { item_type: 'ticket' });
       setAvailablePriorities(priorities);
+      // Pre-check the standard catalog when the tenant has no priorities yet,
+      // so confirming is a single click instead of "select all" + "import".
+      if (importedPriorities.length === 0 && priorities.length > 0) {
+        setSelectedPriorities(priorities.map((p: any) => p.priority_id));
+      }
     } catch (error) {
       console.error('Error loading available priorities:', error);
     }
@@ -517,7 +537,11 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
       setSelectedBoards([]);
       setImportBoardItilSettings({});
       setShowImportDialogs(prev => ({ ...prev, boards: false }));
-      await loadAvailableBoards();
+      // Importing a board auto-seeds its default statuses server-side; refresh
+      // the real (DB-backed) statuses/priorities alongside the available-boards
+      // list so the wizard doesn't show a stale "no default status" alert or an
+      // empty "Import Standard Statuses" table for a board that already has them.
+      await Promise.all([loadAvailableBoards(), loadExistingData()]);
     } catch (error) {
       handleError(error, t('ticketingConfigStep.boards.errors.import', {
         defaultValue: 'Failed to import boards'
@@ -1856,27 +1880,27 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50 border-b">
                       <tr>
-                        <th className="px-2 py-1 text-left text-xs font-medium text-gray-700">
+                        <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">
                           {t('ticketingConfigStep.boards.table.headers.name', {
                             defaultValue: 'Name'
                           })}
                         </th>
-                        <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">
+                        <th className="px-4 py-2 text-center text-sm font-medium text-gray-700">
                           {t('ticketingConfigStep.boards.table.headers.default', {
                             defaultValue: 'Default'
                           })}
                         </th>
-                        <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">
+                        <th className="px-4 py-2 text-center text-sm font-medium text-gray-700">
                           {t('ticketingConfigStep.boards.table.headers.order', {
                             defaultValue: 'Order'
                           })}
                         </th>
-                        <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">
+                        <th className="px-4 py-2 text-center text-sm font-medium text-gray-700">
                           {t('ticketingConfigStep.boards.table.headers.itil', {
                             defaultValue: 'ITIL'
                           })}
                         </th>
-                        <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">
+                        <th className="px-4 py-2 text-center text-sm font-medium text-gray-700">
                           {t('ticketingConfigStep.common.table.actions', {
                             defaultValue: 'Actions'
                           })}
@@ -1886,8 +1910,8 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                     <tbody className="bg-white">
                       {importedBoards.map((board, idx) => (
                         <tr key={board.board_id}>
-                          <td className="px-2 py-1 text-xs">{board.board_name}</td>
-                          <td className="px-2 py-1 text-center">
+                          <td className="px-4 py-2 text-sm">{board.board_name}</td>
+                          <td className="px-4 py-2 text-center">
                             <Button
                               id={`board-default-toggle-${idx}`}
                               data-board-id={board.board_id}
@@ -1907,8 +1931,8 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                               <Star className={`h-3.5 w-3.5 ${board.is_default ? 'text-yellow-500 fill-yellow-500' : 'text-gray-400 hover:text-yellow-500'}`} />
                             </Button>
                           </td>
-                          <td className="px-2 py-1 text-center text-xs text-gray-600">{board.display_order || 0}</td>
-                          <td className="px-2 py-1 text-center">
+                          <td className="px-4 py-2 text-center text-sm text-gray-600">{board.display_order || 0}</td>
+                          <td className="px-4 py-2 text-center">
                             {board.category_type === 'itil' && board.priority_type === 'itil' ? (
                               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
                                 {t('ticketingConfigStep.boards.table.headers.itil', {
@@ -1919,7 +1943,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                               <span className="text-gray-500 text-xs">-</span>
                             )}
                           </td>
-                          <td className="px-2 py-1 text-center">
+                          <td className="px-4 py-2 text-center">
                             <Button
                               id={`remove-board-${board.board_id}-button`}
                               data-board-id={board.board_id}
@@ -1940,10 +1964,10 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                       ))}
                       {data.boardName && !importedBoards.some(c => c.board_name === data.boardName) && (
                         <tr>
-                          <td className="px-2 py-1 text-xs">{data.boardName}</td>
-                          <td className="px-2 py-1 text-center text-xs">-</td>
-                          <td className="px-2 py-1 text-center text-xs text-gray-600">1</td>
-                          <td className="px-2 py-1 text-center">
+                          <td className="px-4 py-2 text-sm">{data.boardName}</td>
+                          <td className="px-4 py-2 text-center text-sm">-</td>
+                          <td className="px-4 py-2 text-center text-sm text-gray-600">1</td>
+                          <td className="px-4 py-2 text-center">
                             {data.is_itil_compliant ? (
                               <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-primary/10 text-primary">
                                 {t('ticketingConfigStep.boards.table.headers.itil', {
@@ -1954,7 +1978,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                               <span className="text-gray-500 text-xs">-</span>
                             )}
                           </td>
-                          <td className="px-2 py-1 text-center">-</td>
+                          <td className="px-4 py-2 text-center">-</td>
                         </tr>
                       )}
                     </tbody>
@@ -2394,17 +2418,17 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50 border-b">
                       <tr>
-                        <th className="px-2 py-1 text-left text-xs font-medium text-gray-700">
+                        <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">
                           {t('ticketingConfigStep.categories.table.headers.name', {
                             defaultValue: 'Name'
                           })}
                         </th>
-                        <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">
+                        <th className="px-4 py-2 text-center text-sm font-medium text-gray-700">
                           {t('ticketingConfigStep.categories.table.headers.order', {
                             defaultValue: 'Order'
                           })}
                         </th>
-                        <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">
+                        <th className="px-4 py-2 text-center text-sm font-medium text-gray-700">
                           {t('ticketingConfigStep.common.table.actions', {
                             defaultValue: 'Actions'
                           })}
@@ -2480,7 +2504,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                           
                           return (
                             <tr key={category.category_id}>
-                              <td className="px-2 py-1 text-xs">
+                              <td className="px-4 py-2 text-sm">
                                 {isSubcategory && (
                                   <CornerDownRight className="inline-block h-3 w-3 ml-8 mr-1 text-gray-400" />
                                 )}
@@ -2488,7 +2512,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                                   {category.category_name}
                                 </span>
                               </td>
-                              <td className="px-2 py-1 text-xs">
+                              <td className="px-4 py-2 text-sm">
                                 {isSubcategory ? (
                                   <div className="flex items-center justify-center">
                                     <CornerDownRight className="h-3 w-3 text-muted-foreground mr-1 ml-12" />
@@ -2502,7 +2526,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                                   </div>
                                 )}
                               </td>
-                              <td className="px-2 py-1 text-center">
+                              <td className="px-4 py-2 text-center">
                                 <Button
                                   id={`remove-category-${category.category_id}-button`}
                                   data-category-id={category.category_id}
@@ -2546,6 +2570,13 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                 defaultValue: 'Statuses'
               })}
             </span>
+            {effectiveStatusBoardId && !statusesForSelectedBoard.some(s => s.is_default && !s.is_closed) && (
+              <span className="text-xs bg-destructive/10 text-destructive px-2 py-1 rounded">
+                {t('common.states.required', {
+                  defaultValue: 'Required'
+                })}
+              </span>
+            )}
           </div>
           {expandedSections.statuses ? (
             <ChevronUp className="w-4 h-4 text-gray-500" />
@@ -2629,7 +2660,18 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                 id="add-status-button"
                 type="button"
                 variant="outline"
-                onClick={() => setShowAddForms(prev => ({ ...prev, status: !prev.status }))}
+                onClick={() => {
+                  // Always reset on open (not just on Cancel/Save) so a form
+                  // closed by re-toggling this button never leaves stale
+                  // values behind for the next status entered.
+                  setShowAddForms(prev => {
+                    const next = !prev.status;
+                    if (next) {
+                      setStatusForm({ name: '', isClosed: false, isDefault: false, displayOrder: 0 });
+                    }
+                    return { ...prev, status: next };
+                  });
+                }}
                 className="flex-1"
                 disabled={!effectiveStatusBoardId}
               >
@@ -2687,21 +2729,37 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                     </p>
                   </div>
                   <div className="col-span-2">
-                    <div className="flex items-center space-x-2">
-                      <Switch
-                        id="status-closed-toggle"
-                        checked={statusForm.isClosed}
-                        onCheckedChange={(checked) => setStatusForm(prev => ({ ...prev, isClosed: checked }))}
-                      />
-                      <Label>
-                        {statusForm.isClosed
-                          ? t('ticketingConfigStep.statuses.addForm.fields.state.closedLabel', {
-                              defaultValue: 'Closed Status'
-                            })
-                          : t('ticketingConfigStep.statuses.addForm.fields.state.openLabel', {
-                              defaultValue: 'Open Status'
-                            })}
-                      </Label>
+                    <Label className="block mb-2">
+                      {t('ticketingConfigStep.statuses.addForm.fields.state.label', {
+                        defaultValue: 'Status Type'
+                      })}
+                    </Label>
+                    {/* Two explicit, always-visible options instead of a single
+                        switch whose label flips — a flipping label made it easy
+                        to create an "Open" status while thinking it was "Closed". */}
+                    <div className="flex gap-2">
+                      <Button
+                        id="status-type-open"
+                        type="button"
+                        size="sm"
+                        variant={!statusForm.isClosed ? 'default' : 'outline'}
+                        onClick={() => setStatusForm(prev => ({ ...prev, isClosed: false }))}
+                      >
+                        {t('ticketingConfigStep.statuses.addForm.fields.state.openLabel', {
+                          defaultValue: 'Open Status'
+                        })}
+                      </Button>
+                      <Button
+                        id="status-type-closed"
+                        type="button"
+                        size="sm"
+                        variant={statusForm.isClosed ? 'default' : 'outline'}
+                        onClick={() => setStatusForm(prev => ({ ...prev, isClosed: true }))}
+                      >
+                        {t('ticketingConfigStep.statuses.addForm.fields.state.closedLabel', {
+                          defaultValue: 'Closed Status'
+                        })}
+                      </Button>
                     </div>
                     <p className="text-xs text-gray-600 mt-2">
                       {statusForm.isClosed 
@@ -2763,10 +2821,20 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                           // Check if the provided order is already in use
                           const isOrderInUse = statusesForSelectedBoard.some(s => s.order_number === orderNumber);
                           if (isOrderInUse) {
+                            const requestedOrder = orderNumber;
                             orderNumber = maxOrder + 1;
+                            // Don't silently reassign the order the user typed —
+                            // this was previously invisible and produced
+                            // surprising values (e.g. typing "1" but the saved
+                            // status showing order 60).
+                            toast(t('ticketingConfigStep.statuses.addForm.fields.displayOrder.reassigned', {
+                              defaultValue: 'Display order {{requested}} is already used on this board — used {{assigned}} instead.',
+                              requested: requestedOrder,
+                              assigned: orderNumber
+                            }), { icon: '⚠️', duration: 5000 });
                           }
                         }
-                        
+
                         // Set as default if this is the first open status
                         const hasDefaultOpenStatus = statusesForSelectedBoard.some(s => s.is_default && !s.is_closed);
                         const isDefault = !statusForm.isClosed && !hasDefaultOpenStatus;
@@ -2975,27 +3043,27 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50 border-b">
                       <tr>
-                        <th className="px-2 py-1 text-left text-xs font-medium text-gray-700">
+                        <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">
                           {t('ticketingConfigStep.statuses.table.headers.name', {
                             defaultValue: 'Name'
                           })}
                         </th>
-                        <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">
+                        <th className="px-4 py-2 text-center text-sm font-medium text-gray-700">
                           {t('ticketingConfigStep.statuses.table.headers.type', {
                             defaultValue: 'Type'
                           })}
                         </th>
-                        <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">
+                        <th className="px-4 py-2 text-center text-sm font-medium text-gray-700">
                           {t('ticketingConfigStep.statuses.table.headers.default', {
                             defaultValue: 'Default'
                           })}
                         </th>
-                        <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">
+                        <th className="px-4 py-2 text-center text-sm font-medium text-gray-700">
                           {t('ticketingConfigStep.statuses.table.headers.order', {
                             defaultValue: 'Order'
                           })}
                         </th>
-                        <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">
+                        <th className="px-4 py-2 text-center text-sm font-medium text-gray-700">
                           {t('ticketingConfigStep.common.table.actions', {
                             defaultValue: 'Actions'
                           })}
@@ -3005,11 +3073,11 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                     <tbody className="bg-white">
                       {statusesForSelectedBoard.map((status, idx) => (
                         <tr key={status.status_id}>
-                          <td className="px-2 py-1 text-xs">{status.name}</td>
-                          <td className="px-2 py-1 text-center text-xs text-gray-600">
+                          <td className="px-4 py-2 text-sm">{status.name}</td>
+                          <td className="px-4 py-2 text-center text-sm text-gray-600">
                             {getStatusTypeLabel(status.is_closed)}
                           </td>
-                          <td className="px-2 py-1 text-center">
+                          <td className="px-4 py-2 text-center">
                             <Button
                               id={`status-default-toggle-${idx}`}
                               data-status-id={status.status_id}
@@ -3030,8 +3098,8 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                               <Star className={`h-3.5 w-3.5 ${status.is_default ? 'text-yellow-500 fill-yellow-500' : status.is_closed ? 'text-gray-300' : 'text-gray-400 hover:text-yellow-500'}`} />
                             </Button>
                           </td>
-                          <td className="px-2 py-1 text-center text-xs text-gray-600">{status.order_number || 0}</td>
-                          <td className="px-2 py-1 text-center">
+                          <td className="px-4 py-2 text-center text-sm text-gray-600">{status.order_number || 0}</td>
+                          <td className="px-4 py-2 text-center">
                             <Button
                               id={`remove-status-${status.status_id}-button`}
                               data-status-id={status.status_id}
@@ -3404,22 +3472,22 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                   <table className="w-full text-sm">
                     <thead className="bg-gray-50 border-b">
                       <tr>
-                        <th className="px-2 py-1 text-left text-xs font-medium text-gray-700">
+                        <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">
                           {t('ticketingConfigStep.priorities.table.headers.name', {
                             defaultValue: 'Name'
                           })}
                         </th>
-                        <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">
+                        <th className="px-4 py-2 text-center text-sm font-medium text-gray-700">
                           {t('ticketingConfigStep.priorities.table.headers.color', {
                             defaultValue: 'Color'
                           })}
                         </th>
-                        <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">
+                        <th className="px-4 py-2 text-center text-sm font-medium text-gray-700">
                           {t('ticketingConfigStep.priorities.table.headers.order', {
                             defaultValue: 'Order'
                           })}
                         </th>
-                        <th className="px-2 py-1 text-center text-xs font-medium text-gray-700">
+                        <th className="px-4 py-2 text-center text-sm font-medium text-gray-700">
                           {t('ticketingConfigStep.common.table.actions', {
                             defaultValue: 'Actions'
                           })}
@@ -3447,19 +3515,19 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                         
                         return (
                           <tr key={priorityName}>
-                            <td className="px-2 py-1 text-xs">
+                            <td className="px-4 py-2 text-sm">
                               {priorityName}
                             </td>
-                            <td className="px-2 py-1 text-center">
+                            <td className="px-4 py-2 text-center">
                               <div 
                                 className="w-3 h-3 rounded-full mx-auto" 
                                 style={{ backgroundColor: color }}
                               />
                             </td>
-                            <td className="px-2 py-1 text-center text-xs text-gray-600">
+                            <td className="px-4 py-2 text-center text-sm text-gray-600">
                               {priorityObj?.order_number || index + 1}
                             </td>
-                            <td className="px-2 py-1 text-center">
+                            <td className="px-4 py-2 text-center">
                               {priorityId ? (
                                 <Button
                                   id={`remove-priority-${priorityId}-button`}
@@ -3504,7 +3572,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
             value={data.supportEmail}
             onChange={(e) => updateData({ supportEmail: e.target.value })}
             placeholder={t('ticketingConfigStep.supportEmail.placeholder', {
-              defaultValue: 'support@yourclient.com'
+              defaultValue: 'support@youritcompany.com'
             })}
           />
           <p className="text-xs text-gray-600">

@@ -30,7 +30,7 @@
     "title": "Onboarding Wizard",
     "description": "Wizard shell for MSP tenant setup with dialog/full-page presentation, progress, validation, and completion flows",
     "steps": {
-      "clientInfo": "Client Info",
+      "clientInfo": "Your Company",
       "teamMembers": "Team Members",
       "addClient": "Add Client",
       "clientContact": "Client Contact",
@@ -117,7 +117,7 @@
     },
     "note": {
       "defaultTaxSettings": "The client will be created with default non-taxable (0%) tax settings. You can configure tax rates later in the client settings.",
-      "optional": "You can skip this step and add clients later from your dashboard."
+      "optional": "Nothing here is final — you can skip this step and add or change clients anytime from your dashboard."
     }
   },
   "billingSetupStep": {
@@ -141,7 +141,7 @@
         "confirmAdd": "Add Service Type"
       },
       "noteLabel": "Note:",
-      "description": "Service types are taxonomy labels for organization and filtering. Billing mode is configured separately on each service.",
+      "description": "Service types are taxonomy labels for organization and filtering. Billing mode is configured separately on each service. You can rename, add, or remove types anytime later from Settings.",
       "addForm": {
         "title": "Add New Service Type",
         "fields": {
@@ -164,8 +164,8 @@
         }
       },
       "import": {
-        "title": "Import Standard Service Types",
-        "description": "Select standard service types to import into your system:",
+        "title": "Suggested Service Types",
+        "description": "These are standard for most MSPs. Uncheck any you don't want, then confirm to add the rest — you can rename or remove them anytime later.",
         "success": {
           "titleOne": "Service type imported successfully!",
           "titleOther": "Service types imported successfully!",
@@ -174,8 +174,8 @@
           "skipped": "{{count}} skipped."
         },
         "actions": {
-          "importing": "Importing...",
-          "importSelected": "Import Selected ({{count}})"
+          "importing": "Adding...",
+          "importSelected": "Confirm & Add ({{count}})"
         }
       },
       "table": {
@@ -192,8 +192,8 @@
       }
     },
     "header": {
-      "title": "Create Your First Service",
-      "description": "Add a service and choose how it should be billed. Service type identifies the service category, while billing mode controls pricing behavior.",
+      "title": "Billing Setup",
+      "description": "Set your default currency and create your first service.",
       "serviceTitle": "Create Your First Service",
       "serviceDescription": "Add a service and choose how it should be billed. Service type identifies the service category, while billing mode controls pricing behavior."
     },
@@ -215,7 +215,7 @@
         "required": "(Required)",
         "emptyPlaceholder": "Create or import service types",
         "placeholder": "Select a service type",
-        "emptyHelp": "Click \"Manage Service Types\" to create or import service types"
+        "emptyHelp": "Confirm a suggested service type below, or add your own — nothing else here is set in stone."
       },
       "billingMode": {
         "label": "Billing Mode"
@@ -281,7 +281,7 @@
       "optionalLabel": "Optional:"
     },
     "footer": {
-      "optional": "You can skip this step and add contacts later from the client's profile."
+      "optional": "Nothing here is final — you can skip this step and add or change contacts anytime from the client's profile."
     }
   },
   "clientInfoStep": {
@@ -302,8 +302,8 @@
       "noteLabel": "Note:"
     },
     "header": {
-      "title": "Client Information",
-      "description": "Let's start by setting up your client profile."
+      "title": "Your Company & Admin Account",
+      "description": "Let's start with your MSP's own company details and your admin login — not a client you support."
     },
     "fields": {
       "firstName": {
@@ -383,9 +383,12 @@
     },
     "errors": {
       "requiredFields": "Please fill in all required fields including password",
+      "requiredFieldsNoPassword": "Please fill in all required fields",
       "invalidEmail": "Please enter a valid email address",
       "passwordLength": "Password must be at least 8 characters long",
       "saveFailed": "Failed to save team member",
+      "inviteFailed": "Failed to send invitation",
+      "roleRequired": "Please select a role",
       "generic": "An error occurred"
     },
     "header": {
@@ -397,12 +400,20 @@
       "titleOther": "{{count}} team members created successfully!",
       "users": "Created users: {{users}}"
     },
+    "invited": {
+      "titleOne": "1 invitation sent successfully!",
+      "titleOther": "{{count}} invitations sent successfully!",
+      "users": "Invited: {{users}}. They'll receive an email with a link to set their own password."
+    },
     "member": {
       "title": "Team Member {{index}}",
       "createdBadge": "Created",
+      "invitedBadge": "Invited",
       "actions": {
         "saving": "Saving...",
-        "save": "Save"
+        "save": "Save",
+        "sending": "Sending...",
+        "sendInvite": "Send Invite"
       }
     },
     "fields": {
@@ -416,10 +427,17 @@
       },
       "email": {
         "label": "Email",
-        "placeholder": "jane@client.com"
+        "placeholder": "jane@youritcompany.com"
       },
       "role": {
         "label": "Role"
+      },
+      "setupMethod": {
+        "label": "How should they get access?",
+        "email": "Send email invite",
+        "password": "Set a password myself",
+        "emailHelp": "They'll get an email with a link to set their own password. No passwords to share.",
+        "passwordHelp": "You set a temporary password now and share it with them directly."
       },
       "password": {
         "label": "Temporary Password",
@@ -447,7 +465,7 @@
     },
     "optional": {
       "label": "Optional:",
-      "description": "You can skip this step and invite team members later from the settings page."
+      "description": "Nothing here is final — you can skip this step and invite, remove, or change team members anytime from Settings > Users."
     }
   },
   "ticketingConfigStep": {
@@ -635,9 +653,11 @@
           "displayOrder": {
             "label": "Display Order",
             "placeholder": "Leave empty for auto-generate",
-            "help": "Controls the order in which statuses appear in dropdown menus throughout the platform. Lower numbers appear first."
+            "help": "Controls the order in which statuses appear in dropdown menus throughout the platform. Lower numbers appear first.",
+            "reassigned": "Display order {{requested}} is already used on this board — used {{assigned}} instead."
           },
           "state": {
+            "label": "Status Type",
             "closedLabel": "Closed Status",
             "openLabel": "Open Status",
             "closedHelp": "This status indicates the ticket is resolved and closed",
@@ -860,7 +880,7 @@
     },
     "supportEmail": {
       "label": "Support Email",
-      "placeholder": "support@yourclient.com",
+      "placeholder": "support@youritcompany.com",
       "help": "This email address will be used to create support tickets. Emails sent to this address will automatically generate tickets in your system."
     },
     "finalRequirement": {

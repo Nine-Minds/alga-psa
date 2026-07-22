@@ -30,7 +30,7 @@
     "title": "Onboarding-Assistent",
     "description": "Assistenten-Shell für die MSP-Mandanten-Einrichtung mit Dialog-/Vollseiten-Darstellung, Fortschritt, Validierung und Abschlussabläufen",
     "steps": {
-      "clientInfo": "Kundeninfo",
+      "clientInfo": "Ihr Unternehmen",
       "teamMembers": "Teammitglieder",
       "addClient": "Kunden anlegen",
       "clientContact": "Kundenkontakt",
@@ -141,7 +141,7 @@
         "confirmAdd": "Diensttyp hinzufügen"
       },
       "noteLabel": "Hinweis:",
-      "description": "Diensttypen sind Taxonomie-Labels zur Organisation und Filterung. Der Abrechnungsmodus wird separat für jeden Dienst konfiguriert.",
+      "description": "Diensttypen sind Taxonomie-Labels zur Organisation und Filterung. Der Abrechnungsmodus wird separat für jeden Dienst konfiguriert. Sie können Typen später jederzeit umbenennen, hinzufügen oder entfernen.",
       "addForm": {
         "title": "Neuen Diensttyp hinzufügen",
         "fields": {
@@ -164,8 +164,8 @@
         }
       },
       "import": {
-        "title": "Standard-Diensttypen importieren",
-        "description": "Wählen Sie Standard-Diensttypen aus, die in Ihr System importiert werden sollen:",
+        "title": "Vorgeschlagene Diensttypen",
+        "description": "Diese sind Standard für die meisten MSPs. Deaktivieren Sie alle, die Sie nicht möchten, und bestätigen Sie dann, um den Rest hinzuzufügen — Sie können sie später jederzeit umbenennen oder entfernen.",
         "success": {
           "titleOne": "Diensttyp erfolgreich importiert!",
           "titleOther": "Diensttypen erfolgreich importiert!",
@@ -174,8 +174,8 @@
           "skipped": "{{count}} übersprungen."
         },
         "actions": {
-          "importing": "Wird importiert...",
-          "importSelected": "Auswahl importieren ({{count}})"
+          "importing": "Wird hinzugefügt...",
+          "importSelected": "Bestätigen & hinzufügen ({{count}})"
         }
       },
       "table": {
@@ -192,8 +192,8 @@
       }
     },
     "header": {
-      "title": "Ihren ersten Dienst erstellen",
-      "description": "Fügen Sie einen Dienst hinzu und wählen Sie aus, wie er abgerechnet werden soll. Der Diensttyp identifiziert die Dienstkategorie, während der Abrechnungsmodus das Preisverhalten steuert.",
+      "title": "Abrechnung einrichten",
+      "description": "Legen Sie Ihre Standardwährung fest und erstellen Sie Ihren ersten Dienst.",
       "serviceTitle": "Erstellen Sie Ihre erste Leistung",
       "serviceDescription": "Fügen Sie eine Leistung hinzu und wählen Sie, wie sie abgerechnet werden soll. Der Leistungstyp identifiziert die Leistungskategorie, während der Abrechnungsmodus das Preisverhalten steuert."
     },
@@ -215,7 +215,7 @@
         "required": "(Erforderlich)",
         "emptyPlaceholder": "Diensttypen erstellen oder importieren",
         "placeholder": "Diensttyp auswählen",
-        "emptyHelp": "Klicken Sie auf „Diensttypen verwalten“, um Diensttypen zu erstellen oder zu importieren"
+        "emptyHelp": "Bestätigen Sie unten einen vorgeschlagenen Diensttyp oder fügen Sie einen eigenen hinzu — nichts anderes hier ist endgültig."
       },
       "billingMode": {
         "label": "Abrechnungsmodus"
@@ -302,8 +302,8 @@
       "noteLabel": "Hinweis:"
     },
     "header": {
-      "title": "Kundeninformationen",
-      "description": "Lassen Sie uns mit der Einrichtung Ihres Kundenprofils beginnen."
+      "title": "Ihr Unternehmen & Admin-Konto",
+      "description": "Beginnen wir mit den Angaben zu Ihrem eigenen MSP-Unternehmen und Ihrem Admin-Login – nicht zu einem Kunden, den Sie betreuen."
     },
     "fields": {
       "firstName": {
@@ -383,9 +383,12 @@
     },
     "errors": {
       "requiredFields": "Bitte füllen Sie alle Pflichtfelder einschließlich des Passworts aus",
+      "requiredFieldsNoPassword": "Bitte füllen Sie alle Pflichtfelder aus",
       "invalidEmail": "Bitte geben Sie eine gültige E-Mail-Adresse ein",
       "passwordLength": "Das Passwort muss mindestens 8 Zeichen lang sein",
       "saveFailed": "Teammitglied konnte nicht gespeichert werden",
+      "inviteFailed": "Einladung konnte nicht gesendet werden",
+      "roleRequired": "Bitte wählen Sie eine Rolle aus",
       "generic": "Es ist ein Fehler aufgetreten"
     },
     "header": {
@@ -397,12 +400,20 @@
       "titleOther": "{{count}} Teammitglieder erfolgreich erstellt!",
       "users": "Erstellte Benutzer: {{users}}"
     },
+    "invited": {
+      "titleOne": "1 Einladung erfolgreich gesendet!",
+      "titleOther": "{{count}} Einladungen erfolgreich gesendet!",
+      "users": "Eingeladen: {{users}}. Sie erhalten eine E-Mail mit einem Link, um ihr eigenes Passwort festzulegen."
+    },
     "member": {
       "title": "Teammitglied {{index}}",
       "createdBadge": "Erstellt",
+      "invitedBadge": "Eingeladen",
       "actions": {
         "saving": "Wird gespeichert...",
-        "save": "Speichern"
+        "save": "Speichern",
+        "sending": "Wird gesendet...",
+        "sendInvite": "Einladung senden"
       }
     },
     "fields": {
@@ -416,10 +427,17 @@
       },
       "email": {
         "label": "E-Mail",
-        "placeholder": "jane@client.com"
+        "placeholder": "jane@ihrunternehmen.de"
       },
       "role": {
         "label": "Rolle"
+      },
+      "setupMethod": {
+        "label": "Wie sollen sie Zugang erhalten?",
+        "email": "E-Mail-Einladung senden",
+        "password": "Ich lege selbst ein Passwort fest",
+        "emailHelp": "Sie erhalten eine E-Mail mit einem Link, um ihr eigenes Passwort festzulegen. Keine Passwörter zum Weitergeben.",
+        "passwordHelp": "Sie legen jetzt ein temporäres Passwort fest und geben es direkt weiter."
       },
       "password": {
         "label": "Temporäres Passwort",
@@ -447,7 +465,7 @@
     },
     "optional": {
       "label": "Optional:",
-      "description": "Sie können diesen Schritt überspringen und Teammitglieder später in den Einstellungen einladen."
+      "description": "Hier ist nichts endgültig — Sie können diesen Schritt überspringen und Teammitglieder jederzeit über Einstellungen > Benutzer einladen, entfernen oder ändern."
     }
   },
   "ticketingConfigStep": {
@@ -860,7 +878,7 @@
     },
     "supportEmail": {
       "label": "Support-E-Mail",
-      "placeholder": "support@yourclient.com",
+      "placeholder": "support@ihrunternehmen.de",
       "help": "Diese E-Mail-Adresse wird zum Erstellen von Support-Tickets verwendet. E-Mails an diese Adresse erzeugen automatisch Tickets in Ihrem System."
     },
     "finalRequirement": {

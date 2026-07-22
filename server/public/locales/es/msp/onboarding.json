@@ -30,7 +30,7 @@
     "title": "Asistente de onboarding",
     "description": "Contenedor del asistente para la configuración del inquilino MSP con presentación en diálogo/página completa, progreso, validación y flujos de finalización",
     "steps": {
-      "clientInfo": "Información del cliente",
+      "clientInfo": "Tu empresa",
       "teamMembers": "Miembros del equipo",
       "addClient": "Añadir cliente",
       "clientContact": "Contacto del cliente",
@@ -141,7 +141,7 @@
         "confirmAdd": "Añadir tipo de servicio"
       },
       "noteLabel": "Nota:",
-      "description": "Los tipos de servicio son etiquetas taxonómicas para organización y filtrado. El modo de facturación se configura por separado en cada servicio.",
+      "description": "Los tipos de servicio son etiquetas taxonómicas para organización y filtrado. El modo de facturación se configura por separado en cada servicio. Puedes renombrar, añadir o eliminar tipos cuando quieras desde Configuración.",
       "addForm": {
         "title": "Añadir nuevo tipo de servicio",
         "fields": {
@@ -164,8 +164,8 @@
         }
       },
       "import": {
-        "title": "Importar tipos de servicio estándar",
-        "description": "Selecciona los tipos de servicio estándar que deseas importar a tu sistema:",
+        "title": "Tipos de servicio sugeridos",
+        "description": "Estos son estándar para la mayoría de los MSP. Desmarca los que no quieras y luego confirma para añadir el resto — puedes renombrarlos o eliminarlos cuando quieras.",
         "success": {
           "titleOne": "¡Tipo de servicio importado correctamente!",
           "titleOther": "¡Tipos de servicio importados correctamente!",
@@ -174,8 +174,8 @@
           "skipped": "{{count}} omitidos."
         },
         "actions": {
-          "importing": "Importando...",
-          "importSelected": "Importar seleccionados ({{count}})"
+          "importing": "Añadiendo...",
+          "importSelected": "Confirmar y añadir ({{count}})"
         }
       },
       "table": {
@@ -192,8 +192,8 @@
       }
     },
     "header": {
-      "title": "Crea tu primer servicio",
-      "description": "Añade un servicio y elige cómo se facturará. El tipo de servicio identifica la categoría del servicio, mientras que el modo de facturación controla el comportamiento del precio.",
+      "title": "Configurar facturación",
+      "description": "Define tu moneda predeterminada y crea tu primer servicio.",
       "serviceTitle": "Cree su primer servicio",
       "serviceDescription": "Agregue un servicio y elija cómo debe facturarse. El tipo de servicio identifica la categoría del servicio, mientras que el modo de facturación controla el comportamiento de precios."
     },
@@ -215,7 +215,7 @@
         "required": "(Obligatorio)",
         "emptyPlaceholder": "Crear o importar tipos de servicio",
         "placeholder": "Selecciona un tipo de servicio",
-        "emptyHelp": "Haz clic en \"Gestionar tipos de servicio\" para crear o importar tipos de servicio"
+        "emptyHelp": "Confirma un tipo de servicio sugerido abajo, o añade el tuyo propio — nada más aquí es definitivo."
       },
       "billingMode": {
         "label": "Modo de facturación"
@@ -302,8 +302,8 @@
       "noteLabel": "Nota:"
     },
     "header": {
-      "title": "Información del cliente",
-      "description": "Empecemos configurando el perfil de tu cliente."
+      "title": "Tu empresa y cuenta de administrador",
+      "description": "Empecemos con los datos de tu propia empresa MSP y tu inicio de sesión de administrador, no con un cliente al que das soporte."
     },
     "fields": {
       "firstName": {
@@ -383,9 +383,12 @@
     },
     "errors": {
       "requiredFields": "Completa todos los campos obligatorios, incluida la contraseña",
+      "requiredFieldsNoPassword": "Completa todos los campos obligatorios",
       "invalidEmail": "Por favor, introduce una dirección de correo electrónico válida",
       "passwordLength": "La contraseña debe tener al menos 8 caracteres",
       "saveFailed": "No se pudo guardar el miembro del equipo",
+      "inviteFailed": "No se pudo enviar la invitación",
+      "roleRequired": "Selecciona un rol",
       "generic": "Se produjo un error"
     },
     "header": {
@@ -397,12 +400,20 @@
       "titleOther": "¡{{count}} miembros del equipo creados correctamente!",
       "users": "Usuarios creados: {{users}}"
     },
+    "invited": {
+      "titleOne": "¡1 invitación enviada correctamente!",
+      "titleOther": "¡{{count}} invitaciones enviadas correctamente!",
+      "users": "Invitados: {{users}}. Recibirán un correo con un enlace para establecer su propia contraseña."
+    },
     "member": {
       "title": "Miembro del equipo {{index}}",
       "createdBadge": "Creado",
+      "invitedBadge": "Invitado",
       "actions": {
         "saving": "Guardando...",
-        "save": "Guardar"
+        "save": "Guardar",
+        "sending": "Enviando...",
+        "sendInvite": "Enviar invitación"
       }
     },
     "fields": {
@@ -416,10 +427,17 @@
       },
       "email": {
         "label": "Correo",
-        "placeholder": "jane@client.com"
+        "placeholder": "jane@tuempresa.com"
       },
       "role": {
         "label": "Rol"
+      },
+      "setupMethod": {
+        "label": "¿Cómo debería acceder?",
+        "email": "Enviar invitación por correo",
+        "password": "Establecer una contraseña yo mismo",
+        "emailHelp": "Recibirá un correo con un enlace para establecer su propia contraseña. Sin contraseñas que compartir.",
+        "passwordHelp": "Estableces ahora una contraseña temporal y se la compartes directamente."
       },
       "password": {
         "label": "Contraseña temporal",
@@ -447,7 +465,7 @@
     },
     "optional": {
       "label": "Opcional:",
-      "description": "Puedes omitir este paso e invitar a miembros del equipo más tarde desde la página de ajustes."
+      "description": "Nada aquí es definitivo — puedes omitir este paso e invitar, quitar o cambiar miembros del equipo cuando quieras desde Configuración > Usuarios."
     }
   },
   "ticketingConfigStep": {
@@ -860,7 +878,7 @@
     },
     "supportEmail": {
       "label": "Correo de soporte",
-      "placeholder": "support@yourclient.com",
+      "placeholder": "support@tuempresa.com",
       "help": "Esta dirección de correo se utilizará para crear tickets de soporte. Los correos enviados a esta dirección generarán automáticamente tickets en tu sistema."
     },
     "finalRequirement": {

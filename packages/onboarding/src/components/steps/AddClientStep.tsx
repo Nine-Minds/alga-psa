@@ -267,7 +267,7 @@ export function AddClientStep({ data, updateData }: StepProps) {
                 })}
               </span>{' '}
               {t('addClientStep.note.optional', {
-                defaultValue: 'You can skip this step and add clients later from your dashboard.'
+                defaultValue: 'Nothing here is final — you can skip this step and add or change clients anytime from your dashboard.'
               })}
             </p>
           </AlertDescription>

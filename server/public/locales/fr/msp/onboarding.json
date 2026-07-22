@@ -30,7 +30,7 @@
     "title": "Assistant d'intégration",
     "description": "Interface d'assistant pour la configuration du tenant MSP avec présentation en dialogue/page complète, progression, validation et flux de finalisation",
     "steps": {
-      "clientInfo": "Informations client",
+      "clientInfo": "Votre entreprise",
       "teamMembers": "Membres de l'équipe",
       "addClient": "Ajouter un client",
       "clientContact": "Contact client",
@@ -141,7 +141,7 @@
         "confirmAdd": "Ajouter le type de service"
       },
       "noteLabel": "Note :",
-      "description": "Les types de service sont des étiquettes taxonomiques pour l'organisation et le filtrage. Le mode de facturation est configuré séparément sur chaque service.",
+      "description": "Les types de service sont des étiquettes taxonomiques pour l'organisation et le filtrage. Le mode de facturation est configuré séparément sur chaque service. Vous pouvez renommer, ajouter ou supprimer des types à tout moment depuis les paramètres.",
       "addForm": {
         "title": "Ajouter un nouveau type de service",
         "fields": {
@@ -164,8 +164,8 @@
         }
       },
       "import": {
-        "title": "Importer les types de service standard",
-        "description": "Sélectionnez les types de service standard à importer dans votre système :",
+        "title": "Types de service suggérés",
+        "description": "Ceux-ci sont standard pour la plupart des MSP. Décochez ceux que vous ne voulez pas, puis confirmez pour ajouter le reste — vous pourrez les renommer ou les supprimer à tout moment.",
         "success": {
           "titleOne": "Type de service importé avec succès !",
           "titleOther": "Types de service importés avec succès !",
@@ -174,8 +174,8 @@
           "skipped": "{{count}} ignoré(s)."
         },
         "actions": {
-          "importing": "Importation...",
-          "importSelected": "Importer la sélection ({{count}})"
+          "importing": "Ajout...",
+          "importSelected": "Confirmer et ajouter ({{count}})"
         }
       },
       "table": {
@@ -192,8 +192,8 @@
       }
     },
     "header": {
-      "title": "Créez votre premier service",
-      "description": "Ajoutez un service et choisissez comment il doit être facturé. Le type de service identifie la catégorie du service, tandis que le mode de facturation contrôle le comportement tarifaire.",
+      "title": "Configuration de la facturation",
+      "description": "Définissez votre devise par défaut et créez votre premier service.",
       "serviceTitle": "Créez votre premier service",
       "serviceDescription": "Ajoutez un service et choisissez comment il doit être facturé. Le type de service identifie la catégorie de service, tandis que le mode de facturation contrôle le comportement de tarification."
     },
@@ -215,7 +215,7 @@
         "required": "(Obligatoire)",
         "emptyPlaceholder": "Créer ou importer des types de service",
         "placeholder": "Sélectionnez un type de service",
-        "emptyHelp": "Cliquez sur « Gérer les types de service » pour créer ou importer des types de service"
+        "emptyHelp": "Confirmez un type de service suggéré ci-dessous, ou ajoutez le vôtre — rien d'autre ici n'est figé."
       },
       "billingMode": {
         "label": "Mode de facturation"
@@ -302,8 +302,8 @@
       "noteLabel": "Note :"
     },
     "header": {
-      "title": "Informations client",
-      "description": "Commençons par configurer le profil de votre client."
+      "title": "Votre entreprise et compte administrateur",
+      "description": "Commençons par les informations de votre propre entreprise MSP et votre identifiant administrateur — pas celles d'un client que vous accompagnez."
     },
     "fields": {
       "firstName": {
@@ -383,9 +383,12 @@
     },
     "errors": {
       "requiredFields": "Veuillez remplir tous les champs obligatoires, y compris le mot de passe",
+      "requiredFieldsNoPassword": "Veuillez remplir tous les champs obligatoires",
       "invalidEmail": "Veuillez saisir une adresse e-mail valide",
       "passwordLength": "Le mot de passe doit contenir au moins 8 caractères",
       "saveFailed": "Impossible d'enregistrer le membre de l'équipe",
+      "inviteFailed": "Impossible d'envoyer l'invitation",
+      "roleRequired": "Veuillez sélectionner un rôle",
       "generic": "Une erreur s'est produite"
     },
     "header": {
@@ -397,12 +400,20 @@
       "titleOther": "{{count}} membres de l'équipe créés avec succès !",
       "users": "Utilisateurs créés : {{users}}"
     },
+    "invited": {
+      "titleOne": "1 invitation envoyée avec succès !",
+      "titleOther": "{{count}} invitations envoyées avec succès !",
+      "users": "Invités : {{users}}. Ils recevront un e-mail avec un lien pour définir leur propre mot de passe."
+    },
     "member": {
       "title": "Membre de l'équipe {{index}}",
       "createdBadge": "Créé",
+      "invitedBadge": "Invité",
       "actions": {
         "saving": "Enregistrement...",
-        "save": "Enregistrer"
+        "save": "Enregistrer",
+        "sending": "Envoi...",
+        "sendInvite": "Envoyer l'invitation"
       }
     },
     "fields": {
@@ -416,10 +427,17 @@
       },
       "email": {
         "label": "E-mail",
-        "placeholder": "jane@client.com"
+        "placeholder": "jane@votreentreprise.com"
       },
       "role": {
         "label": "Rôle"
+      },
+      "setupMethod": {
+        "label": "Comment doivent-ils obtenir l'accès ?",
+        "email": "Envoyer une invitation par e-mail",
+        "password": "Définir un mot de passe moi-même",
+        "emailHelp": "Ils recevront un e-mail avec un lien pour définir leur propre mot de passe. Aucun mot de passe à partager.",
+        "passwordHelp": "Vous définissez un mot de passe temporaire maintenant et le communiquez directement."
       },
       "password": {
         "label": "Mot de passe temporaire",
@@ -447,7 +465,7 @@
     },
     "optional": {
       "label": "Optionnel :",
-      "description": "Vous pouvez ignorer cette étape et inviter des membres de l'équipe plus tard depuis la page des paramètres."
+      "description": "Rien n'est figé ici — vous pouvez ignorer cette étape et inviter, retirer ou modifier des membres de l'équipe à tout moment depuis Paramètres > Utilisateurs."
     }
   },
   "ticketingConfigStep": {
@@ -860,7 +878,7 @@
     },
     "supportEmail": {
       "label": "E-mail de support",
-      "placeholder": "support@yourclient.com",
+      "placeholder": "support@votreentreprise.com",
       "help": "Cette adresse e-mail sera utilisée pour créer des tickets de support. Les e-mails envoyés à cette adresse généreront automatiquement des tickets dans votre système."
     },
     "finalRequirement": {

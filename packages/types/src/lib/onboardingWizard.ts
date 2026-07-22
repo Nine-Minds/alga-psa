@@ -11,6 +11,7 @@ export interface WizardData {
   // Team Members
   teamMembers: TeamMember[];
   createdTeamMemberEmails?: string[]; // Track which team members have been created
+  invitedTeamMemberEmails?: string[]; // Track which team members have been sent an email invite (not yet created)
 
   // Client Info
   clientName: string;
@@ -66,6 +67,9 @@ export interface TeamMember {
   email: string;
   role: string;
   password?: string;
+  /** 'email' (default): send an invite link the invitee sets their own password with.
+   *  'password': admin sets a temporary password now (legacy flow). */
+  inviteMode?: 'email' | 'password';
 }
 
 export interface OnboardingState {

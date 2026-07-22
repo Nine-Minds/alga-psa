@@ -1091,7 +1091,7 @@ export const getAvailableRoles = withAuth(async (
   { tenant }: AuthContext
 ): Promise<{
   success: boolean;
-  data?: Array<{ value: string; label: string }>;
+  data?: Array<{ value: string; label: string; roleId: string }>;
   error?: string;
 }> => {
   try {
@@ -1106,10 +1106,14 @@ export const getAvailableRoles = withAuth(async (
         .orderBy('role_name');
     });
 
-    // Transform roles to the format expected by the select component
+    // Transform roles to the format expected by the select component.
+    // `value`/`label` stay role-name-based (matches addSingleTeamMember's
+    // lookup-by-name); `roleId` is exposed for the email-invite path, which
+    // needs the actual FK value.
     const roleOptions = roles.map(role => ({
       value: role.role_name,
-      label: role.role_name.charAt(0).toUpperCase() + role.role_name.slice(1) // Capitalize first letter
+      label: role.role_name.charAt(0).toUpperCase() + role.role_name.slice(1), // Capitalize first letter
+      roleId: role.role_id
     }));
 
     return {
@@ -1118,10 +1122,29 @@ export const getAvailableRoles = withAuth(async (
     };
   } catch (error) {
     console.error('Error fetching available roles:', error);
-    return { 
-      success: false, 
+    return {
+      success: false,
       error: onboardingActionErrorMessage(error, 'Failed to load available roles')
     };
+  }
+});
+
+/**
+ * License usage for the Team Members onboarding step. Uses the withAuth
+ * session tenant directly instead of getLicenseUsageAction's header/async
+ * -context lookup, which is unreliable this early in onboarding and left the
+ * step's "Users: N" counter stuck at 0.
+ */
+export const getOnboardingLicenseUsage = withAuth(async (
+  _user: IUserWithRoles,
+  { tenant }: AuthContext
+): Promise<OnboardingActionResult> => {
+  try {
+    const usage = await getLicenseUsage(tenant);
+    return { success: true, data: { limit: usage.limit, used: usage.used } };
+  } catch (error) {
+    console.error('Error fetching onboarding license usage:', error);
+    return { success: false, error: onboardingActionErrorMessage(error, 'Failed to load license usage') };
   }
 });
 
