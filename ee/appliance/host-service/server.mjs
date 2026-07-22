@@ -561,6 +561,7 @@ function kubectlCommand(args, requestTimeoutMs = KUBECTL_REQUEST_TIMEOUT_MS) {
 function runQueuedKubectl(command, options = {}) {
   return kubectlQueue.enqueue(command, {
     timeoutMs: options.timeoutMs || KUBECTL_API_TIMEOUT_MS,
+    maxOutputBytes: options.maxOutputBytes,
     onStart: options.onStart,
     onDone: options.onDone,
     signal: options.signal
@@ -568,9 +569,16 @@ function runQueuedKubectl(command, options = {}) {
   });
 }
 
+// -o json payloads (pod/deployment lists) routinely exceed the queue's text
+// cap, and a truncated document must be rejected, not parsed.
+const KUBECTL_JSON_MAX_OUTPUT_BYTES = 16 * 1024 * 1024;
+
 async function runKubectlJson(args, timeoutMs = KUBECTL_API_TIMEOUT_MS, signal) {
-  const result = await runQueuedKubectl(kubectlCommand(`${args} -o json`, timeoutMs), { timeoutMs, signal });
+  const result = await runQueuedKubectl(kubectlCommand(`${args} -o json`, timeoutMs), { timeoutMs, signal, maxOutputBytes: KUBECTL_JSON_MAX_OUTPUT_BYTES });
   if (!result.ok) return { ...result, value: null };
+  if (result.stdoutTruncated) {
+    return { ...result, ok: false, status: 1, value: null, stderr: `kubectl JSON output exceeded ${KUBECTL_JSON_MAX_OUTPUT_BYTES} bytes and was truncated.` };
+  }
   try {
     return { ...result, value: JSON.parse(result.stdout || '{}') };
   } catch (error) {

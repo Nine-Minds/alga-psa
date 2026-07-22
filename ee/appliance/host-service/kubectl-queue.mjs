@@ -1,12 +1,10 @@
 import { spawn } from 'node:child_process';
 
 const DEFAULT_TIMEOUT_MS = 30_000;
-const MAX_OUTPUT_BYTES = 256 * 1024;
+const DEFAULT_MAX_OUTPUT_BYTES = 256 * 1024;
 
-function truncateOutput(value) {
-  const text = value || '';
-  if (text.length <= MAX_OUTPUT_BYTES) return text;
-  return `${text.slice(0, MAX_OUTPUT_BYTES)}\n... output truncated at ${MAX_OUTPUT_BYTES} bytes ...`;
+function truncationMarker(limit) {
+  return `\n... output truncated at ${limit} bytes ...`;
 }
 
 export class SerialCommandQueue {
@@ -26,6 +24,7 @@ export class SerialCommandQueue {
       id: ++this.sequence,
       command,
       timeoutMs: options.timeoutMs || DEFAULT_TIMEOUT_MS,
+      maxOutputBytes: options.maxOutputBytes || DEFAULT_MAX_OUTPUT_BYTES,
       onStart: options.onStart,
       onDone: options.onDone,
       signal: options.signal,
@@ -64,6 +63,8 @@ export class SerialCommandQueue {
     const startedAt = Date.now();
     let stdout = '';
     let stderr = '';
+    let stdoutTruncated = false;
+    let stderrTruncated = false;
     let settled = false;
     let timedOut = false;
     let killTimer = null;
@@ -76,12 +77,15 @@ export class SerialCommandQueue {
       if (entry.signal) entry.signal.removeEventListener('abort', cancel);
 
       const cancelled = entry.signal?.aborted && !timedOut;
+      const stderrText = timedOut ? `${stderr}\nCommand timed out after ${entry.timeoutMs}ms.` : (error ? `${stderr}\n${error.message || String(error)}` : stderr);
       const result = {
         ok: status === 0 && !timedOut && !error && !cancelled,
         status: cancelled ? 499 : timedOut ? 124 : (status ?? 1),
         command: entry.command,
-        stdout: truncateOutput(stdout),
-        stderr: truncateOutput(timedOut ? `${stderr}\nCommand timed out after ${entry.timeoutMs}ms.` : (error ? `${stderr}\n${error.message || String(error)}` : stderr)),
+        stdout: stdoutTruncated ? `${stdout}${truncationMarker(entry.maxOutputBytes)}` : stdout,
+        stderr: stderrTruncated ? `${stderrText}${truncationMarker(entry.maxOutputBytes)}` : stderrText,
+        stdoutTruncated,
+        stderrTruncated,
         queuedMs: startedAt - entry.queuedAt,
         durationMs: Date.now() - startedAt,
         queue: this.name,
@@ -131,8 +135,22 @@ export class SerialCommandQueue {
       killTimer = setTimeout(() => killProcessGroup('SIGKILL'), 2_000);
     }, entry.timeoutMs);
 
-    child.stdout.on('data', (chunk) => { stdout += chunk.toString('utf8'); });
-    child.stderr.on('data', (chunk) => { stderr += chunk.toString('utf8'); });
+    child.stdout.on('data', (chunk) => {
+      if (stdoutTruncated) return;
+      stdout += chunk.toString('utf8');
+      if (stdout.length > entry.maxOutputBytes) {
+        stdout = stdout.slice(0, entry.maxOutputBytes);
+        stdoutTruncated = true;
+      }
+    });
+    child.stderr.on('data', (chunk) => {
+      if (stderrTruncated) return;
+      stderr += chunk.toString('utf8');
+      if (stderr.length > entry.maxOutputBytes) {
+        stderr = stderr.slice(0, entry.maxOutputBytes);
+        stderrTruncated = true;
+      }
+    });
     child.on('error', (error) => finish(1, error));
     child.on('close', (code, signal) => finish(code ?? (signal ? 1 : 0)));
   }
