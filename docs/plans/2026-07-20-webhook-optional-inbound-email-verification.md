@@ -3,7 +3,7 @@
 Verified on 2026-07-21 in the `improve/premise-microsoft-polling`
 worktree. These results cover the initial implementation plus the silence
 detection concurrency/idempotency mitigation, enqueue-failure follow-up, and
-the dedicated reconciliation-cursor mitigation.
+the dedicated reconciliation-cursor and capped-batch overflow mitigations.
 
 ## Focused automated tests
 
@@ -19,7 +19,7 @@ npx vitest run \
   --coverage.enabled=false --silent=passed-only
 ```
 
-Result: **5 files passed, 25 tests passed**.
+Result: **5 files passed, 26 tests passed**.
 
 Coverage includes Graph validation-versus-auth classification, healthy polling
 fallback, polling reconciliation, daily recovery, Test Connection recovery
@@ -37,6 +37,10 @@ healthy UI status, and the following silence-detector guards:
   leaving the polling window retryable;
 - a safety-margin retry can be re-enqueued but is not counted as a new silent
   run;
+- a capped oldest-first Graph batch commits an effective boundary cursor
+  instead of wall-clock completion time, and the next run expands past
+  processed overlap rows to enqueue same-timestamp overflow already older than
+  the 15-minute safety margin;
 - a webhook counter reset that wins the conditional mode-transition update
   prevents subscription deletion.
 

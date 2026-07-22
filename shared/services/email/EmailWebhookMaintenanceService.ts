@@ -525,16 +525,36 @@ export class EmailWebhookMaintenanceService {
       1,
       Number(config.provider_config?.max_emails_per_sync || DEFAULT_RECONCILE_MAX_MESSAGES)
     );
-    const messages = await adapter.listMessagesReceivedSince(since, maxCount);
-    let unprocessedMessages = messages;
+    let fetchLimit = maxCount;
+    let messages: Array<{ id: string; receivedDateTime?: string }> = [];
+    let unprocessedMessages: Array<{ id: string; receivedDateTime?: string }> = [];
+    const processedMessageIds = new Set<string>();
+    const checkedMessageIds = new Set<string>();
 
-    if (messages.length > 0) {
-      const processedRows = await db.table('email_processed_messages')
-        .where({ provider_id: config.id })
-        .whereIn('message_id', messages.map((message) => message.id))
-        .select('message_id');
-      const processed = new Set(processedRows.map((row: any) => String(row.message_id)));
-      unprocessedMessages = messages.filter((message) => !processed.has(message.id));
+    // A capped oldest-first query can initially contain only messages from the
+    // safety-margin overlap. Expand the read until either maxCount unprocessed
+    // messages are visible or Graph is exhausted; otherwise the same processed
+    // boundary batch could permanently hide newer overflow messages.
+    while (true) {
+      messages = await adapter.listMessagesReceivedSince(since, fetchLimit);
+      const uncheckedMessageIds = messages
+        .map((message) => message.id)
+        .filter((messageId) => !checkedMessageIds.has(messageId));
+
+      if (uncheckedMessageIds.length > 0) {
+        const processedRows = await db.table('email_processed_messages')
+          .where({ provider_id: config.id })
+          .whereIn('message_id', uncheckedMessageIds)
+          .select('message_id');
+        for (const messageId of uncheckedMessageIds) checkedMessageIds.add(messageId);
+        for (const row of processedRows) processedMessageIds.add(String(row.message_id));
+      }
+
+      unprocessedMessages = messages
+        .filter((message) => !processedMessageIds.has(message.id))
+        .slice(0, maxCount);
+      if (unprocessedMessages.length >= maxCount || messages.length < fetchLimit) break;
+      fetchLimit *= 2;
     }
 
     const previousReconciliationMs = reconciliationState?.last_reconciliation_at
@@ -542,6 +562,24 @@ export class EmailWebhookMaintenanceService {
       : null;
     const completedAt = new Date().toISOString();
     const completedAtMs = new Date(completedAt).getTime();
+    const graphBatchMayHaveOverflow = unprocessedMessages.length >= maxCount && messages.length >= fetchLimit;
+    let nextReconciliationAt = completedAt;
+    if (graphBatchMayHaveOverflow) {
+      const newestQueuedAtMs = Math.max(...unprocessedMessages.map((message) => {
+        const receivedAtMs = message.receivedDateTime
+          ? new Date(message.receivedDateTime).getTime()
+          : NaN;
+        return receivedAtMs;
+      }));
+      if (!Number.isFinite(newestQueuedAtMs)) {
+        throw new Error('Cannot safely advance a capped Microsoft reconciliation batch without receivedDateTime');
+      }
+
+      // Keep the cursor at the newest queued message. The next query's safety
+      // margin may replay this batch, but the processed-message expansion above
+      // lets it reach overflow without ever advancing past unfetched mail.
+      nextReconciliationAt = new Date(newestQueuedAtMs).toISOString();
+    }
     const enqueueResult = await knex.transaction(async (trx) => {
       const transactionDb = tenantDb(trx, config.tenant);
       const lockedState = await transactionDb.table('microsoft_email_provider_config')
@@ -590,7 +628,7 @@ export class EmailWebhookMaintenanceService {
       await transactionDb.table('microsoft_email_provider_config')
         .where({ email_provider_id: config.id })
         .update({
-          last_reconciliation_at: completedAt,
+          last_reconciliation_at: nextReconciliationAt,
           updated_at: completedAt,
         });
 

@@ -88,6 +88,9 @@ describe('EmailWebhookMaintenanceService Microsoft recovery sweep', () => {
         if (values.webhook_silent_runs === 'webhook_silent_runs + 1') {
           provider.webhook_silent_runs = Number(provider.webhook_silent_runs || 0) + 1;
         }
+        if (typeof values.last_reconciliation_at === 'string') {
+          provider.last_reconciliation_at = values.last_reconciliation_at;
+        }
         return 1;
       }),
       insert: vi.fn().mockResolvedValue([1]),
@@ -303,6 +306,61 @@ describe('EmailWebhookMaintenanceService Microsoft recovery sweep', () => {
       action: 'failed',
       error: 'Redis unavailable',
     });
+  });
+
+  it('keeps capped oldest-first overflow older than the safety margin retryable', async () => {
+    provider.delivery_mode = 'polling';
+    provider.max_emails_per_sync = 2;
+    const originalCursorMs = Date.now() - 3 * 60 * 60 * 1000;
+    provider.last_reconciliation_at = new Date(originalCursorMs).toISOString();
+    const firstMessage = {
+      id: 'oldest-message',
+      receivedDateTime: new Date(originalCursorMs + 20 * 60 * 1000).toISOString(),
+    };
+    const boundaryMessage = {
+      id: 'boundary-message',
+      receivedDateTime: new Date(originalCursorMs + 30 * 60 * 1000).toISOString(),
+    };
+    const overflowMessage = {
+      id: 'overflow-older-than-margin',
+      // Graph only promises oldest-first ordering by receivedDateTime, so an
+      // overflow message may share the boundary message's timestamp.
+      receivedDateTime: boundaryMessage.receivedDateTime,
+    };
+    mocks.adapter.listMessagesReceivedSince
+      .mockResolvedValueOnce([firstMessage, boundaryMessage])
+      .mockResolvedValueOnce([firstMessage, boundaryMessage])
+      .mockResolvedValueOnce([firstMessage, boundaryMessage, overflowMessage]);
+    const knex = await mocks.getAdminConnection();
+    const query = knex();
+
+    await new EmailWebhookMaintenanceService().reconcilePollingProviders({
+      tenantId: provider.tenant,
+    });
+
+    expect(provider.last_reconciliation_at).toBe(boundaryMessage.receivedDateTime);
+    query.select
+      .mockResolvedValueOnce([provider])
+      .mockResolvedValueOnce([
+        { message_id: firstMessage.id },
+        { message_id: boundaryMessage.id },
+      ])
+      .mockResolvedValueOnce([]);
+
+    await new EmailWebhookMaintenanceService().reconcilePollingProviders({
+      tenantId: provider.tenant,
+    });
+
+    expect(mocks.adapter.listMessagesReceivedSince).toHaveBeenNthCalledWith(
+      2,
+      new Date(new Date(boundaryMessage.receivedDateTime).getTime() - 15 * 60 * 1000),
+      2
+    );
+    expect(mocks.enqueue).toHaveBeenCalledWith(expect.objectContaining({
+      pointer: expect.objectContaining({ messageId: overflowMessage.id }),
+    }));
+    expect(Date.now() - new Date(overflowMessage.receivedDateTime).getTime())
+      .toBeGreaterThan(15 * 60 * 1000);
   });
 
   it('does not count safety-margin retries as a second silent run', async () => {
