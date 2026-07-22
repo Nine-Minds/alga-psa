@@ -57,6 +57,7 @@ const SUBTYPES = [
   { category: 'Authentication', name: 'email-verification', description: 'Email verification instructions for new users' },
   { category: 'Authentication', name: 'password-reset', description: 'Password reset instructions for users' },
   { category: 'Authentication', name: 'portal-invitation', description: 'Invitation email for customer portal access' },
+  { category: 'Authentication', name: 'team-invitation', description: 'Invitation email for internal MSP team member access' },
   { category: 'Authentication', name: 'tenant-recovery', description: 'Tenant/organization account recovery and login links' },
   { category: 'Authentication', name: 'no-account-found', description: 'Notification when no account is found for email address' },
   // Appointments
