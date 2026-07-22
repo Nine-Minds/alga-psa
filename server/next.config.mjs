@@ -1317,7 +1317,10 @@ const nextConfig = {
     'node-vault',
     '@nestjs/common',
     '@asteasolutions/zod-to-openapi',
-    'formdata-node',
+    // NB: formdata-node deliberately NOT externalized — server pins v6 while
+    // transitive deps (anthropic/openai SDKs) pin v4, and Turbopack emits an
+    // unresolvable hashed external id for the second copy of any externalized
+    // package. Bundling gives each importer its own inline copy instead.
     '@aws-sdk/s3-request-presigner',
     'winston-daily-rotate-file',
   ],

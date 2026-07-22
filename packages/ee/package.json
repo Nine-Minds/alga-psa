@@ -5,7 +5,7 @@
   "dependencies": {
     "@alga-psa/authorization": "*",
     "@alga-psa/types": "*",
-    "google-auth-library": "^10.6.1",
+    "google-auth-library": "^10.1.0",
     "jsonwebtoken": "^9.0.2",
     "openai": "^4.104.0"
   }
