@@ -16,11 +16,11 @@ const CIPP_CONNECTION_OPTION: EntraConnectionOption = {
   description: 'Use a CIPP endpoint/token as the Entra data source for discovery and sync.',
 };
 
-export const buildEntraConnectionOptions = (_isCippEnabled: boolean): EntraConnectionOption[] => {
-  // CIPP entry point intentionally disabled in the UI. Server plumbing and the
-  // CIPP_CONNECTION_OPTION constant are retained so the path can be reinstated
-  // without a schema or API change.
-  return [DIRECT_CONNECTION_OPTION];
+export const buildEntraConnectionOptions = (isCippEnabled: boolean): EntraConnectionOption[] => {
+  // The caller combines the entra-integration-cipp flag with TIER_FEATURES.CIPP.
+  return isCippEnabled
+    ? [DIRECT_CONNECTION_OPTION, CIPP_CONNECTION_OPTION]
+    : [DIRECT_CONNECTION_OPTION];
 };
 
 export const shouldShowFieldSyncControls = (isFieldSyncEnabled: boolean): boolean => isFieldSyncEnabled;

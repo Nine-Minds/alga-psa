@@ -14,13 +14,11 @@ describe('buildEntraConnectionOptions', () => {
     expect(options.find((option) => option.id === 'cipp')).toBeUndefined();
   });
 
-  it('ignores the CIPP flag and never surfaces CIPP in the UI', () => {
-    // CIPP entry point is intentionally removed from the UI. Server plumbing
-    // remains, but buildEntraConnectionOptions must not re-expose it.
+  it('returns Direct and CIPP options when CIPP is enabled', () => {
     const options = buildEntraConnectionOptions(true);
 
-    expect(options.map((option) => option.id)).toEqual(['direct']);
-    expect(options.find((option) => option.id === 'cipp')).toBeUndefined();
+    expect(options.map((option) => option.id)).toEqual(['direct', 'cipp']);
+    expect(options.find((option) => option.id === 'cipp')).toBeDefined();
   });
 
   it('hides field-sync controls and ambiguous queue when their flags are disabled', () => {

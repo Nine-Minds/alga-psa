@@ -1,9 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 /**
- * T103/T104 (closing the 2026-05-12 teams-enterprise-addons plan debt):
- * Entra API guard returns 403 without the enterprise add-on, and tier alone
- * (premium, no add-on) never unlocks the add-on-only Teams/Entra features.
+ * T103/T104: Entra API access follows the tenant tier while Teams remains
+ * add-on-only.
  */
 
 const hoisted = vi.hoisted(() => {
@@ -25,7 +24,7 @@ const hoisted = vi.hoisted(() => {
     getCurrentUserMock: vi.fn(),
     hasPermissionMock: vi.fn(async () => true),
     assertAddOnAccessMock: vi.fn(async () => undefined),
-    assertTierAccessMock: vi.fn(async () => undefined),
+    assertTierAccessMock: vi.fn(async (_feature: string) => undefined),
     isEnabledMock: vi.fn(async () => true),
   };
 });
@@ -55,7 +54,7 @@ vi.mock('server/src/lib/tier-gating/assertTierAccess', () => ({
 import { requireEntraUiFlagEnabled } from '@ee/app/api/integrations/entra/_guards';
 import { TIER_FEATURES, TIER_FEATURE_MAP, tierHasFeature } from '@alga-psa/types';
 
-describe('Entra add-on guard (T103)', () => {
+describe('Entra tier guard (T103)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     hoisted.getCurrentUserMock.mockResolvedValue({
@@ -69,10 +68,12 @@ describe('Entra add-on guard (T103)', () => {
     hoisted.isEnabledMock.mockResolvedValue(true);
   });
 
-  it('T103: returns 403 when the enterprise add-on is missing — even for a tenant whose tier passes', async () => {
-    // Tier assertion passes (premium tier), add-on assertion fails: the guard
-    // must still refuse — tier alone never unlocks add-on-only features.
-    hoisted.assertAddOnAccessMock.mockRejectedValue(new hoisted.AddOnAccessError('Enterprise'));
+  it('T103: returns 403 when the tenant tier does not include Entra Sync', async () => {
+    hoisted.assertTierAccessMock.mockImplementation(async (feature: TIER_FEATURES) => {
+      if (feature === TIER_FEATURES.ENTRA_SYNC) {
+        throw new hoisted.TierAccessError(feature);
+      }
+    });
 
     const result = await requireEntraUiFlagEnabled('read');
 
@@ -84,29 +85,33 @@ describe('Entra add-on guard (T103)', () => {
     });
   });
 
-  it('T103: passes with the enterprise add-on active and returns tenant/user context', async () => {
+  it('T103: passes for a Pro tenant with no add-ons and returns tenant/user context', async () => {
     const result = await requireEntraUiFlagEnabled('read');
 
     expect(result).toEqual({ tenantId: 'tenant-1', userId: 'user-1' });
-    expect(hoisted.assertAddOnAccessMock).toHaveBeenCalled();
+    expect(hoisted.assertTierAccessMock).toHaveBeenNthCalledWith(1, TIER_FEATURES.INTEGRATIONS);
+    expect(hoisted.assertTierAccessMock).toHaveBeenNthCalledWith(2, TIER_FEATURES.ENTRA_SYNC);
+    expect(hoisted.assertAddOnAccessMock).not.toHaveBeenCalled();
   });
 
   it('rethrows unexpected assertion failures instead of masking them as 403', async () => {
-    hoisted.assertAddOnAccessMock.mockRejectedValue(new Error('database down'));
+    hoisted.assertTierAccessMock.mockRejectedValue(new Error('database down'));
 
     await expect(requireEntraUiFlagEnabled('read')).rejects.toThrow('database down');
   });
 });
 
 describe('tier-vs-addon separation (T104)', () => {
-  it('T104: premium tier alone does not unlock Teams or Entra features', () => {
+  it('T104: premium tier unlocks Entra Sync while Teams stays add-on-only', () => {
     expect(tierHasFeature('premium', TIER_FEATURES.TEAMS_INTEGRATION)).toBe(false);
-    expect(tierHasFeature('premium', TIER_FEATURES.ENTRA_SYNC)).toBe(false);
+    expect(tierHasFeature('premium', TIER_FEATURES.ENTRA_SYNC)).toBe(true);
 
     for (const tier of Object.keys(TIER_FEATURE_MAP) as Array<keyof typeof TIER_FEATURE_MAP>) {
       expect(TIER_FEATURE_MAP[tier]).not.toContain(TIER_FEATURES.TEAMS_INTEGRATION);
-      expect(TIER_FEATURE_MAP[tier]).not.toContain(TIER_FEATURES.ENTRA_SYNC);
     }
+
+    expect(TIER_FEATURE_MAP.pro).toContain(TIER_FEATURES.ENTRA_SYNC);
+    expect(TIER_FEATURE_MAP.premium).toContain(TIER_FEATURES.ENTRA_SYNC);
   });
 
   it('T104: non-add-on features remain tier-unlocked (control)', () => {

@@ -14,6 +14,7 @@ All user-visible Entra surfaces are feature-flag gated.
 ## Prerequisites
 
 - Edition: `NEXT_PUBLIC_EDITION=enterprise`
+- Subscription tier: Pro or Premium
 - Internal MSP user account (client portal users are denied)
 - RBAC:
   - View endpoints/actions: `system_settings.read`
@@ -29,8 +30,9 @@ Choose one connection type per tenant:
 - Best when you control OAuth app registration and consent flow.
 
 2. `cipp` (CIPP API)
-- Use this when CIPP is your operational control plane for managed tenant/user enumeration.
-- Requires CIPP base URL and API token.
+- Available on Pro and Premium when the `entra-integration-cipp` flag is enabled for the tenant.
+- Uses the classic CIPP API for managed tenant and user enumeration.
+- Requires the CIPP base URL and a static API token.
 - Best when your MSP already uses CIPP and wants to reuse that API boundary.
 
 Switching connection types automatically clears stale credentials for the previous type.
