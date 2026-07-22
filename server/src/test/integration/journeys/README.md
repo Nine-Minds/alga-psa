@@ -45,11 +45,9 @@ Generated draft invoice → payment against a draft is refused → `finalizeInvo
 → partial external payment → closing payment.
 Pins: status machine `draft → sent → partially_applied → paid`, balance-due
 arithmetic, `invoice_payments` ledger and `payment` transactions reconciling to
-the total. External payment recording is EE functionality: `invoice_payments`
-is created only by the EE migration chain, and the alternative-payments
-webhook is edition-gated. The CE test bootstrap never creates the table, so
-the test mirrors the EE schema locally (`ensureInvoicePaymentsTable`) to
-exercise the service-level seam.
+the total. `invoice_payments` ships from the CE migration chain; automated
+payment ingestion (Stripe, QBO sync, the alternative-payments webhook) is
+EE-gated at each entry point.
 
 ### `invoiceRenderToDelivery`
 Finalized invoice → `createPDFGenerationService` renders it through the real

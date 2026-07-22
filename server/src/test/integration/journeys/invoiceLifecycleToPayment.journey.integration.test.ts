@@ -150,7 +150,6 @@ describe('journey: invoice lifecycle → payment', () => {
     const contextLike = { db, tenantId, clientId } as const;
     await ensureDefaultBillingSettings(contextLike as any);
     await ensureClientPlanBundlesTable(contextLike as any);
-    await ensureInvoicePaymentsTable(db);
     await setupClientTaxConfiguration(contextLike as any, {
       regionCode: 'US-NY',
       regionName: 'New York',
@@ -346,27 +345,4 @@ async function ensureTenant(connection: Knex): Promise<string> {
     updated_at: connection.fn.now()
   });
   return newTenantId;
-}
-// invoice_payments ships from an EE migration
-// (ee/server/migrations/20251203120000_create_invoice_payments_table.cjs); the
-// CE chain this test DB runs never creates it, even though the payment landing
-// (recordExternalPayment) lives in the CE billing package. Mirror the EE schema
-// here, the way ensureClientPlanBundlesTable does for plan bundles.
-async function ensureInvoicePaymentsTable(connection: Knex): Promise<void> {
-  await connection.raw(`
-    CREATE TABLE IF NOT EXISTS invoice_payments (
-      payment_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-      tenant UUID NOT NULL,
-      invoice_id UUID NOT NULL,
-      amount BIGINT NOT NULL,
-      payment_method VARCHAR(100),
-      payment_date TIMESTAMPTZ DEFAULT NOW(),
-      reference_number VARCHAR(255),
-      notes TEXT,
-      status VARCHAR(50) DEFAULT 'completed',
-      metadata JSONB DEFAULT '{}',
-      created_at TIMESTAMPTZ DEFAULT NOW(),
-      updated_at TIMESTAMPTZ DEFAULT NOW()
-    )
-  `);
 }
