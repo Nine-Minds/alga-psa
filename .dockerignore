@@ -21,6 +21,11 @@ build
 !packages/email/dist/**
 !ee/packages/workflows/dist/**
 !packages/workflow-streams/dist/**
+# temporal-worker parity build (Dockerfile prebuilt stage) COPYs the locally
+# built worker dist from the context; without this the nightly docker-parity
+# check dies at COPY ee/temporal-workflows/dist.
+!ee/temporal-workflows/dist
+!ee/temporal-workflows/dist/**
 # Runtime-resolved @alga-psa packages: their dist/ must ship in images whose
 # code resolves them from node_modules at runtime — the onboarding seeds
 # dynamic-import '@alga-psa/db', and db's dist imports @alga-psa/core. Missing

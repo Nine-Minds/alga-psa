@@ -8,6 +8,7 @@
  */
 
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
+import process from 'node:process';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { tenantDb } from '@alga-psa/db';
@@ -16,6 +17,13 @@ import { createEmailProvider } from '@alga-psa/integrations/actions/email-action
 
 let testDb: Knex;
 let testTenant: string;
+let microsoftProfileId: string;
+let microsoftProfileSecretRef: string;
+let microsoftProfileSecretEnvKey: string;
+
+const microsoftProfileClientId = 'profile-client-id';
+const microsoftProfileClientSecret = 'profile-client-secret';
+const microsoftProfileTenantId = 'profile-tenant-id';
 
 function tenantTable<Row extends object = Record<string, unknown>>(table: string) {
   return tenantDb(testDb, testTenant).table<Row>(table);
@@ -75,13 +83,50 @@ describe('Email Provider Creation', () => {
       created_at: new Date(),
       updated_at: new Date()
     });
+
+    microsoftProfileId = uuidv4();
+    microsoftProfileSecretRef = `microsoft_profile_${microsoftProfileId}_client_secret`;
+    microsoftProfileSecretEnvKey = `TENANT_${testTenant}_${microsoftProfileSecretRef}`;
+    // Exercise the resolver's real environment-backed tenant secret provider.
+    process.env[microsoftProfileSecretEnvKey] = microsoftProfileClientSecret;
+
+    const now = new Date();
+    await tenantTable('microsoft_profiles').insert({
+      tenant: testTenant,
+      profile_id: microsoftProfileId,
+      display_name: 'Email Provider Creation Profile',
+      display_name_normalized: 'email provider creation profile',
+      client_id: microsoftProfileClientId,
+      tenant_id: microsoftProfileTenantId,
+      client_secret_ref: microsoftProfileSecretRef,
+      capabilities: JSON.stringify(['email']),
+      is_default: true,
+      is_archived: false,
+      archived_at: null,
+      created_by: null,
+      updated_by: null,
+      created_at: now,
+      updated_at: now
+    });
+    await tenantTable('microsoft_profile_consumer_bindings').insert({
+      tenant: testTenant,
+      consumer_type: 'email',
+      profile_id: microsoftProfileId,
+      created_by: null,
+      updated_by: null,
+      created_at: now,
+      updated_at: now
+    });
   });
 
   afterAll(async () => {
     // Cleanup
+    delete process.env[microsoftProfileSecretEnvKey];
     await tenantTable('google_email_provider_config').delete();
     await tenantTable('microsoft_email_provider_config').delete();
     await tenantTable('email_providers').delete();
+    await tenantTable('microsoft_profile_consumer_bindings').delete();
+    await tenantTable('microsoft_profiles').delete();
     await tenantFixtureTable().where('tenant', testTenant).delete();
     await testDb.destroy();
   });
@@ -200,9 +245,11 @@ describe('Email Provider Creation', () => {
         .first();
 
       expect(configRecord).toMatchObject({
-        client_id: 'microsoft-client-id',
-        client_secret: 'microsoft-client-secret',
-        tenant_id: 'common',
+        client_id: microsoftProfileClientId,
+        client_secret: microsoftProfileClientSecret,
+        tenant_id: microsoftProfileTenantId,
+        microsoft_profile_id: microsoftProfileId,
+        client_secret_ref: microsoftProfileSecretRef,
         max_emails_per_sync: 100
       });
     });
@@ -220,8 +267,7 @@ describe('Email Provider Creation', () => {
         googleConfig: googleConfig({ client_id: 'client1.apps.googleusercontent.com' })
       }, true);
 
-      // Microsoft client credentials are tenant-level secrets (first write
-      // wins for the tenant), so reuse the same credentials file-wide.
+      // Microsoft client credentials resolve through the tenant's bound profile.
       await createEmailProvider({
         tenant: testTenant,
         providerType: 'microsoft',
