@@ -8,6 +8,7 @@ import { isValidTenantSlug } from '@shared/utils/tenantSlug';
 import { UserSession } from '@alga-psa/db/models/UserSession';
 import { recordPortalDomainSeen } from '@/lib/portal-domains/portalDomainSeen';
 import type { Metadata } from 'next';
+import { PortalBrandingStyles } from '@/lib/auth/portalBranding';
 
 export const metadata: Metadata = {
   title: 'Client Portal Sign In',
@@ -90,7 +91,8 @@ export default async function ClientSignInPage({
 
   return (
     <I18nWrapper portal="client" initialLocale={locale || undefined}>
-      <ClientPortalSignIn branding={branding} />
+      <PortalBrandingStyles branding={branding} />
+      <ClientPortalSignIn branding={branding} portalDomain={portalDomain || undefined} />
     </I18nWrapper>
   );
 }

@@ -1,0 +1,365 @@
+"use client";
+import React, { useState, FormEvent, useEffect } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
+import { Eye, EyeOff } from 'lucide-react';
+import * as Form from '@radix-ui/react-form';
+import { setNewPassword, getAccountInfoFromToken } from '@alga-psa/auth/actions';
+import { AlertProps } from 'server/src/interfaces';
+import { Alert } from '@alga-psa/auth/client';
+import { Alert as UIAlert, AlertDescription } from '@alga-psa/ui/components/Alert';
+import { Label } from '@alga-psa/ui/components/Label';
+import { Input } from '@alga-psa/ui/components/Input';
+import { Button } from '@alga-psa/ui/components/Button';
+import { User, Lock } from 'lucide-react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { validatePassword as validatePasswordPolicy, getPasswordRequirements } from '@alga-psa/validation';
+import { appendPortalDomain } from '@alga-psa/auth/client';
+import type { TenantBranding } from '@alga-psa/tenancy/actions';
+
+type FormData = {
+  password: string;
+  confirmPassword: string;
+};
+
+interface SetNewPasswordClientProps {
+  branding: TenantBranding | null;
+  portalDomain?: string;
+}
+
+const SetNewPasswordClient: React.FC<SetNewPasswordClientProps> = ({ branding, portalDomain }) => {
+  const { t } = useTranslation('msp/auth');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [isAlertOpen, setIsAlertOpen] = useState(false);
+  const [alertInfo, setAlertInfo] = useState<AlertProps>({ type: 'success', title: '', message: '' });
+  const [accountInfo, setAccountInfo] = useState<{
+    name: string;
+    email: string;
+    username: string;
+    accountType: string;
+  } | null>(null);
+
+  const searchParams = useSearchParams();
+  const token = searchParams.get('token');
+  const portal = searchParams.get('portal') || 'msp';
+  const router = useRouter();
+
+  const [formData, setFormData] = useState<FormData>({
+    password: '',
+    confirmPassword: '',
+  });
+
+  const [passwordRequirements, setPasswordRequirements] = useState({
+    minLength: false,
+    hasUppercase: false,
+    hasLowercase: false,
+    hasNumber: false,
+    hasSpecialChar: false,
+    passwordsMatch: false
+  });
+
+  const [passwordsMatch, setPasswordsMatch] = useState(true);
+
+  // Load account info from token
+  useEffect(() => {
+    const loadAccountInfo = async () => {
+      if (token) {
+        const info = await getAccountInfoFromToken(token, portal);
+        if (info) {
+          setAccountInfo(info);
+        }
+      }
+    };
+    loadAccountInfo();
+  }, [token, portal]);
+
+  useEffect(() => {
+    const reqs = getPasswordRequirements(formData.password);
+    const newRequirements = {
+      minLength: reqs.minLength,
+      hasUppercase: reqs.hasUpper,
+      hasLowercase: reqs.hasLower,
+      hasNumber: reqs.hasNumber,
+      hasSpecialChar: reqs.hasSpecial,
+      passwordsMatch: formData.password !== '' && formData.confirmPassword !== '' && formData.password === formData.confirmPassword
+    };
+
+    setPasswordRequirements(newRequirements);
+    setPasswordsMatch(formData.password === formData.confirmPassword);
+  }, [formData.password, formData.confirmPassword]);
+
+  const allCriteriaMet = Object.values(passwordRequirements).every(Boolean);
+
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    if (formData.password !== formData.confirmPassword) {
+      console.log('Passwords do not match');
+      setIsAlertOpen(true);
+      setAlertInfo({
+          type: 'error',
+          title: t('passwordReset.setNew.alerts.passwordTitle', 'Password '),
+          message: t('passwordReset.setNew.alerts.passwordsDoNotMatchMessage', 'Please ensure your password match.'),
+        });
+      return;
+    }
+    if (!allCriteriaMet) {
+      console.log('All password criteria must be met');
+      setIsAlertOpen(true);
+      setAlertInfo({
+          type: 'error',
+          title: t('passwordReset.setNew.alerts.passwordTitle', 'Password '),
+          message: t('passwordReset.setNew.alerts.passwordCriteriaMessage', 'Please ensure your password meets all the specified criteria.'),
+        });
+      return;
+    }
+
+    // Shared policy gate: catches rules not shown in the checklist (common-word
+    // blocklist, long-sequence rejection) and surfaces the specific reason.
+    const policyError = validatePasswordPolicy(formData.password);
+    if (policyError) {
+      setIsAlertOpen(true);
+      setAlertInfo({
+        type: 'error',
+        title: t('passwordReset.setNew.alerts.passwordTitle', 'Password '),
+        message: policyError,
+      });
+      return;
+    }
+
+    if (!token) {
+      setIsAlertOpen(true);
+      setAlertInfo({
+          type: 'error',
+          title: t('passwordReset.setNew.alerts.warningTitle', 'Warning!!!'),
+          message: t('passwordReset.setNew.alerts.missingClientInfoMessage', 'It is missing client information.'),
+        });
+      return;
+    }
+    const wasSuccess = await setNewPassword(formData.password, token);
+    if (!wasSuccess) {
+      setIsAlertOpen(true);
+        setAlertInfo({
+          type: 'error',
+          title: t('passwordReset.setNew.alerts.failedTitle', 'Failed !!!'),
+          message: t('passwordReset.setNew.alerts.tryAgainMessage', 'Please try again. If the error persist please contact support'),
+        });
+      return;
+    }
+    console.log('New password set')
+    const confirmationHref = `/auth/password-reset/confirmation?portal=${portal}`;
+    router.push(portal === 'client' ? appendPortalDomain(confirmationHref, portalDomain) : confirmationHref);
+  };
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData((prevData) => ({
+      ...prevData,
+      [name]: value,
+    }));
+  };
+
+  const bgGradient = branding && portal === 'client'
+    ? 'bg-gradient-to-br from-[rgb(var(--color-primary-50))] to-[rgb(var(--color-secondary-100))] dark:from-[rgb(var(--color-primary-950))] dark:to-[rgb(var(--color-secondary-950))]'
+    : portal === 'client'
+    ? 'bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-blue-950 dark:to-indigo-950'
+    : 'bg-gradient-to-br from-purple-50 via-purple-100 to-indigo-100 dark:from-purple-950 dark:via-purple-950/80 dark:to-indigo-950';
+
+  return (
+    <div className={`min-h-screen flex items-center justify-center p-4 ${bgGradient}`}>
+      <Alert
+        type={alertInfo.type}
+        title={alertInfo.title}
+        message={alertInfo.message}
+        isOpen={isAlertOpen}
+        onClose={() => setIsAlertOpen(false)}
+      />
+
+      <div className="w-full max-w-md">
+        <div className="bg-card rounded-lg shadow-lg p-8">
+          {branding?.logoUrl && (
+            <img
+              src={branding.logoUrl}
+              alt={branding.clientName || t('passwordReset.setNew.logoAlt', 'Client logo')}
+              width={60}
+              height={60}
+              className="mx-auto mb-6 h-[60px] w-[60px] rounded-full object-contain"
+            />
+          )}
+
+          <div className="text-center mb-6">
+          <h2 className="text-2xl font-bold text-[rgb(var(--color-text-900))] text-center mb-2 flex items-center justify-center gap-2">
+            <Lock className="w-6 h-6" />
+              {t('passwordReset.setNew.title', 'Reset Your Password')}</h2>
+            <p className="text-[rgb(var(--color-text-600))] mt-1">{t('passwordReset.setNew.subtitle', 'Set a new password for your account')}</p>
+          </div>
+
+          {/* Account Information Section */}
+          {accountInfo && (
+            <UIAlert variant="info" className="mb-6">
+              <User className="h-4 w-4" />
+              <AlertDescription>
+                <h3 className="font-semibold mb-3">{t('passwordReset.setNew.accountInformation', 'Account Information')}</h3>
+                <div className="space-y-2 text-sm">
+                  <div className="flex">
+                    <span className="text-[rgb(var(--color-text-500))] w-28">{t('passwordReset.setNew.nameLabel', 'Name:')}</span>
+                    <span className="font-medium">{accountInfo.name}</span>
+                  </div>
+                  <div className="flex">
+                    <span className="text-[rgb(var(--color-text-500))] w-28">{t('passwordReset.setNew.emailLabel', 'Email:')}</span>
+                    <span className="font-medium">{accountInfo.email}</span>
+                  </div>
+                  <div className="flex">
+                    <span className="text-[rgb(var(--color-text-500))] w-28">{t('passwordReset.setNew.usernameLabel', 'Username:')}</span>
+                    <span className="font-medium">{accountInfo.username}</span>
+                  </div>
+                  <div className="flex">
+                    <span className="text-[rgb(var(--color-text-500))] w-28">{t('passwordReset.setNew.accountTypeLabel', 'Account Type:')}</span>
+                    <span className="font-medium">{accountInfo.accountType}</span>
+                  </div>
+                </div>
+              </AlertDescription>
+            </UIAlert>
+          )}
+
+          <Form.Root className="space-y-4" onSubmit={handleSubmit}>
+            {/* New Password Field */}
+            <Form.Field name="password">
+              <div className="space-y-2">
+                <Label
+                className="text-sm font-medium text-[rgb(var(--color-text-700))]" htmlFor="password">
+                  {t('passwordReset.setNew.newPasswordLabel', 'New Password')}
+                </Label>
+                <div className="relative">
+                  <Form.Control asChild>
+                    <Input
+                      id="password"
+                      name="password"
+                      type={showPassword ? "text" : "password"}
+                      required
+                      placeholder="••••••••"
+                      className="w-full px-3 py-2 border border-[rgb(var(--color-border-300))] rounded-md shadow-sm appearance-none focus:outline-none focus:ring-1 focus:ring-[rgb(var(--color-primary-500))] focus:border-[rgb(var(--color-primary-500))]"
+                      value={formData.password}
+                      onChange={handleInputChange}
+                    />
+                  </Form.Control>
+                  <button
+                    id="toggle-new-password-visibility-button"
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-[rgb(var(--color-text-400))] hover:text-[rgb(var(--color-text-600))]"
+                  >
+                    {showPassword ? (
+                      <EyeOff className="h-5 w-5" />
+                    ) : (
+                      <Eye className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
+              </div>
+            </Form.Field>
+
+            {/* Confirm Password Field */}
+            <Form.Field name="confirmPassword">
+              <div className="space-y-2">
+                <Label
+                 className="text-sm font-medium text-[rgb(var(--color-text-700))]" htmlFor="confirmPassword">
+                  {t('passwordReset.setNew.confirmPasswordLabel', 'Confirm New Password')}
+                </Label>
+                <div className="relative">
+                  <Form.Control asChild>
+                    <Input
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      type={showConfirmPassword ? "text" : "password"}
+                      required
+                      placeholder={t('passwordReset.setNew.confirmPasswordPlaceholder', 'Confirm your new password')}
+                      className="w-full px-3 py-2 border border-[rgb(var(--color-border-300))] rounded-md shadow-sm appearance-none focus:outline-none focus:ring-1 focus:ring-[rgb(var(--color-primary-500))] focus:border-[rgb(var(--color-primary-500))]"
+                      value={formData.confirmPassword}
+                      onChange={handleInputChange}
+                    />
+                  </Form.Control>
+                  <button
+                    id="toggle-confirm-password-visibility-button"
+                    type="button"
+                    onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-[rgb(var(--color-text-400))] hover:text-[rgb(var(--color-text-600))]"
+                  >
+                    {showConfirmPassword ? (
+                      <EyeOff className="h-5 w-5" />
+                    ) : (
+                      <Eye className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
+              </div>
+            </Form.Field>
+
+            {/* Password Requirements */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">{t('passwordReset.setNew.passwordRequirements', 'Password Requirements')}</Label>
+              <div className="space-y-1 text-xs">
+                <div className={`flex items-center gap-2 ${passwordRequirements.minLength ? 'text-success' : 'text-[rgb(var(--color-text-500))]'}`}>
+                  <div className={`w-2 h-2 rounded-full ${passwordRequirements.minLength ? 'bg-success' : 'bg-[rgb(var(--color-border-300))]'}`}></div>
+                  {t('passwordReset.setNew.requirements.minLength', 'At least 8 characters')}
+                </div>
+                <div className={`flex items-center gap-2 ${passwordRequirements.hasUppercase ? 'text-success' : 'text-[rgb(var(--color-text-500))]'}`}>
+                  <div className={`w-2 h-2 rounded-full ${passwordRequirements.hasUppercase ? 'bg-success' : 'bg-[rgb(var(--color-border-300))]'}`}></div>
+                  {t('passwordReset.setNew.requirements.hasUppercase', 'One uppercase letter')}
+                </div>
+                <div className={`flex items-center gap-2 ${passwordRequirements.hasLowercase ? 'text-success' : 'text-[rgb(var(--color-text-500))]'}`}>
+                  <div className={`w-2 h-2 rounded-full ${passwordRequirements.hasLowercase ? 'bg-success' : 'bg-[rgb(var(--color-border-300))]'}`}></div>
+                  {t('passwordReset.setNew.requirements.hasLowercase', 'One lowercase letter')}
+                </div>
+                <div className={`flex items-center gap-2 ${passwordRequirements.hasNumber ? 'text-success' : 'text-[rgb(var(--color-text-500))]'}`}>
+                  <div className={`w-2 h-2 rounded-full ${passwordRequirements.hasNumber ? 'bg-success' : 'bg-[rgb(var(--color-border-300))]'}`}></div>
+                  {t('passwordReset.setNew.requirements.hasNumber', 'One number')}
+                </div>
+                <div className={`flex items-center gap-2 ${passwordRequirements.hasSpecialChar ? 'text-success' : 'text-[rgb(var(--color-text-500))]'}`}>
+                  <div className={`w-2 h-2 rounded-full ${passwordRequirements.hasSpecialChar ? 'bg-success' : 'bg-[rgb(var(--color-border-300))]'}`}></div>
+                  {t('passwordReset.setNew.requirements.hasSpecialChar', 'One special character')}
+                </div>
+                <div className={`flex items-center gap-2 ${passwordRequirements.passwordsMatch ? 'text-success' : 'text-[rgb(var(--color-text-500))]'}`}>
+                  <div className={`w-2 h-2 rounded-full ${passwordRequirements.passwordsMatch ? 'bg-success' : 'bg-[rgb(var(--color-border-300))]'}`}></div>
+                  {t('passwordReset.setNew.requirements.passwordsMatch', 'Passwords match')}
+                </div>
+              </div>
+            </div>
+
+            {/* Submit Button */}
+            <Form.Submit asChild>
+              <Button
+                id="reset-password-button"
+                type="submit"
+                className="w-full"
+                disabled={!allCriteriaMet || !passwordsMatch || !formData.confirmPassword}
+              >
+                {t('passwordReset.setNew.submit', 'Reset Password')}
+              </Button>
+            </Form.Submit>
+          </Form.Root>
+
+          {/* Back to sign in link */}
+          <div className="mt-6 text-center">
+            <p className="text-sm text-[rgb(var(--color-text-600))]">
+              {t('passwordReset.setNew.rememberYourPassword', 'Remember your password?')}{' '}
+              <Link
+                id="password-reset-sign-in-link"
+                href={portal === 'client'
+                  ? appendPortalDomain('/auth/client-portal/signin', portalDomain)
+                  : '/auth/msp/signin'}
+                className={`font-medium ${
+                  'text-[rgb(var(--color-primary-500))] hover:text-[rgb(var(--color-primary-400))]'
+                }`}
+              >
+                {t('passwordReset.setNew.signInInstead', 'Sign in instead')}
+              </Link>
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default SetNewPasswordClient;
