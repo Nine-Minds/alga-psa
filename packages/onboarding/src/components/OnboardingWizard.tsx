@@ -23,7 +23,8 @@ import {
   setupBilling,
   configureTicketing,
   completeOnboarding,
-  validateOnboardingDefaults
+  validateOnboardingDefaults,
+  saveOnboardingStepPosition
 } from '../actions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { updateTenantDefaultLocaleAction } from '@alga-psa/tenancy/actions';
@@ -57,13 +58,25 @@ export function OnboardingWizard({
   productCode = 'psa',
 }: OnboardingWizardProps) {
   const { t } = useTranslation('msp/onboarding');
-  const [currentStep, setCurrentStep] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
-  const [errors, setErrors] = useState<Record<number, string>>({});
-  const [completedSteps, setCompletedSteps] = useState<Set<number>>(new Set());
-  const [attemptedSteps, setAttemptedSteps] = useState<Set<number>>(new Set());
   const activeStepIndexes = getOnboardingWizardStepIndexes(productCode);
   const requiredStepPositions = getOnboardingWizardRequiredStepPositions(productCode);
+
+  // Resume where the user left off: the last persisted step is restored (clamped to
+  // the valid range) and every step before it is treated as completed so the progress
+  // bar and step-click navigation reflect the restored position.
+  const restoredStep = (() => {
+    const saved = initialData.currentStep;
+    if (typeof saved !== 'number' || !Number.isInteger(saved)) return 0;
+    return Math.min(Math.max(saved, 0), activeStepIndexes.length - 1);
+  })();
+
+  const [currentStep, setCurrentStep] = useState(restoredStep);
+  const [isLoading, setIsLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<number, string>>({});
+  const [completedSteps, setCompletedSteps] = useState<Set<number>>(
+    () => new Set(Array.from({ length: restoredStep }, (_, i) => i))
+  );
+  const [attemptedSteps, setAttemptedSteps] = useState<Set<number>>(new Set());
   const currentOriginalStepIndex = activeStepIndexes[currentStep] ?? activeStepIndexes[0] ?? 0;
   const isAlgaDesk = productCode === 'algadesk';
 
@@ -113,6 +126,16 @@ export function OnboardingWizard({
       console.log('Wizard State:', { currentStep, wizardData });
     }
   }, [currentStep, wizardData, debugMode]);
+
+  // Persist the step position on every change so a forced refresh resumes on the
+  // same step instead of restarting the wizard. Fire-and-forget: a failed write only
+  // means the next refresh resumes one step earlier.
+  useEffect(() => {
+    if (testMode) return;
+    saveOnboardingStepPosition(currentStep).catch((error) => {
+      console.error('Failed to persist onboarding step position:', error);
+    });
+  }, [currentStep, testMode]);
 
   const updateData = (data: Partial<WizardData>) => {
     setWizardData((prev) => ({ ...prev, ...data }));
