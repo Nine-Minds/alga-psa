@@ -27,7 +27,7 @@ cd server && TZ=UTC SECRET_FS_BASE_PATH=/nonexistent \
   DB_USER_SERVER=app_user DB_PASSWORD_SERVER=test_password \
   APP_ENV=test NODE_ENV=test REQUIRE_DB=1 \
   REAL_REDIS=1 REDIS_HOST=localhost REDIS_PORT=<redis-port> \
-  npx vitest run src/test/visual/
+  RUN_VISUAL=1 npx vitest run src/test/visual/
 ```
 
 ## Updating baselines

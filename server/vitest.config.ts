@@ -28,6 +28,13 @@ export default defineConfig({
       '../packages/**/*.{test,spec}.?(c|m)[jt]s?(x)',
       '../ee/packages/workflows/src/actions/**/*.{test,spec}.?(c|m)[jt]s?(x)'
     ],
+    // The visual golden suite launches Chromium + Postgres and depends on
+    // machine-local fonts; it is a manual template-review tool, never part of
+    // an unscoped run. Opt in with RUN_VISUAL=1 (see src/test/visual/README.md).
+    exclude: [
+      '**/node_modules/**',
+      ...(process.env.RUN_VISUAL ? [] : ['**/src/test/visual/**']),
+    ],
     setupFiles: [path.resolve(__dirname, './src/test/setup.ts')],
     globalSetup: [path.resolve(__dirname, './vitest.globalSetup.js')],
     isolate: true,
