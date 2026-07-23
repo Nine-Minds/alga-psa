@@ -18,9 +18,9 @@ exports.up = async function(knex) {
       table.text('email').notNullable();
       table.text('first_name').notNullable();
       table.text('last_name').notNullable();
-      // role_id — no FK to roles; intentional for CitusDB compatibility
-      // (roles is not a distributed/reference table). Referential integrity
-      // enforced at application level.
+      // role_id has no DB FK: the standard migration chain never distributes
+      // `roles` (it stays a local table on Citus), and a distributed table
+      // can't FK a local one. Referential integrity is enforced in app code.
       table.uuid('role_id').nullable();
       table.text('token').notNullable();
       table.timestamp('expires_at', { useTz: true }).notNullable();
