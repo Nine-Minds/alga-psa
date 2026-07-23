@@ -887,5 +887,43 @@
       "label": "Obligatoire :",
       "description": "Veuillez configurer au moins un tableau et une priorité pour terminer la configuration. Importez les configurations standard pour mettre rapidement en place votre système de tickets."
     }
+  },
+  "teamSetup": {
+    "title": "Configurez votre compte",
+    "subtitle": "Terminez la configuration de votre compte de membre d'équipe",
+    "accountInformation": "Informations sur le compte",
+    "name": "Nom :",
+    "email": "E-mail :",
+    "role": "Rôle :",
+    "password": "Mot de passe",
+    "passwordPlaceholder": "Saisissez votre mot de passe",
+    "confirmPassword": "Confirmer le mot de passe",
+    "confirmPasswordPlaceholder": "Confirmez votre mot de passe",
+    "passwordRequirements": "Exigences du mot de passe",
+    "requirements": {
+      "minLength": "Au moins 8 caractères",
+      "hasUppercase": "Une lettre majuscule",
+      "hasLowercase": "Une lettre minuscule",
+      "hasNumber": "Un chiffre",
+      "hasSpecialChar": "Un caractère spécial",
+      "passwordsMatch": "Les mots de passe correspondent"
+    },
+    "creatingAccount": "Création du compte...",
+    "createAccount": "Créer le compte",
+    "alreadyHaveAccount": "Vous avez déjà un compte ?",
+    "signIn": "Se connecter",
+    "invalidInvitation": "Invitation non valide",
+    "invalidInvitationDescription": "Un problème est survenu avec votre invitation d'équipe",
+    "invalidTokenMessage": "Le lien d'invitation n'est pas valide ou a expiré. Demandez à votre administrateur de renvoyer l'invitation.",
+    "goToSignIn": "Aller à la connexion",
+    "accountReady": "Compte prêt. Veuillez vous connecter.",
+    "welcome": "Bienvenue dans l'équipe !",
+    "errors": {
+      "noToken": "Aucun jeton d'invitation fourni",
+      "invalidOrExpired": "Jeton d'invitation invalide ou expiré",
+      "verificationFailed": "Échec de la vérification du jeton d'invitation",
+      "requirementsNotMet": "Veuillez vous assurer que toutes les exigences du mot de passe sont respectées",
+      "createFailed": "Échec de la création du compte"
+    }
   }
 }

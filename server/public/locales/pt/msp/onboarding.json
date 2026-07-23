@@ -887,5 +887,43 @@
       "label": "Obrigatório:",
       "description": "Configure pelo menos um quadro e uma prioridade para concluir a configuração. Importe configurações padrão para configurar rapidamente seu sistema de tickets."
     }
+  },
+  "teamSetup": {
+    "title": "Configure sua conta",
+    "subtitle": "Conclua a configuração da conta do membro da equipe",
+    "accountInformation": "Informações da conta",
+    "name": "Nome:",
+    "email": "E-mail:",
+    "role": "Função:",
+    "password": "Senha",
+    "passwordPlaceholder": "Digite sua senha",
+    "confirmPassword": "Confirmar senha",
+    "confirmPasswordPlaceholder": "Confirme sua senha",
+    "passwordRequirements": "Requisitos da senha",
+    "requirements": {
+      "minLength": "Pelo menos 8 caracteres",
+      "hasUppercase": "Uma letra maiúscula",
+      "hasLowercase": "Uma letra minúscula",
+      "hasNumber": "Um número",
+      "hasSpecialChar": "Um caractere especial",
+      "passwordsMatch": "As senhas coincidem"
+    },
+    "creatingAccount": "Criando conta...",
+    "createAccount": "Criar conta",
+    "alreadyHaveAccount": "Já tem uma conta?",
+    "signIn": "Entrar",
+    "invalidInvitation": "Convite inválido",
+    "invalidInvitationDescription": "Houve um problema com o convite da sua equipe",
+    "invalidTokenMessage": "O link do convite é inválido ou expirou. Peça ao seu administrador para reenviar o convite.",
+    "goToSignIn": "Ir para o login",
+    "accountReady": "Conta pronta. Faça login.",
+    "welcome": "Bem-vindo à equipe!",
+    "errors": {
+      "noToken": "Nenhum token de convite fornecido",
+      "invalidOrExpired": "Token de convite inválido ou expirado",
+      "verificationFailed": "Falha ao verificar o token de convite",
+      "requirementsNotMet": "Certifique-se de que todos os requisitos de senha sejam atendidos",
+      "createFailed": "Falha ao criar a conta"
+    }
   }
 }

@@ -887,5 +887,43 @@
       "label": "Required:",
       "description": "Please configure at least one board and one priority to complete setup. Import standard configurations to quickly set up your ticketing system."
     }
+  },
+  "teamSetup": {
+    "title": "Set Up Your Account",
+    "subtitle": "Complete your team member account setup",
+    "accountInformation": "Account Information",
+    "name": "Name:",
+    "email": "Email:",
+    "role": "Role:",
+    "password": "Password",
+    "passwordPlaceholder": "Enter your password",
+    "confirmPassword": "Confirm Password",
+    "confirmPasswordPlaceholder": "Confirm your password",
+    "passwordRequirements": "Password Requirements",
+    "requirements": {
+      "minLength": "At least 8 characters",
+      "hasUppercase": "One uppercase letter",
+      "hasLowercase": "One lowercase letter",
+      "hasNumber": "One number",
+      "hasSpecialChar": "One special character",
+      "passwordsMatch": "Passwords match"
+    },
+    "creatingAccount": "Creating Account...",
+    "createAccount": "Create Account",
+    "alreadyHaveAccount": "Already have an account?",
+    "signIn": "Sign in",
+    "invalidInvitation": "Invalid Invitation",
+    "invalidInvitationDescription": "There was a problem with your team invitation",
+    "invalidTokenMessage": "The invitation link is invalid or has expired. Please ask your admin to resend the invitation.",
+    "goToSignIn": "Go to Sign In",
+    "accountReady": "Account ready. Please sign in.",
+    "welcome": "Welcome to the team!",
+    "errors": {
+      "noToken": "No invitation token provided",
+      "invalidOrExpired": "Invalid or expired invitation token",
+      "verificationFailed": "Failed to verify invitation token",
+      "requirementsNotMet": "Please ensure all password requirements are met",
+      "createFailed": "Failed to create account"
+    }
   }
 }

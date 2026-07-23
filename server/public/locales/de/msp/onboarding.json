@@ -887,5 +887,43 @@
       "label": "Erforderlich:",
       "description": "Bitte konfigurieren Sie mindestens ein Board und eine Priorität, um die Einrichtung abzuschließen. Importieren Sie Standardkonfigurationen, um Ihr Ticketing-System schnell einzurichten."
     }
+  },
+  "teamSetup": {
+    "title": "Konto einrichten",
+    "subtitle": "Schließen Sie die Kontoeinrichtung für Ihr Teammitglied ab",
+    "accountInformation": "Kontoinformationen",
+    "name": "Name:",
+    "email": "E-Mail:",
+    "role": "Rolle:",
+    "password": "Passwort",
+    "passwordPlaceholder": "Passwort eingeben",
+    "confirmPassword": "Passwort bestätigen",
+    "confirmPasswordPlaceholder": "Passwort bestätigen",
+    "passwordRequirements": "Passwortanforderungen",
+    "requirements": {
+      "minLength": "Mindestens 8 Zeichen",
+      "hasUppercase": "Ein Großbuchstabe",
+      "hasLowercase": "Ein Kleinbuchstabe",
+      "hasNumber": "Eine Zahl",
+      "hasSpecialChar": "Ein Sonderzeichen",
+      "passwordsMatch": "Passwörter stimmen überein"
+    },
+    "creatingAccount": "Konto wird erstellt...",
+    "createAccount": "Konto erstellen",
+    "alreadyHaveAccount": "Sie haben bereits ein Konto?",
+    "signIn": "Anmelden",
+    "invalidInvitation": "Ungültige Einladung",
+    "invalidInvitationDescription": "Es gab ein Problem mit Ihrer Teameinladung",
+    "invalidTokenMessage": "Der Einladungslink ist ungültig oder abgelaufen. Bitten Sie Ihren Administrator, die Einladung erneut zu senden.",
+    "goToSignIn": "Zur Anmeldung",
+    "accountReady": "Konto bereit. Bitte melden Sie sich an.",
+    "welcome": "Willkommen im Team!",
+    "errors": {
+      "noToken": "Kein Einladungstoken angegeben",
+      "invalidOrExpired": "Ungültiges oder abgelaufenes Einladungstoken",
+      "verificationFailed": "Überprüfung des Einladungstokens fehlgeschlagen",
+      "requirementsNotMet": "Bitte stellen Sie sicher, dass alle Passwortanforderungen erfüllt sind",
+      "createFailed": "Konto konnte nicht erstellt werden"
+    }
   }
 }

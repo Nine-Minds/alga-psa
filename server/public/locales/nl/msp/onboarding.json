@@ -887,5 +887,43 @@
       "label": "Verplicht:",
       "description": "Configureer minstens één bord en één prioriteit om de installatie af te ronden. Importeer standaardconfiguraties om je ticketsysteem snel in te richten."
     }
+  },
+  "teamSetup": {
+    "title": "Stel uw account in",
+    "subtitle": "Voltooi de accountinstelling voor uw teamlid",
+    "accountInformation": "Accountinformatie",
+    "name": "Naam:",
+    "email": "E-mail:",
+    "role": "Rol:",
+    "password": "Wachtwoord",
+    "passwordPlaceholder": "Voer uw wachtwoord in",
+    "confirmPassword": "Bevestig wachtwoord",
+    "confirmPasswordPlaceholder": "Bevestig uw wachtwoord",
+    "passwordRequirements": "Wachtwoordvereisten",
+    "requirements": {
+      "minLength": "Minimaal 8 tekens",
+      "hasUppercase": "Eén hoofdletter",
+      "hasLowercase": "Eén kleine letter",
+      "hasNumber": "Eén cijfer",
+      "hasSpecialChar": "Eén speciaal teken",
+      "passwordsMatch": "Wachtwoorden komen overeen"
+    },
+    "creatingAccount": "Account wordt aangemaakt...",
+    "createAccount": "Account aanmaken",
+    "alreadyHaveAccount": "Heeft u al een account?",
+    "signIn": "Inloggen",
+    "invalidInvitation": "Ongeldige uitnodiging",
+    "invalidInvitationDescription": "Er was een probleem met uw teamuitnodiging",
+    "invalidTokenMessage": "De uitnodigingslink is ongeldig of verlopen. Vraag uw beheerder om de uitnodiging opnieuw te versturen.",
+    "goToSignIn": "Ga naar inloggen",
+    "accountReady": "Account gereed. Log in.",
+    "welcome": "Welkom bij het team!",
+    "errors": {
+      "noToken": "Geen uitnodigingstoken opgegeven",
+      "invalidOrExpired": "Ongeldig of verlopen uitnodigingstoken",
+      "verificationFailed": "Verifiëren van uitnodigingstoken mislukt",
+      "requirementsNotMet": "Zorg ervoor dat aan alle wachtwoordvereisten wordt voldaan",
+      "createFailed": "Account aanmaken mislukt"
+    }
   }
 }

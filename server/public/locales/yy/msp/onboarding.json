@@ -887,5 +887,43 @@
       "label": "55555",
       "description": "55555"
     }
+  },
+  "teamSetup": {
+    "title": "55555",
+    "subtitle": "55555",
+    "accountInformation": "55555",
+    "name": "55555",
+    "email": "55555",
+    "role": "55555",
+    "password": "55555",
+    "passwordPlaceholder": "55555",
+    "confirmPassword": "55555",
+    "confirmPasswordPlaceholder": "55555",
+    "passwordRequirements": "55555",
+    "requirements": {
+      "minLength": "55555",
+      "hasUppercase": "55555",
+      "hasLowercase": "55555",
+      "hasNumber": "55555",
+      "hasSpecialChar": "55555",
+      "passwordsMatch": "55555"
+    },
+    "creatingAccount": "55555",
+    "createAccount": "55555",
+    "alreadyHaveAccount": "55555",
+    "signIn": "55555",
+    "invalidInvitation": "55555",
+    "invalidInvitationDescription": "55555",
+    "invalidTokenMessage": "55555",
+    "goToSignIn": "55555",
+    "accountReady": "55555",
+    "welcome": "55555",
+    "errors": {
+      "noToken": "55555",
+      "invalidOrExpired": "55555",
+      "verificationFailed": "55555",
+      "requirementsNotMet": "55555",
+      "createFailed": "55555"
+    }
   }
 }

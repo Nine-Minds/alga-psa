@@ -889,5 +889,43 @@
       "label": "Wymagane:",
       "description": "Skonfiguruj co najmniej jedną tablicę i jeden priorytet, aby zakończyć konfigurację. Zaimportuj standardowe konfiguracje, aby szybko uruchomić system zgłoszeń."
     }
+  },
+  "teamSetup": {
+    "title": "Skonfiguruj swoje konto",
+    "subtitle": "Dokończ konfigurację konta dla członka zespołu",
+    "accountInformation": "Informacje o koncie",
+    "name": "Imię i nazwisko:",
+    "email": "E-mail:",
+    "role": "Rola:",
+    "password": "Hasło",
+    "passwordPlaceholder": "Wprowadź hasło",
+    "confirmPassword": "Potwierdź hasło",
+    "confirmPasswordPlaceholder": "Potwierdź swoje hasło",
+    "passwordRequirements": "Wymagania dotyczące hasła",
+    "requirements": {
+      "minLength": "Co najmniej 8 znaków",
+      "hasUppercase": "Jedna wielka litera",
+      "hasLowercase": "Jedna mała litera",
+      "hasNumber": "Jedna cyfra",
+      "hasSpecialChar": "Jeden znak specjalny",
+      "passwordsMatch": "Hasła się zgadzają"
+    },
+    "creatingAccount": "Tworzenie konta...",
+    "createAccount": "Utwórz konto",
+    "alreadyHaveAccount": "Masz już konto?",
+    "signIn": "Zaloguj się",
+    "invalidInvitation": "Nieprawidłowe zaproszenie",
+    "invalidInvitationDescription": "Wystąpił problem z zaproszeniem do zespołu",
+    "invalidTokenMessage": "Link zaproszenia jest nieprawidłowy lub wygasł. Poproś administratora o ponowne wysłanie zaproszenia.",
+    "goToSignIn": "Przejdź do logowania",
+    "accountReady": "Konto gotowe. Zaloguj się.",
+    "welcome": "Witamy w zespole!",
+    "errors": {
+      "noToken": "Nie podano tokenu zaproszenia",
+      "invalidOrExpired": "Nieprawidłowy lub wygasły token zaproszenia",
+      "verificationFailed": "Nie udało się zweryfikować tokenu zaproszenia",
+      "requirementsNotMet": "Upewnij się, że wszystkie wymagania dotyczące hasła są spełnione",
+      "createFailed": "Nie udało się utworzyć konta"
+    }
   }
 }
