@@ -3,12 +3,11 @@
 import { createTenantKnex, tenantDb, runWithTenant, runAsSystem, createSystemContext } from '@alga-psa/db';
 import { UserInvitationService } from '../../services/UserInvitationService';
 import { getSystemEmailService, TenantEmailService, sendTeamInvitationEmail } from '@alga-psa/email';
-import { UserService } from '../../services/UserService';
 import { hasPermission } from '@alga-psa/user-composition/lib/permissions';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
 import { isValidEmail } from '@alga-psa/core';
 import type { IUserWithRoles } from '@alga-psa/types';
-import { checkInternalUserLicenseLimit } from '../../lib/internalUserLicenseGuard';
+import { checkInternalUserLicenseLimit, isInternalUserLicenseLimitRejected } from '../../lib/internalUserLicenseGuard';
 
 export type UserInvitationErrorCode =
   | 'PERMISSION_DENIED_INVITE'
@@ -122,7 +121,7 @@ export const sendUserInvitation = withAuth(async (
     // acceptance time in completeUserInvitationSetup, since seats can fill up
     // (or shrink) between the invite being sent and accepted.
     const licenseCheck = await checkInternalUserLicenseLimit(knex, tenant);
-    if (!licenseCheck.ok) {
+    if (isInternalUserLicenseLimitRejected(licenseCheck)) {
       return { success: false, error: licenseCheck.error, errorCode: licenseCheck.code };
     }
 
@@ -284,13 +283,18 @@ export async function completeUserInvitationSetup(
       // permission-gated path addUser uses), and seats can have filled up
       // between the invite being sent and this acceptance.
       const licenseCheck = await checkInternalUserLicenseLimit(knex, tenant);
-      if (!licenseCheck.ok) {
+      if (isInternalUserLicenseLimitRejected(licenseCheck)) {
         return { success: false, error: licenseCheck.error, errorCode: licenseCheck.code } as const;
       }
 
       let newUser;
       try {
         newUser = await runAsSystem('user-invitation-account-creation', async () => {
+          // Deferred: loading UserService (and its @alga-psa/db BaseService
+          // base class) eagerly would pull it into every consumer of this
+          // barrel-exported action file, e.g. read-only routes that only
+          // need findUserByIdForApi.
+          const { UserService } = await import('../../services/UserService');
           const userService = new UserService();
           const systemContext = createSystemContext(tenant);
 

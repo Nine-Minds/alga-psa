@@ -7,6 +7,16 @@ export type InternalUserLicenseLimitResult =
   | { ok: true }
   | { ok: false; code: InternalUserLicenseLimitCode; error: string };
 
+// ee/server typechecks this package's sources with strictNullChecks off, where
+// boolean-discriminant narrowing (`if (!result.ok)`) does not apply — a
+// type-predicate guard narrows correctly under both strict and non-strict
+// modes. See reference_ee_server_strict_false_narrowing.
+export function isInternalUserLicenseLimitRejected(
+  result: InternalUserLicenseLimitResult
+): result is { ok: false; code: InternalUserLicenseLimitCode; error: string } {
+  return result.ok === false;
+}
+
 /**
  * Enforce the same internal-user seat limits addUser applies (solo-plan,
  * licensed_user_count, and the EE appliance seat limit), so any code path
