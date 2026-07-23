@@ -53,6 +53,28 @@ describe("materials api", () => {
     });
   });
 
+  it("passes unit_id through for a serialized install", async () => {
+    const client = mockClient({ ok: true, data: { data: { ticket_material_id: "mat-2" } } });
+
+    await addTicketMaterial(client, {
+      apiKey: "api-key-1",
+      ticketId: "ticket-1",
+      data: {
+        service_id: "service-1",
+        quantity: 1,
+        rate: 129900,
+        currency_code: "USD",
+        unit_id: "unit-9",
+      },
+    });
+
+    expect(client.request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        body: expect.objectContaining({ unit_id: "unit-9" }),
+      }),
+    );
+  });
+
   it("calls GET /api/v1/products for product search", async () => {
     const client = mockClient({ ok: true, data: { data: [] } });
 

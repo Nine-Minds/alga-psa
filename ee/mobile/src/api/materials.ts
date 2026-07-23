@@ -22,6 +22,9 @@ export type AddTicketMaterialInput = {
   rate: number;
   currency_code: string;
   description?: string | null;
+  /** Serialized install: deliver this specific stock unit to the ticket's client
+   *  (creates the managed asset when the product opts in). */
+  unit_id?: string | null;
 };
 
 export type ProductPrice = {
@@ -82,6 +85,45 @@ export function listProducts(
     headers: {
       "x-api-key": params.apiKey,
     },
+  });
+}
+
+export type ServiceTypeItem = {
+  id: string;
+  name: string;
+  is_active?: boolean;
+};
+
+export function listServiceTypes(
+  client: ApiClient,
+  params: { apiKey: string; signal?: AbortSignal },
+): Promise<ApiResult<PaginatedResponse<ServiceTypeItem>>> {
+  return client.request<PaginatedResponse<ServiceTypeItem>>({
+    method: "GET",
+    path: "/api/v1/service-types",
+    query: { limit: 100, is_active: true },
+    signal: params.signal,
+    headers: { "x-api-key": params.apiKey },
+  });
+}
+
+export type CreateProductInput = {
+  service_name: string;
+  custom_service_type_id: string;
+  unit_of_measure: string;
+  sku?: string | null;
+  barcode?: string | null;
+};
+
+export function createProduct(
+  client: ApiClient,
+  params: { apiKey: string; data: CreateProductInput },
+): Promise<ApiResult<SuccessResponse<ProductListItem>>> {
+  return client.request<SuccessResponse<ProductListItem>>({
+    method: "POST",
+    path: "/api/v1/products",
+    headers: { "x-api-key": params.apiKey },
+    body: params.data,
   });
 }
 

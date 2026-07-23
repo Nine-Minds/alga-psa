@@ -42,6 +42,9 @@ function render(result: InventoryLookupResult, handlers: Partial<Record<string, 
         onManualSearch={handlers.onManualSearch ?? vi.fn()}
         onDismiss={handlers.onDismiss ?? vi.fn()}
         onAttachBarcode={handlers.onAttachBarcode}
+        onInstallUnit={handlers.onInstallUnit}
+        onCreateProduct={handlers.onCreateProduct}
+        onRegisterAsset={handlers.onRegisterAsset}
       />,
     );
   });
@@ -91,6 +94,28 @@ describe("ScanResultCard", () => {
     expect(tree.root.findAll((node) => typeof node.type === "string" && node.props.testID === "inventory-scan-card-unit")).toHaveLength(1);
   });
 
+  it("offers install on an in-stock unit without an asset", () => {
+    const onInstallUnit = vi.fn();
+    const tree = render({ type: "unit", unit, product }, { onInstallUnit });
+    const install = tree.root.findAll((node) => node.props.accessibilityLabel === "inventory-scan-install-unit")[0];
+    expect(install).toBeTruthy();
+    act(() => install.props.onPress());
+    expect(onInstallUnit).toHaveBeenCalledWith(unit);
+  });
+
+  it("hides install when the unit already has an asset or is not in stock", () => {
+    const withAsset = render(
+      { type: "unit", unit: { ...unit, asset_id: "asset-1" }, product },
+      { onInstallUnit: vi.fn() },
+    );
+    expect(withAsset.root.findAll((node) => node.props.accessibilityLabel === "inventory-scan-install-unit")).toHaveLength(0);
+    const delivered = render(
+      { type: "unit", unit: { ...unit, status: "delivered" as const }, product },
+      { onInstallUnit: vi.fn() },
+    );
+    expect(delivered.root.findAll((node) => node.props.accessibilityLabel === "inventory-scan-install-unit")).toHaveLength(0);
+  });
+
   it("renders the multi variant with a chooser row per match", () => {
     const tree = render({
       type: "multi",
@@ -123,6 +148,18 @@ describe("ScanResultCard", () => {
     const open = tree.root.findAll((node) => node.props.accessibilityLabel === "inventory-scan-open-asset")[0];
     act(() => open.props.onPress());
     expect(onOpenAsset).toHaveBeenCalledWith("ast-1", "Reception Phone");
+  });
+
+  it("offers create-product and register-asset rescues on the none variant", () => {
+    const onCreateProduct = vi.fn();
+    const onRegisterAsset = vi.fn();
+    const tree = render({ type: "none", candidates: [] }, { onCreateProduct, onRegisterAsset });
+    const create = tree.root.findAll((node) => typeof node.type === "string" && node.props.testID === "inventory-scan-create-product")[0];
+    const register = tree.root.findAll((node) => typeof node.type === "string" && node.props.testID === "inventory-scan-register-asset")[0];
+    act(() => create.props.onPress());
+    act(() => register.props.onPress());
+    expect(onCreateProduct).toHaveBeenCalled();
+    expect(onRegisterAsset).toHaveBeenCalled();
   });
 
   it("invokes onAttachBarcode from the none variant", () => {

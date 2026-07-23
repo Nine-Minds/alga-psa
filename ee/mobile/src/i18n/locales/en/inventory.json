@@ -30,7 +30,9 @@
     "attachSuccess": "Barcode added to {{name}}",
     "untrackedHint": "Not stock-tracked yet. Receiving it will start tracking.",
     "assetKind": "Asset",
-    "viewAsset": "View asset"
+    "viewAsset": "View asset",
+    "createProduct": "Create a new product",
+    "registerAsset": "Register as a client's asset"
   },
   "stock": {
     "title": "Stock",
@@ -163,5 +165,64 @@
       "unknown": "Warranty unknown"
     },
     "title": "Asset"
+  },
+  "install": {
+    "cta": "Install for a client",
+    "title": "Install for a client",
+    "pickTicket": "Pick the ticket you're working — the device becomes that client's asset.",
+    "searchTickets": "Search tickets",
+    "loadError": "Couldn't load tickets.",
+    "loading": "Loading tickets…",
+    "noTickets": "No open tickets found.",
+    "ticketLabel": "Ticket",
+    "assetFor": "Asset will belong to {{client}}",
+    "rateLabel": "Rate ({{currency}})",
+    "invalidRate": "Enter a valid rate.",
+    "error": "Couldn't install this unit.",
+    "submit": "Install & deliver",
+    "changeTicket": "Choose a different ticket",
+    "successAsset": "Installed — asset created",
+    "success": "Installed and added to the ticket"
+  },
+  "createProduct": {
+    "title": "New product",
+    "barcodeLine": "Barcode: {{code}}",
+    "nameLabel": "Product name",
+    "namePlaceholder": "e.g. HP 26A Toner Cartridge",
+    "skuLabel": "SKU (optional)",
+    "typeLabel": "Service type",
+    "typeLine": "Service type: {{name}}",
+    "typesError": "Couldn't load service types.",
+    "nameRequired": "Give the product a name.",
+    "typeRequired": "No service type available — add one on the web first.",
+    "error": "Couldn't create the product.",
+    "submit": "Create product",
+    "success": "{{name}} created"
+  },
+  "registerAsset": {
+    "title": "Register as an asset",
+    "serialLine": "Serial / tag: {{code}}",
+    "pickClient": "Whose device is this?",
+    "searchClients": "Search clients",
+    "clientsError": "Couldn't load clients.",
+    "loading": "Loading clients…",
+    "noClients": "No clients found.",
+    "clientLabel": "Client",
+    "changeClient": "Change",
+    "nameLabel": "Device name",
+    "namePlaceholder": "e.g. Front desk workstation",
+    "nameRequired": "Give the device a name.",
+    "typeLabel": "Type",
+    "types": {
+      "workstation": "Workstation",
+      "server": "Server",
+      "network_device": "Network device",
+      "mobile_device": "Mobile device",
+      "printer": "Printer",
+      "unknown": "Other"
+    },
+    "error": "Couldn't register the asset.",
+    "submit": "Register asset",
+    "success": "Asset registered"
   }
 }

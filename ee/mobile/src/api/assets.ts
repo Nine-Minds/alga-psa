@@ -38,6 +38,28 @@ export type AssetDetail = {
   maintenance_schedules?: MaintenanceSchedule[];
 } & Record<string, unknown>;
 
+export type CreateAssetInput = {
+  client_id: string;
+  asset_type: string;
+  asset_tag: string;
+  name: string;
+  status: string;
+  serial_number?: string;
+};
+
+/** Register a device found in the field as a managed asset. */
+export function createAsset(
+  client: ApiClient,
+  params: { apiKey: string; data: CreateAssetInput },
+): Promise<ApiResult<AssetEnvelope<{ asset_id: string } & Record<string, unknown>>>> {
+  return client.request<AssetEnvelope<{ asset_id: string } & Record<string, unknown>>>({
+    method: "POST",
+    path: "/api/v1/assets",
+    headers: { "x-api-key": params.apiKey },
+    body: params.data,
+  });
+}
+
 export function getAsset(
   client: ApiClient,
   params: { apiKey: string; assetId: string; signal?: AbortSignal },

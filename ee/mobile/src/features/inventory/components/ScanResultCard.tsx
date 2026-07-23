@@ -56,6 +56,9 @@ export function ScanResultCard({
   onManualSearch,
   onDismiss,
   onAttachBarcode,
+  onInstallUnit,
+  onCreateProduct,
+  onRegisterAsset,
 }: {
   code: string;
   result: InventoryLookupResult;
@@ -66,6 +69,9 @@ export function ScanResultCard({
   onManualSearch: () => void;
   onDismiss: () => void;
   onAttachBarcode?: () => void;
+  onInstallUnit?: (unit: StockUnitSummary) => void;
+  onCreateProduct?: () => void;
+  onRegisterAsset?: () => void;
 }) {
   const theme = useTheme();
   const { t } = useTranslation("inventory");
@@ -179,6 +185,14 @@ export function ScanResultCard({
           >
             {t("scan.viewAsset", "View asset")}
           </PrimaryButton>
+        ) : result.unit.status === "in_stock" && onInstallUnit ? (
+          // Field install: deliver this unit against a ticket, minting the asset.
+          <PrimaryButton
+            onPress={() => onInstallUnit(result.unit)}
+            accessibilityLabel="inventory-scan-install-unit"
+          >
+            {t("install.cta", "Install for a client")}
+          </PrimaryButton>
         ) : null}
         <Text
           onPress={() => onOpenUnit(result.unit.unit_id)}
@@ -254,6 +268,24 @@ export function ScanResultCard({
         <PrimaryButton onPress={onAttachBarcode} accessibilityLabel="inventory-scan-attach-barcode">
           {t("scan.attachBarcode", "Add this barcode to a product")}
         </PrimaryButton>
+      ) : null}
+      {onCreateProduct ? (
+        <Text
+          onPress={onCreateProduct}
+          testID="inventory-scan-create-product"
+          style={{ ...theme.typography.body, color: theme.colors.primary, textAlign: "center", padding: theme.spacing.sm }}
+        >
+          {t("scan.createProduct", "Create a new product")}
+        </Text>
+      ) : null}
+      {onRegisterAsset ? (
+        <Text
+          onPress={onRegisterAsset}
+          testID="inventory-scan-register-asset"
+          style={{ ...theme.typography.body, color: theme.colors.primary, textAlign: "center", padding: theme.spacing.sm }}
+        >
+          {t("scan.registerAsset", "Register as a client's asset")}
+        </Text>
       ) : null}
       <Text
         onPress={onManualSearch}

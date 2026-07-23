@@ -9,11 +9,14 @@ import type { NativeStackNavigationProp } from "@react-navigation/native-stack";
 import { useTheme } from "../../../ui/ThemeContext";
 import { IconButton, PrimaryButton, TextInput } from "../../../ui/components";
 import { EntityPickerModal, type EntityPickerItem } from "../../../ui/components/EntityPickerModal";
-import { lookupInventoryCode, type InventoryLookupResult } from "../../../api/inventory";
+import { lookupInventoryCode, type InventoryLookupResult, type StockUnitSummary } from "../../../api/inventory";
 import { listProducts, setProductBarcode } from "../../../api/materials";
 import { useInventoryApi } from "../hooks/useInventoryApi";
 import { useToast } from "../../../ui/toast/ToastProvider";
 import { ScanResultCard } from "./ScanResultCard";
+import { InstallUnitFlow } from "./InstallUnitFlow";
+import { CreateProductModal } from "./CreateProductModal";
+import { RegisterAssetModal } from "./RegisterAssetModal";
 import type { RootStackParamList } from "../../../navigation/types";
 
 import { INVENTORY_BARCODE_TYPES } from "../barcodeTypes";
@@ -42,6 +45,9 @@ export function ScanView() {
   const [attachPickerVisible, setAttachPickerVisible] = useState(false);
   const [attachItems, setAttachItems] = useState<EntityPickerItem[]>([]);
   const [attachLoading, setAttachLoading] = useState(false);
+  const [installUnit, setInstallUnit] = useState<StockUnitSummary | null>(null);
+  const [createProductOpen, setCreateProductOpen] = useState(false);
+  const [registerAssetOpen, setRegisterAssetOpen] = useState(false);
 
   const searchAttachProducts = useCallback(
     async (query: string) => {
@@ -242,6 +248,59 @@ export function ScanView() {
           onAttachBarcode={() => {
             setAttachPickerVisible(true);
             void searchAttachProducts("");
+          }}
+          onInstallUnit={(unit) => setInstallUnit(unit)}
+          onCreateProduct={() => setCreateProductOpen(true)}
+          onRegisterAsset={() => setRegisterAssetOpen(true)}
+        />
+      ) : null}
+      {scannedCode ? (
+        <CreateProductModal
+          visible={createProductOpen}
+          client={client}
+          apiKey={apiKey}
+          barcode={scannedCode}
+          onClose={() => setCreateProductOpen(false)}
+          onCreated={(serviceId, serviceName) => {
+            setCreateProductOpen(false);
+            showToast({ tone: "success", message: t("createProduct.success", "{{name}} created", { name: serviceName }) });
+            // Re-resolve the same code: it now matches the new product, so the
+            // regular product card (with Receive) takes over.
+            void resolveCode(scannedCode);
+          }}
+        />
+      ) : null}
+      {scannedCode ? (
+        <RegisterAssetModal
+          visible={registerAssetOpen}
+          client={client}
+          apiKey={apiKey}
+          code={scannedCode}
+          onClose={() => setRegisterAssetOpen(false)}
+          onCreated={(assetId, assetName) => {
+            setRegisterAssetOpen(false);
+            dismissResult();
+            showToast({ tone: "success", message: t("registerAsset.success", "Asset registered") });
+            navigation.navigate("AssetDetail", { assetId, assetName });
+          }}
+        />
+      ) : null}
+      {installUnit ? (
+        <InstallUnitFlow
+          visible
+          client={client}
+          apiKey={apiKey}
+          unit={installUnit}
+          onClose={() => setInstallUnit(null)}
+          onInstalled={(assetId) => {
+            setInstallUnit(null);
+            dismissResult();
+            if (assetId) {
+              showToast({ tone: "success", message: t("install.successAsset", "Installed — asset created") });
+              navigation.navigate("AssetDetail", { assetId });
+            } else {
+              showToast({ tone: "success", message: t("install.success", "Installed and added to the ticket") });
+            }
           }}
         />
       ) : null}
