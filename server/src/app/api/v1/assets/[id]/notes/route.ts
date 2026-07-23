@@ -8,6 +8,7 @@
  */
 
 import { NextResponse } from 'next/server';
+import { runWithApiKeyOrSession } from 'server/src/lib/api/middleware/runWithApiKeyOrSession';
 import {
   getAssetNoteContent,
   saveAssetNote,
@@ -43,7 +44,7 @@ export async function GET(
       return NextResponse.json({ error: 'Missing asset ID' }, { status: 400 });
     }
 
-    const noteContent = await getAssetNoteContent(id);
+    const noteContent = await runWithApiKeyOrSession(request, () => getAssetNoteContent(id));
     if (isActionError(noteContent)) {
       return actionErrorResponse(noteContent);
     }
@@ -87,7 +88,7 @@ export async function PUT(
       );
     }
 
-    const result = await saveAssetNote(id, blockData);
+    const result = await runWithApiKeyOrSession(request, () => saveAssetNote(id, blockData));
     if (isActionError(result)) {
       return actionErrorResponse(result);
     }
@@ -125,7 +126,7 @@ export async function DELETE(
     const url = new URL(request.url);
     const deleteDocument = url.searchParams.get('delete_document') === 'true';
 
-    const result = await deleteAssetNote(id, deleteDocument);
+    const result = await runWithApiKeyOrSession(request, () => deleteAssetNote(id, deleteDocument));
     if (isActionError(result)) {
       return actionErrorResponse(result);
     }

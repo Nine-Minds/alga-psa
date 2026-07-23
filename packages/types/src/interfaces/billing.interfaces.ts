@@ -224,6 +224,7 @@ export interface IService extends TenantEntity {
   item_kind?: 'service' | 'product'; // Catalog kind (Products are a filtered subset)
   is_active?: boolean;
   sku?: string | null;
+  barcode?: string | null;
   cost?: number | null; // cents
   cost_currency?: string | null; // ISO 4217 currency code
   vendor?: string | null;

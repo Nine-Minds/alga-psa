@@ -1,0 +1,567 @@
+[
+  {
+    "id": "T001",
+    "description": "Migration contract test (fake-knex pattern): barcode column + partial unique index created on up, removed on down",
+    "implemented": true,
+    "commitGroup": "barcode-field",
+    "featureIds": [
+      "F001"
+    ],
+    "harness": "server-unit"
+  },
+  {
+    "id": "T002",
+    "description": "ProductCatalogService create/update round-trips normalized barcode; products REST list ?search= matches by barcode (mocked-db service test)",
+    "implemented": true,
+    "commitGroup": "barcode-field",
+    "featureIds": [
+      "F002",
+      "F003"
+    ],
+    "harness": "server-unit"
+  },
+  {
+    "id": "T003",
+    "description": "GTIN normalization: 12-digit UPC-A and its 13-digit zero-padded EAN-13 form normalize identically (iOS/Android divergence pair); non-numeric codes pass through unchanged; uniqueness + lookup use the same function",
+    "implemented": true,
+    "commitGroup": "barcode-field",
+    "featureIds": [
+      "F002"
+    ],
+    "harness": "server-unit"
+  },
+  {
+    "id": "T004",
+    "description": "Integration: duplicate normalized barcode for two products in one tenant rejected by the index; same barcode across tenants allowed",
+    "implemented": false,
+    "commitGroup": "barcode-field",
+    "featureIds": [
+      "F001"
+    ],
+    "harness": "server-integration"
+  },
+  {
+    "id": "T005",
+    "description": "Extraction regression gate: full existing packages/inventory action test suite green after each core extraction (receive, adjust, counts, PO, transfers, units/levels)",
+    "implemented": true,
+    "commitGroup": "inventory-core-extraction",
+    "featureIds": [
+      "F005",
+      "F006",
+      "F007",
+      "F008",
+      "F009"
+    ],
+    "harness": "package-unit"
+  },
+  {
+    "id": "T006",
+    "description": "Extracted cores callable session-free: receive/adjust cores run with (trx, tenant, userId, input) and produce identical movements/levels as before (behavioral tests at the core level)",
+    "implemented": true,
+    "commitGroup": "inventory-core-extraction",
+    "featureIds": [
+      "F005",
+      "F006"
+    ],
+    "harness": "package-unit"
+  },
+  {
+    "id": "T007",
+    "description": "receivePoLine core now enforces assertLocationWritable: unscoped tech receiving into another location is rejected (new behavior)",
+    "implemented": true,
+    "commitGroup": "inventory-core-extraction",
+    "featureIds": [
+      "F008"
+    ],
+    "harness": "package-unit"
+  },
+  {
+    "id": "T010",
+    "description": "Interaction Zod schemas: create accepts Call-type payload with opportunity/client/contact links; rejects missing type_id/client; list filter schema accepts all documented filters",
+    "implemented": true,
+    "commitGroup": "interactions-api",
+    "featureIds": [
+      "F010"
+    ],
+    "harness": "server-unit"
+  },
+  {
+    "id": "T011",
+    "description": "InteractionService.create delegates to createInteractionWithSideEffects (mocked-db): opportunity last_activity_at update path invoked; list applies filters + pagination",
+    "implemented": true,
+    "commitGroup": "interactions-api",
+    "featureIds": [
+      "F011",
+      "F014"
+    ],
+    "harness": "server-unit"
+  },
+  {
+    "id": "T012",
+    "description": "Integration: POST /api/v1/interactions persists tenant-scoped row; GET filters by opportunity_id return it; API key lacking 'interaction' RBAC gets 403; cross-tenant id 404",
+    "implemented": true,
+    "commitGroup": "interactions-api",
+    "featureIds": [
+      "F011",
+      "F012"
+    ],
+    "harness": "server-integration"
+  },
+  {
+    "id": "T013",
+    "description": "Integration: POST with opportunity_id updates opportunities.last_activity_at",
+    "implemented": true,
+    "commitGroup": "interactions-api",
+    "featureIds": [
+      "F014"
+    ],
+    "harness": "server-integration"
+  },
+  {
+    "id": "T014",
+    "description": "interaction-types returns union of system (Call/Email/Meeting/Note) + tenant custom types (mocked-db service test asserting both tables queried)",
+    "implemented": true,
+    "commitGroup": "interactions-api",
+    "featureIds": [
+      "F013"
+    ],
+    "harness": "server-unit"
+  },
+  {
+    "id": "T020",
+    "description": "Lookup: single-domain hits return product/unit variants; a code matching both a product barcode and a unit serial returns 'multi' with both domains listed (no silent shadowing); MAC matching is case/separator-insensitive",
+    "implemented": true,
+    "commitGroup": "inventory-api-read",
+    "featureIds": [
+      "F022"
+    ],
+    "harness": "server-unit"
+  },
+  {
+    "id": "T021",
+    "description": "Lookup no-match returns type='none' with prefix candidates across products and units",
+    "implemented": true,
+    "commitGroup": "inventory-api-read",
+    "featureIds": [
+      "F022"
+    ],
+    "harness": "server-unit"
+  },
+  {
+    "id": "T022",
+    "description": "Lookup payloads: product variant carries per-location on-hand/available; unit variant carries status/client/warranty (schema-level + service test)",
+    "implemented": true,
+    "commitGroup": "inventory-api-read",
+    "featureIds": [
+      "F023",
+      "F020"
+    ],
+    "harness": "server-unit"
+  },
+  {
+    "id": "T023",
+    "description": "InventoryService reads delegate to FR2a cores with filters passed through (stock levels: location/service/low_stock/search; units: serial/mac/status/location/service/client)",
+    "implemented": true,
+    "commitGroup": "inventory-api-read",
+    "featureIds": [
+      "F021"
+    ],
+    "harness": "server-unit"
+  },
+  {
+    "id": "T024",
+    "description": "Integration: inventory read routes 403 for users without inventory:read; 403 product-boundary for AlgaDesk tenant (assertProductApiAccess default-deny)",
+    "implemented": true,
+    "commitGroup": "inventory-api-read",
+    "featureIds": [
+      "F024"
+    ],
+    "harness": "server-integration"
+  },
+  {
+    "id": "T030",
+    "description": "Integration: POST /receipts serialized \u2014 serials.length must equal quantity (400), duplicate serial 409 machine-readable, success creates in_stock units + movements + level increment",
+    "implemented": true,
+    "commitGroup": "inventory-api-write",
+    "featureIds": [
+      "F030",
+      "F035"
+    ],
+    "harness": "server-integration"
+  },
+  {
+    "id": "T031",
+    "description": "Integration: POST /adjustments requires reason (400); applies delta; location a tech cannot write returns 403",
+    "implemented": true,
+    "commitGroup": "inventory-api-write",
+    "featureIds": [
+      "F031"
+    ],
+    "harness": "server-integration"
+  },
+  {
+    "id": "T032",
+    "description": "Integration: count lifecycle over REST \u2014 start -> record -> submit transitions status, visible to web actions (shared tables); double-submit rejected",
+    "implemented": true,
+    "commitGroup": "inventory-api-write",
+    "featureIds": [
+      "F032"
+    ],
+    "harness": "server-integration"
+  },
+  {
+    "id": "T033",
+    "description": "Integration: PO line receive \u2014 quantity_received advances, PO status open->partially_received->received, serialized units carry line unit_cost, INVENTORY_PO_RECEIVED published",
+    "implemented": true,
+    "commitGroup": "inventory-api-write",
+    "featureIds": [
+      "F033",
+      "F035"
+    ],
+    "harness": "server-integration"
+  },
+  {
+    "id": "T034",
+    "description": "Integration: transfer receive \u2014 destination levels increment, units in_transit->in_stock at destination; non-dispatched transfer 409",
+    "implemented": true,
+    "commitGroup": "inventory-api-write",
+    "featureIds": [
+      "F034"
+    ],
+    "harness": "server-integration"
+  },
+  {
+    "id": "T040",
+    "description": "Work-queue REST: service delegates to assembleWorkQueue for the API-key user (mocked-db); integration spot-check: docket excludes other users' deals and includes why-sentences",
+    "implemented": true,
+    "commitGroup": "opportunity-api",
+    "featureIds": [
+      "F040"
+    ],
+    "harness": "server-unit+integration"
+  },
+  {
+    "id": "T041",
+    "description": "Timeline REST: extracted core returns linked interactions newest-first incl. REST-created ones; cross-tenant 404 (integration)",
+    "implemented": true,
+    "commitGroup": "opportunity-api",
+    "featureIds": [
+      "F041"
+    ],
+    "harness": "server-integration"
+  },
+  {
+    "id": "T042",
+    "description": "OpenAPI registry test (house pattern): new interaction/inventory/work-queue/timeline paths present in buildBaseRegistry output",
+    "implemented": true,
+    "commitGroup": "opportunity-api",
+    "featureIds": [
+      "F042"
+    ],
+    "harness": "server-unit"
+  },
+  {
+    "id": "T050",
+    "description": "me/capabilities: psa tenant + RBAC -> flags true; AlgaDesk tenant -> false; missing RBAC -> respective flag false (service test with mocked product/RBAC lookups + one integration case); path present in OpenAPI registry",
+    "implemented": true,
+    "commitGroup": "capabilities",
+    "featureIds": [
+      "F050"
+    ],
+    "harness": "server-unit+integration"
+  },
+  {
+    "id": "T051",
+    "description": "Mobile capabilities store mechanics: fetch on auth + on app-foreground; 404 from old server yields all-false flags; flags exposed via context",
+    "implemented": true,
+    "commitGroup": "capabilities",
+    "featureIds": [
+      "F051"
+    ],
+    "harness": "mobile-vitest"
+  },
+  {
+    "id": "T060",
+    "description": "Workflow action registration: inventory.get_availability/find_units/adjust_stock/create_purchase_order_draft present with valid Zod schemas + designer metadata (mirror registerOpportunityActionsMetadata test)",
+    "implemented": true,
+    "commitGroup": "inventory-workflows",
+    "featureIds": [
+      "F060",
+      "F061",
+      "F062",
+      "F063"
+    ],
+    "harness": "server-unit"
+  },
+  {
+    "id": "T061",
+    "description": "inventory.get_availability returns per-location availability; inventory.adjust_stock writes movement with reason via the FR2a core (session-free, run-actor attribution)",
+    "implemented": true,
+    "commitGroup": "inventory-workflows",
+    "featureIds": [
+      "F060",
+      "F062"
+    ],
+    "harness": "server-unit"
+  },
+  {
+    "id": "T062",
+    "description": "inventory.create_purchase_order_draft creates draft PO with lines and numbering",
+    "implemented": true,
+    "commitGroup": "inventory-workflows",
+    "featureIds": [
+      "F063"
+    ],
+    "harness": "server-unit"
+  },
+  {
+    "id": "T063",
+    "description": "Catalog seed migration contract: upserts all six SO/PO lifecycle events with payload_schema_refs; idempotent re-run (server-unit). SO/PO delete actions publish their DELETED events (package-unit)",
+    "implemented": true,
+    "commitGroup": "inventory-workflows",
+    "featureIds": [
+      "F064"
+    ],
+    "harness": "server-unit+package-unit"
+  },
+  {
+    "id": "T064",
+    "description": "Transfer dispatch/receive and count submit/approve publish new events with schema-valid payloads; payload schemas present in workflowEventPayloadSchemas map (three-touch-point check)",
+    "implemented": true,
+    "commitGroup": "inventory-workflows",
+    "featureIds": [
+      "F065"
+    ],
+    "harness": "server-unit"
+  },
+  {
+    "id": "T065",
+    "description": "adjustStock core crossing reorder point emits INVENTORY_STOCK_LOW; staying above does not; count approval crossing emits too",
+    "implemented": true,
+    "commitGroup": "inventory-workflows",
+    "featureIds": [
+      "F066"
+    ],
+    "harness": "package-unit"
+  },
+  {
+    "id": "T070",
+    "description": "src/api/inventory.ts unit tests (house pattern: assert client.request call object): correct method/path/query and x-api-key param per function; paginated/success envelope parsing",
+    "implemented": true,
+    "commitGroup": "mobile-inventory-core",
+    "featureIds": [
+      "F070"
+    ],
+    "harness": "mobile-vitest"
+  },
+  {
+    "id": "T071",
+    "description": "Scan screen: debounce collapses rapid duplicate reads into one lookup; permission-denied state renders settings link (expo-camera mocked)",
+    "implemented": true,
+    "commitGroup": "mobile-inventory-core",
+    "featureIds": [
+      "F072"
+    ],
+    "harness": "mobile-vitest"
+  },
+  {
+    "id": "T072",
+    "description": "Scan result cards render product/unit/multi/none variants from lookup fixtures; actions navigate (product->receive, unit->detail, multi->chooser)",
+    "implemented": true,
+    "commitGroup": "mobile-inventory-core",
+    "featureIds": [
+      "F073"
+    ],
+    "harness": "mobile-vitest"
+  },
+  {
+    "id": "T073",
+    "description": "Stock list renders low-stock badge and paginates; product stock detail shows per-location rows",
+    "implemented": true,
+    "commitGroup": "mobile-inventory-core",
+    "featureIds": [
+      "F074"
+    ],
+    "harness": "mobile-vitest"
+  },
+  {
+    "id": "T074",
+    "description": "Unit detail screen renders serial/MAC/status/warranty/movements from fixture",
+    "implemented": true,
+    "commitGroup": "mobile-inventory-core",
+    "featureIds": [
+      "F075"
+    ],
+    "harness": "mobile-vitest"
+  },
+  {
+    "id": "T076",
+    "description": "Drawer gating: InventoryTab hidden when capabilities.features.inventory=false, shown when true",
+    "implemented": true,
+    "commitGroup": "mobile-inventory-core",
+    "featureIds": [
+      "F071"
+    ],
+    "harness": "mobile-vitest"
+  },
+  {
+    "id": "T080",
+    "description": "Serial accumulator: N distinct scans build chip list; duplicate scan rejected (no chip, haptic); manual entry adds; submit payload equals chips",
+    "implemented": true,
+    "commitGroup": "mobile-inventory-ops",
+    "featureIds": [
+      "F080"
+    ],
+    "harness": "mobile-vitest"
+  },
+  {
+    "id": "T081",
+    "description": "Receive flow serialized: submit blocked until serials count == quantity; non-serialized submits quantity only",
+    "implemented": true,
+    "commitGroup": "mobile-inventory-ops",
+    "featureIds": [
+      "F080"
+    ],
+    "harness": "mobile-vitest"
+  },
+  {
+    "id": "T082",
+    "description": "Adjust flow requires reason before submit; 403 from API renders no-access state",
+    "implemented": true,
+    "commitGroup": "mobile-inventory-ops",
+    "featureIds": [
+      "F081"
+    ],
+    "harness": "mobile-vitest"
+  },
+  {
+    "id": "T083",
+    "description": "Count record screen: scan increments matching line, unknown code prompts add-line; submit confirmation fires API call",
+    "implemented": true,
+    "commitGroup": "mobile-inventory-ops",
+    "featureIds": [
+      "F082"
+    ],
+    "harness": "mobile-vitest"
+  },
+  {
+    "id": "T084",
+    "description": "PO receive: line progress renders received/ordered; serialized line uses accumulator; over-receipt warning when qty exceeds remaining",
+    "implemented": true,
+    "commitGroup": "mobile-inventory-ops",
+    "featureIds": [
+      "F083"
+    ],
+    "harness": "mobile-vitest"
+  },
+  {
+    "id": "T085",
+    "description": "Transfer receive flow: dispatched list renders; receive confirmation fires API call and removes the transfer from the list",
+    "implemented": true,
+    "commitGroup": "mobile-inventory-ops",
+    "featureIds": [
+      "F084"
+    ],
+    "harness": "mobile-vitest"
+  },
+  {
+    "id": "T090",
+    "description": "src/api/opportunities.ts + interactions.ts unit tests: method/path/query per function (house call-object pattern); error kinds mapped",
+    "implemented": true,
+    "commitGroup": "mobile-opportunities-core",
+    "featureIds": [
+      "F090"
+    ],
+    "harness": "mobile-vitest"
+  },
+  {
+    "id": "T091",
+    "description": "Queue screen renders sections + why-sentences from fixture; finishable empty state; row tap navigates with id",
+    "implemented": true,
+    "commitGroup": "mobile-opportunities-core",
+    "featureIds": [
+      "F092"
+    ],
+    "harness": "mobile-vitest"
+  },
+  {
+    "id": "T092",
+    "description": "Pipeline list renders stage badges + values, search debounces, status filter switches datasets",
+    "implemented": true,
+    "commitGroup": "mobile-opportunities-core",
+    "featureIds": [
+      "F093"
+    ],
+    "harness": "mobile-vitest"
+  },
+  {
+    "id": "T093",
+    "description": "Deal detail renders next-action card as single primary, contact row, timeline items from fixtures",
+    "implemented": true,
+    "commitGroup": "mobile-opportunities-core",
+    "featureIds": [
+      "F094"
+    ],
+    "harness": "mobile-vitest"
+  },
+  {
+    "id": "T094",
+    "description": "Drawer gating: OpportunitiesTab hidden when capabilities.features.opportunities=false, shown when true",
+    "implemented": true,
+    "commitGroup": "mobile-opportunities-core",
+    "featureIds": [
+      "F091"
+    ],
+    "harness": "mobile-vitest"
+  },
+  {
+    "id": "T100",
+    "description": "Complete-action flow: submit disabled until successor action + due date present; success updates next-action card",
+    "implemented": true,
+    "commitGroup": "mobile-opportunities-actions",
+    "featureIds": [
+      "F100"
+    ],
+    "harness": "mobile-vitest"
+  },
+  {
+    "id": "T101",
+    "description": "Log-interaction sheet posts type/title/notes/duration with opportunity+client+contact ids; timeline refetches",
+    "implemented": true,
+    "commitGroup": "mobile-opportunities-actions",
+    "featureIds": [
+      "F101"
+    ],
+    "harness": "mobile-vitest"
+  },
+  {
+    "id": "T102",
+    "description": "Call flow: tel: launch records pending-call context; resume within window shows prompt with elapsed-duration prefill; dismiss logs nothing; save posts Call interaction; resume after window shows nothing",
+    "implemented": true,
+    "commitGroup": "mobile-opportunities-actions",
+    "featureIds": [
+      "F102"
+    ],
+    "harness": "mobile-vitest"
+  },
+  {
+    "id": "T103",
+    "description": "Schedule-follow-up posts to /api/v1/schedules with prefilled title, self-assignment, chosen start/end, and NO work_item_type field (server maps to ad_hoc)",
+    "implemented": true,
+    "commitGroup": "mobile-opportunities-actions",
+    "featureIds": [
+      "F103"
+    ],
+    "harness": "mobile-vitest"
+  },
+  {
+    "id": "T104",
+    "description": "Lose flow requires reason, lost_to only for chose_competitor; Win surfaces close-gate failure message verbatim and shows conversion-on-web note on success",
+    "implemented": true,
+    "commitGroup": "mobile-opportunities-actions",
+    "featureIds": [
+      "F104"
+    ],
+    "harness": "mobile-vitest"
+  }
+]

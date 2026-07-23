@@ -495,6 +495,7 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
           item_kind: 'product',
           is_active: formProduct.is_active ?? true,
           sku: formProduct.sku ?? null,
+          barcode: formProduct.barcode ?? null,
           cost: formProduct.cost ?? null,
           cost_currency: formProduct.cost_currency ?? 'USD',
           vendor: formProduct.vendor ?? null,
@@ -756,6 +757,16 @@ export function QuickAddProduct({ isOpen, onClose, onProductAdded, product }: Qu
                 id="quick-add-product-sku"
                 value={formProduct.sku || ''}
                 onChange={(e) => setFormProduct({ ...formProduct, sku: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
+                {t('quickAddProduct.fields.barcode.label', { defaultValue: 'Barcode (UPC/EAN)' })}
+              </label>
+              <Input
+                id="quick-add-product-barcode"
+                value={formProduct.barcode || ''}
+                onChange={(e) => setFormProduct({ ...formProduct, barcode: e.target.value })}
               />
             </div>
             <div>

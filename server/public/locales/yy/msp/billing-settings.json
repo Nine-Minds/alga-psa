@@ -885,6 +885,9 @@
         "kitPricingMode": "55555",
         "kitPricingSum": "55555",
         "kitPricingFixed": "55555"
+      },
+      "barcode": {
+        "label": "55555"
       }
     },
     "options": {

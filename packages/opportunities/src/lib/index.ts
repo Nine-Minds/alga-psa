@@ -14,3 +14,4 @@ export * from './closeGates';
 export * from './opportunityWin';
 export * from './opportunityHandoff';
 export * from './lessons';
+export * from './opportunityTimelineCore';

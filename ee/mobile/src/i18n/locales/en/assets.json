@@ -1,0 +1,95 @@
+{
+  "detail": {
+    "loading": "Loading device"
+  },
+  "errors": {
+    "unableToLoad": "Unable to load this device."
+  },
+  "common": {
+    "retry": "Retry",
+    "cancel": "Cancel"
+  },
+  "identity": {
+    "tag": "Tag",
+    "serial": "Serial",
+    "type": "Type",
+    "client": "Client",
+    "location": "Location",
+    "warrantyEnds": "Warranty ends",
+    "purchased": "Purchased"
+  },
+  "warranty": {
+    "active": "Under warranty",
+    "expiringSoon": "Warranty expiring",
+    "expired": "Out of warranty",
+    "unknown": "Warranty unknown"
+  },
+  "actions": {
+    "linkTicket": "Link to a ticket",
+    "createTicket": "Create a ticket",
+    "noClient": "This device isn't linked to a client, so a ticket can't be created here."
+  },
+  "tickets": {
+    "title": "Linked tickets",
+    "empty": "No tickets linked to this device yet."
+  },
+  "maintenance": {
+    "title": "Maintenance",
+    "empty": "No maintenance scheduled.",
+    "dueSoon": "Due soon",
+    "overdue": "Overdue",
+    "next": "Next {{date}}",
+    "markDone": "Mark done",
+    "markDoneTitle": "Record maintenance",
+    "noteLabel": "What did you do?",
+    "notePlaceholder": "Optional note",
+    "recordDone": "Record as done",
+    "recorded": "Maintenance recorded",
+    "recordFailed": "Couldn't record maintenance"
+  },
+  "history": {
+    "title": "Service history",
+    "empty": "No service history yet."
+  },
+  "linkTicket": {
+    "title": "Link to a ticket",
+    "search": "Search tickets",
+    "empty": "No open tickets for this client.",
+    "loadError": "Couldn't load tickets.",
+    "success": "Ticket linked to this device",
+    "error": "Couldn't link the ticket. Try again.",
+    "createInstead": "Create a ticket",
+    "cantFind": "Can't find it? Create a ticket",
+    "loading": "Loading tickets…"
+  },
+  "createTicket": {
+    "title": "Create a ticket",
+    "titleField": "Title",
+    "description": "Description",
+    "board": "Board",
+    "status": "Status",
+    "priority": "Priority",
+    "selectBoard": "Select a board",
+    "selectStatus": "Select a status",
+    "selectStatusAfterBoard": "Pick a board first",
+    "selectPriority": "Select a priority",
+    "submit": "Create ticket",
+    "success": "Ticket {{number}} created",
+    "successNoNumber": "Ticket created",
+    "error": "Couldn't create the ticket. Try again."
+  },
+  "software": {
+    "title": "Installed software"
+  },
+  "notes": {
+    "title": "Notes",
+    "add": "Add note",
+    "addTitle": "Add a note",
+    "label": "Note",
+    "placeholder": "What should the team know about this device?",
+    "save": "Save note",
+    "saved": "Note added",
+    "saveFailed": "Couldn't save note",
+    "empty": "No notes on this device yet."
+  }
+}

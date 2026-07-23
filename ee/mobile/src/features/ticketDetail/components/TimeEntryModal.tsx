@@ -3,6 +3,7 @@ import { ActivityIndicator, Modal, Pressable, ScrollView, Text, TextInput, View 
 import { useTranslation } from "react-i18next";
 import type { ApiClient } from "../../../api";
 import { getServices, type ServiceOption } from "../../../api/timeEntries";
+import { sanitizeNumericText } from "../../../ui/components/TextInput";
 import { useTheme } from "../../../ui/ThemeContext";
 import { PrimaryButton } from "../../../ui/components/PrimaryButton";
 import { DatePickerField } from "../../../ui/components/DatePickerField";
@@ -119,7 +120,7 @@ function TimeFields({
           </Text>
           <TextInput
             value={durationFocused ? durationInput : durationStr}
-            onChangeText={setDurationInput}
+            onChangeText={(text) => setDurationInput(sanitizeNumericText(text, "integer"))}
             onFocus={() => setDurationFocused(true)}
             onBlur={() => {
               setDurationFocused(false);

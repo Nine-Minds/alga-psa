@@ -288,6 +288,8 @@ export interface IOpportunityDetail extends IOpportunity {
   client_name: string;
   client_lifecycle_status: ClientLifecycleStatus;
   contact_name?: string | null;
+  contact_phone?: string | null;
+  contact_email?: string | null;
   owner_name: string;
   ladder: IOpportunityEvidenceLadderStep[];
   linked_quotes: Array<{
