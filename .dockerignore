@@ -36,6 +36,8 @@ build
 !packages/core/dist/**
 !packages/db/dist/**
 !packages/event-schemas/dist/**
+!packages/event-bus/dist/**
+!packages/types/dist/**
 
 # Environment variables
 .env

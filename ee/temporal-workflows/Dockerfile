@@ -74,6 +74,15 @@ WORKDIR /app/packages/event-schemas
 
 RUN npx tsup
 
+# Build the remaining runtime packages imported by @alga-psa/email's root
+# bundle. Marketing sequence activities load TenantEmailService from that
+# bundle, so these package exports must exist in the final worker image.
+WORKDIR /app/packages/types
+RUN npx tsup
+
+WORKDIR /app/packages/event-bus
+RUN npx tsup
+
 # Build @alga-psa/workflows (dist/lib/*.mjs required at runtime)
 WORKDIR /app/ee/packages/workflows
 RUN npx tsup
@@ -187,6 +196,9 @@ COPY --from=development /app/packages/email/dist /app/packages/email/dist
 COPY --from=development /app/packages/marketing/dist /app/packages/marketing/dist
 # Copy event-schemas dist (runtime dependency of shared/workflow/streams)
 COPY --from=development /app/packages/event-schemas/dist /app/packages/event-schemas/dist
+# Copy the runtime package exports loaded by @alga-psa/email.
+COPY --from=development /app/packages/types/dist /app/packages/types/dist
+COPY --from=development /app/packages/event-bus/dist /app/packages/event-bus/dist
 # Copy the runtime-resolved @alga-psa package dists built above (base-stage
 # packages/ came from the build context, where .dockerignore strips **/dist)
 COPY --from=development /app/packages/core/dist /app/packages/core/dist

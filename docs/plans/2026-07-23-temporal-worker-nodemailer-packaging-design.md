@@ -11,8 +11,10 @@ import guard, then fails because `@alga-psa/marketing/lib/sequences` imports the
 ## Decision
 
 Declare `nodemailer@^9.0.3` as a direct runtime dependency of
-`ee/temporal-workflows` and update that workspace's lockfile. This is the narrowest
-fix that matches the final image's existing module-resolution path.
+`ee/temporal-workflows` and update that workspace's lockfile. Build and copy the
+already-declared `@alga-psa/types` and `@alga-psa/event-bus` package exports that the
+email root bundle loads at runtime. This closes the same narrow dependency graph
+using the final image's existing module-resolution path.
 
 Do not copy another package's complete `node_modules` tree into the final image and
 do not refactor marketing or email package exports as part of this deployment fix.
