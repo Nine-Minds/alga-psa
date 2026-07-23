@@ -7,37 +7,86 @@ This guide covers development workflows, best practices, and common tasks when w
 ### Prerequisites
 - Docker Engine 24.0.0+
 - Docker Compose v2.20.0+
-- Node.js 18+
+- Node.js `>=20 <25` (for running tests and tooling on the host)
 - Git
 - VS Code (recommended)
+- ~80 GB of free disk space for Docker images, build cache, and volumes
+  (image builds alone can transiently consume 30–40 GB);
+  16 GB RAM recommended for building the server image
+
+On a fresh Ubuntu 24.04 machine, install the prerequisites with:
+
+```bash
+# Docker Engine + Compose v2 (Ubuntu packages satisfy the version requirements)
+sudo apt-get update
+sudo apt-get install -y docker.io docker-compose-v2 git
+
+# Run docker without sudo (takes effect on next login, or run `newgrp docker`)
+sudo usermod -aG docker $USER
+
+# Node.js 22 LTS via NodeSource (Ubuntu's apt nodejs is too old):
+curl -fsSL https://deb.nodesource.com/setup_22.x | sudo -E bash -
+sudo apt-get install -y nodejs
+```
+
+Verify the versions:
+
+```bash
+docker --version            # 24.0.0 or later
+docker compose version      # v2.20.0 or later
+node --version              # >=20 <25
+```
 
 ### Initial Setup
 
 1. Clone and setup:
 ```bash
-git clone https://github.com/your-org/alga-psa.git
+git clone https://github.com/nine-minds/alga-psa.git
 cd alga-psa
-cp .env.example .env.development
+cp .env.example .env
 ```
 
-2. Create development secrets:
+> Compose reads `.env` in the project root by default. If you name the file
+> something else (e.g. `.env.development`), pass it explicitly with
+> `--env-file .env.development` on every `docker compose` command.
+
+> Compose prints `The "X" variable is not set. Defaulting to a blank string.`
+> warnings for a handful of optional values that `.env.example` does not
+> define (e.g. `VERSION`, `HOST`, `PROJECT_NAME`, `TOKEN_EXPIRES`,
+> `SALT_BYTES`). These are safe to ignore for local development — the server
+> image carries its own baked-in defaults.
+
+2. Create development secrets. The Compose stack requires these 11 secret files:
+
 ```bash
 mkdir -p secrets
-# Create development secrets with dummy values
-echo 'dev-password' > secrets/db_password_server
-echo 'dev-password' > secrets/db_password_hocuspocus
-# ... create other required secrets
+for s in postgres_password db_password_server db_password_hocuspocus \
+         redis_password email_password crypto_key token_secret_key \
+         nextauth_secret google_oauth_client_id google_oauth_client_secret \
+         alga_auth_key; do
+  echo "dev-$(openssl rand -hex 24)" > "secrets/$s"
+done
 chmod 600 secrets/*
 ```
 
-3. Start development environment:
+3. Start development environment (the first run builds the server image from
+   source, which can take 15–30 minutes):
 ```bash
 # For Community Edition
-docker compose -f docker-compose.base.yaml -f docker-compose.ce.yaml up
+docker compose -f docker-compose.base.yaml -f docker-compose.ce.yaml up -d
 
 # For Enterprise Edition
-docker compose -f docker-compose.base.yaml -f docker-compose.ee.yaml up
+docker compose -f docker-compose.base.yaml -f docker-compose.ee.yaml up -d
 ```
+
+4. Retrieve the seeded workspace admin credentials. On first boot the server
+   logs print an admin email and generated password:
+```bash
+docker compose -f docker-compose.base.yaml -f docker-compose.ce.yaml logs -f server
+```
+Look for a banner containing `User Email is ->` and `Password is ->`.
+
+5. Open http://localhost:3000 and sign in with those credentials.
 
 ## Development Workflow
 
@@ -225,7 +274,7 @@ export const myAction = withAuth(async (user, { tenant }, arg1: string): Promise
 
 1. Enable debug logs:
 ```bash
-docker compose up -f docker-compose.base.yaml -f docker-compose.ce.yaml -e DEBUG=true
+DEBUG=true docker compose -f docker-compose.base.yaml -f docker-compose.ce.yaml up -d
 ```
 
 2. Use VS Code debugger:
@@ -476,19 +525,15 @@ docker compose exec [service] sh
 
 ### Useful Scripts
 
-1. Development setup:
+1. Build the CE/EE server images locally (also used for prebuilt deployments):
 ```bash
-./scripts/dev-setup.sh
+./scripts/set-image-tag.sh
 ```
 
-2. Test data generation:
+2. Compose wrapper that validates secret files (trailing newlines, presence)
+   before delegating to `docker compose`:
 ```bash
-./scripts/generate-test-data.sh
-```
-
-3. Dependency updates:
-```bash
-./scripts/update-deps.sh
+./scripts/docker-compose-wrapper.sh -f docker-compose.base.yaml -f docker-compose.ce.yaml up -d
 ```
 
 ## Additional Resources
