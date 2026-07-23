@@ -102,7 +102,7 @@ describe('Xero OAuth routes', () => {
     });
     getXeroRedirectUriMock.mockResolvedValue('https://example.com/api/integrations/xero/callback');
     getXeroOAuthScopesStringMock.mockReturnValue(
-      'offline_access accounting.settings accounting.transactions accounting.contacts'
+      'offline_access accounting.settings accounting.invoices accounting.banktransactions accounting.payments accounting.contacts'
     );
     upsertStoredXeroConnectionsMock.mockResolvedValue({});
     axiosPostMock.mockResolvedValue({
@@ -111,7 +111,7 @@ describe('Xero OAuth routes', () => {
         refresh_token: 'refresh-token',
         expires_in: 1800,
         refresh_token_expires_in: 3600,
-        scope: 'offline_access accounting.transactions'
+        scope: 'offline_access accounting.invoices accounting.banktransactions accounting.payments'
       }
     });
     axiosGetMock.mockResolvedValue({
