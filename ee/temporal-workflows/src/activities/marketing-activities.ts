@@ -22,7 +22,8 @@ function activityLogger() {
 
 function getPublicBaseUrl(): string {
   const raw =
-    process.env.NEXTAUTH_URL
+    process.env.APPLICATION_URL
+    || process.env.NEXTAUTH_URL
     || process.env.NEXT_PUBLIC_APP_URL
     || 'http://localhost:3000';
   return raw.endsWith('/') ? raw.slice(0, -1) : raw;

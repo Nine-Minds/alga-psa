@@ -50,6 +50,7 @@ vi.mock('@alga-psa/marketing/lib/sequences', () => ({
 
 describe('marketing activities', () => {
   const originalNextAuthSecret = process.env.NEXTAUTH_SECRET;
+  const originalApplicationUrl = process.env.APPLICATION_URL;
   const originalNextAuthUrl = process.env.NEXTAUTH_URL;
   const originalPublicAppUrl = process.env.NEXT_PUBLIC_APP_URL;
   const knex = { name: 'tenant-knex' };
@@ -59,13 +60,16 @@ describe('marketing activities', () => {
     createTenantKnexMock.mockResolvedValue({ knex, tenant: 'tenant-1' });
     runWithTenantMock.mockImplementation(async (_tenantId, callback) => callback());
     process.env.NEXTAUTH_SECRET = 'test-signing-secret';
-    process.env.NEXTAUTH_URL = 'https://app.example.test/';
+    process.env.APPLICATION_URL = 'https://deployment.example.test/';
+    process.env.NEXTAUTH_URL = 'https://auth.example.test/';
     delete process.env.NEXT_PUBLIC_APP_URL;
   });
 
   afterEach(() => {
     if (originalNextAuthSecret === undefined) delete process.env.NEXTAUTH_SECRET;
     else process.env.NEXTAUTH_SECRET = originalNextAuthSecret;
+    if (originalApplicationUrl === undefined) delete process.env.APPLICATION_URL;
+    else process.env.APPLICATION_URL = originalApplicationUrl;
     if (originalNextAuthUrl === undefined) delete process.env.NEXTAUTH_URL;
     else process.env.NEXTAUTH_URL = originalNextAuthUrl;
     if (originalPublicAppUrl === undefined) delete process.env.NEXT_PUBLIC_APP_URL;
@@ -125,7 +129,7 @@ describe('marketing activities', () => {
     });
 
     expect(sendDueSequenceStepsInternalMock).toHaveBeenCalledWith(knex, 'tenant-1', {
-      baseUrl: 'https://app.example.test',
+      baseUrl: 'https://deployment.example.test',
       signingSecret: 'test-signing-secret',
     });
     expect(result.operation).toEqual(summary);
