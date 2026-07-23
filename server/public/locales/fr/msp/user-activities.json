@@ -143,7 +143,21 @@
       "title": "Élément ponctuel",
       "toggleDoneError": "Échec de la mise à jour de l'élément."
     },
-    "enterpriseOnly": "Les tâches de workflow sont une fonctionnalité Enterprise."
+    "enterpriseOnly": "Les tâches de workflow sont une fonctionnalité Enterprise.",
+    "nextAction": "Prochaine action",
+    "overdueSince": "En retard depuis le {{date}}",
+    "dueOn": "Échéance le {{date}}",
+    "stage": "Étape",
+    "confidence": "Confiance",
+    "owner": "Propriétaire",
+    "expectedClose": "Clôture prévue",
+    "mrr": "MRR",
+    "nrr": "NRR",
+    "hardware": "Matériel",
+    "contact": "Contact",
+    "linkedQuotes": "Devis liés",
+    "openOpportunity": "Ouvrir l'opportunité",
+    "opportunityNotFound": "Opportunité introuvable."
   },
   "groupedView": {
     "addGroup": "Ajouter un groupe",
