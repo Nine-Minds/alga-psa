@@ -59,7 +59,8 @@
     "success": "Ticket linked to this device",
     "error": "Couldn't link the ticket. Try again.",
     "createInstead": "Create a ticket",
-    "cantFind": "Can't find it? Create a ticket"
+    "cantFind": "Can't find it? Create a ticket",
+    "loading": "Loading tickets…"
   },
   "createTicket": {
     "title": "Create a ticket",

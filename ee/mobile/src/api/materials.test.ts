@@ -115,3 +115,50 @@ describe("setProductBarcode", () => {
     );
   });
 });
+
+describe("listServiceTypes", () => {
+  it("GETs active service types from /api/v1/service-types", async () => {
+    const client = mockClient({ ok: true, data: { data: [] } });
+    const { listServiceTypes } = await import("./materials");
+    await listServiceTypes(client, { apiKey: "api-key-1" });
+    expect(client.request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: "GET",
+        path: "/api/v1/service-types",
+        query: { limit: 100, is_active: true },
+        headers: { "x-api-key": "api-key-1" },
+      }),
+    );
+  });
+});
+
+describe("createProduct", () => {
+  it("POSTs the product with the scanned barcode to /api/v1/products", async () => {
+    const client = mockClient({ ok: true, data: { data: { service_id: "svc-9" } } });
+    const { createProduct } = await import("./materials");
+    await createProduct(client, {
+      apiKey: "api-key-1",
+      data: {
+        service_name: "HP 26A Toner",
+        custom_service_type_id: "type-1",
+        unit_of_measure: "each",
+        sku: "HP-26A",
+        barcode: "0194850925894",
+      },
+    });
+    expect(client.request).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: "POST",
+        path: "/api/v1/products",
+        headers: { "x-api-key": "api-key-1" },
+        body: {
+          service_name: "HP 26A Toner",
+          custom_service_type_id: "type-1",
+          unit_of_measure: "each",
+          sku: "HP-26A",
+          barcode: "0194850925894",
+        },
+      }),
+    );
+  });
+});
