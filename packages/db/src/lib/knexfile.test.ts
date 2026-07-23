@@ -9,6 +9,7 @@ vi.mock('@alga-psa/core', () => ({
 
 describe('knexfile', () => {
   beforeEach(() => {
+    vi.resetModules();
     process.env.DB_HOST = 'db-host';
     process.env.DB_PORT = '5439';
     process.env.DB_USER_SERVER = 'app_user';
@@ -34,6 +35,16 @@ describe('knexfile', () => {
     expect(config.connection.password).toBe('server_pw');
   });
 
+  it('getKnexConfig honors the configured server user in production', async () => {
+    process.env.DB_USER_SERVER = 'app_user_pgbouncer';
+    const { getKnexConfig } = await import('./knexfile');
+
+    const config = await getKnexConfig('production');
+
+    expect(config.connection.user).toBe('app_user_pgbouncer');
+    expect(config.connection.password).toBe('server_pw');
+  });
+
   it('getPostgresConnection uses admin env vars and password', async () => {
     const { getPostgresConnection } = await import('./knexfile');
 
@@ -46,4 +57,3 @@ describe('knexfile', () => {
     expect(connection.password).toBe('admin_pw');
   });
 });
-

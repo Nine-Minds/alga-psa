@@ -198,7 +198,7 @@ test('T004 Temporal chart waits for schema-safe startup and creates the default 
   assert.match(job.spec.template.spec.containers[0].command.join('\n'), /temporal operator namespace create/);
 });
 
-test('T005 temporal-worker profile injects NEXTAUTH_SECRET from alga-core secrets', () => {
+test('T005 temporal-worker profile injects appliance auth and Redis configuration', () => {
   const docs = helmTemplate(temporalWorkerChartPath, temporalWorkerProfileValuesPath);
   const deployment = docs.find((doc) => doc.kind === 'Deployment' && doc.metadata?.name === 'test-release-temporal-worker');
   assert.ok(deployment);
@@ -209,6 +209,8 @@ test('T005 temporal-worker profile injects NEXTAUTH_SECRET from alga-core secret
     name: 'alga-core-sebastian-secrets',
     key: 'NEXTAUTH_SECRET'
   });
+  assert.equal(env.find((entry) => entry.name === 'REDIS_HOST')?.value, 'redis.msp.svc.cluster.local');
+  assert.equal(env.find((entry) => entry.name === 'REDIS_PORT')?.value, '6379');
 });
 
 test('T006 alga-core appliance profile gives the app Deployment a first-install-safe progress deadline', () => {

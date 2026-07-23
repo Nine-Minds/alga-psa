@@ -41,6 +41,12 @@ db:
 
 applicationUrl: http://alga-core.msp.svc.cluster.local:3000
 
+extraEnv:
+  - name: REDIS_HOST
+    value: redis.msp.svc.cluster.local
+  - name: REDIS_PORT
+    value: "6379"
+
 autoscaling:
   enabled: true
   minReplicas: 1
