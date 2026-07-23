@@ -11,8 +11,15 @@ import {
   emailPollingReconcileWorkflow,
   entraAllTenantsSyncWorkflow,
   maintenanceJobWorkflow,
+  marketingFanoutWorkflow,
   premiumTrialExpiryWorkflow,
 } from '../workflows';
+import {
+  MARKETING_EXPIRE_STALE_TARGETS_JOB,
+  MARKETING_FLIP_DUE_POSTS_JOB,
+  MARKETING_SEND_SEQUENCE_STEPS_JOB,
+  type MarketingJobName,
+} from '@alga-psa/marketing/lib/marketingJobContract';
 import * as dotenv from 'dotenv';
 
 dotenv.config();
@@ -35,6 +42,33 @@ const EMAIL_WORKFLOW_TASK_QUEUE = 'email-domain-workflows';
 const ENTRA_WORKFLOW_TASK_QUEUE = 'tenant-workflows';
 const ENTRA_SCHEDULE_ID_PREFIX = 'entra-all-tenants-sync-schedule';
 const ENTRA_SCHEDULE_DISCOVERY_TENANT = '__entra_schedule_config_discovery__';
+const MARKETING_WORKFLOW_TASK_QUEUE = 'tenant-workflows';
+const LEGACY_MARKETING_SCHEDULE_PREFIXES = [
+  `${MARKETING_FLIP_DUE_POSTS_JOB}:`,
+  `${MARKETING_EXPIRE_STALE_TARGETS_JOB}:`,
+  `${MARKETING_SEND_SEQUENCE_STEPS_JOB}:`,
+] as const;
+const MARKETING_FANOUT_SCHEDULES: Array<{
+  scheduleId: string;
+  jobName: MarketingJobName;
+  cron: string;
+}> = [
+  {
+    scheduleId: 'marketing-fanout:flip-due-posts',
+    jobName: MARKETING_FLIP_DUE_POSTS_JOB,
+    cron: '*/5 * * * *',
+  },
+  {
+    scheduleId: 'marketing-fanout:send-sequence-steps',
+    jobName: MARKETING_SEND_SEQUENCE_STEPS_JOB,
+    cron: '*/5 * * * *',
+  },
+  {
+    scheduleId: 'marketing-fanout:expire-stale-targets',
+    jobName: MARKETING_EXPIRE_STALE_TARGETS_JOB,
+    cron: '11 * * * *',
+  },
+];
 // Note: RMM alert reconciliation and Huntress incident polling are NOT set up
 // here. They run as per-integration recurring jobs on the job-runner
 // abstraction (Temporal Schedules in EE via TemporalJobRunner), converged by
@@ -200,17 +234,48 @@ async function upsertSchedule(client: Client, scheduleId: string, input: any): P
   }
 }
 
-async function deleteScheduleIfExists(client: Client, scheduleId: string): Promise<void> {
+async function deleteScheduleIfExists(client: Client, scheduleId: string): Promise<boolean> {
   try {
     const handle = client.schedule.getHandle(scheduleId);
     await handle.delete();
     logger.info(`Deleted schedule: ${scheduleId}`);
+    return true;
   } catch (error: any) {
     if (isNotFoundError(error)) {
-      return;
+      return true;
     }
     logger.warn(`Failed to delete schedule ${scheduleId}: ${error?.message || 'Unknown error'}`);
+    return false;
   }
+}
+
+async function deleteLegacyMarketingSchedules(client: Client): Promise<void> {
+  let scanned = 0;
+  let matched = 0;
+  let deleted = 0;
+  let failed = 0;
+
+  for await (const schedule of client.schedule.list()) {
+    scanned++;
+    const scheduleId = schedule.scheduleId;
+    if (!LEGACY_MARKETING_SCHEDULE_PREFIXES.some((prefix) => scheduleId.startsWith(prefix))) {
+      continue;
+    }
+
+    matched++;
+    if (await deleteScheduleIfExists(client, scheduleId)) {
+      deleted++;
+    } else {
+      failed++;
+    }
+  }
+
+  logger.info('Legacy marketing schedule cleanup completed', {
+    scanned,
+    matched,
+    deleted,
+    failed,
+  });
 }
 
 async function loadEntraScheduleConfigs(): Promise<EntraScheduleConfigRow[]> {
@@ -446,6 +511,29 @@ export async function setupSchedules() {
         },
       });
     }
+
+    for (const { scheduleId: marketingScheduleId, jobName, cron } of MARKETING_FANOUT_SCHEDULES) {
+      await upsertSchedule(client, marketingScheduleId, {
+        spec: {
+          cronExpressions: [cron],
+        },
+        action: {
+          type: 'startWorkflow',
+          workflowType: marketingFanoutWorkflow,
+          args: [{ jobName }],
+          taskQueue: MARKETING_WORKFLOW_TASK_QUEUE,
+          workflowExecutionTimeout: '1h',
+        },
+        policies: {
+          overlap: ScheduleOverlapPolicy.SKIP,
+          catchupWindow: '1m',
+        },
+      });
+    }
+
+    // Cut over only after all global schedules converge. Listing by exact
+    // legacy prefixes cannot match the new marketing-fanout:* IDs.
+    await deleteLegacyMarketingSchedules(client);
 
   } catch (error) {
     logger.error('Failed to connect to Temporal for schedule setup', error);

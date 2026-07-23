@@ -6,17 +6,22 @@ import {
   expireStaleTargetsInternal,
   sendDueSequenceStepsInternal,
 } from '@alga-psa/marketing/lib';
+import {
+  MARKETING_EXPIRE_STALE_TARGETS_JOB,
+  MARKETING_FLIP_DUE_POSTS_JOB,
+  MARKETING_SEND_SEQUENCE_STEPS_JOB,
+  type MarketingJobData,
+} from '@alga-psa/marketing/lib/marketingJobContract';
 import { runWithTenant } from 'server/src/lib/db';
 import { getConnection } from 'server/src/lib/db/db';
 import { getMarketingSigningSecret } from 'server/src/lib/marketing/signingSecret';
 
-export const MARKETING_FLIP_DUE_POSTS_JOB = 'marketing:flip-due-posts';
-export const MARKETING_EXPIRE_STALE_TARGETS_JOB = 'marketing:expire-stale-targets';
-export const MARKETING_SEND_SEQUENCE_STEPS_JOB = 'marketing:send-sequence-steps';
-
-export interface MarketingJobData extends Record<string, unknown> {
-  tenantId: string;
-}
+export {
+  MARKETING_EXPIRE_STALE_TARGETS_JOB,
+  MARKETING_FLIP_DUE_POSTS_JOB,
+  MARKETING_SEND_SEQUENCE_STEPS_JOB,
+};
+export type { MarketingJobData };
 
 /** Grace period before an awaiting-manual-publish target auto-expires (F027). */
 const STALE_TARGET_GRACE_HOURS = 48;

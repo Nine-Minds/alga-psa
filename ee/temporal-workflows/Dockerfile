@@ -74,6 +74,15 @@ WORKDIR /app/packages/event-schemas
 
 RUN npx tsup
 
+# Build the remaining runtime packages imported by @alga-psa/email's root
+# bundle. Marketing sequence activities load TenantEmailService from that
+# bundle, so these package exports must exist in the final worker image.
+WORKDIR /app/packages/types
+RUN npx tsup
+
+WORKDIR /app/packages/event-bus
+RUN npx tsup
+
 # Build @alga-psa/workflows (dist/lib/*.mjs required at runtime)
 WORKDIR /app/ee/packages/workflows
 RUN npx tsup
@@ -102,6 +111,9 @@ RUN npm install --ignore-scripts && npm run build
 WORKDIR /app/packages/email
 RUN npm install --ignore-scripts && npm run build
 
+WORKDIR /app/packages/marketing
+RUN npm install --ignore-scripts && npm run build
+
 WORKDIR /app/ee/temporal-workflows
 RUN npm run build
 
@@ -123,6 +135,7 @@ RUN ls -la /app/ee/temporal-workflows/dist/seeds/onboarding || echo "Seeds direc
 FROM base AS production-prebuilt
 
 COPY --from=prebuilt /app/ee/temporal-workflows/dist /app/ee/temporal-workflows/dist
+COPY --from=prebuilt /app/packages/marketing/dist /app/packages/marketing/dist
 # Copy integrations node_modules to both locations for module resolution
 COPY --from=base /app/packages/integrations/node_modules /app/packages/integrations/node_modules
 COPY --from=base /app/packages/integrations/node_modules /app/ee/temporal-workflows/dist/packages/integrations/node_modules
@@ -142,6 +155,8 @@ RUN ls -la /app/ee/temporal-workflows/dist/seeds/onboarding || echo "Seeds direc
 RUN cd /app/ee/temporal-workflows && node --input-type=module -e "const m = await import('@alga-psa/db'); if (typeof m.tenantDb !== 'function') throw new Error('@alga-psa/db loaded but tenantDb missing')"
 
 RUN cd /app/ee/temporal-workflows && node --input-type=module -e "const m = await import('@alga-psa/email/providerConfig'); if (typeof m.createDefaultProviderConfig !== 'function') throw new Error('@alga-psa/email/providerConfig loaded but createDefaultProviderConfig missing')"
+
+RUN cd /app/ee/temporal-workflows && node --input-type=module -e "const posts = await import('@alga-psa/marketing/lib/posts'); const sequences = await import('@alga-psa/marketing/lib/sequences'); if (typeof posts.flipDuePostsInternal !== 'function' || typeof posts.expireStaleTargetsInternal !== 'function' || typeof sequences.sendDueSequenceStepsInternal !== 'function') throw new Error('@alga-psa/marketing runtime exports are incomplete')"
 
 # packages/licensing source is compiled INTO this dist tree, so every import
 # reachable from its root must be resolvable from here at runtime. file: deps
@@ -178,8 +193,12 @@ COPY --from=development /app/ee/packages/workflows /app/ee/packages/workflows
 COPY --from=development /app/packages/core/dist /app/packages/core/dist
 COPY --from=development /app/packages/db/dist /app/packages/db/dist
 COPY --from=development /app/packages/email/dist /app/packages/email/dist
+COPY --from=development /app/packages/marketing/dist /app/packages/marketing/dist
 # Copy event-schemas dist (runtime dependency of shared/workflow/streams)
 COPY --from=development /app/packages/event-schemas/dist /app/packages/event-schemas/dist
+# Copy the runtime package exports loaded by @alga-psa/email.
+COPY --from=development /app/packages/types/dist /app/packages/types/dist
+COPY --from=development /app/packages/event-bus/dist /app/packages/event-bus/dist
 # Copy the runtime-resolved @alga-psa package dists built above (base-stage
 # packages/ came from the build context, where .dockerignore strips **/dist)
 COPY --from=development /app/packages/core/dist /app/packages/core/dist
@@ -206,6 +225,8 @@ RUN ls -la /app/ee/temporal-workflows/dist/seeds/onboarding || echo "Seeds direc
 RUN cd /app/ee/temporal-workflows && node --input-type=module -e "const m = await import('@alga-psa/db'); if (typeof m.tenantDb !== 'function') throw new Error('@alga-psa/db loaded but tenantDb missing')"
 
 RUN cd /app/ee/temporal-workflows && node --input-type=module -e "const m = await import('@alga-psa/email/providerConfig'); if (typeof m.createDefaultProviderConfig !== 'function') throw new Error('@alga-psa/email/providerConfig loaded but createDefaultProviderConfig missing')"
+
+RUN cd /app/ee/temporal-workflows && node --input-type=module -e "const posts = await import('@alga-psa/marketing/lib/posts'); const sequences = await import('@alga-psa/marketing/lib/sequences'); if (typeof posts.flipDuePostsInternal !== 'function' || typeof posts.expireStaleTargetsInternal !== 'function' || typeof sequences.sendDueSequenceStepsInternal !== 'function') throw new Error('@alga-psa/marketing runtime exports are incomplete')"
 
 # packages/licensing source is compiled INTO this dist tree, so every import
 # reachable from its root must be resolvable from here at runtime. file: deps

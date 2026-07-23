@@ -19,6 +19,8 @@ build
 !packages/db/dist/**
 !packages/email/dist
 !packages/email/dist/**
+!packages/marketing/dist
+!packages/marketing/dist/**
 !ee/packages/workflows/dist/**
 !packages/workflow-streams/dist/**
 # temporal-worker parity build (Dockerfile prebuilt stage) COPYs the locally
@@ -34,6 +36,8 @@ build
 !packages/core/dist/**
 !packages/db/dist/**
 !packages/event-schemas/dist/**
+!packages/event-bus/dist/**
+!packages/types/dist/**
 
 # Environment variables
 .env
