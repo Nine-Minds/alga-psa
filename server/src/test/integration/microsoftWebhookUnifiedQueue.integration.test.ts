@@ -17,6 +17,9 @@ const providerQueryMock = {
   andWhere: vi.fn(function andWhere() {
     return this;
   }),
+  forUpdate: vi.fn(function forUpdate() {
+    return this;
+  }),
   first: vi.fn(),
 };
 // tenantDb(trx, tenant).table('tenants') → conn('tenants').where(tenant).first(...)
@@ -25,6 +28,12 @@ const tenantsQueryMock = {
     return this;
   }),
   first: vi.fn(async () => ({ product_code: 'psa' })),
+};
+const updateQueryMock = {
+  where: vi.fn(function where() {
+    return this;
+  }),
+  update: vi.fn().mockResolvedValue(1),
 };
 
 vi.mock('@alga-psa/shared/services/email/unifiedInboundEmailQueue', () => ({
@@ -55,6 +64,7 @@ describe('Microsoft unified inbound pointer queue ingress', () => {
     providerQueryMock.join.mockClear();
     providerQueryMock.where.mockClear();
     providerQueryMock.andWhere.mockClear();
+    providerQueryMock.forUpdate.mockClear();
     providerQueryMock.first.mockReset();
 
     enqueueUnifiedInboundEmailQueueJobMock.mockResolvedValue({
@@ -72,6 +82,8 @@ describe('Microsoft unified inbound pointer queue ingress', () => {
 
     tenantsQueryMock.where.mockClear();
     tenantsQueryMock.first.mockClear();
+    updateQueryMock.where.mockClear();
+    updateQueryMock.update.mockClear();
 
     trxMock.mockImplementation((table: string) => {
       if (table === 'microsoft_email_provider_config as mc') {
@@ -79,6 +91,9 @@ describe('Microsoft unified inbound pointer queue ingress', () => {
       }
       if (table === 'tenants') {
         return tenantsQueryMock;
+      }
+      if (table === 'microsoft_email_provider_config' || table === 'email_provider_health') {
+        return updateQueryMock;
       }
       throw new Error(`Unexpected table in test transaction: ${table}`);
     });
@@ -132,6 +147,7 @@ describe('Microsoft unified inbound pointer queue ingress', () => {
 
     // Provider lookup stays tenant-scoped through the facade join.
     expect(providerQueryMock.join).toHaveBeenCalledWith('email_providers as ep', expect.any(Function));
+    expect(providerQueryMock.forUpdate).toHaveBeenCalledWith('mc');
 
     expect(enqueueUnifiedInboundEmailQueueJobMock).toHaveBeenCalledTimes(1);
     const enqueuePayload = enqueueUnifiedInboundEmailQueueJobMock.mock.calls[0][0];
@@ -149,6 +165,10 @@ describe('Microsoft unified inbound pointer queue ingress', () => {
     expect(enqueuePayload).not.toHaveProperty('emailData');
     expect(enqueuePayload).not.toHaveProperty('attachments');
     expect(enqueuePayload).not.toHaveProperty('rawMimeBase64');
+    expect(updateQueryMock.update).toHaveBeenCalledWith(expect.objectContaining({
+      last_webhook_delivery_at: expect.any(String),
+      webhook_silent_runs: 0,
+    }));
   });
 
   it('T004: Microsoft callback success waits for durable enqueue completion', async () => {

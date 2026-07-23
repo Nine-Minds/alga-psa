@@ -11,7 +11,7 @@ import { ADD_ONS, TIER_FEATURES } from '@alga-psa/types';
 export default function IntegrationsSettingsBody(): React.JSX.Element {
   const { hasAddOn } = useTier();
   const canUseCipp = useTierFeature(TIER_FEATURES.CIPP);
-  const canUseEntraSync = hasAddOn(ADD_ONS.ENTERPRISE);
+  const canUseEntraSync = useTierFeature(TIER_FEATURES.ENTRA_SYNC);
   const canUseTeams = hasAddOn(ADD_ONS.TEAMS);
 
   return (

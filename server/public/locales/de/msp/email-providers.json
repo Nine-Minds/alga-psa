@@ -172,10 +172,16 @@
     "fields": {
       "status": "Status",
       "lastSync": "Letzte Synchronisierung",
+      "lastIngested": "Zuletzt eingelesen",
+      "delivery": "Zustellung",
       "created": "Erstellt",
       "subscription": "Abonnement",
       "defaults": "Ticket-Standardeinstellungen",
       "error": "Fehler:"
+    },
+    "delivery": {
+      "polling": "Abruf alle 3 Minuten",
+      "webhook": "Echtzeit-Zustellung: aktiv"
     },
     "values": {
       "active": "Aktiv",

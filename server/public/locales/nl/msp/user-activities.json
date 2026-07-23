@@ -143,7 +143,21 @@
       "title": "Ad-hocitem",
       "toggleDoneError": "Kan item niet bijwerken."
     },
-    "enterpriseOnly": "Workflow-taken zijn een Enterprise-functie."
+    "enterpriseOnly": "Workflow-taken zijn een Enterprise-functie.",
+    "nextAction": "Volgende actie",
+    "overdueSince": "Achterstallig sinds {{date}}",
+    "dueOn": "Vervalt op {{date}}",
+    "stage": "Fase",
+    "confidence": "Vertrouwen",
+    "owner": "Eigenaar",
+    "expectedClose": "Verwachte afsluiting",
+    "mrr": "MRR",
+    "nrr": "NRR",
+    "hardware": "Hardware",
+    "contact": "Contact",
+    "linkedQuotes": "Gekoppelde offertes",
+    "openOpportunity": "Opportunity openen",
+    "opportunityNotFound": "Opportunity niet gevonden."
   },
   "groupedView": {
     "addGroup": "Groep toevoegen",

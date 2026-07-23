@@ -11,6 +11,13 @@ import {
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+import {
+  queryInStockUnits,
+  queryStockUnits,
+  queryUnitDetail,
+  queryUnitsByMac,
+  queryUnitsBySerial,
+} from '../lib';
 
 async function requireInvRead(user: any): Promise<void> {
   if (!(await hasPermission(user, 'inventory', 'read'))) {
@@ -73,31 +80,6 @@ export const listAvailableStockUnits = withAuth(
   },
 );
 
-/** Escape LIKE wildcards in a user-supplied search term so they match literally. */
-function escapeLike(term: string): string {
-  return term.replace(/[\\%_]/g, (ch) => `\\${ch}`);
-}
-
-/**
- * Base query for UI listings: `stock_units` plus its resolved location and client
- * NAMES via LEFT JOINs, so tables never have to render raw FK UUIDs. Callers add
- * their own filters on the `su.*` columns and choose the order.
- */
-function stockUnitsWithNames(trx: Knex.Transaction, tenant: string) {
-  return trx('stock_units as su')
-    .leftJoin('stock_locations as sl', function () {
-      this.on('su.location_id', '=', 'sl.location_id').andOn('su.tenant', '=', 'sl.tenant');
-    })
-    .leftJoin('clients as c', function () {
-      this.on('su.client_id', '=', 'c.client_id').andOn('su.tenant', '=', 'c.tenant');
-    })
-    .leftJoin('service_catalog as sc', function () {
-      this.on('su.service_id', '=', 'sc.service_id').andOn('su.tenant', '=', 'sc.tenant');
-    })
-    .where({ 'su.tenant': tenant })
-    .select('su.*', 'sl.name as location_name', 'c.client_name', 'sc.service_name as product_name');
-}
-
 /**
  * List serialized units with optional filters. Newest-received first.
  * Rows carry resolved `location_name` / `client_name` for display.
@@ -116,14 +98,7 @@ export const listStockUnits = withAuth(
     return withStockUnitActionErrors(async () => {
       await requireInvRead(user);
       const { knex: db } = await createTenantKnex();
-      return withTransaction(db, async (trx: Knex.Transaction) => {
-        const q = stockUnitsWithNames(trx, tenant);
-        if (filter?.service_id) q.andWhere({ 'su.service_id': filter.service_id });
-        if (filter?.status) q.andWhere({ 'su.status': filter.status });
-        if (filter?.location_id) q.andWhere({ 'su.location_id': filter.location_id });
-        if (filter?.client_id) q.andWhere({ 'su.client_id': filter.client_id });
-        return (await q.orderBy('su.received_at', 'desc')) as IStockUnit[];
-      });
+      return withTransaction(db, (trx: Knex.Transaction) => queryStockUnits(trx, tenant, filter));
     });
   },
 );
@@ -149,14 +124,8 @@ export const searchUnitsBySerial = withAuth(
   async (user, { tenant }, q: string): Promise<IStockUnit[] | StockUnitActionError> => {
     return withStockUnitActionErrors(async () => {
     await requireInvRead(user);
-    const term = (q ?? '').trim();
-    if (!term) return [];
     const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
-      return (await stockUnitsWithNames(trx, tenant)
-        .whereRaw('su.serial_number ILIKE ? ESCAPE ?', [`%${escapeLike(term)}%`, '\\'])
-        .orderBy('su.received_at', 'desc')) as IStockUnit[];
-    });
+    return withTransaction(db, (trx: Knex.Transaction) => queryUnitsBySerial(trx, tenant, q));
     });
   },
 );
@@ -169,15 +138,8 @@ export const searchUnitsByMac = withAuth(
   async (user, { tenant }, q: string): Promise<IStockUnit[] | StockUnitActionError> => {
     return withStockUnitActionErrors(async () => {
     await requireInvRead(user);
-    const term = (q ?? '').trim();
-    if (!term) return [];
     const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
-      return (await stockUnitsWithNames(trx, tenant)
-        .whereNotNull('su.mac_address')
-        .whereRaw('su.mac_address ILIKE ? ESCAPE ?', [`%${escapeLike(term)}%`, '\\'])
-        .orderBy('su.received_at', 'desc')) as IStockUnit[];
-    });
+    return withTransaction(db, (trx: Knex.Transaction) => queryUnitsByMac(trx, tenant, q));
     });
   },
 );
@@ -197,33 +159,8 @@ export const searchInStockUnits = withAuth(
   ): Promise<{ units: IStockUnit[]; total: number } | StockUnitActionError> => {
     return withStockUnitActionErrors(async () => {
       await requireInvRead(user);
-      const term = (input?.search ?? '').trim();
-      const limit = Math.min(Math.max(Math.trunc(input?.limit ?? 10), 1), 100);
-      const page = Math.max(Math.trunc(input?.page ?? 1), 1);
       const { knex: db } = await createTenantKnex();
-      return withTransaction(db, async (trx: Knex.Transaction) => {
-        const applyFilters = <T extends Knex.QueryBuilder>(q: T): T => {
-          q.andWhere({ 'su.status': 'in_stock' });
-          if (term) {
-            const pattern = `%${escapeLike(term)}%`;
-            q.andWhere((b) => {
-              b.whereRaw('su.serial_number ILIKE ? ESCAPE ?', [pattern, '\\']).orWhereRaw(
-                'su.mac_address ILIKE ? ESCAPE ?',
-                [pattern, '\\'],
-              );
-            });
-          }
-          return q;
-        };
-        const countRow = await applyFilters(trx('stock_units as su').where({ 'su.tenant': tenant }))
-          .count<{ count: string }>('* as count')
-          .first();
-        const units = (await applyFilters(stockUnitsWithNames(trx, tenant))
-          .orderBy('su.serial_number', 'asc')
-          .limit(limit)
-          .offset((page - 1) * limit)) as IStockUnit[];
-        return { units, total: Number(countRow?.count ?? 0) };
-      });
+      return withTransaction(db, (trx: Knex.Transaction) => queryInStockUnits(trx, tenant, input));
     });
   },
 );
@@ -241,16 +178,7 @@ export const getUnitDetail = withAuth(
     return withStockUnitActionErrors(async () => {
     await requireInvRead(user);
     const { knex: db } = await createTenantKnex();
-    return withTransaction(db, async (trx: Knex.Transaction) => {
-      const unit = (await trx('stock_units').where({ tenant, unit_id: unitId }).first()) as
-        | IStockUnit
-        | undefined;
-      if (!unit) return null;
-      const movements = (await trx('stock_movements')
-        .where({ tenant, unit_id: unitId })
-        .orderBy('created_at', 'asc')) as IStockMovement[];
-      return { unit, movements };
-    });
+    return withTransaction(db, (trx: Knex.Transaction) => queryUnitDetail(trx, tenant, unitId));
     });
   },
 );

@@ -143,7 +143,21 @@
       "title": "Elemento ad hoc",
       "toggleDoneError": "No se pudo actualizar el elemento."
     },
-    "enterpriseOnly": "Las tareas de flujo de trabajo son una función de Enterprise."
+    "enterpriseOnly": "Las tareas de flujo de trabajo son una función de Enterprise.",
+    "nextAction": "Próxima acción",
+    "overdueSince": "Vencido desde {{date}}",
+    "dueOn": "Vence el {{date}}",
+    "stage": "Etapa",
+    "confidence": "Confianza",
+    "owner": "Propietario",
+    "expectedClose": "Cierre previsto",
+    "mrr": "MRR",
+    "nrr": "NRR",
+    "hardware": "Hardware",
+    "contact": "Contacto",
+    "linkedQuotes": "Presupuestos vinculados",
+    "openOpportunity": "Abrir oportunidad",
+    "opportunityNotFound": "Oportunidad no encontrada."
   },
   "groupedView": {
     "addGroup": "Añadir grupo",

@@ -50,7 +50,10 @@ function addJsExtensions(dir: string) {
         (match, pre, path, post) => {
           if (path.endsWith('.js') || path.endsWith('.json')) return match;
           const resolved = join(dirname(fullPath), path);
-          if (existsSync(resolved) && statSync(resolved).isDirectory()) {
+          // Directory re-exports (`export * from './lib'`) must resolve to the
+          // directory's index.js, not a nonexistent sibling file. A same-named
+          // file wins, matching TypeScript resolution order.
+          if (!existsSync(`${resolved}.js`) && existsSync(resolved) && statSync(resolved).isDirectory()) {
             return `${pre}${path}/index.js${post}`;
           }
           return `${pre}${path}.js${post}`;

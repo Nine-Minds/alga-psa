@@ -180,6 +180,14 @@ const buildCpus = parsePositiveInt(process.env.NEXT_BUILD_CPUS) ?? Math.min(4, h
 const memoryBasedWorkersCount = truthyEnv(process.env.NEXT_BUILD_MEMORY_BASED_WORKERS_COUNT);
 
 const nextConfig = {
+  // Dev-only (ignored in production builds): Next blocks /_next/* asset, HMR,
+  // and RSC requests from origins it does not recognize, which stalls
+  // hydration when a phone/tablet loads the dev server by LAN IP.
+  // Comma-separated hostnames, e.g. DEV_ALLOWED_ORIGINS=192.168.1.20,my-mac.local
+  allowedDevOrigins: (process.env.DEV_ALLOWED_ORIGINS ?? '')
+    .split(',')
+    .map((origin) => origin.trim())
+    .filter(Boolean),
   env: {
     NEXT_PUBLIC_APP_VERSION: process.env.NEXT_PUBLIC_APP_VERSION || appVersion,
     // Propagate edition to client-side code

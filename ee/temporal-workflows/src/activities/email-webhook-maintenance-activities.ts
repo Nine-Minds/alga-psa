@@ -5,3 +5,10 @@ export async function renewMicrosoftWebhooksActivity(options: { tenantId?: strin
   return service.renewMicrosoftWebhooks(options);
 }
 
+export async function reconcilePollingMicrosoftProvidersActivity(options: {
+  tenantId?: string;
+  providerId?: string;
+}): Promise<any[]> {
+  const service = new EmailWebhookMaintenanceService();
+  return service.reconcilePollingProviders(options);
+}

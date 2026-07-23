@@ -11,7 +11,15 @@ import {
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
-import { recordStockMovement, availableQuantity, assertLocationWritable } from '../lib';
+import {
+  recordStockMovement,
+  availableQuantity,
+  assertLocationWritable,
+  publishInventoryEvent,
+  queryTransfers,
+  receiveTransferCore,
+  timestampPayload,
+} from '../lib';
 
 /**
  * Stock transfers — two-step, in-transit moves between locations (design §6.C).
@@ -128,7 +136,7 @@ export const dispatchTransfer = withAuth(
       if (!input.lines || input.lines.length === 0) throw new Error('A transfer requires at least one line');
 
       const { knex: db } = await createTenantKnex();
-      return withTransaction(db, async (trx: Knex.Transaction) => {
+      const result = await withTransaction(db, async (trx: Knex.Transaction) => {
         // A tech can't dispatch stock out of another tech's van (F034).
         await assertLocationWritable(trx, tenant, (user as any)?.user_id, fromLocation);
         const [transfer] = await trx('stock_transfers')
@@ -193,6 +201,15 @@ export const dispatchTransfer = withAuth(
 
         return (await loadTransfer(trx, tenant, transfer.transfer_id)) as IStockTransfer;
       });
+      await publishInventoryEvent('INVENTORY_TRANSFER_DISPATCHED', timestampPayload({
+        tenant,
+        transfer_id: result.transfer_id,
+        from_location_id: result.from_location_id,
+        to_location_id: result.to_location_id,
+        line_count: result.lines?.length ?? 0,
+        user_id: user.user_id,
+      }));
+      return result;
     });
   },
 );
@@ -202,37 +219,18 @@ export const receiveTransfer = withAuth(
     return withTransferActionErrors(async () => {
       await requireTransferPerm(user, 'update');
       const { knex: db } = await createTenantKnex();
-      return withTransaction(db, async (trx: Knex.Transaction) => {
-        // Header row lock = transition mutex: a concurrent duplicate receive (or a
-        // racing cancel) blocks here and is then rejected by the status guard (F019).
-        const transfer = await trx('stock_transfers').where({ tenant, transfer_id: transferId }).forUpdate().first();
-        if (!transfer) throw new Error('Transfer not found');
-        if (transfer.status !== 'dispatched') throw new Error(`Cannot receive a transfer in status '${transfer.status}'`);
-
-        const lines = (await trx('stock_transfer_lines')
-          .where({ tenant, transfer_id: transferId })) as IStockTransferLine[];
-
-        for (const line of lines) {
-          await recordStockMovement(trx, tenant, {
-            movement_type: 'transfer_in',
-            service_id: line.service_id,
-            quantity: Number(line.quantity),
-            unit_id: line.unit_id ?? null,
-            from_location_id: transfer.from_location_id,
-            to_location_id: transfer.to_location_id,
-            source_doc_type: 'transfer',
-            source_doc_id: transferId,
-            performed_by: user.user_id,
-            ...(line.unit_id ? { unitPatch: { status: 'in_stock', location_id: transfer.to_location_id } } : {}),
-          });
-        }
-
-        await trx('stock_transfers')
-          .where({ tenant, transfer_id: transferId })
-          .update({ status: 'received', received_by: user.user_id, received_at: trx.fn.now(), updated_at: trx.fn.now() });
-
-        return (await loadTransfer(trx, tenant, transferId)) as IStockTransfer;
-      });
+      const result = await withTransaction(db, (trx: Knex.Transaction) =>
+        receiveTransferCore(trx, tenant, user.user_id, { transfer_id: transferId }),
+      );
+      await publishInventoryEvent('INVENTORY_TRANSFER_RECEIVED', timestampPayload({
+        tenant,
+        transfer_id: result.transfer_id,
+        from_location_id: result.from_location_id,
+        to_location_id: result.to_location_id,
+        line_count: result.lines?.length ?? 0,
+        user_id: user.user_id,
+      }));
+      return result;
     });
   },
 );
@@ -298,13 +296,7 @@ export const listTransfers = withAuth(
     return withTransferActionErrors(async () => {
       await requireTransferPerm(user, 'read');
       const { knex: db } = await createTenantKnex();
-      return withTransaction(db, async (trx: Knex.Transaction) => {
-        const q = trx('stock_transfers').where({ tenant });
-        if (opts?.status) q.andWhere({ status: opts.status });
-        if (opts?.from_location_id) q.andWhere({ from_location_id: opts.from_location_id });
-        if (opts?.to_location_id) q.andWhere({ to_location_id: opts.to_location_id });
-        return (await q.orderBy('dispatched_at', 'desc')) as IStockTransfer[];
-      });
+      return withTransaction(db, (trx: Knex.Transaction) => queryTransfers(trx, tenant, opts));
     });
   },
 );

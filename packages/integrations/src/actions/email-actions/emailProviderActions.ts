@@ -387,6 +387,9 @@ async function persistMicrosoftConfig(
       webhook_subscription_id: null,
       webhook_expires_at: null,
       webhook_verification_token: null,
+      delivery_mode: 'polling',
+      webhook_silent_runs: 0,
+      next_subscription_probe_at: null,
       created_at: now,
       updated_at: now,
     })
@@ -698,6 +701,11 @@ export const getEmailProviders = withAuth(async (
             'webhook_subscription_id',
             'webhook_expires_at',
             'webhook_verification_token',
+            'last_subscription_renewal',
+            'delivery_mode',
+            'last_webhook_delivery_at',
+            'webhook_silent_runs',
+            'next_subscription_probe_at',
             'created_at',
             'updated_at'
           )
@@ -1277,6 +1285,20 @@ export const testEmailProviderConnection = withAuth(async (
           'Microsoft 365 authentication failed. Reconnect the mailbox and try again.',
           'connection_failed'
         );
+      }
+
+      if (vendorConfig.delivery_mode === 'polling') {
+        const [probeResult] = await new EmailWebhookMaintenanceService().renewMicrosoftWebhooks({
+          tenantId: tenant,
+          providerId,
+          lookAheadMinutes: 0,
+        });
+        if (probeResult && !probeResult.success) {
+          return emailProviderOperationError(
+            probeResult.error || 'Microsoft webhook recovery probe failed.',
+            'connection_failed'
+          );
+        }
       }
     }
 

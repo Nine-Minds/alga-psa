@@ -39,6 +39,7 @@ export function registerProductRoutes(
       item_kind: zOpenApi.enum(['product']),
       is_active: zOpenApi.boolean().optional(),
       sku: zOpenApi.string().nullable().optional(),
+      barcode: zOpenApi.string().nullable().optional(),
       cost: zOpenApi.number().nullable().optional(),
       cost_currency: zOpenApi.string().length(3).nullable().optional(),
       vendor: zOpenApi.string().nullable().optional(),
@@ -143,6 +144,10 @@ export function registerProductRoutes(
         description: 'Authenticated user lacks the required permission.',
         schema: deps.ErrorResponse,
       },
+      409: {
+        description: 'A product with the submitted SKU or barcode already exists.',
+        schema: deps.ErrorResponse,
+      },
     },
     extensions: {
       'x-tenant-header-required': true,
@@ -227,6 +232,10 @@ export function registerProductRoutes(
       },
       404: {
         description: 'Product not found.',
+        schema: deps.ErrorResponse,
+      },
+      409: {
+        description: 'A product with the submitted SKU or barcode already exists.',
         schema: deps.ErrorResponse,
       },
     },

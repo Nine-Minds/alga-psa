@@ -3,12 +3,16 @@ import { headers } from 'next/headers.js';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { tenantDb } from '@alga-psa/db';
 import { createTenantKnex, runWithTenant } from '../../../../../lib/db';
-import { MicrosoftGraphAdapter } from '@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter';
+import {
+  MicrosoftGraphAdapter,
+  MicrosoftSubscriptionError,
+} from '@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter';
 import { resolveMicrosoftConsumerProfileConfig } from '@alga-psa/integrations/lib/microsoftConsumerProfileResolution';
 import { getWebhookBaseUrl } from '../../../../../utils/email/webhookHelpers';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import axios from 'axios';
 import { getMicrosoftTokenUrl } from '@alga-psa/shared/services/email/microsoftGraphEndpoints';
+import { EmailWebhookMaintenanceService } from '@alga-psa/shared/services/email/EmailWebhookMaintenanceService';
 
 export const dynamic = 'force-dynamic';
 
@@ -380,19 +384,39 @@ export async function GET(request: NextRequest) {
                   });
 
                   await adapter.registerWebhookSubscription();
+                  await new EmailWebhookMaintenanceService().recordWebhookDeliveryMode({
+                    providerId: provider.id,
+                    tenant: provider.tenant,
+                    reason: 'OAuth setup subscription succeeded',
+                  });
 
                   console.log('[MS OAuth Callback] Webhook subscription registration attempted');
                 } catch (subErr: any) {
+                  if (subErr instanceof MicrosoftSubscriptionError && subErr.kind === 'validation') {
+                    const nextProbeAt = await new EmailWebhookMaintenanceService().usePollingDelivery({
+                      providerId: provider.id,
+                      tenant: provider.tenant,
+                      reason: subErr.message,
+                    });
+                    console.info('[MS OAuth Callback] Webhook endpoint validation failed; using polling delivery', {
+                      tenant: provider.tenant,
+                      providerId: provider.id,
+                      nextProbeAt,
+                    });
+                    return;
+                  }
                   console.warn('⚠️ Failed to register Microsoft webhook subscription in callback:', {
                     message: subErr?.message || String(subErr),
                     status: subErr?.status,
                     code: subErr?.code,
                     requestId: subErr?.requestId,
                   });
+                  throw subErr;
                 }
               }
             } catch (e) {
-              console.warn('⚠️ Skipped webhook initialization after OAuth due to setup error:', (e as any)?.message || e);
+              console.warn('⚠️ Microsoft webhook initialization failed after OAuth:', (e as any)?.message || e);
+              throw e;
             }
           });
         } catch (persistErr: any) {

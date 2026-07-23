@@ -9,3 +9,4 @@ export { default as PortalSwitchPrompt } from './components/PortalSwitchPrompt';
 export { default as RegisterForm } from './components/RegisterForm';
 export { default as SignOutDialog } from './components/SignOutDialog';
 export { default as TwoFactorInput } from './components/TwoFA';
+export { appendPortalDomain, buildPasswordResetLink } from './lib/portalDomain';

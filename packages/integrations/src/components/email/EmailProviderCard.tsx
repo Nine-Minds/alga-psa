@@ -235,7 +235,7 @@ export function EmailProviderCard({
       </CardHeader>
 
       <CardContent className="pt-0">
-        <div className="grid grid-cols-3 gap-4 text-sm">
+        <div className="grid grid-cols-2 gap-4 text-sm lg:grid-cols-4">
           <div>
             <div className="flex items-center space-x-1 text-muted-foreground mb-1">
               {getStatusIcon(provider.status)}
@@ -253,9 +253,26 @@ export function EmailProviderCard({
           </div>
 
           <div>
-            <div className="text-muted-foreground mb-1">{t('providerCard.fields.lastSync', { defaultValue: 'Last Sync' })}</div>
+            <div className="text-muted-foreground mb-1">
+              {provider.providerType === 'microsoft'
+                ? t('providerCard.fields.lastIngested', { defaultValue: 'Last ingested' })
+                : t('providerCard.fields.lastSync', { defaultValue: 'Last Sync' })}
+            </div>
             <div className="font-medium">{formatLastSync(provider.lastSyncAt)}</div>
           </div>
+
+          {provider.providerType === 'microsoft' && provider.microsoftConfig && (
+            <div>
+              <div className="text-muted-foreground mb-1">
+                {t('providerCard.fields.delivery', { defaultValue: 'Delivery' })}
+              </div>
+              <div className="font-medium">
+                {provider.microsoftConfig.delivery_mode === 'polling'
+                  ? t('providerCard.delivery.polling', { defaultValue: 'Polling every 3 minutes' })
+                  : t('providerCard.delivery.webhook', { defaultValue: 'Real-time delivery: active' })}
+              </div>
+            </div>
+          )}
 
           <div>
             <div className="text-muted-foreground mb-1">{t('providerCard.fields.created', { defaultValue: 'Created' })}</div>

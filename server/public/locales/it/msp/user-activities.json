@@ -143,7 +143,21 @@
       "title": "Elemento ad hoc",
       "toggleDoneError": "Impossibile aggiornare l'elemento."
     },
-    "enterpriseOnly": "Le attività del workflow sono una funzionalità Enterprise."
+    "enterpriseOnly": "Le attività del workflow sono una funzionalità Enterprise.",
+    "nextAction": "Azione successiva",
+    "overdueSince": "In ritardo dal {{date}}",
+    "dueOn": "Scadenza il {{date}}",
+    "stage": "Fase",
+    "confidence": "Confidenza",
+    "owner": "Proprietario",
+    "expectedClose": "Chiusura prevista",
+    "mrr": "MRR",
+    "nrr": "NRR",
+    "hardware": "Hardware",
+    "contact": "Contatto",
+    "linkedQuotes": "Preventivi collegati",
+    "openOpportunity": "Apri opportunità",
+    "opportunityNotFound": "Opportunità non trovata."
   },
   "groupedView": {
     "addGroup": "Aggiungi gruppo",

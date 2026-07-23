@@ -11,15 +11,17 @@ import { useTranslation } from '@alga-psa/ui/lib';
 import SsoProviderButtons from '@alga-psa/auth/sso/entry';
 import CaptchaChallenge from './CaptchaChallenge';
 import { useLoginCaptcha } from './useLoginCaptcha';
+import { appendPortalDomain } from '../lib/portalDomain';
 
 interface ClientLoginFormProps {
   callbackUrl: string;
   onError: (error: string) => void;
   onTwoFactorRequired: () => void;
   tenantSlug?: string;
+  portalDomain?: string;
 }
 
-export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequired, tenantSlug }: ClientLoginFormProps) {
+export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequired, tenantSlug, portalDomain }: ClientLoginFormProps) {
   const { t } = useTranslation('client-portal');
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -189,7 +191,7 @@ export default function ClientLoginForm({ callbackUrl, onError, onTwoFactorRequi
 
       <div className="text-right">
         <Link
-          href="/auth/client-portal/forgot-password"
+          href={appendPortalDomain('/auth/client-portal/forgot-password', portalDomain)}
           className="text-sm text-[rgb(var(--color-primary-500))] hover:text-[rgb(var(--color-primary-600))] transition-colors"
           {...withDataAutomationId({ id: 'client-forgot-password-link' })}
         >

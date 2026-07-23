@@ -26,7 +26,10 @@ This guide walks an administrator through connecting a Microsoft 365 / Exchange 
   * Delegated Microsoft Graph permissions: `Mail.Read`, `Mail.Read.Shared`, `offline_access` (the OAuth flow requests read-only mail access).
 * The mailbox to connect (a licensed user mailbox or a shared mailbox the authorizing user can read).
 * An Alga PSA user with permission to manage system settings (**Settings → Integrations → Providers** requires `system_settings:update`).
-* The server must be reachable from the public internet at its configured base URL — Microsoft Graph delivers notifications to `https://<your-host>/api/email/webhooks/microsoft`.
+* The appliance needs outbound HTTPS access to `graph.microsoft.com` and
+  `login.microsoftonline.com`. A public inbound URL is optional: when Microsoft
+  cannot validate the notification endpoint, Alga PSA automatically uses
+  outbound-only polling.
 
 ## End-to-End Flow
 
@@ -37,8 +40,11 @@ flowchart TD
     C --> D[Click 'Authorize Access' -> OAuth popup]
     D --> E[User signs in and consents]
     E --> F[/api/auth/microsoft/callback stores tokens/]
-    F --> G[Graph webhook subscription registered automatically]
-    G --> H[Provider connected - new mail becomes tickets]
+    F --> G{Graph webhook endpoint reachable?}
+    G -->|Yes| H[Real-time webhook delivery]
+    G -->|No| I[Outbound-only polling every 3 minutes]
+    H --> J[Provider connected - new mail becomes tickets]
+    I --> J
 ```
 
 ## Step-by-Step
@@ -69,13 +75,16 @@ Provider credentials are entered only here — the email provider form itself no
    * **Folder Filters** — comma-separated folders to watch (defaults to `Inbox`).
    * **Max Emails Per Sync** — 1–1000, defaults to 50.
    * **Redirect URI** — pre-filled; must exactly match the URI registered in Entra.
-4. Click **Authorize Access** and complete the Microsoft consent in the popup. The window closes automatically; the Graph webhook subscription is registered as part of the callback, and the provider shows as connected.
+4. Click **Authorize Access** and complete the Microsoft consent in the popup.
+   The window closes automatically. Alga PSA attempts to register a Graph
+   webhook and falls back to polling when Microsoft cannot reach the configured
+   notification URL; either delivery mode appears as connected.
 
 ## How It Works at Runtime
 
-* The OAuth callback stores the access/refresh tokens and immediately creates a Microsoft Graph **change-notification subscription** (`changeType: created`) on the watched folder(s), pointing at `https://<your-host>/api/email/webhooks/microsoft`.
+* The OAuth callback stores the access/refresh tokens and attempts to create a Microsoft Graph **change-notification subscription** (`changeType: created`) on the watched folder(s), pointing at `https://<your-host>/api/email/webhooks/microsoft`.
 * Graph subscriptions are short-lived (created for roughly 60 hours). A background maintenance job sweeps every 15 minutes with a 24-hour look-ahead, renews subscriptions before expiry, and recreates them if Graph reports them gone.
-* Delivery is webhook-driven — there is no timed polling for Microsoft providers. Each notification enqueues the message pointer; a worker fetches the full message from Graph and runs the standard email-to-ticket workflow.
+* With a reachable endpoint, delivery is webhook-driven and reconciliation remains a 15-minute safety net. If endpoint validation fails, or reconciliation repeatedly finds messages that webhooks missed, the provider switches to outbound-only polling every 3 minutes. Polling providers retry webhook registration daily and whenever **Test Connection** is used.
 * The connector operates read-only against the mailbox: it does not mark messages, move them, or send replies.
 
 If no tenant profile is bound to the Email consumer, hosted deployments fall back to the platform-level Microsoft app credentials (`MICROSOFT_CLIENT_ID` / `MICROSOFT_CLIENT_SECRET` / `MICROSOFT_TENANT_ID`). Self-hosted installs should always configure their own profile.
@@ -98,5 +107,10 @@ To enable outbound on an appliance install:
 * **"Authorize Access" is disabled / alert about provider settings** — no Microsoft profile is bound to the Email consumer. Use the **Open Providers Settings** link (or **Settings → Integrations → Providers**) and create/bind a profile first.
 * **OAuth popup fails** — confirm the redirect URI in the form exactly matches the one registered in the Entra app, and that the app allows multi-tenant sign-in (`/common` authority).
 * **Provider says Ready/connected but customers get no email** — expected: this provider is inbound-only. Configure outbound SMTP (or Resend) as described above.
-* **No new tickets from incoming mail** — check the provider's subscription health (`email_provider_health` / the renewal status in the provider list) and use the retry-renewal action; Graph subscriptions expire if renewal cannot reach Microsoft. Also confirm the server's base URL is publicly reachable, since notifications are pushed to `/api/email/webhooks/microsoft`.
+* **No new tickets from incoming mail** — check the provider's delivery mode and
+  last-ingested time. Webhook mode requires Microsoft to reach
+  `/api/email/webhooks/microsoft`; polling mode requires only outbound HTTPS to
+  `graph.microsoft.com` and `login.microsoftonline.com`. **Test Connection**
+  checks Graph access and immediately retries webhook registration without
+  changing the last-ingested cursor.
 * **Wrong folder being watched** — adjust **Folder Filters** on the provider and re-save; each watched folder needs its own subscription.

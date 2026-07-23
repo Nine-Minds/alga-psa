@@ -143,7 +143,21 @@
       "title": "Element ad hoc",
       "toggleDoneError": "Nie udało się zaktualizować elementu."
     },
-    "enterpriseOnly": "Zadania przepływu pracy są funkcją wersji Enterprise."
+    "enterpriseOnly": "Zadania przepływu pracy są funkcją wersji Enterprise.",
+    "nextAction": "Następna akcja",
+    "overdueSince": "Zaległe od {{date}}",
+    "dueOn": "Termin: {{date}}",
+    "stage": "Etap",
+    "confidence": "Pewność",
+    "owner": "Właściciel",
+    "expectedClose": "Przewidywane zamknięcie",
+    "mrr": "MRR",
+    "nrr": "NRR",
+    "hardware": "Sprzęt",
+    "contact": "Kontakt",
+    "linkedQuotes": "Powiązane oferty",
+    "openOpportunity": "Otwórz szansę",
+    "opportunityNotFound": "Nie znaleziono szansy."
   },
   "groupedView": {
     "addGroup": "Dodaj grupę",

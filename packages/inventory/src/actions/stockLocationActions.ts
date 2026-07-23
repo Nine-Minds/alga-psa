@@ -11,6 +11,7 @@ import {
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+import { queryStockLocation, queryStockLocations } from '../lib';
 
 const LOCATION_TYPES: StockLocationType[] = ['warehouse', 'van', 'office', 'other'];
 
@@ -105,58 +106,7 @@ export const listStockLocations = withAuth(
     return withStockLocationActionErrors(async () => {
       await requireLocationPerm(user, 'read');
       const { knex: db } = await createTenantKnex();
-      return withTransaction(db, async (trx: Knex.Transaction) => {
-      // Plain list (most callers): no occupancy join, so the dropdowns/pickers stay cheap.
-      if (!opts?.includeStock) {
-        const q = trx('stock_locations').where({ tenant });
-        if (!opts?.includeInactive) q.andWhere({ is_active: true });
-        return (await q.orderBy('name', 'asc')) as IStockLocation[];
-      }
-
-      // Occupancy per location in one round-trip. The row displays item_type_count — the number of
-      // DISTINCT products on hand — because a summed piece-count across unlike items (phones + cables)
-      // isn't a meaningful quantity, whereas "how many kinds are here" is, and it stays legible from 3
-      // to 750 types. on_hand_qty (SUM of quantity_on_hand, which already folds serialized in-stock
-      // units in via the recompute) is kept as a coarse total for the drill-in header. unit_count
-      // (present serialized units) is kept only to gate Deactivate and flag units present-but-not-on-
-      // hand (allocated / in transit). COALESCE so empty locations read 0.
-      const levelAgg = trx('stock_levels')
-        .select('location_id')
-        .countDistinct({ item_type_count: 'service_id' })
-        .sum({ on_hand_qty: 'quantity_on_hand' })
-        .where({ tenant })
-        .andWhere('quantity_on_hand', '>', 0)
-        .groupBy('location_id')
-        .as('lvl');
-      const unitAgg = trx('stock_units')
-        .select('location_id')
-        .count({ unit_count: '*' })
-        .where({ tenant })
-        .whereIn('status', ['in_stock', 'allocated', 'in_transit'])
-        .groupBy('location_id')
-        .as('un');
-
-      const q = trx('stock_locations as loc')
-        .leftJoin(levelAgg, 'lvl.location_id', 'loc.location_id')
-        .leftJoin(unitAgg, 'un.location_id', 'loc.location_id')
-        .where('loc.tenant', tenant);
-      if (!opts?.includeInactive) q.andWhere('loc.is_active', true);
-
-      const rows = await q
-        .orderBy('loc.name', 'asc')
-        .select(
-          'loc.*',
-          trx.raw('COALESCE(lvl.item_type_count, 0) as item_type_count'),
-          trx.raw('COALESCE(lvl.on_hand_qty, 0) as on_hand_qty'),
-          trx.raw('COALESCE(un.unit_count, 0) as unit_count'),
-        );
-      return rows.map((r: any) => ({
-        ...r,
-        item_type_count: Number(r.item_type_count),
-        on_hand_qty: Number(r.on_hand_qty),
-        unit_count: Number(r.unit_count),
-      })) as IStockLocation[];
-      });
+      return withTransaction(db, (trx: Knex.Transaction) => queryStockLocations(trx, tenant, opts));
     });
   },
 );
@@ -166,10 +116,7 @@ export const getStockLocation = withAuth(
     return withStockLocationActionErrors(async () => {
       await requireLocationPerm(user, 'read');
       const { knex: db } = await createTenantKnex();
-      return withTransaction(db, async (trx: Knex.Transaction) => {
-        const row = await trx('stock_locations').where({ tenant, location_id: locationId }).first();
-        return (row ?? null) as IStockLocation | null;
-      });
+      return withTransaction(db, (trx: Knex.Transaction) => queryStockLocation(trx, tenant, locationId));
     });
   },
 );

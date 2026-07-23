@@ -1094,6 +1094,24 @@ export const validateOnboardingDefaults = withAuth(async (
   }
 });
 
+export const saveOnboardingStepPosition = withAuth(async (
+  _user: IUserWithRoles,
+  _ctx: AuthContext,
+  step: number
+): Promise<OnboardingActionResult> => {
+  try {
+    if (!Number.isInteger(step) || step < 0) {
+      return { success: false, error: 'Invalid step position' };
+    }
+
+    await saveTenantOnboardingProgress({ currentStep: step });
+    return { success: true };
+  } catch (error) {
+    console.error('Error saving onboarding step position:', error);
+    return { success: false, error: onboardingActionErrorMessage(error, 'Failed to save onboarding step position') };
+  }
+});
+
 export const completeOnboarding = withAuth(async (
   _user: IUserWithRoles,
   _ctx: AuthContext

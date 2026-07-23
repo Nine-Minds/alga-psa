@@ -13,6 +13,54 @@ import { getAdminConnection } from '../../../db/admin';
 import { tenantDb } from '@alga-psa/db';
 import { getMicrosoftGraphBaseUrl, getMicrosoftTokenUrl } from '../microsoftGraphEndpoints';
 
+export type MicrosoftSubscriptionErrorKind = 'validation' | 'authentication' | 'other';
+
+export class MicrosoftSubscriptionError extends Error {
+  constructor(
+    message: string,
+    public readonly kind: MicrosoftSubscriptionErrorKind,
+    public readonly status?: number,
+    public readonly code?: string,
+    options?: { cause?: unknown }
+  ) {
+    super(message, options);
+    this.name = 'MicrosoftSubscriptionError';
+  }
+}
+
+export interface MicrosoftWebhookInitializationResult {
+  success: boolean;
+  subscriptionId?: string;
+  error?: string;
+  errorKind?: MicrosoftSubscriptionErrorKind;
+}
+
+function classifySubscriptionError(error: any): MicrosoftSubscriptionErrorKind {
+  const status = error?.response?.status ?? error?.status;
+  const code = String(error?.response?.data?.error?.code ?? error?.code ?? '');
+  const message = String(
+    error?.response?.data?.error?.message ?? error?.message ?? error ?? ''
+  ).toLowerCase();
+
+  if (status === 401 || status === 403 || code === 'ErrorAccessDenied') {
+    return 'authentication';
+  }
+
+  if (
+    code === 'ValidationError' ||
+    code === 'ECONNABORTED' ||
+    message.includes('validation') ||
+    message.includes('notification url') ||
+    message.includes('notificationurl') ||
+    message.includes('validation token') ||
+    message.includes('endpoint') && message.includes('respond')
+  ) {
+    return 'validation';
+  }
+
+  return 'other';
+}
+
 /**
  * Microsoft Graph API adapter for email processing
  * Handles OAuth authentication, webhook subscriptions, and message retrieval
@@ -479,6 +527,9 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
             webhook_subscription_id: response.data.id,
             webhook_expires_at: response.data.expirationDateTime,
             webhook_verification_token: this.config.webhook_verification_token || null,
+            delivery_mode: 'webhook',
+            webhook_silent_runs: 0,
+            next_subscription_probe_at: null,
             updated_at: new Date().toISOString(),
           });
       } catch (dbErr: any) {
@@ -497,7 +548,13 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         requestId: (enriched as any).requestId,
         responseBody: (enriched as any).responseBody,
       });
-      throw enriched;
+      throw new MicrosoftSubscriptionError(
+        enriched.message,
+        classifySubscriptionError(error),
+        (enriched as any).status,
+        String((enriched as any).code || ''),
+        { cause: error }
+      );
     }
   }
 
@@ -1314,10 +1371,23 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
     }
   }
 
+  async deleteWebhookSubscription(): Promise<void> {
+    const subscriptionId = this.config.webhook_subscription_id;
+    if (!subscriptionId) return;
+
+    try {
+      await this.httpClient.delete(`/subscriptions/${encodeURIComponent(subscriptionId)}`);
+    } catch (error: any) {
+      if (error?.response?.status !== 404) {
+        throw this.handleError(error, 'deleteWebhookSubscription');
+      }
+    }
+  }
+
   /**
    * Initialize webhook subscription for email notifications
    */
-  async initializeWebhook(webhookUrl: string): Promise<{ success: boolean; subscriptionId?: string; error?: string }> {
+  async initializeWebhook(webhookUrl: string): Promise<MicrosoftWebhookInitializationResult> {
     try {
       this.log('info', `Initializing webhook subscription to ${webhookUrl}`);
       this.config.webhook_notification_url = webhookUrl;
@@ -1325,7 +1395,9 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
       return { success: true, subscriptionId: this.config.webhook_subscription_id };
     } catch (error) {
       // Enrich/log details (status, request-id, body) before throwing
-      const enriched = this.handleError(error, 'initializeWebhook');
+      const enriched = error instanceof MicrosoftSubscriptionError
+        ? error
+        : this.handleError(error, 'initializeWebhook');
       this.log('error', 'Subscription creation failed (initializeWebhook)', {
         message: enriched.message,
         context: 'initializeWebhook',
@@ -1335,7 +1407,11 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
         responseBody: (enriched as any).responseBody,
       });
       // Return error info instead of throwing to satisfy return type
-      return { success: false, error: enriched.message };
+      return {
+        success: false,
+        error: enriched.message,
+        errorKind: error instanceof MicrosoftSubscriptionError ? error.kind : 'other',
+      };
     }
   }
 

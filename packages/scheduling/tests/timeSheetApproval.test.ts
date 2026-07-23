@@ -217,17 +217,19 @@ describe('TimeSheetApproval', () => {
 
     await flushUi();
 
-    const toggleButton = container.querySelector('button[title="Show Details"]');
-    if (!toggleButton) {
-      throw new Error('Show Details button not found');
-    }
+    const toggleButton = await waitFor(() => {
+      const button = container.querySelector('button[title="Show Details"]');
+      expect(button).not.toBeNull();
+      return button as HTMLButtonElement;
+    }, { timeout: 5_000 });
     toggleButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     await flushUi();
 
-    const suggestionInput = container.querySelector('textarea');
-    if (!suggestionInput) {
-      throw new Error('Suggestion input not found');
-    }
+    const suggestionInput = await waitFor(() => {
+      const input = container.querySelector('textarea');
+      expect(input).not.toBeNull();
+      return input as HTMLTextAreaElement;
+    }, { timeout: 5_000 });
 
     const valueSetter = Object.getOwnPropertyDescriptor(
       HTMLTextAreaElement.prototype,
@@ -239,12 +241,13 @@ describe('TimeSheetApproval', () => {
     suggestionInput.dispatchEvent(new Event('change', { bubbles: true }));
     await flushUi();
 
-    let requestChangesButton = Array.from(container.querySelectorAll('button')).find(
-      node => node.textContent?.includes('Request Changes'),
-    );
-    if (!requestChangesButton) {
-      throw new Error('Request Changes button not found');
-    }
+    let requestChangesButton = await waitFor(() => {
+      const button = Array.from(container.querySelectorAll('button')).find(
+        node => node.textContent?.includes('Request Changes'),
+      );
+      expect(button).toBeDefined();
+      return button as HTMLButtonElement;
+    }, { timeout: 5_000 });
     requestChangesButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     await flushUi();
 
@@ -267,19 +270,21 @@ describe('TimeSheetApproval', () => {
     renderApprovalDrawer();
     await flushUi();
 
-    const freshToggleButton = container.querySelector('button[title="Show Details"]');
-    if (!freshToggleButton) {
-      throw new Error('Show Details button not found');
-    }
+    const freshToggleButton = await waitFor(() => {
+      const button = container.querySelector('button[title="Show Details"]');
+      expect(button).not.toBeNull();
+      return button as HTMLButtonElement;
+    }, { timeout: 5_000 });
     freshToggleButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     await flushUi();
 
-    requestChangesButton = Array.from(container.querySelectorAll('button')).find(
-      node => node.textContent?.includes('Request Changes'),
-    );
-    if (!requestChangesButton) {
-      throw new Error('Request Changes button not found');
-    }
+    requestChangesButton = await waitFor(() => {
+      const button = Array.from(container.querySelectorAll('button')).find(
+        node => node.textContent?.includes('Request Changes'),
+      );
+      expect(button).toBeDefined();
+      return button as HTMLButtonElement;
+    }, { timeout: 5_000 });
     requestChangesButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     await flushUi();
 
@@ -376,7 +381,9 @@ describe('TimeSheetApproval', () => {
     requestChangesButton.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     await flushUi();
 
-    expect(container.textContent).toContain('Please correct the service classification.');
-    expect(container.querySelector('[data-feedback-state="unresolved"]')).not.toBeNull();
+    await waitFor(() => {
+      expect(container.textContent).toContain('Please correct the service classification.');
+      expect(container.querySelector('[data-feedback-state="unresolved"]')).not.toBeNull();
+    }, { timeout: 5_000 });
   });
 });

@@ -15,6 +15,14 @@ import { ClientDetailScreen } from "../screens/ClientDetailScreen";
 import { ContactDetailScreen } from "../screens/ContactDetailScreen";
 import { ProjectTaskDetailScreen } from "../screens/ProjectTaskDetailScreen";
 import { WorkflowTaskDetailScreen } from "../screens/WorkflowTaskDetailScreen";
+import { StockProductDetailScreen } from "../screens/StockProductDetailScreen";
+import { StockUnitDetailScreen } from "../screens/StockUnitDetailScreen";
+import { InventoryReceiveScreen } from "../screens/InventoryReceiveScreen";
+import { InventoryAdjustScreen } from "../screens/InventoryAdjustScreen";
+import { CountSessionScreen } from "../screens/CountSessionScreen";
+import { PurchaseOrderDetailScreen } from "../screens/PurchaseOrderDetailScreen";
+import { AssetDetailScreen } from "../screens/AssetDetailScreen";
+import { OpportunityDetailScreen } from "../screens/OpportunityDetailScreen";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../ui/ThemeContext";
 import { useNotifications } from "../notifications/useNotifications";
@@ -30,6 +38,8 @@ export function RootNavigator({ isSignedIn }: { isSignedIn: boolean }) {
   const { t: tClients } = useTranslation("clients");
   const { t: tContacts } = useTranslation("contacts");
   const { t: tUserActivities } = useTranslation("userActivities");
+  const { t: tInventory } = useTranslation("inventory");
+  const { t: tOpportunities } = useTranslation("opportunities");
   const backLabel = tCommon("back", "Back");
 
   // Register push token and handle notification taps (no-op when feature flag is off)
@@ -121,6 +131,70 @@ export function RootNavigator({ isSignedIn }: { isSignedIn: boolean }) {
             component={WorkflowTaskDetailScreen}
             options={({ navigation }) => ({
               title: tUserActivities("workflowTask.title", "Workflow task"),
+              ...headerBackOptions(backLabel, goBackOrTabs(navigation)),
+            })}
+          />
+          <Stack.Screen
+            name="StockProductDetail"
+            component={StockProductDetailScreen}
+            options={({ navigation, route }) => ({
+              title: route.params.serviceName ?? tInventory("stock.title", "Stock"),
+              ...headerBackOptions(backLabel, goBackOrTabs(navigation)),
+            })}
+          />
+          <Stack.Screen
+            name="StockUnitDetail"
+            component={StockUnitDetailScreen}
+            options={({ navigation }) => ({
+              title: tInventory("unit.title", "Unit"),
+              ...headerBackOptions(backLabel, goBackOrTabs(navigation)),
+            })}
+          />
+          <Stack.Screen
+            name="InventoryReceive"
+            component={InventoryReceiveScreen}
+            options={({ navigation }) => ({
+              title: tInventory("receive.title", "Receive stock"),
+              ...headerBackOptions(backLabel, goBackOrTabs(navigation)),
+            })}
+          />
+          <Stack.Screen
+            name="InventoryAdjust"
+            component={InventoryAdjustScreen}
+            options={({ navigation }) => ({
+              title: tInventory("adjust.title", "Adjust stock"),
+              ...headerBackOptions(backLabel, goBackOrTabs(navigation)),
+            })}
+          />
+          <Stack.Screen
+            name="CountSession"
+            component={CountSessionScreen}
+            options={({ navigation, route }) => ({
+              title: route.params.locationName ?? tInventory("counts.title", "Counts"),
+              ...headerBackOptions(backLabel, goBackOrTabs(navigation)),
+            })}
+          />
+          <Stack.Screen
+            name="PurchaseOrderDetail"
+            component={PurchaseOrderDetailScreen}
+            options={({ navigation, route }) => ({
+              title: route.params.poNumber ?? tInventory("pos.title", "Purchase orders"),
+              ...headerBackOptions(backLabel, goBackOrTabs(navigation)),
+            })}
+          />
+          <Stack.Screen
+            name="AssetDetail"
+            component={AssetDetailScreen}
+            options={({ navigation, route }) => ({
+              title: route.params.assetName ?? tInventory("asset.title", "Asset"),
+              ...headerBackOptions(backLabel, goBackOrTabs(navigation)),
+            })}
+          />
+          <Stack.Screen
+            name="OpportunityDetail"
+            component={OpportunityDetailScreen}
+            options={({ navigation, route }) => ({
+              title: route.params.title ?? tOpportunities("title", "Opportunities"),
               ...headerBackOptions(backLabel, goBackOrTabs(navigation)),
             })}
           />

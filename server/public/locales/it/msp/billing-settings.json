@@ -885,6 +885,9 @@
         "kitPricingMode": "Modalità prezzo kit",
         "kitPricingSum": "Somma dei componenti",
         "kitPricingFixed": "Prezzo fisso"
+      },
+      "barcode": {
+        "label": "Codice a barre (UPC/EAN)"
       }
     },
     "options": {

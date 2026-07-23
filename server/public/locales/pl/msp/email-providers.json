@@ -172,10 +172,16 @@
     "fields": {
       "status": "Status",
       "lastSync": "Ostatnia synchronizacja",
+      "lastIngested": "Ostatnio pobrano",
+      "delivery": "Dostarczanie",
       "created": "Utworzono",
       "subscription": "Subskrypcja",
       "defaults": "Domyślne ustawienia zgłoszeń",
       "error": "Błąd:"
+    },
+    "delivery": {
+      "polling": "Odpytywanie co 3 minuty",
+      "webhook": "Dostarczanie w czasie rzeczywistym: aktywne"
     },
     "values": {
       "active": "Aktywny",

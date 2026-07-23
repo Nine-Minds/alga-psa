@@ -138,6 +138,11 @@ export async function handleMicrosoftWebhookPost(request: NextRequest) {
           const row: any = await providerQuery
             .where('mc.webhook_subscription_id', providerId)
             .andWhere('ep.provider_type', 'microsoft')
+            // Serialize accepted-delivery stamping with the silence detector's
+            // conditional counter/mode updates. Without this lock, a handler
+            // could validate the old subscription, pause, and reset the counter
+            // only after reconciliation had already culled it.
+            .forUpdate('mc')
             .first(
               'ep.*',
               trx.raw('mc.client_id as mc_client_id'),
@@ -185,6 +190,22 @@ export async function handleMicrosoftWebhookPost(request: NextRequest) {
           } else {
             console.warn(`⚠️ No stored verification token for provider ${row.id} - skipping client state validation`);
           }
+
+          const acceptedAt = new Date().toISOString();
+          const providerDb = tenantDb(trx, row.tenant);
+          await providerDb.table('microsoft_email_provider_config')
+            .where({ email_provider_id: row.id })
+            .update({
+              last_webhook_delivery_at: acceptedAt,
+              webhook_silent_runs: 0,
+              updated_at: acceptedAt,
+            });
+          await providerDb.table('email_provider_health')
+            .where({ provider_id: row.id })
+            .update({
+              last_notification_received_at: acceptedAt,
+              updated_at: acceptedAt,
+            });
 
           // Extract message ID from resource
           const messageId = notification.resourceData?.id || extractMessageId(notification.resource);

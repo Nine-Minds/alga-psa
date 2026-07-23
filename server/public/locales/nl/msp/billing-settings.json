@@ -885,6 +885,9 @@
         "kitPricingMode": "Kitprijsmodus",
         "kitPricingSum": "Som van componenten",
         "kitPricingFixed": "Vaste prijs"
+      },
+      "barcode": {
+        "label": "Barcode (UPC/EAN)"
       }
     },
     "options": {
