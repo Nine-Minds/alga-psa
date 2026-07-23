@@ -6,8 +6,8 @@
  * staff joining the MSP's own workspace rather than a client portal.
  *
  * Auth templates manage their own full HTML (no shared emailLayout wrapper).
- * Locales match the set used elsewhere in the onboarding wizard
- * (en, de, es, fr, it).
+ * Locales match the full set supported elsewhere in the product
+ * (en, de, es, fr, it, nl, pl, pt) — see @alga-psa/core/i18n/config.
  */
 
 const TEMPLATE_NAME = 'team-invitation';
@@ -261,6 +261,63 @@ const COPY = {
     footerSent: "Questa e-mail è stata inviata a {{teamMemberName}} nell'ambito della configurazione del tuo account {{tenantName}}.",
     footerUnexpected: 'Se non ti aspettavi questo invito, puoi ignorare tranquillamente questa e-mail.',
     footerCopyright: '© {{currentYear}} {{tenantName}}. Tutti i diritti riservati.',
+  },
+  nl: {
+    subject: 'U bent uitgenodigd om lid te worden van {{tenantName}} op AlgaPSA',
+    title: 'Teamuitnodiging',
+    headerTitle: 'Welkom bij het team',
+    headerSubtitle: 'U bent uitgenodigd om lid te worden van {{tenantName}}',
+    greeting: 'Hallo {{teamMemberName}},',
+    intro: '{{invitedByName}} heeft u uitgenodigd om lid te worden van <strong>{{tenantName}}</strong> als <strong>{{roleName}}</strong>. Stel uw account in om te beginnen.',
+    infoBoxTitle: 'Wat gebeurt er nu',
+    feature1: '✓ Klik op de onderstaande knop om uw eigen wachtwoord in te stellen',
+    feature2: '✓ Log in met uw werk-e-mailadres en het nieuwe wachtwoord',
+    feature3: '✓ Begin direct met het beheren van tickets, klanten en projecten',
+    buttonLabel: 'Uw account instellen',
+    copyLinkHint: 'Of kopieer en plak deze link in uw browser:',
+    warningTitle: '⏰ Tijdgebonden uitnodiging',
+    warningText: 'Deze uitnodigingslink verloopt over <strong>{{expirationTime}}</strong>. Voltooi uw accountconfiguratie vóór die tijd.',
+    footerSent: 'Deze e-mail is verzonden naar {{teamMemberName}} als onderdeel van uw {{tenantName}}-accountconfiguratie.',
+    footerUnexpected: 'Als u deze uitnodiging niet verwachtte, kunt u deze e-mail gerust negeren.',
+    footerCopyright: '© {{currentYear}} {{tenantName}}. Alle rechten voorbehouden.',
+  },
+  pl: {
+    subject: 'Zostałeś(aś) zaproszony(a) do {{tenantName}} w AlgaPSA',
+    title: 'Zaproszenie do zespołu',
+    headerTitle: 'Witamy w zespole',
+    headerSubtitle: 'Zostałeś(aś) zaproszony(a) do {{tenantName}}',
+    greeting: 'Witaj {{teamMemberName}},',
+    intro: '{{invitedByName}} zaprosił(a) Cię do dołączenia do <strong>{{tenantName}}</strong> jako <strong>{{roleName}}</strong>. Skonfiguruj swoje konto, aby zacząć.',
+    infoBoxTitle: 'Co dalej',
+    feature1: '✓ Kliknij poniższy przycisk, aby ustawić własne hasło',
+    feature2: '✓ Zaloguj się przy użyciu służbowego adresu e-mail i nowego hasła',
+    feature3: '✓ Od razu zacznij zarządzać zgłoszeniami, klientami i projektami',
+    buttonLabel: 'Skonfiguruj swoje konto',
+    copyLinkHint: 'Lub skopiuj i wklej ten link do przeglądarki:',
+    warningTitle: '⏰ Zaproszenie ograniczone czasowo',
+    warningText: 'Ten link zaproszeniowy wygaśnie za <strong>{{expirationTime}}</strong>. Dokończ konfigurację konta przed tym terminem.',
+    footerSent: 'Ta wiadomość została wysłana do {{teamMemberName}} w ramach konfiguracji konta {{tenantName}}.',
+    footerUnexpected: 'Jeśli nie spodziewałeś(aś) się tego zaproszenia, możesz bezpiecznie zignorować tę wiadomość.',
+    footerCopyright: '© {{currentYear}} {{tenantName}}. Wszelkie prawa zastrzeżone.',
+  },
+  pt: {
+    subject: 'Você foi convidado(a) para {{tenantName}} no AlgaPSA',
+    title: 'Convite de equipe',
+    headerTitle: 'Bem-vindo(a) à equipe',
+    headerSubtitle: 'Você foi convidado(a) a se juntar a {{tenantName}}',
+    greeting: 'Olá {{teamMemberName}},',
+    intro: '{{invitedByName}} convidou você para se juntar a <strong>{{tenantName}}</strong> como <strong>{{roleName}}</strong>. Configure sua conta para começar.',
+    infoBoxTitle: 'O que acontece a seguir',
+    feature1: '✓ Clique no botão abaixo para definir sua própria senha',
+    feature2: '✓ Faça login com seu e-mail de trabalho e a nova senha',
+    feature3: '✓ Comece a gerenciar tickets, clientes e projetos imediatamente',
+    buttonLabel: 'Configurar sua conta',
+    copyLinkHint: 'Ou copie e cole este link no navegador:',
+    warningTitle: '⏰ Convite com prazo limitado',
+    warningText: 'Este link de convite expirará em <strong>{{expirationTime}}</strong>. Conclua a configuração da sua conta antes desse prazo.',
+    footerSent: 'Este e-mail foi enviado para {{teamMemberName}} como parte da configuração da sua conta {{tenantName}}.',
+    footerUnexpected: 'Se você não esperava este convite, pode ignorar este e-mail com segurança.',
+    footerCopyright: '© {{currentYear}} {{tenantName}}. Todos os direitos reservados.',
   },
 };
 
