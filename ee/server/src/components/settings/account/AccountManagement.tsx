@@ -891,7 +891,7 @@ export default function AccountManagement() {
       activeTitle: 'Enterprise add-on active',
       activeBody: 'Microsoft Entra Sync is available for this tenant.',
     },
-  ];
+  ].filter((card) => card.addOn !== ADD_ONS.ENTERPRISE || hasAddOn(ADD_ONS.ENTERPRISE));
 
   return (
     <div className="space-y-6">

@@ -367,7 +367,7 @@
           "syncAllStarting": "Starting…"
         },
         "badges": {
-          "enterprise": "Enterprise",
+          "pro": "Pro",
           "reviewBeforeInitialSync": "Review Before Initial Sync"
         },
         "connection": {

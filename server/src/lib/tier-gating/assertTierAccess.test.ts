@@ -21,35 +21,42 @@ describe('assertTierAccess', () => {
 
   describe('TierAccessError', () => {
     it('creates error with correct properties', () => {
-      const error = new TierAccessError(TIER_FEATURES.ENTRA_SYNC, 'premium', 'pro');
+      const error = new TierAccessError(TIER_FEATURES.ENTRA_SYNC, 'pro', 'solo');
       expect(error.name).toBe('TierAccessError');
       expect(error.feature).toBe(TIER_FEATURES.ENTRA_SYNC);
-      expect(error.requiredTier).toBe('premium');
-      expect(error.currentTier).toBe('pro');
-      expect(error.message).toContain('Premium');
+      expect(error.requiredTier).toBe('pro');
+      expect(error.currentTier).toBe('solo');
+      expect(error.message).toContain('Pro');
     });
   });
 
   describe('assertTierAccess function', () => {
-    it('throws TierAccessError for pro tenant accessing ENTRA_SYNC', async () => {
+    it('allows a Pro tenant to access ENTRA_SYNC', async () => {
       vi.mocked(getSession).mockResolvedValue({
         user: { plan: 'pro' },
       } as any);
 
-      await expect(assertTierAccess(TIER_FEATURES.ENTRA_SYNC)).rejects.toThrow(TierAccessError);
-      await expect(assertTierAccess(TIER_FEATURES.ENTRA_SYNC)).rejects.toMatchObject({
-        feature: TIER_FEATURES.ENTRA_SYNC,
-        requiredTier: 'premium',
-        currentTier: 'pro',
-      });
+      await expect(assertTierAccess(TIER_FEATURES.ENTRA_SYNC)).resolves.toBeUndefined();
     });
 
-    it('throws for premium tenant accessing add-on-only ENTRA_SYNC by tier', async () => {
+    it('allows a Premium tenant to access ENTRA_SYNC', async () => {
       vi.mocked(getSession).mockResolvedValue({
         user: { plan: 'premium' },
       } as any);
 
-      await expect(assertTierAccess(TIER_FEATURES.ENTRA_SYNC)).rejects.toThrow(TierAccessError);
+      await expect(assertTierAccess(TIER_FEATURES.ENTRA_SYNC)).resolves.toBeUndefined();
+    });
+
+    it('throws TierAccessError for a Solo tenant accessing ENTRA_SYNC', async () => {
+      vi.mocked(getSession).mockResolvedValue({
+        user: { plan: 'solo' },
+      } as any);
+
+      await expect(assertTierAccess(TIER_FEATURES.ENTRA_SYNC)).rejects.toMatchObject({
+        feature: TIER_FEATURES.ENTRA_SYNC,
+        requiredTier: 'pro',
+        currentTier: 'solo',
+      });
     });
 
     it('does not throw for solo tenant accessing INTEGRATIONS (now unlocked at solo)', async () => {
@@ -108,15 +115,12 @@ describe('assertTierAccess', () => {
       await expect(assertTierAccess(TIER_FEATURES.TEAMS_INTEGRATION)).rejects.toThrow(TierAccessError);
     });
 
-    it('throws for NULL plan tenant (misconfigured → pro)', async () => {
+    it('allows a NULL plan tenant because the legacy fallback resolves to Pro', async () => {
       vi.mocked(getSession).mockResolvedValue({
         user: { plan: null },
       } as any);
 
-      await expect(assertTierAccess(TIER_FEATURES.ENTRA_SYNC)).rejects.toThrow(TierAccessError);
-      await expect(assertTierAccess(TIER_FEATURES.ENTRA_SYNC)).rejects.toMatchObject({
-        currentTier: 'pro',
-      });
+      await expect(assertTierAccess(TIER_FEATURES.ENTRA_SYNC)).resolves.toBeUndefined();
     });
 
     it('reverts expired Solo -> Pro trials back to solo access', async () => {

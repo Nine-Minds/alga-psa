@@ -32,7 +32,10 @@ Map which tiers get the feature:
 ```ts
 // packages/types/src/constants/tierFeatures.ts
 export const TIER_FEATURE_MAP: Record<TenantTier, TIER_FEATURES[]> = {
-  pro: [],
+  pro: [
+    TIER_FEATURES.ENTRA_SYNC,
+    TIER_FEATURES.CIPP,
+  ],
   premium: [
     TIER_FEATURES.ENTRA_SYNC,
     TIER_FEATURES.CIPP,
@@ -46,8 +49,8 @@ export const TIER_FEATURE_MAP: Record<TenantTier, TIER_FEATURES[]> = {
 ```ts
 // packages/types/src/constants/tierFeatures.ts
 export const FEATURE_MINIMUM_TIER: Record<TIER_FEATURES, TenantTier> = {
-  [TIER_FEATURES.ENTRA_SYNC]: 'premium',
-  [TIER_FEATURES.CIPP]: 'premium',
+  [TIER_FEATURES.ENTRA_SYNC]: 'pro',
+  [TIER_FEATURES.CIPP]: 'pro',
   [TIER_FEATURES.YOUR_NEW_FEATURE]: 'premium',  // ← add here
 };
 ```
@@ -164,8 +167,12 @@ This means CE users get all features regardless of `tenants.plan`.
 
 ## Existing Gated Features (for reference)
 
-| Feature | Enum | Gated Where |
-|---------|------|-------------|
-| Visual Invoice Designer | `INVOICE_DESIGNER` | InvoiceTemplateEditor visual tab, BillingPageClient |
-| Entra Sync | `ENTRA_SYNC` | IntegrationsSettingsPage, SettingsPage |
-| CIPP | `CIPP` | EntraIntegrationSettings connection options |
+| Feature | Enum | Minimum tier | Gated Where |
+|---------|------|--------------|-------------|
+| Visual Invoice Designer | `INVOICE_DESIGNER` | Premium | InvoiceTemplateEditor visual tab, BillingPageClient |
+| Entra Sync | `ENTRA_SYNC` | Pro | IntegrationsSettingsPage, SettingsPage, Entra API routes |
+| CIPP | `CIPP` | Pro | EntraIntegrationSettings connection options |
+
+## Dormant Enterprise Add-on Plumbing
+
+`ADD_ONS.ENTERPRISE`, `assertAddOnAccess`, and the Enterprise Stripe price configuration are retained intentionally for a future per-client-tenant metered product. Entra Sync and CIPP no longer depend on this add-on; do not remove the dormant plumbing as dead code. The product strategy is recorded in `nineminds-vault/Inbox/2026-07-22-m365-per-tenant-metering-strategy.md`.

@@ -732,7 +732,7 @@ export default function EntraIntegrationSettings({ canUseCipp: canUseCippTier = 
         <CardHeader>
           <div className="flex items-center justify-between gap-2">
             <CardTitle>{t('integrations.entra.settings.title')}</CardTitle>
-            <Badge variant="secondary">{t('integrations.entra.settings.badges.enterprise')}</Badge>
+            <Badge variant="secondary">{t('integrations.entra.settings.badges.pro')}</Badge>
           </div>
           <CardDescription>
             {t('integrations.entra.settings.description')}
