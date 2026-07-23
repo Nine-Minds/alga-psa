@@ -117,7 +117,7 @@
     },
     "note": {
       "defaultTaxSettings": "Der Kunde wird mit den Standard-Steuereinstellungen ohne Steuerpflicht (0 %) angelegt. Sie können die Steuersätze später in den Kundeneinstellungen konfigurieren.",
-      "optional": "Sie können diesen Schritt überspringen und Kunden später von Ihrem Dashboard aus hinzufügen."
+      "optional": "Sie können diesen Schritt überspringen und Kunden jederzeit über Ihr Dashboard hinzufügen oder ändern."
     }
   },
   "billingSetupStep": {
@@ -165,7 +165,7 @@
       },
       "import": {
         "title": "Vorgeschlagene Diensttypen",
-        "description": "Diese sind Standard für die meisten MSPs. Deaktivieren Sie alle, die Sie nicht möchten, und bestätigen Sie dann, um den Rest hinzuzufügen — Sie können sie später jederzeit umbenennen oder entfernen.",
+        "description": "Diese sind Standard für die meisten MSPs. Deaktivieren Sie alle, die Sie nicht möchten, und bestätigen Sie dann, um den Rest hinzuzufügen. Sie können sie später umbenennen oder entfernen.",
         "success": {
           "titleOne": "Diensttyp erfolgreich importiert!",
           "titleOther": "Diensttypen erfolgreich importiert!",
@@ -215,7 +215,7 @@
         "required": "(Erforderlich)",
         "emptyPlaceholder": "Diensttypen erstellen oder importieren",
         "placeholder": "Diensttyp auswählen",
-        "emptyHelp": "Bestätigen Sie unten einen vorgeschlagenen Diensttyp oder fügen Sie einen eigenen hinzu — nichts anderes hier ist endgültig."
+        "emptyHelp": "Bestätigen Sie unten einen vorgeschlagenen Diensttyp oder fügen Sie einen eigenen hinzu. Sie können dies später ändern."
       },
       "billingMode": {
         "label": "Abrechnungsmodus"
@@ -226,7 +226,7 @@
       },
       "defaultCurrency": {
         "label": "Standardwährung *",
-        "description": "Diese Währung wird als Standard für alle Abrechnungen verwendet – Leistungen, Verträge, Angebote und Rechnungen. Sie können sie später pro Kunde überschreiben."
+        "description": "Diese Währung wird als Standard für alle Abrechnungen verwendet: Leistungen, Verträge, Angebote und Rechnungen. Sie können sie später pro Kunde überschreiben."
       }
     },
     "billingMethods": {
@@ -237,7 +237,7 @@
     },
     "validation": {
       "actionRequiredLabel": "Aktion erforderlich:",
-      "actionRequiredDescription": "Bestätige unten einen vorgeschlagenen Diensttyp oder füge einen eigenen hinzu, bevor du einen Dienst anlegst."
+      "actionRequiredDescription": "Bestätige oben einen vorgeschlagenen Diensttyp oder füge einen eigenen hinzu, bevor du einen Dienst anlegst."
     }
   },
   "clientContactStep": {
@@ -281,7 +281,7 @@
       "optionalLabel": "Optional:"
     },
     "footer": {
-      "optional": "Sie können diesen Schritt überspringen und Kontakte später im Profil des Kunden hinzufügen."
+      "optional": "Sie können diesen Schritt überspringen und Kontakte jederzeit im Profil des Kunden hinzufügen oder ändern."
     }
   },
   "clientInfoStep": {
@@ -303,7 +303,7 @@
     },
     "header": {
       "title": "Ihr Unternehmen & Admin-Konto",
-      "description": "Beginnen wir mit den Angaben zu Ihrem eigenen MSP-Unternehmen und Ihrem Admin-Login – nicht zu einem Kunden, den Sie betreuen."
+      "description": "Beginnen wir mit den Angaben zu Ihrem eigenen MSP-Unternehmen und Ihrem Admin-Login, nicht zu einem Kunden, den Sie betreuen."
     },
     "fields": {
       "firstName": {
@@ -326,7 +326,7 @@
       "language": {
         "label": "Sprache",
         "placeholder": "Sprache auswählen",
-        "help": "Wird zum Organisationsstandard für alle — MSP-Mitarbeiter und Client-Portal-Benutzer. Einzelne Benutzer und Kunden können ihn später überschreiben."
+        "help": "Wird zum Organisationsstandard für alle: MSP-Mitarbeiter und Client-Portal-Benutzer. Einzelne Benutzer und Kunden können ihn später überschreiben."
       }
     },
     "password": {
@@ -465,7 +465,7 @@
     },
     "optional": {
       "label": "Optional:",
-      "description": "Hier ist nichts endgültig — Sie können diesen Schritt überspringen und Teammitglieder jederzeit über Einstellungen > Benutzer einladen, entfernen oder ändern."
+      "description": "Sie können diesen Schritt überspringen und Teammitglieder jederzeit über Einstellungen > Benutzer einladen oder verwalten."
     }
   },
   "ticketingConfigStep": {
@@ -654,7 +654,7 @@
             "label": "Anzeigereihenfolge",
             "placeholder": "Leer lassen für automatische Vergabe",
             "help": "Steuert die Reihenfolge, in der Status in Dropdown-Menüs auf der Plattform erscheinen. Niedrigere Zahlen erscheinen zuerst.",
-            "reassigned": "Anzeigereihenfolge {{requested}} wird auf diesem Board bereits verwendet — verwendet wurde stattdessen {{assigned}}."
+            "reassigned": "Anzeigereihenfolge {{requested}} wird auf diesem Board bereits verwendet, daher wurde stattdessen {{assigned}} verwendet."
           },
           "state": {
             "label": "Statustyp",
@@ -881,7 +881,7 @@
     "supportEmail": {
       "label": "Support-E-Mail",
       "placeholder": "support@ihrunternehmen.de",
-      "help": "Diese E-Mail-Adresse wird zum Erstellen von Support-Tickets verwendet. E-Mails an diese Adresse erzeugen automatisch Tickets in Ihrem System."
+      "help": "Wird als deine Support-Kontaktadresse gespeichert – Kunden sehen sie im Portal und sie wird in Termin-E-Mails verwendet. Um eingehende E-Mails automatisch in Tickets umzuwandeln, verbinde später ein Postfach unter Einstellungen > E-Mail."
     },
     "finalRequirement": {
       "label": "Erforderlich:",

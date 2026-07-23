@@ -30,7 +30,7 @@
     "title": "Onboardingwizard",
     "description": "Wizard-shell voor MSP-tenantconfiguratie met dialoog-/volledig-pagina weergave, voortgang, validatie en afronding",
     "steps": {
-      "clientInfo": "Klantinfo",
+      "clientInfo": "Je bedrijf",
       "teamMembers": "Teamleden",
       "addClient": "Klant toevoegen",
       "clientContact": "Klantcontact",
@@ -117,7 +117,7 @@
     },
     "note": {
       "defaultTaxSettings": "De klant wordt aangemaakt met standaard niet-belastbare (0%) belastinginstellingen. Je kunt belastingtarieven later configureren in de klantinstellingen.",
-      "optional": "Je kunt deze stap overslaan en klanten later toevoegen via je dashboard."
+      "optional": "Je kunt deze stap overslaan en klanten altijd toevoegen of wijzigen via je dashboard."
     }
   },
   "billingSetupStep": {
@@ -141,7 +141,7 @@
         "confirmAdd": "Servicetype toevoegen"
       },
       "noteLabel": "Opmerking:",
-      "description": "Servicetypen zijn taxonomielabels voor organisatie en filtering. De factureringsmodus wordt apart op elke service ingesteld.",
+      "description": "Servicetypes zijn taxonomielabels voor ordenen en filteren. De facturatiemodus wordt voor elke dienst afzonderlijk geconfigureerd. Je kunt types later altijd hernoemen, toevoegen of verwijderen via Instellingen.",
       "addForm": {
         "title": "Nieuw servicetype toevoegen",
         "fields": {
@@ -164,8 +164,8 @@
         }
       },
       "import": {
-        "title": "Standaard servicetypen importeren",
-        "description": "Selecteer standaard servicetypen om in je systeem te importeren:",
+        "title": "Voorgestelde servicetypes",
+        "description": "Deze zijn standaard voor de meeste MSP's. Vink alles uit wat je niet wilt en bevestig vervolgens om de rest toe te voegen. Je kunt ze later hernoemen of verwijderen.",
         "success": {
           "titleOne": "Servicetype succesvol geïmporteerd!",
           "titleOther": "Servicetypen succesvol geïmporteerd!",
@@ -174,8 +174,8 @@
           "skipped": "{{count}} overgeslagen."
         },
         "actions": {
-          "importing": "Importeren...",
-          "importSelected": "Geselecteerde importeren ({{count}})"
+          "importing": "Toevoegen...",
+          "importSelected": "Bevestigen en toevoegen ({{count}})"
         }
       },
       "table": {
@@ -192,8 +192,8 @@
       }
     },
     "header": {
-      "title": "Maak je eerste service aan",
-      "description": "Voeg een service toe en kies hoe deze gefactureerd moet worden. Het servicetype identificeert de servicecategorie, terwijl de factureringsmodus de prijslogica bepaalt.",
+      "title": "Facturatie instellen",
+      "description": "Stel je standaardvaluta in en maak je eerste dienst aan.",
       "serviceTitle": "Maak uw eerste service",
       "serviceDescription": "Voeg een service toe en kies hoe deze moet worden gefactureerd. Het servicetype identificeert de servicecategorie, terwijl de facturatiemodus het prijsgedrag bepaalt."
     },
@@ -215,7 +215,7 @@
         "required": "(Verplicht)",
         "emptyPlaceholder": "Servicetypen aanmaken of importeren",
         "placeholder": "Selecteer een servicetype",
-        "emptyHelp": "Klik op \"Servicetypen beheren\" om servicetypen aan te maken of te importeren"
+        "emptyHelp": "Bevestig hieronder een voorgesteld servicetype of voeg je eigen type toe. Je kunt dit later wijzigen."
       },
       "billingMode": {
         "label": "Factureringsmodus"
@@ -226,7 +226,7 @@
       },
       "defaultCurrency": {
         "label": "Standaardvaluta *",
-        "description": "Deze valuta wordt standaard gebruikt voor alle facturatie — services, contracten, offertes en facturen. U kunt deze later per klant overschrijven."
+        "description": "Deze valuta wordt standaard gebruikt voor alle facturatie: services, contracten, offertes en facturen. U kunt deze later per klant overschrijven."
       }
     },
     "billingMethods": {
@@ -237,7 +237,7 @@
     },
     "validation": {
       "actionRequiredLabel": "Actie vereist:",
-      "actionRequiredDescription": "Bevestig hieronder een voorgesteld servicetype, of voeg je eigen type toe, voordat je een service aanmaakt."
+      "actionRequiredDescription": "Bevestig hierboven een voorgesteld servicetype, of voeg je eigen type toe, voordat je een service aanmaakt."
     }
   },
   "clientContactStep": {
@@ -281,7 +281,7 @@
       "optionalLabel": "Optioneel:"
     },
     "footer": {
-      "optional": "Je kunt deze stap overslaan en contacten later toevoegen vanuit het profiel van de klant."
+      "optional": "Je kunt deze stap overslaan en contacten altijd toevoegen of wijzigen vanuit het profiel van de klant."
     }
   },
   "clientInfoStep": {
@@ -302,8 +302,8 @@
       "noteLabel": "Opmerking:"
     },
     "header": {
-      "title": "Klantinformatie",
-      "description": "Laten we beginnen met het instellen van je klantprofiel."
+      "title": "Je bedrijf en beheerdersaccount",
+      "description": "We beginnen met de bedrijfsgegevens van je eigen MSP en je beheerderslogin, niet met een klant die je ondersteunt."
     },
     "fields": {
       "firstName": {
@@ -326,7 +326,7 @@
       "language": {
         "label": "Taal",
         "placeholder": "Selecteer een taal",
-        "help": "Wordt de organisatiestandaard voor iedereen — MSP-personeel en klantportaalgebruikers. Individuele gebruikers en klanten kunnen dit later overschrijven."
+        "help": "Wordt de organisatiestandaard voor iedereen: MSP-personeel en klantportaalgebruikers. Individuele gebruikers en klanten kunnen dit later overschrijven."
       }
     },
     "password": {
@@ -427,7 +427,7 @@
       },
       "email": {
         "label": "E-mail",
-        "placeholder": "jan@klant.com"
+        "placeholder": "jan@jouwitbedrijf.nl"
       },
       "role": {
         "label": "Rol"
@@ -465,7 +465,7 @@
     },
     "optional": {
       "label": "Optioneel:",
-      "description": "Je kunt deze stap overslaan en teamleden later uitnodigen via de instellingenpagina."
+      "description": "Je kunt deze stap overslaan en teamleden altijd uitnodigen of beheren via Instellingen > Gebruikers."
     }
   },
   "ticketingConfigStep": {
@@ -654,7 +654,7 @@
             "label": "Weergavevolgorde",
             "placeholder": "Laat leeg voor automatisch genereren",
             "help": "Bepaalt de volgorde waarin statussen in keuzelijsten door het platform verschijnen. Lagere nummers komen eerst.",
-            "reassigned": "Weergavevolgorde {{requested}} wordt al gebruikt op dit bord — in plaats daarvan is {{assigned}} gebruikt."
+            "reassigned": "Weergavevolgorde {{requested}} wordt al gebruikt op dit bord, daarom is {{assigned}} gebruikt."
           },
           "state": {
             "label": "Statustype",
@@ -880,8 +880,8 @@
     },
     "supportEmail": {
       "label": "Support-e-mail",
-      "placeholder": "support@jouwklant.nl",
-      "help": "Dit e-mailadres wordt gebruikt om supporttickets aan te maken. E-mails naar dit adres genereren automatisch tickets in je systeem."
+      "placeholder": "support@jouwitbedrijf.nl",
+      "help": "Opgeslagen als je supportcontactadres — zichtbaar voor klanten in het portaal en gebruikt in afspraak-e-mails. Om inkomende e-mail automatisch in tickets om te zetten, koppel je later een mailbox via Instellingen > E-mail."
     },
     "finalRequirement": {
       "label": "Verplicht:",

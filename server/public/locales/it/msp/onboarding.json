@@ -117,7 +117,7 @@
     },
     "note": {
       "defaultTaxSettings": "Il cliente verrà creato con le impostazioni fiscali predefinite non imponibili (0%). Potrai configurare le aliquote fiscali in seguito nelle impostazioni del cliente.",
-      "optional": "Puoi saltare questo passaggio e aggiungere clienti più tardi dalla dashboard."
+      "optional": "Puoi saltare questo passaggio e aggiungere o modificare i clienti in qualsiasi momento dalla dashboard."
     }
   },
   "billingSetupStep": {
@@ -165,7 +165,7 @@
       },
       "import": {
         "title": "Tipi di servizio suggeriti",
-        "description": "Sono standard per la maggior parte degli MSP. Deseleziona quelli che non vuoi, poi conferma per aggiungere gli altri — potrai rinominarli o rimuoverli in qualsiasi momento.",
+        "description": "Sono standard per la maggior parte degli MSP. Deseleziona quelli che non vuoi, poi conferma per aggiungere gli altri. Potrai rinominarli o rimuoverli in seguito.",
         "success": {
           "titleOne": "Tipo di servizio importato con successo!",
           "titleOther": "Tipi di servizio importati con successo!",
@@ -215,7 +215,7 @@
         "required": "(Obbligatorio)",
         "emptyPlaceholder": "Crea o importa tipi di servizio",
         "placeholder": "Seleziona un tipo di servizio",
-        "emptyHelp": "Conferma un tipo di servizio suggerito qui sotto, oppure aggiungine uno tuo — nient'altro qui è definitivo."
+        "emptyHelp": "Conferma un tipo di servizio suggerito qui sotto, oppure aggiungine uno tuo. Puoi modificarli in seguito."
       },
       "billingMode": {
         "label": "Modalità di fatturazione"
@@ -237,7 +237,7 @@
     },
     "validation": {
       "actionRequiredLabel": "Azione richiesta:",
-      "actionRequiredDescription": "Conferma un tipo di servizio suggerito qui sotto, oppure aggiungine uno tuo, prima di creare un servizio."
+      "actionRequiredDescription": "Conferma un tipo di servizio suggerito qui sopra, oppure aggiungine uno tuo, prima di creare un servizio."
     }
   },
   "clientContactStep": {
@@ -281,7 +281,7 @@
       "optionalLabel": "Facoltativo:"
     },
     "footer": {
-      "optional": "Puoi saltare questo passaggio e aggiungere contatti più tardi dal profilo del cliente."
+      "optional": "Puoi saltare questo passaggio e aggiungere o modificare i contatti in qualsiasi momento dal profilo del cliente."
     }
   },
   "clientInfoStep": {
@@ -465,7 +465,7 @@
     },
     "optional": {
       "label": "Facoltativo:",
-      "description": "Niente qui è definitivo — puoi saltare questo passaggio e invitare, rimuovere o modificare i membri del team in qualsiasi momento da Impostazioni > Utenti."
+      "description": "Puoi saltare questo passaggio e invitare o gestire i membri del team in qualsiasi momento da Impostazioni > Utenti."
     }
   },
   "ticketingConfigStep": {
@@ -654,7 +654,7 @@
             "label": "Ordine di visualizzazione",
             "placeholder": "Lascia vuoto per generare automaticamente",
             "help": "Controlla l'ordine in cui gli stati appaiono nei menu a discesa in tutta la piattaforma. I numeri più bassi vengono mostrati per primi.",
-            "reassigned": "L'ordine di visualizzazione {{requested}} è già utilizzato in questa board — è stato usato {{assigned}} al suo posto."
+            "reassigned": "L'ordine di visualizzazione {{requested}} è già utilizzato in questa board, quindi è stato usato {{assigned}} al suo posto."
           },
           "state": {
             "label": "Tipo di stato",
@@ -881,7 +881,7 @@
     "supportEmail": {
       "label": "Email di supporto",
       "placeholder": "support@tuaazienda.com",
-      "help": "Questo indirizzo email verrà usato per creare ticket di supporto. Le email inviate a questo indirizzo genereranno automaticamente ticket nel tuo sistema."
+      "help": "Salvata come indirizzo di contatto del supporto: mostrata ai clienti nel portale e usata nelle e-mail degli appuntamenti. Per trasformare automaticamente le e-mail in arrivo in ticket, collega una casella di posta più avanti in Impostazioni > E-mail."
     },
     "finalRequirement": {
       "label": "Richiesto:",

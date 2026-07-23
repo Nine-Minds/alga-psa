@@ -213,7 +213,8 @@
         "teamInvitationSent": "Uitnodiging succesvol verzonden!",
         "clientPortalUserCreated": "Klantenportaalgebruiker succesvol aangemaakt!",
         "copiedVanityLink": "Aangepaste portaalinloglink gekopieerd naar klembord",
-        "copiedCanonicalLink": "Canonieke portaalinloglink gekopieerd naar klembord"
+        "copiedCanonicalLink": "Canonieke portaalinloglink gekopieerd naar klembord",
+        "invitationRevoked": "Uitnodiging ingetrokken"
       },
       "error": {
         "fetchUsers": "Kan gebruikers niet ophalen",
@@ -249,8 +250,17 @@
         "roleRequired": "Rol is vereist",
         "invalidRole": "Geselecteerde rol is ongeldig",
         "licenseLimitReached": "U heeft uw MSP-gebruikerslicentielimiet bereikt.",
-        "soloPlanLimit": "Het Solo-abonnement is beperkt tot 1 gebruiker. Upgrade naar Pro om meer gebruikers toe te voegen."
+        "soloPlanLimit": "Het Solo-abonnement is beperkt tot 1 gebruiker. Upgrade naar Pro om meer gebruikers toe te voegen.",
+        "revokeInvitation": "Uitnodiging intrekken mislukt",
+        "invitationNotFound": "Uitnodiging niet gevonden of al gebruikt"
       }
+    },
+    "invitations": {
+      "title": "Openstaande uitnodigingen",
+      "description": "Uitgenodigde teamleden die hun account nog niet hebben ingesteld.",
+      "expiresPrefix": "Verloopt:",
+      "revoke": "Intrekken",
+      "revoking": "Bezig met intrekken..."
     }
   },
   "userDetails": {

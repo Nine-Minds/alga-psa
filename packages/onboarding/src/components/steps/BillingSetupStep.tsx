@@ -40,6 +40,7 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
   const [isImporting, setIsImporting] = useState(false);
   const [importResult, setImportResult] = useState<{ imported: number; skipped: number } | null>(null);
   const [isLoadingTypes, setIsLoadingTypes] = useState(false);
+  const [tenantTypesLoaded, setTenantTypesLoaded] = useState(false);
 
   // Form state for new service type
   const [serviceTypeForm, setServiceTypeForm] = useState({
@@ -52,21 +53,27 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
   // The service types panel is the only path to a usable Service Type
   // dropdown, so keep it open automatically until the tenant has at least
   // one type — no "Manage Service Types" click required to get started.
-  const isPanelOpen = showServiceTypes || (!isLoadingTypes && tenantTypes.length === 0);
+  const isPanelOpen = showServiceTypes || (tenantTypesLoaded && tenantTypes.length === 0);
 
   useEffect(() => {
     loadTenantServiceTypes();
-    loadStandardServiceTypes();
   }, []);
 
   // Keep the standard-catalog suggestions in sync with what the tenant
   // already has, and gently pre-check them the first time so confirming is
   // a single click instead of a separate "Import from Standard" detour.
+  // Runs once the tenant's types have loaded (even if that load failed) and
+  // again whenever they change.
   useEffect(() => {
     loadStandardServiceTypes();
-  }, [tenantTypes]);
+  }, [tenantTypes, tenantTypesLoaded]);
 
   const loadStandardServiceTypes = async () => {
+    // Wait for the tenant's own types: filtering (and the one-time
+    // auto-select below) against the initial empty state would surface — and
+    // pre-check — types the tenant already has.
+    if (!tenantTypesLoaded) return;
+
     const result = await getStandardServiceTypes();
     if (result.success && result.data) {
       // Filter out any types that might have been imported since last load
@@ -78,6 +85,9 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
       if (!hasAutoSelectedSuggestions && tenantTypes.length === 0 && availableTypes.length > 0) {
         setSelectedTypes(availableTypes.map(st => st.id));
         setHasAutoSelectedSuggestions(true);
+      } else {
+        const availableIds = new Set(availableTypes.map(st => st.id));
+        setSelectedTypes(prev => prev.filter(id => availableIds.has(id)));
       }
     }
   };
@@ -92,6 +102,7 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
         updateData({ serviceTypeId: result.data[0].id });
       }
     }
+    setTenantTypesLoaded(true);
     setIsLoadingTypes(false);
   };
 
@@ -105,9 +116,9 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
     if (result.success && result.data) {
       setImportResult(result.data);
       setSelectedTypes([]);
-      // Reload both tenant service types and available standard types
+      // Reloading tenant types re-runs the [tenantTypes] effect, which
+      // refreshes the standard suggestions with a fresh (non-stale) filter.
       await loadTenantServiceTypes();
-      await loadStandardServiceTypes();
     }
 
     setIsImporting(false);
@@ -224,40 +235,9 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
       )}
 
       <div className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="serviceName">
-            {t('billingSetupStep.fields.serviceName.label', {
-              defaultValue: 'Service Name *'
-            })}
-          </Label>
-          <Input
-            id="serviceName"
-            value={data.serviceName}
-            onChange={(e) => updateData({ serviceName: e.target.value })}
-            placeholder={t('billingSetupStep.fields.serviceName.placeholder', {
-              defaultValue: 'Managed IT Services'
-            })}
-          />
-        </div>
-
-        <div>
-          <Label htmlFor="serviceDescription" className="block mb-2">
-            {t('billingSetupStep.fields.serviceDescription.label', {
-              defaultValue: 'Service Description'
-            })}
-          </Label>
-          <TextArea
-            id="serviceDescription"
-            value={data.serviceDescription}
-            onChange={(e) => updateData({ serviceDescription: e.target.value })}
-            placeholder={t('billingSetupStep.fields.serviceDescription.placeholder', {
-              defaultValue: 'Comprehensive IT support and management services...'
-            })}
-            rows={3}
-            className="!max-w-none"
-          />
-        </div>
-
+        {/* Service Type comes first: it's the one prerequisite (the panel
+            below seeds it in a click), so the form reads top-down instead of
+            leading with fields that can't be submitted yet. */}
         <div className="space-y-2">
           <Label htmlFor="serviceTypeId">
             {t('billingSetupStep.fields.serviceType.label', {
@@ -574,7 +554,7 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
             <div className="border rounded-lg overflow-hidden">
               <div className="max-h-64 overflow-y-auto">
                 <table className="w-full">
-                  <thead className="bg-gray-50 border-b sticky top-0">
+                  <thead className="bg-gray-50 border-b sticky top-0 z-10">
                   <tr>
                     <th className="px-4 py-2">
                       <div className="flex items-center gap-2">
@@ -704,6 +684,40 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
         )}
 
         <div className="space-y-2">
+          <Label htmlFor="serviceName">
+            {t('billingSetupStep.fields.serviceName.label', {
+              defaultValue: 'Service Name *'
+            })}
+          </Label>
+          <Input
+            id="serviceName"
+            value={data.serviceName}
+            onChange={(e) => updateData({ serviceName: e.target.value })}
+            placeholder={t('billingSetupStep.fields.serviceName.placeholder', {
+              defaultValue: 'Managed IT Services'
+            })}
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="serviceDescription" className="block mb-2">
+            {t('billingSetupStep.fields.serviceDescription.label', {
+              defaultValue: 'Service Description'
+            })}
+          </Label>
+          <TextArea
+            id="serviceDescription"
+            value={data.serviceDescription}
+            onChange={(e) => updateData({ serviceDescription: e.target.value })}
+            placeholder={t('billingSetupStep.fields.serviceDescription.placeholder', {
+              defaultValue: 'Comprehensive IT support and management services...'
+            })}
+            rows={3}
+            className="!max-w-none"
+          />
+        </div>
+
+        <div className="space-y-2">
           <Label htmlFor="serviceBillingMode">
             {t('billingSetupStep.fields.billingMode.label', {
               defaultValue: 'Billing Mode'
@@ -753,7 +767,7 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
               })}
             </span>{' '}
             {t('billingSetupStep.validation.actionRequiredDescription', {
-              defaultValue: 'Confirm a suggested service type below, or add your own, before creating a service.'
+              defaultValue: 'Confirm a suggested service type above, or add your own, before creating a service.'
             })}
           </AlertDescription>
         </Alert>

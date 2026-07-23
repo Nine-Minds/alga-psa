@@ -63,6 +63,30 @@ describe('checkInternalUserLicenseLimit', () => {
     });
   });
 
+  it('counts reserved seats (pending invitations) toward the limit', async () => {
+    const result = await checkInternalUserLicenseLimit(
+      fakeTrx({ plan: 'pro', licensedUserCount: 3, usedInternalUsers: 2 }),
+      'tenant-1',
+      { reservedSeats: 1 }
+    );
+
+    expect(result).toEqual({
+      ok: false,
+      code: 'LICENSE_LIMIT_REACHED',
+      error: "You've reached your MSP user license limit.",
+    });
+  });
+
+  it('allows when seats remain after reserved seats', async () => {
+    const result = await checkInternalUserLicenseLimit(
+      fakeTrx({ plan: 'pro', licensedUserCount: 3, usedInternalUsers: 1 }),
+      'tenant-1',
+      { reservedSeats: 1 }
+    );
+
+    expect(result).toEqual({ ok: true });
+  });
+
   it('allows an unlimited (null licensed_user_count) tenant regardless of usage', async () => {
     const result = await checkInternalUserLicenseLimit(
       fakeTrx({ plan: 'pro', licensedUserCount: null, usedInternalUsers: 500 }),

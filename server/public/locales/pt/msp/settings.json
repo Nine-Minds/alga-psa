@@ -213,7 +213,8 @@
         "teamInvitationSent": "Convite enviado com sucesso!",
         "clientPortalUserCreated": "Usuário do portal do cliente criado com sucesso!",
         "copiedVanityLink": "Link de login do portal personalizado copiado para a área de transferência",
-        "copiedCanonicalLink": "Link de login do portal canônico copiado para a área de transferência"
+        "copiedCanonicalLink": "Link de login do portal canônico copiado para a área de transferência",
+        "invitationRevoked": "Convite revogado"
       },
       "error": {
         "fetchUsers": "Falha ao buscar usuários",
@@ -249,8 +250,17 @@
         "roleRequired": "A função é obrigatória",
         "invalidRole": "A função selecionada é inválida",
         "licenseLimitReached": "Você atingiu o limite de licença de usuário MSP.",
-        "soloPlanLimit": "O plano Solo é limitado a 1 usuário. Atualize para o Pro para adicionar mais usuários."
+        "soloPlanLimit": "O plano Solo é limitado a 1 usuário. Atualize para o Pro para adicionar mais usuários.",
+        "revokeInvitation": "Falha ao revogar o convite",
+        "invitationNotFound": "Convite não encontrado ou já utilizado"
       }
+    },
+    "invitations": {
+      "title": "Convites pendentes",
+      "description": "Membros da equipe convidados que ainda não configuraram sua conta.",
+      "expiresPrefix": "Expira:",
+      "revoke": "Revogar",
+      "revoking": "Revogando..."
     }
   },
   "userDetails": {

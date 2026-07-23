@@ -213,7 +213,8 @@
         "teamInvitationSent": "Invitation sent successfully!",
         "clientPortalUserCreated": "Client portal user created successfully!",
         "copiedVanityLink": "Copied vanity portal login link to clipboard",
-        "copiedCanonicalLink": "Copied canonical portal login link to clipboard"
+        "copiedCanonicalLink": "Copied canonical portal login link to clipboard",
+        "invitationRevoked": "Invitation revoked"
       },
       "error": {
         "fetchUsers": "Failed to fetch users",
@@ -249,8 +250,17 @@
         "roleRequired": "Role is required",
         "invalidRole": "Selected role is invalid",
         "licenseLimitReached": "You've reached your MSP user license limit.",
-        "soloPlanLimit": "Solo plan is limited to 1 user. Upgrade to Pro to add more users."
+        "soloPlanLimit": "Solo plan is limited to 1 user. Upgrade to Pro to add more users.",
+        "revokeInvitation": "Failed to revoke invitation",
+        "invitationNotFound": "Invitation not found or already used"
       }
+    },
+    "invitations": {
+      "title": "Pending Invitations",
+      "description": "Invited team members who haven't set up their account yet.",
+      "expiresPrefix": "Expires:",
+      "revoke": "Revoke",
+      "revoking": "Revoking..."
     }
   },
   "userDetails": {

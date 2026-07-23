@@ -458,7 +458,7 @@ const CE_CLEANUP_TABLES: ReadonlySet<string> = new Set([
   'telemetry_consent_log', 'calendar_providers', 'team_members',
   'schedule_entry_assignees', 'comment_reactions', 'project_task_comment_reactions',
   'project_task_comments', 'project_template_task_resources', 'time_sheet_comments',
-  'user_roles', 'user_preferences', 'import_jobs',
+  'user_roles', 'user_preferences', 'import_jobs', 'user_invitations',
   'user_activity_group_items', 'user_activity_groups',
   // Always present in both editions:
   'users', 'clients',
@@ -494,6 +494,8 @@ function makeFakeTrx(present: ReadonlySet<string>) {
     const chain = {
       where: (_criteria: Record<string, unknown>) => chain,
       whereIn: (_column: string, _sub: unknown) => chain,
+      whereNull: (_column: string) => chain,
+      whereRaw: (_sql: string, _bindings?: unknown) => chain,
       orWhere: (_criteria: Record<string, unknown>) => chain,
       // Eager subquery builder (e.g. user_activity_groups.select('group_id'))
       // used inside whereIn after the tenant-scope migration.

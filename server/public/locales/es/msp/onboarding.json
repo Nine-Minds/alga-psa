@@ -117,7 +117,7 @@
     },
     "note": {
       "defaultTaxSettings": "El cliente se creará con la configuración fiscal predeterminada no imponible (0 %). Puedes configurar los tipos impositivos más tarde en los ajustes del cliente.",
-      "optional": "Puedes omitir este paso y añadir clientes más tarde desde tu panel."
+      "optional": "Puedes omitir este paso y añadir o cambiar clientes en cualquier momento desde tu panel."
     }
   },
   "billingSetupStep": {
@@ -165,7 +165,7 @@
       },
       "import": {
         "title": "Tipos de servicio sugeridos",
-        "description": "Estos son estándar para la mayoría de los MSP. Desmarca los que no quieras y luego confirma para añadir el resto — puedes renombrarlos o eliminarlos cuando quieras.",
+        "description": "Estos son estándar para la mayoría de los MSP. Desmarca los que no quieras y luego confirma para añadir el resto. Puedes renombrarlos o eliminarlos más tarde.",
         "success": {
           "titleOne": "¡Tipo de servicio importado correctamente!",
           "titleOther": "¡Tipos de servicio importados correctamente!",
@@ -215,7 +215,7 @@
         "required": "(Obligatorio)",
         "emptyPlaceholder": "Crear o importar tipos de servicio",
         "placeholder": "Selecciona un tipo de servicio",
-        "emptyHelp": "Confirma un tipo de servicio sugerido abajo, o añade el tuyo propio — nada más aquí es definitivo."
+        "emptyHelp": "Confirma un tipo de servicio sugerido abajo o añade el tuyo propio. Puedes cambiarlos más tarde."
       },
       "billingMode": {
         "label": "Modo de facturación"
@@ -237,7 +237,7 @@
     },
     "validation": {
       "actionRequiredLabel": "Acción requerida:",
-      "actionRequiredDescription": "Confirma un tipo de servicio sugerido a continuación, o añade el tuyo propio, antes de crear un servicio."
+      "actionRequiredDescription": "Confirma un tipo de servicio sugerido más arriba, o añade el tuyo propio, antes de crear un servicio."
     }
   },
   "clientContactStep": {
@@ -281,7 +281,7 @@
       "optionalLabel": "Opcional:"
     },
     "footer": {
-      "optional": "Puedes omitir este paso y añadir contactos más tarde desde el perfil del cliente."
+      "optional": "Puedes omitir este paso y añadir o cambiar contactos en cualquier momento desde el perfil del cliente."
     }
   },
   "clientInfoStep": {
@@ -465,7 +465,7 @@
     },
     "optional": {
       "label": "Opcional:",
-      "description": "Nada aquí es definitivo — puedes omitir este paso e invitar, quitar o cambiar miembros del equipo cuando quieras desde Configuración > Usuarios."
+      "description": "Puedes omitir este paso e invitar o gestionar miembros del equipo en cualquier momento desde Configuración > Usuarios."
     }
   },
   "ticketingConfigStep": {
@@ -654,7 +654,7 @@
             "label": "Orden de visualización",
             "placeholder": "Dejar vacío para autogenerar",
             "help": "Controla el orden en que los estados aparecen en los menús desplegables de la plataforma. Los números más bajos aparecen primero.",
-            "reassigned": "El orden de visualización {{requested}} ya se está usando en este tablero — se usó {{assigned}} en su lugar."
+            "reassigned": "El orden de visualización {{requested}} ya se está usando en este tablero, por lo que se usó {{assigned}} en su lugar."
           },
           "state": {
             "label": "Tipo de estado",
@@ -881,7 +881,7 @@
     "supportEmail": {
       "label": "Correo de soporte",
       "placeholder": "support@tuempresa.com",
-      "help": "Esta dirección de correo se utilizará para crear tickets de soporte. Los correos enviados a esta dirección generarán automáticamente tickets en tu sistema."
+      "help": "Se guarda como tu dirección de contacto de soporte: visible para los clientes en el portal y usada en los correos de citas. Para convertir automáticamente los correos entrantes en tickets, conecta un buzón más adelante en Configuración > Correo."
     },
     "finalRequirement": {
       "label": "Obligatorio:",

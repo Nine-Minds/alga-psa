@@ -24,10 +24,18 @@ export function isInternalUserLicenseLimitRejected(
  * email invitation — is held to the same limit. Must be called against the
  * same trx/knex the account creation happens in whenever possible, to keep
  * the check-then-insert window as small as addUser's.
+ *
+ * `reservedSeats` counts toward the limit on top of existing users — the
+ * invite-send path passes its count of other pending invitations so an admin
+ * can't send more invites than there are seats left. Acceptance passes
+ * nothing: the accepting invitation is itself pending and must not block
+ * itself (or race other pending invites — last seat stays first-come,
+ * first-served at accept time).
  */
 export async function checkInternalUserLicenseLimit(
   trx: Knex.Transaction | Knex,
-  tenant: string
+  tenant: string,
+  options?: { reservedSeats?: number }
 ): Promise<InternalUserLicenseLimitResult> {
   const tenantRow = await tenantDb(trx, tenant).table('tenants')
     .first('licensed_user_count', 'plan');
@@ -43,7 +51,7 @@ export async function checkInternalUserLicenseLimit(
     })
     .count('* as count');
 
-  const used = parseInt((usedResult as Array<{ count: string }>)[0].count, 10);
+  const used = parseInt((usedResult as Array<{ count: string }>)[0].count, 10) + (options?.reservedSeats ?? 0);
   const limit = tenantRow.licensed_user_count as number | null;
   const plan = tenantRow.plan as string | null | undefined;
 

@@ -213,7 +213,8 @@
         "teamInvitationSent": "55555",
         "clientPortalUserCreated": "55555",
         "copiedVanityLink": "55555",
-        "copiedCanonicalLink": "55555"
+        "copiedCanonicalLink": "55555",
+        "invitationRevoked": "55555"
       },
       "error": {
         "fetchUsers": "55555",
@@ -249,8 +250,17 @@
         "roleRequired": "55555",
         "invalidRole": "55555",
         "licenseLimitReached": "55555",
-        "soloPlanLimit": "55555"
+        "soloPlanLimit": "55555",
+        "revokeInvitation": "55555",
+        "invitationNotFound": "55555"
       }
+    },
+    "invitations": {
+      "title": "55555",
+      "description": "55555",
+      "expiresPrefix": "55555",
+      "revoke": "55555",
+      "revoking": "55555"
     }
   },
   "userDetails": {

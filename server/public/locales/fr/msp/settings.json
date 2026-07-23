@@ -213,7 +213,8 @@
         "teamInvitationSent": "Invitation envoyée avec succès !",
         "clientPortalUserCreated": "Utilisateur du portail client créé avec succès !",
         "copiedVanityLink": "Lien de connexion personnalisé au portail copié dans le presse-papiers",
-        "copiedCanonicalLink": "Lien de connexion canonique au portail copié dans le presse-papiers"
+        "copiedCanonicalLink": "Lien de connexion canonique au portail copié dans le presse-papiers",
+        "invitationRevoked": "Invitation révoquée"
       },
       "error": {
         "fetchUsers": "Échec de la récupération des utilisateurs",
@@ -249,8 +250,17 @@
         "roleRequired": "Le rôle est requis",
         "invalidRole": "Le rôle sélectionné est invalide",
         "licenseLimitReached": "Vous avez atteint la limite de licences utilisateur MSP.",
-        "soloPlanLimit": "Le plan Solo est limité à 1 utilisateur. Passez à Pro pour ajouter d'autres utilisateurs."
+        "soloPlanLimit": "Le plan Solo est limité à 1 utilisateur. Passez à Pro pour ajouter d'autres utilisateurs.",
+        "revokeInvitation": "Échec de la révocation de l'invitation",
+        "invitationNotFound": "Invitation introuvable ou déjà utilisée"
       }
+    },
+    "invitations": {
+      "title": "Invitations en attente",
+      "description": "Membres de l'équipe invités qui n'ont pas encore configuré leur compte.",
+      "expiresPrefix": "Expire :",
+      "revoke": "Révoquer",
+      "revoking": "Révocation..."
     }
   },
   "userDetails": {

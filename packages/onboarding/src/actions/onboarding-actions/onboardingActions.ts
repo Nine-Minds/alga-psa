@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { hashPassword } from '@alga-psa/core/encryption';
+import { isValidEmail } from '@alga-psa/core';
 import { createClient as createClientInternal } from '@alga-psa/clients/actions/clientActions';
 import { createClientContact } from '@alga-psa/clients/actions/contact-actions/contactActions';
 import { updateTenantOnboardingStatus, saveTenantOnboardingProgress } from '@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions';
@@ -832,7 +833,6 @@ export const configureTicketing = withAuth(async (
           board_id: boardId,
           tenant,
           board_name: data.boardName,
-          ...(Object.prototype.hasOwnProperty.call(boardColumns, 'email') ? { email: data.supportEmail } : {}),
           ...(Object.prototype.hasOwnProperty.call(boardColumns, 'is_active') ? { is_active: true } : {}),
           ...(Object.prototype.hasOwnProperty.call(boardColumns, 'is_inactive') ? { is_inactive: false } : {}),
           is_default: shouldBeDefault
@@ -993,6 +993,32 @@ export const configureTicketing = withAuth(async (
             updated_at: new Date()
           });
           createdIds.priorityIds.push(priorityId);
+        }
+      }
+
+      // Persist the support email where the product actually reads it:
+      // tenant_settings.settings.supportEmail (top-level key — what portal
+      // branding and the appointment organizer fallback consume). `boards`
+      // has no email column, so before this the field went nowhere. Inbound
+      // ticket email remains a separate concern (Settings > Email providers).
+      // Blank or invalid input is skipped so an already-configured address
+      // is never clobbered.
+      const supportEmail = data.supportEmail?.trim();
+      if (supportEmail && isValidEmail(supportEmail)) {
+        const settingsRow = await tenantScopedTable('tenant_settings').first();
+        const mergedSettings = { ...(settingsRow?.settings || {}), supportEmail };
+        if (settingsRow) {
+          await tenantScopedTable('tenant_settings').update({
+            settings: mergedSettings,
+            updated_at: new Date()
+          });
+        } else {
+          await tenantScopedTable('tenant_settings').insert({
+            tenant,
+            settings: mergedSettings,
+            created_at: new Date(),
+            updated_at: new Date()
+          });
         }
       }
 

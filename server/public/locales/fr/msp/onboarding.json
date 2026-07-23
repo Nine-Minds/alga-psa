@@ -117,7 +117,7 @@
     },
     "note": {
       "defaultTaxSettings": "Le client sera créé avec les paramètres fiscaux par défaut non imposables (0 %). Vous pourrez configurer les taux de taxe plus tard dans les paramètres client.",
-      "optional": "Vous pouvez ignorer cette étape et ajouter des clients plus tard depuis votre tableau de bord."
+      "optional": "Vous pouvez ignorer cette étape et ajouter ou modifier des clients à tout moment depuis votre tableau de bord."
     }
   },
   "billingSetupStep": {
@@ -165,7 +165,7 @@
       },
       "import": {
         "title": "Types de service suggérés",
-        "description": "Ceux-ci sont standard pour la plupart des MSP. Décochez ceux que vous ne voulez pas, puis confirmez pour ajouter le reste — vous pourrez les renommer ou les supprimer à tout moment.",
+        "description": "Ceux-ci sont standard pour la plupart des MSP. Décochez ceux que vous ne voulez pas, puis confirmez pour ajouter le reste. Vous pourrez les renommer ou les supprimer plus tard.",
         "success": {
           "titleOne": "Type de service importé avec succès !",
           "titleOther": "Types de service importés avec succès !",
@@ -215,7 +215,7 @@
         "required": "(Obligatoire)",
         "emptyPlaceholder": "Créer ou importer des types de service",
         "placeholder": "Sélectionnez un type de service",
-        "emptyHelp": "Confirmez un type de service suggéré ci-dessous, ou ajoutez le vôtre — rien d'autre ici n'est figé."
+        "emptyHelp": "Confirmez un type de service suggéré ci-dessous, ou ajoutez le vôtre. Vous pourrez les modifier plus tard."
       },
       "billingMode": {
         "label": "Mode de facturation"
@@ -226,7 +226,7 @@
       },
       "defaultCurrency": {
         "label": "Devise par défaut *",
-        "description": "Cette devise sera utilisée par défaut pour toute la facturation — services, contrats, devis et factures. Vous pourrez la remplacer par client ultérieurement."
+        "description": "Cette devise sera utilisée par défaut pour toute la facturation : services, contrats, devis et factures. Vous pourrez la remplacer par client ultérieurement."
       }
     },
     "billingMethods": {
@@ -237,7 +237,7 @@
     },
     "validation": {
       "actionRequiredLabel": "Action requise :",
-      "actionRequiredDescription": "Confirmez un type de service suggéré ci-dessous, ou ajoutez le vôtre, avant de créer un service."
+      "actionRequiredDescription": "Confirmez un type de service suggéré ci-dessus, ou ajoutez le vôtre, avant de créer un service."
     }
   },
   "clientContactStep": {
@@ -281,7 +281,7 @@
       "optionalLabel": "Optionnel :"
     },
     "footer": {
-      "optional": "Vous pouvez ignorer cette étape et ajouter des contacts plus tard depuis le profil du client."
+      "optional": "Vous pouvez ignorer cette étape et ajouter ou modifier des contacts à tout moment depuis le profil du client."
     }
   },
   "clientInfoStep": {
@@ -303,7 +303,7 @@
     },
     "header": {
       "title": "Votre entreprise et compte administrateur",
-      "description": "Commençons par les informations de votre propre entreprise MSP et votre identifiant administrateur — pas celles d'un client que vous accompagnez."
+      "description": "Commençons par les informations de votre propre entreprise MSP et votre identifiant administrateur, pas celles d'un client que vous accompagnez."
     },
     "fields": {
       "firstName": {
@@ -326,7 +326,7 @@
       "language": {
         "label": "Langue",
         "placeholder": "Sélectionnez une langue",
-        "help": "Devient la valeur par défaut de l'organisation pour tout le monde — personnel MSP et utilisateurs du portail client. Les utilisateurs individuels et les clients peuvent la remplacer plus tard."
+        "help": "Devient la valeur par défaut de l'organisation pour tout le monde : personnel MSP et utilisateurs du portail client. Les utilisateurs individuels et les clients peuvent la remplacer plus tard."
       }
     },
     "password": {
@@ -465,7 +465,7 @@
     },
     "optional": {
       "label": "Optionnel :",
-      "description": "Rien n'est figé ici — vous pouvez ignorer cette étape et inviter, retirer ou modifier des membres de l'équipe à tout moment depuis Paramètres > Utilisateurs."
+      "description": "Vous pouvez ignorer cette étape et inviter ou gérer des membres de l'équipe à tout moment depuis Paramètres > Utilisateurs."
     }
   },
   "ticketingConfigStep": {
@@ -654,7 +654,7 @@
             "label": "Ordre d'affichage",
             "placeholder": "Laisser vide pour générer automatiquement",
             "help": "Contrôle l'ordre dans lequel les statuts apparaissent dans les menus déroulants de la plateforme. Les nombres les plus faibles apparaissent en premier.",
-            "reassigned": "L'ordre d'affichage {{requested}} est déjà utilisé sur ce tableau — {{assigned}} a été utilisé à la place."
+            "reassigned": "L'ordre d'affichage {{requested}} est déjà utilisé sur ce tableau, donc {{assigned}} a été utilisé à la place."
           },
           "state": {
             "label": "Type de statut",
@@ -881,7 +881,7 @@
     "supportEmail": {
       "label": "E-mail de support",
       "placeholder": "support@votreentreprise.com",
-      "help": "Cette adresse e-mail sera utilisée pour créer des tickets de support. Les e-mails envoyés à cette adresse généreront automatiquement des tickets dans votre système."
+      "help": "Enregistrée comme adresse de contact du support — visible par vos clients dans le portail et utilisée dans les e-mails de rendez-vous. Pour transformer automatiquement les e-mails entrants en tickets, connectez une boîte aux lettres plus tard dans Paramètres > E-mail."
     },
     "finalRequirement": {
       "label": "Obligatoire :",

@@ -6,6 +6,7 @@ import { getSystemEmailService, TenantEmailService, sendTeamInvitationEmail } fr
 import { hasPermission } from '@alga-psa/user-composition/lib/permissions';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
 import { isValidEmail } from '@alga-psa/core';
+import { validatePassword } from '@alga-psa/validation';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { checkInternalUserLicenseLimit, isInternalUserLicenseLimitRejected } from '../../lib/internalUserLicenseGuard';
 
@@ -21,7 +22,7 @@ export type UserInvitationErrorCode =
   | 'BASE_URL_NOT_CONFIGURED'
   | 'TOKEN_REQUIRED'
   | 'TOKEN_AND_PASSWORD_REQUIRED'
-  | 'PASSWORD_TOO_SHORT'
+  | 'PASSWORD_POLICY'
   | 'INVALID_OR_EXPIRED_TOKEN'
   | 'CREATE_USER_FAILED'
   | 'VERIFICATION_FAILED'
@@ -120,7 +121,21 @@ export const sendUserInvitation = withAuth(async (
     // the same, so it must be held to the same limit. Re-checked again at
     // acceptance time in completeUserInvitationSetup, since seats can fill up
     // (or shrink) between the invite being sent and accepted.
-    const licenseCheck = await checkInternalUserLicenseLimit(knex, tenant);
+    //
+    // Other pending invitations reserve seats here: without that, an admin
+    // with one seat left could send any number of invites and every invitee
+    // past the first would only find out at acceptance, after choosing a
+    // password. This invitee's own pending invitation is excluded so a
+    // resend never blocks itself.
+    const pendingRow = await tenantDb(knex, tenant).table('user_invitations')
+      .whereNull('used_at')
+      .whereNot('email', normalizedEmail)
+      .where('expires_at', '>', knex.fn.now())
+      .count('* as count')
+      .first();
+    const reservedSeats = parseInt(String(pendingRow?.count ?? '0'), 10);
+
+    const licenseCheck = await checkInternalUserLicenseLimit(knex, tenant, { reservedSeats });
     if (isInternalUserLicenseLimitRejected(licenseCheck)) {
       return { success: false, error: licenseCheck.error, errorCode: licenseCheck.code };
     }
@@ -251,8 +266,11 @@ export async function completeUserInvitationSetup(
       return { success: false, error: 'Token and password are required', errorCode: 'TOKEN_AND_PASSWORD_REQUIRED' };
     }
 
-    if (password.length < 8) {
-      return { success: false, error: 'Password must be at least 8 characters long', errorCode: 'PASSWORD_TOO_SHORT' };
+    // Full policy, not just length: this action is reachable without a
+    // session, so the accept page's client-side checks are advisory only.
+    const passwordPolicyError = validatePassword(password);
+    if (passwordPolicyError) {
+      return { success: false, error: passwordPolicyError, errorCode: 'PASSWORD_POLICY' };
     }
 
     const verificationResult = await UserInvitationService.verifyToken(token);
@@ -287,6 +305,22 @@ export async function completeUserInvitationSetup(
         return { success: false, error: licenseCheck.error, errorCode: licenseCheck.code } as const;
       }
 
+      // The invitation's role must still exist — creating the account without
+      // it would hand the invitee a working login that can't see anything,
+      // while reporting success. Fail instead so the admin re-invites with a
+      // current role.
+      const invitationRoleId = verificationResult.invitation?.role_id;
+      const invitationRole = invitationRoleId
+        ? await scopedDb.table('roles').where({ role_id: invitationRoleId }).first()
+        : undefined;
+      if (!invitationRole) {
+        return {
+          success: false,
+          error: 'The role for this invitation no longer exists. Please ask your administrator to send a new invitation.',
+          errorCode: 'INVALID_ROLE'
+        } as const;
+      }
+
       let newUser;
       try {
         newUser = await runAsSystem('user-invitation-account-creation', async () => {
@@ -307,7 +341,10 @@ export async function completeUserInvitationSetup(
             user_type: 'internal',
             is_inactive: false,
             two_factor_enabled: false,
-            is_google_user: false
+            is_google_user: false,
+            // Assigned inside UserService.create's own transaction, so the
+            // account and its role land (or fail) together.
+            role_ids: [invitationRole.role_id]
           }, systemContext);
 
           if (!user || !user.user_id) {
@@ -320,17 +357,6 @@ export async function completeUserInvitationSetup(
         console.error('Error creating team member account:', error);
         const normalized = normalizeSendUserInvitationError(error);
         return { success: false, error: normalized.message, errorCode: normalized.errorCode || 'CREATE_USER_FAILED' } as const;
-      }
-
-      if (invitee.role_name) {
-        try {
-          const invitationRoleId = verificationResult.invitation?.role_id;
-          if (invitationRoleId) {
-            await scopedDb.table('user_roles').insert({ user_id: newUser.user_id, role_id: invitationRoleId, tenant });
-          }
-        } catch (roleError) {
-          console.warn('Failed to assign role to invited team member:', roleError);
-        }
       }
 
       try {

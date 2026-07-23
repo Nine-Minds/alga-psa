@@ -1421,7 +1421,10 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
             <p className="text-xs text-gray-500">
               {t('ticketingConfigStep.numbering.example', {
                 defaultValue: 'Example: {{value}}',
-                value: `${data.ticketPrefix || ''}${String(data.ticketStartNumber || 1).padStart(data.ticketPaddingLength || 0, '0')}`
+                // `?? 6` matches both the input's displayed default and what
+                // saveTicketingSettings persists when the field is untouched;
+                // an explicit 0 still means "no padding".
+                value: `${data.ticketPrefix || ''}${String(data.ticketStartNumber || 1).padStart(data.ticketPaddingLength ?? 6, '0')}`
               })}
             </p>
           </div>
@@ -1741,7 +1744,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                 <div className="border rounded-lg overflow-hidden bg-white">
                   <div className="max-h-48 overflow-y-auto">
                     <table className="w-full">
-                      <thead className="bg-gray-50 border-b sticky top-0">
+                      <thead className="bg-gray-50 border-b sticky top-0 z-10">
                         <tr>
                           <th className="px-3 py-2">
                             <Checkbox
@@ -2251,7 +2254,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                 <div className="border rounded-lg overflow-hidden bg-white">
                   <div className="max-h-48 overflow-y-auto">
                     <table className="w-full">
-                      <thead className="bg-gray-50 border-b sticky top-0">
+                      <thead className="bg-gray-50 border-b sticky top-0 z-10">
                         <tr>
                           <th className="px-3 py-2">
                             <Checkbox
@@ -2921,7 +2924,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                 <div className="border rounded-lg overflow-hidden bg-white">
                   <div className="max-h-48 overflow-y-auto">
                     <table className="w-full">
-                      <thead className="bg-gray-50 border-b sticky top-0">
+                      <thead className="bg-gray-50 border-b sticky top-0 z-10">
                         <tr>
                           <th className="px-3 py-2">
                             <Checkbox
@@ -3360,7 +3363,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
                 <div className="border rounded-lg overflow-hidden bg-white">
                   <div className="max-h-48 overflow-y-auto">
                     <table className="w-full">
-                      <thead className="bg-gray-50 border-b sticky top-0">
+                      <thead className="bg-gray-50 border-b sticky top-0 z-10">
                         <tr>
                           <th className="px-3 py-2">
                             <Checkbox
@@ -3577,7 +3580,7 @@ export function TicketingConfigStep({ data, updateData }: StepProps) {
           />
           <p className="text-xs text-gray-600">
             {t('ticketingConfigStep.supportEmail.help', {
-              defaultValue: 'This email address will be used to create support tickets. Emails sent to this address will automatically generate tickets in your system.'
+              defaultValue: 'Saved as your support contact address — shown to clients in the portal and used in appointment emails. To turn inbound email into tickets automatically, connect a mailbox later in Settings > Email.'
             })}
           </p>
         </div>

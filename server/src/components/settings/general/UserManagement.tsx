@@ -13,7 +13,9 @@ import { addContact, getContactsEligibleForInvitation } from '@alga-psa/clients/
 import { sendPortalInvitation, createClientPortalUser } from '@alga-psa/client-portal/actions/portal-actions/portalInvitationActions';
 import type { PortalInvitationErrorCode } from '@alga-psa/portal-shared/types';
 import { getTenantPortalLoginLink } from '@alga-psa/client-portal/actions/portal-actions/clientPortalLinkActions';
-import { sendUserInvitation, type UserInvitationErrorCode } from '@alga-psa/users/actions/user-actions/userInvitationActions';
+import { sendUserInvitation, getUserInvitations, revokeUserInvitation, type UserInvitationErrorCode } from '@alga-psa/users/actions/user-actions/userInvitationActions';
+
+type PendingUserInvitation = Awaited<ReturnType<typeof getUserInvitations>>[number];
 
 const PORTAL_INVITE_ERROR_KEYS: Partial<Record<PortalInvitationErrorCode, string>> = {
   PERMISSION_DENIED_INVITE: 'users.messages.error.permissionDeniedInvite',
@@ -54,7 +56,9 @@ const USER_INVITE_ERROR_KEYS: Partial<Record<UserInvitationErrorCode, string>> =
   BASE_URL_NOT_CONFIGURED: 'users.messages.error.noBaseUrl',
   INVITATION_FAILED: 'users.messages.error.sendInvitation',
   LICENSE_LIMIT_REACHED: 'users.messages.error.licenseLimitReached',
-  SOLO_PLAN_LIMIT: 'users.messages.error.soloPlanLimit'
+  SOLO_PLAN_LIMIT: 'users.messages.error.soloPlanLimit',
+  INVITATION_NOT_FOUND: 'users.messages.error.invitationNotFound',
+  REVOKE_FAILED: 'users.messages.error.revokeInvitation'
 };
 
 const GENERIC_USER_INVITE_ERROR_CODES: ReadonlySet<UserInvitationErrorCode> = new Set([
@@ -157,6 +161,8 @@ const UserManagement = (): React.JSX.Element => {
   const [contactValidationError, setContactValidationError] = useState<string | null>(null);
   const [isCopyingPortalLink, setIsCopyingPortalLink] = useState(false);
   const [userView, setUserView] = useState<'list' | 'org'>('list');
+  const [pendingInvitations, setPendingInvitations] = useState<PendingUserInvitation[]>([]);
+  const [revokingInvitationId, setRevokingInvitationId] = useState<string | null>(null);
   const { isSolo } = useTier();
   const soloMspUserLimitReached = portalType === 'msp' && isSolo && (licenseUsage?.used ?? 0) >= 1;
   const soloMspLimitMessage = 'Solo plan is limited to 1 user. Upgrade to Pro to add more users.';
@@ -217,6 +223,9 @@ const UserManagement = (): React.JSX.Element => {
     fetchUsers();
     fetchRoles();
     fetchLicenseUsage();
+    if (portalType === 'msp') {
+      fetchPendingInvitations();
+    }
     if (portalType === 'client') {
       fetchClients();
       fetchContacts();
@@ -349,6 +358,42 @@ const UserManagement = (): React.JSX.Element => {
       setIsCopyingPortalLink(false);
     }
   };
+
+  const fetchPendingInvitations = async (): Promise<void> => {
+    try {
+      const invitations = await getUserInvitations();
+      setPendingInvitations(invitations.filter(inv => inv.status === 'pending'));
+    } catch (err) {
+      console.error('Error fetching pending team invitations:', err);
+    }
+  };
+
+  const handleRevokeInvitation = async (invitationId: string): Promise<void> => {
+    setRevokingInvitationId(invitationId);
+    try {
+      const result = await revokeUserInvitation(invitationId);
+      if (result.success) {
+        toast.success(t('users.messages.success.invitationRevoked', { defaultValue: 'Invitation revoked' }));
+        await fetchPendingInvitations();
+      } else {
+        toast.error(translateUserInvitationError(result, 'users.messages.error.revokeInvitation'));
+      }
+    } catch (err) {
+      console.error('Error revoking team invitation:', err);
+      toast.error(t('users.messages.error.revokeInvitation', { defaultValue: 'Failed to revoke invitation' }));
+    } finally {
+      setRevokingInvitationId(null);
+    }
+  };
+
+  const formatInvitationExpiry = (dateValue: string): string =>
+    new Date(dateValue).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
 
   const fetchUsers = async (): Promise<void> => {
     try {
@@ -563,6 +608,7 @@ const fetchContacts = async (): Promise<void> => {
         }
 
         toast.success(t('users.messages.success.teamInvitationSent', { defaultValue: 'Invitation sent successfully!' }));
+        await fetchPendingInvitations();
       } else {
         // Create MSP user immediately with the admin-provided password
         const passwordError = validatePassword(newUser.password);
@@ -1071,6 +1117,44 @@ const fetchContacts = async (): Promise<void> => {
               {renderCreateUserActions()}
             </div>
             {showNewUserForm && renderNewUserForm()}
+            {pendingInvitations.length > 0 && (
+              <div className="mb-4 border rounded-lg p-4 space-y-3">
+                <div>
+                  <h4 className="text-sm font-medium">
+                    {t('users.invitations.title', { defaultValue: 'Pending Invitations' })}
+                  </h4>
+                  <p className="text-sm text-muted-foreground">
+                    {t('users.invitations.description', { defaultValue: "Invited team members who haven't set up their account yet." })}
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  {pendingInvitations.map((invitation) => (
+                    <div key={invitation.invitation_id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="space-y-1">
+                        <div className="text-sm font-medium">
+                          {invitation.first_name} {invitation.last_name}
+                          <span className="ml-2 font-normal text-muted-foreground">{invitation.email}</span>
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {t('users.invitations.expiresPrefix', { defaultValue: 'Expires:' })} {formatInvitationExpiry(invitation.expires_at)}
+                        </div>
+                      </div>
+                      <Button
+                        id={`revoke-invitation-${invitation.invitation_id}`}
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleRevokeInvitation(invitation.invitation_id)}
+                        disabled={revokingInvitationId === invitation.invitation_id}
+                      >
+                        {revokingInvitationId === invitation.invitation_id
+                          ? t('users.invitations.revoking', { defaultValue: 'Revoking...' })
+                          : t('users.invitations.revoke', { defaultValue: 'Revoke' })}
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             <Tabs value={userView} onValueChange={(v) => setUserView(v as 'list' | 'org')}>
               <TabsList>
                 <TabsTrigger value="list">{t('users.tabs.list')}</TabsTrigger>

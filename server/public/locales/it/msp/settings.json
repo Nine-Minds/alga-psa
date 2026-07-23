@@ -213,7 +213,8 @@
         "teamInvitationSent": "Invito inviato con successo!",
         "clientPortalUserCreated": "Utente del portale clienti creato con successo!",
         "copiedVanityLink": "Link personalizzato di accesso al portale copiato negli appunti",
-        "copiedCanonicalLink": "Link canonico di accesso al portale copiato negli appunti"
+        "copiedCanonicalLink": "Link canonico di accesso al portale copiato negli appunti",
+        "invitationRevoked": "Invito revocato"
       },
       "error": {
         "fetchUsers": "Impossibile recuperare gli utenti",
@@ -249,8 +250,17 @@
         "roleRequired": "Il ruolo è obbligatorio",
         "invalidRole": "Il ruolo selezionato non è valido",
         "licenseLimitReached": "Hai raggiunto il limite di licenze utente MSP.",
-        "soloPlanLimit": "Il piano Solo è limitato a 1 utente. Passa a Pro per aggiungere altri utenti."
+        "soloPlanLimit": "Il piano Solo è limitato a 1 utente. Passa a Pro per aggiungere altri utenti.",
+        "revokeInvitation": "Impossibile revocare l'invito",
+        "invitationNotFound": "Invito non trovato o già utilizzato"
       }
+    },
+    "invitations": {
+      "title": "Inviti in sospeso",
+      "description": "Membri del team invitati che non hanno ancora configurato il proprio account.",
+      "expiresPrefix": "Scade:",
+      "revoke": "Revoca",
+      "revoking": "Revoca in corso..."
     }
   },
   "userDetails": {

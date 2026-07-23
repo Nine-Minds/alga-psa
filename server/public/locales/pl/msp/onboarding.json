@@ -30,7 +30,7 @@
     "title": "Kreator wdrożenia",
     "description": "Powłoka kreatora do konfiguracji dzierżawcy MSP z prezentacją w oknie dialogowym lub na pełnym ekranie, postępem, walidacją i zakończeniem",
     "steps": {
-      "clientInfo": "Informacje o kliencie",
+      "clientInfo": "Twoja firma",
       "teamMembers": "Członkowie zespołu",
       "addClient": "Dodaj klienta",
       "clientContact": "Kontakt klienta",
@@ -117,7 +117,7 @@
     },
     "note": {
       "defaultTaxSettings": "Klient zostanie utworzony z domyślnymi nieopodatkowanymi (0%) ustawieniami podatkowymi. Możesz skonfigurować stawki podatkowe później w ustawieniach klienta.",
-      "optional": "Możesz pominąć ten krok i dodać klientów później z poziomu panelu."
+      "optional": "Możesz pominąć ten krok i dodać lub zmienić klientów w dowolnej chwili z poziomu panelu."
     }
   },
   "billingSetupStep": {
@@ -141,7 +141,7 @@
         "confirmAdd": "Dodaj typ usługi"
       },
       "noteLabel": "Uwaga:",
-      "description": "Typy usług są etykietami taksonomicznymi do organizacji i filtrowania. Tryb rozliczeń jest konfigurowany osobno dla każdej usługi.",
+      "description": "Typy usług to etykiety taksonomiczne służące do organizacji i filtrowania. Tryb rozliczeń konfiguruje się osobno dla każdej usługi. Możesz później w dowolnej chwili zmienić nazwę, dodać lub usunąć typy w Ustawieniach.",
       "addForm": {
         "title": "Dodaj nowy typ usługi",
         "fields": {
@@ -164,8 +164,8 @@
         }
       },
       "import": {
-        "title": "Importuj standardowe typy usług",
-        "description": "Wybierz standardowe typy usług do zaimportowania do systemu:",
+        "title": "Sugerowane typy usług",
+        "description": "Są to standardowe typy dla większości dostawców MSP. Odznacz te, których nie chcesz, a następnie potwierdź, aby dodać pozostałe. Możesz je później zmienić lub usunąć.",
         "success": {
           "titleOne": "Typ usługi został zaimportowany!",
           "titleOther": "Typy usług zostały zaimportowane!",
@@ -176,8 +176,8 @@
           "skipped": "Pominięto {{count}}."
         },
         "actions": {
-          "importing": "Importowanie...",
-          "importSelected": "Importuj zaznaczone ({{count}})"
+          "importing": "Dodawanie...",
+          "importSelected": "Potwierdź i dodaj ({{count}})"
         }
       },
       "table": {
@@ -194,8 +194,8 @@
       }
     },
     "header": {
-      "title": "Utwórz swoją pierwszą usługę",
-      "description": "Dodaj usługę i wybierz sposób jej rozliczania. Typ usługi identyfikuje kategorię usługi, a tryb rozliczeń kontroluje zachowanie cenowe.",
+      "title": "Konfiguracja rozliczeń",
+      "description": "Ustaw domyślną walutę i utwórz swoją pierwszą usługę.",
       "serviceTitle": "Utwórz swoją pierwszą usługę",
       "serviceDescription": "Dodaj usługę i wybierz sposób jej rozliczania. Typ usługi określa kategorię usługi, a tryb rozliczania kontroluje zachowanie cen."
     },
@@ -217,7 +217,7 @@
         "required": "(Wymagane)",
         "emptyPlaceholder": "Utwórz lub zaimportuj typy usług",
         "placeholder": "Wybierz typ usługi",
-        "emptyHelp": "Kliknij \"Zarządzaj typami usług\", aby utworzyć lub zaimportować typy usług"
+        "emptyHelp": "Potwierdź poniżej sugerowany typ usługi lub dodaj własny. Możesz to później zmienić."
       },
       "billingMode": {
         "label": "Tryb rozliczeń"
@@ -228,7 +228,7 @@
       },
       "defaultCurrency": {
         "label": "Domyślna waluta *",
-        "description": "Ta waluta będzie używana jako domyślna w całym rozliczaniu — usługi, umowy, oferty i faktury. Możesz ją później zastąpić dla każdego klienta."
+        "description": "Ta waluta będzie używana jako domyślna w całym rozliczaniu: usługi, umowy, oferty i faktury. Możesz ją później zastąpić dla każdego klienta."
       }
     },
     "billingMethods": {
@@ -239,7 +239,7 @@
     },
     "validation": {
       "actionRequiredLabel": "Wymagane działanie:",
-      "actionRequiredDescription": "Potwierdź sugerowany typ usługi poniżej lub dodaj własny, zanim utworzysz usługę."
+      "actionRequiredDescription": "Potwierdź sugerowany typ usługi powyżej lub dodaj własny, zanim utworzysz usługę."
     }
   },
   "clientContactStep": {
@@ -283,7 +283,7 @@
       "optionalLabel": "Opcjonalne:"
     },
     "footer": {
-      "optional": "Możesz pominąć ten krok i dodać kontakty później z profilu klienta."
+      "optional": "Możesz pominąć ten krok i dodać lub zmienić kontakty w dowolnej chwili z profilu klienta."
     }
   },
   "clientInfoStep": {
@@ -304,8 +304,8 @@
       "noteLabel": "Uwaga:"
     },
     "header": {
-      "title": "Informacje o kliencie",
-      "description": "Zacznijmy od skonfigurowania profilu klienta."
+      "title": "Twoja firma i konto administratora",
+      "description": "Zacznijmy od danych Twojej własnej firmy MSP i Twojego loginu administratora, a nie od klienta, którego obsługujesz."
     },
     "fields": {
       "firstName": {
@@ -328,7 +328,7 @@
       "language": {
         "label": "Język",
         "placeholder": "Wybierz język",
-        "help": "Staje się domyślnym językiem organizacji dla wszystkich — personelu MSP i użytkowników portalu klienta. Poszczególni użytkownicy i klienci mogą go później nadpisać."
+        "help": "Staje się domyślnym językiem organizacji dla wszystkich: personelu MSP i użytkowników portalu klienta. Poszczególni użytkownicy i klienci mogą go później nadpisać."
       }
     },
     "password": {
@@ -429,7 +429,7 @@
       },
       "email": {
         "label": "E-mail",
-        "placeholder": "jan@klient.pl"
+        "placeholder": "jan@twojafirma.pl"
       },
       "role": {
         "label": "Rola"
@@ -467,7 +467,7 @@
     },
     "optional": {
       "label": "Opcjonalne:",
-      "description": "Możesz pominąć ten krok i zaprosić członków zespołu później z poziomu ustawień."
+      "description": "Możesz pominąć ten krok i w dowolnej chwili zapraszać członków zespołu lub nimi zarządzać w Ustawienia > Użytkownicy."
     }
   },
   "ticketingConfigStep": {
@@ -656,7 +656,7 @@
             "label": "Kolejność wyświetlania",
             "placeholder": "Pozostaw puste, aby wygenerować automatycznie",
             "help": "Określa kolejność pojawiania się statusów na listach rozwijanych w całej platformie. Niższe numery pojawiają się wcześniej.",
-            "reassigned": "Kolejność wyświetlania {{requested}} jest już używana na tej tablicy — użyto zamiast tego {{assigned}}."
+            "reassigned": "Kolejność wyświetlania {{requested}} jest już używana na tej tablicy, więc użyto zamiast tego {{assigned}}."
           },
           "state": {
             "label": "Typ statusu",
@@ -882,8 +882,8 @@
     },
     "supportEmail": {
       "label": "E-mail wsparcia",
-      "placeholder": "support@twojklient.pl",
-      "help": "Ten adres e-mail będzie używany do tworzenia zgłoszeń wsparcia. Wiadomości wysłane na ten adres będą automatycznie generować zgłoszenia w systemie."
+      "placeholder": "support@twojafirma.pl",
+      "help": "Zapisany jako adres kontaktowy wsparcia — widoczny dla klientów w portalu i używany w e-mailach dotyczących spotkań. Aby automatycznie zamieniać przychodzące e-maile w zgłoszenia, podłącz później skrzynkę w Ustawienia > E-mail."
     },
     "finalRequirement": {
       "label": "Wymagane:",

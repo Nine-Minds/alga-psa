@@ -117,7 +117,7 @@
     },
     "note": {
       "defaultTaxSettings": "The client will be created with default non-taxable (0%) tax settings. You can configure tax rates later in the client settings.",
-      "optional": "Nothing here is final — you can skip this step and add or change clients anytime from your dashboard."
+      "optional": "You can skip this step and add or change clients anytime from your dashboard."
     }
   },
   "billingSetupStep": {
@@ -165,7 +165,7 @@
       },
       "import": {
         "title": "Suggested Service Types",
-        "description": "These are standard for most MSPs. Uncheck any you don't want, then confirm to add the rest — you can rename or remove them anytime later.",
+        "description": "These are standard for most MSPs. Uncheck any you don't want, then confirm to add the rest. You can rename or remove them later.",
         "success": {
           "titleOne": "Service type imported successfully!",
           "titleOther": "Service types imported successfully!",
@@ -215,7 +215,7 @@
         "required": "(Required)",
         "emptyPlaceholder": "Create or import service types",
         "placeholder": "Select a service type",
-        "emptyHelp": "Confirm a suggested service type below, or add your own — nothing else here is set in stone."
+        "emptyHelp": "Confirm a suggested service type below, or add your own. You can change these later."
       },
       "billingMode": {
         "label": "Billing Mode"
@@ -226,7 +226,7 @@
       },
       "defaultCurrency": {
         "label": "Default Currency *",
-        "description": "This currency will be used as the default across all billing — services, contracts, quotes, and invoices. You can override it per client later."
+        "description": "This currency will be used as the default across all billing: services, contracts, quotes, and invoices. You can override it per client later."
       }
     },
     "billingMethods": {
@@ -237,7 +237,7 @@
     },
     "validation": {
       "actionRequiredLabel": "Action Required:",
-      "actionRequiredDescription": "Confirm a suggested service type below, or add your own, before creating a service."
+      "actionRequiredDescription": "Confirm a suggested service type above, or add your own, before creating a service."
     }
   },
   "clientContactStep": {
@@ -281,7 +281,7 @@
       "optionalLabel": "Optional:"
     },
     "footer": {
-      "optional": "Nothing here is final — you can skip this step and add or change contacts anytime from the client's profile."
+      "optional": "You can skip this step and add or change contacts anytime from the client's profile."
     }
   },
   "clientInfoStep": {
@@ -303,7 +303,7 @@
     },
     "header": {
       "title": "Your Company & Admin Account",
-      "description": "Let's start with your MSP's own company details and your admin login — not a client you support."
+      "description": "Let's start with your MSP's own company details and your admin login, not a client you support."
     },
     "fields": {
       "firstName": {
@@ -326,7 +326,7 @@
       "language": {
         "label": "Language",
         "placeholder": "Select a language",
-        "help": "Becomes the organization default for everyone — MSP staff and client portal users. Individual users and clients can override it later."
+        "help": "Becomes the organization default for everyone: MSP staff and client portal users. Individual users and clients can override it later."
       }
     },
     "password": {
@@ -465,7 +465,7 @@
     },
     "optional": {
       "label": "Optional:",
-      "description": "Nothing here is final — you can skip this step and invite, remove, or change team members anytime from Settings > Users."
+      "description": "You can skip this step and invite or manage team members anytime from Settings > Users."
     }
   },
   "ticketingConfigStep": {
@@ -654,7 +654,7 @@
             "label": "Display Order",
             "placeholder": "Leave empty for auto-generate",
             "help": "Controls the order in which statuses appear in dropdown menus throughout the platform. Lower numbers appear first.",
-            "reassigned": "Display order {{requested}} is already used on this board — used {{assigned}} instead."
+            "reassigned": "Display order {{requested}} is already used on this board, so {{assigned}} was used instead."
           },
           "state": {
             "label": "Status Type",
@@ -881,7 +881,7 @@
     "supportEmail": {
       "label": "Support Email",
       "placeholder": "support@youritcompany.com",
-      "help": "This email address will be used to create support tickets. Emails sent to this address will automatically generate tickets in your system."
+      "help": "Saved as your support contact address — shown to clients in the portal and used in appointment emails. To turn inbound email into tickets automatically, connect a mailbox later in Settings > Email."
     },
     "finalRequirement": {
       "label": "Required:",

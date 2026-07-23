@@ -213,7 +213,8 @@
         "teamInvitationSent": "Einladung erfolgreich gesendet!",
         "clientPortalUserCreated": "Kundenportal-Benutzer erfolgreich erstellt!",
         "copiedVanityLink": "Benutzerdefinierter Portal-Anmeldelink in die Zwischenablage kopiert",
-        "copiedCanonicalLink": "Kanonischer Portal-Anmeldelink in die Zwischenablage kopiert"
+        "copiedCanonicalLink": "Kanonischer Portal-Anmeldelink in die Zwischenablage kopiert",
+        "invitationRevoked": "Einladung widerrufen"
       },
       "error": {
         "fetchUsers": "Benutzer konnten nicht abgerufen werden",
@@ -249,8 +250,17 @@
         "roleRequired": "Rolle ist erforderlich",
         "invalidRole": "Ausgewählte Rolle ist ungültig",
         "licenseLimitReached": "Sie haben Ihr MSP-Benutzerlizenzlimit erreicht.",
-        "soloPlanLimit": "Der Solo-Tarif ist auf 1 Benutzer begrenzt. Führen Sie ein Upgrade auf Pro durch, um weitere Benutzer hinzuzufügen."
+        "soloPlanLimit": "Der Solo-Tarif ist auf 1 Benutzer begrenzt. Führen Sie ein Upgrade auf Pro durch, um weitere Benutzer hinzuzufügen.",
+        "revokeInvitation": "Einladung konnte nicht widerrufen werden",
+        "invitationNotFound": "Einladung nicht gefunden oder bereits verwendet"
       }
+    },
+    "invitations": {
+      "title": "Ausstehende Einladungen",
+      "description": "Eingeladene Teammitglieder, die ihr Konto noch nicht eingerichtet haben.",
+      "expiresPrefix": "Läuft ab:",
+      "revoke": "Widerrufen",
+      "revoking": "Wird widerrufen..."
     }
   },
   "userDetails": {

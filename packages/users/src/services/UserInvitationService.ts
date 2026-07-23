@@ -86,6 +86,19 @@ export class UserInvitationService {
         .first();
 
       if (existingInvitation) {
+        // Refresh the pending invitation on resend: the email is rendered
+        // from the latest params, so persist the same name/role for the
+        // account created at acceptance, and restart the 24-hour window the
+        // email promises.
+        await tenantDb(trx, tenant).table('user_invitations')
+          .where({ invitation_id: existingInvitation.invitation_id })
+          .update({
+            first_name: params.firstName,
+            last_name: params.lastName,
+            role_id: params.roleId,
+            expires_at: trx.raw("now() + interval '24 hours'")
+          });
+
         return {
           success: true,
           invitationId: existingInvitation.invitation_id,

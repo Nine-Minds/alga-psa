@@ -173,7 +173,7 @@ const COPY = {
     headerTitle: 'Welcome to the Team',
     headerSubtitle: "You're invited to join {{tenantName}}",
     greeting: 'Hello {{teamMemberName}},',
-    intro: '{{invitedByName}} has invited you to join <strong>{{tenantName}}</strong> as a <strong>{{roleName}}</strong>. Set up your account to get started.',
+    intro: '{{invitedByName}} has invited you to join <strong>{{tenantName}}</strong> as <strong>{{roleName}}</strong>. Set up your account to get started.',
     infoBoxTitle: 'What happens next',
     feature1: '✓ Click the button below to set your own password',
     feature2: '✓ Sign in with your work email and new password',

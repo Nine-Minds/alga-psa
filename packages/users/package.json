@@ -40,7 +40,6 @@
     "@alga-psa/email": "*",
     "@alga-psa/formatting": "*",
     "@alga-psa/storage": "*",
-    "@alga-psa/tenancy": "*",
     "@alga-psa/types": "*",
     "@alga-psa/user-composition": "*",
     "@alga-psa/validation": "*",

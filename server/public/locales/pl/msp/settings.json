@@ -215,7 +215,8 @@
         "teamInvitationSent": "Zaproszenie zostało wysłane pomyślnie!",
         "clientPortalUserCreated": "Użytkownik portalu klienta został utworzony pomyślnie!",
         "copiedVanityLink": "Skopiowano niestandardowy link logowania do portalu do schowka",
-        "copiedCanonicalLink": "Skopiowano kanoniczny link logowania do portalu do schowka"
+        "copiedCanonicalLink": "Skopiowano kanoniczny link logowania do portalu do schowka",
+        "invitationRevoked": "Zaproszenie odwołane"
       },
       "error": {
         "fetchUsers": "Nie udało się pobrać użytkowników",
@@ -251,8 +252,17 @@
         "roleRequired": "Rola jest wymagana",
         "invalidRole": "Wybrana rola jest nieprawidłowa",
         "licenseLimitReached": "Osiągnięto limit licencji użytkowników MSP.",
-        "soloPlanLimit": "Plan Solo jest ograniczony do 1 użytkownika. Przejdź na Pro, aby dodać więcej użytkowników."
+        "soloPlanLimit": "Plan Solo jest ograniczony do 1 użytkownika. Przejdź na Pro, aby dodać więcej użytkowników.",
+        "revokeInvitation": "Nie udało się odwołać zaproszenia",
+        "invitationNotFound": "Nie znaleziono zaproszenia lub zostało już użyte"
       }
+    },
+    "invitations": {
+      "title": "Oczekujące zaproszenia",
+      "description": "Zaproszeni członkowie zespołu, którzy nie skonfigurowali jeszcze swojego konta.",
+      "expiresPrefix": "Wygasa:",
+      "revoke": "Odwołaj",
+      "revoking": "Odwoływanie..."
     }
   },
   "userDetails": {

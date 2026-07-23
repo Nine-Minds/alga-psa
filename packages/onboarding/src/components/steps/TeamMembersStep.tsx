@@ -10,6 +10,7 @@ import { Plus, Trash2, Users, AlertCircle, Eye, EyeOff, Mail, KeyRound } from 'l
 import type { StepProps } from '@alga-psa/types';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
 import { getOnboardingLicenseUsage, getAvailableRoles, addSingleTeamMember } from '@alga-psa/onboarding/actions';
 import { sendUserInvitation } from '@alga-psa/users/actions/user-actions/userInvitationActions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -503,32 +504,35 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
                   defaultValue: 'How should they get access?'
                 })}
               </Label>
-              <div className="flex gap-2">
-                <Button
-                  id={`invite-mode-email-${index}`}
-                  type="button"
-                  variant={inviteMode === 'email' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => updateTeamMember(index, 'inviteMode', 'email')}
-                >
-                  <Mail className="w-4 h-4 mr-2" />
-                  {t('teamMembersStep.fields.setupMethod.email', {
-                    defaultValue: 'Send email invite'
-                  })}
-                </Button>
-                <Button
-                  id={`invite-mode-password-${index}`}
-                  type="button"
-                  variant={inviteMode === 'password' ? 'default' : 'outline'}
-                  size="sm"
-                  onClick={() => updateTeamMember(index, 'inviteMode', 'password')}
-                >
-                  <KeyRound className="w-4 h-4 mr-2" />
-                  {t('teamMembersStep.fields.setupMethod.password', {
-                    defaultValue: 'Set a password myself'
-                  })}
-                </Button>
-              </div>
+              {/* Segmented switcher, not standalone buttons — a filled
+                  "Send email invite" button read as the action that sends
+                  the invite, when the real send is the card's Send Invite. */}
+              <ViewSwitcher<'email' | 'password'>
+                currentView={inviteMode}
+                onChange={(mode) => updateTeamMember(index, 'inviteMode', mode)}
+                aria-label={t('teamMembersStep.fields.setupMethod.label', {
+                  defaultValue: 'How should they get access?'
+                })}
+                className="w-fit"
+                options={[
+                  {
+                    value: 'email',
+                    id: `invite-mode-email-${index}`,
+                    icon: Mail,
+                    label: t('teamMembersStep.fields.setupMethod.email', {
+                      defaultValue: 'Send email invite'
+                    })
+                  },
+                  {
+                    value: 'password',
+                    id: `invite-mode-password-${index}`,
+                    icon: KeyRound,
+                    label: t('teamMembersStep.fields.setupMethod.password', {
+                      defaultValue: 'Set a password myself'
+                    })
+                  }
+                ]}
+              />
               <p className="text-xs text-gray-500">
                 {inviteMode === 'email'
                   ? t('teamMembersStep.fields.setupMethod.emailHelp', {
