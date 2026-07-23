@@ -1,3 +1,5 @@
+const { ensureTenantDistribution } = require('./utils/citusDistribution.cjs');
+
 /**
  * Create user_invitations: email-invitation flow for internal (MSP) team
  * members, mirroring portal_invitations but targeting a not-yet-created
@@ -16,6 +18,9 @@ exports.up = async function(knex) {
       table.text('email').notNullable();
       table.text('first_name').notNullable();
       table.text('last_name').notNullable();
+      // role_id — no FK to roles; intentional for CitusDB compatibility
+      // (roles is not a distributed/reference table). Referential integrity
+      // enforced at application level.
       table.uuid('role_id').nullable();
       table.text('token').notNullable();
       table.timestamp('expires_at', { useTz: true }).notNullable();
@@ -24,7 +29,6 @@ exports.up = async function(knex) {
       table.jsonb('metadata').notNullable().defaultTo(knex.raw(`'{}'::jsonb`));
 
       table.primary(['tenant', 'invitation_id']);
-      table.foreign(['tenant', 'role_id']).references(['tenant', 'role_id']).inTable('roles').onDelete('SET NULL');
 
       table.index(['tenant', 'email'], 'idx_user_invitations_email');
       table.index(['tenant', 'expires_at'], 'idx_user_invitations_expires');
@@ -32,29 +36,10 @@ exports.up = async function(knex) {
     });
   }
 
-  const citusEnabled = await knex.raw(`
-    SELECT EXISTS (
-      SELECT 1
-      FROM pg_extension
-      WHERE extname = 'citus'
-    ) AS enabled;
-  `);
-
-  if (citusEnabled.rows?.[0]?.enabled) {
-    const alreadyDistributed = await knex.raw(`
-      SELECT EXISTS (
-        SELECT 1
-        FROM pg_dist_partition
-        WHERE logicalrelid = 'user_invitations'::regclass
-      ) AS is_distributed;
-    `);
-
-    if (!alreadyDistributed.rows?.[0]?.is_distributed) {
-      await knex.raw("SELECT create_distributed_table('user_invitations', 'tenant', colocate_with => 'users')");
-    }
-  } else {
-    console.warn('[create_user_invitations_table] Skipping create_distributed_table (Citus extension unavailable)');
-  }
+  // Distribute colocated with `tenants`, matching every other tenant-scoped
+  // table in this codebase (colocate_with => 'users' isn't guaranteed valid
+  // since `users` isn't itself distributed via create_distributed_table).
+  await ensureTenantDistribution(knex, 'user_invitations');
 };
 
 /**
