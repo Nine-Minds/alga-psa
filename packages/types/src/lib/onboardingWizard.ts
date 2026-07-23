@@ -58,6 +58,9 @@ export interface WizardData {
   // ITIL Configuration
   is_itil_compliant?: boolean;
   importBoardItilSettings?: Record<string, boolean>;
+
+  // Wizard progress (persisted so a refresh resumes on the same step)
+  currentStep?: number;
 }
 
 export interface TeamMember {
