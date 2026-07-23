@@ -52,7 +52,9 @@ const USER_INVITE_ERROR_KEYS: Partial<Record<UserInvitationErrorCode, string>> =
   ROLE_REQUIRED: 'users.messages.error.roleRequired',
   INVALID_ROLE: 'users.messages.error.invalidRole',
   BASE_URL_NOT_CONFIGURED: 'users.messages.error.noBaseUrl',
-  INVITATION_FAILED: 'users.messages.error.sendInvitation'
+  INVITATION_FAILED: 'users.messages.error.sendInvitation',
+  LICENSE_LIMIT_REACHED: 'users.messages.error.licenseLimitReached',
+  SOLO_PLAN_LIMIT: 'users.messages.error.soloPlanLimit'
 };
 
 const GENERIC_USER_INVITE_ERROR_CODES: ReadonlySet<UserInvitationErrorCode> = new Set([

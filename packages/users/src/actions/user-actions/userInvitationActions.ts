@@ -8,6 +8,7 @@ import { hasPermission } from '@alga-psa/user-composition/lib/permissions';
 import { withAuth, type AuthContext } from '@alga-psa/auth';
 import { isValidEmail } from '@alga-psa/core';
 import type { IUserWithRoles } from '@alga-psa/types';
+import { checkInternalUserLicenseLimit } from '../../lib/internalUserLicenseGuard';
 
 export type UserInvitationErrorCode =
   | 'PERMISSION_DENIED_INVITE'
@@ -27,7 +28,9 @@ export type UserInvitationErrorCode =
   | 'VERIFICATION_FAILED'
   | 'SETUP_FAILED'
   | 'INVITATION_NOT_FOUND'
-  | 'REVOKE_FAILED';
+  | 'REVOKE_FAILED'
+  | 'SOLO_PLAN_LIMIT'
+  | 'LICENSE_LIMIT_REACHED';
 
 interface SendUserInvitationParams {
   email: string;
@@ -111,6 +114,16 @@ export const sendUserInvitation = withAuth(async (
       .first();
     if (existingUser) {
       return { success: false, error: 'A user with this email address already exists', errorCode: 'EMAIL_ALREADY_EXISTS' };
+    }
+
+    // Same seat-limit enforcement addUser applies to a direct password-based
+    // creation — an accepted invitation creates an internal user account just
+    // the same, so it must be held to the same limit. Re-checked again at
+    // acceptance time in completeUserInvitationSetup, since seats can fill up
+    // (or shrink) between the invite being sent and accepted.
+    const licenseCheck = await checkInternalUserLicenseLimit(knex, tenant);
+    if (!licenseCheck.ok) {
+      return { success: false, error: licenseCheck.error, errorCode: licenseCheck.code };
     }
 
     const tenantEmailService = TenantEmailService.getInstance(tenant);
@@ -264,6 +277,15 @@ export async function completeUserInvitationSetup(
         .first();
       if (existingUser) {
         return { success: false, error: 'A user account already exists for this email address', errorCode: 'CREATE_USER_FAILED' } as const;
+      }
+
+      // Re-check the seat limit here, not just at invite time: this is where
+      // the account row actually gets created (via runAsSystem, bypassing the
+      // permission-gated path addUser uses), and seats can have filled up
+      // between the invite being sent and this acceptance.
+      const licenseCheck = await checkInternalUserLicenseLimit(knex, tenant);
+      if (!licenseCheck.ok) {
+        return { success: false, error: licenseCheck.error, errorCode: licenseCheck.code } as const;
       }
 
       let newUser;
