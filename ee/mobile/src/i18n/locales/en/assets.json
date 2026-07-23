@@ -26,7 +26,7 @@
   },
   "actions": {
     "linkTicket": "Link to a ticket",
-    "createTicket": "Create a ticket about this device",
+    "createTicket": "Create a ticket",
     "noClient": "This device isn't linked to a client, so a ticket can't be created here."
   },
   "tickets": {
@@ -54,10 +54,12 @@
   "linkTicket": {
     "title": "Link to a ticket",
     "search": "Search tickets",
-    "empty": "No open tickets found.",
+    "empty": "No open tickets for this client.",
     "loadError": "Couldn't load tickets.",
     "success": "Ticket linked to this device",
-    "error": "Couldn't link the ticket. Try again."
+    "error": "Couldn't link the ticket. Try again.",
+    "createInstead": "Create a ticket",
+    "cantFind": "Can't find it? Create a ticket"
   },
   "createTicket": {
     "title": "Create a ticket",

@@ -211,11 +211,17 @@ describe("AssetDetailScreen", () => {
     expect(text).toContain("No maintenance scheduled.");
   });
 
-  it("links an existing ticket to the asset", async () => {
+  it("links an existing ticket to the asset, scoped to the asset's client", async () => {
     const tree = await renderScreen();
 
     await act(async () => byLabel(tree, "asset-detail-link-ticket")[0].props.onPress());
     await act(async () => {});
+
+    // The ticket list is filtered to the asset's owning client, not all tenants.
+    expect(mockListTickets).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ filters: expect.objectContaining({ is_open: true, client_id: "client-1" }) }),
+    );
 
     const row = hosts(tree, "asset-detail-link-ticket-option-tkt-1")[0];
     expect(row).toBeTruthy();
@@ -225,6 +231,19 @@ describe("AssetDetailScreen", () => {
       expect.anything(),
       expect.objectContaining({ ticketId: "tkt-1", assetId: "asset-1" }),
     );
+  });
+
+  it("hands off from the link picker to create-a-ticket when none fits", async () => {
+    const tree = await renderScreen();
+
+    await act(async () => byLabel(tree, "asset-detail-link-ticket")[0].props.onPress());
+    await act(async () => {});
+
+    // The "can't find it?" escape hatch closes the picker and opens the create flow.
+    await act(async () => hosts(tree, "asset-detail-link-ticket-create-instead")[0].props.onPress());
+    await act(async () => {});
+
+    expect(byLabel(tree, "asset-detail-create-ticket-title").length).toBeGreaterThan(0);
   });
 
   it("creates a ticket from the asset once title and pickers are set", async () => {

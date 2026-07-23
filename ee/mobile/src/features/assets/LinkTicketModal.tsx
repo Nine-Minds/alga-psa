@@ -1,27 +1,34 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { Modal, Pressable, ScrollView, Text, View } from "react-native";
+import { Feather } from "@expo/vector-icons";
 import { useTranslation } from "react-i18next";
 import type { ApiClient } from "../../api";
 import { linkAssetToTicket } from "../../api/assets";
 import { listTickets, type TicketListItem } from "../../api/tickets";
 import { useTheme } from "../../ui/ThemeContext";
 import { useToast } from "../../ui/toast/ToastProvider";
-import { Badge, PrimaryButton, Separator, TextInput } from "../../ui/components";
+import { Badge, IconButton, PrimaryButton, Separator, TextInput } from "../../ui/components";
 
 export function LinkTicketModal({
   visible,
   client,
   apiKey,
   assetId,
+  clientId,
   onClose,
   onLinked,
+  onCreateInstead,
 }: {
   visible: boolean;
   client: ApiClient | null;
   apiKey: string | null;
   assetId: string;
+  /** Scope the ticket list to the asset's owning client. */
+  clientId?: string | null;
   onClose: () => void;
   onLinked: () => void;
+  /** Escape hatch when the tech can't find a ticket: hand off to create-a-ticket. */
+  onCreateInstead?: () => void;
 }) {
   const { t } = useTranslation("assets");
   const theme = useTheme();
@@ -46,7 +53,7 @@ export function LinkTicketModal({
         apiKey,
         page: 1,
         limit: 50,
-        filters: { is_open: true },
+        filters: { is_open: true, ...(clientId ? { client_id: clientId } : {}) },
       });
       if (canceled) return;
       setLoading(false);
@@ -59,7 +66,7 @@ export function LinkTicketModal({
     return () => {
       canceled = true;
     };
-  }, [apiKey, client, visible]);
+  }, [apiKey, client, clientId, visible]);
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -96,9 +103,16 @@ export function LinkTicketModal({
         contentContainerStyle={{ padding: theme.spacing.lg, paddingBottom: theme.spacing.xl }}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={{ ...theme.typography.title, color: theme.colors.text }}>
-          {t("linkTicket.title", "Link to a ticket")}
-        </Text>
+        <View style={{ flexDirection: "row", alignItems: "center", gap: theme.spacing.sm }}>
+          <IconButton
+            onPress={onClose}
+            accessibilityLabel="asset-detail-link-ticket-back"
+            icon={<Feather name="arrow-left" size={22} color={theme.colors.text} />}
+          />
+          <Text style={{ ...theme.typography.title, color: theme.colors.text }}>
+            {t("linkTicket.title", "Link to a ticket")}
+          </Text>
+        </View>
 
         <View style={{ marginTop: theme.spacing.lg }}>
           <TextInput
@@ -120,9 +134,16 @@ export function LinkTicketModal({
               {t("linkTicket.loading", "Loading tickets…")}
             </Text>
           ) : filtered.length === 0 ? (
-            <Text style={{ ...theme.typography.body, color: theme.colors.textSecondary }}>
-              {t("linkTicket.empty", "No open tickets found.")}
-            </Text>
+            <View style={{ gap: theme.spacing.md }}>
+              <Text style={{ ...theme.typography.body, color: theme.colors.textSecondary }}>
+                {t("linkTicket.empty", "No open tickets for this client.")}
+              </Text>
+              {onCreateInstead ? (
+                <PrimaryButton onPress={onCreateInstead} accessibilityLabel="asset-detail-link-ticket-create-instead-empty">
+                  {t("linkTicket.createInstead", "Create a ticket")}
+                </PrimaryButton>
+              ) : null}
+            </View>
           ) : (
             filtered.map((ticket, index) => (
               <View key={ticket.ticket_id}>
@@ -154,11 +175,16 @@ export function LinkTicketModal({
           )}
         </View>
 
-        <View style={{ marginTop: theme.spacing.xl, gap: theme.spacing.sm }}>
-          <PrimaryButton onPress={onClose} accessibilityLabel="asset-detail-link-ticket-cancel">
-            {t("common.cancel", "Cancel")}
-          </PrimaryButton>
-        </View>
+        {onCreateInstead && filtered.length > 0 ? (
+          <Text
+            onPress={onCreateInstead}
+            testID="asset-detail-link-ticket-create-instead"
+            accessibilityRole="button"
+            style={{ ...theme.typography.body, color: theme.colors.primary, textAlign: "center", padding: theme.spacing.md, marginTop: theme.spacing.md }}
+          >
+            {t("linkTicket.cantFind", "Can't find it? Create a ticket")}
+          </Text>
+        ) : null}
       </ScrollView>
     </Modal>
   );

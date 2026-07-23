@@ -258,16 +258,22 @@ export function AssetDetailScreen({ route, navigation }: Props) {
         {/* Actions */}
         <Card>
           <View style={{ gap: theme.spacing.sm }}>
-            <PrimaryButton onPress={() => setLinkOpen(true)} accessibilityLabel="asset-detail-link-ticket">
-              {t("actions.linkTicket", "Link to a ticket")}
-            </PrimaryButton>
-            <PrimaryButton
-              onPress={() => setCreateOpen(true)}
-              disabled={!hasClient}
-              accessibilityLabel="asset-detail-create-ticket"
-            >
-              {t("actions.createTicket", "Create a ticket about this device")}
-            </PrimaryButton>
+            <View style={{ flexDirection: "row", gap: theme.spacing.sm }}>
+              <View style={{ flex: 1 }}>
+                <PrimaryButton onPress={() => setLinkOpen(true)} accessibilityLabel="asset-detail-link-ticket">
+                  {t("actions.linkTicket", "Link to a ticket")}
+                </PrimaryButton>
+              </View>
+              <View style={{ flex: 1 }}>
+                <PrimaryButton
+                  onPress={() => setCreateOpen(true)}
+                  disabled={!hasClient}
+                  accessibilityLabel="asset-detail-create-ticket"
+                >
+                  {t("actions.createTicket", "Create a ticket")}
+                </PrimaryButton>
+              </View>
+            </View>
             {!hasClient ? (
               <Text style={{ ...theme.typography.caption, color: theme.colors.textSecondary, textAlign: "center" }}>
                 {t("actions.noClient", "This device isn't linked to a client, so a ticket can't be created here.")}
@@ -522,8 +528,10 @@ export function AssetDetailScreen({ route, navigation }: Props) {
         client={client}
         apiKey={apiKey}
         assetId={assetId}
+        clientId={asset.client_id}
         onClose={() => setLinkOpen(false)}
         onLinked={() => void refetchTickets()}
+        onCreateInstead={hasClient ? () => { setLinkOpen(false); setCreateOpen(true); } : undefined}
       />
 
       <CreateTicketModal
