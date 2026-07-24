@@ -7,6 +7,7 @@ import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions
 import { updateUser, adminChangeUserPassword } from '@alga-psa/users/actions/user-actions/userActions';
 import { getRoles, assignRoleToUser, removeRoleFromUser } from '@alga-psa/users/lib/roleActions';
 import { getUserCapacity, updateUserCapacity } from '@alga-psa/scheduling/actions/resourceCapacityActions';
+import { parseWeeklyCapacityHours } from '@alga-psa/scheduling/lib/resourceCapacity';
 import { useDrawer } from "@alga-psa/ui";
 import { Text, Flex } from '@radix-ui/themes';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -45,6 +46,7 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
   const [reportsTo, setReportsTo] = useState<string>('');
   const [reportsToOptions, setReportsToOptions] = useState<SelectOption[]>([]);
   const [weeklyCapacity, setWeeklyCapacity] = useState<string>('');
+  const [savedCapacity, setSavedCapacity] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { closeDrawer } = useDrawer();
@@ -161,11 +163,9 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
         try {
           const capacityResult = await getUserCapacity(userId);
           if (capacityResult.success && capacityResult.data) {
-            setWeeklyCapacity(
-              capacityResult.data.maxWeeklyCapacity != null
-                ? String(capacityResult.data.maxWeeklyCapacity)
-                : '',
-            );
+            const capacity = capacityResult.data.maxWeeklyCapacity ?? null;
+            setSavedCapacity(capacity);
+            setWeeklyCapacity(capacity != null ? String(capacity) : '');
           }
         } catch (capacityErr) {
           console.error('Error fetching user capacity:', capacityErr);
@@ -260,6 +260,14 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
           }
         }
 
+        // Validate the capacity before any write, so an unparseable value can't
+        // land after the user fields have already been saved.
+        const parsedCapacity = parseWeeklyCapacityHours(weeklyCapacity);
+        if (!parsedCapacity.ok) {
+          toast.error(t('userDetails.messages.error.invalidCapacity'));
+          return;
+        }
+
         const updatedUserData: Partial<IUser> = {
           first_name: firstName,
           last_name: lastName,
@@ -281,16 +289,13 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
           return;
         }
         if (result.user) {
-          const trimmedCapacity = weeklyCapacity.trim();
-          const capacityValue = trimmedCapacity === '' ? null : Number(trimmedCapacity);
-          if (capacityValue !== null && (!Number.isFinite(capacityValue) || capacityValue < 0)) {
-            toast.error(t('userDetails.messages.error.invalidCapacity'));
-            return;
-          }
-          const capacityResult = await updateUserCapacity(user.user_id, capacityValue);
-          if (!capacityResult.success) {
-            toast.error(capacityResult.error || t('userDetails.messages.error.updateFailed'));
-            return;
+          if (parsedCapacity.value !== savedCapacity) {
+            const capacityResult = await updateUserCapacity(user.user_id, parsedCapacity.value);
+            if (!capacityResult.success) {
+              toast.error(capacityResult.error || t('userDetails.messages.error.updateFailed'));
+              return;
+            }
+            setSavedCapacity(parsedCapacity.value);
           }
           setUser(result.user);
           onUpdate();
