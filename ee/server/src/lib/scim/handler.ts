@@ -46,11 +46,14 @@ interface RequestContext {
 }
 
 const MAX_BODY_BYTES = 1024 * 1024;
+const SCIM_PUBLIC_RATE_LIMIT_TENANT = '__scim_public__';
 
 function getSourceAddress(request: Request): string {
-  return request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
-    || request.headers.get('x-real-ip')
-    || 'unknown';
+  const forwarded = request.headers.get('x-forwarded-for');
+  if (!forwarded) return 'unknown';
+
+  const hops = forwarded.split(',').map((hop) => hop.trim()).filter(Boolean);
+  return hops[hops.length - 1] ?? 'unknown';
 }
 
 function bearerToken(request: Request): string {
@@ -86,6 +89,24 @@ function safeInteger(value: string | null, fallback: number): number {
 }
 
 async function authenticate(request: Request, params: RouteParams): Promise<RequestContext> {
+  const token = bearerToken(request);
+  const sourceAddress = getSourceAddress(request);
+  const publicRateLimit = await TokenBucketRateLimiter.getInstance().tryConsume(
+    'scim-auth',
+    SCIM_PUBLIC_RATE_LIMIT_TENANT,
+    sourceAddress
+  );
+
+  // Expensive credential verification must not run unless the public limiter
+  // actually enforced a source budget. A generic authentication response for
+  // exhausted buckets prevents 429 responses from revealing connection ids.
+  if (!publicRateLimit.allowed) {
+    throw new ScimError(401, 'Invalid SCIM credentials.');
+  }
+  if (publicRateLimit.remaining < 0) {
+    throw new ScimError(503, 'SCIM authentication is temporarily unavailable.');
+  }
+
   const knex = await getAdminConnection();
   const discoveryDb = tenantDb(knex, '__scim_connection_discovery__');
   const connection = await discoveryDb
@@ -99,22 +120,11 @@ async function authenticate(request: Request, params: RouteParams): Promise<Requ
   // Use the same public response for unknown, disabled, and invalid-credential
   // connections so the opaque connection id cannot be enumerated.
   if (!connection) {
-    const token = bearerToken(request);
     verifyScimToken(token, null);
     verifyScimToken(token, null);
     throw new ScimError(401, 'Invalid SCIM credentials.');
   }
 
-  const rateLimit = await TokenBucketRateLimiter.getInstance().tryConsume(
-    'scim',
-    connection.tenant,
-    `${connection.connection_id}:${getSourceAddress(request)}`
-  );
-  if (!rateLimit.allowed) {
-    throw new ScimError(429, 'SCIM request rate limit exceeded.');
-  }
-
-  const token = bearerToken(request);
   const currentMatches = verifyScimToken(token, connection.current_token_hash);
   const previousMatches = verifyScimToken(token, connection.previous_token_hash);
   const previousActive = Boolean(
@@ -124,6 +134,18 @@ async function authenticate(request: Request, params: RouteParams): Promise<Requ
 
   if (!connection.enabled || (!currentMatches && !(previousMatches && previousActive))) {
     throw new ScimError(401, 'Invalid SCIM credentials.');
+  }
+
+  const connectionRateLimit = await TokenBucketRateLimiter.getInstance().tryConsume(
+    'scim',
+    connection.tenant,
+    `${connection.connection_id}:${sourceAddress}`
+  );
+  if (!connectionRateLimit.allowed) {
+    throw new ScimError(429, 'SCIM request rate limit exceeded.');
+  }
+  if (connectionRateLimit.remaining < 0) {
+    throw new ScimError(503, 'SCIM authentication is temporarily unavailable.');
   }
 
   try {
