@@ -52,6 +52,7 @@ describe('marketing activities', () => {
   const originalNextAuthSecret = process.env.NEXTAUTH_SECRET;
   const originalApplicationUrl = process.env.APPLICATION_URL;
   const originalNextAuthUrl = process.env.NEXTAUTH_URL;
+  const originalPublicBaseUrl = process.env.NEXT_PUBLIC_BASE_URL;
   const originalPublicAppUrl = process.env.NEXT_PUBLIC_APP_URL;
   const knex = { name: 'tenant-knex' };
 
@@ -60,9 +61,10 @@ describe('marketing activities', () => {
     createTenantKnexMock.mockResolvedValue({ knex, tenant: 'tenant-1' });
     runWithTenantMock.mockImplementation(async (_tenantId, callback) => callback());
     process.env.NEXTAUTH_SECRET = 'test-signing-secret';
-    process.env.APPLICATION_URL = 'https://deployment.example.test/';
-    process.env.NEXTAUTH_URL = 'https://auth.example.test/';
-    delete process.env.NEXT_PUBLIC_APP_URL;
+    process.env.APPLICATION_URL = 'http://alga-core.msp.svc.cluster.local:3000';
+    process.env.NEXTAUTH_URL = 'http://auth.msp.svc.cluster.local:3000';
+    process.env.NEXT_PUBLIC_BASE_URL = 'https://public.example.test/';
+    process.env.NEXT_PUBLIC_APP_URL = 'https://fallback.example.test/';
   });
 
   afterEach(() => {
@@ -72,6 +74,8 @@ describe('marketing activities', () => {
     else process.env.APPLICATION_URL = originalApplicationUrl;
     if (originalNextAuthUrl === undefined) delete process.env.NEXTAUTH_URL;
     else process.env.NEXTAUTH_URL = originalNextAuthUrl;
+    if (originalPublicBaseUrl === undefined) delete process.env.NEXT_PUBLIC_BASE_URL;
+    else process.env.NEXT_PUBLIC_BASE_URL = originalPublicBaseUrl;
     if (originalPublicAppUrl === undefined) delete process.env.NEXT_PUBLIC_APP_URL;
     else process.env.NEXT_PUBLIC_APP_URL = originalPublicAppUrl;
   });
@@ -118,7 +122,7 @@ describe('marketing activities', () => {
     });
   });
 
-  it('passes canonical URL and signing secret to sequence sending', async () => {
+  it('passes the public URL and signing secret to sequence sending', async () => {
     const summary = { sent: 1, completed: 0, stopped: 0, failed: 1, skipped: 0 };
     sendDueSequenceStepsInternalMock.mockResolvedValue(summary);
     const { runMarketingJobForTenant } = await import('../marketing-activities');
@@ -129,10 +133,45 @@ describe('marketing activities', () => {
     });
 
     expect(sendDueSequenceStepsInternalMock).toHaveBeenCalledWith(knex, 'tenant-1', {
-      baseUrl: 'https://deployment.example.test',
+      baseUrl: 'https://public.example.test',
       signingSecret: 'test-signing-secret',
     });
     expect(result.operation).toEqual(summary);
+  });
+
+  it('falls back to NEXT_PUBLIC_APP_URL without using internal worker hosts', async () => {
+    delete process.env.NEXT_PUBLIC_BASE_URL;
+    sendDueSequenceStepsInternalMock.mockResolvedValue({
+      sent: 0,
+      completed: 0,
+      stopped: 0,
+      failed: 0,
+      skipped: 0,
+    });
+    const { runMarketingJobForTenant } = await import('../marketing-activities');
+
+    await runMarketingJobForTenant({
+      jobName: MARKETING_SEND_SEQUENCE_STEPS_JOB,
+      tenantId: 'tenant-1',
+    });
+
+    expect(sendDueSequenceStepsInternalMock).toHaveBeenCalledWith(
+      knex,
+      'tenant-1',
+      expect.objectContaining({ baseUrl: 'https://fallback.example.test' }),
+    );
+  });
+
+  it('fails closed when only internal worker URLs are configured', async () => {
+    delete process.env.NEXT_PUBLIC_BASE_URL;
+    delete process.env.NEXT_PUBLIC_APP_URL;
+    const { runMarketingJobForTenant } = await import('../marketing-activities');
+
+    await expect(runMarketingJobForTenant({
+      jobName: MARKETING_SEND_SEQUENCE_STEPS_JOB,
+      tenantId: 'tenant-1',
+    })).rejects.toThrow('No public marketing base URL available');
+    expect(sendDueSequenceStepsInternalMock).not.toHaveBeenCalled();
   });
 
   it('fails closed before sequence sending when NEXTAUTH_SECRET is absent', async () => {

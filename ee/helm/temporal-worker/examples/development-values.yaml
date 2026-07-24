@@ -58,6 +58,7 @@ podDisruptionBudget:
 
 # Development application URL
 applicationUrl: "http://localhost:3000"
+publicBaseUrl: "http://localhost:3000"
 
 # Additional development environment variables
 extraEnv:

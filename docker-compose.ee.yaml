@@ -457,6 +457,7 @@ services:
       - SECRET_READ_CHAIN=filesystem,env
       - APPLICATION_URL=${APPLICATION_URL:-http://localhost:3000}
       - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
+      - NEXT_PUBLIC_BASE_URL=${NEXT_PUBLIC_BASE_URL:-http://localhost:3000}
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-local-nextauth-secret}
       - ALGA_AUTH_KEY=${ALGA_AUTH_KEY:-local-alga-auth-key}
       - DB_HOST=${DB_HOST:-pgbouncer}

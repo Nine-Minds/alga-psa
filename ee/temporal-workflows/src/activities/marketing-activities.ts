@@ -22,10 +22,14 @@ function activityLogger() {
 
 function getPublicBaseUrl(): string {
   const raw =
-    process.env.APPLICATION_URL
-    || process.env.NEXTAUTH_URL
+    process.env.NEXT_PUBLIC_BASE_URL
     || process.env.NEXT_PUBLIC_APP_URL
-    || 'http://localhost:3000';
+    || '';
+  if (!raw) {
+    throw new Error(
+      'No public marketing base URL available (NEXT_PUBLIC_BASE_URL or NEXT_PUBLIC_APP_URL); refusing to send sequence steps',
+    );
+  }
   return raw.endsWith('/') ? raw.slice(0, -1) : raw;
 }
 
