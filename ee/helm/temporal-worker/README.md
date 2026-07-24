@@ -46,6 +46,8 @@ The following table lists the configurable parameters and their default values.
 | `image.tag` | Container image tag | `latest` |
 | `image.pullPolicy` | Image pull policy | `Always` |
 | `logLevel` | Logging level (debug, info, warn, error) | `info` |
+| `applicationUrl` | Worker application URL; may be an internal service endpoint | `""` |
+| `publicBaseUrl` | Public application URL used in recipient-facing links | `""` |
 
 ### Temporal Configuration
 
@@ -170,6 +172,7 @@ temporal-worker:
       name: alga-psa-db-secrets
       key: server-password
   applicationUrl: https://app.algapsa.com
+  publicBaseUrl: https://app.algapsa.com
 EOF
 
 helm install alga-psa helm/ -f alga-values.yaml
