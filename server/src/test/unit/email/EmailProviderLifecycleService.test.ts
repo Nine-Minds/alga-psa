@@ -6,6 +6,8 @@ const mocks = vi.hoisted(() => ({
   graphInitialize: vi.fn(),
   gmailStop: vi.fn(),
   gmailRegister: vi.fn(),
+  usePollingDelivery: vi.fn(),
+  recordWebhookDeliveryMode: vi.fn(),
   operations: [] as string[],
 }));
 
@@ -31,6 +33,14 @@ vi.mock('@alga-psa/shared/services/email/providers/GmailAdapter', () => ({
     return {
       stopWatch: (...args: any[]) => mocks.gmailStop(...args),
       registerWebhookSubscription: (...args: any[]) => mocks.gmailRegister(...args),
+    };
+  }),
+}));
+vi.mock('@alga-psa/shared/services/email/EmailWebhookMaintenanceService', () => ({
+  EmailWebhookMaintenanceService: vi.fn(function EmailWebhookMaintenanceService() {
+    return {
+      usePollingDelivery: (...args: any[]) => mocks.usePollingDelivery(...args),
+      recordWebhookDeliveryMode: (...args: any[]) => mocks.recordWebhookDeliveryMode(...args),
     };
   }),
 }));
@@ -134,6 +144,8 @@ describe('EmailProviderLifecycleService', () => {
       mocks.operations.push('external:gmail-stop');
     });
     mocks.gmailRegister.mockResolvedValue(undefined);
+    mocks.usePollingDelivery.mockResolvedValue('polling');
+    mocks.recordWebhookDeliveryMode.mockResolvedValue(undefined);
   });
 
   it.each([
@@ -246,6 +258,32 @@ describe('EmailProviderLifecycleService', () => {
     });
   });
 
+  it('endpoint-validation failure on resume degrades to polling instead of erroring', async () => {
+    const state = createState('microsoft');
+    state.provider.inbound_paused_at = '2026-07-23T18:00:00.000Z';
+    state.provider.inbound_pause_reason = 'manual';
+    mocks.graphInitialize.mockResolvedValue({
+      success: false,
+      error: 'Microsoft webhook endpoint validation failed',
+      errorKind: 'validation',
+    });
+
+    const result = await new EmailProviderLifecycleService().resumeProvider(
+      'provider-microsoft',
+      'tenant-1'
+    );
+
+    expect(result).toEqual({ resumed: true, webhookRegistered: false });
+    expect(mocks.usePollingDelivery).toHaveBeenCalledWith(
+      expect.objectContaining({ providerId: 'provider-microsoft', tenant: 'tenant-1' })
+    );
+    expect(state.provider).toMatchObject({
+      inbound_paused_at: null,
+      status: 'connected',
+      error_message: null,
+    });
+  });
+
   it('T028: pause/resume round-trip restores an ingestable webhook provider', async () => {
     const state = createState('microsoft');
     const service = new EmailProviderLifecycleService();
@@ -257,6 +295,9 @@ describe('EmailProviderLifecycleService', () => {
     expect(result).toMatchObject({ resumed: true, webhookRegistered: true });
     expect(Boolean(state.provider.is_active && !state.provider.inbound_paused_at)).toBe(true);
     expect(mocks.graphInitialize).toHaveBeenCalledTimes(1);
+    expect(mocks.recordWebhookDeliveryMode).toHaveBeenCalledWith(
+      expect.objectContaining({ providerId: 'provider-microsoft', tenant: 'tenant-1' })
+    );
   });
 
   it.each([

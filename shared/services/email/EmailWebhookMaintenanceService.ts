@@ -5,6 +5,7 @@ import { MicrosoftGraphAdapter } from './providers/MicrosoftGraphAdapter';
 import logger from '../../core/logger';
 import { buildMicrosoftEmailProviderConfig } from './microsoftEmailProviderConfig';
 import { enqueueUnifiedInboundEmailQueueJob } from './unifiedInboundEmailQueue';
+import { getEmailWebhookBaseUrl } from './webhookBaseUrl';
 
 const PROVIDER_TENANT_DISCOVERY = 'tenant-discovery';
 
@@ -807,20 +808,7 @@ export class EmailWebhookMaintenanceService {
   }
 
   private getBaseUrl(): string {
-    const envApplicationUrl = process.env.APPLICATION_URL || 
-                              process.env.NEXTAUTH_URL || 
-                              process.env.NEXT_PUBLIC_BASE_URL;
-
-    if (!envApplicationUrl || envApplicationUrl === 'www.algapsa.com') {
-      return 'https://algapsa.com';
-    }
-
-    // Ensure it starts with https:// if it's a non-localhost URL, or return as is if already a valid URL
-    if (envApplicationUrl.startsWith('http://localhost') || envApplicationUrl.startsWith('https://')) {
-        return envApplicationUrl;
-    } else {
-        return `https://${envApplicationUrl}`;
-    }
+    return getEmailWebhookBaseUrl();
   }
 
   private mapRowToConfig(row: any): EmailProviderConfig {

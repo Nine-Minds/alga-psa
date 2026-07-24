@@ -1,9 +1,11 @@
 import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 import type { EmailProviderConfig } from '../../interfaces/inbound-email.interfaces';
+import { EmailWebhookMaintenanceService } from './EmailWebhookMaintenanceService';
 import { buildMicrosoftEmailProviderConfig } from './microsoftEmailProviderConfig';
 import { GmailAdapter } from './providers/GmailAdapter';
 import { MicrosoftGraphAdapter } from './providers/MicrosoftGraphAdapter';
+import { getEmailWebhookBaseUrl } from './webhookBaseUrl';
 
 export type InboundPauseReason = 'manual' | 'tenant_cancelled';
 
@@ -51,11 +53,7 @@ export class EmailProviderLifecycleService {
   }
 
   private toAdapterConfig(provider: ProviderRecord, vendorConfig: any): EmailProviderConfig {
-    const baseUrl = (
-      process.env.NEXTAUTH_URL
-      || process.env.NEXT_PUBLIC_BASE_URL
-      || 'http://localhost:3000'
-    ).replace(/\/$/, '');
+    const baseUrl = getEmailWebhookBaseUrl();
     const webhookPath = provider.provider_type === 'microsoft'
       ? '/api/email/webhooks/microsoft'
       : provider.provider_type === 'google'
@@ -197,6 +195,21 @@ export class EmailProviderLifecycleService {
           await buildMicrosoftEmailProviderConfig(adapterConfig)
         );
         const result = await adapter.initializeWebhook(adapterConfig.webhook_notification_url);
+        if (!result.success && result.errorKind === 'validation') {
+          // Same degradation as initializeProviderWebhook: an unreachable
+          // endpoint means polling, not a dead provider.
+          await new EmailWebhookMaintenanceService().usePollingDelivery({
+            providerId,
+            tenant,
+            reason: result.error || 'Microsoft webhook endpoint validation failed on resume',
+          });
+          await db.table('email_providers').where({ id: providerId }).update({
+            status: 'connected',
+            error_message: null,
+            updated_at: knex.fn.now(),
+          });
+          return { resumed: true, webhookRegistered: false };
+        }
         if (!result.success) throw new Error(result.error || 'Microsoft webhook registration failed');
         await db.table('microsoft_email_provider_config')
           .where({ email_provider_id: providerId })
@@ -204,6 +217,11 @@ export class EmailProviderLifecycleService {
             webhook_subscription_id: result.subscriptionId || null,
             updated_at: knex.fn.now(),
           });
+        await new EmailWebhookMaintenanceService().recordWebhookDeliveryMode({
+          providerId,
+          tenant,
+          reason: 'inbound pause resumed; webhook re-registered',
+        });
       } else {
         await new GmailAdapter(adapterConfig).registerWebhookSubscription();
       }
