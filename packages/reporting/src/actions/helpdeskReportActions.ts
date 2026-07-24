@@ -8,6 +8,13 @@ import {
   reportingActionErrorFrom,
   type ReportingActionError,
 } from './report-actions/reportingActionErrors';
+import {
+  buildEmployeeUtilizationReport,
+  type EmployeeUtilizationInputRow,
+  type EmployeeUtilizationReport,
+} from './employeeUtilization';
+
+export type { EmployeeUtilizationReport } from './employeeUtilization';
 
 export type ReportRangeDays = 7 | 30 | 90;
 
@@ -659,6 +666,69 @@ export const getTicketAgingReport = withAuth(
           ageDays: toCount(row.age_days),
         })),
       };
+    } catch (error) {
+      const expected = reportingActionErrorFrom(error);
+      if (expected) return expected;
+      throw error;
+    }
+  },
+);
+
+export const getEmployeeUtilizationReport = withAuth(
+  async (user, { tenant }, rangeDaysInput?: number): Promise<EmployeeUtilizationReport | ReportingActionError> => {
+    try {
+      const rangeDays = normalizeRangeDays(rangeDaysInput);
+      const { knex } = await createTenantKnex();
+      await assertCanReadReports(user, knex);
+      const scopedDb = tenantDb(knex, tenant);
+
+      const [userRows, timeRows, capacityRows] = await Promise.all([
+        scopedDb.table('users')
+          .where('user_type', 'internal')
+          .where('is_inactive', false)
+          .select(
+            'user_id',
+            knex.raw("COALESCE(NULLIF(TRIM(CONCAT(first_name, ' ', last_name)), ''), email, 'Unknown user') as name"),
+          ),
+        scopedDb.table('time_entries')
+          .where('start_time', '>=', knex.raw(`NOW() - INTERVAL '${rangeDays} days'`))
+          .select(
+            'user_id',
+            knex.raw('COUNT(*)::int as entries'),
+            knex.raw('COALESCE(SUM(EXTRACT(EPOCH FROM (end_time - start_time)) / 60), 0) as worked_minutes'),
+            knex.raw('COALESCE(SUM(billable_duration), 0) as billable_minutes'),
+          )
+          .groupBy('user_id'),
+        scopedDb.table('resources')
+          .select(
+            'user_id',
+            knex.raw('MAX(max_weekly_capacity) as max_weekly_capacity'),
+          )
+          .groupBy('user_id'),
+      ]);
+
+      const timeByUser = new Map<string, { worked_minutes: unknown; billable_minutes: unknown; entries: unknown }>();
+      for (const row of timeRows as any[]) {
+        timeByUser.set(row.user_id, row);
+      }
+      const capacityByUser = new Map<string, number | null>();
+      for (const row of capacityRows as any[]) {
+        capacityByUser.set(row.user_id, toNullableNumber(row.max_weekly_capacity));
+      }
+
+      const inputRows: EmployeeUtilizationInputRow[] = (userRows as any[]).map((row) => {
+        const time = timeByUser.get(row.user_id);
+        return {
+          userId: row.user_id,
+          name: row.name,
+          workedMinutes: Number(time?.worked_minutes ?? 0) || 0,
+          billableMinutes: Number(time?.billable_minutes ?? 0) || 0,
+          entries: toCount(time?.entries),
+          maxWeeklyCapacity: capacityByUser.get(row.user_id) ?? null,
+        };
+      });
+
+      return buildEmployeeUtilizationReport(inputRows, rangeDays);
     } catch (error) {
       const expected = reportingActionErrorFrom(error);
       if (expected) return expected;
