@@ -46,9 +46,9 @@
   { "id": "T045", "featureIds": ["F025"], "description": "Workflow rollback/reactivation invokes resume; a provider whose re-registration fails gets status='error' and reactivation still completes", "implemented": true },
   { "id": "T046", "featureIds": ["F026"], "description": "Final deletion tears down remaining external subscriptions before email tables are deleted; missing/404 subscriptions do not fail deletion", "implemented": true },
   { "id": "T047", "featureIds": ["F027"], "description": "Workflow replay test: history recorded pre-change replays against new code without non-determinism error (patched() guards)", "implemented": true },
-  { "id": "T048", "featureIds": ["F028"], "description": "Backfill suspends providers for tenants in pending/awaiting_confirmation/confirmed and skips rolled_back/deleted tenants", "implemented": false },
-  { "id": "T049", "featureIds": ["F028"], "description": "Backfill second run is a no-op", "implemented": false },
-  { "id": "T050", "featureIds": ["F029"], "description": "Review/lint pass: every new query on email_providers and vendor config tables includes tenant in WHERE/JOIN", "implemented": false },
+  { "id": "T048", "featureIds": ["F028"], "description": "Backfill suspends providers for tenants in pending/awaiting_confirmation/confirmed and skips rolled_back/deleted tenants", "implemented": true },
+  { "id": "T049", "featureIds": ["F028"], "description": "Backfill second run is a no-op", "implemented": true },
+  { "id": "T050", "featureIds": ["F029"], "description": "Review/lint pass: every new query on email_providers and vendor config tables includes tenant in WHERE/JOIN", "implemented": true },
   { "id": "T051", "featureIds": ["F023", "F007"], "description": "End-to-end: start deletion workflow, then deliver Microsoft webhook notification for that tenant — acked, no job enqueued, no ticket, no outbound notification email", "implemented": true },
   { "id": "T052", "featureIds": ["F024", "F013"], "description": "End-to-end: reactivate cancelled tenant — providers resume, webhook re-registered, new inbound email creates a ticket again", "implemented": true }
 ]

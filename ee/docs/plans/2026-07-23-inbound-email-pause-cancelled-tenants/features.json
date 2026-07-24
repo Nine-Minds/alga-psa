@@ -164,13 +164,13 @@
   {
     "id": "F028",
     "description": "Backfill script/admin endpoint suspends email ingestion for all tenants in pending_tenant_deletions (status pending/awaiting_confirmation/confirmed); rerunnable no-op",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["5.6"]
   },
   {
     "id": "F029",
     "description": "All new DB queries and updates include tenant in WHERE clauses and JOIN conditions (Citus rules)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["6"]
   }
 ]
