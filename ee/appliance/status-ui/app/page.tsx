@@ -177,6 +177,11 @@ function apiPath(
   return qs ? `${path}?${qs}` : path;
 }
 
+async function responseError(response: Response, fallback: string) {
+  const body = await response.json().catch(() => null);
+  return body?.error || `${fallback} (HTTP ${response.status})`;
+}
+
 function badgeClass(value?: string | boolean) {
   const normalized = String(value ?? "unknown");
   if (["loading"].includes(normalized)) return styles.loading;
@@ -358,6 +363,8 @@ export default function StatusPage() {
   const [logTail, setLogTail] = useState(200);
   const [logLines, setLogLines] = useState<string[]>([]);
   const [logError, setLogError] = useState<string | null>(null);
+  const [podsError, setPodsError] = useState<string | null>(null);
+  const [deploymentsError, setDeploymentsError] = useState<string | null>(null);
   const [loadingStatus, setLoadingStatus] = useState(true);
   const [loadingNamespaces, setLoadingNamespaces] = useState(true);
   const [loadingDeployments, setLoadingDeployments] = useState(false);
@@ -464,16 +471,20 @@ export default function StatusPage() {
       const response = await fetch(apiPath("/api/k8s/pods", { namespace }), {
         cache: "no-store",
       });
-      if (!response.ok) return;
+      // A failed listing is not an empty cluster. Swallowing it rendered "No
+      // pods found" over a real backend error, which hid a truncated kubectl
+      // response for as long as it took to read the host-service logs.
+      if (!response.ok) throw new Error(await responseError(response, "Unable to list pods."));
       const data = await response.json();
       const nextPods = data.pods || [];
+      setPodsError(null);
       setPods(nextPods);
       if (!selectedPod && nextPods.length) {
         setSelectedPod(nextPods[0].name);
         setSelectedContainer(nextPods[0].containers?.[0]?.name || "");
       }
-    } catch {
-      /* ignore transient Kubernetes failures */
+    } catch (err) {
+      setPodsError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoadingPods(false);
     }
@@ -486,11 +497,12 @@ export default function StatusPage() {
         apiPath("/api/k8s/deployments", { namespace }),
         { cache: "no-store" },
       );
-      if (!response.ok) return;
+      if (!response.ok) throw new Error(await responseError(response, "Unable to list deployments."));
       const data = await response.json();
+      setDeploymentsError(null);
       setDeployments(data.deployments || []);
-    } catch {
-      /* ignore transient Kubernetes failures */
+    } catch (err) {
+      setDeploymentsError(err instanceof Error ? err.message : String(err));
     } finally {
       setLoadingDeployments(false);
     }
@@ -1089,6 +1101,9 @@ export default function StatusPage() {
               onFilter={setDeploymentFilter}
               onRefresh={loadDeployments}
             />
+            {deploymentsError ? (
+              <div className={styles.alert}>{deploymentsError}</div>
+            ) : null}
             <div className={styles.tableWrap}>
               <table>
                 <thead>
@@ -1166,6 +1181,7 @@ export default function StatusPage() {
               onFilter={setPodFilter}
               onRefresh={loadPods}
             />
+            {podsError ? <div className={styles.alert}>{podsError}</div> : null}
             <div className={styles.tableWrap}>
               <table>
                 <thead>

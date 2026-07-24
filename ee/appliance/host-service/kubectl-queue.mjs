@@ -1,12 +1,55 @@
 import { spawn } from 'node:child_process';
+import { StringDecoder } from 'node:string_decoder';
 
 const DEFAULT_TIMEOUT_MS = 30_000;
-const MAX_OUTPUT_BYTES = 256 * 1024;
+// Cap for output rendered as text (logs, describe, apply). Machine-readable
+// callers raise this per command: silently clipping `-o json` produces a blob
+// that no longer parses, which is indistinguishable from a broken cluster.
+const DEFAULT_MAX_OUTPUT_BYTES = 256 * 1024;
 
-function truncateOutput(value) {
-  const text = value || '';
-  if (text.length <= MAX_OUTPUT_BYTES) return text;
-  return `${text.slice(0, MAX_OUTPUT_BYTES)}\n... output truncated at ${MAX_OUTPUT_BYTES} bytes ...`;
+// Accumulates a stream up to a byte budget without growing past it. Callers get
+// the clipped text plus an explicit `truncated` flag so they can decide whether
+// clipped output is usable at all.
+class CappedBuffer {
+  constructor(maxBytes) {
+    this.maxBytes = maxBytes;
+    this.chunks = [];
+    this.length = 0;
+    this.truncated = false;
+    // Decode across chunk boundaries: a multi-byte character split between two
+    // stream chunks would otherwise decode to replacement characters, which is
+    // silent corruption inside a JSON string.
+    this.decoder = new StringDecoder('utf8');
+  }
+
+  appendChunk(chunk) {
+    this.append(this.decoder.write(chunk));
+  }
+
+  append(text) {
+    if (!text) return;
+    if (this.length >= this.maxBytes) {
+      this.truncated = true;
+      return;
+    }
+    const room = this.maxBytes - this.length;
+    if (text.length > room) {
+      this.chunks.push(text.slice(0, room));
+      this.length = this.maxBytes;
+      this.truncated = true;
+      return;
+    }
+    this.chunks.push(text);
+    this.length += text.length;
+  }
+
+  toString() {
+    this.append(this.decoder.end());
+    const text = this.chunks.join('');
+    return this.truncated
+      ? `${text}\n... output truncated at ${this.maxBytes} bytes ...`
+      : text;
+  }
 }
 
 export class SerialCommandQueue {
@@ -26,6 +69,7 @@ export class SerialCommandQueue {
       id: ++this.sequence,
       command,
       timeoutMs: options.timeoutMs || DEFAULT_TIMEOUT_MS,
+      maxOutputBytes: options.maxOutputBytes || DEFAULT_MAX_OUTPUT_BYTES,
       onStart: options.onStart,
       onDone: options.onDone,
       signal: options.signal,
@@ -36,7 +80,7 @@ export class SerialCommandQueue {
     return new Promise((resolve) => {
       entry.resolve = resolve;
       if (entry.signal?.aborted) {
-        entry.resolve({ ok: false, status: 499, command, stdout: '', stderr: 'Command cancelled before start.', queuedMs: 0, durationMs: 0, queue: this.name, id: entry.id });
+        entry.resolve({ ok: false, status: 499, command, stdout: '', stderr: 'Command cancelled before start.', truncated: false, queuedMs: 0, durationMs: 0, queue: this.name, id: entry.id });
         return;
       }
       this.queue.push(entry);
@@ -49,7 +93,7 @@ export class SerialCommandQueue {
     while (this.queue.length > 0) {
       const entry = this.queue.shift();
       if (entry.signal?.aborted) {
-        const result = { ok: false, status: 499, command: entry.command, stdout: '', stderr: 'Command cancelled before start.', queuedMs: Date.now() - entry.queuedAt, durationMs: 0, queue: this.name, id: entry.id };
+        const result = { ok: false, status: 499, command: entry.command, stdout: '', stderr: 'Command cancelled before start.', truncated: false, queuedMs: Date.now() - entry.queuedAt, durationMs: 0, queue: this.name, id: entry.id };
         try { entry.onDone?.(result); } catch { /* callback best effort */ }
         entry.resolve(result);
         continue;
@@ -62,8 +106,8 @@ export class SerialCommandQueue {
 
   run(entry) {
     const startedAt = Date.now();
-    let stdout = '';
-    let stderr = '';
+    const stdout = new CappedBuffer(entry.maxOutputBytes);
+    const stderr = new CappedBuffer(entry.maxOutputBytes);
     let settled = false;
     let timedOut = false;
     let killTimer = null;
@@ -76,12 +120,16 @@ export class SerialCommandQueue {
       if (entry.signal) entry.signal.removeEventListener('abort', cancel);
 
       const cancelled = entry.signal?.aborted && !timedOut;
+      if (timedOut) stderr.append(`\nCommand timed out after ${entry.timeoutMs}ms.`);
+      else if (error) stderr.append(`\n${error.message || String(error)}`);
       const result = {
         ok: status === 0 && !timedOut && !error && !cancelled,
         status: cancelled ? 499 : timedOut ? 124 : (status ?? 1),
         command: entry.command,
-        stdout: truncateOutput(stdout),
-        stderr: truncateOutput(timedOut ? `${stderr}\nCommand timed out after ${entry.timeoutMs}ms.` : (error ? `${stderr}\n${error.message || String(error)}` : stderr)),
+        stdout: stdout.toString(),
+        stderr: stderr.toString(),
+        truncated: stdout.truncated,
+        maxOutputBytes: entry.maxOutputBytes,
         queuedMs: startedAt - entry.queuedAt,
         durationMs: Date.now() - startedAt,
         queue: this.name,
@@ -114,7 +162,7 @@ export class SerialCommandQueue {
     const cancel = () => {
       if (settled) return;
       timedOut = false;
-      stderr += '\nCommand cancelled by caller.';
+      stderr.append('\nCommand cancelled by caller.');
       killProcessGroup('SIGTERM');
       killTimer = setTimeout(() => killProcessGroup('SIGKILL'), 2_000);
     };
@@ -131,8 +179,8 @@ export class SerialCommandQueue {
       killTimer = setTimeout(() => killProcessGroup('SIGKILL'), 2_000);
     }, entry.timeoutMs);
 
-    child.stdout.on('data', (chunk) => { stdout += chunk.toString('utf8'); });
-    child.stderr.on('data', (chunk) => { stderr += chunk.toString('utf8'); });
+    child.stdout.on('data', (chunk) => { stdout.appendChunk(chunk); });
+    child.stderr.on('data', (chunk) => { stderr.appendChunk(chunk); });
     child.on('error', (error) => finish(1, error));
     child.on('close', (code, signal) => finish(code ?? (signal ? 1 : 0)));
   }

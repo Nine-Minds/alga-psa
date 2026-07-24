@@ -561,6 +561,7 @@ function kubectlCommand(args, requestTimeoutMs = KUBECTL_REQUEST_TIMEOUT_MS) {
 function runQueuedKubectl(command, options = {}) {
   return kubectlQueue.enqueue(command, {
     timeoutMs: options.timeoutMs || KUBECTL_API_TIMEOUT_MS,
+    maxOutputBytes: options.maxOutputBytes,
     onStart: options.onStart,
     onDone: options.onDone,
     signal: options.signal
@@ -568,9 +569,29 @@ function runQueuedKubectl(command, options = {}) {
   });
 }
 
+// `-o json` must arrive whole or not at all. A full pod list runs ~30KB per pod
+// (container env dominates), so the queue's text-sized default clipped the
+// listing mid-object on any real namespace: JSON.parse failed and the Pods tab
+// rendered "No pods found" on a perfectly healthy cluster. Budget for a large
+// listing, and if even that overflows, say so instead of parsing a fragment.
+const KUBECTL_JSON_MAX_OUTPUT_BYTES = 32 * 1024 * 1024;
+
 async function runKubectlJson(args, timeoutMs = KUBECTL_API_TIMEOUT_MS, signal) {
-  const result = await runQueuedKubectl(kubectlCommand(`${args} -o json`, timeoutMs), { timeoutMs, signal });
+  const result = await runQueuedKubectl(kubectlCommand(`${args} -o json`, timeoutMs), {
+    timeoutMs,
+    signal,
+    maxOutputBytes: KUBECTL_JSON_MAX_OUTPUT_BYTES
+  });
   if (!result.ok) return { ...result, value: null };
+  if (result.truncated) {
+    return {
+      ...result,
+      ok: false,
+      status: 1,
+      value: null,
+      stderr: `kubectl output exceeded ${result.maxOutputBytes} bytes and was truncated; narrow the request (for example, select a single namespace).`
+    };
+  }
   try {
     return { ...result, value: JSON.parse(result.stdout || '{}') };
   } catch (error) {
