@@ -32,7 +32,9 @@
     "assetKind": "Asset",
     "viewAsset": "View asset",
     "createProduct": "Create a new product",
-    "registerAsset": "Register as a client's asset"
+    "registerAsset": "Register as a client's asset",
+    "useCamera": "Use the camera instead",
+    "grantAccess": "Allow camera access"
   },
   "stock": {
     "title": "Stock",

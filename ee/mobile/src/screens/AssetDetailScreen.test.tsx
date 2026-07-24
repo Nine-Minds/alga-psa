@@ -112,13 +112,13 @@ function ok<T>(data: T) {
   return { ok: true as const, status: 200, data };
 }
 
-async function renderScreen(): Promise<ReactTestRenderer> {
+async function renderScreen(navigate: ReturnType<typeof vi.fn> = vi.fn()): Promise<ReactTestRenderer> {
   let tree!: ReactTestRenderer;
   await act(async () => {
     tree = create(
       <AssetDetailScreen
         route={{ key: "r", name: "AssetDetail", params: { assetId: "asset-1", assetName: "Device" } } as never}
-        navigation={{ navigate: vi.fn() } as never}
+        navigation={{ navigate } as never}
       />,
     );
   });
@@ -277,6 +277,22 @@ describe("AssetDetailScreen", () => {
         }),
       }),
     );
+  });
+
+  it("links to the stock movement trail for an inventory-sourced asset", async () => {
+    mockGetAsset.mockResolvedValue(ok({ data: { ...asset, stock_unit_id: "unit-7" } }));
+    const navigate = vi.fn();
+    const tree = await renderScreen(navigate);
+
+    const link = hosts(tree, "asset-detail-view-provenance")[0];
+    expect(link).toBeTruthy();
+    act(() => link.props.onPress());
+    expect(navigate).toHaveBeenCalledWith("StockUnitDetail", { unitId: "unit-7" });
+  });
+
+  it("hides stock provenance for a manually created asset", async () => {
+    const tree = await renderScreen();
+    expect(hosts(tree, "asset-detail-view-provenance").length).toBe(0);
   });
 
   it("renders installed software when the RMM reports it", async () => {
