@@ -135,6 +135,9 @@ function contactUpdateActionErrorFrom(error: unknown): ContactUpdateActionError 
     if (message === 'Contact not found') {
       return actionError('Contact not found');
     }
+    if (message === 'Contact is not associated with a client') {
+      return actionError('Contact is not associated with a client');
+    }
     if (
       message.startsWith('VALIDATION_ERROR:') ||
       message.startsWith('EMAIL_EXISTS:') ||
@@ -1670,6 +1673,7 @@ function visibilityGroupActionErrorFrom(error: unknown): VisibilityGroupActionEr
     }
     if (
       message === 'Contact not found' ||
+      message === 'Contact is not associated with a client' ||
       message === 'Assigned visibility group is invalid for this contact' ||
       message === 'Visibility group not found' ||
       message === 'One or more boards are invalid for this tenant' ||
@@ -1705,8 +1709,12 @@ async function resolveContactClientId(
     .where({ contact_name_id: contactId })
     .first('contact_name_id', 'client_id');
 
-  if (!contact?.client_id) {
+  if (!contact) {
     throw new Error('Contact not found');
+  }
+
+  if (!contact.client_id) {
+    throw new Error('Contact is not associated with a client');
   }
 
   return contact.client_id;

@@ -366,6 +366,9 @@
       "title": "Geen portaaltoegang",
       "description": "Dit contact heeft nog geen toegang tot het klantportaal"
     },
+    "noClient": {
+      "description": "Wijs dit contact toe aan een klant om portaaltoegang te beheren."
+    },
     "portalAdmin": {
       "label": "Portaalbeheerder",
       "helper": "Wanneer ingeschakeld, wordt de gebruiker aangemaakt met de rol Klantbeheerder. Wanneer uitgeschakeld, krijgt die de rol Klantgebruiker."
