@@ -136,7 +136,7 @@ jobs:
           fi
           # Cornerstone tables that must be distributed for the schema to work
           # at all on Citus.
-          for t in tenants users clients contacts tickets projects documents comments workflow_tasks; do
+          for t in tenants users clients contacts tickets projects documents comments workflow_tasks project_billing_configs project_billing_schedule_entries project_phase_rate_overrides project_billing_cap_usage; do
             STATE=$(psql -h localhost -U postgres -d server -tAc "SELECT partmethod FROM pg_dist_partition WHERE logicalrelid = '$t'::regclass;")
             if [ "$STATE" != "h" ]; then
               echo "::error::Table $t is not distributed (partmethod='$STATE')."
