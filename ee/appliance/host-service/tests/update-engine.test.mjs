@@ -56,6 +56,7 @@ test('runAppChannelUpdate applies channel update and persists history without OS
       }
     },
     tokenFile: path.join(tmp, 'setup-token'),
+    storageInstallCommand: 'true',
     fluxSourceApplyCommand: `cat > ${fluxManifestPath}`,
     reconcileSourceCommand: 'true',
     reconcileHelmCommand: 'true',
@@ -125,6 +126,7 @@ function makeUpdateFixture() {
       }
     },
     tokenFile: path.join(tmp, 'setup-token'),
+    storageInstallCommand: 'true',
     fluxSourceApplyCommand: `cat > ${path.join(tmp, 'flux-source.yaml')}`,
     reconcileSourceCommand: 'true',
     reconcileHelmCommand: 'true',
@@ -179,4 +181,25 @@ test('app update: helm reconcile exits non-zero and HelmRelease is unreadable ->
   const { result, state } = await runWithReconcileOutcome('false'); // kubectl read itself fails
   assert.equal(result.ok, false);
   assert.equal(state.status, 'update-blocked');
+});
+
+test('app update stops before release reconciliation when storage repair fails', async () => {
+  const { stateFile, fakeBin, options } = makeUpdateFixture();
+  const originalPath = process.env.PATH;
+  process.env.PATH = `${fakeBin}:${originalPath}`;
+  try {
+    const result = await runAppChannelUpdate({ channel: 'nightly' }, {
+      ...options,
+      storageInstallCommand: "printf 'storage unavailable' >&2; exit 1"
+    });
+    assert.equal(result.ok, false);
+    assert.equal(result.phase, 'storage');
+    assert.equal(result.step, 'install-local-path-storage');
+
+    const state = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
+    assert.equal(state.status, 'update-blocked');
+    assert.equal(state.phase, 'storage');
+  } finally {
+    process.env.PATH = originalPath;
+  }
 });

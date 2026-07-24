@@ -765,6 +765,62 @@ export async function runNetworkChecks(inputs, options = {}) {
   return { ok: true, checkedAt, failure: null, checks: { registryHost, reference: releaseReference, version: resolvedRelease.manifest.version } };
 }
 
+export function installStorage(options = {}) {
+  const stateFile = options.stateFile || DEFAULT_STATE_FILE;
+  const kubeconfigPath = options.kubeconfigPath || DEFAULT_KUBECONFIG;
+  const installerPath = options.storageInstallerPath
+    || path.resolve(import.meta.dirname, '..', 'scripts', 'install-storage.sh');
+  const installCommand = options.storageInstallCommand
+    || `${shellQuote(installerPath)} --kubeconfig ${shellQuote(kubeconfigPath)}`;
+
+  writeInstallState({
+    status: 'storage-install-running',
+    phase: 'storage',
+    lastAction: 'Reconciling the appliance local-path storage provider',
+    updatedAt: nowIso()
+  }, stateFile);
+
+  const result = spawnSync('sh', ['-c', installCommand], {
+    env: process.env,
+    encoding: 'utf8'
+  });
+
+  if (result.status !== 0) {
+    const detail = (result.stderr || result.stdout || `storage installer exited with code ${result.status ?? 1}`).trim();
+    const failure = preflightFailure(
+      'storage',
+      'install-local-path-storage',
+      'Local-path storage reconciliation failed.',
+      detail
+    );
+    writeInstallState({
+      status: 'storage-install-blocked',
+      phase: 'storage',
+      lastAction: failure.message,
+      failure,
+      installerOutput: {
+        stdout: result.stdout || '',
+        stderr: result.stderr || ''
+      },
+      updatedAt: nowIso()
+    }, stateFile);
+    return failure;
+  }
+
+  const success = {
+    ok: true,
+    phase: 'storage',
+    message: 'Local-path storage reconciliation and PVC smoke test completed successfully.'
+  };
+  writeInstallState({
+    status: 'storage-install-complete',
+    phase: 'storage',
+    lastAction: success.message,
+    updatedAt: nowIso()
+  }, stateFile);
+  return success;
+}
+
 export function installFlux(options = {}) {
   const stateFile = options.stateFile || DEFAULT_STATE_FILE;
   const kubeconfigPath = options.kubeconfigPath || DEFAULT_KUBECONFIG;
@@ -1277,10 +1333,15 @@ export async function runSetupWorkflow(inputs, options = {}) {
     return preflight;
   }
 
-  // The k3s substrate and local-path storage are provisioned by the host
-  // bootstrap (bootstrap-control-plane.sh) before this control-plane workflow
-  // ever runs. The setup workflow only layers Flux and the application release
-  // on top of that substrate.
+  // The host bootstrap applies the storage controller early so the setup UI can
+  // start even when registry access is temporarily unavailable. Before Flux is
+  // allowed to create database, Redis, or file-storage PVCs, reconcile storage
+  // to one controller and prove dynamic provisioning with a mounted write.
+  const storageResult = installStorage(options);
+  if (!storageResult.ok) {
+    return storageResult;
+  }
+
   const fluxResult = installFlux(options);
   if (!fluxResult.ok) {
     return fluxResult;
