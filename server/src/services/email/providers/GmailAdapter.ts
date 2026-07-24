@@ -325,6 +325,19 @@ This indicates a problem with the OAuth token saving process.`;
   }
 
   /**
+   * Stop Gmail push notifications for the configured account.
+   */
+  async stopWatch(): Promise<void> {
+    try {
+      await this.ensureValidToken();
+      await this.gmail.users.stop({ userId: 'me' });
+      this.log('info', 'Stopped Gmail watch subscription');
+    } catch (error) {
+      throw this.handleError(error, 'stopWatch');
+    }
+  }
+
+  /**
    * Renew webhook subscription
    */
   async renewWebhookSubscription(): Promise<void> {
@@ -334,8 +347,7 @@ This indicates a problem with the OAuth token saving process.`;
       
       // Stop existing watch subscription first
       try {
-        // await this.gmail.users.stop({ userId: 'me' });
-        this.log('info', 'Stopped existing Gmail watch subscription');
+        await this.stopWatch();
       } catch (error: any) {
         // It's okay if there's no existing watch to stop
         this.log('warn', `No existing watch to stop: ${error.message}`);

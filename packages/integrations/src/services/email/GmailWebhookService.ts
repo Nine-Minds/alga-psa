@@ -104,19 +104,8 @@ export class GmailWebhookService {
    * Stop Gmail watch for a provider
    */
   private async stopGmailWatch(adapter: GmailAdapter): Promise<void> {
-    try {
-      console.log('[MOCK] Stopping Gmail watch');
-      
-      // TODO: Implement actual Gmail watch stop
-      // This would call the Gmail API to stop watching:
-      // POST https://gmail.googleapis.com/gmail/v1/users/me/stop
-      
-      console.log('✅ Gmail watch stopped');
-      
-    } catch (error: any) {
-      console.warn(`⚠️ Failed to stop Gmail watch: ${error.message}`);
-      // Don't throw - this is cleanup, best effort
-    }
+    await adapter.stopWatch();
+    console.log('✅ Gmail watch stopped');
   }
 
   /**

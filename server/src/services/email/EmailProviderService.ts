@@ -11,6 +11,11 @@ import { buildMicrosoftEmailProviderConfig } from '@alga-psa/shared/services/ema
 import { GmailAdapter } from './providers/GmailAdapter';
 import { GmailWebhookService } from './GmailWebhookService';
 import { getWebhookBaseUrl } from '../../utils/email/webhookHelpers';
+import {
+  EmailProviderLifecycleService,
+  type InboundPauseReason,
+  type ResumeProviderResult,
+} from '@alga-psa/shared/services/email/EmailProviderLifecycleService';
 
 const PROVIDER_TENANT_DISCOVERY = 'tenant-discovery';
 
@@ -44,6 +49,7 @@ export interface ProviderStatus {
 }
 
 export class EmailProviderService {
+  private readonly lifecycleService = new EmailProviderLifecycleService();
   private async getDb() {
     const { knex } = await createTenantKnex();
     return knex;
@@ -361,52 +367,29 @@ export class EmailProviderService {
   }
 
   /**
+   * Pause inbound ingestion without changing the provider's configured active state.
+   */
+  async pauseProvider(
+    providerId: string,
+    tenant: string,
+    reason: InboundPauseReason
+  ): Promise<boolean> {
+    return this.lifecycleService.pauseProvider(providerId, tenant, reason);
+  }
+
+  /**
+   * Resume inbound ingestion and recreate webhook-mode subscriptions.
+   */
+  async resumeProvider(providerId: string, tenant: string): Promise<ResumeProviderResult> {
+    return this.lifecycleService.resumeProvider(providerId, tenant);
+  }
+
+  /**
    * Delete an email provider
    */
-  async deleteProvider(providerId: string): Promise<void> {
-    try {
-      const db = await this.getDb();
-      
-      // Get provider info to determine type for cleanup
-      const provider = await tenantDb(db, PROVIDER_TENANT_DISCOVERY)
-        .unscoped('email_providers', 'tenant discovery for email provider delete')
-        .where('id', providerId)
-        .first();
-
-      if (!provider) {
-        throw new Error('Provider not found');
-      }
-
-      // Delete vendor-specific configuration first
-      const providerDb = tenantDb(db, provider.tenant);
-      if (provider.provider_type === 'google') {
-        await providerDb.table('google_email_provider_config')
-          .where({ email_provider_id: providerId })
-          .del();
-      } else if (provider.provider_type === 'microsoft') {
-        await providerDb.table('microsoft_email_provider_config')
-          .where({ email_provider_id: providerId })
-          .del();
-      } else if (provider.provider_type === 'imap') {
-        await providerDb.table('imap_email_provider_config')
-          .where('email_provider_id', providerId)
-          .del();
-      }
-
-      // Delete main provider record
-      const deleted = await tenantDb(db, provider.tenant).table('email_providers')
-        .where('id', providerId)
-        .del();
-
-      if (deleted === 0) {
-        throw new Error('Provider not found');
-      }
-
-      console.log(`✅ Deleted email provider: ${providerId}`);
-    } catch (error: any) {
-      console.error(`Error deleting email provider ${providerId}:`, error);
-      throw new Error(`Failed to delete email provider: ${error.message}`);
-    }
+  async deleteProvider(providerId: string, tenant: string): Promise<void> {
+    await this.lifecycleService.deleteProvider(providerId, tenant);
+    console.log(`✅ Deleted email provider: ${providerId}`);
   }
 
   /**

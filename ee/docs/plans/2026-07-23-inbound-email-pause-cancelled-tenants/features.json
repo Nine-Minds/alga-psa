@@ -50,61 +50,61 @@
   {
     "id": "F009",
     "description": "GmailAdapter implements watch stop via Gmail users.stop; GmailWebhookService TODO replaced with real call",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["5.3"]
   },
   {
     "id": "F010",
     "description": "MicrosoftGraphAdapter exposes a deleteSubscription operation callable outside renewal, keyed by stored webhook_subscription_id",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["5.3"]
   },
   {
     "id": "F011",
     "description": "EmailProviderService.pauseProvider(id, reason) sets pause columns, best-effort external teardown (Graph delete / Gmail stop), clears webhook_subscription_id/webhook_expires_at/watch_expiration",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["5.3"]
   },
   {
     "id": "F012",
     "description": "pauseProvider commits the pause even when external teardown fails (warning logged); DB gate guarantees inertness",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["5.3", "6"]
   },
   {
     "id": "F013",
     "description": "EmailProviderService.resumeProvider(id) clears pause columns and re-registers webhook/watch via initializeProviderWebhook for webhook-mode providers",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["5.3"]
   },
   {
     "id": "F014",
     "description": "resumeProvider failure to re-register leaves provider resumed but sets status='error' with error_message surfaced in UI",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["5.3", "6"]
   },
   {
     "id": "F015",
     "description": "EmailProviderService.deleteProvider performs external subscription teardown before deleting config rows",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["5.3"]
   },
   {
     "id": "F016",
     "description": "Microsoft webhook maintenance candidate query excludes paused providers (inbound_paused_at IS NULL)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["5.3"]
   },
   {
     "id": "F017",
     "description": "Gmail watch renewal job candidate query excludes paused providers",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["5.3"]
   },
   {
     "id": "F018",
     "description": "EmailWebhookMaintenanceService silent-run detection and subscription probes skip paused providers",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["5.3"]
   },
   {

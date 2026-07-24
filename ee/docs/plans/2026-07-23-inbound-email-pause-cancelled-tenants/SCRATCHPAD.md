@@ -61,3 +61,15 @@ Tenant cancelled subscription today; inbound mail to their Microsoft mailbox kep
 - F007/T009-T012/T014: the unified processor checks the tenant-scoped provider gate before source fetch and repeats the ingestable predicate in Microsoft, Google, and IMAP config fetches.
 - F008/T009-T013: deliberate gate skips return a successful `skipped` result before ticket processing or `email_processed_messages` insertion, so the queue consumer completes them without retry/DLQ noise.
 - Verification: `npx vitest run --config vitest.config.ts src/test/unit/migrations/inboundEmailPauseMigration.test.ts src/test/unit/unifiedInboundEmailQueueJobProcessor.fetch.test.ts src/test/integration/microsoftWebhookUnifiedQueue.integration.test.ts src/test/integration/googleWebhookUnifiedQueue.integration.test.ts src/test/integration/imapWebhookHandoff.integration.test.ts --coverage.enabled=false` from `server/` (35 passed).
+
+### External subscription lifecycle (2026-07-23)
+- F009/T015/T016: added `GmailAdapter.stopWatch()` (shared plus both runtime copies), wired both `GmailWebhookService` implementations to it, and reused it during renewal. API failures are wrapped for callers; lifecycle cleanup contains them.
+- F010/T017/T018: exposed `MicrosoftGraphAdapter.deleteSubscription`, accepting an explicit/stored id, URL-encoding it, and treating Graph 404 as idempotent success; the older delete method delegates to it.
+- F011/T019-T021/T023: introduced tenant-scoped shared `EmailProviderLifecycleService`; pause atomically sets the reason/timestamp once, tears down Graph/Gmail (IMAP no-op), and clears local renewal cursors.
+- F012/T022: pause is committed before teardown and teardown errors are warned/contained; local subscription cursors are cleared in `finally`.
+- F013/T024-T026/T028: resume clears only the pause fields and recreates Gmail watches or Microsoft webhook-mode subscriptions. IMAP and inactive/polling Microsoft providers need no external registration. The round-trip restores the ingestable predicate.
+- F014/T027: failed resume registration leaves pause fields clear and writes `status='error'` plus the reconnect error.
+- F015/T029/T030: provider deletion now delegates through lifecycle teardown before vendor/base row deletion; the existing server action calls the service, and teardown failure does not prevent deletion.
+- F016/T031 and F018/T033: Microsoft maintenance candidates require a null pause timestamp, so renewal, polling probes, reconciliation, and silent-run transitions never receive paused providers.
+- F017/T032: Gmail watch renewal candidates require a null pause timestamp.
+- Verification: shared and integrations workspace typechecks passed; focused adapter/lifecycle/maintenance suite passed (35 tests).

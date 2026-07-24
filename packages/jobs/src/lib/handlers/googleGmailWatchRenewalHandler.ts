@@ -24,6 +24,7 @@ export async function renewGoogleGmailWatchSubscriptions(
   const providers = await providersQuery
     .where('ep.provider_type', 'google')
     .andWhere('ep.is_active', true)
+    .whereNull('ep.inbound_paused_at')
     .andWhere(function () {
       this.whereNull('gc.watch_expiration').orWhere('gc.watch_expiration', '<=', threshold.toISOString());
     })

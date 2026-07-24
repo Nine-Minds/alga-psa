@@ -217,7 +217,8 @@ export class EmailWebhookMaintenanceService {
     }
     query = query
       .where('ep.provider_type', 'microsoft')
-      .andWhere('ep.is_active', true);
+      .andWhere('ep.is_active', true)
+      .whereNull('ep.inbound_paused_at');
 
     if (providerId) {
       query = query.andWhere('ep.id', providerId);
