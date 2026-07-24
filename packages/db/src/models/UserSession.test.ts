@@ -40,7 +40,7 @@ describe('UserSession.extendExpiry', () => {
     expect(updateMock).toHaveBeenCalledWith({ expires_at: expiresAt, updated_at: '__now__' });
   });
 
-  it('does not cache a non-revoked answer across requests', async () => {
+  it('reads durable revocation state on every request', async () => {
     firstMock.mockResolvedValue({ revoked_at: null });
 
     await expect(UserSession.isRevoked('tenant-1', 'scim-session-open')).resolves.toBe(false);
@@ -50,12 +50,12 @@ describe('UserSession.extendExpiry', () => {
     expect(firstMock).toHaveBeenCalledTimes(2);
   });
 
-  it('may cache a revoked answer because revocation is terminal', async () => {
+  it('does not cache a revoked answer', async () => {
     firstMock.mockResolvedValue({ revoked_at: new Date() });
 
     await expect(UserSession.isRevoked('tenant-1', 'scim-session-revoked')).resolves.toBe(true);
     await expect(UserSession.isRevoked('tenant-1', 'scim-session-revoked')).resolves.toBe(true);
 
-    expect(firstMock).toHaveBeenCalledTimes(1);
+    expect(firstMock).toHaveBeenCalledTimes(2);
   });
 });

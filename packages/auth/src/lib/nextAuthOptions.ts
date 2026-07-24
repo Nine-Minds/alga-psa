@@ -81,6 +81,23 @@ function applyPortToVanityUrl(url: URL, portCandidate: string | undefined, proto
 const SESSION_MAX_AGE = getSessionMaxAge();
 const SESSION_COOKIE = getSessionCookieConfig();
 
+async function rejectRevokedOrUnverifiableSession(
+    tenant: unknown,
+    sessionId: unknown,
+): Promise<boolean> {
+    if (typeof tenant !== 'string' || typeof sessionId !== 'string') {
+        console.error('[auth] Tracked session is missing its tenant or session identifier.');
+        return true;
+    }
+
+    try {
+        return await UserSession.isRevoked(tenant, sessionId);
+    } catch (error) {
+        console.error('[auth] Session revocation check failed closed:', error);
+        return true;
+    }
+}
+
 /**
  * Fetches the tenant's plan from the database.
  * Used for both initial sign-in and throttled refresh in JWT callbacks.
@@ -1792,32 +1809,12 @@ export async function buildAuthOptions(context?: BuildAuthOptionsContext): Promi
                 }
             }
 
-            // NEW: Check if session was revoked (throttled to reduce DB load)
-            // PERFORMANCE FIX: Only check revocation every 30 seconds, with in-memory cache
-            // REMOVED updateActivity() - it was called every 60s per user, exhausting connection pool
-            // Activity tracking is not critical and can be updated less frequently via background job
+            // Check durable revocation state on every authenticated request. This
+            // must remain fail-closed so SCIM deactivation takes effect immediately
+            // across application pods.
             if (token.session_id) {
-                try {
-                    const lastRevocationCheck = token.last_revocation_check as number || 0;
-                    const now = Date.now();
-                    const shouldCheckRevocation = now - lastRevocationCheck > 30000; // 30 seconds
-
-                    if (shouldCheckRevocation) {
-                        const isRevoked = await UserSession.isRevoked(
-                            token.tenant as string,
-                            token.session_id as string
-                        );
-
-                        if (isRevoked) {
-                            console.log('[auth] Session revoked, forcing logout:', token.session_id);
-                            return null; // This will force a logout
-                        }
-
-                        token.last_revocation_check = now;
-                    }
-                } catch (error) {
-                    console.error('[auth] Session revocation check error:', error);
-                    // Don't block on session check errors
+                if (await rejectRevokedOrUnverifiableSession(token.tenant, token.session_id)) {
+                    return null;
                 }
             }
 
@@ -2589,32 +2586,12 @@ export const options: NextAuthConfig = {
                 }
             }
 
-            // NEW: Check if session was revoked (throttled to reduce DB load)
-            // PERFORMANCE FIX: Only check revocation every 30 seconds, with in-memory cache
-            // REMOVED updateActivity() - it was called every 60s per user, exhausting connection pool
-            // Activity tracking is not critical and can be updated less frequently via background job
+            // Check durable revocation state on every authenticated request. This
+            // must remain fail-closed so SCIM deactivation takes effect immediately
+            // across application pods.
             if (token.session_id) {
-                try {
-                    const lastRevocationCheck = token.last_revocation_check as number || 0;
-                    const now = Date.now();
-                    const shouldCheckRevocation = now - lastRevocationCheck > 30000; // 30 seconds
-
-                    if (shouldCheckRevocation) {
-                        const isRevoked = await UserSession.isRevoked(
-                            token.tenant as string,
-                            token.session_id as string
-                        );
-
-                        if (isRevoked) {
-                            console.log('[auth] Session revoked, forcing logout:', token.session_id);
-                            return null; // This will force a logout
-                        }
-
-                        token.last_revocation_check = now;
-                    }
-                } catch (error) {
-                    console.error('[auth] Session revocation check error:', error);
-                    // Don't block on session check errors
+                if (await rejectRevokedOrUnverifiableSession(token.tenant, token.session_id)) {
+                    return null;
                 }
             }
 

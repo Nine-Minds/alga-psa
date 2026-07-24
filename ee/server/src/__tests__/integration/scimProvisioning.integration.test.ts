@@ -107,6 +107,12 @@ describe('SCIM provisioning database lifecycle', () => {
 
       await scoped.table('users').where('user_id', userId).update({ is_inactive: true });
       await service.patchUser(String(created.id), [
+        { op: 'replace', path: 'active', value: false },
+      ]);
+      expect(await scoped.table('scim_user_links').where('link_id', created.id).first('scim_inactive_at'))
+        .toMatchObject({ scim_inactive_at: null });
+
+      await service.patchUser(String(created.id), [
         { op: 'replace', path: 'active', value: true },
       ]);
       expect(await scoped.table('users').where('user_id', userId).first('is_inactive'))

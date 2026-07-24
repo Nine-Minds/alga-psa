@@ -44,6 +44,12 @@ vi.mock('./session', () => ({
 vi.mock('./PortalDomainSessionToken', () => ({ issuePortalDomainOtt: vi.fn() }));
 vi.mock('@alga-psa/validation', () => ({ buildTenantPortalSlug: () => 'tenant-slug', isValidTenantSlug: () => true }));
 vi.mock('@alga-psa/core/features', () => ({ isEnterprise: false }));
+vi.mock('@alga-psa/core/secrets', () => ({
+  getSecretProviderInstance: vi.fn(async () => ({
+    getAppSecret: vi.fn(async () => null),
+    getTenantSecret: vi.fn(async () => null),
+  })),
+}));
 vi.mock('@alga-psa/licensing', () => ({
   getLicenseStateRow: vi.fn(async () => null),
   resolveSelfHostTier: vi.fn(() => undefined),
@@ -59,6 +65,19 @@ vi.mock('./sso/registry', () => ({
 vi.mock('./sso/enterpriseRegistryEntry', () => ({ loadEnterpriseSsoProviderRegistryImpl: async () => null }));
 vi.mock('./sso/types', () => ({ OAuthAccountLinkConflictError: class OAuthAccountLinkConflictError extends Error {} }));
 vi.mock('./sso/ceOAuthProfileMapper', () => ({ mapCeOAuthProfileToExtendedUser: vi.fn() }));
+vi.mock('./sso/teamsMicrosoftProviderResolution', () => ({
+  resolveTeamsMicrosoftProviderConfig: vi.fn(async () => ({
+    status: 'not_configured',
+    tenantId: 'tenant-1',
+  })),
+}));
+vi.mock('./microsoftConsumerProfileResolution', () => ({
+  resolveMicrosoftConsumerProfileConfig: vi.fn(async () => ({
+    status: 'not_configured',
+    tenantId: 'tenant-1',
+    consumerType: 'msp_sso',
+  })),
+}));
 vi.mock('next/headers.js', () => ({ cookies: async () => ({ get: vi.fn(), set: vi.fn() }) }));
 vi.mock('./sso/mspSsoResolution', () => ({
   MSP_SSO_RESOLUTION_COOKIE: 'msp_sso_resolution',
@@ -84,7 +103,7 @@ vi.mock('@alga-psa/db/admin', () => ({
 }));
 vi.mock('@alga-psa/core/logger', () => ({ default: { debug: vi.fn(), trace: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 
-const { getAuthOptions } = await import('./nextAuthOptions');
+const { getAuthOptions, options } = await import('./nextAuthOptions');
 
 describe('nextAuth session expiry sliding', () => {
   beforeEach(() => {
@@ -110,8 +129,6 @@ describe('nextAuth session expiry sliding', () => {
       id: 'u-1',
       tenant: 'tenant-1',
       session_id: 'sess-1',
-      // recent so the revocation/plan checks stay out of the way
-      last_revocation_check: before,
       last_plan_check: before,
       // no last_session_extend -> treated as 0 -> stale -> should fire
     });
@@ -130,12 +147,56 @@ describe('nextAuth session expiry sliding', () => {
       id: 'u-1',
       tenant: 'tenant-1',
       session_id: 'sess-1',
-      last_revocation_check: Date.now(),
       last_plan_check: Date.now(),
       last_session_extend: Date.now(), // just extended -> inside throttle -> skip
     });
 
     expect(extendExpiryMock).not.toHaveBeenCalled();
+  });
+
+  it('checks revocation on every JWT callback even when the same token is reused', async () => {
+    const token = {
+      id: 'u-1',
+      tenant: 'tenant-1',
+      session_id: 'sess-1',
+      last_plan_check: Date.now(),
+      last_session_extend: Date.now(),
+    };
+
+    await runJwt(token);
+    isRevokedMock.mockResolvedValue(true);
+
+    await expect(runJwt(token)).resolves.toBeNull();
+    expect(isRevokedMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('fails closed when durable revocation state cannot be read', async () => {
+    isRevokedMock.mockRejectedValue(new Error('database unavailable'));
+
+    await expect(runJwt({
+      id: 'u-1',
+      tenant: 'tenant-1',
+      session_id: 'sess-1',
+      last_plan_check: Date.now(),
+      last_session_extend: Date.now(),
+    })).resolves.toBeNull();
+  });
+
+  it('applies immediate fail-closed revocation checks in the synchronous auth config', async () => {
+    const jwt = options.callbacks?.jwt;
+    expect(jwt).toBeTypeOf('function');
+    isRevokedMock.mockResolvedValue(true);
+
+    await expect(jwt!({
+      token: {
+        id: 'u-1',
+        tenant: 'tenant-1',
+        session_id: 'sess-1',
+        last_plan_check: Date.now(),
+        last_session_extend: Date.now(),
+      },
+      trigger: undefined,
+    } as any)).resolves.toBeNull();
   });
 
   it('does nothing when there is no session_id', async () => {

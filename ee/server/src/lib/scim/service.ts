@@ -407,6 +407,12 @@ export class ScimProvisioningService {
           updated_at: trx.fn.now(),
         });
         lifecycleOperation = link.scim_inactive_at ? operation : 'deactivate';
+        scimInactiveAt = scimInactiveAt ?? new Date();
+      } else if (!link.scim_inactive_at) {
+        // The user was already inactive before this SCIM operation. Preserve
+        // manual/other-policy authority instead of claiming deactivation
+        // provenance that could later permit SCIM to reactivate the user.
+        outcome = 'source_guarded';
       }
 
       await db.table('sessions')
@@ -417,7 +423,6 @@ export class ScimProvisioningService {
           revoked_reason: 'scim',
           updated_at: trx.fn.now(),
         });
-      scimInactiveAt = scimInactiveAt ?? new Date();
     } else if (link.scim_inactive_at) {
       if (user.is_inactive) {
         await db.table('users').where('user_id', link.user_id).update({
