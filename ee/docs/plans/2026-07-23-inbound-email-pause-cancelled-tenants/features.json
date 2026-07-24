@@ -1,0 +1,176 @@
+[
+  {
+    "id": "F001",
+    "description": "CE migration adds nullable columns inbound_paused_at (timestamptz) and inbound_pause_reason (text: 'manual'|'tenant_cancelled') to email_providers",
+    "implemented": false,
+    "prdRefs": ["5.1"]
+  },
+  {
+    "id": "F002",
+    "description": "EmailProvider TypeScript types/DTOs (EmailProviderService, packages/integrations email types) expose inboundPausedAt and inboundPauseReason",
+    "implemented": false,
+    "prdRefs": ["5.1"]
+  },
+  {
+    "id": "F003",
+    "description": "Microsoft webhook handler provider lookup filters on is_active = true (parity with Google/IMAP)",
+    "implemented": false,
+    "prdRefs": ["5.2"]
+  },
+  {
+    "id": "F004",
+    "description": "Microsoft webhook handler skips enqueue (acks 202, debug log) when provider is paused (inbound_paused_at not null)",
+    "implemented": false,
+    "prdRefs": ["5.2"]
+  },
+  {
+    "id": "F005",
+    "description": "Google webhook handler additionally requires inbound_paused_at IS NULL before enqueueing",
+    "implemented": false,
+    "prdRefs": ["5.2"]
+  },
+  {
+    "id": "F006",
+    "description": "IMAP webhook handler additionally requires inbound_paused_at IS NULL before enqueueing (skip response with reason)",
+    "implemented": false,
+    "prdRefs": ["5.2"]
+  },
+  {
+    "id": "F007",
+    "description": "Unified queue consumer job processor re-checks is_active && !paused in all three provider-config fetch paths (Microsoft, Google, IMAP) and skips gated jobs",
+    "implemented": false,
+    "prdRefs": ["5.2"]
+  },
+  {
+    "id": "F008",
+    "description": "Consumer gated-skip completes the job successfully: no ticket, no DLQ entry, no failed email_processed_messages row",
+    "implemented": false,
+    "prdRefs": ["5.2"]
+  },
+  {
+    "id": "F009",
+    "description": "GmailAdapter implements watch stop via Gmail users.stop; GmailWebhookService TODO replaced with real call",
+    "implemented": false,
+    "prdRefs": ["5.3"]
+  },
+  {
+    "id": "F010",
+    "description": "MicrosoftGraphAdapter exposes a deleteSubscription operation callable outside renewal, keyed by stored webhook_subscription_id",
+    "implemented": false,
+    "prdRefs": ["5.3"]
+  },
+  {
+    "id": "F011",
+    "description": "EmailProviderService.pauseProvider(id, reason) sets pause columns, best-effort external teardown (Graph delete / Gmail stop), clears webhook_subscription_id/webhook_expires_at/watch_expiration",
+    "implemented": false,
+    "prdRefs": ["5.3"]
+  },
+  {
+    "id": "F012",
+    "description": "pauseProvider commits the pause even when external teardown fails (warning logged); DB gate guarantees inertness",
+    "implemented": false,
+    "prdRefs": ["5.3", "6"]
+  },
+  {
+    "id": "F013",
+    "description": "EmailProviderService.resumeProvider(id) clears pause columns and re-registers webhook/watch via initializeProviderWebhook for webhook-mode providers",
+    "implemented": false,
+    "prdRefs": ["5.3"]
+  },
+  {
+    "id": "F014",
+    "description": "resumeProvider failure to re-register leaves provider resumed but sets status='error' with error_message surfaced in UI",
+    "implemented": false,
+    "prdRefs": ["5.3", "6"]
+  },
+  {
+    "id": "F015",
+    "description": "EmailProviderService.deleteProvider performs external subscription teardown before deleting config rows",
+    "implemented": false,
+    "prdRefs": ["5.3"]
+  },
+  {
+    "id": "F016",
+    "description": "Microsoft webhook maintenance candidate query excludes paused providers (inbound_paused_at IS NULL)",
+    "implemented": false,
+    "prdRefs": ["5.3"]
+  },
+  {
+    "id": "F017",
+    "description": "Gmail watch renewal job candidate query excludes paused providers",
+    "implemented": false,
+    "prdRefs": ["5.3"]
+  },
+  {
+    "id": "F018",
+    "description": "EmailWebhookMaintenanceService silent-run detection and subscription probes skip paused providers",
+    "implemented": false,
+    "prdRefs": ["5.3"]
+  },
+  {
+    "id": "F019",
+    "description": "Pause/resume API endpoints or server actions with same auth/permission model as existing provider mutations",
+    "implemented": false,
+    "prdRefs": ["5.5"]
+  },
+  {
+    "id": "F020",
+    "description": "Email provider settings UI shows Paused badge and Pause/Resume action per provider (kebab-case ids, i18n keys)",
+    "implemented": false,
+    "prdRefs": ["5.5"]
+  },
+  {
+    "id": "F021",
+    "description": "UI helper copy explains that mail received while paused is not imported retroactively (i18n)",
+    "implemented": false,
+    "prdRefs": ["3", "5.5"]
+  },
+  {
+    "id": "F022",
+    "description": "New Temporal activity suspendTenantEmailIngestion(tenantId) pauses all active, unpaused providers with reason 'tenant_cancelled'; idempotent; per-provider errors isolated; never workflow-fatal",
+    "implemented": false,
+    "prdRefs": ["5.4"]
+  },
+  {
+    "id": "F023",
+    "description": "tenantDeletionWorkflow invokes suspendTenantEmailIngestion immediately after deactivateAllTenantUsers for all trigger sources",
+    "implemented": false,
+    "prdRefs": ["5.4"]
+  },
+  {
+    "id": "F024",
+    "description": "New Temporal activity resumeTenantEmailIngestion(tenantId) resumes only providers with inbound_pause_reason='tenant_cancelled'",
+    "implemented": false,
+    "prdRefs": ["5.4"]
+  },
+  {
+    "id": "F025",
+    "description": "Rollback/reactivation path invokes resumeTenantEmailIngestion; re-registration failures set status='error' and never fail reactivation",
+    "implemented": false,
+    "prdRefs": ["5.4"]
+  },
+  {
+    "id": "F026",
+    "description": "Final-deletion phase runs external subscription teardown for remaining providers before email tables are deleted (idempotent)",
+    "implemented": false,
+    "prdRefs": ["5.4"]
+  },
+  {
+    "id": "F027",
+    "description": "All new activity invocations in tenantDeletionWorkflow are guarded with Temporal patched() so in-flight workflows replay without non-determinism errors",
+    "implemented": false,
+    "prdRefs": ["5.4", "6"]
+  },
+  {
+    "id": "F028",
+    "description": "Backfill script/admin endpoint suspends email ingestion for all tenants in pending_tenant_deletions (status pending/awaiting_confirmation/confirmed); rerunnable no-op",
+    "implemented": false,
+    "prdRefs": ["5.6"]
+  },
+  {
+    "id": "F029",
+    "description": "All new DB queries and updates include tenant in WHERE clauses and JOIN conditions (Citus rules)",
+    "implemented": false,
+    "prdRefs": ["6"]
+  }
+]
