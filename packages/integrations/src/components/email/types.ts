@@ -11,6 +11,8 @@ export interface EmailProvider {
   senderDisplayName?: string | null;
   mailbox: string;
   isActive: boolean;
+  inboundPausedAt?: string | null;
+  inboundPauseReason?: 'manual' | 'tenant_cancelled' | null;
   status: 'connected' | 'disconnected' | 'error' | 'configuring';
   lastSyncAt?: string;
   errorMessage?: string;

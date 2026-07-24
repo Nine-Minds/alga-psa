@@ -138,6 +138,7 @@ export async function handleGoogleWebhook(request: NextRequest) {
             .where('id', cfg.email_provider_id)
             .andWhere('provider_type', 'google')
             .andWhere('is_active', true)
+            .whereNull('inbound_paused_at')
             .first();
           if (provider) {
             console.log(`✅ Mapped provider via subscription ${subscriptionName}: ${provider.id}`);
@@ -155,6 +156,7 @@ export async function handleGoogleWebhook(request: NextRequest) {
         .where('mailbox', notification.emailAddress)
         .andWhere('provider_type', 'google')
         .andWhere('is_active', true)
+        .whereNull('inbound_paused_at')
         .first();
     }
 

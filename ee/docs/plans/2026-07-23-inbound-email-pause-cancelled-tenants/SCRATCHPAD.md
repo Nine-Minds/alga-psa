@@ -48,3 +48,16 @@ Tenant cancelled subscription today; inbound mail to their Microsoft mailbox kep
 
 ## Ops follow-up
 - 2026-07-23 (user): no immediate manual mitigation for today's incident tenant — it gets suspended by the post-deploy backfill together with all other pending-deletion tenants. Until deploy, its Microsoft mailbox keeps creating tickets (Graph subscription renews daily while `is_active=true`).
+
+## Implementation log
+
+### Schema and inbound gates (2026-07-23)
+- F001/T001/T002: added CE migration `server/migrations/20260723180000_add_inbound_pause_to_email_providers.cjs`; both columns are nullable for existing rows, the reason/timestamp relationship is constrained, and down removes the constraint and columns.
+- F002: exposed camel-case pause fields through the shared/server inbound DTOs, integration UI type, both provider-service mappers, and `PROVIDER_COLUMNS`.
+- F003/T003/T005/T006: Microsoft subscription lookup now requires `ep.is_active = true`; gated callbacks are acknowledged without enqueueing while active callbacks and client-state validation remain covered.
+- F004/T004: Microsoft lookup also requires a null pause timestamp; an all-gated callback returns 202 and emits a structured debug event.
+- F005/T007: both Google subscription and mailbox lookup paths require a null pause timestamp; paused notifications are acknowledged as no-provider while active notifications still enqueue.
+- F006/T008: IMAP loads the pause timestamp and returns an explicit successful skip before enqueueing.
+- F007/T009-T012/T014: the unified processor checks the tenant-scoped provider gate before source fetch and repeats the ingestable predicate in Microsoft, Google, and IMAP config fetches.
+- F008/T009-T013: deliberate gate skips return a successful `skipped` result before ticket processing or `email_processed_messages` insertion, so the queue consumer completes them without retry/DLQ noise.
+- Verification: `npx vitest run --config vitest.config.ts src/test/unit/migrations/inboundEmailPauseMigration.test.ts src/test/unit/unifiedInboundEmailQueueJobProcessor.fetch.test.ts src/test/integration/microsoftWebhookUnifiedQueue.integration.test.ts src/test/integration/googleWebhookUnifiedQueue.integration.test.ts src/test/integration/imapWebhookHandoff.integration.test.ts --coverage.enabled=false` from `server/` (35 passed).

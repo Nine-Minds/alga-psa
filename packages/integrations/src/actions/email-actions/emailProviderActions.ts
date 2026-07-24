@@ -204,6 +204,8 @@ const PROVIDER_COLUMNS = [
   'sender_display_name as senderDisplayName',
   'mailbox',
   'is_active as isActive',
+  'inbound_paused_at as inboundPausedAt',
+  'inbound_pause_reason as inboundPauseReason',
   'status',
   'last_sync_at as lastSyncAt',
   'error_message as errorMessage',

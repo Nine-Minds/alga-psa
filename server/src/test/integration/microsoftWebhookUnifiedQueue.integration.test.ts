@@ -17,6 +17,9 @@ const providerQueryMock = {
   andWhere: vi.fn(function andWhere() {
     return this;
   }),
+  whereNull: vi.fn(function whereNull() {
+    return this;
+  }),
   forUpdate: vi.fn(function forUpdate() {
     return this;
   }),
@@ -64,6 +67,7 @@ describe('Microsoft unified inbound pointer queue ingress', () => {
     providerQueryMock.join.mockClear();
     providerQueryMock.where.mockClear();
     providerQueryMock.andWhere.mockClear();
+    providerQueryMock.whereNull.mockClear();
     providerQueryMock.forUpdate.mockClear();
     providerQueryMock.first.mockReset();
 
@@ -300,5 +304,36 @@ describe('Microsoft unified inbound pointer queue ingress', () => {
       unifiedQueuedCount: 0,
     });
     expect(enqueueUnifiedInboundEmailQueueJobMock).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ['T003', 'inactive'],
+    ['T004', 'paused'],
+  ])('%s: Microsoft %s providers are acknowledged without enqueueing', async (_id, _state) => {
+    providerQueryMock.first.mockResolvedValueOnce(null);
+    const { handleMicrosoftWebhookPost } = await import(
+      '@alga-psa/integrations/webhooks/email/handlers/microsoftWebhookHandler'
+    );
+    const request = new NextRequest('http://localhost:3000/api/email/webhooks/microsoft', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        value: [{
+          changeType: 'created',
+          clientState: 'expected-client-state',
+          resource: '/users/user-1/messages/msg-gated',
+          resourceData: { id: 'msg-gated' },
+          subscriptionId: 'sub-ms-gated',
+          tenantId: 'tenant-ms-1',
+        }],
+      }),
+    });
+
+    const response = await handleMicrosoftWebhookPost(request);
+
+    expect(response.status).toBe(202);
+    expect(enqueueUnifiedInboundEmailQueueJobMock).not.toHaveBeenCalled();
+    expect(providerQueryMock.andWhere).toHaveBeenCalledWith('ep.is_active', true);
+    expect(providerQueryMock.whereNull).toHaveBeenCalledWith('ep.inbound_paused_at');
   });
 });

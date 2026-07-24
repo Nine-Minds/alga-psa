@@ -2,49 +2,49 @@
   {
     "id": "F001",
     "description": "CE migration adds nullable columns inbound_paused_at (timestamptz) and inbound_pause_reason (text: 'manual'|'tenant_cancelled') to email_providers",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["5.1"]
   },
   {
     "id": "F002",
     "description": "EmailProvider TypeScript types/DTOs (EmailProviderService, packages/integrations email types) expose inboundPausedAt and inboundPauseReason",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["5.1"]
   },
   {
     "id": "F003",
     "description": "Microsoft webhook handler provider lookup filters on is_active = true (parity with Google/IMAP)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["5.2"]
   },
   {
     "id": "F004",
     "description": "Microsoft webhook handler skips enqueue (acks 202, debug log) when provider is paused (inbound_paused_at not null)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["5.2"]
   },
   {
     "id": "F005",
     "description": "Google webhook handler additionally requires inbound_paused_at IS NULL before enqueueing",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["5.2"]
   },
   {
     "id": "F006",
     "description": "IMAP webhook handler additionally requires inbound_paused_at IS NULL before enqueueing (skip response with reason)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["5.2"]
   },
   {
     "id": "F007",
     "description": "Unified queue consumer job processor re-checks is_active && !paused in all three provider-config fetch paths (Microsoft, Google, IMAP) and skips gated jobs",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["5.2"]
   },
   {
     "id": "F008",
     "description": "Consumer gated-skip completes the job successfully: no ticket, no DLQ entry, no failed email_processed_messages row",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["5.2"]
   },
   {

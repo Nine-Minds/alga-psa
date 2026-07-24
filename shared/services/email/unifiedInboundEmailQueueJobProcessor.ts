@@ -276,6 +276,8 @@ async function fetchMicrosoftProviderConfig(job: UnifiedInboundEmailQueueJob): P
   const row = (await query
     .where('ep.id', job.providerId)
     .andWhere('ep.provider_type', 'microsoft')
+    .andWhere('ep.is_active', true)
+    .whereNull('ep.inbound_paused_at')
     .first(
       'ep.*',
       db.raw('mc.client_id as mc_client_id'),
@@ -341,6 +343,8 @@ async function fetchGoogleProviderConfig(job: UnifiedInboundEmailQueueJob): Prom
   const tenantScopedDb = tenantDb(db, job.tenantId);
   const provider = await tenantScopedDb.table('email_providers')
     .where({ id: job.providerId, provider_type: 'google' })
+    .andWhere('is_active', true)
+    .whereNull('inbound_paused_at')
     .first();
   if (!provider) {
     throw new SourceMessageUnavailableError('google_provider_not_found');
@@ -532,6 +536,8 @@ async function fetchImapMessageForPointer(job: UnifiedInboundEmailQueueJob): Pro
   const provider = (await query
     .where('ep.id', job.providerId)
     .andWhere('ep.provider_type', 'imap')
+    .andWhere('ep.is_active', true)
+    .whereNull('ep.inbound_paused_at')
     .first(
       'ep.id',
       'ep.tenant',
@@ -869,9 +875,42 @@ function buildProcessingMetadata(params: {
   };
 }
 
+async function getInboundProviderGateReason(
+  job: UnifiedInboundEmailQueueJob
+): Promise<'inactive' | 'paused' | null> {
+  const db = await getAdminConnection();
+  const provider = await tenantDb(db, job.tenantId)
+    .table('email_providers')
+    .where({ id: job.providerId, provider_type: job.provider })
+    .first('is_active', 'inbound_paused_at');
+
+  if (!provider) return null;
+  if (!provider.is_active) return 'inactive';
+  if (provider.inbound_paused_at) return 'paused';
+  return null;
+}
+
 export async function processUnifiedInboundEmailQueueJob(
   job: UnifiedInboundEmailQueueJob
 ): Promise<UnifiedInboundEmailQueueProcessResult> {
+  const gateReason = await getInboundProviderGateReason(job);
+  if (gateReason) {
+    console.info('[UnifiedInboundEmailQueueJobProcessor] skipped gated provider job', {
+      event: 'inbound_email_provider_gated',
+      tenantId: job.tenantId,
+      providerId: job.providerId,
+      provider: job.provider,
+      reason: gateReason,
+    });
+    return {
+      outcome: 'skipped',
+      processedCount: 0,
+      dedupedCount: 0,
+      skippedCount: 1,
+      reason: `provider_${gateReason}`,
+    };
+  }
+
   let payloads: EmailMessageDetails[];
   try {
     payloads = await fetchEmailPayloadsForJob(job);

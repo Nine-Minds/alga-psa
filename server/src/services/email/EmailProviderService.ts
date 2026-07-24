@@ -550,6 +550,8 @@ export class EmailProviderService {
       mailbox: row.mailbox,
       folder_to_monitor: 'Inbox', // Default for current implementation
       active: row.is_active,
+      inboundPausedAt: row.inbound_paused_at || null,
+      inboundPauseReason: row.inbound_pause_reason || null,
       webhook_notification_url: this.generateWebhookUrl(webhookPath),
       webhook_subscription_id: vendorConfig?.webhook_subscription_id || null,
       webhook_verification_token: vendorConfig?.webhook_verification_token || null,
