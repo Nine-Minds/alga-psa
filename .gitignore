@@ -231,3 +231,8 @@ server/secrets-playwright/
 
 # build memory harness artifacts
 .build-mem/
+
+# Appliance ISO build inputs/outputs — multi-GB binaries, never committed
+ee/appliance/ubuntu-iso/base/
+ee/appliance/ubuntu-iso/work/
+*.iso
