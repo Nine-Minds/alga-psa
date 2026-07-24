@@ -366,6 +366,9 @@
       "title": "Nessun accesso al portale",
       "description": "Questo contatto non ha ancora accesso al portale clienti"
     },
+    "noClient": {
+      "description": "Assegna questo contatto a un cliente per gestire l'accesso al portale."
+    },
     "portalAdmin": {
       "label": "Amministratore del portale",
       "helper": "Se abilitato, l'utente verrà creato con il ruolo di Amministratore cliente. Se disabilitato, riceverà il ruolo di Utente cliente."

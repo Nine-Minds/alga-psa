@@ -366,6 +366,9 @@
       "title": "No Portal Access",
       "description": "This contact does not have client portal access yet"
     },
+    "noClient": {
+      "description": "Assign this contact to a client to manage portal access."
+    },
     "portalAdmin": {
       "label": "Portal Administrator",
       "helper": "When enabled, the user will be created with Client Admin role. When disabled, they'll get Client User role."
