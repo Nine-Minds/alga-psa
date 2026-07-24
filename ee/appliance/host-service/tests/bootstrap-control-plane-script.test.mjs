@@ -70,11 +70,12 @@ test('T001 host bootstrap dry-run plans minimal k3s, image import, storage/contr
   assert.doesNotMatch(output, /\?token=/);
 });
 
-// The control-plane upgrade is how an appliance takes an appliance fix, and the
-// box most needing one is the box whose duplicate local-path controllers left
-// PostgreSQL and Redis Pending on unbound PVCs. Skipping storage here made the
-// upgrade a no-op on exactly that appliance.
-test('control-plane-only upgrade reconciles storage before applying the new control plane', () => {
+// The control-plane upgrade must stay a thin image swap. Storage repair belongs
+// to the control-plane image: control-plane-entrypoint.sh runs the image's
+// install-storage.sh on pod start, which mutates the host via a privileged
+// hostPath Job. Reconciling here too would run the stale host copy of the
+// installer against the same lock, adding rollout waits for no benefit.
+test('control-plane-only upgrade swaps the image without re-running host bootstrap steps', () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-bootstrap-cp-only-'));
   const applianceRoot = path.join(tmp, 'opt', 'alga-appliance');
   const manifestDir = path.join(applianceRoot, 'control-plane', 'manifests');
@@ -104,9 +105,6 @@ test('control-plane-only upgrade reconciles storage before applying the new cont
 
   const expectedInOrder = [
     'Substrate: waiting for Kubernetes API',
-    'Substrate: reserving local-path storage for the appliance provisioner',
-    'persist --disable local-storage in the k3s service and configuration',
-    'Control plane: applying local-path storage manifest without waiting for image pulls',
     'Control plane: applying Kubernetes-hosted setup/status manifests'
   ];
 
@@ -118,8 +116,10 @@ test('control-plane-only upgrade reconciles storage before applying the new cont
     previous = index;
   }
 
-  // k3s is already running on this path; it must not be restarted, and baked
-  // images must not be re-imported.
+  // k3s is already running on this path; it must not be restarted, baked images
+  // must not be re-imported, and storage must be left to the image's entrypoint.
   assert.equal(output.includes('Substrate: ensuring k3s is installed and running'), false, output);
   assert.equal(output.includes('Control plane: importing baked image archives'), false, output);
+  assert.equal(output.includes('Substrate: reserving local-path storage for the appliance provisioner'), false, output);
+  assert.equal(output.includes('Control plane: applying local-path storage manifest'), false, output);
 });

@@ -460,16 +460,20 @@ if [ "$CONTROL_PLANE_ONLY" = "true" ]; then
   # skipped. apply_control_plane pulls the new digest and applies the kustomize
   # overlay, which triggers the Recreate.
   #
-  # Storage is NOT skipped, despite k3s already running. This path is how an
-  # appliance takes an appliance fix, and the appliance most in need of one is
-  # the appliance whose bundled and appliance-owned local-path controllers are
-  # fighting over the same volumes — leaving PostgreSQL and Redis Pending on
-  # unbound PVCs. Assuming "storage is already applied" made the upgrade a
-  # no-op on exactly that box, so recovery needed a reboot or an app update.
-  # Both calls are idempotent.
+  # Storage is deliberately NOT reconciled here, and not because it is already
+  # correct — on the appliance whose bundled and appliance-owned local-path
+  # controllers are fighting, it is precisely wrong. It is skipped because the
+  # repair belongs to the control-plane image, not to this host script:
+  # control-plane-entrypoint.sh runs the image's install-storage.sh on every pod
+  # start (when the bundled controller is present or the appliance controller is
+  # unavailable), and that installer mutates the host through a privileged
+  # hostPath Job. That is what lets a channel update repair storage without
+  # replacing these ISO-baked scripts.
+  #
+  # Reconciling here as well would run the *stale host copy* of the installer
+  # against the same lock the pod is using, adding rollout waits to every
+  # upgrade for no benefit. See ee/appliance/scripts/control-plane-entrypoint.sh.
   wait_for_kubernetes_api
-  configure_k3s_storage_owner
-  apply_local_storage
   apply_control_plane
   log "control-plane upgrade applied"
 else
