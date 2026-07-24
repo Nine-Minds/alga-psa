@@ -3,6 +3,11 @@
 import { useEffect, useRef, type RefObject } from 'react';
 
 const PAN_THRESHOLD = 5;
+// Vertical rubber-band limit (px) for the translateY fallback used when the
+// board has no native scroll overflow. Bounding it — and always snapping back
+// to 0 on mouseup — is what stops repeated drags from drifting the board
+// off-screen.
+const RUBBER_BAND_LIMIT = 64;
 const INTERACTIVE_SELECTOR =
   '[draggable="true"], button, a, input, select, textarea, [role="scrollbar"], [data-kanban-scrollbar-thumb]';
 
@@ -10,8 +15,10 @@ const INTERACTIVE_SELECTOR =
  * Attaches Figma/Miro-style click-and-drag panning to a Kanban scroll container.
  *
  * Horizontal panning uses the container's native scrollLeft.
- * Vertical panning uses the container's native scrollTop, which is naturally
- * clamped by the browser so panning can never drift past the content edges.
+ * Vertical panning uses scrollTop when the board overflows, otherwise applies
+ * a bounded, rubber-banded CSS translateY on the board so dragging still
+ * feels responsive. The translateY always snaps back to 0 on mouseup, so
+ * offsets can never accumulate across drags.
  *
  * Interactive elements (draggable cards, buttons, inputs, the custom scrollbar thumb)
  * are excluded so native HTML5 drag-and-drop and clicks keep working.
@@ -24,6 +31,8 @@ export function useKanbanPan(containerRef: RefObject<HTMLDivElement | null>, ena
     startY: 0,
     startScrollLeft: 0,
     startScrollTop: 0,
+    useTranslateY: false,
+    board: null as HTMLElement | null,
   });
 
   useEffect(() => {
@@ -31,6 +40,16 @@ export function useKanbanPan(containerRef: RefObject<HTMLDivElement | null>, ena
     if (!container || !enabled) return;
 
     const state = stateRef.current;
+
+    const getBoard = (): HTMLElement | null =>
+      container.querySelector('[data-kanban-board]') as HTMLElement | null;
+
+    const applyTranslateY = (offset: number, animate = false) => {
+      const board = state.board ?? getBoard();
+      if (!board) return;
+      board.style.transition = animate ? 'transform 0.15s ease-out' : '';
+      board.style.transform = offset === 0 ? '' : `translateY(${offset}px)`;
+    };
 
     const setPanningCursor = (panning: boolean) => {
       if (panning) {
@@ -69,11 +88,24 @@ export function useKanbanPan(containerRef: RefObject<HTMLDivElement | null>, ena
       // Horizontal: native scroll
       container.scrollLeft = state.startScrollLeft - deltaX;
 
-      // Vertical: native scroll, naturally clamped to the content bounds
-      container.scrollTop = state.startScrollTop - deltaY;
+      // Vertical: native scroll when possible, otherwise a bounded rubber-band
+      // translateY so dragging still feels responsive when the board has no
+      // overflow of its own.
+      if (state.useTranslateY) {
+        const raw = deltaY;
+        const clamped = Math.max(-RUBBER_BAND_LIMIT, Math.min(RUBBER_BAND_LIMIT, raw));
+        applyTranslateY(clamped);
+      } else {
+        container.scrollTop = state.startScrollTop - deltaY;
+      }
     };
 
     const handleMouseUp = () => {
+      // Always snap the translateY offset back to 0 so it can never persist
+      // (and accumulate) across drags.
+      if (state.useTranslateY) {
+        applyTranslateY(0, true);
+      }
       cleanupPanning();
       if (state.hasMoved) {
         setTimeout(() => { state.hasMoved = false; }, 0);
@@ -87,12 +119,16 @@ export function useKanbanPan(containerRef: RefObject<HTMLDivElement | null>, ena
       if (!target) return;
       if (target.closest(INTERACTIVE_SELECTOR)) return;
 
+      const canScrollVertically = container.scrollHeight > container.clientHeight;
+
       state.active = false;
       state.hasMoved = false;
       state.startX = event.clientX;
       state.startY = event.clientY;
       state.startScrollLeft = container.scrollLeft;
       state.startScrollTop = container.scrollTop;
+      state.useTranslateY = !canScrollVertically;
+      state.board = state.useTranslateY ? getBoard() : null;
 
       window.addEventListener('mousemove', handleMouseMove);
       window.addEventListener('mouseup', handleMouseUp);
@@ -112,6 +148,7 @@ export function useKanbanPan(containerRef: RefObject<HTMLDivElement | null>, ena
     return () => {
       container.removeEventListener('mousedown', handleMouseDown);
       container.removeEventListener('click', handleClickCapture, true);
+      applyTranslateY(0);
       cleanupPanning();
     };
   }, [containerRef, enabled]);
