@@ -63,7 +63,7 @@ Already gated (predecessor plan): inbound email only — MS/Gmail renewal+reconc
 - API keys: `getKeyGateReason` (owner-inactive OR tenant-suspended) in `packages/auth` ApiKeyService AND `server/.../apiKeyServiceForApi` (both validate variants). Outer catches fail CLOSED for auth (opposite of job gates — deliberate).
 - Public: booking route 503 neutral copy (English JSON, API-level — no i18n keys added); marketing capture returns null → module's own generic-404-no-leak convention.
 - Outbound email: gate at `TenantEmailService.sendEmail` top (before rate limiting); `SystemEmailService` untouched (contract test asserts it stays that way).
-- Backfill: `backfill-pending-deletion-tenant-suspension.ts`, statuses include `failed`, npm script `backfill:pending-deletion-tenant-suspension`.
+- Backfill: one-off operator procedure covering statuses incl. `failed`; kept out of the repo per the no-tenant-lifecycle-in-OSS rule (runbook lives with the operator notes).
 
 **Key discovery:** `scheduleRecurringJob` on pg-boss is a **delayed one-shot send with singletonKey**, not persistent cron — "recurring" jobs recur via re-arming (boot-time re-registration or handler finally-blocks). This is why gates must be per-run (dispatch/handler level), with enumeration filters as optimization only.
 
@@ -78,4 +78,4 @@ suspension-schema → workflow-suspend-step → job-dispatch-gate → fanout-gat
 - Predecessor plan: `ee/docs/plans/2026-07-23-inbound-email-pause-cancelled-tenants/`
 - Deletion workflow: `ee/temporal-workflows/src/workflows/tenant-deletion-workflow.ts`
 - Email lifecycle service (pattern reference): `shared/services/email/EmailProviderLifecycleService.ts`
-- Email backfill (pattern reference): `ee/temporal-workflows/src/scripts/backfill-pending-deletion-email-suspension.ts`
+- Email backfill (pattern reference): operator runbook, kept out of the repo

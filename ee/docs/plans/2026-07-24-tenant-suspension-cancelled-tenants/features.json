@@ -282,7 +282,7 @@
   },
   {
     "id": "F032",
-    "description": "Backfill script stamps suspended_at for tenants in pending_tenant_deletions statuses pending/awaiting_confirmation/confirmed/failed that are not yet suspended; rerunnable with per-tenant error containment",
+    "description": "One-off operator backfill (kept out of the repo) stamps suspended_at for tenants in pending_tenant_deletions statuses pending/awaiting_confirmation/confirmed/failed that are not yet suspended; rerunnable with per-tenant error containment",
     "implemented": true,
     "commitGroup": "backfill",
     "prdRefs": [
@@ -291,7 +291,7 @@
   },
   {
     "id": "F033",
-    "description": "Backfill reports summary counts, exits non-zero when any tenant failed, and is exposed as an npm script in ee/temporal-workflows",
+    "description": "Operator backfill reports summary counts and signals failure so it can be safely rerun (validated before being moved to the private runbook)",
     "implemented": true,
     "commitGroup": "backfill",
     "prdRefs": [

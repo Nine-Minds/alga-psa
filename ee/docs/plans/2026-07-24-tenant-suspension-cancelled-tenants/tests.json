@@ -411,7 +411,7 @@
       "F032"
     ],
     "commitGroup": "backfill",
-    "description": "Backfill selects only unsuspended tenants in pending/awaiting_confirmation/confirmed/failed and suspends each",
+    "description": "Backfill selects only unsuspended tenants in pending/awaiting_confirmation/confirmed/failed and suspends each (validated in-repo 2026-07-24, then relocated with the backfill to the private operator runbook)",
     "implemented": true
   },
   {
@@ -420,7 +420,7 @@
       "F032"
     ],
     "commitGroup": "backfill",
-    "description": "Backfill is a no-op on second run (idempotent)",
+    "description": "Backfill is a no-op on second run (idempotent) (validated in-repo 2026-07-24, then relocated with the backfill to the private operator runbook)",
     "implemented": true
   },
   {
@@ -430,7 +430,7 @@
       "F033"
     ],
     "commitGroup": "backfill",
-    "description": "Backfill continues past a failing tenant, counts the error, and exits non-zero",
+    "description": "Backfill continues past a failing tenant, counts the error, and exits non-zero (validated in-repo 2026-07-24, then relocated with the backfill to the private operator runbook)",
     "implemented": true
   },
   {

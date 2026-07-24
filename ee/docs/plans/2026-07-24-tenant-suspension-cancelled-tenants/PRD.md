@@ -85,7 +85,7 @@ All gates are read-only checks against `tenants.suspended_at`; none mutate integ
 
 ### 5.4 Backfill
 
-`ee/temporal-workflows/src/scripts/backfill-pending-deletion-tenant-suspension.ts`, mirroring the email backfill: stamps `suspended_at` for tenants in `pending_tenant_deletions` statuses `pending | awaiting_confirmation | confirmed | failed` that are not yet suspended. Rerunnable, per-tenant error containment, summary counts, non-zero exit on errors, npm script alias.
+One-off operator procedure (deliberately not shipped in this repository): stamps `suspended_at` for tenants in `pending_tenant_deletions` statuses `pending | awaiting_confirmation | confirmed | failed` that are not yet suspended. Rerunnable and idempotent; run by a Nine Minds operator right after deploy, alongside the equivalent inbound-email pause backfill.
 
 ## 6. Risks
 
