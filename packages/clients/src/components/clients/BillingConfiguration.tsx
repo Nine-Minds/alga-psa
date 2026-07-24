@@ -23,6 +23,7 @@ import BillingConfigForm from './BillingConfigForm';
 import ClientTaxRates from './ClientTaxRates';
 import ClientZeroDollarInvoiceSettings from './ClientZeroDollarInvoiceSettings';
 import ClientCreditExpirationSettings from './ClientCreditExpirationSettings';
+import ClientExternalCreditSettings from './ClientExternalCreditSettings';
 import ClientContractAssignment from './ClientContractAssignment';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
 import { toast } from 'react-hot-toast';
@@ -255,6 +256,10 @@ const BillingConfiguration: React.FC<BillingConfigurationProps> = ({ client, onS
                     />
 
                     <ClientCreditExpirationSettings
+                        clientId={client.client_id}
+                    />
+
+                    <ClientExternalCreditSettings
                         clientId={client.client_id}
                     />
 
