@@ -9,7 +9,7 @@ import type { CalendarProviderConfig } from '@alga-psa/types';
 import { GoogleCalendarAdapter } from './providers/GoogleCalendarAdapter';
 import { MicrosoftCalendarAdapter } from './providers/MicrosoftCalendarAdapter';
 import { BaseCalendarAdapter } from './providers/base/BaseCalendarAdapter';
-import { runWithTenant, createTenantKnex, tenantDb } from '@alga-psa/db';
+import { runWithTenant, createTenantKnex, isTenantSuspended, tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin';
 
 const PROVIDER_TENANT_DISCOVERY = 'tenant-discovery';
@@ -41,6 +41,10 @@ export class CalendarWebhookProcessor {
     if (!provider) {
       console.error(`❌ Provider not found for subscription: ${subscriptionName}`);
       return { success: 0, failed: 1 };
+    }
+
+    if (await this.isProviderTenantSuspended(provider)) {
+      return { success: 0, failed: 0 };
     }
 
     if (provider.sync_direction === 'to_external') {
@@ -199,6 +203,10 @@ export class CalendarWebhookProcessor {
     if (!provider) {
       console.error(`❌ Provider not found for Google channel: ${channelId}`);
       return { success: 0, failed: 1 };
+    }
+
+    if (await this.isProviderTenantSuspended(provider)) {
+      return { success: 0, failed: 0 };
     }
 
     const expectedToken = provider.provider_config?.webhookVerificationToken;
@@ -381,6 +389,10 @@ export class CalendarWebhookProcessor {
         continue;
       }
 
+      if (await this.isProviderTenantSuspended(provider)) {
+        continue;
+      }
+
       if (provider.sync_direction === 'to_external') {
         console.log('⚠️ Provider configured for one-way sync to external only, skipping webhook');
         continue;
@@ -541,6 +553,22 @@ export class CalendarWebhookProcessor {
   /**
    * Get provider by Google subscription name
    */
+  /**
+   * Suspended tenants (cancelled, pending deletion) get their calendar
+   * notifications acked without sync work. isTenantSuspended fails open.
+   */
+  private async isProviderTenantSuspended(provider: CalendarProviderConfig): Promise<boolean> {
+    const suspended = await isTenantSuspended(await getAdminConnection(), provider.tenant);
+    if (suspended) {
+      console.log('📅 Skipping calendar webhook for suspended tenant', {
+        providerId: provider.id,
+        tenant: provider.tenant,
+        event: 'calendar_webhook_tenant_suspended',
+      });
+    }
+    return suspended;
+  }
+
   private async getProviderByGoogleSubscription(subscriptionName: string): Promise<CalendarProviderConfig | null> {
     try {
       const knex = await getAdminConnection();
