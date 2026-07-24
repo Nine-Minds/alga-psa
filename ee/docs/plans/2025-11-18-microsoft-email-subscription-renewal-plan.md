@@ -124,7 +124,7 @@ For each candidate provider:
 
 ## 7. Data & Schema Considerations
 - **`microsoft_email_provider_config`** already stores `webhook_subscription_id`, `webhook_expires_at`, `webhook_verification_token`, and OAuth secrets. No schema changes needed beyond ensuring indexes exist (`server/migrations/20250818014500_index_ms_webhook_columns.cjs`).  
-- **`email_provider_health`** needs new columns enumerated in Phase 0; distribute the table in Citus migrations (`ee/server/migrations/citus/...`).  
+- **`email_provider_health`** needs new columns enumerated in Phase 0; distribute the table inline in its CE creation migration, guarded per `docs/architecture/citus-migration-best-practices.md` (correction: `ee/server/migrations/citus/` was removed — that folder was never executed).  
 - Consider materializing a view (or updating `email_provider_configs`) that exposes `subscription_expires_at` so APIs/UI don’t need to read vendor tables directly.  
 - Store consecutive failure count either inside `email_provider_health` (simple integer) or as JSON metadata.
 

@@ -10,7 +10,7 @@
   {"id": "F009", "description": "DB constraint: one project_billing_configs row per project per tenant (UNIQUE)", "implemented": true, "prdRefs": ["§6"]},
   {"id": "F010", "description": "DB constraint: schedule entry status limited to pending/ready/approved/invoiced/canceled (CHECK)", "implemented": true, "prdRefs": ["§6"]},
   {"id": "F011", "description": "DB: FK from project_billing_schedule_entries.phase_id to project_phases with ON DELETE SET NULL semantics supporting manual-trigger fallback", "implemented": true, "prdRefs": ["§6", "§10"]},
-  {"id": "F012", "description": "DB: citus/EE migration parity for new tables (ee/server/migrations/citus) following existing conventions", "implemented": true, "prdRefs": ["§6"]},
+  {"id": "F012", "description": "DB: Citus distribution for the four new tables, guarded inline in each CE creation migration (ee/server/migrations/citus never executed anything and has been removed)", "implemented": true, "prdRefs": ["§6"]},
   {"id": "F015", "description": "Types: IProjectBillingConfig, IProjectBillingScheduleEntry, IProjectPhaseRateOverride, IProjectBillingCapUsage interfaces in packages/types", "implemented": true, "prdRefs": ["§6"]},
   {"id": "F016", "description": "Types: ChargeType union extended with 'project_milestone' and 'project_deposit'", "implemented": true, "prdRefs": ["§6"]},
   {"id": "F017", "description": "Types: project milestone/deposit charge variants carry project_id and schedule_entry_id", "implemented": true, "prdRefs": ["§6"]},

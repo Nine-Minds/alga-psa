@@ -132,7 +132,7 @@ All report amounts are presented in the tenant default currency. Invoice-side am
 
 ### D12 — Editions and gating
 
-Tables and actions ship in core (`server/migrations/`, `packages/billing`) like the rest of the contracts/billing system; the report UI follows the existing gating of the ContractReports tabs (product/tier boundary via `enforceServerProductRoute` + catalog tier checks). Citus distribution for `user_cost_rates` uses the current convention for new tables: **guarded inline `create_distributed_table` DDL in the same CE migration** (no-op on vanilla PG; example: `server/migrations/20251110223310_create_appointment_requests.cjs`), not a separate `ee/server/migrations/citus/` file.
+Tables and actions ship in core (`server/migrations/`, `packages/billing`) like the rest of the contracts/billing system; the report UI follows the existing gating of the ContractReports tabs (product/tier boundary via `enforceServerProductRoute` + catalog tier checks). Citus distribution for `user_cost_rates` uses the current convention for new tables: **guarded inline `create_distributed_table` DDL in the same CE migration** (no-op on vanilla PG; example: `server/migrations/20251110223310_create_appointment_requests.cjs`), not a separate `ee/server/migrations/citus/` file (that folder has since been removed — it was never executed).
 
 ### D13 — Materials timing, status basis, and uncosted materials
 

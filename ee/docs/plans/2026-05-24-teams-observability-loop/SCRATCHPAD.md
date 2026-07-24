@@ -10,7 +10,7 @@
 - **EE migrations dir:** `ee/server/migrations/`
   - Most recent Teams migration: `20260423131000_add_default_meeting_organizer_to_teams_integrations.cjs`
   - Reference for the distribution pattern: `20260307153000_create_teams_integrations.cjs` (uses `colocate_with => 'microsoft_profiles'`; ours uses `colocate_with => 'teams_integrations'`).
-- **Citus-specific migrations dir:** `ee/server/migrations/citus/` — use ONLY if CE migration cannot satisfy Citus path (e.g., distribution-outside-transaction requirements).
+- **Citus-specific migrations dir:** correction (2026-07-24) — `ee/server/migrations/citus/` was never executed by anything and has been removed. Distribution-outside-transaction requirements are satisfied by guarding the same CE migration with `exports.config = { transaction: false }`, not a separate mirrored file.
 - **Tenant deletion activity:** `ee/temporal-workflows/src/activities/tenant-deletion-activities.ts`
   - Target constant: `TENANT_TABLES_DELETION_ORDER` (starts line 36).
   - Existing Teams row: line 94 — `'microsoft_profile_consumer_bindings', 'teams_integrations', 'microsoft_profiles',`
