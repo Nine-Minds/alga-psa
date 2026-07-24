@@ -28,16 +28,20 @@ const STALE_TARGET_GRACE_HOURS = 48;
 
 /**
  * Canonical public base URL for absolute links in outbound marketing email
- * (unsubscribe link, tracking pixel, click redirect). NEXTAUTH_URL is the
- * repo's canonical public-base-url env var — notificationLinkResolver and
- * auth both build absolute URLs from it. NEXT_PUBLIC_APP_URL is accepted as
- * a fallback for deployments that only set the public var.
+ * (unsubscribe link, tracking pixel, click redirect). Internal service and
+ * authentication URLs are deliberately not eligible because recipients must
+ * be able to reach every generated link.
  */
 function getPublicBaseUrl(): string {
   const raw =
-    process.env.NEXTAUTH_URL
+    process.env.NEXT_PUBLIC_BASE_URL
     || process.env.NEXT_PUBLIC_APP_URL
-    || 'http://localhost:3000';
+    || '';
+  if (!raw) {
+    throw new Error(
+      'No public marketing base URL available (NEXT_PUBLIC_BASE_URL or NEXT_PUBLIC_APP_URL); refusing to send sequence steps',
+    );
+  }
   return raw.endsWith('/') ? raw.slice(0, -1) : raw;
 }
 

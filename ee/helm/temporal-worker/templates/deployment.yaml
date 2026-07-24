@@ -135,6 +135,8 @@ spec:
               value: "{{ .Values.logLevel }}"
             - name: APPLICATION_URL
               value: "{{ .Values.applicationUrl }}"
+            - name: NEXT_PUBLIC_BASE_URL
+              value: "{{ .Values.publicBaseUrl }}"
             - name: NM_STORE_URL
               value: "{{ .Values.nm_store.baseUrl }}"
             

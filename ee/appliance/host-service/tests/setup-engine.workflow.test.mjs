@@ -31,7 +31,7 @@ function makeReleaseManifest(overrides = {}) {
       'temporal.single-node.yaml': 'temporal: packaged\n',
       'workflow-worker.single-node.yaml': 'workflow-worker: packaged\nimage:\n  tag: old\nextraEnv:\n  - name: TEMPORAL_ADDRESS\n    value: temporal-frontend.msp.svc.cluster.local:7233\n',
       'email-service.single-node.yaml': 'email-service: packaged\nimage:\n  tag: old\n',
-      'temporal-worker.single-node.yaml': 'temporal-worker: packaged\nimage:\n  tag: old\n'
+      'temporal-worker.single-node.yaml': 'temporal-worker: packaged\napplicationUrl: http://alga-core.msp.svc.cluster.local:3000\npublicBaseUrl: https://alga.local\nimage:\n  tag: old\n'
     },
     ...overrides
   };
@@ -153,6 +153,9 @@ test('applyRuntimeValuesAndReleaseSelection renders runtime values from the mani
     // image tag from the manifest is injected into the alga-core values
     const renderedCoreValues = fs.readFileSync(path.join(runtimeValuesDir, 'values', 'alga-core.single-node.yaml'), 'utf8');
     assert.match(renderedCoreValues, /tag: "coretag"/);
+    const renderedTemporalWorkerValues = fs.readFileSync(path.join(runtimeValuesDir, 'values', 'temporal-worker.single-node.yaml'), 'utf8');
+    assert.match(renderedTemporalWorkerValues, /applicationUrl: http:\/\/alga-core\.msp\.svc\.cluster\.local:3000/);
+    assert.match(renderedTemporalWorkerValues, /publicBaseUrl: "https:\/\/psa\.example\.test"/);
     const initialTenantSecret = fs.readFileSync(path.join(runtimeValuesDir, 'initial-tenant-secret.yaml'), 'utf8');
     assert.match(initialTenantSecret, /name: appliance-initial-tenant/);
     assert.match(initialTenantSecret, /INITIAL_ADMIN_EMAIL: "ava@example.com"/);

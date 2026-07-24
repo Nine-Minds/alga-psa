@@ -198,7 +198,7 @@ test('T004 Temporal chart waits for schema-safe startup and creates the default 
   assert.match(job.spec.template.spec.containers[0].command.join('\n'), /temporal operator namespace create/);
 });
 
-test('T005 temporal-worker profile injects appliance auth and Redis configuration', () => {
+test('T005 temporal-worker profile injects appliance auth, public URL, and Redis configuration', () => {
   const docs = helmTemplate(temporalWorkerChartPath, temporalWorkerProfileValuesPath);
   const deployment = docs.find((doc) => doc.kind === 'Deployment' && doc.metadata?.name === 'test-release-temporal-worker');
   assert.ok(deployment);
@@ -209,6 +209,8 @@ test('T005 temporal-worker profile injects appliance auth and Redis configuratio
     name: 'alga-core-sebastian-secrets',
     key: 'NEXTAUTH_SECRET'
   });
+  assert.equal(env.find((entry) => entry.name === 'APPLICATION_URL')?.value, 'http://alga-core.msp.svc.cluster.local:3000');
+  assert.equal(env.find((entry) => entry.name === 'NEXT_PUBLIC_BASE_URL')?.value, 'https://alga.local');
   assert.equal(env.find((entry) => entry.name === 'REDIS_HOST')?.value, 'redis.msp.svc.cluster.local');
   assert.equal(env.find((entry) => entry.name === 'REDIS_PORT')?.value, '6379');
   assert.deepEqual(env.find((entry) => entry.name === 'REDIS_PASSWORD')?.valueFrom.secretKeyRef, {

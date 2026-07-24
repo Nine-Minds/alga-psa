@@ -227,6 +227,7 @@ stripe:
 
 # Application configuration
 applicationUrl: ""  # Set to your application URL (e.g., https://example.com)
+publicBaseUrl: ""  # Public URL used in recipient-facing links (e.g., https://example.com)
 
 # Namespace override (optional)
 namespace: ""
