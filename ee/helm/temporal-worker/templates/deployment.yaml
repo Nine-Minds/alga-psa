@@ -217,9 +217,8 @@ spec:
             {{- end }}
             
             # Additional environment variables
-            {{- range .Values.extraEnv }}
-            - name: {{ .name }}
-              value: {{ .value | quote }}
+            {{- with .Values.extraEnv }}
+            {{- toYaml . | nindent 12 }}
             {{- end }}
           
           ports:

@@ -211,6 +211,10 @@ test('T005 temporal-worker profile injects appliance auth and Redis configuratio
   });
   assert.equal(env.find((entry) => entry.name === 'REDIS_HOST')?.value, 'redis.msp.svc.cluster.local');
   assert.equal(env.find((entry) => entry.name === 'REDIS_PORT')?.value, '6379');
+  assert.deepEqual(env.find((entry) => entry.name === 'REDIS_PASSWORD')?.valueFrom.secretKeyRef, {
+    name: 'redis-credentials',
+    key: 'REDIS_PASSWORD'
+  });
 });
 
 test('T006 alga-core appliance profile gives the app Deployment a first-install-safe progress deadline', () => {

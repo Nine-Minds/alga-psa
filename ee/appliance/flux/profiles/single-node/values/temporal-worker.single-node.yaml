@@ -46,6 +46,11 @@ extraEnv:
     value: redis.msp.svc.cluster.local
   - name: REDIS_PORT
     value: "6379"
+  - name: REDIS_PASSWORD
+    valueFrom:
+      secretKeyRef:
+        name: redis-credentials
+        key: REDIS_PASSWORD
 
 autoscaling:
   enabled: true
