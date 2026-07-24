@@ -124,40 +124,14 @@ export function ScanView() {
     return null;
   }
 
-  if (!permission.granted) {
-    return (
-      <View style={{ flex: 1, justifyContent: "center", padding: theme.spacing.xl, gap: theme.spacing.md }}>
-        <Text style={{ ...theme.typography.title, color: theme.colors.text, textAlign: "center" }}>
-          {t("scan.permissionTitle", "Camera access needed")}
-        </Text>
-        <Text style={{ ...theme.typography.body, color: theme.colors.textSecondary, textAlign: "center" }}>
-          {t("scan.permissionBody", "Allow camera access to scan barcodes, serial numbers, and MAC labels.")}
-        </Text>
-        {permission.canAskAgain ? (
-          <PrimaryButton onPress={() => void requestPermission()} accessibilityLabel="inventory-scan-request-permission">
-            {t("scan.permissionTitle", "Camera access needed")}
-          </PrimaryButton>
-        ) : (
-          <PrimaryButton onPress={() => void Linking.openSettings()} accessibilityLabel="inventory-scan-open-settings">
-            {t("scan.openSettings", "Open Settings")}
-          </PrimaryButton>
-        )}
-      </View>
-    );
-  }
+  const showCamera = !manualMode && permission.granted && isFocused;
 
   return (
     <View style={{ flex: 1 }}>
       <View style={{ flex: 1 }}>
-        {!manualMode && isFocused ? (
-          <CameraView
-            style={{ flex: 1 }}
-            facing="back"
-            enableTorch={torchOn}
-            barcodeScannerSettings={{ barcodeTypes: [...INVENTORY_BARCODE_TYPES] }}
-            onBarcodeScanned={result ? undefined : onBarcodeScanned}
-          />
-        ) : (
+        {manualMode ? (
+          // Manual entry works without a camera — emulators, denied permission,
+          // a damaged lens, or a code the scanner can't read.
           <View style={{ flex: 1, justifyContent: "center", padding: theme.spacing.xl, gap: theme.spacing.md }}>
             <TextInput
               value={manualCode}
@@ -174,16 +148,51 @@ export function ScanView() {
             >
               {t("segments.scan", "Scan")}
             </PrimaryButton>
+            {permission.granted ? (
+              <Text
+                onPress={() => setManualMode(false)}
+                testID="inventory-scan-back-to-camera"
+                style={{ ...theme.typography.body, color: theme.colors.primary, textAlign: "center" }}
+              >
+                {t("scan.useCamera", "Use the camera instead")}
+              </Text>
+            ) : null}
+          </View>
+        ) : !permission.granted ? (
+          <View style={{ flex: 1, justifyContent: "center", padding: theme.spacing.xl, gap: theme.spacing.md }}>
+            <Text style={{ ...theme.typography.title, color: theme.colors.text, textAlign: "center" }}>
+              {t("scan.permissionTitle", "Camera access needed")}
+            </Text>
+            <Text style={{ ...theme.typography.body, color: theme.colors.textSecondary, textAlign: "center" }}>
+              {t("scan.permissionBody", "Allow camera access to scan barcodes, serial numbers, and MAC labels.")}
+            </Text>
+            {permission.canAskAgain ? (
+              <PrimaryButton onPress={() => void requestPermission()} accessibilityLabel="inventory-scan-request-permission">
+                {t("scan.grantAccess", "Allow camera access")}
+              </PrimaryButton>
+            ) : (
+              <PrimaryButton onPress={() => void Linking.openSettings()} accessibilityLabel="inventory-scan-open-settings">
+                {t("scan.openSettings", "Open Settings")}
+              </PrimaryButton>
+            )}
             <Text
-              onPress={() => setManualMode(false)}
-              testID="inventory-scan-back-to-camera"
-              style={{ ...theme.typography.body, color: theme.colors.primary, textAlign: "center" }}
+              onPress={() => setManualMode(true)}
+              testID="inventory-scan-enter-manually-permission"
+              style={{ ...theme.typography.body, color: theme.colors.primary, textAlign: "center", paddingVertical: theme.spacing.sm }}
             >
-              {t("scan.rescan", "Scan again")}
+              {t("scan.manualEntry", "Enter code manually")}
             </Text>
           </View>
-        )}
-        {!manualMode ? (
+        ) : isFocused ? (
+          <CameraView
+            style={{ flex: 1 }}
+            facing="back"
+            enableTorch={torchOn}
+            barcodeScannerSettings={{ barcodeTypes: [...INVENTORY_BARCODE_TYPES] }}
+            onBarcodeScanned={result ? undefined : onBarcodeScanned}
+          />
+        ) : null}
+        {showCamera ? (
           <>
             <View pointerEvents="none" style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, justifyContent: "center", alignItems: "center" }}>
               <View
@@ -196,11 +205,9 @@ export function ScanView() {
                   opacity: 0.9,
                 }}
               />
-              <Text style={{ ...theme.typography.caption, color: "#ffffff", marginTop: theme.spacing.md, textShadowColor: "#000000", textShadowRadius: 4 }}>
-                {t("scan.instruction", "Point the camera at a barcode")}
-              </Text>
             </View>
-            <View style={{ position: "absolute", top: theme.spacing.md, right: theme.spacing.md, flexDirection: "row", gap: theme.spacing.sm }}>
+            {/* Dark backing so the white icons stay visible on any feed (incl. a blank simulator). */}
+            <View style={{ position: "absolute", top: theme.spacing.md, right: theme.spacing.md, flexDirection: "row", gap: theme.spacing.sm, backgroundColor: "rgba(0,0,0,0.45)", borderRadius: theme.borderRadius.md, paddingHorizontal: theme.spacing.xs }}>
               <IconButton
                 onPress={() => setTorchOn((value) => !value)}
                 accessibilityLabel={torchOn ? t("scan.torchOff", "Turn flashlight off") : t("scan.torchOn", "Turn flashlight on")}
@@ -211,6 +218,24 @@ export function ScanView() {
                 accessibilityLabel={t("scan.manualEntry", "Enter code manually")}
                 icon={<MaterialCommunityIcons name="keyboard-outline" size={22} color="#ffffff" />}
               />
+            </View>
+            {/* Always-visible manual-entry affordance, styled so it reads on any feed. */}
+            <View style={{ position: "absolute", left: 0, right: 0, bottom: theme.spacing.xl, alignItems: "center" }}>
+              <Text
+                onPress={() => setManualMode(true)}
+                testID="inventory-scan-enter-manually"
+                style={{
+                  ...theme.typography.body,
+                  color: "#ffffff",
+                  backgroundColor: "rgba(0,0,0,0.6)",
+                  paddingHorizontal: theme.spacing.lg,
+                  paddingVertical: theme.spacing.sm,
+                  borderRadius: theme.borderRadius.md,
+                  overflow: "hidden",
+                }}
+              >
+                {t("scan.manualEntry", "Enter code manually")}
+              </Text>
             </View>
           </>
         ) : null}

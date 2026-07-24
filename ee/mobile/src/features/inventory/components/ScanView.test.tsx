@@ -81,4 +81,31 @@ describe("ScanView", () => {
       tree.root.findAll((node) => node.props.accessibilityLabel === "inventory-scan-open-settings").length,
     ).toBeGreaterThan(0);
   });
+
+  it("lets you enter a code manually when the camera is unavailable", async () => {
+    permissionGranted = false;
+    canAskAgain = false;
+    const tree = renderView();
+
+    // No camera: the manual-entry escape hatch is still offered on the permission screen.
+    const enterManually = tree.root.find(
+      (node) => node.props.testID === "inventory-scan-enter-manually-permission",
+    );
+    act(() => enterManually.props.onPress());
+
+    const input = tree.root.find((node) => node.props.accessibilityLabel === "inventory-scan-manual-input");
+    act(() => input.props.onChangeText("SN-LIFE-001"));
+    await act(async () => {
+      tree.root.find((node) => node.props.accessibilityLabel === "inventory-scan-manual-submit").props.onPress();
+    });
+
+    expect(mockLookup).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({ code: "SN-LIFE-001" }));
+  });
+
+  it("offers a visible manual-entry button over the live camera", () => {
+    const tree = renderView();
+    expect(
+      tree.root.findAll((node) => node.props.testID === "inventory-scan-enter-manually").length,
+    ).toBeGreaterThan(0);
+  });
 });

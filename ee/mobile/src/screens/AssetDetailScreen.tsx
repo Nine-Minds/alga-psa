@@ -388,6 +388,25 @@ export function AssetDetailScreen({ route, navigation }: Props) {
           )}
         </Card>
 
+        {/* Stock provenance — only for assets that came from inventory. Links to
+            the originating unit's movement trail (received → transfers → install). */}
+        {asset.stock_unit_id ? (
+          <Card>
+            <SectionTitle theme={theme}>{t("provenance.title", "Stock provenance")}</SectionTitle>
+            <Text style={{ ...theme.typography.body, color: theme.colors.textSecondary, marginTop: theme.spacing.xs }}>
+              {t("provenance.body", "This device was deployed from your stock.")}
+            </Text>
+            <Text
+              onPress={() => navigation.navigate("StockUnitDetail", { unitId: asset.stock_unit_id as string })}
+              testID="asset-detail-view-provenance"
+              accessibilityRole="button"
+              style={{ ...theme.typography.body, color: theme.colors.primary, marginTop: theme.spacing.sm }}
+            >
+              {t("provenance.viewHistory", "View stock history")}
+            </Text>
+          </Card>
+        ) : null}
+
         {/* Service history */}
         <Card>
           <SectionTitle theme={theme}>{t("history.title", "Service history")}</SectionTitle>

@@ -91,5 +91,10 @@
     "saved": "Note added",
     "saveFailed": "Couldn't save note",
     "empty": "No notes on this device yet."
+  },
+  "provenance": {
+    "title": "Stock provenance",
+    "body": "This device was deployed from your stock.",
+    "viewHistory": "View stock history"
   }
 }
