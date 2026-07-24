@@ -4,6 +4,9 @@
  * @param {import('knex').Knex} knex
  * @returns {Promise<void>}
  */
+
+const { ensureTenantDistribution } = require('./utils/citusDistribution.cjs');
+
 exports.up = async function up(knex) {
   await knex.schema.createTable('project_billing_cap_usage', (table) => {
     table.uuid('tenant').notNullable();
@@ -24,6 +27,8 @@ exports.up = async function up(knex) {
       .inTable('project_billing_configs')
       .onDelete('CASCADE');
   });
+
+  await ensureTenantDistribution(knex, 'project_billing_cap_usage');
 };
 
 /**
@@ -33,3 +38,6 @@ exports.up = async function up(knex) {
 exports.down = async function down(knex) {
   await knex.schema.dropTableIfExists('project_billing_cap_usage');
 };
+
+// create_distributed_table cannot run inside a transaction on Citus.
+exports.config = { transaction: false };

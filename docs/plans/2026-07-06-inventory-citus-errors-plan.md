@@ -48,7 +48,8 @@ Cause: `ticket_materials` is a **local (undistributed)** table in production whi
 `whereExists` correlated subquery from distributed `tickets` into local
 `ticket_materials`, which Citus rejects. The table was created by
 `server/migrations/20260101093000_create_ticket_project_materials.cjs` with **no
-companion citus migration** in `ee/server/migrations/citus/`. Its sibling
+companion citus migration** (correction 2026-07-24: `ee/server/migrations/citus/`
+was never executed by anything and has since been removed entirely). Its sibling
 `project_materials` (same migration) *is* distributed in prod — but only because someone
 distributed it manually out-of-band; no repo migration covers either table. A fresh
 environment built from migrations would have both tables undistributed.
@@ -77,11 +78,22 @@ foot. Package-wide conversion of the other inventory action files is out of scop
 
 ## Task 1 — Citus migration: distribute `ticket_materials` and `project_materials`
 
-**New file:** `ee/server/migrations/citus/20260706120000_distribute_ticket_project_materials.cjs`
+**Correction (2026-07-24):** the `ee/server/migrations/citus/` folder this task
+originally targeted was never executed by anything and has since been deleted.
+If this task is picked up, the distribution call belongs inline — as a guarded
+`create_distributed_table` call — inside
+`server/migrations/20260101093000_create_ticket_project_materials.cjs` (or a
+later CE migration touching the same tables), per
+`docs/architecture/citus-migration-best-practices.md`, not a new file under the
+removed folder.
 
-Model on `ee/server/migrations/citus/20260111123000_distribute_email_processed_attachments.cjs`
-(the modern minimal template), plus the recovery-mode guard from
-`20250930000002_distribute_boards_table.cjs`.
+~~**New file:** `ee/server/migrations/citus/20260706120000_distribute_ticket_project_materials.cjs`~~
+
+Model on `20260111123000_distribute_email_processed_attachments.cjs`
+(the modern minimal template — now itself removed with the rest of the dead
+folder; see a live example instead in
+`server/migrations/20260626100100_create_inventory_stock.cjs`), plus the
+recovery-mode guard from `20250930000002_distribute_boards_table.cjs`.
 
 Shape:
 

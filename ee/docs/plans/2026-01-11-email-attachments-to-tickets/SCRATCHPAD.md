@@ -20,7 +20,7 @@
 - Worker wiring: `services/workflow-worker/src/index.ts`
 - Schema:
   - `server/migrations/20260111121500_create_email_processed_attachments.cjs`
-  - `ee/server/migrations/citus/20260111123000_distribute_email_processed_attachments.cjs`
+  - (Removed 2026-07-24, never executed) `ee/server/migrations/citus/20260111123000_distribute_email_processed_attachments.cjs` — folder deleted; Citus distribution for this table, if needed, belongs inline in the creation migration above.
 - Provider downloads:
   - Microsoft: `shared/services/email/providers/MicrosoftGraphAdapter.ts` (`downloadAttachmentBytes`, `isInline`)
   - Gmail: `server/src/services/email/providers/GmailAdapter.ts` (`downloadAttachmentBytes`, `isInline`/`contentId` parsing)

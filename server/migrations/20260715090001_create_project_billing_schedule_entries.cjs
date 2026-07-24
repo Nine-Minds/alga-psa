@@ -5,6 +5,8 @@
  * @returns {Promise<void>}
  */
 
+const { ensureTenantDistribution } = require('./utils/citusDistribution.cjs');
+
 // Composite (tenant, X) FKs must never use bare ON DELETE SET NULL: Postgres
 // would null the tenant column too (see 20260611150000_fix_tenant_nulling_
 // foreign_keys.cjs). PG 15+ supports column-targeted SET NULL; Citus and
@@ -103,6 +105,8 @@ exports.up = async function up(knex) {
     ADD CONSTRAINT project_billing_schedule_entries_status_check
     CHECK (status IN ('pending', 'ready', 'approved', 'invoiced', 'canceled'))
   `);
+
+  await ensureTenantDistribution(knex, 'project_billing_schedule_entries');
 };
 
 /**
@@ -112,3 +116,6 @@ exports.up = async function up(knex) {
 exports.down = async function down(knex) {
   await knex.schema.dropTableIfExists('project_billing_schedule_entries');
 };
+
+// create_distributed_table cannot run inside a transaction on Citus.
+exports.config = { transaction: false };

@@ -16,11 +16,19 @@ exports.up = async function up(knex) {
     });
   }
 
-  await knex.raw(`
-    DROP TRIGGER IF EXISTS project_billing_schedule_status_transition_guard
-    ON project_billing_schedule_entries
-  `);
-  await knex.raw('DROP FUNCTION IF EXISTS guard_project_billing_schedule_status_transition()');
+  const { rows: citusRows } = await knex.raw(
+    "SELECT 1 FROM pg_extension WHERE extname = 'citus' LIMIT 1"
+  );
+  if (citusRows.length === 0) {
+    // On Citus the guard trigger was never created (see the companion
+    // creation migration's guard) and Citus rejects trigger DDL — even
+    // DROP TRIGGER IF EXISTS — against a distributed table outright.
+    await knex.raw(`
+      DROP TRIGGER IF EXISTS project_billing_schedule_status_transition_guard
+      ON project_billing_schedule_entries
+    `);
+    await knex.raw('DROP FUNCTION IF EXISTS guard_project_billing_schedule_status_transition()');
+  }
 
   // Product policy: every configured T&M cap is a hard cap. Thresholds remain
   // notification points, but notify-only billing is no longer supported.
