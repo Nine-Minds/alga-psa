@@ -56,7 +56,8 @@
       "noOpenTicketsInRange": "No hay tickets abiertos en este intervalo.",
       "noDate": "Sin fecha",
       "notAvailable": "n/d",
-      "noEmailChannels": "No hay canales de correo configurados."
+      "noEmailChannels": "No hay canales de correo configurados.",
+      "noCapacity": "n/d — sin capacidad definida"
     },
     "fallbackTitle": "Informe",
     "dateRange": {
@@ -95,7 +96,12 @@
       "bucketOverageHours": "Exceso de bolsa",
       "openAssigned": "Abiertos asignados",
       "activeAssignees": "Asignados activos",
-      "avgResolutionTime": "Tiempo medio de resolucion"
+      "avgResolutionTime": "Tiempo medio de resolucion",
+      "workedHours": "Horas trabajadas",
+      "capacityHours": "Horas de capacidad",
+      "utilization": "Utilización",
+      "usersWithoutCapacity": "Sin capacidad",
+      "activeUsers": "Usuarios activos"
     },
     "sections": {
       "openByStatus": "Abiertos por estado",
@@ -113,7 +119,8 @@
       "upcomingRenewals": "Renovaciones proximas",
       "bucketUsage": "Uso de bolsa",
       "performanceByAssignee": "Rendimiento por asignado",
-      "closedByAssignee": "Cerrados por asignado"
+      "closedByAssignee": "Cerrados por asignado",
+      "utilizationByUser": "Utilización por usuario"
     },
     "reportCatalog": {
       "ticketWorkload": {
@@ -135,6 +142,10 @@
       "teamPerformance": {
         "title": "Rendimiento del equipo",
         "description": "Productividad del equipo y responsable de respuesta para espacios con varios usuarios."
+      },
+      "employeeUtilization": {
+        "title": "Utilización de empleados",
+        "description": "Horas trabajadas frente a la capacidad semanal de cada miembro del equipo."
       },
       "contractReports": {
         "title": "Informes de contratos",
@@ -158,7 +169,10 @@
       "entries": "Entradas",
       "ticket": "Ticket",
       "entered": "Ingresado",
-      "age": "Antiguedad"
+      "age": "Antiguedad",
+      "workedHours": "Horas trabajadas",
+      "capacityHours": "Horas de capacidad",
+      "utilization": "Utilización"
     },
     "statusValues": {
       "connected": "Conectado",

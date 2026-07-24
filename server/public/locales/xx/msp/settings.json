@@ -282,6 +282,11 @@
         "label": "11111",
         "placeholder": "11111"
       },
+      "weeklyCapacity": {
+        "label": "11111",
+        "placeholder": "11111",
+        "help": "11111"
+      },
       "lastLogin": "11111",
       "roles": "11111",
       "status": "11111",
@@ -326,7 +331,8 @@
         "passwordTooShort": "11111",
         "passwordChangeFailed": "11111",
         "passwordChangeError": "11111",
-        "permissionDenied": "11111"
+        "permissionDenied": "11111",
+        "invalidCapacity": "11111"
       }
     },
     "loading": "11111"

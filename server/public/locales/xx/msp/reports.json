@@ -56,7 +56,8 @@
       "noOpenTicketsInRange": "11111",
       "noDate": "11111",
       "notAvailable": "11111",
-      "noEmailChannels": "11111"
+      "noEmailChannels": "11111",
+      "noCapacity": "11111"
     },
     "fallbackTitle": "11111",
     "dateRange": {
@@ -95,7 +96,12 @@
       "bucketOverageHours": "11111",
       "openAssigned": "11111",
       "activeAssignees": "11111",
-      "avgResolutionTime": "11111"
+      "avgResolutionTime": "11111",
+      "workedHours": "11111",
+      "capacityHours": "11111",
+      "utilization": "11111",
+      "usersWithoutCapacity": "11111",
+      "activeUsers": "11111"
     },
     "sections": {
       "openByStatus": "11111",
@@ -113,7 +119,8 @@
       "upcomingRenewals": "11111",
       "bucketUsage": "11111",
       "performanceByAssignee": "11111",
-      "closedByAssignee": "11111"
+      "closedByAssignee": "11111",
+      "utilizationByUser": "11111"
     },
     "reportCatalog": {
       "ticketWorkload": {
@@ -133,6 +140,10 @@
         "description": "11111"
       },
       "teamPerformance": {
+        "title": "11111",
+        "description": "11111"
+      },
+      "employeeUtilization": {
         "title": "11111",
         "description": "11111"
       },
@@ -158,7 +169,10 @@
       "entries": "11111",
       "ticket": "11111",
       "entered": "11111",
-      "age": "11111"
+      "age": "11111",
+      "workedHours": "11111",
+      "capacityHours": "11111",
+      "utilization": "11111"
     },
     "statusValues": {
       "connected": "11111",

@@ -56,7 +56,8 @@
       "noOpenTicketsInRange": "No open tickets in this range.",
       "noDate": "No date",
       "notAvailable": "n/a",
-      "noEmailChannels": "No email channels are configured."
+      "noEmailChannels": "No email channels are configured.",
+      "noCapacity": "n/a — no capacity set"
     },
     "fallbackTitle": "Report",
     "dateRange": {
@@ -95,7 +96,12 @@
       "bucketOverageHours": "Bucket overage",
       "openAssigned": "Open assigned",
       "activeAssignees": "Active assignees",
-      "avgResolutionTime": "Avg. resolution time"
+      "avgResolutionTime": "Avg. resolution time",
+      "workedHours": "Worked hours",
+      "capacityHours": "Capacity hours",
+      "utilization": "Utilization",
+      "usersWithoutCapacity": "Missing capacity",
+      "activeUsers": "Active users"
     },
     "sections": {
       "openByStatus": "Open by status",
@@ -113,7 +119,8 @@
       "upcomingRenewals": "Upcoming renewals",
       "bucketUsage": "Bucket usage",
       "performanceByAssignee": "Performance by assignee",
-      "closedByAssignee": "Closed by assignee"
+      "closedByAssignee": "Closed by assignee",
+      "utilizationByUser": "Utilization by user"
     },
     "reportCatalog": {
       "ticketWorkload": {
@@ -135,6 +142,10 @@
       "teamPerformance": {
         "title": "Team Performance",
         "description": "Team-level throughput and response ownership for multi-user workspaces."
+      },
+      "employeeUtilization": {
+        "title": "Employee Utilization",
+        "description": "Hours worked against each team member’s weekly capacity."
       },
       "contractReports": {
         "title": "Contract Reports",
@@ -158,7 +169,10 @@
       "entries": "Entries",
       "ticket": "Ticket",
       "entered": "Entered",
-      "age": "Age"
+      "age": "Age",
+      "workedHours": "Worked hours",
+      "capacityHours": "Capacity hours",
+      "utilization": "Utilization"
     },
     "statusValues": {
       "connected": "Connected",
