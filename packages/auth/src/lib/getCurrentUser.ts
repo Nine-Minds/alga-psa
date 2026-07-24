@@ -1,8 +1,9 @@
 import type { IUserWithRoles } from '@alga-psa/types';
 import { getUserWithRoles, getUserWithRolesByEmail, createTenantKnex } from '@alga-psa/db';
 import { getApiKeyUserOverride } from './apiKeyUserContext';
-import { getSession } from './getSession';
+import { getSession, getSessionWithRevocationCheck } from './getSession';
 import logger from '@alga-psa/core/logger';
+import type { Session } from 'next-auth';
 // Note: Avatar URLs are NOT fetched here to avoid circular dependency with @alga-psa/documents.
 // If avatar URL is needed, use getUserAvatarUrl from @alga-psa/documents separately.
 
@@ -24,7 +25,11 @@ function activeUserOrNull(user: IUserWithRoles | null): IUserWithRoles | null {
   return user;
 }
 
-export async function getCurrentUser(): Promise<IUserWithRoles | null> {
+type SessionResolver = () => Promise<Session | null>;
+
+async function resolveCurrentUser(
+  resolveSession: SessionResolver
+): Promise<IUserWithRoles | null> {
   try {
     // API-key routes establish the caller's identity explicitly (see
     // apiKeyUserContext); it takes precedence over any ambient session.
@@ -33,7 +38,7 @@ export async function getCurrentUser(): Promise<IUserWithRoles | null> {
       return apiKeyUser;
     }
 
-    const session = await getSession();
+    const session = await resolveSession();
 
     if (!session?.user) {
       return null;
@@ -105,4 +110,20 @@ export async function getCurrentUser(): Promise<IUserWithRoles | null> {
     // Preserve the original error and stack trace
     throw error;
   }
+}
+
+export async function getCurrentUser(): Promise<IUserWithRoles | null> {
+  return resolveCurrentUser(getSession);
+}
+
+/**
+ * Resolves the current user through the full-auth-first session path.
+ *
+ * Authorization boundaries use this helper so an edge-decoded JWT is never
+ * their first source of authority. The full auth callback and the shared
+ * session gate both reject revoked or untracked sessions; the latter also
+ * protects the development-only edge fallback.
+ */
+export async function getCurrentUserWithRevocationCheck(): Promise<IUserWithRoles | null> {
+  return resolveCurrentUser(getSessionWithRevocationCheck);
 }

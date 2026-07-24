@@ -23,7 +23,7 @@
 
 import type { IUserWithRoles } from '@alga-psa/types';
 import { runWithTenant } from '@alga-psa/db';
-import { getCurrentUser } from './getCurrentUser';
+import { getCurrentUserWithRevocationCheck } from './getCurrentUser';
 
 /**
  * Context provided to authenticated actions
@@ -84,7 +84,7 @@ export function withAuth<TArgs extends unknown[], TResult>(
   options?: WithAuthOptions
 ): (...args: TArgs) => Promise<TResult> {
   return async (...args: TArgs): Promise<TResult> => {
-    const user = await getCurrentUser();
+    const user = await getCurrentUserWithRevocationCheck();
 
     if (!user) {
       if (options?.allowUnauthenticated) {
@@ -124,7 +124,7 @@ export function withOptionalAuth<TArgs extends unknown[], TResult>(
   action: (user: IUserWithRoles | null, ctx: AuthContext | null, ...args: TArgs) => Promise<TResult>
 ): (...args: TArgs) => Promise<TResult> {
   return async (...args: TArgs): Promise<TResult> => {
-    const user = await getCurrentUser();
+    const user = await getCurrentUserWithRevocationCheck();
 
     if (!user) {
       return action(null, null, ...args);
@@ -153,7 +153,7 @@ export function withAuthCheck<TArgs extends unknown[], TResult>(
   action: (user: IUserWithRoles, ...args: TArgs) => Promise<TResult>
 ): (...args: TArgs) => Promise<TResult> {
   return async (...args: TArgs): Promise<TResult> => {
-    const user = await getCurrentUser();
+    const user = await getCurrentUserWithRevocationCheck();
 
     if (!user) {
       throw new AuthenticationError();
