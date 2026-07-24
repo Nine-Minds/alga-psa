@@ -282,6 +282,11 @@
         "label": "Rapporteert aan",
         "placeholder": "Manager selecteren"
       },
+      "weeklyCapacity": {
+        "label": "Wekelijkse capaciteit (uren)",
+        "placeholder": "bijv. 40",
+        "help": "Verwachte werkuren per week. Gebruikt in benuttingsrapporten."
+      },
       "lastLogin": "Laatste aanmelding",
       "roles": "Rollen",
       "status": "Status",
@@ -326,7 +331,8 @@
         "emailAlreadyExists": "Er bestaat al een gebruiker met dit e-mailadres",
         "reportsToSelf": "Een gebruiker kan niet aan zichzelf rapporteren",
         "reportsToCycle": "Dit zou een circulaire rapportagelijn creëren",
-        "permissionDenied": "Je hebt geen toestemming om gebruikersrollen te wijzigen."
+        "permissionDenied": "Je hebt geen toestemming om gebruikersrollen te wijzigen.",
+        "invalidCapacity": "Wekelijkse capaciteit moet een positief getal zijn."
       }
     },
     "loading": "Gebruikersdetails laden..."

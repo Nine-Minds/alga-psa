@@ -282,6 +282,11 @@
         "label": "Reports To",
         "placeholder": "Select manager"
       },
+      "weeklyCapacity": {
+        "label": "Weekly capacity (hours)",
+        "placeholder": "e.g. 40",
+        "help": "Expected working hours per week. Used by utilization reports."
+      },
       "lastLogin": "Last Login",
       "roles": "Roles",
       "status": "Status",
@@ -326,7 +331,8 @@
         "passwordTooShort": "Password must be at least 8 characters long",
         "passwordChangeFailed": "Failed to change password",
         "passwordChangeError": "An error occurred while changing password",
-        "permissionDenied": "You do not have permission to change user roles."
+        "permissionDenied": "You do not have permission to change user roles.",
+        "invalidCapacity": "Weekly capacity must be a positive number."
       }
     },
     "loading": "Loading user details..."

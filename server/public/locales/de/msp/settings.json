@@ -282,6 +282,11 @@
         "label": "Vorgesetzter",
         "placeholder": "Vorgesetzten auswählen"
       },
+      "weeklyCapacity": {
+        "label": "Wochenkapazität (Stunden)",
+        "placeholder": "z. B. 40",
+        "help": "Erwartete Arbeitsstunden pro Woche. Wird in Auslastungsberichten verwendet."
+      },
       "lastLogin": "Letzte Anmeldung",
       "roles": "Rollen",
       "status": "Status",
@@ -326,7 +331,8 @@
         "emailAlreadyExists": "Ein Benutzer mit dieser E-Mail-Adresse existiert bereits",
         "reportsToSelf": "Ein Benutzer kann sich nicht selbst als Vorgesetzten zuweisen",
         "reportsToCycle": "Dies würde eine zirkuläre Berichtskette erzeugen",
-        "permissionDenied": "Sie haben keine Berechtigung, Benutzerrollen zu ändern."
+        "permissionDenied": "Sie haben keine Berechtigung, Benutzerrollen zu ändern.",
+        "invalidCapacity": "Die Wochenkapazität muss eine positive Zahl sein."
       }
     },
     "loading": "Benutzerdetails werden geladen..."

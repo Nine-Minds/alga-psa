@@ -6,6 +6,7 @@ import { findUserById, getCurrentUser, getAllUsers, getUserRoles } from '@alga-p
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions/avatarActions';
 import { updateUser, adminChangeUserPassword } from '@alga-psa/users/actions/user-actions/userActions';
 import { getRoles, assignRoleToUser, removeRoleFromUser } from '@alga-psa/users/lib/roleActions';
+import { getUserCapacity, updateUserCapacity } from '@alga-psa/scheduling/actions/resourceCapacityActions';
 import { useDrawer } from "@alga-psa/ui";
 import { Text, Flex } from '@radix-ui/themes';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -43,6 +44,7 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
   const [selectedRole, setSelectedRole] = useState<string>('');
   const [reportsTo, setReportsTo] = useState<string>('');
   const [reportsToOptions, setReportsToOptions] = useState<SelectOption[]>([]);
+  const [weeklyCapacity, setWeeklyCapacity] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { closeDrawer } = useDrawer();
@@ -156,6 +158,18 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
         setEmail(userWithRoles.email);
         setIsActive(!userWithRoles.is_inactive);
         setRoles(userRoles);
+        try {
+          const capacityResult = await getUserCapacity(userId);
+          if (capacityResult.success && capacityResult.data) {
+            setWeeklyCapacity(
+              capacityResult.data.maxWeeklyCapacity != null
+                ? String(capacityResult.data.maxWeeklyCapacity)
+                : '',
+            );
+          }
+        } catch (capacityErr) {
+          console.error('Error fetching user capacity:', capacityErr);
+        }
       } else {
         setError(t('userDetails.messages.error.userNotFound'));
       }
@@ -267,6 +281,17 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
           return;
         }
         if (result.user) {
+          const trimmedCapacity = weeklyCapacity.trim();
+          const capacityValue = trimmedCapacity === '' ? null : Number(trimmedCapacity);
+          if (capacityValue !== null && (!Number.isFinite(capacityValue) || capacityValue < 0)) {
+            toast.error(t('userDetails.messages.error.invalidCapacity'));
+            return;
+          }
+          const capacityResult = await updateUserCapacity(user.user_id, capacityValue);
+          if (!capacityResult.success) {
+            toast.error(capacityResult.error || t('userDetails.messages.error.updateFailed'));
+            return;
+          }
           setUser(result.user);
           onUpdate();
           closeDrawer();
@@ -398,6 +423,24 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
             placeholder={t('userDetails.fields.reportsTo.placeholder')}
             allowClear
           />
+        </div>
+
+        <div>
+          <Text as="label" size="2" weight="medium" className="mb-2 block">
+            {t('userDetails.fields.weeklyCapacity.label')}
+          </Text>
+          <Input
+            id="user-weekly-capacity"
+            type="number"
+            min={0}
+            value={weeklyCapacity}
+            onChange={(e) => setWeeklyCapacity(e.target.value)}
+            placeholder={t('userDetails.fields.weeklyCapacity.placeholder')}
+            className="w-full"
+          />
+          <Text size="1" color="gray" className="mt-1 block">
+            {t('userDetails.fields.weeklyCapacity.help')}
+          </Text>
         </div>
 
         {/* Last Login Info */}

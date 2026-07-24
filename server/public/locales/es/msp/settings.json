@@ -282,6 +282,11 @@
         "label": "Reporta a",
         "placeholder": "Seleccionar gerente"
       },
+      "weeklyCapacity": {
+        "label": "Capacidad semanal (horas)",
+        "placeholder": "p. ej., 40",
+        "help": "Horas de trabajo previstas por semana. Se usa en los informes de utilización."
+      },
       "lastLogin": "Último inicio de sesión",
       "roles": "Roles",
       "status": "Estado",
@@ -326,7 +331,8 @@
         "emailAlreadyExists": "Ya existe un usuario con esta dirección de correo electrónico",
         "reportsToSelf": "Un usuario no puede reportarse a sí mismo",
         "reportsToCycle": "Esto crearía una cadena de reporte circular",
-        "permissionDenied": "No tienes permiso para cambiar los roles de usuario."
+        "permissionDenied": "No tienes permiso para cambiar los roles de usuario.",
+        "invalidCapacity": "La capacidad semanal debe ser un número positivo."
       }
     },
     "loading": "Cargando detalles del usuario..."

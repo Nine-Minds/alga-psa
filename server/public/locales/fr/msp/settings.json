@@ -282,6 +282,11 @@
         "label": "Supérieur hiérarchique",
         "placeholder": "Sélectionner un responsable"
       },
+      "weeklyCapacity": {
+        "label": "Capacité hebdomadaire (heures)",
+        "placeholder": "p. ex. 40",
+        "help": "Heures de travail prévues par semaine. Utilisé dans les rapports d’utilisation."
+      },
       "lastLogin": "Dernière connexion",
       "roles": "Rôles",
       "status": "Statut",
@@ -326,7 +331,8 @@
         "emailAlreadyExists": "Un utilisateur avec cette adresse e-mail existe déjà",
         "reportsToSelf": "Un utilisateur ne peut pas être son propre responsable",
         "reportsToCycle": "Cela créerait une chaîne hiérarchique circulaire",
-        "permissionDenied": "Vous n'avez pas la permission de modifier les rôles des utilisateurs."
+        "permissionDenied": "Vous n'avez pas la permission de modifier les rôles des utilisateurs.",
+        "invalidCapacity": "La capacité hebdomadaire doit être un nombre positif."
       }
     },
     "loading": "Chargement des détails de l'utilisateur..."

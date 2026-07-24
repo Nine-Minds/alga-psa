@@ -282,6 +282,11 @@
         "label": "Relatórios para",
         "placeholder": "Selecione o gerente"
       },
+      "weeklyCapacity": {
+        "label": "Capacidade semanal (horas)",
+        "placeholder": "ex.: 40",
+        "help": "Horas de trabalho previstas por semana. Usado nos relatórios de utilização."
+      },
       "lastLogin": "Último login",
       "roles": "Funções",
       "status": "Status",
@@ -326,7 +331,8 @@
         "passwordTooShort": "A senha deve ter pelo menos 8 caracteres",
         "passwordChangeFailed": "Falha ao alterar a senha",
         "passwordChangeError": "Ocorreu um erro ao alterar a senha",
-        "permissionDenied": "Você não tem permissão para alterar funções de usuário."
+        "permissionDenied": "Você não tem permissão para alterar funções de usuário.",
+        "invalidCapacity": "A capacidade semanal deve ser um número positivo."
       }
     },
     "loading": "Carregando detalhes do usuário..."

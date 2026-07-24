@@ -282,6 +282,11 @@
         "label": "Riporta a",
         "placeholder": "Seleziona responsabile"
       },
+      "weeklyCapacity": {
+        "label": "Capacità settimanale (ore)",
+        "placeholder": "es. 40",
+        "help": "Ore di lavoro previste a settimana. Usato nei report di utilizzo."
+      },
       "lastLogin": "Ultimo accesso",
       "roles": "Ruoli",
       "status": "Stato",
@@ -326,7 +331,8 @@
         "emailAlreadyExists": "Esiste già un utente con questo indirizzo e-mail",
         "reportsToSelf": "Un utente non può riferire a se stesso",
         "reportsToCycle": "Questo creerebbe una catena di riporto circolare",
-        "permissionDenied": "Non disponi delle autorizzazioni per modificare i ruoli utente."
+        "permissionDenied": "Non disponi delle autorizzazioni per modificare i ruoli utente.",
+        "invalidCapacity": "La capacità settimanale deve essere un numero positivo."
       }
     },
     "loading": "Caricamento dettagli utente..."

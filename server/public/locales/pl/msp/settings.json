@@ -284,6 +284,11 @@
         "label": "Przełożony",
         "placeholder": "Wybierz przełożonego"
       },
+      "weeklyCapacity": {
+        "label": "Tygodniowa wydajność (godziny)",
+        "placeholder": "np. 40",
+        "help": "Oczekiwane godziny pracy w tygodniu. Używane w raportach wykorzystania."
+      },
       "lastLogin": "Ostatnie logowanie",
       "roles": "Role",
       "status": "Status",
@@ -328,7 +333,8 @@
         "emailAlreadyExists": "Użytkownik o tym adresie e-mail już istnieje",
         "reportsToSelf": "Użytkownik nie może podlegać samemu sobie",
         "reportsToCycle": "Spowodowałoby to cykliczną strukturę podległości",
-        "permissionDenied": "Nie masz uprawnień do zmiany ról użytkowników."
+        "permissionDenied": "Nie masz uprawnień do zmiany ról użytkowników.",
+        "invalidCapacity": "Tygodniowa wydajność musi być liczbą dodatnią."
       }
     },
     "loading": "Ładowanie szczegółów użytkownika..."
