@@ -690,8 +690,12 @@ export const getEmployeeUtilizationReport = withAuth(
             'user_id',
             knex.raw("COALESCE(NULLIF(TRIM(CONCAT(first_name, ' ', last_name)), ''), email, 'Unknown user') as name"),
           ),
+        // work_date is the canonical calendar day of the entry (NOT NULL since the
+        // work_date migration), so the window matches the whole-day capacity
+        // denominator instead of a rolling timestamp window.
         scopedDb.table('time_entries')
-          .where('start_time', '>=', knex.raw(`NOW() - INTERVAL '${rangeDays} days'`))
+          .where('work_date', '>=', knex.raw(`CURRENT_DATE - INTERVAL '${rangeDays - 1} days'`))
+          .where('work_date', '<=', knex.raw('CURRENT_DATE'))
           .select(
             'user_id',
             knex.raw('COUNT(*)::int as entries'),
@@ -699,12 +703,8 @@ export const getEmployeeUtilizationReport = withAuth(
             knex.raw('COALESCE(SUM(billable_duration), 0) as billable_minutes'),
           )
           .groupBy('user_id'),
-        scopedDb.table('resources')
-          .select(
-            'user_id',
-            knex.raw('MAX(max_weekly_capacity) as max_weekly_capacity'),
-          )
-          .groupBy('user_id'),
+        // One capacity row per user is guaranteed by the resources_tenant_user_unique index.
+        scopedDb.table('resources').select('user_id', 'max_weekly_capacity'),
       ]);
 
       const timeByUser = new Map<string, { worked_minutes: unknown; billable_minutes: unknown; entries: unknown }>();

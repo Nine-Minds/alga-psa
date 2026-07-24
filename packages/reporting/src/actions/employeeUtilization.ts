@@ -13,6 +13,8 @@ export interface EmployeeUtilizationReport {
     activeUsers: number;
     usersWithoutCapacity: number;
     totalWorkedHours: number;
+    /** Worked hours of the employees that actually have a capacity configured. */
+    workedHoursWithCapacity: number;
     totalCapacityHours: number;
     overallUtilizationPercent: number | null;
   };
@@ -78,19 +80,24 @@ export function buildEmployeeUtilizationReport(
   });
 
   const totalWorkedHours = Math.round(byUser.reduce((sum, row) => sum + row.workedHours, 0) * 10) / 10;
+  const withCapacity = byUser.filter((row) => row.capacityHours !== null);
+  // Numerator and denominator must cover the same people: counting hours worked
+  // by employees without a configured capacity would inflate the percentage.
+  const workedHoursWithCapacity =
+    Math.round(withCapacity.reduce((sum, row) => sum + row.workedHours, 0) * 10) / 10;
   const totalCapacityHours =
-    Math.round(byUser.reduce((sum, row) => sum + (row.capacityHours ?? 0), 0) * 10) / 10;
-  const usersWithoutCapacity = byUser.filter((row) => row.capacityHours === null).length;
+    Math.round(withCapacity.reduce((sum, row) => sum + (row.capacityHours ?? 0), 0) * 10) / 10;
 
   return {
     rangeDays,
     summary: {
       activeUsers: byUser.length,
-      usersWithoutCapacity,
+      usersWithoutCapacity: byUser.length - withCapacity.length,
       totalWorkedHours,
+      workedHoursWithCapacity,
       totalCapacityHours,
       overallUtilizationPercent:
-        totalCapacityHours > 0 ? Math.round((totalWorkedHours / totalCapacityHours) * 100) : null,
+        totalCapacityHours > 0 ? Math.round((workedHoursWithCapacity / totalCapacityHours) * 100) : null,
     },
     byUser,
   };

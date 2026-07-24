@@ -59,6 +59,7 @@ describe('buildEmployeeUtilizationReport', () => {
       activeUsers: 1,
       usersWithoutCapacity: 0,
       totalWorkedHours: 100,
+      workedHoursWithCapacity: 100,
       totalCapacityHours: 40,
       overallUtilizationPercent: 250,
     });
@@ -74,10 +75,11 @@ describe('buildEmployeeUtilizationReport', () => {
     expect(report.byUser[0].utilizationPercent).toBeNull();
     expect(report.summary.usersWithoutCapacity).toBe(1);
     expect(report.summary.totalCapacityHours).toBe(0);
+    expect(report.summary.workedHoursWithCapacity).toBe(0);
     expect(report.summary.overallUtilizationPercent).toBeNull();
   });
 
-  it('excludes uncapped users from the overall utilization denominator', () => {
+  it('excludes uncapped users from both sides of the overall utilization ratio', () => {
     const report = buildEmployeeUtilizationReport(
       [
         row({ userId: 'capped', workedMinutes: 1200, maxWeeklyCapacity: 40 }), // 20h worked, 40h cap (7d)
@@ -89,8 +91,9 @@ describe('buildEmployeeUtilizationReport', () => {
     expect(report.summary.activeUsers).toBe(2);
     expect(report.summary.usersWithoutCapacity).toBe(1);
     expect(report.summary.totalWorkedHours).toBe(120);
+    expect(report.summary.workedHoursWithCapacity).toBe(20);
     expect(report.summary.totalCapacityHours).toBe(40);
-    expect(report.summary.overallUtilizationPercent).toBe(300); // 120 / 40
+    expect(report.summary.overallUtilizationPercent).toBe(50); // 20 / 40, uncapped hours excluded
   });
 
   it('ranks users with capacity utilization ahead of uncapped users', () => {

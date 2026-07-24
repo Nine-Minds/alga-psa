@@ -27,12 +27,23 @@ describe('employee utilization report tenant-scoped query contract', () => {
     expect(section).not.toContain("knex('resources')");
   });
 
-  it('restricts the roster to active internal users and windows time entries by range', () => {
+  it('restricts the roster to active internal users and windows time entries by calendar day', () => {
     const section = employeeUtilizationSection();
 
     expect(section).toContain("where('user_type', 'internal')");
     expect(section).toContain("where('is_inactive', false)");
-    expect(section).toContain("where('start_time', '>=', knex.raw(`NOW() - INTERVAL '${rangeDays} days'`))");
+    // Explicit work_date boundaries, so the numerator covers exactly the
+    // rangeDays calendar days the capacity denominator is prorated over.
+    expect(section).toContain("where('work_date', '>=', knex.raw(`CURRENT_DATE - INTERVAL '${rangeDays - 1} days'`))");
+    expect(section).toContain("where('work_date', '<=', knex.raw('CURRENT_DATE'))");
+    expect(section).not.toContain("where('start_time'");
+  });
+
+  it('reads one capacity row per user rather than aggregating duplicates', () => {
+    const section = employeeUtilizationSection();
+
+    expect(section).toContain("scopedDb.table('resources').select('user_id', 'max_weekly_capacity')");
+    expect(section).not.toContain('MAX(max_weekly_capacity)');
   });
 
   it('delegates utilization math to the pure builder', () => {
