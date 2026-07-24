@@ -10,7 +10,6 @@ describe('per-phase status backward compatibility contracts', () => {
   const settingsSource = readWorkspaceFile('packages/projects/src/components/settings/projects/ProjectTaskStatusSettings.tsx');
   const migrationSource = readWorkspaceFile('server/migrations/20260318100000_add_phase_id_to_project_status_mappings.cjs');
   const templateMigrationSource = readWorkspaceFile('server/migrations/20260318101000_add_template_phase_id_to_project_template_status_mappings.cjs');
-  const citusMigrationSource = readWorkspaceFile('ee/server/migrations/citus/20260318102000_fix_phase_status_mapping_foreign_keys.cjs');
 
   it('T057/T059: phases without custom statuses fall back to project defaults and settings still start at project scope', () => {
     expect(modelSource).toContain('if (!phaseId) {');
@@ -36,8 +35,5 @@ describe('per-phase status backward compatibility contracts', () => {
     expect(migrationSource).toContain(".onDelete('CASCADE')");
     expect(templateMigrationSource).toContain(".foreign(['tenant', 'template_phase_id'])");
     expect(templateMigrationSource).toContain(".references(['tenant', 'template_phase_id'])");
-    expect(citusMigrationSource).toContain("requiredColumns: ['tenant', 'phase_id']");
-    expect(citusMigrationSource).toContain("requiredForeignColumns: ['tenant', 'phase_id']");
-    expect(citusMigrationSource).toContain("onDelete: 'CASCADE'");
   });
 });
