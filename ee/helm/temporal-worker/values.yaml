@@ -159,6 +159,11 @@ affinity: {}
 extraEnv: []
   # - name: EXTRA_VAR
   #   value: "extra-value"
+  # - name: SECRET_VAR
+  #   valueFrom:
+  #     secretKeyRef:
+  #       name: existing-secret
+  #       key: SECRET_KEY
 
 # Auth configuration
 auth:
