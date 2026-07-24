@@ -312,7 +312,7 @@ function blockingHelmReleaseIssues(installState, helmIssues) {
   return helmIssues.filter((issue) => !isTransientHelmReleaseConvergenceIssue(issue));
 }
 
-function deriveFailureSummary(installState, podLines, helmIssues, warnings) {
+function deriveFailureSummary(installState, pods, helmIssues, warnings) {
   const summaries = [];
   const phase = installState?.phase || 'unknown';
   const status = installState?.status || 'unknown';
@@ -335,9 +335,9 @@ function deriveFailureSummary(installState, podLines, helmIssues, warnings) {
   }
 
   const backgroundHints = ['email-service', 'temporal', 'workflow-worker', 'temporal-worker'];
-  const backgroundIssueLines = podLines.filter((line) => {
-    const lower = line.toLowerCase();
-    return backgroundHints.some((hint) => lower.includes(hint)) && !lower.includes(' running') && !lower.includes(' completed');
+  const backgroundIssueLines = pods.filter((pod) => {
+    const lower = pod.name.toLowerCase();
+    return backgroundHints.some((hint) => lower.includes(hint)) && !isTerminalPod(pod) && !podLooksHealthy(pod);
   });
   if (backgroundIssueLines.length > 0) {
     summaries.push({
@@ -378,29 +378,71 @@ function deriveFailureSummary(installState, podLines, helmIssues, warnings) {
   return summaries;
 }
 
-function lineLooksHealthy(line) {
-  const lower = line.toLowerCase();
-  return lower.includes(' running') || lower.includes(' completed');
+function splitPodColumn(value) {
+  if (!value || value === '<none>') return [];
+  return value.split(',').filter(Boolean);
 }
 
-function deriveReadiness(installState, nodes, podLines, jobLines, helmLines, helmIssues, warnings) {
+// Parse the custom-columns pod listing into records. The engine used to scan
+// kubectl's human table with substring tests, which cannot tell a *terminated*
+// pod from a live unhealthy one — an evicted corpse and a CrashLoopBackOff both
+// simply failed to say "running".
+function parsePodRecords(lines) {
+  return lines
+    .map((line) => {
+      const [namespace, name, phase, reason, ready, waiting, initWaiting] = line.trim().split(/\s+/);
+      if (!name || name === '<none>') return null;
+      return {
+        namespace: namespace || 'unknown',
+        name,
+        phase: phase && phase !== '<none>' ? phase : 'Unknown',
+        reason: reason && reason !== '<none>' ? reason : null,
+        readyFlags: splitPodColumn(ready),
+        waitingReasons: [...splitPodColumn(waiting), ...splitPodColumn(initWaiting)]
+      };
+    })
+    .filter(Boolean);
+}
+
+// Succeeded/Failed are Kubernetes' terminal phases. Every evicted pod lands here
+// as phase=Failed regardless of what the STATUS column renders (Evicted, Error,
+// ContainerStatusUnknown are all decorations of the same terminal state).
+export function isTerminalPod(pod) {
+  return pod.phase === 'Succeeded' || pod.phase === 'Failed';
+}
+
+// A live pod is healthy only while it is Running with every container ready.
+// Terminal pods are not workloads at all — callers must exclude them first.
+function podLooksHealthy(pod) {
+  return pod.phase === 'Running'
+    && pod.readyFlags.length > 0
+    && pod.readyFlags.every((flag) => flag === 'true');
+}
+
+function podStatusLabel(pod) {
+  return pod.waitingReasons[0] || pod.reason || pod.phase;
+}
+
+function deriveReadiness(installState, nodes, pods, jobLines, helmLines, helmIssues, warnings) {
   const readyNodeCount = nodes.filter((node) => node.ready).length;
   const platformReady = readyNodeCount > 0;
-  const coreReady = platformReady && podLines.some((line) => {
-    const lower = line.toLowerCase();
-    return lower.startsWith('msp ') && lower.includes('alga-core') && lineLooksHealthy(line);
-  });
+  const coreReady = platformReady && pods.some((pod) => (
+    pod.namespace === 'msp' && pod.name.toLowerCase().includes('alga-core') && podLooksHealthy(pod)
+  ));
   const bootstrapReady = coreReady && (
     jobLines.some((line) => line.toLowerCase().includes('bootstrap') && /\s1\/1\s/.test(line)) ||
     helmLines.some((line) => line.toLowerCase().startsWith('alga-core') && line.toLowerCase().includes('true'))
   );
 
+  // Terminal pods are excluded before judging degradation. A Deployment that is
+  // serving 1/1 is healthy no matter how many evicted corpses it left behind,
+  // and nothing ever deletes those corpses on a single-node appliance — so
+  // counting them made "background services degraded" a permanent state.
   const backgroundServiceHints = ['email-service', 'temporal', 'workflow-worker', 'temporal-worker'];
-  const backgroundIssues = podLines.filter((line) => {
-    const lower = line.toLowerCase();
+  const backgroundIssues = pods.filter((pod) => {
+    const lower = pod.name.toLowerCase();
     const isBackground = backgroundServiceHints.some((hint) => lower.includes(hint));
-    const looksHealthy = lineLooksHealthy(line);
-    return isBackground && !looksHealthy;
+    return isBackground && !isTerminalPod(pod) && !podLooksHealthy(pod);
   });
 
   // Login readiness is gated by core/bootstrap, not background workloads.
@@ -526,19 +568,17 @@ function parseEventsJson(output) {
   }
 }
 
-function deriveActiveOperations(podLines) {
-  return podLines
-    .filter((line) => /\b(ContainerCreating|PodInitializing|Pending|ImagePullBackOff|ErrImagePull|CrashLoopBackOff)\b/i.test(line))
+function deriveActiveOperations(pods) {
+  return pods
+    .filter((pod) => !isTerminalPod(pod) && !podLooksHealthy(pod))
     .slice(0, 8)
-    .map((line) => {
-      const fields = line.trim().split(/\s+/);
-      const namespace = fields[0] || 'unknown';
-      const pod = fields[1] || 'unknown';
-      const status = fields[3] || fields[2] || 'unknown';
+    .map((pod) => {
+      const namespace = pod.namespace;
+      const status = podStatusLabel(pod);
       return {
-        component: `${namespace}/${pod}`,
+        component: `${namespace}/${pod.name}`,
         image: null,
-        message: `${pod} is ${status}.`,
+        message: `${pod.name} is ${status}.`,
         estimatedSizeHuman: null,
         elapsedSeconds: null,
         progressAvailable: false,
@@ -631,6 +671,8 @@ function buildStatusSnapshot({
   const podLines = podResult.ok
     ? podResult.stdout.split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
     : [];
+  const pods = parsePodRecords(podLines);
+  const livePods = pods.filter((pod) => !isTerminalPod(pod));
 
   const jobLines = jobResult.ok
     ? jobResult.stdout.split(/\r?\n/).map((line) => line.trim()).filter(Boolean)
@@ -660,8 +702,8 @@ function buildStatusSnapshot({
     ? [...nodeWarnings, ...podWarnings, ...helmWarnings]
     : (suppressTransientHelmReleaseWarning ? helmWarnings : []);
   const readinessWarnings = [...warnings, ...(suppressTransientHelmReleaseWarning ? helmWarnings : [])];
-  const tiers = deriveReadiness(failureState, nodes, podLines, jobLines, helmLines, helmIssues, readinessWarnings);
-  const derivedFailures = deriveFailureSummary(failureState, podLines, blockingHelmIssues, warnings);
+  const tiers = deriveReadiness(failureState, nodes, pods, jobLines, helmLines, helmIssues, readinessWarnings);
+  const derivedFailures = deriveFailureSummary(failureState, pods, blockingHelmIssues, warnings);
   const failures = liveNetworkBlocker ? [liveNetworkBlocker, ...derivedFailures] : derivedFailures;
   const readinessTiers = normalizeReadinessTiers(tiers);
   let rollup = rollupFromState(installState, tiers, failures);
@@ -691,7 +733,7 @@ function buildStatusSnapshot({
 
   const topBlockers = failures.map(blockerFromFailure);
   const recentEvents = eventsResult.ok ? parseEventsJson(eventsResult.stdout).slice(-40) : [];
-  const activeOperations = deriveActiveOperations(podLines);
+  const activeOperations = deriveActiveOperations(pods);
   const bootstrap = deriveBootstrapInfo(jobLines);
 
   return {
@@ -719,7 +761,8 @@ function buildStatusSnapshot({
     release: releaseSelection,
     kubernetes: {
       nodes,
-      podCount: podLines.length,
+      podCount: livePods.length,
+      terminatedPodCount: pods.length - livePods.length,
       jobCount: jobLines.length,
       helmReleaseCount: helmLines.length,
       warnings,
@@ -744,7 +787,7 @@ function statusSnapshotCommandContext(options = {}) {
     kubeconfigPath,
     kubectlPrefix,
     nodeCommand: `${kubectlPrefix} get nodes -o json`,
-    podCommand: `${kubectlPrefix} get pods -A --no-headers`,
+    podCommand: `${kubectlPrefix} get pods -A --no-headers -o custom-columns=NAMESPACE:.metadata.namespace,NAME:.metadata.name,PHASE:.status.phase,REASON:.status.reason,READY:.status.containerStatuses[*].ready,WAITING:.status.containerStatuses[*].state.waiting.reason,INITWAITING:.status.initContainerStatuses[*].state.waiting.reason`,
     jobCommand: `${kubectlPrefix} -n msp get jobs --no-headers`,
     helmCommand: `${kubectlPrefix} -n alga-system get helmreleases.helm.toolkit.fluxcd.io --no-headers`,
     eventsCommand: `${kubectlPrefix} get events -A -o json`

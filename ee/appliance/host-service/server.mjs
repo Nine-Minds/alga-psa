@@ -15,6 +15,7 @@ import { createNativeKubernetesAdapter } from './kubernetes-client-adapter.mjs';
 import { PodExecManager } from './pod-exec-manager.mjs';
 import { PortForwardManager } from './port-forward-manager.mjs';
 import { ensurePodAccessRbac } from './pod-access-rbac.mjs';
+import { reapTerminalPods } from './terminal-pod-reaper.mjs';
 import { accessError, PodAccessError, requestHasSameOrigin } from './pod-access-common.mjs';
 import {
   collectManageStatus,
@@ -173,6 +174,11 @@ const AUTO_RETRY_MAX_ATTEMPTS = Number(process.env.ALGA_APPLIANCE_AUTO_RETRY_MAX
 const AUTO_RETRY_BASE_MS = Number(process.env.ALGA_APPLIANCE_AUTO_RETRY_BASE_MS || 15_000);
 const AUTO_RETRY_MAX_MS = Number(process.env.ALGA_APPLIANCE_AUTO_RETRY_MAX_MS || 300_000);
 const RECONCILE_INTERVAL_MS = Number(process.env.ALGA_APPLIANCE_RECONCILE_INTERVAL_MS || 15_000);
+// Terminal-pod sweep. Nothing about it is urgent — corpses accumulate over days
+// — so it runs far less often than the setup reconciler.
+const POD_REAP_DISABLED = process.env.ALGA_APPLIANCE_DISABLE_POD_REAP === '1';
+const POD_REAP_INTERVAL_MS = Number(process.env.ALGA_APPLIANCE_POD_REAP_INTERVAL_MS || 600_000);
+const POD_REAP_RETAIN = Number(process.env.ALGA_APPLIANCE_POD_REAP_RETAIN || 5);
 const NETWORK_CLASS_PHASES = ['network', 'dns', 'registry-release-source'];
 const retryStateFile = path.join(path.dirname(stateFile), 'auto-retry-state.json');
 let reconcileRunning = false;
@@ -1622,4 +1628,33 @@ if (!AUTO_RETRY_DISABLED) {
   const reconcileTimer = setInterval(() => { reconcileBlockedSetup().catch(() => {}); }, RECONCILE_INTERVAL_MS);
   reconcileTimer.unref();
   process.stdout.write(`alga-appliance auto-retry reconciler enabled (every ${RECONCILE_INTERVAL_MS}ms, max ${AUTO_RETRY_MAX_ATTEMPTS} attempts)\n`);
+}
+
+if (!POD_REAP_DISABLED) {
+  let reapRunning = false;
+  const runReap = async () => {
+    if (reapRunning) return;
+    reapRunning = true;
+    try {
+      const result = await reapTerminalPods({
+        kube: manageKube,
+        retainPerNamespace: POD_REAP_RETAIN,
+        log: (message) => process.stdout.write(`alga-appliance pod reaper: ${message}\n`)
+      });
+      if (!result.ok && result.error) {
+        process.stdout.write(`alga-appliance pod reaper: sweep incomplete — ${result.error}\n`);
+      }
+    } catch (error) {
+      process.stdout.write(`alga-appliance pod reaper: sweep failed — ${error?.message || error}\n`);
+    } finally {
+      reapRunning = false;
+    }
+  };
+  const reapTimer = setInterval(() => { runReap(); }, POD_REAP_INTERVAL_MS);
+  reapTimer.unref();
+  // Sweep shortly after boot too, so an upgraded appliance clears a backlog it
+  // inherited without waiting out a full interval.
+  const initialReap = setTimeout(() => { runReap(); }, 30_000);
+  initialReap.unref();
+  process.stdout.write(`alga-appliance terminal-pod reaper enabled (every ${POD_REAP_INTERVAL_MS}ms, retaining ${POD_REAP_RETAIN} per namespace)\n`);
 }

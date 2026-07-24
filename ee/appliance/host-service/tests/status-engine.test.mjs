@@ -42,8 +42,8 @@ JSON
 fi
 if [[ "$*" == *"get pods -A --no-headers"* ]]; then
   cat <<'TXT'
-default pod-a Running
-kube-system pod-b Running
+default pod-a Running <none> true <none> <none>
+kube-system pod-b Running <none> true <none> <none>
 TXT
   exit 0
 fi
@@ -101,8 +101,8 @@ JSON
 fi
 if [[ "$*" == *"get pods -A --no-headers"* ]]; then
   cat <<'TXT'
-msp alga-core-abc Running
-msp temporal-worker-xyz CrashLoopBackOff
+msp alga-core-abc Running <none> true <none> <none>
+msp temporal-worker-xyz Running <none> false CrashLoopBackOff <none>
 TXT
   exit 0
 fi
@@ -165,8 +165,8 @@ JSON
 fi
 if [[ "$*" == *"get pods -A --no-headers"* ]]; then
   cat <<'TXT'
-msp alga-core-abc Running
-alga-system temporal-worker-xyz CrashLoopBackOff
+msp alga-core-abc Running <none> true <none> <none>
+alga-system temporal-worker-xyz Running <none> false CrashLoopBackOff <none>
 TXT
   exit 0
 fi
@@ -204,6 +204,81 @@ exit 1
   }
 });
 
+// Regression: a single-node appliance never garbage collects terminal pods, so
+// DiskPressure evictions left 20 phase=Failed corpses behind. The engine counted
+// them as degraded background workloads and reported the box unhealthy forever,
+// while every Deployment was serving 1/1.
+test('evicted pod corpses do not make a healthy appliance report degraded', () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-status-evicted-'));
+  const stateFile = path.join(tmp, 'install-state.json');
+  const fakeBin = path.join(tmp, 'bin');
+  fs.mkdirSync(fakeBin, { recursive: true });
+
+  fs.writeFileSync(stateFile, JSON.stringify({ phase: 'app-readiness', status: 'release-config-complete' }));
+
+  const evicted = Array.from({ length: 14 }, (_, index) =>
+    `msp email-service-8578d4cdf5-c${index} Failed Evicted <none> <none> <none>`).join('\n');
+
+  const kubectlPath = path.join(fakeBin, 'kubectl');
+  fs.writeFileSync(kubectlPath, `#!/usr/bin/env bash
+if [[ "$*" == *"get nodes -o json"* ]]; then
+  cat <<'JSON'
+{"items":[{"metadata":{"name":"node-1"},"status":{"conditions":[{"type":"Ready","status":"True"}]}}]}
+JSON
+  exit 0
+fi
+if [[ "$*" == *"get pods -A --no-headers"* ]]; then
+  cat <<'TXT'
+msp alga-core-abc Running <none> true <none> <none>
+msp email-service-84dbb598c9-live Running <none> true <none> <none>
+msp workflow-worker-66965d456f-live Running <none> true <none> <none>
+${evicted}
+TXT
+  exit 0
+fi
+if [[ "$*" == *"-n msp get jobs --no-headers"* ]]; then
+  cat <<'TXT'
+alga-core-bootstrap 1/1 1 1m
+TXT
+  exit 0
+fi
+if [[ "$*" == *"-n alga-system get helmreleases"* ]]; then
+  cat <<'TXT'
+alga-core 1h True Release reconciliation succeeded
+pgbouncer 1h True Release reconciliation succeeded
+temporal 1h True Release reconciliation succeeded
+workflow-worker 1h True Release reconciliation succeeded
+email-service 1h True Release reconciliation succeeded
+temporal-worker 1h True Release reconciliation succeeded
+TXT
+  exit 0
+fi
+exit 1
+`);
+  fs.chmodSync(kubectlPath, 0o755);
+
+  const originalPath = process.env.PATH;
+  process.env.PATH = `${fakeBin}:${originalPath}`;
+  try {
+    const snapshot = collectStatusSnapshot({
+      stateFile,
+      kubeconfigPath: '/tmp/k3s.yaml',
+      kubectlPrefix: 'kubectl --kubeconfig /tmp/k3s.yaml'
+    });
+
+    assert.equal(snapshot.tiers.backgroundIssues.length, 0);
+    assert.equal(snapshot.tiers.backgroundReady, true);
+    assert.equal(snapshot.tiers.fullyHealthy, true);
+    assert.equal(snapshot.failures.some((failure) => failure.category === 'background-services'), false);
+    // Corpses are reported separately rather than inflating the live pod count.
+    assert.equal(snapshot.kubernetes.podCount, 3);
+    assert.equal(snapshot.kubernetes.terminatedPodCount, 14);
+    assert.equal(snapshot.activeOperations.length, 0);
+  } finally {
+    process.env.PATH = originalPath;
+  }
+});
+
 test('non-ready HelmReleases block fullyHealthy even when pods are running', () => {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-status-hr-'));
   const stateFile = path.join(tmp, 'install-state.json');
@@ -222,8 +297,8 @@ JSON
 fi
 if [[ "$*" == *"get pods -A --no-headers"* ]]; then
   cat <<'TXT'
-msp alga-core-abc Running
-msp workflow-worker-xyz Running
+msp alga-core-abc Running <none> true <none> <none>
+msp workflow-worker-xyz Running <none> true <none> <none>
 TXT
   exit 0
 fi
@@ -280,7 +355,7 @@ JSON
 fi
 if [[ "$*" == *"get pods -A --no-headers"* ]]; then
   cat <<'TXT'
-msp alga-core-abc Running
+msp alga-core-abc Running <none> true <none> <none>
 TXT
   exit 0
 fi
@@ -381,7 +456,7 @@ JSON
 fi
 if [[ "$*" == *"get pods -A --no-headers"* ]]; then
   cat <<'TXT'
-msp alga-core-abc Running
+msp alga-core-abc Running <none> true <none> <none>
 TXT
   exit 0
 fi
@@ -451,7 +526,7 @@ JSON
 fi
 if [[ "$*" == *"get pods -A --no-headers"* ]]; then
   cat <<'TXT'
-kube-system flux-controller-abc Running
+kube-system flux-controller-abc Running <none> true <none> <none>
 TXT
   exit 0
 fi
