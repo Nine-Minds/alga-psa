@@ -214,8 +214,16 @@ export async function reconcileRmmPollingSchedules(
   const adminKnex = await getAdminConnection();
   const integrations = await tenantDb(adminKnex, RMM_POLLING_RECONCILE_TENANT)
     .unscoped('rmm_integrations', RMM_POLLING_RECONCILE_REASON)
+    .join('tenants as t', 'rmm_integrations.tenant', 't.tenant')
     .whereIn('provider', [...RMM_ALERT_POLLING_PROVIDERS, 'huntress'])
-    .select('tenant', 'integration_id', 'provider', 'is_active', 'settings');
+    .select(
+      'rmm_integrations.tenant',
+      'rmm_integrations.integration_id',
+      'rmm_integrations.provider',
+      'rmm_integrations.is_active',
+      'rmm_integrations.settings',
+      't.suspended_at as tenant_suspended_at'
+    );
 
   let ensured = 0;
   let cancelled = 0;
@@ -229,8 +237,13 @@ export async function reconcileRmmPollingSchedules(
     const jobName = isHuntress ? HUNTRESS_INCIDENT_POLL_JOB : RMM_ALERT_RECONCILIATION_JOB;
     const singletonKey = `${jobName}:${tenantId}:${integrationId}`;
     const state = isHuntress ? parseHuntressPollState(row) : parseRmmPollState(row);
+    // Suspended tenants are ineligible, so the control loop cancels their
+    // polls and recreates them automatically once the suspension clears.
     const eligible =
-      state.active && state.pollingEnabled && (isHuntress || Boolean(getRmmAlertFetcher(provider)));
+      state.active
+      && state.pollingEnabled
+      && !row.tenant_suspended_at
+      && (isHuntress || Boolean(getRmmAlertFetcher(provider)));
     const desiredCron = intervalMinutesToCron(state.intervalMinutes);
 
     try {
