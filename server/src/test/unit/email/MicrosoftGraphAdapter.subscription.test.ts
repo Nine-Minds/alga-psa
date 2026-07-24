@@ -93,6 +93,20 @@ describe('MicrosoftGraphAdapter subscription hygiene', () => {
     expect(mocks.client.delete).toHaveBeenCalledWith('/subscriptions/orphan');
   });
 
+  it('T017: deletes the explicitly supplied stored Graph subscription', async () => {
+    const adapter = new MicrosoftGraphAdapter(config());
+
+    await adapter.deleteSubscription('stored/subscription');
+
+    expect(mocks.client.delete).toHaveBeenCalledWith('/subscriptions/stored%2Fsubscription');
+  });
+
+  it('T018: treats an already-gone Graph subscription as successful cleanup', async () => {
+    mocks.client.delete.mockRejectedValueOnce({ response: { status: 404 } });
+
+    await expect(new MicrosoftGraphAdapter(config()).deleteSubscription()).resolves.toBeUndefined();
+  });
+
   it('classifies endpoint validation failures separately from authentication failures', async () => {
     mocks.client.post.mockRejectedValueOnce({
       message: 'Request failed with status code 400',

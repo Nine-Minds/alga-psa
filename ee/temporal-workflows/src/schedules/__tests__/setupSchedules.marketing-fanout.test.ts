@@ -58,6 +58,8 @@ vi.mock('@alga-psa/db', () => ({
     const rows = context.includes('entra') ? [] : [];
     const query = {
       where: vi.fn(() => query),
+      join: vi.fn(() => query),
+      whereNull: vi.fn(() => query),
       select: vi.fn(async () => rows),
     };
     return {

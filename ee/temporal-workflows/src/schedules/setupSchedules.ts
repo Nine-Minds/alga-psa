@@ -303,6 +303,8 @@ async function loadEntraScheduleConfigs(): Promise<EntraScheduleConfigRow[]> {
   });
 
   const rows = await query
+    .join('tenants as t', 's.tenant', 't.tenant')
+    .whereNull('t.suspended_at')
     .select([
       's.tenant as tenantId',
       's.sync_enabled as syncEnabled',

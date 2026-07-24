@@ -144,6 +144,7 @@
     },
     "badges": {
       "disabled": "Disabilitato",
+      "paused": "In pausa",
       "connected": "Collegato",
       "disconnected": "Disconnesso",
       "error": "Errore",
@@ -167,8 +168,16 @@
       "reconnectOauth": "Riconnetti OAuth",
       "resyncing": "Risincronizzazione in corso...",
       "resyncMailbox": "Risincronizza casella di posta",
+      "pause": "Sospendi email in arrivo",
+      "resume": "Riprendi email in arrivo",
       "delete": "Elimina fornitore"
     },
+    "feedback": {
+      "paused": "Email in arrivo sospese.",
+      "resumed": "Email in arrivo riprese.",
+      "pauseError": "Impossibile modificare lo stato di pausa delle email in arrivo."
+    },
+    "pausedHelp": "I messaggi ricevuti mentre questa casella è in pausa non vengono importati retroattivamente.",
     "fields": {
       "status": "Stato",
       "lastSync": "Ultima sincronizzazione",

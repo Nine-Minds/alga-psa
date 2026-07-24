@@ -1,7 +1,8 @@
 import logger from '@alga-psa/core/logger';
 import { randomUUID } from 'crypto';
 import { createTenantKnex, runWithTenant } from '@alga-psa/db/tenant';
-import { retryOnTenantReadOnly, tenantDb } from '@alga-psa/db';
+import { isTenantSuspended, retryOnTenantReadOnly, tenantDb } from '@alga-psa/db';
+import { getAdminConnection } from '@alga-psa/db/admin.js';
 import { getEntraProviderAdapter } from '@ee/lib/integrations/entra/providers';
 import { executeEntraSync } from '@ee/lib/integrations/entra/sync/syncEngine';
 import { filterEntraUsersForTenant } from '@ee/lib/integrations/entra/settingsService';
@@ -49,6 +50,15 @@ export async function loadMappedTenantsActivity(
     tenantId: input.tenantId,
     managedTenantId: input.managedTenantId,
   });
+
+  // Suspended tenants (cancelled, pending deletion) sync nothing; the
+  // schedule may predate the suspension, so re-check per run.
+  if (await isTenantSuspended(await getAdminConnection(), input.tenantId)) {
+    logger.info('Skipping Entra mapping load for suspended tenant', {
+      tenantId: input.tenantId,
+    });
+    return { mappings: [] };
+  }
 
   const mappings = await runWithTenant(input.tenantId, async () => {
     const { knex } = await createTenantKnex();

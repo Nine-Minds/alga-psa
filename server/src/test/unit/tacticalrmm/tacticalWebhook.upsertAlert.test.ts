@@ -57,6 +57,7 @@ vi.mock('@alga-psa/core/secrets', () => ({
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: vi.fn(async () => ({ knex: knexMock })),
+  isTenantSuspended: vi.fn(async () => false),
   tenantDb: (conn: any, _tenant: string) => ({
     table: (t: string) => conn(t),
     unscoped: (t: string) => conn(t),

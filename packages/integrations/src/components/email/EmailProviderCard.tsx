@@ -23,6 +23,8 @@ import {
   XCircle,
   AlertCircle,
   Clock,
+  PauseCircle,
+  PlayCircle,
   Repeat,
   Stethoscope,
 } from 'lucide-react';
@@ -34,7 +36,7 @@ interface EmailProviderCardProps {
   defaultsOptions: { value: string; label: string }[];
   updatingProviderId: string | null;
   busy?: boolean;
-  busyAction?: 'test' | 'resync' | null;
+  busyAction?: 'test' | 'resync' | 'pause' | 'resume' | null;
   onEdit: (provider: EmailProvider) => void;
   onDelete: (providerId: string) => void;
   onTestConnection: (provider: EmailProvider) => void | Promise<void>;
@@ -44,6 +46,7 @@ interface EmailProviderCardProps {
   onResyncProvider?: (provider: EmailProvider) => void | Promise<void>;
   onRunDiagnostics: (provider: EmailProvider) => void;
   onChangeDefaults: (provider: EmailProvider, defaultsId?: string) => void | Promise<void>;
+  onTogglePause: (provider: EmailProvider) => void | Promise<void>;
 }
 
 const getProviderIcon = (providerType: string) => {
@@ -74,6 +77,7 @@ export function EmailProviderCard({
   onResyncProvider,
   onRunDiagnostics,
   onChangeDefaults,
+  onTogglePause,
 }: EmailProviderCardProps) {
   const { t } = useTranslation('msp/email-providers');
 
@@ -116,7 +120,18 @@ export function EmailProviderCard({
     }
   };
 
-  const getStatusBadge = (status: EmailProvider['status'], isActive: boolean) => {
+  const getStatusBadge = (
+    status: EmailProvider['status'],
+    isActive: boolean,
+    isPaused: boolean
+  ) => {
+    if (isPaused) {
+      return (
+        <Badge id={`provider-paused-badge-${provider.id}`} variant="secondary">
+          {t('providerCard.badges.paused')}
+        </Badge>
+      );
+    }
     if (!isActive) {
       return <Badge variant="secondary">{t('providerCard.badges.disabled', { defaultValue: 'Disabled' })}</Badge>;
     }
@@ -168,7 +183,7 @@ export function EmailProviderCard({
           </div>
 
           <div className="flex items-center space-x-2">
-            {getStatusBadge(provider.status, provider.isActive)}
+            {getStatusBadge(provider.status, provider.isActive, Boolean(provider.inboundPausedAt))}
 
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -219,6 +234,18 @@ export function EmailProviderCard({
                       : t('providerCard.actions.resyncMailbox', { defaultValue: 'Resync Mailbox' })}
                   </DropdownMenuItem>
                 )}
+                <DropdownMenuItem
+                  id={`${provider.inboundPausedAt ? 'resume' : 'pause'}-provider-${provider.id}`}
+                  onClick={() => onTogglePause(provider)}
+                  disabled={busy}
+                >
+                  {provider.inboundPausedAt
+                    ? <PlayCircle className="h-4 w-4 mr-2" />
+                    : <PauseCircle className="h-4 w-4 mr-2" />}
+                  {provider.inboundPausedAt
+                    ? t('providerCard.actions.resume')
+                    : t('providerCard.actions.pause')}
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
                   onClick={() => onDelete(provider.id)}
@@ -296,6 +323,12 @@ export function EmailProviderCard({
             <AlertDescription>
               <strong>{t('providerCard.fields.error', { defaultValue: 'Error:' })}</strong> {provider.errorMessage}
             </AlertDescription>
+          </Alert>
+        )}
+
+        {provider.inboundPausedAt && (
+          <Alert id={`provider-paused-help-${provider.id}`} className="mt-3">
+            <AlertDescription>{t('providerCard.pausedHelp')}</AlertDescription>
           </Alert>
         )}
 

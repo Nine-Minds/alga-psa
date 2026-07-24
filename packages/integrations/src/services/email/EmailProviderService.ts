@@ -8,6 +8,11 @@ import { EmailProviderConfig } from '@alga-psa/shared/interfaces/inbound-email.i
 import { MicrosoftGraphAdapter } from '@alga-psa/shared/services/email/providers/MicrosoftGraphAdapter';
 import { buildMicrosoftEmailProviderConfig } from '@alga-psa/shared/services/email/microsoftEmailProviderConfig';
 import { EmailWebhookMaintenanceService } from '@alga-psa/shared/services/email/EmailWebhookMaintenanceService';
+import {
+  EmailProviderLifecycleService,
+  type InboundPauseReason,
+  type ResumeProviderResult,
+} from '@alga-psa/shared/services/email/EmailProviderLifecycleService';
 import { GmailAdapter } from './providers/GmailAdapter';
 import { GmailWebhookService } from './GmailWebhookService';
 import { getWebhookBaseUrl } from '../../utils/email/webhookHelpers';
@@ -42,6 +47,7 @@ export interface ProviderStatus {
 }
 
 export class EmailProviderService {
+  private readonly lifecycleService = new EmailProviderLifecycleService();
   private async getDb(tenant: string) {
     const { knex } = await createTenantKnex(tenant);
     return knex;
@@ -351,51 +357,29 @@ export class EmailProviderService {
   }
 
   /**
+   * Pause inbound ingestion without changing the provider's configured active state.
+   */
+  async pauseProvider(
+    providerId: string,
+    tenant: string,
+    reason: InboundPauseReason
+  ): Promise<boolean> {
+    return this.lifecycleService.pauseProvider(providerId, tenant, reason);
+  }
+
+  /**
+   * Resume inbound ingestion and recreate webhook-mode subscriptions.
+   */
+  async resumeProvider(providerId: string, tenant: string): Promise<ResumeProviderResult> {
+    return this.lifecycleService.resumeProvider(providerId, tenant);
+  }
+
+  /**
    * Delete an email provider
    */
   async deleteProvider(providerId: string, tenant: string): Promise<void> {
-    try {
-      const db = await this.getDb(tenant);
-      const scopedDb = tenantDb(db, tenant);
-
-      // Get provider info to determine type for cleanup
-      const provider = await scopedDb.table('email_providers')
-        .where('id', providerId)
-        .first();
-
-      if (!provider) {
-        throw new Error('Provider not found');
-      }
-
-      // Delete vendor-specific configuration first
-      if (provider.provider_type === 'google') {
-        await scopedDb.table('google_email_provider_config')
-          .where('email_provider_id', providerId)
-          .del();
-      } else if (provider.provider_type === 'microsoft') {
-        await scopedDb.table('microsoft_email_provider_config')
-          .where('email_provider_id', providerId)
-          .del();
-      } else if (provider.provider_type === 'imap') {
-        await scopedDb.table('imap_email_provider_config')
-          .where('email_provider_id', providerId)
-          .del();
-      }
-
-      // Delete main provider record
-      const deleted = await scopedDb.table('email_providers')
-        .where('id', providerId)
-        .del();
-
-      if (deleted === 0) {
-        throw new Error('Provider not found');
-      }
-
-      console.log(`✅ Deleted email provider: ${providerId}`);
-    } catch (error: any) {
-      console.error(`Error deleting email provider ${providerId}:`, error);
-      throw new Error(`Failed to delete email provider: ${error.message}`);
-    }
+    await this.lifecycleService.deleteProvider(providerId, tenant);
+    console.log(`✅ Deleted email provider: ${providerId}`);
   }
 
   /**
@@ -553,6 +537,8 @@ export class EmailProviderService {
       mailbox: row.mailbox,
       folder_to_monitor: 'Inbox', // Default for current implementation
       active: row.is_active,
+      inboundPausedAt: row.inbound_paused_at || null,
+      inboundPauseReason: row.inbound_pause_reason || null,
       webhook_notification_url: this.generateWebhookUrl(webhookPath),
       webhook_subscription_id: vendorConfig?.webhook_subscription_id || null,
       webhook_verification_token: vendorConfig?.webhook_verification_token || null,

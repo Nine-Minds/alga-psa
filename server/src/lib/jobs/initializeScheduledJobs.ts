@@ -25,6 +25,7 @@ export async function initializeScheduledJobs(): Promise<void> {
     const knex = await getConnection(null);
     const tenants = await tenantDb(knex, '__scheduled_jobs_tenant_enumeration__')
       .unscoped('tenants', 'scheduler enumerates all tenants to register recurring jobs')
+      .whereNull('suspended_at')
       .select('tenant');
     logger.info(`Preparing to schedule jobs for ${tenants.length} tenants`);
     

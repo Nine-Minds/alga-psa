@@ -204,6 +204,8 @@ const PROVIDER_COLUMNS = [
   'sender_display_name as senderDisplayName',
   'mailbox',
   'is_active as isActive',
+  'inbound_paused_at as inboundPausedAt',
+  'inbound_pause_reason as inboundPauseReason',
   'status',
   'last_sync_at as lastSyncAt',
   'error_message as errorMessage',
@@ -1057,18 +1059,16 @@ export const deleteEmailProvider = withAuth(async (
   { tenant },
   providerId: string
 ): Promise<{ success: true } | EmailProviderActionError> => {
-  const { knex } = await createTenantKnex();
-  const db = tenantDb(knex, tenant);
-
-  const result = await db.table('email_providers')
-    .where({ id: providerId })
-    .delete();
-
-  if (result === 0) {
-    return actionError('Email provider not found');
+  try {
+    await new EmailProviderService().deleteProvider(providerId, tenant);
+    return { success: true };
+  } catch (error) {
+    if (error instanceof Error && error.message === 'Provider not found') {
+      return actionError('Email provider not found');
+    }
+    console.error('Failed to delete email provider:', error);
+    return actionError('Failed to delete email provider');
   }
-
-  return { success: true };
 });
 
 export const resyncImapProvider = withAuth(async (

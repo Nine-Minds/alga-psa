@@ -9,8 +9,12 @@ import React from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { getInboundTicketDefaults } from '@alga-psa/integrations/actions';
-import { updateEmailProvider } from '@alga-psa/integrations/actions';
+import {
+  getInboundTicketDefaults,
+  pauseEmailProvider,
+  resumeEmailProvider,
+  updateEmailProvider,
+} from '@alga-psa/integrations/actions';
 import type { EmailProvider } from './types';
 import { EmailProviderCard, EmptyProviderPlaceholder } from './EmailProviderCard';
 import { RefreshCw } from 'lucide-react';
@@ -52,7 +56,7 @@ export function EmailProviderList({
   const [defaultsOptions, setDefaultsOptions] = React.useState<{ value: string; label: string }[]>([]);
   const [updatingProviderId, setUpdatingProviderId] = React.useState<string | null>(null);
   const [busyProviderId, setBusyProviderId] = React.useState<string | null>(null);
-  const [busyAction, setBusyAction] = React.useState<'test' | 'resync' | null>(null);
+  const [busyAction, setBusyAction] = React.useState<'test' | 'resync' | 'pause' | 'resume' | null>(null);
   const [searchTerm, setSearchTerm] = React.useState('');
   const [providerFilter, setProviderFilter] = React.useState<'all' | 'google' | 'microsoft' | 'imap'>('all');
 
@@ -111,6 +115,34 @@ export function EmailProviderList({
       setBusyProviderId(provider.id);
       setBusyAction('resync');
       await onResyncProvider(provider);
+    } finally {
+      setBusyProviderId(null);
+      setBusyAction(null);
+    }
+  };
+
+  const handleTogglePause = async (provider: EmailProvider) => {
+    const isPaused = Boolean(provider.inboundPausedAt);
+    try {
+      setBusyProviderId(provider.id);
+      setBusyAction(isPaused ? 'resume' : 'pause');
+      const result = isPaused
+        ? await resumeEmailProvider(provider.id)
+        : await pauseEmailProvider(provider.id);
+      if (!result.success) {
+        if (result.resumed) {
+          onRefresh();
+        }
+        toast.error(result.error || t('providerCard.feedback.pauseError'));
+        return;
+      }
+      toast.success(t(isPaused
+        ? 'providerCard.feedback.resumed'
+        : 'providerCard.feedback.paused'));
+      onRefresh();
+    } catch (error) {
+      console.error('Failed to change inbound pause state', error);
+      toast.error(t('providerCard.feedback.pauseError'));
     } finally {
       setBusyProviderId(null);
       setBusyAction(null);
@@ -183,6 +215,7 @@ export function EmailProviderList({
             onResyncProvider={onResyncProvider ? handleResyncProviderInternal : undefined}
             onRunDiagnostics={onRunDiagnostics}
             onChangeDefaults={handleChangeDefaults}
+            onTogglePause={handleTogglePause}
           />
         ))}
       </div>

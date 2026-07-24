@@ -1,5 +1,5 @@
 import type { Knex } from 'knex';
-import { tenantDb, getConnection } from '@alga-psa/db';
+import { tenantDb, getConnection, isTenantSuspended } from '@alga-psa/db';
 import { EmailProviderManager } from './providers/EmailProviderManager';
 import { 
   TenantEmailSettings, 
@@ -180,6 +180,23 @@ export class TenantEmailService extends BaseEmailService {
     // All outbound emails should go through the configured outbound provider (e.g. Resend/SMTP).
     // The providerId from ticket metadata is used upstream (in ticketEmailSubscriber) to resolve
     // the correct 'From' address, which is passed in params.from.
+
+    // Belt-and-braces: no tenant-scoped email leaves a suspended tenant
+    // (cancelled, pending deletion) even if some generator was missed by the
+    // job/event gates. System emails (win-back, reactivation) go through
+    // SystemEmailService and are unaffected. isTenantSuspended fails open.
+    const suspensionKnex = await getConnection(this.tenantId);
+    if (await isTenantSuspended(suspensionKnex, this.tenantId)) {
+      logger.info(`[${this.getServiceName()}] Dropping email for suspended tenant`, {
+        tenantId: this.tenantId,
+        to: params.to,
+        event: 'email_dropped_tenant_suspended'
+      });
+      return {
+        success: false,
+        error: 'Tenant is suspended; outbound email is disabled'
+      };
+    }
 
     // Check rate limits before sending
     const rateLimitResult = await this.checkRateLimits(params);

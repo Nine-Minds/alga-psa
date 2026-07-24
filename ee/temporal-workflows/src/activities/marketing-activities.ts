@@ -37,6 +37,7 @@ export async function listMarketingTenantIds(): Promise<string[]> {
   const knex = await getAdminConnection();
   const rows = await tenantDb(knex, MARKETING_TENANT_DISCOVERY_CONTEXT)
     .unscoped('tenants', 'marketing fan-out enumerates every tenant before tenant context is known')
+    .whereNull('suspended_at')
     .orderBy('tenant', 'asc')
     .select('tenant') as Array<{ tenant: string }>;
 

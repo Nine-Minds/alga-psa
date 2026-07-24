@@ -1372,7 +1372,14 @@ export class MicrosoftGraphAdapter extends BaseEmailAdapter {
   }
 
   async deleteWebhookSubscription(): Promise<void> {
-    const subscriptionId = this.config.webhook_subscription_id;
+    await this.deleteSubscription();
+  }
+
+  /**
+   * Delete a Graph subscription by id. Defaults to the subscription stored on
+   * this provider and treats an already-expired subscription as success.
+   */
+  async deleteSubscription(subscriptionId = this.config.webhook_subscription_id): Promise<void> {
     if (!subscriptionId) return;
 
     try {

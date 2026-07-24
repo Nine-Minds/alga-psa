@@ -5,6 +5,7 @@ const enqueueUnifiedInboundEmailQueueJobMock = vi.fn();
 const getAdminConnectionMock = vi.fn();
 const getTenantSecretMock = vi.fn();
 const verifyIdTokenMock = vi.fn();
+let providerPaused = false;
 
 vi.mock('@alga-psa/shared/services/email/unifiedInboundEmailQueue', () => ({
   enqueueUnifiedInboundEmailQueueJob: (...args: any[]) => enqueueUnifiedInboundEmailQueueJobMock(...args),
@@ -50,6 +51,7 @@ describe('Google unified inbound pointer queue ingress', () => {
     getAdminConnectionMock.mockReset();
     getTenantSecretMock.mockReset();
     verifyIdTokenMock.mockReset();
+    providerPaused = false;
 
     enqueueUnifiedInboundEmailQueueJobMock.mockResolvedValue({
       job: { jobId: 'job-g-1' },
@@ -82,6 +84,10 @@ describe('Google unified inbound pointer queue ingress', () => {
             predicates.push({ column, value });
             return builder;
           },
+          whereNull(column: string) {
+            predicates.push({ column, value: null });
+            return builder;
+          },
           async first() {
             if (table === 'google_email_provider_config') {
               const bySubscription = predicates.find((p) => p.column === 'pubsub_subscription_name');
@@ -101,6 +107,9 @@ describe('Google unified inbound pointer queue ingress', () => {
             }
 
             if (table === 'email_providers') {
+              if (providerPaused && predicates.some((predicate) => predicate.column === 'inbound_paused_at')) {
+                return null;
+              }
               return {
                 id: 'provider-g-1',
                 tenant: 'tenant-g-1',
@@ -179,6 +188,35 @@ describe('Google unified inbound pointer queue ingress', () => {
     expect(enqueuePayload).not.toHaveProperty('emailData');
     expect(enqueuePayload).not.toHaveProperty('attachments');
     expect(enqueuePayload).not.toHaveProperty('rawMimeBase64');
+  });
+
+  it('T007: a paused Google provider is acknowledged without enqueueing', async () => {
+    providerPaused = true;
+    const { handleGoogleWebhook } = await import(
+      '@alga-psa/integrations/webhooks/email/handlers/googleWebhookHandler'
+    );
+    const notification = { emailAddress: 'support@example.com', historyId: '43' };
+    const request = new NextRequest('http://localhost:3000/api/email/webhooks/google', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        authorization: `Bearer ${createJwt('pubsub-service@example-project.iam.gserviceaccount.com')}`,
+      },
+      body: JSON.stringify({
+        message: {
+          data: Buffer.from(JSON.stringify(notification)).toString('base64'),
+          messageId: 'pubsub-paused',
+          publishTime: new Date().toISOString(),
+        },
+        subscription: 'projects/example-project/subscriptions/sub-google-1',
+      }),
+    });
+
+    const response = await handleGoogleWebhook(request);
+
+    expect(response.status).toBe(200);
+    expect(await response.json()).toMatchObject({ success: true, message: 'No provider found' });
+    expect(enqueueUnifiedInboundEmailQueueJobMock).not.toHaveBeenCalled();
   });
 
   it('T005: Google callback success waits for durable enqueue completion', async () => {

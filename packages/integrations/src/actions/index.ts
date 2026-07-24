@@ -67,6 +67,11 @@ export {
   getHostedMicrosoftConfig
 } from './email-actions/emailProviderActions';
 export {
+  pauseEmailProvider,
+  resumeEmailProvider,
+  type EmailProviderPauseActionResult
+} from './email-actions/inboundPauseActions';
+export {
   getEmailDomains,
   addEmailDomain,
   verifyEmailDomain,
