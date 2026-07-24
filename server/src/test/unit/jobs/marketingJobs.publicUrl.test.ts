@@ -56,10 +56,10 @@ describe('marketing sequence job public URL', () => {
       failed: 0,
       skipped: 0,
     });
-    process.env.APPLICATION_URL = 'http://alga-core.msp.svc.cluster.local:3000';
-    process.env.NEXTAUTH_URL = 'http://auth.msp.svc.cluster.local:3000';
-    process.env.NEXT_PUBLIC_BASE_URL = 'https://public.example.test/';
-    process.env.NEXT_PUBLIC_APP_URL = 'https://fallback.example.test/';
+    process.env.APPLICATION_URL = 'https://runtime-public.example.test/';
+    process.env.NEXTAUTH_URL = 'https://auth-fallback.example.test/';
+    process.env.NEXT_PUBLIC_BASE_URL = 'https://image-build.example.test/';
+    process.env.NEXT_PUBLIC_APP_URL = 'https://image-build-fallback.example.test/';
   });
 
   afterEach(() => {
@@ -73,7 +73,7 @@ describe('marketing sequence job public URL', () => {
     else process.env.NEXT_PUBLIC_APP_URL = originalPublicAppUrl;
   });
 
-  it('uses the explicit public URL instead of internal application and auth hosts', async () => {
+  it('uses the runtime application URL instead of NEXT_PUBLIC values from the image build', async () => {
     const { marketingSendSequenceStepsHandler } = await import(
       'server/src/lib/jobs/handlers/marketingJobs'
     );
@@ -81,20 +81,34 @@ describe('marketing sequence job public URL', () => {
     await marketingSendSequenceStepsHandler({ tenantId: 'tenant-1' });
 
     expect(sendDueSequenceStepsInternalMock).toHaveBeenCalledWith(knex, 'tenant-1', {
-      baseUrl: 'https://public.example.test',
+      baseUrl: 'https://runtime-public.example.test',
       signingSecret: 'test-signing-secret',
     });
   });
 
-  it('fails closed when only internal application and auth hosts are configured', async () => {
-    delete process.env.NEXT_PUBLIC_BASE_URL;
-    delete process.env.NEXT_PUBLIC_APP_URL;
+  it('falls back to the runtime authentication URL for non-Compose local launches', async () => {
+    delete process.env.APPLICATION_URL;
+    const { marketingSendSequenceStepsHandler } = await import(
+      'server/src/lib/jobs/handlers/marketingJobs'
+    );
+
+    await marketingSendSequenceStepsHandler({ tenantId: 'tenant-1' });
+
+    expect(sendDueSequenceStepsInternalMock).toHaveBeenCalledWith(knex, 'tenant-1', {
+      baseUrl: 'https://auth-fallback.example.test',
+      signingSecret: 'test-signing-secret',
+    });
+  });
+
+  it('fails closed when runtime-only public URLs are absent', async () => {
+    delete process.env.APPLICATION_URL;
+    delete process.env.NEXTAUTH_URL;
     const { marketingSendSequenceStepsHandler } = await import(
       'server/src/lib/jobs/handlers/marketingJobs'
     );
 
     await expect(marketingSendSequenceStepsHandler({ tenantId: 'tenant-1' }))
-      .rejects.toThrow('No public marketing base URL available');
+      .rejects.toThrow('No runtime public marketing base URL available');
     expect(sendDueSequenceStepsInternalMock).not.toHaveBeenCalled();
   });
 });
