@@ -1,4 +1,3 @@
-// @ts-nocheck
 async function loadSharp() {
   try {
     const mod = await import('sharp');
@@ -66,14 +65,17 @@ export class StorageService {
     private static async getTypedProviderConfig<T>(providerType: string): Promise<T> {
         const config = await getStorageConfig();
         const providerConfig = await getProviderConfig(config.defaultProvider);
+        // Hold the discriminant as a plain string so the default branch can
+        // report it — the local/s3 cases narrow providerConfig to never here.
+        const resolvedProviderType: string = providerConfig.type;
 
-        switch (providerConfig.type) {
+        switch (resolvedProviderType) {
             case 'local':
                 return providerConfig as LocalProviderConfig as T;
             case 's3':
                 return providerConfig as S3ProviderConfig as T;
             default:
-                throw new Error(`Unsupported provider type: ${providerConfig.type}`);
+                throw new Error(`Unsupported provider type: ${resolvedProviderType}`);
         }
     }
 
@@ -87,6 +89,11 @@ export class StorageService {
       metadata?: Record<string, any>;
       isImageAvatar?: boolean;
       isEntityLogo?: boolean;
+      // Derived artifacts (e.g. preview/thumbnail regenerations) are not
+      // first-class documents. Set this to skip DOCUMENT_UPLOADED /
+      // MEDIA_PROCESSING_SUCCEEDED so a preview upload can't re-trigger the
+      // workflow that produced it. FILE_UPLOADED still fires (unchanged).
+      isDerivedArtifact?: boolean;
     }
   ) {
     try {
@@ -195,30 +202,32 @@ export class StorageService {
         metadata: options.metadata
       });
 
-      try {
-        const uploadedByUserId = isValidUUID(options.uploaded_by_id) ? options.uploaded_by_id : undefined;
-        await publishWorkflowEvent({
-          eventType: 'DOCUMENT_UPLOADED',
-          payload: buildDocumentUploadedPayload({
-            documentId: fileRecord.file_id,
-            uploadedByUserId,
-            uploadedAt: fileRecord.created_at,
-            fileName: fileRecord.original_name,
-            contentType: fileRecord.mime_type,
-            sizeBytes: fileRecord.file_size,
-            storageKey: fileRecord.storage_path,
-          }),
-          ctx: {
-            tenantId: tenant,
-            occurredAt: fileRecord.created_at,
-            actor: uploadedByUserId
-              ? { actorType: 'USER', actorUserId: uploadedByUserId }
-              : { actorType: 'SYSTEM' },
-          },
-          idempotencyKey: `document_uploaded:${fileRecord.file_id}:${fileRecord.created_at}`,
-        });
-      } catch (error) {
-        console.error('[StorageService] Failed to publish DOCUMENT_UPLOADED workflow event', error);
+      if (!options.isDerivedArtifact) {
+        try {
+          const uploadedByUserId = isValidUUID(options.uploaded_by_id) ? options.uploaded_by_id : undefined;
+          await publishWorkflowEvent({
+            eventType: 'DOCUMENT_UPLOADED',
+            payload: buildDocumentUploadedPayload({
+              documentId: fileRecord.file_id,
+              uploadedByUserId,
+              uploadedAt: fileRecord.created_at,
+              fileName: fileRecord.original_name,
+              contentType: fileRecord.mime_type,
+              sizeBytes: fileRecord.file_size,
+              storageKey: fileRecord.storage_path,
+            }),
+            ctx: {
+              tenantId: tenant,
+              occurredAt: fileRecord.created_at,
+              actor: uploadedByUserId
+                ? { actorType: 'USER', actorUserId: uploadedByUserId }
+                : { actorType: 'SYSTEM' },
+            },
+            idempotencyKey: `document_uploaded:${fileRecord.file_id}:${fileRecord.created_at}`,
+          });
+        } catch (error) {
+          console.error('[StorageService] Failed to publish DOCUMENT_UPLOADED workflow event', error);
+        }
       }
 
       try {
@@ -244,7 +253,7 @@ export class StorageService {
           idempotencyKey: `file_uploaded:${fileRecord.file_id}:${fileRecord.created_at}`,
         });
 
-        if (isEntityImage) {
+        if (isEntityImage && !options.isDerivedArtifact) {
           await publishWorkflowEvent({
             eventType: 'MEDIA_PROCESSING_SUCCEEDED',
             payload: buildMediaProcessingSucceededPayload({

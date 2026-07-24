@@ -1,6 +1,6 @@
 import nodemailer from 'nodemailer';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
-import { StorageService } from 'server/src/lib/storage/StorageService';
+import { StorageService } from '@alga-psa/storage/StorageService';
 import { InvoiceViewModel } from 'server/src/interfaces/invoice.interfaces';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { formatCurrencyFromMinorUnits } from '@alga-psa/core';

@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-vi.mock('../../../lib/storage/StorageService', () => ({
+vi.mock('@alga-psa/storage/StorageService', () => ({
   StorageService: {
     downloadFile: vi.fn(),
   },
 }));
-import { StorageService } from '../../../lib/storage/StorageService';
+import { StorageService } from '@alga-psa/storage/StorageService';
 import {
   extractDocumentViewFileId,
   rewriteTicketCommentImagesToCid,

@@ -8,7 +8,7 @@ import type { TenantCompany } from 'server/src/lib/types';
 // @ts-ignore - Types exist but aren't properly exposed in package.json
 const { FormData } = require('formdata-node');
 import fs from 'fs/promises';
-import { StorageService } from 'server/src/lib/storage/StorageService';
+import { StorageService } from '@alga-psa/storage/StorageService';
 import { ZipGenerationService } from 'server/src/services/zip-generation.service';
 import { PDFGenerationService, createPDFGenerationService } from '@alga-psa/billing/services';
 import { JobStatus } from 'server/src/types/job';
