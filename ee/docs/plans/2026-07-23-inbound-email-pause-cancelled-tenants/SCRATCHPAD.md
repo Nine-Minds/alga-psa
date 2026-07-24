@@ -79,3 +79,13 @@ Tenant cancelled subscription today; inbound mail to their Microsoft mailbox kep
 - F020/T036: provider cards render the pause fields returned by `getEmailProviders`, show a Paused badge, and expose Pause/Resume in the provider kebab menu. `EmailProviderList` runs the action, shows feedback, and refreshes provider state; resume failures that cleared the pause still refresh so `status='error'` is visible.
 - F021/T037: added English i18n keys for badge/actions/feedback/helper copy. The helper explicitly states that messages received during the pause are not imported retroactively. New pause/resume menu ids use kebab-case.
 - Verification: inbound action tests passed (2), card/i18n contract tests passed (5), and the integrations workspace typecheck passed.
+
+### Tenant cancellation workflow integration (2026-07-23)
+- F022/T038-T041: added tenant-scoped suspension activity selecting only active, unpaused providers, applying `tenant_cancelled`, isolating each provider failure, and returning success even when its query fails. Repeated runs select nothing because the pause is already present; existing manual pauses are excluded.
+- F023/T042/T043: every deletion trigger now calls suspension directly after user deactivation and before trigger-specific Stripe/email behavior.
+- F024/T044: cancellation resume activity selects only non-null pauses whose reason is `tenant_cancelled`; manual pauses never enter the loop.
+- F025/T045: rollback invokes resume just after user reactivation and contains both activity-level failures and per-provider registration errors. The lifecycle service leaves failed registrations unpaused with `status='error'`.
+- F026/T046: a final best-effort teardown activity visits every remaining tenant provider before `deleteTenantData`; provider failures are isolated and the lifecycle teardown is idempotent for expired/missing subscriptions.
+- F027/T047: all three additions use stable `patched()` marker ids. A workflow contract test enforces that every new activity call occurs exactly once inside its matching patch guard, preserving pre-change replay behavior.
+- T051/T052: cross-layer regression contracts connect workflow suspension to the Microsoft webhook and queue-consumer gates, and rollback selection to pause clearing plus Microsoft/Gmail registration. Behavioral tests in the earlier groups cover the gated skips and restored inbound processing at those boundaries.
+- Verification: focused Temporal activity/workflow suite passed (12 tests) with `TEMPORAL_TEST_SKIP_ENV_BOOTSTRAP=1`; Temporal workspace typecheck passed. The bypass reused the already-running Temporal service and avoided the test compose file's port 7233 collision.

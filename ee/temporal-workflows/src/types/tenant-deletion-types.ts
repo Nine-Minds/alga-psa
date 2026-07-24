@@ -41,6 +41,7 @@ export type TenantDeletionStep =
   | 'exporting_data'
   | 'getting_tenant_info'
   | 'deactivating_users'
+  | 'suspending_email_ingestion'
   | 'canceling_stripe_subscription'
   | 'sending_cancellation_email'
   | 'tagging_client'

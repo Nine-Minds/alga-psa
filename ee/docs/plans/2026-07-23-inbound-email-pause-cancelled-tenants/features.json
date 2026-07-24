@@ -128,37 +128,37 @@
   {
     "id": "F022",
     "description": "New Temporal activity suspendTenantEmailIngestion(tenantId) pauses all active, unpaused providers with reason 'tenant_cancelled'; idempotent; per-provider errors isolated; never workflow-fatal",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["5.4"]
   },
   {
     "id": "F023",
     "description": "tenantDeletionWorkflow invokes suspendTenantEmailIngestion immediately after deactivateAllTenantUsers for all trigger sources",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["5.4"]
   },
   {
     "id": "F024",
     "description": "New Temporal activity resumeTenantEmailIngestion(tenantId) resumes only providers with inbound_pause_reason='tenant_cancelled'",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["5.4"]
   },
   {
     "id": "F025",
     "description": "Rollback/reactivation path invokes resumeTenantEmailIngestion; re-registration failures set status='error' and never fail reactivation",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["5.4"]
   },
   {
     "id": "F026",
     "description": "Final-deletion phase runs external subscription teardown for remaining providers before email tables are deleted (idempotent)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["5.4"]
   },
   {
     "id": "F027",
     "description": "All new activity invocations in tenantDeletionWorkflow are guarded with Temporal patched() so in-flight workflows replay without non-determinism errors",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["5.4", "6"]
   },
   {

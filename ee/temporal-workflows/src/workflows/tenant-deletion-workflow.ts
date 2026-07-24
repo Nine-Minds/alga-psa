@@ -9,6 +9,7 @@ import {
   workflowInfo,
   uuid4,
   executeChild,
+  patched,
 } from '@temporalio/workflow';
 import type * as activities from '../activities/tenant-deletion-activities';
 import type {
@@ -30,6 +31,9 @@ import { tenantExportWorkflow } from './tenant-export-workflow.js';
 const {
   validateTenantDeletion,
   deactivateAllTenantUsers,
+  suspendTenantEmailIngestion,
+  resumeTenantEmailIngestion,
+  teardownTenantEmailIngestion,
   reactivateTenantUsers,
   tagClientAsCanceled,
   removeClientCanceledTag,
@@ -195,6 +199,24 @@ export async function tenantDeletionWorkflow(
     log.info('Deactivating all users for tenant', { tenantId: input.tenantId });
     const { deactivatedCount } = await deactivateAllTenantUsers(input.tenantId);
     log.info('Users deactivated', { deactivatedCount });
+
+    if (patched('tenant-deletion-pause-inbound-email-v1')) {
+      state.step = 'suspending_email_ingestion';
+      try {
+        const emailSuspension = await suspendTenantEmailIngestion(input.tenantId);
+        log.info('Tenant email ingestion suspended', {
+          tenantId: input.tenantId,
+          ...emailSuspension,
+        });
+      } catch (emailSuspensionError) {
+        log.error('Failed to suspend tenant email ingestion (continuing deletion)', {
+          tenantId: input.tenantId,
+          error: emailSuspensionError instanceof Error
+            ? emailSuspensionError.message
+            : 'Unknown error',
+        });
+      }
+    }
 
     // Step 2.5: Cancel Stripe subscription if triggered from extension/manual.
     // - stripe_webhook: subscription already canceled by Stripe
@@ -398,6 +420,22 @@ export async function tenantDeletionWorkflow(
     }
 
     log.info('Executing tenant deletion', { tenantId: input.tenantId });
+    if (patched('tenant-deletion-final-email-teardown-v1')) {
+      try {
+        const emailTeardown = await teardownTenantEmailIngestion(input.tenantId);
+        log.info('Final tenant email subscription teardown completed', {
+          tenantId: input.tenantId,
+          ...emailTeardown,
+        });
+      } catch (emailTeardownError) {
+        log.error('Failed final email subscription teardown (continuing deletion)', {
+          tenantId: input.tenantId,
+          error: emailTeardownError instanceof Error
+            ? emailTeardownError.message
+            : 'Unknown error',
+        });
+      }
+    }
     const deleteResult = await deleteTenantData(input.tenantId, deletionId);
 
     if (!deleteResult.success) {
@@ -474,6 +512,21 @@ async function handleRollback(
   // Reactivate users in the deleted tenant
   log.info('Reactivating users');
   await reactivateTenantUsers(tenantId);
+
+  if (patched('tenant-deletion-resume-inbound-email-v1')) {
+    try {
+      const emailResume = await resumeTenantEmailIngestion(tenantId);
+      log.info('Tenant email ingestion resumed after rollback', {
+        tenantId,
+        ...emailResume,
+      });
+    } catch (emailResumeError) {
+      log.error('Failed to resume tenant email ingestion (continuing rollback)', {
+        tenantId,
+        error: emailResumeError instanceof Error ? emailResumeError.message : 'Unknown error',
+      });
+    }
+  }
 
   // Remove canceled tag from client in master tenant
   log.info('Removing Canceled tag');
