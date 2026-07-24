@@ -6,6 +6,24 @@ import logger from '@alga-psa/core/logger';
 // Note: Avatar URLs are NOT fetched here to avoid circular dependency with @alga-psa/documents.
 // If avatar URL is needed, use getUserAvatarUrl from @alga-psa/documents separately.
 
+/**
+ * Deactivation (by an administrator or by SCIM) must deny access on the next
+ * request, not merely at the next sign-in, so an inactive user resolves to no
+ * caller at all.
+ */
+function activeUserOrNull(user: IUserWithRoles | null): IUserWithRoles | null {
+  if (!user) {
+    return null;
+  }
+
+  if (user.is_inactive) {
+    logger.warn(`Rejecting request from inactive user ${user.user_id}`);
+    return null;
+  }
+
+  return user;
+}
+
 export async function getCurrentUser(): Promise<IUserWithRoles | null> {
   try {
     // API-key routes establish the caller's identity explicitly (see
@@ -29,11 +47,7 @@ export async function getCurrentUser(): Promise<IUserWithRoles | null> {
         sessionUser.tenant
       );
 
-      if (!userWithRoles) {
-        return null;
-      }
-
-      return userWithRoles;
+      return activeUserOrNull(userWithRoles);
     }
 
     // Fallback paths should fail in production for security
@@ -68,11 +82,7 @@ export async function getCurrentUser(): Promise<IUserWithRoles | null> {
         sessionUser.user_type
       );
 
-      if (!userWithRoles) {
-        return null;
-      }
-
-      return userWithRoles;
+      return activeUserOrNull(userWithRoles);
     }
 
     // Last resort: email-only lookup (development only)
@@ -89,11 +99,7 @@ export async function getCurrentUser(): Promise<IUserWithRoles | null> {
       undefined
     );
 
-    if (!userWithRoles) {
-      return null;
-    }
-
-    return userWithRoles;
+    return activeUserOrNull(userWithRoles);
   } catch (error) {
     logger.error('Failed to get current user:', error);
     // Preserve the original error and stack trace

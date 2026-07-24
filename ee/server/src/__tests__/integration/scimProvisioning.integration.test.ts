@@ -142,4 +142,112 @@ describe('SCIM provisioning database lifecycle', () => {
       await trx.rollback();
     }
   });
+
+  it('keeps the transaction usable when a link insert loses the uniqueness race', async () => {
+    const trx = await db.transaction();
+    try {
+      const discovery = tenantDb(trx, '__scim_integration_discovery__');
+      const tenantRow = await discovery
+        .unscoped('tenants as t', 'SCIM integration test selects a tenant with no configured connection')
+        .whereNotExists(
+          discovery
+            .unscoped('scim_connections as c', 'SCIM integration test excludes configured tenants')
+            .select(trx.raw('1'))
+            .whereRaw('c.tenant = t.tenant')
+        )
+        .select('t.tenant')
+        .first();
+      expect(tenantRow?.tenant).toBeTruthy();
+
+      const tenant = tenantRow.tenant as string;
+      const scoped = tenantDb(trx, tenant);
+      const userId = randomUUID();
+      const email = `scim-${randomUUID()}@example.test`;
+
+      await scoped.table('users').insert({
+        tenant,
+        user_id: userId,
+        username: email,
+        email,
+        hashed_password: 'not-a-real-password-hash',
+        user_type: 'internal',
+        is_inactive: false,
+        created_at: trx.fn.now(),
+        updated_at: trx.fn.now(),
+      });
+      const [connection] = await scoped.table('scim_connections').insert({
+        tenant,
+        enabled: true,
+        current_token_generation: 1,
+        created_at: trx.fn.now(),
+        updated_at: trx.fn.now(),
+      }).returning('*');
+
+      const service = new ScimProvisioningService(
+        trx,
+        connection,
+        `https://example.test/api/scim/v2/${connection.connection_id}`
+      );
+
+      // An administrator-unlinked tombstone still occupies the externalId index
+      // entry, so the insert below violates it exactly like a lost race would.
+      const externalId = `entra-${randomUUID()}`;
+      await scoped.table('scim_user_links').insert({
+        tenant,
+        connection_id: connection.connection_id,
+        user_id: userId,
+        external_id: externalId,
+        observed_user_name: email,
+        observed_primary_email: email,
+        upstream_active: true,
+        link_state: 'unlinked',
+        created_at: trx.fn.now(),
+        updated_at: trx.fn.now(),
+      });
+
+      const secondUserId = randomUUID();
+      const secondEmail = `scim-${randomUUID()}@example.test`;
+      await scoped.table('users').insert({
+        tenant,
+        user_id: secondUserId,
+        username: secondEmail,
+        email: secondEmail,
+        hashed_password: 'not-a-real-password-hash',
+        user_type: 'internal',
+        is_inactive: false,
+        created_at: trx.fn.now(),
+        updated_at: trx.fn.now(),
+      });
+
+      // The conflict is reported as a SCIM 409 rather than surfacing as an
+      // aborted-transaction error...
+      await expect(service.createUser({
+        externalId,
+        userName: secondEmail,
+        primaryEmail: secondEmail,
+        active: true,
+        displayName: 'Conflicting SCIM user',
+        givenName: null,
+        familyName: null,
+        title: null,
+      })).rejects.toMatchObject({ status: 409 });
+
+      // ...and the writes that follow the failed insert are committed, which is
+      // only possible if the failure rolled back to a savepoint.
+      expect(await scoped.table('scim_unresolved_identities')
+        .where('external_id', externalId)
+        .first('failure_reason'))
+        .toMatchObject({ failure_reason: 'identity_conflict' });
+      expect(await scoped.table('scim_operations')
+        .where({ external_id: externalId, outcome: 'rejected' })
+        .first('detail_code'))
+        .toMatchObject({ detail_code: 'identity_conflict' });
+
+      // The transaction is still healthy for unrelated work.
+      expect(await scoped.table('users').where('user_id', secondUserId).first('user_id'))
+        .toMatchObject({ user_id: secondUserId });
+    } finally {
+      await trx.rollback();
+    }
+  });
 });

@@ -43,6 +43,10 @@ const KNOWN_HARDCODED_CURRENCY: Record<string, { count: number; why: string }> =
     count: 1,
     why: 'deliberate: "$0" is the snippet cursor placeholder, not currency',
   },
+  'ee/server/src/lib/scim/credentials.ts': {
+    count: 2,
+    why: 'deliberate: "$" delimits the algorithm/salt/digest fields of the scrypt hash encoding, not currency',
+  },
   'ee/server/src/services/chatWorkflowRegexTransformGuidance.ts': {
     count: 1,
     why: 'deliberate: documents regex replacement tokens ($1, $$), not currency',

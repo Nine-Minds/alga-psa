@@ -131,15 +131,7 @@ export class ScimProvisioningService {
 
   async createUser(input: NormalizedScimUser): Promise<Record<string, unknown>> {
     const result = await this.knex.transaction(async (trx): Promise<ProvisionResult> => {
-      const db = tenantDb(trx, this.connection.tenant);
-      const existing = await db.table<ScimLinkRow>('scim_user_links')
-        .where({
-          connection_id: this.connection.connection_id,
-          external_id: input.externalId,
-        })
-        .whereNot('link_state', 'unlinked')
-        .forUpdate()
-        .first();
+      const existing = await this.findLinkByExternalId(trx, input.externalId);
 
       if (existing) {
         const link = await this.applyLifecycle(trx, existing, input, 'provision');
@@ -160,34 +152,59 @@ export class ScimProvisioningService {
       }
 
       const user = matchResult.candidates[0];
-      let link: ScimLinkRow;
+      // Losing the unique-index race is an expected outcome, not a failure: the
+      // insert runs in its own savepoint so that a violation rolls back only the
+      // failed statement. The enclosing transaction stays usable and can still
+      // read the winning row or record the conflict, neither of which is
+      // possible once a bare INSERT has aborted the transaction.
+      let link: ScimLinkRow | undefined;
       try {
-        [link] = await db.table<ScimLinkRow>('scim_user_links')
-          .insert({
-            tenant: this.connection.tenant,
-            connection_id: this.connection.connection_id,
-            user_id: user.user_id,
-            external_id: input.externalId,
-            ...this.observedFields(input),
-            upstream_active: input.active,
-            link_state: 'active',
-            last_operation_at: trx.fn.now(),
-            created_at: trx.fn.now(),
-            updated_at: trx.fn.now(),
-          })
-          .returning('*');
+        await trx.transaction(async (attempt) => {
+          [link] = await tenantDb(attempt, this.connection.tenant)
+            .table<ScimLinkRow>('scim_user_links')
+            .insert({
+              tenant: this.connection.tenant,
+              connection_id: this.connection.connection_id,
+              user_id: user.user_id,
+              external_id: input.externalId,
+              ...this.observedFields(input),
+              upstream_active: input.active,
+              link_state: 'active',
+              last_operation_at: attempt.fn.now(),
+              created_at: attempt.fn.now(),
+              updated_at: attempt.fn.now(),
+            })
+            .returning('*');
+        });
       } catch (error) {
-        if ((error as { code?: string }).code === '23505') {
-          await this.upsertUnresolved(trx, input, 'identity_conflict');
-          await this.recordOperation(trx, {
-            operation: 'provision',
-            outcome: 'rejected',
-            externalId: input.externalId,
-            detailCode: 'identity_conflict',
-          });
-          return { conflict: this.conflictDetail('identity_conflict') };
+        if ((error as { code?: string }).code !== '23505') {
+          throw error;
         }
-        throw error;
+
+        // A concurrent provision of the same directory identity committed while
+        // this one was running. Retries of the same SCIM POST must be idempotent,
+        // so adopt the winning link instead of reporting a conflict.
+        const winner = await this.findLinkByExternalId(trx, input.externalId);
+        if (winner) {
+          const adopted = await this.applyLifecycle(trx, winner, input, 'provision');
+          return { resource: await this.resourceInTransaction(trx, adopted.link_id) };
+        }
+
+        // Otherwise the identity collides with a link this connection may not
+        // reuse: an administrator-unlinked tombstone for the same externalId, or
+        // an Alga user already managed by another link.
+        await this.upsertUnresolved(trx, input, 'identity_conflict');
+        await this.recordOperation(trx, {
+          operation: 'provision',
+          outcome: 'rejected',
+          externalId: input.externalId,
+          detailCode: 'identity_conflict',
+        });
+        return { conflict: this.conflictDetail('identity_conflict') };
+      }
+
+      if (!link) {
+        throw new Error('SCIM persistence invariant failed: link insert returned no row.');
       }
 
       link = await this.applyLifecycle(trx, link, input, 'provision');
@@ -349,6 +366,21 @@ export class ScimProvisioningService {
       throw new ScimError(404, 'The SCIM user resource was not found.');
     }
     return link;
+  }
+
+  private async findLinkByExternalId(
+    trx: Knex.Transaction,
+    externalId: string
+  ): Promise<ScimLinkRow | undefined> {
+    return tenantDb(trx, this.connection.tenant)
+      .table<ScimLinkRow>('scim_user_links')
+      .where({
+        connection_id: this.connection.connection_id,
+        external_id: externalId,
+      })
+      .whereNot('link_state', 'unlinked')
+      .forUpdate()
+      .first();
   }
 
   private async findEligibleMatch(

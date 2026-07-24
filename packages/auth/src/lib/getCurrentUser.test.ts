@@ -79,4 +79,22 @@ describe('getCurrentUser', () => {
 
     await expect(getCurrentUser()).resolves.toBeNull();
   });
+
+  it('returns null when the session user has been deactivated', async () => {
+    vi.mocked(getSession).mockResolvedValue({
+      user: {
+        id: 'user-1',
+        tenant: 'tenant-1',
+      },
+    } as any);
+
+    vi.mocked(getUserWithRoles).mockResolvedValue({
+      user_id: 'user-1',
+      tenant: 'tenant-1',
+      is_inactive: true,
+      roles: [{ role_id: 'role-1' }],
+    } as any);
+
+    await expect(getCurrentUser()).resolves.toBeNull();
+  });
 });
