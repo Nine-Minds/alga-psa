@@ -820,8 +820,8 @@ async function persistFixedInvoiceCharges(
       ),
     ),
   );
-  // Map: clientContractLineId -> { contract_line_name: string, contract_line_base_rate: number | null }
-  const planInfoMap = new Map<string, { contract_line_name: string; contract_line_base_rate: number | null }>();
+  // Map: clientContractLineId -> { contract_line_name, invoice_line_description, contract_line_base_rate }
+  const planInfoMap = new Map<string, { contract_line_name: string; invoice_line_description?: string | null; contract_line_base_rate: number | null }>();
 
   // Filter out virtual contract-association IDs that start with "contract-" as they're not real UUIDs in the database
   const validDbPlanIds = clientPlanIds.filter(id => !id.startsWith('contract-'));
@@ -843,12 +843,14 @@ async function persistFixedInvoiceCharges(
       .select(
         'cl.contract_line_id as client_contract_line_id',
         'cl.contract_line_name',
+        'cl.invoice_line_description',
         'cl.custom_rate as contract_line_base_rate'
        );
 
     for (const detail of planDetails) {
       planInfoMap.set(detail.client_contract_line_id, {
         contract_line_name: detail.contract_line_name,
+        invoice_line_description: detail.invoice_line_description ?? null,
         contract_line_base_rate: detail.contract_line_base_rate != null
           ? Number(detail.contract_line_base_rate)
           : null
@@ -866,8 +868,11 @@ async function persistFixedInvoiceCharges(
         continue;
     }
 
-    // Update the consolidated item's description and unit_price before insertion
-    planEntry.consolidatedItem.description = `Fixed Plan: ${planInfo.contract_line_name}`;
+    // Update the consolidated item's description and unit_price before insertion.
+    // A hand-crafted per-line override wins over the engine-derived text.
+    planEntry.consolidatedItem.description = planInfo.invoice_line_description
+      ? planInfo.invoice_line_description
+      : `Fixed Plan: ${planInfo.contract_line_name}`;
     // Use the plan-level base rate sourced from the contract line if available.
     // Fallback to the unit_price derived from the first service charge if plan-level rate is missing (shouldn't happen ideally).
     // contract_line_base_rate (from custom_rate) is already stored in cents, no conversion needed
@@ -908,7 +913,7 @@ async function persistFixedInvoiceCharges(
       item_id: parentItemId,
       invoice_id: invoiceId,
       service_id: null,
-      description: planInfo.contract_line_name || 'Fixed Plan Charge',
+      description: planInfo.invoice_line_description || planInfo.contract_line_name || 'Fixed Plan Charge',
       quantity: 1,
       unit_price: planNetTotal,
       net_amount: planNetTotal,
