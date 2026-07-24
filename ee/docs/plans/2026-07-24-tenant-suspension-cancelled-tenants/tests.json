@@ -1,0 +1,446 @@
+[
+  {
+    "id": "T001",
+    "featureIds": [
+      "F001"
+    ],
+    "commitGroup": "suspension-schema",
+    "description": "Migration up adds suspended_at and suspended_reason to tenants as nullable with the CHECK constraint; existing rows unaffected",
+    "implemented": true
+  },
+  {
+    "id": "T002",
+    "featureIds": [
+      "F001"
+    ],
+    "commitGroup": "suspension-schema",
+    "description": "Migration down drops the constraint and both columns cleanly; up is hasColumn-guarded (rerunnable)",
+    "implemented": true
+  },
+  {
+    "id": "T003",
+    "featureIds": [
+      "F002"
+    ],
+    "commitGroup": "suspension-schema",
+    "description": "isTenantSuspended returns true when suspended_at is set, false when null, false for unknown tenant",
+    "implemented": true
+  },
+  {
+    "id": "T004",
+    "featureIds": [
+      "F003"
+    ],
+    "commitGroup": "suspension-schema",
+    "description": "isTenantSuspended returns false and logs a warning when the query throws (fail-open)",
+    "implemented": true
+  },
+  {
+    "id": "T005",
+    "featureIds": [
+      "F004"
+    ],
+    "commitGroup": "suspension-schema",
+    "description": "suspendTenant stamps flag+reason when null and reports suspended=true",
+    "implemented": true
+  },
+  {
+    "id": "T006",
+    "featureIds": [
+      "F004"
+    ],
+    "commitGroup": "suspension-schema",
+    "description": "suspendTenant on an already-suspended tenant does not overwrite suspended_at/reason and reports suspended=false",
+    "implemented": true
+  },
+  {
+    "id": "T007",
+    "featureIds": [
+      "F005"
+    ],
+    "commitGroup": "suspension-schema",
+    "description": "resumeTenant clears the flag when the stored reason matches",
+    "implemented": true
+  },
+  {
+    "id": "T008",
+    "featureIds": [
+      "F005"
+    ],
+    "commitGroup": "suspension-schema",
+    "description": "resumeTenant leaves the flag untouched when the stored reason differs",
+    "implemented": true
+  },
+  {
+    "id": "T009",
+    "featureIds": [
+      "F006"
+    ],
+    "commitGroup": "workflow-suspend-step",
+    "description": "suspendTenantBackgroundActivity suspends an unsuspended tenant with reason 'tenant_cancelled'",
+    "implemented": true
+  },
+  {
+    "id": "T010",
+    "featureIds": [
+      "F006"
+    ],
+    "commitGroup": "workflow-suspend-step",
+    "description": "suspendTenantBackgroundActivity is a no-op on rerun and contains helper errors without rejecting",
+    "implemented": true
+  },
+  {
+    "id": "T011",
+    "featureIds": [
+      "F007"
+    ],
+    "commitGroup": "workflow-suspend-step",
+    "description": "Workflow contract: suspendTenantBackgroundActivity runs after suspendTenantEmailIngestion, before trigger-specific branching, under patched('tenant-deletion-suspend-tenant-v1')",
+    "implemented": true
+  },
+  {
+    "id": "T012",
+    "featureIds": [
+      "F008"
+    ],
+    "commitGroup": "workflow-suspend-step",
+    "description": "resumeTenantBackgroundActivity clears a 'tenant_cancelled' suspension and rejects (propagates) on query failure",
+    "implemented": true
+  },
+  {
+    "id": "T013",
+    "featureIds": [
+      "F008"
+    ],
+    "commitGroup": "workflow-suspend-step",
+    "description": "resumeTenantBackgroundActivity leaves non-matching (future manual) suspensions in place",
+    "implemented": true
+  },
+  {
+    "id": "T014",
+    "featureIds": [
+      "F009"
+    ],
+    "commitGroup": "workflow-suspend-step",
+    "description": "Workflow contract: rollback resumes tenant activity after resumeTenantEmailIngestion under patched('tenant-deletion-resume-tenant-v1') with contained errors",
+    "implemented": true
+  },
+  {
+    "id": "T015",
+    "featureIds": [
+      "F010"
+    ],
+    "commitGroup": "job-dispatch-gate",
+    "description": "JobHandlerRegistry.execute skips a handler for a suspended tenant's job: handler not invoked, execute resolves (no throw)",
+    "implemented": true
+  },
+  {
+    "id": "T016",
+    "featureIds": [
+      "F010",
+      "F034"
+    ],
+    "commitGroup": "job-dispatch-gate",
+    "description": "JobHandlerRegistry.execute runs handlers normally for non-suspended tenants and for jobs without tenantId (system-scope)",
+    "implemented": true
+  },
+  {
+    "id": "T017",
+    "featureIds": [
+      "F010",
+      "F003"
+    ],
+    "commitGroup": "job-dispatch-gate",
+    "description": "JobHandlerRegistry.execute proceeds with the handler when the suspension lookup errors (fail-open)",
+    "implemented": true
+  },
+  {
+    "id": "T018",
+    "featureIds": [
+      "F011"
+    ],
+    "commitGroup": "fanout-gates",
+    "description": "maintenanceJobFanout enumeration excludes suspended tenants and includes active ones",
+    "implemented": true
+  },
+  {
+    "id": "T019",
+    "featureIds": [
+      "F012"
+    ],
+    "commitGroup": "fanout-gates",
+    "description": "listMarketingTenantIds excludes suspended tenants",
+    "implemented": true
+  },
+  {
+    "id": "T020",
+    "featureIds": [
+      "F013"
+    ],
+    "commitGroup": "fanout-gates",
+    "description": "CE initializeScheduledJobs enumeration excludes suspended tenants at registration",
+    "implemented": true
+  },
+  {
+    "id": "T021",
+    "featureIds": [
+      "F014"
+    ],
+    "commitGroup": "fanout-gates",
+    "description": "Entra schedule-config loader excludes suspended tenants; sync activity skips a tenant suspended after schedule creation",
+    "implemented": true
+  },
+  {
+    "id": "T022",
+    "featureIds": [
+      "F015"
+    ],
+    "commitGroup": "job-dispatch-gate",
+    "description": "Time-period chain: suspended tenant run creates no periods but schedules the next run; resumes creation after flag cleared",
+    "implemented": true
+  },
+  {
+    "id": "T023",
+    "featureIds": [
+      "F016"
+    ],
+    "commitGroup": "job-dispatch-gate",
+    "description": "Billing-cycle creation skips suspended tenants and still processes active tenants in the same run",
+    "implemented": true
+  },
+  {
+    "id": "T024",
+    "featureIds": [
+      "F017"
+    ],
+    "commitGroup": "job-dispatch-gate",
+    "description": "Accounting sync cycle skips a suspended tenant without cancelling its reschedule chain",
+    "implemented": true
+  },
+  {
+    "id": "T025",
+    "featureIds": [
+      "F018"
+    ],
+    "commitGroup": "rmm-gates",
+    "description": "RMM reconciler enumeration excludes suspended tenants' integrations (no recurring poll jobs created/kept)",
+    "implemented": true
+  },
+  {
+    "id": "T026",
+    "featureIds": [
+      "F019"
+    ],
+    "commitGroup": "rmm-gates",
+    "description": "Tactical webhook for suspended tenant: 2xx ack, no alert pipeline, no RMM_WEBHOOK_RECEIVED event",
+    "implemented": true
+  },
+  {
+    "id": "T027",
+    "featureIds": [
+      "F020"
+    ],
+    "commitGroup": "rmm-gates",
+    "description": "NinjaOne webhook for suspended tenant: 2xx ack after HMAC verification, no processing",
+    "implemented": true
+  },
+  {
+    "id": "T028",
+    "featureIds": [
+      "F021"
+    ],
+    "commitGroup": "rmm-gates",
+    "description": "LevelIO webhook for suspended tenant: 2xx ack, no processing",
+    "implemented": true
+  },
+  {
+    "id": "T029",
+    "featureIds": [
+      "F019",
+      "F020",
+      "F021",
+      "F034"
+    ],
+    "commitGroup": "rmm-gates",
+    "description": "RMM webhooks for non-suspended tenants still run the full alert pipeline (regression)",
+    "implemented": false
+  },
+  {
+    "id": "T030",
+    "featureIds": [
+      "F022"
+    ],
+    "commitGroup": "event-worker-gate",
+    "description": "processEvent for a suspended tenant's event: acked/skipped, no workflow runs listed or created",
+    "implemented": true
+  },
+  {
+    "id": "T031",
+    "featureIds": [
+      "F022",
+      "F034"
+    ],
+    "commitGroup": "event-worker-gate",
+    "description": "processEvent for a non-suspended tenant still starts matching published workflows (regression)",
+    "implemented": false
+  },
+  {
+    "id": "T032",
+    "featureIds": [
+      "F023"
+    ],
+    "commitGroup": "event-worker-gate",
+    "description": "processEvent proceeds when the suspension lookup throws (fail-open)",
+    "implemented": true
+  },
+  {
+    "id": "T033",
+    "featureIds": [
+      "F024"
+    ],
+    "commitGroup": "api-key-gate",
+    "description": "validateApiKey rejects an otherwise-valid key whose owning user is inactive",
+    "implemented": true
+  },
+  {
+    "id": "T034",
+    "featureIds": [
+      "F025"
+    ],
+    "commitGroup": "api-key-gate",
+    "description": "validateApiKey rejects an otherwise-valid key whose tenant is suspended",
+    "implemented": true
+  },
+  {
+    "id": "T035",
+    "featureIds": [
+      "F024",
+      "F025",
+      "F034"
+    ],
+    "commitGroup": "api-key-gate",
+    "description": "validateApiKey accepts a valid key for an active user in a non-suspended tenant (regression)",
+    "implemented": true
+  },
+  {
+    "id": "T036",
+    "featureIds": [
+      "F026"
+    ],
+    "commitGroup": "api-key-gate",
+    "description": "validateApiKeyForTenant and validateApiKeyAnyTenant reject inactive-owner and suspended-tenant keys",
+    "implemented": true
+  },
+  {
+    "id": "T037",
+    "featureIds": [
+      "F027"
+    ],
+    "commitGroup": "api-key-gate",
+    "description": "/api/auth/validate-api-key returns isValid=false for a gated key",
+    "implemented": true
+  },
+  {
+    "id": "T038",
+    "featureIds": [
+      "F028"
+    ],
+    "commitGroup": "public-endpoint-gates",
+    "description": "Appointment request for suspended tenant: neutral unavailable error, no appointment_requests row, no email",
+    "implemented": true
+  },
+  {
+    "id": "T039",
+    "featureIds": [
+      "F028",
+      "F034"
+    ],
+    "commitGroup": "public-endpoint-gates",
+    "description": "Appointment request for active tenant still persists and confirms (regression)",
+    "implemented": false
+  },
+  {
+    "id": "T040",
+    "featureIds": [
+      "F029"
+    ],
+    "commitGroup": "public-endpoint-gates",
+    "description": "Marketing capture for suspended tenant: neutral unavailable error, no prospect rows",
+    "implemented": true
+  },
+  {
+    "id": "T041",
+    "featureIds": [
+      "F030"
+    ],
+    "commitGroup": "public-endpoint-gates",
+    "description": "Calendar webhooks for suspended tenant are acked without sync work; active tenant unaffected",
+    "implemented": true
+  },
+  {
+    "id": "T042",
+    "featureIds": [
+      "F031"
+    ],
+    "commitGroup": "outbound-email-gate",
+    "description": "Tenant email send for suspended tenant is dropped with a log and reports non-delivery to the caller without throwing",
+    "implemented": true
+  },
+  {
+    "id": "T043",
+    "featureIds": [
+      "F031",
+      "F034"
+    ],
+    "commitGroup": "outbound-email-gate",
+    "description": "Tenant email send for non-suspended tenant delivers normally (regression)",
+    "implemented": false
+  },
+  {
+    "id": "T044",
+    "featureIds": [
+      "F031"
+    ],
+    "commitGroup": "outbound-email-gate",
+    "description": "SystemEmailService-based sends are unaffected by suspension (win-back/reactivation mail path)",
+    "implemented": true
+  },
+  {
+    "id": "T045",
+    "featureIds": [
+      "F032"
+    ],
+    "commitGroup": "backfill",
+    "description": "Backfill selects only unsuspended tenants in pending/awaiting_confirmation/confirmed/failed and suspends each",
+    "implemented": true
+  },
+  {
+    "id": "T046",
+    "featureIds": [
+      "F032"
+    ],
+    "commitGroup": "backfill",
+    "description": "Backfill is a no-op on second run (idempotent)",
+    "implemented": true
+  },
+  {
+    "id": "T047",
+    "featureIds": [
+      "F032",
+      "F033"
+    ],
+    "commitGroup": "backfill",
+    "description": "Backfill continues past a failing tenant, counts the error, and exits non-zero",
+    "implemented": true
+  },
+  {
+    "id": "T048",
+    "featureIds": [
+      "F007",
+      "F009"
+    ],
+    "commitGroup": "workflow-suspend-step",
+    "description": "Workflow contract: each new activity call is guarded by its own stable patch marker and appears exactly once",
+    "implemented": true
+  }
+]
