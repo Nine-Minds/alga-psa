@@ -6,8 +6,10 @@ APPLIANCE_ROOT="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"
 STORAGE_MANIFEST="$APPLIANCE_ROOT/manifests/local-path-storage.yaml"
 STORAGE_PATH="/var/mnt/alga-data/local-path-provisioner"
 K3S_CONFIG_DROP_IN="/etc/rancher/k3s/config.yaml.d/20-alga-local-storage.yaml"
+K3S_LOCAL_STORAGE_SKIP_FILE="/var/lib/rancher/k3s/server/manifests/local-storage.yaml.skip"
 SMOKE_NAMESPACE="storage-smoke"
 LOCK_DIR="${ALGA_APPLIANCE_STORAGE_LOCK_DIR:-/var/lib/alga-appliance/storage-reconcile.lock}"
+STORAGE_STABILITY_SECONDS="${ALGA_APPLIANCE_STORAGE_STABILITY_SECONDS:-10}"
 DRY_RUN=false
 KUBE_COMMAND=()
 
@@ -127,6 +129,8 @@ spec:
               disable+:
                 - local-storage
               CONFIG
+              mkdir -p "/host$(dirname "${K3S_LOCAL_STORAGE_SKIP_FILE}")"
+              : > "/host${K3S_LOCAL_STORAGE_SKIP_FILE}"
               K3S_SERVICE=/host/etc/systemd/system/k3s.service
               if [ -f "\$K3S_SERVICE" ] \
                 && grep -q -- '--disable servicelb' "\$K3S_SERVICE" \
@@ -191,8 +195,137 @@ remove_k3s_bundled_provisioner() {
   kube -n kube-system delete deployment local-path-provisioner --ignore-not-found --wait=true
 }
 
-run_smoke_test() {
+verify_single_storage_controller() {
+  if $DRY_RUN; then
+    echo "+ prove local-path-storage/local-path-provisioner is available"
+    echo "+ prove kube-system/local-path-provisioner is absent"
+    echo "+ wait ${STORAGE_STABILITY_SECONDS}s and prove controller uniqueness again"
+    return 0
+  fi
+
+  kube -n local-path-storage rollout status deployment/local-path-provisioner --timeout=5m
+  if kube -n kube-system get deployment local-path-provisioner >/dev/null 2>&1; then
+    echo "Bundled kube-system/local-path-provisioner is still present; refusing to report storage success." >&2
+    return 1
+  fi
+}
+
+verify_storage_controller_convergence() {
+  verify_single_storage_controller
+  sleep "$STORAGE_STABILITY_SECONDS"
+  verify_single_storage_controller
+}
+
+list_local_path_pvs() {
+  kube get persistentvolume \
+    -o jsonpath='{range .items[?(@.spec.storageClassName=="local-path")]}{.metadata.name}{"\n"}{end}' \
+    2>/dev/null || true
+}
+
+smoke_pv_claim_namespace() {
+  kube get persistentvolume "$1" -o jsonpath='{.spec.claimRef.namespace}' 2>/dev/null || true
+}
+
+transition_smoke_pv_to_delete() {
+  local pv_name="$1"
+  local claim_namespace
+  local reclaim_policy
+
+  claim_namespace="$(smoke_pv_claim_namespace "$pv_name")"
+  if [ "$claim_namespace" != "$SMOKE_NAMESPACE" ]; then
+    echo "Refusing to clean PV $pv_name: claim namespace is '$claim_namespace', not '$SMOKE_NAMESPACE'." >&2
+    return 1
+  fi
+
+  reclaim_policy="$(kube get persistentvolume "$pv_name" -o jsonpath='{.spec.persistentVolumeReclaimPolicy}' 2>/dev/null || true)"
+  case "$reclaim_policy" in
+    Retain)
+      kube patch persistentvolume "$pv_name" --type=json \
+        -p='[{"op":"test","path":"/spec/persistentVolumeReclaimPolicy","value":"Retain"},{"op":"replace","path":"/spec/persistentVolumeReclaimPolicy","value":"Delete"}]'
+      ;;
+    Delete)
+      # A previous interrupted cleanup may already have completed the safe
+      # Retain -> Delete transition. Continue removing only this smoke PV.
+      ;;
+    *)
+      echo "Refusing to clean PV $pv_name with unexpected reclaim policy '$reclaim_policy'." >&2
+      return 1
+      ;;
+  esac
+}
+
+cleanup_leaked_smoke_pvs() {
+  local pv_name
+  local claim_namespace
+
+  while IFS= read -r pv_name; do
+    [ -n "$pv_name" ] || continue
+    claim_namespace="$(smoke_pv_claim_namespace "$pv_name")"
+    [ "$claim_namespace" = "$SMOKE_NAMESPACE" ] || continue
+
+    echo "Cleaning previously leaked storage smoke PV $pv_name."
+    if ! transition_smoke_pv_to_delete "$pv_name"; then
+      return 1
+    fi
+    if ! kube delete persistentvolume "$pv_name" --wait=false; then
+      return 1
+    fi
+    if ! kube wait --for=delete --timeout=5m "persistentvolume/$pv_name"; then
+      return 1
+    fi
+  done < <(list_local_path_pvs)
+}
+
+cleanup_previous_smoke_resources() {
+  kube delete namespace "$SMOKE_NAMESPACE" --ignore-not-found --wait=true >/dev/null
+  cleanup_leaked_smoke_pvs
+}
+
+run_smoke_test() (
   local manifest
+  local smoke_pv_name=""
+
+  cleanup_current_smoke_test() {
+    local original_status="$?"
+    local cleanup_status=0
+    local resolved_pv_name="$smoke_pv_name"
+    local safe_smoke_pv=false
+
+    trap - EXIT
+    set +e
+
+    if [ -z "$resolved_pv_name" ]; then
+      resolved_pv_name="$(kube -n "$SMOKE_NAMESPACE" get persistentvolumeclaim storage-smoke-pvc \
+        -o jsonpath='{.spec.volumeName}' 2>/dev/null)"
+    fi
+
+    if [ -n "$resolved_pv_name" ]; then
+      if ! transition_smoke_pv_to_delete "$resolved_pv_name"; then
+        cleanup_status=1
+      else
+        safe_smoke_pv=true
+      fi
+    fi
+
+    if ! kube delete namespace "$SMOKE_NAMESPACE" --ignore-not-found --wait=true >/dev/null; then
+      cleanup_status=1
+    fi
+
+    if $safe_smoke_pv; then
+      if ! kube wait --for=delete --timeout=5m "persistentvolume/$resolved_pv_name"; then
+        cleanup_status=1
+      fi
+    fi
+
+    if ! cleanup_leaked_smoke_pvs; then
+      cleanup_status=1
+    fi
+
+    if [ "$original_status" -ne 0 ]; then
+      exit "$original_status"
+    fi
+    exit "$cleanup_status"
+  }
 
   if $DRY_RUN; then
     cat <<EOF
@@ -214,7 +347,9 @@ EOF
     return 0
   fi
 
-  kube delete namespace "$SMOKE_NAMESPACE" --ignore-not-found --wait=true >/dev/null
+  trap cleanup_current_smoke_test EXIT
+
+  cleanup_previous_smoke_resources
   kube create namespace "$SMOKE_NAMESPACE" --dry-run=client -o yaml | kube apply -f -
   kube label namespace "$SMOKE_NAMESPACE" \
     pod-security.kubernetes.io/enforce=privileged \
@@ -264,10 +399,24 @@ EOF
 )"
 
   printf '%s\n' "$manifest" | kube apply -f -
+  kube -n "$SMOKE_NAMESPACE" wait \
+    --for=jsonpath='{.status.phase}'=Bound \
+    --timeout=5m \
+    persistentvolumeclaim/storage-smoke-pvc
+  smoke_pv_name="$(kube -n "$SMOKE_NAMESPACE" get persistentvolumeclaim storage-smoke-pvc \
+    -o jsonpath='{.spec.volumeName}')"
+  if [ -z "$smoke_pv_name" ]; then
+    echo "Storage smoke PVC did not bind to a PV." >&2
+    return 1
+  fi
+  if [ "$(smoke_pv_claim_namespace "$smoke_pv_name")" != "$SMOKE_NAMESPACE" ]; then
+    echo "Storage smoke PVC bound to a PV outside namespace $SMOKE_NAMESPACE." >&2
+    return 1
+  fi
+
   kube -n "$SMOKE_NAMESPACE" wait --for=condition=complete --timeout=5m job/storage-smoke
   kube -n "$SMOKE_NAMESPACE" logs job/storage-smoke >/dev/null
-  kube delete namespace "$SMOKE_NAMESPACE" --ignore-not-found >/dev/null
-}
+)
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -334,6 +483,8 @@ kubectl_cmd label namespace msp \
   --overwrite
 
 wait_for_rollout
+verify_storage_controller_convergence
 run_smoke_test
+verify_storage_controller_convergence
 
 echo "Storage prerequisites are ready."
