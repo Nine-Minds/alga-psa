@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const extendExpiryMock = vi.fn(async () => undefined);
 const isRevokedMock = vi.fn(async () => false);
+const createMock = vi.fn(async () => 'sess-created');
 
 const tenantFirstMock = vi.fn();
 const subscriptionFirstMock = vi.fn();
@@ -88,13 +89,13 @@ vi.mock('@alga-psa/db/models/UserSession', () => ({
   UserSession: {
     isRevoked: (...args: unknown[]) => isRevokedMock(...(args as [])),
     extendExpiry: (...args: unknown[]) => extendExpiryMock(...(args as [])),
-    create: vi.fn(),
+    create: (...args: unknown[]) => createMock(...(args as [])),
     updateLocation: vi.fn(),
   },
 }));
 vi.mock('./ipAddress', () => ({ getClientIp: vi.fn() }));
 vi.mock('./deviceFingerprint', () => ({ generateDeviceFingerprint: vi.fn(), getDeviceInfo: vi.fn() }));
-vi.mock('./geolocation', () => ({ getLocationFromIp: vi.fn() }));
+vi.mock('./geolocation', () => ({ getLocationFromIp: vi.fn(async () => null) }));
 vi.mock('@alga-psa/db', () => ({ getConnection: vi.fn() }));
 vi.mock('./PortalDomainModel', () => ({ getPortalDomain: vi.fn(), getPortalDomainByHostname: vi.fn() }));
 vi.mock('@alga-psa/db/models/user', () => ({ default: { updateLastLogin: vi.fn() } }));
@@ -109,6 +110,7 @@ describe('nextAuth session expiry sliding', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     isRevokedMock.mockResolvedValue(false);
+    createMock.mockResolvedValue('sess-created');
     extendExpiryMock.mockResolvedValue(undefined);
     // Keep plan refresh quiet/side-effect-free for these cases.
     tenantFirstMock.mockResolvedValue({ plan: 'pro', product_code: 'psa' });
@@ -199,13 +201,81 @@ describe('nextAuth session expiry sliding', () => {
     } as any)).resolves.toBeNull();
   });
 
-  it('does nothing when there is no session_id', async () => {
-    await runJwt({
+  it('rejects a reused OAuth JWT with no durable session_id', async () => {
+    await expect(runJwt({
       id: 'u-1',
       tenant: 'tenant-1',
       last_plan_check: Date.now(),
-    });
+    })).resolves.toBeNull();
 
+    expect(isRevokedMock).not.toHaveBeenCalled();
     expect(extendExpiryMock).not.toHaveBeenCalled();
+  });
+
+  it('creates a durable session for a new OAuth login without device metadata', async () => {
+    const authOptions = await getAuthOptions();
+    const jwt = authOptions.callbacks?.jwt;
+    expect(jwt).toBeTypeOf('function');
+
+    const token = await jwt!({
+      token: {},
+      user: {
+        id: 'u-1',
+        email: 'user@example.com',
+        tenant: 'tenant-1',
+        user_type: 'internal',
+        loginMethod: 'azure-ad',
+      },
+      trigger: 'signIn',
+    } as any);
+
+    expect(createMock).toHaveBeenCalledWith(expect.objectContaining({
+      tenant: 'tenant-1',
+      user_id: 'u-1',
+      ip_address: 'unknown',
+      user_agent: 'unknown',
+      login_method: 'azure-ad',
+    }));
+    expect(token).toMatchObject({
+      session_id: 'sess-created',
+      login_method: 'azure-ad',
+    });
+    expect(isRevokedMock).toHaveBeenCalledWith('tenant-1', 'sess-created');
+  });
+
+  it('creates a durable OAuth session in the synchronous auth config', async () => {
+    const jwt = options.callbacks?.jwt;
+    expect(jwt).toBeTypeOf('function');
+
+    await expect(jwt!({
+      token: {},
+      user: {
+        id: 'u-1',
+        email: 'user@example.com',
+        tenant: 'tenant-1',
+        user_type: 'internal',
+        loginMethod: 'azure-ad',
+      },
+      trigger: 'signIn',
+    } as any)).resolves.toMatchObject({
+      session_id: 'sess-created',
+      login_method: 'azure-ad',
+    });
+  });
+
+  it('fails closed when an OAuth session cannot be persisted', async () => {
+    createMock.mockRejectedValue(new Error('database unavailable'));
+
+    await expect((await getAuthOptions()).callbacks?.jwt!({
+      token: {},
+      user: {
+        id: 'u-1',
+        email: 'user@example.com',
+        tenant: 'tenant-1',
+        user_type: 'internal',
+        loginMethod: 'azure-ad',
+      },
+      trigger: 'signIn',
+    } as any)).resolves.toBeNull();
   });
 });
