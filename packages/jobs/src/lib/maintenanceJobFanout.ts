@@ -96,6 +96,7 @@ export async function runMaintenanceJob(
   const knex = await getAdminConnection();
   const tenants = await tenantDb(knex, '__maintenance_job_fanout_tenant_enumeration__')
     .unscoped<{ tenant: string }>('tenants', 'maintenance fanout enumerates tenants for tenant-scoped jobs')
+    .whereNull('suspended_at')
     .select('tenant');
   let succeeded = 0;
   let failed = 0;

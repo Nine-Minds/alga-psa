@@ -76,13 +76,14 @@ describe('marketing activities', () => {
     else process.env.NEXT_PUBLIC_APP_URL = originalPublicAppUrl;
   });
 
-  it('enumerates every tenant with an explicit unscoped query in deterministic order', async () => {
+  it('enumerates every unsuspended tenant with an explicit unscoped query in deterministic order', async () => {
     const select = vi.fn().mockResolvedValue([
       { tenant: 'tenant-a' },
       { tenant: 'tenant-b' },
     ]);
     const orderBy = vi.fn(() => ({ select }));
-    const unscoped = vi.fn(() => ({ orderBy }));
+    const whereNull = vi.fn(() => ({ orderBy }));
+    const unscoped = vi.fn(() => ({ whereNull }));
     getAdminConnectionMock.mockResolvedValue({ name: 'admin-knex' });
     tenantDbMock.mockReturnValue({ unscoped });
     const { listMarketingTenantIds } = await import('../marketing-activities');
@@ -92,6 +93,7 @@ describe('marketing activities', () => {
       'tenants',
       expect.stringContaining('enumerates every tenant'),
     );
+    expect(whereNull).toHaveBeenCalledWith('suspended_at');
     expect(orderBy).toHaveBeenCalledWith('tenant', 'asc');
   });
 
