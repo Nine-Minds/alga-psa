@@ -58,8 +58,9 @@ exports.up = async function up(knex) {
   }
   // No fk_so_lines_tax_rate FK: once sales_order_lines is distributed on Citus a
   // single-column FK to tax_rates (which is distributed with a composite key on
-  // prod) is invalid. The reference stays logical — same precedent as
-  // ee/server/migrations/citus/20260703120000_convert_tax_child_tables_to_reference.cjs.
+  // prod) is invalid. The reference stays logical (a never-executed companion
+  // migration in the now-removed ee/server/migrations/citus/ folder once
+  // attempted this as a reference-table conversion).
 
   // --- SO line ↔ invoice charge backlink (F047) ---
   // invoice_items is a VIEW over invoice_charges; the persistent column lives on
