@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { StorageService } from 'server/src/lib/storage/StorageService';
+import { StorageService } from '@alga-psa/storage/StorageService';
 import { createTenantKnex } from 'server/src/lib/db';
 import { getCurrentUser } from 'server/src/lib/auth/session';
 import { canAccessDocument } from 'server/src/lib/utils/documentPermissionUtils';

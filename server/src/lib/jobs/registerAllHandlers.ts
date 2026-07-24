@@ -2,7 +2,7 @@ import { Job } from 'pg-boss';
 import logger from '@alga-psa/core/logger';
 import { JobHandlerRegistry } from './jobHandlerRegistry';
 import { BaseJobData } from './interfaces';
-import { StorageService } from '../storage/StorageService';
+import { StorageService } from '@alga-psa/storage/StorageService';
 import { JobService } from '../../services/job.service';
 
 // Import all job handlers

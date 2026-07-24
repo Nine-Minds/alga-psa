@@ -206,6 +206,9 @@ export async function uploadEntityImage(
         uploaded_by_id: userId,
         metadata: { context, entityId, entityType },
         isImageAvatar: true,
+        // Logos preserve aspect ratio (avatars keep the square cover-crop). See
+        // StorageService.uploadFile image-processing branch (alga0002162).
+        isEntityLogo: isLogoUpload || false,
       },
     );
 

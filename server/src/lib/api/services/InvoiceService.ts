@@ -37,7 +37,7 @@ import { BillingEngine } from '@alga-psa/billing/services';
 import { TaxService } from '@alga-psa/billing/services/taxService';
 import { NumberingService } from '@shared/services/numberingService';
 import { PDFGenerationService, createPDFGenerationService } from '@alga-psa/billing/services';
-import { StorageService } from '../../storage/StorageService';
+import { StorageService } from '@alga-psa/storage/StorageService';
 import InvoiceModel from '@alga-psa/billing/models/invoice';
 
 // Import schemas and interfaces

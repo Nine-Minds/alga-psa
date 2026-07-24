@@ -8,7 +8,7 @@ import { convertBlockContentToMarkdown } from '@alga-psa/formatting/blocknoteUti
 import logger from '@alga-psa/core/logger';
 import { downloadDocument } from '@alga-psa/documents/actions/documentActions';
 import { createPDFGenerationService } from '@alga-psa/billing/services';
-import { StorageService } from 'server/src/lib/storage/StorageService';
+import { StorageService } from '@alga-psa/storage/StorageService';
 import { tenantDb, withTransaction, runWithTenant } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { getSession } from '@alga-psa/auth';

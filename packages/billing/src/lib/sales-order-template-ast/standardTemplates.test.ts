@@ -3,8 +3,20 @@ import { describe, expect, it } from 'vitest';
 import { evaluateTemplateAst } from '../invoice-template-ast/evaluator';
 import { renderTemplateAstHtmlDocument } from '../invoice-template-ast/server-render';
 import { assembleSalesOrderViewModel } from '../adapters/salesOrderAdapters';
-import { buildStandardSalesOrderConfirmationAst } from './standardTemplates';
+import { buildStandardSalesOrderConfirmationAst, STANDARD_SALES_ORDER_TEMPLATE_ASTS } from './standardTemplates';
+import { STANDARD_PACKING_SLIP_TEMPLATE_ASTS, STANDARD_PICK_LIST_TEMPLATE_ASTS } from './otherDocuments';
 import { resolveSalesOrderTemplateAst } from './templateSelection';
+
+const collectNodesById = (node: unknown, id: string, out: any[] = []): any[] => {
+  if (!node || typeof node !== 'object') return out;
+  if (Array.isArray(node)) {
+    for (const item of node) collectNodesById(item, id, out);
+    return out;
+  }
+  if ((node as any).id === id) out.push(node);
+  for (const key of Object.keys(node)) collectNodesById((node as any)[key], id, out);
+  return out;
+};
 
 const sampleViewModel = () =>
   assembleSalesOrderViewModel({
@@ -32,6 +44,22 @@ const sampleViewModel = () =>
   });
 
 describe('standard sales order confirmation template', () => {
+  // Regression: alga0002161 — the issuer-logo image must letterbox (object-fit:
+  // contain) instead of stretching non-wide logos to the 180x72 box. Sales-order
+  // standard templates render straight from these TS constants (no DB row).
+  it('sets object-fit on every issuer-logo node so logos are not squashed', () => {
+    const logos = [
+      ...Object.values(STANDARD_SALES_ORDER_TEMPLATE_ASTS),
+      ...Object.values(STANDARD_PACKING_SLIP_TEMPLATE_ASTS),
+      ...Object.values(STANDARD_PICK_LIST_TEMPLATE_ASTS),
+    ].flatMap((ast) => collectNodesById(ast, 'issuer-logo'));
+    expect(logos.length).toBeGreaterThan(0);
+    for (const logo of logos) {
+      expect(logo.style?.inline?.objectFit).toBe('contain');
+      expect(logo.style?.inline?.objectPosition).toBe('left');
+    }
+  });
+
   it('evaluates and renders to a non-empty HTML document (validates the AST schema)', async () => {
     const ast = buildStandardSalesOrderConfirmationAst();
     const vm = sampleViewModel();

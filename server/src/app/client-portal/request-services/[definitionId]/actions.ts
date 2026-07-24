@@ -5,7 +5,7 @@ import { createTenantKnex, withTransaction } from '@alga-psa/db';
 import type { IUserWithRoles } from '@alga-psa/types';
 import { getAuthenticatedClientId } from '@alga-psa/client-portal/lib/clientAuth';
 import { redirect } from 'next/navigation';
-import { StorageService } from '../../../../lib/storage/StorageService';
+import { StorageService } from '@alga-psa/storage/StorageService';
 import {
   getVisiblePublishedServiceRequestDefinitionDetail,
   submitPortalServiceRequest,

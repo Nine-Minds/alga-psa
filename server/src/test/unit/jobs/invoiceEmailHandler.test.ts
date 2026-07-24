@@ -44,7 +44,7 @@ vi.mock('server/src/services/emailService', () => ({
   getEmailService: mocks.getEmailService,
 }));
 
-vi.mock('server/src/lib/storage/StorageService', () => ({
+vi.mock('@alga-psa/storage/StorageService', () => ({
   StorageService: { downloadFile: mocks.downloadFile },
 }));
 

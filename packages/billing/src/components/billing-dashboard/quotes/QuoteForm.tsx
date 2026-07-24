@@ -1079,6 +1079,12 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
   };
 
   const primaryAction = resolvePrimaryAction();
+  // The primary button is only rendered when `primaryAction && !isReadOnly`
+  // (see the header/footer action rows). Overflow de-duplication must key off
+  // the same visibility, otherwise a primary action that is computed but hidden
+  // (e.g. conversions on an accepted/read-only quote) gets filtered out of the
+  // overflow menu too and becomes unreachable.
+  const isPrimaryActionVisible = Boolean(primaryAction) && !isReadOnly;
 
   // Secondary inline button (e.g. "Request changes" pairs with "Approve",
   // "Save quote" pairs with "Send to client" on drafts).
@@ -1124,8 +1130,11 @@ const QuoteForm: React.FC<QuoteFormProps> = ({
       if (canConvertToInvoice) items.push({ id: 'quote-form-convert-invoice', label: t('quoteForm.actions.convertToInvoice', { defaultValue: 'Convert to invoice' }), onClick: () => void handleOpenConversionDialog('invoice'), disabled: isWorking || isPreviewLoading });
       if (canConvertToBoth) items.push({ id: 'quote-form-convert-both', label: t('quoteForm.actions.convertToBoth', { defaultValue: 'Convert to both' }), onClick: () => void handleOpenConversionDialog('both'), disabled: isWorking || isPreviewLoading });
       if (canConvertToSalesOrder) items.push({ id: 'quote-form-convert-sales-order', label: t('quoteForm.actions.convertToSalesOrder', { defaultValue: 'Convert to sales order' }), onClick: () => void handleOpenConversionDialog('sales_order'), disabled: isWorking || isPreviewLoading });
-      // Remove the item whose id matches the primary so we don't duplicate.
-      return items.filter((i) => i.id !== primaryAction?.id);
+      // Remove the item whose id matches the primary ONLY when the primary
+      // button is actually rendered; otherwise keep it so the action stays
+      // reachable (accepted quotes are read-only, so their conversion primary
+      // is hidden and must remain available in the overflow menu).
+      return items.filter((i) => !isPrimaryActionVisible || i.id !== primaryAction?.id);
     }
     return [];
   };

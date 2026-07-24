@@ -73,7 +73,7 @@ import {
 } from '@alga-psa/jobs/handlers/searchReconcileHandler';
 import { JobService } from '../../services/job.service';
 import { getConnection } from '../db/db';
-import { StorageService } from '../../lib/storage/StorageService';
+import { StorageService } from '@alga-psa/storage/StorageService';
 import logger from '@alga-psa/core/logger';
 import type { IRecurringRunExecutionWindowIdentity } from '@alga-psa/types';
 import type { IRecurringDueSelectionInput } from '@alga-psa/types';
