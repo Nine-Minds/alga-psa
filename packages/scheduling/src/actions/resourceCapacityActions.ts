@@ -4,6 +4,7 @@ import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import { v4 as uuidv4 } from 'uuid';
+import { parseWeeklyCapacityHours, weeklyCapacityRejectionMessage } from '../lib/resourceCapacity';
 
 export interface UserCapacityResult {
   success: boolean;
@@ -11,11 +12,9 @@ export interface UserCapacityResult {
   error?: string;
 }
 
-function normalizeCapacity(value: unknown): number | null {
-  if (value === null || value === undefined || value === '') return null;
-  const parsed = Number(value);
-  if (!Number.isFinite(parsed) || parsed < 0) return null;
-  return Math.round(parsed);
+function storedCapacity(value: unknown): number | null {
+  const parsed = parseWeeklyCapacityHours(value);
+  return parsed.ok ? parsed.value : null;
 }
 
 /**
@@ -40,7 +39,7 @@ export const getUserCapacity = withAuth(async (
       success: true,
       data: {
         userId,
-        maxWeeklyCapacity: row ? normalizeCapacity(row.max_weekly_capacity) : null,
+        maxWeeklyCapacity: row ? storedCapacity(row.max_weekly_capacity) : null,
       },
     };
   } catch (error) {
@@ -53,35 +52,37 @@ export const getUserCapacity = withAuth(async (
  * Create or update the weekly capacity (hours) for a user.
  *
  * The resources table PK is (tenant, resource_id) and the table is distributed
- * on Citus, so we select-then-insert/update rather than relying on onConflict,
- * and avoid db.fn.now() inside a merge (IMMUTABLE-upsert landmine).
+ * on Citus, so we update-then-insert rather than relying on onConflict, and
+ * avoid db.fn.now() inside a merge (IMMUTABLE-upsert landmine). A unique index
+ * on (tenant, user_id) keeps this to a single row per user; the update matches
+ * on user_id so it stays correct for rows predating that index.
  */
 export const updateUserCapacity = withAuth(async (
   user,
   { tenant },
   userId: string,
-  maxWeeklyCapacity: number | null
+  maxWeeklyCapacity: number | string | null
 ): Promise<UserCapacityResult> => {
   try {
+    const parsed = parseWeeklyCapacityHours(maxWeeklyCapacity);
+    if (!parsed.ok) {
+      return { success: false, error: weeklyCapacityRejectionMessage(parsed.reason) };
+    }
+    const capacity = parsed.value;
+
     const { knex: db } = await createTenantKnex();
     if (!(await hasPermission(user, 'user', 'update', db))) {
       return { success: false, error: 'Insufficient permissions to update user capacity' };
     }
 
-    const capacity = normalizeCapacity(maxWeeklyCapacity);
-
     await withTransaction(db, async (trx: Knex.Transaction) => {
       const scopedDb = tenantDb(trx, tenant);
       const now = new Date();
-      const existing = await scopedDb.table('resources')
+      const updated = await scopedDb.table('resources')
         .where({ user_id: userId })
-        .first('resource_id');
+        .update({ max_weekly_capacity: capacity, updated_at: now });
 
-      if (existing) {
-        await scopedDb.table('resources')
-          .where({ resource_id: existing.resource_id })
-          .update({ max_weekly_capacity: capacity, updated_at: now });
-      } else {
+      if (!updated) {
         await scopedDb.table('resources').insert({
           tenant,
           resource_id: uuidv4(),
