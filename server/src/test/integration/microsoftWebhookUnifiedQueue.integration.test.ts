@@ -336,4 +336,41 @@ describe('Microsoft unified inbound pointer queue ingress', () => {
     expect(providerQueryMock.andWhere).toHaveBeenCalledWith('ep.is_active', true);
     expect(providerQueryMock.whereNull).toHaveBeenCalledWith('ep.inbound_paused_at');
   });
+
+  it('logs a warning event for subscriptions with no provider record at all', async () => {
+    providerQueryMock.first
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(null);
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const { handleMicrosoftWebhookPost } = await import(
+      '@alga-psa/integrations/webhooks/email/handlers/microsoftWebhookHandler'
+    );
+    const request = new NextRequest('http://localhost:3000/api/email/webhooks/microsoft', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        value: [{
+          changeType: 'created',
+          clientState: 'expected-client-state',
+          resource: '/users/user-1/messages/msg-rogue',
+          resourceData: { id: 'msg-rogue' },
+          subscriptionId: 'sub-ms-rogue',
+          tenantId: 'tenant-ms-1',
+        }],
+      }),
+    });
+
+    try {
+      const response = await handleMicrosoftWebhookPost(request);
+
+      expect(response.status).toBe(202);
+      expect(enqueueUnifiedInboundEmailQueueJobMock).not.toHaveBeenCalled();
+      expect(warnSpy).toHaveBeenCalledWith(
+        '[MicrosoftWebhook] Ignoring notification for unknown subscription',
+        expect.objectContaining({ event: 'microsoft_email_unknown_subscription' }),
+      );
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
 });

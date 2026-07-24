@@ -162,10 +162,31 @@ export async function handleMicrosoftWebhookPost(request: NextRequest) {
 
         if (!row) {
           gatedNotificationCount += 1;
-          console.debug('[MicrosoftWebhook] Acknowledging notification for an unknown or gated provider', {
-            subscriptionId: providerId,
-            event: 'microsoft_email_provider_gated',
+          // Distinguish a deliberately gated provider (paused/inactive) from a
+          // subscription we have no record of — the latter stays a warning so
+          // leaked or rogue subscriptions remain visible in production logs.
+          const ungatedProbe = discoveryDb.unscoped(
+            'microsoft_email_provider_config as mc',
+            'tenant discovery from Microsoft email webhook subscription'
+          );
+          discoveryDb.tenantJoin(ungatedProbe, 'email_providers as ep', 'mc.email_provider_id', 'ep.id', {
+            rootTenantColumn: 'mc.tenant',
           });
+          const gatedProvider = await ungatedProbe
+            .where('mc.webhook_subscription_id', providerId)
+            .andWhere('ep.provider_type', 'microsoft')
+            .first('ep.id');
+          if (gatedProvider) {
+            console.debug('[MicrosoftWebhook] Acknowledging notification for a gated provider', {
+              subscriptionId: providerId,
+              event: 'microsoft_email_provider_gated',
+            });
+          } else {
+            console.warn('[MicrosoftWebhook] Ignoring notification for unknown subscription', {
+              subscriptionId: providerId,
+              event: 'microsoft_email_unknown_subscription',
+            });
+          }
           return;
         }
 

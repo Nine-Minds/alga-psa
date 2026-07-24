@@ -10,8 +10,8 @@ describe('paused inbound provider renewal guards', () => {
   it('T031/T033: Microsoft renewal, probes, and silence detection share the paused-provider exclusion', () => {
     const source = read('shared/services/email/EmailWebhookMaintenanceService.ts');
 
-    expect(source).toContain(
-      ".andWhere('ep.is_active', true)\n      .whereNull('ep.inbound_paused_at')"
+    expect(source).toMatch(
+      /\.andWhere\('ep\.is_active', true\)\s*\.whereNull\('ep\.inbound_paused_at'\)/
     );
     expect(source).toContain('return await this.probeSubscription(adapter, config)');
     expect(source).toContain('detectWebhookSilence');
@@ -20,8 +20,8 @@ describe('paused inbound provider renewal guards', () => {
   it('T032: Gmail watch renewal excludes paused providers', () => {
     const source = read('packages/jobs/src/lib/handlers/googleGmailWatchRenewalHandler.ts');
 
-    expect(source).toContain(
-      ".andWhere('ep.is_active', true)\n    .whereNull('ep.inbound_paused_at')"
+    expect(source).toMatch(
+      /\.andWhere\('ep\.is_active', true\)\s*\.whereNull\('ep\.inbound_paused_at'\)/
     );
   });
 
