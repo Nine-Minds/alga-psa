@@ -81,6 +81,7 @@ export class StorageService {
       uploaded_by_id: string;
       metadata?: Record<string, any>;
       isImageAvatar?: boolean;
+      isEntityLogo?: boolean;
     }
   ) {
     try {
@@ -139,13 +140,25 @@ export class StorageService {
           }
 
           const sharp = await loadSharp();
-          processedBuffer = await sharp(fileBuffer)
-            .resize(256, 256, {
-              fit: 'cover',
-              withoutEnlargement: true,
-            })
-            .webp({ quality: 85 })
-            .toBuffer();
+          // Logos must preserve their aspect ratio — a wide wordmark was being
+          // center-cropped to a 256px-wide square (alga0002162). Avatars keep the
+          // square cover-crop so they fill circular/framed slots cleanly.
+          const LOGO_MAX_DIMENSION = 1024;
+          processedBuffer = options.isEntityLogo
+            ? await sharp(fileBuffer)
+                .resize(LOGO_MAX_DIMENSION, LOGO_MAX_DIMENSION, {
+                  fit: 'inside',
+                  withoutEnlargement: true,
+                })
+                .webp({ quality: 85 })
+                .toBuffer()
+            : await sharp(fileBuffer)
+                .resize(256, 256, {
+                  fit: 'cover',
+                  withoutEnlargement: true,
+                })
+                .webp({ quality: 85 })
+                .toBuffer();
 
           processedMimeType = 'image/webp';
           processedFileSize = processedBuffer.length;

@@ -7,7 +7,31 @@ import {
   STANDARD_QUOTE_TEMPLATE_ASTS,
 } from './standardTemplates';
 
+const collectNodesById = (node: unknown, id: string, out: any[] = []): any[] => {
+  if (!node || typeof node !== 'object') return out;
+  if (Array.isArray(node)) {
+    for (const item of node) collectNodesById(item, id, out);
+    return out;
+  }
+  if ((node as any).id === id) out.push(node);
+  for (const key of Object.keys(node)) collectNodesById((node as any)[key], id, out);
+  return out;
+};
+
 describe('standard quote template AST definitions', () => {
+  // Regression: alga0002161 — the issuer-logo image must letterbox (object-fit:
+  // contain) instead of stretching non-wide logos to the 180x72 box.
+  it('sets object-fit on every issuer-logo node so logos are not squashed', () => {
+    const logos = Object.values(STANDARD_QUOTE_TEMPLATE_ASTS).flatMap((ast) =>
+      collectNodesById(ast, 'issuer-logo'),
+    );
+    expect(logos.length).toBeGreaterThan(0);
+    for (const logo of logos) {
+      expect(logo.style?.inline?.objectFit).toBe('contain');
+      expect(logo.style?.inline?.objectPosition).toBe('left');
+    }
+  });
+
   it('exposes AST definitions for each standard quote template code', () => {
     expect(Object.keys(STANDARD_QUOTE_TEMPLATE_ASTS)).toEqual(
       expect.arrayContaining([

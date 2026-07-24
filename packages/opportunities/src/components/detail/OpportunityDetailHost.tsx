@@ -86,6 +86,7 @@ export function OpportunityDetailHost({
   const [winProjectStatusId, setWinProjectStatusId] = useState('');
   const [winProjectName, setWinProjectName] = useState(detail.title);
   const [winProjectStartDate, setWinProjectStartDate] = useState(new Date().toISOString().slice(0, 10));
+  const [winConvertQuoteId, setWinConvertQuoteId] = useState('');
   const [valuesOpen, setValuesOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [linkQuoteOpen, setLinkQuoteOpen] = useState(false);
@@ -95,6 +96,10 @@ export function OpportunityDetailHost({
   const [draftOpen, setDraftOpen] = useState(Boolean(drafting && autoOpenDraft));
 
   const refresh = () => router.refresh();
+
+  // Accepted linked quotes can be converted to a draft agreement as part of
+  // marking the deal won (winOpportunity → prepareOpportunityWinConversions).
+  const acceptedLinkedQuotes = detail.linked_quotes.filter((q) => q.status === 'accepted');
 
   useEffect(() => {
     if (!winOpen) return;
@@ -354,6 +359,26 @@ export function OpportunityDetailHost({
                 )}
           </p>
           <div className="space-y-3 rounded-md border border-[rgb(var(--color-border-200))] p-3">
+            {acceptedLinkedQuotes.length > 0 ? (
+              <div>
+                <Label htmlFor="opportunity-win-convert-quote">
+                  {t('opportunities.winDialog.convertQuote', 'Convert an accepted quote to a draft agreement (optional)')}
+                </Label>
+                <CustomSelect
+                  id="opportunity-win-convert-quote"
+                  value={winConvertQuoteId}
+                  onValueChange={setWinConvertQuoteId}
+                  disabled={winning}
+                  options={[
+                    { value: '', label: t('opportunities.winDialog.noConvertQuote', 'Do not convert a quote') },
+                    ...acceptedLinkedQuotes.map((q) => ({
+                      value: q.quote_id,
+                      label: `${q.quote_number} · ${formatCurrencyFromMinorUnits(q.total_amount, undefined, q.currency_code)}`,
+                    })),
+                  ]}
+                />
+              </div>
+            ) : null}
             <div>
               <Label htmlFor="opportunity-win-project-template">
                 {t('opportunities.winDialog.projectTemplate', 'Create an onboarding project (optional)')}
@@ -427,12 +452,15 @@ export function OpportunityDetailHost({
                 setWinning(true);
                 try {
                   await run(
-                    () => winOpportunity(detail.opportunity_id, winProjectTemplateId ? {
-                      project_template_id: winProjectTemplateId,
-                      project_name: winProjectName.trim(),
-                      project_status_id: winProjectStatusId || undefined,
-                      project_start_date: winProjectStartDate || undefined,
-                    } : {}),
+                    () => winOpportunity(detail.opportunity_id, {
+                      ...(winProjectTemplateId ? {
+                        project_template_id: winProjectTemplateId,
+                        project_name: winProjectName.trim(),
+                        project_status_id: winProjectStatusId || undefined,
+                        project_start_date: winProjectStartDate || undefined,
+                      } : {}),
+                      ...(winConvertQuoteId ? { convert_quote_id: winConvertQuoteId } : {}),
+                    }),
                     t('opportunities.toast.won', 'Won'),
                   );
                   setWinOpen(false);
