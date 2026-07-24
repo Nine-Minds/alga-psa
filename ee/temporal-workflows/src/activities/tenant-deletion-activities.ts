@@ -41,6 +41,11 @@ export {
   teardownTenantEmailIngestion,
 } from './tenant-email-ingestion-activities.js';
 
+export {
+  suspendTenantBackgroundActivity,
+  resumeTenantBackgroundActivity,
+} from './tenant-suspension-activities.js';
+
 /**
  * Comprehensive list of tables to delete from, in dependency order.
  * Most dependent tables first, then progressively less dependent.

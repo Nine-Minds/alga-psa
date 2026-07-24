@@ -34,6 +34,8 @@ const {
   suspendTenantEmailIngestion,
   resumeTenantEmailIngestion,
   teardownTenantEmailIngestion,
+  suspendTenantBackgroundActivity,
+  resumeTenantBackgroundActivity,
   reactivateTenantUsers,
   tagClientAsCanceled,
   removeClientCanceledTag,
@@ -213,6 +215,24 @@ export async function tenantDeletionWorkflow(
           tenantId: input.tenantId,
           error: emailSuspensionError instanceof Error
             ? emailSuspensionError.message
+            : 'Unknown error',
+        });
+      }
+    }
+
+    if (patched('tenant-deletion-suspend-tenant-v1')) {
+      state.step = 'suspending_tenant_activity';
+      try {
+        const tenantSuspension = await suspendTenantBackgroundActivity(input.tenantId);
+        log.info('Tenant background activity suspended', {
+          tenantId: input.tenantId,
+          ...tenantSuspension,
+        });
+      } catch (tenantSuspensionError) {
+        log.error('Failed to suspend tenant background activity (continuing deletion)', {
+          tenantId: input.tenantId,
+          error: tenantSuspensionError instanceof Error
+            ? tenantSuspensionError.message
             : 'Unknown error',
         });
       }
@@ -524,6 +544,21 @@ async function handleRollback(
       log.error('Failed to resume tenant email ingestion (continuing rollback)', {
         tenantId,
         error: emailResumeError instanceof Error ? emailResumeError.message : 'Unknown error',
+      });
+    }
+  }
+
+  if (patched('tenant-deletion-resume-tenant-v1')) {
+    try {
+      const tenantResume = await resumeTenantBackgroundActivity(tenantId);
+      log.info('Tenant background activity resumed after rollback', {
+        tenantId,
+        ...tenantResume,
+      });
+    } catch (tenantResumeError) {
+      log.error('Failed to resume tenant background activity (continuing rollback)', {
+        tenantId,
+        error: tenantResumeError instanceof Error ? tenantResumeError.message : 'Unknown error',
       });
     }
   }
