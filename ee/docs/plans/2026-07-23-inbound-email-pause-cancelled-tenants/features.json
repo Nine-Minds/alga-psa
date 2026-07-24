@@ -163,7 +163,7 @@
   },
   {
     "id": "F028",
-    "description": "Backfill script/admin endpoint suspends email ingestion for all tenants in pending_tenant_deletions (status pending/awaiting_confirmation/confirmed); rerunnable no-op",
+    "description": "Backfill script/admin endpoint suspends email ingestion for all tenants in pending_tenant_deletions (status pending/awaiting_confirmation/confirmed/failed); rerunnable no-op",
     "implemented": true,
     "prdRefs": ["5.6"]
   },

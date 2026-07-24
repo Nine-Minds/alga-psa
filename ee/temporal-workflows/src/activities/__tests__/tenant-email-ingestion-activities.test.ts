@@ -156,6 +156,15 @@ describe('tenant email ingestion activities', () => {
     );
   });
 
+  it('propagates provider-query failures so Temporal can retry the rollback resume', async () => {
+    mocks.tenantDb.mockImplementation(() => {
+      throw new Error('connection refused');
+    });
+
+    await expect(resumeTenantEmailIngestion(tenantId)).rejects.toThrow('connection refused');
+    expect(mocks.resumeProvider).not.toHaveBeenCalled();
+  });
+
   it('tears down every remaining provider and isolates missing remote subscriptions', async () => {
     const query = providerQuery([{ id: 'provider-gone' }, { id: 'provider-live' }]);
     mocks.tenantDb.mockReturnValue({ table: vi.fn().mockReturnValue(query) });
