@@ -674,6 +674,14 @@ export const getTicketAgingReport = withAuth(
   },
 );
 
+/**
+ * Employee utilization, v1 semantics:
+ * - roster: internal users that are active today (past employees are excluded,
+ *   including any hours they logged inside the range),
+ * - worked hours: every time entry in the range, whatever its approval status,
+ * - capacity: the user's current weekly capacity prorated over the range, not
+ *   an effective-dated history (no holiday/PTO awareness yet).
+ */
 export const getEmployeeUtilizationReport = withAuth(
   async (user, { tenant }, rangeDaysInput?: number): Promise<EmployeeUtilizationReport | ReportingActionError> => {
     try {
