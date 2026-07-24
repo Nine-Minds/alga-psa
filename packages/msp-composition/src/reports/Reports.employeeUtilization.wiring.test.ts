@@ -1,7 +1,10 @@
+// @vitest-environment node
+
 import { readFileSync } from 'node:fs';
+import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 
-const source = readFileSync(new URL('../src/reports/Reports.tsx', import.meta.url), 'utf8');
+const source = readFileSync(resolve(__dirname, './Reports.tsx'), 'utf8');
 
 const view = (() => {
   const start = source.indexOf('function EmployeeUtilizationView(');
