@@ -11,7 +11,14 @@ vi.mock('@alga-psa/core/logger', () => ({
 vi.mock('@alga-psa/db/admin', () => ({
   getAdminConnection: async () => (table: string) => {
     expect(table).toBe('tenants');
-    return { select: (_col: string) => Promise.resolve(listTenantsMock()) };
+    const builder = {
+      whereNull: (column: string) => {
+        expect(column).toBe('suspended_at');
+        return builder;
+      },
+      select: (_col: string) => Promise.resolve(listTenantsMock()),
+    };
+    return builder;
   },
 }));
 
