@@ -970,6 +970,11 @@ export async function applyRuntimeValuesAndReleaseSelection(inputs, releaseSelec
       values[`alga-core.${profile}.yaml`] = setYamlScalar(values[`alga-core.${profile}.yaml`], ['appUrl'], yamlString(appUrl));
       values[`alga-core.${profile}.yaml`] = setYamlScalar(values[`alga-core.${profile}.yaml`], ['host'], yamlString(hostFromAppUrl(appUrl)));
       values[`alga-core.${profile}.yaml`] = setYamlScalar(values[`alga-core.${profile}.yaml`], ['domainSuffix'], '""');
+      values[`temporal-worker.${profile}.yaml`] = setYamlScalar(
+        values[`temporal-worker.${profile}.yaml`],
+        ['publicBaseUrl'],
+        yamlString(appUrl)
+      );
     }
     if (images.algaCore) {
       values[`alga-core.${profile}.yaml`] = setYamlScalar(values[`alga-core.${profile}.yaml`], ['setup', 'image', 'tag'], yamlString(images.algaCore));

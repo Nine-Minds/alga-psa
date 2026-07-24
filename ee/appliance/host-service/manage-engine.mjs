@@ -197,7 +197,9 @@ export async function applyAppUrl(deps) {
     releaseSelectionFile,
     valuesNamespace = 'alga-system',
     valuesConfigMapName = 'appliance-values-alga-core',
+    temporalWorkerValuesConfigMapName = 'appliance-values-temporal-worker',
     helmReleaseName = 'alga-core',
+    temporalWorkerHelmReleaseName = 'temporal-worker',
     timestamp
   } = deps;
 
@@ -210,35 +212,69 @@ export async function applyAppUrl(deps) {
   }
   const host = hostFromAppUrl(appUrl);
 
-  // 1. Read the current alga-core values configmap, rewrite the URL scalars.
-  const cm = await kube.json(`get configmap ${valuesConfigMapName} -n ${valuesNamespace}`);
-  if (!cm || !cm.ok || !cm.value || !cm.value.data) {
-    return { ok: false, status: 412, error: `Could not read ${valuesConfigMapName} in ${valuesNamespace}.` };
-  }
-  const dataKeys = Object.keys(cm.value.data);
-  const valuesKey = dataKeys.find((k) => k.startsWith('alga-core.')) || dataKeys[0];
-  if (!valuesKey) {
-    return { ok: false, status: 412, error: `${valuesConfigMapName} has no values data key.` };
-  }
-  let yaml = cm.value.data[valuesKey];
-  try {
-    yaml = setYamlScalar(yaml, ['appUrl'], JSON.stringify(appUrl));
-    yaml = setYamlScalar(yaml, ['host'], JSON.stringify(host));
-    yaml = setYamlScalar(yaml, ['domainSuffix'], '""');
-  } catch (error) {
-    return { ok: false, status: 412, error: `Could not rewrite app URL in values: ${error instanceof Error ? error.message : String(error)}` };
+  // 1. Read and rewrite both values ConfigMaps before applying either one.
+  //    The app keeps its internal service URL, while recipient-facing links
+  //    from temporal-worker follow the operator's public hostname.
+  const valuesTargets = [
+    {
+      configMapName: valuesConfigMapName,
+      valuesKeyPrefix: 'alga-core.',
+      rewrite(yaml) {
+        let updated = setYamlScalar(yaml, ['appUrl'], JSON.stringify(appUrl));
+        updated = setYamlScalar(updated, ['host'], JSON.stringify(host));
+        return setYamlScalar(updated, ['domainSuffix'], '""');
+      }
+    },
+    {
+      configMapName: temporalWorkerValuesConfigMapName,
+      valuesKeyPrefix: 'temporal-worker.',
+      rewrite(yaml) {
+        return setYamlScalar(yaml, ['publicBaseUrl'], JSON.stringify(appUrl));
+      }
+    }
+  ];
+  const manifests = [];
+
+  for (const target of valuesTargets) {
+    const cm = await kube.json(`get configmap ${target.configMapName} -n ${valuesNamespace}`);
+    if (!cm || !cm.ok || !cm.value || !cm.value.data) {
+      return { ok: false, status: 412, error: `Could not read ${target.configMapName} in ${valuesNamespace}.` };
+    }
+    const dataKeys = Object.keys(cm.value.data);
+    const valuesKey = dataKeys.find((key) => key.startsWith(target.valuesKeyPrefix)) || dataKeys[0];
+    if (!valuesKey) {
+      return { ok: false, status: 412, error: `${target.configMapName} has no values data key.` };
+    }
+
+    let yaml = cm.value.data[valuesKey];
+    try {
+      yaml = target.rewrite(yaml);
+    } catch (error) {
+      return {
+        ok: false,
+        status: 412,
+        error: `Could not rewrite app URL in ${target.configMapName}: ${error instanceof Error ? error.message : String(error)}`
+      };
+    }
+
+    manifests.push({
+      apiVersion: 'v1',
+      kind: 'ConfigMap',
+      metadata: { name: target.configMapName, namespace: valuesNamespace },
+      data: { [valuesKey]: yaml.endsWith('\n') ? yaml : `${yaml}\n` }
+    });
   }
 
-  // 2. Apply the updated configmap (full object so the data key is preserved).
-  const manifest = {
-    apiVersion: 'v1',
-    kind: 'ConfigMap',
-    metadata: { name: valuesConfigMapName, namespace: valuesNamespace },
-    data: { [valuesKey]: yaml.endsWith('\n') ? yaml : `${yaml}\n` }
-  };
-  const applied = await kube.apply(manifest);
-  if (!applied.ok) {
-    return { ok: false, status: 412, error: `Could not apply updated values: ${(applied.stderr || applied.stdout || '').trim()}` };
+  // 2. Apply the updated ConfigMaps with their existing data keys preserved.
+  for (const manifest of manifests) {
+    const applied = await kube.apply(manifest);
+    if (!applied.ok) {
+      return {
+        ok: false,
+        status: 412,
+        error: `Could not apply updated ${manifest.metadata.name} values: ${(applied.stderr || applied.stdout || '').trim()}`
+      };
+    }
   }
 
   // 3. Persist the operator intent in release-selection.json so the next update
@@ -259,11 +295,17 @@ export async function applyAppUrl(deps) {
     }
   }
 
-  // 4. Reconcile the HelmRelease so NEXTAUTH_URL re-renders from the new values.
+  // 4. Reconcile both HelmReleases so the public URL reaches the app and worker.
   const ts = timestamp || String(Math.floor(nowMs() / 1000));
-  const reconciled = await kube.run(`annotate helmrelease ${helmReleaseName} -n ${valuesNamespace} reconcile.fluxcd.io/requestedAt=${ts} --overwrite`);
-  if (!reconciled.ok) {
-    return { ok: false, status: 412, error: `Values applied but HelmRelease reconcile failed: ${(reconciled.stderr || reconciled.stdout || '').trim()}` };
+  for (const releaseName of [helmReleaseName, temporalWorkerHelmReleaseName]) {
+    const reconciled = await kube.run(`annotate helmrelease ${releaseName} -n ${valuesNamespace} reconcile.fluxcd.io/requestedAt=${ts} --overwrite`);
+    if (!reconciled.ok) {
+      return {
+        ok: false,
+        status: 412,
+        error: `Values applied but ${releaseName} HelmRelease reconcile failed: ${(reconciled.stderr || reconciled.stdout || '').trim()}`
+      };
+    }
   }
   return { ok: true, appUrl, host };
 }

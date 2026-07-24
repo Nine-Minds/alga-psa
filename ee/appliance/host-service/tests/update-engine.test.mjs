@@ -25,6 +25,7 @@ test('runAppChannelUpdate applies channel update and persists history without OS
   }));
 
   const valueYaml = `image:\n  tag: latest\n`;
+  const temporalWorkerYaml = `applicationUrl: http://alga-core.msp.svc.cluster.local:3000\npublicBaseUrl: https://alga.local\nimage:\n  tag: latest\n`;
   const coreYaml = `appUrl: https://alga.local\nhost: alga.local\ndomainSuffix: alga.local\nbootstrap:\n  mode: recover\nsetup:\n  image:\n    tag: latest\nserver:\n  image:\n    tag: latest\n`;
   const originalPath = process.env.PATH;
   process.env.PATH = `${fakeBin}:${originalPath}`;
@@ -52,7 +53,7 @@ test('runAppChannelUpdate applies channel update and persists history without OS
         'temporal.test-profile.yaml': valueYaml,
         'workflow-worker.test-profile.yaml': valueYaml,
         'email-service.test-profile.yaml': valueYaml,
-        'temporal-worker.test-profile.yaml': valueYaml
+        'temporal-worker.test-profile.yaml': temporalWorkerYaml
       }
     },
     tokenFile: path.join(tmp, 'setup-token'),
@@ -102,6 +103,7 @@ function makeUpdateFixture() {
     runtime: { appHostname: 'psa.example.com', dnsMode: 'system', dnsServers: '' }
   }));
   const valueYaml = `image:\n  tag: latest\n`;
+  const temporalWorkerYaml = `applicationUrl: http://alga-core.msp.svc.cluster.local:3000\npublicBaseUrl: https://alga.local\nimage:\n  tag: latest\n`;
   const coreYaml = `appUrl: https://alga.local\nhost: alga.local\ndomainSuffix: alga.local\nbootstrap:\n  mode: recover\nsetup:\n  image:\n    tag: latest\nserver:\n  image:\n    tag: latest\n`;
   const options = {
     stateFile,
@@ -121,7 +123,7 @@ function makeUpdateFixture() {
         'temporal.test-profile.yaml': valueYaml,
         'workflow-worker.test-profile.yaml': valueYaml,
         'email-service.test-profile.yaml': valueYaml,
-        'temporal-worker.test-profile.yaml': valueYaml
+        'temporal-worker.test-profile.yaml': temporalWorkerYaml
       }
     },
     tokenFile: path.join(tmp, 'setup-token'),
