@@ -144,6 +144,7 @@
     },
     "badges": {
       "disabled": "Disabled",
+      "paused": "Paused",
       "connected": "Connected",
       "disconnected": "Disconnected",
       "error": "Error",
@@ -167,8 +168,16 @@
       "reconnectOauth": "Reconnect OAuth",
       "resyncing": "Resyncing…",
       "resyncMailbox": "Resync Mailbox",
+      "pause": "Pause inbound email",
+      "resume": "Resume inbound email",
       "delete": "Delete Provider"
     },
+    "feedback": {
+      "paused": "Inbound email paused.",
+      "resumed": "Inbound email resumed.",
+      "pauseError": "Failed to change inbound email pause state."
+    },
+    "pausedHelp": "Messages received while this inbox is paused are not imported retroactively.",
     "fields": {
       "status": "Status",
       "lastSync": "Last Sync",

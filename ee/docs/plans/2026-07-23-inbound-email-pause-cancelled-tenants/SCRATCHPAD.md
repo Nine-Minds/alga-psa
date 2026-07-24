@@ -73,3 +73,9 @@ Tenant cancelled subscription today; inbound mail to their Microsoft mailbox kep
 - F016/T031 and F018/T033: Microsoft maintenance candidates require a null pause timestamp, so renewal, polling probes, reconciliation, and silent-run transitions never receive paused providers.
 - F017/T032: Gmail watch renewal candidates require a null pause timestamp.
 - Verification: shared and integrations workspace typechecks passed; focused adapter/lifecycle/maintenance suite passed (35 tests).
+
+### Manual pause/resume UX (2026-07-23)
+- F019/T034/T035: added `pauseEmailProvider`/`resumeEmailProvider` server actions wrapped by `withAuth`, guarded by the existing `ticket_settings:update` provider-configuration permission, and preflighted through the authenticated tenant-scoped provider table. Pause always uses reason `manual`; cross-tenant ids resolve as not found.
+- F020/T036: provider cards render the pause fields returned by `getEmailProviders`, show a Paused badge, and expose Pause/Resume in the provider kebab menu. `EmailProviderList` runs the action, shows feedback, and refreshes provider state; resume failures that cleared the pause still refresh so `status='error'` is visible.
+- F021/T037: added English i18n keys for badge/actions/feedback/helper copy. The helper explicitly states that messages received during the pause are not imported retroactively. New pause/resume menu ids use kebab-case.
+- Verification: inbound action tests passed (2), card/i18n contract tests passed (5), and the integrations workspace typecheck passed.

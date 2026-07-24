@@ -110,19 +110,19 @@
   {
     "id": "F019",
     "description": "Pause/resume API endpoints or server actions with same auth/permission model as existing provider mutations",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["5.5"]
   },
   {
     "id": "F020",
     "description": "Email provider settings UI shows Paused badge and Pause/Resume action per provider (kebab-case ids, i18n keys)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["5.5"]
   },
   {
     "id": "F021",
     "description": "UI helper copy explains that mail received while paused is not imported retroactively (i18n)",
-    "implemented": false,
+    "implemented": true,
     "prdRefs": ["3", "5.5"]
   },
   {

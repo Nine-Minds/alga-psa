@@ -39,7 +39,7 @@ function microsoftProvider(deliveryMode: 'webhook' | 'polling'): EmailProvider {
   };
 }
 
-function renderCard(provider: EmailProvider) {
+function renderCard(provider: EmailProvider, onTogglePause = vi.fn()) {
   renderWithProviders(
     <EmailProviderCard
       provider={provider}
@@ -52,6 +52,7 @@ function renderCard(provider: EmailProvider) {
       onRetryRenewal={vi.fn()}
       onRunDiagnostics={vi.fn()}
       onChangeDefaults={vi.fn()}
+      onTogglePause={onTogglePause}
     />
   );
 }
@@ -69,5 +70,20 @@ describe('EmailProviderCard Microsoft delivery status', () => {
     renderCard(microsoftProvider('webhook'));
 
     expect(screen.getByText('Real-time delivery: active')).toBeInTheDocument();
+  });
+
+  it('T036/T037: renders paused state and helper copy', () => {
+    const onTogglePause = vi.fn();
+    const provider = {
+      ...microsoftProvider('webhook'),
+      inboundPausedAt: '2026-07-23T18:00:00.000Z',
+      inboundPauseReason: 'manual' as const,
+    };
+    renderCard(provider, onTogglePause);
+
+    expect(screen.getByText('providerCard.badges.paused')).toBeInTheDocument();
+    expect(screen.getByText('providerCard.pausedHelp')).toBeInTheDocument();
+    expect(document.getElementById(`provider-paused-badge-${provider.id}`)).toBeInTheDocument();
+
   });
 });
