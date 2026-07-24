@@ -11,7 +11,11 @@ const DEFAULT_RELEASE_SELECTION_FILE = process.env.ALGA_APPLIANCE_RELEASE_SELECT
 const DEFAULT_KUBECONFIG = process.env.ALGA_APPLIANCE_KUBECONFIG || '/etc/rancher/k3s/k3s.yaml';
 const DEFAULT_COMMAND_TIMEOUT_MS = 5_000;
 const MAX_DIAGNOSTIC_BYTES = 64 * 1024;
-const HAS_GNU_TIMEOUT = spawnSync('sh', ['-c', 'command -v timeout >/dev/null 2>&1']).status === 0;
+// Probe for the GNU flags we actually use, not merely for a binary named
+// `timeout`. The control-plane image ships BusyBox, whose timeout rejects
+// --kill-after — detecting presence alone built a command line that failed on
+// every query and reported a healthy cluster as "node query failed".
+const HAS_GNU_TIMEOUT = spawnSync('sh', ['-c', 'timeout --kill-after=1s 1s true >/dev/null 2>&1']).status === 0;
 const EXPECTED_HELM_RELEASES = ['alga-core', 'pgbouncer', 'temporal', 'workflow-worker', 'email-service', 'temporal-worker'];
 
 function readJsonFile(file) {

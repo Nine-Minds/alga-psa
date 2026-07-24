@@ -15,6 +15,7 @@ const commandTimeoutMs = Number(process.env.ALGA_HOST_AGENT_COMMAND_TIMEOUT_MS |
 // bootstrap control-plane apply instead, so the swap survives the pod restart.
 const applianceRoot = process.env.ALGA_APPLIANCE_ROOT || '/opt/alga-appliance';
 const bootstrapScript = process.env.ALGA_APPLIANCE_BOOTSTRAP_SCRIPT || `${applianceRoot}/scripts/bootstrap-control-plane.sh`;
+const installStateFile = process.env.ALGA_APPLIANCE_STATE_FILE || '/var/lib/alga-appliance/install-state.json';
 const cpUpgradeStatusFile = process.env.ALGA_APPLIANCE_CP_UPGRADE_STATUS_FILE || '/var/lib/alga-appliance/control-plane-upgrade.json';
 const cpUpgradeLogFile = process.env.ALGA_APPLIANCE_CP_UPGRADE_LOG_FILE || '/var/lib/alga-appliance/control-plane-upgrade.log';
 
@@ -34,9 +35,36 @@ function writeCpUpgradeStatus(status, extra = {}) {
   }
 }
 
+// Both upgrade paths reconcile storage, and the control-plane upgrade Recreate's
+// the pod running the app update. Interleaving them SIGKILLs a reconcile
+// mid-flight, so refuse rather than race — the caller retries once the app
+// update lands.
+const APP_UPDATE_BUSY_STATUSES = new Set([
+  'update-running',
+  'storage-install-running'
+]);
+
+function appUpdateInFlight() {
+  try {
+    const state = JSON.parse(fs.readFileSync(installStateFile, 'utf8'));
+    return APP_UPDATE_BUSY_STATUSES.has(String(state?.status || ''));
+  } catch {
+    // No readable state file means no update is running.
+    return false;
+  }
+}
+
 function startControlPlaneUpgrade() {
   if (cpUpgradeInFlight) {
     return { ok: true, started: false, alreadyRunning: true };
+  }
+  if (appUpdateInFlight()) {
+    return {
+      ok: false,
+      started: false,
+      busy: 'app-update',
+      error: 'An application update is running. Wait for it to finish before upgrading the control plane.'
+    };
   }
   cpUpgradeInFlight = true;
   writeCpUpgradeStatus('running', { startedAt: nowIso() });
@@ -137,7 +165,7 @@ const server = http.createServer((req, res) => {
     // Kick off the control-plane apply and return immediately. The work
     // continues here on the host while the control-plane pod is Recreate'd.
     const result = startControlPlaneUpgrade();
-    json(res, 202, result);
+    json(res, result.ok ? 202 : 409, result);
     return;
   }
 

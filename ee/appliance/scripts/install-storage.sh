@@ -9,6 +9,9 @@ K3S_CONFIG_DROP_IN="/etc/rancher/k3s/config.yaml.d/20-alga-local-storage.yaml"
 K3S_LOCAL_STORAGE_SKIP_FILE="/var/lib/rancher/k3s/server/manifests/local-storage.yaml.skip"
 SMOKE_NAMESPACE="storage-smoke"
 LOCK_DIR="${ALGA_APPLIANCE_STORAGE_LOCK_DIR:-/var/lib/alga-appliance/storage-reconcile.lock}"
+# Comfortably above a legitimate worst-case run (two 5m rollout waits plus the
+# stability re-check), so a live holder is never evicted by a slow cluster.
+LOCK_STALE_SECONDS="${ALGA_APPLIANCE_STORAGE_LOCK_STALE_SECONDS:-900}"
 STORAGE_STABILITY_SECONDS="${ALGA_APPLIANCE_STORAGE_STABILITY_SECONDS:-10}"
 DRY_RUN=false
 KUBE_COMMAND=()
@@ -38,6 +41,32 @@ run_cmd() {
   "$@"
 }
 
+# Break a lock whose holder is gone. The lock lives on a hostPath shared by the
+# control-plane pod and the host, so holders sit in different PID namespaces and
+# liveness cannot be probed by PID. Age is the only portable signal.
+#
+# This matters because the holder really can die without running its trap: the
+# control-plane pod invokes this script through spawnSync, which blocks Node's
+# event loop, so the pod cannot service SIGTERM while a reconcile is running. A
+# control-plane upgrade (strategy: Recreate, 30s grace) therefore SIGKILLs the
+# script mid-run. Without stale detection that orphaned directory wedges every
+# future reconciliation until someone removes it by hand.
+lock_age_seconds() {
+  local stamp_file="$LOCK_DIR/acquired-at"
+  local acquired_at
+  acquired_at="$(cat "$stamp_file" 2>/dev/null || echo '')"
+  if [ -z "$acquired_at" ]; then
+    # A lock with no stamp predates this logic (or was interrupted between
+    # mkdir and stamping); fall back to the directory's own mtime.
+    acquired_at="$(stat -c %Y "$LOCK_DIR" 2>/dev/null || echo '')"
+  fi
+  if [ -z "$acquired_at" ]; then
+    echo 0
+    return 0
+  fi
+  echo $(( $(date +%s) - acquired_at ))
+}
+
 acquire_lock() {
   if $DRY_RUN; then
     return 0
@@ -46,6 +75,11 @@ acquire_lock() {
   local attempts=0
   mkdir -p "$(dirname "$LOCK_DIR")"
   until mkdir "$LOCK_DIR" 2>/dev/null; do
+    if [ "$(lock_age_seconds)" -ge "$LOCK_STALE_SECONDS" ]; then
+      echo "Breaking a stale storage reconciliation lock (held for $(lock_age_seconds)s)." >&2
+      rm -rf "$LOCK_DIR"
+      continue
+    fi
     attempts=$((attempts + 1))
     if [ "$attempts" -ge 150 ]; then
       echo "Timed out waiting for another storage reconciliation to finish." >&2
@@ -53,7 +87,8 @@ acquire_lock() {
     fi
     sleep 2
   done
-  trap 'rmdir "$LOCK_DIR" 2>/dev/null || true' EXIT INT TERM
+  date +%s > "$LOCK_DIR/acquired-at" 2>/dev/null || true
+  trap 'rm -rf "$LOCK_DIR" 2>/dev/null || true' EXIT INT TERM
 }
 
 configure_kube_command() {

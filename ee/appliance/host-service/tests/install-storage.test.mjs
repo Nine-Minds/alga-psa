@@ -279,3 +279,40 @@ test('repeated reconciliation preserves application PVs and leaves no smoke reso
   assert.equal(fs.existsSync(path.join(harness.stateDir, 'current-smoke-pv')), false);
   assert.equal(fs.existsSync(path.join(harness.stateDir, 'pv-storage-smoke.policy')), false);
 });
+
+test('a stale lock left by a SIGKILLed holder is broken instead of wedging forever', () => {
+  const harness = createHarness();
+  const lockDir = harness.env.ALGA_APPLIANCE_STORAGE_LOCK_DIR;
+
+  // Simulate the real failure: the control-plane pod is Recreate'd mid-reconcile
+  // and SIGKILLed, so its EXIT trap never removes the lock directory.
+  fs.mkdirSync(lockDir, { recursive: true });
+  fs.writeFileSync(path.join(lockDir, 'acquired-at'), String(Math.floor(Date.now() / 1000) - 3600));
+
+  const result = runInstaller(harness);
+
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  assert.match(result.stderr, /Breaking a stale storage reconciliation lock/);
+  assert.equal(fs.existsSync(lockDir), false, 'lock should be released on exit');
+});
+
+test('a fresh lock held by a live reconcile is respected, not broken', () => {
+  const harness = createHarness();
+  const lockDir = harness.env.ALGA_APPLIANCE_STORAGE_LOCK_DIR;
+
+  fs.mkdirSync(lockDir, { recursive: true });
+  fs.writeFileSync(path.join(lockDir, 'acquired-at'), String(Math.floor(Date.now() / 1000)));
+
+  const result = spawnSync(installer, ['--kubeconfig', harness.kubeconfig], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+    env: { ...harness.env, ALGA_APPLIANCE_STORAGE_LOCK_STALE_SECONDS: '900' },
+    timeout: 12_000
+  });
+
+  // The holder is young, so this run must wait rather than steal the lock. It is
+  // killed by the harness timeout while still waiting, which is the proof.
+  assert.notEqual(result.status, 0);
+  assert.doesNotMatch(result.stderr || '', /Breaking a stale storage reconciliation lock/);
+  assert.equal(fs.existsSync(lockDir), true, 'the live holder keeps its lock');
+});

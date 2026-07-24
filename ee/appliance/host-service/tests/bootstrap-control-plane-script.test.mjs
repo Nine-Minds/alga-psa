@@ -69,3 +69,57 @@ test('T001 host bootstrap dry-run plans minimal k3s, image import, storage/contr
   assert.match(output, /setup handoff: http:\/\/.+:18080\//);
   assert.doesNotMatch(output, /\?token=/);
 });
+
+// The control-plane upgrade is how an appliance takes an appliance fix, and the
+// box most needing one is the box whose duplicate local-path controllers left
+// PostgreSQL and Redis Pending on unbound PVCs. Skipping storage here made the
+// upgrade a no-op on exactly that appliance.
+test('control-plane-only upgrade reconciles storage before applying the new control plane', () => {
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'alga-bootstrap-cp-only-'));
+  const applianceRoot = path.join(tmp, 'opt', 'alga-appliance');
+  const manifestDir = path.join(applianceRoot, 'control-plane', 'manifests');
+  const storageDir = path.join(applianceRoot, 'manifests');
+  const scriptsDir = path.join(applianceRoot, 'scripts');
+
+  fs.mkdirSync(manifestDir, { recursive: true });
+  fs.mkdirSync(storageDir, { recursive: true });
+  fs.mkdirSync(scriptsDir, { recursive: true });
+  fs.writeFileSync(path.join(manifestDir, 'kustomization.yaml'), 'resources: []\n');
+  fs.writeFileSync(path.join(manifestDir, 'namespace.yaml'), 'kind: Namespace\n');
+  fs.writeFileSync(path.join(storageDir, 'local-path-storage.yaml'), 'kind: List\n');
+  fs.writeFileSync(path.join(scriptsDir, 'install-storage.sh'), '#!/usr/bin/env bash\n', { mode: 0o755 });
+  const tokenFile = path.join(tmp, 'setup-token');
+  fs.writeFileSync(tokenFile, 'token-123\n');
+
+  const result = spawnSync(bootstrapScript, [
+    '--appliance-root', applianceRoot,
+    '--kubeconfig', path.join(tmp, 'k3s.yaml'),
+    '--token-file', tokenFile,
+    '--control-plane-only',
+    '--dry-run'
+  ], { cwd: repoRoot, encoding: 'utf8' });
+
+  assert.equal(result.status, 0, result.stderr || result.stdout);
+  const output = result.stdout;
+
+  const expectedInOrder = [
+    'Substrate: waiting for Kubernetes API',
+    'Substrate: reserving local-path storage for the appliance provisioner',
+    'persist --disable local-storage in the k3s service and configuration',
+    'Control plane: applying local-path storage manifest without waiting for image pulls',
+    'Control plane: applying Kubernetes-hosted setup/status manifests'
+  ];
+
+  let previous = -1;
+  for (const fragment of expectedInOrder) {
+    const index = output.indexOf(fragment);
+    assert.notEqual(index, -1, `missing plan step: ${fragment}\n${output}`);
+    assert.equal(index > previous, true, `plan step out of order: ${fragment}\n${output}`);
+    previous = index;
+  }
+
+  // k3s is already running on this path; it must not be restarted, and baked
+  // images must not be re-imported.
+  assert.equal(output.includes('Substrate: ensuring k3s is installed and running'), false, output);
+  assert.equal(output.includes('Control plane: importing baked image archives'), false, output);
+});

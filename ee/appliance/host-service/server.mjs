@@ -50,6 +50,17 @@ const kubeconfigPath = process.env.ALGA_APPLIANCE_KUBECONFIG || '/etc/rancher/k3
 const staticUiDir = process.env.ALGA_APPLIANCE_STATUS_UI_DIR || '/opt/alga-appliance/status-ui/dist';
 const cpUpgradeStatusFile = process.env.ALGA_APPLIANCE_CP_UPGRADE_STATUS_FILE || '/var/lib/alga-appliance/control-plane-upgrade.json';
 const hostAgentSocket = process.env.ALGA_APPLIANCE_HOST_AGENT_SOCKET || '/run/alga-appliance/host-agent.sock';
+
+// A control-plane upgrade is "applying" only while the host-agent says running.
+// The status file is written by the host-agent on the shared hostPath.
+function controlPlaneUpgradeInFlight() {
+  try {
+    const status = JSON.parse(fs.readFileSync(cpUpgradeStatusFile, 'utf8'));
+    return String(status?.status || '') === 'running';
+  } catch {
+    return false;
+  }
+}
 const STATUS_CACHE_TTL_MS = Number(process.env.ALGA_APPLIANCE_STATUS_CACHE_TTL_MS || 10_000);
 const KUBECTL_REQUEST_TIMEOUT_MS = Number(process.env.ALGA_APPLIANCE_KUBECTL_REQUEST_TIMEOUT_MS || 20_000);
 const KUBECTL_STATUS_TIMEOUT_MS = Number(process.env.ALGA_APPLIANCE_KUBECTL_STATUS_TIMEOUT_MS || 20_000);
@@ -1312,6 +1323,16 @@ const server = http.createServer(async (req, res) => {
     if (!['stable', 'nightly'].includes(channel)) {
       res.writeHead(400, { 'content-type': 'application/json' });
       res.end(JSON.stringify({ error: 'Invalid channel. Use stable or nightly.' }));
+      return;
+    }
+
+    // Refuse while a control-plane upgrade is applying. Both paths reconcile
+    // storage under one lock, and the upgrade Recreate's this very pod — so
+    // starting an app update here would have it SIGKILLed mid-reconcile.
+    if (controlPlaneUpgradeInFlight()) {
+      jsonResponse(res, 409, {
+        error: 'A control-plane upgrade is applying. Wait for it to finish before updating the application channel.'
+      });
       return;
     }
 

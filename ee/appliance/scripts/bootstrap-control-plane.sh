@@ -456,10 +456,20 @@ EOF
 if [ "$CONTROL_PLANE_ONLY" = "true" ]; then
   # Self-service control-plane upgrade (host-agent driven): re-resolve the
   # channel-pinned control-plane image and re-apply only the control plane.
-  # k3s is already up, baked images are already imported, and local-path storage
-  # is already applied, so skip those steps. apply_control_plane pulls the new
-  # digest and applies the kustomize overlay, which triggers the Recreate.
+  # k3s is already up and baked images are already imported, so those steps are
+  # skipped. apply_control_plane pulls the new digest and applies the kustomize
+  # overlay, which triggers the Recreate.
+  #
+  # Storage is NOT skipped, despite k3s already running. This path is how an
+  # appliance takes an appliance fix, and the appliance most in need of one is
+  # the appliance whose bundled and appliance-owned local-path controllers are
+  # fighting over the same volumes — leaving PostgreSQL and Redis Pending on
+  # unbound PVCs. Assuming "storage is already applied" made the upgrade a
+  # no-op on exactly that box, so recovery needed a reboot or an app update.
+  # Both calls are idempotent.
   wait_for_kubernetes_api
+  configure_k3s_storage_owner
+  apply_local_storage
   apply_control_plane
   log "control-plane upgrade applied"
 else
