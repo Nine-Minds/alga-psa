@@ -150,6 +150,7 @@
       "copying": "Wird kopiert...",
       "createUser": "Benutzer erstellen",
       "sendInvitation": "Portal-Einladung senden",
+      "sendTeamInvitation": "Einladung senden",
       "cancel": "Abbrechen"
     },
     "form": {
@@ -183,7 +184,8 @@
       },
       "passwordAlert": {
         "withPassword": "Wenn Sie ein Passwort festlegen, wird der Benutzer sofort erstellt. Er kann sich sofort anmelden.",
-        "withoutPassword": "Kein Passwort erforderlich — wir senden eine Portal-Einladung, damit der Benutzer es selbst festlegen kann."
+        "withoutPassword": "Kein Passwort erforderlich — wir senden eine Portal-Einladung, damit der Benutzer es selbst festlegen kann.",
+        "withoutPasswordMsp": "Kein Passwort erforderlich — wir senden eine E-Mail-Einladung, damit die Person es selbst festlegen kann."
       },
       "requirePasswordChange": "Passwortänderung bei der ersten Anmeldung erforderlich"
     },
@@ -208,9 +210,11 @@
     "messages": {
       "success": {
         "portalInvitationSent": "Portal-Einladung erfolgreich gesendet!",
+        "teamInvitationSent": "Einladung erfolgreich gesendet!",
         "clientPortalUserCreated": "Kundenportal-Benutzer erfolgreich erstellt!",
         "copiedVanityLink": "Benutzerdefinierter Portal-Anmeldelink in die Zwischenablage kopiert",
-        "copiedCanonicalLink": "Kanonischer Portal-Anmeldelink in die Zwischenablage kopiert"
+        "copiedCanonicalLink": "Kanonischer Portal-Anmeldelink in die Zwischenablage kopiert",
+        "invitationRevoked": "Einladung widerrufen"
       },
       "error": {
         "fetchUsers": "Benutzer konnten nicht abgerufen werden",
@@ -237,6 +241,7 @@
         "contactNotFound": "Kontakt nicht gefunden.",
         "contactMissingEmailGeneric": "Der Kontakt hat keine E-Mail-Adresse. Bitte fügen Sie dem Kontakt eine E-Mail-Adresse hinzu, bevor Sie eine Einladung senden.",
         "contactInvalidEmail": "Der Kontakt hat eine ungültige E-Mail-Adresse. Bitte aktualisieren Sie den Kontakt mit einer gültigen E-Mail-Adresse, bevor Sie eine Einladung senden.",
+        "invalidEmail": "Bitte geben Sie eine gültige E-Mail-Adresse ein",
         "noDefaultClient": "Kein Standard-Client für diesen Mandanten konfiguriert. Bitte legen Sie in den allgemeinen Einstellungen einen Standard-Client fest.",
         "noDefaultLocation": "Der Standard-Client muss einen Standard-Standort konfiguriert haben, um Portaleinladungen zu senden.",
         "noLocationEmail": "Der Standort des Standard-Clients muss eine Kontakt-E-Mail-Adresse konfiguriert haben.",
@@ -245,8 +250,17 @@
         "roleRequired": "Rolle ist erforderlich",
         "invalidRole": "Ausgewählte Rolle ist ungültig",
         "licenseLimitReached": "Sie haben Ihr MSP-Benutzerlizenzlimit erreicht.",
-        "soloPlanLimit": "Der Solo-Tarif ist auf 1 Benutzer begrenzt. Führen Sie ein Upgrade auf Pro durch, um weitere Benutzer hinzuzufügen."
+        "soloPlanLimit": "Der Solo-Tarif ist auf 1 Benutzer begrenzt. Führen Sie ein Upgrade auf Pro durch, um weitere Benutzer hinzuzufügen.",
+        "revokeInvitation": "Einladung konnte nicht widerrufen werden",
+        "invitationNotFound": "Einladung nicht gefunden oder bereits verwendet"
       }
+    },
+    "invitations": {
+      "title": "Ausstehende Einladungen",
+      "description": "Eingeladene Teammitglieder, die ihr Konto noch nicht eingerichtet haben.",
+      "expiresPrefix": "Läuft ab:",
+      "revoke": "Widerrufen",
+      "revoking": "Wird widerrufen..."
     }
   },
   "userDetails": {

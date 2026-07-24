@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { hashPassword } from '@alga-psa/core/encryption';
+import { isValidEmail } from '@alga-psa/core';
 import { createClient as createClientInternal } from '@alga-psa/clients/actions/clientActions';
 import { createClientContact } from '@alga-psa/clients/actions/contact-actions/contactActions';
 import { updateTenantOnboardingStatus, saveTenantOnboardingProgress } from '@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions';
@@ -832,7 +833,6 @@ export const configureTicketing = withAuth(async (
           board_id: boardId,
           tenant,
           board_name: data.boardName,
-          ...(Object.prototype.hasOwnProperty.call(boardColumns, 'email') ? { email: data.supportEmail } : {}),
           ...(Object.prototype.hasOwnProperty.call(boardColumns, 'is_active') ? { is_active: true } : {}),
           ...(Object.prototype.hasOwnProperty.call(boardColumns, 'is_inactive') ? { is_inactive: false } : {}),
           is_default: shouldBeDefault
@@ -996,6 +996,32 @@ export const configureTicketing = withAuth(async (
         }
       }
 
+      // Persist the support email where the product actually reads it:
+      // tenant_settings.settings.supportEmail (top-level key — what portal
+      // branding and the appointment organizer fallback consume). `boards`
+      // has no email column, so before this the field went nowhere. Inbound
+      // ticket email remains a separate concern (Settings > Email providers).
+      // Blank or invalid input is skipped so an already-configured address
+      // is never clobbered.
+      const supportEmail = data.supportEmail?.trim();
+      if (supportEmail && isValidEmail(supportEmail)) {
+        const settingsRow = await tenantScopedTable('tenant_settings').first();
+        const mergedSettings = { ...(settingsRow?.settings || {}), supportEmail };
+        if (settingsRow) {
+          await tenantScopedTable('tenant_settings').update({
+            settings: mergedSettings,
+            updated_at: new Date()
+          });
+        } else {
+          await tenantScopedTable('tenant_settings').insert({
+            tenant,
+            settings: mergedSettings,
+            created_at: new Date(),
+            updated_at: new Date()
+          });
+        }
+      }
+
       // Save progress - convert categories and priorities to strings
       await saveTenantOnboardingProgress({
         boardName: data.boardName,
@@ -1109,7 +1135,7 @@ export const getAvailableRoles = withAuth(async (
   { tenant }: AuthContext
 ): Promise<{
   success: boolean;
-  data?: Array<{ value: string; label: string }>;
+  data?: Array<{ value: string; label: string; roleId: string }>;
   error?: string;
 }> => {
   try {
@@ -1124,10 +1150,14 @@ export const getAvailableRoles = withAuth(async (
         .orderBy('role_name');
     });
 
-    // Transform roles to the format expected by the select component
+    // Transform roles to the format expected by the select component.
+    // `value`/`label` stay role-name-based (matches addSingleTeamMember's
+    // lookup-by-name); `roleId` is exposed for the email-invite path, which
+    // needs the actual FK value.
     const roleOptions = roles.map(role => ({
       value: role.role_name,
-      label: role.role_name.charAt(0).toUpperCase() + role.role_name.slice(1) // Capitalize first letter
+      label: role.role_name.charAt(0).toUpperCase() + role.role_name.slice(1), // Capitalize first letter
+      roleId: role.role_id
     }));
 
     return {
@@ -1136,10 +1166,29 @@ export const getAvailableRoles = withAuth(async (
     };
   } catch (error) {
     console.error('Error fetching available roles:', error);
-    return { 
-      success: false, 
+    return {
+      success: false,
       error: onboardingActionErrorMessage(error, 'Failed to load available roles')
     };
+  }
+});
+
+/**
+ * License usage for the Team Members onboarding step. Uses the withAuth
+ * session tenant directly instead of getLicenseUsageAction's header/async
+ * -context lookup, which is unreliable this early in onboarding and left the
+ * step's "Users: N" counter stuck at 0.
+ */
+export const getOnboardingLicenseUsage = withAuth(async (
+  _user: IUserWithRoles,
+  { tenant }: AuthContext
+): Promise<OnboardingActionResult> => {
+  try {
+    const usage = await getLicenseUsage(tenant);
+    return { success: true, data: { limit: usage.limit, used: usage.used } };
+  } catch (error) {
+    console.error('Error fetching onboarding license usage:', error);
+    return { success: false, error: onboardingActionErrorMessage(error, 'Failed to load license usage') };
   }
 });
 

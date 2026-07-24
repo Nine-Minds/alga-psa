@@ -150,6 +150,7 @@
       "copying": "11111",
       "createUser": "11111",
       "sendInvitation": "11111",
+      "sendTeamInvitation": "11111",
       "cancel": "11111"
     },
     "form": {
@@ -183,7 +184,8 @@
       },
       "passwordAlert": {
         "withPassword": "11111",
-        "withoutPassword": "11111"
+        "withoutPassword": "11111",
+        "withoutPasswordMsp": "11111"
       },
       "requirePasswordChange": "11111"
     },
@@ -208,9 +210,11 @@
     "messages": {
       "success": {
         "portalInvitationSent": "11111",
+        "teamInvitationSent": "11111",
         "clientPortalUserCreated": "11111",
         "copiedVanityLink": "11111",
-        "copiedCanonicalLink": "11111"
+        "copiedCanonicalLink": "11111",
+        "invitationRevoked": "11111"
       },
       "error": {
         "fetchUsers": "11111",
@@ -237,6 +241,7 @@
         "contactNotFound": "11111",
         "contactMissingEmailGeneric": "11111",
         "contactInvalidEmail": "11111",
+        "invalidEmail": "11111",
         "noDefaultClient": "11111",
         "noDefaultLocation": "11111",
         "noLocationEmail": "11111",
@@ -245,8 +250,17 @@
         "roleRequired": "11111",
         "invalidRole": "11111",
         "licenseLimitReached": "11111",
-        "soloPlanLimit": "11111"
+        "soloPlanLimit": "11111",
+        "revokeInvitation": "11111",
+        "invitationNotFound": "11111"
       }
+    },
+    "invitations": {
+      "title": "11111",
+      "description": "11111",
+      "expiresPrefix": "11111",
+      "revoke": "11111",
+      "revoking": "11111"
     }
   },
   "userDetails": {

@@ -8,7 +8,7 @@ import { Label } from '@alga-psa/ui/components/Label';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import type { StepProps } from '@alga-psa/types';
-import { ChevronDown, ChevronUp, Package, Trash2, Settings } from 'lucide-react';
+import { ChevronDown, ChevronUp, Trash2, Settings } from 'lucide-react';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Checkbox } from '@alga-psa/ui/components/Checkbox';
@@ -32,15 +32,16 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
   const { t } = useTranslation('msp/onboarding');
   const isServiceCreated = !!data.serviceId;
   const [showServiceTypes, setShowServiceTypes] = useState(false);
-  const [showImportDialog, setShowImportDialog] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
   const [standardTypes, setStandardTypes] = useState<Array<{ id: string; name: string; display_order?: number }>>([]);
   const [tenantTypes, setTenantTypes] = useState<Array<{ id: string; name: string }>>([]);
   const [selectedTypes, setSelectedTypes] = useState<string[]>([]);
+  const [hasAutoSelectedSuggestions, setHasAutoSelectedSuggestions] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
   const [importResult, setImportResult] = useState<{ imported: number; skipped: number } | null>(null);
   const [isLoadingTypes, setIsLoadingTypes] = useState(false);
-  
+  const [tenantTypesLoaded, setTenantTypesLoaded] = useState(false);
+
   // Form state for new service type
   const [serviceTypeForm, setServiceTypeForm] = useState({
     name: '',
@@ -49,24 +50,45 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
     displayOrder: 0
   });
 
+  // The service types panel is the only path to a usable Service Type
+  // dropdown, so keep it open automatically until the tenant has at least
+  // one type — no "Manage Service Types" click required to get started.
+  const isPanelOpen = showServiceTypes || (tenantTypesLoaded && tenantTypes.length === 0);
+
   useEffect(() => {
     loadTenantServiceTypes();
   }, []);
 
+  // Keep the standard-catalog suggestions in sync with what the tenant
+  // already has, and gently pre-check them the first time so confirming is
+  // a single click instead of a separate "Import from Standard" detour.
+  // Runs once the tenant's types have loaded (even if that load failed) and
+  // again whenever they change.
   useEffect(() => {
-    if (showImportDialog) {
-      loadStandardServiceTypes();
-    }
-  }, [showImportDialog, tenantTypes]); // Reload when tenant types change
+    loadStandardServiceTypes();
+  }, [tenantTypes, tenantTypesLoaded]);
 
   const loadStandardServiceTypes = async () => {
+    // Wait for the tenant's own types: filtering (and the one-time
+    // auto-select below) against the initial empty state would surface — and
+    // pre-check — types the tenant already has.
+    if (!tenantTypesLoaded) return;
+
     const result = await getStandardServiceTypes();
     if (result.success && result.data) {
       // Filter out any types that might have been imported since last load
-      const availableTypes = result.data.filter(st => 
+      const availableTypes = result.data.filter(st =>
         !tenantTypes.some(tt => tt.name === st.name)
       );
       setStandardTypes(availableTypes);
+
+      if (!hasAutoSelectedSuggestions && tenantTypes.length === 0 && availableTypes.length > 0) {
+        setSelectedTypes(availableTypes.map(st => st.id));
+        setHasAutoSelectedSuggestions(true);
+      } else {
+        const availableIds = new Set(availableTypes.map(st => st.id));
+        setSelectedTypes(prev => prev.filter(id => availableIds.has(id)));
+      }
     }
   };
 
@@ -80,24 +102,25 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
         updateData({ serviceTypeId: result.data[0].id });
       }
     }
+    setTenantTypesLoaded(true);
     setIsLoadingTypes(false);
   };
 
   const handleImport = async () => {
     if (selectedTypes.length === 0) return;
-    
+
     setIsImporting(true);
     setImportResult(null);
-    
+
     const result = await importServiceTypes(selectedTypes);
     if (result.success && result.data) {
       setImportResult(result.data);
       setSelectedTypes([]);
-      // Reload both tenant service types and available standard types
+      // Reloading tenant types re-runs the [tenantTypes] effect, which
+      // refreshes the standard suggestions with a fresh (non-stale) filter.
       await loadTenantServiceTypes();
-      await loadStandardServiceTypes();
     }
-    
+
     setIsImporting(false);
   };
 
@@ -212,40 +235,9 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
       )}
 
       <div className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="serviceName">
-            {t('billingSetupStep.fields.serviceName.label', {
-              defaultValue: 'Service Name *'
-            })}
-          </Label>
-          <Input
-            id="serviceName"
-            value={data.serviceName}
-            onChange={(e) => updateData({ serviceName: e.target.value })}
-            placeholder={t('billingSetupStep.fields.serviceName.placeholder', {
-              defaultValue: 'Managed IT Services'
-            })}
-          />
-        </div>
-
-        <div>
-          <Label htmlFor="serviceDescription" className="block mb-2">
-            {t('billingSetupStep.fields.serviceDescription.label', {
-              defaultValue: 'Service Description'
-            })}
-          </Label>
-          <TextArea
-            id="serviceDescription"
-            value={data.serviceDescription}
-            onChange={(e) => updateData({ serviceDescription: e.target.value })}
-            placeholder={t('billingSetupStep.fields.serviceDescription.placeholder', {
-              defaultValue: 'Comprehensive IT support and management services...'
-            })}
-            rows={3}
-            className="!max-w-none"
-          />
-        </div>
-
+        {/* Service Type comes first: it's the one prerequisite (the panel
+            below seeds it in a click), so the form reads top-down instead of
+            leading with fields that can't be submitted yet. */}
         <div className="space-y-2">
           <Label htmlFor="serviceTypeId">
             {t('billingSetupStep.fields.serviceType.label', {
@@ -290,16 +282,16 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
             </Button>
           </div>
           {serviceTypeOptions.length === 0 && !isLoadingTypes && (
-            <p className="text-xs text-red-600">
+            <p className="text-xs text-gray-600">
               {t('billingSetupStep.fields.serviceType.emptyHelp', {
-                defaultValue: 'Click "Manage Service Types" to create or import service types'
+                defaultValue: 'Confirm a suggested service type below, or add your own — nothing else here is set in stone.'
               })}
             </p>
           )}
         </div>
 
         {/* Service Types Management Section */}
-        {showServiceTypes && (
+        {isPanelOpen && (
           <div className="border rounded-lg p-4 space-y-4">
             <Alert variant="info" className="mb-4">
               <AlertDescription>
@@ -309,30 +301,12 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
                   })}
                 </span>{' '}
                 {t('billingSetupStep.serviceTypes.description', {
-                  defaultValue: 'Service types are taxonomy labels for organization and filtering. Billing mode is configured separately on each service.'
+                  defaultValue: 'Service types are taxonomy labels for organization and filtering. Billing mode is configured separately on each service. You can rename, add, or remove types anytime later from Settings.'
                 })}
               </AlertDescription>
             </Alert>
-            
+
             <div className="flex gap-2">
-              <Button
-                id="import-standard-types-btn"
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  setShowImportDialog(prev => !prev);
-                  if (!showImportDialog) {
-                    setShowAddForm(false);
-                    loadStandardServiceTypes();
-                  }
-                }}
-                className="flex-1"
-              >
-                <Package className="w-4 h-4 mr-2" />
-                {t('billingSetupStep.serviceTypes.actions.import', {
-                  defaultValue: 'Import from Standard'
-                })}
-              </Button>
               <Button
                 id="add-service-type-btn"
                 type="button"
@@ -340,7 +314,6 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
                 onClick={() => {
                   setShowAddForm(prev => !prev);
                   if (!showAddForm) {
-                    setShowImportDialog(false);
                     // Calculate next order number
                     const maxOrder = tenantTypes.reduce((max, t) => {
                       const order = (t as any).order_number || (t as any).display_order || 0;
@@ -535,18 +508,20 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
               </div>
             )}
 
-            {/* Import Dialog */}
-            {showImportDialog && (
+            {/* Suggested standard service types — shown inline instead of
+                behind a separate "Import from Standard" dialog, pre-checked
+                so confirming is a single click. */}
+            {standardTypes.length > 0 && (
               <div className="border rounded-lg p-4 bg-gray-50 space-y-4">
                 <h4 className="font-medium">
                   {t('billingSetupStep.serviceTypes.import.title', {
-                    defaultValue: 'Import Standard Service Types'
+                    defaultValue: 'Suggested Service Types'
                   })}
                 </h4>
-                
+
                 <p className="text-sm text-gray-600">
                   {t('billingSetupStep.serviceTypes.import.description', {
-                    defaultValue: 'Select standard service types to import into your system:'
+                    defaultValue: 'These are standard for most MSPs. Uncheck any you don\'t want, then confirm to add the rest — you can rename or remove them anytime later.'
                   })}
                 </p>
 
@@ -579,7 +554,7 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
             <div className="border rounded-lg overflow-hidden">
               <div className="max-h-64 overflow-y-auto">
                 <table className="w-full">
-                  <thead className="bg-gray-50 border-b sticky top-0">
+                  <thead className="bg-gray-50 border-b sticky top-0 z-10">
                   <tr>
                     <th className="px-4 py-2">
                       <div className="flex items-center gap-2">
@@ -636,10 +611,10 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
                 >
                   {isImporting
                     ? t('billingSetupStep.serviceTypes.import.actions.importing', {
-                        defaultValue: 'Importing...'
+                        defaultValue: 'Adding...'
                       })
                     : t('billingSetupStep.serviceTypes.import.actions.importSelected', {
-                        defaultValue: 'Import Selected ({{count}})',
+                        defaultValue: 'Confirm & Add ({{count}})',
                         count: selectedTypes.length
                       })}
                 </Button>
@@ -709,6 +684,40 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
         )}
 
         <div className="space-y-2">
+          <Label htmlFor="serviceName">
+            {t('billingSetupStep.fields.serviceName.label', {
+              defaultValue: 'Service Name *'
+            })}
+          </Label>
+          <Input
+            id="serviceName"
+            value={data.serviceName}
+            onChange={(e) => updateData({ serviceName: e.target.value })}
+            placeholder={t('billingSetupStep.fields.serviceName.placeholder', {
+              defaultValue: 'Managed IT Services'
+            })}
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="serviceDescription" className="block mb-2">
+            {t('billingSetupStep.fields.serviceDescription.label', {
+              defaultValue: 'Service Description'
+            })}
+          </Label>
+          <TextArea
+            id="serviceDescription"
+            value={data.serviceDescription}
+            onChange={(e) => updateData({ serviceDescription: e.target.value })}
+            placeholder={t('billingSetupStep.fields.serviceDescription.placeholder', {
+              defaultValue: 'Comprehensive IT support and management services...'
+            })}
+            rows={3}
+            className="!max-w-none"
+          />
+        </div>
+
+        <div className="space-y-2">
           <Label htmlFor="serviceBillingMode">
             {t('billingSetupStep.fields.billingMode.label', {
               defaultValue: 'Billing Mode'
@@ -716,7 +725,7 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
           </Label>
           <CustomSelect
             id="serviceBillingMode"
-            value={data.serviceBillingMode || 'usage'}
+            value={data.serviceBillingMode || 'hourly'}
             onValueChange={(value) => updateData({ serviceBillingMode: value as 'fixed' | 'hourly' | 'usage' })}
             options={[
               { value: 'fixed', label: t('billingSetupStep.billingMethods.fixed', { defaultValue: 'Fixed' }) },
@@ -758,7 +767,7 @@ export function BillingSetupStep({ data, updateData, attemptedToProceed = false 
               })}
             </span>{' '}
             {t('billingSetupStep.validation.actionRequiredDescription', {
-              defaultValue: 'Click "Manage Service Types" above to create or import at least one service type before creating a service.'
+              defaultValue: 'Confirm a suggested service type above, or add your own, before creating a service.'
             })}
           </AlertDescription>
         </Alert>

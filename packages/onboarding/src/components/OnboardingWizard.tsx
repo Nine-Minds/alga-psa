@@ -107,7 +107,7 @@ export function OnboardingWizard({
     serviceName: '',
     serviceDescription: '',
     servicePrice: '',
-    serviceBillingMode: 'usage',
+    serviceBillingMode: 'hourly',
     contractLineName: 'hourly',
     currencyCode: 'USD',
 
@@ -143,7 +143,7 @@ export function OnboardingWizard({
 
   const translatedStepLabelsByOriginalIndex = [
     t(isAlgaDesk ? 'onboardingWizard.steps.algadeskWorkspace' : 'onboardingWizard.steps.clientInfo', {
-      defaultValue: isAlgaDesk ? 'Workspace' : 'Client Info'
+      defaultValue: isAlgaDesk ? 'Workspace' : 'Your Company'
     }),
     t('onboardingWizard.steps.teamMembers', {
       defaultValue: 'Team Members'

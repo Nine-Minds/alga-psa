@@ -30,7 +30,7 @@
     "title": "Onboarding-Assistent",
     "description": "Assistenten-Shell für die MSP-Mandanten-Einrichtung mit Dialog-/Vollseiten-Darstellung, Fortschritt, Validierung und Abschlussabläufen",
     "steps": {
-      "clientInfo": "Kundeninfo",
+      "clientInfo": "Ihr Unternehmen",
       "teamMembers": "Teammitglieder",
       "addClient": "Kunden anlegen",
       "clientContact": "Kundenkontakt",
@@ -117,7 +117,7 @@
     },
     "note": {
       "defaultTaxSettings": "Der Kunde wird mit den Standard-Steuereinstellungen ohne Steuerpflicht (0 %) angelegt. Sie können die Steuersätze später in den Kundeneinstellungen konfigurieren.",
-      "optional": "Sie können diesen Schritt überspringen und Kunden später von Ihrem Dashboard aus hinzufügen."
+      "optional": "Sie können diesen Schritt überspringen und Kunden jederzeit über Ihr Dashboard hinzufügen oder ändern."
     }
   },
   "billingSetupStep": {
@@ -141,7 +141,7 @@
         "confirmAdd": "Diensttyp hinzufügen"
       },
       "noteLabel": "Hinweis:",
-      "description": "Diensttypen sind Taxonomie-Labels zur Organisation und Filterung. Der Abrechnungsmodus wird separat für jeden Dienst konfiguriert.",
+      "description": "Diensttypen sind Taxonomie-Labels zur Organisation und Filterung. Der Abrechnungsmodus wird separat für jeden Dienst konfiguriert. Sie können Typen später jederzeit umbenennen, hinzufügen oder entfernen.",
       "addForm": {
         "title": "Neuen Diensttyp hinzufügen",
         "fields": {
@@ -164,8 +164,8 @@
         }
       },
       "import": {
-        "title": "Standard-Diensttypen importieren",
-        "description": "Wählen Sie Standard-Diensttypen aus, die in Ihr System importiert werden sollen:",
+        "title": "Vorgeschlagene Diensttypen",
+        "description": "Diese sind Standard für die meisten MSPs. Deaktivieren Sie alle, die Sie nicht möchten, und bestätigen Sie dann, um den Rest hinzuzufügen. Sie können sie später umbenennen oder entfernen.",
         "success": {
           "titleOne": "Diensttyp erfolgreich importiert!",
           "titleOther": "Diensttypen erfolgreich importiert!",
@@ -174,8 +174,8 @@
           "skipped": "{{count}} übersprungen."
         },
         "actions": {
-          "importing": "Wird importiert...",
-          "importSelected": "Auswahl importieren ({{count}})"
+          "importing": "Wird hinzugefügt...",
+          "importSelected": "Bestätigen & hinzufügen ({{count}})"
         }
       },
       "table": {
@@ -192,8 +192,8 @@
       }
     },
     "header": {
-      "title": "Ihren ersten Dienst erstellen",
-      "description": "Fügen Sie einen Dienst hinzu und wählen Sie aus, wie er abgerechnet werden soll. Der Diensttyp identifiziert die Dienstkategorie, während der Abrechnungsmodus das Preisverhalten steuert.",
+      "title": "Abrechnung einrichten",
+      "description": "Legen Sie Ihre Standardwährung fest und erstellen Sie Ihren ersten Dienst.",
       "serviceTitle": "Erstellen Sie Ihre erste Leistung",
       "serviceDescription": "Fügen Sie eine Leistung hinzu und wählen Sie, wie sie abgerechnet werden soll. Der Leistungstyp identifiziert die Leistungskategorie, während der Abrechnungsmodus das Preisverhalten steuert."
     },
@@ -215,7 +215,7 @@
         "required": "(Erforderlich)",
         "emptyPlaceholder": "Diensttypen erstellen oder importieren",
         "placeholder": "Diensttyp auswählen",
-        "emptyHelp": "Klicken Sie auf „Diensttypen verwalten“, um Diensttypen zu erstellen oder zu importieren"
+        "emptyHelp": "Bestätigen Sie unten einen vorgeschlagenen Diensttyp oder fügen Sie einen eigenen hinzu. Sie können dies später ändern."
       },
       "billingMode": {
         "label": "Abrechnungsmodus"
@@ -226,7 +226,7 @@
       },
       "defaultCurrency": {
         "label": "Standardwährung *",
-        "description": "Diese Währung wird als Standard für alle Abrechnungen verwendet – Leistungen, Verträge, Angebote und Rechnungen. Sie können sie später pro Kunde überschreiben."
+        "description": "Diese Währung wird als Standard für alle Abrechnungen verwendet: Leistungen, Verträge, Angebote und Rechnungen. Sie können sie später pro Kunde überschreiben."
       }
     },
     "billingMethods": {
@@ -237,7 +237,7 @@
     },
     "validation": {
       "actionRequiredLabel": "Aktion erforderlich:",
-      "actionRequiredDescription": "Klicken Sie oben auf „Diensttypen verwalten“, um mindestens einen Diensttyp zu erstellen oder zu importieren, bevor Sie einen Dienst anlegen."
+      "actionRequiredDescription": "Bestätige oben einen vorgeschlagenen Diensttyp oder füge einen eigenen hinzu, bevor du einen Dienst anlegst."
     }
   },
   "clientContactStep": {
@@ -281,7 +281,7 @@
       "optionalLabel": "Optional:"
     },
     "footer": {
-      "optional": "Sie können diesen Schritt überspringen und Kontakte später im Profil des Kunden hinzufügen."
+      "optional": "Sie können diesen Schritt überspringen und Kontakte jederzeit im Profil des Kunden hinzufügen oder ändern."
     }
   },
   "clientInfoStep": {
@@ -302,8 +302,8 @@
       "noteLabel": "Hinweis:"
     },
     "header": {
-      "title": "Kundeninformationen",
-      "description": "Lassen Sie uns mit der Einrichtung Ihres Kundenprofils beginnen."
+      "title": "Ihr Unternehmen & Admin-Konto",
+      "description": "Beginnen wir mit den Angaben zu Ihrem eigenen MSP-Unternehmen und Ihrem Admin-Login, nicht zu einem Kunden, den Sie betreuen."
     },
     "fields": {
       "firstName": {
@@ -326,7 +326,7 @@
       "language": {
         "label": "Sprache",
         "placeholder": "Sprache auswählen",
-        "help": "Wird zum Organisationsstandard für alle — MSP-Mitarbeiter und Client-Portal-Benutzer. Einzelne Benutzer und Kunden können ihn später überschreiben."
+        "help": "Wird zum Organisationsstandard für alle: MSP-Mitarbeiter und Client-Portal-Benutzer. Einzelne Benutzer und Kunden können ihn später überschreiben."
       }
     },
     "password": {
@@ -383,9 +383,12 @@
     },
     "errors": {
       "requiredFields": "Bitte füllen Sie alle Pflichtfelder einschließlich des Passworts aus",
+      "requiredFieldsNoPassword": "Bitte füllen Sie alle Pflichtfelder aus",
       "invalidEmail": "Bitte geben Sie eine gültige E-Mail-Adresse ein",
       "passwordLength": "Das Passwort muss mindestens 8 Zeichen lang sein",
       "saveFailed": "Teammitglied konnte nicht gespeichert werden",
+      "inviteFailed": "Einladung konnte nicht gesendet werden",
+      "roleRequired": "Bitte wählen Sie eine Rolle aus",
       "generic": "Es ist ein Fehler aufgetreten"
     },
     "header": {
@@ -397,12 +400,20 @@
       "titleOther": "{{count}} Teammitglieder erfolgreich erstellt!",
       "users": "Erstellte Benutzer: {{users}}"
     },
+    "invited": {
+      "titleOne": "1 Einladung erfolgreich gesendet!",
+      "titleOther": "{{count}} Einladungen erfolgreich gesendet!",
+      "users": "Eingeladen: {{users}}. Sie erhalten eine E-Mail mit einem Link, um ihr eigenes Passwort festzulegen."
+    },
     "member": {
       "title": "Teammitglied {{index}}",
       "createdBadge": "Erstellt",
+      "invitedBadge": "Eingeladen",
       "actions": {
         "saving": "Wird gespeichert...",
-        "save": "Speichern"
+        "save": "Speichern",
+        "sending": "Wird gesendet...",
+        "sendInvite": "Einladung senden"
       }
     },
     "fields": {
@@ -416,10 +427,17 @@
       },
       "email": {
         "label": "E-Mail",
-        "placeholder": "jane@client.com"
+        "placeholder": "jane@ihrunternehmen.de"
       },
       "role": {
         "label": "Rolle"
+      },
+      "setupMethod": {
+        "label": "Wie sollen sie Zugang erhalten?",
+        "email": "E-Mail-Einladung senden",
+        "password": "Ich lege selbst ein Passwort fest",
+        "emailHelp": "Sie erhalten eine E-Mail mit einem Link, um ihr eigenes Passwort festzulegen. Keine Passwörter zum Weitergeben.",
+        "passwordHelp": "Sie legen jetzt ein temporäres Passwort fest und geben es direkt weiter."
       },
       "password": {
         "label": "Temporäres Passwort",
@@ -447,7 +465,7 @@
     },
     "optional": {
       "label": "Optional:",
-      "description": "Sie können diesen Schritt überspringen und Teammitglieder später in den Einstellungen einladen."
+      "description": "Sie können diesen Schritt überspringen und Teammitglieder jederzeit über Einstellungen > Benutzer einladen oder verwalten."
     }
   },
   "ticketingConfigStep": {
@@ -635,9 +653,11 @@
           "displayOrder": {
             "label": "Anzeigereihenfolge",
             "placeholder": "Leer lassen für automatische Vergabe",
-            "help": "Steuert die Reihenfolge, in der Status in Dropdown-Menüs auf der Plattform erscheinen. Niedrigere Zahlen erscheinen zuerst."
+            "help": "Steuert die Reihenfolge, in der Status in Dropdown-Menüs auf der Plattform erscheinen. Niedrigere Zahlen erscheinen zuerst.",
+            "reassigned": "Anzeigereihenfolge {{requested}} wird auf diesem Board bereits verwendet, daher wurde stattdessen {{assigned}} verwendet."
           },
           "state": {
+            "label": "Statustyp",
             "closedLabel": "Geschlossener Status",
             "openLabel": "Offener Status",
             "closedHelp": "Dieser Status zeigt an, dass das Ticket gelöst und geschlossen ist",
@@ -860,12 +880,50 @@
     },
     "supportEmail": {
       "label": "Support-E-Mail",
-      "placeholder": "support@yourclient.com",
-      "help": "Diese E-Mail-Adresse wird zum Erstellen von Support-Tickets verwendet. E-Mails an diese Adresse erzeugen automatisch Tickets in Ihrem System."
+      "placeholder": "support@ihrunternehmen.de",
+      "help": "Wird als deine Support-Kontaktadresse gespeichert – Kunden sehen sie im Portal und sie wird in Termin-E-Mails verwendet. Um eingehende E-Mails automatisch in Tickets umzuwandeln, verbinde später ein Postfach unter Einstellungen > E-Mail."
     },
     "finalRequirement": {
       "label": "Erforderlich:",
       "description": "Bitte konfigurieren Sie mindestens ein Board und eine Priorität, um die Einrichtung abzuschließen. Importieren Sie Standardkonfigurationen, um Ihr Ticketing-System schnell einzurichten."
+    }
+  },
+  "teamSetup": {
+    "title": "Konto einrichten",
+    "subtitle": "Schließen Sie die Kontoeinrichtung für Ihr Teammitglied ab",
+    "accountInformation": "Kontoinformationen",
+    "name": "Name:",
+    "email": "E-Mail:",
+    "role": "Rolle:",
+    "password": "Passwort",
+    "passwordPlaceholder": "Passwort eingeben",
+    "confirmPassword": "Passwort bestätigen",
+    "confirmPasswordPlaceholder": "Passwort bestätigen",
+    "passwordRequirements": "Passwortanforderungen",
+    "requirements": {
+      "minLength": "Mindestens 8 Zeichen",
+      "hasUppercase": "Ein Großbuchstabe",
+      "hasLowercase": "Ein Kleinbuchstabe",
+      "hasNumber": "Eine Zahl",
+      "hasSpecialChar": "Ein Sonderzeichen",
+      "passwordsMatch": "Passwörter stimmen überein"
+    },
+    "creatingAccount": "Konto wird erstellt...",
+    "createAccount": "Konto erstellen",
+    "alreadyHaveAccount": "Sie haben bereits ein Konto?",
+    "signIn": "Anmelden",
+    "invalidInvitation": "Ungültige Einladung",
+    "invalidInvitationDescription": "Es gab ein Problem mit Ihrer Teameinladung",
+    "invalidTokenMessage": "Der Einladungslink ist ungültig oder abgelaufen. Bitten Sie Ihren Administrator, die Einladung erneut zu senden.",
+    "goToSignIn": "Zur Anmeldung",
+    "accountReady": "Konto bereit. Bitte melden Sie sich an.",
+    "welcome": "Willkommen im Team!",
+    "errors": {
+      "noToken": "Kein Einladungstoken angegeben",
+      "invalidOrExpired": "Ungültiges oder abgelaufenes Einladungstoken",
+      "verificationFailed": "Überprüfung des Einladungstokens fehlgeschlagen",
+      "requirementsNotMet": "Bitte stellen Sie sicher, dass alle Passwortanforderungen erfüllt sind",
+      "createFailed": "Konto konnte nicht erstellt werden"
     }
   }
 }

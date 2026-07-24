@@ -556,6 +556,14 @@ export const deleteUser = withAuth(async (
       // import_jobs uses created_by, not user_id
       await tenantScopedTable('import_jobs').where({ created_by: userId }).del();
 
+      // Pending invites created by this user live only in metadata JSONB
+      // (no FK), so drop them explicitly — otherwise a departed admin's
+      // outstanding invitations stay acceptable for up to 24h.
+      await tenantScopedTable('user_invitations')
+        .whereRaw("metadata->>'created_by' = ?", [userId])
+        .whereNull('used_at')
+        .del();
+
       // Activity group items must precede groups (items.group_id → groups).
       await tenantScopedTable('user_activity_group_items')
         .whereIn(

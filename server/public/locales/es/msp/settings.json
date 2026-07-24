@@ -150,6 +150,7 @@
       "copying": "Copiando...",
       "createUser": "Crear usuario",
       "sendInvitation": "Enviar invitación al portal",
+      "sendTeamInvitation": "Enviar invitación",
       "cancel": "Cancelar"
     },
     "form": {
@@ -183,7 +184,8 @@
       },
       "passwordAlert": {
         "withPassword": "Establecer una contraseña creará el usuario de inmediato. Podrá iniciar sesión de inmediato.",
-        "withoutPassword": "No se requiere contraseña; enviaremos una invitación al portal para que el usuario la establezca."
+        "withoutPassword": "No se requiere contraseña; enviaremos una invitación al portal para que el usuario la establezca.",
+        "withoutPasswordMsp": "No se requiere contraseña; le enviaremos una invitación por correo electrónico para que la establezca usted mismo."
       },
       "requirePasswordChange": "Requerir cambio de contraseña en el primer inicio de sesión"
     },
@@ -208,9 +210,11 @@
     "messages": {
       "success": {
         "portalInvitationSent": "Invitación al portal enviada correctamente.",
+        "teamInvitationSent": "¡Invitación enviada correctamente!",
         "clientPortalUserCreated": "Usuario del portal del cliente creado correctamente.",
         "copiedVanityLink": "Enlace personalizado de inicio de sesión del portal copiado al portapapeles",
-        "copiedCanonicalLink": "Enlace canónico de inicio de sesión del portal copiado al portapapeles"
+        "copiedCanonicalLink": "Enlace canónico de inicio de sesión del portal copiado al portapapeles",
+        "invitationRevoked": "Invitación revocada"
       },
       "error": {
         "fetchUsers": "Error al obtener los usuarios",
@@ -237,6 +241,7 @@
         "contactNotFound": "Contacto no encontrado.",
         "contactMissingEmailGeneric": "El contacto no tiene dirección de correo electrónico. Agrega una dirección de correo al contacto antes de enviar una invitación.",
         "contactInvalidEmail": "El contacto tiene una dirección de correo electrónico no válida. Actualiza el contacto con una dirección válida antes de enviar una invitación.",
+        "invalidEmail": "Por favor ingrese una dirección de correo electrónico válida",
         "noDefaultClient": "No hay un cliente predeterminado configurado para este tenant. Configura un cliente predeterminado en Configuración General.",
         "noDefaultLocation": "El cliente predeterminado debe tener una ubicación predeterminada configurada para enviar invitaciones al portal.",
         "noLocationEmail": "La ubicación del cliente predeterminado debe tener un correo electrónico de contacto configurado.",
@@ -245,8 +250,17 @@
         "roleRequired": "Se requiere un rol",
         "invalidRole": "El rol seleccionado no es válido",
         "licenseLimitReached": "Ha alcanzado el límite de licencias de usuario MSP.",
-        "soloPlanLimit": "El plan Solo está limitado a 1 usuario. Actualice a Pro para agregar más usuarios."
+        "soloPlanLimit": "El plan Solo está limitado a 1 usuario. Actualice a Pro para agregar más usuarios.",
+        "revokeInvitation": "No se pudo revocar la invitación",
+        "invitationNotFound": "Invitación no encontrada o ya utilizada"
       }
+    },
+    "invitations": {
+      "title": "Invitaciones pendientes",
+      "description": "Miembros del equipo invitados que aún no han configurado su cuenta.",
+      "expiresPrefix": "Expira:",
+      "revoke": "Revocar",
+      "revoking": "Revocando..."
     }
   },
   "userDetails": {

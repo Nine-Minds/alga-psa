@@ -6,12 +6,13 @@ import React, { useState, useEffect } from 'react';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Plus, Trash2, Users, AlertCircle, Eye, EyeOff } from 'lucide-react';
+import { Plus, Trash2, Users, AlertCircle, Eye, EyeOff, Mail, KeyRound } from 'lucide-react';
 import type { StepProps } from '@alga-psa/types';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { getLicenseUsageAction } from '@alga-psa/licensing/actions';
-import { getAvailableRoles, addSingleTeamMember } from '@alga-psa/onboarding/actions';
+import ViewSwitcher from '@alga-psa/ui/components/ViewSwitcher';
+import { getOnboardingLicenseUsage, getAvailableRoles, addSingleTeamMember } from '@alga-psa/onboarding/actions';
+import { sendUserInvitation } from '@alga-psa/users/actions/user-actions/userInvitationActions';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 export function TeamMembersStep({ data, updateData }: StepProps) {
@@ -23,7 +24,7 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
     message?: string;
   } | null>(null);
   const [isLoadingLicense, setIsLoadingLicense] = useState(true);
-  const [roleOptions, setRoleOptions] = useState<Array<{ value: string; label: string }>>([]);
+  const [roleOptions, setRoleOptions] = useState<Array<{ value: string; label: string; roleId: string }>>([]);
   const [isLoadingRoles, setIsLoadingRoles] = useState(true);
   const [savingMemberIndex, setSavingMemberIndex] = useState<number | null>(null);
   const [saveErrors, setSaveErrors] = useState<Record<number, string>>({});
@@ -41,15 +42,16 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
 
   useEffect(() => {
     // Check if there's an unsaved form
-    const hasEmpty = data.teamMembers.some(m => 
+    const hasEmpty = data.teamMembers.some(m =>
       !m.firstName || !m.lastName || !m.email
     );
-    const hasUnsaved = data.teamMembers.some(m => 
-      m.firstName && m.lastName && m.email && 
-      !data.createdTeamMemberEmails?.includes(m.email)
+    const isHandled = (email: string) =>
+      data.createdTeamMemberEmails?.includes(email) || data.invitedTeamMemberEmails?.includes(email);
+    const hasUnsaved = data.teamMembers.some(m =>
+      m.firstName && m.lastName && m.email && !isHandled(m.email)
     );
     setHasUnsavedForm(hasEmpty || hasUnsaved);
-  }, [data.teamMembers, data.createdTeamMemberEmails]);
+  }, [data.teamMembers, data.createdTeamMemberEmails, data.invitedTeamMemberEmails]);
 
   useEffect(() => {
     fetchRoles();
@@ -59,32 +61,21 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
     try {
       setIsLoadingRoles(true);
       const result = await getAvailableRoles();
-      
+
       if (result.success && result.data) {
         setRoleOptions(
           result.data.map((role) => ({
             value: role.value,
-            label: translateRoleLabel(role.value, role.label)
+            label: translateRoleLabel(role.value, role.label),
+            roleId: role.roleId
           }))
         );
       } else {
-        // Fallback to default roles if fetch fails
-        setRoleOptions([
-          { value: 'admin', label: translateRoleLabel('admin', 'Admin') },
-          { value: 'technician', label: translateRoleLabel('technician', 'Technician') },
-          { value: 'manager', label: translateRoleLabel('manager', 'Manager') },
-          { value: 'user', label: translateRoleLabel('user', 'User') }
-        ]);
+        setRoleOptions([]);
       }
     } catch (error) {
       console.error('Error fetching roles:', error);
-      // Fallback to default roles
-      setRoleOptions([
-        { value: 'admin', label: translateRoleLabel('admin', 'Admin') },
-        { value: 'technician', label: translateRoleLabel('technician', 'Technician') },
-        { value: 'manager', label: translateRoleLabel('manager', 'Manager') },
-        { value: 'user', label: translateRoleLabel('user', 'User') }
-      ]);
+      setRoleOptions([]);
     } finally {
       setIsLoadingRoles(false);
     }
@@ -93,25 +84,25 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
   const checkLicenseStatus = async () => {
     try {
       setIsLoadingLicense(true);
-      const result = await getLicenseUsageAction();
-      
+      const result = await getOnboardingLicenseUsage();
+
       if (result.success && result.data) {
         const { limit, used } = result.data;
-        
+
         // Count already created team members
         const actualCurrent = used; // This already includes all created users
-        
+
         if (limit === null) {
           // No limit
-          setLicenseInfo({ 
-            limit: Infinity, 
-            current: actualCurrent, 
-            allowed: true 
+          setLicenseInfo({
+            limit: Infinity,
+            current: actualCurrent,
+            allowed: true
           });
         } else {
           // Has limit - check if we can add more
           const canAddMore = actualCurrent < limit;
-          
+
           let message: string | undefined = undefined;
           if (!canAddMore) {
             message = t('teamMembersStep.license.limitReached', {
@@ -130,21 +121,21 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
                   count: canAdd
                 });
           }
-          
-          setLicenseInfo({ 
-            limit, 
+
+          setLicenseInfo({
+            limit,
             current: actualCurrent,
             allowed: canAddMore,
             message
           });
         }
       } else {
-        // If we can't get license info, assume no limit
-        setLicenseInfo({ limit: Infinity, current: 0, allowed: true });
+        console.error('Unable to load onboarding license usage:', result.error);
+        setLicenseInfo(null);
       }
     } catch (error) {
       console.error('Error checking license status:', error);
-      setLicenseInfo({ limit: Infinity, current: 0, allowed: true });
+      setLicenseInfo(null);
     } finally {
       setIsLoadingLicense(false);
     }
@@ -152,16 +143,16 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
 
   const saveMember = async (index: number) => {
     const member = data.teamMembers[index];
-    
-    // Validate fields
-    if (!member.firstName || !member.lastName || !member.email || !member.password) {
-      setSaveErrors(prev => ({ ...prev, [index]: t('teamMembersStep.errors.requiredFields', {
-        defaultValue: 'Please fill in all required fields including password'
+    const inviteMode = member.inviteMode || 'email';
+
+    // Validate fields common to both modes
+    if (!member.firstName || !member.lastName || !member.email) {
+      setSaveErrors(prev => ({ ...prev, [index]: t('teamMembersStep.errors.requiredFieldsNoPassword', {
+        defaultValue: 'Please fill in all required fields'
       }) }));
       return;
     }
 
-    // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(member.email)) {
       setSaveErrors(prev => ({ ...prev, [index]: t('teamMembersStep.errors.invalidEmail', {
@@ -170,37 +161,70 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
       return;
     }
 
-    // Validate password strength (at least 8 characters)
-    if (member.password.length < 8) {
-      setSaveErrors(prev => ({ ...prev, [index]: t('teamMembersStep.errors.passwordLength', {
-        defaultValue: 'Password must be at least 8 characters long'
-      }) }));
-      return;
+    if (inviteMode === 'password') {
+      if (!member.password) {
+        setSaveErrors(prev => ({ ...prev, [index]: t('teamMembersStep.errors.requiredFields', {
+          defaultValue: 'Please fill in all required fields including password'
+        }) }));
+        return;
+      }
+      if (member.password.length < 8) {
+        setSaveErrors(prev => ({ ...prev, [index]: t('teamMembersStep.errors.passwordLength', {
+          defaultValue: 'Password must be at least 8 characters long'
+        }) }));
+        return;
+      }
     }
 
     setSavingMemberIndex(index);
     setSaveErrors(prev => ({ ...prev, [index]: '' }));
 
     try {
-      const result = await addSingleTeamMember(member);
-      
-      if (result.success) {
-        // Add to created list
-        const currentCreated = data.createdTeamMemberEmails || [];
-        updateData({ 
-          createdTeamMemberEmails: [...currentCreated, member.email]
+      if (inviteMode === 'email') {
+        const roleId = roleOptions.find(r => r.value === member.role)?.roleId;
+        if (!roleId) {
+          setSaveErrors(prev => ({ ...prev, [index]: t('teamMembersStep.errors.roleRequired', {
+            defaultValue: 'Please select a role'
+          }) }));
+          return;
+        }
+
+        const result = await sendUserInvitation({
+          email: member.email,
+          firstName: member.firstName,
+          lastName: member.lastName,
+          roleId
         });
-        
-        // Re-check license status
-        await checkLicenseStatus();
+
+        if (result.success) {
+          const currentInvited = data.invitedTeamMemberEmails || [];
+          updateData({
+            invitedTeamMemberEmails: [...currentInvited, member.email]
+          });
+        } else {
+          setSaveErrors(prev => ({ ...prev, [index]: result.error || t('teamMembersStep.errors.inviteFailed', {
+            defaultValue: 'Failed to send invitation'
+          }) }));
+        }
       } else {
-        setSaveErrors(prev => ({ ...prev, [index]: result.error || t('teamMembersStep.errors.saveFailed', {
-          defaultValue: 'Failed to save team member'
-        }) }));
+        const result = await addSingleTeamMember(member);
+
+        if (result.success) {
+          const currentCreated = data.createdTeamMemberEmails || [];
+          updateData({
+            createdTeamMemberEmails: [...currentCreated, member.email]
+          });
+
+          await checkLicenseStatus();
+        } else {
+          setSaveErrors(prev => ({ ...prev, [index]: result.error || t('teamMembersStep.errors.saveFailed', {
+            defaultValue: 'Failed to save team member'
+          }) }));
+        }
       }
     } catch (error) {
-      setSaveErrors(prev => ({ 
-        ...prev, 
+      setSaveErrors(prev => ({
+        ...prev,
         [index]: error instanceof Error ? error.message : t('teamMembersStep.errors.generic', {
           defaultValue: 'An error occurred'
         })
@@ -216,16 +240,16 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
       // Don't allow adding new form if there's an unsaved one
       return;
     }
-    
+
     if (licenseInfo && !licenseInfo.allowed) return;
-    
+
     // Use the first available role as default, or 'technician' if no roles loaded
     const defaultRole = roleOptions.length > 0 ? roleOptions[0].value : 'technician';
-    
+
     updateData({
       teamMembers: [
         ...data.teamMembers,
-        { firstName: '', lastName: '', email: '', role: defaultRole, password: '' }
+        { firstName: '', lastName: '', email: '', role: defaultRole, password: '', inviteMode: 'email' }
       ]
     });
   };
@@ -280,6 +304,30 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
         </Alert>
       )}
 
+      {/* Success Message for Invited Team Members */}
+      {data.invitedTeamMemberEmails && data.invitedTeamMemberEmails.length > 0 && (
+        <Alert variant="success">
+          <AlertDescription>
+            <p className="font-medium">
+              {data.invitedTeamMemberEmails.length === 1
+                ? t('teamMembersStep.invited.titleOne', {
+                    defaultValue: '1 invitation sent successfully!'
+                  })
+                : t('teamMembersStep.invited.titleOther', {
+                    defaultValue: '{{count}} invitations sent successfully!',
+                    count: data.invitedTeamMemberEmails.length
+                  })}
+            </p>
+            <p className="text-sm mt-1">
+              {t('teamMembersStep.invited.users', {
+                defaultValue: 'Invited: {{users}}. They\'ll receive an email with a link to set their own password.',
+                users: data.invitedTeamMemberEmails.join(', ')
+              })}
+            </p>
+          </AlertDescription>
+        </Alert>
+      )}
+
       {/* License Status Display */}
       {!isLoadingLicense && licenseInfo && (
         <Alert variant={licenseInfo.allowed ? "info" : "destructive"}>
@@ -312,14 +360,17 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
       )}
 
       {data.teamMembers.map((member, index) => {
-        const isAlreadyCreated = data.createdTeamMemberEmails?.includes(member.email);
+        const inviteMode = member.inviteMode || 'email';
+        const isCreated = data.createdTeamMemberEmails?.includes(member.email);
+        const isInvited = data.invitedTeamMemberEmails?.includes(member.email);
+        const isAlreadyHandled = isCreated || isInvited;
         const isSaving = savingMemberIndex === index;
         const hasError = !!saveErrors[index];
         const isFormFilled = member.firstName && member.lastName && member.email;
-        
+
         return (
         <div key={index} className={`p-4 border rounded-lg space-y-4 ${
-          isAlreadyCreated ? 'bg-gray-50 border-gray-300' : hasError ? 'border-red-300' : ''
+          isAlreadyHandled ? 'bg-gray-50 border-gray-300' : hasError ? 'border-red-300' : ''
         }`}>
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-2">
@@ -329,16 +380,23 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
                   index: index + 1
                 })}
               </h3>
-              {isAlreadyCreated && (
+              {isCreated && (
                 <span className="text-xs px-2 py-1 rounded-full bg-success/10 text-success">
                   {t('teamMembersStep.member.createdBadge', {
                     defaultValue: 'Created'
                   })}
                 </span>
               )}
+              {isInvited && (
+                <span className="text-xs px-2 py-1 rounded-full bg-success/10 text-success">
+                  {t('teamMembersStep.member.invitedBadge', {
+                    defaultValue: 'Invited'
+                  })}
+                </span>
+              )}
             </div>
             <div className="flex items-center gap-2">
-              {!isAlreadyCreated && isFormFilled && (
+              {!isAlreadyHandled && isFormFilled && (
                 <Button
                   id={`save-member-${index}`}
                   type="button"
@@ -348,12 +406,12 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
                   disabled={isSaving}
                 >
                   {isSaving
-                    ? t('teamMembersStep.member.actions.saving', {
-                        defaultValue: 'Saving...'
-                      })
-                    : t('teamMembersStep.member.actions.save', {
-                        defaultValue: 'Save'
-                      })}
+                    ? (inviteMode === 'email'
+                        ? t('teamMembersStep.member.actions.sending', { defaultValue: 'Sending...' })
+                        : t('teamMembersStep.member.actions.saving', { defaultValue: 'Saving...' }))
+                    : (inviteMode === 'email'
+                        ? t('teamMembersStep.member.actions.sendInvite', { defaultValue: 'Send Invite' })
+                        : t('teamMembersStep.member.actions.save', { defaultValue: 'Save' }))}
                 </Button>
               )}
               {data.teamMembers.length > 1 && (
@@ -384,7 +442,7 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
                 placeholder={t('teamMembersStep.fields.firstName.placeholder', {
                   defaultValue: 'Jane'
                 })}
-                disabled={isAlreadyCreated}
+                disabled={isAlreadyHandled}
               />
             </div>
 
@@ -400,7 +458,7 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
                 placeholder={t('teamMembersStep.fields.lastName.placeholder', {
                   defaultValue: 'Smith'
                 })}
-                disabled={isAlreadyCreated}
+                disabled={isAlreadyHandled}
               />
             </div>
           </div>
@@ -417,9 +475,9 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
                 value={member.email}
                 onChange={(e) => updateTeamMember(index, 'email', e.target.value)}
                 placeholder={t('teamMembersStep.fields.email.placeholder', {
-                  defaultValue: 'jane@client.com'
+                  defaultValue: 'jane@youritcompany.com'
                 })}
-                disabled={isAlreadyCreated}
+                disabled={isAlreadyHandled}
                 autoComplete="off"
               />
             </div>
@@ -434,12 +492,60 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
                 value={member.role}
                 onValueChange={(value) => updateTeamMember(index, 'role', value)}
                 options={roleOptions}
-                disabled={isLoadingRoles || isAlreadyCreated}
+                disabled={isLoadingRoles || isAlreadyHandled}
               />
             </div>
           </div>
 
-          {!isAlreadyCreated && (
+          {!isAlreadyHandled && (
+            <div className="space-y-2">
+              <Label>
+                {t('teamMembersStep.fields.setupMethod.label', {
+                  defaultValue: 'How should they get access?'
+                })}
+              </Label>
+              {/* Segmented switcher, not standalone buttons — a filled
+                  "Send email invite" button read as the action that sends
+                  the invite, when the real send is the card's Send Invite. */}
+              <ViewSwitcher<'email' | 'password'>
+                currentView={inviteMode}
+                onChange={(mode) => updateTeamMember(index, 'inviteMode', mode)}
+                aria-label={t('teamMembersStep.fields.setupMethod.label', {
+                  defaultValue: 'How should they get access?'
+                })}
+                className="w-fit"
+                options={[
+                  {
+                    value: 'email',
+                    id: `invite-mode-email-${index}`,
+                    icon: Mail,
+                    label: t('teamMembersStep.fields.setupMethod.email', {
+                      defaultValue: 'Send email invite'
+                    })
+                  },
+                  {
+                    value: 'password',
+                    id: `invite-mode-password-${index}`,
+                    icon: KeyRound,
+                    label: t('teamMembersStep.fields.setupMethod.password', {
+                      defaultValue: 'Set a password myself'
+                    })
+                  }
+                ]}
+              />
+              <p className="text-xs text-gray-500">
+                {inviteMode === 'email'
+                  ? t('teamMembersStep.fields.setupMethod.emailHelp', {
+                      defaultValue: 'They\'ll get an email with a link to set their own password. No passwords to share.'
+                    })
+                  : t('teamMembersStep.fields.setupMethod.passwordHelp', {
+                      defaultValue: 'You set a temporary password now and share it with them directly.'
+                    })}
+              </p>
+            </div>
+          )}
+
+          {!isAlreadyHandled && inviteMode === 'password' && (
             <div className="space-y-2">
               <Label>
                 {t('teamMembersStep.fields.password.label', {
@@ -454,7 +560,6 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
                   placeholder={t('teamMembersStep.fields.password.placeholder', {
                     defaultValue: 'Set temporary password'
                   })}
-                  disabled={isAlreadyCreated}
                   className="pr-10"
                   autoComplete="new-password"
                 />
@@ -462,7 +567,6 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
                   type="button"
                   onClick={() => setShowPasswords(prev => ({ ...prev, [index]: !prev[index] }))}
                   className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  disabled={isAlreadyCreated}
                 >
                   {showPasswords[index] ? (
                     <Eye className="h-4 w-4 text-gray-400" />
@@ -478,7 +582,7 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
               </p>
             </div>
           )}
-          
+
           {hasError && (
             <Alert variant="destructive">
               <AlertDescription>{saveErrors[index]}</AlertDescription>
@@ -548,7 +652,7 @@ export function TeamMembersStep({ data, updateData }: StepProps) {
             })}
           </span>{' '}
           {t('teamMembersStep.optional.description', {
-            defaultValue: 'You can skip this step and invite team members later from the settings page.'
+            defaultValue: 'Nothing here is final — you can skip this step and invite, remove, or change team members anytime from Settings > Users.'
           })}
         </AlertDescription>
       </Alert>

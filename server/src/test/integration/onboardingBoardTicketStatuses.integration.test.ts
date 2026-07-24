@@ -117,6 +117,10 @@ async function cleanupTenant(tenantId: string) {
   await tenantTable(tenantId, 'statuses').delete().catch(() => undefined);
   await tenantTable(tenantId, 'categories').delete().catch(() => undefined);
   await tenantTable(tenantId, 'boards').delete().catch(() => undefined);
+  // configureTicketing persists supportEmail into tenant_settings; without
+  // this delete the tenants-row delete below FK-fails (silently, via catch)
+  // and leaks tenant rows into the shared test database.
+  await tenantTable(tenantId, 'tenant_settings').delete().catch(() => undefined);
   await tenantTable(tenantId, 'users').delete().catch(() => undefined);
   await tenantRows().where({ tenant: tenantId }).delete().catch(() => undefined);
 }
@@ -255,6 +259,10 @@ describe('Onboarding board-specific ticket statuses', () => {
     if (hasColumn(nextNumberColumns, 'initial_value')) {
       expect(Number(numbering?.initial_value)).toBe(100);
     }
+
+    const settingsRow = await tenantTable(tenantId, 'tenant_settings')
+      .first<{ settings: { supportEmail?: string } | null }>('settings');
+    expect(settingsRow?.settings?.supportEmail).toBe('support@example.com');
 
     await expect(
       validateOnboardingDefaults(

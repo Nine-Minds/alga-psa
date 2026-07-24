@@ -101,7 +101,7 @@ describe('ClientInfoStep rendering', () => {
       render(<ClientInfoStep data={makeWizardData()} updateData={vi.fn()} />);
 
       // Should show first-time heading
-      expect(screen.getByText('Client Information')).toBeInTheDocument();
+      expect(screen.getByText('Your Company & Admin Account')).toBeInTheDocument();
 
       // Should show all fields
       expect(screen.getByPlaceholderText('John')).toBeInTheDocument();       // firstName
