@@ -71,6 +71,7 @@
     "entraSync": "Microsoft Entra Sync — auto-discover tenants and sync contacts from Entra ID",
     "cipp": "CIPP Integration — connect your CIPP instance for multi-tenant Entra management",
     "teamsIntegration": "Microsoft Teams — meetings integration and Teams bot for ticket notifications",
+    "scimProvisioning": "SCIM User Provisioning — synchronize user activation from your identity provider",
     "advancedAuthorizationBundles": "Advanced Authorization Bundles — create and manage premium ABAC narrowing bundles"
   },
   "summary": {

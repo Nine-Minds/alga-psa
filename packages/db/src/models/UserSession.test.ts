@@ -1,9 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const updateMock = vi.fn(async () => 1);
+const firstMock = vi.fn(async () => ({ revoked_at: null }));
 const builder = {
   where: vi.fn(() => builder),
   whereNull: vi.fn(() => builder),
+  select: vi.fn(() => builder),
+  first: firstMock,
   update: updateMock,
 };
 
@@ -35,5 +38,24 @@ describe('UserSession.extendExpiry', () => {
     // Guard: never resurrect a revoked session.
     expect(builder.whereNull).toHaveBeenCalledWith('revoked_at');
     expect(updateMock).toHaveBeenCalledWith({ expires_at: expiresAt, updated_at: '__now__' });
+  });
+
+  it('does not cache a non-revoked answer across requests', async () => {
+    firstMock.mockResolvedValue({ revoked_at: null });
+
+    await expect(UserSession.isRevoked('tenant-1', 'scim-session-open')).resolves.toBe(false);
+    firstMock.mockResolvedValue({ revoked_at: new Date() });
+    await expect(UserSession.isRevoked('tenant-1', 'scim-session-open')).resolves.toBe(true);
+
+    expect(firstMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('may cache a revoked answer because revocation is terminal', async () => {
+    firstMock.mockResolvedValue({ revoked_at: new Date() });
+
+    await expect(UserSession.isRevoked('tenant-1', 'scim-session-revoked')).resolves.toBe(true);
+    await expect(UserSession.isRevoked('tenant-1', 'scim-session-revoked')).resolves.toBe(true);
+
+    expect(firstMock).toHaveBeenCalledTimes(1);
   });
 });

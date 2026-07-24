@@ -56,6 +56,7 @@ export type RevocationReason =
   | 'admin_revoke'
   | 'max_sessions'
   | 'security'
+  | 'scim'
   | 'inactivity'
   | 'expired';
 
@@ -232,7 +233,10 @@ export class UserSession {
     const now = Date.now();
 
     const cached = this.revocationCache.get(cacheKey);
-    if (cached && now - cached.timestamp < this.CACHE_TTL_MS) {
+    // Only cache revoked sessions. A negative cache entry on another app pod
+    // would otherwise let a newly SCIM-deactivated user retain access until
+    // the TTL elapsed.
+    if (cached?.revoked && now - cached.timestamp < this.CACHE_TTL_MS) {
       return cached.revoked;
     }
 
@@ -242,7 +246,11 @@ export class UserSession {
 
     const isRevoked = session ? (session as any).revoked_at !== null : true;
 
-    this.revocationCache.set(cacheKey, { revoked: isRevoked, timestamp: now });
+    if (isRevoked) {
+      this.revocationCache.set(cacheKey, { revoked: true, timestamp: now });
+    } else {
+      this.revocationCache.delete(cacheKey);
+    }
 
     if (this.revocationCache.size > 1000) {
       const entries = Array.from(this.revocationCache.entries());

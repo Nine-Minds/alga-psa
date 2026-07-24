@@ -99,12 +99,44 @@ function SessionsLoading() {
   return <SettingsTabSkeleton title={t('security.tabs.sessions', { defaultValue: 'Sessions' })} description={t('security.loading.sessions', { defaultValue: 'Loading active sessions...' })} showTable={true} />;
 }
 
+function ScimLoading() {
+  const { t } = useTranslation('msp/profile');
+  return (
+    <SettingsTabSkeleton
+      title={t('security.tabs.userProvisioning', { defaultValue: 'User provisioning' })}
+      description={t('security.loading.userProvisioning', { defaultValue: 'Loading SCIM provisioning...' })}
+      showTable
+    />
+  );
+}
+
+const ScimProvisioningSettings = dynamic(
+  () => import('@enterprise/components/settings/security/ScimProvisioningSettings'),
+  {
+    loading: ScimLoading,
+    ssr: false,
+  },
+);
+
 const AdminSessionManagement = dynamic(() => import('./AdminSessionManagement'), {
   loading: SessionsLoading,
   ssr: false
 });
 
-const SECURITY_TAB_IDS = ['roles', 'sessions', 'single-sign-on', 'permissions', 'user-roles', 'policies', 'api-keys', 'webhooks'] as const;
+// Next.js replaces this public edition flag at build time.
+// eslint-disable-next-line no-undef
+const isEnterpriseEdition = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
+const SECURITY_TAB_IDS: readonly string[] = [
+  'roles',
+  'sessions',
+  'single-sign-on',
+  ...(isEnterpriseEdition ? ['user-provisioning'] : []),
+  'permissions',
+  'user-roles',
+  'policies',
+  'api-keys',
+  'webhooks',
+];
 const DEFAULT_SECURITY_TAB = 'roles';
 
 const SecuritySettingsPage = (): React.JSX.Element => {
@@ -126,11 +158,8 @@ const SecuritySettingsPage = (): React.JSX.Element => {
     const targetTab = requestedTab && SECURITY_TAB_IDS.includes(requestedTab as typeof SECURITY_TAB_IDS[number])
       ? requestedTab
       : DEFAULT_SECURITY_TAB;
-    // Only update state if the derived tab is different from the current state
-    if (targetTab !== activeTab) {
-      setActiveTab(targetTab);
-    }
-  }, [tabParam]); // Correct dependency array
+    setActiveTab((currentTab) => currentTab === targetTab ? currentTab : targetTab);
+  }, [tabParam]);
 
   const tabContent: TabContent[] = [
     {
@@ -163,6 +192,17 @@ const SecuritySettingsPage = (): React.JSX.Element => {
         </>
       ),
     },
+    ...(isEnterpriseEdition
+      ? [{
+          id: 'user-provisioning',
+          label: t('security.tabs.userProvisioning', { defaultValue: 'User provisioning' }),
+          content: (
+            <Suspense fallback={<ScimLoading />}>
+              <ScimProvisioningSettings />
+            </Suspense>
+          ),
+        }]
+      : []),
     {
       id: 'permissions',
       label: t('security.tabs.permissions', { defaultValue: 'Permissions' }),
