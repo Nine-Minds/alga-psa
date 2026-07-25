@@ -1085,6 +1085,21 @@ export const remapEntraTenant = withAuth(async (
  * The confirmed tenant-to-client mappings, named. Read-gated: it exposes client
  * names and directory sizes, not credentials.
  */
+/**
+ * Whether the current user may start an Entra sync.
+ *
+ * The per-client "Sync Entra Now" control rendered for anyone who could see the
+ * client, while the server requires system_settings:update — so a technician
+ * pressed a visible button and got a Forbidden toast. The UI asks first now.
+ */
+export const canManageEntraIntegration = withAuth(async (user, _ctx) => {
+  if (isClientPortalUser(user)) {
+    return false;
+  }
+
+  return hasPermission(user as any, 'system_settings', 'update');
+});
+
 export const getEntraSyncSchedule = withAuth(async (user, _ctx) => {
   if (isClientPortalUser(user)) {
     return { success: false, error: 'Forbidden' } as const;

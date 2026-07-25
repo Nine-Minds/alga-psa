@@ -58,6 +58,7 @@ export {
   runEntraPreflight,
   getEntraConfirmedMappings,
   getEntraSyncSchedule,
+  canManageEntraIntegration,
   saveEntraSyncSchedule,
   getEntraIntegrationStatus,
   updateEntraFieldSyncConfig,

@@ -128,10 +128,12 @@ export const ClientQuickView: React.FC<ClientQuickViewProps> = ({
     defaultValue: false,
   });
   const isEEAvailable = process.env.NEXT_PUBLIC_EDITION === 'enterprise';
+  const entraSyncPermission = useEntraSyncPermission();
   const showEntraSyncAction = shouldShowEntraSyncAction(
     isEEAvailable ? 'enterprise' : process.env.NEXT_PUBLIC_EDITION,
     entraClientSyncFlag.enabled,
-    editedClient
+    editedClient,
+    entraSyncPermission.canManage
   );
 
   useEffect(() => {
