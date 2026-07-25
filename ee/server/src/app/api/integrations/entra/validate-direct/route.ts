@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { badRequest, dynamic, ok, runtime } from '../_responses';
-import { requireEntraUiFlagEnabled } from '../_guards';
+import { requireEntraAccess } from '../_guards';
 import { resolveMicrosoftCredentialsForTenant } from '@enterprise/lib/integrations/entra/auth/microsoftCredentialResolver';
 import { refreshEntraDirectToken } from '@enterprise/lib/integrations/entra/auth/refreshDirectToken';
 import { ENTRA_DIRECT_SECRET_KEYS } from '@enterprise/lib/integrations/entra/secrets';
@@ -24,12 +24,12 @@ async function listManagedTenants(accessToken: string): Promise<number> {
 }
 
 export async function POST(): Promise<Response> {
-  const flagGate = await requireEntraUiFlagEnabled('update');
-  if (flagGate instanceof Response) {
-    return flagGate;
+  const accessGate = await requireEntraAccess('update');
+  if (accessGate instanceof Response) {
+    return accessGate;
   }
 
-  const { tenantId } = flagGate;
+  const { tenantId } = accessGate;
   const credentials = await resolveMicrosoftCredentialsForTenant(tenantId);
   if (!credentials) {
     await updateEntraConnectionValidation({

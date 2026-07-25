@@ -62,16 +62,6 @@ function normalizeCippBaseUrl(input: string): string | null {
   }
 }
 
-async function isEntraUiEnabledForTenant(params: {
-  tenantId: string;
-  userId?: string;
-}): Promise<boolean> {
-  return isFeatureFlagEnabled('entra-integration-ui', {
-    tenantId: params.tenantId,
-    userId: params.userId,
-  });
-}
-
 async function isEntraAmbiguousQueueEnabledForTenant(params: {
   tenantId: string;
   userId?: string;
@@ -337,14 +327,6 @@ export const initiateEntraDirectOAuth = withAuth(async (user, { tenant }) => {
     return { success: false, error: 'Forbidden: insufficient permissions to configure Entra integration' } as const;
   }
 
-  const enabled = await isEntraUiEnabledForTenant({
-    tenantId: tenant,
-    userId: (user as { user_id?: string } | undefined)?.user_id,
-  });
-  if (!enabled) {
-    return flagDisabledResult<{ authUrl: string; state: string }>();
-  }
-
   const resolverModule = await import('@enterprise/lib/integrations/entra/auth/microsoftCredentialResolver');
   const credentials = await resolverModule.resolveMicrosoftCredentialsForTenant(tenant);
   if (!credentials) {
@@ -404,15 +386,6 @@ export const getEntraIntegrationStatus = withAuth(async (user, { tenant }) => {
     return { success: false, error: 'Forbidden: insufficient permissions to view Entra integration' } as const;
   }
 
-  const enabled = await isEntraUiEnabledForTenant({
-    tenantId: tenant,
-    userId: (user as { user_id?: string } | undefined)?.user_id,
-  });
-
-  if (!enabled) {
-    return flagDisabledResult<EntraStatusResponse>();
-  }
-
   const routeResult = await callEeRoute<EntraStatusResponse>({
     importFn: routes.route,
     method: 'GET',
@@ -451,14 +424,6 @@ export const updateEntraFieldSyncConfig = withAuth(async (
   }
 
   const userId = (user as { user_id?: string } | undefined)?.user_id;
-  const enabled = await isEntraUiEnabledForTenant({
-    tenantId: tenant,
-    userId,
-  });
-  if (!enabled) {
-    return flagDisabledResult<EntraFieldSyncConfig>();
-  }
-
   const fieldSyncEnabled = await isEntraFieldSyncEnabledForTenant({
     tenantId: tenant,
     userId,
@@ -504,14 +469,6 @@ export const connectEntraIntegration = withAuth(async (
     return { success: false, error: 'Forbidden: insufficient permissions to configure Entra integration' } as const;
   }
 
-  const enabled = await isEntraUiEnabledForTenant({
-    tenantId: tenant,
-    userId: (user as { user_id?: string } | undefined)?.user_id,
-  });
-  if (!enabled) {
-    return flagDisabledResult<{ status: string; connectionType: EntraConnectionType }>();
-  }
-
   await clearStaleCredentialsForConnectionType(tenant, input.connectionType);
 
   return callEeRoute<{ status: string; connectionType: EntraConnectionType }>({
@@ -533,14 +490,6 @@ export const connectEntraCipp = withAuth(async (
   const canUpdate = await hasPermission(user as any, 'system_settings', 'update');
   if (!canUpdate) {
     return { success: false, error: 'Forbidden: insufficient permissions to configure Entra integration' } as const;
-  }
-
-  const enabled = await isEntraUiEnabledForTenant({
-    tenantId: tenant,
-    userId: (user as { user_id?: string } | undefined)?.user_id,
-  });
-  if (!enabled) {
-    return flagDisabledResult<{ status: string; connectionType: EntraConnectionType; baseUrl: string }>();
   }
 
   const normalizedBaseUrl = normalizeCippBaseUrl(input.baseUrl);
@@ -613,14 +562,6 @@ export const validateEntraDirectConnection = withAuth(async (user, { tenant }) =
     return { success: false, error: 'Forbidden: insufficient permissions to validate Entra integration' } as const;
   }
 
-  const enabled = await isEntraUiEnabledForTenant({
-    tenantId: tenant,
-    userId: (user as { user_id?: string } | undefined)?.user_id,
-  });
-  if (!enabled) {
-    return flagDisabledResult<EntraDirectValidationResponse>();
-  }
-
   return callEeRoute<EntraDirectValidationResponse>({
     importFn: routes.validateDirectRoute,
     method: 'POST',
@@ -635,14 +576,6 @@ export const validateEntraCippConnection = withAuth(async (user, { tenant }) => 
   const canUpdate = await hasPermission(user as any, 'system_settings', 'update');
   if (!canUpdate) {
     return { success: false, error: 'Forbidden: insufficient permissions to validate Entra integration' } as const;
-  }
-
-  const enabled = await isEntraUiEnabledForTenant({
-    tenantId: tenant,
-    userId: (user as { user_id?: string } | undefined)?.user_id,
-  });
-  if (!enabled) {
-    return flagDisabledResult<EntraCippValidationResponse>();
   }
 
   return callEeRoute<EntraCippValidationResponse>({
@@ -661,14 +594,6 @@ export const disconnectEntraIntegration = withAuth(async (user, { tenant }) => {
     return { success: false, error: 'Forbidden: insufficient permissions to configure Entra integration' } as const;
   }
 
-  const enabled = await isEntraUiEnabledForTenant({
-    tenantId: tenant,
-    userId: (user as { user_id?: string } | undefined)?.user_id,
-  });
-  if (!enabled) {
-    return flagDisabledResult<{ status: string }>();
-  }
-
   return callEeRoute<{ status: string }>({
     importFn: routes.disconnectRoute,
     method: 'POST',
@@ -683,14 +608,6 @@ export const getEntraSyncRunHistory = withAuth(async (user, { tenant }, limit: n
   const canRead = await hasPermission(user as any, 'system_settings', 'read');
   if (!canRead) {
     return { success: false, error: 'Forbidden: insufficient permissions to view Entra integration' } as const;
-  }
-
-  const enabled = await isEntraUiEnabledForTenant({
-    tenantId: tenant,
-    userId: (user as { user_id?: string } | undefined)?.user_id,
-  });
-  if (!enabled) {
-    return flagDisabledResult<EntraSyncHistoryResponse>();
   }
 
   const safeLimit = Number.isFinite(limit) ? Math.max(1, Math.min(50, Math.floor(limit))) : 10;
@@ -725,14 +642,6 @@ export const getEntraReconciliationQueue = withAuth(async (user, { tenant }, lim
   }
 
   const userId = (user as { user_id?: string } | undefined)?.user_id;
-  const enabled = await isEntraUiEnabledForTenant({
-    tenantId: tenant,
-    userId,
-  });
-  if (!enabled) {
-    return flagDisabledResult<EntraReconciliationQueueResponse>();
-  }
-
   const queueFlagEnabled = await isEntraAmbiguousQueueEnabledForTenant({
     tenantId: tenant,
     userId,
@@ -764,14 +673,6 @@ export const resolveEntraQueueToExisting = withAuth(async (
   }
 
   const userId = (user as { user_id?: string } | undefined)?.user_id;
-  const enabled = await isEntraUiEnabledForTenant({
-    tenantId: tenant,
-    userId,
-  });
-  if (!enabled) {
-    return flagDisabledResult<EntraQueueResolutionResponse>();
-  }
-
   const queueFlagEnabled = await isEntraAmbiguousQueueEnabledForTenant({
     tenantId: tenant,
     userId,
@@ -802,14 +703,6 @@ export const resolveEntraQueueToNew = withAuth(async (
   }
 
   const userId = (user as { user_id?: string } | undefined)?.user_id;
-  const enabled = await isEntraUiEnabledForTenant({
-    tenantId: tenant,
-    userId,
-  });
-  if (!enabled) {
-    return flagDisabledResult<EntraQueueResolutionResponse>();
-  }
-
   const queueFlagEnabled = await isEntraAmbiguousQueueEnabledForTenant({
     tenantId: tenant,
     userId,
@@ -835,14 +728,6 @@ export const discoverEntraManagedTenants = withAuth(async (user, { tenant }) => 
     return { success: false, error: 'Forbidden: insufficient permissions to configure Entra integration' } as const;
   }
 
-  const enabled = await isEntraUiEnabledForTenant({
-    tenantId: tenant,
-    userId: (user as { user_id?: string } | undefined)?.user_id,
-  });
-  if (!enabled) {
-    return flagDisabledResult<{ discoveredTenantCount: number; discoveredTenants: unknown[] }>();
-  }
-
   return callEeRoute<{ discoveredTenantCount: number; discoveredTenants: unknown[] }>({
     importFn: routes.discoveryRoute,
     method: 'POST',
@@ -857,14 +742,6 @@ export const getEntraMappingPreview = withAuth(async (user, { tenant }) => {
   const canRead = await hasPermission(user as any, 'system_settings', 'read');
   if (!canRead) {
     return { success: false, error: 'Forbidden: insufficient permissions to view Entra integration' } as const;
-  }
-
-  const enabled = await isEntraUiEnabledForTenant({
-    tenantId: tenant,
-    userId: (user as { user_id?: string } | undefined)?.user_id,
-  });
-  if (!enabled) {
-    return flagDisabledResult<EntraMappingPreviewResponse>();
   }
 
   return callEeRoute<EntraMappingPreviewResponse>({
@@ -885,14 +762,6 @@ export const confirmEntraMappings = withAuth(async (
   const canUpdate = await hasPermission(user as any, 'system_settings', 'update');
   if (!canUpdate) {
     return { success: false, error: 'Forbidden: insufficient permissions to configure Entra integration' } as const;
-  }
-
-  const enabled = await isEntraUiEnabledForTenant({
-    tenantId: tenant,
-    userId: (user as { user_id?: string } | undefined)?.user_id,
-  });
-  if (!enabled) {
-    return flagDisabledResult<{ confirmedMappings: number }>();
   }
 
   const confirmResult = await callEeRoute<{ confirmedMappings: number }>({
@@ -942,14 +811,6 @@ export const skipEntraTenantMapping = withAuth(async (
   const canUpdate = await hasPermission(user as any, 'system_settings', 'update');
   if (!canUpdate) {
     return { success: false, error: 'Forbidden: insufficient permissions to configure Entra integration' } as const;
-  }
-
-  const enabled = await isEntraUiEnabledForTenant({
-    tenantId: tenant,
-    userId: (user as { user_id?: string } | undefined)?.user_id,
-  });
-  if (!enabled) {
-    return flagDisabledResult<{ managedTenantId: string; mappingState: string }>();
   }
 
   const managedTenantId = String(input.managedTenantId || '').trim();
@@ -1011,14 +872,6 @@ export const importEntraTenantAsClient = withAuth(async (
     return { success: false, error: 'Forbidden: insufficient permissions to configure Entra integration' } as const;
   }
 
-  const enabled = await isEntraUiEnabledForTenant({
-    tenantId: tenant,
-    userId: (user as { user_id?: string } | undefined)?.user_id,
-  });
-  if (!enabled) {
-    return flagDisabledResult<{ managedTenantId: string; }>();
-  }
-
   const { knex } = await createTenantKnex();
 
   const managedTenant = await tenantDb(knex, tenant).table('entra_managed_tenants')
@@ -1076,14 +929,6 @@ export const unmapEntraTenant = withAuth(async (
     return { success: false, error: 'Forbidden: insufficient permissions to configure Entra integration' } as const;
   }
 
-  const enabled = await isEntraUiEnabledForTenant({
-    tenantId: tenant,
-    userId: (user as { user_id?: string } | undefined)?.user_id,
-  });
-  if (!enabled) {
-    return flagDisabledResult<{ managedTenantId: string; status: string }>();
-  }
-
   return callEeRoute<{ managedTenantId: string; status: string }>({
     importFn: routes.mappingsUnmapRoute,
     method: 'POST',
@@ -1105,14 +950,6 @@ export const remapEntraTenant = withAuth(async (
     return { success: false, error: 'Forbidden: insufficient permissions to configure Entra integration' } as const;
   }
 
-  const enabled = await isEntraUiEnabledForTenant({
-    tenantId: tenant,
-    userId: (user as { user_id?: string } | undefined)?.user_id,
-  });
-  if (!enabled) {
-    return flagDisabledResult<{ managedTenantId: string; targetClientId: string; status: string }>();
-  }
-
   return callEeRoute<{ managedTenantId: string; targetClientId: string; status: string }>({
     importFn: routes.mappingsRemapRoute,
     method: 'POST',
@@ -1132,14 +969,6 @@ export const startEntraSync = withAuth(async (
   const canUpdate = await hasPermission(user as any, 'system_settings', 'update');
   if (!canUpdate) {
     return { success: false, error: 'Forbidden: insufficient permissions to configure Entra integration' } as const;
-  }
-
-  const enabled = await isEntraUiEnabledForTenant({
-    tenantId: tenant,
-    userId: (user as { user_id?: string } | undefined)?.user_id,
-  });
-  if (!enabled) {
-    return flagDisabledResult<{ accepted: boolean; scope: EntraSyncScope; runId: string | null }>();
   }
 
   if (input.scope === 'all-tenants') {

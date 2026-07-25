@@ -7,7 +7,7 @@ import { TierAccessError, assertTierAccess } from 'server/src/lib/tier-gating/as
 type HuduGuardPermission = 'read' | 'update';
 
 /**
- * Hudu UI access guard — mirrors requireEntraUiFlagEnabled.
+ * Hudu UI access guard — mirrors requireEntraAccess.
  *
  * Requires the integrations tier and `system_settings` RBAC. Returns a Response
  * (401/403) when the caller is unauthorized, otherwise resolves the tenant +

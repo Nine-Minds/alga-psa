@@ -1,5 +1,5 @@
 import { dynamic, ok, runtime } from '../_responses';
-import { requireEntraUiFlagEnabled } from '../_guards';
+import { requireEntraAccess } from '../_guards';
 import { clearEntraDirectTokenSet } from '@enterprise/lib/integrations/entra/auth/tokenStore';
 import { clearEntraCippCredentials } from '@enterprise/lib/integrations/entra/providers/cipp/cippSecretStore';
 import { disconnectActiveEntraConnection } from '@enterprise/lib/integrations/entra/connectionRepository';
@@ -7,18 +7,18 @@ import { disconnectActiveEntraConnection } from '@enterprise/lib/integrations/en
 export { dynamic, runtime };
 
 export async function POST(): Promise<Response> {
-  const flagGate = await requireEntraUiFlagEnabled('update');
-  if (flagGate instanceof Response) {
-    return flagGate;
+  const accessGate = await requireEntraAccess('update');
+  if (accessGate instanceof Response) {
+    return accessGate;
   }
 
   await Promise.all([
-    clearEntraDirectTokenSet(flagGate.tenantId),
-    clearEntraCippCredentials(flagGate.tenantId),
+    clearEntraDirectTokenSet(accessGate.tenantId),
+    clearEntraCippCredentials(accessGate.tenantId),
   ]);
   await disconnectActiveEntraConnection({
-    tenant: flagGate.tenantId,
-    userId: flagGate.userId,
+    tenant: accessGate.tenantId,
+    userId: accessGate.userId,
   });
 
   return ok({

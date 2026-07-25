@@ -34,9 +34,8 @@ describe('Entra integration guide contracts', () => {
     expect(guide).toContain('field_sync_config');
   });
 
-  it('T138: docs include feature-flag rollout order for pilot tenants', () => {
+  it('T138: docs include optional feature rollout order for pilot tenants', () => {
     expect(guide).toContain('## Rollout Order (Recommended)');
-    expect(guide).toContain('entra-integration-ui');
     expect(guide).toContain('entra-integration-cipp');
     expect(guide).toContain('entra-integration-field-sync');
     expect(guide).toContain('entra-integration-ambiguous-queue');

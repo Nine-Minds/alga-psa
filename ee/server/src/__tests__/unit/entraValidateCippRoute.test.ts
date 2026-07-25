@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const requireEntraUiFlagEnabledMock = vi.fn();
+const requireEntraAccessMock = vi.fn();
 const getEntraCippCredentialsMock = vi.fn();
 const updateEntraConnectionValidationMock = vi.fn();
 const axiosGetMock = vi.fn();
 
 vi.mock('@ee/app/api/integrations/entra/_guards', () => ({
-  requireEntraUiFlagEnabled: requireEntraUiFlagEnabledMock,
+  requireEntraAccess: requireEntraAccessMock,
 }));
 
 vi.mock('@ee/lib/integrations/entra/providers/cipp/cippSecretStore', () => ({
@@ -29,14 +29,14 @@ vi.mock('axios', () => ({
 describe('validate-cipp route', () => {
   beforeEach(() => {
     vi.resetModules();
-    requireEntraUiFlagEnabledMock.mockReset();
+    requireEntraAccessMock.mockReset();
     getEntraCippCredentialsMock.mockReset();
     updateEntraConnectionValidationMock.mockReset();
     axiosGetMock.mockReset();
   });
 
   it('T039: succeeds with valid CIPP token and tenant endpoint response', async () => {
-    requireEntraUiFlagEnabledMock.mockResolvedValue({
+    requireEntraAccessMock.mockResolvedValue({
       tenantId: 'tenant-39',
       userId: 'user-39',
     });

@@ -135,7 +135,6 @@ interface EntraIntegrationSettingsProps {
 
 export default function EntraIntegrationSettings({ canUseCipp: canUseCippTier = true }: EntraIntegrationSettingsProps) {
   const { t } = useTranslation('msp/integrations');
-  const uiFlag = useFeatureFlag('entra-integration-ui', { defaultValue: false });
   const cippFlag = useFeatureFlag('entra-integration-cipp', { defaultValue: false });
   const fieldSyncFlag = useFeatureFlag('entra-integration-field-sync', { defaultValue: false });
   const ambiguousQueueFlag = useFeatureFlag('entra-integration-ambiguous-queue', { defaultValue: false });
@@ -705,21 +704,6 @@ export default function EntraIntegrationSettings({ canUseCipp: canUseCippTier = 
       ) : null}
     </div>
   ) : null;
-
-  if (!uiFlag.enabled) {
-    return (
-      <div className="space-y-6" id="entra-integration-settings-disabled">
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('integrations.entra.settings.disabled.title')}</CardTitle>
-            <CardDescription>
-              {t('integrations.entra.settings.disabled.description')}
-            </CardDescription>
-          </CardHeader>
-        </Card>
-      </div>
-    );
-  }
 
   return (
     <div

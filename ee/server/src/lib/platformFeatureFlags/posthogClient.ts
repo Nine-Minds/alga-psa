@@ -11,11 +11,6 @@ const POSTHOG_API_HOST = process.env.POSTHOG_API_HOST || 'https://us.posthog.com
 
 export const ENTRA_PHASE1_FLAG_DEFINITIONS = [
   {
-    key: 'entra-integration-ui',
-    name: 'Entra Integration UI',
-    tags: ['entra', 'integration', 'phase-1'],
-  },
-  {
     key: 'entra-integration-client-sync-action',
     name: 'Entra Client Sync Action',
     tags: ['entra', 'integration', 'phase-1'],

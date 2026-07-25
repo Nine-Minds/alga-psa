@@ -149,7 +149,7 @@ describe('EntraIntegrationSettings guided flow', () => {
     mappingTableState.summary = { mapped: 0, skipped: 0, needsReview: 0 };
     mappingTableState.skippedTenants = [];
 
-    applyFlags(['entra-integration-ui']);
+    applyFlags([]);
     getEntraSyncRunHistoryMock.mockResolvedValue({ success: true, data: { runs: [] } });
     discoverEntraManagedTenantsMock.mockResolvedValue({
       success: true,
@@ -392,7 +392,7 @@ describe('EntraIntegrationSettings guided flow', () => {
     expect(syncAllButton).toBeEnabled();
   });
 
-  it('T068: mapping wizard content is inaccessible when the Entra UI flag is disabled', async () => {
+  it('T068: Entra settings remain accessible without a master UI flag', async () => {
     applyFlags([]);
     getEntraIntegrationStatusMock.mockResolvedValue({
       success: true,
@@ -401,9 +401,10 @@ describe('EntraIntegrationSettings guided flow', () => {
 
     render(<EntraIntegrationSettings />);
 
-    await screen.findByText('Entra integration UI is currently disabled for this tenant.');
-    expect(screen.queryByText('Map Tenants to Clients')).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Run Initial Sync' })).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(document.getElementById('entra-integration-settings')).not.toBeNull();
+    });
+    expect(document.getElementById('entra-integration-settings-disabled')).toBeNull();
   });
 
   it('T128: ambiguous reconciliation queue panel is hidden when flag is disabled', async () => {
@@ -422,7 +423,7 @@ describe('EntraIntegrationSettings guided flow', () => {
   });
 
   it('T129: ambiguous reconciliation queue panel is visible when flag is enabled', async () => {
-    applyFlags(['entra-integration-ui', 'entra-integration-ambiguous-queue']);
+    applyFlags(['entra-integration-ambiguous-queue']);
     getEntraIntegrationStatusMock.mockResolvedValue({
       success: true,
       data: buildStatus({
@@ -453,7 +454,7 @@ describe('EntraIntegrationSettings guided flow', () => {
     expect(document.getElementById('entra-reconciliation-queue-stub')).toBeNull();
     firstRender.unmount();
 
-    applyFlags(['entra-integration-ui', 'entra-integration-field-sync', 'entra-integration-ambiguous-queue']);
+    applyFlags(['entra-integration-field-sync', 'entra-integration-ambiguous-queue']);
     getEntraIntegrationStatusMock.mockResolvedValue({
       success: true,
       data: buildStatus({
@@ -470,7 +471,7 @@ describe('EntraIntegrationSettings guided flow', () => {
   });
 
   it('T136: field sync controls persist selected overwrite toggles', async () => {
-    applyFlags(['entra-integration-ui', 'entra-integration-field-sync']);
+    applyFlags(['entra-integration-field-sync']);
     getEntraIntegrationStatusMock.mockResolvedValue({
       success: true,
       data: buildStatus({
@@ -581,7 +582,7 @@ describe('EntraIntegrationSettings guided flow', () => {
   });
 
   it('T010: maintenance mode keeps mapping/history/queue visible without onboarding CTA prominence', async () => {
-    applyFlags(['entra-integration-ui', 'entra-integration-ambiguous-queue']);
+    applyFlags(['entra-integration-ambiguous-queue']);
     getEntraSyncRunHistoryMock.mockResolvedValue({
       success: true,
       data: {

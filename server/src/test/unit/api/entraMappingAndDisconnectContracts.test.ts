@@ -14,7 +14,7 @@ describe('Entra mapping/disconnect contract checks', () => {
     expect(unmapRoute).toContain("mapping_state: 'unmapped'");
     expect(unmapRoute).toContain('is_active: false');
     // Tenant scoping now lives in the tenantDb facade.
-    expect(unmapRoute).toContain('const db = tenantDb(knex, flagGate.tenantId);');
+    expect(unmapRoute).toContain('const db = tenantDb(knex, accessGate.tenantId);');
     expect(unmapRoute).toContain("await db.table('entra_client_tenant_mappings').insert");
     expect(unmapRoute).not.toContain('entra_sync_runs');
     expect(unmapRoute).not.toContain('entra_sync_run_tenants');

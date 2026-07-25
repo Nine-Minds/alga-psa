@@ -1,13 +1,13 @@
 import { badRequest, dynamic, ok, runtime } from '../../_responses';
-import { requireEntraUiFlagEnabled } from '../../_guards';
+import { requireEntraAccess } from '../../_guards';
 import { getEntraSyncRunHistory } from '@enterprise/lib/integrations/entra/entraWorkflowClient';
 
 export { dynamic, runtime };
 
 export async function GET(request: Request): Promise<Response> {
-  const flagGate = await requireEntraUiFlagEnabled('read');
-  if (flagGate instanceof Response) {
-    return flagGate;
+  const accessGate = await requireEntraAccess('read');
+  if (accessGate instanceof Response) {
+    return accessGate;
   }
 
   const url = new URL(request.url);
@@ -17,6 +17,6 @@ export async function GET(request: Request): Promise<Response> {
     return badRequest('limit must be a positive number');
   }
 
-  const history = await getEntraSyncRunHistory(flagGate.tenantId, parsedLimit);
+  const history = await getEntraSyncRunHistory(accessGate.tenantId, parsedLimit);
   return ok({ runs: history });
 }

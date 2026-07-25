@@ -215,26 +215,6 @@ describe('Entra direct connect action permissions', () => {
     );
   });
 
-  it('T139: disabling entra-integration-ui hides settings reads without touching persisted Entra data paths', async () => {
-    hasPermissionMock.mockResolvedValue(true);
-    featureFlagIsEnabledMock.mockResolvedValue(false);
-
-    const { getEntraIntegrationStatus } = await import(
-      '@alga-psa/integrations/actions/integrations/entraActions'
-    );
-    const result = await getEntraIntegrationStatus(
-      { user_id: 'user-139', user_type: 'internal' } as any,
-      { tenant: 'tenant-139' }
-    );
-
-    expect(result).toEqual({
-      success: false,
-      error: 'Microsoft Entra integration is disabled for this tenant.',
-    });
-    expect(statusRouteGetMock).not.toHaveBeenCalled();
-    expect(createTenantKnexMock).not.toHaveBeenCalled();
-  });
-
   it('T032: direct connect initiation returns OAuth URL with encoded nonce/state', async () => {
     hasPermissionMock.mockResolvedValue(true);
     featureFlagIsEnabledMock.mockResolvedValue(true);

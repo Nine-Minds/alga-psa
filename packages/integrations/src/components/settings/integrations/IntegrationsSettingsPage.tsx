@@ -30,7 +30,6 @@ import { CalendarEnterpriseIntegrationSettings } from './CalendarEnterpriseInteg
 import { TeamsEnterpriseIntegrationSettings } from './TeamsEnterpriseIntegrationSettings';
 import dynamic from 'next/dynamic';
 import Spinner from '@alga-psa/ui/components/Spinner';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getVisibleIntegrationCategoryIds,
@@ -143,8 +142,6 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
 }) => {
   const { t } = useTranslation('msp/settings');
   const isEEAvailable = isCalendarEnterpriseEdition();
-  const entraUiFlag = useFeatureFlag('entra-integration-ui', { defaultValue: false });
-  const isEntraUiEnabled = isEEAvailable && entraUiFlag.enabled;
   const huduGate = useHuduIntegrationEnabled();
   const isHuduEnabled = huduGate.enabled;
   const searchParams = useSearchParams();
@@ -286,7 +283,7 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
       description: t('integrations.categories.identity.description'),
       icon: Shield,
       integrations: [
-        ...(isEntraUiEnabled ? [{
+        ...(isEEAvailable ? [{
           id: 'entra',
           name: t('integrations.items.entra.name'),
           description: t('integrations.items.entra.description'),
@@ -318,7 +315,7 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
         }] : []),
       ],
     },
-  ], [canUseCipp, canUseEntraSync, canUseTeams, isEEAvailable, isEntraUiEnabled, isHuduEnabled, t]);
+  ], [canUseCipp, canUseEntraSync, canUseTeams, isEEAvailable, isHuduEnabled, t]);
 
   // Filter out empty categories
   const visibleCategories = categories.filter((category) => {

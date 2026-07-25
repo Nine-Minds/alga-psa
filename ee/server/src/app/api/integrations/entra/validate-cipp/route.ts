@@ -1,6 +1,6 @@
 import axios from 'axios';
 import { badRequest, dynamic, ok, runtime } from '../_responses';
-import { requireEntraUiFlagEnabled } from '../_guards';
+import { requireEntraAccess } from '../_guards';
 import { getEntraCippCredentials } from '@enterprise/lib/integrations/entra/providers/cipp/cippSecretStore';
 import { updateEntraConnectionValidation } from '@enterprise/lib/integrations/entra/connectionRepository';
 
@@ -39,15 +39,15 @@ function extractTenantCount(payload: unknown): number | null {
 }
 
 export async function POST(): Promise<Response> {
-  const flagGate = await requireEntraUiFlagEnabled('update');
-  if (flagGate instanceof Response) {
-    return flagGate;
+  const accessGate = await requireEntraAccess('update');
+  if (accessGate instanceof Response) {
+    return accessGate;
   }
 
-  const credentials = await getEntraCippCredentials(flagGate.tenantId);
+  const credentials = await getEntraCippCredentials(accessGate.tenantId);
   if (!credentials) {
     await updateEntraConnectionValidation({
-      tenant: flagGate.tenantId,
+      tenant: accessGate.tenantId,
       connectionType: 'cipp',
       status: 'validation_failed',
       snapshot: {
@@ -75,7 +75,7 @@ export async function POST(): Promise<Response> {
       const tenantCount = extractTenantCount(response.data);
       if (tenantCount !== null) {
         await updateEntraConnectionValidation({
-          tenant: flagGate.tenantId,
+          tenant: accessGate.tenantId,
           connectionType: 'cipp',
           status: 'connected',
           snapshot: null,
@@ -99,7 +99,7 @@ export async function POST(): Promise<Response> {
 
         if (status === 401 || status === 403) {
           await updateEntraConnectionValidation({
-            tenant: flagGate.tenantId,
+            tenant: accessGate.tenantId,
             connectionType: 'cipp',
             status: 'validation_failed',
             snapshot: {
@@ -120,7 +120,7 @@ export async function POST(): Promise<Response> {
   }
 
   await updateEntraConnectionValidation({
-    tenant: flagGate.tenantId,
+    tenant: accessGate.tenantId,
     connectionType: 'cipp',
     status: 'validation_failed',
     snapshot: {

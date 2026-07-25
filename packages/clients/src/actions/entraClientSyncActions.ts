@@ -1,7 +1,6 @@
 'use server';
 
 import { withAuth } from '@alga-psa/auth';
-import { isFeatureFlagEnabled } from '@alga-psa/core';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
 import { hasMspPermission } from '../lib/authHelpers';
 
@@ -20,14 +19,6 @@ export const startClientEntraSync = withAuth(async (
   const canUpdate = await hasMspPermission(user, 'system_settings', 'update');
   if (!canUpdate) {
     return { success: false, error: 'Forbidden: insufficient permissions to configure Entra integration' } as const;
-  }
-
-  const enabled = await isFeatureFlagEnabled('entra-integration-ui', {
-    tenantId: tenant,
-    userId: (user as { user_id?: string } | undefined)?.user_id,
-  });
-  if (!enabled) {
-    return { success: false, error: 'Microsoft Entra integration is disabled for this tenant.' } as const;
   }
 
   const clientId = String(input.clientId || '').trim();
