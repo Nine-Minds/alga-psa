@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Identity / Entra + CIPP — three options</title>
+<link rel="stylesheet" href="shared.css">
+<style>
+  .wrap{max-width:1080px;margin:0 auto;padding:28px 24px 70px}
+  .opt{display:grid;grid-template-columns:1fr 300px;gap:20px;align-items:start}
+  @media(max-width:900px){.opt{grid-template-columns:1fr}}
+  .optcard{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:20px 22px;margin-bottom:16px}
+  .optcard h2{margin:0;font-size:16px;font-weight:700;display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .optcard .num{width:24px;height:24px;border-radius:50%;background:var(--purple);color:#fff;font-size:12px;font-weight:700;
+    display:inline-flex;align-items:center;justify-content:center;flex:none}
+  .optcard p.d{margin:8px 0 0;font-size:13.5px;color:var(--text-700)}
+  .cols{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-top:14px}
+  @media(max-width:760px){.cols{grid-template-columns:1fr}}
+  .cols h4{margin:0 0 5px;font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.06em;color:var(--text-400)}
+  .cols ul{margin:0;padding-left:17px;font-size:12.5px;color:var(--text-700)}
+  .cols li{padding:1.5px 0}
+  .who{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}
+  .who span{font-size:11px;font-weight:600;border-radius:9999px;padding:2px 9px;background:var(--panel);color:var(--text-500)}
+  .who span.win{background:var(--success-bg);color:var(--success-fg)}
+  .who span.lose{background:var(--error-bg);color:var(--error-fg)}
+</style>
+</head>
+<body>
+<div class="mockbar"><b>Identity / Microsoft Entra + CIPP</b> <span class="sep">·</span> three design options
+  <span class="sep">·</span> mockups, not production code
+  <button class="themetog" style="margin-left:auto">Dark</button></div>
+
+<div class="wrap">
+  <h1 style="font-size:23px;font-weight:700;margin:0 0 6px;letter-spacing:-0.015em">Three ways to rebuild the Identity screen</h1>
+  <p style="font-size:14px;color:var(--text-500);margin:0 0 8px;max-width:76ch">
+    All three carry the same content — pre-consent disclosure, a real connect flow with test-before-save, a contact preflight,
+    single-client piloting, schedule control with pause, visible field rules, a review queue, and run history with client names
+    instead of tenant GUIDs. They differ in <b>where that content lives</b> and <b>what the first run feels like</b>.</p>
+  <p style="font-size:13px;color:var(--text-400);margin:0 0 22px">
+    Each mockup has a state switcher in the top bar — step through <b>not connected → connected → mapping → preflight →
+    operating → failing</b>. Dark mode toggle on the right. Dialogs, tabs, filters, switches and expanders all work.</p>
+
+  <div class="optcard">
+    <h2><span class="num">1</span> Guided setup → console <span class="pill tier">recommended</span></h2>
+    <p class="d">Entra gets its own route. Until the first successful sync, a wizard owns the whole screen — one decision at a
+      time, disclosure before consent, preflight as the gate. After that it becomes a tabbed operations console
+      (Overview · Sync &amp; schedule · Clients · Field rules · Review queue · History · Connection).</p>
+    <div class="cols">
+      <div><h4>Strengths</h4><ul>
+        <li>Best first run — the screen has one job at a time</li>
+        <li>Setup chrome disappears forever once you're live</li>
+        <li>Ops console has room for filters, history, per-tenant health</li>
+        <li>Overview leads with "needs your attention"</li>
+      </ul></div>
+      <div><h4>Costs</h4><ul>
+        <li>Two distinct UIs to build and keep consistent</li>
+        <li>New route + mode state; deep links need care</li>
+        <li>Most work of the three</li>
+      </ul></div>
+    </div>
+    <div class="who"><span class="win">Dana: disclosure before consent</span><span class="win">Peet: preflight gate</span><span class="win">Sam: ops console + pause</span></div>
+    <div class="btn-row" style="margin-top:15px">
+      <a class="btn btn-primary" href="option-1-guided.html">Open option 1</a>
+      <a class="btn btn-outline btn-xs" href="option-1-guided.html#fresh">First run</a>
+      <a class="btn btn-outline btn-xs" href="option-1-guided.html#preflight">Preflight</a>
+      <a class="btn btn-outline btn-xs" href="option-1-guided.html#failing">Failing</a>
+    </div>
+  </div>
+
+  <div class="optcard">
+    <h2><span class="num">2</span> One page, ranked by urgency</h2>
+    <p class="d">Stays exactly where it is today — inside the Identity tab, no new route. One scroll, ordered by what matters:
+      a status band that changes character with state, then "needs your attention", then your clients, then everything else
+      collapsed into accordions that state their own summary in the header.</p>
+    <div class="cols">
+      <div><h4>Strengths</h4><ul>
+        <li>Cheapest to build; closest to today's structure</li>
+        <li>No navigation, no mode state, no new route</li>
+        <li>Accordion headers carry the answer ("on, every 24 hours")</li>
+        <li>Everything is Ctrl-F findable on one page</li>
+      </ul></div>
+      <div><h4>Costs</h4><ul>
+        <li>First run is still a scroll past things you don't need yet</li>
+        <li>Long page once you have 39 clients and real history</li>
+        <li>Mapping and history stay cramped</li>
+      </ul></div>
+    </div>
+    <div class="who"><span class="win">Dana: disclosure inline</span><span>Peet: preflight present, less prominent</span><span class="win">Sam: pause in the band</span></div>
+    <div class="btn-row" style="margin-top:15px">
+      <a class="btn btn-primary" href="option-2-onepage.html">Open option 2</a>
+      <a class="btn btn-outline btn-xs" href="option-2-onepage.html#fresh">First run</a>
+      <a class="btn btn-outline btn-xs" href="option-2-onepage.html#preflight">Preflight</a>
+      <a class="btn btn-outline btn-xs" href="option-2-onepage.html#failing">Failing</a>
+    </div>
+  </div>
+
+  <div class="optcard">
+    <h2><span class="num">3</span> Client-centric workbench</h2>
+    <p class="d">Flips the object model: the spine is <b>your clients</b>, not the connection. Every row expands in place to show
+      what sync did or would do to that client, with per-client preview and sync. Setup isn't a mode — it's a checklist card that
+      sits above the list until it's done, and unmatched tenants are just rows that need you.</p>
+    <div class="cols">
+      <div><h4>Strengths</h4><ul>
+        <li>Piloting one client is the natural default, not a workaround</li>
+        <li>Matches how an owner thinks — by client, not by tenant GUID</li>
+        <li>Failure is diagnosed on the row, with the fix attached</li>
+        <li>Scales cleanly to 200 clients with filters</li>
+      </ul></div>
+      <div><h4>Costs</h4><ul>
+        <li>Weakest cold start — a list is a poor teacher</li>
+        <li>Connection lives in Settings, easy to overlook when it breaks</li>
+        <li>Expanding rows carry a lot; risks becoming dense</li>
+      </ul></div>
+    </div>
+    <div class="who"><span>Dana: disclosure is in a dialog</span><span class="win">Peet: per-client everything</span><span class="win">Sam: scale + per-client health</span></div>
+    <div class="btn-row" style="margin-top:15px">
+      <a class="btn btn-primary" href="option-3-workbench.html">Open option 3</a>
+      <a class="btn btn-outline btn-xs" href="option-3-workbench.html#fresh">First run</a>
+      <a class="btn btn-outline btn-xs" href="option-3-workbench.html#preflight">Preflight</a>
+      <a class="btn btn-outline btn-xs" href="option-3-workbench.html#failing">Failing</a>
+    </div>
+  </div>
+
+  <div class="optcard" style="background:var(--bg)">
+    <h2 style="font-size:14px">Fixed in all three, regardless of which you pick</h2>
+    <div class="cols" style="margin-top:10px">
+      <div><h4>Traps removed</h4><ul>
+        <li>No "Reconnect" button on a never-connected screen</li>
+        <li>Connection options are real, focusable controls</li>
+        <li>Connection is tested <i>before</i> it is saved</li>
+        <li>Disconnect, create-client and unmap all confirm, and say what survives</li>
+        <li>"Not connected" in plain words, once — no <span class="mono">not_connected</span></li>
+      </ul></div>
+      <div><h4>Truth restored</h4><ul>
+        <li>Preflight before anything writes (the engine already supports it)</li>
+        <li>Schedule is visible, settable and pausable</li>
+        <li>Run history shows client names, trigger and who ran it</li>
+        <li>Field rules and the review queue are visible, not flag-hidden</li>
+        <li>Credential rotation without tearing the integration down</li>
+      </ul></div>
+    </div>
+  </div>
+</div>
+<script src="mock.js"></script>
+</body>
+</html>
