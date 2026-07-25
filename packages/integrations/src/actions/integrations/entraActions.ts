@@ -551,13 +551,13 @@ export const testEntraCippCredentials = withAuth(async (
     return { success: false, error: 'CIPP API token is required.' } as const;
   }
 
-  const { probeCippCredentials } = await import(
+  const { isFailedCippProbe, probeCippCredentials } = await import(
     '@enterprise/lib/integrations/entra/providers/cipp/cippProbe'
   );
 
   const probe = await probeCippCredentials({ baseUrl: normalizedBaseUrl, apiToken });
 
-  if (!probe.valid) {
+  if (isFailedCippProbe(probe)) {
     return {
       success: false,
       error: probe.error || 'Unable to validate the CIPP connection.',
@@ -605,13 +605,13 @@ export const connectEntraCipp = withAuth(async (
   // failed connect must leave no trace — neither a staged credential, nor a row
   // claiming status 'connected', nor a validation_failed stamp on whatever
   // connection the tenant already had working.
-  const { probeCippCredentials } = await import(
+  const { isFailedCippProbe, probeCippCredentials } = await import(
     '@enterprise/lib/integrations/entra/providers/cipp/cippProbe'
   );
 
   const probe = await probeCippCredentials({ baseUrl: normalizedBaseUrl, apiToken });
 
-  if (!probe.valid) {
+  if (isFailedCippProbe(probe)) {
     return {
       success: false,
       error: probe.error || 'Unable to validate the CIPP connection.',
@@ -1205,7 +1205,7 @@ export const runEntraPreflight = withAuth(async (
 export const startEntraSync = withAuth(async (
   user,
   { tenant },
-  input: { scope: EntraSyncScope; clientId?: string }
+  input: { scope: EntraSyncScope; clientId?: string; managedTenantId?: string }
 ) => {
   if (isClientPortalUser(user)) {
     return { success: false, error: 'Forbidden' } as const;

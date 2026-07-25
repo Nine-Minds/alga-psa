@@ -6,7 +6,10 @@ import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { resolveMicrosoftCredentialsForTenant } from '@ee/lib/integrations/entra/auth/microsoftCredentialResolver';
 import { saveEntraDirectTokenSet } from '@ee/lib/integrations/entra/auth/tokenStore';
 import { ENTRA_DIRECT_SCOPE_STRING } from '@ee/lib/integrations/entra/auth/directScopes';
-import { probeEntraDirectAccess } from '@ee/lib/integrations/entra/providers/direct/directProbe';
+import {
+  isFailedEntraDirectProbe,
+  probeEntraDirectAccess,
+} from '@ee/lib/integrations/entra/providers/direct/directProbe';
 
 export const dynamic = 'force-dynamic';
 
@@ -139,7 +142,7 @@ export async function GET(request: NextRequest) {
     // argument and records nothing, so a rejected token leaves no trace at
     // all: no stored token set, no disconnected predecessor, no new row.
     const probe = await probeEntraDirectAccess(accessToken);
-    if (!probe.valid) {
+    if (isFailedEntraDirectProbe(probe)) {
       console.error('[Entra OAuth] Direct connection rejected before persisting', {
         code: probe.code,
         status: probe.status,

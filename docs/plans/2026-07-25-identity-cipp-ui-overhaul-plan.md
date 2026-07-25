@@ -2,7 +2,9 @@
 
 **Date:** 2026-07-25
 **Branch:** `improve/cipp-ui`
-**Status:** Draft, approved for implementation
+**Status:** Delivered on `improve/cipp-ui` (PR1–PR7 below are all implemented; see
+"Delivery record" at the foot of this document for what shipped, what changed along the way,
+and the one ops action still outstanding).
 **Design mockups:** [`2026-07-25-identity-cipp-ui-mockups/`](./2026-07-25-identity-cipp-ui-mockups/index.html) —
 option 1 chosen. Open `index.html` in a browser; each option has a lifecycle state switcher
 (not connected → connected → mapping → preflight → operating → failing), a dark-mode toggle, and working
@@ -382,3 +384,46 @@ interactive element needs a stable automation id per `docs/ui/ui_automation_ids.
 Per-tenant metering and the dormant add-on machinery (`ADD_ONS.ENTERPRISE`, `assertAddOnAccess`, Stripe price
 config) stay untouched — they are the substrate for the future metered product. Do not "clean them up".
 Teams add-on changes, CE edition changes, and CIPP API modernization are also out of scope.
+
+---
+
+## Delivery record
+
+All seven staged PRs are implemented on this branch, one commit each, in this order:
+PR1 (with two follow-up fixes), PR2, PR3, PR5, PR7, PR4, PR6. PR5 and PR7 landed before PR4
+because the console consumes the shared `FieldSyncRules` from PR5 and prompts for the
+default-off schedule from PR7.
+
+**Things that turned out differently from the plan:**
+
+- **F3 was half done when this document said it was done.** `connectEntraCipp` validated before
+  persisting, but validated by calling the validate-cipp route, which reads the credential from
+  the store and stamps its verdict onto the tenant's *active* connection — so a failed connect
+  briefly overwrote a working credential and left `validation_failed` on a healthy Direct
+  connection. And the Direct callback, which this plan explicitly covered ("Same treatment for
+  the direct path's post-callback persistence"), still persisted tokens and a `connected` row
+  before any Graph call. Both are fixed: `probeCippCredentials` and `probeEntraDirectAccess` are
+  pure probes that take the candidate credential as an argument and write nothing, and the
+  connection swap is one transaction rather than two writes.
+- **PR1 item 7 was half done too.** The "Next Sync Interval" locale keys were deleted while the
+  component still rendered them, so the overview showed a literal
+  `integrations.entra.settings.overview.syncIntervalLabel` to operators.
+- **The EE Entra test suite was failing 19/110** for reasons unrelated to this work (the tenantDb
+  facade migration broke hand-rolled query doubles; component tests asserted English copy while
+  the i18n mock echoed keys). Fixed, since "unit and component suites green" is this plan's own
+  release gate: 34 files / 127 tests pass.
+- **PR6's notifications** use the existing internal-notification broadcast (the pattern accounting
+  sync uses) rather than new templates and subtypes. The decision rules are pure and separate from
+  delivery, so the sync path does not import the notification stack.
+- **`shouldShowEntraSyncAction` gained a permission argument.** The per-client "Sync Entra Now"
+  button rendered for every user who could open a client while the server required
+  `system_settings:update` — item 5 of PR6, and a real Forbidden-toast defect.
+
+**Still outstanding — one ops action, not a code change:**
+
+PR7 migrates every tenant's `sync_enabled` to false. Run the enumeration query under "Note on the
+migrate-to-off decision" and hand ops the affected-tenant list **before this deploys**, so the
+tenants that are genuinely running recurring sync today are told rather than discovering it.
+
+**Not attempted, and still true:** the CIPP emulator (`test-harness/cipp-emulator/`) does not
+exist, so CIPP paths remain covered by unit-level doubles.

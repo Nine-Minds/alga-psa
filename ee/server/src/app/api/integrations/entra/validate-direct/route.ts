@@ -5,7 +5,10 @@ import { resolveMicrosoftCredentialsForTenant } from '@ee/lib/integrations/entra
 import { refreshEntraDirectToken } from '@ee/lib/integrations/entra/auth/refreshDirectToken';
 import { ENTRA_DIRECT_SECRET_KEYS } from '@ee/lib/integrations/entra/secrets';
 import { updateEntraConnectionValidation } from '@ee/lib/integrations/entra/connectionRepository';
-import { probeEntraDirectAccess } from '@ee/lib/integrations/entra/providers/direct/directProbe';
+import {
+  isFailedEntraDirectProbe,
+  probeEntraDirectAccess,
+} from '@ee/lib/integrations/entra/providers/direct/directProbe';
 
 export { dynamic, runtime };
 
@@ -82,7 +85,7 @@ export async function POST(): Promise<Response> {
   // the active connection.
   let probe = await probeEntraDirectAccess(accessToken);
 
-  if (!probe.valid && probe.code === 'auth_rejected') {
+  if (isFailedEntraDirectProbe(probe) && probe.code === 'auth_rejected') {
     try {
       const refreshed = await refreshEntraDirectToken(tenantId);
       probe = await probeEntraDirectAccess(refreshed.accessToken);
@@ -100,7 +103,7 @@ export async function POST(): Promise<Response> {
       return badRequest('Direct Entra validation failed after token refresh.');
     }
 
-    if (!probe.valid) {
+    if (isFailedEntraDirectProbe(probe)) {
       await updateEntraConnectionValidation({
         tenant: tenantId,
         connectionType: 'direct',
@@ -115,7 +118,7 @@ export async function POST(): Promise<Response> {
     }
   }
 
-  if (!probe.valid) {
+  if (isFailedEntraDirectProbe(probe)) {
     await updateEntraConnectionValidation({
       tenant: tenantId,
       connectionType: 'direct',

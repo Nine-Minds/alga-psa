@@ -45,8 +45,9 @@ vi.mock('@alga-psa/ui/components/Switch', () => ({
   ),
 }));
 
-vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
-  CustomSelect: ({
+vi.mock('@alga-psa/ui/components/CustomSelect', () => {
+  // CustomSelect is a default export.
+  const CustomSelect = ({
     id,
     value,
     onValueChange,
@@ -66,8 +67,10 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
         </option>
       ))}
     </select>
-  ),
-}));
+  );
+
+  return { __esModule: true, default: CustomSelect, CustomSelect };
+});
 
 const enabledToggle = () => document.getElementById('entra-schedule-enabled') as HTMLInputElement;
 const saveButton = () => document.getElementById('entra-schedule-save') as HTMLButtonElement;

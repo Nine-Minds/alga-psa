@@ -86,6 +86,7 @@ import {
   resolveEntraClientSyncStartState,
   shouldShowEntraSyncAction,
   } from './clientDetailsEntraSyncAction';
+import { useEntraSyncPermission } from './useEntraSyncPermission';
 
 function isClientActionError(value: unknown): value is ActionMessageError | ActionPermissionError {
   return isActionMessageError(value) || isActionPermissionError(value);

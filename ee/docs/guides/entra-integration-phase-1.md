@@ -32,10 +32,18 @@ Choose one connection type per tenant:
 2. `cipp` (CIPP API)
 - Available on Pro and Premium when the `entra-integration-cipp` flag is enabled for the tenant.
 - Uses the classic CIPP API for managed tenant and user enumeration.
-- Requires the CIPP base URL and a static API token.
+- Requires the **CIPP-API function app host** (for example `my-cipp-api.azurewebsites.net`) — not
+  the CIPP frontend an operator signs into — and a **CIPP API key**, taken from
+  Settings → CIPP → API access in CIPP itself. An Azure client secret is not this credential.
 - Best when your MSP already uses CIPP and wants to reuse that API boundary.
 
 Switching connection types automatically clears stale credentials for the previous type.
+
+Both connect paths validate before they persist. The CIPP dialog tests the candidate credential
+against the tenant list and keeps Save disabled until that test passes; the Direct OAuth callback
+probes Microsoft Graph with the freshly exchanged token before writing anything, so a sign-in that
+completes without admin consent leaves no connection record at all. A failed connect never disturbs
+a connection the tenant already had.
 
 ## Required Secret Names
 
@@ -117,9 +125,14 @@ curl -X POST \
 The settings wizard follows four explicit write-gated steps:
 
 1. Connect
-- Choose `direct` or `cipp`.
-- For direct: start OAuth, complete callback, validate connection.
-- For CIPP: save base URL/token, validate tenant list access.
+- Read the pre-consent disclosure: the exact Graph scopes with plain-English glosses, and the
+  contact-effect contract (matched by email within the mapped client; unmatched become new
+  contacts; existing fields are not overwritten unless enabled; nothing is ever deleted). It can be
+  copied for a change record.
+- Choose `direct` or `cipp` from the connection chooser, which states each option's prerequisites.
+- For direct: confirm the interstitial (a Global Administrator must consent; the connection then
+  runs as a service principal), complete OAuth, and the callback validates before persisting.
+- For CIPP: enter the CIPP-API host and API key, press Test connection, then Save.
 
 2. Discover Tenants
 - Run discovery to populate managed Entra tenants.
@@ -127,6 +140,8 @@ The settings wizard follows four explicit write-gated steps:
 3. Map Tenants to Clients
 - Review `auto-matched`, `needs review`, and skipped rows.
 - Confirm mappings explicitly (no hidden writes during preview).
+- Importing a discovered tenant as a new client is confirmed, with a warning listing
+  similarly-named existing clients.
 
 4. Initial Sync
 - Run initial sync once at least one mapping is confirmed.
@@ -140,20 +155,70 @@ Default behavior is additive/linking, not destructive:
 - Multiple plausible matches queue reconciliation items.
 - Name-only similarity does not auto-link.
 - Sync never deletes contacts.
-- Disabled/deleted upstream Entra users mark linked contacts inactive.
+- Disabled/deleted upstream Entra users mark linked contacts inactive, and only while the
+  `markInactiveWhenDisabled` rule is on. It defaults on (this was previously unconditional), and
+  turning it off means a disabled Microsoft account leaves its contact alone.
+- Contacts carry their provenance: the contact record shows that a directory maintains it, its
+  sign-in name and last sync, and an inactive contact says whether the Microsoft account was
+  disabled or deleted rather than leaving "Inactive" unexplained.
 
 Field overwrite controls:
 
 - Only fields enabled in `entra_sync_settings.field_sync_config` may overwrite local contact values.
 - If a field toggle is off, local value remains authoritative.
+- All overwrite rules default to off, and are visible to every tenant that can reach the screen
+  (they used to be hidden behind a default-off feature flag).
+- Editing a contact field that an enabled rule syncs warns inline, so the edit is not silently
+  reverted by the next run.
 
 ## Manual Sync Paths
 
-- Settings: `Sync All Tenants Now` starts all-tenant workflow.
-- Client details: `Sync Entra Now` starts single-client workflow for mapped client.
-- Mapping confirm flow can optionally start initial sync immediately.
+- Console header: `Sync now` starts the all-tenant workflow.
+- Console → Clients: per-client preview and sync.
+- Client details: `Sync Entra Now` starts the single-client workflow for a mapped client. Shown
+  only to users who hold `system_settings:update`, which is what the server enforces.
+- The setup wizard's last step is a pilot: preview one client, sync that one client, and the
+  remaining clients unlock only once its run has completed.
 
 All sync execution paths run via Temporal workflows and persist run + per-tenant results.
+
+## After Setup: the Operations Console
+
+Once one real sync has completed, the Entra route switches from the setup wizard to the
+operations console and never switches back — a connection that later breaks is an attention item,
+not a return to onboarding. Its tabs carry `?tab=` deep links:
+
+- **Overview** — the attention list (broken connection, failing clients grouped by that one root
+  cause, review-queue backlog, never-synced clients, automatic sync off), the last real sync, and
+  schedule/connection/mapping state.
+- **Sync & schedule** — automatic sync on/off and cadence. Writes `entra_sync_settings` and
+  reconciles the tenant's Temporal schedule immediately. Automatic sync defaults to **off**.
+- **Clients** — search, state filters, and per-client preview / sync / unlink.
+- **Field rules** — the overwrite rules (all default off) and the named
+  "mark contacts inactive when the Microsoft account is disabled" rule (defaults on, preserving
+  the previous unconditional behaviour). "Preview effect" runs a preflight with the pending rules.
+- **Review queue** — ambiguous matches, resolvable to an existing contact, to a new contact, or
+  dismissed. A dismissal is recorded with actor, time and reason, and the identity is not queued
+  again.
+- **History** — filters by trigger and failures, pagination, CSV export, and runs identified by
+  **client name** rather than Microsoft tenant GUID. Preflights appear labelled as previews.
+- **Connection** — test, rotate the credential in place, export the connection record, disconnect
+  (confirmed), and the tenant mapping table.
+
+## Preflight (Preview Before Writing)
+
+`POST /api/integrations/entra/sync/preflight` classifies every identity in one mapped client —
+create / link / needs decision / mark inactive / no change — and writes nothing but an audit row
+with `is_dry_run = true`. It runs the real reconciliation with writes disabled rather than a
+parallel implementation, so its counts are the counts the following sync reports on unchanged
+data. Dry runs are excluded from every health aggregate and from the setup→console switch.
+
+## Notifications
+
+Runs notify tenant admins when the sync needs a person: identities landing in the review queue,
+and repeated failure (the second consecutive failed or partial run — one failed run is usually
+transient). An optional per-run digest is off by default. Stored in
+`entra_sync_settings.notification_config`.
 
 ## Rollout Order (Recommended)
 

@@ -31,8 +31,9 @@ vi.mock('@alga-psa/ui/components/Button', () => ({
   ),
 }));
 
-vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
-  CustomSelect: ({
+vi.mock('@alga-psa/ui/components/CustomSelect', () => {
+  // CustomSelect is a default export.
+  const CustomSelect = ({
     id,
     value,
     onValueChange,
@@ -50,8 +51,10 @@ vi.mock('@alga-psa/ui/components/CustomSelect', () => ({
         </option>
       ))}
     </select>
-  ),
-}));
+  );
+
+  return { __esModule: true, default: CustomSelect, CustomSelect };
+});
 
 function mapping(overrides: Record<string, unknown> = {}) {
   return {

@@ -105,3 +105,21 @@ export async function probeEntraDirectAccess(
     };
   }
 }
+
+/**
+ * Narrowing helpers. ee/server compiles with `strict: false`, where a union
+ * discriminated by a boolean literal does not narrow on `if (!probe.valid)`;
+ * a user-defined type guard narrows in both modes without changing the result
+ * shape that routes and tests mirror.
+ */
+export function isFailedEntraDirectProbe(
+  probe: EntraDirectProbeResult
+): probe is Extract<EntraDirectProbeResult, { valid: false }> {
+  return probe.valid === false;
+}
+
+export function isSuccessfulEntraDirectProbe(
+  probe: EntraDirectProbeResult
+): probe is Extract<EntraDirectProbeResult, { valid: true }> {
+  return probe.valid === true;
+}

@@ -120,3 +120,24 @@ export async function probeCippCredentials(
     code: 'validation_failed',
   };
 }
+
+/**
+ * Narrowing helpers.
+ *
+ * ee/server compiles with `strict: false`, and without strictNullChecks a union
+ * discriminated by a boolean literal does not narrow on `if (!probe.valid)` —
+ * every field of the failure arm reads as a type error. A user-defined type
+ * guard narrows in both modes, and keeps the result shape (which tests and
+ * route payloads mirror) unchanged.
+ */
+export function isFailedCippProbe(
+  probe: CippProbeResult
+): probe is Extract<CippProbeResult, { valid: false }> {
+  return probe.valid === false;
+}
+
+export function isSuccessfulCippProbe(
+  probe: CippProbeResult
+): probe is Extract<CippProbeResult, { valid: true }> {
+  return probe.valid === true;
+}

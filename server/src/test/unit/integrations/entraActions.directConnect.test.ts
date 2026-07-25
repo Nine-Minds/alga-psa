@@ -50,6 +50,9 @@ vi.mock('@enterprise/lib/integrations/entra/auth/microsoftCredentialResolver', (
 
 vi.mock('@enterprise/lib/integrations/entra/providers/cipp/cippProbe', () => ({
   probeCippCredentials: probeCippCredentialsMock,
+  // The action narrows through the guard rather than `!probe.valid`, because
+  // ee/server compiles without strictNullChecks where that does not narrow.
+  isFailedCippProbe: (probe: { valid?: boolean }) => probe.valid === false,
 }));
 
 vi.mock('@enterprise/lib/integrations/entra/providers/cipp/cippSecretStore', () => ({

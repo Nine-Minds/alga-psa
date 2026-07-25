@@ -89,4 +89,9 @@ export {
   type EntraReconciliationQueueResponse,
   type EntraQueueResolutionResponse,
   type EntraFieldSyncConfig,
+  type EntraConfirmedMapping,
+  type EntraPreflightBucketId,
+  type EntraPreflightIdentity,
+  type EntraPreflightResponse,
+  type EntraSyncScheduleSettings,
 } from './entraActions';

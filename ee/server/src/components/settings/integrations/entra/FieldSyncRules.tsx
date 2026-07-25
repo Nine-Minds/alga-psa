@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
-import { CustomSelect } from '@alga-psa/ui/components/CustomSelect';
+import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
