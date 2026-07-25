@@ -375,6 +375,111 @@
         },
         "title": "CIPP verbinden"
       },
+      "console": {
+        "actions": {
+          "syncNow": "Nu synchroniseren",
+          "syncingNow": "Starten…"
+        },
+        "attention": {
+          "connection": "De verbinding werkt niet. Er wordt niets gesynchroniseerd tot dit is opgelost.",
+          "empty": "Er is niets dat aandacht vraagt.",
+          "failedClients": "{{count}} klanten mislukten bij hun laatste synchronisatie.",
+          "neverSynced": "{{count}} gekoppelde klanten zijn nooit gesynchroniseerd.",
+          "open": "Openen",
+          "reviewQueue": "{{count}} identiteiten wachten op een beslissing.",
+          "scheduleOff": "Automatische synchronisatie staat uit. Contacten wijzigen alleen als u zelf synchroniseert.",
+          "title": "Vraagt aandacht"
+        },
+        "clients": {
+          "empty": "Geen klanten voldoen aan dit filter.",
+          "filters": {
+            "all": "Alle",
+            "failing": "Mislukt",
+            "healthy": "Gezond",
+            "never-synced": "Nooit gesynchroniseerd"
+          },
+          "lastSynced": "laatst gesynchroniseerd {{time}} · {{status}}",
+          "neverSynced": "nooit gesynchroniseerd",
+          "searchPlaceholder": "Zoek klanten of domeinen",
+          "sync": "Synchroniseren",
+          "unlink": "Ontkoppelen"
+        },
+        "connection": {
+          "exportRecord": "Verbindingsrecord exporteren",
+          "mappingDescription": "Bekijk of wijzig bij welke klant elke Microsoft-tenant hoort.",
+          "mappingTitle": "Tenantkoppeling",
+          "rotate": "Referentie roteren",
+          "validate": "Verbinding testen",
+          "validated": "De verbinding werkt.",
+          "validating": "Testen…"
+        },
+        "errors": {
+          "syncFailed": "De synchronisatie kon niet worden gestart.",
+          "validateFailed": "De verbinding kon niet worden gecontroleerd."
+        },
+        "history": {
+          "allClients": "Alle klanten",
+          "empty": "Geen runs voldoen aan deze filters.",
+          "export": "CSV exporteren",
+          "includePreviews": "Previews meenemen",
+          "next": "Volgende",
+          "onlyFailures": "Alleen fouten",
+          "page": "Pagina {{page}} van {{pages}}",
+          "previewBadge": "preview",
+          "previous": "Vorige",
+          "runHeader": "{{scope}} · {{status}}",
+          "runMeta": "{{runType}} · gestart {{started}} · klaar {{completed}}",
+          "tenantCounts": "{{succeeded}} geslaagd, {{failed}} mislukt van {{total}}",
+          "triggers": {
+            "all": "Alle runs",
+            "manual": "Handmatig",
+            "scheduled": "Gepland"
+          }
+        },
+        "lastRun": {
+          "empty": "Er is nog geen synchronisatie uitgevoerd.",
+          "summary": "{{status}} om {{time}}",
+          "tenants": "{{succeeded}} van {{total}} klanten geslaagd",
+          "title": "Laatste synchronisatie"
+        },
+        "schedule": {
+          "description": "Wanneer aan, synchroniseert Alga elke gekoppelde klant met dit ritme. Uitzetten stopt geplande runs; handmatig synchroniseren blijft mogelijk.",
+          "enablePrompt": "De pilot is geslaagd. Zet automatische synchronisatie aan om contacten bij te houden zonder handmatige runs.",
+          "intervalLabel": "Uitvoeren elke",
+          "intervals": {
+            "10080": "Week",
+            "1440": "Dag",
+            "240": "4 uur",
+            "60": "Uur",
+            "720": "12 uur"
+          },
+          "pause": "Pauzeren",
+          "pauseHint": "Gepauzeerd. Sla op om toe te passen.",
+          "save": "Planning opslaan",
+          "saveFailed": "De planning kon niet worden opgeslagen.",
+          "saved": "Planning opgeslagen.",
+          "savedPending": "Instelling opgeslagen. De planning wordt bijgewerkt bij de volgende reconciliatie door de worker.",
+          "saving": "Opslaan…",
+          "title": "Automatische synchronisatie"
+        },
+        "sideRail": {
+          "schedule": "Automatische synchronisatie:",
+          "scheduleOff": "uit",
+          "scheduleOn": "aan, elke {{minutes}} minuten",
+          "title": "In één oogopslag"
+        },
+        "syncStarted": "Synchronisatie gestart voor alle gekoppelde klanten.",
+        "tabs": {
+          "clients": "Klanten",
+          "connection": "Verbinding",
+          "fieldRules": "Veldregels",
+          "history": "Geschiedenis",
+          "overview": "Overzicht",
+          "reviewQueue": "Beoordelingswachtrij",
+          "schedule": "Synchronisatie en planning"
+        },
+        "title": "Microsoft Entra-beheer"
+      },
       "pilot": {
         "actions": {
           "preview": "Wijzigingen bekijken",

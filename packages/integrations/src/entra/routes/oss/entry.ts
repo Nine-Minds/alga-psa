@@ -9,6 +9,7 @@ export const routes: Record<string, RouteLoader> = {
     validateDirectRoute: unavailable,
     validateCippRoute: unavailable,
     discoveryRoute: unavailable,
+    scheduleRoute: unavailable,
     syncRoute: unavailable,
     syncPreflightRoute: unavailable,
     syncRunsRoute: unavailable,

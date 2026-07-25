@@ -2,11 +2,7 @@
 
 import React from 'react';
 
-interface EntraIntegrationSettingsProps {
-  canUseCipp?: boolean;
-}
-
-const EntraIntegrationSettings: React.FC<EntraIntegrationSettingsProps> = () => {
+const EntraIntegrationSummaryCard: React.FC = () => {
   return (
     <div className="text-center py-8 text-muted-foreground">
       <p className="text-lg font-medium">Enterprise Feature</p>
@@ -17,4 +13,4 @@ const EntraIntegrationSettings: React.FC<EntraIntegrationSettingsProps> = () => 
   );
 };
 
-export default EntraIntegrationSettings;
+export default EntraIntegrationSummaryCard;

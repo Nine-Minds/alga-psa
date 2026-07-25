@@ -204,6 +204,15 @@ export type EntraCippValidationResponse = {
   endpoint: string;
 };
 
+export type EntraSyncScheduleSettings = {
+  syncEnabled: boolean;
+  syncIntervalMinutes: number;
+  updatedAt: string | null;
+  /** False when Temporal was unreachable: the setting saved, the schedule lags. */
+  scheduleApplied?: boolean;
+  scheduleError?: string | null;
+};
+
 export type EntraConfirmedMapping = {
   managedTenantId: string;
   entraTenantId: string;
@@ -1076,6 +1085,48 @@ export const remapEntraTenant = withAuth(async (
  * The confirmed tenant-to-client mappings, named. Read-gated: it exposes client
  * names and directory sizes, not credentials.
  */
+export const getEntraSyncSchedule = withAuth(async (user, _ctx) => {
+  if (isClientPortalUser(user)) {
+    return { success: false, error: 'Forbidden' } as const;
+  }
+
+  const canRead = await hasPermission(user as any, 'system_settings', 'read');
+  if (!canRead) {
+    return { success: false, error: 'Forbidden: insufficient permissions to view Entra integration' } as const;
+  }
+
+  return callEeRoute<EntraSyncScheduleSettings>({
+    importFn: routes.scheduleRoute,
+    method: 'GET',
+  });
+});
+
+/**
+ * Turn automatic sync on or off and set its cadence. The settings row has
+ * existed since phase 1 and nothing ever wrote it, which is why the schedule
+ * was unsettable and Pause did not exist.
+ */
+export const saveEntraSyncSchedule = withAuth(async (
+  user,
+  _ctx,
+  input: { syncEnabled: boolean; syncIntervalMinutes: number }
+) => {
+  if (isClientPortalUser(user)) {
+    return { success: false, error: 'Forbidden' } as const;
+  }
+
+  const canUpdate = await hasPermission(user as any, 'system_settings', 'update');
+  if (!canUpdate) {
+    return { success: false, error: 'Forbidden: insufficient permissions to configure Entra integration' } as const;
+  }
+
+  return callEeRoute<EntraSyncScheduleSettings>({
+    importFn: routes.scheduleRoute,
+    method: 'POST',
+    body: input,
+  });
+});
+
 export const getEntraConfirmedMappings = withAuth(async (user, _ctx) => {
   if (isClientPortalUser(user)) {
     return { success: false, error: 'Forbidden' } as const;

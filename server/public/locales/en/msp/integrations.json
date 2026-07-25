@@ -375,6 +375,111 @@
         },
         "title": "Connect CIPP"
       },
+      "console": {
+        "actions": {
+          "syncNow": "Sync now",
+          "syncingNow": "Starting…"
+        },
+        "attention": {
+          "connection": "The connection is not working. Nothing will sync until it is fixed.",
+          "empty": "Nothing needs attention.",
+          "failedClients": "{{count}} clients failed their last sync.",
+          "neverSynced": "{{count}} mapped clients have never synced.",
+          "open": "Open",
+          "reviewQueue": "{{count}} identities are waiting for a decision.",
+          "scheduleOff": "Automatic sync is off. Contacts only change when you run a sync.",
+          "title": "Needs attention"
+        },
+        "clients": {
+          "empty": "No clients match this filter.",
+          "filters": {
+            "all": "All",
+            "failing": "Failing",
+            "healthy": "Healthy",
+            "never-synced": "Never synced"
+          },
+          "lastSynced": "last synced {{time}} · {{status}}",
+          "neverSynced": "never synced",
+          "searchPlaceholder": "Search clients or domains",
+          "sync": "Sync",
+          "unlink": "Unlink"
+        },
+        "connection": {
+          "exportRecord": "Export connection record",
+          "mappingDescription": "Review or change which client each Microsoft tenant belongs to.",
+          "mappingTitle": "Tenant mapping",
+          "rotate": "Rotate credential",
+          "validate": "Test connection",
+          "validated": "The connection is working.",
+          "validating": "Testing…"
+        },
+        "errors": {
+          "syncFailed": "The sync could not be started.",
+          "validateFailed": "The connection could not be validated."
+        },
+        "history": {
+          "allClients": "All clients",
+          "empty": "No runs match these filters.",
+          "export": "Export CSV",
+          "includePreviews": "Include previews",
+          "next": "Next",
+          "onlyFailures": "Failures only",
+          "page": "Page {{page}} of {{pages}}",
+          "previewBadge": "preview",
+          "previous": "Previous",
+          "runHeader": "{{scope}} · {{status}}",
+          "runMeta": "{{runType}} · started {{started}} · finished {{completed}}",
+          "tenantCounts": "{{succeeded}} succeeded, {{failed}} failed of {{total}}",
+          "triggers": {
+            "all": "All runs",
+            "manual": "Manual",
+            "scheduled": "Scheduled"
+          }
+        },
+        "lastRun": {
+          "empty": "No sync has run yet.",
+          "summary": "{{status}} at {{time}}",
+          "tenants": "{{succeeded}} of {{total}} clients succeeded",
+          "title": "Last sync"
+        },
+        "schedule": {
+          "description": "When on, Alga syncs every mapped client on this cadence. Turning it off stops scheduled runs; you can still sync by hand.",
+          "enablePrompt": "The pilot succeeded. Turn on automatic sync to keep contacts in step without running it by hand.",
+          "intervalLabel": "Run every",
+          "intervals": {
+            "10080": "Week",
+            "1440": "Day",
+            "240": "4 hours",
+            "60": "Hour",
+            "720": "12 hours"
+          },
+          "pause": "Pause",
+          "pauseHint": "Paused. Save to apply.",
+          "save": "Save schedule",
+          "saveFailed": "Could not save the schedule.",
+          "saved": "Schedule saved.",
+          "savedPending": "Setting saved. The schedule itself will update when the worker next reconciles.",
+          "saving": "Saving…",
+          "title": "Automatic sync"
+        },
+        "sideRail": {
+          "schedule": "Automatic sync:",
+          "scheduleOff": "off",
+          "scheduleOn": "on, every {{minutes}} minutes",
+          "title": "At a glance"
+        },
+        "syncStarted": "Sync started for all mapped clients.",
+        "tabs": {
+          "clients": "Clients",
+          "connection": "Connection",
+          "fieldRules": "Field rules",
+          "history": "History",
+          "overview": "Overview",
+          "reviewQueue": "Review queue",
+          "schedule": "Sync & schedule"
+        },
+        "title": "Microsoft Entra operations"
+      },
       "pilot": {
         "actions": {
           "preview": "Preview changes",

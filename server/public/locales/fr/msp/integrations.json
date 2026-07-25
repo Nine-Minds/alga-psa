@@ -375,6 +375,111 @@
         },
         "title": "Connecter CIPP"
       },
+      "console": {
+        "actions": {
+          "syncNow": "Synchroniser maintenant",
+          "syncingNow": "Démarrage…"
+        },
+        "attention": {
+          "connection": "La connexion ne fonctionne pas. Rien ne sera synchronisé tant qu'elle n'est pas rétablie.",
+          "empty": "Rien ne nécessite votre attention.",
+          "failedClients": "{{count}} clients ont échoué à leur dernière synchronisation.",
+          "neverSynced": "{{count}} clients associés n'ont jamais été synchronisés.",
+          "open": "Ouvrir",
+          "reviewQueue": "{{count}} identités attendent une décision.",
+          "scheduleOff": "La synchronisation automatique est désactivée. Les contacts ne changent que lorsque vous lancez une synchronisation.",
+          "title": "Nécessite votre attention"
+        },
+        "clients": {
+          "empty": "Aucun client ne correspond à ce filtre.",
+          "filters": {
+            "all": "Tous",
+            "failing": "En échec",
+            "healthy": "Sains",
+            "never-synced": "Jamais synchronisés"
+          },
+          "lastSynced": "dernière synchro {{time}} · {{status}}",
+          "neverSynced": "jamais synchronisé",
+          "searchPlaceholder": "Rechercher des clients ou domaines",
+          "sync": "Synchroniser",
+          "unlink": "Dissocier"
+        },
+        "connection": {
+          "exportRecord": "Exporter l'enregistrement de connexion",
+          "mappingDescription": "Vérifiez ou modifiez le client auquel appartient chaque locataire Microsoft.",
+          "mappingTitle": "Association des locataires",
+          "rotate": "Renouveler l'identifiant",
+          "validate": "Tester la connexion",
+          "validated": "La connexion fonctionne.",
+          "validating": "Test en cours…"
+        },
+        "errors": {
+          "syncFailed": "La synchronisation n'a pas pu démarrer.",
+          "validateFailed": "La connexion n'a pas pu être vérifiée."
+        },
+        "history": {
+          "allClients": "Tous les clients",
+          "empty": "Aucune exécution ne correspond à ces filtres.",
+          "export": "Exporter en CSV",
+          "includePreviews": "Inclure les prévisualisations",
+          "next": "Suivant",
+          "onlyFailures": "Échecs uniquement",
+          "page": "Page {{page}} sur {{pages}}",
+          "previewBadge": "prévisualisation",
+          "previous": "Précédent",
+          "runHeader": "{{scope}} · {{status}}",
+          "runMeta": "{{runType}} · démarrée {{started}} · terminée {{completed}}",
+          "tenantCounts": "{{succeeded}} réussis, {{failed}} en échec sur {{total}}",
+          "triggers": {
+            "all": "Toutes les exécutions",
+            "manual": "Manuelles",
+            "scheduled": "Planifiées"
+          }
+        },
+        "lastRun": {
+          "empty": "Aucune synchronisation n'a encore été exécutée.",
+          "summary": "{{status}} à {{time}}",
+          "tenants": "{{succeeded}} clients sur {{total}} ont réussi",
+          "title": "Dernière synchronisation"
+        },
+        "schedule": {
+          "description": "Lorsqu'elle est activée, Alga synchronise chaque client associé à cette cadence. La désactiver arrête les exécutions planifiées ; vous pouvez toujours synchroniser manuellement.",
+          "enablePrompt": "Le pilote a réussi. Activez la synchronisation automatique pour garder les contacts à jour sans intervention.",
+          "intervalLabel": "Exécuter toutes les",
+          "intervals": {
+            "10080": "Semaine",
+            "1440": "Jour",
+            "240": "4 heures",
+            "60": "Heure",
+            "720": "12 heures"
+          },
+          "pause": "Mettre en pause",
+          "pauseHint": "En pause. Enregistrez pour appliquer.",
+          "save": "Enregistrer la planification",
+          "saveFailed": "Impossible d'enregistrer la planification.",
+          "saved": "Planification enregistrée.",
+          "savedPending": "Réglage enregistré. La planification sera mise à jour lors de la prochaine réconciliation du worker.",
+          "saving": "Enregistrement…",
+          "title": "Synchronisation automatique"
+        },
+        "sideRail": {
+          "schedule": "Synchronisation automatique :",
+          "scheduleOff": "désactivée",
+          "scheduleOn": "activée, toutes les {{minutes}} minutes",
+          "title": "En un coup d'œil"
+        },
+        "syncStarted": "Synchronisation lancée pour tous les clients associés.",
+        "tabs": {
+          "clients": "Clients",
+          "connection": "Connexion",
+          "fieldRules": "Règles de champ",
+          "history": "Historique",
+          "overview": "Aperçu",
+          "reviewQueue": "File de revue",
+          "schedule": "Synchronisation et planification"
+        },
+        "title": "Exploitation Microsoft Entra"
+      },
       "pilot": {
         "actions": {
           "preview": "Prévisualiser les changements",

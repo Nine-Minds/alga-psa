@@ -375,6 +375,111 @@
         },
         "title": "Connetti CIPP"
       },
+      "console": {
+        "actions": {
+          "syncNow": "Sincronizza ora",
+          "syncingNow": "Avvio…"
+        },
+        "attention": {
+          "connection": "La connessione non funziona. Nulla verrà sincronizzato finché non è ripristinata.",
+          "empty": "Nulla richiede attenzione.",
+          "failedClients": "{{count}} client hanno fallito l'ultima sincronizzazione.",
+          "neverSynced": "{{count}} client associati non sono mai stati sincronizzati.",
+          "open": "Apri",
+          "reviewQueue": "{{count}} identità attendono una decisione.",
+          "scheduleOff": "La sincronizzazione automatica è disattivata. I contatti cambiano solo quando esegui una sincronizzazione.",
+          "title": "Richiede attenzione"
+        },
+        "clients": {
+          "empty": "Nessun client corrisponde a questo filtro.",
+          "filters": {
+            "all": "Tutti",
+            "failing": "In errore",
+            "healthy": "In salute",
+            "never-synced": "Mai sincronizzati"
+          },
+          "lastSynced": "ultima sincronizzazione {{time}} · {{status}}",
+          "neverSynced": "mai sincronizzato",
+          "searchPlaceholder": "Cerca client o domini",
+          "sync": "Sincronizza",
+          "unlink": "Scollega"
+        },
+        "connection": {
+          "exportRecord": "Esporta record di connessione",
+          "mappingDescription": "Verifica o modifica a quale client appartiene ogni tenant Microsoft.",
+          "mappingTitle": "Associazione tenant",
+          "rotate": "Ruota credenziale",
+          "validate": "Prova connessione",
+          "validated": "La connessione funziona.",
+          "validating": "Prova in corso…"
+        },
+        "errors": {
+          "syncFailed": "Non è stato possibile avviare la sincronizzazione.",
+          "validateFailed": "Non è stato possibile verificare la connessione."
+        },
+        "history": {
+          "allClients": "Tutti i client",
+          "empty": "Nessuna esecuzione corrisponde a questi filtri.",
+          "export": "Esporta CSV",
+          "includePreviews": "Includi anteprime",
+          "next": "Successivo",
+          "onlyFailures": "Solo errori",
+          "page": "Pagina {{page}} di {{pages}}",
+          "previewBadge": "anteprima",
+          "previous": "Precedente",
+          "runHeader": "{{scope}} · {{status}}",
+          "runMeta": "{{runType}} · iniziata {{started}} · conclusa {{completed}}",
+          "tenantCounts": "{{succeeded}} riuscite, {{failed}} fallite su {{total}}",
+          "triggers": {
+            "all": "Tutte le esecuzioni",
+            "manual": "Manuali",
+            "scheduled": "Pianificate"
+          }
+        },
+        "lastRun": {
+          "empty": "Nessuna sincronizzazione è ancora stata eseguita.",
+          "summary": "{{status}} alle {{time}}",
+          "tenants": "{{succeeded}} client su {{total}} riusciti",
+          "title": "Ultima sincronizzazione"
+        },
+        "schedule": {
+          "description": "Se attiva, Alga sincronizza ogni client associato con questa cadenza. Disattivandola si fermano le esecuzioni pianificate; puoi comunque sincronizzare manualmente.",
+          "enablePrompt": "Il pilota è riuscito. Attiva la sincronizzazione automatica per mantenere allineati i contatti senza eseguirla a mano.",
+          "intervalLabel": "Esegui ogni",
+          "intervals": {
+            "10080": "Settimana",
+            "1440": "Giorno",
+            "240": "4 ore",
+            "60": "Ora",
+            "720": "12 ore"
+          },
+          "pause": "Sospendi",
+          "pauseHint": "Sospesa. Salva per applicare.",
+          "save": "Salva pianificazione",
+          "saveFailed": "Non è stato possibile salvare la pianificazione.",
+          "saved": "Pianificazione salvata.",
+          "savedPending": "Impostazione salvata. La pianificazione si aggiornerà alla prossima riconciliazione del worker.",
+          "saving": "Salvataggio…",
+          "title": "Sincronizzazione automatica"
+        },
+        "sideRail": {
+          "schedule": "Sincronizzazione automatica:",
+          "scheduleOff": "disattivata",
+          "scheduleOn": "attiva, ogni {{minutes}} minuti",
+          "title": "In sintesi"
+        },
+        "syncStarted": "Sincronizzazione avviata per tutti i client associati.",
+        "tabs": {
+          "clients": "Client",
+          "connection": "Connessione",
+          "fieldRules": "Regole sui campi",
+          "history": "Cronologia",
+          "overview": "Panoramica",
+          "reviewQueue": "Coda di revisione",
+          "schedule": "Sincronizzazione e pianificazione"
+        },
+        "title": "Operatività Microsoft Entra"
+      },
       "pilot": {
         "actions": {
           "preview": "Anteprima delle modifiche",

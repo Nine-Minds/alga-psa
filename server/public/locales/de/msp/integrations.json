@@ -375,6 +375,111 @@
         },
         "title": "CIPP verbinden"
       },
+      "console": {
+        "actions": {
+          "syncNow": "Jetzt synchronisieren",
+          "syncingNow": "Wird gestartet…"
+        },
+        "attention": {
+          "connection": "Die Verbindung funktioniert nicht. Bis zur Behebung wird nichts synchronisiert.",
+          "empty": "Nichts erfordert Aufmerksamkeit.",
+          "failedClients": "Bei {{count}} Clients ist die letzte Synchronisierung fehlgeschlagen.",
+          "neverSynced": "{{count}} zugeordnete Clients wurden noch nie synchronisiert.",
+          "open": "Öffnen",
+          "reviewQueue": "{{count}} Identitäten warten auf eine Entscheidung.",
+          "scheduleOff": "Automatische Synchronisierung ist aus. Kontakte ändern sich nur, wenn Sie manuell synchronisieren.",
+          "title": "Erfordert Aufmerksamkeit"
+        },
+        "clients": {
+          "empty": "Keine Clients entsprechen diesem Filter.",
+          "filters": {
+            "all": "Alle",
+            "failing": "Fehlerhaft",
+            "healthy": "In Ordnung",
+            "never-synced": "Nie synchronisiert"
+          },
+          "lastSynced": "zuletzt synchronisiert {{time}} · {{status}}",
+          "neverSynced": "nie synchronisiert",
+          "searchPlaceholder": "Clients oder Domains suchen",
+          "sync": "Synchronisieren",
+          "unlink": "Zuordnung aufheben"
+        },
+        "connection": {
+          "exportRecord": "Verbindungsdatensatz exportieren",
+          "mappingDescription": "Prüfen oder ändern Sie, zu welchem Client jeder Microsoft-Mandant gehört.",
+          "mappingTitle": "Mandantenzuordnung",
+          "rotate": "Anmeldedaten rotieren",
+          "validate": "Verbindung testen",
+          "validated": "Die Verbindung funktioniert.",
+          "validating": "Wird getestet…"
+        },
+        "errors": {
+          "syncFailed": "Die Synchronisierung konnte nicht gestartet werden.",
+          "validateFailed": "Die Verbindung konnte nicht geprüft werden."
+        },
+        "history": {
+          "allClients": "Alle Clients",
+          "empty": "Keine Läufe entsprechen diesen Filtern.",
+          "export": "CSV exportieren",
+          "includePreviews": "Vorschauen einschließen",
+          "next": "Weiter",
+          "onlyFailures": "Nur Fehler",
+          "page": "Seite {{page}} von {{pages}}",
+          "previewBadge": "Vorschau",
+          "previous": "Zurück",
+          "runHeader": "{{scope}} · {{status}}",
+          "runMeta": "{{runType}} · gestartet {{started}} · beendet {{completed}}",
+          "tenantCounts": "{{succeeded}} erfolgreich, {{failed}} fehlgeschlagen von {{total}}",
+          "triggers": {
+            "all": "Alle Läufe",
+            "manual": "Manuell",
+            "scheduled": "Geplant"
+          }
+        },
+        "lastRun": {
+          "empty": "Es wurde noch keine Synchronisierung ausgeführt.",
+          "summary": "{{status}} um {{time}}",
+          "tenants": "{{succeeded}} von {{total}} Clients erfolgreich",
+          "title": "Letzte Synchronisierung"
+        },
+        "schedule": {
+          "description": "Wenn aktiviert, synchronisiert Alga jeden zugeordneten Client in dieser Taktung. Beim Ausschalten entfallen geplante Läufe; manuell können Sie weiterhin synchronisieren.",
+          "enablePrompt": "Der Pilot war erfolgreich. Aktivieren Sie die automatische Synchronisierung, damit Kontakte ohne manuelle Läufe aktuell bleiben.",
+          "intervalLabel": "Ausführen alle",
+          "intervals": {
+            "10080": "Woche",
+            "1440": "Tag",
+            "240": "4 Stunden",
+            "60": "Stunde",
+            "720": "12 Stunden"
+          },
+          "pause": "Pausieren",
+          "pauseHint": "Pausiert. Zum Anwenden speichern.",
+          "save": "Zeitplan speichern",
+          "saveFailed": "Der Zeitplan konnte nicht gespeichert werden.",
+          "saved": "Zeitplan gespeichert.",
+          "savedPending": "Einstellung gespeichert. Der Zeitplan wird beim nächsten Abgleich des Workers aktualisiert.",
+          "saving": "Wird gespeichert…",
+          "title": "Automatische Synchronisierung"
+        },
+        "sideRail": {
+          "schedule": "Automatische Synchronisierung:",
+          "scheduleOff": "aus",
+          "scheduleOn": "an, alle {{minutes}} Minuten",
+          "title": "Auf einen Blick"
+        },
+        "syncStarted": "Synchronisierung für alle zugeordneten Clients gestartet.",
+        "tabs": {
+          "clients": "Clients",
+          "connection": "Verbindung",
+          "fieldRules": "Feldregeln",
+          "history": "Verlauf",
+          "overview": "Übersicht",
+          "reviewQueue": "Prüfliste",
+          "schedule": "Synchronisierung & Zeitplan"
+        },
+        "title": "Microsoft Entra-Betrieb"
+      },
       "pilot": {
         "actions": {
           "preview": "Änderungen vorschauen",

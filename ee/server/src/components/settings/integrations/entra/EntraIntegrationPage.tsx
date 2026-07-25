@@ -7,8 +7,8 @@ import {
   getEntraIntegrationStatus,
   type EntraStatusResponse,
 } from '@alga-psa/integrations/actions';
-import EntraIntegrationSettings from '../EntraIntegrationSettings';
-import { buildEntraCallbackErrorKey } from '../entraIntegrationSettingsGates';
+import { buildEntraCallbackErrorKey } from './entraCallbackErrors';
+import { EntraConsole } from './EntraConsole';
 import { EntraSetupWizard } from './EntraSetupWizard';
 import { selectEntraSurfaceMode } from './entraSetupModel';
 
@@ -106,7 +106,7 @@ export default function EntraIntegrationPage({
           onStatusChanged={loadStatus}
         />
       ) : (
-        <EntraIntegrationSettings canUseCipp={canUseCippTier} />
+        <EntraConsole status={status} onStatusChanged={loadStatus} />
       )}
     </div>
   );

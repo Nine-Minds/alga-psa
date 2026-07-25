@@ -375,6 +375,111 @@
         },
         "title": "Conectar CIPP"
       },
+      "console": {
+        "actions": {
+          "syncNow": "Sincronizar agora",
+          "syncingNow": "A iniciar…"
+        },
+        "attention": {
+          "connection": "A ligação não está a funcionar. Nada será sincronizado até ser resolvida.",
+          "empty": "Nada precisa de atenção.",
+          "failedClients": "{{count}} clientes falharam a última sincronização.",
+          "neverSynced": "{{count}} clientes associados nunca sincronizaram.",
+          "open": "Abrir",
+          "reviewQueue": "{{count}} identidades aguardam uma decisão.",
+          "scheduleOff": "A sincronização automática está desligada. Os contactos só mudam quando executa uma sincronização.",
+          "title": "Precisa de atenção"
+        },
+        "clients": {
+          "empty": "Nenhum cliente corresponde a este filtro.",
+          "filters": {
+            "all": "Todos",
+            "failing": "Com falhas",
+            "healthy": "Saudáveis",
+            "never-synced": "Nunca sincronizados"
+          },
+          "lastSynced": "última sincronização {{time}} · {{status}}",
+          "neverSynced": "nunca sincronizado",
+          "searchPlaceholder": "Procurar clientes ou domínios",
+          "sync": "Sincronizar",
+          "unlink": "Desassociar"
+        },
+        "connection": {
+          "exportRecord": "Exportar registo de ligação",
+          "mappingDescription": "Reveja ou altere a que cliente pertence cada inquilino Microsoft.",
+          "mappingTitle": "Associação de inquilinos",
+          "rotate": "Rodar credencial",
+          "validate": "Testar ligação",
+          "validated": "A ligação está a funcionar.",
+          "validating": "A testar…"
+        },
+        "errors": {
+          "syncFailed": "Não foi possível iniciar a sincronização.",
+          "validateFailed": "Não foi possível validar a ligação."
+        },
+        "history": {
+          "allClients": "Todos os clientes",
+          "empty": "Nenhuma execução corresponde a estes filtros.",
+          "export": "Exportar CSV",
+          "includePreviews": "Incluir pré-visualizações",
+          "next": "Seguinte",
+          "onlyFailures": "Apenas falhas",
+          "page": "Página {{page}} de {{pages}}",
+          "previewBadge": "pré-visualização",
+          "previous": "Anterior",
+          "runHeader": "{{scope}} · {{status}}",
+          "runMeta": "{{runType}} · iniciada {{started}} · terminada {{completed}}",
+          "tenantCounts": "{{succeeded}} com sucesso, {{failed}} falhadas de {{total}}",
+          "triggers": {
+            "all": "Todas as execuções",
+            "manual": "Manuais",
+            "scheduled": "Agendadas"
+          }
+        },
+        "lastRun": {
+          "empty": "Ainda não foi executada nenhuma sincronização.",
+          "summary": "{{status}} às {{time}}",
+          "tenants": "{{succeeded}} de {{total}} clientes com sucesso",
+          "title": "Última sincronização"
+        },
+        "schedule": {
+          "description": "Quando ligada, o Alga sincroniza cada cliente associado nesta cadência. Desligar para as execuções agendadas; pode continuar a sincronizar manualmente.",
+          "enablePrompt": "O piloto correu bem. Ligue a sincronização automática para manter os contactos em dia sem execuções manuais.",
+          "intervalLabel": "Executar a cada",
+          "intervals": {
+            "10080": "Semana",
+            "1440": "Dia",
+            "240": "4 horas",
+            "60": "Hora",
+            "720": "12 horas"
+          },
+          "pause": "Pausar",
+          "pauseHint": "Em pausa. Guarde para aplicar.",
+          "save": "Guardar agendamento",
+          "saveFailed": "Não foi possível guardar o agendamento.",
+          "saved": "Agendamento guardado.",
+          "savedPending": "Definição guardada. O agendamento será atualizado na próxima reconciliação do worker.",
+          "saving": "A guardar…",
+          "title": "Sincronização automática"
+        },
+        "sideRail": {
+          "schedule": "Sincronização automática:",
+          "scheduleOff": "desligada",
+          "scheduleOn": "ligada, a cada {{minutes}} minutos",
+          "title": "Num relance"
+        },
+        "syncStarted": "Sincronização iniciada para todos os clientes associados.",
+        "tabs": {
+          "clients": "Clientes",
+          "connection": "Ligação",
+          "fieldRules": "Regras de campo",
+          "history": "Histórico",
+          "overview": "Visão geral",
+          "reviewQueue": "Fila de revisão",
+          "schedule": "Sincronização e agendamento"
+        },
+        "title": "Operação do Microsoft Entra"
+      },
       "pilot": {
         "actions": {
           "preview": "Pré-visualizar alterações",

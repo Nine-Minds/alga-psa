@@ -173,6 +173,8 @@ export {
   testEntraCippCredentials,
   runEntraPreflight,
   getEntraConfirmedMappings,
+  getEntraSyncSchedule,
+  saveEntraSyncSchedule,
   getEntraIntegrationStatus,
   updateEntraFieldSyncConfig,
   connectEntraIntegration,

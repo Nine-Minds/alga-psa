@@ -375,6 +375,111 @@
         },
         "title": "11111"
       },
+      "console": {
+        "actions": {
+          "syncNow": "11111",
+          "syncingNow": "11111"
+        },
+        "attention": {
+          "connection": "11111",
+          "empty": "11111",
+          "failedClients": "11111",
+          "neverSynced": "11111",
+          "open": "11111",
+          "reviewQueue": "11111",
+          "scheduleOff": "11111",
+          "title": "11111"
+        },
+        "clients": {
+          "empty": "11111",
+          "filters": {
+            "all": "11111",
+            "failing": "11111",
+            "healthy": "11111",
+            "never-synced": "11111"
+          },
+          "lastSynced": "11111",
+          "neverSynced": "11111",
+          "searchPlaceholder": "11111",
+          "sync": "11111",
+          "unlink": "11111"
+        },
+        "connection": {
+          "exportRecord": "11111",
+          "mappingDescription": "11111",
+          "mappingTitle": "11111",
+          "rotate": "11111",
+          "validate": "11111",
+          "validated": "11111",
+          "validating": "11111"
+        },
+        "errors": {
+          "syncFailed": "11111",
+          "validateFailed": "11111"
+        },
+        "history": {
+          "allClients": "11111",
+          "empty": "11111",
+          "export": "11111",
+          "includePreviews": "11111",
+          "next": "11111",
+          "onlyFailures": "11111",
+          "page": "11111",
+          "previewBadge": "11111",
+          "previous": "11111",
+          "runHeader": "11111",
+          "runMeta": "11111",
+          "tenantCounts": "11111",
+          "triggers": {
+            "all": "11111",
+            "manual": "11111",
+            "scheduled": "11111"
+          }
+        },
+        "lastRun": {
+          "empty": "11111",
+          "summary": "11111",
+          "tenants": "11111",
+          "title": "11111"
+        },
+        "schedule": {
+          "description": "11111",
+          "enablePrompt": "11111",
+          "intervalLabel": "11111",
+          "intervals": {
+            "10080": "11111",
+            "1440": "11111",
+            "240": "11111",
+            "60": "11111",
+            "720": "11111"
+          },
+          "pause": "11111",
+          "pauseHint": "11111",
+          "save": "11111",
+          "saveFailed": "11111",
+          "saved": "11111",
+          "savedPending": "11111",
+          "saving": "11111",
+          "title": "11111"
+        },
+        "sideRail": {
+          "schedule": "11111",
+          "scheduleOff": "11111",
+          "scheduleOn": "11111",
+          "title": "11111"
+        },
+        "syncStarted": "11111",
+        "tabs": {
+          "clients": "11111",
+          "connection": "11111",
+          "fieldRules": "11111",
+          "history": "11111",
+          "overview": "11111",
+          "reviewQueue": "11111",
+          "schedule": "11111"
+        },
+        "title": "11111"
+      },
       "pilot": {
         "actions": {
           "preview": "11111",

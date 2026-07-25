@@ -375,6 +375,111 @@
         },
         "title": "Połącz CIPP"
       },
+      "console": {
+        "actions": {
+          "syncNow": "Synchronizuj teraz",
+          "syncingNow": "Uruchamianie…"
+        },
+        "attention": {
+          "connection": "Połączenie nie działa. Nic nie zostanie zsynchronizowane, dopóki nie zostanie naprawione.",
+          "empty": "Nic nie wymaga uwagi.",
+          "failedClients": "U {{count}} klientów ostatnia synchronizacja się nie powiodła.",
+          "neverSynced": "{{count}} przypisanych klientów nigdy nie było synchronizowanych.",
+          "open": "Otwórz",
+          "reviewQueue": "{{count}} tożsamości czeka na decyzję.",
+          "scheduleOff": "Automatyczna synchronizacja jest wyłączona. Kontakty zmieniają się tylko po ręcznym uruchomieniu.",
+          "title": "Wymaga uwagi"
+        },
+        "clients": {
+          "empty": "Żaden klient nie pasuje do tego filtra.",
+          "filters": {
+            "all": "Wszyscy",
+            "failing": "Z błędami",
+            "healthy": "Sprawni",
+            "never-synced": "Nigdy niesynchronizowani"
+          },
+          "lastSynced": "ostatnia synchronizacja {{time}} · {{status}}",
+          "neverSynced": "nigdy niesynchronizowany",
+          "searchPlaceholder": "Szukaj klientów lub domen",
+          "sync": "Synchronizuj",
+          "unlink": "Odłącz"
+        },
+        "connection": {
+          "exportRecord": "Eksportuj rekord połączenia",
+          "mappingDescription": "Sprawdź lub zmień, do którego klienta należy każda dzierżawa Microsoft.",
+          "mappingTitle": "Przypisanie dzierżaw",
+          "rotate": "Wymień poświadczenie",
+          "validate": "Testuj połączenie",
+          "validated": "Połączenie działa.",
+          "validating": "Testowanie…"
+        },
+        "errors": {
+          "syncFailed": "Nie udało się uruchomić synchronizacji.",
+          "validateFailed": "Nie udało się zweryfikować połączenia."
+        },
+        "history": {
+          "allClients": "Wszyscy klienci",
+          "empty": "Żaden przebieg nie pasuje do tych filtrów.",
+          "export": "Eksportuj CSV",
+          "includePreviews": "Uwzględnij podglądy",
+          "next": "Następna",
+          "onlyFailures": "Tylko błędy",
+          "page": "Strona {{page}} z {{pages}}",
+          "previewBadge": "podgląd",
+          "previous": "Poprzednia",
+          "runHeader": "{{scope}} · {{status}}",
+          "runMeta": "{{runType}} · start {{started}} · koniec {{completed}}",
+          "tenantCounts": "{{succeeded}} udanych, {{failed}} nieudanych z {{total}}",
+          "triggers": {
+            "all": "Wszystkie przebiegi",
+            "manual": "Ręczne",
+            "scheduled": "Zaplanowane"
+          }
+        },
+        "lastRun": {
+          "empty": "Nie uruchomiono jeszcze żadnej synchronizacji.",
+          "summary": "{{status}} o {{time}}",
+          "tenants": "Powodzenie: {{succeeded}} z {{total}} klientów",
+          "title": "Ostatnia synchronizacja"
+        },
+        "schedule": {
+          "description": "Gdy włączona, Alga synchronizuje każdego przypisanego klienta w tym rytmie. Wyłączenie zatrzymuje przebiegi zaplanowane; ręczna synchronizacja pozostaje dostępna.",
+          "enablePrompt": "Pilotaż się powiódł. Włącz automatyczną synchronizację, aby kontakty pozostawały aktualne bez ręcznych uruchomień.",
+          "intervalLabel": "Uruchamiaj co",
+          "intervals": {
+            "10080": "Tydzień",
+            "1440": "Dobę",
+            "240": "4 godziny",
+            "60": "Godzinę",
+            "720": "12 godzin"
+          },
+          "pause": "Wstrzymaj",
+          "pauseHint": "Wstrzymano. Zapisz, aby zastosować.",
+          "save": "Zapisz harmonogram",
+          "saveFailed": "Nie udało się zapisać harmonogramu.",
+          "saved": "Zapisano harmonogram.",
+          "savedPending": "Ustawienie zapisane. Harmonogram zaktualizuje się przy następnym uzgodnieniu przez workera.",
+          "saving": "Zapisywanie…",
+          "title": "Automatyczna synchronizacja"
+        },
+        "sideRail": {
+          "schedule": "Automatyczna synchronizacja:",
+          "scheduleOff": "wyłączona",
+          "scheduleOn": "włączona, co {{minutes}} minut",
+          "title": "W skrócie"
+        },
+        "syncStarted": "Uruchomiono synchronizację dla wszystkich przypisanych klientów.",
+        "tabs": {
+          "clients": "Klienci",
+          "connection": "Połączenie",
+          "fieldRules": "Reguły pól",
+          "history": "Historia",
+          "overview": "Przegląd",
+          "reviewQueue": "Kolejka przeglądu",
+          "schedule": "Synchronizacja i harmonogram"
+        },
+        "title": "Obsługa Microsoft Entra"
+      },
       "pilot": {
         "actions": {
           "preview": "Podgląd zmian",

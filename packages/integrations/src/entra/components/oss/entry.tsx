@@ -9,8 +9,6 @@ const EnterpriseOnlyNotice = () => (
     </Card>
 );
 
-export const EntraIntegrationSettings = (_props: { canUseCipp?: boolean }) => <EnterpriseOnlyNotice />;
-
 export const EntraIntegrationPage = (_props: { canUseCipp?: boolean }) => <EnterpriseOnlyNotice />;
 
 export const EntraIntegrationSummaryCard = () => <EnterpriseOnlyNotice />;
