@@ -7,8 +7,9 @@ import { createTestDbConnection } from '../../../../test-utils/dbConfig';
 let mockTenantId = 'tenant-test';
 
 vi.mock('@alga-psa/auth', () => ({
+  hasPermission: async () => true,
   withAuth: (fn: any) => async (...args: any[]) =>
-    fn({ user_id: 'user-test', tenant: mockTenantId, roles: [] }, { tenant: mockTenantId }, ...args),
+    fn({ user_id: 'user-test', tenant: mockTenantId, user_type: 'internal', roles: [] }, { tenant: mockTenantId }, ...args),
 }));
 
 import { getEmailLogsForTicket } from '@alga-psa/email/actions';

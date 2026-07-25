@@ -6,6 +6,7 @@ import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { v4 as uuidv4 } from 'uuid';
 import { withAuth } from '@alga-psa/auth';
+import { hasPermission } from '@alga-psa/auth/rbac';
 import { enqueueInvoiceVoid } from '../services/accountingSync/syncProducers';
 
 // Exported for testing
@@ -80,6 +81,15 @@ export const voidInvoice = withAuth(async (
   invoiceId: string,
   reason: string
 ): Promise<VoidInvoiceResult> => {
+  // Voiding reverses credits and pushes voids to accounting integrations —
+  // internal MSP users with invoice update permission only.
+  if (user.user_type === 'client') {
+    return { success: false, error: 'Permission denied: operation not available in client portal' };
+  }
+  if (!await hasPermission(user, 'invoice', 'update')) {
+    return { success: false, error: 'Permission denied: invoice update required' };
+  }
+
   const trimmedReason = reason?.trim();
   if (!trimmedReason) {
     return { success: false, error: 'A reason is required to void an invoice.' };

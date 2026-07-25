@@ -138,11 +138,9 @@ function buildTrx(params: { ticket: Record<string, unknown> | undefined }) {
       }
 
       if (table === 'comments') {
-        return {
-          where: vi.fn().mockReturnValue({
-            orderBy: vi.fn().mockResolvedValue([]),
-          }),
-        };
+        // The conversations query selects/joins/filters before ordering; the
+        // chainable builder is thenable and resolves to no comments.
+        return makeChainable();
       }
 
       // Additional-agent / comment / assigned / involved-users subqueries plus the

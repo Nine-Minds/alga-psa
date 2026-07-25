@@ -304,7 +304,11 @@ export const getRecentActivity = withAuth(async (
       const clientId = contact.client_id;
       const visibility = await getClientContactVisibilityContext(trx, tenant, userContactId);
 
-      // Get recent tickets with their initial descriptions
+      // Get recent tickets with their initial descriptions.
+      // MSP-internal notes (and notes on internal threads) must never surface
+      // as the activity excerpt — exclude them at the query, mirroring the
+      // getClientTicketDetails comment filter. The filters are null-tolerant
+      // so tickets without any comments are kept.
       const ticketsQuery = scopedDb.table('tickets')
         .select([
           'tickets.title',
@@ -312,9 +316,18 @@ export const getRecentActivity = withAuth(async (
           'comments.note as description'
         ]);
       scopedDb.tenantJoin(ticketsQuery, 'comments', 'tickets.ticket_id', 'comments.ticket_id', { type: 'left' });
+      scopedDb.tenantJoin(ticketsQuery, 'comment_threads as ct', 'comments.thread_id', 'ct.thread_id', { type: 'left' });
       const tickets = await ticketsQuery
         .where({
           'tickets.client_id': clientId
+        })
+        .where(function (this: Knex.QueryBuilder) {
+          this.whereNull('comments.is_internal')
+            .orWhere('comments.is_internal', false);
+        })
+        .where(function (this: Knex.QueryBuilder) {
+          this.whereNull('ct.is_internal')
+            .orWhere('ct.is_internal', false);
         })
         .modify((queryBuilder: Knex.QueryBuilder) => {
           applyVisibilityBoardFilter(queryBuilder, visibility.visibleBoardIds, 'tickets.board_id');

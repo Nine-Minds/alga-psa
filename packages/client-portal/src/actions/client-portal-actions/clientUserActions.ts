@@ -8,7 +8,7 @@ import { revalidatePath } from 'next/cache';
 // Note: getUserClientId removed - was unused and caused nested withAuth issues
 import { uploadEntityImage, deleteEntityImage } from '@alga-psa/storage';
 import { hasPermission, withAuth, type AuthContext } from '@alga-psa/auth';
-import { getRoles, assignRoleToUser, removeRoleFromUser, getUserRoles } from '@alga-psa/auth/actions/policyActions';
+import { getRoles, assignRoleToUser, removeRoleFromUser } from '@alga-psa/auth/actions/policyActions';
 import {
   createPortalUserInDB,
   getClientPortalRoles as getClientPortalRolesFromDB,
@@ -95,9 +95,17 @@ function clientUserActionErrorMessage(error: unknown, fallback: string): string 
 /**
  * Get available client portal roles
  */
-export const getClientPortalRoles = withAuth(async (_user: IUserWithRoles, { tenant }: AuthContext): Promise<IRole[]> => {
+export const getClientPortalRoles = withAuth(async (user: IUserWithRoles, { tenant }: AuthContext): Promise<IRole[]> => {
   try {
     const { knex } = await createTenantKnex();
+
+    // Listing assignable client roles is part of user management; gate it the
+    // same way the portal gates the User Management tab (`user:read`).
+    const canRead = await hasPermission(user, 'user', 'read', knex);
+    if (!canRead) {
+      return [];
+    }
+
     return await getClientPortalRolesFromDB(knex, tenant);
   } catch (error) {
     console.error('Error fetching client portal roles:', error);
@@ -146,14 +154,36 @@ export async function removeClientUserRole(userId: string, roleId: string): Prom
 /**
  * Get roles for a specific client user
  */
-export async function getClientUserRoles(userId: string): Promise<IRole[]> {
+export const getClientUserRoles = withAuth(async (
+  user: IUserWithRoles,
+  { tenant }: AuthContext,
+  userId: string
+): Promise<IRole[]> => {
   try {
-    return await getUserRoles(userId);
+    const { knex } = await createTenantKnex();
+
+    return await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // A user may always read their own roles; reading someone else's requires
+      // MSP user:update or same-company client admin (see assertCanManageClientUser).
+      if (user.user_id !== userId) {
+        await assertCanManageClientUser(user, tenant, trx, userId);
+      }
+
+      const scopedDb = tenantDb(trx, tenant);
+      const query = scopedDb.table('user_roles');
+      scopedDb.tenantJoin(query, 'roles', 'user_roles.role_id', 'roles.role_id');
+
+      return await query
+        .where({
+          'user_roles.user_id': userId
+        })
+        .select('roles.*');
+    });
   } catch (error) {
     console.error('Error getting client user roles:', error);
     return [];
   }
-}
+});
 
 /**
  * Authorize management of a client-portal user and confirm the target is a
@@ -217,6 +247,68 @@ async function assertCanManageClientUser(
 
   if (!targetContact?.client_id || targetContact.client_id !== actorContact.client_id) {
     throw new Error('Permission denied: Cannot manage users for another client');
+  }
+}
+
+/**
+ * Authorize creation of a client-portal user for a given contact/client.
+ * Mirrors assertCanManageClientUser for the create case (no target user exists
+ * yet, so the target contact is scoped instead):
+ *
+ * - MSP (internal) staff need the standard `user:create` permission.
+ * - Client-portal callers must be a client admin (`is_client_admin`) and the
+ *   target contact must belong to their own client company. The supplied
+ *   `clientId` must match that contact's client, so a portal admin of Company A
+ *   cannot mint a login attached to Company B's contacts.
+ */
+async function assertCanCreateClientUser(
+  user: IUserWithRoles,
+  tenant: string,
+  knex: Knex | Knex.Transaction,
+  contactId: string,
+  clientId: string
+): Promise<void> {
+  // MSP staff: gate on the standard user-management permission.
+  if (user.user_type !== 'client') {
+    const canCreate = await hasPermission(user, 'user', 'create', knex);
+    if (!canCreate) {
+      throw new Error('Permission denied: Cannot create client user');
+    }
+    return;
+  }
+
+  // Client-portal caller: must be a client admin acting within their own company.
+  if (!user.contact_id) {
+    throw new Error('Permission denied: Client portal admin access is required');
+  }
+
+  const scopedDb = tenantDb(knex, tenant);
+
+  const [actorContact, targetContact] = await Promise.all([
+    scopedDb.table('contacts')
+      .where({ contact_name_id: user.contact_id })
+      .select('client_id', 'is_client_admin')
+      .first(),
+    scopedDb.table('contacts')
+      .where({ contact_name_id: contactId })
+      .select('client_id')
+      .first(),
+  ]);
+
+  if (!actorContact?.is_client_admin || !actorContact.client_id) {
+    throw new Error('Permission denied: Client portal admin access is required');
+  }
+
+  if (!targetContact) {
+    throw new Error('Contact not found');
+  }
+
+  if (targetContact.client_id !== actorContact.client_id) {
+    throw new Error('Permission denied: Cannot create users for another client');
+  }
+
+  if (clientId !== targetContact.client_id) {
+    throw new Error('Permission denied: Client does not match the selected contact');
   }
 }
 
@@ -306,20 +398,43 @@ export const resetClientUserPassword = withAuth(async (
  * Get client user by ID
  */
 export const getClientUserById = withAuth(async (
-  _user: IUserWithRoles,
+  user: IUserWithRoles,
   { tenant }: AuthContext,
   userId: string
 ): Promise<IUser | null> => {
   try {
     const { knex } = await createTenantKnex();
 
-    const user = await withTransaction(knex, async (trx: Knex.Transaction) => {
+    const clientUser = await withTransaction(knex, async (trx: Knex.Transaction) => {
+      // A user may always read their own record; reading someone else's requires
+      // MSP user:update or same-company client admin (see assertCanManageClientUser).
+      if (user.user_id !== userId) {
+        await assertCanManageClientUser(user, tenant, trx, userId);
+      }
+
+      // Column whitelist: never return credential material (hashed_password,
+      // two_factor_secret, ...) to the client portal.
       return await tenantDb(trx, tenant).table('users')
-      .where({ user_id: userId, user_type: 'client' })
-      .first();
+        .where({ user_id: userId, user_type: 'client' })
+        .select(
+          'user_id',
+          'username',
+          'first_name',
+          'last_name',
+          'email',
+          'contact_id',
+          'user_type',
+          'is_inactive',
+          'two_factor_enabled',
+          'last_login_at',
+          'created_at',
+          'updated_at',
+          'tenant'
+        )
+        .first();
     });
 
-    return (user as IUser | undefined) || null;
+    return (clientUser as IUser | undefined) || null;
   } catch (error) {
     console.error('Error getting client user:', error);
     throw error;
@@ -353,10 +468,10 @@ export const createClientUser = withAuth(async (
   try {
     const { knex } = await createTenantKnex();
 
-    const allowed = await hasPermission(currentUser, 'user', 'create', knex);
-    if (!allowed) {
-      return { success: false, error: 'Permission denied: Cannot create client user' };
-    }
+    // Authorize: MSP staff need `user:create`; client-portal callers must be a
+    // client admin creating a login for a contact in their own company, with a
+    // clientId consistent with that contact.
+    await assertCanCreateClientUser(currentUser, tenant, knex, contactId, clientId);
 
     // Use the shared model to create the portal user
     const input: CreatePortalUserInput = {

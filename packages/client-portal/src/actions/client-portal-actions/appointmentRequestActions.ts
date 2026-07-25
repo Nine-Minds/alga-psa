@@ -853,6 +853,24 @@ export const updateAppointmentRequest = withAuth(async (
       return { success: false, error: 'Service not found' };
     }
 
+    // If ticket_id provided, verify it exists and belongs to the client
+    // (mirrors the create-path validation — the update path previously wrote
+    // the caller-supplied ticket_id without any ownership check).
+    if (validatedData.ticket_id) {
+      const ticket = await withTransaction(db, async (trx: Knex.Transaction) => {
+        return await tenantDb(trx, tenant).table('tickets')
+          .where({
+            ticket_id: validatedData.ticket_id,
+            client_id: clientId
+          })
+          .first();
+      });
+
+      if (!ticket) {
+        return { success: false, error: 'Ticket not found or does not belong to your organization' };
+      }
+    }
+
     // Update the appointment request
     await withTransaction(db, async (trx: Knex.Transaction) => {
       await tenantDb(trx, tenant).table('appointment_requests')
