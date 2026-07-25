@@ -1,6 +1,10 @@
 'use server';
 
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
+import {
+  getAppointmentIcsSigningSecret,
+  signAppointmentIcsToken,
+} from '../lib/appointmentIcsSigning';
 import { format, type Locale } from 'date-fns';
 import { de, es, fr, it, nl, enUS } from 'date-fns/locale';
 
@@ -226,7 +230,17 @@ export async function generateICSLink(
   // For now, return a link to an endpoint that will generate the ICS file
   // The actual ICS generation endpoint would need to be implemented
   const baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-  return `${baseUrl}/api/calendar/appointment/${scheduleEntry.entry_id}.ics`;
+  const url = `${baseUrl}/api/calendar/appointment/${scheduleEntry.entry_id}.ics`;
+  const secret = await getAppointmentIcsSigningSecret();
+  if (!secret) {
+    // Fail closed: without a signing secret no valid token can be minted, and
+    // the route will refuse unsigned requests. Return the unsigned URL rather
+    // than breaking the appointment email flow outright.
+    console.error('[ICS Link] No signing secret available; generated ICS link will be rejected');
+    return url;
+  }
+  const token = await signAppointmentIcsToken(secret, scheduleEntry.entry_id);
+  return `${url}?token=${token}`;
 }
 
 /**
