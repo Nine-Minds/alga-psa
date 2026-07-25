@@ -37,6 +37,18 @@ vi.mock('@alga-psa/db', async (importOriginal) => {
   };
 });
 
+// The actions are wrapped in withAuth and derive tenant/user from the
+// session; inject the test user as the authenticated session user.
+vi.mock('@alga-psa/auth', () => ({
+  withAuth: (fn: any) => async (...args: any[]) =>
+    fn(
+      { user_id: testUserId, tenant: testTenantId, user_type: 'internal', roles: [] },
+      { tenant: testTenantId },
+      ...args
+    ),
+  hasPermission: async () => true,
+}));
+
 import {
   broadcastNotification
 } from '@alga-psa/notifications/realtime/internalNotificationBroadcaster';
