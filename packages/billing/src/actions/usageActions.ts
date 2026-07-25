@@ -6,6 +6,11 @@ import { determineDefaultContractLine } from '@alga-psa/billing/lib/contractLine
 import { ICreateUsageRecord, IUpdateUsageRecord, IUsageFilter, IUsageRecord } from '@alga-psa/types';
 import { revalidatePath } from 'next/cache';
 import { findOrCreateCurrentBucketUsageRecord, updateBucketUsageMinutes } from '../services/bucketUsageService'; // Import bucket service functions
+import {
+  bucketUsageErrorMessage,
+  findBucketUsageError,
+  isBucketUsageError,
+} from '@alga-psa/shared/billingClients/bucketUsageErrors';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getAnalyticsAsync } from '../lib/authHelpers';
@@ -27,6 +32,12 @@ function tenantScopedTable(
 }
 
 function usageActionErrorFrom(error: unknown): UsageActionError | null {
+  // Typed bucket failures name their cause; prefer them over the string match.
+  const bucketError = findBucketUsageError(error);
+  if (bucketError) {
+    return actionError(bucketUsageErrorMessage(bucketError));
+  }
+
   if (error instanceof Error) {
     const message = error.message;
     if (message.startsWith('Permission denied:')) {
@@ -135,6 +146,7 @@ export const createUsageRecord = withAuth(async (user, { tenant }, data: ICreate
             console.log(`Successfully updated bucket usage for usage record ${record.usage_id}`);
           } catch (bucketError) {
             console.error(`Error updating bucket usage for usage record ${record.usage_id}:`, bucketError);
+            if (isBucketUsageError(bucketError)) throw bucketError;
             throw new Error(`Bucket usage update failed for usage record ${record.usage_id}: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
           }
         }
@@ -257,6 +269,7 @@ export const updateUsageRecord = withAuth(async (user, { tenant }, data: IUpdate
             console.log(`Successfully updated bucket usage for usage record ${updatedRecord.usage_id}`);
           } catch (bucketError) {
             console.error(`Error updating bucket usage for usage record ${updatedRecord.usage_id}:`, bucketError);
+            if (isBucketUsageError(bucketError)) throw bucketError;
             throw new Error(`Bucket usage update failed for usage record ${updatedRecord.usage_id}: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
           }
         }
@@ -329,6 +342,7 @@ export const deleteUsageRecord = withAuth(async (user, { tenant }, usageId: stri
             console.log(`Successfully updated (decremented) bucket usage for deleted usage record ${usageId}`);
           } catch (bucketError) {
             console.error(`Error updating bucket usage before deleting usage record ${usageId}:`, bucketError);
+            if (isBucketUsageError(bucketError)) throw bucketError;
             throw new Error(`Bucket usage update failed before deleting usage record ${usageId}: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
           }
         }

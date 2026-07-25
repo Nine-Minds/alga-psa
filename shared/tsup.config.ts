@@ -64,6 +64,7 @@ export default defineConfig({
     'extensions/types': 'extensions/types.ts',
     'billingClients/index': 'billingClients/index.ts',
     'billingClients/bucketUsageService': 'billingClients/bucketUsageService.ts',
+    'billingClients/bucketUsageErrors': 'billingClients/bucketUsageErrors.ts',
     'lib/ticketActivity/index': 'lib/ticketActivity/index.ts',
     'lib/ticketActivity/types': 'lib/ticketActivity/types.ts',
     'lib/ticketActivity/writeTicketActivity': 'lib/ticketActivity/writeTicketActivity.ts',

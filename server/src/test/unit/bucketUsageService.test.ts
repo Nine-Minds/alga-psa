@@ -19,18 +19,36 @@ type BucketUsageRow = {
   rolled_over_minutes: number;
 };
 
+type ServiceConfigurationRow = {
+  config_id: string;
+  configuration_type: string;
+};
+
+/**
+ * A (contract line, service) pair holds one configuration row per
+ * configuration_type. Default to the single-Bucket shape; tests that care about
+ * the multi-configuration case pass their own set.
+ */
+const DEFAULT_SERVICE_CONFIGURATIONS: ServiceConfigurationRow[] = [
+  { config_id: "bucket-config-1", configuration_type: "Bucket" },
+];
+
 function buildBucketUsageTransaction(config: {
   existingUsage?: BucketUsageRow;
   previousUsage?: BucketUsageRow;
   allowRollover?: boolean;
   bucketConfig?: Record<string, unknown> | null;
+  serviceConfigurations?: ServiceConfigurationRow[];
 }) {
+  const serviceConfigurations = config.serviceConfigurations ?? DEFAULT_SERVICE_CONFIGURATIONS;
   const state = {
     bucketUsageFirstCalls: 0,
     clientContractFirstCalls: 0,
     insertedRecord: null as Record<string, unknown> | null,
     tablesCalled: [] as string[],
     whereCalls: [] as Array<{ tableName: string; args: unknown[] }>,
+    /** config_id the service resolved and then looked up a detail row for. */
+    requestedBucketConfigId: null as string | null,
   };
 
   const trx: any = ((tableName: string) => {
@@ -41,8 +59,14 @@ function buildBucketUsageTransaction(config: {
 
     state.tablesCalled.push(tableName);
     const builder: any = {};
+    // Track the filter this builder actually applied, so the fakes can answer
+    // like a real table rather than ignoring the predicate.
+    const appliedWhere: Record<string, unknown> = {};
     builder.where = vi.fn().mockImplementation((...args: unknown[]) => {
       state.whereCalls.push({ tableName, args });
+      if (args.length === 1 && typeof args[0] === "object" && args[0] !== null) {
+        Object.assign(appliedWhere, args[0] as Record<string, unknown>);
+      }
       return builder;
     });
     builder.andWhere = vi.fn().mockImplementation(() => builder);
@@ -84,16 +108,36 @@ function buildBucketUsageTransaction(config: {
       }
 
       if (tableName === "contract_line_service_configuration") {
-        return { config_id: "bucket-config-1" };
+        // Honour configuration_type when the caller pins it. Omitting it is the
+        // alga0002175 defect: the pair can hold an Hourly row too, and picking
+        // that one leaves the bucket detail lookup below with nothing.
+        const matches = "configuration_type" in appliedWhere
+          ? serviceConfigurations.filter(
+              (row) => row.configuration_type === appliedWhere.configuration_type,
+            )
+          : serviceConfigurations;
+
+        return matches.length > 0 ? { config_id: matches[0].config_id } : undefined;
       }
 
       if (tableName === "contract_line_service_bucket_config") {
+        const requestedConfigId = appliedWhere.config_id as string | undefined;
+        state.requestedBucketConfigId = requestedConfigId ?? null;
+
         if (config.bucketConfig === null) {
           return undefined;
         }
 
+        // Only Bucket configurations have a detail row.
+        const owningConfiguration = serviceConfigurations.find(
+          (row) => row.config_id === requestedConfigId,
+        );
+        if (owningConfiguration && owningConfiguration.configuration_type !== "Bucket") {
+          return undefined;
+        }
+
         return config.bucketConfig ?? {
-          config_id: "bucket-config-1",
+          config_id: requestedConfigId ?? "bucket-config-1",
           contract_line_id: "contract-line-1",
           service_catalog_id: "service-1",
           total_minutes: 120,
@@ -299,10 +343,77 @@ describe("BucketUsageService Unit Tests", () => {
           "service-1",
           "2025-02-10T00:00:00Z",
         ),
-      ).rejects.toThrow(
-        "Bucket configuration not found for config_id bucket-config-1 (plan contract-line-1, service service-1) in tenant test-tenant. Cannot create usage record.",
-      );
+      ).rejects.toMatchObject({ code: "MISSING_BUCKET_CONFIG" });
       expect(state.insertedRecord).toBeNull();
+    });
+
+    // Regression: alga0002175. An Hourly contract line carrying a bucket
+    // overlay ("7 hours included, overage above that") has BOTH an 'Hourly' and
+    // a 'Bucket' configuration row for the one service. Resolving on
+    // (contract_line_id, service_id) alone can return the Hourly row, whose
+    // bucket detail lookup finds nothing — so every bucket time entry in the
+    // tenant fails. Ordered Hourly-first here so an unqualified query picks it.
+    it("resolves the Bucket configuration when the line also has an Hourly one", async () => {
+      const { trx, state } = buildBucketUsageTransaction({
+        serviceConfigurations: [
+          { config_id: "hourly-config-1", configuration_type: "Hourly" },
+          { config_id: "bucket-config-1", configuration_type: "Bucket" },
+        ],
+      });
+
+      const record = await findOrCreateCurrentBucketUsageRecord(
+        trx,
+        "client-1",
+        "service-1",
+        "2025-02-10T00:00:00Z",
+      );
+
+      expect(state.requestedBucketConfigId).toBe("bucket-config-1");
+      expect(record).toMatchObject({
+        contract_line_id: "contract-line-1",
+        service_catalog_id: "service-1",
+        minutes_used: 0,
+      });
+    });
+
+    it("pins configuration_type when querying contract_line_service_configuration", async () => {
+      const { trx, state } = buildBucketUsageTransaction({});
+
+      await findOrCreateCurrentBucketUsageRecord(
+        trx,
+        "client-1",
+        "service-1",
+        "2025-02-10T00:00:00Z",
+      );
+
+      const configurationFilters = state.whereCalls
+        .filter((call) => call.tableName === "contract_line_service_configuration")
+        .flatMap((call) => call.args)
+        .filter((arg): arg is Record<string, unknown> =>
+          typeof arg === "object" && arg !== null,
+        );
+
+      expect(
+        configurationFilters.some((filter) => filter.configuration_type === "Bucket"),
+      ).toBe(true);
+    });
+
+    it("reports a missing Bucket configuration distinctly from a missing detail row", async () => {
+      const { trx } = buildBucketUsageTransaction({
+        // Line covers the service, but only with an Hourly configuration.
+        serviceConfigurations: [
+          { config_id: "hourly-config-1", configuration_type: "Hourly" },
+        ],
+      });
+
+      await expect(
+        findOrCreateCurrentBucketUsageRecord(
+          trx,
+          "client-1",
+          "service-1",
+          "2025-02-10T00:00:00Z",
+        ),
+      ).rejects.toMatchObject({ code: "MISSING_PLAN_SERVICE_CONFIG" });
     });
   });
 
