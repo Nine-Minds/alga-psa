@@ -159,6 +159,17 @@ describe('EntraSetupWizard', () => {
 
   it('gates the Microsoft redirect behind the consent interstitial', async () => {
     initiateEntraDirectOAuthMock.mockResolvedValue({ success: true, data: { authUrl: 'https://login' } });
+    // jsdom cannot navigate, and assigning `location.href` for real makes it log
+    // an unhandled "Not implemented: navigation" error. Swap in a plain object so
+    // the redirect target is assertable instead of merely implied.
+    const realLocation = window.location;
+    const locationStub = { href: '' } as Location;
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      writable: true,
+      value: locationStub,
+    });
+
     renderWizard(statusOf());
 
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
@@ -177,6 +188,13 @@ describe('EntraSetupWizard', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Continue to Microsoft' }));
     await waitFor(() => expect(initiateEntraDirectOAuthMock).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(locationStub.href).toBe('https://login'));
+
+    Object.defineProperty(window, 'location', {
+      configurable: true,
+      writable: true,
+      value: realLocation,
+    });
   });
 
   it('opens the CIPP dialog rather than redirecting when CIPP is chosen', () => {

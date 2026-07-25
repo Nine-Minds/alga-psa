@@ -412,6 +412,38 @@ default-off schedule from PR7.
   facade migration broke hand-rolled query doubles; component tests asserted English copy while
   the i18n mock echoed keys). Fixed, since "unit and component suites green" is this plan's own
   release gate: 34 files / 127 tests pass.
+
+### Reading the EE unit suite's remaining red
+
+`ee/server`'s unit suite is not green on `main` and is not green here either, so a bare pass/fail
+count on it says nothing about this branch. What the count has to be measured against is the
+commit this work branched from, `c2e7de496e`:
+
+```bash
+git worktree add --detach /tmp/entra-baseline c2e7de496e
+ln -s "$PWD/node_modules" /tmp/entra-baseline/node_modules   # aliases resolve from the config dir,
+                                                             # so each tree still tests its own source
+cd ee/server && NODE_OPTIONS=--max-old-space-size=8192 \
+  npx vitest run src/__tests__/unit --reporter=json --outputFile=/tmp/branch.json
+cd /tmp/entra-baseline/ee/server && NODE_OPTIONS=--max-old-space-size=8192 \
+  npx vitest run src/__tests__/unit --reporter=json --outputFile=/tmp/base.json
+```
+
+Diffed by `file :: fullName`, that gives **0 failures introduced and 53 fixed** (108 failing at the
+baseline, 55 here). Every remaining failure fails identically at `c2e7de496e`, and none is Entra
+code: Stripe tier pricing, Hudu, Tanium, managed domains, `TemporalJobRunner`, and five suites that
+never load because `next-auth/lib/env.js` imports `next/server`, which Node ESM will not resolve
+without the `.js`.
+
+That last one is why `huduSettingsPageCategory.test.tsx` is red on the changed-files list. This
+branch touched it — one line, renaming the mocked export to the `EntraIntegrationSummaryCard` the
+page now imports — but it fails at the baseline with the same resolution error, before that rename
+exists. Repairing the `next-auth` resolution is test-infra work affecting five unrelated suites,
+so it is deliberately not done here.
+
+Of the 26 changed EE unit files, one (`entraIntegrationSettings.initialSyncCta.test.tsx`) was
+deleted, superseded by the wizard and console suites; of the 25 that remain, 24 pass and only the
+Hudu suite above is red.
 - **PR6's notifications** use the existing internal-notification broadcast (the pattern accounting
   sync uses) rather than new templates and subtypes. The decision rules are pure and separate from
   delivery, so the sync path does not import the notification stack.
