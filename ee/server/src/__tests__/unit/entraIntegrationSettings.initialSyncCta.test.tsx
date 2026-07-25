@@ -315,7 +315,10 @@ describe('EntraIntegrationSettings guided flow', () => {
     expect(panel?.textContent).toContain('Connection Type: CIPP');
     expect(panel?.textContent).toContain('CIPP Server: https://cipp.example.com');
     expect(panel?.textContent).toContain('Mapped Tenants: 7');
-    expect(panel?.textContent).toContain('Next Sync Interval: Every 30 minutes');
+    // The unsettable "Next Sync Interval" line is gone: it stated a schedule the
+    // screen gave no way to change, and PR4's Sync & schedule tab owns it now.
+    expect(document.getElementById('entra-status-sync-interval')).toBeNull();
+    expect(panel?.textContent).not.toContain('Next Sync Interval');
   });
 
   it('T132: status panel shows direct Microsoft tenant and credential source details', async () => {

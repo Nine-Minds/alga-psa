@@ -1,4 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
+import { withTenantScope } from '../utils/tenantScopedBuilderDouble';
+
+const ISO_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T[\d:.]+Z$/;
 import { upsertEntraContactLinkActive } from '@ee/lib/integrations/entra/sync/contactLinkRepository';
 
 function buildUser(seed: string) {
@@ -34,9 +37,9 @@ describe('upsertEntraContactLinkActive', () => {
           throw new Error(`Unexpected table ${table}`);
         }
 
-        return {
+        return withTenantScope({
           insert: insertMock,
-        };
+        });
       }),
       {
         fn: {
@@ -58,8 +61,8 @@ describe('upsertEntraContactLinkActive', () => {
         tenant: 'tenant-107',
         link_status: 'active',
         is_active: true,
-        last_seen_at: 'db-now',
-        last_synced_at: 'db-now',
+        last_seen_at: expect.stringMatching(ISO_TIMESTAMP),
+        last_synced_at: expect.stringMatching(ISO_TIMESTAMP),
       })
     );
     expect(onConflictMock).toHaveBeenCalledWith(['tenant', 'entra_tenant_id', 'entra_object_id']);
@@ -67,8 +70,8 @@ describe('upsertEntraContactLinkActive', () => {
       expect.objectContaining({
         link_status: 'active',
         is_active: true,
-        last_seen_at: 'db-now',
-        last_synced_at: 'db-now',
+        last_seen_at: expect.stringMatching(ISO_TIMESTAMP),
+        last_synced_at: expect.stringMatching(ISO_TIMESTAMP),
       })
     );
   });
@@ -81,7 +84,7 @@ describe('upsertEntraContactLinkActive', () => {
           throw new Error(`Unexpected table ${table}`);
         }
 
-        return {
+        return withTenantScope({
           insert: (insertRow: Record<string, unknown>) => ({
             onConflict: () => ({
               merge: (mergeRow: Record<string, unknown>) => {
@@ -100,7 +103,7 @@ describe('upsertEntraContactLinkActive', () => {
               },
             }),
           }),
-        };
+        });
       }),
       {
         fn: {
@@ -130,7 +133,7 @@ describe('upsertEntraContactLinkActive', () => {
       client_id: 'client-remapped-113',
       link_status: 'active',
       is_active: true,
-      last_seen_at: 'db-now',
+      last_seen_at: expect.stringMatching(ISO_TIMESTAMP),
     });
   });
 });

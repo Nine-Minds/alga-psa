@@ -242,17 +242,6 @@ export default function EntraIntegrationSettings({ canUseCipp: canUseCippTier = 
     status?.connectionType === 'direct'
       ? status.connectionDetails?.directCredentialSource || t('integrations.entra.settings.errors.unknown')
       : null;
-  const syncIntervalMinutes = status?.nextSyncIntervalMinutes ?? null;
-  const syncIntervalLabel =
-    syncIntervalMinutes && syncIntervalMinutes > 0
-      ? t(
-          syncIntervalMinutes === 1
-            ? 'integrations.entra.settings.overview.syncIntervalValueOne'
-            : 'integrations.entra.settings.overview.syncIntervalValue',
-          { count: syncIntervalMinutes }
-        )
-      : t('integrations.entra.settings.overview.syncIntervalNone');
-
   const formatDateTime = (value: string | null | undefined): string => {
     if (!value) return t('integrations.entra.settings.validation.neverFormatted');
     const parsed = Date.parse(value);
@@ -620,9 +609,6 @@ export default function EntraIntegrationSettings({ canUseCipp: canUseCippTier = 
           </p>
           <p className="text-sm text-muted-foreground">
             <span className="font-medium text-foreground">{t('integrations.entra.settings.overview.mappedTenantsLabel')}</span> {status?.mappedTenantCount ?? 0}
-          </p>
-          <p className="text-sm text-muted-foreground" id="entra-status-sync-interval">
-            <span className="font-medium text-foreground">{t('integrations.entra.settings.overview.syncIntervalLabel')}</span> {syncIntervalLabel}
           </p>
         </div>
       </div>
