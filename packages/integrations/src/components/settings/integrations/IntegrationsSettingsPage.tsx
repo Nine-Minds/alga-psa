@@ -56,7 +56,7 @@ const StripeConnectionSettings = dynamic(
   }
 );
 
-import { EntraIntegrationSettings } from '@alga-psa/integrations/entra/components/entry';
+import { EntraIntegrationSummaryCard } from '@alga-psa/integrations/entra/components/entry';
 import { useHuduIntegrationEnabled } from './useHuduIntegrationEnabled';
 
 // Dynamic import for Hudu (EE feature) — `@enterprise` resolves to the real EE
@@ -287,8 +287,9 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
           id: 'entra',
           name: t('integrations.items.entra.name'),
           description: t('integrations.items.entra.description'),
+          // Entra owns its own route now; the category keeps a summary and a way in.
           component: canUseEntraSync
-            ? () => <EntraIntegrationSettings canUseCipp={canUseCipp} />
+            ? () => <EntraIntegrationSummaryCard />
             : () => (
                 <AddOnRequiredNotice
                   featureName={t('integrations.items.entra.name')}

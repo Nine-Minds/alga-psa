@@ -20,7 +20,7 @@ export async function GET(): Promise<Response> {
     const { knex } = await createTenantKnex();
     const db = tenantDb(knex, accessGate.tenantId);
 
-    const [mappingCountRow, lastDiscoveryRow, syncSettingsRow] = await Promise.all([
+    const [mappingCountRow, lastDiscoveryRow, syncSettingsRow, completedRunRow] = await Promise.all([
       db.table('entra_client_tenant_mappings')
         .where({ is_active: true, mapping_state: 'mapped' })
         .count<{ count: string }>('* as count')
@@ -30,12 +30,18 @@ export async function GET(): Promise<Response> {
         .first(),
       db.table('entra_sync_settings')
         .first(['sync_interval_minutes']),
+      // One completed real sync is what moves the tenant from guided setup to
+      // the operations console, permanently.
+      db.table('entra_sync_runs')
+        .where({ status: 'completed' })
+        .first(['run_id']),
     ]);
 
     return {
       mappedTenantCount: Number(mappingCountRow?.count || 0),
       lastDiscoveryAt: lastDiscoveryRow?.last_discovered_at || null,
       nextSyncIntervalMinutes: Number(syncSettingsRow?.sync_interval_minutes || 0) || null,
+      hasCompletedFirstSync: Boolean(completedRunRow),
     };
   });
 
@@ -67,6 +73,7 @@ export async function GET(): Promise<Response> {
     lastDiscoveryAt: summary.lastDiscoveryAt,
     mappedTenantCount: summary.mappedTenantCount,
     nextSyncIntervalMinutes: summary.nextSyncIntervalMinutes,
+    hasCompletedFirstSync: summary.hasCompletedFirstSync,
     availableConnectionTypes: ['direct', 'cipp'],
     lastValidatedAt: connection?.last_validated_at || null,
     lastValidationError:

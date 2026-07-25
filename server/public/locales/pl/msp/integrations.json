@@ -346,6 +346,65 @@
       }
     },
     "entra": {
+      "cippDialog": {
+        "actions": {
+          "cancel": "Anuluj",
+          "connect": "Połącz",
+          "connecting": "Łączenie...",
+          "test": "Testuj połączenie",
+          "testing": "Testowanie…"
+        },
+        "description": "Wprowadź URL swojej instancji CIPP oraz token API, aby umożliwić Alga wykrywanie i synchronizację danych Entra.",
+        "encryptionNote": "Klucz API jest szyfrowany w spoczynku i po zapisaniu nigdy nie jest ponownie pokazywany.",
+        "errors": {
+          "missingFields": "Zarówno Base URL, jak i token API są wymagane.",
+          "testFirst": "Przetestuj połączenie przed zapisaniem.",
+          "unknown": "Wystąpił nieznany błąd."
+        },
+        "fields": {
+          "apiToken": "Token API",
+          "apiTokenHelp": "W CIPP: Ustawienia → CIPP → Dostęp API. Skopiuj klucz API, a nie sekret klienta Azure.",
+          "apiTokenPlaceholder": "Wprowadź token...",
+          "baseUrl": "Bazowy URL CIPP",
+          "baseUrlHelp": "To host aplikacji funkcyjnej CIPP-API (na przykład my-cipp-api.azurewebsites.net), a nie frontend CIPP, do którego się logujesz.",
+          "baseUrlPlaceholder": "https://cipp.yourdomain.com"
+        },
+        "test": {
+          "passed": "CIPP odpowiedział. Widoczne dzierżawy: {{count}}.",
+          "required": "Przetestuj połączenie przed zapisaniem."
+        },
+        "title": "Połącz CIPP"
+      },
+      "reconciliation": {
+        "actions": {
+          "refresh": "Odśwież",
+          "resolveExisting": "Rozwiąż do istniejącego",
+          "resolveNew": "Rozwiąż do nowego"
+        },
+        "candidate": {
+          "fallback": "kandydat",
+          "label": "Kontakty kandydujące: {{count}}"
+        },
+        "contactPicker": {
+          "label": "Istniejący kontakt",
+          "placeholder": "Wybierz istniejący kontakt..."
+        },
+        "empty": "Żadne niejednoznaczne dopasowania nie oczekują na przegląd.",
+        "errors": {
+          "enterContactId": "Wprowadź ID kontaktu, aby rozwiązać do istniejącego kontaktu.",
+          "loadQueue": "Nie udało się załadować kolejki uzgadniania.",
+          "resolveFailed": "Nie udało się rozwiązać elementu kolejki."
+        },
+        "loading": "Ładowanie kolejki…",
+        "noEmailIdentity": "Brak tożsamości e-mail",
+        "queuedAt": "{{identity}} · w kolejce {{time}}",
+        "scopedToMappedClient": "Opcje istniejących kontaktów są ograniczone do tego zmapowanego klienta.",
+        "success": {
+          "resolvedExisting": "Rozwiązano element kolejki {{queueItemId}} do istniejącego kontaktu {{contactNameId}}.",
+          "resolvedNew": "Rozwiązano element kolejki {{queueItemId}} przez utworzenie kontaktu {{contactNameId}}."
+        },
+        "title": "Kolejka niejednoznacznych dopasowań"
+      },
       "settings": {
         "actions": {
           "cancel": "Anuluj",
@@ -464,8 +523,8 @@
           "title": "Ustawienia synchronizacji pól"
         },
         "guidedStep": {
-          "current": "bieżący",
           "complete": "ukończony",
+          "current": "bieżący",
           "locked": "zablokowany",
           "stepLabel": "Krok {{number}}",
           "thisIsCurrent": "To jest Twój bieżący krok wdrażania."
@@ -557,6 +616,124 @@
           }
         }
       },
+      "setup": {
+        "chooser": {
+          "cipp": {
+            "description": "Alga odczytuje dzierżawy przez instancję CIPP, którą już prowadzisz.",
+            "label": "CIPP (CyberDrain Improved Partner Portal)",
+            "prerequisites": {
+              "apiHost": "Hosta aplikacji funkcyjnej CIPP-API, nie frontendu CIPP.",
+              "apiKey": "Klucza API CIPP z dostępem do listy dzierżaw.",
+              "instance": "Działającej instancji CIPP."
+            }
+          },
+          "continue": "Kontynuuj",
+          "continuing": "Kontynuowanie…",
+          "direct": {
+            "description": "Alga komunikuje się z Microsoft Graph przez Twoją relację partnerską.",
+            "label": "Bezpośredni partner Microsoft",
+            "prerequisites": {
+              "appRegistration": "Dane OAuth Microsoft skonfigurowane dla tej dzierżawy.",
+              "globalAdmin": "Administratora globalnego, który zatwierdzi uprawnienia.",
+              "partnerRelationship": "Relacja partnerska (GDAP) z zarządzanymi dzierżawami."
+            }
+          },
+          "prerequisitesTitle": "Będziesz potrzebować",
+          "recommendation": "Większość MSP powinna wybrać Bezpośrednie. Wybierz CIPP tylko, jeśli już masz instancję.",
+          "title": "Wybierz sposób połączenia"
+        },
+        "description": "Cztery kroki: połącz, wykryj zarządzane dzierżawy, przypisz je do klientów i uruchom pierwszą synchronizację.",
+        "directConsent": {
+          "adminNote": "Administrator globalny musi zatwierdzić te uprawnienia. W przeciwnym razie logowanie się powiedzie, ale połączenie zostanie odrzucone i nic nie zostanie zapisane.",
+          "cancel": "Anuluj",
+          "continue": "Przejdź do Microsoftu",
+          "intro": "Opuszczasz Algę i zalogujesz się w Microsofcie. Oto uprawnienia, o które zostanie wysłane żądanie.",
+          "redirecting": "Przekierowywanie…",
+          "servicePrincipalNote": "Połączenie działa następnie jako jednostka usługi, a nie jako Twoje logowanie, więc działa również pod Twoją nieobecność.",
+          "title": "Zanim przejdziesz do Microsoftu"
+        },
+        "disclosure": {
+          "contacts": {
+            "creation": "Tożsamość bez dopasowania staje się nowym kontaktem u tego klienta.",
+            "deletion": "Nic nigdy nie jest usuwane.",
+            "matching": "Kontakty są dopasowywane po adresie e-mail w obrębie klienta, do którego przypiszesz dzierżawę.",
+            "overwrite": "Istniejące nazwiska, e-maile, telefony i stanowiska nie są nadpisywane, chyba że to włączysz."
+          },
+          "contactsTitle": "Co dzieje się z Twoimi kontaktami",
+          "copied": "Skopiowano",
+          "copy": "Kopiuj do rejestru zmian",
+          "description": "Przeczytaj przed autoryzacją. Możesz skopiować to do rejestru zmian.",
+          "recordGeneratedAt": "Przygotowano {{time}}",
+          "recordHeading": "Integracja Microsoft Entra — rejestr zmian",
+          "scopes": {
+            "directory": "Odczytuje dane katalogu w Twojej dzierżawie. Używane tylko przez tryb testowy własnej dzierżawy.",
+            "managedTenants": "Wymienia dzierżawy klientów objęte Twoją relacją partnerską oraz ich użytkowników. Tak wykrywani są klienci i kontakty.",
+            "offlineAccess": "Utrzymuje połączenie po zamknięciu przeglądarki, aby zaplanowane synchronizacje mogły działać.",
+            "unknown": "Żądane przez połączenie.",
+            "userRead": "Potwierdza, kto się loguje. Odczytuje tylko Twój profil."
+          },
+          "scopesTitle": "Żądane uprawnienia",
+          "title": "Co Alga odczyta i co zmieni"
+        },
+        "state": {
+          "complete": "Gotowe",
+          "current": "Teraz",
+          "locked": "Później"
+        },
+        "stepLabel": "Krok {{number}}",
+        "steps": {
+          "connect": {
+            "description": "Wybierz, jak Alga łączy się z Microsoftem, i autoryzuj to.",
+            "title": "Połącz Microsoft Entra"
+          },
+          "discover": {
+            "description": "Zapytaj Microsoft, które dzierżawy klientów obejmuje Twoja relacja partnerska.",
+            "title": "Wykryj zarządzane dzierżawy"
+          },
+          "map": {
+            "description": "Zdecyduj, do którego klienta Alga należy każda dzierżawa Microsoft. Nic nie jest synchronizowane do czasu potwierdzenia.",
+            "title": "Przypisz dzierżawy do klientów"
+          },
+          "sync": {
+            "description": "Pobierz kontakty dla przypisanych klientów.",
+            "title": "Uruchom pierwszą synchronizację"
+          }
+        },
+        "title": "Skonfiguruj Microsoft Entra"
+      },
+      "summary": {
+        "backToIntegrations": "Wróć do integracji",
+        "description": "Wykryj zarządzane dzierżawy, przypisz je do klientów i utrzymuj kontakty w zgodzie.",
+        "open": "Otwórz",
+        "title": "Microsoft Entra"
+      },
+      "syncHistory": {
+        "actions": {
+          "hideDetails": "Ukryj szczegóły",
+          "refresh": "Odśwież",
+          "viewDetails": "Zobacz szczegóły"
+        },
+        "details": {
+          "noResults": "Nie zarejestrowano wyników tenantów.",
+          "stats": "utworzone {{created}}, powiązane {{linked}}, zaktualizowane {{updated}}, niejednoznaczne {{ambiguous}}, dezaktywowane {{inactivated}}",
+          "tenantHeader": "Tenant {{tenant}} · {{status}}",
+          "unknownTenant": "nieznany"
+        },
+        "empty": "Nie znaleziono jeszcze uruchomień synchronizacji.",
+        "errors": {
+          "loadDetailFailed": "Nie udało się załadować szczegółów uruchomienia.",
+          "loadFailed": "Nie udało się załadować historii synchronizacji.",
+          "loadRunFailed": "Nie udało się załadować uruchomienia {{runId}}."
+        },
+        "loading": "Ładowanie historii synchronizacji…",
+        "run": {
+          "header": "{{runType}} · {{status}}",
+          "inProgress": "W toku",
+          "tenants": "Tenanty: {{processed}}/{{total}} · Sukces: {{success}} · Nieudane: {{failed}}",
+          "timing": "Rozpoczęto {{started}} · Ukończono {{completed}}"
+        },
+        "title": "Ostatnie uruchomienia synchronizacji"
+      },
       "tenantMapping": {
         "actions": {
           "cancel": "Anuluj",
@@ -613,82 +790,6 @@
           "unmatched": "Niedopasowane"
         },
         "title": "Podgląd mapowania tenantów"
-      },
-      "cippDialog": {
-        "actions": {
-          "cancel": "Anuluj",
-          "connect": "Połącz",
-          "connecting": "Łączenie..."
-        },
-        "description": "Wprowadź URL swojej instancji CIPP oraz token API, aby umożliwić Alga wykrywanie i synchronizację danych Entra.",
-        "errors": {
-          "missingFields": "Zarówno Base URL, jak i token API są wymagane.",
-          "unknown": "Wystąpił nieznany błąd."
-        },
-        "fields": {
-          "apiToken": "Token API",
-          "apiTokenPlaceholder": "Wprowadź token...",
-          "baseUrl": "Bazowy URL CIPP",
-          "baseUrlPlaceholder": "https://cipp.yourdomain.com"
-        },
-        "title": "Połącz CIPP"
-      },
-      "reconciliation": {
-        "actions": {
-          "refresh": "Odśwież",
-          "resolveExisting": "Rozwiąż do istniejącego",
-          "resolveNew": "Rozwiąż do nowego"
-        },
-        "candidate": {
-          "fallback": "kandydat",
-          "label": "Kontakty kandydujące: {{count}}"
-        },
-        "contactPicker": {
-          "label": "Istniejący kontakt",
-          "placeholder": "Wybierz istniejący kontakt..."
-        },
-        "errors": {
-          "enterContactId": "Wprowadź ID kontaktu, aby rozwiązać do istniejącego kontaktu.",
-          "loadQueue": "Nie udało się załadować kolejki uzgadniania.",
-          "resolveFailed": "Nie udało się rozwiązać elementu kolejki."
-        },
-        "empty": "Żadne niejednoznaczne dopasowania nie oczekują na przegląd.",
-        "loading": "Ładowanie kolejki…",
-        "noEmailIdentity": "Brak tożsamości e-mail",
-        "queuedAt": "{{identity}} · w kolejce {{time}}",
-        "scopedToMappedClient": "Opcje istniejących kontaktów są ograniczone do tego zmapowanego klienta.",
-        "success": {
-          "resolvedExisting": "Rozwiązano element kolejki {{queueItemId}} do istniejącego kontaktu {{contactNameId}}.",
-          "resolvedNew": "Rozwiązano element kolejki {{queueItemId}} przez utworzenie kontaktu {{contactNameId}}."
-        },
-        "title": "Kolejka niejednoznacznych dopasowań"
-      },
-      "syncHistory": {
-        "actions": {
-          "hideDetails": "Ukryj szczegóły",
-          "refresh": "Odśwież",
-          "viewDetails": "Zobacz szczegóły"
-        },
-        "details": {
-          "noResults": "Nie zarejestrowano wyników tenantów.",
-          "stats": "utworzone {{created}}, powiązane {{linked}}, zaktualizowane {{updated}}, niejednoznaczne {{ambiguous}}, dezaktywowane {{inactivated}}",
-          "tenantHeader": "Tenant {{tenant}} · {{status}}",
-          "unknownTenant": "nieznany"
-        },
-        "empty": "Nie znaleziono jeszcze uruchomień synchronizacji.",
-        "errors": {
-          "loadDetailFailed": "Nie udało się załadować szczegółów uruchomienia.",
-          "loadFailed": "Nie udało się załadować historii synchronizacji.",
-          "loadRunFailed": "Nie udało się załadować uruchomienia {{runId}}."
-        },
-        "loading": "Ładowanie historii synchronizacji…",
-        "run": {
-          "header": "{{runType}} · {{status}}",
-          "inProgress": "W toku",
-          "tenants": "Tenanty: {{processed}}/{{total}} · Sukces: {{success}} · Nieudane: {{failed}}",
-          "timing": "Rozpoczęto {{started}} · Ukończono {{completed}}"
-        },
-        "title": "Ostatnie uruchomienia synchronizacji"
       }
     },
     "google": {

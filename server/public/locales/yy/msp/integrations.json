@@ -346,6 +346,65 @@
       }
     },
     "entra": {
+      "cippDialog": {
+        "actions": {
+          "cancel": "55555",
+          "connect": "55555",
+          "connecting": "55555",
+          "test": "55555",
+          "testing": "55555"
+        },
+        "description": "55555",
+        "encryptionNote": "55555",
+        "errors": {
+          "missingFields": "55555",
+          "testFirst": "55555",
+          "unknown": "55555"
+        },
+        "fields": {
+          "apiToken": "55555",
+          "apiTokenHelp": "55555",
+          "apiTokenPlaceholder": "55555",
+          "baseUrl": "55555",
+          "baseUrlHelp": "55555",
+          "baseUrlPlaceholder": "55555"
+        },
+        "test": {
+          "passed": "55555",
+          "required": "55555"
+        },
+        "title": "55555"
+      },
+      "reconciliation": {
+        "actions": {
+          "refresh": "55555",
+          "resolveExisting": "55555",
+          "resolveNew": "55555"
+        },
+        "candidate": {
+          "fallback": "55555",
+          "label": "55555 {{count}} 55555"
+        },
+        "contactPicker": {
+          "label": "55555",
+          "placeholder": "55555"
+        },
+        "empty": "55555",
+        "errors": {
+          "enterContactId": "55555",
+          "loadQueue": "55555",
+          "resolveFailed": "55555"
+        },
+        "loading": "55555",
+        "noEmailIdentity": "55555",
+        "queuedAt": "55555 {{identity}} 55555 {{time}} 55555",
+        "scopedToMappedClient": "55555",
+        "success": {
+          "resolvedExisting": "55555 {{queueItemId}} 55555 {{contactNameId}} 55555",
+          "resolvedNew": "55555 {{queueItemId}} 55555 {{contactNameId}} 55555"
+        },
+        "title": "55555"
+      },
       "settings": {
         "actions": {
           "cancel": "55555",
@@ -464,8 +523,8 @@
           "title": "55555"
         },
         "guidedStep": {
-          "current": "55555",
           "complete": "55555",
+          "current": "55555",
           "locked": "55555",
           "stepLabel": "55555 {{number}} 55555",
           "thisIsCurrent": "55555"
@@ -557,6 +616,124 @@
           }
         }
       },
+      "setup": {
+        "chooser": {
+          "cipp": {
+            "description": "55555",
+            "label": "55555",
+            "prerequisites": {
+              "apiHost": "55555",
+              "apiKey": "55555",
+              "instance": "55555"
+            }
+          },
+          "continue": "55555",
+          "continuing": "55555",
+          "direct": {
+            "description": "55555",
+            "label": "55555",
+            "prerequisites": {
+              "appRegistration": "55555",
+              "globalAdmin": "55555",
+              "partnerRelationship": "55555"
+            }
+          },
+          "prerequisitesTitle": "55555",
+          "recommendation": "55555",
+          "title": "55555"
+        },
+        "description": "55555",
+        "directConsent": {
+          "adminNote": "55555",
+          "cancel": "55555",
+          "continue": "55555",
+          "intro": "55555",
+          "redirecting": "55555",
+          "servicePrincipalNote": "55555",
+          "title": "55555"
+        },
+        "disclosure": {
+          "contacts": {
+            "creation": "55555",
+            "deletion": "55555",
+            "matching": "55555",
+            "overwrite": "55555"
+          },
+          "contactsTitle": "55555",
+          "copied": "55555",
+          "copy": "55555",
+          "description": "55555",
+          "recordGeneratedAt": "55555",
+          "recordHeading": "55555",
+          "scopes": {
+            "directory": "55555",
+            "managedTenants": "55555",
+            "offlineAccess": "55555",
+            "unknown": "55555",
+            "userRead": "55555"
+          },
+          "scopesTitle": "55555",
+          "title": "55555"
+        },
+        "state": {
+          "complete": "55555",
+          "current": "55555",
+          "locked": "55555"
+        },
+        "stepLabel": "55555",
+        "steps": {
+          "connect": {
+            "description": "55555",
+            "title": "55555"
+          },
+          "discover": {
+            "description": "55555",
+            "title": "55555"
+          },
+          "map": {
+            "description": "55555",
+            "title": "55555"
+          },
+          "sync": {
+            "description": "55555",
+            "title": "55555"
+          }
+        },
+        "title": "55555"
+      },
+      "summary": {
+        "backToIntegrations": "55555",
+        "description": "55555",
+        "open": "55555",
+        "title": "55555"
+      },
+      "syncHistory": {
+        "actions": {
+          "hideDetails": "55555",
+          "refresh": "55555",
+          "viewDetails": "55555"
+        },
+        "details": {
+          "noResults": "55555",
+          "stats": "55555 {{created}} 55555 {{linked}} 55555 {{updated}} 55555 {{ambiguous}} 55555 {{inactivated}} 55555",
+          "tenantHeader": "55555 {{tenant}} 55555 {{status}} 55555",
+          "unknownTenant": "55555"
+        },
+        "empty": "55555",
+        "errors": {
+          "loadDetailFailed": "55555",
+          "loadFailed": "55555",
+          "loadRunFailed": "55555 {{runId}} 55555"
+        },
+        "loading": "55555",
+        "run": {
+          "header": "55555 {{runType}} 55555 {{status}} 55555",
+          "inProgress": "55555",
+          "tenants": "55555 {{processed}} 55555 {{total}} 55555 {{success}} 55555 {{failed}} 55555",
+          "timing": "55555 {{started}} 55555 {{completed}} 55555"
+        },
+        "title": "55555"
+      },
       "tenantMapping": {
         "actions": {
           "cancel": "55555",
@@ -611,82 +788,6 @@
           "needsReview": "55555",
           "skipped": "55555",
           "unmatched": "55555"
-        },
-        "title": "55555"
-      },
-      "cippDialog": {
-        "actions": {
-          "cancel": "55555",
-          "connect": "55555",
-          "connecting": "55555"
-        },
-        "description": "55555",
-        "errors": {
-          "missingFields": "55555",
-          "unknown": "55555"
-        },
-        "fields": {
-          "apiToken": "55555",
-          "apiTokenPlaceholder": "55555",
-          "baseUrl": "55555",
-          "baseUrlPlaceholder": "55555"
-        },
-        "title": "55555"
-      },
-      "reconciliation": {
-        "actions": {
-          "refresh": "55555",
-          "resolveExisting": "55555",
-          "resolveNew": "55555"
-        },
-        "candidate": {
-          "fallback": "55555",
-          "label": "55555 {{count}} 55555"
-        },
-        "contactPicker": {
-          "label": "55555",
-          "placeholder": "55555"
-        },
-        "errors": {
-          "enterContactId": "55555",
-          "loadQueue": "55555",
-          "resolveFailed": "55555"
-        },
-        "empty": "55555",
-        "loading": "55555",
-        "noEmailIdentity": "55555",
-        "queuedAt": "55555 {{identity}} 55555 {{time}} 55555",
-        "scopedToMappedClient": "55555",
-        "success": {
-          "resolvedExisting": "55555 {{queueItemId}} 55555 {{contactNameId}} 55555",
-          "resolvedNew": "55555 {{queueItemId}} 55555 {{contactNameId}} 55555"
-        },
-        "title": "55555"
-      },
-      "syncHistory": {
-        "actions": {
-          "hideDetails": "55555",
-          "refresh": "55555",
-          "viewDetails": "55555"
-        },
-        "details": {
-          "noResults": "55555",
-          "stats": "55555 {{created}} 55555 {{linked}} 55555 {{updated}} 55555 {{ambiguous}} 55555 {{inactivated}} 55555",
-          "tenantHeader": "55555 {{tenant}} 55555 {{status}} 55555",
-          "unknownTenant": "55555"
-        },
-        "empty": "55555",
-        "errors": {
-          "loadDetailFailed": "55555",
-          "loadFailed": "55555",
-          "loadRunFailed": "55555 {{runId}} 55555"
-        },
-        "loading": "55555",
-        "run": {
-          "header": "55555 {{runType}} 55555 {{status}} 55555",
-          "inProgress": "55555",
-          "tenants": "55555 {{processed}} 55555 {{total}} 55555 {{success}} 55555 {{failed}} 55555",
-          "timing": "55555 {{started}} 55555 {{completed}} 55555"
         },
         "title": "55555"
       }

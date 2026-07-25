@@ -54,6 +54,7 @@ export { getXeroCsvSettings, saveXeroCsvSettings } from './xeroCsvActions';
 export {
   initiateEntraDirectOAuth,
   connectEntraCipp,
+  testEntraCippCredentials,
   getEntraIntegrationStatus,
   updateEntraFieldSyncConfig,
   getEntraReconciliationQueue,

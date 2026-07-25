@@ -346,6 +346,65 @@
       }
     },
     "entra": {
+      "cippDialog": {
+        "actions": {
+          "cancel": "Annuleren",
+          "connect": "Verbinden",
+          "connecting": "Verbinden...",
+          "test": "Verbinding testen",
+          "testing": "Testen…"
+        },
+        "description": "Voer uw CIPP-instantie-URL en een API-token in om Alga toegang te geven om Entra-gegevens te ontdekken en te synchroniseren.",
+        "encryptionNote": "De API-sleutel wordt versleuteld opgeslagen en na het opslaan nooit meer getoond.",
+        "errors": {
+          "missingFields": "Zowel Basis-URL als API-token zijn vereist.",
+          "testFirst": "Test de verbinding voordat u opslaat.",
+          "unknown": "Er is een onbekende fout opgetreden."
+        },
+        "fields": {
+          "apiToken": "API-token",
+          "apiTokenHelp": "In CIPP: Instellingen → CIPP → API-toegang. Kopieer de API-sleutel, niet een Azure-clientgeheim.",
+          "apiTokenPlaceholder": "Voer token in...",
+          "baseUrl": "CIPP-basis-URL",
+          "baseUrlHelp": "Dit is de host van de CIPP-API function app (bijvoorbeeld my-cipp-api.azurewebsites.net), niet de CIPP-frontend waarop u zich aanmeldt.",
+          "baseUrlPlaceholder": "https://cipp.uwdomein.com"
+        },
+        "test": {
+          "passed": "CIPP antwoordde. {{count}} tenants zichtbaar.",
+          "required": "Test de verbinding voordat u opslaat."
+        },
+        "title": "CIPP verbinden"
+      },
+      "reconciliation": {
+        "actions": {
+          "refresh": "Vernieuwen",
+          "resolveExisting": "Oplossen naar bestaand",
+          "resolveNew": "Oplossen naar nieuw"
+        },
+        "candidate": {
+          "fallback": "kandidaat",
+          "label": "Kandidaat-contacten: {{count}}"
+        },
+        "contactPicker": {
+          "label": "Bestaand contact",
+          "placeholder": "Selecteer bestaand contact..."
+        },
+        "empty": "Er wachten geen dubbelzinnige overeenkomsten op controle.",
+        "errors": {
+          "enterContactId": "Voer een contact-ID in om naar een bestaand contact op te lossen.",
+          "loadQueue": "Kan afstemmingswachtrij niet laden.",
+          "resolveFailed": "Kan wachtrij-item niet oplossen."
+        },
+        "loading": "Wachtrij laden…",
+        "noEmailIdentity": "Geen e-mailidentiteit",
+        "queuedAt": "{{identity}} · in wachtrij geplaatst {{time}}",
+        "scopedToMappedClient": "Bestaande contactopties zijn beperkt tot deze toegewezen klant.",
+        "success": {
+          "resolvedExisting": "Wachtrij-item {{queueItemId}} opgelost naar bestaand contact {{contactNameId}}.",
+          "resolvedNew": "Wachtrij-item {{queueItemId}} opgelost door contact {{contactNameId}} aan te maken."
+        },
+        "title": "Wachtrij voor dubbelzinnige overeenkomsten"
+      },
       "settings": {
         "actions": {
           "cancel": "Annuleren",
@@ -464,8 +523,8 @@
           "title": "Veldsynchronisatiebesturingselementen"
         },
         "guidedStep": {
-          "current": "huidig",
           "complete": "voltooid",
+          "current": "huidig",
           "locked": "vergrendeld",
           "stepLabel": "Stap {{number}}",
           "thisIsCurrent": "Dit is uw huidige onboarding-stap."
@@ -557,6 +616,124 @@
           }
         }
       },
+      "setup": {
+        "chooser": {
+          "cipp": {
+            "description": "Alga leest tenants via de CIPP-instantie die u al draait.",
+            "label": "CIPP (CyberDrain Improved Partner Portal)",
+            "prerequisites": {
+              "apiHost": "De host van de CIPP-API function app, niet de CIPP-frontend.",
+              "apiKey": "Een CIPP API-sleutel met toegang tot de tenantlijst.",
+              "instance": "Een draaiende CIPP-instantie."
+            }
+          },
+          "continue": "Doorgaan",
+          "continuing": "Bezig…",
+          "direct": {
+            "description": "Alga praat met Microsoft Graph via uw partnerrelatie.",
+            "label": "Directe Microsoft-partner",
+            "prerequisites": {
+              "appRegistration": "Microsoft OAuth-gegevens die voor deze tenant zijn geconfigureerd.",
+              "globalAdmin": "Een globale beheerder die de machtigingen kan goedkeuren.",
+              "partnerRelationship": "Een partnerrelatie (GDAP) met de tenants die u beheert."
+            }
+          },
+          "prerequisitesTitle": "U heeft nodig",
+          "recommendation": "De meeste MSP's kiezen het beste Direct. Kies CIPP alleen als u al een instantie draait.",
+          "title": "Kies hoe u verbindt"
+        },
+        "description": "Vier stappen: verbinden, de tenants die u beheert ontdekken, ze aan klanten koppelen en de eerste synchronisatie uitvoeren.",
+        "directConsent": {
+          "adminNote": "Een globale beheerder moet deze machtigingen goedkeuren. Zo niet, dan lukt de aanmelding wel maar wordt de verbinding geweigerd en wordt er niets opgeslagen.",
+          "cancel": "Annuleren",
+          "continue": "Doorgaan naar Microsoft",
+          "intro": "U verlaat Alga en meldt zich aan bij Microsoft. Dit zijn de machtigingen die worden gevraagd.",
+          "redirecting": "Doorsturen…",
+          "servicePrincipalNote": "De verbinding draait daarna als service-principal en niet onder uw aanmelding, zodat ze blijft werken als u er niet bent.",
+          "title": "Voordat u doorgaat naar Microsoft"
+        },
+        "disclosure": {
+          "contacts": {
+            "creation": "Een identiteit zonder match wordt een nieuw contact bij die klant.",
+            "deletion": "Er wordt nooit iets verwijderd.",
+            "matching": "Contacten worden gematcht op e-mailadres binnen de klant waaraan u de tenant koppelt.",
+            "overwrite": "Bestaande namen, e-mails, telefoonnummers en functies worden niet overschreven tenzij u dat inschakelt."
+          },
+          "contactsTitle": "Wat er met uw contacten gebeurt",
+          "copied": "Gekopieerd",
+          "copy": "Kopiëren voor een wijzigingsdossier",
+          "description": "Lees dit voordat u autoriseert. U kunt het naar een wijzigingsdossier kopiëren.",
+          "recordGeneratedAt": "Opgesteld {{time}}",
+          "recordHeading": "Microsoft Entra-integratie — wijzigingsdossier",
+          "scopes": {
+            "directory": "Leest directorygegevens in uw eigen tenant. Wordt alleen gebruikt door de eigen-tenant testmodus.",
+            "managedTenants": "Somt de klanttenants op die uw partnerrelatie dekt, en de gebruikers daarin. Zo worden klanten en contacten ontdekt.",
+            "offlineAccess": "Houdt de verbinding werkend nadat u de browser sluit, zodat geplande synchronisaties kunnen draaien.",
+            "unknown": "Gevraagd door de verbinding.",
+            "userRead": "Bevestigt wie zich aanmeldt. Leest alleen uw eigen profiel."
+          },
+          "scopesTitle": "Gevraagde machtigingen",
+          "title": "Wat Alga leest en wat het wijzigt"
+        },
+        "state": {
+          "complete": "Klaar",
+          "current": "Nu",
+          "locked": "Later"
+        },
+        "stepLabel": "Stap {{number}}",
+        "steps": {
+          "connect": {
+            "description": "Kies hoe Alga Microsoft bereikt en autoriseer het.",
+            "title": "Microsoft Entra verbinden"
+          },
+          "discover": {
+            "description": "Vraag Microsoft welke klanttenants uw partnerrelatie dekt.",
+            "title": "Beheerde tenants ontdekken"
+          },
+          "map": {
+            "description": "Bepaal bij welke Alga-klant elke Microsoft-tenant hoort. Er wordt niets gesynchroniseerd tot dit bevestigd is.",
+            "title": "Tenants aan klanten koppelen"
+          },
+          "sync": {
+            "description": "Haal contacten op voor de gekoppelde klanten.",
+            "title": "Eerste synchronisatie uitvoeren"
+          }
+        },
+        "title": "Microsoft Entra instellen"
+      },
+      "summary": {
+        "backToIntegrations": "Terug naar integraties",
+        "description": "Ontdek de tenants die u beheert, koppel ze aan klanten en houd contacten gelijk.",
+        "open": "Openen",
+        "title": "Microsoft Entra"
+      },
+      "syncHistory": {
+        "actions": {
+          "hideDetails": "Details verbergen",
+          "refresh": "Vernieuwen",
+          "viewDetails": "Details bekijken"
+        },
+        "details": {
+          "noResults": "Geen tenantresultaten geregistreerd.",
+          "stats": "aangemaakt {{created}}, gekoppeld {{linked}}, bijgewerkt {{updated}}, dubbelzinnig {{ambiguous}}, gedeactiveerd {{inactivated}}",
+          "tenantHeader": "Tenant {{tenant}} · {{status}}",
+          "unknownTenant": "onbekend"
+        },
+        "empty": "Nog geen synchronisatieruns gevonden.",
+        "errors": {
+          "loadDetailFailed": "Kan rundetails niet laden.",
+          "loadFailed": "Kan synchronisatiegeschiedenis niet laden.",
+          "loadRunFailed": "Kan run {{runId}} niet laden."
+        },
+        "loading": "Synchronisatiegeschiedenis laden…",
+        "run": {
+          "header": "{{runType}} · {{status}}",
+          "inProgress": "Bezig",
+          "tenants": "Tenants: {{processed}}/{{total}} · Succes: {{success}} · Mislukt: {{failed}}",
+          "timing": "Gestart {{started}} · Voltooid {{completed}}"
+        },
+        "title": "Recente synchronisatieruns"
+      },
       "tenantMapping": {
         "actions": {
           "cancel": "Annuleren",
@@ -613,82 +790,6 @@
           "unmatched": "Niet gekoppeld"
         },
         "title": "Tenant-toewijzingsvoorbeeld"
-      },
-      "cippDialog": {
-        "actions": {
-          "cancel": "Annuleren",
-          "connect": "Verbinden",
-          "connecting": "Verbinden..."
-        },
-        "description": "Voer uw CIPP-instantie-URL en een API-token in om Alga toegang te geven om Entra-gegevens te ontdekken en te synchroniseren.",
-        "errors": {
-          "missingFields": "Zowel Basis-URL als API-token zijn vereist.",
-          "unknown": "Er is een onbekende fout opgetreden."
-        },
-        "fields": {
-          "apiToken": "API-token",
-          "apiTokenPlaceholder": "Voer token in...",
-          "baseUrl": "CIPP-basis-URL",
-          "baseUrlPlaceholder": "https://cipp.uwdomein.com"
-        },
-        "title": "CIPP verbinden"
-      },
-      "reconciliation": {
-        "actions": {
-          "refresh": "Vernieuwen",
-          "resolveExisting": "Oplossen naar bestaand",
-          "resolveNew": "Oplossen naar nieuw"
-        },
-        "candidate": {
-          "fallback": "kandidaat",
-          "label": "Kandidaat-contacten: {{count}}"
-        },
-        "contactPicker": {
-          "label": "Bestaand contact",
-          "placeholder": "Selecteer bestaand contact..."
-        },
-        "errors": {
-          "enterContactId": "Voer een contact-ID in om naar een bestaand contact op te lossen.",
-          "loadQueue": "Kan afstemmingswachtrij niet laden.",
-          "resolveFailed": "Kan wachtrij-item niet oplossen."
-        },
-        "empty": "Er wachten geen dubbelzinnige overeenkomsten op controle.",
-        "loading": "Wachtrij laden…",
-        "noEmailIdentity": "Geen e-mailidentiteit",
-        "queuedAt": "{{identity}} · in wachtrij geplaatst {{time}}",
-        "scopedToMappedClient": "Bestaande contactopties zijn beperkt tot deze toegewezen klant.",
-        "success": {
-          "resolvedExisting": "Wachtrij-item {{queueItemId}} opgelost naar bestaand contact {{contactNameId}}.",
-          "resolvedNew": "Wachtrij-item {{queueItemId}} opgelost door contact {{contactNameId}} aan te maken."
-        },
-        "title": "Wachtrij voor dubbelzinnige overeenkomsten"
-      },
-      "syncHistory": {
-        "actions": {
-          "hideDetails": "Details verbergen",
-          "refresh": "Vernieuwen",
-          "viewDetails": "Details bekijken"
-        },
-        "details": {
-          "noResults": "Geen tenantresultaten geregistreerd.",
-          "stats": "aangemaakt {{created}}, gekoppeld {{linked}}, bijgewerkt {{updated}}, dubbelzinnig {{ambiguous}}, gedeactiveerd {{inactivated}}",
-          "tenantHeader": "Tenant {{tenant}} · {{status}}",
-          "unknownTenant": "onbekend"
-        },
-        "empty": "Nog geen synchronisatieruns gevonden.",
-        "errors": {
-          "loadDetailFailed": "Kan rundetails niet laden.",
-          "loadFailed": "Kan synchronisatiegeschiedenis niet laden.",
-          "loadRunFailed": "Kan run {{runId}} niet laden."
-        },
-        "loading": "Synchronisatiegeschiedenis laden…",
-        "run": {
-          "header": "{{runType}} · {{status}}",
-          "inProgress": "Bezig",
-          "tenants": "Tenants: {{processed}}/{{total}} · Succes: {{success}} · Mislukt: {{failed}}",
-          "timing": "Gestart {{started}} · Voltooid {{completed}}"
-        },
-        "title": "Recente synchronisatieruns"
       }
     },
     "google": {

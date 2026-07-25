@@ -33,10 +33,16 @@ function decodeState(state: string): EntraDirectConnectState | null {
   }
 }
 
+// The Entra surface has its own route; the callback lands the operator back on
+// the screen they left rather than on the integrations index.
+const ENTRA_SETTINGS_PATH = '/msp/settings/integrations/entra';
+
+function entraSettingsUrl(): URL {
+  return new URL(ENTRA_SETTINGS_PATH, process.env.NEXTAUTH_URL || 'http://localhost:3000');
+}
+
 function failureRedirect(errorCode: string, message?: string): NextResponse {
-  const url = new URL('/msp/settings', process.env.NEXTAUTH_URL || 'http://localhost:3000');
-  url.searchParams.set('tab', 'integrations');
-  url.searchParams.set('category', 'identity');
+  const url = entraSettingsUrl();
   url.searchParams.set('entra_status', 'failure');
   url.searchParams.set('error', errorCode);
   if (message) {
@@ -46,9 +52,7 @@ function failureRedirect(errorCode: string, message?: string): NextResponse {
 }
 
 function successRedirect(): NextResponse {
-  const url = new URL('/msp/settings', process.env.NEXTAUTH_URL || 'http://localhost:3000');
-  url.searchParams.set('tab', 'integrations');
-  url.searchParams.set('category', 'identity');
+  const url = entraSettingsUrl();
   url.searchParams.set('entra_status', 'success');
   return NextResponse.redirect(url);
 }

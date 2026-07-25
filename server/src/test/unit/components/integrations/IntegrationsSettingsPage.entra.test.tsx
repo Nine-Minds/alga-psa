@@ -117,10 +117,10 @@ vi.mock('@alga-psa/integrations/components', () => ({
   CalendarIntegrationsSettings: () => <div data-testid="calendar-integrations-settings-stub" />,
 }));
 
-// The page imports the Entra settings surface from the integrations entry barrel.
+// The Identity category renders Entra's summary card; the surface itself has its own route.
 vi.mock('@alga-psa/integrations/entra/components/entry', () => ({
   __esModule: true,
-  EntraIntegrationSettings: () => (
+  EntraIntegrationSummaryCard: () => (
     <div data-testid="entra-integration-settings-shell">Loading Entra integration settings...</div>
   ),
 }));

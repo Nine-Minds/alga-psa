@@ -35,6 +35,11 @@ const {
   },
 }));
 
+vi.mock('@alga-psa/ui/lib/i18n/client', async () => {
+  const { createLocaleTranslationMock } = await import('../utils/localeTranslationMock');
+  return createLocaleTranslationMock('msp/integrations');
+});
+
 vi.mock('@alga-psa/ui/hooks', () => ({
   useFeatureFlag: useFeatureFlagMock,
 }));
@@ -306,8 +311,8 @@ describe('EntraIntegrationSettings guided flow', () => {
     await screen.findByText('Status');
     const panel = document.getElementById('entra-connection-status-panel');
     expect(panel).not.toBeNull();
-    expect(panel?.textContent).toContain('Connection: connected');
-    expect(panel?.textContent).toContain('Connection Type: cipp');
+    expect(panel?.textContent).toContain('Connected');
+    expect(panel?.textContent).toContain('Connection Type: CIPP');
     expect(panel?.textContent).toContain('CIPP Server: https://cipp.example.com');
     expect(panel?.textContent).toContain('Mapped Tenants: 7');
     expect(panel?.textContent).toContain('Next Sync Interval: Every 30 minutes');
@@ -335,7 +340,7 @@ describe('EntraIntegrationSettings guided flow', () => {
     await screen.findByText('Status');
     const panel = document.getElementById('entra-connection-status-panel');
     expect(panel).not.toBeNull();
-    expect(panel?.textContent).toContain('Connection Type: direct');
+    expect(panel?.textContent).toContain('Connection Type: Microsoft Entra Direct');
     expect(panel?.textContent).toContain('Microsoft Tenant: aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee');
     expect(panel?.textContent).toContain('Credential Source: tenant-secret');
   });

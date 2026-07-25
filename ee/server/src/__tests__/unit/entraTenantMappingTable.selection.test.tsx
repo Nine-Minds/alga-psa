@@ -18,6 +18,11 @@ const {
   getAllClientsMock: vi.fn(),
 }));
 
+vi.mock('@alga-psa/ui/lib/i18n/client', async () => {
+  const { createLocaleTranslationMock } = await import('../utils/localeTranslationMock');
+  return createLocaleTranslationMock('msp/integrations');
+});
+
 vi.mock('@alga-psa/integrations/actions', () => ({
   getEntraMappingPreview: getEntraMappingPreviewMock,
   confirmEntraMappings: confirmEntraMappingsMock,
@@ -241,6 +246,15 @@ describe('EntraTenantMappingTable client selection', () => {
 
     fireEvent.click(within(initialRow).getByRole('button', { name: 'Import as new client' }));
 
+    // Importing is gated behind a confirmation dialog so an accidental click cannot create a client.
+    const importConfirmButton = await waitFor(() => {
+      const button = document.getElementById('entra-import-confirm-dialog-confirm');
+      expect(button).not.toBeNull();
+      return button as HTMLElement;
+    });
+    expect(importEntraTenantAsClientMock).not.toHaveBeenCalled();
+    fireEvent.click(importConfirmButton);
+
     await waitFor(() => {
       expect(importEntraTenantAsClientMock).toHaveBeenCalledWith({
         managedTenantId: 'managed-unmapped-130',
@@ -248,7 +262,12 @@ describe('EntraTenantMappingTable client selection', () => {
     });
 
     await waitFor(() => {
-      const updatedRow = screen.getByText('Unmapped Import Tenant').closest('tr') as HTMLElement;
+      // Scope to the table: the imported client's name now also appears in every row's client picker.
+      const table = document.getElementById('entra-mapping-table') as HTMLElement;
+      const updatedRow = within(table)
+        .getAllByText('Unmapped Import Tenant')
+        .map((node) => node.closest('tr'))
+        .find((row): row is HTMLTableRowElement => row !== null) as HTMLElement;
       expect(within(updatedRow).getByText('Imported')).toBeTruthy();
       expect(within(updatedRow).queryByText('Auto-matched')).toBeNull();
       const updatedSelect = within(updatedRow).getByRole('combobox') as HTMLSelectElement;

@@ -346,6 +346,65 @@
       }
     },
     "entra": {
+      "cippDialog": {
+        "actions": {
+          "cancel": "Annulla",
+          "connect": "Connetti",
+          "connecting": "Connessione in corso...",
+          "test": "Prova connessione",
+          "testing": "Prova in corso…"
+        },
+        "description": "Inserisci l'URL della tua istanza CIPP e un token API per consentire ad Alga di scoprire e sincronizzare i dati Entra.",
+        "encryptionNote": "La chiave API è cifrata a riposo e non viene più mostrata dopo il salvataggio.",
+        "errors": {
+          "missingFields": "Sia l'URL di base sia il token API sono obbligatori.",
+          "testFirst": "Prova la connessione prima di salvare.",
+          "unknown": "Si è verificato un errore sconosciuto."
+        },
+        "fields": {
+          "apiToken": "Token API",
+          "apiTokenHelp": "In CIPP: Impostazioni → CIPP → Accesso API. Copia la chiave API, non un segreto client di Azure.",
+          "apiTokenPlaceholder": "Inserisci token...",
+          "baseUrl": "URL di base CIPP",
+          "baseUrlHelp": "Questo è l'host della function app CIPP-API (ad esempio my-cipp-api.azurewebsites.net), non il frontend CIPP a cui accedi.",
+          "baseUrlPlaceholder": "https://cipp.yourdomain.com"
+        },
+        "test": {
+          "passed": "CIPP ha risposto. {{count}} tenant visibili.",
+          "required": "Prova la connessione prima di salvare."
+        },
+        "title": "Connetti CIPP"
+      },
+      "reconciliation": {
+        "actions": {
+          "refresh": "Aggiorna",
+          "resolveExisting": "Risolvi su esistente",
+          "resolveNew": "Risolvi come nuovo"
+        },
+        "candidate": {
+          "fallback": "candidato",
+          "label": "Contatti candidati: {{count}}"
+        },
+        "contactPicker": {
+          "label": "Contatto esistente",
+          "placeholder": "Seleziona contatto esistente..."
+        },
+        "empty": "Nessuna corrispondenza ambigua in attesa di revisione.",
+        "errors": {
+          "enterContactId": "Inserisci un ID contatto per risolvere su un contatto esistente.",
+          "loadQueue": "Impossibile caricare la coda di riconciliazione.",
+          "resolveFailed": "Impossibile risolvere l'elemento della coda."
+        },
+        "loading": "Caricamento coda…",
+        "noEmailIdentity": "Nessuna identità email",
+        "queuedAt": "{{identity}} · accodato {{time}}",
+        "scopedToMappedClient": "Le opzioni dei contatti esistenti sono limitate a questo cliente mappato.",
+        "success": {
+          "resolvedExisting": "Elemento della coda {{queueItemId}} risolto sul contatto esistente {{contactNameId}}.",
+          "resolvedNew": "Elemento della coda {{queueItemId}} risolto creando il contatto {{contactNameId}}."
+        },
+        "title": "Coda di corrispondenze ambigue"
+      },
       "settings": {
         "actions": {
           "cancel": "Annulla",
@@ -464,8 +523,8 @@
           "title": "Controlli di sincronizzazione dei campi"
         },
         "guidedStep": {
-          "current": "corrente",
           "complete": "completato",
+          "current": "corrente",
           "locked": "bloccato",
           "stepLabel": "Passaggio {{number}}",
           "thisIsCurrent": "Questo è il passaggio di onboarding corrente."
@@ -557,6 +616,124 @@
           }
         }
       },
+      "setup": {
+        "chooser": {
+          "cipp": {
+            "description": "Alga legge i tenant tramite l'istanza CIPP che già utilizzi.",
+            "label": "CIPP (CyberDrain Improved Partner Portal)",
+            "prerequisites": {
+              "apiHost": "L'host della function app CIPP-API, non il frontend CIPP.",
+              "apiKey": "Una chiave API CIPP con accesso all'elenco dei tenant.",
+              "instance": "Un'istanza CIPP attiva."
+            }
+          },
+          "continue": "Continua",
+          "continuing": "Continuazione…",
+          "direct": {
+            "description": "Alga comunica con Microsoft Graph tramite la tua relazione di partner.",
+            "label": "Partner Microsoft diretto",
+            "prerequisites": {
+              "appRegistration": "Credenziali OAuth Microsoft configurate per questo tenant.",
+              "globalAdmin": "Un amministratore globale che possa approvare le autorizzazioni.",
+              "partnerRelationship": "Una relazione di partner (GDAP) con i tenant che gestisci."
+            }
+          },
+          "prerequisitesTitle": "Ti serviranno",
+          "recommendation": "La maggior parte degli MSP dovrebbe scegliere Diretto. Scegli CIPP solo se hai già un'istanza.",
+          "title": "Scegli come connetterti"
+        },
+        "description": "Quattro passaggi: connetti, individua i tenant che gestisci, associali ai client ed esegui la prima sincronizzazione.",
+        "directConsent": {
+          "adminNote": "Un amministratore globale deve approvare queste autorizzazioni. In caso contrario l'accesso andrà a buon fine ma la connessione sarà rifiutata e non verrà salvato nulla.",
+          "cancel": "Annulla",
+          "continue": "Continua su Microsoft",
+          "intro": "Stai per lasciare Alga e accedere su Microsoft. Queste sono le autorizzazioni che verranno richieste.",
+          "redirecting": "Reindirizzamento…",
+          "servicePrincipalNote": "La connessione funziona poi come entità servizio e non con il tuo accesso, così continua a funzionare quando non ci sei.",
+          "title": "Prima di continuare su Microsoft"
+        },
+        "disclosure": {
+          "contacts": {
+            "creation": "Un'identità senza corrispondenza diventa un nuovo contatto di quel client.",
+            "deletion": "Nulla viene mai eliminato.",
+            "matching": "I contatti vengono abbinati per indirizzo e-mail all'interno del client a cui associ il tenant.",
+            "overwrite": "Nomi, e-mail, numeri di telefono e qualifiche esistenti non vengono sovrascritti se non lo attivi."
+          },
+          "contactsTitle": "Cosa succede ai tuoi contatti",
+          "copied": "Copiato",
+          "copy": "Copia per un record di modifica",
+          "description": "Leggi prima di autorizzare. Puoi copiarlo in un record di modifica.",
+          "recordGeneratedAt": "Preparato {{time}}",
+          "recordHeading": "Integrazione Microsoft Entra — record di modifica",
+          "scopes": {
+            "directory": "Legge i dati di directory nel tuo tenant. Usato solo dalla modalità di test sul tenant proprio.",
+            "managedTenants": "Elenca i tenant cliente coperti dalla tua relazione di partner e i loro utenti. È così che vengono individuati client e contatti.",
+            "offlineAccess": "Mantiene attiva la connessione dopo la chiusura del browser, così le sincronizzazioni pianificate possono essere eseguite.",
+            "unknown": "Richiesto dalla connessione.",
+            "userRead": "Conferma chi sta accedendo. Legge solo il tuo profilo."
+          },
+          "scopesTitle": "Autorizzazioni richieste",
+          "title": "Cosa leggerà Alga e cosa cambierà"
+        },
+        "state": {
+          "complete": "Fatto",
+          "current": "Ora",
+          "locked": "Dopo"
+        },
+        "stepLabel": "Passaggio {{number}}",
+        "steps": {
+          "connect": {
+            "description": "Scegli come Alga raggiunge Microsoft, quindi autorizzalo.",
+            "title": "Connetti Microsoft Entra"
+          },
+          "discover": {
+            "description": "Chiedi a Microsoft quali tenant cliente copre la tua relazione di partner.",
+            "title": "Individua i tenant gestiti"
+          },
+          "map": {
+            "description": "Decidi a quale client Alga appartiene ogni tenant Microsoft. Nulla viene sincronizzato prima della conferma.",
+            "title": "Associa i tenant ai client"
+          },
+          "sync": {
+            "description": "Importa i contatti dei client associati.",
+            "title": "Esegui la prima sincronizzazione"
+          }
+        },
+        "title": "Configura Microsoft Entra"
+      },
+      "summary": {
+        "backToIntegrations": "Torna alle integrazioni",
+        "description": "Individua i tenant che gestisci, associali ai client e mantieni allineati i contatti.",
+        "open": "Apri",
+        "title": "Microsoft Entra"
+      },
+      "syncHistory": {
+        "actions": {
+          "hideDetails": "Nascondi dettagli",
+          "refresh": "Aggiorna",
+          "viewDetails": "Vedi dettagli"
+        },
+        "details": {
+          "noResults": "Nessun risultato di tenant registrato.",
+          "stats": "creati {{created}}, collegati {{linked}}, aggiornati {{updated}}, ambigui {{ambiguous}}, disattivati {{inactivated}}",
+          "tenantHeader": "Tenant {{tenant}} · {{status}}",
+          "unknownTenant": "sconosciuto"
+        },
+        "empty": "Ancora nessuna esecuzione di sincronizzazione trovata.",
+        "errors": {
+          "loadDetailFailed": "Impossibile caricare i dettagli dell'esecuzione.",
+          "loadFailed": "Impossibile caricare la cronologia di sincronizzazione.",
+          "loadRunFailed": "Impossibile caricare l'esecuzione {{runId}}."
+        },
+        "loading": "Caricamento cronologia di sincronizzazione…",
+        "run": {
+          "header": "{{runType}} · {{status}}",
+          "inProgress": "In corso",
+          "tenants": "Tenant: {{processed}}/{{total}} · Successo: {{success}} · Non riusciti: {{failed}}",
+          "timing": "Avviato {{started}} · Completato {{completed}}"
+        },
+        "title": "Esecuzioni di sincronizzazione recenti"
+      },
       "tenantMapping": {
         "actions": {
           "cancel": "Annulla",
@@ -613,82 +790,6 @@
           "unmatched": "Non abbinato"
         },
         "title": "Anteprima di mappatura dei tenant"
-      },
-      "cippDialog": {
-        "actions": {
-          "cancel": "Annulla",
-          "connect": "Connetti",
-          "connecting": "Connessione in corso..."
-        },
-        "description": "Inserisci l'URL della tua istanza CIPP e un token API per consentire ad Alga di scoprire e sincronizzare i dati Entra.",
-        "errors": {
-          "missingFields": "Sia l'URL di base sia il token API sono obbligatori.",
-          "unknown": "Si è verificato un errore sconosciuto."
-        },
-        "fields": {
-          "apiToken": "Token API",
-          "apiTokenPlaceholder": "Inserisci token...",
-          "baseUrl": "URL di base CIPP",
-          "baseUrlPlaceholder": "https://cipp.yourdomain.com"
-        },
-        "title": "Connetti CIPP"
-      },
-      "reconciliation": {
-        "actions": {
-          "refresh": "Aggiorna",
-          "resolveExisting": "Risolvi su esistente",
-          "resolveNew": "Risolvi come nuovo"
-        },
-        "candidate": {
-          "fallback": "candidato",
-          "label": "Contatti candidati: {{count}}"
-        },
-        "contactPicker": {
-          "label": "Contatto esistente",
-          "placeholder": "Seleziona contatto esistente..."
-        },
-        "errors": {
-          "enterContactId": "Inserisci un ID contatto per risolvere su un contatto esistente.",
-          "loadQueue": "Impossibile caricare la coda di riconciliazione.",
-          "resolveFailed": "Impossibile risolvere l'elemento della coda."
-        },
-        "empty": "Nessuna corrispondenza ambigua in attesa di revisione.",
-        "loading": "Caricamento coda…",
-        "noEmailIdentity": "Nessuna identità email",
-        "queuedAt": "{{identity}} · accodato {{time}}",
-        "scopedToMappedClient": "Le opzioni dei contatti esistenti sono limitate a questo cliente mappato.",
-        "success": {
-          "resolvedExisting": "Elemento della coda {{queueItemId}} risolto sul contatto esistente {{contactNameId}}.",
-          "resolvedNew": "Elemento della coda {{queueItemId}} risolto creando il contatto {{contactNameId}}."
-        },
-        "title": "Coda di corrispondenze ambigue"
-      },
-      "syncHistory": {
-        "actions": {
-          "hideDetails": "Nascondi dettagli",
-          "refresh": "Aggiorna",
-          "viewDetails": "Vedi dettagli"
-        },
-        "details": {
-          "noResults": "Nessun risultato di tenant registrato.",
-          "stats": "creati {{created}}, collegati {{linked}}, aggiornati {{updated}}, ambigui {{ambiguous}}, disattivati {{inactivated}}",
-          "tenantHeader": "Tenant {{tenant}} · {{status}}",
-          "unknownTenant": "sconosciuto"
-        },
-        "empty": "Ancora nessuna esecuzione di sincronizzazione trovata.",
-        "errors": {
-          "loadDetailFailed": "Impossibile caricare i dettagli dell'esecuzione.",
-          "loadFailed": "Impossibile caricare la cronologia di sincronizzazione.",
-          "loadRunFailed": "Impossibile caricare l'esecuzione {{runId}}."
-        },
-        "loading": "Caricamento cronologia di sincronizzazione…",
-        "run": {
-          "header": "{{runType}} · {{status}}",
-          "inProgress": "In corso",
-          "tenants": "Tenant: {{processed}}/{{total}} · Successo: {{success}} · Non riusciti: {{failed}}",
-          "timing": "Avviato {{started}} · Completato {{completed}}"
-        },
-        "title": "Esecuzioni di sincronizzazione recenti"
       }
     },
     "google": {

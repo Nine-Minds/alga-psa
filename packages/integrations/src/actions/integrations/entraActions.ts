@@ -200,6 +200,8 @@ export type EntraStatusResponse = {
   lastDiscoveryAt: string | null;
   mappedTenantCount: number;
   nextSyncIntervalMinutes: number | null;
+  /** True once one real sync has completed — the switch from setup to console. */
+  hasCompletedFirstSync?: boolean;
   availableConnectionTypes: EntraConnectionType[];
   lastValidatedAt: string | null;
   lastValidationError: Record<string, unknown> | null;
@@ -476,6 +478,61 @@ export const connectEntraIntegration = withAuth(async (
     method: 'POST',
     body: input,
   });
+});
+
+/**
+ * Test a candidate CIPP credential without saving it. This is the same probe
+ * connectEntraCipp runs before persisting, exposed on its own so the connect
+ * dialog can offer Test separately from Save: an operator can find out the
+ * host or key is wrong without committing anything, and Save stays disabled
+ * until a test has passed.
+ */
+export const testEntraCippCredentials = withAuth(async (
+  user,
+  _ctx,
+  input: { baseUrl: string; apiToken: string }
+) => {
+  if (isClientPortalUser(user)) {
+    return { success: false, error: 'Forbidden' } as const;
+  }
+
+  const canUpdate = await hasPermission(user as any, 'system_settings', 'update');
+  if (!canUpdate) {
+    return { success: false, error: 'Forbidden: insufficient permissions to configure Entra integration' } as const;
+  }
+
+  const normalizedBaseUrl = normalizeCippBaseUrl(input.baseUrl);
+  if (!normalizedBaseUrl) {
+    return { success: false, error: 'CIPP base URL must be a valid http(s) URL.' } as const;
+  }
+
+  const apiToken = String(input.apiToken || '').trim();
+  if (!apiToken) {
+    return { success: false, error: 'CIPP API token is required.' } as const;
+  }
+
+  const { probeCippCredentials } = await import(
+    '@enterprise/lib/integrations/entra/providers/cipp/cippProbe'
+  );
+
+  const probe = await probeCippCredentials({ baseUrl: normalizedBaseUrl, apiToken });
+
+  if (!probe.valid) {
+    return {
+      success: false,
+      error: probe.error || 'Unable to validate the CIPP connection.',
+    } as const;
+  }
+
+  return {
+    success: true,
+    data: {
+      valid: true as const,
+      checkedAt: probe.checkedAt,
+      tenantCountSample: probe.tenantCountSample,
+      baseUrl: normalizedBaseUrl,
+    },
+  } as const;
 });
 
 export const connectEntraCipp = withAuth(async (

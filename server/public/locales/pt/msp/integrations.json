@@ -346,6 +346,65 @@
       }
     },
     "entra": {
+      "cippDialog": {
+        "actions": {
+          "cancel": "Cancelar",
+          "connect": "Conectar",
+          "connecting": "Conectando...",
+          "test": "Testar ligação",
+          "testing": "A testar…"
+        },
+        "description": "Insira o URL da sua instância CIPP e um token de API para permitir que Alga descubra e sincronize dados do Entra.",
+        "encryptionNote": "A chave de API é cifrada em repouso e nunca mais é mostrada após guardar.",
+        "errors": {
+          "missingFields": "O URL base e o token da API são obrigatórios.",
+          "testFirst": "Teste a ligação antes de guardar.",
+          "unknown": "Ocorreu um erro desconhecido."
+        },
+        "fields": {
+          "apiToken": "Token de API",
+          "apiTokenHelp": "No CIPP: Definições → CIPP → Acesso à API. Copie a chave de API, não um segredo de cliente do Azure.",
+          "apiTokenPlaceholder": "Insira o token...",
+          "baseUrl": "URL base do CIPP",
+          "baseUrlHelp": "Este é o anfitrião da function app CIPP-API (por exemplo my-cipp-api.azurewebsites.net), não o frontend CIPP onde inicia sessão.",
+          "baseUrlPlaceholder": "https://cipp.yourdomain.com"
+        },
+        "test": {
+          "passed": "O CIPP respondeu. {{count}} inquilinos visíveis.",
+          "required": "Teste a ligação antes de guardar."
+        },
+        "title": "Conectar CIPP"
+      },
+      "reconciliation": {
+        "actions": {
+          "refresh": "Atualizar",
+          "resolveExisting": "Resolver para existir",
+          "resolveNew": "Resolver para novo"
+        },
+        "candidate": {
+          "fallback": "candidato",
+          "label": "Contatos do candidato: {{count}}"
+        },
+        "contactPicker": {
+          "label": "Contato existente",
+          "placeholder": "Selecione o contato existente..."
+        },
+        "empty": "Nenhuma correspondência ambígua está aguardando revisão.",
+        "errors": {
+          "enterContactId": "Insira um ID de contato para resolver o contato existente.",
+          "loadQueue": "Falha ao carregar a fila de reconciliação.",
+          "resolveFailed": "Falha ao resolver o item da fila."
+        },
+        "loading": "Carregando fila…",
+        "noEmailIdentity": "Sem identidade de e-mail",
+        "queuedAt": "{{identity}} · {{time}} na fila",
+        "scopedToMappedClient": "As opções de contato existentes estão limitadas a este cliente mapeado.",
+        "success": {
+          "resolvedExisting": "Item de fila {{queueItemId}} resolvido para o contato existente {{contactNameId}}.",
+          "resolvedNew": "Item da fila {{queueItemId}} resolvido criando o contato {{contactNameId}}."
+        },
+        "title": "Fila de correspondência ambígua"
+      },
       "settings": {
         "actions": {
           "cancel": "Cancelar",
@@ -464,8 +523,8 @@
           "title": "Controles de sincronização de campo"
         },
         "guidedStep": {
-          "current": "atual",
           "complete": "completo",
+          "current": "atual",
           "locked": "bloqueado",
           "stepLabel": "Etapa {{number}}",
           "thisIsCurrent": "Esta é a sua etapa de onboarding atual."
@@ -557,6 +616,124 @@
           }
         }
       },
+      "setup": {
+        "chooser": {
+          "cipp": {
+            "description": "O Alga lê inquilinos através da instância CIPP que já mantém.",
+            "label": "CIPP (CyberDrain Improved Partner Portal)",
+            "prerequisites": {
+              "apiHost": "O anfitrião da function app CIPP-API, não o frontend CIPP.",
+              "apiKey": "Uma chave de API CIPP com acesso à lista de inquilinos.",
+              "instance": "Uma instância CIPP em funcionamento."
+            }
+          },
+          "continue": "Continuar",
+          "continuing": "A continuar…",
+          "direct": {
+            "description": "O Alga comunica com o Microsoft Graph através da sua relação de parceiro.",
+            "label": "Parceiro Microsoft direto",
+            "prerequisites": {
+              "appRegistration": "Credenciais OAuth da Microsoft configuradas para este inquilino.",
+              "globalAdmin": "Um administrador global que possa aprovar as permissões.",
+              "partnerRelationship": "Uma relação de parceiro (GDAP) com os inquilinos que gere."
+            }
+          },
+          "prerequisitesTitle": "Vai precisar de",
+          "recommendation": "A maioria dos MSP deve escolher Direto. Escolha CIPP apenas se já tiver uma instância.",
+          "title": "Escolha como ligar"
+        },
+        "description": "Quatro passos: ligar, descobrir os inquilinos que gere, associá-los a clientes e executar a primeira sincronização.",
+        "directConsent": {
+          "adminNote": "Um administrador global tem de aprovar estas permissões. Caso contrário, o início de sessão conclui-se mas a ligação é recusada e nada é guardado.",
+          "cancel": "Cancelar",
+          "continue": "Continuar para a Microsoft",
+          "intro": "Vai sair do Alga e iniciar sessão na Microsoft. Estas são as permissões que serão pedidas.",
+          "redirecting": "A redirecionar…",
+          "servicePrincipalNote": "A ligação passa a correr como principal de serviço e não com o seu início de sessão, pelo que continua a funcionar na sua ausência.",
+          "title": "Antes de continuar para a Microsoft"
+        },
+        "disclosure": {
+          "contacts": {
+            "creation": "Uma identidade sem correspondência passa a ser um novo contacto desse cliente.",
+            "deletion": "Nada é alguma vez eliminado.",
+            "matching": "Os contactos são correspondidos por endereço de e-mail dentro do cliente a que associa o inquilino.",
+            "overwrite": "Nomes, e-mails, telefones e cargos existentes não são substituídos, a menos que ative essa opção."
+          },
+          "contactsTitle": "O que acontece aos seus contactos",
+          "copied": "Copiado",
+          "copy": "Copiar para um registo de alterações",
+          "description": "Leia antes de autorizar. Pode copiar para um registo de alterações.",
+          "recordGeneratedAt": "Preparado {{time}}",
+          "recordHeading": "Integração Microsoft Entra — registo de alterações",
+          "scopes": {
+            "directory": "Lê dados de diretório no seu inquilino. Usado apenas pelo modo de teste de inquilino próprio.",
+            "managedTenants": "Lista os inquilinos de cliente abrangidos pela sua relação de parceiro e os respetivos utilizadores. É assim que clientes e contactos são descobertos.",
+            "offlineAccess": "Mantém a ligação ativa depois de fechar o navegador, para que as sincronizações agendadas possam correr.",
+            "unknown": "Pedido pela ligação.",
+            "userRead": "Confirma quem está a iniciar sessão. Lê apenas o seu perfil."
+          },
+          "scopesTitle": "Permissões pedidas",
+          "title": "O que o Alga vai ler e o que vai alterar"
+        },
+        "state": {
+          "complete": "Concluído",
+          "current": "Agora",
+          "locked": "Mais tarde"
+        },
+        "stepLabel": "Passo {{number}}",
+        "steps": {
+          "connect": {
+            "description": "Escolha como o Alga chega à Microsoft e autorize-o.",
+            "title": "Ligar o Microsoft Entra"
+          },
+          "discover": {
+            "description": "Pergunte à Microsoft que inquilinos de cliente a sua relação de parceiro abrange.",
+            "title": "Descobrir inquilinos geridos"
+          },
+          "map": {
+            "description": "Decida a que cliente Alga pertence cada inquilino Microsoft. Nada é sincronizado antes da confirmação.",
+            "title": "Associar inquilinos a clientes"
+          },
+          "sync": {
+            "description": "Traga os contactos dos clientes associados.",
+            "title": "Executar a primeira sincronização"
+          }
+        },
+        "title": "Configurar o Microsoft Entra"
+      },
+      "summary": {
+        "backToIntegrations": "Voltar às integrações",
+        "description": "Descubra os inquilinos que gere, associe-os a clientes e mantenha os contactos em dia.",
+        "open": "Abrir",
+        "title": "Microsoft Entra"
+      },
+      "syncHistory": {
+        "actions": {
+          "hideDetails": "Ocultar detalhes",
+          "refresh": "Atualizar",
+          "viewDetails": "Ver detalhes"
+        },
+        "details": {
+          "noResults": "Nenhum resultado de inquilino registrado.",
+          "stats": "{{created}} criado, {{linked}} vinculado, {{updated}} atualizado, {{ambiguous}} ambíguo, {{inactivated}} inativado",
+          "tenantHeader": "Inquilino {{tenant}} · {{status}}",
+          "unknownTenant": "desconhecido"
+        },
+        "empty": "Nenhuma execução de sincronização foi encontrada ainda.",
+        "errors": {
+          "loadDetailFailed": "Falha ao carregar detalhes da execução.",
+          "loadFailed": "Falha ao carregar o histórico de sincronização.",
+          "loadRunFailed": "Falha ao carregar a execução {{runId}}."
+        },
+        "loading": "Carregando histórico de sincronização…",
+        "run": {
+          "header": "{{runType}} · {{status}}",
+          "inProgress": "Em andamento",
+          "tenants": "Locatários: {{processed}}/{{total}} · Sucesso: {{success}} · Falha: {{failed}}",
+          "timing": "{{started}} iniciado · {{completed}} concluído"
+        },
+        "title": "Execuções de sincronização recentes"
+      },
       "tenantMapping": {
         "actions": {
           "cancel": "Cancelar",
@@ -613,82 +790,6 @@
           "unmatched": "Incomparável"
         },
         "title": "Visualização do mapeamento de locatário"
-      },
-      "cippDialog": {
-        "actions": {
-          "cancel": "Cancelar",
-          "connect": "Conectar",
-          "connecting": "Conectando..."
-        },
-        "description": "Insira o URL da sua instância CIPP e um token de API para permitir que Alga descubra e sincronize dados do Entra.",
-        "errors": {
-          "missingFields": "O URL base e o token da API são obrigatórios.",
-          "unknown": "Ocorreu um erro desconhecido."
-        },
-        "fields": {
-          "apiToken": "Token de API",
-          "apiTokenPlaceholder": "Insira o token...",
-          "baseUrl": "URL base do CIPP",
-          "baseUrlPlaceholder": "https://cipp.yourdomain.com"
-        },
-        "title": "Conectar CIPP"
-      },
-      "reconciliation": {
-        "actions": {
-          "refresh": "Atualizar",
-          "resolveExisting": "Resolver para existir",
-          "resolveNew": "Resolver para novo"
-        },
-        "candidate": {
-          "fallback": "candidato",
-          "label": "Contatos do candidato: {{count}}"
-        },
-        "contactPicker": {
-          "label": "Contato existente",
-          "placeholder": "Selecione o contato existente..."
-        },
-        "errors": {
-          "enterContactId": "Insira um ID de contato para resolver o contato existente.",
-          "loadQueue": "Falha ao carregar a fila de reconciliação.",
-          "resolveFailed": "Falha ao resolver o item da fila."
-        },
-        "empty": "Nenhuma correspondência ambígua está aguardando revisão.",
-        "loading": "Carregando fila…",
-        "noEmailIdentity": "Sem identidade de e-mail",
-        "queuedAt": "{{identity}} · {{time}} na fila",
-        "scopedToMappedClient": "As opções de contato existentes estão limitadas a este cliente mapeado.",
-        "success": {
-          "resolvedExisting": "Item de fila {{queueItemId}} resolvido para o contato existente {{contactNameId}}.",
-          "resolvedNew": "Item da fila {{queueItemId}} resolvido criando o contato {{contactNameId}}."
-        },
-        "title": "Fila de correspondência ambígua"
-      },
-      "syncHistory": {
-        "actions": {
-          "hideDetails": "Ocultar detalhes",
-          "refresh": "Atualizar",
-          "viewDetails": "Ver detalhes"
-        },
-        "details": {
-          "noResults": "Nenhum resultado de inquilino registrado.",
-          "stats": "{{created}} criado, {{linked}} vinculado, {{updated}} atualizado, {{ambiguous}} ambíguo, {{inactivated}} inativado",
-          "tenantHeader": "Inquilino {{tenant}} · {{status}}",
-          "unknownTenant": "desconhecido"
-        },
-        "empty": "Nenhuma execução de sincronização foi encontrada ainda.",
-        "errors": {
-          "loadDetailFailed": "Falha ao carregar detalhes da execução.",
-          "loadFailed": "Falha ao carregar o histórico de sincronização.",
-          "loadRunFailed": "Falha ao carregar a execução {{runId}}."
-        },
-        "loading": "Carregando histórico de sincronização…",
-        "run": {
-          "header": "{{runType}} · {{status}}",
-          "inProgress": "Em andamento",
-          "tenants": "Locatários: {{processed}}/{{total}} · Sucesso: {{success}} · Falha: {{failed}}",
-          "timing": "{{started}} iniciado · {{completed}} concluído"
-        },
-        "title": "Execuções de sincronização recentes"
       }
     },
     "google": {

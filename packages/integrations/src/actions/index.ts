@@ -170,6 +170,7 @@ export {
 export {
   initiateEntraDirectOAuth,
   connectEntraCipp,
+  testEntraCippCredentials,
   getEntraIntegrationStatus,
   updateEntraFieldSyncConfig,
   connectEntraIntegration,

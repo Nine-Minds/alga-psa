@@ -1,8 +1,8 @@
 import { dynamic, ok, runtime } from '../_responses';
 import { requireEntraAccess } from '../_guards';
-import { clearEntraDirectTokenSet } from '@enterprise/lib/integrations/entra/auth/tokenStore';
-import { clearEntraCippCredentials } from '@enterprise/lib/integrations/entra/providers/cipp/cippSecretStore';
-import { disconnectActiveEntraConnection } from '@enterprise/lib/integrations/entra/connectionRepository';
+import { clearEntraDirectTokenSet } from '@ee/lib/integrations/entra/auth/tokenStore';
+import { clearEntraCippCredentials } from '@ee/lib/integrations/entra/providers/cipp/cippSecretStore';
+import { disconnectActiveEntraConnection } from '@ee/lib/integrations/entra/connectionRepository';
 
 export { dynamic, runtime };
 

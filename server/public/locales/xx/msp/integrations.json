@@ -346,6 +346,65 @@
       }
     },
     "entra": {
+      "cippDialog": {
+        "actions": {
+          "cancel": "11111",
+          "connect": "11111",
+          "connecting": "11111",
+          "test": "11111",
+          "testing": "11111"
+        },
+        "description": "11111",
+        "encryptionNote": "11111",
+        "errors": {
+          "missingFields": "11111",
+          "testFirst": "11111",
+          "unknown": "11111"
+        },
+        "fields": {
+          "apiToken": "11111",
+          "apiTokenHelp": "11111",
+          "apiTokenPlaceholder": "11111",
+          "baseUrl": "11111",
+          "baseUrlHelp": "11111",
+          "baseUrlPlaceholder": "11111"
+        },
+        "test": {
+          "passed": "11111",
+          "required": "11111"
+        },
+        "title": "11111"
+      },
+      "reconciliation": {
+        "actions": {
+          "refresh": "11111",
+          "resolveExisting": "11111",
+          "resolveNew": "11111"
+        },
+        "candidate": {
+          "fallback": "11111",
+          "label": "11111 {{count}} 11111"
+        },
+        "contactPicker": {
+          "label": "11111",
+          "placeholder": "11111"
+        },
+        "empty": "11111",
+        "errors": {
+          "enterContactId": "11111",
+          "loadQueue": "11111",
+          "resolveFailed": "11111"
+        },
+        "loading": "11111",
+        "noEmailIdentity": "11111",
+        "queuedAt": "11111 {{identity}} 11111 {{time}} 11111",
+        "scopedToMappedClient": "11111",
+        "success": {
+          "resolvedExisting": "11111 {{queueItemId}} 11111 {{contactNameId}} 11111",
+          "resolvedNew": "11111 {{queueItemId}} 11111 {{contactNameId}} 11111"
+        },
+        "title": "11111"
+      },
       "settings": {
         "actions": {
           "cancel": "11111",
@@ -464,8 +523,8 @@
           "title": "11111"
         },
         "guidedStep": {
-          "current": "11111",
           "complete": "11111",
+          "current": "11111",
           "locked": "11111",
           "stepLabel": "11111 {{number}} 11111",
           "thisIsCurrent": "11111"
@@ -557,6 +616,124 @@
           }
         }
       },
+      "setup": {
+        "chooser": {
+          "cipp": {
+            "description": "11111",
+            "label": "11111",
+            "prerequisites": {
+              "apiHost": "11111",
+              "apiKey": "11111",
+              "instance": "11111"
+            }
+          },
+          "continue": "11111",
+          "continuing": "11111",
+          "direct": {
+            "description": "11111",
+            "label": "11111",
+            "prerequisites": {
+              "appRegistration": "11111",
+              "globalAdmin": "11111",
+              "partnerRelationship": "11111"
+            }
+          },
+          "prerequisitesTitle": "11111",
+          "recommendation": "11111",
+          "title": "11111"
+        },
+        "description": "11111",
+        "directConsent": {
+          "adminNote": "11111",
+          "cancel": "11111",
+          "continue": "11111",
+          "intro": "11111",
+          "redirecting": "11111",
+          "servicePrincipalNote": "11111",
+          "title": "11111"
+        },
+        "disclosure": {
+          "contacts": {
+            "creation": "11111",
+            "deletion": "11111",
+            "matching": "11111",
+            "overwrite": "11111"
+          },
+          "contactsTitle": "11111",
+          "copied": "11111",
+          "copy": "11111",
+          "description": "11111",
+          "recordGeneratedAt": "11111",
+          "recordHeading": "11111",
+          "scopes": {
+            "directory": "11111",
+            "managedTenants": "11111",
+            "offlineAccess": "11111",
+            "unknown": "11111",
+            "userRead": "11111"
+          },
+          "scopesTitle": "11111",
+          "title": "11111"
+        },
+        "state": {
+          "complete": "11111",
+          "current": "11111",
+          "locked": "11111"
+        },
+        "stepLabel": "11111",
+        "steps": {
+          "connect": {
+            "description": "11111",
+            "title": "11111"
+          },
+          "discover": {
+            "description": "11111",
+            "title": "11111"
+          },
+          "map": {
+            "description": "11111",
+            "title": "11111"
+          },
+          "sync": {
+            "description": "11111",
+            "title": "11111"
+          }
+        },
+        "title": "11111"
+      },
+      "summary": {
+        "backToIntegrations": "11111",
+        "description": "11111",
+        "open": "11111",
+        "title": "11111"
+      },
+      "syncHistory": {
+        "actions": {
+          "hideDetails": "11111",
+          "refresh": "11111",
+          "viewDetails": "11111"
+        },
+        "details": {
+          "noResults": "11111",
+          "stats": "11111 {{created}} 11111 {{linked}} 11111 {{updated}} 11111 {{ambiguous}} 11111 {{inactivated}} 11111",
+          "tenantHeader": "11111 {{tenant}} 11111 {{status}} 11111",
+          "unknownTenant": "11111"
+        },
+        "empty": "11111",
+        "errors": {
+          "loadDetailFailed": "11111",
+          "loadFailed": "11111",
+          "loadRunFailed": "11111 {{runId}} 11111"
+        },
+        "loading": "11111",
+        "run": {
+          "header": "11111 {{runType}} 11111 {{status}} 11111",
+          "inProgress": "11111",
+          "tenants": "11111 {{processed}} 11111 {{total}} 11111 {{success}} 11111 {{failed}} 11111",
+          "timing": "11111 {{started}} 11111 {{completed}} 11111"
+        },
+        "title": "11111"
+      },
       "tenantMapping": {
         "actions": {
           "cancel": "11111",
@@ -611,82 +788,6 @@
           "needsReview": "11111",
           "skipped": "11111",
           "unmatched": "11111"
-        },
-        "title": "11111"
-      },
-      "cippDialog": {
-        "actions": {
-          "cancel": "11111",
-          "connect": "11111",
-          "connecting": "11111"
-        },
-        "description": "11111",
-        "errors": {
-          "missingFields": "11111",
-          "unknown": "11111"
-        },
-        "fields": {
-          "apiToken": "11111",
-          "apiTokenPlaceholder": "11111",
-          "baseUrl": "11111",
-          "baseUrlPlaceholder": "11111"
-        },
-        "title": "11111"
-      },
-      "reconciliation": {
-        "actions": {
-          "refresh": "11111",
-          "resolveExisting": "11111",
-          "resolveNew": "11111"
-        },
-        "candidate": {
-          "fallback": "11111",
-          "label": "11111 {{count}} 11111"
-        },
-        "contactPicker": {
-          "label": "11111",
-          "placeholder": "11111"
-        },
-        "errors": {
-          "enterContactId": "11111",
-          "loadQueue": "11111",
-          "resolveFailed": "11111"
-        },
-        "empty": "11111",
-        "loading": "11111",
-        "noEmailIdentity": "11111",
-        "queuedAt": "11111 {{identity}} 11111 {{time}} 11111",
-        "scopedToMappedClient": "11111",
-        "success": {
-          "resolvedExisting": "11111 {{queueItemId}} 11111 {{contactNameId}} 11111",
-          "resolvedNew": "11111 {{queueItemId}} 11111 {{contactNameId}} 11111"
-        },
-        "title": "11111"
-      },
-      "syncHistory": {
-        "actions": {
-          "hideDetails": "11111",
-          "refresh": "11111",
-          "viewDetails": "11111"
-        },
-        "details": {
-          "noResults": "11111",
-          "stats": "11111 {{created}} 11111 {{linked}} 11111 {{updated}} 11111 {{ambiguous}} 11111 {{inactivated}} 11111",
-          "tenantHeader": "11111 {{tenant}} 11111 {{status}} 11111",
-          "unknownTenant": "11111"
-        },
-        "empty": "11111",
-        "errors": {
-          "loadDetailFailed": "11111",
-          "loadFailed": "11111",
-          "loadRunFailed": "11111 {{runId}} 11111"
-        },
-        "loading": "11111",
-        "run": {
-          "header": "11111 {{runType}} 11111 {{status}} 11111",
-          "inProgress": "11111",
-          "tenants": "11111 {{processed}} 11111 {{total}} 11111 {{success}} 11111 {{failed}} 11111",
-          "timing": "11111 {{started}} 11111 {{completed}} 11111"
         },
         "title": "11111"
       }

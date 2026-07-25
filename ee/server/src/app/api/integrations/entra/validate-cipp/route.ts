@@ -1,8 +1,8 @@
 import { badRequest, dynamic, ok, runtime } from '../_responses';
 import { requireEntraAccess } from '../_guards';
-import { getEntraCippCredentials } from '@enterprise/lib/integrations/entra/providers/cipp/cippSecretStore';
-import { probeCippCredentials } from '@enterprise/lib/integrations/entra/providers/cipp/cippProbe';
-import { updateEntraConnectionValidation } from '@enterprise/lib/integrations/entra/connectionRepository';
+import { getEntraCippCredentials } from '@ee/lib/integrations/entra/providers/cipp/cippSecretStore';
+import { probeCippCredentials } from '@ee/lib/integrations/entra/providers/cipp/cippProbe';
+import { updateEntraConnectionValidation } from '@ee/lib/integrations/entra/connectionRepository';
 
 export { dynamic, runtime };
 

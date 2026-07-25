@@ -1,7 +1,7 @@
 import { badRequest, dynamic, ok, runtime } from '../../../_responses';
 import { requireEntraAccess } from '../../../_guards';
-import { getEntraSyncRunProgress } from '@enterprise/lib/integrations/entra/entraWorkflowClient';
-import { serializeEntraSyncRunProgress } from '@enterprise/lib/integrations/entra/sync/syncResultSerializer';
+import { getEntraSyncRunProgress } from '@ee/lib/integrations/entra/entraWorkflowClient';
+import { serializeEntraSyncRunProgress } from '@ee/lib/integrations/entra/sync/syncResultSerializer';
 
 export { dynamic, runtime };
 

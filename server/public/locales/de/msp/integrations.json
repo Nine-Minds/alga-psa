@@ -346,6 +346,65 @@
       }
     },
     "entra": {
+      "cippDialog": {
+        "actions": {
+          "cancel": "Abbrechen",
+          "connect": "Verbinden",
+          "connecting": "Verbindung wird hergestellt...",
+          "test": "Verbindung testen",
+          "testing": "Wird getestet…"
+        },
+        "description": "Geben Sie Ihre CIPP-Instanz-URL und ein API-Token ein, damit Alga Entra-Daten erkennen und synchronisieren kann.",
+        "encryptionNote": "Der API-Schlüssel wird verschlüsselt gespeichert und nach dem Speichern nie wieder angezeigt.",
+        "errors": {
+          "missingFields": "Sowohl Basis-URL als auch API-Token sind erforderlich.",
+          "testFirst": "Testen Sie die Verbindung vor dem Speichern.",
+          "unknown": "Ein unbekannter Fehler ist aufgetreten."
+        },
+        "fields": {
+          "apiToken": "API-Token",
+          "apiTokenHelp": "In CIPP: Einstellungen → CIPP → API-Zugriff. Kopieren Sie den API-Schlüssel, nicht ein Azure-Client-Geheimnis.",
+          "apiTokenPlaceholder": "Token eingeben...",
+          "baseUrl": "CIPP-Basis-URL",
+          "baseUrlHelp": "Dies ist der CIPP-API-Function-App-Host (z. B. my-cipp-api.azurewebsites.net), nicht das CIPP-Frontend, bei dem Sie sich anmelden.",
+          "baseUrlPlaceholder": "https://cipp.yourdomain.com"
+        },
+        "test": {
+          "passed": "CIPP hat geantwortet. {{count}} Mandanten sichtbar.",
+          "required": "Testen Sie die Verbindung vor dem Speichern."
+        },
+        "title": "CIPP verbinden"
+      },
+      "reconciliation": {
+        "actions": {
+          "refresh": "Aktualisieren",
+          "resolveExisting": "Auf bestehenden Kontakt auflösen",
+          "resolveNew": "Auf neuen Kontakt auflösen"
+        },
+        "candidate": {
+          "fallback": "Kandidat",
+          "label": "Kandidaten-Kontakte: {{count}}"
+        },
+        "contactPicker": {
+          "label": "Bestehender Kontakt",
+          "placeholder": "Bestehenden Kontakt auswählen..."
+        },
+        "empty": "Keine mehrdeutigen Übereinstimmungen warten auf Prüfung.",
+        "errors": {
+          "enterContactId": "Geben Sie eine Kontakt-ID ein, um auf einen bestehenden Kontakt aufzulösen.",
+          "loadQueue": "Abgleichswarteschlange konnte nicht geladen werden.",
+          "resolveFailed": "Warteschlangenelement konnte nicht aufgelöst werden."
+        },
+        "loading": "Warteschlange wird geladen…",
+        "noEmailIdentity": "Keine E-Mail-Identität",
+        "queuedAt": "{{identity}} · eingereiht {{time}}",
+        "scopedToMappedClient": "Bestehende Kontaktoptionen sind auf diesen zugeordneten Kunden beschränkt.",
+        "success": {
+          "resolvedExisting": "Warteschlangenelement {{queueItemId}} auf bestehenden Kontakt {{contactNameId}} aufgelöst.",
+          "resolvedNew": "Warteschlangenelement {{queueItemId}} durch Erstellen des Kontakts {{contactNameId}} aufgelöst."
+        },
+        "title": "Warteschlange für mehrdeutige Übereinstimmungen"
+      },
       "settings": {
         "actions": {
           "cancel": "Abbrechen",
@@ -464,8 +523,8 @@
           "title": "Feldsynchronisationssteuerung"
         },
         "guidedStep": {
-          "current": "aktuell",
           "complete": "abgeschlossen",
+          "current": "aktuell",
           "locked": "gesperrt",
           "stepLabel": "Schritt {{number}}",
           "thisIsCurrent": "Dies ist Ihr aktueller Onboarding-Schritt."
@@ -557,6 +616,124 @@
           }
         }
       },
+      "setup": {
+        "chooser": {
+          "cipp": {
+            "description": "Alga liest Mandanten über die von Ihnen betriebene CIPP-Instanz.",
+            "label": "CIPP (CyberDrain Improved Partner Portal)",
+            "prerequisites": {
+              "apiHost": "Den CIPP-API-Function-App-Host, nicht das CIPP-Frontend.",
+              "apiKey": "Einen CIPP-API-Schlüssel mit Zugriff auf die Mandantenliste.",
+              "instance": "Eine laufende CIPP-Instanz."
+            }
+          },
+          "continue": "Weiter",
+          "continuing": "Wird fortgesetzt…",
+          "direct": {
+            "description": "Alga spricht über Ihre Partnerbeziehung mit Microsoft Graph.",
+            "label": "Direkter Microsoft-Partner",
+            "prerequisites": {
+              "appRegistration": "Für diesen Mandanten konfigurierte Microsoft-OAuth-Anmeldedaten.",
+              "globalAdmin": "Einen globalen Administrator, der die Berechtigungen genehmigen kann.",
+              "partnerRelationship": "Eine Partnerbeziehung (GDAP) mit den verwalteten Mandanten."
+            }
+          },
+          "prerequisitesTitle": "Sie benötigen",
+          "recommendation": "Die meisten MSPs sollten Direkt wählen. Wählen Sie CIPP nur, wenn Sie bereits eine Instanz betreiben.",
+          "title": "Verbindungsart wählen"
+        },
+        "description": "Vier Schritte: verbinden, verwaltete Mandanten ermitteln, Clients zuordnen, erste Synchronisierung ausführen.",
+        "directConsent": {
+          "adminNote": "Ein globaler Administrator muss diese Berechtigungen genehmigen. Andernfalls wird die Anmeldung abgeschlossen, die Verbindung jedoch abgelehnt, und es wird nichts gespeichert.",
+          "cancel": "Abbrechen",
+          "continue": "Weiter zu Microsoft",
+          "intro": "Sie verlassen Alga und melden sich bei Microsoft an. Diese Berechtigungen werden angefordert.",
+          "redirecting": "Weiterleitung…",
+          "servicePrincipalNote": "Die Verbindung läuft anschließend als Dienstprinzipal und nicht unter Ihrer Anmeldung, sodass sie auch in Ihrer Abwesenheit funktioniert.",
+          "title": "Bevor Sie zu Microsoft wechseln"
+        },
+        "disclosure": {
+          "contacts": {
+            "creation": "Eine Identität ohne Treffer wird zu einem neuen Kontakt in diesem Client.",
+            "deletion": "Es wird niemals etwas gelöscht.",
+            "matching": "Kontakte werden per E-Mail-Adresse innerhalb des zugeordneten Clients abgeglichen.",
+            "overwrite": "Vorhandene Namen, E-Mails, Telefonnummern und Positionen werden nur überschrieben, wenn Sie das aktivieren."
+          },
+          "contactsTitle": "Was mit Ihren Kontakten geschieht",
+          "copied": "Kopiert",
+          "copy": "Für Änderungsdatensatz kopieren",
+          "description": "Lesen Sie dies vor der Autorisierung. Sie können es in einen Änderungsdatensatz kopieren.",
+          "recordGeneratedAt": "Erstellt {{time}}",
+          "recordHeading": "Microsoft Entra-Integration — Änderungsdatensatz",
+          "scopes": {
+            "directory": "Liest Verzeichnisdaten in Ihrem eigenen Mandanten. Wird nur vom Selbstmandanten-Testmodus verwendet.",
+            "managedTenants": "Listet die Kundenmandanten Ihrer Partnerbeziehung und deren Benutzer auf. So werden Clients und Kontakte ermittelt.",
+            "offlineAccess": "Hält die Verbindung nach dem Schließen des Browsers aufrecht, damit geplante Synchronisierungen laufen können.",
+            "unknown": "Von der Verbindung angefordert.",
+            "userRead": "Bestätigt, wer sich anmeldet. Liest nur Ihr eigenes Profil."
+          },
+          "scopesTitle": "Angeforderte Berechtigungen",
+          "title": "Was Alga liest und was es ändert"
+        },
+        "state": {
+          "complete": "Fertig",
+          "current": "Jetzt",
+          "locked": "Später"
+        },
+        "stepLabel": "Schritt {{number}}",
+        "steps": {
+          "connect": {
+            "description": "Wählen Sie, wie Alga Microsoft erreicht, und autorisieren Sie es.",
+            "title": "Microsoft Entra verbinden"
+          },
+          "discover": {
+            "description": "Fragen Sie Microsoft, welche Kundenmandanten Ihre Partnerbeziehung abdeckt.",
+            "title": "Verwaltete Mandanten ermitteln"
+          },
+          "map": {
+            "description": "Legen Sie fest, zu welchem Alga-Client jeder Microsoft-Mandant gehört. Vor der Bestätigung wird nichts synchronisiert.",
+            "title": "Mandanten Clients zuordnen"
+          },
+          "sync": {
+            "description": "Kontakte für die zugeordneten Clients übernehmen.",
+            "title": "Erste Synchronisierung ausführen"
+          }
+        },
+        "title": "Microsoft Entra einrichten"
+      },
+      "summary": {
+        "backToIntegrations": "Zurück zu Integrationen",
+        "description": "Verwaltete Mandanten ermitteln, Clients zuordnen und Kontakte im Gleichschritt halten.",
+        "open": "Öffnen",
+        "title": "Microsoft Entra"
+      },
+      "syncHistory": {
+        "actions": {
+          "hideDetails": "Details ausblenden",
+          "refresh": "Aktualisieren",
+          "viewDetails": "Details anzeigen"
+        },
+        "details": {
+          "noResults": "Keine Tenant-Ergebnisse aufgezeichnet.",
+          "stats": "erstellt {{created}}, verknüpft {{linked}}, aktualisiert {{updated}}, mehrdeutig {{ambiguous}}, deaktiviert {{inactivated}}",
+          "tenantHeader": "Tenant {{tenant}} · {{status}}",
+          "unknownTenant": "unbekannt"
+        },
+        "empty": "Noch keine Sync-Läufe gefunden.",
+        "errors": {
+          "loadDetailFailed": "Lauf-Detail konnte nicht geladen werden.",
+          "loadFailed": "Sync-Verlauf konnte nicht geladen werden.",
+          "loadRunFailed": "Lauf {{runId}} konnte nicht geladen werden."
+        },
+        "loading": "Sync-Verlauf wird geladen…",
+        "run": {
+          "header": "{{runType}} · {{status}}",
+          "inProgress": "In Bearbeitung",
+          "tenants": "Tenants: {{processed}}/{{total}} · Erfolgreich: {{success}} · Fehlgeschlagen: {{failed}}",
+          "timing": "Gestartet {{started}} · Abgeschlossen {{completed}}"
+        },
+        "title": "Letzte Sync-Läufe"
+      },
       "tenantMapping": {
         "actions": {
           "cancel": "Abbrechen",
@@ -613,82 +790,6 @@
           "unmatched": "Nicht zugeordnet"
         },
         "title": "Tenant-Zuordnungsvorschau"
-      },
-      "cippDialog": {
-        "actions": {
-          "cancel": "Abbrechen",
-          "connect": "Verbinden",
-          "connecting": "Verbindung wird hergestellt..."
-        },
-        "description": "Geben Sie Ihre CIPP-Instanz-URL und ein API-Token ein, damit Alga Entra-Daten erkennen und synchronisieren kann.",
-        "errors": {
-          "missingFields": "Sowohl Basis-URL als auch API-Token sind erforderlich.",
-          "unknown": "Ein unbekannter Fehler ist aufgetreten."
-        },
-        "fields": {
-          "apiToken": "API-Token",
-          "apiTokenPlaceholder": "Token eingeben...",
-          "baseUrl": "CIPP-Basis-URL",
-          "baseUrlPlaceholder": "https://cipp.yourdomain.com"
-        },
-        "title": "CIPP verbinden"
-      },
-      "reconciliation": {
-        "actions": {
-          "refresh": "Aktualisieren",
-          "resolveExisting": "Auf bestehenden Kontakt auflösen",
-          "resolveNew": "Auf neuen Kontakt auflösen"
-        },
-        "candidate": {
-          "fallback": "Kandidat",
-          "label": "Kandidaten-Kontakte: {{count}}"
-        },
-        "contactPicker": {
-          "label": "Bestehender Kontakt",
-          "placeholder": "Bestehenden Kontakt auswählen..."
-        },
-        "errors": {
-          "enterContactId": "Geben Sie eine Kontakt-ID ein, um auf einen bestehenden Kontakt aufzulösen.",
-          "loadQueue": "Abgleichswarteschlange konnte nicht geladen werden.",
-          "resolveFailed": "Warteschlangenelement konnte nicht aufgelöst werden."
-        },
-        "empty": "Keine mehrdeutigen Übereinstimmungen warten auf Prüfung.",
-        "loading": "Warteschlange wird geladen…",
-        "noEmailIdentity": "Keine E-Mail-Identität",
-        "queuedAt": "{{identity}} · eingereiht {{time}}",
-        "scopedToMappedClient": "Bestehende Kontaktoptionen sind auf diesen zugeordneten Kunden beschränkt.",
-        "success": {
-          "resolvedExisting": "Warteschlangenelement {{queueItemId}} auf bestehenden Kontakt {{contactNameId}} aufgelöst.",
-          "resolvedNew": "Warteschlangenelement {{queueItemId}} durch Erstellen des Kontakts {{contactNameId}} aufgelöst."
-        },
-        "title": "Warteschlange für mehrdeutige Übereinstimmungen"
-      },
-      "syncHistory": {
-        "actions": {
-          "hideDetails": "Details ausblenden",
-          "refresh": "Aktualisieren",
-          "viewDetails": "Details anzeigen"
-        },
-        "details": {
-          "noResults": "Keine Tenant-Ergebnisse aufgezeichnet.",
-          "stats": "erstellt {{created}}, verknüpft {{linked}}, aktualisiert {{updated}}, mehrdeutig {{ambiguous}}, deaktiviert {{inactivated}}",
-          "tenantHeader": "Tenant {{tenant}} · {{status}}",
-          "unknownTenant": "unbekannt"
-        },
-        "empty": "Noch keine Sync-Läufe gefunden.",
-        "errors": {
-          "loadDetailFailed": "Lauf-Detail konnte nicht geladen werden.",
-          "loadFailed": "Sync-Verlauf konnte nicht geladen werden.",
-          "loadRunFailed": "Lauf {{runId}} konnte nicht geladen werden."
-        },
-        "loading": "Sync-Verlauf wird geladen…",
-        "run": {
-          "header": "{{runType}} · {{status}}",
-          "inProgress": "In Bearbeitung",
-          "tenants": "Tenants: {{processed}}/{{total}} · Erfolgreich: {{success}} · Fehlgeschlagen: {{failed}}",
-          "timing": "Gestartet {{started}} · Abgeschlossen {{completed}}"
-        },
-        "title": "Letzte Sync-Läufe"
       }
     },
     "google": {
