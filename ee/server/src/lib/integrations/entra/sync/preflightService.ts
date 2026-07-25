@@ -161,6 +161,11 @@ export async function runEntraPreflight(params: {
   clientId?: string | null;
   userId?: string | null;
   sampleLimit?: number;
+  /**
+   * Rules to preview instead of the stored ones, so "what would turning this
+   * on do?" can be answered before saving it.
+   */
+  fieldSyncConfigOverride?: Record<string, unknown> | null;
 }): Promise<EntraPreflightResult> {
   const mapping = await loadMappingForPreflight(params.tenantId, {
     managedTenantId: params.managedTenantId,
@@ -183,15 +188,17 @@ export async function runEntraPreflight(params: {
   });
   const filtered = await filterEntraUsersForTenant(params.tenantId, users);
 
-  const fieldSyncConfig = await runWithTenant(params.tenantId, async () => {
-    const { knex } = await createTenantKnex();
-    const row = await tenantDb(knex, params.tenantId).table('entra_sync_settings')
-      .first(['field_sync_config']);
-    const raw = row?.field_sync_config;
-    return raw && typeof raw === 'object' && !Array.isArray(raw)
-      ? (raw as Record<string, unknown>)
-      : {};
-  });
+  const fieldSyncConfig = params.fieldSyncConfigOverride
+    ? params.fieldSyncConfigOverride
+    : await runWithTenant(params.tenantId, async () => {
+      const { knex } = await createTenantKnex();
+      const row = await tenantDb(knex, params.tenantId).table('entra_sync_settings')
+        .first(['field_sync_config']);
+      const raw = row?.field_sync_config;
+      return raw && typeof raw === 'object' && !Array.isArray(raw)
+        ? (raw as Record<string, unknown>)
+        : {};
+    });
 
   const disabledIdentities = filtered.excluded
     .filter((entry) => entry.reason === 'account_disabled')

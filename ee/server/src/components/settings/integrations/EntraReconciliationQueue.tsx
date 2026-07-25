@@ -4,6 +4,7 @@ import React from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
+  dismissEntraQueueItem,
   getEntraReconciliationQueue,
   resolveEntraQueueToExisting,
   resolveEntraQueueToNew,
@@ -118,6 +119,28 @@ export default function EntraReconciliationQueue() {
     }
   }, [existingContactIdByItem, loadQueue, t]);
 
+  // Dismissal is the third real answer to an ambiguous match, alongside "this
+  // contact" and "make a new one": some identities simply are not worth a
+  // decision, and without this the queue only ever grew.
+  const handleDismiss = React.useCallback(async (item: EntraReconciliationQueueItem) => {
+    setResolvingItemId(item.queueItemId);
+    setError(null);
+    setSuccessMessage(null);
+    try {
+      const result = await dismissEntraQueueItem({ queueItemId: item.queueItemId });
+      if ('error' in result) {
+        setError(result.error || t('integrations.entra.reconciliation.errors.resolveFailed'));
+      } else {
+        setSuccessMessage(t('integrations.entra.reconciliation.success.dismissed', {
+          identity: item.email || item.userPrincipalName || item.displayName || item.entraObjectId,
+        }));
+        await loadQueue();
+      }
+    } finally {
+      setResolvingItemId(null);
+    }
+  }, [loadQueue, t]);
+
   const handleResolveNew = React.useCallback(async (item: EntraReconciliationQueueItem) => {
     setResolvingItemId(item.queueItemId);
     setError(null);
@@ -180,7 +203,7 @@ export default function EntraReconciliationQueue() {
                   ))}
                 </ul>
               ) : null}
-              <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto_auto]">
+              <div className="mt-3 grid gap-2 sm:grid-cols-[1fr_auto_auto_auto]">
                 {item.clientId ? (
                   <p className="text-xs text-muted-foreground sm:col-span-3">
                     {t('integrations.entra.reconciliation.scopedToMappedClient')}
@@ -220,6 +243,16 @@ export default function EntraReconciliationQueue() {
                   onClick={() => void handleResolveNew(item)}
                 >
                   {t('integrations.entra.reconciliation.actions.resolveNew')}
+                </Button>
+                <Button
+                  id={`entra-queue-dismiss-${item.queueItemId}`}
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  disabled={resolvingItemId === item.queueItemId}
+                  onClick={() => void handleDismiss(item)}
+                >
+                  {t('integrations.entra.reconciliation.actions.dismiss')}
                 </Button>
               </div>
             </div>

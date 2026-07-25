@@ -13,7 +13,6 @@ import {
   getEntraSyncRunHistory,
   discoverEntraManagedTenants,
   startEntraSync,
-  updateEntraFieldSyncConfig,
   initiateEntraDirectOAuth,
   disconnectEntraIntegration,
   unmapEntraTenant,
@@ -34,6 +33,7 @@ import {
   shouldShowFieldSyncControls,
 } from './entraIntegrationSettingsGates';
 import { EntraCippConnectDialog } from './EntraCippConnectDialog';
+import { FieldSyncRules, normalizeEntraFieldSyncConfig } from './entra/FieldSyncRules';
 
 type GuidedStepId = 'connect' | 'discover' | 'map' | 'sync';
 type GuidedStepVisualState = 'current' | 'complete' | 'locked';
@@ -44,63 +44,6 @@ const WIZARD_STEPS = [
   { id: 'map' as const, titleKey: 'integrations.entra.settings.wizard.map.title', descriptionKey: 'integrations.entra.settings.wizard.map.description' },
   { id: 'sync' as const, titleKey: 'integrations.entra.settings.wizard.sync.title', descriptionKey: 'integrations.entra.settings.wizard.sync.description' },
 ] as const;
-
-const DEFAULT_FIELD_SYNC_CONFIG: EntraFieldSyncConfig = {
-  displayName: false,
-  email: false,
-  phone: false,
-  role: false,
-  upn: false,
-};
-
-type FieldSyncOption = {
-  key: keyof EntraFieldSyncConfig;
-  labelKey: string;
-  descriptionKey: string;
-};
-
-const FIELD_SYNC_OPTIONS: FieldSyncOption[] = [
-  {
-    key: 'displayName',
-    labelKey: 'integrations.entra.settings.fieldSync.options.displayName.label',
-    descriptionKey: 'integrations.entra.settings.fieldSync.options.displayName.description',
-  },
-  {
-    key: 'email',
-    labelKey: 'integrations.entra.settings.fieldSync.options.email.label',
-    descriptionKey: 'integrations.entra.settings.fieldSync.options.email.description',
-  },
-  {
-    key: 'phone',
-    labelKey: 'integrations.entra.settings.fieldSync.options.phone.label',
-    descriptionKey: 'integrations.entra.settings.fieldSync.options.phone.description',
-  },
-  {
-    key: 'role',
-    labelKey: 'integrations.entra.settings.fieldSync.options.role.label',
-    descriptionKey: 'integrations.entra.settings.fieldSync.options.role.description',
-  },
-  {
-    key: 'upn',
-    labelKey: 'integrations.entra.settings.fieldSync.options.upn.label',
-    descriptionKey: 'integrations.entra.settings.fieldSync.options.upn.description',
-  },
-];
-
-function normalizeFieldSyncConfig(value: unknown): EntraFieldSyncConfig {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    return { ...DEFAULT_FIELD_SYNC_CONFIG };
-  }
-
-  const source = value as Record<string, unknown>;
-  return {
-    displayName: source.displayName === true,
-    email: source.email === true,
-    phone: source.phone === true,
-    role: source.role === true,
-    upn: source.upn === true,
-  };
-}
 
 function deriveGuidedStepState(params: {
   status: EntraStatusResponse | null;
@@ -138,8 +81,6 @@ interface EntraIntegrationSettingsProps {
 export default function EntraIntegrationSettings({ canUseCipp: canUseCippTier = true }: EntraIntegrationSettingsProps) {
   const { t } = useTranslation('msp/integrations');
   const cippFlag = useFeatureFlag('entra-integration-cipp', { defaultValue: false });
-  const fieldSyncFlag = useFeatureFlag('entra-integration-field-sync', { defaultValue: false });
-  const ambiguousQueueFlag = useFeatureFlag('entra-integration-ambiguous-queue', { defaultValue: false });
   const [statusLoading, setStatusLoading] = React.useState(true);
   const [statusError, setStatusError] = React.useState<string | null>(null);
   const [status, setStatus] = React.useState<EntraStatusResponse | null>(null);
@@ -158,12 +99,9 @@ export default function EntraIntegrationSettings({ canUseCipp: canUseCippTier = 
   const [hasMaintenanceSyncRun, setHasMaintenanceSyncRun] = React.useState(false);
   const [maintenanceSignalLoaded, setMaintenanceSignalLoaded] = React.useState(false);
   const [showMappingDetails, setShowMappingDetails] = React.useState(false);
-  const [fieldSyncConfig, setFieldSyncConfig] = React.useState<EntraFieldSyncConfig>({
-    ...DEFAULT_FIELD_SYNC_CONFIG,
-  });
-  const [fieldSyncDirty, setFieldSyncDirty] = React.useState(false);
-  const [fieldSyncSaving, setFieldSyncSaving] = React.useState(false);
-  const [fieldSyncMessage, setFieldSyncMessage] = React.useState<string | null>(null);
+  const [fieldSyncConfig, setFieldSyncConfig] = React.useState<EntraFieldSyncConfig>(
+    normalizeEntraFieldSyncConfig(null)
+  );
 
   const [cippDialogOpen, setCippDialogOpen] = React.useState(false);
   const [directLoading, setDirectLoading] = React.useState(false);
@@ -184,8 +122,7 @@ export default function EntraIntegrationSettings({ canUseCipp: canUseCippTier = 
         setStatusError(result.error || t('integrations.entra.settings.errors.loadStatus'));
       } else {
         setStatus(result.data || null);
-        setFieldSyncConfig(normalizeFieldSyncConfig(result.data?.fieldSyncConfig));
-        setFieldSyncDirty(false);
+        setFieldSyncConfig(normalizeEntraFieldSyncConfig(result.data?.fieldSyncConfig));
       }
     } finally {
       setStatusLoading(false);
@@ -449,40 +386,6 @@ export default function EntraIntegrationSettings({ canUseCipp: canUseCippTier = 
     }
   };
 
-  const handleFieldSyncToggle = React.useCallback((key: keyof EntraFieldSyncConfig, checked: boolean) => {
-    setFieldSyncConfig((current) => ({
-      ...current,
-      [key]: checked,
-    }));
-    setFieldSyncDirty(true);
-    setFieldSyncMessage(null);
-  }, []);
-
-  const handleResetFieldSync = React.useCallback(() => {
-    setFieldSyncConfig(normalizeFieldSyncConfig(status?.fieldSyncConfig));
-    setFieldSyncDirty(false);
-    setFieldSyncMessage(null);
-  }, [status?.fieldSyncConfig]);
-
-  const handleSaveFieldSync = React.useCallback(async () => {
-    setFieldSyncSaving(true);
-    setFieldSyncMessage(null);
-    try {
-      const result = await updateEntraFieldSyncConfig(fieldSyncConfig);
-      if ('error' in result) {
-        setFieldSyncMessage(result.error || t('integrations.entra.settings.fieldSync.feedback.saveFailed'));
-        return;
-      }
-
-      setFieldSyncConfig(normalizeFieldSyncConfig(result.data));
-      setFieldSyncDirty(false);
-      setFieldSyncMessage(t('integrations.entra.settings.fieldSync.feedback.saved'));
-      await loadStatus();
-    } finally {
-      setFieldSyncSaving(false);
-    }
-  }, [fieldSyncConfig, loadStatus, t]);
-
   React.useEffect(() => {
     // Auto-open the mapping panel whenever the map step is the active step or we're in
     // maintenance mode. Don't force-close it otherwise — the Review/Remap button owns
@@ -549,6 +452,21 @@ export default function EntraIntegrationSettings({ canUseCipp: canUseCippTier = 
       </div>
     </>
   );
+
+  // The rules live in a shared component now: the wizard's last step and the
+  // console tab must offer the same controls, and this screen is on its way out.
+  const fieldSyncControlsPanel = shouldShowFieldSyncControls() ? (
+    <FieldSyncRules
+      config={fieldSyncConfig}
+      onConfigChange={setFieldSyncConfig}
+      onSaved={loadStatus}
+      headerSlot={
+        settingsMode === 'onboarding' && isSyncStepCurrent ? (
+          <Badge variant="outline">{t('integrations.entra.settings.badges.reviewBeforeInitialSync')}</Badge>
+        ) : null
+      }
+    />
+  ) : null;
 
   const statusPanel = (
     <div className="entra-status-panel p-4" id="entra-connection-status-panel">
@@ -656,72 +574,6 @@ export default function EntraIntegrationSettings({ canUseCipp: canUseCippTier = 
       ) : null}
     </div>
   );
-
-  const fieldSyncControlsPanel = shouldShowFieldSyncControls(fieldSyncFlag.enabled) ? (
-    <div
-      className="rounded-lg border border-border/70 bg-background p-4"
-      id="entra-field-sync-controls-panel"
-    >
-      <div className="flex items-center justify-between gap-3">
-        <div>
-          <p className="text-sm font-semibold">{t('integrations.entra.settings.fieldSync.title')}</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {t('integrations.entra.settings.fieldSync.description')}
-          </p>
-        </div>
-        {settingsMode === 'onboarding' && isSyncStepCurrent ? (
-          <Badge variant="outline">{t('integrations.entra.settings.badges.reviewBeforeInitialSync')}</Badge>
-        ) : null}
-      </div>
-      <div className="mt-3 space-y-3">
-        {FIELD_SYNC_OPTIONS.map((option) => (
-          <div
-            key={option.key}
-            className="flex items-start justify-between gap-3 rounded-md border border-border/50 p-3"
-          >
-            <div>
-              <p className="text-sm font-medium">{t(option.labelKey)}</p>
-              <p className="text-xs text-muted-foreground">{t(option.descriptionKey)}</p>
-            </div>
-            <Switch
-              id={`entra-field-sync-${option.key}`}
-              checked={fieldSyncConfig[option.key]}
-              onCheckedChange={(value) => handleFieldSyncToggle(option.key, value)}
-              disabled={fieldSyncSaving}
-            />
-          </div>
-        ))}
-      </div>
-      <div className="mt-3 flex flex-wrap gap-2">
-        <Button
-          id="entra-field-sync-save"
-          type="button"
-          size="sm"
-          onClick={() => void handleSaveFieldSync()}
-          disabled={!fieldSyncDirty || fieldSyncSaving}
-        >
-          {fieldSyncSaving
-            ? t('integrations.entra.settings.actions.savingFieldSync')
-            : t('integrations.entra.settings.actions.saveFieldSync')}
-        </Button>
-        <Button
-          id="entra-field-sync-reset"
-          type="button"
-          size="sm"
-          variant="outline"
-          onClick={() => void handleResetFieldSync()}
-          disabled={!fieldSyncDirty || fieldSyncSaving}
-        >
-          {t('integrations.entra.settings.actions.resetFieldSync')}
-        </Button>
-      </div>
-      {fieldSyncMessage ? (
-        <p className="mt-2 text-sm text-muted-foreground" id="entra-field-sync-feedback">
-          {fieldSyncMessage}
-        </p>
-      ) : null}
-    </div>
-  ) : null;
 
   return (
     <div
@@ -936,7 +788,7 @@ export default function EntraIntegrationSettings({ canUseCipp: canUseCippTier = 
 
           <EntraSyncHistoryPanel />
 
-          {shouldShowAmbiguousQueue(ambiguousQueueFlag.enabled) ? (
+          {shouldShowAmbiguousQueue() ? (
             <EntraReconciliationQueue />
           ) : null}
 

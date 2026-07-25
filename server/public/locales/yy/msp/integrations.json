@@ -426,6 +426,7 @@
       },
       "reconciliation": {
         "actions": {
+          "dismiss": "55555",
           "refresh": "55555",
           "resolveExisting": "55555",
           "resolveNew": "55555"
@@ -449,6 +450,7 @@
         "queuedAt": "55555 {{identity}} 55555 {{time}} 55555",
         "scopedToMappedClient": "55555",
         "success": {
+          "dismissed": "55555",
           "resolvedExisting": "55555 {{queueItemId}} 55555 {{contactNameId}} 55555",
           "resolvedNew": "55555 {{queueItemId}} 55555 {{contactNameId}} 55555"
         },
@@ -556,6 +558,10 @@
               "description": "55555",
               "label": "55555"
             },
+            "markInactiveWhenDisabled": {
+              "description": "55555",
+              "label": "55555"
+            },
             "phone": {
               "description": "55555",
               "label": "55555"
@@ -569,6 +575,13 @@
               "label": "55555"
             }
           },
+          "preview": "55555",
+          "previewClientLabel": "55555",
+          "previewing": "55555",
+          "save": "55555",
+          "saveFailed": "55555",
+          "saved": "55555",
+          "saving": "55555",
           "title": "55555"
         },
         "guidedStep": {

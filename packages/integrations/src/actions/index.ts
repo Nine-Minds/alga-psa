@@ -179,6 +179,7 @@ export {
   getEntraReconciliationQueue,
   resolveEntraQueueToExisting,
   resolveEntraQueueToNew,
+  dismissEntraQueueItem,
   validateEntraDirectConnection,
   validateEntraCippConnection,
   disconnectEntraIntegration,

@@ -29,4 +29,5 @@ export const routes: Record<string, RouteLoader> = {
     reconciliationQueueRoute: () => import('@enterprise/app/api/integrations/entra/reconciliation-queue/route'),
     resolveExistingRoute: () => import('@enterprise/app/api/integrations/entra/reconciliation-queue/resolve-existing/route'),
     resolveNewRoute: () => import('@enterprise/app/api/integrations/entra/reconciliation-queue/resolve-new/route'),
+    dismissQueueItemRoute: () => import('@enterprise/app/api/integrations/entra/reconciliation-queue/dismiss/route'),
 };

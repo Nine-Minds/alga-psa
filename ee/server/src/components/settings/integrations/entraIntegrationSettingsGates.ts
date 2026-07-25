@@ -70,6 +70,12 @@ export const buildEntraCallbackErrorKey = (errorCode: string | null | undefined)
   }
 };
 
-export const shouldShowFieldSyncControls = (isFieldSyncEnabled: boolean): boolean => isFieldSyncEnabled;
+/**
+ * Field-sync rules and the review queue used to hide behind default-off flags,
+ * which is why the two most reassuring parts of the feature were invisible to
+ * the people who needed them. Both surfaces are permanent now; these remain so
+ * call sites read as decisions rather than bare `true`.
+ */
+export const shouldShowFieldSyncControls = (): boolean => true;
 
-export const shouldShowAmbiguousQueue = (isAmbiguousQueueEnabled: boolean): boolean => isAmbiguousQueueEnabled;
+export const shouldShowAmbiguousQueue = (): boolean => true;

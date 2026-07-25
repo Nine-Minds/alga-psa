@@ -20,4 +20,5 @@ export const routes: Record<string, RouteLoader> = {
     reconciliationQueueRoute: unavailable,
     resolveExistingRoute: unavailable,
     resolveNewRoute: unavailable,
+    dismissQueueItemRoute: unavailable,
 };

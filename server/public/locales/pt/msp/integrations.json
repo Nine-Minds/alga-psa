@@ -426,6 +426,7 @@
       },
       "reconciliation": {
         "actions": {
+          "dismiss": "Dispensar",
           "refresh": "Atualizar",
           "resolveExisting": "Resolver para existir",
           "resolveNew": "Resolver para novo"
@@ -449,6 +450,7 @@
         "queuedAt": "{{identity}} · {{time}} na fila",
         "scopedToMappedClient": "As opções de contato existentes estão limitadas a este cliente mapeado.",
         "success": {
+          "dismissed": "{{identity}} dispensado. Não volta na próxima sincronização.",
           "resolvedExisting": "Item de fila {{queueItemId}} resolvido para o contato existente {{contactNameId}}.",
           "resolvedNew": "Item da fila {{queueItemId}} resolvido criando o contato {{contactNameId}}."
         },
@@ -556,6 +558,10 @@
               "description": "Permitir que o email/UPN do Entra substitua o email do contato nos contatos vinculados.",
               "label": "E-mail"
             },
+            "markInactiveWhenDisabled": {
+              "description": "Os contactos ligados são marcados como inativos, nunca eliminados. Desative isto para deixar os contactos intactos quando a conta for desativada.",
+              "label": "Marcar contactos como inativos quando a conta Microsoft está desativada"
+            },
             "phone": {
               "description": "Permitir que os valores do telefone Entra substituam o número de telefone do contato nos contatos vinculados.",
               "label": "Telefone"
@@ -569,6 +575,13 @@
               "label": "UPN"
             }
           },
+          "preview": "Pré-visualizar efeito",
+          "previewClientLabel": "Pré-visualizar com",
+          "previewing": "A pré-visualizar…",
+          "save": "Guardar regras",
+          "saveFailed": "Não foi possível guardar as regras de campo.",
+          "saved": "Regras de campo guardadas.",
+          "saving": "A guardar…",
           "title": "Controles de sincronização de campo"
         },
         "guidedStep": {

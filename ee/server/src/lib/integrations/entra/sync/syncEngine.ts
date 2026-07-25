@@ -64,6 +64,16 @@ export interface ExecuteEntraSyncResult {
   preview?: EntraSyncPreviewIdentity[];
 }
 
+function isInactivationEnabled(config: Record<string, unknown> | undefined): boolean {
+  const value = config?.markInactiveWhenDisabled ?? config?.mark_inactive_when_disabled;
+  // Absent means the setting predates the toggle, where inactivation was
+  // unconditional; preserve that rather than silently changing behaviour.
+  if (value === undefined || value === null) {
+    return true;
+  }
+  return value === true || value === 'true' || value === 1 || value === '1';
+}
+
 function describeUser(
   user: EntraSyncUser,
   bucket: EntraSyncPreviewBucket
@@ -148,7 +158,10 @@ export async function executeEntraSync(
     }
   }
 
-  const disabledIdentities = input.disabledIdentities || [];
+  // The inactivation rule is a field-sync rule like any other: an operator who
+  // turned it off must not have contacts deactivated behind their back.
+  const inactivationEnabled = isInactivationEnabled(input.fieldSyncConfig);
+  const disabledIdentities = inactivationEnabled ? input.disabledIdentities || [] : [];
   if (disabledIdentities.length > 0) {
     if (dryRun) {
       const wouldInactivate = await countEntraIdentityLinkedContacts(

@@ -23,9 +23,11 @@ describe('buildEntraConnectionOptions', () => {
     expect(options.find((option) => option.id === 'cipp')).toBeDefined();
   });
 
-  it('hides field-sync controls and ambiguous queue when their flags are disabled', () => {
-    expect(shouldShowFieldSyncControls(false)).toBe(false);
-    expect(shouldShowAmbiguousQueue(false)).toBe(false);
+  it('renders field-sync controls and the review queue unconditionally now their flags are retired', () => {
+    // Both panels were the most reassuring part of the feature and both were
+    // hidden behind default-off flags. Neither flag exists any more.
+    expect(shouldShowFieldSyncControls()).toBe(true);
+    expect(shouldShowAmbiguousQueue()).toBe(true);
   });
 });
 

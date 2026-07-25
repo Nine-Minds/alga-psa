@@ -426,6 +426,7 @@
       },
       "reconciliation": {
         "actions": {
+          "dismiss": "Odrzuć",
           "refresh": "Odśwież",
           "resolveExisting": "Rozwiąż do istniejącego",
           "resolveNew": "Rozwiąż do nowego"
@@ -449,6 +450,7 @@
         "queuedAt": "{{identity}} · w kolejce {{time}}",
         "scopedToMappedClient": "Opcje istniejących kontaktów są ograniczone do tego zmapowanego klienta.",
         "success": {
+          "dismissed": "Odrzucono {{identity}}. Nie wróci przy następnej synchronizacji.",
           "resolvedExisting": "Rozwiązano element kolejki {{queueItemId}} do istniejącego kontaktu {{contactNameId}}.",
           "resolvedNew": "Rozwiązano element kolejki {{queueItemId}} przez utworzenie kontaktu {{contactNameId}}."
         },
@@ -556,6 +558,10 @@
               "description": "Zezwól, aby e-mail/UPN Entra nadpisywał e-mail kontaktu w powiązanych kontaktach.",
               "label": "E-mail"
             },
+            "markInactiveWhenDisabled": {
+              "description": "Powiązane kontakty są oznaczane jako nieaktywne, nigdy usuwane. Wyłącz tę opcję, aby nie zmieniać kontaktów po wyłączeniu ich konta.",
+              "label": "Oznaczaj kontakty jako nieaktywne, gdy konto Microsoft jest wyłączone"
+            },
             "phone": {
               "description": "Zezwól, aby wartości telefonu Entra nadpisywały numer telefonu kontaktu w powiązanych kontaktach.",
               "label": "Telefon"
@@ -569,6 +575,13 @@
               "label": "UPN"
             }
           },
+          "preview": "Podgląd efektu",
+          "previewClientLabel": "Podgląd dla",
+          "previewing": "Trwa podgląd…",
+          "save": "Zapisz reguły",
+          "saveFailed": "Nie udało się zapisać reguł pól.",
+          "saved": "Zapisano reguły pól.",
+          "saving": "Zapisywanie…",
           "title": "Ustawienia synchronizacji pól"
         },
         "guidedStep": {

@@ -28,12 +28,18 @@ export async function POST(request: Request): Promise<Response> {
       : undefined;
 
   try {
+    const fieldSyncConfigOverride =
+      body.fieldSyncConfig && typeof body.fieldSyncConfig === 'object' && !Array.isArray(body.fieldSyncConfig)
+        ? (body.fieldSyncConfig as Record<string, unknown>)
+        : null;
+
     const result = await runEntraPreflight({
       tenantId: accessGate.tenantId,
       managedTenantId: managedTenantId || null,
       clientId: clientId || null,
       userId: accessGate.userId,
       sampleLimit,
+      fieldSyncConfigOverride,
     });
 
     return ok(result);

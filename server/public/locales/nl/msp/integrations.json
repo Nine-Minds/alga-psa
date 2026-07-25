@@ -426,6 +426,7 @@
       },
       "reconciliation": {
         "actions": {
+          "dismiss": "Negeren",
           "refresh": "Vernieuwen",
           "resolveExisting": "Oplossen naar bestaand",
           "resolveNew": "Oplossen naar nieuw"
@@ -449,6 +450,7 @@
         "queuedAt": "{{identity}} · in wachtrij geplaatst {{time}}",
         "scopedToMappedClient": "Bestaande contactopties zijn beperkt tot deze toegewezen klant.",
         "success": {
+          "dismissed": "{{identity}} genegeerd. Het komt bij de volgende synchronisatie niet terug.",
           "resolvedExisting": "Wachtrij-item {{queueItemId}} opgelost naar bestaand contact {{contactNameId}}.",
           "resolvedNew": "Wachtrij-item {{queueItemId}} opgelost door contact {{contactNameId}} aan te maken."
         },
@@ -556,6 +558,10 @@
               "description": "Sta toe dat Entra-e-mail/UPN het contact-e-mailadres van gekoppelde contacten overschrijft.",
               "label": "E-mail"
             },
+            "markInactiveWhenDisabled": {
+              "description": "Gekoppelde contacten worden als inactief gemarkeerd, nooit verwijderd. Schakel dit uit om contacten met rust te laten wanneer hun account wordt uitgeschakeld.",
+              "label": "Contacten als inactief markeren wanneer het Microsoft-account is uitgeschakeld"
+            },
             "phone": {
               "description": "Sta toe dat Entra-telefoonwaarden het contacttelefoonnummer van gekoppelde contacten overschrijven.",
               "label": "Telefoon"
@@ -569,6 +575,13 @@
               "label": "UPN"
             }
           },
+          "preview": "Effect bekijken",
+          "previewClientLabel": "Bekijken met",
+          "previewing": "Bezig met bekijken…",
+          "save": "Regels opslaan",
+          "saveFailed": "De veldregels konden niet worden opgeslagen.",
+          "saved": "Veldregels opgeslagen.",
+          "saving": "Opslaan…",
           "title": "Veldsynchronisatiebesturingselementen"
         },
         "guidedStep": {

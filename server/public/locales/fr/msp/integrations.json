@@ -426,6 +426,7 @@
       },
       "reconciliation": {
         "actions": {
+          "dismiss": "Ignorer",
           "refresh": "Actualiser",
           "resolveExisting": "Résoudre vers existant",
           "resolveNew": "Résoudre vers nouveau"
@@ -449,6 +450,7 @@
         "queuedAt": "{{identity}} · mis en file {{time}}",
         "scopedToMappedClient": "Les options de contact existant sont limitées à ce client mappé.",
         "success": {
+          "dismissed": "{{identity}} ignoré. Il ne reviendra pas à la prochaine synchronisation.",
           "resolvedExisting": "Élément de file {{queueItemId}} résolu vers le contact existant {{contactNameId}}.",
           "resolvedNew": "Élément de file {{queueItemId}} résolu en créant le contact {{contactNameId}}."
         },
@@ -556,6 +558,10 @@
               "description": "Autoriser l'e-mail/UPN Entra à écraser l'e-mail du contact sur les contacts liés.",
               "label": "E-mail"
             },
+            "markInactiveWhenDisabled": {
+              "description": "Les contacts liés sont marqués inactifs, jamais supprimés. Désactivez ceci pour laisser les contacts intacts lorsque leur compte est désactivé.",
+              "label": "Marquer les contacts inactifs lorsque le compte Microsoft est désactivé"
+            },
             "phone": {
               "description": "Autoriser les valeurs de téléphone Entra à écraser le numéro de téléphone du contact sur les contacts liés.",
               "label": "Téléphone"
@@ -569,6 +575,13 @@
               "label": "UPN"
             }
           },
+          "preview": "Prévisualiser l'effet",
+          "previewClientLabel": "Prévisualiser avec",
+          "previewing": "Prévisualisation…",
+          "save": "Enregistrer les règles",
+          "saveFailed": "Impossible d'enregistrer les règles de champ.",
+          "saved": "Règles de champ enregistrées.",
+          "saving": "Enregistrement…",
           "title": "Contrôles de synchronisation des champs"
         },
         "guidedStep": {

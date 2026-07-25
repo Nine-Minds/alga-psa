@@ -75,13 +75,22 @@ For direct Microsoft OAuth credentials, resolution order is:
 
 ## Feature Flags (Phase 1)
 
-Required flags:
+Remaining flags:
 
-- `entra-integration-ui`
 - `entra-integration-client-sync-action`
-- `entra-integration-cipp`
-- `entra-integration-field-sync`
-- `entra-integration-ambiguous-queue`
+- `entra-integration-cipp` — soft-launch control for the CIPP connection option
+
+Retired flags. `entra-integration-ui` (the master gate), `entra-integration-field-sync`
+and `entra-integration-ambiguous-queue` no longer exist. Access to the Entra surface is
+edition + tier + RBAC only:
+
+```
+EE edition  +  assertTierAccess(TIER_FEATURES.ENTRA_SYNC)  [Pro+]  +  system_settings read/update
+```
+
+A tenant that fails the check gets the tier 403 from the API routes and an upgrade notice
+on the route — there is no "disabled" 404 any more. Field rules and the review queue
+render for every tenant that can reach the screen.
 
 Create/check default Phase 1 flag definitions through platform feature flag API:
 
@@ -148,14 +157,18 @@ All sync execution paths run via Temporal workflows and persist run + per-tenant
 
 ## Rollout Order (Recommended)
 
-1. Deploy schema + EE code with all Entra flags disabled.
-2. Ensure Phase 1 flags exist using `ensure_entra_phase1_flags`.
-3. Enable `entra-integration-ui` for internal test tenants only.
-4. For test tenants needing CIPP, enable `entra-integration-cipp`.
-5. Validate discovery and mapping quality on pilot tenants.
-6. Enable `entra-integration-field-sync` only after field overwrite policy is approved.
-7. Enable `entra-integration-ambiguous-queue` for support teams handling reconciliation.
-8. Enable `entra-integration-client-sync-action` after mapping/sync operations are stable.
-9. Expand tenant targeting incrementally.
+1. Deploy schema + EE code. Entra is reachable by any Pro+ tenant with the permission,
+   so the gate is tier, not a flag.
+2. Ensure the remaining flag definitions exist using `ensure_entra_phase1_flags`.
+3. Validate discovery and mapping quality on pilot tenants. The setup wizard's preflight
+   previews contact changes for one client without writing anything, so this no longer
+   requires a leap of faith.
+4. For tenants needing CIPP, enable `entra-integration-cipp`. Its retirement is an ops
+   decision — flip per tenant, then globally, then retire.
+5. Enable `entra-integration-client-sync-action` after mapping/sync operations are stable.
+6. Expand tenant targeting incrementally.
 
-Turning UI flags off hides Entra surfaces immediately without deleting connection/mapping/run history data.
+Field overwrite policy is no longer a rollout step: the rules ship visible and default to
+off, so a tenant that has not opted in already has the safe behaviour. Turning
+`entra-integration-cipp` off hides the CIPP connection option without deleting
+connection/mapping/run history data.

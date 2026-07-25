@@ -426,6 +426,7 @@
       },
       "reconciliation": {
         "actions": {
+          "dismiss": "Ignora",
           "refresh": "Aggiorna",
           "resolveExisting": "Risolvi su esistente",
           "resolveNew": "Risolvi come nuovo"
@@ -449,6 +450,7 @@
         "queuedAt": "{{identity}} · accodato {{time}}",
         "scopedToMappedClient": "Le opzioni dei contatti esistenti sono limitate a questo cliente mappato.",
         "success": {
+          "dismissed": "{{identity}} ignorato. Non tornerà alla prossima sincronizzazione.",
           "resolvedExisting": "Elemento della coda {{queueItemId}} risolto sul contatto esistente {{contactNameId}}.",
           "resolvedNew": "Elemento della coda {{queueItemId}} risolto creando il contatto {{contactNameId}}."
         },
@@ -556,6 +558,10 @@
               "description": "Consenti all'email/UPN di Entra di sovrascrivere l'email del contatto sui contatti collegati.",
               "label": "Email"
             },
+            "markInactiveWhenDisabled": {
+              "description": "I contatti collegati vengono contrassegnati come inattivi, mai eliminati. Disattiva questa opzione per lasciare i contatti invariati quando l'account viene disabilitato.",
+              "label": "Contrassegna i contatti come inattivi quando l'account Microsoft è disabilitato"
+            },
             "phone": {
               "description": "Consenti ai valori telefonici di Entra di sovrascrivere il numero di telefono del contatto sui contatti collegati.",
               "label": "Telefono"
@@ -569,6 +575,13 @@
               "label": "UPN"
             }
           },
+          "preview": "Anteprima effetto",
+          "previewClientLabel": "Anteprima con",
+          "previewing": "Anteprima in corso…",
+          "save": "Salva regole",
+          "saveFailed": "Non è stato possibile salvare le regole sui campi.",
+          "saved": "Regole sui campi salvate.",
+          "saving": "Salvataggio…",
           "title": "Controlli di sincronizzazione dei campi"
         },
         "guidedStep": {

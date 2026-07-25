@@ -426,6 +426,7 @@
       },
       "reconciliation": {
         "actions": {
+          "dismiss": "Dismiss",
           "refresh": "Refresh",
           "resolveExisting": "Resolve to Existing",
           "resolveNew": "Resolve to New"
@@ -449,6 +450,7 @@
         "queuedAt": "{{identity}} · queued {{time}}",
         "scopedToMappedClient": "Existing contact options are limited to this mapped client.",
         "success": {
+          "dismissed": "Dismissed {{identity}}. It will not come back on the next sync.",
           "resolvedExisting": "Resolved queue item {{queueItemId}} to existing contact {{contactNameId}}.",
           "resolvedNew": "Resolved queue item {{queueItemId}} by creating contact {{contactNameId}}."
         },
@@ -556,6 +558,10 @@
               "description": "Allow Entra email/UPN to overwrite contact email on linked contacts.",
               "label": "Email"
             },
+            "markInactiveWhenDisabled": {
+              "description": "Linked contacts are marked inactive, never deleted. Turn this off to leave contacts alone when their account is disabled.",
+              "label": "Mark contacts inactive when the Microsoft account is disabled"
+            },
             "phone": {
               "description": "Allow Entra phone values to overwrite contact phone number on linked contacts.",
               "label": "Phone"
@@ -569,6 +575,13 @@
               "label": "UPN"
             }
           },
+          "preview": "Preview effect",
+          "previewClientLabel": "Preview against",
+          "previewing": "Previewing…",
+          "save": "Save rules",
+          "saveFailed": "Could not save the field rules.",
+          "saved": "Field rules saved.",
+          "saving": "Saving…",
           "title": "Field Sync Controls"
         },
         "guidedStep": {

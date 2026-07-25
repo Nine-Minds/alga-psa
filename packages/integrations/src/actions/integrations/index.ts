@@ -62,6 +62,7 @@ export {
   getEntraReconciliationQueue,
   resolveEntraQueueToExisting,
   resolveEntraQueueToNew,
+  dismissEntraQueueItem,
   connectEntraIntegration,
   validateEntraDirectConnection,
   validateEntraCippConnection,

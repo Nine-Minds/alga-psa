@@ -3,7 +3,6 @@
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
-import { isFeatureFlagEnabled } from '@alga-psa/core';
 import { routes } from '@alga-psa/integrations/entra/routes/entry';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { generateMicrosoftAuthUrl, generateNonce } from '../../utils/email/oauthHelpers';
@@ -62,37 +61,10 @@ function normalizeCippBaseUrl(input: string): string | null {
   }
 }
 
-async function isEntraAmbiguousQueueEnabledForTenant(params: {
-  tenantId: string;
-  userId?: string;
-}): Promise<boolean> {
-  return isFeatureFlagEnabled('entra-integration-ambiguous-queue', {
-    tenantId: params.tenantId,
-    userId: params.userId,
-  });
-}
-
-async function isEntraFieldSyncEnabledForTenant(params: {
-  tenantId: string;
-  userId?: string;
-}): Promise<boolean> {
-  return isFeatureFlagEnabled('entra-integration-field-sync', {
-    tenantId: params.tenantId,
-    userId: params.userId,
-  });
-}
-
 function eeUnavailableResult<T>(): EntraActionResult<T> {
   return {
     success: false,
     error: 'Microsoft Entra integration is only available in Enterprise Edition.',
-  };
-}
-
-function flagDisabledResult<T>(): EntraActionResult<T> {
-  return {
-    success: false,
-    error: 'Microsoft Entra integration is disabled for this tenant.',
   };
 }
 
@@ -328,6 +300,13 @@ export type EntraFieldSyncConfig = {
   phone: boolean;
   role: boolean;
   upn: boolean;
+  /**
+   * Mark a contact inactive when its Microsoft account is disabled. This has
+   * always happened; it was simply unconditional and unnamed in the UI, which
+   * made it the one destructive-feeling behaviour nobody had agreed to. It
+   * defaults on to preserve today's behaviour, and can now be turned off.
+   */
+  markInactiveWhenDisabled: boolean;
 };
 
 const DEFAULT_ENTRA_FIELD_SYNC_CONFIG: EntraFieldSyncConfig = {
@@ -336,6 +315,7 @@ const DEFAULT_ENTRA_FIELD_SYNC_CONFIG: EntraFieldSyncConfig = {
   phone: false,
   role: false,
   upn: false,
+  markInactiveWhenDisabled: true,
 };
 
 const ENTRA_FIELD_SYNC_ALIASES: Record<keyof EntraFieldSyncConfig, string[]> = {
@@ -344,6 +324,7 @@ const ENTRA_FIELD_SYNC_ALIASES: Record<keyof EntraFieldSyncConfig, string[]> = {
   phone: ['phone', 'phoneNumber', 'phone_number', 'mobilePhone', 'mobile_phone'],
   role: ['role', 'jobTitle', 'job_title'],
   upn: ['upn', 'userPrincipalName', 'user_principal_name'],
+  markInactiveWhenDisabled: ['markInactiveWhenDisabled', 'mark_inactive_when_disabled'],
 };
 
 function isTruthyFlagValue(value: unknown): boolean {
@@ -358,7 +339,15 @@ function normalizeEntraFieldSyncConfig(input: unknown): EntraFieldSyncConfig {
   const source = input as Record<string, unknown>;
   const normalized = { ...DEFAULT_ENTRA_FIELD_SYNC_CONFIG };
   (Object.keys(ENTRA_FIELD_SYNC_ALIASES) as Array<keyof EntraFieldSyncConfig>).forEach((key) => {
-    normalized[key] = ENTRA_FIELD_SYNC_ALIASES[key].some((alias) => isTruthyFlagValue(source[alias]));
+    const aliases = ENTRA_FIELD_SYNC_ALIASES[key];
+    const present = aliases.find((alias) => source[alias] !== undefined);
+    if (present === undefined) {
+      // Absent means "keep the default", which matters for the inactivation
+      // rule: settings rows written before it existed must keep behaving as
+      // they did, not silently switch it off.
+      return;
+    }
+    normalized[key] = aliases.some((alias) => isTruthyFlagValue(source[alias]));
   });
   return normalized;
 }
@@ -474,15 +463,6 @@ export const updateEntraFieldSyncConfig = withAuth(async (
   const canUpdate = await hasPermission(user as any, 'system_settings', 'update');
   if (!canUpdate) {
     return { success: false, error: 'Forbidden: insufficient permissions to configure Entra integration' } as const;
-  }
-
-  const userId = (user as { user_id?: string } | undefined)?.user_id;
-  const fieldSyncEnabled = await isEntraFieldSyncEnabledForTenant({
-    tenantId: tenant,
-    userId,
-  });
-  if (!fieldSyncEnabled) {
-    return flagDisabledResult<EntraFieldSyncConfig>();
   }
 
   const normalizedConfig = normalizeEntraFieldSyncConfig(input);
@@ -774,14 +754,6 @@ export const getEntraReconciliationQueue = withAuth(async (user, { tenant }, lim
     return { success: false, error: 'Forbidden: insufficient permissions to view Entra integration' } as const;
   }
 
-  const userId = (user as { user_id?: string } | undefined)?.user_id;
-  const queueFlagEnabled = await isEntraAmbiguousQueueEnabledForTenant({
-    tenantId: tenant,
-    userId,
-  });
-  if (!queueFlagEnabled) {
-    return flagDisabledResult<EntraReconciliationQueueResponse>();
-  }
 
   const safeLimit = Number.isFinite(limit) ? Math.max(1, Math.min(200, Math.floor(limit))) : 50;
   return callEeRoute<EntraReconciliationQueueResponse>({
@@ -805,14 +777,6 @@ export const resolveEntraQueueToExisting = withAuth(async (
     return { success: false, error: 'Forbidden: insufficient permissions to resolve queue items' } as const;
   }
 
-  const userId = (user as { user_id?: string } | undefined)?.user_id;
-  const queueFlagEnabled = await isEntraAmbiguousQueueEnabledForTenant({
-    tenantId: tenant,
-    userId,
-  });
-  if (!queueFlagEnabled) {
-    return flagDisabledResult<EntraQueueResolutionResponse>();
-  }
 
   return callEeRoute<EntraQueueResolutionResponse>({
     importFn: routes.resolveExistingRoute,
@@ -835,17 +799,35 @@ export const resolveEntraQueueToNew = withAuth(async (
     return { success: false, error: 'Forbidden: insufficient permissions to resolve queue items' } as const;
   }
 
-  const userId = (user as { user_id?: string } | undefined)?.user_id;
-  const queueFlagEnabled = await isEntraAmbiguousQueueEnabledForTenant({
-    tenantId: tenant,
-    userId,
-  });
-  if (!queueFlagEnabled) {
-    return flagDisabledResult<EntraQueueResolutionResponse>();
-  }
 
   return callEeRoute<EntraQueueResolutionResponse>({
     importFn: routes.resolveNewRoute,
+    method: 'POST',
+    body: input,
+  });
+});
+
+/**
+ * Dismiss an ambiguous match. The queue could only ever grow before, which is
+ * why nobody opened it; a dismissal is recorded with actor, time and reason
+ * rather than deleting the row.
+ */
+export const dismissEntraQueueItem = withAuth(async (
+  user,
+  _ctx,
+  input: { queueItemId: string; reason?: string }
+) => {
+  if (isClientPortalUser(user)) {
+    return { success: false, error: 'Forbidden' } as const;
+  }
+
+  const canUpdate = await hasPermission(user as any, 'system_settings', 'update');
+  if (!canUpdate) {
+    return { success: false, error: 'Forbidden: insufficient permissions to resolve queue items' } as const;
+  }
+
+  return callEeRoute<{ queueItemId: string; status: string }>({
+    importFn: routes.dismissQueueItemRoute,
     method: 'POST',
     body: input,
   });
@@ -1121,7 +1103,13 @@ export const getEntraConfirmedMappings = withAuth(async (user, _ctx) => {
 export const runEntraPreflight = withAuth(async (
   user,
   _ctx,
-  input: { managedTenantId?: string; clientId?: string; sampleLimit?: number }
+  input: {
+    managedTenantId?: string;
+    clientId?: string;
+    sampleLimit?: number;
+    /** Preview these rules instead of the stored ones. */
+    fieldSyncConfig?: EntraFieldSyncConfig;
+  }
 ) => {
   if (isClientPortalUser(user)) {
     return { success: false, error: 'Forbidden' } as const;
@@ -1143,6 +1131,7 @@ export const runEntraPreflight = withAuth(async (
       managedTenantId: input.managedTenantId,
       clientId: input.clientId,
       sampleLimit: input.sampleLimit,
+      fieldSyncConfig: input.fieldSyncConfig,
     },
   });
 });

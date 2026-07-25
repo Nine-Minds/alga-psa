@@ -415,23 +415,7 @@ describe('EntraIntegrationSettings guided flow', () => {
     expect(document.getElementById('entra-integration-settings-disabled')).toBeNull();
   });
 
-  it('T128: ambiguous reconciliation queue panel is hidden when flag is disabled', async () => {
-    getEntraIntegrationStatusMock.mockResolvedValue({
-      success: true,
-      data: buildStatus({
-        status: 'connected',
-        lastDiscoveryAt: '2026-02-20T12:00:00.000Z',
-        mappedTenantCount: 1,
-      }),
-    });
-
-    render(<EntraIntegrationSettings />);
-    await screen.findByText('Current Step');
-    expect(document.getElementById('entra-reconciliation-queue-stub')).toBeNull();
-  });
-
-  it('T129: ambiguous reconciliation queue panel is visible when flag is enabled', async () => {
-    applyFlags(['entra-integration-ambiguous-queue']);
+  it('T128: ambiguous reconciliation queue panel is always rendered now the flag is retired', async () => {
     getEntraIntegrationStatusMock.mockResolvedValue({
       success: true,
       data: buildStatus({
@@ -446,7 +430,7 @@ describe('EntraIntegrationSettings guided flow', () => {
     expect(document.getElementById('entra-reconciliation-queue-stub')).not.toBeNull();
   });
 
-  it('T007: field-sync and ambiguous-queue sections remain controlled by existing flags', async () => {
+  it('T129: ambiguous reconciliation queue panel is visible', async () => {
     getEntraIntegrationStatusMock.mockResolvedValue({
       success: true,
       data: buildStatus({
@@ -456,13 +440,14 @@ describe('EntraIntegrationSettings guided flow', () => {
       }),
     });
 
-    const firstRender = render(<EntraIntegrationSettings />);
+    render(<EntraIntegrationSettings />);
     await screen.findByText('Current Step');
-    expect(document.getElementById('entra-field-sync-controls-panel')).toBeNull();
-    expect(document.getElementById('entra-reconciliation-queue-stub')).toBeNull();
-    firstRender.unmount();
+    expect(document.getElementById('entra-reconciliation-queue-stub')).not.toBeNull();
+  });
 
-    applyFlags(['entra-integration-field-sync', 'entra-integration-ambiguous-queue']);
+  it('T007: field rules and the review queue render without any flag', async () => {
+    // Both were the most reassuring parts of the feature and both were hidden
+    // behind default-off flags. Neither flag exists any more.
     getEntraIntegrationStatusMock.mockResolvedValue({
       success: true,
       data: buildStatus({
@@ -479,7 +464,6 @@ describe('EntraIntegrationSettings guided flow', () => {
   });
 
   it('T136: field sync controls persist selected overwrite toggles', async () => {
-    applyFlags(['entra-integration-field-sync']);
     getEntraIntegrationStatusMock.mockResolvedValue({
       success: true,
       data: buildStatus({
@@ -492,6 +476,7 @@ describe('EntraIntegrationSettings guided flow', () => {
           phone: false,
           role: false,
           upn: false,
+          markInactiveWhenDisabled: true,
         },
       }),
     });
@@ -503,6 +488,7 @@ describe('EntraIntegrationSettings guided flow', () => {
         phone: false,
         role: false,
         upn: false,
+        markInactiveWhenDisabled: true,
       },
     });
 
@@ -516,7 +502,7 @@ describe('EntraIntegrationSettings guided flow', () => {
     }
     fireEvent.click(displayNameToggle);
 
-    const saveButton = screen.getByRole('button', { name: 'Save Field Sync Controls' });
+    const saveButton = screen.getByRole('button', { name: 'Save rules' });
     fireEvent.click(saveButton);
 
     await waitFor(() => {
@@ -526,9 +512,10 @@ describe('EntraIntegrationSettings guided flow', () => {
         phone: false,
         role: false,
         upn: false,
+        markInactiveWhenDisabled: true,
       });
     });
-    expect(await screen.findByText('Field sync controls saved.')).toBeInTheDocument();
+    expect(await screen.findByText('Field rules saved.')).toBeInTheDocument();
   });
 
   it('T008: empty sync history keeps page in onboarding mode with guided current-step card', async () => {
@@ -590,7 +577,6 @@ describe('EntraIntegrationSettings guided flow', () => {
   });
 
   it('T010: maintenance mode keeps mapping/history/queue visible without onboarding CTA prominence', async () => {
-    applyFlags(['entra-integration-ambiguous-queue']);
     getEntraSyncRunHistoryMock.mockResolvedValue({
       success: true,
       data: {

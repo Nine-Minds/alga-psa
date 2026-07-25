@@ -20,16 +20,6 @@ export const ENTRA_PHASE1_FLAG_DEFINITIONS = [
     name: 'Entra CIPP Option',
     tags: ['entra', 'integration', 'phase-1'],
   },
-  {
-    key: 'entra-integration-field-sync',
-    name: 'Entra Field Sync Controls',
-    tags: ['entra', 'integration', 'phase-1'],
-  },
-  {
-    key: 'entra-integration-ambiguous-queue',
-    name: 'Entra Ambiguous Queue',
-    tags: ['entra', 'integration', 'phase-1'],
-  },
 ] as const;
 
 async function getPostHogConfig(): Promise<{ apiKey: string; projectId: string }> {
