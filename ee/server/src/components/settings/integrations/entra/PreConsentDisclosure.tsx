@@ -1,10 +1,13 @@
 'use client';
 
 import React from 'react';
+import { ShieldCheck } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { MarkList, type MarkListItem } from './MarkList';
 import {
-  ENTRA_CONTACT_EFFECT_KEYS,
+  ENTRA_CAPABILITY_STATEMENTS,
+  ENTRA_CONTACT_EFFECT_STATEMENTS,
   ENTRA_SCOPE_DISCLOSURES,
   buildEntraChangeRecord,
 } from './entraSetupModel';
@@ -12,7 +15,12 @@ import {
 /**
  * Disclosure before consent: what Alga will read, and what it will do to
  * contacts — stated before the operator commits, not discovered afterwards.
- * Read-only by design; the only action is taking a copy for a change record.
+ *
+ * Two columns, because these are two different questions: one is about the
+ * permissions Microsoft will be asked for, the other about what changes inside
+ * Alga. The scope strings themselves are a footnote — accurate, checkable, and
+ * not the thing a person reads first. Read-only by design; the only action is
+ * taking a copy for a change record.
  */
 export function PreConsentDisclosure(): React.JSX.Element {
   const { t } = useTranslation('msp/integrations');
@@ -30,7 +38,7 @@ export function PreConsentDisclosure(): React.JSX.Element {
         gloss: t(entry.glossKey),
       })),
       contactsHeading: t('integrations.entra.setup.disclosure.contactsTitle'),
-      contactEffects: ENTRA_CONTACT_EFFECT_KEYS.map((key) => t(key)),
+      contactEffects: ENTRA_CONTACT_EFFECT_STATEMENTS.map((statement) => t(statement.key)),
     });
 
     try {
@@ -43,57 +51,80 @@ export function PreConsentDisclosure(): React.JSX.Element {
     }
   }, [t]);
 
+  const toItems = (
+    statements: Array<{ key: string; mark: MarkListItem['mark'] }>
+  ): MarkListItem[] =>
+    statements.map((statement) => ({
+      id: statement.key,
+      mark: statement.mark,
+      text: t(statement.key),
+    }));
+
   return (
     <div
-      className="space-y-4 rounded-lg border border-border/70 bg-background p-4"
+      className="rounded-lg border border-border/70 bg-background p-4"
       id="entra-preconsent-disclosure"
     >
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="text-sm font-semibold">{t('integrations.entra.setup.disclosure.title')}</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {t('integrations.entra.setup.disclosure.description')}
+      <div className="flex items-center gap-2">
+        <ShieldCheck className="h-4 w-4 flex-shrink-0 text-primary-500" aria-hidden="true" />
+        <p className="text-sm font-semibold">{t('integrations.entra.setup.disclosure.title')}</p>
+      </div>
+      <p className="mt-1 text-sm text-muted-foreground">
+        {t('integrations.entra.setup.disclosure.description')}
+      </p>
+
+      <div className="mt-4 grid gap-6 md:grid-cols-2">
+        <div>
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            {t('integrations.entra.setup.disclosure.capabilitiesTitle')}
+          </p>
+          <MarkList
+            id="entra-disclosure-capabilities"
+            className="mt-2"
+            items={toItems(ENTRA_CAPABILITY_STATEMENTS)}
+          />
+          <p className="mt-3 text-xs text-muted-foreground" id="entra-disclosure-scopes">
+            {t('integrations.entra.setup.disclosure.scopesTitle')}{': '}
+            {ENTRA_SCOPE_DISCLOSURES.map((entry, index) => (
+              <React.Fragment key={entry.scope}>
+                {index > 0 ? ', ' : ''}
+                <span className="font-mono" title={t(entry.glossKey)}>
+                  {entry.scope}
+                </span>
+              </React.Fragment>
+            ))}
+            {'. '}
+            {t('integrations.entra.setup.disclosure.scopesAllReadOnly')}
           </p>
         </div>
+
+        <div>
+          <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            {t('integrations.entra.setup.disclosure.contactsTitle')}
+          </p>
+          <MarkList
+            id="entra-disclosure-contact-effects"
+            className="mt-2"
+            items={toItems(ENTRA_CONTACT_EFFECT_STATEMENTS)}
+          />
+          <p className="mt-3 text-xs text-muted-foreground">
+            {t('integrations.entra.setup.disclosure.inactiveNote')}
+          </p>
+        </div>
+      </div>
+
+      <div className="mt-4 border-t border-border/60 pt-3">
         <Button
           id="entra-disclosure-copy"
           type="button"
           size="sm"
-          variant="outline"
-          className="flex-shrink-0"
+          variant="ghost"
           onClick={() => void handleCopy()}
         >
           {copied
             ? t('integrations.entra.setup.disclosure.copied')
             : t('integrations.entra.setup.disclosure.copy')}
         </Button>
-      </div>
-
-      <div>
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          {t('integrations.entra.setup.disclosure.scopesTitle')}
-        </p>
-        <ul className="mt-2 space-y-2" id="entra-disclosure-scopes">
-          {ENTRA_SCOPE_DISCLOSURES.map((entry) => (
-            <li key={entry.scope} className="min-w-0 text-sm">
-              <p className="truncate font-mono text-xs text-foreground">{entry.scope}</p>
-              <p className="text-sm text-muted-foreground">{t(entry.glossKey)}</p>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      <div>
-        <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-          {t('integrations.entra.setup.disclosure.contactsTitle')}
-        </p>
-        <ul className="mt-2 list-disc space-y-1 pl-4" id="entra-disclosure-contact-effects">
-          {ENTRA_CONTACT_EFFECT_KEYS.map((key) => (
-            <li key={key} className="text-sm text-muted-foreground">
-              {t(key)}
-            </li>
-          ))}
-        </ul>
       </div>
     </div>
   );

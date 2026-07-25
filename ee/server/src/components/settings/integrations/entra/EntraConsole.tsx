@@ -1,10 +1,12 @@
 'use client';
 
 import React from 'react';
+import { AlertCircle, AlertTriangle, Info } from 'lucide-react';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Card, CardContent, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
+import { CustomTabs, type TabContent } from '@alga-psa/ui/components/CustomTabs';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@alga-psa/ui/components/Table';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   disconnectEntraIntegration,
@@ -12,8 +14,10 @@ import {
   initiateEntraDirectOAuth,
   unmapEntraTenant,
   getEntraReconciliationQueue,
+  getEntraSyncRunDetail,
   getEntraSyncRunHistory,
   getEntraSyncSchedule,
+  saveEntraSyncSchedule,
   startEntraSync,
   validateEntraCippConnection,
   validateEntraDirectConnection,
@@ -21,6 +25,7 @@ import {
   type EntraFieldSyncConfig,
   type EntraStatusResponse,
   type EntraSyncHistoryRun,
+  type EntraSyncRunTenantResult,
   type EntraSyncScheduleSettings,
 } from '@alga-psa/integrations/actions';
 import EntraReconciliationQueue from '../EntraReconciliationQueue';
@@ -34,12 +39,15 @@ import { EntraDirectConsentDialog } from './EntraDirectConsentDialog';
 import { EntraClientsTab } from './EntraClientsTab';
 import { EntraHistoryTab } from './EntraHistoryTab';
 import { EntraScheduleTab } from './EntraScheduleTab';
-import { FieldSyncRules, normalizeEntraFieldSyncConfig } from './FieldSyncRules';
+import { FieldSyncRules } from './FieldSyncRules';
+import { normalizeEntraFieldSyncConfig } from './fieldSyncModel';
+import { MarkList, type MarkListItem } from './MarkList';
 import {
   ENTRA_CONSOLE_TABS,
   buildEntraAttentionItems,
   findLastRealRun,
   parseEntraConsoleTab,
+  summarizeEntraRunResults,
   type EntraAttentionItem,
   type EntraConsoleTab,
 } from './entraConsoleModel';
@@ -59,9 +67,15 @@ const TAB_LABEL_KEYS: Record<EntraConsoleTab, string> = {
   connection: 'integrations.entra.console.tabs.connection',
 };
 
+const SEVERITY_ICON: Record<EntraAttentionItem['severity'], typeof AlertCircle> = {
+  blocking: AlertCircle,
+  warning: AlertTriangle,
+  info: Info,
+};
+
 const SEVERITY_CLASS: Record<EntraAttentionItem['severity'], string> = {
   blocking: 'text-destructive',
-  warning: 'text-amber-600',
+  warning: 'text-warning',
   info: 'text-muted-foreground',
 };
 
@@ -71,13 +85,89 @@ function formatDateTime(value: string | null | undefined, fallback: string): str
   return Number.isNaN(parsed) ? value : new Date(parsed).toLocaleString();
 }
 
+function formatTime(value: string | null | undefined, fallback: string): string {
+  if (!value) return fallback;
+  const parsed = Date.parse(value);
+  return Number.isNaN(parsed)
+    ? value
+    : new Date(parsed).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+}
+
+/** One number, its label, and what it means — the overview's smallest unit. */
+function Stat({
+  id,
+  label,
+  value,
+  sub,
+  tone,
+}: {
+  id: string;
+  label: string;
+  value: React.ReactNode;
+  sub?: string;
+  tone?: 'default' | 'danger';
+}): React.JSX.Element {
+  return (
+    <div id={id} className="min-w-[6rem]">
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+      <p
+        className={`mt-0.5 text-2xl font-semibold tabular-nums ${
+          tone === 'danger' ? 'text-destructive' : ''
+        }`}
+        data-stat-value={typeof value === 'number' ? value : undefined}
+      >
+        {value}
+      </p>
+      {sub ? <p className="text-xs text-muted-foreground">{sub}</p> : null}
+    </div>
+  );
+}
+
+/** A labelled value row, right-aligned — the side rail's smallest unit. */
+function KeyValue({
+  label,
+  value,
+  tone,
+}: {
+  label: string;
+  value: React.ReactNode;
+  tone?: 'default' | 'danger';
+}): React.JSX.Element {
+  return (
+    <div className="flex items-baseline justify-between gap-3 py-1 text-sm">
+      <span className="flex-shrink-0 text-muted-foreground">{label}</span>
+      <span className={`min-w-0 truncate text-right ${tone === 'danger' ? 'text-destructive' : ''}`}>
+        {value}
+      </span>
+    </div>
+  );
+}
+
+function RailCard({
+  id,
+  title,
+  children,
+}: {
+  id: string;
+  title: string;
+  children: React.ReactNode;
+}): React.JSX.Element {
+  return (
+    <div className="rounded-lg border border-border/70 bg-background p-4" id={id}>
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{title}</p>
+      <div className="mt-2">{children}</div>
+    </div>
+  );
+}
+
 /**
  * The operations console: what an MSP looks at after setup is done.
  *
  * The old screen served both jobs at once, so a tenant with a working
  * integration still got a four-step onboarding ladder above its actual
  * operational state. Here the first thing on the screen is what needs
- * attention, and everything else lives behind a tab with a deep link.
+ * attention, then what the last run did to the contact list, and everything
+ * else lives behind a tab with a deep link.
  */
 export function EntraConsole({ status, onStatusChanged }: EntraConsoleProps): React.JSX.Element {
   const { t } = useTranslation('msp/integrations');
@@ -85,6 +175,7 @@ export function EntraConsole({ status, onStatusChanged }: EntraConsoleProps): Re
   const [tab, setTab] = React.useState<EntraConsoleTab>('overview');
   const [mappings, setMappings] = React.useState<EntraConfirmedMapping[]>([]);
   const [runs, setRuns] = React.useState<EntraSyncHistoryRun[]>([]);
+  const [lastRunResults, setLastRunResults] = React.useState<EntraSyncRunTenantResult[]>([]);
   const [schedule, setSchedule] = React.useState<EntraSyncScheduleSettings | null>(null);
   const [reviewQueueCount, setReviewQueueCount] = React.useState(0);
   const [fieldSyncConfig, setFieldSyncConfig] = React.useState<EntraFieldSyncConfig>(
@@ -92,6 +183,7 @@ export function EntraConsole({ status, onStatusChanged }: EntraConsoleProps): Re
   );
   const [loading, setLoading] = React.useState(true);
   const [syncAllBusy, setSyncAllBusy] = React.useState(false);
+  const [pauseBusy, setPauseBusy] = React.useState(false);
   const [actionMessage, setActionMessage] = React.useState<string | null>(null);
   const [actionError, setActionError] = React.useState<string | null>(null);
   const [disconnectOpen, setDisconnectOpen] = React.useState(false);
@@ -135,9 +227,23 @@ export function EntraConsole({ status, onStatusChanged }: EntraConsoleProps): Re
       ]);
 
       if (!('error' in mappingResult)) setMappings(mappingResult.data?.mappings || []);
-      if (!('error' in runsResult)) setRuns(runsResult.data?.runs || []);
       if (!('error' in scheduleResult)) setSchedule(scheduleResult.data || null);
       if (!('error' in queueResult)) setReviewQueueCount((queueResult.data?.items || []).length);
+
+      if (!('error' in runsResult)) {
+        const loadedRuns = runsResult.data?.runs || [];
+        setRuns(loadedRuns);
+
+        // What the last real run did to the contact list, per client. The
+        // history list carries tenant counts only.
+        const lastReal = findLastRealRun(loadedRuns);
+        if (lastReal) {
+          const detail = await getEntraSyncRunDetail(lastReal.runId);
+          setLastRunResults(!('error' in detail) ? detail.data?.tenantResults || [] : []);
+        } else {
+          setLastRunResults([]);
+        }
+      }
     } finally {
       setLoading(false);
     }
@@ -159,6 +265,28 @@ export function EntraConsole({ status, onStatusChanged }: EntraConsoleProps): Re
     runs,
   });
   const lastRun = findLastRealRun(runs);
+  const totals = summarizeEntraRunResults(lastRunResults);
+  const failingCount = mappings.filter((mapping) => mapping.lastRunStatus === 'failed').length;
+
+  const clientNameByTenant = new Map(
+    mappings.map((mapping) => [
+      mapping.managedTenantId,
+      mapping.clientName || mapping.displayName || mapping.primaryDomain || mapping.entraTenantId,
+    ])
+  );
+  const clientNameById = new Map(
+    mappings.map((mapping) => [
+      mapping.clientId,
+      mapping.clientName || mapping.displayName || mapping.primaryDomain || mapping.entraTenantId,
+    ])
+  );
+
+  const resultClientName = (result: EntraSyncRunTenantResult): string =>
+    (result.managedTenantId ? clientNameByTenant.get(result.managedTenantId) : undefined)
+    || (result.clientId ? clientNameById.get(result.clientId) : undefined)
+    || result.managedTenantId
+    || result.clientId
+    || t('integrations.entra.syncHistory.details.unknownTenant');
 
   const handleSyncAll = React.useCallback(async () => {
     setSyncAllBusy(true);
@@ -176,6 +304,36 @@ export function EntraConsole({ status, onStatusChanged }: EntraConsoleProps): Re
       setSyncAllBusy(false);
     }
   }, [loadConsole, t]);
+
+  /**
+   * Pause is the button an operator reaches for when a sync is doing something
+   * they did not expect, so it is on the header rather than two tabs away.
+   */
+  const handleTogglePause = React.useCallback(async () => {
+    if (!schedule) return;
+    setPauseBusy(true);
+    setActionError(null);
+    setActionMessage(null);
+    try {
+      const next = !schedule.syncEnabled;
+      const result = await saveEntraSyncSchedule({
+        syncEnabled: next,
+        syncIntervalMinutes: schedule.syncIntervalMinutes,
+      });
+      if ('error' in result) {
+        setActionError(result.error || t('integrations.entra.console.schedule.saveFailed'));
+        return;
+      }
+      setSchedule(result.data || null);
+      setActionMessage(
+        next
+          ? t('integrations.entra.console.schedule.resumed')
+          : t('integrations.entra.console.schedule.paused')
+      );
+    } finally {
+      setPauseBusy(false);
+    }
+  }, [schedule, t]);
 
   const handleValidate = React.useCallback(async () => {
     setValidateBusy(true);
@@ -285,373 +443,638 @@ export function EntraConsole({ status, onStatusChanged }: EntraConsoleProps): Re
   }, [mappings, status]);
 
   const connectionHealthy = status?.status === 'connected';
+  const connectionMethodLabel = status?.connectionType
+    ? t(`integrations.entra.settings.connection.types.${status.connectionType}`)
+    : t('integrations.entra.settings.connection.notConfigured');
 
-  return (
-    <div className="space-y-4" id="entra-console" data-entra-console-tab={tab}>
-      <Card>
-        <CardHeader>
+  const permissionItems: MarkListItem[] = [
+    {
+      id: 'read-tenants',
+      mark: 'affirm',
+      text: t('integrations.entra.setup.disclosure.capabilities.readTenants'),
+    },
+    {
+      id: 'read-users',
+      mark: 'affirm',
+      text: t('integrations.entra.setup.disclosure.capabilities.readUsers'),
+    },
+    {
+      id: 'no-write',
+      mark: 'deny',
+      text: t('integrations.entra.setup.disclosure.capabilities.noWrite'),
+    },
+  ];
+
+  const overviewPanel = (
+    <div className="space-y-4" id="entra-console-overview">
+      <div className="rounded-lg border border-border/70 bg-background p-4">
+        <p className="text-sm font-semibold">{t('integrations.entra.console.attention.title')}</p>
+        {attention.length === 0 ? (
+          <p className="mt-2 text-sm text-muted-foreground" id="entra-console-attention-empty">
+            {t('integrations.entra.console.attention.empty')}
+          </p>
+        ) : (
+          <ul className="mt-2 divide-y divide-border/60" id="entra-console-attention-list">
+            {attention.map((item) => {
+              const Icon = SEVERITY_ICON[item.severity];
+              return (
+                <li key={item.id} className="flex items-start gap-3 py-2">
+                  <Icon
+                    className={`mt-0.5 h-4 w-4 flex-shrink-0 ${SEVERITY_CLASS[item.severity]}`}
+                    aria-hidden="true"
+                  />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium">{t(item.titleKey, item.values)}</p>
+                    {item.detailKey ? (
+                      <p className="text-sm text-muted-foreground">
+                        {t(item.detailKey, item.values)}
+                      </p>
+                    ) : null}
+                  </div>
+                  <Button
+                    id={`entra-console-attention-${item.id}`}
+                    type="button"
+                    size="sm"
+                    variant={item.severity === 'blocking' ? 'default' : 'outline'}
+                    className="flex-shrink-0"
+                    onClick={() => selectTab(item.tab)}
+                  >
+                    {t(item.actionKey)}
+                  </Button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-3">
+        <div className="rounded-lg border border-border/70 bg-background p-4 lg:col-span-2">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="flex items-center gap-2">
-              <CardTitle>{t('integrations.entra.console.title')}</CardTitle>
-              <Badge
-                id="entra-console-health"
-                variant={connectionHealthy ? 'secondary' : 'outline'}
-              >
-                {t(`integrations.entra.settings.status.values.${status?.status || 'not_connected'}`, {
-                  defaultValue: t('integrations.entra.settings.status.values.unknown'),
+            <p className="text-sm font-semibold">{t('integrations.entra.console.lastRun.title')}</p>
+            <Button
+              id="entra-console-open-history"
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={() => selectTab('history')}
+            >
+              {t('integrations.entra.console.lastRun.fullHistory')}
+            </Button>
+          </div>
+
+          {lastRun ? (
+            <>
+              <p className="mt-1 text-sm text-muted-foreground" id="entra-console-last-run">
+                {t('integrations.entra.console.lastRun.summary', {
+                  status: lastRun.status,
+                  time: formatDateTime(lastRun.completedAt || lastRun.startedAt, '—'),
                 })}
-              </Badge>
+              </p>
+
+              <div className="mt-3 flex flex-wrap gap-x-8 gap-y-3" id="entra-console-last-run-stats">
+                <Stat
+                  id="entra-console-stat-linked"
+                  label={t('integrations.entra.console.lastRun.stats.linked')}
+                  value={totals.linked}
+                  sub={t('integrations.entra.console.lastRun.stats.linkedSub')}
+                />
+                <Stat
+                  id="entra-console-stat-created"
+                  label={t('integrations.entra.console.lastRun.stats.created')}
+                  value={totals.created}
+                  sub={t('integrations.entra.console.lastRun.stats.createdSub')}
+                />
+                <Stat
+                  id="entra-console-stat-updated"
+                  label={t('integrations.entra.console.lastRun.stats.updated')}
+                  value={totals.updated}
+                  sub={t('integrations.entra.console.lastRun.stats.updatedSub')}
+                />
+                <Stat
+                  id="entra-console-stat-inactivated"
+                  label={t('integrations.entra.console.lastRun.stats.inactivated')}
+                  value={totals.inactivated}
+                  sub={t('integrations.entra.console.lastRun.stats.inactivatedSub')}
+                />
+                {lastRun.failedTenants > 0 ? (
+                  <Stat
+                    id="entra-console-stat-failed"
+                    label={t('integrations.entra.console.lastRun.stats.failed')}
+                    value={lastRun.failedTenants}
+                    sub={t('integrations.entra.console.lastRun.stats.failedSub')}
+                    tone="danger"
+                  />
+                ) : null}
+              </div>
+
+              {lastRunResults.length > 0 ? (
+                <div className="mt-4 overflow-x-auto" id="entra-console-last-run-clients">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>{t('integrations.entra.console.lastRun.columns.client')}</TableHead>
+                        <TableHead>{t('integrations.entra.console.lastRun.columns.result')}</TableHead>
+                        <TableHead className="text-right">
+                          {t('integrations.entra.console.lastRun.columns.linked')}
+                        </TableHead>
+                        <TableHead className="text-right">
+                          {t('integrations.entra.console.lastRun.columns.created')}
+                        </TableHead>
+                        <TableHead className="text-right">
+                          {t('integrations.entra.console.lastRun.columns.inactivated')}
+                        </TableHead>
+                        <TableHead>{t('integrations.entra.console.lastRun.columns.when')}</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {lastRunResults.map((result) => (
+                        <TableRow key={`${result.managedTenantId || result.clientId}`}>
+                          <TableCell className="font-medium">{resultClientName(result)}</TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                result.status === 'failed'
+                                  ? 'error'
+                                  : result.ambiguous > 0
+                                    ? 'warning'
+                                    : 'success'
+                              }
+                              size="sm"
+                            >
+                              {result.status === 'failed'
+                                ? t('integrations.entra.console.lastRun.results.failed')
+                                : result.ambiguous > 0
+                                  ? t('integrations.entra.console.lastRun.results.toReview', {
+                                      count: result.ambiguous,
+                                    })
+                                  : t('integrations.entra.console.lastRun.results.done')}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right tabular-nums">{result.linked}</TableCell>
+                          <TableCell className="text-right tabular-nums">{result.created}</TableCell>
+                          <TableCell className="text-right tabular-nums">
+                            {result.inactivated}
+                          </TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {formatTime(result.completedAt || result.startedAt, '—')}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              ) : null}
+            </>
+          ) : (
+            <p className="mt-2 text-sm text-muted-foreground" id="entra-console-last-run-empty">
+              {t('integrations.entra.console.lastRun.empty')}
+            </p>
+          )}
+        </div>
+
+        <div className="space-y-4" id="entra-console-side-rail">
+          <RailCard id="entra-console-rail-schedule" title={t('integrations.entra.console.schedule.title')}>
+            <p className="text-sm">
+              {schedule?.syncEnabled
+                ? t('integrations.entra.console.sideRail.scheduleOn', {
+                    minutes: schedule.syncIntervalMinutes,
+                  })
+                : t('integrations.entra.console.sideRail.scheduleOff')}
+            </p>
+            <div className="mt-2">
+              <KeyValue
+                label={t('integrations.entra.console.sideRail.lastRun')}
+                value={formatDateTime(
+                  lastRun?.completedAt || lastRun?.startedAt,
+                  t('integrations.entra.settings.validation.neverFormatted')
+                )}
+              />
+              <KeyValue
+                label={t('integrations.entra.console.sideRail.covers')}
+                value={t('integrations.entra.console.sideRail.coversClients', {
+                  count: mappings.length,
+                })}
+              />
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="mt-2 flex flex-wrap gap-2">
               <Button
-                id="entra-console-sync-now"
+                id="entra-console-rail-pause"
                 type="button"
                 size="sm"
-                onClick={() => void handleSyncAll()}
-                disabled={syncAllBusy || !connectionHealthy || mappings.length === 0}
+                variant="outline"
+                onClick={() => void handleTogglePause()}
+                disabled={pauseBusy || !schedule}
               >
-                {syncAllBusy
-                  ? t('integrations.entra.console.actions.syncingNow')
-                  : t('integrations.entra.console.actions.syncNow')}
+                {schedule?.syncEnabled
+                  ? t('integrations.entra.console.actions.pause')
+                  : t('integrations.entra.console.actions.resume')}
               </Button>
               <Button
-                id="entra-console-refresh"
+                id="entra-console-rail-change-schedule"
                 type="button"
                 size="sm"
                 variant="ghost"
-                onClick={() => void loadConsole()}
-                disabled={loading}
+                onClick={() => selectTab('schedule')}
               >
-                {t('integrations.entra.settings.actions.refresh')}
+                {t('integrations.entra.console.sideRail.change')}
               </Button>
             </div>
-          </div>
-        </CardHeader>
+          </RailCard>
 
-        <CardContent className="space-y-4">
-          <div className="flex flex-wrap gap-1" role="tablist" id="entra-console-tabs">
-            {ENTRA_CONSOLE_TABS.map((candidate) => (
-              <button
-                key={candidate}
-                id={`entra-console-tab-${candidate}`}
-                type="button"
-                role="tab"
-                aria-selected={tab === candidate}
-                className={
-                  tab === candidate
-                    ? 'rounded-md border border-primary-500 px-3 py-1.5 text-sm font-medium'
-                    : 'rounded-md border border-transparent px-3 py-1.5 text-sm text-muted-foreground hover:border-border/70'
+          <RailCard
+            id="entra-console-rail-connection"
+            title={t('integrations.entra.settings.connection.details')}
+          >
+            <KeyValue
+              label={t('integrations.entra.settings.overview.connectionTypeLabel')}
+              value={connectionMethodLabel}
+            />
+            {status?.connectionType === 'cipp' ? (
+              <KeyValue
+                label={t('integrations.entra.settings.connection.cippServerLabel')}
+                value={
+                  status.connectionDetails?.cippBaseUrl
+                  || t('integrations.entra.settings.connection.notAvailable')
                 }
-                onClick={() => selectTab(candidate)}
+              />
+            ) : null}
+            <KeyValue
+              label={t('integrations.entra.settings.validation.lastValidatedLabel')}
+              value={formatDateTime(
+                status?.lastValidatedAt,
+                t('integrations.entra.settings.validation.neverFormatted')
+              )}
+              tone={connectionHealthy ? 'default' : 'danger'}
+            />
+            <div className="mt-2 flex flex-wrap gap-2">
+              <Button
+                id="entra-console-rail-rotate"
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => void handleRotate()}
+                disabled={rotateBusy || !status?.connectionType}
               >
-                {t(TAB_LABEL_KEYS[candidate])}
-                {candidate === 'review-queue' && reviewQueueCount > 0 ? ` · ${reviewQueueCount}` : ''}
-              </button>
+                {t('integrations.entra.console.connection.rotate')}
+              </Button>
+              <Button
+                id="entra-console-rail-open-connection"
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={() => selectTab('connection')}
+              >
+                {t('integrations.entra.console.sideRail.change')}
+              </Button>
+            </div>
+          </RailCard>
+
+          <RailCard
+            id="entra-console-rail-overwrites"
+            title={t('integrations.entra.console.overwrites.title')}
+          >
+            <KeyValue
+              label={t('integrations.entra.settings.fieldSync.options.displayName.label')}
+              value={
+                fieldSyncConfig.displayName
+                  ? t('integrations.entra.console.overwrites.on')
+                  : t('integrations.entra.console.overwrites.off')
+              }
+            />
+            <KeyValue
+              label={t('integrations.entra.settings.fieldSync.options.phone.label')}
+              value={
+                fieldSyncConfig.phone
+                  ? t('integrations.entra.console.overwrites.on')
+                  : t('integrations.entra.console.overwrites.off')
+              }
+            />
+            <KeyValue
+              label={t('integrations.entra.settings.fieldSync.options.role.label')}
+              value={
+                fieldSyncConfig.role
+                  ? t('integrations.entra.console.overwrites.on')
+                  : t('integrations.entra.console.overwrites.off')
+              }
+            />
+            <Button
+              id="entra-console-rail-field-rules"
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="mt-2"
+              onClick={() => selectTab('field-rules')}
+            >
+              {t('integrations.entra.console.overwrites.change')}
+            </Button>
+          </RailCard>
+        </div>
+      </div>
+    </div>
+  );
+
+  const connectionPanel = (
+    <div className="space-y-4" id="entra-console-connection">
+      <div className="grid gap-4 md:grid-cols-2">
+        <div className="rounded-lg border border-border/70 bg-background p-4">
+          <p className="text-sm font-semibold">
+            {t('integrations.entra.settings.connection.details')}
+          </p>
+          <div className="mt-2">
+            <KeyValue
+              label={t('integrations.entra.settings.overview.connectionTypeLabel')}
+              value={connectionMethodLabel}
+            />
+            {status?.connectionType === 'cipp' ? (
+              <KeyValue
+                label={t('integrations.entra.settings.connection.cippServerLabel')}
+                value={
+                  status.connectionDetails?.cippBaseUrl
+                  || t('integrations.entra.settings.connection.notAvailable')
+                }
+              />
+            ) : null}
+            {status?.connectionType === 'direct' ? (
+              <KeyValue
+                label={t('integrations.entra.settings.connection.directTenantLabel')}
+                value={
+                  status.connectionDetails?.directTenantId
+                  || t('integrations.entra.settings.connection.directTenantDefault')
+                }
+              />
+            ) : null}
+            <KeyValue
+              label={t('integrations.entra.settings.validation.lastValidatedLabel')}
+              value={formatDateTime(
+                status?.lastValidatedAt,
+                t('integrations.entra.settings.validation.neverFormatted')
+              )}
+            />
+          </div>
+
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button
+              id="entra-console-validate"
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => void handleValidate()}
+              disabled={validateBusy || !status?.connectionType}
+            >
+              {validateBusy
+                ? t('integrations.entra.console.connection.validating')
+                : t('integrations.entra.console.connection.validate')}
+            </Button>
+            <Button
+              id="entra-console-rotate"
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => void handleRotate()}
+              disabled={rotateBusy || !status?.connectionType}
+            >
+              {t('integrations.entra.console.connection.rotate')}
+            </Button>
+            <Button
+              id="entra-console-export-record"
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={handleExportConnectionRecord}
+            >
+              {t('integrations.entra.console.connection.exportRecord')}
+            </Button>
+            <Button
+              id="entra-console-disconnect"
+              type="button"
+              size="sm"
+              variant="destructive"
+              className="ml-auto"
+              onClick={() => setDisconnectOpen(true)}
+              disabled={disconnectBusy || !status?.connectionType}
+            >
+              {t('integrations.entra.settings.actions.disconnect')}
+            </Button>
+          </div>
+        </div>
+
+        <div className="rounded-lg border border-border/70 bg-background p-4" id="entra-console-permissions">
+          <p className="text-sm font-semibold">
+            {t('integrations.entra.console.connection.permissionsTitle')}
+          </p>
+          <MarkList className="mt-2" items={permissionItems} />
+        </div>
+      </div>
+
+      <div className="rounded-lg border border-border/70 bg-background p-4">
+        <p className="text-sm font-semibold">
+          {t('integrations.entra.console.connection.mappingTitle')}
+        </p>
+        <p className="mt-1 text-sm text-muted-foreground">
+          {t('integrations.entra.console.connection.mappingDescription')}
+        </p>
+        <div className="mb-3 mt-3 grid gap-2 text-sm text-muted-foreground sm:grid-cols-4">
+          <p>
+            <span className="font-medium text-foreground">
+              {t('integrations.entra.settings.mapping.savedLabel')}
+            </span>{' '}
+            {mappings.length}
+          </p>
+          <p>
+            <span className="font-medium text-foreground">
+              {t('integrations.entra.settings.mapping.selectedLabel')}
+            </span>{' '}
+            {mappingSummary.mapped}
+          </p>
+          <p>
+            <span className="font-medium text-foreground">
+              {t('integrations.entra.settings.mapping.skippedLabel')}
+            </span>{' '}
+            {mappingSummary.skipped}
+          </p>
+          <p>
+            <span className="font-medium text-foreground">
+              {t('integrations.entra.settings.mapping.needsReviewLabel')}
+            </span>{' '}
+            {mappingSummary.needsReview}
+          </p>
+        </div>
+        <EntraTenantMappingTable
+          onSummaryChange={setMappingSummary}
+          onSkippedTenantsChange={setSkippedTenants}
+          onPersistedMappingChange={() => void loadConsole()}
+        />
+      </div>
+
+      <div
+        className="rounded-lg border border-border/70 bg-background p-4"
+        id="entra-skipped-tenants-panel"
+      >
+        <p className="text-sm font-semibold">{t('integrations.entra.settings.skipped.title')}</p>
+        {skippedTenants.length === 0 ? (
+          <p className="mt-1 text-sm text-muted-foreground">
+            {t('integrations.entra.settings.skipped.empty')}
+          </p>
+        ) : (
+          <div className="mt-2 space-y-2">
+            {skippedTenants.map((tenant) => (
+              <div
+                key={tenant.managedTenantId}
+                className="flex items-center justify-between gap-3 rounded-md border border-border/60 p-2"
+              >
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium">
+                    {tenant.displayName || tenant.managedTenantId}
+                  </p>
+                  <p className="truncate text-xs text-muted-foreground">
+                    {tenant.primaryDomain
+                      || t('integrations.entra.settings.skipped.noPrimaryDomain')}
+                  </p>
+                </div>
+                <Button
+                  id={`entra-remap-skipped-${tenant.managedTenantId}`}
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setRemapTarget(tenant)}
+                  disabled={remapBusy}
+                >
+                  {t('integrations.entra.settings.skipped.remap')}
+                </Button>
+              </div>
             ))}
           </div>
+        )}
+      </div>
+    </div>
+  );
 
-          {actionMessage ? (
-            <p className="text-sm text-muted-foreground" id="entra-console-message">{actionMessage}</p>
-          ) : null}
-          {actionError ? (
-            <p className="text-sm text-destructive" id="entra-console-error">{actionError}</p>
-          ) : null}
+  const panels: Record<EntraConsoleTab, React.ReactNode> = {
+    overview: overviewPanel,
+    schedule: (
+      <EntraScheduleTab
+        schedule={schedule}
+        hasCompletedPilot={mappings.some((mapping) => mapping.lastRunStatus === 'completed')}
+        onSaved={loadConsole}
+      />
+    ),
+    clients: <EntraClientsTab mappings={mappings} loading={loading} onChanged={loadConsole} />,
+    'field-rules': (
+      <FieldSyncRules
+        config={fieldSyncConfig}
+        onConfigChange={setFieldSyncConfig}
+        onSaved={onStatusChanged}
+      />
+    ),
+    'review-queue': <EntraReconciliationQueue />,
+    history: <EntraHistoryTab runs={runs} mappings={mappings} loading={loading} />,
+    connection: connectionPanel,
+  };
 
-          {tab === 'overview' ? (
-            <div className="space-y-4" id="entra-console-overview">
-              <div className="rounded-lg border border-border/70 bg-background p-4">
-                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  {t('integrations.entra.console.attention.title')}
-                </p>
-                {attention.length === 0 ? (
-                  <p className="mt-2 text-sm text-muted-foreground" id="entra-console-attention-empty">
-                    {t('integrations.entra.console.attention.empty')}
-                  </p>
-                ) : (
-                  <ul className="mt-2 space-y-1" id="entra-console-attention-list">
-                    {attention.map((item) => (
-                      <li key={item.id} className="flex items-center justify-between gap-3">
-                        <span className={`text-sm ${SEVERITY_CLASS[item.severity]}`}>
-                          {t(item.titleKey, item.values)}
-                        </span>
-                        <Button
-                          id={`entra-console-attention-${item.id}`}
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => selectTab(item.tab)}
-                        >
-                          {t('integrations.entra.console.attention.open')}
-                        </Button>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
+  const tabCounts: Partial<Record<EntraConsoleTab, number>> = {
+    clients: mappings.length,
+    'review-queue': reviewQueueCount,
+  };
 
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="rounded-lg border border-border/70 bg-background p-4">
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    {t('integrations.entra.console.lastRun.title')}
-                  </p>
-                  {lastRun ? (
-                    <div className="mt-2 space-y-1 text-sm text-muted-foreground" id="entra-console-last-run">
-                      <p>
-                        {t('integrations.entra.console.lastRun.summary', {
-                          status: lastRun.status,
-                          time: formatDateTime(lastRun.completedAt || lastRun.startedAt, '—'),
-                        })}
-                      </p>
-                      <p>
-                        {t('integrations.entra.console.lastRun.tenants', {
-                          succeeded: lastRun.succeededTenants,
-                          total: lastRun.totalTenants,
-                        })}
-                      </p>
-                    </div>
-                  ) : (
-                    <p className="mt-2 text-sm text-muted-foreground" id="entra-console-last-run-empty">
-                      {t('integrations.entra.console.lastRun.empty')}
-                    </p>
-                  )}
-                </div>
+  const tabs: TabContent[] = ENTRA_CONSOLE_TABS.map((candidate) => ({
+    id: candidate,
+    label: (
+      <span className="flex items-center gap-1.5">
+        {t(TAB_LABEL_KEYS[candidate])}
+        {tabCounts[candidate] ? (
+          <Badge
+            variant={candidate === 'review-queue' ? 'warning' : 'default-muted'}
+            size="sm"
+          >
+            {tabCounts[candidate]}
+          </Badge>
+        ) : null}
+      </span>
+    ),
+    content: panels[candidate],
+  }));
 
-                <div className="rounded-lg border border-border/70 bg-background p-4" id="entra-console-side-rail">
-                  <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                    {t('integrations.entra.console.sideRail.title')}
-                  </p>
-                  <div className="mt-2 space-y-1 text-sm text-muted-foreground">
-                    <p>
-                      <span className="font-medium text-foreground">
-                        {t('integrations.entra.console.sideRail.schedule')}
-                      </span>{' '}
-                      {schedule?.syncEnabled
-                        ? t('integrations.entra.console.sideRail.scheduleOn', {
-                            minutes: schedule.syncIntervalMinutes,
-                          })
-                        : t('integrations.entra.console.sideRail.scheduleOff')}
-                    </p>
-                    <p>
-                      <span className="font-medium text-foreground">
-                        {t('integrations.entra.settings.overview.connectionTypeLabel')}
-                      </span>{' '}
-                      {status?.connectionType
-                        ? t(`integrations.entra.settings.connection.types.${status.connectionType}`)
-                        : t('integrations.entra.settings.connection.notConfigured')}
-                    </p>
-                    <p>
-                      <span className="font-medium text-foreground">
-                        {t('integrations.entra.settings.overview.mappedTenantsLabel')}
-                      </span>{' '}
-                      {mappings.length}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : null}
+  return (
+    <div className="space-y-5" id="entra-console" data-entra-console-tab={tab}>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-xl font-semibold tracking-tight">
+              {t('integrations.entra.summary.title')}
+            </h1>
+            <Badge variant="secondary">{t('integrations.entra.settings.badges.pro')}</Badge>
+          </div>
+          <p className="mt-1 text-sm text-muted-foreground" id="entra-console-lead">
+            {t('integrations.entra.console.lead', {
+              clients: mappings.length,
+              method: connectionMethodLabel,
+            })}
+          </p>
+        </div>
 
-          {tab === 'schedule' ? (
-            <EntraScheduleTab
-              schedule={schedule}
-              hasCompletedPilot={mappings.some((mapping) => mapping.lastRunStatus === 'completed')}
-              onSaved={loadConsole}
-            />
-          ) : null}
+        <div className="flex flex-shrink-0 flex-wrap items-center gap-2">
+          <Badge
+            id="entra-console-health"
+            variant={connectionHealthy ? (failingCount > 0 ? 'warning' : 'success') : 'error'}
+          >
+            {connectionHealthy
+              ? failingCount > 0
+                ? t('integrations.entra.console.health.failingClients', { count: failingCount })
+                : t('integrations.entra.console.health.healthy')
+              : t(`integrations.entra.settings.status.values.${status?.status || 'not_connected'}`, {
+                  defaultValue: t('integrations.entra.settings.status.values.unknown'),
+                })}
+          </Badge>
+          <Button
+            id="entra-console-sync-now"
+            type="button"
+            size="sm"
+            onClick={() => void handleSyncAll()}
+            disabled={syncAllBusy || !connectionHealthy || mappings.length === 0}
+          >
+            {syncAllBusy
+              ? t('integrations.entra.console.actions.syncingNow')
+              : t('integrations.entra.console.actions.syncNow')}
+          </Button>
+          <Button
+            id="entra-console-pause"
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => void handleTogglePause()}
+            disabled={pauseBusy || !schedule}
+          >
+            {schedule?.syncEnabled
+              ? t('integrations.entra.console.actions.pause')
+              : t('integrations.entra.console.actions.resume')}
+          </Button>
+          <Button
+            id="entra-console-refresh"
+            type="button"
+            size="sm"
+            variant="ghost"
+            onClick={() => void loadConsole()}
+            disabled={loading}
+          >
+            {t('integrations.entra.settings.actions.refresh')}
+          </Button>
+        </div>
+      </div>
 
-          {tab === 'clients' ? (
-            <EntraClientsTab mappings={mappings} loading={loading} onChanged={loadConsole} />
-          ) : null}
+      {actionMessage ? (
+        <p className="text-sm text-muted-foreground" id="entra-console-message">{actionMessage}</p>
+      ) : null}
+      {actionError ? (
+        <p className="text-sm text-destructive" id="entra-console-error">{actionError}</p>
+      ) : null}
 
-          {tab === 'field-rules' ? (
-            <FieldSyncRules
-              config={fieldSyncConfig}
-              onConfigChange={setFieldSyncConfig}
-              onSaved={onStatusChanged}
-            />
-          ) : null}
-
-          {tab === 'review-queue' ? <EntraReconciliationQueue /> : null}
-
-          {tab === 'history' ? (
-            <EntraHistoryTab runs={runs} mappings={mappings} loading={loading} />
-          ) : null}
-
-          {tab === 'connection' ? (
-            <div className="space-y-4" id="entra-console-connection">
-              <div className="rounded-lg border border-border/70 bg-background p-4">
-                <p className="text-sm font-semibold">
-                  {t('integrations.entra.settings.connection.details')}
-                </p>
-                <div className="mt-2 space-y-1 text-sm text-muted-foreground">
-                  <p>
-                    <span className="font-medium text-foreground">
-                      {t('integrations.entra.settings.overview.connectionTypeLabel')}
-                    </span>{' '}
-                    {status?.connectionType
-                      ? t(`integrations.entra.settings.connection.types.${status.connectionType}`)
-                      : t('integrations.entra.settings.connection.notConfigured')}
-                  </p>
-                  {status?.connectionType === 'cipp' ? (
-                    <p>
-                      <span className="font-medium text-foreground">
-                        {t('integrations.entra.settings.connection.cippServerLabel')}
-                      </span>{' '}
-                      {status.connectionDetails?.cippBaseUrl
-                        || t('integrations.entra.settings.connection.notAvailable')}
-                    </p>
-                  ) : null}
-                  {status?.connectionType === 'direct' ? (
-                    <p>
-                      <span className="font-medium text-foreground">
-                        {t('integrations.entra.settings.connection.directTenantLabel')}
-                      </span>{' '}
-                      {status.connectionDetails?.directTenantId
-                        || t('integrations.entra.settings.connection.directTenantDefault')}
-                    </p>
-                  ) : null}
-                  <p>
-                    <span className="font-medium text-foreground">
-                      {t('integrations.entra.settings.validation.lastValidatedLabel')}
-                    </span>{' '}
-                    {formatDateTime(
-                      status?.lastValidatedAt,
-                      t('integrations.entra.settings.validation.neverFormatted')
-                    )}
-                  </p>
-                </div>
-
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <Button
-                    id="entra-console-validate"
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() => void handleValidate()}
-                    disabled={validateBusy || !status?.connectionType}
-                  >
-                    {validateBusy
-                      ? t('integrations.entra.console.connection.validating')
-                      : t('integrations.entra.console.connection.validate')}
-                  </Button>
-                  <Button
-                    id="entra-console-rotate"
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() => void handleRotate()}
-                    disabled={rotateBusy || !status?.connectionType}
-                  >
-                    {t('integrations.entra.console.connection.rotate')}
-                  </Button>
-                  <Button
-                    id="entra-console-export-record"
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={handleExportConnectionRecord}
-                  >
-                    {t('integrations.entra.console.connection.exportRecord')}
-                  </Button>
-                  <Button
-                    id="entra-console-disconnect"
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setDisconnectOpen(true)}
-                    disabled={disconnectBusy || !status?.connectionType}
-                  >
-                    {t('integrations.entra.settings.actions.disconnect')}
-                  </Button>
-                </div>
-              </div>
-
-              <div className="rounded-lg border border-border/70 bg-background p-4">
-                <p className="text-sm font-semibold">
-                  {t('integrations.entra.console.connection.mappingTitle')}
-                </p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  {t('integrations.entra.console.connection.mappingDescription')}
-                </p>
-                <div className="mb-3 mt-3 grid gap-2 text-sm text-muted-foreground sm:grid-cols-4">
-                  <p>
-                    <span className="font-medium text-foreground">
-                      {t('integrations.entra.settings.mapping.savedLabel')}
-                    </span>{' '}
-                    {mappings.length}
-                  </p>
-                  <p>
-                    <span className="font-medium text-foreground">
-                      {t('integrations.entra.settings.mapping.selectedLabel')}
-                    </span>{' '}
-                    {mappingSummary.mapped}
-                  </p>
-                  <p>
-                    <span className="font-medium text-foreground">
-                      {t('integrations.entra.settings.mapping.skippedLabel')}
-                    </span>{' '}
-                    {mappingSummary.skipped}
-                  </p>
-                  <p>
-                    <span className="font-medium text-foreground">
-                      {t('integrations.entra.settings.mapping.needsReviewLabel')}
-                    </span>{' '}
-                    {mappingSummary.needsReview}
-                  </p>
-                </div>
-                <EntraTenantMappingTable
-                  onSummaryChange={setMappingSummary}
-                  onSkippedTenantsChange={setSkippedTenants}
-                  onPersistedMappingChange={() => void loadConsole()}
-                />
-              </div>
-
-              <div
-                className="rounded-lg border border-border/70 bg-background p-4"
-                id="entra-skipped-tenants-panel"
-              >
-                <p className="text-sm font-semibold">
-                  {t('integrations.entra.settings.skipped.title')}
-                </p>
-                {skippedTenants.length === 0 ? (
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {t('integrations.entra.settings.skipped.empty')}
-                  </p>
-                ) : (
-                  <div className="mt-2 space-y-2">
-                    {skippedTenants.map((tenant) => (
-                      <div
-                        key={tenant.managedTenantId}
-                        className="flex items-center justify-between gap-3 rounded-md border border-border/60 p-2"
-                      >
-                        <div className="min-w-0">
-                          <p className="truncate text-sm font-medium">
-                            {tenant.displayName || tenant.managedTenantId}
-                          </p>
-                          <p className="truncate text-xs text-muted-foreground">
-                            {tenant.primaryDomain
-                              || t('integrations.entra.settings.skipped.noPrimaryDomain')}
-                          </p>
-                        </div>
-                        <Button
-                          id={`entra-remap-skipped-${tenant.managedTenantId}`}
-                          type="button"
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setRemapTarget(tenant)}
-                          disabled={remapBusy}
-                        >
-                          {t('integrations.entra.settings.skipped.remap')}
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-            </div>
-          ) : null}
-        </CardContent>
-      </Card>
+      <CustomTabs
+        tabs={tabs}
+        value={tab}
+        onTabChange={(next) => selectTab(parseEntraConsoleTab(next))}
+        idPrefix="entra-console-tab"
+      />
 
       <EntraDirectConsentDialog
         open={rotateDirectOpen}

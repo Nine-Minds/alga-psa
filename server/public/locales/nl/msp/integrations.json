@@ -377,20 +377,37 @@
       },
       "console": {
         "actions": {
+          "pause": "Sync pauzeren",
+          "resume": "Sync hervatten",
           "syncNow": "Nu synchroniseren",
           "syncingNow": "Starten…"
         },
         "attention": {
+          "actions": {
+            "fixConnection": "Verbinding herstellen",
+            "openSchedule": "Planning openen",
+            "review": "Beoordelen",
+            "viewClients": "Klanten bekijken"
+          },
           "connection": "De verbinding werkt niet. Er wordt niets gesynchroniseerd tot dit is opgelost.",
+          "connectionDetail": "Herstel eerst de verbinding — tot die werkt mislukt elke klant op dezelfde manier.",
           "empty": "Er is niets dat aandacht vraagt.",
           "failedClients": "{{count}} klanten mislukten bij hun laatste synchronisatie.",
+          "failedClientsDetail": "{{clients}}",
           "neverSynced": "{{count}} gekoppelde klanten zijn nooit gesynchroniseerd.",
-          "open": "Openen",
+          "neverSyncedDetail": "{{clients}}",
           "reviewQueue": "{{count}} identiteiten wachten op een beslissing.",
+          "reviewQueueDetail": "Twee of meer contacten delen één Microsoft-e-mailadres, dus er gebeurt niets tot u kiest.",
           "scheduleOff": "Automatische synchronisatie staat uit. Contacten wijzigen alleen als u zelf synchroniseert.",
+          "scheduleOffDetail": "Contacten veranderen alleen als iemand handmatig een synchronisatie start.",
           "title": "Vraagt aandacht"
         },
         "clients": {
+          "columns": {
+            "lastSync": "Laatste sync",
+            "tenant": "Microsoft-tenant",
+            "users": "Gebruikers"
+          },
           "empty": "Geen klanten voldoen aan dit filter.",
           "filters": {
             "all": "Alle",
@@ -398,7 +415,6 @@
             "healthy": "Gezond",
             "never-synced": "Nooit gesynchroniseerd"
           },
-          "lastSynced": "laatst gesynchroniseerd {{time}} · {{status}}",
           "neverSynced": "nooit gesynchroniseerd",
           "searchPlaceholder": "Zoek klanten of domeinen",
           "sync": "Synchroniseren",
@@ -408,6 +424,7 @@
           "exportRecord": "Verbindingsrecord exporteren",
           "mappingDescription": "Bekijk of wijzig bij welke klant elke Microsoft-tenant hoort.",
           "mappingTitle": "Tenantkoppeling",
+          "permissionsTitle": "Geldende machtigingen",
           "rotate": "Referentie roteren",
           "validate": "Verbinding testen",
           "validated": "De verbinding werkt.",
@@ -417,8 +434,20 @@
           "syncFailed": "De synchronisatie kon niet worden gestart.",
           "validateFailed": "De verbinding kon niet worden gecontroleerd."
         },
+        "health": {
+          "failingClients": "{{count}} klanten mislukken",
+          "healthy": "Gezond"
+        },
         "history": {
           "allClients": "Alle klanten",
+          "columns": {
+            "clients": "Klanten",
+            "failed": "Mislukt",
+            "scope": "Bereik",
+            "succeeded": "Geslaagd",
+            "trigger": "Trigger",
+            "when": "Wanneer"
+          },
           "empty": "Geen runs voldoen aan deze filters.",
           "export": "CSV exporteren",
           "includePreviews": "Previews meenemen",
@@ -427,9 +456,6 @@
           "page": "Pagina {{page}} van {{pages}}",
           "previewBadge": "preview",
           "previous": "Vorige",
-          "runHeader": "{{scope}} · {{status}}",
-          "runMeta": "{{runType}} · gestart {{started}} · klaar {{completed}}",
-          "tenantCounts": "{{succeeded}} geslaagd, {{failed}} mislukt van {{total}}",
           "triggers": {
             "all": "Alle runs",
             "manual": "Handmatig",
@@ -437,10 +463,43 @@
           }
         },
         "lastRun": {
+          "columns": {
+            "client": "Klant",
+            "created": "Nieuw",
+            "inactivated": "Inactief",
+            "linked": "Gekoppeld",
+            "result": "Resultaat",
+            "when": "Wanneer"
+          },
           "empty": "Er is nog geen synchronisatie uitgevoerd.",
+          "fullHistory": "Volledige geschiedenis",
+          "results": {
+            "done": "Klaar",
+            "failed": "Mislukt",
+            "toReview": "{{count}} te beoordelen"
+          },
+          "stats": {
+            "created": "Aangemaakt",
+            "createdSub": "nieuwe contacten",
+            "failed": "Mislukt",
+            "failedSub": "klanten",
+            "inactivated": "Inactief gemaakt",
+            "inactivatedSub": "accounts uitgeschakeld",
+            "linked": "Gekoppeld",
+            "linkedSub": "bestaande contacten",
+            "updated": "Velden gewijzigd",
+            "updatedSub": "waar u dat toestond"
+          },
           "summary": "{{status}} om {{time}}",
           "tenants": "{{succeeded}} van {{total}} klanten geslaagd",
           "title": "Laatste synchronisatie"
+        },
+        "lead": "{{clients}} klanten gekoppeld · verbonden via {{method}}",
+        "overwrites": {
+          "change": "Veldregels wijzigen",
+          "off": "Uit",
+          "on": "Aan",
+          "title": "Toegestane overschrijvingen"
         },
         "schedule": {
           "description": "Wanneer aan, synchroniseert Alga elke gekoppelde klant met dit ritme. Uitzetten stopt geplande runs; handmatig synchroniseren blijft mogelijk.",
@@ -455,6 +514,8 @@
           },
           "pause": "Pauzeren",
           "pauseHint": "Gepauzeerd. Sla op om toe te passen.",
+          "paused": "Automatische synchronisatie gepauzeerd.",
+          "resumed": "Automatische synchronisatie hervat.",
           "save": "Planning opslaan",
           "saveFailed": "De planning kon niet worden opgeslagen.",
           "saved": "Planning opgeslagen.",
@@ -463,10 +524,12 @@
           "title": "Automatische synchronisatie"
         },
         "sideRail": {
-          "schedule": "Automatische synchronisatie:",
+          "change": "Wijzigen…",
+          "covers": "Omvat",
+          "coversClients": "{{count}} klanten",
+          "lastRun": "Laatste run",
           "scheduleOff": "uit",
-          "scheduleOn": "aan, elke {{minutes}} minuten",
-          "title": "In één oogopslag"
+          "scheduleOn": "aan, elke {{minutes}} minuten"
         },
         "syncStarted": "Synchronisatie gestart voor alle gekoppelde klanten.",
         "tabs": {
@@ -485,6 +548,7 @@
           "preview": "Wijzigingen bekijken",
           "previewing": "Bezig met bekijken…",
           "syncOne": "Deze klant synchroniseren",
+          "syncOneNamed": "Alleen {{client}} synchroniseren",
           "syncRemaining": "De resterende {{count}} synchroniseren",
           "syncingOne": "Starten…",
           "syncingRemaining": "Starten…"
@@ -497,6 +561,7 @@
           "syncFailed": "De synchronisatie kon niet worden gestart."
         },
         "gateNote": "Synchroniseer eerst één klant. De rest komt vrij zodra die run klaar is.",
+        "previewPrompt": "Bekijk de wijzigingen voor deze klant voordat er iets wordt weggeschreven.",
         "remainingStarted": "Synchronisatie gestart voor de resterende {{count}} klanten.",
         "started": "Synchronisatie gestart voor {{client}}."
       },
@@ -525,6 +590,7 @@
         },
         "hideNames": "Namen verbergen",
         "moreNames": "en nog {{count}}",
+        "nothingWritten": "Nog niets weggeschreven",
         "showNames": "Namen tonen",
         "summary": "{{count}} identiteiten gecontroleerd om {{time}}. Er is niets gewijzigd.",
         "title": "Wat deze synchronisatie zou doen"
@@ -794,7 +860,10 @@
               "instance": "Een draaiende CIPP-instantie."
             }
           },
+          "cippReassurance": "Alga test de verbinding voordat deze wordt opgeslagen.",
           "continue": "Doorgaan",
+          "continueCipp": "CIPP-verbinding instellen",
+          "continueDirect": "Doorgaan met Direct",
           "continuing": "Bezig…",
           "direct": {
             "description": "Alga praat met Microsoft Graph via uw partnerrelatie.",
@@ -805,11 +874,14 @@
               "partnerRelationship": "Een partnerrelatie (GDAP) met de tenants die u beheert."
             }
           },
+          "directReassurance": "U ziet de toestemmingsvraag voordat er iets wordt verleend.",
           "prerequisitesTitle": "U heeft nodig",
           "recommendation": "De meeste MSP's kiezen het beste Direct. Kies CIPP alleen als u al een instantie draait.",
+          "recommendedBadge": "Aanbevolen",
           "title": "Kies hoe u verbindt"
         },
-        "description": "Vier stappen: verbinden, de tenants die u beheert ontdekken, ze aan klanten koppelen en de eerste synchronisatie uitvoeren.",
+        "connectedVia": "Verbonden via {{method}}",
+        "description": "Breng de mensen uit de Microsoft-tenants die u beheert als klantcontacten naar Alga. Er wordt niets naar uw contacten geschreven totdat u een voorbeeld hebt gezien en goedgekeurd.",
         "directConsent": {
           "adminNote": "Een globale beheerder moet deze machtigingen goedkeuren. Zo niet, dan lukt de aanmelding wel maar wordt de verbinding geweigerd en wordt er niets opgeslagen.",
           "cancel": "Annuleren",
@@ -820,7 +892,15 @@
           "title": "Voordat u doorgaat naar Microsoft"
         },
         "disclosure": {
+          "capabilities": {
+            "noMailbox": "Leest nooit e-mail, bestanden, agenda's of Teams-berichten",
+            "noWrite": "Schrijft nooit iets terug naar Microsoft",
+            "readTenants": "De lijst met Microsoft-tenants die u beheert lezen",
+            "readUsers": "Gebruikers in die tenants lezen — naam, e-mail, telefoon, functie"
+          },
+          "capabilitiesTitle": "Wat Alga mag doen",
           "contacts": {
+            "ambiguous": "Delen twee contacten een e-mailadres? Dat wordt apart gezet zodat u beslist — nooit geraden.",
             "creation": "Een identiteit zonder match wordt een nieuw contact bij die klant.",
             "deletion": "Er wordt nooit iets verwijderd.",
             "matching": "Contacten worden gematcht op e-mailadres binnen de klant waaraan u de tenant koppelt.",
@@ -830,6 +910,7 @@
           "copied": "Gekopieerd",
           "copy": "Kopiëren voor een wijzigingsdossier",
           "description": "Lees dit voordat u autoriseert. U kunt het naar een wijzigingsdossier kopiëren.",
+          "inactiveNote": "Een uitgeschakeld Microsoft-account markeert het contact als inactief. U kunt dat in stap 4 uitzetten.",
           "recordGeneratedAt": "Opgesteld {{time}}",
           "recordHeading": "Microsoft Entra-integratie — wijzigingsdossier",
           "scopes": {
@@ -839,30 +920,30 @@
             "unknown": "Gevraagd door de verbinding.",
             "userRead": "Bevestigt wie zich aanmeldt. Leest alleen uw eigen profiel."
           },
+          "scopesAllReadOnly": "Allemaal alleen-lezen.",
           "scopesTitle": "Gevraagde machtigingen",
           "title": "Wat Alga leest en wat het wijzigt"
-        },
-        "state": {
-          "complete": "Klaar",
-          "current": "Nu",
-          "locked": "Later"
         },
         "stepLabel": "Stap {{number}}",
         "steps": {
           "connect": {
             "description": "Kies hoe Alga Microsoft bereikt en autoriseer het.",
+            "short": "Verbinden",
             "title": "Microsoft Entra verbinden"
           },
           "discover": {
             "description": "Vraag Microsoft welke klanttenants uw partnerrelatie dekt.",
+            "short": "Tenants zoeken",
             "title": "Beheerde tenants ontdekken"
           },
           "map": {
             "description": "Bepaal bij welke Alga-klant elke Microsoft-tenant hoort. Er wordt niets gesynchroniseerd tot dit bevestigd is.",
+            "short": "Aan klanten koppelen",
             "title": "Tenants aan klanten koppelen"
           },
           "sync": {
             "description": "Haal contacten op voor de gekoppelde klanten.",
+            "short": "Voorbeeld & pilot",
             "title": "Eerste synchronisatie uitvoeren"
           }
         },

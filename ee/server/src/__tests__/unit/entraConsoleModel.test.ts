@@ -5,6 +5,7 @@ import {
   filterEntraRuns,
   findLastRealRun,
   parseEntraConsoleTab,
+  summarizeEntraRunResults,
   DEFAULT_ENTRA_HISTORY_FILTERS,
 } from '@ee/components/settings/integrations/entra/entraConsoleModel';
 import type {
@@ -107,8 +108,29 @@ describe('buildEntraAttentionItems', () => {
     });
 
     const failed = items.find((item) => item.id === 'failed-clients');
-    expect(failed?.values).toEqual({ count: 2 });
+    expect(failed?.values?.count).toBe(2);
     expect(failed?.tab).toBe('clients');
+    // The detail line names the clients, so the operator can tell one broken
+    // client from five without opening the tab.
+    expect(failed?.values?.clients).toBe('Contoso, Contoso');
+    expect(failed?.actionKey).toBe('integrations.entra.console.attention.actions.viewClients');
+  });
+
+  it('names at most three failing clients and counts the rest', () => {
+    const items = buildEntraAttentionItems({
+      ...base,
+      mappings: ['a', 'b', 'c', 'd', 'e'].map((suffix) =>
+        mapping({
+          managedTenantId: `managed-${suffix}`,
+          clientName: `Client ${suffix.toUpperCase()}`,
+          lastRunStatus: 'failed',
+        })
+      ),
+    });
+
+    expect(items.find((item) => item.id === 'failed-clients')?.values?.clients).toBe(
+      'Client A, Client B, Client C +2'
+    );
   });
 
   it('surfaces the review-queue backlog, unsynced clients, and a schedule that is off', () => {
@@ -122,6 +144,36 @@ describe('buildEntraAttentionItems', () => {
     expect(items.map((item) => item.id)).toEqual(['review-queue', 'never-synced', 'schedule-off']);
     expect(items.find((item) => item.id === 'review-queue')?.values).toEqual({ count: 3 });
     expect(items.find((item) => item.id === 'schedule-off')?.severity).toBe('info');
+  });
+});
+
+describe('summarizeEntraRunResults', () => {
+  it('adds the per-client results up into what the run did to the contact list', () => {
+    const totals = summarizeEntraRunResults([
+      { status: 'completed', linked: 153, created: 2, updated: 1, inactivated: 1, ambiguous: 0 },
+      { status: 'completed', linked: 76, created: 0, updated: 0, inactivated: 0, ambiguous: 2 },
+      { status: 'failed' },
+    ]);
+
+    expect(totals).toEqual({
+      linked: 229,
+      created: 2,
+      updated: 1,
+      inactivated: 1,
+      ambiguous: 2,
+      failed: 1,
+    });
+  });
+
+  it('reports zeroes rather than NaN when a run recorded nothing', () => {
+    expect(summarizeEntraRunResults([])).toEqual({
+      linked: 0,
+      created: 0,
+      updated: 0,
+      inactivated: 0,
+      ambiguous: 0,
+      failed: 0,
+    });
   });
 });
 

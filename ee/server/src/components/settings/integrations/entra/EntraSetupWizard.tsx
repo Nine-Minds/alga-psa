@@ -4,10 +4,13 @@ import React from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
+  disconnectEntraIntegration,
   discoverEntraManagedTenants,
   initiateEntraDirectOAuth,
+  type EntraFieldSyncConfig,
   type EntraStatusResponse,
 } from '@alga-psa/integrations/actions';
 import {
@@ -17,9 +20,12 @@ import {
 import { EntraCippConnectDialog } from '../EntraCippConnectDialog';
 import { ConnectionMethodChooser, type EntraConnectionMethod } from './ConnectionMethodChooser';
 import { EntraDirectConsentDialog } from './EntraDirectConsentDialog';
+import { normalizeEntraFieldSyncConfig } from './fieldSyncModel';
 import { PilotSyncControl } from './PilotSyncControl';
 import { PreConsentDisclosure } from './PreConsentDisclosure';
+import { SetupLadder } from './SetupLadder';
 import {
+  ENTRA_SETUP_STEP_SHORT_LABEL_KEYS,
   deriveEntraSetupSteps,
   type EntraSetupStep,
   type EntraSetupStepId,
@@ -47,10 +53,15 @@ const STEP_DESCRIPTION_KEYS: Record<EntraSetupStepId, string> = {
 };
 
 /**
- * The guided setup. Every step contains the action that completes it — the old
- * screen listed four inert boxes and put the real controls somewhere below
- * under "connection options appear below", which meant the ladder taught
- * nothing and the operator scrolled to find out what to do.
+ * The guided setup: a ladder showing where you are, and one card showing the
+ * step you are on.
+ *
+ * Every step contains the action that completes it — the old screen listed four
+ * inert boxes and put the real controls somewhere below under "connection
+ * options appear below", which meant the ladder taught nothing and the operator
+ * scrolled to find out what to do. Steps that are not current are a line in the
+ * ladder, not a card: describing work that cannot be started yet in full costs
+ * three quarters of the screen and teaches nothing either.
  */
 export function EntraSetupWizard({
   status,
@@ -66,6 +77,9 @@ export function EntraSetupWizard({
   const [connectBusy, setConnectBusy] = React.useState(false);
   const [connectError, setConnectError] = React.useState<string | null>(null);
 
+  const [disconnectOpen, setDisconnectOpen] = React.useState(false);
+  const [disconnectBusy, setDisconnectBusy] = React.useState(false);
+
   const [mappingSummary, setMappingSummary] = React.useState<EntraMappingSummary>({
     mapped: 0,
     skipped: 0,
@@ -76,16 +90,30 @@ export function EntraSetupWizard({
   const [discoveryBusy, setDiscoveryBusy] = React.useState(false);
   const [discoveryMessage, setDiscoveryMessage] = React.useState<string | null>(null);
 
+  // The pilot previews with the rules as they are on screen, so turning one on
+  // updates the preview before anything is written or even saved.
+  const [fieldSyncConfig, setFieldSyncConfig] = React.useState<EntraFieldSyncConfig>(
+    normalizeEntraFieldSyncConfig(null)
+  );
+  React.useEffect(() => {
+    setFieldSyncConfig(normalizeEntraFieldSyncConfig(status?.fieldSyncConfig));
+  }, [status?.fieldSyncConfig]);
+
   // The mapping table knows about confirmed mappings before the status endpoint
   // is refetched, so the ladder should not wait a round trip to advance.
   const mappedCount = Math.max(status?.mappedTenantCount ?? 0, mappingSummary.mapped);
 
+  const isConnected = status?.status === 'connected';
   const steps: EntraSetupStep[] = deriveEntraSetupSteps({
-    isConnected: status?.status === 'connected',
+    isConnected,
     hasDiscovery: Boolean(status?.lastDiscoveryAt),
     hasConfirmedMappings: mappedCount > 0,
   });
-  const currentStep = steps.find((step) => step.state === 'current')?.id ?? 'connect';
+  const current = steps.find((step) => step.state === 'current') ?? steps[0];
+
+  const ladderLabels = Object.fromEntries(
+    Object.entries(ENTRA_SETUP_STEP_SHORT_LABEL_KEYS).map(([id, key]) => [id, t(key)])
+  ) as Record<EntraSetupStepId, string>;
 
   const handleContinueConnect = React.useCallback(() => {
     setConnectError(null);
@@ -142,14 +170,24 @@ export function EntraSetupWizard({
     }
   }, [onStatusChanged, t]);
 
-  const renderStepAction = (stepId: EntraSetupStepId): React.ReactNode => {
-    if (stepId !== currentStep) {
-      return null;
+  // Setup is reversible: a connection made with the wrong method, or to the
+  // wrong CIPP instance, has to be undoable without finishing the whole flow.
+  const handleDisconnect = React.useCallback(async () => {
+    setDisconnectBusy(true);
+    try {
+      await disconnectEntraIntegration();
+      setDisconnectOpen(false);
+      setMethod(null);
+      await onStatusChanged();
+    } finally {
+      setDisconnectBusy(false);
     }
+  }, [onStatusChanged]);
 
+  const renderStepAction = (stepId: EntraSetupStepId): React.ReactNode => {
     if (stepId === 'connect') {
       return (
-        <div className="mt-4 space-y-4">
+        <div className="space-y-4">
           <PreConsentDisclosure />
           <ConnectionMethodChooser
             cippAvailable={cippAvailable}
@@ -169,7 +207,7 @@ export function EntraSetupWizard({
 
     if (stepId === 'discover') {
       return (
-        <div className="mt-4 space-y-2">
+        <div className="space-y-2">
           <Button
             id="entra-setup-run-discovery"
             type="button"
@@ -191,64 +229,84 @@ export function EntraSetupWizard({
 
     if (stepId === 'map') {
       return (
-        <div className="mt-4">
-          <EntraTenantMappingTable
-            refreshKey={mappingRefreshKey}
-            onSummaryChange={setMappingSummary}
-            onPersistedMappingChange={() => void onStatusChanged()}
-          />
-        </div>
+        <EntraTenantMappingTable
+          refreshKey={mappingRefreshKey}
+          onSummaryChange={setMappingSummary}
+          onPersistedMappingChange={() => void onStatusChanged()}
+        />
       );
     }
 
     // Step 4 is a pilot, not a big-bang: preview one client, sync that one, and
     // only then offer the rest.
     return (
-      <div className="mt-4">
-        <PilotSyncControl onPilotStarted={onStatusChanged} />
-      </div>
+      <PilotSyncControl
+        onPilotStarted={onStatusChanged}
+        fieldSyncConfig={fieldSyncConfig}
+        onFieldSyncConfigChange={setFieldSyncConfig}
+        onFieldSyncSaved={onStatusChanged}
+      />
     );
   };
 
   return (
-    <div className="space-y-6" id="entra-setup-wizard">
-      <Card>
-        <CardHeader>
-          <div className="flex items-center justify-between gap-2">
-            <CardTitle>{t('integrations.entra.setup.title')}</CardTitle>
-            <Badge variant="secondary">{t('integrations.entra.settings.badges.pro')}</Badge>
-          </div>
-          <CardDescription>{t('integrations.entra.setup.description')}</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {steps.map((step) => (
-            <div
-              key={step.id}
-              className={
-                step.state === 'current'
-                  ? 'rounded-lg border border-primary-500 bg-background p-4'
-                  : 'rounded-lg border border-border/60 bg-muted/30 p-4'
-              }
-              id={`entra-setup-step-${step.stepNumber}`}
-              data-step-state={step.state}
-            >
-              <div className="flex items-center justify-between gap-2">
-                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  {t('integrations.entra.setup.stepLabel', { number: step.stepNumber })}
-                </p>
-                <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                  {t(`integrations.entra.setup.state.${step.state}`)}
-                </span>
-              </div>
-              <p className="mt-1 text-sm font-semibold">{t(STEP_TITLE_KEYS[step.id])}</p>
-              <p className="mt-1 text-sm text-muted-foreground">
-                {t(STEP_DESCRIPTION_KEYS[step.id])}
-              </p>
-              {renderStepAction(step.id)}
+    <div className="space-y-5" id="entra-setup-wizard">
+      <div>
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-2">
+              <h1 className="text-xl font-semibold tracking-tight">
+                {t('integrations.entra.setup.title')}
+              </h1>
+              <Badge variant="secondary">{t('integrations.entra.settings.badges.pro')}</Badge>
             </div>
-          ))}
-        </CardContent>
-      </Card>
+            <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+              {t('integrations.entra.setup.description')}
+            </p>
+          </div>
+
+          {isConnected ? (
+            <div className="flex flex-shrink-0 items-center gap-2" id="entra-setup-connection-state">
+              <Badge variant="success">
+                {t('integrations.entra.setup.connectedVia', {
+                  method: status?.connectionType
+                    ? t(`integrations.entra.settings.connection.types.${status.connectionType}`)
+                    : t('integrations.entra.settings.connection.notConfigured'),
+                })}
+              </Badge>
+              <Button
+                id="entra-setup-disconnect"
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => setDisconnectOpen(true)}
+                disabled={disconnectBusy}
+              >
+                {t('integrations.entra.settings.actions.disconnect')}
+              </Button>
+            </div>
+          ) : null}
+        </div>
+
+        <div className="mt-4">
+          <SetupLadder id="entra-setup-ladder" steps={steps} labels={ladderLabels} />
+        </div>
+      </div>
+
+      <div id={`entra-setup-step-${current.stepNumber}`} data-step-state={current.state}>
+        <Card>
+          <CardHeader>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <CardTitle>{t(STEP_TITLE_KEYS[current.id])}</CardTitle>
+              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                {t('integrations.entra.setup.stepLabel', { number: current.stepNumber })}
+              </span>
+            </div>
+            <CardDescription>{t(STEP_DESCRIPTION_KEYS[current.id])}</CardDescription>
+          </CardHeader>
+          <CardContent>{renderStepAction(current.id)}</CardContent>
+        </Card>
+      </div>
 
       <EntraDirectConsentDialog
         open={directConsentOpen}
@@ -261,6 +319,24 @@ export function EntraSetupWizard({
         open={cippDialogOpen}
         onOpenChange={setCippDialogOpen}
         onSuccess={() => void onStatusChanged()}
+      />
+
+      <ConfirmationDialog
+        id="entra-setup-disconnect-dialog"
+        isOpen={disconnectOpen}
+        onClose={() => setDisconnectOpen(false)}
+        onConfirm={() => handleDisconnect()}
+        isConfirming={disconnectBusy}
+        title={t('integrations.entra.settings.disconnectConfirm.title')}
+        message={
+          <div className="space-y-2 text-sm text-muted-foreground">
+            <p>{t('integrations.entra.settings.disconnectConfirm.stops')}</p>
+            <p>{t('integrations.entra.settings.disconnectConfirm.keeps')}</p>
+            <p>{t('integrations.entra.settings.disconnectConfirm.reconnect')}</p>
+          </div>
+        }
+        confirmLabel={t('integrations.entra.settings.actions.disconnect')}
+        cancelLabel={t('integrations.entra.settings.actions.cancel')}
       />
     </div>
   );

@@ -280,6 +280,37 @@ export type EntraSyncHistoryResponse = {
   runs: EntraSyncHistoryRun[];
 };
 
+/** What one run did to one client. */
+export type EntraSyncRunTenantResult = {
+  managedTenantId: string | null;
+  clientId: string | null;
+  status: string;
+  created: number;
+  linked: number;
+  updated: number;
+  ambiguous: number;
+  inactivated: number;
+  errorMessage: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
+};
+
+export type EntraSyncRunDetail = {
+  run: {
+    runId: string;
+    status: string;
+    runType: string;
+    startedAt: string;
+    completedAt: string | null;
+    totalTenants: number;
+    processedTenants: number;
+    succeededTenants: number;
+    failedTenants: number;
+    summary: Record<string, unknown>;
+  } | null;
+  tenantResults: EntraSyncRunTenantResult[];
+};
+
 export type EntraReconciliationQueueItem = {
   queueItemId: string;
   managedTenantId: string | null;
@@ -750,6 +781,36 @@ export const getEntraSyncRunHistory = withAuth(async (user, { tenant }, limit: n
         runs: runs.slice(0, safeLimit),
       },
     } as const;
+  });
+});
+
+/**
+ * One run in detail: what it did to each client.
+ *
+ * The history list carries tenant counts only, which is enough to say a run
+ * failed and not enough to say what it changed. The overview needs the second
+ * thing — "1,842 linked, 18 created, 4 made inactive" is the answer to "did
+ * last night's sync do anything alarming?".
+ */
+export const getEntraSyncRunDetail = withAuth(async (user, _ctx, runId: string) => {
+  if (isClientPortalUser(user)) {
+    return { success: false, error: 'Forbidden' } as const;
+  }
+
+  const canRead = await hasPermission(user as any, 'system_settings', 'read');
+  if (!canRead) {
+    return { success: false, error: 'Forbidden: insufficient permissions to view Entra integration' } as const;
+  }
+
+  const safeRunId = String(runId || '').trim();
+  if (!safeRunId) {
+    return { success: false, error: 'A run id is required.' } as const;
+  }
+
+  return callEeRoute<EntraSyncRunDetail>({
+    importFn: routes.syncRunsRoute,
+    method: 'GET',
+    query: { runId: safeRunId },
   });
 });
 

@@ -6,13 +6,21 @@ import { EntraSetupWizard } from '@ee/components/settings/integrations/entra/Ent
 import type { EntraStatusResponse } from '@alga-psa/integrations/actions';
 
 const {
+  disconnectEntraIntegrationMock,
   discoverEntraManagedTenantsMock,
+  getEntraConfirmedMappingsMock,
   initiateEntraDirectOAuthMock,
+  runEntraPreflightMock,
   startEntraSyncMock,
+  updateEntraFieldSyncConfigMock,
 } = vi.hoisted(() => ({
+  disconnectEntraIntegrationMock: vi.fn(),
   discoverEntraManagedTenantsMock: vi.fn(),
+  getEntraConfirmedMappingsMock: vi.fn(),
   initiateEntraDirectOAuthMock: vi.fn(),
+  runEntraPreflightMock: vi.fn(),
   startEntraSyncMock: vi.fn(),
+  updateEntraFieldSyncConfigMock: vi.fn(),
 }));
 
 vi.mock('@alga-psa/ui/lib/i18n/client', async () => {
@@ -21,9 +29,13 @@ vi.mock('@alga-psa/ui/lib/i18n/client', async () => {
 });
 
 vi.mock('@alga-psa/integrations/actions', () => ({
+  disconnectEntraIntegration: disconnectEntraIntegrationMock,
   discoverEntraManagedTenants: discoverEntraManagedTenantsMock,
+  getEntraConfirmedMappings: getEntraConfirmedMappingsMock,
   initiateEntraDirectOAuth: initiateEntraDirectOAuthMock,
+  runEntraPreflight: runEntraPreflightMock,
   startEntraSync: startEntraSyncMock,
+  updateEntraFieldSyncConfig: updateEntraFieldSyncConfigMock,
 }));
 
 // The mapping table and the CIPP dialog have their own suites; the wizard only
@@ -49,6 +61,11 @@ vi.mock('@alga-psa/ui/components/Button', () => ({
 
 vi.mock('@alga-psa/ui/components/Badge', () => ({
   Badge: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
+}));
+
+vi.mock('@alga-psa/ui/components/ConfirmationDialog', () => ({
+  ConfirmationDialog: ({ isOpen, id, title }: { isOpen: boolean; id?: string; title?: string }) =>
+    isOpen ? <div id={id}>{title}</div> : null,
 }));
 
 vi.mock('@alga-psa/ui/components/Card', () => ({
@@ -112,10 +129,40 @@ describe('EntraSetupWizard', () => {
     expect(stepOne?.querySelector('#entra-connection-method-chooser')).not.toBeNull();
     expect(stepOne?.getAttribute('data-step-state')).toBe('current');
 
-    // Later steps are present as a ladder but carry no controls to press.
-    expect(document.getElementById('entra-setup-step-2')?.querySelector('button')).toBeNull();
+    // Later steps are a line in the ladder, not a card: no second card exists,
+    // and nothing on screen offers work that cannot be started yet.
+    expect(document.getElementById('entra-setup-step-2')).toBeNull();
     expect(document.getElementById('entra-setup-run-discovery')).toBeNull();
     expect(document.getElementById('entra-pilot-control-stub')).toBeNull();
+  });
+
+  it('shows all four steps in the ladder with the current one marked', () => {
+    renderWizard(statusOf({ status: 'connected', connectionType: 'direct' }));
+
+    const ladder = document.getElementById('entra-setup-ladder');
+    expect(ladder?.children).toHaveLength(4);
+    expect(document.getElementById('entra-setup-ladder-1')?.getAttribute('data-step-state'))
+      .toBe('complete');
+    expect(document.getElementById('entra-setup-ladder-2')?.getAttribute('data-step-state'))
+      .toBe('current');
+    expect(document.getElementById('entra-setup-ladder-2')?.getAttribute('aria-current'))
+      .toBe('step');
+    expect(document.getElementById('entra-setup-ladder-4')?.getAttribute('data-step-state'))
+      .toBe('locked');
+    expect(ladder?.textContent).toContain('Preview & pilot');
+  });
+
+  it('offers a way back out once connected, so a wrong method is not a dead end', () => {
+    renderWizard(statusOf({ status: 'connected', connectionType: 'cipp' }));
+
+    expect(document.getElementById('entra-setup-connection-state')?.textContent)
+      .toContain('Connected via CIPP');
+
+    expect(document.getElementById('entra-setup-disconnect-dialog')).toBeNull();
+    fireEvent.click(document.getElementById('entra-setup-disconnect') as HTMLButtonElement);
+    expect(document.getElementById('entra-setup-disconnect-dialog')).not.toBeNull();
+    // Confirmation first: disconnecting is not a one-click accident.
+    expect(disconnectEntraIntegrationMock).not.toHaveBeenCalled();
   });
 
   it('discloses scopes and the contact contract before any connect action', () => {
@@ -128,6 +175,25 @@ describe('EntraSetupWizard', () => {
     const effects = document.getElementById('entra-disclosure-contact-effects');
     expect(effects?.textContent).toContain('Nothing is ever deleted.');
     expect(effects?.textContent).toContain('matched by email address');
+  });
+
+  it('marks what will happen apart from what will never happen', () => {
+    renderWizard(statusOf());
+
+    const capabilities = document.getElementById('entra-disclosure-capabilities');
+    expect(capabilities?.textContent).toContain('Read the list of Microsoft tenants you manage');
+    expect(capabilities?.textContent).toContain('Never writes anything back to Microsoft');
+
+    // The reassurances are marked as denials, not as more bullet points.
+    const marks = Array.from(capabilities?.querySelectorAll('[data-mark]') || []).map((node) =>
+      node.getAttribute('data-mark')
+    );
+    expect(marks).toEqual(['affirm', 'affirm', 'deny', 'deny']);
+
+    const effectMarks = Array.from(
+      document.getElementById('entra-disclosure-contact-effects')?.querySelectorAll('[data-mark]') || []
+    ).map((node) => node.getAttribute('data-mark'));
+    expect(effectMarks).toEqual(['affirm', 'affirm', 'caution', 'deny', 'deny']);
   });
 
   it('offers both connection methods as focusable radios in a radiogroup', () => {
@@ -172,12 +238,19 @@ describe('EntraSetupWizard', () => {
 
     renderWizard(statusOf());
 
-    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    fireEvent.click(document.getElementById('entra-connection-method-continue') as HTMLButtonElement);
     expect(initiateEntraDirectOAuthMock).not.toHaveBeenCalled();
     expect(document.getElementById('entra-direct-consent-dialog')).toBeNull();
 
     fireEvent.click(screen.getAllByRole('radio')[0]);
-    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    // The button names the method once one is chosen, and says what happens next.
+    expect(
+      document.getElementById('entra-connection-method-continue')?.textContent
+    ).toContain('Continue with Direct');
+    expect(document.getElementById('entra-connection-method-reassurance')?.textContent).toContain(
+      'review the permission prompt'
+    );
+    fireEvent.click(document.getElementById('entra-connection-method-continue') as HTMLButtonElement);
 
     const dialog = document.getElementById('entra-direct-consent-dialog');
     expect(dialog).not.toBeNull();
@@ -201,7 +274,10 @@ describe('EntraSetupWizard', () => {
     renderWizard(statusOf());
 
     fireEvent.click(screen.getAllByRole('radio')[1]);
-    fireEvent.click(screen.getByRole('button', { name: 'Continue' }));
+    expect(
+      document.getElementById('entra-connection-method-continue')?.textContent
+    ).toContain('Set up CIPP connection');
+    fireEvent.click(document.getElementById('entra-connection-method-continue') as HTMLButtonElement);
 
     expect(document.getElementById('entra-cipp-connect-dialog-stub')).not.toBeNull();
     expect(initiateEntraDirectOAuthMock).not.toHaveBeenCalled();

@@ -8,10 +8,12 @@ const {
   getEntraConfirmedMappingsMock,
   runEntraPreflightMock,
   startEntraSyncMock,
+  updateEntraFieldSyncConfigMock,
 } = vi.hoisted(() => ({
   getEntraConfirmedMappingsMock: vi.fn(),
   runEntraPreflightMock: vi.fn(),
   startEntraSyncMock: vi.fn(),
+  updateEntraFieldSyncConfigMock: vi.fn(),
 }));
 
 vi.mock('@alga-psa/ui/lib/i18n/client', async () => {
@@ -23,6 +25,7 @@ vi.mock('@alga-psa/integrations/actions', () => ({
   getEntraConfirmedMappings: getEntraConfirmedMappingsMock,
   runEntraPreflight: runEntraPreflightMock,
   startEntraSync: startEntraSyncMock,
+  updateEntraFieldSyncConfig: updateEntraFieldSyncConfigMock,
 }));
 
 vi.mock('@alga-psa/ui/components/Button', () => ({

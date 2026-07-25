@@ -91,13 +91,50 @@ export const ENTRA_SCOPE_DISCLOSURES: EntraScopeDisclosure[] = ENTRA_DIRECT_DELE
   })
 );
 
-/** The contact-effect contract, in the order it is read. */
-export const ENTRA_CONTACT_EFFECT_KEYS: string[] = [
-  'integrations.entra.setup.disclosure.contacts.matching',
-  'integrations.entra.setup.disclosure.contacts.creation',
-  'integrations.entra.setup.disclosure.contacts.overwrite',
-  'integrations.entra.setup.disclosure.contacts.deletion',
+/**
+ * Marked statements, not bullets: the tick and the cross are what an operator
+ * reads first, and "never writes anything back to Microsoft" is reassurance
+ * only if it is visibly a *never*.
+ */
+export type EntraDisclosureMark = 'affirm' | 'deny' | 'caution';
+
+export interface EntraDisclosureStatement {
+  key: string;
+  mark: EntraDisclosureMark;
+}
+
+/** What the connection is allowed to do, in plain words. */
+export const ENTRA_CAPABILITY_STATEMENTS: EntraDisclosureStatement[] = [
+  { key: 'integrations.entra.setup.disclosure.capabilities.readTenants', mark: 'affirm' },
+  { key: 'integrations.entra.setup.disclosure.capabilities.readUsers', mark: 'affirm' },
+  { key: 'integrations.entra.setup.disclosure.capabilities.noWrite', mark: 'deny' },
+  { key: 'integrations.entra.setup.disclosure.capabilities.noMailbox', mark: 'deny' },
 ];
+
+/** The contact-effect contract, in the order it is read. */
+export const ENTRA_CONTACT_EFFECT_STATEMENTS: EntraDisclosureStatement[] = [
+  { key: 'integrations.entra.setup.disclosure.contacts.matching', mark: 'affirm' },
+  { key: 'integrations.entra.setup.disclosure.contacts.creation', mark: 'affirm' },
+  { key: 'integrations.entra.setup.disclosure.contacts.ambiguous', mark: 'caution' },
+  { key: 'integrations.entra.setup.disclosure.contacts.overwrite', mark: 'deny' },
+  { key: 'integrations.entra.setup.disclosure.contacts.deletion', mark: 'deny' },
+];
+
+export const ENTRA_CONTACT_EFFECT_KEYS: string[] = ENTRA_CONTACT_EFFECT_STATEMENTS.map(
+  (statement) => statement.key
+);
+
+/**
+ * Short labels for the ladder. The step cards state the work in a sentence;
+ * the ladder only has room for the verb, and repeating the long title there
+ * makes four headings say the same thing twice.
+ */
+export const ENTRA_SETUP_STEP_SHORT_LABEL_KEYS: Record<EntraSetupStepId, string> = {
+  connect: 'integrations.entra.setup.steps.connect.short',
+  discover: 'integrations.entra.setup.steps.discover.short',
+  map: 'integrations.entra.setup.steps.map.short',
+  sync: 'integrations.entra.setup.steps.sync.short',
+};
 
 /**
  * Plain text for the clipboard, so an operator can paste the disclosure into a

@@ -377,20 +377,37 @@
       },
       "console": {
         "actions": {
+          "pause": "11111",
+          "resume": "11111",
           "syncNow": "11111",
           "syncingNow": "11111"
         },
         "attention": {
+          "actions": {
+            "fixConnection": "11111",
+            "openSchedule": "11111",
+            "review": "11111",
+            "viewClients": "11111"
+          },
           "connection": "11111",
+          "connectionDetail": "11111",
           "empty": "11111",
           "failedClients": "11111",
+          "failedClientsDetail": "11111",
           "neverSynced": "11111",
-          "open": "11111",
+          "neverSyncedDetail": "11111",
           "reviewQueue": "11111",
+          "reviewQueueDetail": "11111",
           "scheduleOff": "11111",
+          "scheduleOffDetail": "11111",
           "title": "11111"
         },
         "clients": {
+          "columns": {
+            "lastSync": "11111",
+            "tenant": "11111",
+            "users": "11111"
+          },
           "empty": "11111",
           "filters": {
             "all": "11111",
@@ -398,7 +415,6 @@
             "healthy": "11111",
             "never-synced": "11111"
           },
-          "lastSynced": "11111",
           "neverSynced": "11111",
           "searchPlaceholder": "11111",
           "sync": "11111",
@@ -408,6 +424,7 @@
           "exportRecord": "11111",
           "mappingDescription": "11111",
           "mappingTitle": "11111",
+          "permissionsTitle": "11111",
           "rotate": "11111",
           "validate": "11111",
           "validated": "11111",
@@ -417,8 +434,20 @@
           "syncFailed": "11111",
           "validateFailed": "11111"
         },
+        "health": {
+          "failingClients": "11111",
+          "healthy": "11111"
+        },
         "history": {
           "allClients": "11111",
+          "columns": {
+            "clients": "11111",
+            "failed": "11111",
+            "scope": "11111",
+            "succeeded": "11111",
+            "trigger": "11111",
+            "when": "11111"
+          },
           "empty": "11111",
           "export": "11111",
           "includePreviews": "11111",
@@ -427,9 +456,6 @@
           "page": "11111",
           "previewBadge": "11111",
           "previous": "11111",
-          "runHeader": "11111",
-          "runMeta": "11111",
-          "tenantCounts": "11111",
           "triggers": {
             "all": "11111",
             "manual": "11111",
@@ -437,9 +463,42 @@
           }
         },
         "lastRun": {
+          "columns": {
+            "client": "11111",
+            "created": "11111",
+            "inactivated": "11111",
+            "linked": "11111",
+            "result": "11111",
+            "when": "11111"
+          },
           "empty": "11111",
+          "fullHistory": "11111",
+          "results": {
+            "done": "11111",
+            "failed": "11111",
+            "toReview": "11111"
+          },
+          "stats": {
+            "created": "11111",
+            "createdSub": "11111",
+            "failed": "11111",
+            "failedSub": "11111",
+            "inactivated": "11111",
+            "inactivatedSub": "11111",
+            "linked": "11111",
+            "linkedSub": "11111",
+            "updated": "11111",
+            "updatedSub": "11111"
+          },
           "summary": "11111",
           "tenants": "11111",
+          "title": "11111"
+        },
+        "lead": "11111",
+        "overwrites": {
+          "change": "11111",
+          "off": "11111",
+          "on": "11111",
           "title": "11111"
         },
         "schedule": {
@@ -455,6 +514,8 @@
           },
           "pause": "11111",
           "pauseHint": "11111",
+          "paused": "11111",
+          "resumed": "11111",
           "save": "11111",
           "saveFailed": "11111",
           "saved": "11111",
@@ -463,10 +524,12 @@
           "title": "11111"
         },
         "sideRail": {
-          "schedule": "11111",
+          "change": "11111",
+          "covers": "11111",
+          "coversClients": "11111",
+          "lastRun": "11111",
           "scheduleOff": "11111",
-          "scheduleOn": "11111",
-          "title": "11111"
+          "scheduleOn": "11111"
         },
         "syncStarted": "11111",
         "tabs": {
@@ -485,6 +548,7 @@
           "preview": "11111",
           "previewing": "11111",
           "syncOne": "11111",
+          "syncOneNamed": "11111",
           "syncRemaining": "11111",
           "syncingOne": "11111",
           "syncingRemaining": "11111"
@@ -497,6 +561,7 @@
           "syncFailed": "11111"
         },
         "gateNote": "11111",
+        "previewPrompt": "11111",
         "remainingStarted": "11111",
         "started": "11111"
       },
@@ -525,6 +590,7 @@
         },
         "hideNames": "11111",
         "moreNames": "11111",
+        "nothingWritten": "11111",
         "showNames": "11111",
         "summary": "11111",
         "title": "11111"
@@ -794,7 +860,10 @@
               "instance": "11111"
             }
           },
+          "cippReassurance": "11111",
           "continue": "11111",
+          "continueCipp": "11111",
+          "continueDirect": "11111",
           "continuing": "11111",
           "direct": {
             "description": "11111",
@@ -805,10 +874,13 @@
               "partnerRelationship": "11111"
             }
           },
+          "directReassurance": "11111",
           "prerequisitesTitle": "11111",
           "recommendation": "11111",
+          "recommendedBadge": "11111",
           "title": "11111"
         },
+        "connectedVia": "11111",
         "description": "11111",
         "directConsent": {
           "adminNote": "11111",
@@ -820,7 +892,15 @@
           "title": "11111"
         },
         "disclosure": {
+          "capabilities": {
+            "noMailbox": "11111",
+            "noWrite": "11111",
+            "readTenants": "11111",
+            "readUsers": "11111"
+          },
+          "capabilitiesTitle": "11111",
           "contacts": {
+            "ambiguous": "11111",
             "creation": "11111",
             "deletion": "11111",
             "matching": "11111",
@@ -830,6 +910,7 @@
           "copied": "11111",
           "copy": "11111",
           "description": "11111",
+          "inactiveNote": "11111",
           "recordGeneratedAt": "11111",
           "recordHeading": "11111",
           "scopes": {
@@ -839,30 +920,30 @@
             "unknown": "11111",
             "userRead": "11111"
           },
+          "scopesAllReadOnly": "11111",
           "scopesTitle": "11111",
           "title": "11111"
-        },
-        "state": {
-          "complete": "11111",
-          "current": "11111",
-          "locked": "11111"
         },
         "stepLabel": "11111",
         "steps": {
           "connect": {
             "description": "11111",
+            "short": "11111",
             "title": "11111"
           },
           "discover": {
             "description": "11111",
+            "short": "11111",
             "title": "11111"
           },
           "map": {
             "description": "11111",
+            "short": "11111",
             "title": "11111"
           },
           "sync": {
             "description": "11111",
+            "short": "11111",
             "title": "11111"
           }
         },

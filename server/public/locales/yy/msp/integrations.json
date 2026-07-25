@@ -377,20 +377,37 @@
       },
       "console": {
         "actions": {
+          "pause": "55555",
+          "resume": "55555",
           "syncNow": "55555",
           "syncingNow": "55555"
         },
         "attention": {
+          "actions": {
+            "fixConnection": "55555",
+            "openSchedule": "55555",
+            "review": "55555",
+            "viewClients": "55555"
+          },
           "connection": "55555",
+          "connectionDetail": "55555",
           "empty": "55555",
           "failedClients": "55555",
+          "failedClientsDetail": "55555",
           "neverSynced": "55555",
-          "open": "55555",
+          "neverSyncedDetail": "55555",
           "reviewQueue": "55555",
+          "reviewQueueDetail": "55555",
           "scheduleOff": "55555",
+          "scheduleOffDetail": "55555",
           "title": "55555"
         },
         "clients": {
+          "columns": {
+            "lastSync": "55555",
+            "tenant": "55555",
+            "users": "55555"
+          },
           "empty": "55555",
           "filters": {
             "all": "55555",
@@ -398,7 +415,6 @@
             "healthy": "55555",
             "never-synced": "55555"
           },
-          "lastSynced": "55555",
           "neverSynced": "55555",
           "searchPlaceholder": "55555",
           "sync": "55555",
@@ -408,6 +424,7 @@
           "exportRecord": "55555",
           "mappingDescription": "55555",
           "mappingTitle": "55555",
+          "permissionsTitle": "55555",
           "rotate": "55555",
           "validate": "55555",
           "validated": "55555",
@@ -417,8 +434,20 @@
           "syncFailed": "55555",
           "validateFailed": "55555"
         },
+        "health": {
+          "failingClients": "55555",
+          "healthy": "55555"
+        },
         "history": {
           "allClients": "55555",
+          "columns": {
+            "clients": "55555",
+            "failed": "55555",
+            "scope": "55555",
+            "succeeded": "55555",
+            "trigger": "55555",
+            "when": "55555"
+          },
           "empty": "55555",
           "export": "55555",
           "includePreviews": "55555",
@@ -427,9 +456,6 @@
           "page": "55555",
           "previewBadge": "55555",
           "previous": "55555",
-          "runHeader": "55555",
-          "runMeta": "55555",
-          "tenantCounts": "55555",
           "triggers": {
             "all": "55555",
             "manual": "55555",
@@ -437,9 +463,42 @@
           }
         },
         "lastRun": {
+          "columns": {
+            "client": "55555",
+            "created": "55555",
+            "inactivated": "55555",
+            "linked": "55555",
+            "result": "55555",
+            "when": "55555"
+          },
           "empty": "55555",
+          "fullHistory": "55555",
+          "results": {
+            "done": "55555",
+            "failed": "55555",
+            "toReview": "55555"
+          },
+          "stats": {
+            "created": "55555",
+            "createdSub": "55555",
+            "failed": "55555",
+            "failedSub": "55555",
+            "inactivated": "55555",
+            "inactivatedSub": "55555",
+            "linked": "55555",
+            "linkedSub": "55555",
+            "updated": "55555",
+            "updatedSub": "55555"
+          },
           "summary": "55555",
           "tenants": "55555",
+          "title": "55555"
+        },
+        "lead": "55555",
+        "overwrites": {
+          "change": "55555",
+          "off": "55555",
+          "on": "55555",
           "title": "55555"
         },
         "schedule": {
@@ -455,6 +514,8 @@
           },
           "pause": "55555",
           "pauseHint": "55555",
+          "paused": "55555",
+          "resumed": "55555",
           "save": "55555",
           "saveFailed": "55555",
           "saved": "55555",
@@ -463,10 +524,12 @@
           "title": "55555"
         },
         "sideRail": {
-          "schedule": "55555",
+          "change": "55555",
+          "covers": "55555",
+          "coversClients": "55555",
+          "lastRun": "55555",
           "scheduleOff": "55555",
-          "scheduleOn": "55555",
-          "title": "55555"
+          "scheduleOn": "55555"
         },
         "syncStarted": "55555",
         "tabs": {
@@ -485,6 +548,7 @@
           "preview": "55555",
           "previewing": "55555",
           "syncOne": "55555",
+          "syncOneNamed": "55555",
           "syncRemaining": "55555",
           "syncingOne": "55555",
           "syncingRemaining": "55555"
@@ -497,6 +561,7 @@
           "syncFailed": "55555"
         },
         "gateNote": "55555",
+        "previewPrompt": "55555",
         "remainingStarted": "55555",
         "started": "55555"
       },
@@ -525,6 +590,7 @@
         },
         "hideNames": "55555",
         "moreNames": "55555",
+        "nothingWritten": "55555",
         "showNames": "55555",
         "summary": "55555",
         "title": "55555"
@@ -794,7 +860,10 @@
               "instance": "55555"
             }
           },
+          "cippReassurance": "55555",
           "continue": "55555",
+          "continueCipp": "55555",
+          "continueDirect": "55555",
           "continuing": "55555",
           "direct": {
             "description": "55555",
@@ -805,10 +874,13 @@
               "partnerRelationship": "55555"
             }
           },
+          "directReassurance": "55555",
           "prerequisitesTitle": "55555",
           "recommendation": "55555",
+          "recommendedBadge": "55555",
           "title": "55555"
         },
+        "connectedVia": "55555",
         "description": "55555",
         "directConsent": {
           "adminNote": "55555",
@@ -820,7 +892,15 @@
           "title": "55555"
         },
         "disclosure": {
+          "capabilities": {
+            "noMailbox": "55555",
+            "noWrite": "55555",
+            "readTenants": "55555",
+            "readUsers": "55555"
+          },
+          "capabilitiesTitle": "55555",
           "contacts": {
+            "ambiguous": "55555",
             "creation": "55555",
             "deletion": "55555",
             "matching": "55555",
@@ -830,6 +910,7 @@
           "copied": "55555",
           "copy": "55555",
           "description": "55555",
+          "inactiveNote": "55555",
           "recordGeneratedAt": "55555",
           "recordHeading": "55555",
           "scopes": {
@@ -839,30 +920,30 @@
             "unknown": "55555",
             "userRead": "55555"
           },
+          "scopesAllReadOnly": "55555",
           "scopesTitle": "55555",
           "title": "55555"
-        },
-        "state": {
-          "complete": "55555",
-          "current": "55555",
-          "locked": "55555"
         },
         "stepLabel": "55555",
         "steps": {
           "connect": {
             "description": "55555",
+            "short": "55555",
             "title": "55555"
           },
           "discover": {
             "description": "55555",
+            "short": "55555",
             "title": "55555"
           },
           "map": {
             "description": "55555",
+            "short": "55555",
             "title": "55555"
           },
           "sync": {
             "description": "55555",
+            "short": "55555",
             "title": "55555"
           }
         },

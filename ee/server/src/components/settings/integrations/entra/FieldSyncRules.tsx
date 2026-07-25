@@ -14,15 +14,9 @@ import {
   type EntraPreflightResponse,
 } from '@alga-psa/integrations/actions';
 import { ContactPreflightReport } from './ContactPreflightReport';
+import { DEFAULT_ENTRA_FIELD_SYNC_CONFIG, normalizeEntraFieldSyncConfig } from './fieldSyncModel';
 
-export const DEFAULT_ENTRA_FIELD_SYNC_CONFIG: EntraFieldSyncConfig = {
-  displayName: false,
-  email: false,
-  phone: false,
-  role: false,
-  upn: false,
-  markInactiveWhenDisabled: true,
-};
+export { DEFAULT_ENTRA_FIELD_SYNC_CONFIG, normalizeEntraFieldSyncConfig };
 
 interface FieldSyncRuleOption {
   key: keyof EntraFieldSyncConfig;
@@ -62,28 +56,17 @@ const OVERWRITE_RULES: FieldSyncRuleOption[] = [
   },
 ];
 
-export function normalizeEntraFieldSyncConfig(value: unknown): EntraFieldSyncConfig {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    return { ...DEFAULT_ENTRA_FIELD_SYNC_CONFIG };
-  }
-
-  const source = value as Record<string, unknown>;
-  return {
-    displayName: source.displayName === true,
-    email: source.email === true,
-    phone: source.phone === true,
-    role: source.role === true,
-    upn: source.upn === true,
-    markInactiveWhenDisabled: source.markInactiveWhenDisabled !== false,
-  };
-}
-
 interface FieldSyncRulesProps {
   config: EntraFieldSyncConfig;
   onConfigChange: (config: EntraFieldSyncConfig) => void;
   onSaved?: () => void | Promise<void>;
   /** Rendered by the setup wizard as well as the console tab. */
   headerSlot?: React.ReactNode;
+  /**
+   * The pilot step already shows a preview of the client being piloted, and two
+   * preview controls on one screen is a question about which one is authoritative.
+   */
+  showPreview?: boolean;
 }
 
 /**
@@ -101,6 +84,7 @@ export function FieldSyncRules({
   onConfigChange,
   onSaved,
   headerSlot,
+  showPreview = true,
 }: FieldSyncRulesProps): React.JSX.Element {
   const { t } = useTranslation('msp/integrations');
   const [saving, setSaving] = React.useState(false);
@@ -241,7 +225,7 @@ export function FieldSyncRules({
             : t('integrations.entra.settings.fieldSync.save')}
         </Button>
 
-        {mappings.length > 0 ? (
+        {showPreview && mappings.length > 0 ? (
           <>
             <div className="w-56">
               <CustomSelect
@@ -283,7 +267,7 @@ export function FieldSyncRules({
         </p>
       ) : null}
 
-      {preview ? (
+      {showPreview && preview ? (
         <div className="mt-3">
           <ContactPreflightReport report={preview} />
         </div>

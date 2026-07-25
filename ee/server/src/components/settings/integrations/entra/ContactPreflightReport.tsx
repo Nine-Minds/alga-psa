@@ -1,7 +1,9 @@
 'use client';
 
 import React from 'react';
+import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
+import { Progress } from '@alga-psa/ui/components/Progress';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type {
   EntraPreflightBucketId,
@@ -38,6 +40,20 @@ const BUCKET_DESCRIPTION_KEYS: Record<EntraPreflightBucketId, string> = {
   no_change: 'integrations.entra.preflight.buckets.noChange.description',
 };
 
+/**
+ * Colour carries the same meaning it does everywhere else in the product:
+ * green creates, blue links, amber needs a person, red takes something away.
+ */
+const BUCKET_BAR_CLASSES: Record<EntraPreflightBucketId, string> = {
+  create: 'bg-success',
+  link: 'bg-primary-500',
+  needs_decision: 'bg-warning',
+  mark_inactive: 'bg-destructive',
+  no_change: 'bg-muted-foreground/40',
+};
+
+const BUCKET_DOT_CLASSES: Record<EntraPreflightBucketId, string> = BUCKET_BAR_CLASSES;
+
 function identityLabel(identity: EntraPreflightIdentity): string {
   return (
     identity.displayName
@@ -48,7 +64,12 @@ function identityLabel(identity: EntraPreflightIdentity): string {
 }
 
 /**
- * What the sync would do, before it does it. Every bucket is expandable to the
+ * What the sync would do, before it does it.
+ *
+ * The proportions are the point: "109 linked, 29 created, 4 to decide" is a
+ * normal first run, and "0 linked, 1,842 created" is a mapping mistake about to
+ * duplicate someone's whole contact list — and those two read differently at a
+ * glance only if the counts are drawn as counts. Every bucket expands to the
  * identities behind the number, because "12 contacts will be created" is a
  * claim an operator has to be able to check against their own directory.
  */
@@ -57,39 +78,59 @@ export function ContactPreflightReport({ report }: ContactPreflightReportProps):
   const [expanded, setExpanded] = React.useState<EntraPreflightBucketId | null>(null);
 
   const bucketsById = new Map(report.buckets.map((bucket) => [bucket.bucket, bucket]));
+  const total = Math.max(
+    report.totalIdentities || 0,
+    report.buckets.reduce((sum, bucket) => sum + (bucket.count || 0), 0)
+  );
 
   return (
-    <div className="space-y-3 rounded-lg border border-border/70 bg-background p-4" id="entra-preflight-report">
-      <div>
-        <p className="text-sm font-semibold">{t('integrations.entra.preflight.title')}</p>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {t('integrations.entra.preflight.summary', {
-            count: report.totalIdentities,
-            time: new Date(report.checkedAt).toLocaleString(),
-          })}
-        </p>
+    <div className="rounded-lg border border-border/70 bg-background p-4" id="entra-preflight-report">
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold">{t('integrations.entra.preflight.title')}</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {t('integrations.entra.preflight.summary', {
+              count: report.totalIdentities,
+              time: new Date(report.checkedAt).toLocaleString(),
+            })}
+          </p>
+        </div>
+        <Badge variant="default-muted" id="entra-preflight-nothing-written">
+          {t('integrations.entra.preflight.nothingWritten')}
+        </Badge>
       </div>
 
-      <ul className="divide-y divide-border/60">
+      <div className="mt-4 space-y-2">
         {BUCKET_ORDER.map((bucketId) => {
           const bucket = bucketsById.get(bucketId);
           const count = bucket?.count ?? 0;
           const samples = bucket?.samples ?? [];
           const isExpanded = expanded === bucketId;
+          const percent = total > 0 ? Math.round((count / total) * 100) : 0;
 
           return (
-            <li key={bucketId} className="py-2" id={`entra-preflight-bucket-${bucketId}`}>
-              <div className="flex items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="text-sm font-medium">{t(BUCKET_LABEL_KEYS[bucketId])}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {t(BUCKET_DESCRIPTION_KEYS[bucketId])}
-                  </p>
-                </div>
-                <div className="flex flex-shrink-0 items-center gap-2">
-                  <span className="text-sm font-semibold" data-bucket-count={count}>
-                    {count}
-                  </span>
+            <div key={bucketId} id={`entra-preflight-bucket-${bucketId}`}>
+              <div className="flex items-center gap-3">
+                <span className="flex w-52 min-w-0 flex-shrink-0 items-center gap-2 text-sm">
+                  <span
+                    className={`h-2.5 w-2.5 flex-shrink-0 rounded-sm ${BUCKET_DOT_CLASSES[bucketId]}`}
+                    aria-hidden="true"
+                  />
+                  <span className="truncate">{t(BUCKET_LABEL_KEYS[bucketId])}</span>
+                </span>
+                <Progress
+                  value={percent}
+                  className="h-2 flex-1"
+                  indicatorClassName={BUCKET_BAR_CLASSES[bucketId]}
+                  aria-label={t(BUCKET_LABEL_KEYS[bucketId])}
+                />
+                <span
+                  className="w-12 flex-shrink-0 text-right text-sm font-semibold tabular-nums"
+                  data-bucket-count={count}
+                >
+                  {count}
+                </span>
+                <span className="w-24 flex-shrink-0 text-right">
                   {count > 0 ? (
                     <Button
                       id={`entra-preflight-expand-${bucketId}`}
@@ -103,33 +144,42 @@ export function ContactPreflightReport({ report }: ContactPreflightReportProps):
                         : t('integrations.entra.preflight.showNames')}
                     </Button>
                   ) : null}
-                </div>
+                </span>
               </div>
 
-              {isExpanded && samples.length > 0 ? (
-                <ul
-                  className="mt-2 list-disc space-y-0.5 pl-4"
-                  id={`entra-preflight-samples-${bucketId}`}
-                >
-                  {samples.map((identity) => (
-                    <li key={identity.entraObjectId} className="min-w-0 truncate text-sm text-muted-foreground">
-                      {identityLabel(identity)}
-                      {identity.email && identity.email !== identityLabel(identity)
-                        ? ` · ${identity.email}`
-                        : ''}
-                    </li>
-                  ))}
-                  {count > samples.length ? (
-                    <li className="text-sm text-muted-foreground">
-                      {t('integrations.entra.preflight.moreNames', { count: count - samples.length })}
-                    </li>
+              {isExpanded ? (
+                <div className="mt-1 rounded-md border border-border/50 bg-muted/30 p-3">
+                  <p className="text-sm text-muted-foreground">
+                    {t(BUCKET_DESCRIPTION_KEYS[bucketId])}
+                  </p>
+                  {samples.length > 0 ? (
+                    <ul
+                      className="mt-2 flex flex-wrap gap-x-4 gap-y-1"
+                      id={`entra-preflight-samples-${bucketId}`}
+                    >
+                      {samples.map((identity) => (
+                        <li key={identity.entraObjectId} className="min-w-0 truncate text-sm">
+                          {identityLabel(identity)}
+                          {identity.email && identity.email !== identityLabel(identity)
+                            ? ` · ${identity.email}`
+                            : ''}
+                        </li>
+                      ))}
+                      {count > samples.length ? (
+                        <li className="text-sm text-muted-foreground">
+                          {t('integrations.entra.preflight.moreNames', {
+                            count: count - samples.length,
+                          })}
+                        </li>
+                      ) : null}
+                    </ul>
                   ) : null}
-                </ul>
+                </div>
               ) : null}
-            </li>
+            </div>
           );
         })}
-      </ul>
+      </div>
     </div>
   );
 }

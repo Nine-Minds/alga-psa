@@ -1,8 +1,10 @@
 'use client';
 
 import React from 'react';
+import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@alga-psa/ui/components/Table';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   runEntraPreflight,
@@ -156,73 +158,109 @@ export function EntraClientsTab({
           {t('integrations.entra.console.clients.empty')}
         </p>
       ) : (
-        <ul className="divide-y divide-border/60 rounded-lg border border-border/70">
-          {visible.map((mapping) => {
-            const isExpanded = expanded === mapping.managedTenantId;
-            const busy = busyRow === mapping.managedTenantId;
+        <div className="overflow-x-auto rounded-lg border border-border/70">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{t('integrations.entra.console.lastRun.columns.client')}</TableHead>
+                <TableHead>{t('integrations.entra.console.clients.columns.tenant')}</TableHead>
+                <TableHead className="text-right">
+                  {t('integrations.entra.console.clients.columns.users')}
+                </TableHead>
+                <TableHead>{t('integrations.entra.console.clients.columns.lastSync')}</TableHead>
+                <TableHead>{t('integrations.entra.console.lastRun.columns.result')}</TableHead>
+                <TableHead className="text-right">
+                  {t('integrations.entra.tenantMapping.columns.actions')}
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {visible.map((mapping) => {
+                const isExpanded = expanded === mapping.managedTenantId;
+                const busy = busyRow === mapping.managedTenantId;
+                const preview = previewByRow[mapping.managedTenantId];
 
-            return (
-              <li
-                key={mapping.managedTenantId}
-                className="p-3"
-                id={`entra-client-row-${mapping.managedTenantId}`}
-              >
-                <div className="flex flex-wrap items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium">{clientLabel(mapping)}</p>
-                    <p className="truncate text-xs text-muted-foreground">
-                      {mapping.primaryDomain || mapping.entraTenantId}
-                      {' · '}
-                      {mapping.lastSyncedAt
-                        ? t('integrations.entra.console.clients.lastSynced', {
-                            time: new Date(mapping.lastSyncedAt).toLocaleString(),
-                            status: mapping.lastRunStatus || '—',
-                          })
-                        : t('integrations.entra.console.clients.neverSynced')}
-                    </p>
-                  </div>
-                  <div className="flex flex-shrink-0 flex-wrap gap-2">
-                    <Button
-                      id={`entra-client-preview-${mapping.managedTenantId}`}
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      onClick={() => void handlePreview(mapping)}
-                      disabled={busy}
-                    >
-                      {t('integrations.entra.pilot.actions.preview')}
-                    </Button>
-                    <Button
-                      id={`entra-client-sync-${mapping.managedTenantId}`}
-                      type="button"
-                      size="sm"
-                      onClick={() => void handleSync(mapping)}
-                      disabled={busy}
-                    >
-                      {t('integrations.entra.console.clients.sync')}
-                    </Button>
-                    <Button
-                      id={`entra-client-unlink-${mapping.managedTenantId}`}
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setUnlinkTarget(mapping)}
-                      disabled={busy}
-                    >
-                      {t('integrations.entra.console.clients.unlink')}
-                    </Button>
-                  </div>
-                </div>
+                return (
+                  <React.Fragment key={mapping.managedTenantId}>
+                    <TableRow id={`entra-client-row-${mapping.managedTenantId}`}>
+                      <TableCell className="font-medium">{clientLabel(mapping)}</TableCell>
+                      <TableCell className="font-mono text-xs text-muted-foreground">
+                        {mapping.primaryDomain || mapping.entraTenantId}
+                      </TableCell>
+                      <TableCell className="text-right tabular-nums">
+                        {mapping.sourceUserCount}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">
+                        {mapping.lastSyncedAt
+                          ? new Date(mapping.lastSyncedAt).toLocaleString()
+                          : t('integrations.entra.console.clients.neverSynced')}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          size="sm"
+                          variant={
+                            mapping.lastRunStatus === 'failed'
+                              ? 'error'
+                              : mapping.lastRunStatus === 'completed'
+                                ? 'success'
+                                : 'default-muted'
+                          }
+                        >
+                          {mapping.lastRunStatus === 'failed'
+                            ? t('integrations.entra.console.lastRun.results.failed')
+                            : mapping.lastRunStatus === 'completed'
+                              ? t('integrations.entra.console.lastRun.results.done')
+                              : t('integrations.entra.console.clients.neverSynced')}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex flex-wrap justify-end gap-2">
+                          <Button
+                            id={`entra-client-preview-${mapping.managedTenantId}`}
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            onClick={() => void handlePreview(mapping)}
+                            disabled={busy}
+                          >
+                            {t('integrations.entra.pilot.actions.preview')}
+                          </Button>
+                          <Button
+                            id={`entra-client-sync-${mapping.managedTenantId}`}
+                            type="button"
+                            size="sm"
+                            onClick={() => void handleSync(mapping)}
+                            disabled={busy}
+                          >
+                            {t('integrations.entra.console.clients.sync')}
+                          </Button>
+                          <Button
+                            id={`entra-client-unlink-${mapping.managedTenantId}`}
+                            type="button"
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setUnlinkTarget(mapping)}
+                            disabled={busy}
+                          >
+                            {t('integrations.entra.console.clients.unlink')}
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
 
-                {isExpanded && previewByRow[mapping.managedTenantId] ? (
-                  <div className="mt-3">
-                    <ContactPreflightReport report={previewByRow[mapping.managedTenantId]} />
-                  </div>
-                ) : null}
-              </li>
-            );
-          })}
-        </ul>
+                    {isExpanded && preview ? (
+                      <TableRow>
+                        <TableCell colSpan={6} className="bg-muted/20">
+                          <ContactPreflightReport report={preview} />
+                        </TableCell>
+                      </TableRow>
+                    ) : null}
+                  </React.Fragment>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </div>
       )}
 
       <ConfirmationDialog

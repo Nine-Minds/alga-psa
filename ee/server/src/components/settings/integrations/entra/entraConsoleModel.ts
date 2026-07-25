@@ -37,10 +37,32 @@ export interface EntraAttentionItem {
   id: string;
   severity: EntraAttentionSeverity;
   titleKey: string;
-  /** Interpolation values for the title, already resolved to primitives. */
+  /**
+   * The line under the title: what it means, or which clients it is about. An
+   * attention list that only states counts makes the operator open every item
+   * to find out whether it is one problem or five.
+   */
+  detailKey?: string;
+  /** The button's own words — "Fix connection" beats a row of "Open"s. */
+  actionKey: string;
+  /** Interpolation values for the title and detail, already resolved to primitives. */
   values?: Record<string, string | number>;
   /** Tab to open when the operator acts on this. */
   tab: EntraConsoleTab;
+}
+
+/** At most three names, then a count — a list of 39 is not a summary. */
+const NAMED_CLIENT_LIMIT = 3;
+
+function namedClients(mappings: EntraConfirmedMapping[]): string {
+  const names = mappings
+    .map((mapping) => mapping.clientName || mapping.displayName || mapping.primaryDomain)
+    .filter((name): name is string => Boolean(name));
+
+  if (names.length <= NAMED_CLIENT_LIMIT) {
+    return names.join(', ');
+  }
+  return `${names.slice(0, NAMED_CLIENT_LIMIT).join(', ')} +${names.length - NAMED_CLIENT_LIMIT}`;
 }
 
 export interface BuildEntraAttentionInput {
@@ -67,6 +89,8 @@ export function buildEntraAttentionItems(input: BuildEntraAttentionInput): Entra
       id: 'connection',
       severity: 'blocking',
       titleKey: 'integrations.entra.console.attention.connection',
+      detailKey: 'integrations.entra.console.attention.connectionDetail',
+      actionKey: 'integrations.entra.console.attention.actions.fixConnection',
       tab: 'connection',
     });
   }
@@ -79,7 +103,9 @@ export function buildEntraAttentionItems(input: BuildEntraAttentionInput): Entra
       id: 'failed-clients',
       severity: 'blocking',
       titleKey: 'integrations.entra.console.attention.failedClients',
-      values: { count: failedClients.length },
+      detailKey: 'integrations.entra.console.attention.failedClientsDetail',
+      actionKey: 'integrations.entra.console.attention.actions.viewClients',
+      values: { count: failedClients.length, clients: namedClients(failedClients) },
       tab: 'clients',
     });
   }
@@ -89,6 +115,8 @@ export function buildEntraAttentionItems(input: BuildEntraAttentionInput): Entra
       id: 'review-queue',
       severity: 'warning',
       titleKey: 'integrations.entra.console.attention.reviewQueue',
+      detailKey: 'integrations.entra.console.attention.reviewQueueDetail',
+      actionKey: 'integrations.entra.console.attention.actions.review',
       values: { count: input.reviewQueueCount },
       tab: 'review-queue',
     });
@@ -100,7 +128,9 @@ export function buildEntraAttentionItems(input: BuildEntraAttentionInput): Entra
       id: 'never-synced',
       severity: 'warning',
       titleKey: 'integrations.entra.console.attention.neverSynced',
-      values: { count: neverSynced.length },
+      detailKey: 'integrations.entra.console.attention.neverSyncedDetail',
+      actionKey: 'integrations.entra.console.attention.actions.viewClients',
+      values: { count: neverSynced.length, clients: namedClients(neverSynced) },
       tab: 'clients',
     });
   }
@@ -110,11 +140,49 @@ export function buildEntraAttentionItems(input: BuildEntraAttentionInput): Entra
       id: 'schedule-off',
       severity: 'info',
       titleKey: 'integrations.entra.console.attention.scheduleOff',
+      detailKey: 'integrations.entra.console.attention.scheduleOffDetail',
+      actionKey: 'integrations.entra.console.attention.actions.openSchedule',
       tab: 'schedule',
     });
   }
 
   return items;
+}
+
+export interface EntraRunTotals {
+  linked: number;
+  created: number;
+  updated: number;
+  inactivated: number;
+  ambiguous: number;
+  failed: number;
+}
+
+/**
+ * The run, added up. The overview leads with what last night's sync did to the
+ * contact list, which is a sum across clients, not a per-client table read.
+ */
+export function summarizeEntraRunResults(
+  results: Array<{
+    status?: string;
+    created?: number;
+    linked?: number;
+    updated?: number;
+    inactivated?: number;
+    ambiguous?: number;
+  }>
+): EntraRunTotals {
+  return results.reduce<EntraRunTotals>(
+    (totals, result) => ({
+      linked: totals.linked + (result.linked || 0),
+      created: totals.created + (result.created || 0),
+      updated: totals.updated + (result.updated || 0),
+      inactivated: totals.inactivated + (result.inactivated || 0),
+      ambiguous: totals.ambiguous + (result.ambiguous || 0),
+      failed: totals.failed + (result.status === 'failed' ? 1 : 0),
+    }),
+    { linked: 0, created: 0, updated: 0, inactivated: 0, ambiguous: 0, failed: 0 }
+  );
 }
 
 /** The last run that actually changed something — previews are not runs. */

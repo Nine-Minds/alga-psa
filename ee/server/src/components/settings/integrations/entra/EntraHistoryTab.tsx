@@ -1,8 +1,10 @@
 'use client';
 
 import React from 'react';
+import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Switch } from '@alga-psa/ui/components/Switch';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@alga-psa/ui/components/Table';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type {
   EntraConfirmedMapping,
@@ -137,41 +139,64 @@ export function EntraHistoryTab({
           {t('integrations.entra.console.history.empty')}
         </p>
       ) : (
-        <ul className="divide-y divide-border/60 rounded-lg border border-border/70">
-          {visible.map((run) => (
-            <li key={run.runId} className="p-3" id={`entra-history-run-${run.runId}`}>
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">
-                    {t('integrations.entra.console.history.runHeader', {
-                      scope: run.scopeManagedTenantId
-                        ? clientNames.get(run.scopeManagedTenantId) || run.scopeManagedTenantId
-                        : t('integrations.entra.console.history.allClients'),
-                      status: run.status,
-                    })}
-                    {run.isDryRun
-                      ? ` · ${t('integrations.entra.console.history.previewBadge')}`
-                      : ''}
-                  </p>
-                  <p className="truncate text-xs text-muted-foreground">
-                    {t('integrations.entra.console.history.runMeta', {
-                      started: formatDateTime(run.startedAt),
-                      completed: formatDateTime(run.completedAt),
-                      runType: run.runType,
-                    })}
-                  </p>
-                </div>
-                <p className="flex-shrink-0 text-xs text-muted-foreground">
-                  {t('integrations.entra.console.history.tenantCounts', {
-                    succeeded: run.succeededTenants,
-                    failed: run.failedTenants,
-                    total: run.totalTenants,
-                  })}
-                </p>
-              </div>
-            </li>
-          ))}
-        </ul>
+        <div className="overflow-x-auto rounded-lg border border-border/70">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>{t('integrations.entra.console.history.columns.when')}</TableHead>
+                <TableHead>{t('integrations.entra.console.history.columns.trigger')}</TableHead>
+                <TableHead>{t('integrations.entra.console.history.columns.scope')}</TableHead>
+                <TableHead className="text-right">
+                  {t('integrations.entra.console.history.columns.clients')}
+                </TableHead>
+                <TableHead className="text-right">
+                  {t('integrations.entra.console.history.columns.succeeded')}
+                </TableHead>
+                <TableHead className="text-right">
+                  {t('integrations.entra.console.history.columns.failed')}
+                </TableHead>
+                <TableHead>{t('integrations.entra.console.lastRun.columns.result')}</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {visible.map((run) => (
+                <TableRow key={run.runId} id={`entra-history-run-${run.runId}`}>
+                  <TableCell>{formatDateTime(run.startedAt)}</TableCell>
+                  <TableCell className="text-muted-foreground">{run.runType}</TableCell>
+                  <TableCell>
+                    {run.scopeManagedTenantId
+                      ? clientNames.get(run.scopeManagedTenantId) || run.scopeManagedTenantId
+                      : t('integrations.entra.console.history.allClients')}
+                  </TableCell>
+                  <TableCell className="text-right tabular-nums">{run.totalTenants}</TableCell>
+                  <TableCell className="text-right tabular-nums">{run.succeededTenants}</TableCell>
+                  <TableCell className="text-right tabular-nums">{run.failedTenants}</TableCell>
+                  <TableCell>
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <Badge
+                        size="sm"
+                        variant={
+                          run.status === 'failed'
+                            ? 'error'
+                            : run.status === 'partial'
+                              ? 'warning'
+                              : 'success'
+                        }
+                      >
+                        {run.status}
+                      </Badge>
+                      {run.isDryRun ? (
+                        <Badge size="sm" variant="default-muted">
+                          {t('integrations.entra.console.history.previewBadge')}
+                        </Badge>
+                      ) : null}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       )}
 
       {pageCount > 1 ? (

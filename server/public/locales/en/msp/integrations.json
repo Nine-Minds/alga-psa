@@ -377,20 +377,37 @@
       },
       "console": {
         "actions": {
+          "pause": "Pause sync",
+          "resume": "Resume sync",
           "syncNow": "Sync now",
           "syncingNow": "Starting…"
         },
         "attention": {
+          "actions": {
+            "fixConnection": "Fix connection",
+            "openSchedule": "Open schedule",
+            "review": "Review",
+            "viewClients": "View clients"
+          },
           "connection": "The connection is not working. Nothing will sync until it is fixed.",
+          "connectionDetail": "Fix the connection first — every client fails the same way until it works.",
           "empty": "Nothing needs attention.",
           "failedClients": "{{count}} clients failed their last sync.",
+          "failedClientsDetail": "{{clients}}",
           "neverSynced": "{{count}} mapped clients have never synced.",
-          "open": "Open",
+          "neverSyncedDetail": "{{clients}}",
           "reviewQueue": "{{count}} identities are waiting for a decision.",
+          "reviewQueueDetail": "Two or more contacts share one Microsoft email, so nothing happens to them until you choose.",
           "scheduleOff": "Automatic sync is off. Contacts only change when you run a sync.",
+          "scheduleOffDetail": "Contacts only change when someone runs a sync by hand.",
           "title": "Needs attention"
         },
         "clients": {
+          "columns": {
+            "lastSync": "Last sync",
+            "tenant": "Microsoft tenant",
+            "users": "Users"
+          },
           "empty": "No clients match this filter.",
           "filters": {
             "all": "All",
@@ -398,7 +415,6 @@
             "healthy": "Healthy",
             "never-synced": "Never synced"
           },
-          "lastSynced": "last synced {{time}} · {{status}}",
           "neverSynced": "never synced",
           "searchPlaceholder": "Search clients or domains",
           "sync": "Sync",
@@ -408,6 +424,7 @@
           "exportRecord": "Export connection record",
           "mappingDescription": "Review or change which client each Microsoft tenant belongs to.",
           "mappingTitle": "Tenant mapping",
+          "permissionsTitle": "Permissions in effect",
           "rotate": "Rotate credential",
           "validate": "Test connection",
           "validated": "The connection is working.",
@@ -417,8 +434,20 @@
           "syncFailed": "The sync could not be started.",
           "validateFailed": "The connection could not be validated."
         },
+        "health": {
+          "failingClients": "{{count}} clients failing",
+          "healthy": "Healthy"
+        },
         "history": {
           "allClients": "All clients",
+          "columns": {
+            "clients": "Clients",
+            "failed": "Failed",
+            "scope": "Scope",
+            "succeeded": "Succeeded",
+            "trigger": "Trigger",
+            "when": "When"
+          },
           "empty": "No runs match these filters.",
           "export": "Export CSV",
           "includePreviews": "Include previews",
@@ -427,9 +456,6 @@
           "page": "Page {{page}} of {{pages}}",
           "previewBadge": "preview",
           "previous": "Previous",
-          "runHeader": "{{scope}} · {{status}}",
-          "runMeta": "{{runType}} · started {{started}} · finished {{completed}}",
-          "tenantCounts": "{{succeeded}} succeeded, {{failed}} failed of {{total}}",
           "triggers": {
             "all": "All runs",
             "manual": "Manual",
@@ -437,10 +463,43 @@
           }
         },
         "lastRun": {
+          "columns": {
+            "client": "Client",
+            "created": "New",
+            "inactivated": "Inactive",
+            "linked": "Linked",
+            "result": "Result",
+            "when": "When"
+          },
           "empty": "No sync has run yet.",
+          "fullHistory": "Full history",
+          "results": {
+            "done": "Done",
+            "failed": "Failed",
+            "toReview": "{{count}} to review"
+          },
+          "stats": {
+            "created": "Created",
+            "createdSub": "new contacts",
+            "failed": "Failed",
+            "failedSub": "clients",
+            "inactivated": "Made inactive",
+            "inactivatedSub": "accounts disabled",
+            "linked": "Linked",
+            "linkedSub": "existing contacts",
+            "updated": "Fields changed",
+            "updatedSub": "where you allowed it"
+          },
           "summary": "{{status}} at {{time}}",
           "tenants": "{{succeeded}} of {{total}} clients succeeded",
           "title": "Last sync"
+        },
+        "lead": "{{clients}} clients mapped · connected via {{method}}",
+        "overwrites": {
+          "change": "Change field rules",
+          "off": "Off",
+          "on": "On",
+          "title": "Overwrites allowed"
         },
         "schedule": {
           "description": "When on, Alga syncs every mapped client on this cadence. Turning it off stops scheduled runs; you can still sync by hand.",
@@ -455,6 +514,8 @@
           },
           "pause": "Pause",
           "pauseHint": "Paused. Save to apply.",
+          "paused": "Automatic sync paused.",
+          "resumed": "Automatic sync resumed.",
           "save": "Save schedule",
           "saveFailed": "Could not save the schedule.",
           "saved": "Schedule saved.",
@@ -463,10 +524,12 @@
           "title": "Automatic sync"
         },
         "sideRail": {
-          "schedule": "Automatic sync:",
+          "change": "Change…",
+          "covers": "Covers",
+          "coversClients": "{{count}} clients",
+          "lastRun": "Last run",
           "scheduleOff": "off",
-          "scheduleOn": "on, every {{minutes}} minutes",
-          "title": "At a glance"
+          "scheduleOn": "on, every {{minutes}} minutes"
         },
         "syncStarted": "Sync started for all mapped clients.",
         "tabs": {
@@ -485,6 +548,7 @@
           "preview": "Preview changes",
           "previewing": "Previewing…",
           "syncOne": "Sync this client",
+          "syncOneNamed": "Sync {{client}} only",
           "syncRemaining": "Sync the remaining {{count}}",
           "syncingOne": "Starting…",
           "syncingRemaining": "Starting…"
@@ -497,6 +561,7 @@
           "syncFailed": "The sync could not be started."
         },
         "gateNote": "Sync one client first. The rest unlock once its run finishes.",
+        "previewPrompt": "Preview the changes for this client before anything is written.",
         "remainingStarted": "Sync started for the remaining {{count}} clients.",
         "started": "Sync started for {{client}}."
       },
@@ -525,6 +590,7 @@
         },
         "hideNames": "Hide names",
         "moreNames": "and {{count}} more",
+        "nothingWritten": "Nothing written yet",
         "showNames": "Show names",
         "summary": "{{count}} identities checked at {{time}}. Nothing was changed.",
         "title": "What this sync would do"
@@ -794,7 +860,10 @@
               "instance": "A running CIPP instance."
             }
           },
+          "cippReassurance": "Alga will test the connection before saving it.",
           "continue": "Continue",
+          "continueCipp": "Set up CIPP connection",
+          "continueDirect": "Continue with Direct",
           "continuing": "Continuing…",
           "direct": {
             "description": "Alga talks to Microsoft Graph through your partner relationship.",
@@ -805,11 +874,14 @@
               "partnerRelationship": "A partner relationship (GDAP) with the tenants you manage."
             }
           },
+          "directReassurance": "You will review the permission prompt before anything is granted.",
           "prerequisitesTitle": "You will need",
           "recommendation": "Most MSPs should choose Direct. Choose CIPP only if you already run an instance.",
+          "recommendedBadge": "Recommended",
           "title": "Choose how to connect"
         },
-        "description": "Four steps: connect, discover the tenants you manage, map them to clients, then run the first sync.",
+        "connectedVia": "Connected via {{method}}",
+        "description": "Bring the people from the Microsoft tenants you manage into Alga as client contacts. Nothing is written to your contacts until you have seen a preview and approved it.",
         "directConsent": {
           "adminNote": "A Global Administrator must approve these permissions. If you are not one, the sign-in will complete but the connection will be refused, and nothing will be saved.",
           "cancel": "Cancel",
@@ -820,7 +892,15 @@
           "title": "Before you continue to Microsoft"
         },
         "disclosure": {
+          "capabilities": {
+            "noMailbox": "Never reads mail, files, calendars or Teams messages",
+            "noWrite": "Never writes anything back to Microsoft",
+            "readTenants": "Read the list of Microsoft tenants you manage",
+            "readUsers": "Read users in those tenants — name, email, phone, job title"
+          },
+          "capabilitiesTitle": "What Alga will be allowed to do",
           "contacts": {
+            "ambiguous": "Two contacts share an email? It is set aside for you to decide — never guessed.",
             "creation": "An identity with no match becomes a new contact in that client.",
             "deletion": "Nothing is ever deleted.",
             "matching": "Contacts are matched by email address within the client you map the tenant to.",
@@ -830,6 +910,7 @@
           "copied": "Copied",
           "copy": "Copy for a change record",
           "description": "Read this before you authorize. You can copy it into a change record.",
+          "inactiveNote": "A disabled Microsoft account marks the contact inactive. You can turn that off in step 4.",
           "recordGeneratedAt": "Prepared {{time}}",
           "recordHeading": "Microsoft Entra integration — change record",
           "scopes": {
@@ -839,30 +920,30 @@
             "unknown": "Requested by the connection.",
             "userRead": "Confirms who is signing in. Reads your own profile only."
           },
+          "scopesAllReadOnly": "All read-only.",
           "scopesTitle": "Permissions requested",
           "title": "What Alga will read, and what it will change"
-        },
-        "state": {
-          "complete": "Done",
-          "current": "Now",
-          "locked": "Later"
         },
         "stepLabel": "Step {{number}}",
         "steps": {
           "connect": {
             "description": "Choose how Alga reaches Microsoft, then authorize it.",
+            "short": "Connect",
             "title": "Connect Microsoft Entra"
           },
           "discover": {
             "description": "Ask Microsoft which customer tenants your partner relationship covers.",
+            "short": "Find tenants",
             "title": "Discover managed tenants"
           },
           "map": {
             "description": "Decide which Alga client each Microsoft tenant belongs to. Nothing syncs until this is confirmed.",
+            "short": "Match to clients",
             "title": "Map tenants to clients"
           },
           "sync": {
             "description": "Bring contacts in for the clients you mapped.",
+            "short": "Preview & pilot",
             "title": "Run the first sync"
           }
         },

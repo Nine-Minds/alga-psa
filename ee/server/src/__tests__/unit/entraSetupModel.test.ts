@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ENTRA_CAPABILITY_STATEMENTS,
   ENTRA_CONTACT_EFFECT_KEYS,
+  ENTRA_CONTACT_EFFECT_STATEMENTS,
   ENTRA_SCOPE_DISCLOSURES,
+  ENTRA_SETUP_STEP_IDS,
+  ENTRA_SETUP_STEP_SHORT_LABEL_KEYS,
   buildEntraChangeRecord,
   deriveEntraSetupSteps,
   selectEntraSurfaceMode,
@@ -84,7 +88,34 @@ describe('disclosure content', () => {
     expect(ENTRA_CONTACT_EFFECT_KEYS).toContain(
       'integrations.entra.setup.disclosure.contacts.deletion'
     );
-    expect(ENTRA_CONTACT_EFFECT_KEYS).toHaveLength(4);
+    expect(ENTRA_CONTACT_EFFECT_KEYS).toHaveLength(5);
+  });
+
+  it('marks each effect as something that will, will never, or might happen', () => {
+    // The reassurances are denials — "not overwritten", "never deleted" — and
+    // an ambiguous match is neither, so it reads as a caution rather than a
+    // promise in either direction.
+    expect(ENTRA_CONTACT_EFFECT_STATEMENTS.map((statement) => statement.mark)).toEqual([
+      'affirm',
+      'affirm',
+      'caution',
+      'deny',
+      'deny',
+    ]);
+    expect(ENTRA_CAPABILITY_STATEMENTS.map((statement) => statement.mark)).toEqual([
+      'affirm',
+      'affirm',
+      'deny',
+      'deny',
+    ]);
+  });
+
+  it('gives the ladder a short label for every step', () => {
+    for (const stepId of ENTRA_SETUP_STEP_IDS) {
+      expect(ENTRA_SETUP_STEP_SHORT_LABEL_KEYS[stepId]).toMatch(
+        /^integrations\.entra\.setup\.steps\.[a-z]+\.short$/
+      );
+    }
   });
 });
 
