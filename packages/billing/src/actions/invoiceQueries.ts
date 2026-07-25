@@ -20,6 +20,65 @@ import {
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 
+type InvoiceQueryUser = {
+  user_id: string;
+  user_type?: string | null;
+  contact_id?: string | null;
+  clientId?: string | null;
+};
+
+/**
+ * Resolve the client_id a client-portal caller is scoped to (from the session
+ * user or their contact record). Only call for user_type === 'client'.
+ */
+async function getClientPortalUserClientId(
+  knex: Knex | Knex.Transaction,
+  tenant: string,
+  user: InvoiceQueryUser
+): Promise<string | null> {
+  if (typeof user.clientId === 'string' && user.clientId.length > 0) {
+    return user.clientId;
+  }
+  if (!user.contact_id) {
+    return null;
+  }
+  const contact = await tenantDb(knex, tenant).table('contacts')
+    .where({ contact_name_id: user.contact_id })
+    .select('client_id')
+    .first<{ client_id: string | null }>();
+  return contact?.client_id ?? null;
+}
+
+/**
+ * Client portal users hold client-flagged copies of billing:read, so the
+ * permission check alone does not scope results to their own client. For
+ * client callers, verify the target invoice belongs to their client; drafts
+ * are never exposed to the portal (mirrors validateClientInvoiceAccess in
+ * client-portal's client-billing actions). Internal callers are unaffected.
+ */
+async function assertClientPortalInvoiceAccess(
+  knex: Knex | Knex.Transaction,
+  tenant: string,
+  user: InvoiceQueryUser,
+  invoiceId: string
+): Promise<ActionPermissionError | null> {
+  if (user.user_type !== 'client') {
+    return null;
+  }
+  const portalClientId = await getClientPortalUserClientId(knex, tenant, user);
+  if (!portalClientId) {
+    return permissionError('Permission denied: invoice access denied');
+  }
+  const invoice = await tenantDb(knex, tenant).table('invoices')
+    .where({ invoice_id: invoiceId })
+    .whereNot('status', 'draft')
+    .first('client_id');
+  if (!invoice || invoice.client_id !== portalClientId) {
+    return permissionError('Permission denied: invoice access denied');
+  }
+  return null;
+}
+
 // Types for paginated invoice fetching
 export interface FetchInvoicesOptions {
   page?: number;
@@ -218,6 +277,13 @@ export const getInvoiceRoutingState = withAuth(async (
     return { exists: false, isDraft: false };
   }
   const { knex } = await createTenantKnex();
+  if (user.user_type === 'client') {
+    // Client portal callers must not probe invoices outside their own client.
+    const denied = await assertClientPortalInvoiceAccess(knex, tenant, user, invoiceId);
+    if (denied) {
+      return { exists: false, isDraft: false };
+    }
+  }
   const row = await knex('invoices')
     .where({ tenant, invoice_id: invoiceId })
     .select('status', 'finalized_at')
@@ -236,6 +302,10 @@ export const fetchInvoicesPaginated = withAuth(async (
 ): Promise<PaginatedInvoicesResult | ActionPermissionError> => {
   if (!await hasPermission(user, 'billing', 'read')) {
     return permissionError('Permission denied: billing read required');
+  }
+  // This listing spans all clients; the portal uses fetchInvoicesByClient instead.
+  if (user.user_type === 'client') {
+    return permissionError('Permission denied: operation not available in client portal');
   }
 
   const {
@@ -489,7 +559,16 @@ export const fetchInvoicesByClient = withAuth(async (
     console.log(`Fetching invoices for client: ${clientId}`);
 
     const { knex } = await createTenantKnex();
-    
+
+    // Client portal callers may only fetch their own client's invoices —
+    // never trust the caller-supplied clientId.
+    if (user.user_type === 'client') {
+      const portalClientId = await getClientPortalUserClientId(knex, tenant, user);
+      if (!portalClientId || portalClientId !== clientId) {
+        return permissionError('Permission denied: cannot access invoices for another client');
+      }
+    }
+
     // Get invoices with client info and location data in a single query, filtered by client_id
     const invoices = await withTransaction(knex, async (trx: Knex.Transaction) => {
       const db = tenantDb(trx, tenant);
@@ -598,6 +677,19 @@ export const fetchInvoicesByContract = withAuth(async (
   try {
     const { knex } = await createTenantKnex();
 
+    // Client portal callers may only fetch invoices for their own client's contracts.
+    if (user.user_type === 'client') {
+      const portalClientId = await getClientPortalUserClientId(knex, tenant, user);
+      const contract = portalClientId
+        ? await tenantDb(knex, tenant).table('client_contracts')
+            .where({ client_contract_id: contractId })
+            .first('client_id')
+        : null;
+      if (!portalClientId || !contract || contract.client_id !== portalClientId) {
+        return permissionError('Permission denied: cannot access invoices for another client');
+      }
+    }
+
     const invoices = await withTransaction(knex, async (trx: Knex.Transaction) => {
       const db = tenantDb(trx, tenant);
       const query = db.table('invoices');
@@ -665,6 +757,13 @@ export const getInvoiceForRendering = withAuth(async (
 
     const { knex } = await createTenantKnex();
 
+    // Portal components call this action directly (bypassing the
+    // ownership-checked client-portal wrapper), so scope client callers here.
+    const denied = await assertClientPortalInvoiceAccess(knex, tenant, user, invoiceId);
+    if (denied) {
+      return denied;
+    }
+
     // Existing-invoice preview refresh and rerender must hydrate through the full
     // detail-aware reader so canonical recurring periods survive after persistence.
     const invoice = await Invoice.getFullInvoiceById(knex, tenant, invoiceId);
@@ -690,6 +789,12 @@ export const getEnrichedInvoiceViewModel = withAuth(async (
   }
 
   const { knex } = await createTenantKnex();
+
+  const denied = await assertClientPortalInvoiceAccess(knex, tenant, user, invoiceId);
+  if (denied) {
+    return denied;
+  }
+
   let loadedInvoice: InvoiceViewModel;
   try {
     loadedInvoice = await Invoice.getFullInvoiceById(knex, tenant, invoiceId);
@@ -733,7 +838,18 @@ export const getResolvedInvoiceTemplateId = withAuth(async (
   { tenant },
   invoiceId: string
 ): Promise<string | null> => {
+  if (!await hasPermission(user, 'billing', 'read')) {
+    return null;
+  }
+
   const { knex } = await createTenantKnex();
+
+  // Same client-portal scoping as the other invoice readers: do not let a
+  // portal caller probe invoices outside their own client.
+  const denied = await assertClientPortalInvoiceAccess(knex, tenant, user, invoiceId);
+  if (denied) {
+    return null;
+  }
 
   const db = tenantDb(knex, tenant);
 
@@ -790,6 +906,11 @@ export const getInvoicePurchaseOrderSummary = withAuth(async (
 
   const { knex } = await createTenantKnex();
 
+  const denied = await assertClientPortalInvoiceAccess(knex, tenant, user, invoiceId);
+  if (denied) {
+    return denied;
+  }
+
   const invoice = await tenantDb(knex, tenant).table('invoices')
     .where({ invoice_id: invoiceId })
     .select('invoice_id', 'client_contract_id', 'po_number')
@@ -842,6 +963,10 @@ export const getInvoiceLineItems = withAuth(async (
 
   try {
     const { knex } = await createTenantKnex();
+    const denied = await assertClientPortalInvoiceAccess(knex, tenant, user, invoiceId);
+    if (denied) {
+      return denied;
+    }
     console.log('Fetching line items for invoice:', invoiceId);
     const items = await Invoice.getInvoiceItems(knex, tenant, invoiceId);
     console.log(`Got ${items.length} line items`);
