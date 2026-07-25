@@ -502,37 +502,30 @@ export const connectEntraCipp = withAuth(async (
     return { success: false, error: 'CIPP API token is required.' } as const;
   }
 
-  // Validate before persisting anything. The credential has to be in the secret
-  // store for the validation route to use it, so stage it there, then roll the
-  // store back if CIPP rejects it — a failed connect must leave no trace, and
-  // above all must not leave a row claiming status 'connected'.
-  const cippSecretStore = await import('@enterprise/lib/integrations/entra/providers/cipp/cippSecretStore');
-  const previousCredentials = await cippSecretStore
-    .getEntraCippCredentials(tenant)
-    .catch(() => null);
+  // Validate before persisting anything, and validate without side effects: the
+  // probe takes the candidate credential as an argument, so nothing is written
+  // to the secret store or to the connection row until CIPP has accepted it. A
+  // failed connect must leave no trace — neither a staged credential, nor a row
+  // claiming status 'connected', nor a validation_failed stamp on whatever
+  // connection the tenant already had working.
+  const { probeCippCredentials } = await import(
+    '@enterprise/lib/integrations/entra/providers/cipp/cippProbe'
+  );
 
+  const probe = await probeCippCredentials({ baseUrl: normalizedBaseUrl, apiToken });
+
+  if (!probe.valid) {
+    return {
+      success: false,
+      error: probe.error || 'Unable to validate the CIPP connection.',
+    } as const;
+  }
+
+  const cippSecretStore = await import('@enterprise/lib/integrations/entra/providers/cipp/cippSecretStore');
   await cippSecretStore.saveEntraCippCredentials(tenant, {
     baseUrl: normalizedBaseUrl,
     apiToken,
   });
-
-  const validation = await callEeRoute<EntraCippValidationResponse>({
-    importFn: routes.validateCippRoute,
-    method: 'POST',
-  });
-
-  if ('error' in validation) {
-    if (previousCredentials) {
-      await cippSecretStore.saveEntraCippCredentials(tenant, previousCredentials);
-    } else {
-      await cippSecretStore.clearEntraCippCredentials(tenant);
-    }
-
-    return {
-      success: false,
-      error: validation.error || 'Unable to validate the CIPP connection.',
-    } as const;
-  }
 
   await clearStaleCredentialsForConnectionType(tenant, 'cipp');
 

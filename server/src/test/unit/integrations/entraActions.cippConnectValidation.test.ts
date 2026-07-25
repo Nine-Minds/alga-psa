@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-// connectEntraCipp dispatches to the EE validate-cipp route before persisting.
+// connectEntraCipp probes CIPP with the candidate credential before persisting
+// anything — no secret-store staging, no connection-row writes on failure.
 process.env.EDITION = 'ee';
 
 const hasPermissionMock = vi.fn();
@@ -9,7 +10,7 @@ const getEntraCippCredentialsMock = vi.fn();
 const clearEntraCippCredentialsMock = vi.fn();
 const clearEntraDirectTokenSetMock = vi.fn();
 const createTenantKnexMock = vi.fn();
-const validateCippRoutePostMock = vi.fn();
+const probeCippCredentialsMock = vi.fn();
 
 vi.mock('@alga-psa/auth', () => ({
   withAuth: (fn: unknown) => fn,
@@ -25,6 +26,10 @@ vi.mock('@enterprise/lib/integrations/entra/providers/cipp/cippSecretStore', () 
   clearEntraCippCredentials: clearEntraCippCredentialsMock,
 }));
 
+vi.mock('@enterprise/lib/integrations/entra/providers/cipp/cippProbe', () => ({
+  probeCippCredentials: probeCippCredentialsMock,
+}));
+
 vi.mock('@enterprise/lib/integrations/entra/auth/tokenStore', () => ({
   clearEntraDirectTokenSet: clearEntraDirectTokenSetMock,
 }));
@@ -37,16 +42,8 @@ vi.mock('@alga-psa/db', () => ({
 }));
 
 vi.mock('@alga-psa/integrations/entra/routes/entry', () => ({
-  routes: {
-    validateCippRoute: async () => ({ POST: validateCippRoutePostMock }),
-  },
+  routes: {},
 }));
-
-const jsonResponse = (status: number, body: unknown): Response =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { 'content-type': 'application/json' },
-  });
 
 const buildKnexMock = () => {
   const insertMock = vi.fn(async () => [1]);
@@ -74,13 +71,16 @@ describe('connectEntraCipp validates before persisting', () => {
     clearEntraDirectTokenSetMock.mockReset();
     clearEntraDirectTokenSetMock.mockResolvedValue(undefined);
     createTenantKnexMock.mockReset();
-    validateCippRoutePostMock.mockReset();
+    probeCippCredentialsMock.mockReset();
   });
 
-  it('writes no connection row and clears the staged credential when CIPP rejects it', async () => {
-    validateCippRoutePostMock.mockResolvedValue(
-      jsonResponse(400, { success: false, error: 'CIPP credentials were rejected by the remote API.' })
-    );
+  it('writes nothing at all when CIPP rejects the candidate credential', async () => {
+    probeCippCredentialsMock.mockResolvedValue({
+      valid: false,
+      checkedAt: '2026-07-25T00:00:00.000Z',
+      error: 'CIPP credentials were rejected by the remote API.',
+      code: 'auth_rejected',
+    });
     const { knexMock, insertMock, updateMock } = buildKnexMock();
     createTenantKnexMock.mockResolvedValue({ knex: knexMock });
 
@@ -100,19 +100,24 @@ describe('connectEntraCipp validates before persisting', () => {
     });
     expect(insertMock).not.toHaveBeenCalled();
     expect(updateMock).not.toHaveBeenCalled();
-    expect(clearEntraCippCredentialsMock).toHaveBeenCalledWith('tenant-1');
+    // Nothing was staged, so there is nothing to clear or restore.
+    expect(saveEntraCippCredentialsMock).not.toHaveBeenCalled();
+    expect(clearEntraCippCredentialsMock).not.toHaveBeenCalled();
     // A failed connect must not take the direct credential down with it.
     expect(clearEntraDirectTokenSetMock).not.toHaveBeenCalled();
   });
 
-  it('restores the previous credential when a rotation fails validation', async () => {
+  it('leaves a working credential untouched when a rotation fails validation', async () => {
     getEntraCippCredentialsMock.mockResolvedValue({
       baseUrl: 'https://cipp.example.com',
       apiToken: 'working-token',
     });
-    validateCippRoutePostMock.mockResolvedValue(
-      jsonResponse(400, { success: false, error: 'CIPP credentials were rejected by the remote API.' })
-    );
+    probeCippCredentialsMock.mockResolvedValue({
+      valid: false,
+      checkedAt: '2026-07-25T00:00:00.000Z',
+      error: 'CIPP credentials were rejected by the remote API.',
+      code: 'auth_rejected',
+    });
     const { knexMock, insertMock } = buildKnexMock();
     createTenantKnexMock.mockResolvedValue({ knex: knexMock });
 
@@ -128,16 +133,19 @@ describe('connectEntraCipp validates before persisting', () => {
 
     expect(insertMock).not.toHaveBeenCalled();
     expect(clearEntraCippCredentialsMock).not.toHaveBeenCalled();
-    expect(saveEntraCippCredentialsMock).toHaveBeenLastCalledWith('tenant-2', {
-      baseUrl: 'https://cipp.example.com',
-      apiToken: 'working-token',
-    });
+    // The stored credential is never overwritten by an unvalidated one, so no
+    // rollback is needed — and the active connection is never stamped
+    // validation_failed by the probe.
+    expect(saveEntraCippCredentialsMock).not.toHaveBeenCalled();
   });
 
   it('persists a validated connection with last_validated_at set', async () => {
-    validateCippRoutePostMock.mockResolvedValue(
-      jsonResponse(200, { success: true, data: { valid: true, tenantCountSample: 3 } })
-    );
+    probeCippCredentialsMock.mockResolvedValue({
+      valid: true,
+      checkedAt: '2026-07-25T00:00:00.000Z',
+      tenantCountSample: 3,
+      endpoint: 'https://cipp.example.com/api/listtenants',
+    });
     const { knexMock, insertMock } = buildKnexMock();
     createTenantKnexMock.mockResolvedValue({ knex: knexMock });
 
@@ -152,6 +160,10 @@ describe('connectEntraCipp validates before persisting', () => {
     );
 
     expect(result.success).toBe(true);
+    expect(saveEntraCippCredentialsMock).toHaveBeenCalledWith('tenant-3', {
+      baseUrl: 'https://cipp.example.com',
+      apiToken: 'good-token',
+    });
     const insertedRow = insertMock.mock.calls[0]?.[0] as Record<string, unknown>;
     expect(insertedRow).toMatchObject({
       tenant: 'tenant-3',

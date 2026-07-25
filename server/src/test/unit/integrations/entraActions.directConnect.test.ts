@@ -13,6 +13,7 @@ const saveEntraCippCredentialsMock = vi.fn();
 const getEntraCippCredentialsMock = vi.fn();
 const validateCippRoutePostMock = vi.fn();
 const clearEntraDirectTokenSetMock = vi.fn();
+const probeCippCredentialsMock = vi.fn();
 const getSecretProviderInstanceMock = vi.fn();
 const createTenantKnexMock = vi.fn();
 const discoveryRoutePostMock = vi.fn();
@@ -45,6 +46,10 @@ vi.mock('@alga-psa/core', async (importOriginal) => {
 
 vi.mock('@enterprise/lib/integrations/entra/auth/microsoftCredentialResolver', () => ({
   resolveMicrosoftCredentialsForTenant: resolveMicrosoftCredentialsForTenantMock,
+}));
+
+vi.mock('@enterprise/lib/integrations/entra/providers/cipp/cippProbe', () => ({
+  probeCippCredentials: probeCippCredentialsMock,
 }));
 
 vi.mock('@enterprise/lib/integrations/entra/providers/cipp/cippSecretStore', () => ({
@@ -120,6 +125,13 @@ describe('Entra direct connect action permissions', () => {
     saveEntraCippCredentialsMock.mockReset();
     getEntraCippCredentialsMock.mockReset();
     getEntraCippCredentialsMock.mockResolvedValue(null);
+    probeCippCredentialsMock.mockReset();
+    probeCippCredentialsMock.mockResolvedValue({
+      valid: true,
+      checkedAt: '2026-07-25T00:00:00.000Z',
+      tenantCountSample: 1,
+      endpoint: 'https://cipp.example.com/api/listtenants',
+    });
     validateCippRoutePostMock.mockReset();
     validateCippRoutePostMock.mockResolvedValue(
       new Response(JSON.stringify({ success: true, data: { valid: true } }), {
