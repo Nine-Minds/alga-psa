@@ -76,6 +76,30 @@ describe('probeEntraDirectAccess', () => {
     });
   });
 
+  it('follows MICROSOFT_GRAPH_BASE_URL, so the emulator can be probed like Graph', async () => {
+    const originalBaseUrl = process.env.MICROSOFT_GRAPH_BASE_URL;
+    process.env.MICROSOFT_GRAPH_BASE_URL = 'http://127.0.0.1:4010/v1.0';
+    axiosGetMock.mockResolvedValue({ data: { value: [{ tenantId: 'a' }] } });
+
+    try {
+      const { probeEntraDirectAccess } = await import(
+        '@ee/lib/integrations/entra/providers/direct/directProbe'
+      );
+      const result = await probeEntraDirectAccess('token-1');
+
+      expect(result).toMatchObject({
+        valid: true,
+        endpoint: 'http://127.0.0.1:4010/v1.0/tenantRelationships/managedTenants/tenants?$top=1',
+      });
+    } finally {
+      if (originalBaseUrl === undefined) {
+        delete process.env.MICROSOFT_GRAPH_BASE_URL;
+      } else {
+        process.env.MICROSOFT_GRAPH_BASE_URL = originalBaseUrl;
+      }
+    }
+  });
+
   it('probes the endpoint the adapter actually uses in self-tenant smoke mode', async () => {
     process.env.ENTRA_DIRECT_SMOKE_SELF_TENANT_MODE = 'true';
     axiosGetMock.mockResolvedValue({ data: { value: [{ id: 'org-1' }] } });

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getMicrosoftTokenUrl } from '@alga-psa/shared/services/email/microsoftGraphEndpoints';
 import { resolveMicrosoftCredentialsForTenant } from './microsoftCredentialResolver';
 import { getEntraDirectRefreshToken, saveEntraDirectTokenSet } from './tokenStore';
 import { ENTRA_DIRECT_SCOPE_STRING } from './directScopes';
@@ -34,7 +35,7 @@ export async function refreshEntraDirectToken(
   });
 
   const response = await axios.post(
-    'https://login.microsoftonline.com/common/oauth2/v2.0/token',
+    getMicrosoftTokenUrl('common'),
     tokenParams.toString(),
     {
       headers: { 'content-type': 'application/x-www-form-urlencoded' },

@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { getMicrosoftGraphBaseUrl } from '@alga-psa/shared/services/email/microsoftGraphEndpoints';
 
 /**
  * The Direct (GDAP) reachability probe, with no side effects of any kind: it
@@ -20,7 +21,9 @@ import axios from 'axios';
 // wants a shared probe result type and a connect-then-record helper on the
 // provider adapter, not a third copy of this file.
 
-const GRAPH_BASE_URL = 'https://graph.microsoft.com/v1.0';
+// LEVERAGE: friction microsoft-endpoints-under-email — Graph/login endpoint
+// resolution is not email-specific; it lives under shared/services/email only
+// because inbound email needed it first. Entra is the second caller.
 
 export type EntraDirectProbeResult =
   | {
@@ -42,14 +45,18 @@ export type EntraDirectProbeResult =
  * directProviderAdapter.listManagedTenants, including its self-tenant smoke
  * mode — probing an endpoint the adapter will never call would validate the
  * wrong thing, and would fail every smoke tenant at connect time.
+ *
+ * Resolved per call rather than at module load so pointing MICROSOFT_GRAPH_BASE_URL
+ * at the Graph emulator moves the probe with the adapter.
  */
 export function entraDirectProbeEndpoint(): string {
+  const graphBaseUrl = getMicrosoftGraphBaseUrl();
   const isSelfTenantSmoke =
     (process.env.ENTRA_DIRECT_SMOKE_SELF_TENANT_MODE || '').toLowerCase() === 'true';
 
   return isSelfTenantSmoke
-    ? `${GRAPH_BASE_URL}/organization?$top=1`
-    : `${GRAPH_BASE_URL}/tenantRelationships/managedTenants/tenants?$top=1`;
+    ? `${graphBaseUrl}/organization?$top=1`
+    : `${graphBaseUrl}/tenantRelationships/managedTenants/tenants?$top=1`;
 }
 
 export async function probeEntraDirectAccess(

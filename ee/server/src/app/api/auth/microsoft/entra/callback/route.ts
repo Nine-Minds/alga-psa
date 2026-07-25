@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { NextRequest, NextResponse } from 'next/server';
+import { getMicrosoftTokenUrl } from '@alga-psa/shared/services/email/microsoftGraphEndpoints';
 import { createTenantKnex, runWithTenant } from '@/lib/db';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
@@ -121,7 +122,7 @@ export async function GET(request: NextRequest) {
     });
 
     const tokenResponse = await axios.post(
-      'https://login.microsoftonline.com/common/oauth2/v2.0/token',
+      getMicrosoftTokenUrl('common'),
       tokenParams.toString(),
       {
         headers: { 'content-type': 'application/x-www-form-urlencoded' },

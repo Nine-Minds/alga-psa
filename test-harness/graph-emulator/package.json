@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "start": "node server.mjs",
-    "test": "node --test smoke.test.mjs"
+    "seed": "node seed.mjs",
+    "test": "node --test smoke.test.mjs entra.smoke.test.mjs"
   }
 }

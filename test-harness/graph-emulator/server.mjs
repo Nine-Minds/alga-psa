@@ -1,5 +1,12 @@
 import http from 'node:http';
 import { randomUUID } from 'node:crypto';
+import {
+  handleCippApi,
+  handleEntraControl,
+  handleEntraGraph,
+  resetEntra,
+  seedMspPreset,
+} from './entra.mjs';
 
 const port = Number(process.env.PORT || 4010);
 const state = {
@@ -104,10 +111,14 @@ async function deliverNotifications(message) {
 }
 
 async function handleControl(req, res, url) {
+  if (await handleEntraControl(req, res, url, body, json)) {
+    return;
+  }
   if (req.method === 'POST' && url.pathname === '/__control/reset') {
     state.clients.clear(); state.codes.clear(); state.refreshTokens.clear();
     state.accessTokens.clear(); state.messages.clear(); state.subscriptions.clear(); state.faults.clear();
     state.accessTokenTtlSeconds = 3600; state.rotateRefreshTokens = true;
+    resetEntra();
     return json(res, 200, { ok: true });
   }
   if (req.method === 'POST' && url.pathname === '/__control/clients') {
@@ -205,12 +216,18 @@ async function handler(req, res) {
     return json(res, 400, { error: 'unsupported_grant_type' });
   }
 
+  // CIPP speaks its own API rather than Graph, and authenticates with its own
+  // key, so it is handled before the Graph access-token gate.
+  if (handleCippApi(req, res, url, json)) return;
+
   if (!url.pathname.startsWith('/v1.0/')) return json(res, 404, { error: 'not_found' });
   const access = requireAccess(req, res);
   if (!access) return;
   const graphPath = url.pathname.slice('/v1.0'.length);
   const fault = injectedFault(`${req.method} ${graphPath}`);
   if (fault) return json(res, fault.status, fault.body);
+
+  if (handleEntraGraph(req, res, graphPath, url, json)) return;
 
   if (req.method === 'GET' && (graphPath === '/me' || /^\/users\/[^/]+$/.test(graphPath))) {
     return json(res, 200, { id: 'emulated-user', userPrincipalName: 'support@example.test', mail: 'support@example.test' });
@@ -284,4 +301,36 @@ async function handler(req, res) {
 const server = http.createServer((req, res) => {
   handler(req, res).catch((error) => json(res, 500, { error: error?.message || String(error) }));
 });
-server.listen(port, '0.0.0.0', () => console.log(`[graph-emulator] listening on ${port}`));
+
+// Boot with a directory already in it, so `npm start` is enough to walk the
+// Entra setup. GRAPH_EMULATOR_SEED=none starts empty.
+function bootSeed() {
+  const seed = (process.env.GRAPH_EMULATOR_SEED || 'entra-msp').trim().toLowerCase();
+  if (seed === 'none' || seed === 'off' || seed === 'false') return;
+  if (seed !== 'entra-msp') {
+    console.warn(`[graph-emulator] unknown seed "${seed}", starting empty`);
+    return;
+  }
+  const summary = seedMspPreset();
+  console.log(
+    `[graph-emulator] seeded ${summary.tenants.length} managed tenants, ${summary.userCount} users`
+  );
+
+  // The OAuth client Alga will present. Registering it here means the connect
+  // flow works without a separate setup step.
+  const clientId = (process.env.MICROSOFT_CLIENT_ID || '').trim();
+  const clientSecret = (process.env.MICROSOFT_CLIENT_SECRET || '').trim();
+  if (clientId && clientSecret) {
+    state.clients.set(clientId, clientSecret);
+    console.log(`[graph-emulator] registered OAuth client ${clientId}`);
+  } else {
+    console.log(
+      '[graph-emulator] no MICROSOFT_CLIENT_ID/SECRET in env — register one with POST /__control/clients'
+    );
+  }
+}
+
+server.listen(port, '0.0.0.0', () => {
+  bootSeed();
+  console.log(`[graph-emulator] listening on ${port}`);
+});

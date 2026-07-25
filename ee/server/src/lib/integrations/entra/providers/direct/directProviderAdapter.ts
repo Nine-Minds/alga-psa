@@ -1,5 +1,6 @@
 import axios, { AxiosError } from 'axios';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
+import { getMicrosoftGraphBaseUrl } from '@alga-psa/shared/services/email/microsoftGraphEndpoints';
 import { refreshEntraDirectToken } from '../../auth/refreshDirectToken';
 import { ENTRA_DIRECT_SECRET_KEYS } from '../../secrets';
 import { normalizeEntraSyncUser } from '../../sync/types';
@@ -11,7 +12,10 @@ import type {
   EntraProviderAdapter,
 } from '../types';
 
-const GRAPH_BASE_URL = 'https://graph.microsoft.com/v1.0';
+// Resolved per call: MICROSOFT_GRAPH_BASE_URL points the whole adapter at the
+// Graph emulator (test-harness/graph-emulator) so the integration can be walked
+// end to end without a CSP tenant.
+const graphBaseUrl = (): string => getMicrosoftGraphBaseUrl();
 
 // Smoke-only: when enabled, swap the GDAP-backed managedTenants/* endpoints for
 // /organization and /users so the partner's own tenant acts as a single managed
@@ -252,7 +256,7 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
 
     const tenants: EntraManagedTenantRecord[] = [];
     const seenTenantIds = new Set<string>();
-    let nextUrl = `${GRAPH_BASE_URL}/tenantRelationships/managedTenants/tenants?$top=999`;
+    let nextUrl = `${graphBaseUrl()}/tenantRelationships/managedTenants/tenants?$top=999`;
 
     while (nextUrl) {
       const payload = await this.graphGet(input.tenant, nextUrl);
@@ -309,7 +313,7 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
     ].join(',');
 
     let nextUrl =
-      `${GRAPH_BASE_URL}/tenantRelationships/managedTenants/users` +
+      `${graphBaseUrl()}/tenantRelationships/managedTenants/users` +
       `?$filter=tenantId eq '${encodedTenant}'&$select=${select}&$top=999`;
 
     while (nextUrl) {
@@ -365,7 +369,7 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
       }));
     }
 
-    const payload = await this.graphGet(input.tenant, `${GRAPH_BASE_URL}/organization`);
+    const payload = await this.graphGet(input.tenant, `${graphBaseUrl()}/organization`);
     const rows = Array.isArray(payload.value) ? payload.value : [];
     const tenants: EntraManagedTenantRecord[] = [];
 
@@ -462,7 +466,7 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
       'businessPhones',
     ].join(',');
 
-    let nextUrl = `${GRAPH_BASE_URL}/users?$select=${select}&$top=999`;
+    let nextUrl = `${graphBaseUrl()}/users?$select=${select}&$top=999`;
 
     while (nextUrl) {
       const payload = await this.graphGet(tenant, nextUrl);
