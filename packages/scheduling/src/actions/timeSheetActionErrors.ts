@@ -4,10 +4,22 @@ import {
   type ActionMessageError,
   type ActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+import {
+  bucketUsageErrorMessage,
+  findBucketUsageError,
+} from '@alga-psa/shared/billingClients/bucketUsageErrors';
 
 export type TimeSheetActionError = ActionMessageError | ActionPermissionError;
 
 export function timeSheetActionErrorFrom(error: unknown): TimeSheetActionError | null {
+  // Check the typed bucket failure first: it carries which of several unrelated
+  // causes fired, so it can say something the user can act on. The string match
+  // further down is the fallback for any throw not yet converted.
+  const bucketError = findBucketUsageError(error);
+  if (bucketError) {
+    return actionError(bucketUsageErrorMessage(bucketError));
+  }
+
   if (error instanceof Error) {
     const message = error.message;
     if (message.includes('Permission denied:')) {

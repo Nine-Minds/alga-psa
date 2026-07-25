@@ -8,6 +8,7 @@ import { determineDefaultContractLine } from '../lib/contractLineDisambiguation'
 // the dropped `client_contract_lines` table and caused a prod outage on
 // time-entry save. Don't recreate a local copy.
 import { findOrCreateCurrentBucketUsageRecord, updateBucketUsageMinutes } from '@alga-psa/shared/billingClients/bucketUsageService';
+import { isBucketUsageError } from '@alga-psa/shared/billingClients/bucketUsageErrors';
 import {
   ITimeEntry,
   ITimeEntryWithWorkItem,
@@ -741,7 +742,12 @@ export const saveTimeEntry = withAuth(async (
                 console.log(`Successfully updated bucket usage for entry ${resultingEntry.entry_id}`);
               } catch (bucketError) {
                 console.error(`Error updating bucket usage for time entry ${resultingEntry.entry_id}:`, bucketError);
-                // Re-throwing ensures data consistency.
+                // Re-throwing ensures data consistency. Keep the typed failure
+                // intact — the action guard maps its code to a message the user
+                // can actually act on.
+                if (isBucketUsageError(bucketError)) {
+                  throw bucketError;
+                }
                 throw new Error(`Bucket usage update failed for time entry ${resultingEntry.entry_id}: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
               }
             } else {
@@ -1100,7 +1106,10 @@ export const deleteTimeEntry = withAuth(async (
                 console.log(`Successfully decremented bucket usage for deleted entry ${entryId}`);
               } catch (bucketError) {
                 console.error(`Error updating bucket usage for deleted time entry ${entryId}:`, bucketError);
-                // Re-throwing ensures data consistency.
+                // Re-throwing ensures data consistency; preserve the typed code.
+                if (isBucketUsageError(bucketError)) {
+                  throw bucketError;
+                }
                 throw new Error(`Bucket usage update failed while deleting time entry ${entryId}: ${bucketError instanceof Error ? bucketError.message : String(bucketError)}`);
               }
             }
