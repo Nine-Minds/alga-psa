@@ -372,6 +372,12 @@
           "reviewBeforeInitialSync": "Review Before Initial Sync"
         },
         "connection": {
+          "callbackErrors": {
+            "consentMissing": "Microsoft signed you in but refused access to your managed tenant list. A Global Administrator must grant admin consent for the requested permissions. Nothing was saved — try again once consent is granted.",
+            "expired": "The connection attempt expired before it finished. Nothing was saved — start the connection again.",
+            "generic": "Microsoft Entra was not connected, and nothing was saved. Please try again.",
+            "validationFailed": "Microsoft signed you in, but we could not read your managed tenant list, so nothing was saved. Check the connection's permissions and try again."
+          },
           "cippServerLabel": "CIPP Server:",
           "connectingSuffix": " (Connecting...)",
           "details": "Connection Details",

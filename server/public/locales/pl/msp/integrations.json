@@ -372,6 +372,12 @@
           "reviewBeforeInitialSync": "Przejrzyj przed początkową synchronizacją"
         },
         "connection": {
+          "callbackErrors": {
+            "consentMissing": "Microsoft zalogował Cię, ale odmówił dostępu do listy zarządzanych dzierżaw. Administrator globalny musi udzielić zgody administratora na żądane uprawnienia. Nic nie zostało zapisane — spróbuj ponownie po udzieleniu zgody.",
+            "expired": "Próba połączenia wygasła przed zakończeniem. Nic nie zostało zapisane — rozpocznij połączenie ponownie.",
+            "generic": "Nie połączono z Microsoft Entra i nic nie zostało zapisane. Spróbuj ponownie.",
+            "validationFailed": "Microsoft zalogował Cię, ale nie udało się odczytać listy zarządzanych dzierżaw, więc nic nie zostało zapisane. Sprawdź uprawnienia połączenia i spróbuj ponownie."
+          },
           "cippServerLabel": "Serwer CIPP:",
           "connectingSuffix": " (Łączenie...)",
           "details": "Szczegóły połączenia",

@@ -1,27 +1,13 @@
-import axios from 'axios';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { badRequest, dynamic, ok, runtime } from '../_responses';
 import { requireEntraAccess } from '../_guards';
-import { resolveMicrosoftCredentialsForTenant } from '@enterprise/lib/integrations/entra/auth/microsoftCredentialResolver';
-import { refreshEntraDirectToken } from '@enterprise/lib/integrations/entra/auth/refreshDirectToken';
-import { ENTRA_DIRECT_SECRET_KEYS } from '@enterprise/lib/integrations/entra/secrets';
-import { updateEntraConnectionValidation } from '@enterprise/lib/integrations/entra/connectionRepository';
-import { entraRouteErrorMessage } from '../_errors';
+import { resolveMicrosoftCredentialsForTenant } from '@ee/lib/integrations/entra/auth/microsoftCredentialResolver';
+import { refreshEntraDirectToken } from '@ee/lib/integrations/entra/auth/refreshDirectToken';
+import { ENTRA_DIRECT_SECRET_KEYS } from '@ee/lib/integrations/entra/secrets';
+import { updateEntraConnectionValidation } from '@ee/lib/integrations/entra/connectionRepository';
+import { probeEntraDirectAccess } from '@ee/lib/integrations/entra/providers/direct/directProbe';
 
 export { dynamic, runtime };
-
-async function listManagedTenants(accessToken: string): Promise<number> {
-  const response = await axios.get(
-    'https://graph.microsoft.com/v1.0/tenantRelationships/managedTenants/tenants?$top=1',
-    {
-      headers: { Authorization: `Bearer ${accessToken}` },
-      timeout: 15000,
-    }
-  );
-
-  const value = response.data?.value;
-  return Array.isArray(value) ? value.length : 0;
-}
 
 export async function POST(): Promise<Response> {
   const accessGate = await requireEntraAccess('update');
@@ -91,67 +77,59 @@ export async function POST(): Promise<Response> {
     return badRequest('Direct Entra token is not configured.');
   }
 
-  try {
-    const managedTenantSampleCount = await listManagedTenants(accessToken);
-    await updateEntraConnectionValidation({
-      tenant: tenantId,
-      connectionType: 'direct',
-      status: 'connected',
-      snapshot: null,
-    });
-    return ok({
-      valid: true,
-      checkedAt: new Date().toISOString(),
-      managedTenantSampleCount,
-    });
-  } catch (error: unknown) {
-    const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+  // Unlike the connect path, this route is the explicit "Validate" action: the
+  // probe stays side-effect free and the route owns persisting its verdict onto
+  // the active connection.
+  let probe = await probeEntraDirectAccess(accessToken);
 
-    if (status === 401) {
-      try {
-        const refreshed = await refreshEntraDirectToken(tenantId);
-        const managedTenantSampleCount = await listManagedTenants(refreshed.accessToken);
-        await updateEntraConnectionValidation({
-          tenant: tenantId,
-          connectionType: 'direct',
-          status: 'connected',
-          snapshot: null,
-        });
-        return ok({
-          valid: true,
+  if (!probe.valid && probe.code === 'auth_rejected') {
+    try {
+      const refreshed = await refreshEntraDirectToken(tenantId);
+      probe = await probeEntraDirectAccess(refreshed.accessToken);
+    } catch {
+      await updateEntraConnectionValidation({
+        tenant: tenantId,
+        connectionType: 'direct',
+        status: 'validation_failed',
+        snapshot: {
+          message: 'Direct Entra validation failed after token refresh.',
+          code: 'post_refresh_validation_failed',
           checkedAt: new Date().toISOString(),
-          managedTenantSampleCount,
-        });
-      } catch {
-        await updateEntraConnectionValidation({
-          tenant: tenantId,
-          connectionType: 'direct',
-          status: 'validation_failed',
-          snapshot: {
-            message: 'Direct Entra validation failed after token refresh.',
-            code: 'post_refresh_validation_failed',
-            checkedAt: new Date().toISOString(),
-          },
-        });
-        return badRequest('Direct Entra validation failed after token refresh.');
-      }
+        },
+      });
+      return badRequest('Direct Entra validation failed after token refresh.');
     }
 
-    const message = entraRouteErrorMessage(error, 'Direct Entra validation failed.');
+    if (!probe.valid) {
+      await updateEntraConnectionValidation({
+        tenant: tenantId,
+        connectionType: 'direct',
+        status: 'validation_failed',
+        snapshot: {
+          message: 'Direct Entra validation failed after token refresh.',
+          code: 'post_refresh_validation_failed',
+          checkedAt: probe.checkedAt,
+        },
+      });
+      return badRequest('Direct Entra validation failed after token refresh.');
+    }
+  }
+
+  if (!probe.valid) {
     await updateEntraConnectionValidation({
       tenant: tenantId,
       connectionType: 'direct',
       status: 'validation_failed',
       snapshot: {
-        message,
+        message: probe.error,
         code: 'upstream_error',
-        checkedAt: new Date().toISOString(),
+        checkedAt: probe.checkedAt,
       },
     });
     return new Response(
       JSON.stringify({
         success: false,
-        error: message,
+        error: probe.error,
       }),
       {
         status: 502,
@@ -159,4 +137,17 @@ export async function POST(): Promise<Response> {
       }
     );
   }
+
+  await updateEntraConnectionValidation({
+    tenant: tenantId,
+    connectionType: 'direct',
+    status: 'connected',
+    snapshot: null,
+  });
+
+  return ok({
+    valid: true,
+    checkedAt: probe.checkedAt,
+    managedTenantSampleCount: probe.managedTenantSampleCount,
+  });
 }

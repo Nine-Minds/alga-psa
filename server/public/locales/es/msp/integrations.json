@@ -372,6 +372,12 @@
           "reviewBeforeInitialSync": "Revisar antes de la sincronización inicial"
         },
         "connection": {
+          "callbackErrors": {
+            "consentMissing": "Microsoft inició su sesión, pero denegó el acceso a su lista de inquilinos gestionados. Un administrador global debe conceder el consentimiento de administrador para los permisos solicitados. No se guardó nada: inténtelo de nuevo cuando se conceda el consentimiento.",
+            "expired": "El intento de conexión caducó antes de completarse. No se guardó nada: inicie la conexión de nuevo.",
+            "generic": "Microsoft Entra no se conectó y no se guardó nada. Inténtelo de nuevo.",
+            "validationFailed": "Microsoft inició su sesión, pero no se pudo leer su lista de inquilinos gestionados, por lo que no se guardó nada. Revise los permisos de la conexión e inténtelo de nuevo."
+          },
           "cippServerLabel": "Servidor CIPP:",
           "connectingSuffix": " (Conectando...)",
           "details": "Detalles de conexión",

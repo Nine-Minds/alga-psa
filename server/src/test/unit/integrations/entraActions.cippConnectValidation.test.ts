@@ -36,6 +36,10 @@ vi.mock('@enterprise/lib/integrations/entra/auth/tokenStore', () => ({
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: createTenantKnexMock,
+  // The connection swap runs in one transaction; the double runs the callback
+  // against the same builder so the assertions below still see the writes.
+  withTransaction: async (knexOrTrx: any, callback: (trx: any) => Promise<unknown>) =>
+    callback(knexOrTrx),
   tenantDb: (conn: any) => ({
     table: (table: string) => conn(table),
   }),

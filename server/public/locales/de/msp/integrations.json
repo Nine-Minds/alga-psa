@@ -372,6 +372,12 @@
           "reviewBeforeInitialSync": "Vor initialer Synchronisation prüfen"
         },
         "connection": {
+          "callbackErrors": {
+            "consentMissing": "Microsoft hat Sie angemeldet, den Zugriff auf Ihre verwaltete Mandantenliste jedoch verweigert. Ein globaler Administrator muss die Administratorzustimmung für die angeforderten Berechtigungen erteilen. Es wurde nichts gespeichert – versuchen Sie es nach erteilter Zustimmung erneut.",
+            "expired": "Der Verbindungsversuch ist abgelaufen, bevor er abgeschlossen war. Es wurde nichts gespeichert – starten Sie die Verbindung erneut.",
+            "generic": "Microsoft Entra wurde nicht verbunden, und es wurde nichts gespeichert. Bitte versuchen Sie es erneut.",
+            "validationFailed": "Microsoft hat Sie angemeldet, aber Ihre verwaltete Mandantenliste konnte nicht gelesen werden, daher wurde nichts gespeichert. Prüfen Sie die Berechtigungen der Verbindung und versuchen Sie es erneut."
+          },
           "cippServerLabel": "CIPP-Server:",
           "connectingSuffix": " (Verbindung wird hergestellt...)",
           "details": "Verbindungsdetails",

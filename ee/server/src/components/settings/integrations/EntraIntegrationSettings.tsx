@@ -28,6 +28,7 @@ import {
 import EntraSyncHistoryPanel from './EntraSyncHistoryPanel';
 import EntraReconciliationQueue from './EntraReconciliationQueue';
 import {
+  buildEntraCallbackErrorKey,
   buildEntraConnectionOptions,
   buildEntraStatusHeaderAction,
   shouldShowAmbiguousQueue,
@@ -168,6 +169,7 @@ export default function EntraIntegrationSettings({ canUseCipp: canUseCippTier = 
   const [cippDialogOpen, setCippDialogOpen] = React.useState(false);
   const [directLoading, setDirectLoading] = React.useState(false);
   const [directError, setDirectError] = React.useState<string | null>(null);
+  const [callbackError, setCallbackError] = React.useState<string | null>(null);
   const [disconnectLoading, setDisconnectLoading] = React.useState(false);
   const [disconnectDialogOpen, setDisconnectDialogOpen] = React.useState(false);
   const [remappingRows, setRemappingRows] = React.useState<Record<string, boolean>>({});
@@ -214,6 +216,36 @@ export default function EntraIntegrationSettings({ canUseCipp: canUseCippTier = 
   React.useEffect(() => {
     void loadMaintenanceSignal();
   }, [loadMaintenanceSignal]);
+
+  // Report the Direct OAuth round trip. The callback now validates against
+  // Graph before persisting, so a rejected connection returns here having
+  // written nothing — and would otherwise look like the button did nothing.
+  // The params are consumed once so a refresh does not re-raise the error.
+  React.useEffect(() => {
+    if (typeof window === 'undefined') {
+      return;
+    }
+
+    const params = new URLSearchParams(window.location.search);
+    const callbackStatus = params.get('entra_status');
+    if (!callbackStatus) {
+      return;
+    }
+
+    if (callbackStatus === 'failure') {
+      setCallbackError(t(buildEntraCallbackErrorKey(params.get('error'))));
+    }
+
+    params.delete('entra_status');
+    params.delete('error');
+    params.delete('message');
+    const query = params.toString();
+    window.history.replaceState(
+      null,
+      '',
+      `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`
+    );
+  }, [t]);
 
   const storedConnectionType = status?.connectionType || null;
   const isConnected = status?.status === 'connected';
@@ -404,6 +436,7 @@ export default function EntraIntegrationSettings({ canUseCipp: canUseCippTier = 
     } else if (optionId === 'direct') {
       setDirectLoading(true);
       setDirectError(null);
+      setCallbackError(null);
       try {
         const result = await initiateEntraDirectOAuth();
         if ('error' in result) {
@@ -598,6 +631,12 @@ export default function EntraIntegrationSettings({ canUseCipp: canUseCippTier = 
           </Button>
         </div>
       </div>
+
+      {callbackError ? (
+        <p className="mt-3 text-sm text-destructive" id="entra-callback-error">
+          {callbackError}
+        </p>
+      ) : null}
 
       <div className="entra-status-section mt-3">
         <p className="text-xs uppercase tracking-wide text-muted-foreground">{t('integrations.entra.settings.overview.label')}</p>

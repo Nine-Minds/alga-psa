@@ -372,6 +372,12 @@
           "reviewBeforeInitialSync": "11111"
         },
         "connection": {
+          "callbackErrors": {
+            "consentMissing": "11111",
+            "expired": "11111",
+            "generic": "11111",
+            "validationFailed": "11111"
+          },
           "cippServerLabel": "11111",
           "connectingSuffix": "11111",
           "details": "11111",

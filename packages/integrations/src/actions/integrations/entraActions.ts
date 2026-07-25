@@ -5,7 +5,7 @@ import { hasPermission } from '@alga-psa/auth/rbac';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
 import { isFeatureFlagEnabled } from '@alga-psa/core';
 import { routes } from '@alga-psa/integrations/entra/routes/entry';
-import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { generateMicrosoftAuthUrl, generateNonce } from '../../utils/email/oauthHelpers';
 import { createIntegrationClient } from '../clientLookupActions';
 
@@ -530,35 +530,41 @@ export const connectEntraCipp = withAuth(async (
   await clearStaleCredentialsForConnectionType(tenant, 'cipp');
 
   const { knex } = await createTenantKnex();
-  const db = tenantDb(knex, tenant);
-  const now = knex.fn.now();
   const userId = String((user as { user_id?: string } | undefined)?.user_id || '');
 
-  await db.table('entra_partner_connections')
-    .where({ is_active: true })
-    .update({
-      is_active: false,
-      status: 'disconnected',
-      disconnected_at: now,
-      updated_at: now,
-      updated_by: userId || null,
-    });
+  // Retiring the old connection and recording the new one is one swap, not two
+  // writes: a failure between them would leave the tenant disconnected from a
+  // connection that still works.
+  await withTransaction(knex, async (trx) => {
+    const db = tenantDb(trx, tenant);
+    const now = trx.fn.now();
 
-  await db.table('entra_partner_connections').insert({
-    tenant,
-    connection_type: 'cipp',
-    status: 'connected',
-    is_active: true,
-    cipp_base_url: normalizedBaseUrl,
-    token_secret_ref: 'entra_cipp',
-    connected_at: now,
-    disconnected_at: null,
-    last_validated_at: now,
-    last_validation_error: knex.raw(`'{}'::jsonb`),
-    created_by: userId || null,
-    updated_by: userId || null,
-    created_at: now,
-    updated_at: now,
+    await db.table('entra_partner_connections')
+      .where({ is_active: true })
+      .update({
+        is_active: false,
+        status: 'disconnected',
+        disconnected_at: now,
+        updated_at: now,
+        updated_by: userId || null,
+      });
+
+    await db.table('entra_partner_connections').insert({
+      tenant,
+      connection_type: 'cipp',
+      status: 'connected',
+      is_active: true,
+      cipp_base_url: normalizedBaseUrl,
+      token_secret_ref: 'entra_cipp',
+      connected_at: now,
+      disconnected_at: null,
+      last_validated_at: now,
+      last_validation_error: trx.raw(`'{}'::jsonb`),
+      created_by: userId || null,
+      updated_by: userId || null,
+      created_at: now,
+      updated_at: now,
+    });
   });
 
   return {

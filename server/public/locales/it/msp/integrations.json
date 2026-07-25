@@ -372,6 +372,12 @@
           "reviewBeforeInitialSync": "Rivedi prima della sincronizzazione iniziale"
         },
         "connection": {
+          "callbackErrors": {
+            "consentMissing": "Microsoft ti ha autenticato ma ha negato l'accesso all'elenco dei tenant gestiti. Un amministratore globale deve concedere il consenso amministratore per le autorizzazioni richieste. Non è stato salvato nulla: riprova una volta concesso il consenso.",
+            "expired": "Il tentativo di connessione è scaduto prima di completarsi. Non è stato salvato nulla: avvia di nuovo la connessione.",
+            "generic": "Microsoft Entra non è stato connesso e non è stato salvato nulla. Riprova.",
+            "validationFailed": "Microsoft ti ha autenticato, ma non è stato possibile leggere l'elenco dei tenant gestiti, quindi non è stato salvato nulla. Controlla le autorizzazioni della connessione e riprova."
+          },
           "cippServerLabel": "Server CIPP:",
           "connectingSuffix": " (Connessione...)",
           "details": "Dettagli connessione",

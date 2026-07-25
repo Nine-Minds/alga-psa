@@ -372,6 +372,12 @@
           "reviewBeforeInitialSync": "55555"
         },
         "connection": {
+          "callbackErrors": {
+            "consentMissing": "55555",
+            "expired": "55555",
+            "generic": "55555",
+            "validationFailed": "55555"
+          },
           "cippServerLabel": "55555",
           "connectingSuffix": "55555",
           "details": "55555",

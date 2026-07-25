@@ -372,6 +372,12 @@
           "reviewBeforeInitialSync": "Controleer voor initiële synchronisatie"
         },
         "connection": {
+          "callbackErrors": {
+            "consentMissing": "Microsoft heeft u aangemeld maar toegang tot uw lijst met beheerde tenants geweigerd. Een globale beheerder moet beheerderstoestemming verlenen voor de gevraagde machtigingen. Er is niets opgeslagen — probeer het opnieuw zodra de toestemming is verleend.",
+            "expired": "De verbindingspoging is verlopen voordat deze was voltooid. Er is niets opgeslagen — start de verbinding opnieuw.",
+            "generic": "Microsoft Entra is niet verbonden en er is niets opgeslagen. Probeer het opnieuw.",
+            "validationFailed": "Microsoft heeft u aangemeld, maar uw lijst met beheerde tenants kon niet worden gelezen, dus er is niets opgeslagen. Controleer de machtigingen van de verbinding en probeer het opnieuw."
+          },
           "cippServerLabel": "CIPP-server:",
           "connectingSuffix": " (Verbinden...)",
           "details": "Verbindingsdetails",

@@ -72,6 +72,8 @@ vi.mock('@alga-psa/core/secrets', async (importOriginal) => {
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: createTenantKnexMock,
+  withTransaction: async (knexOrTrx: any, callback: (trx: any) => Promise<unknown>) =>
+    callback(knexOrTrx),
   tenantDb: (conn: any, tenant: string) => ({
     table: (t: string) => {
       const builder = conn(t);
