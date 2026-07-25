@@ -377,7 +377,7 @@ describe('Entra direct connect action permissions', () => {
     expect(Object.values(insertedRow)).not.toContain('cipp-token-37');
   });
 
-  it('T041: switching direct<->CIPP clears stale credentials from the previous mode', async () => {
+  it('T041: switching direct<->CIPP clears stale credentials once the swap has committed, not before', async () => {
     hasPermissionMock.mockResolvedValue(true);
     featureFlagIsEnabledMock.mockResolvedValue(true);
 
@@ -399,7 +399,11 @@ describe('Entra direct connect action permissions', () => {
       { user_id: 'user-41a', user_type: 'internal' } as any,
       { tenant: 'tenant-41a' }
     );
-    expect(clearEntraCippCredentialsMock).toHaveBeenCalledWith('tenant-41a');
+    // Handing the operator an authorize URL is not connecting them. They can
+    // still cancel at the Microsoft consent screen, or fail the probe in the
+    // callback, and land back on a tenant whose CIPP connection has to still
+    // work. The callback retires it after the swap to Direct commits.
+    expect(clearEntraCippCredentialsMock).not.toHaveBeenCalled();
 
     clearEntraDirectTokenSetMock.mockResolvedValue(undefined);
     saveEntraCippCredentialsMock.mockResolvedValue(undefined);

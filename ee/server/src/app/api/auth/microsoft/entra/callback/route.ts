@@ -4,7 +4,12 @@ import { createTenantKnex, runWithTenant } from '@/lib/db';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { getCurrentUser } from '@alga-psa/user-composition/actions';
 import { resolveMicrosoftCredentialsForTenant } from '@ee/lib/integrations/entra/auth/microsoftCredentialResolver';
-import { saveEntraDirectTokenSet } from '@ee/lib/integrations/entra/auth/tokenStore';
+import {
+  getEntraDirectTokenSet,
+  saveEntraDirectTokenSet,
+  clearEntraDirectTokenSet,
+} from '@ee/lib/integrations/entra/auth/tokenStore';
+import { clearEntraCippCredentials } from '@ee/lib/integrations/entra/providers/cipp/cippSecretStore';
 import { ENTRA_DIRECT_SCOPE_STRING } from '@ee/lib/integrations/entra/auth/directScopes';
 import {
   isFailedEntraDirectProbe,
@@ -150,6 +155,12 @@ export async function GET(request: NextRequest) {
       return failureRedirect(probe.code, probe.error);
     }
 
+    // The new row's token_secret_ref has to resolve to something, so the token
+    // set is written first — but there is one slot per tenant, so writing it
+    // overwrites whatever Direct connection the tenant already had. Hold the
+    // predecessor: if the swap below fails, it goes back.
+    const previousTokenSet = await getEntraDirectTokenSet(state.tenant).catch(() => null);
+
     const expiresAt = new Date(Date.now() + expiresIn * 1000).toISOString();
     await saveEntraDirectTokenSet(state.tenant, {
       accessToken,
@@ -161,37 +172,53 @@ export async function GET(request: NextRequest) {
     // Retiring the old connection and recording the new one is one swap, not
     // two writes: a failure between them would leave the tenant disconnected
     // from a connection that still works.
-    await runWithTenant(state.tenant, async () => {
-      const { knex } = await createTenantKnex();
-      await withTransaction(knex, async (trx) => {
-        const now = trx.fn.now();
-        const db = tenantDb(trx, state.tenant);
+    try {
+      await runWithTenant(state.tenant, async () => {
+        const { knex } = await createTenantKnex();
+        await withTransaction(knex, async (trx) => {
+          const now = trx.fn.now();
+          const db = tenantDb(trx, state.tenant);
 
-        await db.table('entra_partner_connections')
-          .where({ is_active: true })
-          .update({
-            is_active: false,
-            status: 'disconnected',
-            disconnected_at: now,
+          await db.table('entra_partner_connections')
+            .where({ is_active: true })
+            .update({
+              is_active: false,
+              status: 'disconnected',
+              disconnected_at: now,
+              updated_at: now,
+            });
+
+          await db.table('entra_partner_connections').insert({
+            tenant: state.tenant,
+            connection_type: 'direct',
+            status: 'connected',
+            is_active: true,
+            token_secret_ref: 'entra_direct',
+            connected_at: now,
+            disconnected_at: null,
+            last_validated_at: now,
+            last_validation_error: trx.raw(`'{}'::jsonb`),
+            created_by: state.userId,
+            updated_by: state.userId,
+            created_at: now,
             updated_at: now,
           });
-
-        await db.table('entra_partner_connections').insert({
-          tenant: state.tenant,
-          connection_type: 'direct',
-          status: 'connected',
-          is_active: true,
-          token_secret_ref: 'entra_direct',
-          connected_at: now,
-          disconnected_at: null,
-          last_validated_at: now,
-          last_validation_error: trx.raw(`'{}'::jsonb`),
-          created_by: state.userId,
-          updated_by: state.userId,
-          created_at: now,
-          updated_at: now,
         });
       });
+    } catch (swapError: unknown) {
+      if (previousTokenSet) {
+        await saveEntraDirectTokenSet(state.tenant, previousTokenSet).catch(() => undefined);
+      } else {
+        await clearEntraDirectTokenSet(state.tenant).catch(() => undefined);
+      }
+      throw swapError;
+    }
+
+    // Only now is the CIPP credential stale. Until the swap committed, it was
+    // still backing the tenant's active connection, and a cancelled consent or
+    // a rejected probe had to leave it working.
+    await clearEntraCippCredentials(state.tenant).catch((error: unknown) => {
+      console.error('[Entra OAuth] Failed to clear superseded CIPP credentials', error);
     });
 
     return successRedirect();

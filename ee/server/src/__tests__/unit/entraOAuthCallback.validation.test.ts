@@ -5,6 +5,9 @@ const axiosPostMock = vi.fn();
 const axiosGetMock = vi.fn();
 const resolveMicrosoftCredentialsForTenantMock = vi.fn();
 const saveEntraDirectTokenSetMock = vi.fn();
+const getEntraDirectTokenSetMock = vi.fn();
+const clearEntraDirectTokenSetMock = vi.fn();
+const clearEntraCippCredentialsMock = vi.fn();
 const createTenantKnexMock = vi.fn();
 const runWithTenantMock = vi.fn();
 const getCurrentUserMock = vi.fn();
@@ -30,6 +33,12 @@ vi.mock('@ee/lib/integrations/entra/auth/microsoftCredentialResolver', () => ({
 
 vi.mock('@ee/lib/integrations/entra/auth/tokenStore', () => ({
   saveEntraDirectTokenSet: saveEntraDirectTokenSetMock,
+  getEntraDirectTokenSet: getEntraDirectTokenSetMock,
+  clearEntraDirectTokenSet: clearEntraDirectTokenSetMock,
+}));
+
+vi.mock('@ee/lib/integrations/entra/providers/cipp/cippSecretStore', () => ({
+  clearEntraCippCredentials: clearEntraCippCredentialsMock,
 }));
 
 vi.mock('@/lib/db', () => ({
@@ -93,10 +102,17 @@ describe('Entra OAuth callback validation', () => {
     axiosGetMock.mockReset();
     resolveMicrosoftCredentialsForTenantMock.mockReset();
     saveEntraDirectTokenSetMock.mockReset();
+    getEntraDirectTokenSetMock.mockReset();
+    clearEntraDirectTokenSetMock.mockReset();
+    clearEntraCippCredentialsMock.mockReset();
     createTenantKnexMock.mockReset();
     runWithTenantMock.mockReset();
     getCurrentUserMock.mockReset();
     process.env.NEXTAUTH_URL = 'http://localhost:3000';
+
+    getEntraDirectTokenSetMock.mockResolvedValue(null);
+    clearEntraDirectTokenSetMock.mockResolvedValue(undefined);
+    clearEntraCippCredentialsMock.mockResolvedValue(undefined);
 
     getCurrentUserMock.mockResolvedValue({ user_id: 'user-34', tenant: STATE_TENANT });
     resolveMicrosoftCredentialsForTenantMock.mockResolvedValue({
@@ -210,6 +226,13 @@ describe('Entra OAuth callback validation', () => {
         updated_by: 'user-34',
       })
     );
+
+    // The superseded CIPP credential is retired last. Until the swap commits it
+    // is still backing the tenant's active connection.
+    expect(clearEntraCippCredentialsMock).toHaveBeenCalledWith(STATE_TENANT);
+    expect(insertMock.mock.invocationCallOrder[0]).toBeLessThan(
+      clearEntraCippCredentialsMock.mock.invocationCallOrder[0]
+    );
   });
 
   it('T035: a token Graph rejects persists nothing at all', async () => {
@@ -238,6 +261,7 @@ describe('Entra OAuth callback validation', () => {
     expect(createTenantKnexMock).not.toHaveBeenCalled();
     expect(updateMock).not.toHaveBeenCalled();
     expect(insertMock).not.toHaveBeenCalled();
+    expect(clearEntraCippCredentialsMock).not.toHaveBeenCalled();
   });
 
   it('T036: an unreachable Graph endpoint also persists nothing', async () => {
@@ -255,6 +279,37 @@ describe('Entra OAuth callback validation', () => {
     expect(runWithTenantMock).not.toHaveBeenCalled();
     expect(updateMock).not.toHaveBeenCalled();
     expect(insertMock).not.toHaveBeenCalled();
+    expect(clearEntraCippCredentialsMock).not.toHaveBeenCalled();
+  });
+
+  it('T038: a failed connection swap restores the prior token set and spares the CIPP credential', async () => {
+    const { knexMock } = knexDouble();
+    const priorTokenSet = {
+      accessToken: 'prior-access',
+      refreshToken: 'prior-refresh',
+      expiresAt: '2026-01-01T00:00:00.000Z',
+      scope: 'prior-scope',
+    };
+
+    getEntraDirectTokenSetMock.mockResolvedValue(priorTokenSet);
+    knexMock.transaction = vi.fn(async () => {
+      throw new Error('deadlock detected');
+    });
+    createTenantKnexMock.mockResolvedValue({ knex: knexMock });
+    runWithTenantMock.mockImplementation(async (_tenant: string, fn: () => Promise<unknown>) => fn());
+    axiosGetMock.mockResolvedValue({ data: { value: [{ tenantId: 'managed-1' }] } });
+
+    const { GET } = await import('@ee/app/api/auth/microsoft/entra/callback/route');
+    const response = await GET(callbackRequest(encodeState()));
+
+    expect(response.headers.get('location')).toContain('error=callback_error');
+
+    // The token slot holds one set per tenant, so the write above clobbered a
+    // Direct connection that still worked. It goes back.
+    expect(saveEntraDirectTokenSetMock).toHaveBeenLastCalledWith(STATE_TENANT, priorTokenSet);
+    // And the CIPP credential — which may be the one actually backing the
+    // active connection — is never touched on a failed swap.
+    expect(clearEntraCippCredentialsMock).not.toHaveBeenCalled();
   });
 
   it('T037: a session that does not match the state tenant never reaches the token exchange', async () => {

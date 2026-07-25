@@ -179,5 +179,96 @@ describe('connectEntraCipp validates before persisting', () => {
       is_active: true,
       last_validated_at: 'db-now',
     });
+
+    // The Direct token set is only stale once the swap has committed. Clearing
+    // it earlier would strand a tenant whose swap then failed.
+    expect(clearEntraDirectTokenSetMock).toHaveBeenCalledWith('tenant-3');
+    expect(insertMock.mock.invocationCallOrder[0]).toBeLessThan(
+      clearEntraDirectTokenSetMock.mock.invocationCallOrder[0]
+    );
+  });
+
+  it('restores the previous credential and spares the direct tokens when the swap fails', async () => {
+    getEntraCippCredentialsMock.mockResolvedValue({
+      baseUrl: 'https://old.example.com',
+      apiToken: 'working-token',
+    });
+    probeCippCredentialsMock.mockResolvedValue({
+      valid: true,
+      checkedAt: '2026-07-25T00:00:00.000Z',
+      tenantCountSample: 1,
+      endpoint: 'https://cipp.example.com/api/listtenants',
+    });
+
+    const { knexMock } = buildKnexMock();
+    knexMock.mockImplementation(() => ({
+      where: vi.fn().mockReturnThis(),
+      update: vi.fn(async () => 1),
+      insert: vi.fn(async () => {
+        throw new Error('deadlock detected');
+      }),
+    }));
+    createTenantKnexMock.mockResolvedValue({ knex: knexMock });
+
+    const { connectEntraCipp } = await import(
+      '@alga-psa/integrations/actions/integrations/entraActions'
+    );
+
+    const result = await connectEntraCipp(
+      { user_id: 'user-4', user_type: 'internal' } as any,
+      { tenant: 'tenant-4' },
+      { baseUrl: 'https://cipp.example.com', apiToken: 'new-token' }
+    );
+
+    expect(result).toEqual({
+      success: false,
+      error: 'Unable to record the CIPP connection. Your previous connection was left in place.',
+    });
+
+    // There is one credential slot per tenant, so staging the candidate
+    // clobbered a connection that still worked. It goes back.
+    expect(saveEntraCippCredentialsMock).toHaveBeenLastCalledWith('tenant-4', {
+      baseUrl: 'https://old.example.com',
+      apiToken: 'working-token',
+    });
+    expect(clearEntraCippCredentialsMock).not.toHaveBeenCalled();
+    // And a swap that never committed does not get to retire the Direct tokens.
+    expect(clearEntraDirectTokenSetMock).not.toHaveBeenCalled();
+  });
+
+  it('clears the staged credential when the swap fails and there was no predecessor', async () => {
+    getEntraCippCredentialsMock.mockResolvedValue(null);
+    probeCippCredentialsMock.mockResolvedValue({
+      valid: true,
+      checkedAt: '2026-07-25T00:00:00.000Z',
+      tenantCountSample: 1,
+      endpoint: 'https://cipp.example.com/api/listtenants',
+    });
+
+    const { knexMock } = buildKnexMock();
+    knexMock.mockImplementation(() => ({
+      where: vi.fn().mockReturnThis(),
+      update: vi.fn(async () => 1),
+      insert: vi.fn(async () => {
+        throw new Error('deadlock detected');
+      }),
+    }));
+    createTenantKnexMock.mockResolvedValue({ knex: knexMock });
+
+    const { connectEntraCipp } = await import(
+      '@alga-psa/integrations/actions/integrations/entraActions'
+    );
+
+    const result = await connectEntraCipp(
+      { user_id: 'user-5', user_type: 'internal' } as any,
+      { tenant: 'tenant-5' },
+      { baseUrl: 'https://cipp.example.com', apiToken: 'new-token' }
+    );
+
+    expect(result.success).toBe(false);
+    // Nothing to restore, so the staged credential is removed rather than left
+    // behind pointing at a connection row that was never written.
+    expect(clearEntraCippCredentialsMock).toHaveBeenCalledWith('tenant-5');
+    expect(clearEntraDirectTokenSetMock).not.toHaveBeenCalled();
   });
 });

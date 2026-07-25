@@ -415,8 +415,11 @@ export const initiateEntraDirectOAuth = withAuth(async (user, { tenant }) => {
     return { success: false, error: 'Microsoft OAuth credentials are not configured for Entra direct connection' } as const;
   }
 
-  await clearStaleCredentialsForConnectionType(tenant, 'direct');
-
+  // Initiating OAuth is not connecting. The operator has not consented yet, the
+  // probe has not run, and either can still fail or be cancelled — at which
+  // point they are back on the Entra screen with whatever connection they had.
+  // Retiring the CIPP credentials here would have already broken it. The stale
+  // credentials are cleared by the callback, after the swap to Direct commits.
   const secretProvider = await getSecretProviderInstance();
   const baseUrl =
     process.env.NEXT_PUBLIC_BASE_URL ||
@@ -650,12 +653,21 @@ export const connectEntraCipp = withAuth(async (
   }
 
   const cippSecretStore = await import('@enterprise/lib/integrations/entra/providers/cipp/cippSecretStore');
+
+  // The new row's token_secret_ref has to resolve to something, so the
+  // credential is written before the swap — but there is one slot per tenant,
+  // so writing it overwrites whatever CIPP connection the tenant already had.
+  // Hold the predecessor: if the swap fails, it goes back, and the tenant is
+  // left on the connection it came in with rather than on a row pointing at a
+  // credential we replaced.
+  const previousCredentials = await cippSecretStore
+    .getEntraCippCredentials(tenant)
+    .catch(() => null);
+
   await cippSecretStore.saveEntraCippCredentials(tenant, {
     baseUrl: normalizedBaseUrl,
     apiToken,
   });
-
-  await clearStaleCredentialsForConnectionType(tenant, 'cipp');
 
   const { knex } = await createTenantKnex();
   const userId = String((user as { user_id?: string } | undefined)?.user_id || '');
@@ -663,37 +675,57 @@ export const connectEntraCipp = withAuth(async (
   // Retiring the old connection and recording the new one is one swap, not two
   // writes: a failure between them would leave the tenant disconnected from a
   // connection that still works.
-  await withTransaction(knex, async (trx) => {
-    const db = tenantDb(trx, tenant);
-    const now = trx.fn.now();
+  try {
+    await withTransaction(knex, async (trx) => {
+      const db = tenantDb(trx, tenant);
+      const now = trx.fn.now();
 
-    await db.table('entra_partner_connections')
-      .where({ is_active: true })
-      .update({
-        is_active: false,
-        status: 'disconnected',
-        disconnected_at: now,
-        updated_at: now,
+      await db.table('entra_partner_connections')
+        .where({ is_active: true })
+        .update({
+          is_active: false,
+          status: 'disconnected',
+          disconnected_at: now,
+          updated_at: now,
+          updated_by: userId || null,
+        });
+
+      await db.table('entra_partner_connections').insert({
+        tenant,
+        connection_type: 'cipp',
+        status: 'connected',
+        is_active: true,
+        cipp_base_url: normalizedBaseUrl,
+        token_secret_ref: 'entra_cipp',
+        connected_at: now,
+        disconnected_at: null,
+        last_validated_at: now,
+        last_validation_error: trx.raw(`'{}'::jsonb`),
+        created_by: userId || null,
         updated_by: userId || null,
+        created_at: now,
+        updated_at: now,
       });
-
-    await db.table('entra_partner_connections').insert({
-      tenant,
-      connection_type: 'cipp',
-      status: 'connected',
-      is_active: true,
-      cipp_base_url: normalizedBaseUrl,
-      token_secret_ref: 'entra_cipp',
-      connected_at: now,
-      disconnected_at: null,
-      last_validated_at: now,
-      last_validation_error: trx.raw(`'{}'::jsonb`),
-      created_by: userId || null,
-      updated_by: userId || null,
-      created_at: now,
-      updated_at: now,
     });
-  });
+  } catch (error: unknown) {
+    console.error('[Entra] Failed to record the CIPP connection; rolling the credential back', error);
+
+    if (previousCredentials) {
+      await cippSecretStore.saveEntraCippCredentials(tenant, previousCredentials).catch(() => undefined);
+    } else {
+      await cippSecretStore.clearEntraCippCredentials(tenant).catch(() => undefined);
+    }
+
+    return {
+      success: false,
+      error: 'Unable to record the CIPP connection. Your previous connection was left in place.',
+    } as const;
+  }
+
+  // Only now is the Direct token set stale. Until the swap committed, it was
+  // still backing the tenant's active connection, and a failed connect had to
+  // leave it working.
+  await clearStaleCredentialsForConnectionType(tenant, 'cipp');
 
   return {
     success: true,
