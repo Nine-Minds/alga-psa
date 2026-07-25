@@ -23,6 +23,31 @@ export const buildEntraConnectionOptions = (isCippEnabled: boolean): EntraConnec
     : [DIRECT_CONNECTION_OPTION];
 };
 
+export interface EntraStatusHeaderAction {
+  disconnect: boolean;
+  /** When set, the connection type Reconnect must re-run — never a guess. */
+  reconnect: 'direct' | 'cipp' | null;
+}
+
+/**
+ * The action offered beside the status badge. A never-connected tenant gets
+ * none: the connection chooser below is the first-run action, and a Reconnect
+ * button there silently committed CIPP shops to Direct OAuth.
+ */
+export const buildEntraStatusHeaderAction = (params: {
+  status: string | null | undefined;
+  connectionType: 'direct' | 'cipp' | null | undefined;
+}): EntraStatusHeaderAction => {
+  if (params.status === 'connected') {
+    return { disconnect: true, reconnect: null };
+  }
+
+  return {
+    disconnect: false,
+    reconnect: params.connectionType || null,
+  };
+};
+
 export const shouldShowFieldSyncControls = (isFieldSyncEnabled: boolean): boolean => isFieldSyncEnabled;
 
 export const shouldShowAmbiguousQueue = (isAmbiguousQueueEnabled: boolean): boolean => isAmbiguousQueueEnabled;

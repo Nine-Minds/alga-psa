@@ -348,14 +348,15 @@
     "entra": {
       "settings": {
         "actions": {
+          "cancel": "Anuluj",
           "disconnect": "Rozłącz",
-          "reconnect": "Połącz ponownie",
+          "hideReviewRemap": "Ukryj Przejrzyj / Zmapuj ponownie",
+          "reconnect": "Połącz ponownie: {{connectionType}}",
           "reconnecting": "Ponowne łączenie…",
           "refresh": "Odśwież",
           "resetFieldSync": "Resetuj",
           "reviewMappings": "Przejrzyj mapowania",
           "reviewRemap": "Przejrzyj / Zmapuj ponownie",
-          "hideReviewRemap": "Ukryj Przejrzyj / Zmapuj ponownie",
           "runDiscovery": "Uruchom wykrywanie",
           "runDiscoveryAgain": "Uruchom wykrywanie ponownie",
           "runDiscoveryRunning": "Uruchamianie wykrywania…",
@@ -371,17 +372,20 @@
           "reviewBeforeInitialSync": "Przejrzyj przed początkową synchronizacją"
         },
         "connection": {
+          "cippServerLabel": "Serwer CIPP:",
           "connectingSuffix": " (Łączenie...)",
           "details": "Szczegóły połączenia",
           "directCredentialSourceLabel": "Źródło poświadczeń:",
           "directTenantDefault": "common (multi-tenant)",
           "directTenantLabel": "Tenant Microsoft:",
-          "cippServerLabel": "Serwer CIPP:",
           "notAvailable": "Niedostępne",
           "notConfigured": "Nie skonfigurowano",
-          "notConnectedStatus": "not_connected",
           "optionsTitle": "Opcje połączenia",
-          "promptDetails": "Połącz Entra, aby wypełnić szczegóły dostawcy."
+          "promptDetails": "Połącz Entra, aby wypełnić szczegóły dostawcy.",
+          "types": {
+            "cipp": "CIPP",
+            "direct": "Microsoft Entra Bezpośrednio"
+          }
         },
         "currentStep": {
           "connect": {
@@ -407,6 +411,12 @@
         "disabled": {
           "description": "Interfejs integracji Entra jest obecnie wyłączony dla tego tenanta.",
           "title": "Integracja Microsoft Entra"
+        },
+        "disconnectConfirm": {
+          "keeps": "Kontakty, mapowania klientów i historia synchronizacji pozostaną bez zmian. Nic nie zostanie usunięte.",
+          "reconnect": "Ponowne połączenie w przyszłości przywróci synchronizację bez konieczności ponownego mapowania.",
+          "stops": "Zaplanowane i ręczne synchronizacje zostaną zatrzymane, a zapisane poświadczenia usunięte.",
+          "title": "Odłączyć Microsoft Entra?"
         },
         "discovery": {
           "completed": "Wykrywanie ukończone. Wykryto {{count}} tenantów.",
@@ -483,12 +493,9 @@
           "title": "Bieżące operacje"
         },
         "overview": {
-          "connectionLabel": "Połączenie:",
           "connectionTypeLabel": "Typ połączenia:",
           "label": "Przegląd",
-          "mappedTenantsLabel": "Zmapowane tenanty:",
-          "nextSyncIntervalEvery": "Co {{minutes}} minut",
-          "nextSyncIntervalLabel": "Następny interwał synchronizacji:"
+          "mappedTenantsLabel": "Zmapowane tenanty:"
         },
         "skipped": {
           "empty": "Obecnie żadne tenanty nie są oznaczone jako pominięte.",
@@ -498,7 +505,14 @@
         },
         "status": {
           "connectionHealth": "Stan połączenia",
-          "label": "Status"
+          "label": "Status",
+          "values": {
+            "connected": "Połączono",
+            "disconnected": "Rozłączono",
+            "not_connected": "Brak połączenia",
+            "unknown": "Nieznany",
+            "validation_failed": "Połączono, ale walidacja się nie powiodła"
+          }
         },
         "syncAll": {
           "failed": "Nie udało się rozpocząć pełnej synchronizacji Entra.",
@@ -506,6 +520,10 @@
           "startedNoId": "Żądanie rozpoczęcia synchronizacji zaakceptowane."
         },
         "title": "Integracja Microsoft Entra",
+        "unmapConfirm": {
+          "body": "Spowoduje to usunięcie zapisanej decyzji mapowania dla {{tenant}}, dzięki czemu pojawi się ona ponownie w tabeli mapowań. Już zsynchronizowane kontakty nie zostaną zmienione.",
+          "title": "Zmapować tę dzierżawę ponownie?"
+        },
         "validation": {
           "label": "Walidacja i wykrywanie",
           "lastDiscoveryLabel": "Ostatnie wykrywanie:",
@@ -535,6 +553,7 @@
       },
       "tenantMapping": {
         "actions": {
+          "cancel": "Anuluj",
           "confirmSelected": "Potwierdź wybrane mapowania",
           "confirming": "Potwierdzanie…",
           "import": "Importuj jako nowego klienta",
@@ -564,6 +583,11 @@
         "feedback": {
           "confirmed": "Potwierdzono {{count}} mapowań.",
           "confirmedOne": "Potwierdzono {{count}} mapowanie."
+        },
+        "importConfirm": {
+          "body": "Z dzierżawy Entra {{tenant}} zostanie utworzony nowy klient, a dzierżawa zostanie do niego zmapowana.",
+          "similarWarning": "Ci istniejący klienci mają podobne nazwy — zmapuj do jednego z nich, jeśli to ta sama organizacja:",
+          "title": "Zaimportować jako nowego klienta?"
         },
         "noSuggestion": "Brak sugestii",
         "picker": {

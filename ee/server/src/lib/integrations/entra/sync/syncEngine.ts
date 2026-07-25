@@ -53,13 +53,18 @@ export async function executeEntraSync(
     if (candidates.length === 1) {
       counters.increment('linked');
       if (!dryRun) {
-        await linkExistingMatchedContact(
+        // `updated` counts contacts whose values the field-sync rules actually
+        // changed. A link that overwrote nothing is a link and nothing more.
+        const linked = await linkExistingMatchedContact(
           input.tenantId,
           input.clientId,
           candidates[0],
           user,
           input.fieldSyncConfig
         );
+        if (linked.fieldsUpdated) {
+          counters.increment('updated');
+        }
       }
       continue;
     }

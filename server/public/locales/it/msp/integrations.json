@@ -348,14 +348,15 @@
     "entra": {
       "settings": {
         "actions": {
+          "cancel": "Annulla",
           "disconnect": "Disconnetti",
-          "reconnect": "Riconnetti",
+          "hideReviewRemap": "Nascondi rivedi / rimappa",
+          "reconnect": "Riconnetti {{connectionType}}",
           "reconnecting": "Riconnessione in corso…",
           "refresh": "Aggiorna",
           "resetFieldSync": "Reimposta",
           "reviewMappings": "Rivedi mappature",
           "reviewRemap": "Rivedi / Rimappa",
-          "hideReviewRemap": "Nascondi rivedi / rimappa",
           "runDiscovery": "Esegui discovery",
           "runDiscoveryAgain": "Esegui discovery di nuovo",
           "runDiscoveryRunning": "Esecuzione discovery in corso…",
@@ -371,17 +372,20 @@
           "reviewBeforeInitialSync": "Rivedi prima della sincronizzazione iniziale"
         },
         "connection": {
+          "cippServerLabel": "Server CIPP:",
           "connectingSuffix": " (Connessione...)",
           "details": "Dettagli connessione",
           "directCredentialSourceLabel": "Fonte credenziali:",
           "directTenantDefault": "common (multi-tenant)",
           "directTenantLabel": "Tenant Microsoft:",
-          "cippServerLabel": "Server CIPP:",
           "notAvailable": "Non disponibile",
           "notConfigured": "Non configurato",
-          "notConnectedStatus": "not_connected",
           "optionsTitle": "Opzioni di connessione",
-          "promptDetails": "Connetti Entra per popolare i dettagli del provider."
+          "promptDetails": "Connetti Entra per popolare i dettagli del provider.",
+          "types": {
+            "cipp": "CIPP",
+            "direct": "Microsoft Entra Diretto"
+          }
         },
         "currentStep": {
           "connect": {
@@ -407,6 +411,12 @@
         "disabled": {
           "description": "L'interfaccia utente dell'integrazione Entra è attualmente disabilitata per questo tenant.",
           "title": "Integrazione Microsoft Entra"
+        },
+        "disconnectConfirm": {
+          "keeps": "Contatti, mappature dei clienti e cronologia delle sincronizzazioni vengono mantenuti invariati. Nulla viene eliminato.",
+          "reconnect": "Riconnettendosi in seguito la sincronizzazione viene ripristinata senza rifare le mappature.",
+          "stops": "Le sincronizzazioni pianificate e manuali si interrompono e la credenziale memorizzata viene rimossa.",
+          "title": "Disconnettere Microsoft Entra?"
         },
         "discovery": {
           "completed": "Discovery completata. {{count}} tenant scoperti.",
@@ -483,12 +493,9 @@
           "title": "Operazioni continue"
         },
         "overview": {
-          "connectionLabel": "Connessione:",
           "connectionTypeLabel": "Tipo di connessione:",
           "label": "Panoramica",
-          "mappedTenantsLabel": "Tenant mappati:",
-          "nextSyncIntervalEvery": "Ogni {{minutes}} minuti",
-          "nextSyncIntervalLabel": "Intervallo prossima sincronizzazione:"
+          "mappedTenantsLabel": "Tenant mappati:"
         },
         "skipped": {
           "empty": "Nessun tenant è attualmente contrassegnato come saltato.",
@@ -498,7 +505,14 @@
         },
         "status": {
           "connectionHealth": "Integrità connessione",
-          "label": "Stato"
+          "label": "Stato",
+          "values": {
+            "connected": "Connesso",
+            "disconnected": "Disconnesso",
+            "not_connected": "Non connesso",
+            "unknown": "Sconosciuto",
+            "validation_failed": "Connesso, ma la convalida non riesce"
+          }
         },
         "syncAll": {
           "failed": "Impossibile avviare la sincronizzazione completa di Entra.",
@@ -506,6 +520,10 @@
           "startedNoId": "Richiesta di avvio della sincronizzazione accettata."
         },
         "title": "Integrazione Microsoft Entra",
+        "unmapConfirm": {
+          "body": "Questa operazione rimuove la decisione di mappatura salvata per {{tenant}}, che tornerà nella tabella di mappatura. I contatti già sincronizzati non vengono modificati.",
+          "title": "Rimappare questo tenant?"
+        },
         "validation": {
           "label": "Validazione e discovery",
           "lastDiscoveryLabel": "Ultima discovery:",
@@ -535,6 +553,7 @@
       },
       "tenantMapping": {
         "actions": {
+          "cancel": "Annulla",
           "confirmSelected": "Conferma mappature selezionate",
           "confirming": "Conferma in corso…",
           "import": "Importa come nuovo cliente",
@@ -564,6 +583,11 @@
         "feedback": {
           "confirmed": "Confermate {{count}} mappature.",
           "confirmedOne": "Confermata {{count}} mappatura."
+        },
+        "importConfirm": {
+          "body": "Verrà creato un nuovo cliente dal tenant Entra {{tenant}} e il tenant vi verrà mappato.",
+          "similarWarning": "Questi clienti esistenti hanno nomi simili: mappa su uno di essi se si tratta della stessa organizzazione:",
+          "title": "Importare come nuovo cliente?"
         },
         "noSuggestion": "Nessun suggerimento",
         "picker": {

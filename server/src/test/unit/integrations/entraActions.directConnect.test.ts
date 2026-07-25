@@ -1,10 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+// The Entra actions are EE-only and dispatch to EE route handlers; connectEntraCipp
+// now validates through one before it persists anything, so the suite has to run
+// as EE. Set before the dynamic imports below, which read this at module scope.
+process.env.EDITION = 'ee';
+
 const hasPermissionMock = vi.fn();
 const featureFlagIsEnabledMock = vi.fn();
 const resolveMicrosoftCredentialsForTenantMock = vi.fn();
 const clearEntraCippCredentialsMock = vi.fn();
 const saveEntraCippCredentialsMock = vi.fn();
+const getEntraCippCredentialsMock = vi.fn();
+const validateCippRoutePostMock = vi.fn();
 const clearEntraDirectTokenSetMock = vi.fn();
 const getSecretProviderInstanceMock = vi.fn();
 const createTenantKnexMock = vi.fn();
@@ -43,6 +50,7 @@ vi.mock('@enterprise/lib/integrations/entra/auth/microsoftCredentialResolver', (
 vi.mock('@enterprise/lib/integrations/entra/providers/cipp/cippSecretStore', () => ({
   clearEntraCippCredentials: clearEntraCippCredentialsMock,
   saveEntraCippCredentials: saveEntraCippCredentialsMock,
+  getEntraCippCredentials: getEntraCippCredentialsMock,
 }));
 
 vi.mock('@enterprise/lib/integrations/entra/auth/tokenStore', () => ({
@@ -94,6 +102,7 @@ vi.mock('@alga-psa/integrations/entra/routes/entry', () => ({
     route: async () => ({ GET: statusRouteGetMock }),
     discoveryRoute: async () => ({ POST: discoveryRoutePostMock }),
     mappingsConfirmRoute: async () => ({ POST: confirmMappingsRoutePostMock }),
+    validateCippRoute: async () => ({ POST: validateCippRoutePostMock }),
   },
 }));
 
@@ -109,6 +118,15 @@ describe('Entra direct connect action permissions', () => {
     resolveMicrosoftCredentialsForTenantMock.mockReset();
     clearEntraCippCredentialsMock.mockReset();
     saveEntraCippCredentialsMock.mockReset();
+    getEntraCippCredentialsMock.mockReset();
+    getEntraCippCredentialsMock.mockResolvedValue(null);
+    validateCippRoutePostMock.mockReset();
+    validateCippRoutePostMock.mockResolvedValue(
+      new Response(JSON.stringify({ success: true, data: { valid: true } }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      })
+    );
     clearEntraDirectTokenSetMock.mockReset();
     getSecretProviderInstanceMock.mockReset();
     createTenantKnexMock.mockReset();

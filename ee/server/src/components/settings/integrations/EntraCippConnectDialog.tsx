@@ -6,7 +6,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { connectEntraCipp, validateEntraCippConnection } from '@alga-psa/integrations/actions';
+import { connectEntraCipp } from '@alga-psa/integrations/actions';
 
 interface EntraCippConnectDialogProps {
     open: boolean;
@@ -36,15 +36,12 @@ export function EntraCippConnectDialog({
         setError(null);
 
         try {
+            // connectEntraCipp validates against CIPP before it persists anything,
+            // so a returned error means nothing was saved and the operator can
+            // correct the credential and retry in place.
             const result = await connectEntraCipp({ baseUrl, apiToken });
             if ('error' in result) {
                 setError(result.error);
-                return;
-            }
-
-            const validation = await validateEntraCippConnection();
-            if ('error' in validation) {
-                setError(validation.error);
                 return;
             }
 

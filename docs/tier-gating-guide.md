@@ -106,6 +106,23 @@ export async function yourProtectedAction() {
 }
 ```
 
+#### Background runtimes have no session
+
+`assertTierAccess` reads the session, so it is unusable from the Temporal worker,
+job runners, and scripts. Those resolve the tenant's tier directly:
+
+```ts
+import { resolveTenantTier } from '@alga-psa/licensing';
+import { TIER_FEATURES, tierHasFeature } from '@alga-psa/types';
+
+const allowed = tierHasFeature(await resolveTenantTier(tenantId), TIER_FEATURES.YOUR_NEW_FEATURE);
+```
+
+If a feature has a recurring background component, gate it on the same feature
+the request path gates on. `setupSchedules.ts` gated Entra's recurring sync on
+the Enterprise add-on long after the UI and API moved to Pro, so Pro tenants got
+the whole UI while the worker deleted their schedule on every boot.
+
 ### 6. Add display name in AccountManagement
 
 ```ts
@@ -162,6 +179,8 @@ This means CE users get all features regardless of `tenants.plan`.
 | `server/src/components/tier-gating/TierGate.tsx` | Client-side gate component |
 | `server/src/lib/tier-gating/ServerTierGate.tsx` | Server-side gate component |
 | `server/src/lib/tier-gating/assertTierAccess.ts` | Server action enforcement |
+| `packages/licensing/src/lib/tenant-tier.ts` | Session-free tier resolution (shared by actions and background runtimes) |
+| `ee/temporal-workflows/src/schedules/setupSchedules.ts` | Per-tenant recurring schedules; gates on tier, not add-ons |
 | `packages/ui/src/components/tier-gating/FeatureUpgradeNotice.tsx` | Upgrade CTA shown when gated |
 | `ee/server/src/components/settings/account/AccountManagement.tsx` | Account page feature display |
 

@@ -348,14 +348,15 @@
     "entra": {
       "settings": {
         "actions": {
+          "cancel": "Annuleren",
           "disconnect": "Verbinding verbreken",
-          "reconnect": "Opnieuw verbinden",
+          "hideReviewRemap": "Controleren / Opnieuw toewijzen verbergen",
+          "reconnect": "{{connectionType}} opnieuw verbinden",
           "reconnecting": "Opnieuw verbinden…",
           "refresh": "Vernieuwen",
           "resetFieldSync": "Resetten",
           "reviewMappings": "Toewijzingen controleren",
           "reviewRemap": "Controleren / Opnieuw toewijzen",
-          "hideReviewRemap": "Controleren / Opnieuw toewijzen verbergen",
           "runDiscovery": "Ontdekking uitvoeren",
           "runDiscoveryAgain": "Ontdekking opnieuw uitvoeren",
           "runDiscoveryRunning": "Ontdekking uitvoeren…",
@@ -371,17 +372,20 @@
           "reviewBeforeInitialSync": "Controleer voor initiële synchronisatie"
         },
         "connection": {
+          "cippServerLabel": "CIPP-server:",
           "connectingSuffix": " (Verbinden...)",
           "details": "Verbindingsdetails",
           "directCredentialSourceLabel": "Bron van inloggegevens:",
           "directTenantDefault": "common (multi-tenant)",
           "directTenantLabel": "Microsoft-tenant:",
-          "cippServerLabel": "CIPP-server:",
           "notAvailable": "Niet beschikbaar",
           "notConfigured": "Niet geconfigureerd",
-          "notConnectedStatus": "not_connected",
           "optionsTitle": "Verbindingsopties",
-          "promptDetails": "Verbind Entra om providerdetails in te vullen."
+          "promptDetails": "Verbind Entra om providerdetails in te vullen.",
+          "types": {
+            "cipp": "CIPP",
+            "direct": "Microsoft Entra Direct"
+          }
         },
         "currentStep": {
           "connect": {
@@ -407,6 +411,12 @@
         "disabled": {
           "description": "De Entra-integratie-UI is momenteel uitgeschakeld voor deze tenant.",
           "title": "Microsoft Entra-integratie"
+        },
+        "disconnectConfirm": {
+          "keeps": "Contactpersonen, klantkoppelingen en synchronisatiegeschiedenis blijven ongewijzigd behouden. Er wordt niets verwijderd.",
+          "reconnect": "Later opnieuw verbinden herstelt de synchronisatie zonder uw koppelingen opnieuw te maken.",
+          "stops": "Geplande en handmatige synchronisaties stoppen en de opgeslagen inloggegevens worden verwijderd.",
+          "title": "Microsoft Entra loskoppelen?"
         },
         "discovery": {
           "completed": "Ontdekking voltooid. {{count}} tenants ontdekt.",
@@ -483,12 +493,9 @@
           "title": "Doorlopende operaties"
         },
         "overview": {
-          "connectionLabel": "Verbinding:",
           "connectionTypeLabel": "Verbindingstype:",
           "label": "Overzicht",
-          "mappedTenantsLabel": "Toegewezen tenants:",
-          "nextSyncIntervalEvery": "Elke {{minutes}} minuten",
-          "nextSyncIntervalLabel": "Volgende synchronisatie-interval:"
+          "mappedTenantsLabel": "Toegewezen tenants:"
         },
         "skipped": {
           "empty": "Momenteel zijn er geen tenants gemarkeerd als overgeslagen.",
@@ -498,7 +505,14 @@
         },
         "status": {
           "connectionHealth": "Verbindingsgezondheid",
-          "label": "Status"
+          "label": "Status",
+          "values": {
+            "connected": "Verbonden",
+            "disconnected": "Verbinding verbroken",
+            "not_connected": "Niet verbonden",
+            "unknown": "Onbekend",
+            "validation_failed": "Verbonden, maar validatie mislukt"
+          }
         },
         "syncAll": {
           "failed": "Kan volledige Entra-synchronisatie niet starten.",
@@ -506,6 +520,10 @@
           "startedNoId": "Synchronisatiestartverzoek geaccepteerd."
         },
         "title": "Microsoft Entra-integratie",
+        "unmapConfirm": {
+          "body": "Hiermee wordt de opgeslagen koppelingsbeslissing voor {{tenant}} verwijderd, zodat deze weer in de koppelingstabel verschijnt. Reeds gesynchroniseerde contactpersonen worden niet gewijzigd.",
+          "title": "Deze tenant opnieuw koppelen?"
+        },
         "validation": {
           "label": "Validatie en ontdekking",
           "lastDiscoveryLabel": "Laatste ontdekking:",
@@ -535,6 +553,7 @@
       },
       "tenantMapping": {
         "actions": {
+          "cancel": "Annuleren",
           "confirmSelected": "Geselecteerde toewijzingen bevestigen",
           "confirming": "Bevestigen…",
           "import": "Importeren als nieuwe klant",
@@ -564,6 +583,11 @@
         "feedback": {
           "confirmed": "{{count}} toewijzingen bevestigd.",
           "confirmedOne": "{{count}} toewijzing bevestigd."
+        },
+        "importConfirm": {
+          "body": "Er wordt een nieuwe klant gemaakt op basis van de Entra-tenant {{tenant}}, en de tenant wordt daaraan gekoppeld.",
+          "similarWarning": "Deze bestaande klanten hebben vergelijkbare namen — koppel in plaats daarvan aan een van hen als dit dezelfde organisatie is:",
+          "title": "Importeren als nieuwe klant?"
         },
         "noSuggestion": "Geen suggestie",
         "picker": {

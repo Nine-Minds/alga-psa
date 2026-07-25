@@ -348,14 +348,15 @@
     "entra": {
       "settings": {
         "actions": {
+          "cancel": "Abbrechen",
           "disconnect": "Trennen",
-          "reconnect": "Erneut verbinden",
+          "hideReviewRemap": "Prüfen / Neu zuordnen ausblenden",
+          "reconnect": "{{connectionType}} erneut verbinden",
           "reconnecting": "Wird erneut verbunden…",
           "refresh": "Aktualisieren",
           "resetFieldSync": "Zurücksetzen",
           "reviewMappings": "Zuordnungen prüfen",
           "reviewRemap": "Prüfen / Neu zuordnen",
-          "hideReviewRemap": "Prüfen / Neu zuordnen ausblenden",
           "runDiscovery": "Discovery ausführen",
           "runDiscoveryAgain": "Discovery erneut ausführen",
           "runDiscoveryRunning": "Discovery wird ausgeführt…",
@@ -371,17 +372,20 @@
           "reviewBeforeInitialSync": "Vor initialer Synchronisation prüfen"
         },
         "connection": {
+          "cippServerLabel": "CIPP-Server:",
           "connectingSuffix": " (Verbindung wird hergestellt...)",
           "details": "Verbindungsdetails",
           "directCredentialSourceLabel": "Anmeldedatenquelle:",
           "directTenantDefault": "common (multi-tenant)",
           "directTenantLabel": "Microsoft Tenant:",
-          "cippServerLabel": "CIPP-Server:",
           "notAvailable": "Nicht verfügbar",
           "notConfigured": "Nicht konfiguriert",
-          "notConnectedStatus": "not_connected",
           "optionsTitle": "Verbindungsoptionen",
-          "promptDetails": "Verbinden Sie Entra, um Anbieterdetails zu füllen."
+          "promptDetails": "Verbinden Sie Entra, um Anbieterdetails zu füllen.",
+          "types": {
+            "cipp": "CIPP",
+            "direct": "Microsoft Entra Direkt"
+          }
         },
         "currentStep": {
           "connect": {
@@ -407,6 +411,12 @@
         "disabled": {
           "description": "Die Entra-Integrations-UI ist für diesen Tenant derzeit deaktiviert.",
           "title": "Microsoft Entra Integration"
+        },
+        "disconnectConfirm": {
+          "keeps": "Kontakte, Kundenzuordnungen und der Synchronisierungsverlauf bleiben unverändert erhalten. Es wird nichts gelöscht.",
+          "reconnect": "Beim späteren erneuten Verbinden wird die Synchronisierung wiederhergestellt, ohne die Zuordnungen erneut vorzunehmen.",
+          "stops": "Geplante und manuelle Synchronisierungen werden gestoppt und die gespeicherten Zugangsdaten werden entfernt.",
+          "title": "Microsoft Entra trennen?"
         },
         "discovery": {
           "completed": "Discovery abgeschlossen. {{count}} Tenants erkannt.",
@@ -483,12 +493,9 @@
           "title": "Laufende Operationen"
         },
         "overview": {
-          "connectionLabel": "Verbindung:",
           "connectionTypeLabel": "Verbindungstyp:",
           "label": "Übersicht",
-          "mappedTenantsLabel": "Zugeordnete Tenants:",
-          "nextSyncIntervalEvery": "Alle {{minutes}} Minuten",
-          "nextSyncIntervalLabel": "Nächstes Sync-Intervall:"
+          "mappedTenantsLabel": "Zugeordnete Tenants:"
         },
         "skipped": {
           "empty": "Derzeit sind keine Tenants als übersprungen markiert.",
@@ -498,7 +505,14 @@
         },
         "status": {
           "connectionHealth": "Verbindungsgesundheit",
-          "label": "Status"
+          "label": "Status",
+          "values": {
+            "connected": "Verbunden",
+            "disconnected": "Getrennt",
+            "not_connected": "Nicht verbunden",
+            "unknown": "Unbekannt",
+            "validation_failed": "Verbunden, Validierung schlägt fehl"
+          }
         },
         "syncAll": {
           "failed": "Vollständige Entra-Synchronisation konnte nicht gestartet werden.",
@@ -506,6 +520,10 @@
           "startedNoId": "Anfrage zum Synchronisationsstart akzeptiert."
         },
         "title": "Microsoft Entra Integration",
+        "unmapConfirm": {
+          "body": "Dadurch wird die gespeicherte Zuordnungsentscheidung für {{tenant}} entfernt, sodass er wieder in der Zuordnungstabelle erscheint. Bereits synchronisierte Kontakte werden nicht geändert.",
+          "title": "Diesen Mandanten neu zuordnen?"
+        },
         "validation": {
           "label": "Validierung & Discovery",
           "lastDiscoveryLabel": "Letzte Discovery:",
@@ -535,6 +553,7 @@
       },
       "tenantMapping": {
         "actions": {
+          "cancel": "Abbrechen",
           "confirmSelected": "Ausgewählte Zuordnungen bestätigen",
           "confirming": "Wird bestätigt…",
           "import": "Als neuen Kunden importieren",
@@ -564,6 +583,11 @@
         "feedback": {
           "confirmed": "{{count}} Zuordnungen bestätigt.",
           "confirmedOne": "{{count}} Zuordnung bestätigt."
+        },
+        "importConfirm": {
+          "body": "Aus dem Entra-Mandanten {{tenant}} wird ein neuer Kunde erstellt und der Mandant diesem zugeordnet.",
+          "similarWarning": "Diese vorhandenen Kunden haben ähnliche Namen – ordnen Sie stattdessen einem davon zu, wenn es sich um dieselbe Organisation handelt:",
+          "title": "Als neuen Kunden importieren?"
         },
         "noSuggestion": "Kein Vorschlag",
         "picker": {

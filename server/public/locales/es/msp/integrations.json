@@ -348,14 +348,15 @@
     "entra": {
       "settings": {
         "actions": {
+          "cancel": "Cancelar",
           "disconnect": "Desconectar",
-          "reconnect": "Reconectar",
+          "hideReviewRemap": "Ocultar revisión / reasignación",
+          "reconnect": "Volver a conectar {{connectionType}}",
           "reconnecting": "Reconectando…",
           "refresh": "Actualizar",
           "resetFieldSync": "Restablecer",
           "reviewMappings": "Revisar asignaciones",
           "reviewRemap": "Revisar / Reasignar",
-          "hideReviewRemap": "Ocultar revisión / reasignación",
           "runDiscovery": "Ejecutar descubrimiento",
           "runDiscoveryAgain": "Volver a ejecutar descubrimiento",
           "runDiscoveryRunning": "Ejecutando descubrimiento…",
@@ -371,17 +372,20 @@
           "reviewBeforeInitialSync": "Revisar antes de la sincronización inicial"
         },
         "connection": {
+          "cippServerLabel": "Servidor CIPP:",
           "connectingSuffix": " (Conectando...)",
           "details": "Detalles de conexión",
           "directCredentialSourceLabel": "Origen de credenciales:",
           "directTenantDefault": "common (multi-tenant)",
           "directTenantLabel": "Microsoft Tenant:",
-          "cippServerLabel": "Servidor CIPP:",
           "notAvailable": "No disponible",
           "notConfigured": "No configurado",
-          "notConnectedStatus": "not_connected",
           "optionsTitle": "Opciones de conexión",
-          "promptDetails": "Conecte Entra para completar los detalles del proveedor."
+          "promptDetails": "Conecte Entra para completar los detalles del proveedor.",
+          "types": {
+            "cipp": "CIPP",
+            "direct": "Microsoft Entra Directo"
+          }
         },
         "currentStep": {
           "connect": {
@@ -407,6 +411,12 @@
         "disabled": {
           "description": "La interfaz de integración con Entra está actualmente deshabilitada para este inquilino.",
           "title": "Integración con Microsoft Entra"
+        },
+        "disconnectConfirm": {
+          "keeps": "Los contactos, las asignaciones de clientes y el historial de sincronización se conservan tal cual. No se elimina nada.",
+          "reconnect": "Volver a conectar más adelante restaura la sincronización sin rehacer las asignaciones.",
+          "stops": "Las sincronizaciones programadas y manuales se detienen y se elimina la credencial almacenada.",
+          "title": "¿Desconectar Microsoft Entra?"
         },
         "discovery": {
           "completed": "Descubrimiento completado. Se descubrieron {{count}} inquilinos.",
@@ -483,12 +493,9 @@
           "title": "Operaciones continuas"
         },
         "overview": {
-          "connectionLabel": "Conexión:",
           "connectionTypeLabel": "Tipo de conexión:",
           "label": "Resumen",
-          "mappedTenantsLabel": "Inquilinos asignados:",
-          "nextSyncIntervalEvery": "Cada {{minutes}} minutos",
-          "nextSyncIntervalLabel": "Próximo intervalo de sincronización:"
+          "mappedTenantsLabel": "Inquilinos asignados:"
         },
         "skipped": {
           "empty": "Actualmente no hay inquilinos marcados como omitidos.",
@@ -498,7 +505,14 @@
         },
         "status": {
           "connectionHealth": "Estado de la conexión",
-          "label": "Estado"
+          "label": "Estado",
+          "values": {
+            "connected": "Conectado",
+            "disconnected": "Desconectado",
+            "not_connected": "No conectado",
+            "unknown": "Desconocido",
+            "validation_failed": "Conectado, pero la validación falla"
+          }
         },
         "syncAll": {
           "failed": "No se pudo iniciar la sincronización completa de Entra.",
@@ -506,6 +520,10 @@
           "startedNoId": "Solicitud de inicio de sincronización aceptada."
         },
         "title": "Integración con Microsoft Entra",
+        "unmapConfirm": {
+          "body": "Esto elimina la decisión de asignación guardada para {{tenant}}, de modo que vuelva a aparecer en la tabla de asignaciones. Los contactos ya sincronizados no se modifican.",
+          "title": "¿Reasignar este inquilino?"
+        },
         "validation": {
           "label": "Validación y descubrimiento",
           "lastDiscoveryLabel": "Último descubrimiento:",
@@ -535,6 +553,7 @@
       },
       "tenantMapping": {
         "actions": {
+          "cancel": "Cancelar",
           "confirmSelected": "Confirmar asignaciones seleccionadas",
           "confirming": "Confirmando…",
           "import": "Importar como nuevo cliente",
@@ -564,6 +583,11 @@
         "feedback": {
           "confirmed": "Se confirmaron {{count}} asignaciones.",
           "confirmedOne": "Se confirmó {{count}} asignación."
+        },
+        "importConfirm": {
+          "body": "Se creará un nuevo cliente a partir del inquilino de Entra {{tenant}} y el inquilino se asignará a él.",
+          "similarWarning": "Estos clientes existentes tienen nombres similares: asigne a uno de ellos si se trata de la misma organización:",
+          "title": "¿Importar como nuevo cliente?"
         },
         "noSuggestion": "Sin sugerencia",
         "picker": {

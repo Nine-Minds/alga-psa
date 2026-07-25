@@ -348,14 +348,15 @@
     "entra": {
       "settings": {
         "actions": {
+          "cancel": "55555",
           "disconnect": "55555",
-          "reconnect": "55555",
+          "hideReviewRemap": "55555",
+          "reconnect": "55555 {{connectionType}} 55555",
           "reconnecting": "55555",
           "refresh": "55555",
           "resetFieldSync": "55555",
           "reviewMappings": "55555",
           "reviewRemap": "55555",
-          "hideReviewRemap": "55555",
           "runDiscovery": "55555",
           "runDiscoveryAgain": "55555",
           "runDiscoveryRunning": "55555",
@@ -371,17 +372,20 @@
           "reviewBeforeInitialSync": "55555"
         },
         "connection": {
+          "cippServerLabel": "55555",
           "connectingSuffix": "55555",
           "details": "55555",
           "directCredentialSourceLabel": "55555",
           "directTenantDefault": "55555",
           "directTenantLabel": "55555",
-          "cippServerLabel": "55555",
           "notAvailable": "55555",
           "notConfigured": "55555",
-          "notConnectedStatus": "55555",
           "optionsTitle": "55555",
-          "promptDetails": "55555"
+          "promptDetails": "55555",
+          "types": {
+            "cipp": "55555",
+            "direct": "55555"
+          }
         },
         "currentStep": {
           "connect": {
@@ -406,6 +410,12 @@
         "description": "55555",
         "disabled": {
           "description": "55555",
+          "title": "55555"
+        },
+        "disconnectConfirm": {
+          "keeps": "55555",
+          "reconnect": "55555",
+          "stops": "55555",
           "title": "55555"
         },
         "discovery": {
@@ -483,12 +493,9 @@
           "title": "55555"
         },
         "overview": {
-          "connectionLabel": "55555",
           "connectionTypeLabel": "55555",
           "label": "55555",
-          "mappedTenantsLabel": "55555",
-          "nextSyncIntervalEvery": "55555 {{minutes}} 55555",
-          "nextSyncIntervalLabel": "55555"
+          "mappedTenantsLabel": "55555"
         },
         "skipped": {
           "empty": "55555",
@@ -498,7 +505,14 @@
         },
         "status": {
           "connectionHealth": "55555",
-          "label": "55555"
+          "label": "55555",
+          "values": {
+            "connected": "55555",
+            "disconnected": "55555",
+            "not_connected": "55555",
+            "unknown": "55555",
+            "validation_failed": "55555"
+          }
         },
         "syncAll": {
           "failed": "55555",
@@ -506,6 +520,10 @@
           "startedNoId": "55555"
         },
         "title": "55555",
+        "unmapConfirm": {
+          "body": "55555 {{tenant}} 55555",
+          "title": "55555"
+        },
         "validation": {
           "label": "55555",
           "lastDiscoveryLabel": "55555",
@@ -535,6 +553,7 @@
       },
       "tenantMapping": {
         "actions": {
+          "cancel": "55555",
           "confirmSelected": "55555",
           "confirming": "55555",
           "import": "55555",
@@ -564,6 +583,11 @@
         "feedback": {
           "confirmed": "55555 {{count}} 55555",
           "confirmedOne": "55555 {{count}} 55555"
+        },
+        "importConfirm": {
+          "body": "55555 {{tenant}} 55555",
+          "similarWarning": "55555",
+          "title": "55555"
         },
         "noSuggestion": "55555",
         "picker": {

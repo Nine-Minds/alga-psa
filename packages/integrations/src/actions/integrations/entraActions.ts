@@ -502,13 +502,39 @@ export const connectEntraCipp = withAuth(async (
     return { success: false, error: 'CIPP API token is required.' } as const;
   }
 
-  await clearStaleCredentialsForConnectionType(tenant, 'cipp');
-
+  // Validate before persisting anything. The credential has to be in the secret
+  // store for the validation route to use it, so stage it there, then roll the
+  // store back if CIPP rejects it — a failed connect must leave no trace, and
+  // above all must not leave a row claiming status 'connected'.
   const cippSecretStore = await import('@enterprise/lib/integrations/entra/providers/cipp/cippSecretStore');
+  const previousCredentials = await cippSecretStore
+    .getEntraCippCredentials(tenant)
+    .catch(() => null);
+
   await cippSecretStore.saveEntraCippCredentials(tenant, {
     baseUrl: normalizedBaseUrl,
     apiToken,
   });
+
+  const validation = await callEeRoute<EntraCippValidationResponse>({
+    importFn: routes.validateCippRoute,
+    method: 'POST',
+  });
+
+  if ('error' in validation) {
+    if (previousCredentials) {
+      await cippSecretStore.saveEntraCippCredentials(tenant, previousCredentials);
+    } else {
+      await cippSecretStore.clearEntraCippCredentials(tenant);
+    }
+
+    return {
+      success: false,
+      error: validation.error || 'Unable to validate the CIPP connection.',
+    } as const;
+  }
+
+  await clearStaleCredentialsForConnectionType(tenant, 'cipp');
 
   const { knex } = await createTenantKnex();
   const db = tenantDb(knex, tenant);
@@ -534,7 +560,7 @@ export const connectEntraCipp = withAuth(async (
     token_secret_ref: 'entra_cipp',
     connected_at: now,
     disconnected_at: null,
-    last_validated_at: null,
+    last_validated_at: now,
     last_validation_error: knex.raw(`'{}'::jsonb`),
     created_by: userId || null,
     updated_by: userId || null,

@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { EntraSyncUser } from '@ee/lib/integrations/entra/sync/types';
 
 const findContactMatchesByEmailMock = vi.fn();
@@ -91,5 +91,72 @@ describe('executeEntraSync dry-run behavior', () => {
     expect(queueAmbiguousContactMatchMock).not.toHaveBeenCalled();
     expect(linkExistingMatchedContactMock).not.toHaveBeenCalled();
     expect(createContactForEntraUserMock).not.toHaveBeenCalled();
+  });
+});
+
+describe('executeEntraSync updated counter', () => {
+  beforeEach(() => {
+    findContactMatchesByEmailMock.mockReset();
+    queueAmbiguousContactMatchMock.mockReset();
+    linkExistingMatchedContactMock.mockReset();
+    createContactForEntraUserMock.mockReset();
+  });
+
+  const matchFor = (seed: string) => [
+    {
+      contactNameId: `contact-${seed}`,
+      clientId: 'client-222',
+      email: `${seed}@example.com`,
+      fullName: `User ${seed}`,
+      isInactive: false,
+    },
+  ];
+
+  it('counts a link that overwrote a field as updated', async () => {
+    findContactMatchesByEmailMock.mockResolvedValue(matchFor('overwritten'));
+    linkExistingMatchedContactMock.mockResolvedValue({
+      action: 'linked',
+      fieldsUpdated: true,
+      contactNameId: 'contact-overwritten',
+      linkIdentity: { entraTenantId: 'entra-tenant-111', entraObjectId: 'entra-object-overwritten' },
+    });
+
+    const { executeEntraSync } = await import('@ee/lib/integrations/entra/sync/syncEngine');
+    const result = await executeEntraSync({
+      tenantId: 'tenant-222',
+      clientId: 'client-222',
+      managedTenantId: 'managed-222',
+      fieldSyncConfig: { displayName: true },
+      users: [buildUser('overwritten')],
+    });
+
+    expect(result.counters).toEqual({
+      created: 0,
+      linked: 1,
+      updated: 1,
+      ambiguous: 0,
+      inactivated: 0,
+    });
+  });
+
+  it('leaves updated at zero when a link changed nothing', async () => {
+    findContactMatchesByEmailMock.mockResolvedValue(matchFor('unchanged'));
+    linkExistingMatchedContactMock.mockResolvedValue({
+      action: 'linked',
+      fieldsUpdated: false,
+      contactNameId: 'contact-unchanged',
+      linkIdentity: { entraTenantId: 'entra-tenant-111', entraObjectId: 'entra-object-unchanged' },
+    });
+
+    const { executeEntraSync } = await import('@ee/lib/integrations/entra/sync/syncEngine');
+    const result = await executeEntraSync({
+      tenantId: 'tenant-222',
+      clientId: 'client-222',
+      managedTenantId: 'managed-222',
+      users: [buildUser('unchanged')],
+    });
+
+    expect(result.counters.linked).toBe(1);
+    expect(result.counters.updated).toBe(0);
   });
 });

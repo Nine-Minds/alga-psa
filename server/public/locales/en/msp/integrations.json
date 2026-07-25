@@ -348,14 +348,15 @@
     "entra": {
       "settings": {
         "actions": {
+          "cancel": "Cancel",
           "disconnect": "Disconnect",
-          "reconnect": "Reconnect",
+          "hideReviewRemap": "Hide Review / Remap",
+          "reconnect": "Reconnect {{connectionType}}",
           "reconnecting": "Reconnecting…",
           "refresh": "Refresh",
           "resetFieldSync": "Reset",
           "reviewMappings": "Review Mappings",
           "reviewRemap": "Review / Remap",
-          "hideReviewRemap": "Hide Review / Remap",
           "runDiscovery": "Run Discovery",
           "runDiscoveryAgain": "Run Discovery Again",
           "runDiscoveryRunning": "Running Discovery…",
@@ -371,17 +372,20 @@
           "reviewBeforeInitialSync": "Review Before Initial Sync"
         },
         "connection": {
+          "cippServerLabel": "CIPP Server:",
           "connectingSuffix": " (Connecting...)",
           "details": "Connection Details",
           "directCredentialSourceLabel": "Credential Source:",
           "directTenantDefault": "common (multi-tenant)",
           "directTenantLabel": "Microsoft Tenant:",
-          "cippServerLabel": "CIPP Server:",
           "notAvailable": "Not available",
           "notConfigured": "Not configured",
-          "notConnectedStatus": "not_connected",
           "optionsTitle": "Connection Options",
-          "promptDetails": "Connect Entra to populate provider details."
+          "promptDetails": "Connect Entra to populate provider details.",
+          "types": {
+            "cipp": "CIPP",
+            "direct": "Microsoft Entra Direct"
+          }
         },
         "currentStep": {
           "connect": {
@@ -407,6 +411,12 @@
         "disabled": {
           "description": "Entra integration UI is currently disabled for this tenant.",
           "title": "Microsoft Entra Integration"
+        },
+        "disconnectConfirm": {
+          "keeps": "Contacts, client mappings and sync history are kept exactly as they are. Nothing is deleted.",
+          "reconnect": "Reconnecting later restores syncing without redoing your mappings.",
+          "stops": "Scheduled and manual syncs stop, and the stored credential is removed.",
+          "title": "Disconnect Microsoft Entra?"
         },
         "discovery": {
           "completed": "Discovery completed. {{count}} tenants discovered.",
@@ -483,12 +493,9 @@
           "title": "Ongoing Operations"
         },
         "overview": {
-          "connectionLabel": "Connection:",
           "connectionTypeLabel": "Connection Type:",
           "label": "Overview",
-          "mappedTenantsLabel": "Mapped Tenants:",
-          "nextSyncIntervalEvery": "Every {{minutes}} minutes",
-          "nextSyncIntervalLabel": "Next Sync Interval:"
+          "mappedTenantsLabel": "Mapped Tenants:"
         },
         "skipped": {
           "empty": "No tenants are currently marked as skipped.",
@@ -498,7 +505,14 @@
         },
         "status": {
           "connectionHealth": "Connection Health",
-          "label": "Status"
+          "label": "Status",
+          "values": {
+            "connected": "Connected",
+            "disconnected": "Disconnected",
+            "not_connected": "Not connected",
+            "unknown": "Unknown",
+            "validation_failed": "Connected, but failing validation"
+          }
         },
         "syncAll": {
           "failed": "Failed to start full Entra sync.",
@@ -506,6 +520,10 @@
           "startedNoId": "Sync start request accepted."
         },
         "title": "Microsoft Entra Integration",
+        "unmapConfirm": {
+          "body": "This removes the saved mapping decision for {{tenant}} so it reappears in the mapping table. Contacts already synced are not changed.",
+          "title": "Remap this tenant?"
+        },
         "validation": {
           "label": "Validation & Discovery",
           "lastDiscoveryLabel": "Last Discovery:",
@@ -535,6 +553,7 @@
       },
       "tenantMapping": {
         "actions": {
+          "cancel": "Cancel",
           "confirmSelected": "Confirm Selected Mappings",
           "confirming": "Confirming…",
           "import": "Import as new client",
@@ -564,6 +583,11 @@
         "feedback": {
           "confirmed": "Confirmed {{count}} mappings.",
           "confirmedOne": "Confirmed {{count}} mapping."
+        },
+        "importConfirm": {
+          "body": "A new client will be created from the Entra tenant {{tenant}}, and the tenant will be mapped to it.",
+          "similarWarning": "These existing clients have similar names — map to one of them instead if this is the same organization:",
+          "title": "Import as a new client?"
         },
         "noSuggestion": "No suggestion",
         "picker": {

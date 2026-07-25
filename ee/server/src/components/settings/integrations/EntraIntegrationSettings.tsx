@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Switch } from '@alga-psa/ui/components/Switch';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
@@ -28,6 +29,7 @@ import EntraSyncHistoryPanel from './EntraSyncHistoryPanel';
 import EntraReconciliationQueue from './EntraReconciliationQueue';
 import {
   buildEntraConnectionOptions,
+  buildEntraStatusHeaderAction,
   shouldShowAmbiguousQueue,
   shouldShowFieldSyncControls,
 } from './entraIntegrationSettingsGates';
@@ -167,7 +169,9 @@ export default function EntraIntegrationSettings({ canUseCipp: canUseCippTier = 
   const [directLoading, setDirectLoading] = React.useState(false);
   const [directError, setDirectError] = React.useState<string | null>(null);
   const [disconnectLoading, setDisconnectLoading] = React.useState(false);
+  const [disconnectDialogOpen, setDisconnectDialogOpen] = React.useState(false);
   const [remappingRows, setRemappingRows] = React.useState<Record<string, boolean>>({});
+  const [unmapConfirmTenant, setUnmapConfirmTenant] = React.useState<EntraSkippedTenant | null>(null);
   const [tableRefreshKey, setTableRefreshKey] = React.useState(0);
 
   const loadStatus = React.useCallback(async () => {
@@ -210,6 +214,17 @@ export default function EntraIntegrationSettings({ canUseCipp: canUseCippTier = 
   React.useEffect(() => {
     void loadMaintenanceSignal();
   }, [loadMaintenanceSignal]);
+
+  const storedConnectionType = status?.connectionType || null;
+  const isConnected = status?.status === 'connected';
+  const headerAction = buildEntraStatusHeaderAction({
+    status: status?.status,
+    connectionType: storedConnectionType,
+  });
+  const connectionStatusLabel = t(
+    `integrations.entra.settings.status.values.${status?.status || 'not_connected'}`,
+    { defaultValue: t('integrations.entra.settings.status.values.unknown') }
+  );
 
   const validationMessage =
     status?.lastValidationError && typeof status.lastValidationError === 'object'
@@ -384,10 +399,6 @@ export default function EntraIntegrationSettings({ canUseCipp: canUseCippTier = 
   }, [loadMaintenanceSignal, loadStatus, t]);
 
   const handleConnectionOptionClick = async (optionId: string) => {
-    if (!isConnectStepCurrent) {
-      return;
-    }
-
     if (optionId === 'cipp') {
       setCippDialogOpen(true);
     } else if (optionId === 'direct') {
@@ -413,9 +424,19 @@ export default function EntraIntegrationSettings({ canUseCipp: canUseCippTier = 
     try {
       await disconnectEntraIntegration();
       await loadStatus();
+      setDisconnectDialogOpen(false);
     } finally {
       setDisconnectLoading(false);
     }
+  };
+
+  // Re-runs the connection type already on record. Guessing 'direct' here is how
+  // a CIPP shop silently ended up on Direct OAuth.
+  const handleReconnect = async () => {
+    if (!storedConnectionType) {
+      return;
+    }
+    await handleConnectionOptionClick(storedConnectionType);
   };
 
   const handleRemapSkipped = async (managedTenantId: string) => {
@@ -423,6 +444,7 @@ export default function EntraIntegrationSettings({ canUseCipp: canUseCippTier = 
     try {
       await unmapEntraTenant({ managedTenantId });
       setTableRefreshKey((curr) => curr + 1);
+      setUnmapConfirmTenant(null);
     } finally {
       setRemappingRows((curr) => ({ ...curr, [managedTenantId]: false }));
     }
@@ -516,7 +538,7 @@ export default function EntraIntegrationSettings({ canUseCipp: canUseCippTier = 
                   type="button"
                   size="sm"
                   variant="outline"
-                  onClick={() => void handleRemapSkipped(tenant.managedTenantId)}
+                  onClick={() => setUnmapConfirmTenant(tenant)}
                   disabled={remappingRows[tenant.managedTenantId]}
                 >
                   {t('integrations.entra.settings.skipped.remap')}
@@ -539,35 +561,38 @@ export default function EntraIntegrationSettings({ canUseCipp: canUseCippTier = 
         <div className="flex items-center gap-2">
           <Badge
             id="entra-status-connection-badge"
-            variant={status?.status === 'connected' ? 'secondary' : 'outline'}
+            variant={isConnected ? 'secondary' : 'outline'}
           >
-            {status?.status || t('integrations.entra.settings.connection.notConnectedStatus')}
+            {connectionStatusLabel}
           </Badge>
-          {status?.status === 'connected' ? (
+          {headerAction.disconnect ? (
             <Button
               id="entra-disconnect"
               type="button"
               size="sm"
               variant="outline"
-              onClick={() => void handleDisconnect()}
+              onClick={() => setDisconnectDialogOpen(true)}
               disabled={disconnectLoading || statusLoading}
             >
               {t('integrations.entra.settings.actions.disconnect')}
             </Button>
-          ) : (
+          ) : null}
+          {headerAction.reconnect ? (
             <Button
               id="entra-reconnect"
               type="button"
               size="sm"
               variant="outline"
-              onClick={() => void handleConnectionOptionClick('direct')}
+              onClick={() => void handleReconnect()}
               disabled={directLoading || statusLoading}
             >
               {directLoading
                 ? t('integrations.entra.settings.actions.reconnecting')
-                : t('integrations.entra.settings.actions.reconnect')}
+                : t('integrations.entra.settings.actions.reconnect', {
+                    connectionType: t(`integrations.entra.settings.connection.types.${headerAction.reconnect}`),
+                  })}
             </Button>
-          )}
+          ) : null}
           <Button id="entra-refresh-status" type="button" size="sm" variant="ghost" onClick={loadStatus} disabled={statusLoading}>
             {t('integrations.entra.settings.actions.refresh')}
           </Button>
@@ -576,21 +601,15 @@ export default function EntraIntegrationSettings({ canUseCipp: canUseCippTier = 
 
       <div className="entra-status-section mt-3">
         <p className="text-xs uppercase tracking-wide text-muted-foreground">{t('integrations.entra.settings.overview.label')}</p>
-        <div className="mt-2 grid gap-x-6 gap-y-2 sm:grid-cols-2 xl:grid-cols-4">
+        <div className="mt-2 grid gap-x-6 gap-y-2 sm:grid-cols-2">
           <p className="text-sm text-muted-foreground">
-            <span className="font-medium text-foreground">{t('integrations.entra.settings.overview.connectionLabel')}</span> {status?.status || t('integrations.entra.settings.connection.notConnectedStatus')}
-          </p>
-          <p className="text-sm text-muted-foreground">
-            <span className="font-medium text-foreground">{t('integrations.entra.settings.overview.connectionTypeLabel')}</span> {status?.connectionType || t('integrations.entra.settings.connection.notConfigured')}
+            <span className="font-medium text-foreground">{t('integrations.entra.settings.overview.connectionTypeLabel')}</span>{' '}
+            {storedConnectionType
+              ? t(`integrations.entra.settings.connection.types.${storedConnectionType}`)
+              : t('integrations.entra.settings.connection.notConfigured')}
           </p>
           <p className="text-sm text-muted-foreground">
             <span className="font-medium text-foreground">{t('integrations.entra.settings.overview.mappedTenantsLabel')}</span> {status?.mappedTenantCount ?? 0}
-          </p>
-          <p className="text-sm text-muted-foreground">
-            <span className="font-medium text-foreground">{t('integrations.entra.settings.overview.nextSyncIntervalLabel')}</span>{' '}
-            {status?.nextSyncIntervalMinutes
-              ? t('integrations.entra.settings.overview.nextSyncIntervalEvery', { minutes: status.nextSyncIntervalMinutes })
-              : t('integrations.entra.settings.connection.notConfigured')}
           </p>
         </div>
       </div>
@@ -925,6 +944,43 @@ export default function EntraIntegrationSettings({ canUseCipp: canUseCippTier = 
           {settingsMode === 'maintenance' ? mappingAndSkippedSection : null}
         </CardContent>
       </Card>
+
+      <ConfirmationDialog
+        id="entra-unmap-confirm-dialog"
+        isOpen={unmapConfirmTenant !== null}
+        onClose={() => setUnmapConfirmTenant(null)}
+        onConfirm={() =>
+          unmapConfirmTenant ? handleRemapSkipped(unmapConfirmTenant.managedTenantId) : undefined
+        }
+        isConfirming={Boolean(unmapConfirmTenant && remappingRows[unmapConfirmTenant.managedTenantId])}
+        title={t('integrations.entra.settings.unmapConfirm.title')}
+        message={t('integrations.entra.settings.unmapConfirm.body', {
+          tenant: unmapConfirmTenant?.displayName
+            || unmapConfirmTenant?.primaryDomain
+            || unmapConfirmTenant?.managedTenantId
+            || '',
+        })}
+        confirmLabel={t('integrations.entra.settings.skipped.remap')}
+        cancelLabel={t('integrations.entra.settings.actions.cancel')}
+      />
+
+      <ConfirmationDialog
+        id="entra-disconnect-confirm-dialog"
+        isOpen={disconnectDialogOpen}
+        onClose={() => setDisconnectDialogOpen(false)}
+        onConfirm={() => handleDisconnect()}
+        isConfirming={disconnectLoading}
+        title={t('integrations.entra.settings.disconnectConfirm.title')}
+        message={
+          <div className="space-y-2 text-sm text-muted-foreground">
+            <p>{t('integrations.entra.settings.disconnectConfirm.stops')}</p>
+            <p>{t('integrations.entra.settings.disconnectConfirm.keeps')}</p>
+            <p>{t('integrations.entra.settings.disconnectConfirm.reconnect')}</p>
+          </div>
+        }
+        confirmLabel={t('integrations.entra.settings.actions.disconnect')}
+        cancelLabel={t('integrations.entra.settings.actions.cancel')}
+      />
 
       <EntraCippConnectDialog
         open={cippDialogOpen}

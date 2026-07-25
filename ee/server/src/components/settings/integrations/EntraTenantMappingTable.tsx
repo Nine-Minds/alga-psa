@@ -8,6 +8,7 @@ import { getEntraMappingPreview, confirmEntraMappings } from '@alga-psa/integrat
 import { skipEntraTenantMapping, importEntraTenantAsClient } from '@alga-psa/integrations/actions';
 import { getAllClients } from '@alga-psa/clients/actions';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
+import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import type { IClient } from '@alga-psa/types';
 
 type MatchReason = 'exact_domain' | 'secondary_domain' | 'fuzzy_name';
@@ -41,6 +42,31 @@ export interface EntraSkippedTenant {
   managedTenantId: string;
   displayName: string | null;
   primaryDomain: string | null;
+}
+
+/**
+ * Existing clients whose name overlaps the Entra tenant's, so the operator sees
+ * the duplicate they are about to create before they create it. Deliberately
+ * loose — this is a warning, not a matcher.
+ */
+function findSimilarClientNames(displayName: string | null, clients: IClient[]): string[] {
+  const normalize = (value: string): string => value.toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  const target = normalize(displayName || '');
+  if (!target) {
+    return [];
+  }
+
+  const targetTokens = target.split(' ').filter((token) => token.length > 2);
+
+  return clients
+    .map((client) => String(client.client_name || ''))
+    .filter((clientName) => {
+      const candidate = normalize(clientName);
+      if (!candidate) return false;
+      if (candidate === target || candidate.includes(target) || target.includes(candidate)) return true;
+      return targetTokens.some((token) => candidate.split(' ').includes(token));
+    })
+    .slice(0, 5);
 }
 
 function formatConfidence(score: number): string {
@@ -136,6 +162,7 @@ export function EntraTenantMappingTable({
   const [allClients, setAllClients] = React.useState<IClient[]>([]);
   const [skippingByRow, setSkippingByRow] = React.useState<Record<string, boolean>>({});
   const [importingByRow, setImportingByRow] = React.useState<Record<string, boolean>>({});
+  const [importConfirmRow, setImportConfirmRow] = React.useState<MappingTenantRow | null>(null);
   const [confirmingMappings, setConfirmingMappings] = React.useState(false);
   const [confirmFeedback, setConfirmFeedback] = React.useState<string | null>(null);
 
@@ -295,10 +322,16 @@ export function EntraTenantMappingTable({
         )
       );
       onPersistedMappingChange?.();
+      setImportConfirmRow(null);
     } finally {
       setImportingByRow((current) => ({ ...current, [row.managedTenantId]: false }));
     }
   }, [onPersistedMappingChange]);
+
+  const importSimilarClients = React.useMemo(
+    () => (importConfirmRow ? findSimilarClientNames(importConfirmRow.displayName, allClients) : []),
+    [allClients, importConfirmRow]
+  );
 
   const handleConfirmSelectedMappings = React.useCallback(async () => {
     if (mappingsToConfirm.length === 0) {
@@ -462,7 +495,7 @@ export function EntraTenantMappingTable({
                           type="button"
                           size="sm"
                           variant="outline"
-                          onClick={() => void handleImportAsClient(row)}
+                          onClick={() => setImportConfirmRow(row)}
                           disabled={loading || row.isSkipped || Boolean(importingByRow[row.managedTenantId])}
                         >
                           {importingByRow[row.managedTenantId]
@@ -500,6 +533,41 @@ export function EntraTenantMappingTable({
           </tbody>
         </table>
       </div>
+
+      <ConfirmationDialog
+        id="entra-import-confirm-dialog"
+        isOpen={importConfirmRow !== null}
+        onClose={() => setImportConfirmRow(null)}
+        onConfirm={() => (importConfirmRow ? handleImportAsClient(importConfirmRow) : undefined)}
+        isConfirming={Boolean(importConfirmRow && importingByRow[importConfirmRow.managedTenantId])}
+        title={t('integrations.entra.tenantMapping.importConfirm.title')}
+        message={
+          <div className="min-w-0 space-y-2 text-sm text-muted-foreground">
+            <p>
+              {t('integrations.entra.tenantMapping.importConfirm.body', {
+                tenant: importConfirmRow?.displayName
+                  || importConfirmRow?.primaryDomain
+                  || importConfirmRow?.entraTenantId
+                  || '',
+              })}
+            </p>
+            {importSimilarClients.length > 0 ? (
+              <div>
+                <p className="font-medium text-foreground">
+                  {t('integrations.entra.tenantMapping.importConfirm.similarWarning')}
+                </p>
+                <ul className="mt-1 list-disc pl-4">
+                  {importSimilarClients.map((clientName) => (
+                    <li key={clientName} className="truncate">{clientName}</li>
+                  ))}
+                </ul>
+              </div>
+            ) : null}
+          </div>
+        }
+        confirmLabel={t('integrations.entra.tenantMapping.actions.import')}
+        cancelLabel={t('integrations.entra.tenantMapping.actions.cancel')}
+      />
     </div>
   );
 }
