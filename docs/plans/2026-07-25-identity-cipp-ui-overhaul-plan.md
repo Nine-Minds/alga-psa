@@ -49,6 +49,36 @@ Every item below was confirmed by reading the code during the design session, no
 | F11 | Field-sync controls and the ambiguous-match queue are complete but hidden behind default-off flags `entra-integration-field-sync` and `entra-integration-ambiguous-queue`. All three personas called the field-sync panel the most reassuring thing in the feature. | `EntraIntegrationSettings.tsx:139-140` |
 | F12 | Sync run details identify tenants by **GUID**, not client name — on the screen whose whole purpose was mapping GUIDs to client names. | `entraWorkflowClient.ts` run detail mapping |
 
+## Access gating as of this branch
+
+The `entra-integration-ui` master flag is **being retired**. Work already in progress on this branch removes
+the flag check from the route guard, renames `requireEntraUiFlagEnabled` → `requireEntraAccess`, propagates
+the rename across all 16 Entra API routes plus `server/src/middleware.ts`, and drops the flag from
+`ENTRA_PHASE1_FLAG_DEFINITIONS` in `ee/server/src/lib/platformFeatureFlags/posthogClient.ts`.
+
+Access to the Entra surface is therefore, from here on:
+
+```
+EE edition  +  assertTierAccess(TIER_FEATURES.ENTRA_SYNC)  [Pro+]  +  RBAC system_settings read/update
+```
+
+Consequences for this plan:
+
+- **Nothing in this overhaul may reintroduce a UI-level flag gate.** The new route and every component below
+  it gate on tier and permission only.
+- The 404-when-disabled branch is gone, so a tenant that fails the check gets the tier 403, not a "disabled"
+  404. Error copy on the new surfaces should reflect that.
+- Flags that **remain** after this branch: `entra-integration-cipp` (soft-launch control for the CIPP
+  connection option, per the 2026-07-22 migration plan), `entra-integration-field-sync` and
+  `entra-integration-ambiguous-queue` (both retired in PR5 below), and
+  `entra-integration-client-sync-action`.
+- Whether `entra-integration-cipp` is also retired is an **ops decision, not a code decision** — the soft
+  launch sequence is flip-per-tenant, then global, then retire. This plan leaves it in place and assumes CIPP
+  is on for the tenants exercising the new flow.
+- Stale prose references to the flag survive in the historical phase-1 artifacts
+  (`ee/docs/plans/2026-02-20-entra-integration-phase-1/{features.json,tests.json}`). They describe what was
+  true then; leave them, or annotate rather than rewrite history.
+
 ## Scope decisions (settled 2026-07-25)
 
 - **Full experience overhaul**, including surfaces outside the Identity screen.
@@ -172,6 +202,9 @@ No new surfaces. Pure defect work against the current screen, so it can ship imm
 
 **Changes**
 
+0. **Build on the retired master flag.** The `requireEntraAccess` rename and flag removal land before or with
+   this PR (see "Access gating" above). The new route gates on tier + RBAC only — do not add a flag check,
+   and do not resurrect the 404-when-disabled response.
 1. New route + page shell; Identity category card becomes a summary with an "Open" link; callback redirect updated.
 2. `EntraSetupWizard` with the four-step ladder; each step **contains** its action. Delete the
    "Connection options appear below" pattern entirely.
@@ -247,7 +280,11 @@ run detail renders client names.
 **Changes**
 
 1. Remove `entra-integration-field-sync` and `entra-integration-ambiguous-queue` reads; render both permanently.
-   Retire the flags from bootstrap once deployed.
+   Drop both from `ENTRA_PHASE1_FLAG_DEFINITIONS` in `posthogClient.ts`, matching how `entra-integration-ui`
+   was retired earlier on this branch, and update
+   `ee/server/src/__tests__/unit/entraIntegrationSettings.initialSyncCta.test.tsx`, which drives both flags
+   through `applyFlags(...)` and will fail once the reads are gone.
+   Leave `entra-integration-cipp` alone — its retirement is the ops soft-launch decision described above.
 2. `FieldSyncRules` as a shared component used by wizard step 4 and the console tab, with defaults visibly off
    and an explicit "mark contacts inactive when the Microsoft account is disabled" toggle (today this behaviour
    is unconditional and unnamed in the UI).
@@ -319,8 +356,14 @@ interactive element needs a stable automation id per `docs/ui/ui_automation_ids.
    in `server/.env.local`, walking a Pro tenant through: disclosure → CIPP connect with a deliberately bad
    credential (must not persist) → good credential → discovery → mapping → preflight → pilot one client →
    console → enable schedule → rotate credential → disconnect.
-5. Confirm a Solo-tier tenant still gets 403 from the Entra routes and no UI.
+   The `entra-integration-cipp` line stays in `server/.env.local` on this worktree — it is the only reason the
+   CIPP option renders locally.
+5. Confirm a Solo-tier tenant gets **403 from `assertTierAccess`** on the Entra routes and no UI. Note this is
+   now the only rejection path — with `entra-integration-ui` retired there is no 404-when-disabled response
+   left to test for, and any test still asserting one should be deleted rather than adapted.
 6. Confirm a Pro tenant with no Enterprise add-on now gets a recurring schedule created (F6 regression guard).
+7. Grep for stragglers after PR5: `grep -rn "entra-integration-ui\|entra-integration-field-sync\|entra-integration-ambiguous-queue" --include="*.ts" --include="*.tsx" . | grep -v node_modules`
+   should return nothing outside the historical `ee/docs/plans/2026-02-20-entra-integration-phase-1/` artifacts.
 
 ## Risks
 
