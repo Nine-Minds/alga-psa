@@ -32,6 +32,10 @@ vi.mock('@ee/components/settings/integrations/EntraTenantMappingTable', () => ({
   EntraTenantMappingTable: () => <div id="entra-mapping-table-stub" />,
 }));
 
+vi.mock('@ee/components/settings/integrations/entra/PilotSyncControl', () => ({
+  PilotSyncControl: () => <div id="entra-pilot-control-stub" />,
+}));
+
 vi.mock('@ee/components/settings/integrations/EntraCippConnectDialog', () => ({
   EntraCippConnectDialog: ({ open }: { open: boolean }) =>
     open ? <div id="entra-cipp-connect-dialog-stub" /> : null,
@@ -111,7 +115,7 @@ describe('EntraSetupWizard', () => {
     // Later steps are present as a ladder but carry no controls to press.
     expect(document.getElementById('entra-setup-step-2')?.querySelector('button')).toBeNull();
     expect(document.getElementById('entra-setup-run-discovery')).toBeNull();
-    expect(document.getElementById('entra-setup-run-initial-sync')).toBeNull();
+    expect(document.getElementById('entra-pilot-control-stub')).toBeNull();
   });
 
   it('discloses scopes and the contact contract before any connect action', () => {
@@ -208,7 +212,7 @@ describe('EntraSetupWizard', () => {
     expect(stepThree?.querySelector('#entra-mapping-table-stub')).not.toBeNull();
   });
 
-  it('only enables the first sync once mappings are confirmed', () => {
+  it('hands the last step to the pilot control once mappings are confirmed', () => {
     renderWizard(
       statusOf({
         status: 'connected',
@@ -218,8 +222,9 @@ describe('EntraSetupWizard', () => {
       })
     );
 
-    const syncButton = document.getElementById('entra-setup-run-initial-sync') as HTMLButtonElement;
-    expect(syncButton).not.toBeNull();
-    expect(syncButton.disabled).toBe(false);
+    // The first sync is a pilot on one client, not a big-bang across all of them.
+    const stepFour = document.getElementById('entra-setup-step-4');
+    expect(stepFour?.getAttribute('data-step-state')).toBe('current');
+    expect(stepFour?.querySelector('#entra-pilot-control-stub')).not.toBeNull();
   });
 });

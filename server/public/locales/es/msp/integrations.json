@@ -375,6 +375,55 @@
         },
         "title": "Conectar CIPP"
       },
+      "pilot": {
+        "actions": {
+          "preview": "Previsualizar cambios",
+          "previewing": "Previsualizando…",
+          "syncOne": "Sincronizar este cliente",
+          "syncRemaining": "Sincronizar los {{count}} restantes",
+          "syncingOne": "Iniciando…",
+          "syncingRemaining": "Iniciando…"
+        },
+        "clientLabel": "Cliente piloto",
+        "empty": "Confirme primero una asignación de inquilino a cliente; todavía no hay nada que pilotar.",
+        "errors": {
+          "loadMappings": "No se pudieron cargar los clientes asignados.",
+          "preflightFailed": "No se pudo completar la previsualización.",
+          "syncFailed": "No se pudo iniciar la sincronización."
+        },
+        "gateNote": "Sincronice un cliente primero. El resto se desbloquea cuando termine su ejecución.",
+        "remainingStarted": "Sincronización iniciada para los {{count}} clientes restantes.",
+        "started": "Sincronización iniciada para {{client}}."
+      },
+      "preflight": {
+        "buckets": {
+          "create": {
+            "description": "Ningún contacto de este cliente coincide con el correo, así que se crearía uno.",
+            "label": "Contactos nuevos"
+          },
+          "link": {
+            "description": "Un contacto existente coincide por correo y se vincularía, y se actualizaría donde sus reglas de campo lo permitan.",
+            "label": "Vinculados a contactos existentes"
+          },
+          "markInactive": {
+            "description": "La cuenta de Microsoft está deshabilitada, así que el contacto vinculado se marcaría inactivo. No se elimina nada.",
+            "label": "Marcados como inactivos"
+          },
+          "needsDecision": {
+            "description": "Coincide más de un contacto, así que la sincronización no adivina. Estos van a la cola de revisión.",
+            "label": "Necesita una decisión"
+          },
+          "noChange": {
+            "description": "Ya vinculado, y nada de lo que sus reglas sincronizan ha cambiado.",
+            "label": "Sin cambios"
+          }
+        },
+        "hideNames": "Ocultar nombres",
+        "moreNames": "y {{count}} más",
+        "showNames": "Mostrar nombres",
+        "summary": "{{count}} identidades comprobadas a las {{time}}. No se cambió nada.",
+        "title": "Qué haría esta sincronización"
+      },
       "reconciliation": {
         "actions": {
           "refresh": "Actualizar",

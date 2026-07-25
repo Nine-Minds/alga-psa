@@ -8,7 +8,6 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   discoverEntraManagedTenants,
   initiateEntraDirectOAuth,
-  startEntraSync,
   type EntraStatusResponse,
 } from '@alga-psa/integrations/actions';
 import {
@@ -18,6 +17,7 @@ import {
 import { EntraCippConnectDialog } from '../EntraCippConnectDialog';
 import { ConnectionMethodChooser, type EntraConnectionMethod } from './ConnectionMethodChooser';
 import { EntraDirectConsentDialog } from './EntraDirectConsentDialog';
+import { PilotSyncControl } from './PilotSyncControl';
 import { PreConsentDisclosure } from './PreConsentDisclosure';
 import {
   deriveEntraSetupSteps,
@@ -75,8 +75,6 @@ export function EntraSetupWizard({
 
   const [discoveryBusy, setDiscoveryBusy] = React.useState(false);
   const [discoveryMessage, setDiscoveryMessage] = React.useState<string | null>(null);
-  const [syncBusy, setSyncBusy] = React.useState(false);
-  const [syncMessage, setSyncMessage] = React.useState<string | null>(null);
 
   // The mapping table knows about confirmed mappings before the status endpoint
   // is refetched, so the ladder should not wait a round trip to advance.
@@ -144,27 +142,6 @@ export function EntraSetupWizard({
     }
   }, [onStatusChanged, t]);
 
-  const handleRunInitialSync = React.useCallback(async () => {
-    setSyncBusy(true);
-    setSyncMessage(null);
-    try {
-      const result = await startEntraSync({ scope: 'initial' });
-      if ('error' in result) {
-        setSyncMessage(result.error || t('integrations.entra.settings.initialSync.failed'));
-        return;
-      }
-
-      setSyncMessage(
-        result.data?.runId
-          ? t('integrations.entra.settings.initialSync.started', { runId: result.data.runId })
-          : t('integrations.entra.settings.initialSync.startedNoId')
-      );
-      await onStatusChanged();
-    } finally {
-      setSyncBusy(false);
-    }
-  }, [onStatusChanged, t]);
-
   const renderStepAction = (stepId: EntraSetupStepId): React.ReactNode => {
     if (stepId !== currentStep) {
       return null;
@@ -224,23 +201,11 @@ export function EntraSetupWizard({
       );
     }
 
+    // Step 4 is a pilot, not a big-bang: preview one client, sync that one, and
+    // only then offer the rest.
     return (
-      <div className="mt-4 space-y-2">
-        <Button
-          id="entra-setup-run-initial-sync"
-          type="button"
-          onClick={() => void handleRunInitialSync()}
-          disabled={syncBusy || mappedCount === 0}
-        >
-          {syncBusy
-            ? t('integrations.entra.settings.actions.runInitialSyncRunning')
-            : t('integrations.entra.settings.actions.runInitialSync')}
-        </Button>
-        {syncMessage ? (
-          <p className="text-sm text-muted-foreground" id="entra-setup-initial-sync-feedback">
-            {syncMessage}
-          </p>
-        ) : null}
+      <div className="mt-4">
+        <PilotSyncControl onPilotStarted={onStatusChanged} />
       </div>
     );
   };

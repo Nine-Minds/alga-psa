@@ -104,6 +104,8 @@ export interface SyncTenantUsersActivityInput {
   tenantId: string;
   runId: string;
   mapping: EntraManagedTenantRef;
+  /** A preflight: classify every identity, write nothing. Defaults to false. */
+  dryRun?: boolean;
 }
 
 export interface RecordSyncTenantResultActivityInput {

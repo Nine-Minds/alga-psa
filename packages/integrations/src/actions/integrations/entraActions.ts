@@ -232,6 +232,53 @@ export type EntraCippValidationResponse = {
   endpoint: string;
 };
 
+export type EntraConfirmedMapping = {
+  managedTenantId: string;
+  entraTenantId: string;
+  clientId: string;
+  clientName: string | null;
+  displayName: string | null;
+  primaryDomain: string | null;
+  sourceUserCount: number;
+  lastSyncedAt: string | null;
+  lastRunStatus: string | null;
+};
+
+export type EntraPreflightBucketId =
+  | 'create'
+  | 'link'
+  | 'needs_decision'
+  | 'no_change'
+  | 'mark_inactive';
+
+export type EntraPreflightIdentity = {
+  bucket: EntraPreflightBucketId;
+  entraObjectId: string;
+  displayName: string | null;
+  email: string | null;
+  userPrincipalName: string | null;
+};
+
+export type EntraPreflightResponse = {
+  runId: string;
+  managedTenantId: string;
+  clientId: string;
+  checkedAt: string;
+  totalIdentities: number;
+  counters: {
+    created: number;
+    linked: number;
+    updated: number;
+    ambiguous: number;
+    inactivated: number;
+  };
+  buckets: Array<{
+    bucket: EntraPreflightBucketId;
+    count: number;
+    samples: EntraPreflightIdentity[];
+  }>;
+};
+
 export type EntraSyncHistoryRun = {
   runId: string;
   status: string;
@@ -242,6 +289,10 @@ export type EntraSyncHistoryRun = {
   processedTenants: number;
   succeededTenants: number;
   failedTenants: number;
+  /** A preflight: it classified identities and wrote nothing. */
+  isDryRun?: boolean;
+  scopeManagedTenantId?: string | null;
+  scopeClientId?: string | null;
 };
 
 export type EntraSyncHistoryResponse = {
@@ -1036,6 +1087,63 @@ export const remapEntraTenant = withAuth(async (
     importFn: routes.mappingsRemapRoute,
     method: 'POST',
     body: input,
+  });
+});
+
+/**
+ * The confirmed tenant-to-client mappings, named. Read-gated: it exposes client
+ * names and directory sizes, not credentials.
+ */
+export const getEntraConfirmedMappings = withAuth(async (user, _ctx) => {
+  if (isClientPortalUser(user)) {
+    return { success: false, error: 'Forbidden' } as const;
+  }
+
+  const canRead = await hasPermission(user as any, 'system_settings', 'read');
+  if (!canRead) {
+    return { success: false, error: 'Forbidden: insufficient permissions to view Entra integration' } as const;
+  }
+
+  return callEeRoute<{ mappings: EntraConfirmedMapping[] }>({
+    importFn: routes.mappingsRoute,
+    method: 'GET',
+  });
+});
+
+/**
+ * Preview what a sync would do to one mapped client, without doing any of it.
+ *
+ * The preview runs the real reconciliation with writes disabled, so its counts
+ * are the counts the following sync will report on unchanged data. It is an
+ * update-gated action because it reads the customer directory and records an
+ * audit row, even though it changes no contact.
+ */
+export const runEntraPreflight = withAuth(async (
+  user,
+  _ctx,
+  input: { managedTenantId?: string; clientId?: string; sampleLimit?: number }
+) => {
+  if (isClientPortalUser(user)) {
+    return { success: false, error: 'Forbidden' } as const;
+  }
+
+  const canUpdate = await hasPermission(user as any, 'system_settings', 'update');
+  if (!canUpdate) {
+    return { success: false, error: 'Forbidden: insufficient permissions to configure Entra integration' } as const;
+  }
+
+  if (!input.managedTenantId && !input.clientId) {
+    return { success: false, error: 'A preflight needs a mapped tenant or client to preview.' } as const;
+  }
+
+  return callEeRoute<EntraPreflightResponse>({
+    importFn: routes.syncPreflightRoute,
+    method: 'POST',
+    body: {
+      managedTenantId: input.managedTenantId,
+      clientId: input.clientId,
+      sampleLimit: input.sampleLimit,
+    },
   });
 });
 

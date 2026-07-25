@@ -375,6 +375,55 @@
         },
         "title": "Connetti CIPP"
       },
+      "pilot": {
+        "actions": {
+          "preview": "Anteprima delle modifiche",
+          "previewing": "Anteprima in corso…",
+          "syncOne": "Sincronizza questo client",
+          "syncRemaining": "Sincronizza i restanti {{count}}",
+          "syncingOne": "Avvio…",
+          "syncingRemaining": "Avvio…"
+        },
+        "clientLabel": "Client pilota",
+        "empty": "Conferma prima un'associazione tenant-client; non c'è ancora nulla da pilotare.",
+        "errors": {
+          "loadMappings": "Impossibile caricare i client associati.",
+          "preflightFailed": "Non è stato possibile completare l'anteprima.",
+          "syncFailed": "Non è stato possibile avviare la sincronizzazione."
+        },
+        "gateNote": "Sincronizza prima un client. Gli altri si sbloccano quando la sua esecuzione termina.",
+        "remainingStarted": "Sincronizzazione avviata per i restanti {{count}} client.",
+        "started": "Sincronizzazione avviata per {{client}}."
+      },
+      "preflight": {
+        "buckets": {
+          "create": {
+            "description": "Nessun contatto di questo client corrisponde all'e-mail, quindi ne verrebbe creato uno.",
+            "label": "Nuovi contatti"
+          },
+          "link": {
+            "description": "Un contatto esistente corrisponde per e-mail e verrebbe collegato, e aggiornato dove le tue regole sui campi lo consentono.",
+            "label": "Collegati a contatti esistenti"
+          },
+          "markInactive": {
+            "description": "L'account Microsoft è disabilitato, quindi il contatto collegato verrebbe contrassegnato come inattivo. Nulla viene eliminato.",
+            "label": "Contrassegnati come inattivi"
+          },
+          "needsDecision": {
+            "description": "Corrisponde più di un contatto, quindi la sincronizzazione non tira a indovinare. Finiscono nella coda di revisione.",
+            "label": "Serve una decisione"
+          },
+          "noChange": {
+            "description": "Già collegato, e nulla di ciò che le tue regole sincronizzano è cambiato.",
+            "label": "Nessuna modifica"
+          }
+        },
+        "hideNames": "Nascondi i nomi",
+        "moreNames": "e altri {{count}}",
+        "showNames": "Mostra i nomi",
+        "summary": "{{count}} identità controllate alle {{time}}. Non è stato modificato nulla.",
+        "title": "Cosa farebbe questa sincronizzazione"
+      },
       "reconciliation": {
         "actions": {
           "refresh": "Aggiorna",

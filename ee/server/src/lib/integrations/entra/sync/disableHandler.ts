@@ -57,6 +57,42 @@ async function markIdentityInactive(
   });
 }
 
+/**
+ * How many contacts marking these identities inactive would touch, without
+ * touching any of them.
+ *
+ * F8: markDisabledEntraUsersInactive runs outside executeEntraSync and was not
+ * dry-run guarded, so a "preview" would have deactivated real contacts. The
+ * preflight calls this instead — same query that decides which contacts the
+ * real run updates, minus the update.
+ */
+export async function countEntraIdentityLinkedContacts(
+  tenantId: string,
+  identities: EntraIdentityRef[]
+): Promise<number> {
+  if (identities.length === 0) {
+    return 0;
+  }
+
+  return runWithTenant(tenantId, async () => {
+    const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, tenantId);
+
+    let total = 0;
+    for (const identity of identities) {
+      const links = await db.table('entra_contact_links')
+        .where({
+          entra_tenant_id: identity.entraTenantId,
+          entra_object_id: identity.entraObjectId,
+        })
+        .select(['contact_name_id']);
+      total += links.length;
+    }
+
+    return total;
+  });
+}
+
 export async function markDisabledEntraUsersInactive(
   tenantId: string,
   identities: EntraIdentityRef[]

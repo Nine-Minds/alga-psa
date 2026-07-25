@@ -6,7 +6,6 @@ import { getAdminConnection } from '@alga-psa/db/admin.js';
 import { getEntraProviderAdapter } from '@ee/lib/integrations/entra/providers';
 import { executeEntraSync } from '@ee/lib/integrations/entra/sync/syncEngine';
 import { filterEntraUsersForTenant } from '@ee/lib/integrations/entra/settingsService';
-import { markDisabledEntraUsersInactive } from '@ee/lib/integrations/entra/sync/disableHandler';
 import type { EntraConnectionType } from '@ee/interfaces/entra.interfaces';
 import type {
   LoadMappedTenantsActivityInput,
@@ -130,24 +129,27 @@ export async function syncTenantUsersActivity(
       : {};
   });
 
+  const disabledIdentities = filteredUsers.excluded
+    .filter((entry) => entry.reason === 'account_disabled')
+    .map((entry) => ({
+      entraTenantId: entry.user.entraTenantId,
+      entraObjectId: entry.user.entraObjectId,
+      displayName: entry.user.displayName,
+      email: entry.user.email,
+      userPrincipalName: entry.user.userPrincipalName,
+    }));
+
+  // Inactivation goes through executeEntraSync rather than beside it, so the
+  // dry-run guard covers every write this activity can cause.
   const syncResult = await executeEntraSync({
     tenantId: input.tenantId,
     clientId: input.mapping.clientId,
     managedTenantId: input.mapping.managedTenantId,
     users: filteredUsers.included,
     fieldSyncConfig,
-    dryRun: false,
+    dryRun: Boolean(input.dryRun),
+    disabledIdentities,
   });
-
-  const disabledIdentities = filteredUsers.excluded
-    .filter((entry) => entry.reason === 'account_disabled')
-    .map((entry) => ({
-      entraTenantId: entry.user.entraTenantId,
-      entraObjectId: entry.user.entraObjectId,
-    }));
-  const inactivatedCount = disabledIdentities.length
-    ? await markDisabledEntraUsersInactive(input.tenantId, disabledIdentities)
-    : 0;
 
   return {
     managedTenantId: input.mapping.managedTenantId,
@@ -157,7 +159,7 @@ export async function syncTenantUsersActivity(
     linked: syncResult.counters.linked,
     updated: syncResult.counters.updated,
     ambiguous: syncResult.counters.ambiguous,
-    inactivated: syncResult.counters.inactivated + inactivatedCount,
+    inactivated: syncResult.counters.inactivated,
     errorMessage: null,
   };
 }

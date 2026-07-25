@@ -375,6 +375,55 @@
         },
         "title": "CIPP verbinden"
       },
+      "pilot": {
+        "actions": {
+          "preview": "Änderungen vorschauen",
+          "previewing": "Vorschau läuft…",
+          "syncOne": "Diesen Client synchronisieren",
+          "syncRemaining": "Die übrigen {{count}} synchronisieren",
+          "syncingOne": "Wird gestartet…",
+          "syncingRemaining": "Wird gestartet…"
+        },
+        "clientLabel": "Pilot-Client",
+        "empty": "Bestätigen Sie zuerst eine Mandanten-Client-Zuordnung; es gibt noch nichts zu pilotieren.",
+        "errors": {
+          "loadMappings": "Die zugeordneten Clients konnten nicht geladen werden.",
+          "preflightFailed": "Die Vorschau konnte nicht abgeschlossen werden.",
+          "syncFailed": "Die Synchronisierung konnte nicht gestartet werden."
+        },
+        "gateNote": "Synchronisieren Sie zuerst einen Client. Die übrigen werden freigegeben, sobald dessen Lauf beendet ist.",
+        "remainingStarted": "Synchronisierung für die übrigen {{count}} Clients gestartet.",
+        "started": "Synchronisierung für {{client}} gestartet."
+      },
+      "preflight": {
+        "buckets": {
+          "create": {
+            "description": "Kein Kontakt dieses Clients passt zur E-Mail-Adresse, daher würde einer erstellt.",
+            "label": "Neue Kontakte"
+          },
+          "link": {
+            "description": "Ein vorhandener Kontakt passt per E-Mail und würde verknüpft und dort aktualisiert, wo Ihre Feldregeln es erlauben.",
+            "label": "Mit vorhandenen Kontakten verknüpft"
+          },
+          "markInactive": {
+            "description": "Das Microsoft-Konto ist deaktiviert, daher würde der verknüpfte Kontakt als inaktiv markiert. Es wird nichts gelöscht.",
+            "label": "Als inaktiv markiert"
+          },
+          "needsDecision": {
+            "description": "Mehr als ein Kontakt passt, daher rät die Synchronisierung nicht. Diese landen in der Prüfliste.",
+            "label": "Entscheidung erforderlich"
+          },
+          "noChange": {
+            "description": "Bereits verknüpft, und nichts, was Ihre Regeln synchronisieren, hat sich geändert.",
+            "label": "Keine Änderung"
+          }
+        },
+        "hideNames": "Namen ausblenden",
+        "moreNames": "und {{count}} weitere",
+        "showNames": "Namen anzeigen",
+        "summary": "{{count}} Identitäten um {{time}} geprüft. Es wurde nichts geändert.",
+        "title": "Was diese Synchronisierung tun würde"
+      },
       "reconciliation": {
         "actions": {
           "refresh": "Aktualisieren",

@@ -375,6 +375,55 @@
         },
         "title": "CIPP verbinden"
       },
+      "pilot": {
+        "actions": {
+          "preview": "Wijzigingen bekijken",
+          "previewing": "Bezig met bekijken…",
+          "syncOne": "Deze klant synchroniseren",
+          "syncRemaining": "De resterende {{count}} synchroniseren",
+          "syncingOne": "Starten…",
+          "syncingRemaining": "Starten…"
+        },
+        "clientLabel": "Pilotklant",
+        "empty": "Bevestig eerst een tenant-naar-klant koppeling; er valt nog niets te piloten.",
+        "errors": {
+          "loadMappings": "De gekoppelde klanten konden niet worden geladen.",
+          "preflightFailed": "De preview kon niet worden voltooid.",
+          "syncFailed": "De synchronisatie kon niet worden gestart."
+        },
+        "gateNote": "Synchroniseer eerst één klant. De rest komt vrij zodra die run klaar is.",
+        "remainingStarted": "Synchronisatie gestart voor de resterende {{count}} klanten.",
+        "started": "Synchronisatie gestart voor {{client}}."
+      },
+      "preflight": {
+        "buckets": {
+          "create": {
+            "description": "Geen contact bij deze klant komt overeen met het e-mailadres, dus er zou er een worden aangemaakt.",
+            "label": "Nieuwe contacten"
+          },
+          "link": {
+            "description": "Een bestaand contact komt overeen op e-mail en zou worden gekoppeld, en bijgewerkt waar uw veldregels dat toestaan.",
+            "label": "Gekoppeld aan bestaande contacten"
+          },
+          "markInactive": {
+            "description": "Het Microsoft-account is uitgeschakeld, dus het gekoppelde contact zou als inactief worden gemarkeerd. Er wordt niets verwijderd.",
+            "label": "Als inactief gemarkeerd"
+          },
+          "needsDecision": {
+            "description": "Meer dan één contact komt overeen, dus de synchronisatie gokt niet. Deze komen in de beoordelingswachtrij.",
+            "label": "Vraagt een beslissing"
+          },
+          "noChange": {
+            "description": "Al gekoppeld, en niets wat uw regels synchroniseren is gewijzigd.",
+            "label": "Geen wijziging"
+          }
+        },
+        "hideNames": "Namen verbergen",
+        "moreNames": "en nog {{count}}",
+        "showNames": "Namen tonen",
+        "summary": "{{count}} identiteiten gecontroleerd om {{time}}. Er is niets gewijzigd.",
+        "title": "Wat deze synchronisatie zou doen"
+      },
       "reconciliation": {
         "actions": {
           "refresh": "Vernieuwen",

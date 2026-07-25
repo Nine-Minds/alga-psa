@@ -171,6 +171,8 @@ export {
   initiateEntraDirectOAuth,
   connectEntraCipp,
   testEntraCippCredentials,
+  runEntraPreflight,
+  getEntraConfirmedMappings,
   getEntraIntegrationStatus,
   updateEntraFieldSyncConfig,
   connectEntraIntegration,

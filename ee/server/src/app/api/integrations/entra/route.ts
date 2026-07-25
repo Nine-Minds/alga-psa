@@ -31,9 +31,10 @@ export async function GET(): Promise<Response> {
       db.table('entra_sync_settings')
         .first(['sync_interval_minutes']),
       // One completed real sync is what moves the tenant from guided setup to
-      // the operations console, permanently.
+      // the operations console, permanently. A preflight is not a sync: it
+      // wrote nothing, so it cannot end onboarding.
       db.table('entra_sync_runs')
-        .where({ status: 'completed' })
+        .where({ status: 'completed', is_dry_run: false })
         .first(['run_id']),
     ]);
 

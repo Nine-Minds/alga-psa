@@ -375,6 +375,55 @@
         },
         "title": "Connect CIPP"
       },
+      "pilot": {
+        "actions": {
+          "preview": "Preview changes",
+          "previewing": "Previewing…",
+          "syncOne": "Sync this client",
+          "syncRemaining": "Sync the remaining {{count}}",
+          "syncingOne": "Starting…",
+          "syncingRemaining": "Starting…"
+        },
+        "clientLabel": "Pilot client",
+        "empty": "Confirm a tenant-to-client mapping first; there is nothing to pilot yet.",
+        "errors": {
+          "loadMappings": "Could not load the mapped clients.",
+          "preflightFailed": "The preview could not be completed.",
+          "syncFailed": "The sync could not be started."
+        },
+        "gateNote": "Sync one client first. The rest unlock once its run finishes.",
+        "remainingStarted": "Sync started for the remaining {{count}} clients.",
+        "started": "Sync started for {{client}}."
+      },
+      "preflight": {
+        "buckets": {
+          "create": {
+            "description": "No contact in this client matches the email, so one would be created.",
+            "label": "New contacts"
+          },
+          "link": {
+            "description": "An existing contact matches by email and would be linked, and updated where your field rules allow.",
+            "label": "Linked to existing contacts"
+          },
+          "markInactive": {
+            "description": "The Microsoft account is disabled, so the linked contact would be marked inactive. Nothing is deleted.",
+            "label": "Marked inactive"
+          },
+          "needsDecision": {
+            "description": "More than one contact matches, so the sync will not guess. These land in the review queue.",
+            "label": "Needs a decision"
+          },
+          "noChange": {
+            "description": "Already linked, and nothing your rules sync has changed.",
+            "label": "No change"
+          }
+        },
+        "hideNames": "Hide names",
+        "moreNames": "and {{count}} more",
+        "showNames": "Show names",
+        "summary": "{{count}} identities checked at {{time}}. Nothing was changed.",
+        "title": "What this sync would do"
+      },
       "reconciliation": {
         "actions": {
           "refresh": "Refresh",

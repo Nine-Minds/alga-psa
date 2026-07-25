@@ -64,6 +64,10 @@ export interface EntraSyncRunHistoryItem {
   processedTenants: number;
   succeededTenants: number;
   failedTenants: number;
+  /** A preflight: it classified identities and wrote nothing. */
+  isDryRun: boolean;
+  scopeManagedTenantId: string | null;
+  scopeClientId: string | null;
 }
 
 function sanitizeWorkflowIdSegment(value: string): string {
@@ -346,6 +350,12 @@ export async function getEntraSyncRunHistory(
       processedTenants: Number(row.processed_tenants || 0),
       succeededTenants: Number(row.succeeded_tenants || 0),
       failedTenants: Number(row.failed_tenants || 0),
+      // History shows preflights — "preview run at 14:22" is audit evidence —
+      // but every aggregate that means "the integration is working" filters
+      // them out, because a preview changed nothing.
+      isDryRun: Boolean(row.is_dry_run),
+      scopeManagedTenantId: row.scope_managed_tenant_id ? String(row.scope_managed_tenant_id) : null,
+      scopeClientId: row.scope_client_id ? String(row.scope_client_id) : null,
     }));
   });
 }

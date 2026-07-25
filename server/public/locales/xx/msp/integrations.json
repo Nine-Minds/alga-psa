@@ -375,6 +375,55 @@
         },
         "title": "11111"
       },
+      "pilot": {
+        "actions": {
+          "preview": "11111",
+          "previewing": "11111",
+          "syncOne": "11111",
+          "syncRemaining": "11111",
+          "syncingOne": "11111",
+          "syncingRemaining": "11111"
+        },
+        "clientLabel": "11111",
+        "empty": "11111",
+        "errors": {
+          "loadMappings": "11111",
+          "preflightFailed": "11111",
+          "syncFailed": "11111"
+        },
+        "gateNote": "11111",
+        "remainingStarted": "11111",
+        "started": "11111"
+      },
+      "preflight": {
+        "buckets": {
+          "create": {
+            "description": "11111",
+            "label": "11111"
+          },
+          "link": {
+            "description": "11111",
+            "label": "11111"
+          },
+          "markInactive": {
+            "description": "11111",
+            "label": "11111"
+          },
+          "needsDecision": {
+            "description": "11111",
+            "label": "11111"
+          },
+          "noChange": {
+            "description": "11111",
+            "label": "11111"
+          }
+        },
+        "hideNames": "11111",
+        "moreNames": "11111",
+        "showNames": "11111",
+        "summary": "11111",
+        "title": "11111"
+      },
       "reconciliation": {
         "actions": {
           "refresh": "11111",

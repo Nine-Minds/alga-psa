@@ -202,6 +202,48 @@ async function findExistingClientContactByEmail(
   return existing?.contact_name_id ? String(existing.contact_name_id) : null;
 }
 
+/**
+ * What linking this match would change, computed without writing anything.
+ *
+ * The preflight has to answer "would this do anything?" with exactly the rule
+ * the real sync applies, or the preview lies. It reuses the same patch builder
+ * and the same change detector as upsertContactLink; the only difference is
+ * that nothing is persisted afterwards.
+ */
+export async function previewLinkedContactChange(
+  tenantId: string,
+  matchedContact: EntraContactMatchCandidate,
+  user: EntraSyncUser,
+  fieldSyncConfig?: Record<string, unknown>
+): Promise<{ alreadyLinked: boolean; fieldsWouldChange: boolean }> {
+  return runWithTenant(tenantId, async () => {
+    const { knex } = await createTenantKnex();
+    // Reads only: a preflight that opened a write transaction would be one
+    // careless edit away from writing during a preview.
+    const readConn = knex as unknown as Knex.Transaction;
+
+    const linkedContactId = await findExistingLinkedContactId(readConn, tenantId, user);
+
+    const syncedFieldPatch = buildContactFieldSyncPatch(user, fieldSyncConfig || {});
+    const { phone_numbers, ...directContactPatch } = syncedFieldPatch as Record<string, unknown> & {
+      phone_numbers?: unknown;
+    };
+
+    const fieldsWouldChange = await detectContactFieldChanges(
+      readConn,
+      tenantId,
+      matchedContact.contactNameId,
+      directContactPatch,
+      phone_numbers as ContactPhoneNumberInput[] | undefined
+    );
+
+    return {
+      alreadyLinked: linkedContactId === matchedContact.contactNameId,
+      fieldsWouldChange,
+    };
+  });
+}
+
 export async function linkExistingMatchedContact(
   tenantId: string,
   clientId: string,
