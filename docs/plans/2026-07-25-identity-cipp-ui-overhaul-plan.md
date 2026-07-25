@@ -377,7 +377,9 @@ interactive element needs a stable automation id per `docs/ui/ui_automation_ids.
   deleting the file; the run-list polling and discovery error handling are easy to drop by accident.
 - A CIPP emulator (`test-harness/cipp-emulator/`, proposed in the 2026-07-22 plan) remains the right substrate
   for automated CIPP coverage and is still not built. PR2/PR3 CIPP paths will rely on unit-level doubles until
-  it exists.
+  it exists. **Since resolved differently:** rather than a second emulator, the existing Graph emulator
+  (`test-harness/graph-emulator/`) grew both the Entra Graph endpoints and the CIPP API over one seeded
+  directory — see "Trying it without a tenant" below.
 
 ## Out of scope
 
@@ -457,5 +459,26 @@ PR7 migrates every tenant's `sync_enabled` to false. Run the enumeration query u
 migrate-to-off decision" and hand ops the affected-tenant list **before this deploys**, so the
 tenants that are genuinely running recurring sync today are told rather than discovering it.
 
-**Not attempted, and still true:** the CIPP emulator (`test-harness/cipp-emulator/`) does not
-exist, so CIPP paths remain covered by unit-level doubles.
+## Trying it without a tenant
+
+`test-harness/graph-emulator/` now serves the Entra surface as well as inbound email: the
+GDAP-backed `tenantRelationships/managedTenants/*` endpoints, `/organization` and `/users` for
+self-tenant mode, and the CIPP API (`/api/listtenants`, `/api/listusers`) over the same seeded
+directory — three managed tenants, thirteen users, two disabled, one without a mailbox. Graph
+responses page with `@odata.nextLink`, so an adapter that ignores paging fails there rather than in
+production, and the existing fault injection reaches the new paths (a 403 on the managed-tenant read
+is the "admin consent missing" branch).
+
+Alga reaches it because the Entra code resolves its endpoints through
+`shared/services/email/microsoftGraphEndpoints` instead of hardcoding `graph.microsoft.com` and
+`login.microsoftonline.com` in four places. Set `MICROSOFT_LOGIN_BASE_URL`,
+`MICROSOFT_GRAPH_BASE_URL`, `MICROSOFT_CLIENT_ID` and `MICROSOFT_CLIENT_SECRET`, run the emulator
+with the same client pair, and Direct connects with no consent screen. The adapter's
+`ENTRA_DIRECT_SMOKE_*` env-var scaffolding (synthetic tenants, disabled-user lists, extra users
+spelled out as pipe-delimited strings) exists because there was nowhere to put a directory; it is
+now redundant for local work and is a candidate for deletion.
+
+**This makes the plan's verification item 4 runnable.** The flow has been walked as far as connect →
+discover → mapping against the emulator; mapping, preflight and the pilot sync remain to be walked
+by hand.
+
