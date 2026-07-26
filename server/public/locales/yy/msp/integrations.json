@@ -451,7 +451,9 @@
           },
           "unlinked": "55555",
           "unlinkFailed": "55555",
-          "hidePreview": "55555"
+          "hidePreview": "55555",
+          "previewLoading": "55555",
+          "previewLoadingHint": "55555"
         },
         "connection": {
           "changeAction": "55555",
@@ -642,11 +644,14 @@
             "label": "55555"
           }
         },
+        "checkAgain": "55555",
+        "checkedLabel": "55555",
         "hideNames": "55555",
         "moreNames": "55555",
         "nothingWritten": "55555",
         "showNames": "55555",
         "summary": "55555",
+        "summaryNoTime": "55555",
         "title": "55555"
       },
       "reconciliation": {

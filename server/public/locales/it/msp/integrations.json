@@ -451,7 +451,9 @@
           },
           "unlinked": "{{client}} non si sincronizza più.",
           "unlinkFailed": "Non è stato possibile scollegare quel cliente.",
-          "hidePreview": "Nascondi anteprima"
+          "hidePreview": "Nascondi anteprima",
+          "previewLoading": "Lettura della directory di {{client}} da Microsoft…",
+          "previewLoadingHint": "La durata dipende da quanti utenti ha il cliente."
         },
         "connection": {
           "changeAction": "Modifica connessione",
@@ -642,11 +644,14 @@
             "label": "Nessuna modifica"
           }
         },
+        "checkAgain": "Controlla di nuovo",
+        "checkedLabel": "Controllato",
         "hideNames": "Nascondi i nomi",
         "moreNames": "e altri {{count}}",
         "nothingWritten": "Non è ancora stato scritto nulla",
         "showNames": "Mostra i nomi",
         "summary": "{{count}} identità controllate alle {{time}}. Non è stato modificato nulla.",
+        "summaryNoTime": "{{count}} identità controllate. Non è stato modificato nulla.",
         "title": "Cosa farebbe questa sincronizzazione"
       },
       "reconciliation": {

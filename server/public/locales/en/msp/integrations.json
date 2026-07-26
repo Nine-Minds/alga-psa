@@ -451,7 +451,9 @@
           },
           "unlinked": "{{client}} no longer syncs.",
           "unlinkFailed": "That client could not be unlinked.",
-          "hidePreview": "Hide preview"
+          "hidePreview": "Hide preview",
+          "previewLoading": "Reading {{client}}'s directory from Microsoft…",
+          "previewLoadingHint": "How long this takes depends on how many users the client has."
         },
         "connection": {
           "changeAction": "Change connection",
@@ -642,11 +644,14 @@
             "label": "No change"
           }
         },
+        "checkAgain": "Check again",
+        "checkedLabel": "Checked",
         "hideNames": "Hide names",
         "moreNames": "and {{count}} more",
         "nothingWritten": "Nothing written yet",
         "showNames": "Show names",
         "summary": "{{count}} identities checked at {{time}}. Nothing was changed.",
+        "summaryNoTime": "{{count}} identities checked. Nothing was changed.",
         "title": "What this sync would do"
       },
       "reconciliation": {

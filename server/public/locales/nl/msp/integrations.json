@@ -451,7 +451,9 @@
           },
           "unlinked": "{{client}} synchroniseert niet meer.",
           "unlinkFailed": "Die klant kon niet worden ontkoppeld.",
-          "hidePreview": "Voorbeeld verbergen"
+          "hidePreview": "Voorbeeld verbergen",
+          "previewLoading": "Directory van {{client}} wordt gelezen bij Microsoft…",
+          "previewLoadingHint": "Hoe lang dit duurt hangt af van het aantal gebruikers van de klant."
         },
         "connection": {
           "changeAction": "Verbinding wijzigen",
@@ -642,11 +644,14 @@
             "label": "Geen wijziging"
           }
         },
+        "checkAgain": "Opnieuw controleren",
+        "checkedLabel": "Gecontroleerd",
         "hideNames": "Namen verbergen",
         "moreNames": "en nog {{count}}",
         "nothingWritten": "Nog niets weggeschreven",
         "showNames": "Namen tonen",
         "summary": "{{count}} identiteiten gecontroleerd om {{time}}. Er is niets gewijzigd.",
+        "summaryNoTime": "{{count}} identiteiten gecontroleerd. Er is niets gewijzigd.",
         "title": "Wat deze synchronisatie zou doen"
       },
       "reconciliation": {

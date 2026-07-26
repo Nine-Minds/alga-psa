@@ -451,7 +451,9 @@
           },
           "unlinked": "{{client}} wird nicht mehr synchronisiert.",
           "unlinkFailed": "Dieser Kunde konnte nicht getrennt werden.",
-          "hidePreview": "Vorschau ausblenden"
+          "hidePreview": "Vorschau ausblenden",
+          "previewLoading": "Verzeichnis von {{client}} wird von Microsoft gelesen…",
+          "previewLoadingHint": "Die Dauer hängt davon ab, wie viele Benutzer der Client hat."
         },
         "connection": {
           "changeAction": "Verbindung ändern",
@@ -642,11 +644,14 @@
             "label": "Keine Änderung"
           }
         },
+        "checkAgain": "Erneut prüfen",
+        "checkedLabel": "Geprüft",
         "hideNames": "Namen ausblenden",
         "moreNames": "und {{count}} weitere",
         "nothingWritten": "Noch nichts geschrieben",
         "showNames": "Namen anzeigen",
         "summary": "{{count}} Identitäten um {{time}} geprüft. Es wurde nichts geändert.",
+        "summaryNoTime": "{{count}} Identitäten geprüft. Nichts wurde geändert.",
         "title": "Was diese Synchronisierung tun würde"
       },
       "reconciliation": {

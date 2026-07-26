@@ -451,7 +451,9 @@
           },
           "unlinked": "{{client}} ya no se sincroniza.",
           "unlinkFailed": "No se pudo desvincular ese cliente.",
-          "hidePreview": "Ocultar vista previa"
+          "hidePreview": "Ocultar vista previa",
+          "previewLoading": "Leyendo el directorio de {{client}} desde Microsoft…",
+          "previewLoadingHint": "El tiempo depende de cuántos usuarios tenga el cliente."
         },
         "connection": {
           "changeAction": "Cambiar conexión",
@@ -642,11 +644,14 @@
             "label": "Sin cambios"
           }
         },
+        "checkAgain": "Comprobar de nuevo",
+        "checkedLabel": "Comprobado",
         "hideNames": "Ocultar nombres",
         "moreNames": "y {{count}} más",
         "nothingWritten": "Todavía no se ha escrito nada",
         "showNames": "Mostrar nombres",
         "summary": "{{count}} identidades comprobadas a las {{time}}. No se cambió nada.",
+        "summaryNoTime": "{{count}} identidades comprobadas. No se cambió nada.",
         "title": "Qué haría esta sincronización"
       },
       "reconciliation": {

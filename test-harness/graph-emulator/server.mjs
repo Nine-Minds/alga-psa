@@ -17,6 +17,9 @@ const state = {
   messages: new Map(),
   subscriptions: new Map(),
   faults: new Map(),
+  // Vendor-agnostic transport latency, mirroring transport:latency in the
+  // packages/emulators suite this file is destined to be replaced by.
+  latencyMs: 0,
   accessTokenTtlSeconds: 3600,
   rotateRefreshTokens: true,
 };
@@ -117,7 +120,7 @@ async function handleControl(req, res, url) {
   if (req.method === 'POST' && url.pathname === '/__control/reset') {
     state.clients.clear(); state.codes.clear(); state.refreshTokens.clear();
     state.accessTokens.clear(); state.messages.clear(); state.subscriptions.clear(); state.faults.clear();
-    state.accessTokenTtlSeconds = 3600; state.rotateRefreshTokens = true;
+    state.accessTokenTtlSeconds = 3600; state.rotateRefreshTokens = true; state.latencyMs = 0;
     resetEntra();
     return json(res, 200, { ok: true });
   }
@@ -153,6 +156,11 @@ async function handleControl(req, res, url) {
     if (token) token.revoked = true;
     return json(res, 200, { ok: Boolean(token) });
   }
+  if (req.method === 'POST' && url.pathname === '/__control/latency') {
+    const input = await body(req);
+    state.latencyMs = Math.max(0, Number(input.ms || 0));
+    return json(res, 200, { ok: true, latencyMs: state.latencyMs });
+  }
   if (req.method === 'POST' && url.pathname === '/__control/faults') {
     const input = await body(req);
     state.faults.set(String(input.operation), {
@@ -177,6 +185,12 @@ async function handleControl(req, res, url) {
 async function handler(req, res) {
   const url = new URL(req.url, `http://${req.headers.host}`);
   if (url.pathname.startsWith('/__control/')) return handleControl(req, res, url);
+
+  // Delay the vendor surface only: the control plane has to stay reachable to
+  // turn the latency back off.
+  if (state.latencyMs > 0) {
+    await new Promise((resolve) => setTimeout(resolve, state.latencyMs));
+  }
 
   if (req.method === 'GET' && /\/oauth2\/v2\.0\/authorize$/.test(url.pathname)) {
     const clientId = url.searchParams.get('client_id');

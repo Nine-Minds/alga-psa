@@ -6,6 +6,7 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Progress } from '@alga-psa/ui/components/Progress';
 import { EntraSection } from './EntraSection';
+import { RelativeTime } from './RelativeTime';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type {
   EntraPreflightBucketId,
@@ -15,6 +16,9 @@ import type {
 
 interface ContactPreflightReportProps {
   report: EntraPreflightResponse;
+  /** Re-run the preflight. Omitted where the report is not the caller's to refresh. */
+  onRecheck?: () => void;
+  rechecking?: boolean;
 }
 
 /** Read order: what will be created first, then what needs a person. */
@@ -75,7 +79,11 @@ function identityLabel(identity: EntraPreflightIdentity): string {
  * identities behind the number, because "12 contacts will be created" is a
  * claim an operator has to be able to check against their own directory.
  */
-export function ContactPreflightReport({ report }: ContactPreflightReportProps): React.JSX.Element {
+export function ContactPreflightReport({
+  report,
+  onRecheck,
+  rechecking = false,
+}: ContactPreflightReportProps): React.JSX.Element {
   const { t } = useTranslation('msp/integrations');
   const [expanded, setExpanded] = React.useState<EntraPreflightBucketId | null>(null);
 
@@ -90,14 +98,39 @@ export function ContactPreflightReport({ report }: ContactPreflightReportProps):
       id="entra-preflight-report"
       icon={Eye}
       title={t('integrations.entra.preflight.title')}
-      description={t('integrations.entra.preflight.summary', {
-        count: report.totalIdentities,
-        time: new Date(report.checkedAt).toLocaleString(),
-      })}
+      description={
+        <span className="flex flex-wrap items-center gap-x-1.5">
+          {t('integrations.entra.preflight.summaryNoTime', { count: report.totalIdentities })}
+          {/* A preview is cached until this client syncs, so it can be much
+              older than the panel opening suggests. The age is the whole point
+              of showing it, which an absolute timestamp buried in the sentence
+              was not doing. */}
+          <span id="entra-preflight-age" className="inline-flex items-center gap-1">
+            {t('integrations.entra.preflight.checkedLabel')}
+            <RelativeTime value={report.checkedAt} fallback={null} />
+          </span>
+        </span>
+      }
       action={
-        <Badge variant="default-muted" id="entra-preflight-nothing-written">
-          {t('integrations.entra.preflight.nothingWritten')}
-        </Badge>
+        <div className="flex flex-shrink-0 items-center gap-2">
+          <Badge variant="default-muted" id="entra-preflight-nothing-written">
+            {t('integrations.entra.preflight.nothingWritten')}
+          </Badge>
+          {onRecheck ? (
+            <Button
+              id="entra-preflight-recheck"
+              type="button"
+              size="xs"
+              variant="outline"
+              onClick={onRecheck}
+              disabled={rechecking}
+            >
+              {rechecking
+                ? t('integrations.entra.pilot.actions.previewing')
+                : t('integrations.entra.preflight.checkAgain')}
+            </Button>
+          ) : null}
+        </div>
       }
     >
 

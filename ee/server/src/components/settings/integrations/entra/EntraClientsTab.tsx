@@ -5,6 +5,7 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { SearchInput } from '@alga-psa/ui/components/SearchInput';
 import { EmptyState } from '@alga-psa/ui/components/EmptyState';
+import { Loader2 } from 'lucide-react';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import type { ColumnDefinition } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -62,7 +63,15 @@ export function EntraClientsTab({
   const [search, setSearch] = React.useState('');
   const [filter, setFilter] = React.useState<EntraClientFilter>('all');
   const [expanded, setExpanded] = React.useState<string | null>(null);
-  const [busyRow, setBusyRow] = React.useState<string | null>(null);
+  /**
+   * Which row is working, and at what. Tracking only the row made every button
+   * in it show its own busy label, so a preview — which now takes visibly long
+   * — put "Starting…" on the Sync button and told the operator a sync had
+   * begun when none had.
+   */
+  const [busyRow, setBusyRow] = React.useState<{ id: string; action: 'preview' | 'sync' } | null>(
+    null
+  );
   const [previewByRow, setPreviewByRow] = React.useState<Record<string, EntraPreflightResponse>>({});
   const [unlinkTarget, setUnlinkTarget] = React.useState<EntraConfirmedMapping | null>(null);
   const [error, setError] = React.useState<string | null>(null);
@@ -81,11 +90,42 @@ export function EntraClientsTab({
       })
   );
 
+  /**
+   * Read the directory and classify it. This is a live call to Microsoft — the
+   * same read a real sync makes, minus the writes — so it costs whatever the
+   * client's user count costs, and the row says so while it runs.
+   */
+  const runPreview = React.useCallback(async (mapping: EntraConfirmedMapping) => {
+    setBusyRow({ id: mapping.managedTenantId, action: 'preview' });
+    // Expand first, so the spinner appears where the report will.
+    setExpanded(mapping.managedTenantId);
+    setError(null);
+    setMessage(null);
+    try {
+      const result = await runEntraPreflight({ managedTenantId: mapping.managedTenantId });
+      if ('error' in result) {
+        setError(result.error || t('integrations.entra.pilot.errors.preflightFailed'));
+        // Nothing to show, so do not leave an empty panel hanging open.
+        setExpanded((current) =>
+          current === mapping.managedTenantId && !previewByRow[mapping.managedTenantId]
+            ? null
+            : current
+        );
+        return;
+      }
+      if (result.data) {
+        setPreviewByRow((current) => ({ ...current, [mapping.managedTenantId]: result.data! }));
+      }
+    } finally {
+      setBusyRow(null);
+    }
+  }, [previewByRow, t]);
+
   const handlePreview = React.useCallback(async (mapping: EntraConfirmedMapping) => {
     // Preview was write-only: the cache it filled was never read, so a second
     // click re-ran a Graph round trip and inserted another preflight row into
     // run history, and the expanded panel had no way to close. It toggles now,
-    // and a re-run is an explicit action inside the panel.
+    // and the panel carries "Check again" for a deliberate re-run.
     if (expanded === mapping.managedTenantId) {
       setExpanded(null);
       return;
@@ -94,27 +134,11 @@ export function EntraClientsTab({
       setExpanded(mapping.managedTenantId);
       return;
     }
-
-    setBusyRow(mapping.managedTenantId);
-    setError(null);
-    setMessage(null);
-    try {
-      const result = await runEntraPreflight({ managedTenantId: mapping.managedTenantId });
-      if ('error' in result) {
-        setError(result.error || t('integrations.entra.pilot.errors.preflightFailed'));
-        return;
-      }
-      if (result.data) {
-        setPreviewByRow((current) => ({ ...current, [mapping.managedTenantId]: result.data! }));
-        setExpanded(mapping.managedTenantId);
-      }
-    } finally {
-      setBusyRow(null);
-    }
-  }, [expanded, previewByRow, t]);
+    await runPreview(mapping);
+  }, [expanded, previewByRow, runPreview]);
 
   const handleSync = React.useCallback(async (mapping: EntraConfirmedMapping) => {
-    setBusyRow(mapping.managedTenantId);
+    setBusyRow({ id: mapping.managedTenantId, action: 'sync' });
     setError(null);
     setMessage(null);
     try {
@@ -147,7 +171,9 @@ export function EntraClientsTab({
 
   const handleUnlink = React.useCallback(async () => {
     if (!unlinkTarget) return;
-    setBusyRow(unlinkTarget.managedTenantId);
+    // Unlink runs from the dialog, which has its own confirming state; the row
+    // only needs to stop accepting clicks.
+    setBusyRow({ id: unlinkTarget.managedTenantId, action: 'sync' });
     setError(null);
     setMessage(null);
     try {
@@ -231,7 +257,11 @@ export function EntraClientsTab({
       headerClassName: 'sr-only',
       render: (_value, mapping) => {
         const isExpanded = expanded === mapping.managedTenantId;
-        const busy = busyRow === mapping.managedTenantId;
+        // Every control in a working row is disabled — you cannot sync a client
+        // mid-preview — but only the one actually running says so.
+        const busy = busyRow?.id === mapping.managedTenantId;
+        const previewing = busy && busyRow?.action === 'preview';
+        const syncing = busy && busyRow?.action === 'sync';
         return (
           <div className="flex flex-nowrap justify-end gap-1 whitespace-nowrap">
             {/* Preview is the encouraged move — it writes nothing — so it
@@ -245,7 +275,7 @@ export function EntraClientsTab({
               onClick={() => void handlePreview(mapping)}
               disabled={busy}
             >
-              {busy
+              {previewing
                 ? t('integrations.entra.pilot.actions.previewing')
                 : isExpanded
                   ? t('integrations.entra.console.clients.hidePreview')
@@ -259,7 +289,7 @@ export function EntraClientsTab({
               onClick={() => void handleSync(mapping)}
               disabled={busy}
             >
-              {busy
+              {syncing
                 ? t('integrations.entra.pilot.actions.syncingOne')
                 : t('integrations.entra.console.clients.sync')}
             </Button>
@@ -379,11 +409,47 @@ export function EntraClientsTab({
           columns={columns}
           pagination={visible.length > CLIENTS_PAGE_SIZE}
           pageSize={CLIENTS_PAGE_SIZE}
-          expandedRowRender={(mapping) =>
-            expanded === mapping.managedTenantId && previewByRow[mapping.managedTenantId] ? (
-              <ContactPreflightReport report={previewByRow[mapping.managedTenantId]} />
-            ) : null
-          }
+          expandedRowRender={(mapping) => {
+            if (expanded !== mapping.managedTenantId) return null;
+            const preview = previewByRow[mapping.managedTenantId];
+            const busy = busyRow?.id === mapping.managedTenantId && busyRow.action === 'preview';
+
+            // A first read has nothing to show yet; a re-check keeps the old
+            // report on screen and marks the button busy, so the panel does
+            // not blank out under the operator.
+            if (busy && !preview) {
+              return (
+                <div
+                  className="flex items-start gap-3"
+                  id={`entra-client-preview-loading-${mapping.managedTenantId}`}
+                  aria-busy="true"
+                >
+                  <Loader2
+                    className="mt-0.5 h-4 w-4 flex-shrink-0 animate-spin text-[rgb(var(--color-primary-500))]"
+                    aria-hidden="true"
+                  />
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium">
+                      {t('integrations.entra.console.clients.previewLoading', {
+                        client: clientLabel(mapping),
+                      })}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {t('integrations.entra.console.clients.previewLoadingHint')}
+                    </p>
+                  </div>
+                </div>
+              );
+            }
+
+            return preview ? (
+              <ContactPreflightReport
+                report={preview}
+                onRecheck={() => void runPreview(mapping)}
+                rechecking={busy}
+              />
+            ) : null;
+          }}
         />
       )}
 
@@ -392,7 +458,7 @@ export function EntraClientsTab({
         isOpen={unlinkTarget !== null}
         onClose={() => setUnlinkTarget(null)}
         onConfirm={() => handleUnlink()}
-        isConfirming={Boolean(unlinkTarget && busyRow === unlinkTarget.managedTenantId)}
+        isConfirming={Boolean(unlinkTarget && busyRow?.id === unlinkTarget.managedTenantId)}
         title={t('integrations.entra.console.clients.unlinkConfirm.title', {
           client: unlinkTarget ? clientLabel(unlinkTarget) : '',
         })}

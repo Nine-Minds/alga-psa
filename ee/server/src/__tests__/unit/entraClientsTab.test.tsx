@@ -176,6 +176,89 @@ describe('EntraClientsTab', () => {
     expect(runEntraPreflightMock).toHaveBeenCalledTimes(1);
   });
 
+  it('says what it is doing while it reads the directory', async () => {
+    let release: ((value: unknown) => void) | null = null;
+    runEntraPreflightMock.mockImplementation(
+      () => new Promise((resolve) => {
+        release = resolve;
+      })
+    );
+
+    renderTab([client()]);
+    fireEvent.click(document.getElementById('entra-client-preview-managed-1') as HTMLButtonElement);
+
+    // The row used to sit there with nothing but a changed button label while a
+    // live call to Microsoft ran for as long as the client's user count took.
+    const loading = document.getElementById('entra-client-preview-loading-managed-1');
+    expect(loading).not.toBeNull();
+    expect(loading?.textContent).toContain('Contoso');
+    expect(loading?.getAttribute('aria-busy')).toBe('true');
+
+    release?.({
+      success: true,
+      data: {
+        runId: 'preflight-1',
+        managedTenantId: 'managed-1',
+        clientId: 'client-1',
+        checkedAt: '2026-07-25T12:00:00.000Z',
+        totalIdentities: 1,
+        counters: { created: 1, linked: 0, updated: 0, ambiguous: 0, inactivated: 0 },
+        buckets: [{ bucket: 'create', count: 1, samples: [] }],
+      },
+    });
+
+    await waitFor(() =>
+      expect(document.getElementById('entra-preflight-report')).not.toBeNull()
+    );
+    expect(document.getElementById('entra-client-preview-loading-managed-1')).toBeNull();
+  });
+
+  it('offers a re-check, and says how old the report it is showing is', async () => {
+    const preflight = (checkedAt: string) => ({
+      success: true,
+      data: {
+        runId: 'preflight-1',
+        managedTenantId: 'managed-1',
+        clientId: 'client-1',
+        checkedAt,
+        totalIdentities: 1,
+        counters: { created: 1, linked: 0, updated: 0, ambiguous: 0, inactivated: 0 },
+        buckets: [{ bucket: 'create', count: 1, samples: [] }],
+      },
+    });
+    runEntraPreflightMock.mockResolvedValue(preflight('2026-07-25T12:00:00.000Z'));
+
+    renderTab([client()]);
+    fireEvent.click(document.getElementById('entra-client-preview-managed-1') as HTMLButtonElement);
+    await waitFor(() => expect(document.getElementById('entra-preflight-report')).not.toBeNull());
+
+    // The preview is cached until this client syncs, so it can be far older
+    // than opening the panel suggests. The age is on screen, and there is a way
+    // to get a fresh one without syncing.
+    expect(document.getElementById('entra-preflight-age')).not.toBeNull();
+
+    expect(runEntraPreflightMock).toHaveBeenCalledTimes(1);
+    fireEvent.click(document.getElementById('entra-preflight-recheck') as HTMLButtonElement);
+    await waitFor(() => expect(runEntraPreflightMock).toHaveBeenCalledTimes(2));
+  });
+
+  it('surfaces a timeout as itself rather than as a generic failure', async () => {
+    runEntraPreflightMock.mockResolvedValue({
+      success: false,
+      error: 'CIPP did not answer within 20 seconds. It may still be gathering the directory — try again in a moment.',
+    });
+
+    renderTab([client()]);
+    fireEvent.click(document.getElementById('entra-client-preview-managed-1') as HTMLButtonElement);
+
+    await waitFor(() =>
+      expect(document.getElementById('entra-clients-error')?.textContent).toContain('20 seconds')
+    );
+    // No half-open panel left behind with nothing in it.
+    expect(document.getElementById('entra-preflight-report')).toBeNull();
+    expect(document.getElementById('entra-client-preview-loading-managed-1')).toBeNull();
+  });
+
   it('says so when unlinking is refused, instead of closing on a failure', async () => {
     unmapEntraTenantMock.mockResolvedValue({
       success: false,

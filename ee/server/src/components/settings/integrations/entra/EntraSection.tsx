@@ -37,7 +37,7 @@ interface EntraSectionProps {
   icon: LucideIcon;
   title: string;
   /** One line under the title, when the title alone does not say what the section is for. */
-  description?: string;
+  description?: React.ReactNode;
   /** Controls that act on the section as a whole, aligned to the title. */
   action?: React.ReactNode;
   tone?: EntraSectionTone;
