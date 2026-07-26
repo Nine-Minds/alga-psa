@@ -1,0 +1,36 @@
+{
+  "name": "@alga-psa/emulator-suite",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./src/index.ts",
+  "bin": {
+    "algasim-suite": "./dist/cli.js"
+  },
+  "exports": {
+    ".": {
+      "types": "./src/index.ts",
+      "import": "./dist/index.js",
+      "require": "./dist/index.cjs"
+    }
+  },
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "start": "node dist/cli.js"
+  },
+  "dependencies": {
+    "@alga-psa/emulator-host": "*",
+    "@alga-psa/emulator-msgraph": "*",
+    "@alga-psa/emulator-qbo": "*",
+    "@alga-psa/emulator-smtp-sink": "*",
+    "@alga-psa/emulator-webhook-sink": "*"
+  },
+  "devDependencies": {
+    "tsup": "^8.0.0",
+    "typescript": "^5.7.3",
+    "vitest": "^4.1.9"
+  }
+}
