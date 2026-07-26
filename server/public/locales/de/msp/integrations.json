@@ -705,12 +705,12 @@
             "generic": "Microsoft Entra wurde nicht verbunden, und es wurde nichts gespeichert. Bitte versuchen Sie es erneut.",
             "validationFailed": "Microsoft hat Sie angemeldet, aber Ihre verwaltete Mandantenliste konnte nicht gelesen werden, daher wurde nichts gespeichert. Prüfen Sie die Berechtigungen der Verbindung und versuchen Sie es erneut."
           },
-          "cippServerLabel": "CIPP-Server:",
+          "cippServerLabel": "CIPP-Server",
           "connectingSuffix": " (Verbindung wird hergestellt...)",
           "details": "Verbindungsdetails",
           "directCredentialSourceLabel": "Anmeldedatenquelle:",
           "directTenantDefault": "common (multi-tenant)",
-          "directTenantLabel": "Microsoft Tenant:",
+          "directTenantLabel": "Microsoft-Mandant",
           "notAvailable": "Nicht verfügbar",
           "notConfigured": "Nicht konfiguriert",
           "optionsTitle": "Verbindungsoptionen",
@@ -871,7 +871,7 @@
         "validation": {
           "label": "Validierung & Discovery",
           "lastDiscoveryLabel": "Letzte Discovery:",
-          "lastValidatedLabel": "Zuletzt validiert:",
+          "lastValidatedLabel": "Zuletzt geprüft",
           "neverFormatted": "Nie",
           "noneValidationError": "Keiner",
           "validationErrorLabel": "Validierungsfehler:"

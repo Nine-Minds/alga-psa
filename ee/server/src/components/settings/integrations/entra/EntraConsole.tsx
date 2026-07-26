@@ -126,8 +126,12 @@ function Stat({
   return (
     <div id={id} className="min-w-[6rem]">
       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+      {/* text-lg, not text-2xl: the stat row was the only 24px type in the
+          whole Entra feature, which made "0 new contacts" louder than the page
+          title above it and far louder than "Needs attention", the one thing
+          this screen exists to surface. Nothing in a panel outruns the h1. */}
       <p
-        className={`mt-0.5 text-2xl font-semibold tabular-nums ${
+        className={`mt-1 text-lg font-semibold tabular-nums ${
           tone === 'danger' ? 'text-destructive' : ''
         }`}
         data-stat-value={typeof value === 'number' ? value : undefined}
@@ -152,7 +156,15 @@ function KeyValue({
   return (
     <div className="flex items-baseline justify-between gap-3 py-1 text-sm">
       <span className="flex-shrink-0 text-muted-foreground">{label}</span>
-      <span className={`min-w-0 truncate text-right ${tone === 'danger' ? 'text-destructive' : ''}`}>
+      {/* `truncate` clips the tail whatever the alignment, and the tail of a
+          CIPP URL is the part that says which server it is — so the full value
+          goes on the title, where it stays recoverable. Right-anchored is
+          deliberate: these rows are a two-column rail, and a clean right edge
+          is what makes them scan as a column at all. */}
+      <span
+        className={`min-w-0 truncate text-right ${tone === 'danger' ? 'text-destructive' : ''}`}
+        title={typeof value === 'string' ? value : undefined}
+      >
         {value}
       </span>
     </div>
@@ -170,7 +182,11 @@ function RailCard({
 }): React.JSX.Element {
   return (
     <div className="rounded-lg border border-border/70 bg-background p-4" id={id}>
-      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{title}</p>
+      {/* Card titles are sentence-case semibold across this panel. These used
+          the uppercase micro-label class, which everywhere else in the feature
+          marks a *sub*-label — so "AUTOMATIC SYNC", a card, read quieter than
+          "LINKED", a label nested two levels inside its sibling. */}
+      <p className="text-sm font-semibold">{title}</p>
       <div className="mt-2">{children}</div>
     </div>
   );
@@ -792,7 +808,7 @@ export function EntraConsole({
                         this table was the last one left at the framework's
                         sentence-case 14px default. */}
                     <TableHeader>
-                      <TableRow className="[&>th]:h-9 [&>th]:text-xs [&>th]:uppercase [&>th]:tracking-wide">
+                      <TableRow className="[&>th]:h-9 [&>th]:whitespace-nowrap [&>th]:text-xs [&>th]:uppercase [&>th]:tracking-wide">
                         <TableHead>{t('integrations.entra.console.lastRun.columns.client')}</TableHead>
                         <TableHead>{t('integrations.entra.console.lastRun.columns.result')}</TableHead>
                         <TableHead className="text-right">
@@ -828,7 +844,11 @@ export function EntraConsole({
                             ) : null}
                           </TableCell>
                           <TableCell>
-                            <Badge variant={RUN_RESULT_BADGE_VARIANTS[outcome]} size="sm">
+                            <Badge
+                              variant={RUN_RESULT_BADGE_VARIANTS[outcome]}
+                              size="sm"
+                              className="whitespace-nowrap"
+                            >
                               {outcome === 'review'
                                 ? t('integrations.entra.console.lastRun.results.toReview', {
                                     count: result.ambiguous,

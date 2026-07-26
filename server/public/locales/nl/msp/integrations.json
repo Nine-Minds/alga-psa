@@ -705,12 +705,12 @@
             "generic": "Microsoft Entra is niet verbonden en er is niets opgeslagen. Probeer het opnieuw.",
             "validationFailed": "Microsoft heeft u aangemeld, maar uw lijst met beheerde tenants kon niet worden gelezen, dus er is niets opgeslagen. Controleer de machtigingen van de verbinding en probeer het opnieuw."
           },
-          "cippServerLabel": "CIPP-server:",
+          "cippServerLabel": "CIPP-server",
           "connectingSuffix": " (Verbinden...)",
-          "details": "Verbindingsdetails",
+          "details": "Verbindingsgegevens",
           "directCredentialSourceLabel": "Bron van inloggegevens:",
           "directTenantDefault": "common (multi-tenant)",
-          "directTenantLabel": "Microsoft-tenant:",
+          "directTenantLabel": "Microsoft-tenant",
           "notAvailable": "Niet beschikbaar",
           "notConfigured": "Niet geconfigureerd",
           "optionsTitle": "Verbindingsopties",
@@ -871,7 +871,7 @@
         "validation": {
           "label": "Validatie en ontdekking",
           "lastDiscoveryLabel": "Laatste ontdekking:",
-          "lastValidatedLabel": "Laatst gevalideerd:",
+          "lastValidatedLabel": "Laatst gecontroleerd",
           "neverFormatted": "Nooit",
           "noneValidationError": "Geen",
           "validationErrorLabel": "Validatiefout:"

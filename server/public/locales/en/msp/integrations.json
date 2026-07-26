@@ -705,12 +705,12 @@
             "generic": "Microsoft Entra was not connected, and nothing was saved. Please try again.",
             "validationFailed": "Microsoft signed you in, but we could not read your managed tenant list, so nothing was saved. Check the connection's permissions and try again."
           },
-          "cippServerLabel": "CIPP Server:",
+          "cippServerLabel": "CIPP server",
           "connectingSuffix": " (Connecting...)",
-          "details": "Connection Details",
+          "details": "Connection details",
           "directCredentialSourceLabel": "Credential Source:",
           "directTenantDefault": "common (multi-tenant)",
-          "directTenantLabel": "Microsoft Tenant:",
+          "directTenantLabel": "Microsoft tenant",
           "notAvailable": "Not available",
           "notConfigured": "Not configured",
           "optionsTitle": "Connection Options",
@@ -871,7 +871,7 @@
         "validation": {
           "label": "Validation & Discovery",
           "lastDiscoveryLabel": "Last Discovery:",
-          "lastValidatedLabel": "Last Validated:",
+          "lastValidatedLabel": "Last checked",
           "neverFormatted": "Never",
           "noneValidationError": "None",
           "validationErrorLabel": "Validation Error:"

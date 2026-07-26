@@ -705,12 +705,12 @@
             "generic": "Microsoft Entra no se conectó y no se guardó nada. Inténtelo de nuevo.",
             "validationFailed": "Microsoft inició su sesión, pero no se pudo leer su lista de inquilinos gestionados, por lo que no se guardó nada. Revise los permisos de la conexión e inténtelo de nuevo."
           },
-          "cippServerLabel": "Servidor CIPP:",
+          "cippServerLabel": "Servidor CIPP",
           "connectingSuffix": " (Conectando...)",
           "details": "Detalles de conexión",
           "directCredentialSourceLabel": "Origen de credenciales:",
           "directTenantDefault": "common (multi-tenant)",
-          "directTenantLabel": "Microsoft Tenant:",
+          "directTenantLabel": "Inquilino de Microsoft",
           "notAvailable": "No disponible",
           "notConfigured": "No configurado",
           "optionsTitle": "Opciones de conexión",
@@ -871,7 +871,7 @@
         "validation": {
           "label": "Validación y descubrimiento",
           "lastDiscoveryLabel": "Último descubrimiento:",
-          "lastValidatedLabel": "Última validación:",
+          "lastValidatedLabel": "Última comprobación",
           "neverFormatted": "Nunca",
           "noneValidationError": "Ninguno",
           "validationErrorLabel": "Error de validación:"

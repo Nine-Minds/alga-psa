@@ -705,12 +705,12 @@
             "generic": "Microsoft Entra n'a pas été connecté et rien n'a été enregistré. Veuillez réessayer.",
             "validationFailed": "Microsoft vous a connecté, mais votre liste de locataires gérés n'a pas pu être lue, donc rien n'a été enregistré. Vérifiez les autorisations de la connexion et réessayez."
           },
-          "cippServerLabel": "Serveur CIPP :",
+          "cippServerLabel": "Serveur CIPP",
           "connectingSuffix": " (Connexion...)",
           "details": "Détails de la connexion",
           "directCredentialSourceLabel": "Source des identifiants :",
           "directTenantDefault": "common (multi-tenant)",
-          "directTenantLabel": "Tenant Microsoft :",
+          "directTenantLabel": "Locataire Microsoft",
           "notAvailable": "Non disponible",
           "notConfigured": "Non configuré",
           "optionsTitle": "Options de connexion",
@@ -871,7 +871,7 @@
         "validation": {
           "label": "Validation et découverte",
           "lastDiscoveryLabel": "Dernière découverte :",
-          "lastValidatedLabel": "Dernière validation :",
+          "lastValidatedLabel": "Dernière vérification",
           "neverFormatted": "Jamais",
           "noneValidationError": "Aucune",
           "validationErrorLabel": "Erreur de validation :"

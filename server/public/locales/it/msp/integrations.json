@@ -705,12 +705,12 @@
             "generic": "Microsoft Entra non è stato connesso e non è stato salvato nulla. Riprova.",
             "validationFailed": "Microsoft ti ha autenticato, ma non è stato possibile leggere l'elenco dei tenant gestiti, quindi non è stato salvato nulla. Controlla le autorizzazioni della connessione e riprova."
           },
-          "cippServerLabel": "Server CIPP:",
+          "cippServerLabel": "Server CIPP",
           "connectingSuffix": " (Connessione...)",
-          "details": "Dettagli connessione",
+          "details": "Dettagli della connessione",
           "directCredentialSourceLabel": "Fonte credenziali:",
           "directTenantDefault": "common (multi-tenant)",
-          "directTenantLabel": "Tenant Microsoft:",
+          "directTenantLabel": "Tenant Microsoft",
           "notAvailable": "Non disponibile",
           "notConfigured": "Non configurato",
           "optionsTitle": "Opzioni di connessione",
@@ -871,7 +871,7 @@
         "validation": {
           "label": "Validazione e discovery",
           "lastDiscoveryLabel": "Ultima discovery:",
-          "lastValidatedLabel": "Ultima validazione:",
+          "lastValidatedLabel": "Ultimo controllo",
           "neverFormatted": "Mai",
           "noneValidationError": "Nessuno",
           "validationErrorLabel": "Errore di validazione:"

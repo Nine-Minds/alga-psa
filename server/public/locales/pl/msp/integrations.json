@@ -705,12 +705,12 @@
             "generic": "Nie połączono z Microsoft Entra i nic nie zostało zapisane. Spróbuj ponownie.",
             "validationFailed": "Microsoft zalogował Cię, ale nie udało się odczytać listy zarządzanych dzierżaw, więc nic nie zostało zapisane. Sprawdź uprawnienia połączenia i spróbuj ponownie."
           },
-          "cippServerLabel": "Serwer CIPP:",
+          "cippServerLabel": "Serwer CIPP",
           "connectingSuffix": " (Łączenie...)",
           "details": "Szczegóły połączenia",
           "directCredentialSourceLabel": "Źródło poświadczeń:",
           "directTenantDefault": "common (multi-tenant)",
-          "directTenantLabel": "Tenant Microsoft:",
+          "directTenantLabel": "Dzierżawca Microsoft",
           "notAvailable": "Niedostępne",
           "notConfigured": "Nie skonfigurowano",
           "optionsTitle": "Opcje połączenia",
@@ -871,7 +871,7 @@
         "validation": {
           "label": "Walidacja i wykrywanie",
           "lastDiscoveryLabel": "Ostatnie wykrywanie:",
-          "lastValidatedLabel": "Ostatnio zwalidowano:",
+          "lastValidatedLabel": "Ostatnio sprawdzone",
           "neverFormatted": "Nigdy",
           "noneValidationError": "Brak",
           "validationErrorLabel": "Błąd walidacji:"
