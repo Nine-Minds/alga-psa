@@ -1,3 +1,4 @@
+import type { BadgeVariant } from '@alga-psa/ui/components/Badge';
 import type { EntraConfirmedMapping } from '@alga-psa/integrations/actions';
 
 // LEVERAGE: pattern entra-status-presentation — the console overview and the
@@ -33,7 +34,9 @@ export const ENTRA_CLIENT_HEALTH_LABEL_KEYS: Record<EntraClientHealth, string> =
   synced: 'integrations.entra.console.clients.status.synced',
 };
 
-export const ENTRA_CLIENT_HEALTH_BADGE_VARIANTS: Record<EntraClientHealth, string> = {
+// Typed as the kit's own union rather than `string`, which forced an `as never`
+// at the one place that used it.
+export const ENTRA_CLIENT_HEALTH_BADGE_VARIANTS: Record<EntraClientHealth, BadgeVariant> = {
   never: 'outline',
   running: 'default-muted',
   failed: 'error',
