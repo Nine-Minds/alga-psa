@@ -411,12 +411,12 @@
           "scheduleNotAppliedDetail": "Bis dahin läuft nichts von selbst. Speichern Sie den Zeitplan erneut.",
           "scheduleOff": "Die automatische Synchronisierung ist aus.",
           "scheduleOffDetail": "Kontakte ändern sich nur, wenn jemand die Synchronisierung von Hand startet.",
-          "title": "Erfordert Aufmerksamkeit",
           "severity": {
             "blocking": "Blockierend",
             "info": "Zur Information",
             "warning": "Warnung"
-          }
+          },
+          "title": "Erfordert Aufmerksamkeit"
         },
         "clients": {
           "columns": {
@@ -512,6 +512,7 @@
           },
           "empty": "Es wurde noch keine Synchronisierung ausgeführt.",
           "fullHistory": "Vollständiger Verlauf",
+          "progress": "Bisher {{processed}} von {{total}} Clients erledigt.",
           "results": {
             "done": "Fertig",
             "failed": "Fehlgeschlagen",
@@ -519,6 +520,7 @@
             "running": "Synchronisiert gerade",
             "toReview": "{{count}} zu prüfen"
           },
+          "showAll": "Alle {{count}} Clients dieses Laufs ansehen",
           "stats": {
             "created": "Erstellt",
             "createdSub": "neue Kontakte",
@@ -531,8 +533,6 @@
             "updated": "Geändert",
             "updatedSub": "wo Sie es erlaubt haben"
           },
-          "title": "Letzte Synchronisierung",
-          "unavailable": "Der Ausführungsverlauf konnte nicht gelesen werden.",
           "summaries": {
             "completed": "Abgeschlossen {{time}}.",
             "failed": "Fehlgeschlagen {{time}}.",
@@ -540,8 +540,8 @@
             "running": "Gestartet {{time}} und läuft noch.",
             "unknown": "Letzter Lauf {{time}}."
           },
-          "progress": "Bisher {{processed}} von {{total}} Clients erledigt.",
-          "showAll": "Alle {{count}} Clients dieses Laufs ansehen"
+          "title": "Letzte Synchronisierung",
+          "unavailable": "Der Ausführungsverlauf konnte nicht gelesen werden."
         },
         "lead": "{{clients}} Kunden zugeordnet · verbunden über {{method}}",
         "overwrites": {
@@ -552,6 +552,14 @@
           "title": "Erlaubte Überschreibungen"
         },
         "schedule": {
+          "cadence": {
+            "10080": "wöchentlich",
+            "1440": "täglich",
+            "240": "alle 4 Stunden",
+            "60": "stündlich",
+            "720": "alle 12 Stunden"
+          },
+          "changeAction": "Zeitplan ändern",
           "description": "Wenn aktiviert, synchronisiert Alga jeden zugeordneten Client in dieser Taktung. Beim Ausschalten entfallen geplante Läufe; manuell können Sie weiterhin synchronisieren.",
           "enablePrompt": "Der Pilot war erfolgreich. Aktivieren Sie die automatische Synchronisierung, damit Kontakte ohne manuelle Läufe aktuell bleiben.",
           "intervalLabel": "Ausführen alle",
@@ -571,15 +579,7 @@
           "saved": "Zeitplan gespeichert.",
           "savedPending": "Einstellung gespeichert. Der Zeitplan wird beim nächsten Abgleich des Workers aktualisiert.",
           "saving": "Wird gespeichert…",
-          "title": "Automatische Synchronisierung",
-          "cadence": {
-            "10080": "wöchentlich",
-            "1440": "täglich",
-            "240": "alle 4 Stunden",
-            "60": "stündlich",
-            "720": "alle 12 Stunden"
-          },
-          "changeAction": "Zeitplan ändern"
+          "title": "Automatische Synchronisierung"
         },
         "sideRail": {
           "runs": "Läuft {{cadence}}",

@@ -411,12 +411,12 @@
           "scheduleNotAppliedDetail": "Tot die tijd draait er niets vanzelf. Sla het schema opnieuw op om het te herhalen.",
           "scheduleOff": "Automatische synchronisatie staat uit.",
           "scheduleOffDetail": "Contacten veranderen alleen als iemand handmatig een synchronisatie start.",
-          "title": "Vraagt aandacht",
           "severity": {
             "blocking": "Blokkerend",
             "info": "Ter informatie",
             "warning": "Waarschuwing"
-          }
+          },
+          "title": "Vraagt aandacht"
         },
         "clients": {
           "columns": {
@@ -512,6 +512,7 @@
           },
           "empty": "Er is nog geen synchronisatie uitgevoerd.",
           "fullHistory": "Volledige geschiedenis",
+          "progress": "{{processed}} van {{total}} klanten tot nu toe klaar.",
           "results": {
             "done": "Klaar",
             "failed": "Mislukt",
@@ -519,6 +520,7 @@
             "running": "Bezig met synchroniseren",
             "toReview": "{{count}} te beoordelen"
           },
+          "showAll": "Bekijk alle {{count}} klanten in deze uitvoering",
           "stats": {
             "created": "Aangemaakt",
             "createdSub": "nieuwe contacten",
@@ -531,8 +533,6 @@
             "updated": "Gewijzigd",
             "updatedSub": "waar u dat toestond"
           },
-          "title": "Laatste synchronisatie",
-          "unavailable": "De uitvoeringsgeschiedenis kon niet worden gelezen.",
           "summaries": {
             "completed": "Voltooid {{time}}.",
             "failed": "Mislukt {{time}}.",
@@ -540,8 +540,8 @@
             "running": "Gestart {{time}} en nog bezig.",
             "unknown": "Laatste uitvoering {{time}}."
           },
-          "progress": "{{processed}} van {{total}} klanten tot nu toe klaar.",
-          "showAll": "Bekijk alle {{count}} klanten in deze uitvoering"
+          "title": "Laatste synchronisatie",
+          "unavailable": "De uitvoeringsgeschiedenis kon niet worden gelezen."
         },
         "lead": "{{clients}} klanten gekoppeld · verbonden via {{method}}",
         "overwrites": {
@@ -552,6 +552,14 @@
           "title": "Toegestane overschrijvingen"
         },
         "schedule": {
+          "cadence": {
+            "10080": "elke week",
+            "1440": "elke dag",
+            "240": "elke 4 uur",
+            "60": "elk uur",
+            "720": "elke 12 uur"
+          },
+          "changeAction": "Schema wijzigen",
           "description": "Wanneer aan, synchroniseert Alga elke gekoppelde klant met dit ritme. Uitzetten stopt geplande runs; handmatig synchroniseren blijft mogelijk.",
           "enablePrompt": "De pilot is geslaagd. Zet automatische synchronisatie aan om contacten bij te houden zonder handmatige runs.",
           "intervalLabel": "Uitvoeren elke",
@@ -571,15 +579,7 @@
           "saved": "Planning opgeslagen.",
           "savedPending": "Instelling opgeslagen. De planning wordt bijgewerkt bij de volgende reconciliatie door de worker.",
           "saving": "Opslaan…",
-          "title": "Automatische synchronisatie",
-          "cadence": {
-            "10080": "elke week",
-            "1440": "elke dag",
-            "240": "elke 4 uur",
-            "60": "elk uur",
-            "720": "elke 12 uur"
-          },
-          "changeAction": "Schema wijzigen"
+          "title": "Automatische synchronisatie"
         },
         "sideRail": {
           "runs": "Draait {{cadence}}",

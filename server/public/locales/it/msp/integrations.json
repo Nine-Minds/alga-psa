@@ -411,12 +411,12 @@
           "scheduleNotAppliedDetail": "Fino ad allora non verrà eseguito nulla da solo. Salva di nuovo la pianificazione per riprovare.",
           "scheduleOff": "La sincronizzazione automatica è disattivata.",
           "scheduleOffDetail": "I contatti cambiano solo quando qualcuno avvia una sincronizzazione a mano.",
-          "title": "Richiede attenzione",
           "severity": {
             "blocking": "Bloccante",
             "info": "Per informazione",
             "warning": "Avviso"
-          }
+          },
+          "title": "Richiede attenzione"
         },
         "clients": {
           "columns": {
@@ -512,6 +512,7 @@
           },
           "empty": "Nessuna sincronizzazione è ancora stata eseguita.",
           "fullHistory": "Cronologia completa",
+          "progress": "{{processed}} di {{total}} clienti completati finora.",
           "results": {
             "done": "Fatto",
             "failed": "Fallito",
@@ -519,6 +520,7 @@
             "running": "Sincronizzazione",
             "toReview": "{{count}} da rivedere"
           },
+          "showAll": "Vedi tutti i {{count}} clienti di questa esecuzione",
           "stats": {
             "created": "Creati",
             "createdSub": "nuovi contatti",
@@ -531,8 +533,6 @@
             "updated": "Modificati",
             "updatedSub": "dove l'hai consentito"
           },
-          "title": "Ultima sincronizzazione",
-          "unavailable": "Non è stato possibile leggere la cronologia delle esecuzioni.",
           "summaries": {
             "completed": "Completato {{time}}.",
             "failed": "Fallito {{time}}.",
@@ -540,8 +540,8 @@
             "running": "Iniziato {{time}} e ancora in corso.",
             "unknown": "Ultima esecuzione {{time}}."
           },
-          "progress": "{{processed}} di {{total}} clienti completati finora.",
-          "showAll": "Vedi tutti i {{count}} clienti di questa esecuzione"
+          "title": "Ultima sincronizzazione",
+          "unavailable": "Non è stato possibile leggere la cronologia delle esecuzioni."
         },
         "lead": "{{clients}} clienti abbinati · connesso tramite {{method}}",
         "overwrites": {
@@ -552,6 +552,14 @@
           "title": "Sovrascritture consentite"
         },
         "schedule": {
+          "cadence": {
+            "10080": "ogni settimana",
+            "1440": "ogni giorno",
+            "240": "ogni 4 ore",
+            "60": "ogni ora",
+            "720": "ogni 12 ore"
+          },
+          "changeAction": "Modifica pianificazione",
           "description": "Se attiva, Alga sincronizza ogni client associato con questa cadenza. Disattivandola si fermano le esecuzioni pianificate; puoi comunque sincronizzare manualmente.",
           "enablePrompt": "Il pilota è riuscito. Attiva la sincronizzazione automatica per mantenere allineati i contatti senza eseguirla a mano.",
           "intervalLabel": "Esegui ogni",
@@ -571,15 +579,7 @@
           "saved": "Pianificazione salvata.",
           "savedPending": "Impostazione salvata. La pianificazione si aggiornerà alla prossima riconciliazione del worker.",
           "saving": "Salvataggio…",
-          "title": "Sincronizzazione automatica",
-          "cadence": {
-            "10080": "ogni settimana",
-            "1440": "ogni giorno",
-            "240": "ogni 4 ore",
-            "60": "ogni ora",
-            "720": "ogni 12 ore"
-          },
-          "changeAction": "Modifica pianificazione"
+          "title": "Sincronizzazione automatica"
         },
         "sideRail": {
           "runs": "Viene eseguito {{cadence}}",

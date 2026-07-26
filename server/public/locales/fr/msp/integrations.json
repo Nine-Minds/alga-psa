@@ -411,12 +411,12 @@
           "scheduleNotAppliedDetail": "D'ici là, rien ne s'exécutera tout seul. Enregistrez à nouveau la planification pour réessayer.",
           "scheduleOff": "La synchronisation automatique est désactivée.",
           "scheduleOffDetail": "Les contacts ne changent que lorsqu'une synchronisation est lancée à la main.",
-          "title": "Nécessite votre attention",
           "severity": {
             "blocking": "Bloquant",
             "info": "Pour information",
             "warning": "Avertissement"
-          }
+          },
+          "title": "Nécessite votre attention"
         },
         "clients": {
           "columns": {
@@ -512,6 +512,7 @@
           },
           "empty": "Aucune synchronisation n'a encore été exécutée.",
           "fullHistory": "Historique complet",
+          "progress": "{{processed}} clients sur {{total}} traités jusqu'ici.",
           "results": {
             "done": "Terminé",
             "failed": "En échec",
@@ -519,6 +520,7 @@
             "running": "Synchronisation",
             "toReview": "{{count}} à examiner"
           },
+          "showAll": "Voir les {{count}} clients de cette exécution",
           "stats": {
             "created": "Créés",
             "createdSub": "nouveaux contacts",
@@ -531,8 +533,6 @@
             "updated": "Modifiés",
             "updatedSub": "là où vous l'avez autorisé"
           },
-          "title": "Dernière synchronisation",
-          "unavailable": "L'historique des exécutions n'a pas pu être lu.",
           "summaries": {
             "completed": "Terminé {{time}}.",
             "failed": "Échec {{time}}.",
@@ -540,8 +540,8 @@
             "running": "Démarré {{time}} et toujours en cours.",
             "unknown": "Dernière exécution {{time}}."
           },
-          "progress": "{{processed}} clients sur {{total}} traités jusqu'ici.",
-          "showAll": "Voir les {{count}} clients de cette exécution"
+          "title": "Dernière synchronisation",
+          "unavailable": "L'historique des exécutions n'a pas pu être lu."
         },
         "lead": "{{clients}} clients associés · connecté via {{method}}",
         "overwrites": {
@@ -552,6 +552,14 @@
           "title": "Écrasements autorisés"
         },
         "schedule": {
+          "cadence": {
+            "10080": "chaque semaine",
+            "1440": "chaque jour",
+            "240": "toutes les 4 heures",
+            "60": "toutes les heures",
+            "720": "toutes les 12 heures"
+          },
+          "changeAction": "Modifier la planification",
           "description": "Lorsqu'elle est activée, Alga synchronise chaque client associé à cette cadence. La désactiver arrête les exécutions planifiées ; vous pouvez toujours synchroniser manuellement.",
           "enablePrompt": "Le pilote a réussi. Activez la synchronisation automatique pour garder les contacts à jour sans intervention.",
           "intervalLabel": "Exécuter toutes les",
@@ -571,15 +579,7 @@
           "saved": "Planification enregistrée.",
           "savedPending": "Réglage enregistré. La planification sera mise à jour lors de la prochaine réconciliation du worker.",
           "saving": "Enregistrement…",
-          "title": "Synchronisation automatique",
-          "cadence": {
-            "10080": "chaque semaine",
-            "1440": "chaque jour",
-            "240": "toutes les 4 heures",
-            "60": "toutes les heures",
-            "720": "toutes les 12 heures"
-          },
-          "changeAction": "Modifier la planification"
+          "title": "Synchronisation automatique"
         },
         "sideRail": {
           "runs": "S'exécute {{cadence}}",

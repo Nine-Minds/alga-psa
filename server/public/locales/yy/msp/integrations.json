@@ -411,12 +411,12 @@
           "scheduleNotAppliedDetail": "55555",
           "scheduleOff": "55555",
           "scheduleOffDetail": "55555",
-          "title": "55555",
           "severity": {
             "blocking": "55555",
             "info": "55555",
             "warning": "55555"
-          }
+          },
+          "title": "55555"
         },
         "clients": {
           "columns": {
@@ -512,6 +512,7 @@
           },
           "empty": "55555",
           "fullHistory": "55555",
+          "progress": "55555",
           "results": {
             "done": "55555",
             "failed": "55555",
@@ -519,6 +520,7 @@
             "running": "55555",
             "toReview": "55555"
           },
+          "showAll": "55555",
           "stats": {
             "created": "55555",
             "createdSub": "55555",
@@ -531,8 +533,6 @@
             "updated": "55555",
             "updatedSub": "55555"
           },
-          "title": "55555",
-          "unavailable": "55555",
           "summaries": {
             "completed": "55555",
             "failed": "55555",
@@ -540,8 +540,8 @@
             "running": "55555",
             "unknown": "55555"
           },
-          "progress": "55555",
-          "showAll": "55555"
+          "title": "55555",
+          "unavailable": "55555"
         },
         "lead": "55555",
         "overwrites": {
@@ -552,6 +552,14 @@
           "title": "55555"
         },
         "schedule": {
+          "cadence": {
+            "10080": "55555",
+            "1440": "55555",
+            "240": "55555",
+            "60": "55555",
+            "720": "55555"
+          },
+          "changeAction": "55555",
           "description": "55555",
           "enablePrompt": "55555",
           "intervalLabel": "55555",
@@ -571,15 +579,7 @@
           "saved": "55555",
           "savedPending": "55555",
           "saving": "55555",
-          "title": "55555",
-          "cadence": {
-            "10080": "55555",
-            "1440": "55555",
-            "240": "55555",
-            "60": "55555",
-            "720": "55555"
-          },
-          "changeAction": "55555"
+          "title": "55555"
         },
         "sideRail": {
           "runs": "55555",

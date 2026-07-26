@@ -411,12 +411,12 @@
           "scheduleNotAppliedDetail": "Nothing will run on its own until it is. Save the schedule again to retry.",
           "scheduleOff": "Automatic sync is off.",
           "scheduleOffDetail": "Contacts only change when someone runs a sync by hand.",
-          "title": "Needs attention",
           "severity": {
             "blocking": "Blocking",
             "info": "For information",
             "warning": "Warning"
-          }
+          },
+          "title": "Needs attention"
         },
         "clients": {
           "columns": {
@@ -512,6 +512,7 @@
           },
           "empty": "No sync has run yet.",
           "fullHistory": "Full history",
+          "progress": "{{processed}} of {{total}} clients done so far.",
           "results": {
             "done": "Done",
             "failed": "Failed",
@@ -519,6 +520,7 @@
             "running": "Syncing",
             "toReview": "{{count}} to review"
           },
+          "showAll": "See all {{count}} clients in this run",
           "stats": {
             "created": "Created",
             "createdSub": "new contacts",
@@ -531,8 +533,6 @@
             "updated": "Changed",
             "updatedSub": "where you allowed it"
           },
-          "title": "Last sync",
-          "unavailable": "The run history could not be read.",
           "summaries": {
             "completed": "Finished {{time}}.",
             "failed": "Failed {{time}}.",
@@ -540,8 +540,8 @@
             "running": "Started {{time}} and still running.",
             "unknown": "Last run {{time}}."
           },
-          "progress": "{{processed}} of {{total}} clients done so far.",
-          "showAll": "See all {{count}} clients in this run"
+          "title": "Last sync",
+          "unavailable": "The run history could not be read."
         },
         "lead": "{{clients}} clients mapped · connected via {{method}}",
         "overwrites": {
@@ -552,6 +552,14 @@
           "title": "Overwrites allowed"
         },
         "schedule": {
+          "cadence": {
+            "10080": "every week",
+            "1440": "every day",
+            "240": "every 4 hours",
+            "60": "every hour",
+            "720": "every 12 hours"
+          },
+          "changeAction": "Change schedule",
           "description": "When on, Alga syncs every mapped client on this cadence. Turning it off stops scheduled runs; you can still sync by hand.",
           "enablePrompt": "The pilot succeeded. Turn on automatic sync to keep contacts in step without running it by hand.",
           "intervalLabel": "Run every",
@@ -571,15 +579,7 @@
           "saved": "Schedule saved.",
           "savedPending": "Setting saved. The schedule itself will update when the worker next reconciles.",
           "saving": "Saving…",
-          "title": "Automatic sync",
-          "cadence": {
-            "10080": "every week",
-            "1440": "every day",
-            "240": "every 4 hours",
-            "60": "every hour",
-            "720": "every 12 hours"
-          },
-          "changeAction": "Change schedule"
+          "title": "Automatic sync"
         },
         "sideRail": {
           "runs": "Runs {{cadence}}",
