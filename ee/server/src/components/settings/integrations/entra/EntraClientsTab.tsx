@@ -168,17 +168,17 @@ export function EntraClientsTab({
         <div className="overflow-x-auto rounded-lg border border-border/70">
           <Table>
             <TableHeader>
-              <TableRow>
+              {/* The console labels every group this way (Stat, RailCard); the
+                  table was the one place still using sentence-case 14px. */}
+              <TableRow className="border-b border-border/60 [&>th]:h-9 [&>th]:text-xs [&>th]:uppercase [&>th]:tracking-wide">
                 <TableHead>{t('integrations.entra.console.lastRun.columns.client')}</TableHead>
-                <TableHead>{t('integrations.entra.console.clients.columns.tenant')}</TableHead>
                 <TableHead className="text-right">
                   {t('integrations.entra.console.clients.columns.users')}
                 </TableHead>
                 <TableHead>{t('integrations.entra.console.clients.columns.lastSync')}</TableHead>
                 <TableHead>{t('integrations.entra.console.lastRun.columns.result')}</TableHead>
-                <TableHead className="text-right">
-                  {t('integrations.entra.tenantMapping.columns.actions')}
-                </TableHead>
+                {/* Three self-labelling buttons need no column title. */}
+                <TableHead aria-label={t('integrations.entra.tenantMapping.columns.actions')} />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -189,10 +189,18 @@ export function EntraClientsTab({
 
                 return (
                   <React.Fragment key={mapping.managedTenantId}>
-                    <TableRow id={`entra-client-row-${mapping.managedTenantId}`}>
-                      <TableCell className="font-medium">{clientLabel(mapping)}</TableCell>
-                      <TableCell className="font-mono text-xs text-muted-foreground">
-                        {mapping.primaryDomain || mapping.entraTenantId}
+                    <TableRow
+                      id={`entra-client-row-${mapping.managedTenantId}`}
+                      className="border-b border-border/60"
+                    >
+                      <TableCell>
+                        {/* The client is what the operator scans for, so it is
+                            the only semibold in the row; the domain is the
+                            disambiguator, not a column of its own. */}
+                        <span className="font-semibold">{clientLabel(mapping)}</span>
+                        <span className="mt-0.5 block font-mono text-xs text-muted-foreground">
+                          {mapping.primaryDomain || mapping.entraTenantId}
+                        </span>
                       </TableCell>
                       <TableCell className="text-right tabular-nums">
                         {mapping.sourceUserCount}
@@ -228,12 +236,15 @@ export function EntraClientsTab({
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <div className="flex flex-wrap justify-end gap-2">
+                        <div className="flex flex-nowrap justify-end gap-1 whitespace-nowrap">
+                          {/* Preview is the encouraged move — it writes nothing
+                              — so it leads. Sync writes to contacts and is not
+                              the loudest thing on a 200-row table. */}
                           <Button
                             id={`entra-client-preview-${mapping.managedTenantId}`}
                             type="button"
-                            size="sm"
-                            variant="outline"
+                            size="xs"
+                            variant="soft"
                             onClick={() => void handlePreview(mapping)}
                             disabled={busy}
                           >
@@ -242,7 +253,8 @@ export function EntraClientsTab({
                           <Button
                             id={`entra-client-sync-${mapping.managedTenantId}`}
                             type="button"
-                            size="sm"
+                            size="xs"
+                            variant="outline"
                             onClick={() => void handleSync(mapping)}
                             disabled={busy}
                           >
@@ -251,7 +263,7 @@ export function EntraClientsTab({
                           <Button
                             id={`entra-client-unlink-${mapping.managedTenantId}`}
                             type="button"
-                            size="sm"
+                            size="xs"
                             variant="ghost"
                             onClick={() => setUnlinkTarget(mapping)}
                             disabled={busy}
@@ -264,7 +276,7 @@ export function EntraClientsTab({
 
                     {isExpanded && preview ? (
                       <TableRow>
-                        <TableCell colSpan={6} className="bg-muted/20">
+                        <TableCell colSpan={5} className="bg-muted/20">
                           <ContactPreflightReport report={preview} />
                         </TableCell>
                       </TableRow>
