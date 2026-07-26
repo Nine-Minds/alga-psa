@@ -4,6 +4,7 @@ export type {
   ControlRegistry,
   EmulatorCore,
   EmulatorPackage,
+  EmulatorServer,
   FaultDef,
   HostEnv,
   SeederDef,

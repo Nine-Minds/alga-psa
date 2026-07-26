@@ -70,11 +70,21 @@ export interface ControlRegistry {
   seeder<P>(def: SeederDef<P>): void;
 }
 
+/** Handle for a non-HTTP vendor surface started via EmulatorPackage.serve. */
+export interface EmulatorServer {
+  /** Actual bound port (matters when started with port 0). */
+  port: number;
+  close(): Promise<void>;
+}
+
 /**
  * The unit the host loads. One package per emulated vendor service.
  *
  * Core stays pure (in-process state machine, injectable into unit tests);
- * `wire` mounts the vendor's HTTP protocol; `register` declares controls.
+ * `register` declares controls. The vendor surface is either `wire` (HTTP —
+ * mounted behind the shared transport-fault middleware) or `serve` (any
+ * other protocol, e.g. SMTP — the package owns the listener). Exactly one
+ * of the two must be provided.
  */
 export interface EmulatorPackage<C extends EmulatorCore = EmulatorCore> {
   /** Stable identifier used in control routes and CLI commands, e.g. "qbo". */
@@ -83,6 +93,7 @@ export interface EmulatorPackage<C extends EmulatorCore = EmulatorCore> {
   /** Default port for the vendor surface. Overridable per host instance. */
   defaultPort: number;
   createCore(env: HostEnv): C;
-  wire(router: Router, core: C, env: HostEnv): void;
+  wire?(router: Router, core: C, env: HostEnv): void;
+  serve?(core: C, port: number, env: HostEnv): Promise<EmulatorServer>;
   register(reg: ControlRegistry, core: C): void;
 }

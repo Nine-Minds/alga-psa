@@ -5,7 +5,7 @@ import { buildControlApp } from './controlApi';
 import { ControlError, EmulatorControls } from './registry';
 import { registerTransportFaults, TransportFaultState, transportFaultMiddleware } from './transportFaults';
 import type { Scenario } from './scenario';
-import type { EmulatorCore, EmulatorPackage, HostEnv } from './types';
+import type { EmulatorCore, EmulatorPackage, EmulatorServer, HostEnv } from './types';
 
 export interface EmulatorInstance {
   pkg: EmulatorPackage;
@@ -59,6 +59,7 @@ export class EmulatorHost {
   readonly scenarios = new Map<string, Scenario>();
   private readonly instances = new Map<string, EmulatorInstance>();
   private servers: Server[] = [];
+  private customServers: EmulatorServer[] = [];
   /** Actual bound control port (known after start()). */
   controlPort = 0;
 
@@ -75,10 +76,17 @@ export class EmulatorHost {
       if (this.instances.has(pkg.id)) {
         throw new Error(`Duplicate emulator id "${pkg.id}"`);
       }
+      if (Boolean(pkg.wire) === Boolean(pkg.serve)) {
+        throw new Error(`Emulator "${pkg.id}" must provide exactly one of wire() or serve()`);
+      }
       const core = pkg.createCore(this.env);
       const controls = new EmulatorControls();
       const transport = new TransportFaultState();
-      registerTransportFaults(controls, transport);
+      if (pkg.wire) {
+        // Transport faults sit in front of HTTP surfaces only; a serve()
+        // emulator owns its protocol end to end.
+        registerTransportFaults(controls, transport);
+      }
       pkg.register(controls, core);
       this.instances.set(pkg.id, { pkg, core, controls, transport, port: 0 });
     }
@@ -124,15 +132,21 @@ export class EmulatorHost {
     }
     const ports: Record<string, number> = {};
     for (const instance of this.instances.values()) {
-      const app = express();
-      app.use(transportFaultMiddleware(instance.transport, this.env.rng));
-      const router = express.Router();
-      instance.pkg.wire(router, instance.core, this.env);
-      app.use(router);
       const requestedPort = this.options.ports?.[instance.pkg.id] ?? instance.pkg.defaultPort;
-      const server = await listen(app, requestedPort);
-      this.servers.push(server);
-      instance.port = boundPort(server);
+      if (instance.pkg.wire) {
+        const app = express();
+        app.use(transportFaultMiddleware(instance.transport, this.env.rng));
+        const router = express.Router();
+        instance.pkg.wire(router, instance.core, this.env);
+        app.use(router);
+        const server = await listen(app, requestedPort);
+        this.servers.push(server);
+        instance.port = boundPort(server);
+      } else {
+        const server = await instance.pkg.serve!(instance.core, requestedPort, this.env);
+        this.customServers.push(server);
+        instance.port = server.port;
+      }
       ports[instance.pkg.id] = instance.port;
       this.env.log(`${instance.pkg.id} vendor surface listening`, { port: instance.port });
     }
@@ -144,15 +158,17 @@ export class EmulatorHost {
   }
 
   async stop(): Promise<void> {
-    await Promise.all(
-      this.servers.map(
+    await Promise.all([
+      ...this.servers.map(
         (server) =>
           new Promise<void>((resolve, reject) => {
             server.closeAllConnections();
             server.close((err) => (err ? reject(err) : resolve()));
           }),
       ),
-    );
+      ...this.customServers.map((server) => server.close()),
+    ]);
     this.servers = [];
+    this.customServers = [];
   }
 }
