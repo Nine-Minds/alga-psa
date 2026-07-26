@@ -1,7 +1,0 @@
-services:
-  microsoft-graph-emulator:
-    build: .
-    environment:
-      PORT: 4010
-    ports:
-      - "4010:4010"

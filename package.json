@@ -13,6 +13,7 @@
     "services/email-service",
     "shared",
     "packages/*",
+    "packages/emulators/*",
     "sdk/*",
     "sdk/samples/*",
     "sdk/samples/*/*",
