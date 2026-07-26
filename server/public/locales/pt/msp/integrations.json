@@ -543,7 +543,14 @@
           "saved": "Agendamento guardado.",
           "savedPending": "Definição guardada. O agendamento será atualizado na próxima reconciliação do worker.",
           "saving": "A guardar…",
-          "title": "Sincronização automática"
+          "title": "Sincronização automática",
+          "cadence": {
+            "10080": "todas as semanas",
+            "1440": "todos os dias",
+            "240": "a cada 4 horas",
+            "60": "a cada hora",
+            "720": "a cada 12 horas"
+          }
         },
         "sideRail": {
           "change": "Alterar…",
@@ -551,9 +558,9 @@
           "coversClients": "{{count}} clientes",
           "coversClientsOne": "{{count}} cliente",
           "lastRun": "Última execução",
-          "scheduleOff": "desligada",
-          "scheduleOn": "ligada, a cada {{minutes}} minutos",
-          "scheduleOnCadence": "ligado, {{cadence}}"
+          "runs": "Executa {{cadence}}",
+          "runsMinutes": "Executa a cada {{minutes}} minutos",
+          "scheduleOff": "Desativado"
         },
         "syncStarted": "Sincronização iniciada para todos os clientes associados.",
         "tabs": {

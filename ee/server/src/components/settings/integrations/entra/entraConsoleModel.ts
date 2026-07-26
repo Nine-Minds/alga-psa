@@ -31,6 +31,17 @@ export function parseEntraConsoleTab(value: string | null | undefined): EntraCon
     : DEFAULT_ENTRA_CONSOLE_TAB;
 }
 
+/**
+ * The cadences automatic sync offers. Lives here because two surfaces need it:
+ * the schedule tab builds its select from it, and the overview rail has to know
+ * whether a stored interval is one of them before it can name it in a sentence.
+ */
+export const ENTRA_SYNC_INTERVAL_CHOICES = [60, 240, 720, 1440, 10080] as const;
+
+export function isEntraSyncIntervalChoice(minutes: number | null | undefined): boolean {
+  return (ENTRA_SYNC_INTERVAL_CHOICES as readonly number[]).includes(minutes ?? -1);
+}
+
 export type EntraAttentionSeverity = 'blocking' | 'warning' | 'info';
 
 export interface EntraAttentionItem {

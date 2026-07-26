@@ -543,7 +543,14 @@
           "saved": "Planification enregistrée.",
           "savedPending": "Réglage enregistré. La planification sera mise à jour lors de la prochaine réconciliation du worker.",
           "saving": "Enregistrement…",
-          "title": "Synchronisation automatique"
+          "title": "Synchronisation automatique",
+          "cadence": {
+            "10080": "chaque semaine",
+            "1440": "chaque jour",
+            "240": "toutes les 4 heures",
+            "60": "toutes les heures",
+            "720": "toutes les 12 heures"
+          }
         },
         "sideRail": {
           "change": "Modifier…",
@@ -551,9 +558,9 @@
           "coversClients": "{{count}} clients",
           "coversClientsOne": "{{count}} client",
           "lastRun": "Dernière exécution",
-          "scheduleOff": "désactivée",
-          "scheduleOn": "activée, toutes les {{minutes}} minutes",
-          "scheduleOnCadence": "activé, {{cadence}}"
+          "runs": "S'exécute {{cadence}}",
+          "runsMinutes": "S'exécute toutes les {{minutes}} minutes",
+          "scheduleOff": "Désactivé"
         },
         "syncStarted": "Synchronisation lancée pour tous les clients associés.",
         "tabs": {

@@ -543,7 +543,14 @@
           "saved": "Planning opgeslagen.",
           "savedPending": "Instelling opgeslagen. De planning wordt bijgewerkt bij de volgende reconciliatie door de worker.",
           "saving": "Opslaan…",
-          "title": "Automatische synchronisatie"
+          "title": "Automatische synchronisatie",
+          "cadence": {
+            "10080": "elke week",
+            "1440": "elke dag",
+            "240": "elke 4 uur",
+            "60": "elk uur",
+            "720": "elke 12 uur"
+          }
         },
         "sideRail": {
           "change": "Wijzigen…",
@@ -551,9 +558,9 @@
           "coversClients": "{{count}} klanten",
           "coversClientsOne": "{{count}} klant",
           "lastRun": "Laatste run",
-          "scheduleOff": "uit",
-          "scheduleOn": "aan, elke {{minutes}} minuten",
-          "scheduleOnCadence": "aan, {{cadence}}"
+          "runs": "Draait {{cadence}}",
+          "runsMinutes": "Draait elke {{minutes}} minuten",
+          "scheduleOff": "Uit"
         },
         "syncStarted": "Synchronisatie gestart voor alle gekoppelde klanten.",
         "tabs": {

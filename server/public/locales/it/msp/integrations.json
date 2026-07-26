@@ -543,7 +543,14 @@
           "saved": "Pianificazione salvata.",
           "savedPending": "Impostazione salvata. La pianificazione si aggiornerà alla prossima riconciliazione del worker.",
           "saving": "Salvataggio…",
-          "title": "Sincronizzazione automatica"
+          "title": "Sincronizzazione automatica",
+          "cadence": {
+            "10080": "ogni settimana",
+            "1440": "ogni giorno",
+            "240": "ogni 4 ore",
+            "60": "ogni ora",
+            "720": "ogni 12 ore"
+          }
         },
         "sideRail": {
           "change": "Modifica…",
@@ -551,9 +558,9 @@
           "coversClients": "{{count}} clienti",
           "coversClientsOne": "{{count}} cliente",
           "lastRun": "Ultima esecuzione",
-          "scheduleOff": "disattivata",
-          "scheduleOn": "attiva, ogni {{minutes}} minuti",
-          "scheduleOnCadence": "attivo, {{cadence}}"
+          "runs": "Viene eseguito {{cadence}}",
+          "runsMinutes": "Viene eseguito ogni {{minutes}} minuti",
+          "scheduleOff": "Disattivato"
         },
         "syncStarted": "Sincronizzazione avviata per tutti i client associati.",
         "tabs": {

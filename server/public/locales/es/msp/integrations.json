@@ -543,7 +543,14 @@
           "saved": "Programación guardada.",
           "savedPending": "Ajuste guardado. La programación se actualizará cuando el worker vuelva a reconciliar.",
           "saving": "Guardando…",
-          "title": "Sincronización automática"
+          "title": "Sincronización automática",
+          "cadence": {
+            "10080": "cada semana",
+            "1440": "cada día",
+            "240": "cada 4 horas",
+            "60": "cada hora",
+            "720": "cada 12 horas"
+          }
         },
         "sideRail": {
           "change": "Cambiar…",
@@ -551,9 +558,9 @@
           "coversClients": "{{count}} clientes",
           "coversClientsOne": "{{count}} cliente",
           "lastRun": "Última ejecución",
-          "scheduleOff": "desactivada",
-          "scheduleOn": "activada, cada {{minutes}} minutos",
-          "scheduleOnCadence": "activado, {{cadence}}"
+          "runs": "Se ejecuta {{cadence}}",
+          "runsMinutes": "Se ejecuta cada {{minutes}} minutos",
+          "scheduleOff": "Desactivado"
         },
         "syncStarted": "Sincronización iniciada para todos los clientes asignados.",
         "tabs": {

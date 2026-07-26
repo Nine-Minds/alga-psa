@@ -48,6 +48,7 @@ import {
   ENTRA_CONSOLE_TABS,
   buildEntraAttentionItems,
   findLastRealRun,
+  isEntraSyncIntervalChoice,
   parseEntraConsoleTab,
   summarizeEntraRunResults,
   type EntraAttentionItem,
@@ -469,6 +470,24 @@ export function EntraConsole({
     URL.revokeObjectURL(url);
   }, [mappings, status]);
 
+  /**
+   * "on, Day" — the rail was interpolating the schedule select's option label
+   * ("Day", the noun after "Run every") into a sentence, and the two do not
+   * compose in English or in any of the nine other locales. A cadence sentence
+   * is its own string.
+   */
+  const scheduleCadenceLabel = !schedule?.syncEnabled
+    ? t('integrations.entra.console.sideRail.scheduleOff')
+    : isEntraSyncIntervalChoice(schedule.syncIntervalMinutes)
+      ? t('integrations.entra.console.sideRail.runs', {
+          cadence: t(
+            `integrations.entra.console.schedule.cadence.${schedule.syncIntervalMinutes}`
+          ),
+        })
+      : t('integrations.entra.console.sideRail.runsMinutes', {
+          minutes: schedule.syncIntervalMinutes,
+        });
+
   const connectionHealthy = status?.status === 'connected';
   const connectionMethodLabel = status?.connectionType
     ? t(`integrations.entra.settings.connection.types.${status.connectionType}`)
@@ -671,20 +690,7 @@ export function EntraConsole({
 
         <div className="space-y-4" id="entra-console-side-rail">
           <RailCard id="entra-console-rail-schedule" title={t('integrations.entra.console.schedule.title')}>
-            <p className="text-sm">
-              {schedule?.syncEnabled
-                ? t('integrations.entra.console.sideRail.scheduleOnCadence', {
-                    cadence: t(
-                      `integrations.entra.console.schedule.intervals.${schedule.syncIntervalMinutes}`,
-                      {
-                        defaultValue: t('integrations.entra.console.sideRail.scheduleOn', {
-                          minutes: schedule.syncIntervalMinutes,
-                        }),
-                      }
-                    ),
-                  })
-                : t('integrations.entra.console.sideRail.scheduleOff')}
-            </p>
+            <p className="text-sm">{scheduleCadenceLabel}</p>
             <div className="mt-2">
               <KeyValue
                 label={t('integrations.entra.console.sideRail.lastRun')}

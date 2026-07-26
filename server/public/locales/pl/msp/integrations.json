@@ -543,7 +543,14 @@
           "saved": "Zapisano harmonogram.",
           "savedPending": "Ustawienie zapisane. Harmonogram zaktualizuje się przy następnym uzgodnieniu przez workera.",
           "saving": "Zapisywanie…",
-          "title": "Automatyczna synchronizacja"
+          "title": "Automatyczna synchronizacja",
+          "cadence": {
+            "10080": "co tydzień",
+            "1440": "codziennie",
+            "240": "co 4 godziny",
+            "60": "co godzinę",
+            "720": "co 12 godzin"
+          }
         },
         "sideRail": {
           "change": "Zmień…",
@@ -551,9 +558,9 @@
           "coversClients": "{{count}} klientów",
           "coversClientsOne": "{{count}} klient",
           "lastRun": "Ostatnie uruchomienie",
-          "scheduleOff": "wyłączona",
-          "scheduleOn": "włączona, co {{minutes}} minut",
-          "scheduleOnCadence": "wł., {{cadence}}"
+          "runs": "Uruchamia się {{cadence}}",
+          "runsMinutes": "Uruchamia się co {{minutes}} minut",
+          "scheduleOff": "Wyłączone"
         },
         "syncStarted": "Uruchomiono synchronizację dla wszystkich przypisanych klientów.",
         "tabs": {

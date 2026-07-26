@@ -543,7 +543,14 @@
           "saved": "55555",
           "savedPending": "55555",
           "saving": "55555",
-          "title": "55555"
+          "title": "55555",
+          "cadence": {
+            "10080": "55555",
+            "1440": "55555",
+            "240": "55555",
+            "60": "55555",
+            "720": "55555"
+          }
         },
         "sideRail": {
           "change": "55555",
@@ -551,9 +558,9 @@
           "coversClients": "55555",
           "coversClientsOne": "55555",
           "lastRun": "55555",
-          "scheduleOff": "55555",
-          "scheduleOn": "55555",
-          "scheduleOnCadence": "55555"
+          "runs": "55555",
+          "runsMinutes": "55555",
+          "scheduleOff": "55555"
         },
         "syncStarted": "55555",
         "tabs": {

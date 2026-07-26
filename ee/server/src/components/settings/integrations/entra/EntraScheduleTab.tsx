@@ -9,6 +9,7 @@ import {
   saveEntraSyncSchedule,
   type EntraSyncScheduleSettings,
 } from '@alga-psa/integrations/actions';
+import { ENTRA_SYNC_INTERVAL_CHOICES } from './entraConsoleModel';
 
 interface EntraScheduleTabProps {
   schedule: EntraSyncScheduleSettings | null;
@@ -17,7 +18,7 @@ interface EntraScheduleTabProps {
   onSaved: () => void | Promise<void>;
 }
 
-const INTERVAL_CHOICES = [60, 240, 720, 1440, 10080];
+const INTERVAL_CHOICES = ENTRA_SYNC_INTERVAL_CHOICES;
 
 /**
  * Automatic sync, on or off, at a cadence the tenant chooses.

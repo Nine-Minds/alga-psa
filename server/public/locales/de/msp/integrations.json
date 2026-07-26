@@ -543,7 +543,14 @@
           "saved": "Zeitplan gespeichert.",
           "savedPending": "Einstellung gespeichert. Der Zeitplan wird beim nächsten Abgleich des Workers aktualisiert.",
           "saving": "Wird gespeichert…",
-          "title": "Automatische Synchronisierung"
+          "title": "Automatische Synchronisierung",
+          "cadence": {
+            "10080": "wöchentlich",
+            "1440": "täglich",
+            "240": "alle 4 Stunden",
+            "60": "stündlich",
+            "720": "alle 12 Stunden"
+          }
         },
         "sideRail": {
           "change": "Ändern…",
@@ -551,9 +558,9 @@
           "coversClients": "{{count}} Kunden",
           "coversClientsOne": "{{count}} Kunde",
           "lastRun": "Letzter Lauf",
-          "scheduleOff": "aus",
-          "scheduleOn": "an, alle {{minutes}} Minuten",
-          "scheduleOnCadence": "an, {{cadence}}"
+          "runs": "Läuft {{cadence}}",
+          "runsMinutes": "Läuft alle {{minutes}} Minuten",
+          "scheduleOff": "Aus"
         },
         "syncStarted": "Synchronisierung für alle zugeordneten Clients gestartet.",
         "tabs": {

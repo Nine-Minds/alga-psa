@@ -543,7 +543,14 @@
           "saved": "Schedule saved.",
           "savedPending": "Setting saved. The schedule itself will update when the worker next reconciles.",
           "saving": "Saving…",
-          "title": "Automatic sync"
+          "title": "Automatic sync",
+          "cadence": {
+            "10080": "every week",
+            "1440": "every day",
+            "240": "every 4 hours",
+            "60": "every hour",
+            "720": "every 12 hours"
+          }
         },
         "sideRail": {
           "change": "Change…",
@@ -551,9 +558,9 @@
           "coversClients": "{{count}} clients",
           "coversClientsOne": "{{count}} client",
           "lastRun": "Last run",
-          "scheduleOff": "off",
-          "scheduleOn": "on, every {{minutes}} minutes",
-          "scheduleOnCadence": "on, {{cadence}}"
+          "runs": "Runs {{cadence}}",
+          "runsMinutes": "Runs every {{minutes}} minutes",
+          "scheduleOff": "Off"
         },
         "syncStarted": "Sync started for all mapped clients.",
         "tabs": {
