@@ -437,7 +437,8 @@
             "title": "Stoppen met synchroniseren van {{client}}?"
           },
           "unlinked": "{{client}} synchroniseert niet meer.",
-          "unlinkFailed": "Die klant kon niet worden ontkoppeld."
+          "unlinkFailed": "Die klant kon niet worden ontkoppeld.",
+          "hidePreview": "Voorbeeld verbergen"
         },
         "connection": {
           "exportRecord": "Verbindingsrecord exporteren",

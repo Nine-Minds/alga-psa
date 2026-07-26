@@ -437,7 +437,8 @@
             "title": "Zatrzymać synchronizację klienta {{client}}?"
           },
           "unlinked": "{{client}} nie jest już synchronizowany.",
-          "unlinkFailed": "Nie udało się odłączyć tego klienta."
+          "unlinkFailed": "Nie udało się odłączyć tego klienta.",
+          "hidePreview": "Ukryj podgląd"
         },
         "connection": {
           "exportRecord": "Eksportuj rekord połączenia",

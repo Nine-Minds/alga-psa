@@ -437,7 +437,8 @@
             "title": "¿Dejar de sincronizar {{client}}?"
           },
           "unlinked": "{{client}} ya no se sincroniza.",
-          "unlinkFailed": "No se pudo desvincular ese cliente."
+          "unlinkFailed": "No se pudo desvincular ese cliente.",
+          "hidePreview": "Ocultar vista previa"
         },
         "connection": {
           "exportRecord": "Exportar registro de conexión",

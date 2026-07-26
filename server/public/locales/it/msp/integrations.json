@@ -437,7 +437,8 @@
             "title": "Interrompere la sincronizzazione di {{client}}?"
           },
           "unlinked": "{{client}} non si sincronizza più.",
-          "unlinkFailed": "Non è stato possibile scollegare quel cliente."
+          "unlinkFailed": "Non è stato possibile scollegare quel cliente.",
+          "hidePreview": "Nascondi anteprima"
         },
         "connection": {
           "exportRecord": "Esporta record di connessione",

@@ -437,7 +437,8 @@
             "title": "55555"
           },
           "unlinked": "55555",
-          "unlinkFailed": "55555"
+          "unlinkFailed": "55555",
+          "hidePreview": "55555"
         },
         "connection": {
           "exportRecord": "55555",

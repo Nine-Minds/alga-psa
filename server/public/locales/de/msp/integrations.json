@@ -437,7 +437,8 @@
             "title": "Synchronisierung für {{client}} beenden?"
           },
           "unlinked": "{{client}} wird nicht mehr synchronisiert.",
-          "unlinkFailed": "Dieser Kunde konnte nicht getrennt werden."
+          "unlinkFailed": "Dieser Kunde konnte nicht getrennt werden.",
+          "hidePreview": "Vorschau ausblenden"
         },
         "connection": {
           "exportRecord": "Verbindungsdatensatz exportieren",

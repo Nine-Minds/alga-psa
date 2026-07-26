@@ -78,6 +78,19 @@ export function EntraClientsTab({
   );
 
   const handlePreview = React.useCallback(async (mapping: EntraConfirmedMapping) => {
+    // Preview was write-only: the cache it filled was never read, so a second
+    // click re-ran a Graph round trip and inserted another preflight row into
+    // run history, and the expanded panel had no way to close. It toggles now,
+    // and a re-run is an explicit action inside the panel.
+    if (expanded === mapping.managedTenantId) {
+      setExpanded(null);
+      return;
+    }
+    if (previewByRow[mapping.managedTenantId]) {
+      setExpanded(mapping.managedTenantId);
+      return;
+    }
+
     setBusyRow(mapping.managedTenantId);
     setError(null);
     setMessage(null);
@@ -94,7 +107,7 @@ export function EntraClientsTab({
     } finally {
       setBusyRow(null);
     }
-  }, [t]);
+  }, [expanded, previewByRow, t]);
 
   const handleSync = React.useCallback(async (mapping: EntraConfirmedMapping) => {
     setBusyRow(mapping.managedTenantId);
@@ -115,6 +128,13 @@ export function EntraClientsTab({
         return;
       }
       setMessage(t('integrations.entra.pilot.started', { client: clientLabel(mapping) }));
+      // The preview described a sync that has now happened; keeping it on
+      // screen would describe contacts that already exist.
+      setPreviewByRow((current) => {
+        const { [mapping.managedTenantId]: _done, ...rest } = current;
+        return rest;
+      });
+      setExpanded((current) => (current === mapping.managedTenantId ? null : current));
       await onChanged();
     } finally {
       setBusyRow(null);
@@ -309,7 +329,11 @@ export function EntraClientsTab({
                             onClick={() => void handlePreview(mapping)}
                             disabled={busy}
                           >
-                            {t('integrations.entra.pilot.actions.preview')}
+                            {busy
+                              ? t('integrations.entra.pilot.actions.previewing')
+                              : isExpanded
+                                ? t('integrations.entra.console.clients.hidePreview')
+                                : t('integrations.entra.pilot.actions.preview')}
                           </Button>
                           <Button
                             id={`entra-client-sync-${mapping.managedTenantId}`}
@@ -319,7 +343,9 @@ export function EntraClientsTab({
                             onClick={() => void handleSync(mapping)}
                             disabled={busy}
                           >
-                            {t('integrations.entra.console.clients.sync')}
+                            {busy
+                              ? t('integrations.entra.pilot.actions.syncingOne')
+                              : t('integrations.entra.console.clients.sync')}
                           </Button>
                           <Button
                             id={`entra-client-unlink-${mapping.managedTenantId}`}

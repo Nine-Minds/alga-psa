@@ -437,7 +437,8 @@
             "title": "Arrêter de synchroniser {{client}} ?"
           },
           "unlinked": "{{client}} n'est plus synchronisé.",
-          "unlinkFailed": "Ce client n'a pas pu être dissocié."
+          "unlinkFailed": "Ce client n'a pas pu être dissocié.",
+          "hidePreview": "Masquer l'aperçu"
         },
         "connection": {
           "exportRecord": "Exporter l'enregistrement de connexion",

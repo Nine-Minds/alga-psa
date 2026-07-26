@@ -437,7 +437,8 @@
             "title": "Stop syncing {{client}}?"
           },
           "unlinked": "{{client}} no longer syncs.",
-          "unlinkFailed": "That client could not be unlinked."
+          "unlinkFailed": "That client could not be unlinked.",
+          "hidePreview": "Hide preview"
         },
         "connection": {
           "exportRecord": "Export connection record",
