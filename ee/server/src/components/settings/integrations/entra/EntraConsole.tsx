@@ -106,6 +106,18 @@ const RUN_RESULT_LABEL_KEYS: Record<EntraRunResultOutcome, string> = {
   done: 'integrations.entra.console.lastRun.results.done',
 };
 
+/**
+ * Severity reached a screen reader through nothing: the icon is aria-hidden
+ * and SEVERITY_CLASS is colour, so a blocking connection failure and an
+ * informational "the schedule is off" were identical in the accessibility
+ * tree. The word is visually hidden because sighted readers have the icon.
+ */
+const SEVERITY_LABEL_KEYS: Record<EntraAttentionItem['severity'], string> = {
+  blocking: 'integrations.entra.console.attention.severity.blocking',
+  warning: 'integrations.entra.console.attention.severity.warning',
+  info: 'integrations.entra.console.attention.severity.info',
+};
+
 const SEVERITY_CLASS: Record<EntraAttentionItem['severity'], string> = {
   blocking: 'text-destructive',
   warning: 'text-warning',
@@ -709,7 +721,11 @@ export function EntraConsole({
             {t('integrations.entra.console.attention.empty')}
           </p>
         ) : (
-          <ul className="mt-2 divide-y divide-border/60" id="entra-console-attention-list">
+          <ul
+            className="mt-2 divide-y divide-border/60"
+            id="entra-console-attention-list"
+            aria-label={t('integrations.entra.console.attention.title')}
+          >
             {attention.map((item) => {
               const Icon = SEVERITY_ICON[item.severity];
               return (
@@ -719,7 +735,10 @@ export function EntraConsole({
                     aria-hidden="true"
                   />
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-medium">{t(item.titleKey, item.values)}</p>
+                    <p className="text-sm font-medium">
+                      <span className="sr-only">{t(SEVERITY_LABEL_KEYS[item.severity])}: </span>
+                      {t(item.titleKey, item.values)}
+                    </p>
                     {item.detail || item.detailKey ? (
                       <p className="text-sm text-muted-foreground">
                         {item.detail || t(item.detailKey as string, item.values)}

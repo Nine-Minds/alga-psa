@@ -411,7 +411,12 @@
           "scheduleNotAppliedDetail": "Nothing will run on its own until it is. Save the schedule again to retry.",
           "scheduleOff": "Automatic sync is off.",
           "scheduleOffDetail": "Contacts only change when someone runs a sync by hand.",
-          "title": "Needs attention"
+          "title": "Needs attention",
+          "severity": {
+            "blocking": "Blocking",
+            "info": "For information",
+            "warning": "Warning"
+          }
         },
         "clients": {
           "columns": {

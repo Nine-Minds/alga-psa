@@ -411,7 +411,12 @@
           "scheduleNotAppliedDetail": "Fino ad allora non verrà eseguito nulla da solo. Salva di nuovo la pianificazione per riprovare.",
           "scheduleOff": "La sincronizzazione automatica è disattivata.",
           "scheduleOffDetail": "I contatti cambiano solo quando qualcuno avvia una sincronizzazione a mano.",
-          "title": "Richiede attenzione"
+          "title": "Richiede attenzione",
+          "severity": {
+            "blocking": "Bloccante",
+            "info": "Per informazione",
+            "warning": "Avviso"
+          }
         },
         "clients": {
           "columns": {

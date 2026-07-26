@@ -411,7 +411,12 @@
           "scheduleNotAppliedDetail": "Do tego czasu nic nie uruchomi się samo. Zapisz harmonogram ponownie, aby spróbować jeszcze raz.",
           "scheduleOff": "Synchronizacja automatyczna jest wyłączona.",
           "scheduleOffDetail": "Kontakty zmieniają się tylko wtedy, gdy ktoś ręcznie uruchomi synchronizację.",
-          "title": "Wymaga uwagi"
+          "title": "Wymaga uwagi",
+          "severity": {
+            "blocking": "Blokujące",
+            "info": "Do wiadomości",
+            "warning": "Ostrzeżenie"
+          }
         },
         "clients": {
           "columns": {

@@ -301,6 +301,13 @@ describe('EntraConsole overview', () => {
       .toContain('View clients');
     expect(document.getElementById('entra-console-attention-review-queue')?.textContent)
       .toContain('Review');
+
+    // Severity used to be carried by an aria-hidden icon and a text colour, so
+    // a blocking failure and an informational note were the same thing to a
+    // screen reader.
+    expect(list?.textContent).toContain('Blocking:');
+    expect(list?.textContent).toContain('Warning:');
+    expect(list?.getAttribute('aria-label')).toBe('Needs attention');
   });
 
   it('shows the health of the whole integration in the header', async () => {

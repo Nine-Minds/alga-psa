@@ -411,7 +411,12 @@
           "scheduleNotAppliedDetail": "Até lá nada será executado sozinho. Guarde o agendamento novamente para tentar de novo.",
           "scheduleOff": "A sincronização automática está desligada.",
           "scheduleOffDetail": "Os contactos só mudam quando alguém executa uma sincronização à mão.",
-          "title": "Precisa de atenção"
+          "title": "Precisa de atenção",
+          "severity": {
+            "blocking": "Bloqueante",
+            "info": "Para informação",
+            "warning": "Aviso"
+          }
         },
         "clients": {
           "columns": {

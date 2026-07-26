@@ -411,7 +411,12 @@
           "scheduleNotAppliedDetail": "55555",
           "scheduleOff": "55555",
           "scheduleOffDetail": "55555",
-          "title": "55555"
+          "title": "55555",
+          "severity": {
+            "blocking": "55555",
+            "info": "55555",
+            "warning": "55555"
+          }
         },
         "clients": {
           "columns": {

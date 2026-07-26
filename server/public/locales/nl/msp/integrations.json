@@ -411,7 +411,12 @@
           "scheduleNotAppliedDetail": "Tot die tijd draait er niets vanzelf. Sla het schema opnieuw op om het te herhalen.",
           "scheduleOff": "Automatische synchronisatie staat uit.",
           "scheduleOffDetail": "Contacten veranderen alleen als iemand handmatig een synchronisatie start.",
-          "title": "Vraagt aandacht"
+          "title": "Vraagt aandacht",
+          "severity": {
+            "blocking": "Blokkerend",
+            "info": "Ter informatie",
+            "warning": "Waarschuwing"
+          }
         },
         "clients": {
           "columns": {

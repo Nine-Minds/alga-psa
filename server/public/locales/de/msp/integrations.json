@@ -411,7 +411,12 @@
           "scheduleNotAppliedDetail": "Bis dahin läuft nichts von selbst. Speichern Sie den Zeitplan erneut.",
           "scheduleOff": "Die automatische Synchronisierung ist aus.",
           "scheduleOffDetail": "Kontakte ändern sich nur, wenn jemand die Synchronisierung von Hand startet.",
-          "title": "Erfordert Aufmerksamkeit"
+          "title": "Erfordert Aufmerksamkeit",
+          "severity": {
+            "blocking": "Blockierend",
+            "info": "Zur Information",
+            "warning": "Warnung"
+          }
         },
         "clients": {
           "columns": {
