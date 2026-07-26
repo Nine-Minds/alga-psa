@@ -379,6 +379,8 @@
         "actions": {
           "pause": "Suspendre la synchro",
           "resume": "Reprendre la synchro",
+          "syncNeedsClients": "Associez au moins un client avant de synchroniser.",
+          "syncNeedsConnection": "Réparez la connexion avant de synchroniser.",
           "syncNow": "Synchroniser maintenant",
           "syncingNow": "Démarrage…"
         },
@@ -402,6 +404,7 @@
           "noClients": "Aucun client n'est associé, donc rien ne peut se synchroniser.",
           "noClientsDetail": "Associez un locataire Microsoft à un client pour commencer à synchroniser les contacts.",
           "reviewQueue": "{{count}} identités attendent une décision.",
+          "reviewQueueAtLeast": "Au moins {{count}} identités attendent une décision.",
           "reviewQueueDetail": "Deux contacts ou plus partagent une même adresse Microsoft : rien ne leur arrive tant que vous n'avez pas choisi.",
           "reviewQueueOne": "{{count}} identité attend une décision.",
           "scheduleNotApplied": "La synchronisation automatique est activée, mais la planification n'a jamais été appliquée.",

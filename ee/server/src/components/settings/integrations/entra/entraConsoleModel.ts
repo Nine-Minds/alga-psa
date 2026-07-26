@@ -89,6 +89,8 @@ export interface BuildEntraAttentionInput {
   status: EntraStatusResponse | null;
   mappings: EntraConfirmedMapping[];
   reviewQueueCount: number;
+  /** The queue read came back full, so the count is a floor, not a total. */
+  reviewQueueAtLimit?: boolean;
   schedule: EntraSyncScheduleSettings | null;
 }
 
@@ -180,9 +182,11 @@ export function buildEntraAttentionItems(input: BuildEntraAttentionInput): Entra
     items.push({
       id: 'review-queue',
       severity: 'warning',
-      titleKey: input.reviewQueueCount === 1
-        ? 'integrations.entra.console.attention.reviewQueueOne'
-        : 'integrations.entra.console.attention.reviewQueue',
+      titleKey: input.reviewQueueAtLimit
+        ? 'integrations.entra.console.attention.reviewQueueAtLeast'
+        : input.reviewQueueCount === 1
+          ? 'integrations.entra.console.attention.reviewQueueOne'
+          : 'integrations.entra.console.attention.reviewQueue',
       detailKey: 'integrations.entra.console.attention.reviewQueueDetail',
       actionKey: 'integrations.entra.console.attention.actions.review',
       values: { count: input.reviewQueueCount },

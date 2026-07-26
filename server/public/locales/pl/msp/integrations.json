@@ -379,6 +379,8 @@
         "actions": {
           "pause": "Wstrzymaj synchronizację",
           "resume": "Wznów synchronizację",
+          "syncNeedsClients": "Powiąż co najmniej jednego klienta przed synchronizacją.",
+          "syncNeedsConnection": "Napraw połączenie przed synchronizacją.",
           "syncNow": "Synchronizuj teraz",
           "syncingNow": "Uruchamianie…"
         },
@@ -402,6 +404,7 @@
           "noClients": "Nie przypisano żadnych klientów, więc nic nie może się synchronizować.",
           "noClientsDetail": "Powiąż dzierżawcę Microsoft z klientem, aby rozpocząć synchronizację kontaktów.",
           "reviewQueue": "{{count}} tożsamości czeka na decyzję.",
+          "reviewQueueAtLeast": "Co najmniej {{count}} tożsamości czeka na decyzję.",
           "reviewQueueDetail": "Dwa lub więcej kontaktów ma ten sam e-mail Microsoft, więc nic się z nimi nie dzieje, dopóki nie wybierzesz.",
           "reviewQueueOne": "{{count}} tożsamość czeka na decyzję.",
           "scheduleNotApplied": "Synchronizacja automatyczna jest włączona, ale harmonogram nigdy nie został zastosowany.",

@@ -379,6 +379,8 @@
         "actions": {
           "pause": "Pause sync",
           "resume": "Resume sync",
+          "syncNeedsClients": "Map at least one client before syncing.",
+          "syncNeedsConnection": "Fix the connection before syncing.",
           "syncNow": "Sync now",
           "syncingNow": "Starting…"
         },
@@ -402,6 +404,7 @@
           "noClients": "No clients are mapped, so nothing can sync.",
           "noClientsDetail": "Match a Microsoft tenant to a client to start syncing contacts.",
           "reviewQueue": "{{count}} identities are waiting for a decision.",
+          "reviewQueueAtLeast": "At least {{count}} identities are waiting for a decision.",
           "reviewQueueDetail": "Two or more contacts share one Microsoft email, so nothing happens to them until you choose.",
           "reviewQueueOne": "{{count}} identity is waiting for a decision.",
           "scheduleNotApplied": "Automatic sync is on, but the schedule was never applied.",

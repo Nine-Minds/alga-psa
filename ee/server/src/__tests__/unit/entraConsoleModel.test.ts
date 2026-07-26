@@ -186,6 +186,20 @@ describe('buildEntraAttentionItems', () => {
     expect(items[0].detail).toBe('CIPP returned 401');
   });
 
+  it('does not present a page of the review queue as the whole queue', () => {
+    const items = buildEntraAttentionItems({
+      ...base,
+      reviewQueueCount: 50,
+      reviewQueueAtLimit: true,
+    });
+
+    // The count is items.length of a 50-row read, so at 5,000 pending
+    // identities the screen used to say a flat "50 identities are waiting".
+    expect(items.find((item) => item.id === 'review-queue')?.titleKey).toBe(
+      'integrations.entra.console.attention.reviewQueueAtLeast'
+    );
+  });
+
   it('says nothing can sync when nothing is mapped', () => {
     const items = buildEntraAttentionItems({ ...base, mappings: [] });
 

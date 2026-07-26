@@ -379,6 +379,8 @@
         "actions": {
           "pause": "Sync pausieren",
           "resume": "Sync fortsetzen",
+          "syncNeedsClients": "Ordnen Sie mindestens einen Client zu, bevor Sie synchronisieren.",
+          "syncNeedsConnection": "Beheben Sie die Verbindung, bevor Sie synchronisieren.",
           "syncNow": "Jetzt synchronisieren",
           "syncingNow": "Wird gestartet…"
         },
@@ -402,6 +404,7 @@
           "noClients": "Keine Clients zugeordnet, daher kann nichts synchronisiert werden.",
           "noClientsDetail": "Ordnen Sie einen Microsoft-Mandanten einem Client zu, um Kontakte zu synchronisieren.",
           "reviewQueue": "{{count}} Identitäten warten auf eine Entscheidung.",
+          "reviewQueueAtLeast": "Mindestens {{count}} Identitäten warten auf eine Entscheidung.",
           "reviewQueueDetail": "Zwei oder mehr Kontakte teilen sich eine Microsoft-E-Mail; bis Sie entscheiden, passiert mit ihnen nichts.",
           "reviewQueueOne": "{{count}} Identität wartet auf eine Entscheidung.",
           "scheduleNotApplied": "Die automatische Synchronisierung ist aktiv, aber der Zeitplan wurde nie übernommen.",

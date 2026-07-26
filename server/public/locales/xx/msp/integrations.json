@@ -379,6 +379,8 @@
         "actions": {
           "pause": "11111",
           "resume": "11111",
+          "syncNeedsClients": "11111",
+          "syncNeedsConnection": "11111",
           "syncNow": "11111",
           "syncingNow": "11111"
         },
@@ -402,6 +404,7 @@
           "noClients": "11111",
           "noClientsDetail": "11111",
           "reviewQueue": "11111",
+          "reviewQueueAtLeast": "11111",
           "reviewQueueDetail": "11111",
           "reviewQueueOne": "11111",
           "scheduleNotApplied": "11111",

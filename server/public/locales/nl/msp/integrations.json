@@ -379,6 +379,8 @@
         "actions": {
           "pause": "Sync pauzeren",
           "resume": "Sync hervatten",
+          "syncNeedsClients": "Koppel ten minste één klant voordat u synchroniseert.",
+          "syncNeedsConnection": "Herstel de verbinding voordat u synchroniseert.",
           "syncNow": "Nu synchroniseren",
           "syncingNow": "Starten…"
         },
@@ -402,6 +404,7 @@
           "noClients": "Er zijn geen klanten gekoppeld, dus er kan niets synchroniseren.",
           "noClientsDetail": "Koppel een Microsoft-tenant aan een klant om contacten te gaan synchroniseren.",
           "reviewQueue": "{{count}} identiteiten wachten op een beslissing.",
+          "reviewQueueAtLeast": "Minstens {{count}} identiteiten wachten op een beslissing.",
           "reviewQueueDetail": "Twee of meer contacten delen één Microsoft-e-mailadres, dus er gebeurt niets tot u kiest.",
           "reviewQueueOne": "{{count}} identiteit wacht op een beslissing.",
           "scheduleNotApplied": "Automatische synchronisatie staat aan, maar het schema is nooit toegepast.",

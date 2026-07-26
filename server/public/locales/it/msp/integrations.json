@@ -379,6 +379,8 @@
         "actions": {
           "pause": "Sospendi la sincronizzazione",
           "resume": "Riprendi la sincronizzazione",
+          "syncNeedsClients": "Associa almeno un cliente prima di sincronizzare.",
+          "syncNeedsConnection": "Ripristina la connessione prima di sincronizzare.",
           "syncNow": "Sincronizza ora",
           "syncingNow": "Avvio…"
         },
@@ -402,6 +404,7 @@
           "noClients": "Nessun cliente è associato, quindi non può sincronizzarsi nulla.",
           "noClientsDetail": "Associa un tenant Microsoft a un cliente per iniziare a sincronizzare i contatti.",
           "reviewQueue": "{{count}} identità attendono una decisione.",
+          "reviewQueueAtLeast": "Almeno {{count}} identità attendono una decisione.",
           "reviewQueueDetail": "Due o più contatti condividono la stessa e-mail Microsoft: non succede nulla finché non scegli.",
           "reviewQueueOne": "{{count}} identità è in attesa di una decisione.",
           "scheduleNotApplied": "La sincronizzazione automatica è attiva, ma la pianificazione non è mai stata applicata.",

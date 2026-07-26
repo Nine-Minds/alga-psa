@@ -420,6 +420,28 @@ describe('EntraConsole overview', () => {
     expect(document.getElementById('entra-console-attention-failed-clients')).not.toBeNull();
   });
 
+  it('says why Sync now is unavailable rather than just greying it out', async () => {
+    getEntraConfirmedMappingsMock.mockResolvedValue({
+      success: true,
+      data: { mappings: [] },
+    });
+
+    renderConsole();
+
+    await waitFor(() =>
+      expect((document.getElementById('entra-console-sync-now') as HTMLButtonElement).disabled).toBe(
+        true
+      )
+    );
+    // The reason lives on the wrapper, which is what carries the tooltip: a
+    // disabled button swallows the pointer events Radix listens for.
+    expect(
+      document.getElementById('entra-console-sync-now')?.closest('span')?.getAttribute(
+        'data-sync-blocked'
+      )
+    ).toBe('Map at least one client before syncing.');
+  });
+
   it('pauses automatic sync from the header without leaving the overview', async () => {
     renderConsole();
 

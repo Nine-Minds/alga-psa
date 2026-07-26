@@ -81,6 +81,9 @@ const TAB_LABEL_KEYS: Record<EntraConsoleTab, string> = {
   connection: 'integrations.entra.console.tabs.connection',
 };
 
+/** One page of the review queue. A page is not a total; see reviewQueueAtLimit. */
+const REVIEW_QUEUE_PAGE_SIZE = 50;
+
 const SEVERITY_ICON: Record<EntraAttentionItem['severity'], typeof AlertCircle> = {
   blocking: AlertCircle,
   warning: AlertTriangle,
@@ -214,6 +217,13 @@ export function EntraConsole({
   const [lastRunResults, setLastRunResults] = React.useState<EntraSyncRunTenantResult[]>([]);
   const [schedule, setSchedule] = React.useState<EntraSyncScheduleSettings | null>(null);
   const [reviewQueueCount, setReviewQueueCount] = React.useState(0);
+  /**
+   * True when the queue came back full. `getEntraReconciliationQueue` takes a
+   * page size, and the console was rendering `items.length` as a total — so
+   * five thousand pending identities read "50 identities are waiting", in the
+   * attention item and in the tab badge, and an operator planned around it.
+   */
+  const [reviewQueueAtLimit, setReviewQueueAtLimit] = React.useState(false);
   const [fieldSyncConfig, setFieldSyncConfig] = React.useState<EntraFieldSyncConfig>(
     normalizeEntraFieldSyncConfig(null)
   );
@@ -268,7 +278,7 @@ export function EntraConsole({
         getEntraConfirmedMappings(),
         getEntraSyncRunHistory(50),
         getEntraSyncSchedule(),
-        getEntraReconciliationQueue(50),
+        getEntraReconciliationQueue(REVIEW_QUEUE_PAGE_SIZE),
       ]);
 
       // Every reader returns a Forbidden or failure envelope rather than
@@ -285,8 +295,13 @@ export function EntraConsole({
       if ('error' in scheduleResult) failures.push(scheduleResult.error);
       else setSchedule(scheduleResult.data || null);
 
-      if ('error' in queueResult) failures.push(queueResult.error);
-      else setReviewQueueCount((queueResult.data?.items || []).length);
+      if ('error' in queueResult) {
+        failures.push(queueResult.error);
+      } else {
+        const queued = (queueResult.data?.items || []).length;
+        setReviewQueueCount(queued);
+        setReviewQueueAtLimit(queued >= REVIEW_QUEUE_PAGE_SIZE);
+      }
 
       if ('error' in runsResult) {
         failures.push(runsResult.error);
@@ -345,6 +360,7 @@ export function EntraConsole({
     status,
     mappings,
     reviewQueueCount,
+    reviewQueueAtLimit,
     schedule,
   });
   const lastRun = findLastRealRun(runs);
@@ -629,6 +645,13 @@ export function EntraConsole({
   const overwrittenFields = ENTRA_OVERWRITE_RULES.filter(
     (rule) => fieldSyncConfig[rule.key]
   ).map((rule) => t(rule.labelKey));
+
+  /** Why "Sync now" is unavailable, in the words the operator needs. */
+  const syncBlockedReason = !connectionHealthy
+    ? t('integrations.entra.console.actions.syncNeedsConnection')
+    : mappings.length === 0
+      ? t('integrations.entra.console.actions.syncNeedsClients')
+      : null;
 
   const permissionItems: MarkListItem[] = [
     {
@@ -1231,9 +1254,11 @@ export function EntraConsole({
     connection: connectionPanel,
   };
 
-  const tabCounts: Partial<Record<EntraConsoleTab, number>> = {
+  const tabCounts: Partial<Record<EntraConsoleTab, React.ReactNode>> = {
     clients: mappings.length,
-    'review-queue': reviewQueueCount,
+    'review-queue': reviewQueueCount
+      ? `${reviewQueueCount}${reviewQueueAtLimit ? '+' : ''}`
+      : 0,
   };
 
   const tabs: TabContent[] = ENTRA_CONSOLE_TABS.map((candidate) => ({
@@ -1276,17 +1301,24 @@ export function EntraConsole({
           <Badge id="entra-console-health" variant={headline.variant}>
             {headline.label}
           </Badge>
-          <Button
-            id="entra-console-sync-now"
-            type="button"
-            size="sm"
-            onClick={() => void handleSyncAll()}
-            disabled={syncAllBusy || !connectionHealthy || mappings.length === 0}
-          >
-            {syncAllBusy
-              ? t('integrations.entra.console.actions.syncingNow')
-              : t('integrations.entra.console.actions.syncNow')}
-          </Button>
+          {/* A disabled control that will not say why is a dead end. The span
+              carries the tooltip because a disabled button swallows the pointer
+              events Radix listens for. */}
+          <Tooltip content={syncBlockedReason || ''} open={syncBlockedReason ? undefined : false}>
+            <span data-sync-blocked={syncBlockedReason || undefined}>
+              <Button
+                id="entra-console-sync-now"
+                type="button"
+                size="sm"
+                onClick={() => void handleSyncAll()}
+                disabled={syncAllBusy || Boolean(syncBlockedReason)}
+              >
+                {syncAllBusy
+                  ? t('integrations.entra.console.actions.syncingNow')
+                  : t('integrations.entra.console.actions.syncNow')}
+              </Button>
+            </span>
+          </Tooltip>
           <Button
             id="entra-console-pause"
             type="button"
