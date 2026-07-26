@@ -274,6 +274,24 @@ describe('EntraConsole overview', () => {
     );
   });
 
+  it('does not call a tenant healthy because its clients only partly failed', async () => {
+    getEntraConfirmedMappingsMock.mockResolvedValue({
+      success: true,
+      data: { mappings: [{ ...CONTOSO, lastRunStatus: 'partial' }] },
+    });
+
+    renderConsole();
+
+    // The header used to test lastRunStatus === 'failed' and nothing else, so a
+    // partly failed client read "Healthy" here and "Failing" on the Clients tab.
+    await waitFor(() =>
+      expect(document.getElementById('entra-console-health')?.textContent).toContain(
+        '1 client failing'
+      )
+    );
+    expect(document.getElementById('entra-console-attention-failed-clients')).not.toBeNull();
+  });
+
   it('pauses automatic sync from the header without leaving the overview', async () => {
     renderConsole();
 

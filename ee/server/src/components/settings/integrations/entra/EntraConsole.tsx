@@ -47,6 +47,7 @@ import { wasEntraSyncAccepted } from './syncStart';
 import {
   ENTRA_CONSOLE_TABS,
   buildEntraAttentionItems,
+  failingEntraClients,
   findLastRealRun,
   isEntraSyncIntervalChoice,
   parseEntraConsoleTab,
@@ -275,11 +276,10 @@ export function EntraConsole({
     mappings,
     reviewQueueCount,
     scheduleEnabled: Boolean(schedule?.syncEnabled),
-    runs,
   });
   const lastRun = findLastRealRun(runs);
   const totals = summarizeEntraRunResults(lastRunResults);
-  const failingCount = mappings.filter((mapping) => mapping.lastRunStatus === 'failed').length;
+  const failingCount = failingEntraClients(mappings).length;
 
   const clientNameByTenant = new Map(
     mappings.map((mapping) => [

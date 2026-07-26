@@ -74,7 +74,6 @@ describe('buildEntraAttentionItems', () => {
     mappings: [mapping()],
     reviewQueueCount: 0,
     scheduleEnabled: true,
-    runs: [run()],
   };
 
   it('says nothing when nothing is wrong', () => {
@@ -131,6 +130,31 @@ describe('buildEntraAttentionItems', () => {
     expect(items.find((item) => item.id === 'failed-clients')?.values?.clients).toBe(
       'Client A, Client B, Client C +2'
     );
+  });
+
+  it('counts a partly failed client as failing, the way every other surface does', () => {
+    const items = buildEntraAttentionItems({
+      ...base,
+      mappings: [
+        mapping({ lastRunStatus: 'partial', clientName: 'Partly Ltd' }),
+        mapping({ managedTenantId: 'managed-2', lastRunStatus: 'failed', clientName: 'Broken Ltd' }),
+      ],
+    });
+
+    // 'partial' used to match nothing here, so a tenant whose clients all came
+    // back partly failed was told nothing needed attention.
+    const failed = items.find((item) => item.id === 'failed-clients');
+    expect(failed?.values?.count).toBe(2);
+    expect(failed?.values?.clients).toBe('Partly Ltd, Broken Ltd');
+  });
+
+  it('does not accuse a client of never syncing while it is mid-first-run', () => {
+    const items = buildEntraAttentionItems({
+      ...base,
+      mappings: [mapping({ lastSyncedAt: null, lastRunStatus: 'running' })],
+    });
+
+    expect(items.map((item) => item.id)).toEqual([]);
   });
 
   it('surfaces the review-queue backlog, unsynced clients, and a schedule that is off', () => {

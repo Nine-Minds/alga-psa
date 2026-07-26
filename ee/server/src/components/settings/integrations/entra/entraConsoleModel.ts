@@ -3,6 +3,7 @@ import type {
   EntraStatusResponse,
   EntraSyncHistoryRun,
 } from '@alga-psa/integrations/actions';
+import { entraClientHealth } from './entraClientHealth';
 
 /**
  * What the console decides without the DOM: which tab a URL means, and what
@@ -81,7 +82,21 @@ export interface BuildEntraAttentionInput {
   mappings: EntraConfirmedMapping[];
   reviewQueueCount: number;
   scheduleEnabled: boolean;
-  runs: EntraSyncHistoryRun[];
+}
+
+/**
+ * One question, one answer. "Which clients are in trouble" is settled by
+ * `entraClientHealth`, the module written after the same expression was found
+ * in three places disagreeing — including its verdict that `partial` is a
+ * failure, because that is how the backend's notification rules count it.
+ */
+export function failingEntraClients(
+  mappings: EntraConfirmedMapping[]
+): EntraConfirmedMapping[] {
+  return mappings.filter((mapping) => {
+    const health = entraClientHealth(mapping);
+    return health === 'failed' || health === 'partial';
+  });
 }
 
 /**
@@ -108,7 +123,7 @@ export function buildEntraAttentionItems(input: BuildEntraAttentionInput): Entra
 
   // Client failures are only worth listing when the connection itself is fine;
   // otherwise they are all the same failure wearing different names.
-  const failedClients = input.mappings.filter((mapping) => mapping.lastRunStatus === 'failed');
+  const failedClients = failingEntraClients(input.mappings);
   if (!connectionBroken && failedClients.length > 0) {
     items.push({
       id: 'failed-clients',
@@ -137,7 +152,12 @@ export function buildEntraAttentionItems(input: BuildEntraAttentionInput): Entra
     });
   }
 
-  const neverSynced = input.mappings.filter((mapping) => !mapping.lastSyncedAt);
+  // Never means never: a client in the middle of its first run has no
+  // lastSyncedAt yet, and being told it has "never synced" while the Clients
+  // tab badges it "Syncing" is how an operator learns not to trust the list.
+  const neverSynced = input.mappings.filter(
+    (mapping) => entraClientHealth(mapping) === 'never'
+  );
   if (neverSynced.length > 0) {
     items.push({
       id: 'never-synced',
