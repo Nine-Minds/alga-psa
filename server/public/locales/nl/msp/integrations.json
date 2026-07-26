@@ -458,6 +458,7 @@
           "exportRecord": "Verbindingsrecord exporteren",
           "mappingDescription": "Bekijk of wijzig bij welke klant elke Microsoft-tenant hoort.",
           "mappingTitle": "Tenantkoppeling",
+          "methodLabel": "Methode",
           "permissionsTitle": "Geldende machtigingen",
           "rotate": "Referentie roteren",
           "validate": "Verbinding testen",

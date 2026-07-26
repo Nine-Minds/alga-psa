@@ -458,6 +458,7 @@
           "exportRecord": "Exportar registro de conexión",
           "mappingDescription": "Revise o cambie a qué cliente pertenece cada inquilino de Microsoft.",
           "mappingTitle": "Asignación de inquilinos",
+          "methodLabel": "Método",
           "permissionsTitle": "Permisos vigentes",
           "rotate": "Rotar credencial",
           "validate": "Probar conexión",

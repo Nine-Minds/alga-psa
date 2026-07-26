@@ -458,6 +458,7 @@
           "exportRecord": "Esporta record di connessione",
           "mappingDescription": "Verifica o modifica a quale client appartiene ogni tenant Microsoft.",
           "mappingTitle": "Associazione tenant",
+          "methodLabel": "Metodo",
           "permissionsTitle": "Autorizzazioni in vigore",
           "rotate": "Ruota credenziale",
           "validate": "Prova connessione",

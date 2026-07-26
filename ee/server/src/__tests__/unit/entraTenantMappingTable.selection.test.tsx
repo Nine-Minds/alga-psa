@@ -137,14 +137,17 @@ describe('EntraTenantMappingTable client selection', () => {
     expect(fuzzyRow).toBeTruthy();
     expect(unmatchedRow).toBeTruthy();
 
-    const fuzzySelect = within(fuzzyRow as HTMLElement).getByRole('combobox') as HTMLSelectElement;
-    const unmatchedSelect = within(unmatchedRow as HTMLElement).getByRole('combobox') as HTMLSelectElement;
+    // Re-query between the two changes: the table re-renders on the first
+    // selection, so a node captured beforehand can be detached by the second.
+    const pickerIn = (label: string) =>
+      within(screen.getByText(label).closest('tr') as HTMLElement)
+        .getByRole('combobox') as HTMLSelectElement;
 
-    fireEvent.change(fuzzySelect, { target: { value: 'client-alpha' } });
-    fireEvent.change(unmatchedSelect, { target: { value: 'client-beta' } });
+    fireEvent.change(pickerIn('Fuzzy Tenant'), { target: { value: 'client-alpha' } });
+    fireEvent.change(pickerIn('Unmatched Tenant'), { target: { value: 'client-beta' } });
 
-    expect(fuzzySelect.value).toBe('client-alpha');
-    expect(unmatchedSelect.value).toBe('client-beta');
+    expect(pickerIn('Fuzzy Tenant').value).toBe('client-alpha');
+    expect(pickerIn('Unmatched Tenant').value).toBe('client-beta');
 
     await waitFor(() => {
       expect(onSummaryChange).toHaveBeenCalledWith(

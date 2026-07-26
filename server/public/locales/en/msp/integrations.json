@@ -458,6 +458,7 @@
           "exportRecord": "Export connection record",
           "mappingDescription": "Review or change which client each Microsoft tenant belongs to.",
           "mappingTitle": "Tenant mapping",
+          "methodLabel": "Method",
           "permissionsTitle": "Permissions in effect",
           "rotate": "Rotate credential",
           "validate": "Test connection",

@@ -458,6 +458,7 @@
           "exportRecord": "Exportar registo de ligação",
           "mappingDescription": "Reveja ou altere a que cliente pertence cada inquilino Microsoft.",
           "mappingTitle": "Associação de inquilinos",
+          "methodLabel": "Método",
           "permissionsTitle": "Permissões em vigor",
           "rotate": "Rodar credencial",
           "validate": "Testar ligação",

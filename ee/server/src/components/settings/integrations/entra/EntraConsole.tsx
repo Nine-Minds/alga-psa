@@ -1076,7 +1076,7 @@ export function EntraConsole({
         >
           <div>
             <KeyValue
-              label={t('integrations.entra.settings.overview.connectionTypeLabel')}
+              label={t('integrations.entra.console.connection.methodLabel')}
               value={connectionMethodLabel}
             />
             {status?.connectionType === 'cipp' ? (

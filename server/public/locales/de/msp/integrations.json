@@ -458,6 +458,7 @@
           "exportRecord": "Verbindungsdatensatz exportieren",
           "mappingDescription": "Prüfen oder ändern Sie, zu welchem Client jeder Microsoft-Mandant gehört.",
           "mappingTitle": "Mandantenzuordnung",
+          "methodLabel": "Methode",
           "permissionsTitle": "Geltende Berechtigungen",
           "rotate": "Anmeldedaten rotieren",
           "validate": "Verbindung testen",
