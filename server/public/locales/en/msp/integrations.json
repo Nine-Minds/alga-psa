@@ -441,6 +441,7 @@
           "hidePreview": "Hide preview"
         },
         "connection": {
+          "changeAction": "Change connection",
           "exportRecord": "Export connection record",
           "mappingDescription": "Review or change which client each Microsoft tenant belongs to.",
           "mappingTitle": "Tenant mapping",
@@ -554,14 +555,10 @@
             "240": "every 4 hours",
             "60": "every hour",
             "720": "every 12 hours"
-          }
+          },
+          "changeAction": "Change schedule"
         },
         "sideRail": {
-          "change": "Change…",
-          "covers": "Covers",
-          "coversClients": "{{count}} clients",
-          "coversClientsOne": "{{count}} client",
-          "lastRun": "Last run",
           "runs": "Runs {{cadence}}",
           "runsMinutes": "Runs every {{minutes}} minutes",
           "scheduleOff": "Off"

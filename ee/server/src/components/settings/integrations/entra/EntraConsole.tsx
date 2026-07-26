@@ -805,46 +805,21 @@ export function EntraConsole({
 
         <div className="space-y-4" id="entra-console-side-rail">
           <RailCard id="entra-console-rail-schedule" title={t('integrations.entra.console.schedule.title')}>
+            {/* "Last run" and "Covers" used to sit here: the first is the same
+                timestamp as the last-sync card 600px to the left, the second
+                the same count as the header lead and the Clients tab badge.
+                Pause was here too, identical to the header button that is
+                visible from every tab. */}
             <p className="text-sm">{scheduleCadenceLabel}</p>
-            <div className="mt-2">
-              <KeyValue
-                label={t('integrations.entra.console.sideRail.lastRun')}
-                value={formatDateTime(
-                  lastRun?.completedAt || lastRun?.startedAt,
-                  t('integrations.entra.settings.validation.neverFormatted')
-                )}
-              />
-              <KeyValue
-                label={t('integrations.entra.console.sideRail.covers')}
-                value={t(
-                  mappings.length === 1
-                    ? 'integrations.entra.console.sideRail.coversClientsOne'
-                    : 'integrations.entra.console.sideRail.coversClients',
-                  { count: mappings.length }
-                )}
-              />
-            </div>
-            <div className="mt-2 flex flex-wrap gap-2">
-              <Button
-                id="entra-console-rail-pause"
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => void handleTogglePause()}
-                disabled={pauseBusy || !schedule}
-              >
-                {schedule?.syncEnabled
-                  ? t('integrations.entra.console.actions.pause')
-                  : t('integrations.entra.console.actions.resume')}
-              </Button>
+            <div className="mt-3">
               <Button
                 id="entra-console-rail-change-schedule"
                 type="button"
                 size="sm"
-                variant="ghost"
+                variant="outline"
                 onClick={() => selectTab('schedule')}
               >
-                {t('integrations.entra.console.sideRail.change')}
+                {t('integrations.entra.console.schedule.changeAction')}
               </Button>
             </div>
           </RailCard>
@@ -853,10 +828,10 @@ export function EntraConsole({
             id="entra-console-rail-connection"
             title={t('integrations.entra.settings.connection.details')}
           >
-            <KeyValue
-              label={t('integrations.entra.settings.overview.connectionTypeLabel')}
-              value={connectionMethodLabel}
-            />
+            {/* The connection *type* is in the header lead ("connected via
+                CIPP"); what belongs here is where it points, which the lead
+                does not say. The direct tenant row was missing entirely, so a
+                direct-connected tenant's rail identified nothing at all. */}
             {status?.connectionType === 'cipp' ? (
               <KeyValue
                 label={t('integrations.entra.settings.connection.cippServerLabel')}
@@ -866,33 +841,34 @@ export function EntraConsole({
                 }
               />
             ) : null}
+            {status?.connectionType === 'direct' ? (
+              <KeyValue
+                label={t('integrations.entra.settings.connection.directTenantLabel')}
+                value={
+                  status.connectionDetails?.directTenantId
+                  || t('integrations.entra.settings.connection.directTenantDefault')
+                }
+              />
+            ) : null}
+            {/* No danger tone on the timestamp: the date is not what is wrong,
+                the connection is — and the header badge and the blocking
+                attention row both already say so. */}
             <KeyValue
               label={t('integrations.entra.settings.validation.lastValidatedLabel')}
               value={formatDateTime(
                 status?.lastValidatedAt,
                 t('integrations.entra.settings.validation.neverFormatted')
               )}
-              tone={connectionHealthy ? 'default' : 'danger'}
             />
-            <div className="mt-2 flex flex-wrap gap-2">
-              <Button
-                id="entra-console-rail-rotate"
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={() => void handleRotate()}
-                disabled={rotateBusy || !status?.connectionType}
-              >
-                {t('integrations.entra.console.connection.rotate')}
-              </Button>
+            <div className="mt-3">
               <Button
                 id="entra-console-rail-open-connection"
                 type="button"
                 size="sm"
-                variant="ghost"
+                variant="outline"
                 onClick={() => selectTab('connection')}
               >
-                {t('integrations.entra.console.sideRail.change')}
+                {t('integrations.entra.console.connection.changeAction')}
               </Button>
             </div>
           </RailCard>

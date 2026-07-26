@@ -441,6 +441,7 @@
           "hidePreview": "Masquer l'aperçu"
         },
         "connection": {
+          "changeAction": "Modifier la connexion",
           "exportRecord": "Exporter l'enregistrement de connexion",
           "mappingDescription": "Vérifiez ou modifiez le client auquel appartient chaque locataire Microsoft.",
           "mappingTitle": "Association des locataires",
@@ -554,14 +555,10 @@
             "240": "toutes les 4 heures",
             "60": "toutes les heures",
             "720": "toutes les 12 heures"
-          }
+          },
+          "changeAction": "Modifier la planification"
         },
         "sideRail": {
-          "change": "Modifier…",
-          "covers": "Couvre",
-          "coversClients": "{{count}} clients",
-          "coversClientsOne": "{{count}} client",
-          "lastRun": "Dernière exécution",
           "runs": "S'exécute {{cadence}}",
           "runsMinutes": "S'exécute toutes les {{minutes}} minutes",
           "scheduleOff": "Désactivé"

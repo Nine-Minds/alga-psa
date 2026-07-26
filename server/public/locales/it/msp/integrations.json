@@ -441,6 +441,7 @@
           "hidePreview": "Nascondi anteprima"
         },
         "connection": {
+          "changeAction": "Modifica connessione",
           "exportRecord": "Esporta record di connessione",
           "mappingDescription": "Verifica o modifica a quale client appartiene ogni tenant Microsoft.",
           "mappingTitle": "Associazione tenant",
@@ -554,14 +555,10 @@
             "240": "ogni 4 ore",
             "60": "ogni ora",
             "720": "ogni 12 ore"
-          }
+          },
+          "changeAction": "Modifica pianificazione"
         },
         "sideRail": {
-          "change": "Modifica…",
-          "covers": "Copre",
-          "coversClients": "{{count}} clienti",
-          "coversClientsOne": "{{count}} cliente",
-          "lastRun": "Ultima esecuzione",
           "runs": "Viene eseguito {{cadence}}",
           "runsMinutes": "Viene eseguito ogni {{minutes}} minuti",
           "scheduleOff": "Disattivato"

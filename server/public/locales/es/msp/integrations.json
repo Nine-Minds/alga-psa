@@ -441,6 +441,7 @@
           "hidePreview": "Ocultar vista previa"
         },
         "connection": {
+          "changeAction": "Cambiar conexión",
           "exportRecord": "Exportar registro de conexión",
           "mappingDescription": "Revise o cambie a qué cliente pertenece cada inquilino de Microsoft.",
           "mappingTitle": "Asignación de inquilinos",
@@ -554,14 +555,10 @@
             "240": "cada 4 horas",
             "60": "cada hora",
             "720": "cada 12 horas"
-          }
+          },
+          "changeAction": "Cambiar programación"
         },
         "sideRail": {
-          "change": "Cambiar…",
-          "covers": "Cubre",
-          "coversClients": "{{count}} clientes",
-          "coversClientsOne": "{{count}} cliente",
-          "lastRun": "Última ejecución",
           "runs": "Se ejecuta {{cadence}}",
           "runsMinutes": "Se ejecuta cada {{minutes}} minutos",
           "scheduleOff": "Desactivado"

@@ -441,6 +441,7 @@
           "hidePreview": "Ukryj podgląd"
         },
         "connection": {
+          "changeAction": "Zmień połączenie",
           "exportRecord": "Eksportuj rekord połączenia",
           "mappingDescription": "Sprawdź lub zmień, do którego klienta należy każda dzierżawa Microsoft.",
           "mappingTitle": "Przypisanie dzierżaw",
@@ -554,14 +555,10 @@
             "240": "co 4 godziny",
             "60": "co godzinę",
             "720": "co 12 godzin"
-          }
+          },
+          "changeAction": "Zmień harmonogram"
         },
         "sideRail": {
-          "change": "Zmień…",
-          "covers": "Obejmuje",
-          "coversClients": "{{count}} klientów",
-          "coversClientsOne": "{{count}} klient",
-          "lastRun": "Ostatnie uruchomienie",
           "runs": "Uruchamia się {{cadence}}",
           "runsMinutes": "Uruchamia się co {{minutes}} minut",
           "scheduleOff": "Wyłączone"

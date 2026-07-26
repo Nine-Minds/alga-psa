@@ -441,6 +441,7 @@
           "hidePreview": "11111"
         },
         "connection": {
+          "changeAction": "11111",
           "exportRecord": "11111",
           "mappingDescription": "11111",
           "mappingTitle": "11111",
@@ -554,14 +555,10 @@
             "240": "11111",
             "60": "11111",
             "720": "11111"
-          }
+          },
+          "changeAction": "11111"
         },
         "sideRail": {
-          "change": "11111",
-          "covers": "11111",
-          "coversClients": "11111",
-          "coversClientsOne": "11111",
-          "lastRun": "11111",
           "runs": "11111",
           "runsMinutes": "11111",
           "scheduleOff": "11111"

@@ -441,6 +441,7 @@
           "hidePreview": "Vorschau ausblenden"
         },
         "connection": {
+          "changeAction": "Verbindung ändern",
           "exportRecord": "Verbindungsdatensatz exportieren",
           "mappingDescription": "Prüfen oder ändern Sie, zu welchem Client jeder Microsoft-Mandant gehört.",
           "mappingTitle": "Mandantenzuordnung",
@@ -554,14 +555,10 @@
             "240": "alle 4 Stunden",
             "60": "stündlich",
             "720": "alle 12 Stunden"
-          }
+          },
+          "changeAction": "Zeitplan ändern"
         },
         "sideRail": {
-          "change": "Ändern…",
-          "covers": "Umfasst",
-          "coversClients": "{{count}} Kunden",
-          "coversClientsOne": "{{count}} Kunde",
-          "lastRun": "Letzter Lauf",
           "runs": "Läuft {{cadence}}",
           "runsMinutes": "Läuft alle {{minutes}} Minuten",
           "scheduleOff": "Aus"

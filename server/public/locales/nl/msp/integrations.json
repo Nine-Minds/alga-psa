@@ -441,6 +441,7 @@
           "hidePreview": "Voorbeeld verbergen"
         },
         "connection": {
+          "changeAction": "Verbinding wijzigen",
           "exportRecord": "Verbindingsrecord exporteren",
           "mappingDescription": "Bekijk of wijzig bij welke klant elke Microsoft-tenant hoort.",
           "mappingTitle": "Tenantkoppeling",
@@ -554,14 +555,10 @@
             "240": "elke 4 uur",
             "60": "elk uur",
             "720": "elke 12 uur"
-          }
+          },
+          "changeAction": "Schema wijzigen"
         },
         "sideRail": {
-          "change": "Wijzigen…",
-          "covers": "Omvat",
-          "coversClients": "{{count}} klanten",
-          "coversClientsOne": "{{count}} klant",
-          "lastRun": "Laatste run",
           "runs": "Draait {{cadence}}",
           "runsMinutes": "Draait elke {{minutes}} minuten",
           "scheduleOff": "Uit"

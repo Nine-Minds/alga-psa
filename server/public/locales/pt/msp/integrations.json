@@ -441,6 +441,7 @@
           "hidePreview": "Ocultar pré-visualização"
         },
         "connection": {
+          "changeAction": "Alterar ligação",
           "exportRecord": "Exportar registo de ligação",
           "mappingDescription": "Reveja ou altere a que cliente pertence cada inquilino Microsoft.",
           "mappingTitle": "Associação de inquilinos",
@@ -554,14 +555,10 @@
             "240": "a cada 4 horas",
             "60": "a cada hora",
             "720": "a cada 12 horas"
-          }
+          },
+          "changeAction": "Alterar agendamento"
         },
         "sideRail": {
-          "change": "Alterar…",
-          "covers": "Abrange",
-          "coversClients": "{{count}} clientes",
-          "coversClientsOne": "{{count}} cliente",
-          "lastRun": "Última execução",
           "runs": "Executa {{cadence}}",
           "runsMinutes": "Executa a cada {{minutes}} minutos",
           "scheduleOff": "Desativado"
