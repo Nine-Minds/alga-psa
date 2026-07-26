@@ -1,6 +1,8 @@
 'use client';
 
 import React from 'react';
+import { PencilLine } from 'lucide-react';
+import { EntraSection } from './EntraSection';
 import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Switch } from '@alga-psa/ui/components/Switch';
@@ -133,21 +135,14 @@ export function FieldSyncRules({
   }, [config, previewClient, t]);
 
   return (
-    <div
-      className="rounded-lg border border-border/70 bg-background p-4"
+    <EntraSection
       id="entra-field-sync-controls-panel"
+      icon={PencilLine}
+      title={t('integrations.entra.settings.fieldSync.title')}
+      description={t('integrations.entra.settings.fieldSync.description')}
+      action={headerSlot}
     >
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-sm font-semibold">{t('integrations.entra.settings.fieldSync.title')}</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {t('integrations.entra.settings.fieldSync.description')}
-          </p>
-        </div>
-        {headerSlot}
-      </div>
-
-      <div className="mt-3 space-y-3">
+      <div className="space-y-3">
         {OVERWRITE_RULES.map((option) => (
           <div
             key={option.key}
@@ -244,7 +239,7 @@ export function FieldSyncRules({
           <ContactPreflightReport report={preview} />
         </div>
       ) : null}
-    </div>
+    </EntraSection>
   );
 }
 

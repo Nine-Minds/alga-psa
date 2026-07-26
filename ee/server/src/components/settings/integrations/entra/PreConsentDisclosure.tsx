@@ -4,6 +4,7 @@ import React from 'react';
 import { ShieldCheck } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
+import { EntraSection } from './EntraSection';
 import { MarkList, type MarkListItem } from './MarkList';
 import {
   ENTRA_CAPABILITY_STATEMENTS,
@@ -61,19 +62,13 @@ export function PreConsentDisclosure(): React.JSX.Element {
     }));
 
   return (
-    <div
-      className="rounded-lg border border-border/70 bg-background p-4"
+    <EntraSection
       id="entra-preconsent-disclosure"
+      icon={ShieldCheck}
+      title={t('integrations.entra.setup.disclosure.title')}
+      description={t('integrations.entra.setup.disclosure.description')}
     >
-      <div className="flex items-center gap-2">
-        <ShieldCheck className="h-4 w-4 flex-shrink-0 text-primary-500" aria-hidden="true" />
-        <p className="text-sm font-semibold">{t('integrations.entra.setup.disclosure.title')}</p>
-      </div>
-      <p className="mt-1 text-sm text-muted-foreground">
-        {t('integrations.entra.setup.disclosure.description')}
-      </p>
-
-      <div className="mt-4 grid gap-6 md:grid-cols-2">
+      <div className="grid gap-6 md:grid-cols-2">
         <div>
           <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
             {t('integrations.entra.setup.disclosure.capabilitiesTitle')}
@@ -126,7 +121,7 @@ export function PreConsentDisclosure(): React.JSX.Element {
             : t('integrations.entra.setup.disclosure.copy')}
         </Button>
       </div>
-    </div>
+    </EntraSection>
   );
 }
 

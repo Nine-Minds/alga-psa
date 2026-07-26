@@ -2,6 +2,8 @@
 
 import React from 'react';
 import Link from 'next/link';
+import { ShieldCheck } from 'lucide-react';
+import { EntraSection } from './EntraSection';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -54,17 +56,12 @@ export default function EntraIntegrationSummaryCard(): React.JSX.Element {
   );
 
   return (
-    <div
-      className="rounded-lg border border-border/70 bg-background p-4"
+    <EntraSection
       id="entra-integration-summary-card"
-    >
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0">
-          <p className="text-sm font-semibold">{t('integrations.entra.summary.title')}</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {t('integrations.entra.summary.description')}
-          </p>
-        </div>
+      icon={ShieldCheck}
+      title={t('integrations.entra.summary.title')}
+      description={t('integrations.entra.summary.description')}
+      action={
         <div className="flex flex-shrink-0 items-center gap-2">
           {loading ? null : (
             <Badge
@@ -80,20 +77,20 @@ export default function EntraIntegrationSummaryCard(): React.JSX.Element {
             </Button>
           </Link>
         </div>
-      </div>
-
+      }
+    >
       {loading ? (
-        <div className="mt-3 h-4 w-48 animate-pulse rounded bg-muted" id="entra-summary-loading" />
+        <div className="h-4 w-48 animate-pulse rounded bg-muted" id="entra-summary-loading" />
       ) : null}
 
       {error ? (
-        <p className="mt-3 text-sm text-destructive" id="entra-summary-error">
+        <p className="text-sm text-destructive" id="entra-summary-error">
           {error}
         </p>
       ) : null}
 
       {!loading && !error ? (
-        <div className="mt-3 grid gap-x-6 gap-y-1 sm:grid-cols-2">
+        <div className="grid gap-x-6 gap-y-1 sm:grid-cols-2">
           <p className="text-sm text-muted-foreground">
             <span className="font-medium text-foreground">
               {t('integrations.entra.settings.overview.connectionTypeLabel')}
@@ -110,6 +107,6 @@ export default function EntraIntegrationSummaryCard(): React.JSX.Element {
           </p>
         </div>
       ) : null}
-    </div>
+    </EntraSection>
   );
 }

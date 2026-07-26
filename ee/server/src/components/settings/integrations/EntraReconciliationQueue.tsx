@@ -2,6 +2,8 @@
 
 import React from 'react';
 import { Button } from '@alga-psa/ui/components/Button';
+import { Users } from 'lucide-react';
+import { EntraSection } from './entra/EntraSection';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   dismissEntraQueueItem,
@@ -159,13 +161,17 @@ export default function EntraReconciliationQueue() {
   }, [loadQueue, t]);
 
   return (
-    <div className="rounded-lg border border-border/70 bg-background p-4" id="entra-reconciliation-queue">
-      <div className="mb-3 flex items-center justify-between gap-2">
-        <p className="text-sm font-semibold">{t('integrations.entra.reconciliation.title')}</p>
+    <EntraSection
+      id="entra-reconciliation-queue"
+      icon={Users}
+      title={t('integrations.entra.reconciliation.title')}
+      tone={items.length > 0 ? 'warning' : 'default'}
+      action={
         <Button id="entra-reconciliation-queue-refresh" type="button" size="sm" variant="ghost" onClick={loadQueue} disabled={loading}>
           {t('integrations.entra.reconciliation.actions.refresh')}
         </Button>
-      </div>
+      }
+    >
 
       {loading ? <p className="text-sm text-muted-foreground">{t('integrations.entra.reconciliation.loading')}</p> : null}
       {!loading && items.length === 0 ? (
@@ -284,6 +290,6 @@ export default function EntraReconciliationQueue() {
         clients={clients}
         selectedClientId={quickAddItem?.clientId || null}
       />
-    </div>
+    </EntraSection>
   );
 }

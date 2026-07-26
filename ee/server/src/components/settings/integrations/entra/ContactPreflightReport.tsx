@@ -1,9 +1,11 @@
 'use client';
 
 import React from 'react';
+import { Eye } from 'lucide-react';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Progress } from '@alga-psa/ui/components/Progress';
+import { EntraSection } from './EntraSection';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type {
   EntraPreflightBucketId,
@@ -84,21 +86,20 @@ export function ContactPreflightReport({ report }: ContactPreflightReportProps):
   );
 
   return (
-    <div className="rounded-lg border border-border/70 bg-background p-4" id="entra-preflight-report">
-      <div className="flex flex-wrap items-start justify-between gap-2">
-        <div className="min-w-0">
-          <p className="text-sm font-semibold">{t('integrations.entra.preflight.title')}</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            {t('integrations.entra.preflight.summary', {
-              count: report.totalIdentities,
-              time: new Date(report.checkedAt).toLocaleString(),
-            })}
-          </p>
-        </div>
+    <EntraSection
+      id="entra-preflight-report"
+      icon={Eye}
+      title={t('integrations.entra.preflight.title')}
+      description={t('integrations.entra.preflight.summary', {
+        count: report.totalIdentities,
+        time: new Date(report.checkedAt).toLocaleString(),
+      })}
+      action={
         <Badge variant="default-muted" id="entra-preflight-nothing-written">
           {t('integrations.entra.preflight.nothingWritten')}
         </Badge>
-      </div>
+      }
+    >
 
       <div className="mt-4 space-y-2">
         {BUCKET_ORDER.map((bucketId) => {
@@ -180,7 +181,7 @@ export function ContactPreflightReport({ report }: ContactPreflightReportProps):
           );
         })}
       </div>
-    </div>
+    </EntraSection>
   );
 }
 

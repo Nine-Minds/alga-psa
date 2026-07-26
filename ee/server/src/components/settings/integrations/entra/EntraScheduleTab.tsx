@@ -1,6 +1,8 @@
 'use client';
 
 import React from 'react';
+import { Clock } from 'lucide-react';
+import { EntraSection } from './EntraSection';
 import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Switch } from '@alga-psa/ui/components/Switch';
@@ -81,21 +83,19 @@ export function EntraScheduleTab({
         </p>
       ) : null}
 
-      <div className="rounded-lg border border-border/70 bg-background p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <p className="text-sm font-semibold">{t('integrations.entra.console.schedule.title')}</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {t('integrations.entra.console.schedule.description')}
-            </p>
-          </div>
+      <EntraSection
+        icon={Clock}
+        title={t('integrations.entra.console.schedule.title')}
+        description={t('integrations.entra.console.schedule.description')}
+        action={
           <Switch
             id="entra-schedule-enabled"
             checked={enabled}
             onCheckedChange={setEnabled}
             disabled={saving}
           />
-        </div>
+        }
+      >
 
         <div className="mt-3 max-w-xs">
           <CustomSelect
@@ -146,7 +146,7 @@ export function EntraScheduleTab({
         {error ? (
           <p className="mt-2 text-sm text-destructive" id="entra-schedule-error">{error}</p>
         ) : null}
-      </div>
+      </EntraSection>
     </div>
   );
 }
