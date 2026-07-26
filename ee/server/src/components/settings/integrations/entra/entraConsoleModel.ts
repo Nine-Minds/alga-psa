@@ -1,3 +1,4 @@
+import type { BadgeVariant } from '@alga-psa/ui/components/Badge';
 import type {
   EntraConfirmedMapping,
   EntraStatusResponse,
@@ -301,6 +302,22 @@ export function entraRunResultOutcome(result: {
   return (result.ambiguous || 0) > 0 ? 'review' : 'done';
 }
 
+export const ENTRA_RUN_RESULT_BADGE_VARIANTS: Record<EntraRunResultOutcome, BadgeVariant> = {
+  failed: 'error',
+  partial: 'warning',
+  running: 'default-muted',
+  review: 'warning',
+  done: 'success',
+};
+
+export const ENTRA_RUN_RESULT_LABEL_KEYS: Record<EntraRunResultOutcome, string> = {
+  failed: 'integrations.entra.console.lastRun.results.failed',
+  partial: 'integrations.entra.console.lastRun.results.partlyFailed',
+  running: 'integrations.entra.console.lastRun.results.running',
+  review: 'integrations.entra.console.lastRun.results.toReview',
+  done: 'integrations.entra.console.lastRun.results.done',
+};
+
 const RUN_RESULT_RANK: Record<EntraRunResultOutcome, number> = {
   failed: 0,
   partial: 1,
@@ -345,6 +362,17 @@ export const DEFAULT_ENTRA_HISTORY_FILTERS: EntraHistoryFilters = {
 };
 
 const SCHEDULED_RUN_TYPES = new Set(['all-tenants']);
+
+/**
+ * Whether the schedule started this run, or a person did.
+ *
+ * The history table used to print `runType` straight out of the database —
+ * "all-tenants", "single-tenant", "preflight" — which is schema vocabulary
+ * leaking onto a screen that already has words for this in its own filter.
+ */
+export function isScheduledEntraRun(run: { runType: string }): boolean {
+  return SCHEDULED_RUN_TYPES.has(run.runType);
+}
 
 export function filterEntraRuns(
   runs: EntraSyncHistoryRun[],

@@ -4,7 +4,8 @@ import React from 'react';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Switch } from '@alga-psa/ui/components/Switch';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@alga-psa/ui/components/Table';
+import { DataTable } from '@alga-psa/ui/components/DataTable';
+import type { ColumnDefinition } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type {
   EntraConfirmedMapping,
@@ -13,9 +14,14 @@ import type {
 import {
   DEFAULT_ENTRA_HISTORY_FILTERS,
   buildEntraRunHistoryCsv,
+  ENTRA_RUN_RESULT_BADGE_VARIANTS,
+  ENTRA_RUN_RESULT_LABEL_KEYS,
+  entraRunResultOutcome,
   filterEntraRuns,
+  isScheduledEntraRun,
   type EntraHistoryFilters,
 } from './entraConsoleModel';
+import { RelativeTime } from './RelativeTime';
 
 interface EntraHistoryTabProps {
   runs: EntraSyncHistoryRun[];
@@ -24,12 +30,6 @@ interface EntraHistoryTabProps {
 }
 
 const PAGE_SIZE = 10;
-
-function formatDateTime(value: string | null): string {
-  if (!value) return '—';
-  const parsed = Date.parse(value);
-  return Number.isNaN(parsed) ? value : new Date(parsed).toLocaleString();
-}
 
 /**
  * Run history that names clients.
@@ -46,7 +46,6 @@ export function EntraHistoryTab({
 }: EntraHistoryTabProps): React.JSX.Element {
   const { t } = useTranslation('msp/integrations');
   const [filters, setFilters] = React.useState<EntraHistoryFilters>(DEFAULT_ENTRA_HISTORY_FILTERS);
-  const [page, setPage] = React.useState(0);
 
   const clientNames = React.useMemo(() => {
     const map = new Map<string, string>();
@@ -60,13 +59,11 @@ export function EntraHistoryTab({
   }, [mappings]);
 
   const filtered = filterEntraRuns(runs, filters);
-  const pageCount = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const currentPage = Math.min(page, pageCount - 1);
-  const visible = filtered.slice(currentPage * PAGE_SIZE, currentPage * PAGE_SIZE + PAGE_SIZE);
 
+  // DataTable owns the page now, and resets to the first one when its data
+  // changes — which is exactly what changing a filter does.
   const setFilter = <K extends keyof EntraHistoryFilters>(key: K, value: EntraHistoryFilters[K]) => {
     setFilters((current) => ({ ...current, [key]: value }));
-    setPage(0);
   };
 
   const handleExport = React.useCallback(() => {
@@ -85,6 +82,79 @@ export function EntraHistoryTab({
   if (loading) {
     return <div className="h-24 animate-pulse rounded-md bg-muted" id="entra-history-loading" />;
   }
+
+  const columns: ColumnDefinition<EntraSyncHistoryRun>[] = [
+    {
+      title: t('integrations.entra.console.history.columns.when'),
+      dataIndex: 'startedAt',
+      width: '150px',
+      render: (_value, run) => <RelativeTime value={run.startedAt} fallback="—" />,
+    },
+    {
+      title: t('integrations.entra.console.history.columns.trigger'),
+      dataIndex: 'runType',
+      width: '120px',
+      // Not `runType`: "all-tenants" and "preflight" are schema words, and this
+      // screen's own filter already has English ones for the same distinction.
+      render: (_value, run) =>
+        t(
+          isScheduledEntraRun(run)
+            ? 'integrations.entra.console.history.triggers.scheduled'
+            : 'integrations.entra.console.history.triggers.manual'
+        ),
+    },
+    {
+      title: t('integrations.entra.console.history.columns.scope'),
+      dataIndex: 'scopeManagedTenantId',
+      render: (_value, run) =>
+        run.scopeManagedTenantId
+          ? clientNames.get(run.scopeManagedTenantId) || run.scopeManagedTenantId
+          : t('integrations.entra.console.history.allClients'),
+    },
+    {
+      title: t('integrations.entra.console.history.columns.clients'),
+      dataIndex: 'totalTenants',
+      width: '110px',
+      headerClassName: 'text-right',
+      cellClassName: 'text-right tabular-nums',
+    },
+    {
+      title: t('integrations.entra.console.history.columns.succeeded'),
+      dataIndex: 'succeededTenants',
+      width: '120px',
+      headerClassName: 'text-right',
+      cellClassName: 'text-right tabular-nums',
+    },
+    {
+      title: t('integrations.entra.console.history.columns.failed'),
+      dataIndex: 'failedTenants',
+      width: '104px',
+      headerClassName: 'text-right',
+      cellClassName: 'text-right tabular-nums',
+    },
+    {
+      title: t('integrations.entra.console.lastRun.columns.result'),
+      dataIndex: 'status',
+      width: '170px',
+      render: (_value, run) => {
+        const outcome = entraRunResultOutcome(run);
+        return (
+          <div className="flex flex-wrap items-center gap-1.5">
+            {/* The badge used to print `run.status` — the raw enum, untranslated
+                in all ten locales. */}
+            <Badge size="sm" variant={ENTRA_RUN_RESULT_BADGE_VARIANTS[outcome]}>
+              {t(ENTRA_RUN_RESULT_LABEL_KEYS[outcome])}
+            </Badge>
+            {run.isDryRun ? (
+              <Badge size="sm" variant="default-muted">
+                {t('integrations.entra.console.history.previewBadge')}
+              </Badge>
+            ) : null}
+          </div>
+        );
+      },
+    },
+  ];
 
   return (
     <div className="space-y-3" id="entra-console-history">
@@ -139,96 +209,15 @@ export function EntraHistoryTab({
           {t('integrations.entra.console.history.empty')}
         </p>
       ) : (
-        <div className="overflow-x-auto rounded-lg border border-border/70">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>{t('integrations.entra.console.history.columns.when')}</TableHead>
-                <TableHead>{t('integrations.entra.console.history.columns.trigger')}</TableHead>
-                <TableHead>{t('integrations.entra.console.history.columns.scope')}</TableHead>
-                <TableHead className="text-right">
-                  {t('integrations.entra.console.history.columns.clients')}
-                </TableHead>
-                <TableHead className="text-right">
-                  {t('integrations.entra.console.history.columns.succeeded')}
-                </TableHead>
-                <TableHead className="text-right">
-                  {t('integrations.entra.console.history.columns.failed')}
-                </TableHead>
-                <TableHead>{t('integrations.entra.console.lastRun.columns.result')}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {visible.map((run) => (
-                <TableRow key={run.runId} id={`entra-history-run-${run.runId}`}>
-                  <TableCell>{formatDateTime(run.startedAt)}</TableCell>
-                  <TableCell className="text-muted-foreground">{run.runType}</TableCell>
-                  <TableCell>
-                    {run.scopeManagedTenantId
-                      ? clientNames.get(run.scopeManagedTenantId) || run.scopeManagedTenantId
-                      : t('integrations.entra.console.history.allClients')}
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">{run.totalTenants}</TableCell>
-                  <TableCell className="text-right tabular-nums">{run.succeededTenants}</TableCell>
-                  <TableCell className="text-right tabular-nums">{run.failedTenants}</TableCell>
-                  <TableCell>
-                    <div className="flex flex-wrap items-center gap-1.5">
-                      <Badge
-                        size="sm"
-                        variant={
-                          run.status === 'failed'
-                            ? 'error'
-                            : run.status === 'partial'
-                              ? 'warning'
-                              : 'success'
-                        }
-                      >
-                        {run.status}
-                      </Badge>
-                      {run.isDryRun ? (
-                        <Badge size="sm" variant="default-muted">
-                          {t('integrations.entra.console.history.previewBadge')}
-                        </Badge>
-                      ) : null}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
+        <DataTable
+          id="entra-history-table"
+          data={filtered}
+          columns={columns}
+          pagination={filtered.length > PAGE_SIZE}
+          pageSize={PAGE_SIZE}
+        />
       )}
 
-      {pageCount > 1 ? (
-        <div className="flex items-center gap-2">
-          <Button
-            id="entra-history-prev"
-            type="button"
-            size="sm"
-            variant="ghost"
-            onClick={() => setPage((current) => Math.max(0, current - 1))}
-            disabled={currentPage === 0}
-          >
-            {t('integrations.entra.console.history.previous')}
-          </Button>
-          <span className="text-sm text-muted-foreground" id="entra-history-page">
-            {t('integrations.entra.console.history.page', {
-              page: currentPage + 1,
-              pages: pageCount,
-            })}
-          </span>
-          <Button
-            id="entra-history-next"
-            type="button"
-            size="sm"
-            variant="ghost"
-            onClick={() => setPage((current) => Math.min(pageCount - 1, current + 1))}
-            disabled={currentPage >= pageCount - 1}
-          >
-            {t('integrations.entra.console.history.next')}
-          </Button>
-        </div>
-      ) : null}
     </div>
   );
 }

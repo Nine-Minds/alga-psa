@@ -64,6 +64,8 @@ import { formatEntraExactTime, formatEntraRelativeTime } from './timeFormat';
 import { wasEntraSyncAccepted } from './syncStart';
 import {
   ENTRA_CONSOLE_TABS,
+  ENTRA_RUN_RESULT_BADGE_VARIANTS,
+  ENTRA_RUN_RESULT_LABEL_KEYS,
   ENTRA_RUN_RESULT_ROW_LIMIT,
   buildEntraAttentionItems,
   entraRunResultOutcome,
@@ -74,7 +76,6 @@ import {
   sortEntraRunResultsWorstFirst,
   summarizeEntraRunResults,
   type EntraAttentionItem,
-  type EntraRunResultOutcome,
   type EntraConsoleTab,
 } from './entraConsoleModel';
 
@@ -102,22 +103,6 @@ const SEVERITY_ICON: Record<EntraAttentionItem['severity'], typeof AlertCircle> 
   blocking: AlertCircle,
   warning: AlertTriangle,
   info: Info,
-};
-
-const RUN_RESULT_BADGE_VARIANTS: Record<EntraRunResultOutcome, BadgeVariant> = {
-  failed: 'error',
-  partial: 'warning',
-  running: 'default-muted',
-  review: 'warning',
-  done: 'success',
-};
-
-const RUN_RESULT_LABEL_KEYS: Record<EntraRunResultOutcome, string> = {
-  failed: 'integrations.entra.console.lastRun.results.failed',
-  partial: 'integrations.entra.console.lastRun.results.partlyFailed',
-  running: 'integrations.entra.console.lastRun.results.running',
-  review: 'integrations.entra.console.lastRun.results.toReview',
-  done: 'integrations.entra.console.lastRun.results.done',
 };
 
 /**
@@ -700,7 +685,7 @@ export function EntraConsole({
         const outcome = entraRunResultOutcome(result);
         return (
           <Badge
-            variant={RUN_RESULT_BADGE_VARIANTS[outcome]}
+            variant={ENTRA_RUN_RESULT_BADGE_VARIANTS[outcome]}
             size="sm"
             className="whitespace-nowrap"
           >
@@ -708,7 +693,7 @@ export function EntraConsole({
               ? t('integrations.entra.console.lastRun.results.toReview', {
                   count: result.ambiguous,
                 })
-              : t(RUN_RESULT_LABEL_KEYS[outcome])}
+              : t(ENTRA_RUN_RESULT_LABEL_KEYS[outcome])}
           </Badge>
         );
       },
