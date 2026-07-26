@@ -415,13 +415,19 @@
           "filters": {
             "all": "Alle",
             "failing": "Mislukt",
-            "healthy": "Gezond",
-            "never-synced": "Nooit gesynchroniseerd"
+            "never-synced": "Nooit gesynchroniseerd",
+            "synced": "Gesynchroniseerd"
           },
-          "neverSynced": "nooit gesynchroniseerd",
           "searchPlaceholder": "Zoek klanten of domeinen",
           "sync": "Synchroniseren",
-          "unlink": "Ontkoppelen"
+          "unlink": "Ontkoppelen",
+          "status": {
+            "failed": "Mislukt",
+            "neverSynced": "Nooit gesynchroniseerd",
+            "partlyFailed": "Deels mislukt",
+            "synced": "Gesynchroniseerd",
+            "syncing": "Bezig met synchroniseren"
+          }
         },
         "connection": {
           "exportRecord": "Verbindingsrecord exporteren",

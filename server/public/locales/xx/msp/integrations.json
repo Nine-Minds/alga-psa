@@ -415,13 +415,19 @@
           "filters": {
             "all": "11111",
             "failing": "11111",
-            "healthy": "11111",
-            "never-synced": "11111"
+            "never-synced": "11111",
+            "synced": "11111"
           },
-          "neverSynced": "11111",
           "searchPlaceholder": "11111",
           "sync": "11111",
-          "unlink": "11111"
+          "unlink": "11111",
+          "status": {
+            "failed": "11111",
+            "neverSynced": "11111",
+            "partlyFailed": "11111",
+            "synced": "11111",
+            "syncing": "11111"
+          }
         },
         "connection": {
           "exportRecord": "11111",

@@ -415,13 +415,19 @@
           "filters": {
             "all": "Alle",
             "failing": "Fehlerhaft",
-            "healthy": "In Ordnung",
-            "never-synced": "Nie synchronisiert"
+            "never-synced": "Nie synchronisiert",
+            "synced": "Synchronisiert"
           },
-          "neverSynced": "nie synchronisiert",
           "searchPlaceholder": "Clients oder Domains suchen",
           "sync": "Synchronisieren",
-          "unlink": "Zuordnung aufheben"
+          "unlink": "Zuordnung aufheben",
+          "status": {
+            "failed": "Fehlgeschlagen",
+            "neverSynced": "Nie synchronisiert",
+            "partlyFailed": "Teilweise fehlgeschlagen",
+            "synced": "Synchronisiert",
+            "syncing": "Synchronisiert gerade"
+          }
         },
         "connection": {
           "exportRecord": "Verbindungsdatensatz exportieren",

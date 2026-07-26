@@ -415,13 +415,19 @@
           "filters": {
             "all": "Tous",
             "failing": "En échec",
-            "healthy": "Sains",
-            "never-synced": "Jamais synchronisés"
+            "never-synced": "Jamais synchronisés",
+            "synced": "Synchronisé"
           },
-          "neverSynced": "jamais synchronisé",
           "searchPlaceholder": "Rechercher des clients ou domaines",
           "sync": "Synchroniser",
-          "unlink": "Dissocier"
+          "unlink": "Dissocier",
+          "status": {
+            "failed": "En échec",
+            "neverSynced": "Jamais synchronisé",
+            "partlyFailed": "Partiellement en échec",
+            "synced": "Synchronisé",
+            "syncing": "Synchronisation"
+          }
         },
         "connection": {
           "exportRecord": "Exporter l'enregistrement de connexion",

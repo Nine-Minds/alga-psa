@@ -415,13 +415,19 @@
           "filters": {
             "all": "All",
             "failing": "Failing",
-            "healthy": "Healthy",
-            "never-synced": "Never synced"
+            "never-synced": "Never synced",
+            "synced": "Synced"
           },
-          "neverSynced": "never synced",
           "searchPlaceholder": "Search clients or domains",
           "sync": "Sync",
-          "unlink": "Unlink"
+          "unlink": "Unlink",
+          "status": {
+            "failed": "Failed",
+            "neverSynced": "Never synced",
+            "partlyFailed": "Partly failed",
+            "synced": "Synced",
+            "syncing": "Syncing"
+          }
         },
         "connection": {
           "exportRecord": "Export connection record",

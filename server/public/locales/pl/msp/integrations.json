@@ -415,13 +415,19 @@
           "filters": {
             "all": "Wszyscy",
             "failing": "Z błędami",
-            "healthy": "Sprawni",
-            "never-synced": "Nigdy niesynchronizowani"
+            "never-synced": "Nigdy niesynchronizowani",
+            "synced": "Zsynchronizowane"
           },
-          "neverSynced": "nigdy niesynchronizowany",
           "searchPlaceholder": "Szukaj klientów lub domen",
           "sync": "Synchronizuj",
-          "unlink": "Odłącz"
+          "unlink": "Odłącz",
+          "status": {
+            "failed": "Nieudane",
+            "neverSynced": "Nigdy nie synchronizowany",
+            "partlyFailed": "Częściowo nieudane",
+            "synced": "Zsynchronizowany",
+            "syncing": "Synchronizacja"
+          }
         },
         "connection": {
           "exportRecord": "Eksportuj rekord połączenia",

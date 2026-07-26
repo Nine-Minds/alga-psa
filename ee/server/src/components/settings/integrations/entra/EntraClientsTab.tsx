@@ -16,6 +16,16 @@ import {
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { ContactPreflightReport } from './ContactPreflightReport';
 import { wasEntraSyncAccepted } from './syncStart';
+import {
+  ENTRA_CLIENT_FILTERS,
+  ENTRA_CLIENT_HEALTH_BADGE_VARIANTS,
+  ENTRA_CLIENT_HEALTH_LABEL_KEYS,
+  countEntraClientsByFilter,
+  entraClientHealth,
+  matchesEntraClientFilter,
+  sortEntraClientsWorstFirst,
+  type EntraClientFilter,
+} from './entraClientHealth';
 import { formatEntraExactTime, formatEntraRelativeTime } from './timeFormat';
 
 interface EntraClientsTabProps {
@@ -24,17 +34,8 @@ interface EntraClientsTabProps {
   onChanged: () => void | Promise<void>;
 }
 
-type StateFilter = 'all' | 'never-synced' | 'failing' | 'healthy';
-
 function clientLabel(mapping: EntraConfirmedMapping): string {
   return mapping.clientName || mapping.displayName || mapping.primaryDomain || mapping.entraTenantId;
-}
-
-function matchesFilter(mapping: EntraConfirmedMapping, filter: StateFilter): boolean {
-  if (filter === 'never-synced') return !mapping.lastSyncedAt;
-  if (filter === 'failing') return mapping.lastRunStatus === 'failed';
-  if (filter === 'healthy') return mapping.lastRunStatus === 'completed';
-  return true;
 }
 
 /**
@@ -51,7 +52,7 @@ export function EntraClientsTab({
 }: EntraClientsTabProps): React.JSX.Element {
   const { t } = useTranslation('msp/integrations');
   const [search, setSearch] = React.useState('');
-  const [filter, setFilter] = React.useState<StateFilter>('all');
+  const [filter, setFilter] = React.useState<EntraClientFilter>('all');
   const [expanded, setExpanded] = React.useState<string | null>(null);
   const [busyRow, setBusyRow] = React.useState<string | null>(null);
   const [previewByRow, setPreviewByRow] = React.useState<Record<string, EntraPreflightResponse>>({});
@@ -59,15 +60,18 @@ export function EntraClientsTab({
   const [error, setError] = React.useState<string | null>(null);
   const [message, setMessage] = React.useState<string | null>(null);
 
-  const visible = mappings
-    .filter((mapping) => matchesFilter(mapping, filter))
-    .filter((mapping) => {
-      const needle = search.trim().toLowerCase();
-      if (!needle) return true;
-      return [mapping.clientName, mapping.displayName, mapping.primaryDomain, mapping.entraTenantId]
-        .filter(Boolean)
-        .some((value) => String(value).toLowerCase().includes(needle));
-    });
+  const filterCounts = countEntraClientsByFilter(mappings);
+  const visible = sortEntraClientsWorstFirst(
+    mappings
+      .filter((mapping) => matchesEntraClientFilter(mapping, filter))
+      .filter((mapping) => {
+        const needle = search.trim().toLowerCase();
+        if (!needle) return true;
+        return [mapping.clientName, mapping.displayName, mapping.primaryDomain, mapping.entraTenantId]
+          .filter(Boolean)
+          .some((value) => String(value).toLowerCase().includes(needle));
+      })
+  );
 
   const handlePreview = React.useCallback(async (mapping: EntraConfirmedMapping) => {
     setBusyRow(mapping.managedTenantId);
@@ -141,17 +145,25 @@ export function EntraClientsTab({
             onClear={() => setSearch('')}
           />
         </div>
-        <div className="flex flex-wrap gap-1">
-          {(['all', 'never-synced', 'failing', 'healthy'] as StateFilter[]).map((candidate) => (
+        {/* A segmented set, not four buttons: the chrome lives on the
+            container so the neutral "All" state stops being the loudest
+            control on the screen. Counts say whether a filter is worth a
+            click — "Failing" alone answers nothing. */}
+        <div className="flex flex-wrap items-center gap-0.5 rounded-md border border-border/70 p-0.5" role="group">
+          {ENTRA_CLIENT_FILTERS.map((candidate) => (
             <Button
               key={candidate}
               id={`entra-clients-filter-${candidate}`}
               type="button"
-              size="sm"
-              variant={filter === candidate ? 'default' : 'ghost'}
+              size="xs"
+              variant={filter === candidate ? 'soft' : 'ghost'}
+              aria-pressed={filter === candidate}
               onClick={() => setFilter(candidate)}
             >
               {t(`integrations.entra.console.clients.filters.${candidate}`)}
+              <span className="ml-1.5 tabular-nums text-muted-foreground">
+                {filterCounts[candidate]}
+              </span>
             </Button>
           ))}
         </div>
@@ -186,6 +198,7 @@ export function EntraClientsTab({
                 const isExpanded = expanded === mapping.managedTenantId;
                 const busy = busyRow === mapping.managedTenantId;
                 const preview = previewByRow[mapping.managedTenantId];
+                const health = entraClientHealth(mapping);
 
                 return (
                   <React.Fragment key={mapping.managedTenantId}>
@@ -220,19 +233,9 @@ export function EntraClientsTab({
                       <TableCell>
                         <Badge
                           size="sm"
-                          variant={
-                            mapping.lastRunStatus === 'failed'
-                              ? 'error'
-                              : mapping.lastRunStatus === 'completed'
-                                ? 'success'
-                                : 'default-muted'
-                          }
+                          variant={ENTRA_CLIENT_HEALTH_BADGE_VARIANTS[health] as never}
                         >
-                          {mapping.lastRunStatus === 'failed'
-                            ? t('integrations.entra.console.lastRun.results.failed')
-                            : mapping.lastRunStatus === 'completed'
-                              ? t('integrations.entra.console.lastRun.results.done')
-                              : t('integrations.entra.console.clients.neverSynced')}
+                          {t(ENTRA_CLIENT_HEALTH_LABEL_KEYS[health])}
                         </Badge>
                       </TableCell>
                       <TableCell>
