@@ -3,7 +3,7 @@
 import React from 'react';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Input } from '@alga-psa/ui/components/Input';
+import { SearchInput } from '@alga-psa/ui/components/SearchInput';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@alga-psa/ui/components/Table';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
@@ -132,11 +132,12 @@ export function EntraClientsTab({
     <div className="space-y-3" id="entra-console-clients">
       <div className="flex flex-wrap items-end gap-2">
         <div className="w-64">
-          <Input
+          <SearchInput
             id="entra-clients-search"
             placeholder={t('integrations.entra.console.clients.searchPlaceholder')}
             value={search}
             onChange={(event) => setSearch(event.target.value)}
+            onClear={() => setSearch('')}
           />
         </div>
         <div className="flex flex-wrap gap-1">
