@@ -7,7 +7,7 @@ const linkExistingMatchedContactMock = vi.fn();
 const createContactForEntraUserMock = vi.fn();
 const previewLinkedContactChangeMock = vi.fn();
 const markDisabledEntraUsersInactiveMock = vi.fn();
-const countEntraIdentityLinkedContactsMock = vi.fn();
+const selectLinkedEntraIdentitiesMock = vi.fn();
 
 vi.mock('@ee/lib/integrations/entra/sync/contactMatcher', () => ({
   findContactMatchesByEmail: findContactMatchesByEmailMock,
@@ -22,7 +22,7 @@ vi.mock('@ee/lib/integrations/entra/sync/contactReconciler', () => ({
 
 vi.mock('@ee/lib/integrations/entra/sync/disableHandler', () => ({
   markDisabledEntraUsersInactive: markDisabledEntraUsersInactiveMock,
-  countEntraIdentityLinkedContacts: countEntraIdentityLinkedContactsMock,
+  selectLinkedEntraIdentities: selectLinkedEntraIdentitiesMock,
 }));
 
 function buildUser(seed: string): EntraSyncUser {
@@ -116,7 +116,8 @@ describe('executeEntraSync updated counter', () => {
     createContactForEntraUserMock.mockReset();
     previewLinkedContactChangeMock.mockReset();
     markDisabledEntraUsersInactiveMock.mockReset();
-    countEntraIdentityLinkedContactsMock.mockReset();
+    selectLinkedEntraIdentitiesMock.mockReset();
+    selectLinkedEntraIdentitiesMock.mockResolvedValue([]);
   });
 
   const matchFor = (seed: string) => [
@@ -196,11 +197,14 @@ describe('executeEntraSync inactivation is inside the dry-run guard', () => {
     createContactForEntraUserMock.mockReset();
     previewLinkedContactChangeMock.mockReset();
     markDisabledEntraUsersInactiveMock.mockReset();
-    countEntraIdentityLinkedContactsMock.mockReset();
+    selectLinkedEntraIdentitiesMock.mockReset();
+    selectLinkedEntraIdentitiesMock.mockResolvedValue([]);
   });
 
   it('F8: a dry run counts the inactivations it would make and performs none', async () => {
-    countEntraIdentityLinkedContactsMock.mockResolvedValue(1);
+    selectLinkedEntraIdentitiesMock.mockResolvedValue([
+      { identity: disabled[0], linkedContactCount: 1 },
+    ]);
 
     const { executeEntraSync } = await import('@ee/lib/integrations/entra/sync/syncEngine');
     const result = await executeEntraSync({
@@ -221,6 +225,26 @@ describe('executeEntraSync inactivation is inside the dry-run guard', () => {
     ]);
   });
 
+  it('does not promise to inactivate a disabled account that has no contact here', async () => {
+    // The account is disabled in Entra but was never synced into Alga, so there
+    // is nothing to mark. Listing it under "Marked inactive" would tell the
+    // operator a change is coming that the real run cannot make.
+    selectLinkedEntraIdentitiesMock.mockResolvedValue([]);
+
+    const { executeEntraSync } = await import('@ee/lib/integrations/entra/sync/syncEngine');
+    const result = await executeEntraSync({
+      tenantId: 'tenant-333',
+      clientId: 'client-333',
+      managedTenantId: 'managed-333',
+      dryRun: true,
+      users: [],
+      disabledIdentities: disabled,
+    });
+
+    expect(result.counters.inactivated).toBe(0);
+    expect(result.preview).toEqual([]);
+  });
+
   it('a real run performs the inactivation and reports the same count', async () => {
     markDisabledEntraUsersInactiveMock.mockResolvedValue(1);
 
@@ -236,7 +260,7 @@ describe('executeEntraSync inactivation is inside the dry-run guard', () => {
     expect(markDisabledEntraUsersInactiveMock).toHaveBeenCalledWith('tenant-333', [
       { entraTenantId: 'entra-tenant-111', entraObjectId: 'entra-object-disabled' },
     ]);
-    expect(countEntraIdentityLinkedContactsMock).not.toHaveBeenCalled();
+    expect(selectLinkedEntraIdentitiesMock).not.toHaveBeenCalled();
     expect(result.counters.inactivated).toBe(1);
     expect(result.preview).toBeUndefined();
   });
@@ -257,7 +281,9 @@ describe('executeEntraSync inactivation is inside the dry-run guard', () => {
       user.entraObjectId === 'entra-object-linked' ? linkedMatch : []
     );
     previewLinkedContactChangeMock.mockResolvedValue({ alreadyLinked: false, fieldsWouldChange: true });
-    countEntraIdentityLinkedContactsMock.mockResolvedValue(1);
+    selectLinkedEntraIdentitiesMock.mockResolvedValue([
+      { identity: disabled[0], linkedContactCount: 1 },
+    ]);
 
     const { executeEntraSync } = await import('@ee/lib/integrations/entra/sync/syncEngine');
     const preview = await executeEntraSync({

@@ -199,10 +199,13 @@ describe('EntraConsole overview', () => {
       success: true,
       data: { syncEnabled: false, syncIntervalMinutes: 1440, updatedAt: null, scheduleApplied: true },
     });
+
+    // The console deep-links from ?tab=, so each test starts on a clean URL.
+    window.history.replaceState({}, '', '/msp/settings/integrations/entra');
   });
 
   const renderConsole = (status = statusOf()) =>
-    render(<EntraConsole status={status} onStatusChanged={vi.fn()} />);
+    render(<EntraConsole status={status} cippAvailable onStatusChanged={vi.fn()} />);
 
   it('leads with what the last run did to the contact list, per client and in total', async () => {
     renderConsole();
@@ -248,8 +251,9 @@ describe('EntraConsole overview', () => {
     renderConsole();
 
     await waitFor(() =>
+      // One is one: the count reads as English, not as a template.
       expect(document.getElementById('entra-console-health')?.textContent).toContain(
-        '1 clients failing'
+        '1 client failing'
       )
     );
     expect(document.getElementById('entra-console-lead')?.textContent).toContain(
@@ -289,6 +293,22 @@ describe('EntraConsole overview', () => {
     await waitFor(() =>
       expect(document.getElementById('entra-console-pause')?.textContent).toBe('Resume sync')
     );
+  });
+
+  it('offers a way back in when the connection has been removed', async () => {
+    // Disconnecting keeps the contacts and the mappings, so the console has to
+    // keep a way to reconnect — otherwise the integration is unrecoverable from
+    // the only screen that still knows about it.
+    // Deep-link straight to the tab the attention item sends the operator to.
+    window.history.replaceState({}, '', '/msp/settings/integrations/entra?tab=connection');
+    renderConsole(statusOf({ status: 'not_connected', connectionType: null }));
+
+    await waitFor(() =>
+      expect(document.getElementById('entra-console-reconnect')).not.toBeNull()
+    );
+    expect(document.getElementById('entra-connection-method-chooser')).not.toBeNull();
+    // The controls that need an existing connection stay out of the way.
+    expect((document.getElementById('entra-console-rotate') as HTMLButtonElement)?.disabled).toBe(true);
   });
 
   it('summarises the overwrite rules that are actually in force', async () => {

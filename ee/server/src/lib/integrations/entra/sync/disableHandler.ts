@@ -70,15 +70,35 @@ export async function countEntraIdentityLinkedContacts(
   tenantId: string,
   identities: EntraIdentityRef[]
 ): Promise<number> {
+  const linked = await selectLinkedEntraIdentities(tenantId, identities);
+  return linked.reduce((total, entry) => total + entry.linkedContactCount, 0);
+}
+
+export interface LinkedEntraIdentity<T extends EntraIdentityRef = EntraIdentityRef> {
+  identity: T;
+  linkedContactCount: number;
+}
+
+/**
+ * Which of these identities are actually linked to a contact, and to how many.
+ *
+ * The preview needs the *which*, not just the total: a disabled Microsoft
+ * account that was never synced here has no contact to mark inactive, and
+ * listing it under "Marked inactive" promises a change that will not happen.
+ */
+export async function selectLinkedEntraIdentities<T extends EntraIdentityRef>(
+  tenantId: string,
+  identities: T[]
+): Promise<Array<LinkedEntraIdentity<T>>> {
   if (identities.length === 0) {
-    return 0;
+    return [];
   }
 
   return runWithTenant(tenantId, async () => {
     const { knex } = await createTenantKnex();
     const db = tenantDb(knex, tenantId);
 
-    let total = 0;
+    const linked: Array<LinkedEntraIdentity<T>> = [];
     for (const identity of identities) {
       const links = await db.table('entra_contact_links')
         .where({
@@ -86,10 +106,13 @@ export async function countEntraIdentityLinkedContacts(
           entra_object_id: identity.entraObjectId,
         })
         .select(['contact_name_id']);
-      total += links.length;
+
+      if (links.length > 0) {
+        linked.push({ identity, linkedContactCount: links.length });
+      }
     }
 
-    return total;
+    return linked;
   });
 }
 

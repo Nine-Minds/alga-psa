@@ -8,8 +8,8 @@ import {
   queueAmbiguousContactMatch,
 } from './contactReconciler';
 import {
-  countEntraIdentityLinkedContacts,
   markDisabledEntraUsersInactive,
+  selectLinkedEntraIdentities,
   type EntraIdentityRef,
 } from './disableHandler';
 
@@ -164,20 +164,20 @@ export async function executeEntraSync(
   const disabledIdentities = inactivationEnabled ? input.disabledIdentities || [] : [];
   if (disabledIdentities.length > 0) {
     if (dryRun) {
-      const wouldInactivate = await countEntraIdentityLinkedContacts(
-        input.tenantId,
-        disabledIdentities
-      );
-      for (let index = 0; index < wouldInactivate; index += 1) {
-        counters.increment('inactivated');
-      }
-      for (const identity of disabledIdentities) {
+      // Only identities with a contact behind them: a disabled account that was
+      // never synced here has nothing to mark, and listing it would promise a
+      // change the run cannot make.
+      const linked = await selectLinkedEntraIdentities(input.tenantId, disabledIdentities);
+      for (const entry of linked) {
+        for (let index = 0; index < entry.linkedContactCount; index += 1) {
+          counters.increment('inactivated');
+        }
         preview?.push({
           bucket: 'mark_inactive',
-          entraObjectId: identity.entraObjectId,
-          displayName: identity.displayName ?? null,
-          email: identity.email ?? null,
-          userPrincipalName: identity.userPrincipalName ?? null,
+          entraObjectId: entry.identity.entraObjectId,
+          displayName: entry.identity.displayName ?? null,
+          email: entry.identity.email ?? null,
+          userPrincipalName: entry.identity.userPrincipalName ?? null,
         });
       }
     } else {

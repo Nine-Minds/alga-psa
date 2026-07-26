@@ -77,6 +77,13 @@ export interface UpsertEntraSyncRunActivityInput {
   workflowId: string;
   runType: EntraSyncScope;
   initiatedBy?: string;
+  /**
+   * What the run covered. Without it a single-client sync is indistinguishable
+   * from an all-tenants one in history, which is the tenant-GUID problem F12
+   * set out to remove wearing different clothes.
+   */
+  scopeManagedTenantId?: string | null;
+  scopeClientId?: string | null;
 }
 
 export interface DiscoverManagedTenantsActivityInput {

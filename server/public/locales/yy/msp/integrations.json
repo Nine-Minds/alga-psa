@@ -394,10 +394,13 @@
           "empty": "55555",
           "failedClients": "55555",
           "failedClientsDetail": "55555",
+          "failedClientsOne": "55555",
           "neverSynced": "55555",
           "neverSyncedDetail": "55555",
+          "neverSyncedOne": "55555",
           "reviewQueue": "55555",
           "reviewQueueDetail": "55555",
+          "reviewQueueOne": "55555",
           "scheduleOff": "55555",
           "scheduleOffDetail": "55555",
           "title": "55555"
@@ -432,10 +435,12 @@
         },
         "errors": {
           "syncFailed": "55555",
+          "syncNotStarted": "55555",
           "validateFailed": "55555"
         },
         "health": {
           "failingClients": "55555",
+          "failingClientsOne": "55555",
           "healthy": "55555"
         },
         "history": {
@@ -527,9 +532,11 @@
           "change": "55555",
           "covers": "55555",
           "coversClients": "55555",
+          "coversClientsOne": "55555",
           "lastRun": "55555",
           "scheduleOff": "55555",
-          "scheduleOn": "55555"
+          "scheduleOn": "55555",
+          "scheduleOnCadence": "55555"
         },
         "syncStarted": "55555",
         "tabs": {
@@ -850,6 +857,7 @@
         }
       },
       "setup": {
+        "backToCurrentStep": "55555",
         "chooser": {
           "cipp": {
             "description": "55555",

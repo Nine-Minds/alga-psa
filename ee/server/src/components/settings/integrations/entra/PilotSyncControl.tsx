@@ -14,6 +14,7 @@ import {
 } from '@alga-psa/integrations/actions';
 import { ContactPreflightReport } from './ContactPreflightReport';
 import { FieldSyncRules } from './FieldSyncRules';
+import { wasEntraSyncAccepted } from './syncStart';
 
 interface PilotSyncControlProps {
   /** Called after a pilot sync starts, so the surrounding surface can refresh. */
@@ -125,6 +126,10 @@ export function PilotSyncControl({
         setError(result.error || t('integrations.entra.pilot.errors.syncFailed'));
         return;
       }
+      if (!wasEntraSyncAccepted(result)) {
+        setError(t('integrations.entra.console.errors.syncNotStarted'));
+        return;
+      }
       setMessage(t('integrations.entra.pilot.started', { client: mappingLabel(selected) }));
       await onPilotStarted?.();
       await loadMappings();
@@ -141,6 +146,10 @@ export function PilotSyncControl({
       const result = await startEntraSync({ scope: 'all-tenants' });
       if ('error' in result) {
         setError(result.error || t('integrations.entra.pilot.errors.syncFailed'));
+        return;
+      }
+      if (!wasEntraSyncAccepted(result)) {
+        setError(t('integrations.entra.console.errors.syncNotStarted'));
         return;
       }
       setMessage(t('integrations.entra.pilot.remainingStarted', { count: remainingCount }));

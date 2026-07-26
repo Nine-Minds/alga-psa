@@ -394,10 +394,13 @@
           "empty": "Nothing needs attention.",
           "failedClients": "{{count}} clients failed their last sync.",
           "failedClientsDetail": "{{clients}}",
+          "failedClientsOne": "{{count}} client failed its last sync.",
           "neverSynced": "{{count}} mapped clients have never synced.",
           "neverSyncedDetail": "{{clients}}",
+          "neverSyncedOne": "{{count}} mapped client has never synced.",
           "reviewQueue": "{{count}} identities are waiting for a decision.",
           "reviewQueueDetail": "Two or more contacts share one Microsoft email, so nothing happens to them until you choose.",
+          "reviewQueueOne": "{{count}} identity is waiting for a decision.",
           "scheduleOff": "Automatic sync is off. Contacts only change when you run a sync.",
           "scheduleOffDetail": "Contacts only change when someone runs a sync by hand.",
           "title": "Needs attention"
@@ -432,10 +435,12 @@
         },
         "errors": {
           "syncFailed": "The sync could not be started.",
+          "syncNotStarted": "The sync did not start: the background worker is unavailable. Nothing has changed — try again once it is back.",
           "validateFailed": "The connection could not be validated."
         },
         "health": {
           "failingClients": "{{count}} clients failing",
+          "failingClientsOne": "{{count}} client failing",
           "healthy": "Healthy"
         },
         "history": {
@@ -527,9 +532,11 @@
           "change": "Change…",
           "covers": "Covers",
           "coversClients": "{{count}} clients",
+          "coversClientsOne": "{{count}} client",
           "lastRun": "Last run",
           "scheduleOff": "off",
-          "scheduleOn": "on, every {{minutes}} minutes"
+          "scheduleOn": "on, every {{minutes}} minutes",
+          "scheduleOnCadence": "on, {{cadence}}"
         },
         "syncStarted": "Sync started for all mapped clients.",
         "tabs": {
@@ -850,6 +857,7 @@
         }
       },
       "setup": {
+        "backToCurrentStep": "Back to {{step}}",
         "chooser": {
           "cipp": {
             "description": "Alga reads tenants through the CIPP instance you already run.",

@@ -134,6 +134,22 @@ export class CippProviderAdapter implements EntraProviderAdapter {
           continue;
         }
 
+        // A rotated or revoked API key is the usual way a working CIPP
+        // connection stops working, and it is the one an operator can fix.
+        // Raw axios reaches the run history as "Request failed with status
+        // code 401", which names neither the cause nor the remedy.
+        if (axios.isAxiosError(error)) {
+          const status = error.response?.status;
+          if (status === 401 || status === 403) {
+            throw new Error(
+              'CIPP rejected the stored API credential. Rotate it from the Connection tab to resume syncing.'
+            );
+          }
+          throw new Error(
+            `CIPP could not be reached${status ? ` (HTTP ${status})` : ''}. The sync will retry on its next run.`
+          );
+        }
+
         throw error;
       }
     }

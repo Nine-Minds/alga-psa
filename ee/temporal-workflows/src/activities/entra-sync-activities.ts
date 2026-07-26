@@ -213,6 +213,8 @@ export async function upsertSyncRunActivity(
           run_type: input.runType,
           status: 'running',
           initiated_by: input.initiatedBy || null,
+          scope_managed_tenant_id: input.scopeManagedTenantId || null,
+          scope_client_id: input.scopeClientId || null,
           started_at: now,
           completed_at: null,
           total_tenants: 0,

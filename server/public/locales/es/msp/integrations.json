@@ -394,10 +394,13 @@
           "empty": "Nada requiere atención.",
           "failedClients": "{{count}} clientes fallaron en su última sincronización.",
           "failedClientsDetail": "{{clients}}",
+          "failedClientsOne": "{{count}} cliente falló su última sincronización.",
           "neverSynced": "{{count}} clientes asignados nunca se han sincronizado.",
           "neverSyncedDetail": "{{clients}}",
+          "neverSyncedOne": "{{count}} cliente asociado nunca se ha sincronizado.",
           "reviewQueue": "{{count}} identidades esperan una decisión.",
           "reviewQueueDetail": "Dos o más contactos comparten un correo de Microsoft, así que no les pasa nada hasta que usted elija.",
+          "reviewQueueOne": "{{count}} identidad espera una decisión.",
           "scheduleOff": "La sincronización automática está desactivada. Los contactos solo cambian cuando ejecuta una sincronización.",
           "scheduleOffDetail": "Los contactos solo cambian cuando alguien ejecuta una sincronización a mano.",
           "title": "Requiere atención"
@@ -432,10 +435,12 @@
         },
         "errors": {
           "syncFailed": "No se pudo iniciar la sincronización.",
+          "syncNotStarted": "La sincronización no se inició: el procesador en segundo plano no está disponible. No ha cambiado nada; inténtelo de nuevo cuando vuelva.",
           "validateFailed": "No se pudo validar la conexión."
         },
         "health": {
           "failingClients": "{{count}} clientes con fallos",
+          "failingClientsOne": "{{count}} cliente con fallos",
           "healthy": "Correcto"
         },
         "history": {
@@ -527,9 +532,11 @@
           "change": "Cambiar…",
           "covers": "Cubre",
           "coversClients": "{{count}} clientes",
+          "coversClientsOne": "{{count}} cliente",
           "lastRun": "Última ejecución",
           "scheduleOff": "desactivada",
-          "scheduleOn": "activada, cada {{minutes}} minutos"
+          "scheduleOn": "activada, cada {{minutes}} minutos",
+          "scheduleOnCadence": "activado, {{cadence}}"
         },
         "syncStarted": "Sincronización iniciada para todos los clientes asignados.",
         "tabs": {
@@ -850,6 +857,7 @@
         }
       },
       "setup": {
+        "backToCurrentStep": "Volver a {{step}}",
         "chooser": {
           "cipp": {
             "description": "Alga lee los inquilinos a través de la instancia de CIPP que ya ejecuta.",

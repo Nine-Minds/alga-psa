@@ -13,10 +13,7 @@ import {
   type EntraFieldSyncConfig,
   type EntraStatusResponse,
 } from '@alga-psa/integrations/actions';
-import {
-  EntraTenantMappingTable,
-  type EntraMappingSummary,
-} from '../EntraTenantMappingTable';
+import { EntraTenantMappingTable } from '../EntraTenantMappingTable';
 import { EntraCippConnectDialog } from '../EntraCippConnectDialog';
 import { ConnectionMethodChooser, type EntraConnectionMethod } from './ConnectionMethodChooser';
 import { EntraDirectConsentDialog } from './EntraDirectConsentDialog';
@@ -80,11 +77,6 @@ export function EntraSetupWizard({
   const [disconnectOpen, setDisconnectOpen] = React.useState(false);
   const [disconnectBusy, setDisconnectBusy] = React.useState(false);
 
-  const [mappingSummary, setMappingSummary] = React.useState<EntraMappingSummary>({
-    mapped: 0,
-    skipped: 0,
-    needsReview: 0,
-  });
   const [mappingRefreshKey, setMappingRefreshKey] = React.useState(0);
 
   const [discoveryBusy, setDiscoveryBusy] = React.useState(false);
@@ -99,9 +91,12 @@ export function EntraSetupWizard({
     setFieldSyncConfig(normalizeEntraFieldSyncConfig(status?.fieldSyncConfig));
   }, [status?.fieldSyncConfig]);
 
-  // The mapping table knows about confirmed mappings before the status endpoint
-  // is refetched, so the ladder should not wait a round trip to advance.
-  const mappedCount = Math.max(status?.mappedTenantCount ?? 0, mappingSummary.mapped);
+  // Only what the server has persisted advances the ladder. The mapping table's
+  // summary counts rows with a client *selected* — a suggestion the operator has
+  // not confirmed — and treating that as progress skipped the mapping step
+  // entirely on any tenant whose domain happened to auto-match, landing the
+  // operator on "Preview & pilot" being told to go back and map something.
+  const mappedCount = status?.mappedTenantCount ?? 0;
 
   const isConnected = status?.status === 'connected';
   const steps: EntraSetupStep[] = deriveEntraSetupSteps({
@@ -109,7 +104,24 @@ export function EntraSetupWizard({
     hasDiscovery: Boolean(status?.lastDiscoveryAt),
     hasConfirmedMappings: mappedCount > 0,
   });
-  const current = steps.find((step) => step.state === 'current') ?? steps[0];
+  const furthest = steps.find((step) => step.state === 'current') ?? steps[0];
+
+  // Confirming one mapping advances the ladder, so without this the operator
+  // could map a single tenant and then have no way to reach the mapping table
+  // again — it only renders on its own step.
+  const [revisiting, setRevisiting] = React.useState<EntraSetupStepId | null>(null);
+  const revisited = revisiting
+    ? steps.find((step) => step.id === revisiting && step.state === 'complete')
+    : undefined;
+  const current = revisited ?? furthest;
+
+  // A step that stops being complete (a disconnect, say) must not strand the
+  // operator on a card the ladder no longer offers.
+  React.useEffect(() => {
+    if (revisiting && !steps.some((step) => step.id === revisiting && step.state === 'complete')) {
+      setRevisiting(null);
+    }
+  }, [revisiting, steps]);
 
   const ladderLabels = Object.fromEntries(
     Object.entries(ENTRA_SETUP_STEP_SHORT_LABEL_KEYS).map(([id, key]) => [id, t(key)])
@@ -231,7 +243,6 @@ export function EntraSetupWizard({
       return (
         <EntraTenantMappingTable
           refreshKey={mappingRefreshKey}
-          onSummaryChange={setMappingSummary}
           onPersistedMappingChange={() => void onStatusChanged()}
         />
       );
@@ -289,7 +300,12 @@ export function EntraSetupWizard({
         </div>
 
         <div className="mt-4">
-          <SetupLadder id="entra-setup-ladder" steps={steps} labels={ladderLabels} />
+          <SetupLadder
+            id="entra-setup-ladder"
+            steps={steps}
+            labels={ladderLabels}
+            onRevisit={setRevisiting}
+          />
         </div>
       </div>
 
@@ -298,9 +314,24 @@ export function EntraSetupWizard({
           <CardHeader>
             <div className="flex flex-wrap items-center justify-between gap-2">
               <CardTitle>{t(STEP_TITLE_KEYS[current.id])}</CardTitle>
-              <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-                {t('integrations.entra.setup.stepLabel', { number: current.stepNumber })}
-              </span>
+              <div className="flex items-center gap-2">
+                {revisited ? (
+                  <Button
+                    id="entra-setup-resume"
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => setRevisiting(null)}
+                  >
+                    {t('integrations.entra.setup.backToCurrentStep', {
+                      step: ladderLabels[furthest.id],
+                    })}
+                  </Button>
+                ) : null}
+                <span className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  {t('integrations.entra.setup.stepLabel', { number: current.stepNumber })}
+                </span>
+              </div>
             </div>
             <CardDescription>{t(STEP_DESCRIPTION_KEYS[current.id])}</CardDescription>
           </CardHeader>

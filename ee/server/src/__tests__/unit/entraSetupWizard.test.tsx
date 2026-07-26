@@ -40,8 +40,19 @@ vi.mock('@alga-psa/integrations/actions', () => ({
 
 // The mapping table and the CIPP dialog have their own suites; the wizard only
 // needs to prove it mounts them at the right step.
+// The real table reports a summary of the rows on screen, in which "mapped"
+// means "a client is selected" — a suggestion, not a saved decision.
 vi.mock('@ee/components/settings/integrations/EntraTenantMappingTable', () => ({
-  EntraTenantMappingTable: () => <div id="entra-mapping-table-stub" />,
+  EntraTenantMappingTable: ({
+    onSummaryChange,
+  }: {
+    onSummaryChange?: (summary: { mapped: number; skipped: number; needsReview: number }) => void;
+  }) => {
+    React.useEffect(() => {
+      onSummaryChange?.({ mapped: 3, skipped: 0, needsReview: 0 });
+    }, [onSummaryChange]);
+    return <div id="entra-mapping-table-stub" />;
+  },
 }));
 
 vi.mock('@ee/components/settings/integrations/entra/PilotSyncControl', () => ({
@@ -304,6 +315,51 @@ describe('EntraSetupWizard', () => {
     const stepThree = document.getElementById('entra-setup-step-3');
     expect(stepThree?.getAttribute('data-step-state')).toBe('current');
     expect(stepThree?.querySelector('#entra-mapping-table-stub')).not.toBeNull();
+  });
+
+  it('does not treat auto-matched suggestions as a completed mapping step', () => {
+    // The tenant has discovery and the table is showing three rows with a client
+    // pre-selected, but nothing has been confirmed: mappedTenantCount is still 0.
+    renderWizard(
+      statusOf({
+        status: 'connected',
+        connectionType: 'direct',
+        lastDiscoveryAt: '2026-07-25T00:00:00.000Z',
+        mappedTenantCount: 0,
+      })
+    );
+
+    // Advancing here strands the operator on a pilot step that tells them to go
+    // back and map something, with no mapping table on screen to do it in.
+    expect(document.getElementById('entra-setup-step-3')?.getAttribute('data-step-state'))
+      .toBe('current');
+    expect(document.getElementById('entra-setup-step-4')).toBeNull();
+    expect(document.getElementById('entra-pilot-control-stub')).toBeNull();
+  });
+
+  it('lets a completed step be revisited, so the rest of the tenants can be mapped', () => {
+    // One mapping confirmed advances the ladder to the pilot, but the other
+    // tenants still need mapping and the table lives on step 3.
+    renderWizard(
+      statusOf({
+        status: 'connected',
+        connectionType: 'direct',
+        lastDiscoveryAt: '2026-07-25T00:00:00.000Z',
+        mappedTenantCount: 1,
+      })
+    );
+
+    expect(document.getElementById('entra-setup-step-4')).not.toBeNull();
+    // Locked steps stay inert; completed ones are reachable.
+    expect(document.getElementById('entra-setup-ladder-revisit-4')).toBeNull();
+
+    fireEvent.click(document.getElementById('entra-setup-ladder-revisit-3') as HTMLButtonElement);
+    expect(document.getElementById('entra-setup-step-3')?.querySelector('#entra-mapping-table-stub'))
+      .not.toBeNull();
+
+    fireEvent.click(document.getElementById('entra-setup-resume') as HTMLButtonElement);
+    expect(document.getElementById('entra-setup-step-4')?.querySelector('#entra-pilot-control-stub'))
+      .not.toBeNull();
   });
 
   it('hands the last step to the pilot control once mappings are confirmed', () => {

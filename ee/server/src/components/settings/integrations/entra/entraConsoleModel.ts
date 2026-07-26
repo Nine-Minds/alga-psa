@@ -102,7 +102,9 @@ export function buildEntraAttentionItems(input: BuildEntraAttentionInput): Entra
     items.push({
       id: 'failed-clients',
       severity: 'blocking',
-      titleKey: 'integrations.entra.console.attention.failedClients',
+      titleKey: failedClients.length === 1
+        ? 'integrations.entra.console.attention.failedClientsOne'
+        : 'integrations.entra.console.attention.failedClients',
       detailKey: 'integrations.entra.console.attention.failedClientsDetail',
       actionKey: 'integrations.entra.console.attention.actions.viewClients',
       values: { count: failedClients.length, clients: namedClients(failedClients) },
@@ -114,7 +116,9 @@ export function buildEntraAttentionItems(input: BuildEntraAttentionInput): Entra
     items.push({
       id: 'review-queue',
       severity: 'warning',
-      titleKey: 'integrations.entra.console.attention.reviewQueue',
+      titleKey: input.reviewQueueCount === 1
+        ? 'integrations.entra.console.attention.reviewQueueOne'
+        : 'integrations.entra.console.attention.reviewQueue',
       detailKey: 'integrations.entra.console.attention.reviewQueueDetail',
       actionKey: 'integrations.entra.console.attention.actions.review',
       values: { count: input.reviewQueueCount },
@@ -127,7 +131,9 @@ export function buildEntraAttentionItems(input: BuildEntraAttentionInput): Entra
     items.push({
       id: 'never-synced',
       severity: 'warning',
-      titleKey: 'integrations.entra.console.attention.neverSynced',
+      titleKey: neverSynced.length === 1
+        ? 'integrations.entra.console.attention.neverSyncedOne'
+        : 'integrations.entra.console.attention.neverSynced',
       detailKey: 'integrations.entra.console.attention.neverSyncedDetail',
       actionKey: 'integrations.entra.console.attention.actions.viewClients',
       values: { count: neverSynced.length, clients: namedClients(neverSynced) },

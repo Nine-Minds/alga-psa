@@ -394,10 +394,13 @@
           "empty": "Er is niets dat aandacht vraagt.",
           "failedClients": "{{count}} klanten mislukten bij hun laatste synchronisatie.",
           "failedClientsDetail": "{{clients}}",
+          "failedClientsOne": "{{count}} klant is bij de laatste synchronisatie mislukt.",
           "neverSynced": "{{count}} gekoppelde klanten zijn nooit gesynchroniseerd.",
           "neverSyncedDetail": "{{clients}}",
+          "neverSyncedOne": "{{count}} gekoppelde klant is nooit gesynchroniseerd.",
           "reviewQueue": "{{count}} identiteiten wachten op een beslissing.",
           "reviewQueueDetail": "Twee of meer contacten delen één Microsoft-e-mailadres, dus er gebeurt niets tot u kiest.",
+          "reviewQueueOne": "{{count}} identiteit wacht op een beslissing.",
           "scheduleOff": "Automatische synchronisatie staat uit. Contacten wijzigen alleen als u zelf synchroniseert.",
           "scheduleOffDetail": "Contacten veranderen alleen als iemand handmatig een synchronisatie start.",
           "title": "Vraagt aandacht"
@@ -432,10 +435,12 @@
         },
         "errors": {
           "syncFailed": "De synchronisatie kon niet worden gestart.",
+          "syncNotStarted": "De synchronisatie is niet gestart: de achtergrondverwerker is niet beschikbaar. Er is niets gewijzigd — probeer het opnieuw zodra die terug is.",
           "validateFailed": "De verbinding kon niet worden gecontroleerd."
         },
         "health": {
           "failingClients": "{{count}} klanten mislukken",
+          "failingClientsOne": "{{count}} klant mislukt",
           "healthy": "Gezond"
         },
         "history": {
@@ -527,9 +532,11 @@
           "change": "Wijzigen…",
           "covers": "Omvat",
           "coversClients": "{{count}} klanten",
+          "coversClientsOne": "{{count}} klant",
           "lastRun": "Laatste run",
           "scheduleOff": "uit",
-          "scheduleOn": "aan, elke {{minutes}} minuten"
+          "scheduleOn": "aan, elke {{minutes}} minuten",
+          "scheduleOnCadence": "aan, {{cadence}}"
         },
         "syncStarted": "Synchronisatie gestart voor alle gekoppelde klanten.",
         "tabs": {
@@ -850,6 +857,7 @@
         }
       },
       "setup": {
+        "backToCurrentStep": "Terug naar {{step}}",
         "chooser": {
           "cipp": {
             "description": "Alga leest tenants via de CIPP-instantie die u al draait.",

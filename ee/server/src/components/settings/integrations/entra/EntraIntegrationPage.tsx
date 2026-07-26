@@ -106,7 +106,11 @@ export default function EntraIntegrationPage({
           onStatusChanged={loadStatus}
         />
       ) : (
-        <EntraConsole status={status} onStatusChanged={loadStatus} />
+        <EntraConsole
+          status={status}
+          cippAvailable={cippAvailable}
+          onStatusChanged={loadStatus}
+        />
       )}
     </div>
   );

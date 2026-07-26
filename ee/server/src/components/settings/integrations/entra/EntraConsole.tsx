@@ -35,6 +35,7 @@ import {
   type EntraSkippedTenant,
 } from '../EntraTenantMappingTable';
 import { EntraCippConnectDialog } from '../EntraCippConnectDialog';
+import { ConnectionMethodChooser, type EntraConnectionMethod } from './ConnectionMethodChooser';
 import { EntraDirectConsentDialog } from './EntraDirectConsentDialog';
 import { EntraClientsTab } from './EntraClientsTab';
 import { EntraHistoryTab } from './EntraHistoryTab';
@@ -42,6 +43,7 @@ import { EntraScheduleTab } from './EntraScheduleTab';
 import { FieldSyncRules } from './FieldSyncRules';
 import { normalizeEntraFieldSyncConfig } from './fieldSyncModel';
 import { MarkList, type MarkListItem } from './MarkList';
+import { wasEntraSyncAccepted } from './syncStart';
 import {
   ENTRA_CONSOLE_TABS,
   buildEntraAttentionItems,
@@ -54,6 +56,8 @@ import {
 
 interface EntraConsoleProps {
   status: EntraStatusResponse | null;
+  /** CIPP is offered only when both the tier and the soft-launch flag allow it. */
+  cippAvailable: boolean;
   onStatusChanged: () => void | Promise<void>;
 }
 
@@ -169,7 +173,11 @@ function RailCard({
  * attention, then what the last run did to the contact list, and everything
  * else lives behind a tab with a deep link.
  */
-export function EntraConsole({ status, onStatusChanged }: EntraConsoleProps): React.JSX.Element {
+export function EntraConsole({
+  status,
+  cippAvailable,
+  onStatusChanged,
+}: EntraConsoleProps): React.JSX.Element {
   const { t } = useTranslation('msp/integrations');
 
   const [tab, setTab] = React.useState<EntraConsoleTab>('overview');
@@ -192,6 +200,10 @@ export function EntraConsole({ status, onStatusChanged }: EntraConsoleProps): Re
   const [rotateDirectOpen, setRotateDirectOpen] = React.useState(false);
   const [rotateCippOpen, setRotateCippOpen] = React.useState(false);
   const [rotateBusy, setRotateBusy] = React.useState(false);
+  // Disconnecting is not a one-way door: the console keeps the contacts and the
+  // mappings, so it has to keep a way back in as well.
+  const [reconnectMethod, setReconnectMethod] = React.useState<EntraConnectionMethod | null>(null);
+  const [reconnectBusy, setReconnectBusy] = React.useState(false);
   const [mappingSummary, setMappingSummary] = React.useState<EntraMappingSummary>({
     mapped: 0,
     skipped: 0,
@@ -298,6 +310,10 @@ export function EntraConsole({ status, onStatusChanged }: EntraConsoleProps): Re
         setActionError(result.error || t('integrations.entra.console.errors.syncFailed'));
         return;
       }
+      if (!wasEntraSyncAccepted(result)) {
+        setActionError(t('integrations.entra.console.errors.syncNotStarted'));
+        return;
+      }
       setActionMessage(t('integrations.entra.console.syncStarted'));
       await loadConsole();
     } finally {
@@ -376,6 +392,17 @@ export function EntraConsole({ status, onStatusChanged }: EntraConsoleProps): Re
     }
     setRotateDirectOpen(true);
   }, [status?.connectionType]);
+
+  const handleReconnect = React.useCallback(() => {
+    setActionError(null);
+    if (reconnectMethod === 'cipp') {
+      setRotateCippOpen(true);
+      return;
+    }
+    if (reconnectMethod === 'direct') {
+      setRotateDirectOpen(true);
+    }
+  }, [reconnectMethod]);
 
   const handleRotateDirect = React.useCallback(async () => {
     setRotateBusy(true);
@@ -590,7 +617,16 @@ export function EntraConsole({ status, onStatusChanged }: EntraConsoleProps): Re
                     <TableBody>
                       {lastRunResults.map((result) => (
                         <TableRow key={`${result.managedTenantId || result.clientId}`}>
-                          <TableCell className="font-medium">{resultClientName(result)}</TableCell>
+                          <TableCell className="font-medium">
+                            {resultClientName(result)}
+                            {/* Why it failed, where the failure is: "Failed" on
+                                its own sends the operator hunting through logs. */}
+                            {result.errorMessage ? (
+                              <span className="mt-0.5 block text-xs font-normal text-destructive">
+                                {result.errorMessage}
+                              </span>
+                            ) : null}
+                          </TableCell>
                           <TableCell>
                             <Badge
                               variant={
@@ -637,8 +673,15 @@ export function EntraConsole({ status, onStatusChanged }: EntraConsoleProps): Re
           <RailCard id="entra-console-rail-schedule" title={t('integrations.entra.console.schedule.title')}>
             <p className="text-sm">
               {schedule?.syncEnabled
-                ? t('integrations.entra.console.sideRail.scheduleOn', {
-                    minutes: schedule.syncIntervalMinutes,
+                ? t('integrations.entra.console.sideRail.scheduleOnCadence', {
+                    cadence: t(
+                      `integrations.entra.console.schedule.intervals.${schedule.syncIntervalMinutes}`,
+                      {
+                        defaultValue: t('integrations.entra.console.sideRail.scheduleOn', {
+                          minutes: schedule.syncIntervalMinutes,
+                        }),
+                      }
+                    ),
                   })
                 : t('integrations.entra.console.sideRail.scheduleOff')}
             </p>
@@ -652,9 +695,12 @@ export function EntraConsole({ status, onStatusChanged }: EntraConsoleProps): Re
               />
               <KeyValue
                 label={t('integrations.entra.console.sideRail.covers')}
-                value={t('integrations.entra.console.sideRail.coversClients', {
-                  count: mappings.length,
-                })}
+                value={t(
+                  mappings.length === 1
+                    ? 'integrations.entra.console.sideRail.coversClientsOne'
+                    : 'integrations.entra.console.sideRail.coversClients',
+                  { count: mappings.length }
+                )}
               />
             </div>
             <div className="mt-2 flex flex-wrap gap-2">
@@ -812,6 +858,18 @@ export function EntraConsole({ status, onStatusChanged }: EntraConsoleProps): Re
               )}
             />
           </div>
+
+          {!status?.connectionType ? (
+            <div className="mt-4" id="entra-console-reconnect">
+              <ConnectionMethodChooser
+                cippAvailable={cippAvailable}
+                value={reconnectMethod}
+                onChange={setReconnectMethod}
+                onContinue={handleReconnect}
+                busy={reconnectBusy || rotateBusy}
+              />
+            </div>
+          ) : null}
 
           <div className="mt-3 flex flex-wrap gap-2">
             <Button
@@ -1020,7 +1078,12 @@ export function EntraConsole({ status, onStatusChanged }: EntraConsoleProps): Re
           >
             {connectionHealthy
               ? failingCount > 0
-                ? t('integrations.entra.console.health.failingClients', { count: failingCount })
+                ? t(
+                    failingCount === 1
+                      ? 'integrations.entra.console.health.failingClientsOne'
+                      : 'integrations.entra.console.health.failingClients',
+                    { count: failingCount }
+                  )
                 : t('integrations.entra.console.health.healthy')
               : t(`integrations.entra.settings.status.values.${status?.status || 'not_connected'}`, {
                   defaultValue: t('integrations.entra.settings.status.values.unknown'),

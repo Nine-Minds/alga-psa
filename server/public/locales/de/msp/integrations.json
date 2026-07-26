@@ -394,10 +394,13 @@
           "empty": "Nichts erfordert Aufmerksamkeit.",
           "failedClients": "Bei {{count}} Clients ist die letzte Synchronisierung fehlgeschlagen.",
           "failedClientsDetail": "{{clients}}",
+          "failedClientsOne": "{{count}} Kunde ist bei der letzten Synchronisierung fehlgeschlagen.",
           "neverSynced": "{{count}} zugeordnete Clients wurden noch nie synchronisiert.",
           "neverSyncedDetail": "{{clients}}",
+          "neverSyncedOne": "{{count}} zugeordneter Kunde wurde noch nie synchronisiert.",
           "reviewQueue": "{{count}} Identitäten warten auf eine Entscheidung.",
           "reviewQueueDetail": "Zwei oder mehr Kontakte teilen sich eine Microsoft-E-Mail; bis Sie entscheiden, passiert mit ihnen nichts.",
+          "reviewQueueOne": "{{count}} Identität wartet auf eine Entscheidung.",
           "scheduleOff": "Automatische Synchronisierung ist aus. Kontakte ändern sich nur, wenn Sie manuell synchronisieren.",
           "scheduleOffDetail": "Kontakte ändern sich nur, wenn jemand die Synchronisierung von Hand startet.",
           "title": "Erfordert Aufmerksamkeit"
@@ -432,10 +435,12 @@
         },
         "errors": {
           "syncFailed": "Die Synchronisierung konnte nicht gestartet werden.",
+          "syncNotStarted": "Die Synchronisierung wurde nicht gestartet: Der Hintergrunddienst ist nicht erreichbar. Es hat sich nichts geändert — versuchen Sie es erneut, sobald er wieder da ist.",
           "validateFailed": "Die Verbindung konnte nicht geprüft werden."
         },
         "health": {
           "failingClients": "{{count}} Kunden fehlerhaft",
+          "failingClientsOne": "{{count}} Kunde fehlerhaft",
           "healthy": "In Ordnung"
         },
         "history": {
@@ -527,9 +532,11 @@
           "change": "Ändern…",
           "covers": "Umfasst",
           "coversClients": "{{count}} Kunden",
+          "coversClientsOne": "{{count}} Kunde",
           "lastRun": "Letzter Lauf",
           "scheduleOff": "aus",
-          "scheduleOn": "an, alle {{minutes}} Minuten"
+          "scheduleOn": "an, alle {{minutes}} Minuten",
+          "scheduleOnCadence": "an, {{cadence}}"
         },
         "syncStarted": "Synchronisierung für alle zugeordneten Clients gestartet.",
         "tabs": {
@@ -850,6 +857,7 @@
         }
       },
       "setup": {
+        "backToCurrentStep": "Zurück zu {{step}}",
         "chooser": {
           "cipp": {
             "description": "Alga liest Mandanten über die von Ihnen betriebene CIPP-Instanz.",

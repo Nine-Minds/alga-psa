@@ -178,6 +178,27 @@ describe('PilotSyncControl', () => {
     );
   });
 
+  it('does not claim a sync started when the worker never took it', async () => {
+    getEntraConfirmedMappingsMock.mockResolvedValue({
+      success: true,
+      data: { mappings: [mapping()] },
+    });
+    // The request succeeded; the workflow was never accepted, so no run exists.
+    startEntraSyncMock.mockResolvedValue({
+      success: true,
+      data: { accepted: false, runId: null, error: 'Temporal client not available' },
+    });
+
+    render(<PilotSyncControl />);
+    await screen.findByText('Contoso');
+
+    fireEvent.click(document.getElementById('entra-pilot-sync') as HTMLButtonElement);
+
+    await waitFor(() => expect(document.getElementById('entra-pilot-error')).not.toBeNull());
+    expect(document.getElementById('entra-pilot-error')?.textContent).toContain('did not start');
+    expect(document.getElementById('entra-pilot-message')).toBeNull();
+  });
+
   it('says so plainly when nothing is mapped yet', async () => {
     getEntraConfirmedMappingsMock.mockResolvedValue({ success: true, data: { mappings: [] } });
 

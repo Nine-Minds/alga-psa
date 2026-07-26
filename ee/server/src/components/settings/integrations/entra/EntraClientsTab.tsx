@@ -15,6 +15,7 @@ import {
 } from '@alga-psa/integrations/actions';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { ContactPreflightReport } from './ContactPreflightReport';
+import { wasEntraSyncAccepted } from './syncStart';
 
 interface EntraClientsTabProps {
   mappings: EntraConfirmedMapping[];
@@ -98,6 +99,10 @@ export function EntraClientsTab({
       });
       if ('error' in result) {
         setError(result.error || t('integrations.entra.pilot.errors.syncFailed'));
+        return;
+      }
+      if (!wasEntraSyncAccepted(result)) {
+        setError(t('integrations.entra.console.errors.syncNotStarted'));
         return;
       }
       setMessage(t('integrations.entra.pilot.started', { client: clientLabel(mapping) }));

@@ -394,10 +394,13 @@
           "empty": "Nada precisa de atenção.",
           "failedClients": "{{count}} clientes falharam a última sincronização.",
           "failedClientsDetail": "{{clients}}",
+          "failedClientsOne": "{{count}} cliente falhou a última sincronização.",
           "neverSynced": "{{count}} clientes associados nunca sincronizaram.",
           "neverSyncedDetail": "{{clients}}",
+          "neverSyncedOne": "{{count}} cliente associado nunca sincronizou.",
           "reviewQueue": "{{count}} identidades aguardam uma decisão.",
           "reviewQueueDetail": "Dois ou mais contactos partilham um e-mail Microsoft, por isso nada lhes acontece até escolher.",
+          "reviewQueueOne": "{{count}} identidade aguarda uma decisão.",
           "scheduleOff": "A sincronização automática está desligada. Os contactos só mudam quando executa uma sincronização.",
           "scheduleOffDetail": "Os contactos só mudam quando alguém executa uma sincronização à mão.",
           "title": "Precisa de atenção"
@@ -432,10 +435,12 @@
         },
         "errors": {
           "syncFailed": "Não foi possível iniciar a sincronização.",
+          "syncNotStarted": "A sincronização não arrancou: o serviço em segundo plano está indisponível. Nada mudou — tente novamente quando voltar.",
           "validateFailed": "Não foi possível validar a ligação."
         },
         "health": {
           "failingClients": "{{count}} clientes com falhas",
+          "failingClientsOne": "{{count}} cliente com falhas",
           "healthy": "Saudável"
         },
         "history": {
@@ -527,9 +532,11 @@
           "change": "Alterar…",
           "covers": "Abrange",
           "coversClients": "{{count}} clientes",
+          "coversClientsOne": "{{count}} cliente",
           "lastRun": "Última execução",
           "scheduleOff": "desligada",
-          "scheduleOn": "ligada, a cada {{minutes}} minutos"
+          "scheduleOn": "ligada, a cada {{minutes}} minutos",
+          "scheduleOnCadence": "ligado, {{cadence}}"
         },
         "syncStarted": "Sincronização iniciada para todos os clientes associados.",
         "tabs": {
@@ -850,6 +857,7 @@
         }
       },
       "setup": {
+        "backToCurrentStep": "Voltar a {{step}}",
         "chooser": {
           "cipp": {
             "description": "O Alga lê inquilinos através da instância CIPP que já mantém.",

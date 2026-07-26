@@ -394,10 +394,13 @@
           "empty": "Nic nie wymaga uwagi.",
           "failedClients": "U {{count}} klientów ostatnia synchronizacja się nie powiodła.",
           "failedClientsDetail": "{{clients}}",
+          "failedClientsOne": "{{count}} klient nie ukończył ostatniej synchronizacji.",
           "neverSynced": "{{count}} przypisanych klientów nigdy nie było synchronizowanych.",
           "neverSyncedDetail": "{{clients}}",
+          "neverSyncedOne": "{{count}} dopasowany klient nigdy nie był synchronizowany.",
           "reviewQueue": "{{count}} tożsamości czeka na decyzję.",
           "reviewQueueDetail": "Dwa lub więcej kontaktów ma ten sam e-mail Microsoft, więc nic się z nimi nie dzieje, dopóki nie wybierzesz.",
+          "reviewQueueOne": "{{count}} tożsamość czeka na decyzję.",
           "scheduleOff": "Automatyczna synchronizacja jest wyłączona. Kontakty zmieniają się tylko po ręcznym uruchomieniu.",
           "scheduleOffDetail": "Kontakty zmieniają się tylko wtedy, gdy ktoś ręcznie uruchomi synchronizację.",
           "title": "Wymaga uwagi"
@@ -432,10 +435,12 @@
         },
         "errors": {
           "syncFailed": "Nie udało się uruchomić synchronizacji.",
+          "syncNotStarted": "Synchronizacja nie wystartowała: usługa w tle jest niedostępna. Nic się nie zmieniło — spróbuj ponownie, gdy wróci.",
           "validateFailed": "Nie udało się zweryfikować połączenia."
         },
         "health": {
           "failingClients": "{{count}} klientów z błędami",
+          "failingClientsOne": "{{count}} klient z błędem",
           "healthy": "Sprawne"
         },
         "history": {
@@ -527,9 +532,11 @@
           "change": "Zmień…",
           "covers": "Obejmuje",
           "coversClients": "{{count}} klientów",
+          "coversClientsOne": "{{count}} klient",
           "lastRun": "Ostatnie uruchomienie",
           "scheduleOff": "wyłączona",
-          "scheduleOn": "włączona, co {{minutes}} minut"
+          "scheduleOn": "włączona, co {{minutes}} minut",
+          "scheduleOnCadence": "wł., {{cadence}}"
         },
         "syncStarted": "Uruchomiono synchronizację dla wszystkich przypisanych klientów.",
         "tabs": {
@@ -850,6 +857,7 @@
         }
       },
       "setup": {
+        "backToCurrentStep": "Wróć do {{step}}",
         "chooser": {
           "cipp": {
             "description": "Alga odczytuje dzierżawy przez instancję CIPP, którą już prowadzisz.",

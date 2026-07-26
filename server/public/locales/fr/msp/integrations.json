@@ -394,10 +394,13 @@
           "empty": "Rien ne nécessite votre attention.",
           "failedClients": "{{count}} clients ont échoué à leur dernière synchronisation.",
           "failedClientsDetail": "{{clients}}",
+          "failedClientsOne": "{{count}} client a échoué à sa dernière synchronisation.",
           "neverSynced": "{{count}} clients associés n'ont jamais été synchronisés.",
           "neverSyncedDetail": "{{clients}}",
+          "neverSyncedOne": "{{count}} client associé n'a jamais été synchronisé.",
           "reviewQueue": "{{count}} identités attendent une décision.",
           "reviewQueueDetail": "Deux contacts ou plus partagent une même adresse Microsoft : rien ne leur arrive tant que vous n'avez pas choisi.",
+          "reviewQueueOne": "{{count}} identité attend une décision.",
           "scheduleOff": "La synchronisation automatique est désactivée. Les contacts ne changent que lorsque vous lancez une synchronisation.",
           "scheduleOffDetail": "Les contacts ne changent que lorsqu'une synchronisation est lancée à la main.",
           "title": "Nécessite votre attention"
@@ -432,10 +435,12 @@
         },
         "errors": {
           "syncFailed": "La synchronisation n'a pas pu démarrer.",
+          "syncNotStarted": "La synchronisation n'a pas démarré : le service d'arrière-plan est indisponible. Rien n'a changé — réessayez lorsqu'il sera de retour.",
           "validateFailed": "La connexion n'a pas pu être vérifiée."
         },
         "health": {
           "failingClients": "{{count}} clients en échec",
+          "failingClientsOne": "{{count}} client en échec",
           "healthy": "Opérationnel"
         },
         "history": {
@@ -527,9 +532,11 @@
           "change": "Modifier…",
           "covers": "Couvre",
           "coversClients": "{{count}} clients",
+          "coversClientsOne": "{{count}} client",
           "lastRun": "Dernière exécution",
           "scheduleOff": "désactivée",
-          "scheduleOn": "activée, toutes les {{minutes}} minutes"
+          "scheduleOn": "activée, toutes les {{minutes}} minutes",
+          "scheduleOnCadence": "activé, {{cadence}}"
         },
         "syncStarted": "Synchronisation lancée pour tous les clients associés.",
         "tabs": {
@@ -850,6 +857,7 @@
         }
       },
       "setup": {
+        "backToCurrentStep": "Retour à {{step}}",
         "chooser": {
           "cipp": {
             "description": "Alga lit les locataires via l'instance CIPP que vous exploitez déjà.",
