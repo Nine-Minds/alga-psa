@@ -1,0 +1,6 @@
+{
+  "name": "@alga-psa/emulators-root",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Container folder for the algasim emulator packages; not a real package. Exists so the packages/* workspace glob and Nx project inference have a named project here."
+}
