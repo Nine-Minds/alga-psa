@@ -491,17 +491,19 @@
         "lastRun": {
           "columns": {
             "client": "Kunde",
-            "created": "Neu",
-            "inactivated": "Inaktiv",
+            "created": "Erstellt",
+            "inactivated": "Deaktiviert",
             "linked": "Verknüpft",
             "result": "Ergebnis",
-            "when": "Wann"
+            "updated": "Geändert"
           },
           "empty": "Es wurde noch keine Synchronisierung ausgeführt.",
           "fullHistory": "Vollständiger Verlauf",
           "results": {
             "done": "Fertig",
             "failed": "Fehlgeschlagen",
+            "partlyFailed": "Teilweise fehlgeschlagen",
+            "running": "Synchronisiert gerade",
             "toReview": "{{count}} zu prüfen"
           },
           "stats": {
@@ -513,7 +515,7 @@
             "inactivatedSub": "Konten deaktiviert",
             "linked": "Verknüpft",
             "linkedSub": "bestehende Kontakte",
-            "updated": "Felder geändert",
+            "updated": "Geändert",
             "updatedSub": "wo Sie es erlaubt haben"
           },
           "title": "Letzte Synchronisierung",
@@ -525,7 +527,8 @@
             "running": "Gestartet {{time}} und läuft noch.",
             "unknown": "Letzter Lauf {{time}}."
           },
-          "progress": "Bisher {{processed}} von {{total}} Clients erledigt."
+          "progress": "Bisher {{processed}} von {{total}} Clients erledigt.",
+          "showAll": "Alle {{count}} Clients dieses Laufs ansehen"
         },
         "lead": "{{clients}} Kunden zugeordnet · verbunden über {{method}}",
         "overwrites": {

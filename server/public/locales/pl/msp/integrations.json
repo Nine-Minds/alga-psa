@@ -491,17 +491,19 @@
         "lastRun": {
           "columns": {
             "client": "Klient",
-            "created": "Nowe",
-            "inactivated": "Nieaktywne",
+            "created": "Utworzone",
+            "inactivated": "Dezaktywowane",
             "linked": "Powiązane",
             "result": "Wynik",
-            "when": "Kiedy"
+            "updated": "Zmienione"
           },
           "empty": "Nie uruchomiono jeszcze żadnej synchronizacji.",
           "fullHistory": "Pełna historia",
           "results": {
             "done": "Gotowe",
             "failed": "Nieudane",
+            "partlyFailed": "Częściowo nieudane",
+            "running": "Synchronizacja",
             "toReview": "{{count}} do przejrzenia"
           },
           "stats": {
@@ -513,7 +515,7 @@
             "inactivatedSub": "konta wyłączone",
             "linked": "Powiązane",
             "linkedSub": "istniejące kontakty",
-            "updated": "Zmienione pola",
+            "updated": "Zmienione",
             "updatedSub": "tam, gdzie na to pozwolono"
           },
           "title": "Ostatnia synchronizacja",
@@ -525,7 +527,8 @@
             "running": "Rozpoczęto {{time}} i wciąż trwa.",
             "unknown": "Ostatnie uruchomienie {{time}}."
           },
-          "progress": "Dotychczas {{processed}} z {{total}} klientów."
+          "progress": "Dotychczas {{processed}} z {{total}} klientów.",
+          "showAll": "Zobacz wszystkich {{count}} klientów tego uruchomienia"
         },
         "lead": "{{clients}} klientów dopasowanych · połączono przez {{method}}",
         "overwrites": {

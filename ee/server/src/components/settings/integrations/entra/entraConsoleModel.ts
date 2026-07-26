@@ -222,6 +222,53 @@ export function summarizeEntraRunResults(
   );
 }
 
+export type EntraRunResultOutcome = 'failed' | 'partial' | 'running' | 'review' | 'done';
+
+/**
+ * What one client's slice of a run came to.
+ *
+ * The overview used to branch on `failed` / `ambiguous > 0` / everything else,
+ * which put `partial`, `running` and `skipped` behind a green "Done" — a third
+ * status vocabulary on a console that already has two, and the only one that
+ * lies.
+ */
+export function entraRunResultOutcome(result: {
+  status?: string;
+  ambiguous?: number;
+}): EntraRunResultOutcome {
+  const status = (result.status || '').toLowerCase();
+  if (status === 'failed') return 'failed';
+  if (status === 'partial') return 'partial';
+  if (status === 'running') return 'running';
+  return (result.ambiguous || 0) > 0 ? 'review' : 'done';
+}
+
+const RUN_RESULT_RANK: Record<EntraRunResultOutcome, number> = {
+  failed: 0,
+  partial: 1,
+  review: 2,
+  running: 3,
+  done: 4,
+};
+
+/**
+ * Worst first. The server returns per-client results in whatever order it
+ * wrote them, which at two clients is invisible and at two hundred means the
+ * one that failed is wherever the run happened to put it — on a card the
+ * operator reads to find exactly that.
+ */
+export function sortEntraRunResultsWorstFirst<T extends { status?: string; ambiguous?: number }>(
+  results: T[]
+): T[] {
+  return [...results].sort(
+    (left, right) =>
+      RUN_RESULT_RANK[entraRunResultOutcome(left)] - RUN_RESULT_RANK[entraRunResultOutcome(right)]
+  );
+}
+
+/** How many per-client rows a summary shows before it stops being a summary. */
+export const ENTRA_RUN_RESULT_ROW_LIMIT = 8;
+
 /** The last run that actually changed something — previews are not runs. */
 export function findLastRealRun(runs: EntraSyncHistoryRun[]): EntraSyncHistoryRun | null {
   return runs.find((run) => !run.isDryRun) || null;

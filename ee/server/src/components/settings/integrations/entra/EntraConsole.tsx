@@ -50,13 +50,17 @@ import { formatEntraExactTime, formatEntraRelativeTime } from './timeFormat';
 import { wasEntraSyncAccepted } from './syncStart';
 import {
   ENTRA_CONSOLE_TABS,
+  ENTRA_RUN_RESULT_ROW_LIMIT,
   buildEntraAttentionItems,
+  entraRunResultOutcome,
   failingEntraClients,
   findLastRealRun,
   isEntraSyncIntervalChoice,
   parseEntraConsoleTab,
+  sortEntraRunResultsWorstFirst,
   summarizeEntraRunResults,
   type EntraAttentionItem,
+  type EntraRunResultOutcome,
   type EntraConsoleTab,
 } from './entraConsoleModel';
 
@@ -83,19 +87,27 @@ const SEVERITY_ICON: Record<EntraAttentionItem['severity'], typeof AlertCircle> 
   info: Info,
 };
 
+const RUN_RESULT_BADGE_VARIANTS: Record<EntraRunResultOutcome, BadgeVariant> = {
+  failed: 'error',
+  partial: 'warning',
+  running: 'default-muted',
+  review: 'warning',
+  done: 'success',
+};
+
+const RUN_RESULT_LABEL_KEYS: Record<EntraRunResultOutcome, string> = {
+  failed: 'integrations.entra.console.lastRun.results.failed',
+  partial: 'integrations.entra.console.lastRun.results.partlyFailed',
+  running: 'integrations.entra.console.lastRun.results.running',
+  review: 'integrations.entra.console.lastRun.results.toReview',
+  done: 'integrations.entra.console.lastRun.results.done',
+};
+
 const SEVERITY_CLASS: Record<EntraAttentionItem['severity'], string> = {
   blocking: 'text-destructive',
   warning: 'text-warning',
   info: 'text-muted-foreground',
 };
-
-function formatTime(value: string | null | undefined, fallback: string): string {
-  if (!value) return fallback;
-  const parsed = Date.parse(value);
-  return Number.isNaN(parsed)
-    ? value
-    : new Date(parsed).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-}
 
 /** One number, its label, and what it means — the overview's smallest unit. */
 function Stat({
@@ -321,6 +333,10 @@ export function EntraConsole({
   });
   const lastRun = findLastRealRun(runs);
   const totals = summarizeEntraRunResults(lastRunResults);
+  const shownRunResults = sortEntraRunResultsWorstFirst(lastRunResults).slice(
+    0,
+    ENTRA_RUN_RESULT_ROW_LIMIT
+  );
   const failingCount = failingEntraClients(mappings).length;
 
   const clientNameByTenant = new Map(
@@ -767,8 +783,12 @@ export function EntraConsole({
               {!lastRunInProgress && lastRunResults.length > 0 ? (
                 <div className="mt-4 overflow-x-auto" id="entra-console-last-run-clients">
                   <Table>
+                    {/* The console labels every group this way (Stat, RailCard);
+                        the Clients tab was brought to this standard already and
+                        this table was the last one left at the framework's
+                        sentence-case 14px default. */}
                     <TableHeader>
-                      <TableRow>
+                      <TableRow className="[&>th]:h-9 [&>th]:text-xs [&>th]:uppercase [&>th]:tracking-wide">
                         <TableHead>{t('integrations.entra.console.lastRun.columns.client')}</TableHead>
                         <TableHead>{t('integrations.entra.console.lastRun.columns.result')}</TableHead>
                         <TableHead className="text-right">
@@ -778,14 +798,21 @@ export function EntraConsole({
                           {t('integrations.entra.console.lastRun.columns.created')}
                         </TableHead>
                         <TableHead className="text-right">
+                          {t('integrations.entra.console.lastRun.columns.updated')}
+                        </TableHead>
+                        <TableHead className="text-right">
                           {t('integrations.entra.console.lastRun.columns.inactivated')}
                         </TableHead>
-                        <TableHead>{t('integrations.entra.console.lastRun.columns.when')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {lastRunResults.map((result) => (
-                        <TableRow key={`${result.managedTenantId || result.clientId}`}>
+                      {shownRunResults.map((result) => {
+                        const outcome = entraRunResultOutcome(result);
+                        return (
+                        <TableRow
+                          key={`${result.managedTenantId || result.clientId}`}
+                          className="border-b border-border/60"
+                        >
                           <TableCell className="font-medium">
                             {resultClientName(result)}
                             {/* Why it failed, where the failure is: "Failed" on
@@ -797,37 +824,42 @@ export function EntraConsole({
                             ) : null}
                           </TableCell>
                           <TableCell>
-                            <Badge
-                              variant={
-                                result.status === 'failed'
-                                  ? 'error'
-                                  : result.ambiguous > 0
-                                    ? 'warning'
-                                    : 'success'
-                              }
-                              size="sm"
-                            >
-                              {result.status === 'failed'
-                                ? t('integrations.entra.console.lastRun.results.failed')
-                                : result.ambiguous > 0
-                                  ? t('integrations.entra.console.lastRun.results.toReview', {
-                                      count: result.ambiguous,
-                                    })
-                                  : t('integrations.entra.console.lastRun.results.done')}
+                            <Badge variant={RUN_RESULT_BADGE_VARIANTS[outcome]} size="sm">
+                              {outcome === 'review'
+                                ? t('integrations.entra.console.lastRun.results.toReview', {
+                                    count: result.ambiguous,
+                                  })
+                                : t(RUN_RESULT_LABEL_KEYS[outcome])}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right tabular-nums">{result.linked}</TableCell>
                           <TableCell className="text-right tabular-nums">{result.created}</TableCell>
+                          <TableCell className="text-right tabular-nums">{result.updated}</TableCell>
                           <TableCell className="text-right tabular-nums">
                             {result.inactivated}
                           </TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {formatTime(result.completedAt || result.startedAt, '—')}
-                          </TableCell>
                         </TableRow>
-                      ))}
+                        );
+                      })}
                     </TableBody>
                   </Table>
+                  {/* A summary that lists two hundred clients is not a summary.
+                      The worst are on top; the rest are one click away on the
+                      tab built to page through them. */}
+                  {lastRunResults.length > shownRunResults.length ? (
+                    <Button
+                      id="entra-console-last-run-show-all"
+                      type="button"
+                      size="sm"
+                      variant="link"
+                      className="mt-2 px-0"
+                      onClick={() => selectTab('history')}
+                    >
+                      {t('integrations.entra.console.lastRun.showAll', {
+                        count: lastRunResults.length,
+                      })}
+                    </Button>
+                  ) : null}
                 </div>
               ) : null}
             </>

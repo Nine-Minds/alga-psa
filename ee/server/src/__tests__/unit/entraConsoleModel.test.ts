@@ -2,9 +2,11 @@ import { describe, expect, it } from 'vitest';
 import {
   buildEntraAttentionItems,
   buildEntraRunHistoryCsv,
+  entraRunResultOutcome,
   filterEntraRuns,
   findLastRealRun,
   parseEntraConsoleTab,
+  sortEntraRunResultsWorstFirst,
   summarizeEntraRunResults,
   DEFAULT_ENTRA_HISTORY_FILTERS,
 } from '@ee/components/settings/integrations/entra/entraConsoleModel';
@@ -168,6 +170,29 @@ describe('buildEntraAttentionItems', () => {
     expect(items.map((item) => item.id)).toEqual(['review-queue', 'never-synced', 'schedule-off']);
     expect(items.find((item) => item.id === 'review-queue')?.values).toEqual({ count: 3 });
     expect(items.find((item) => item.id === 'schedule-off')?.severity).toBe('info');
+  });
+});
+
+describe('entraRunResultOutcome', () => {
+  it('does not badge a partly failed or still-running client as Done', () => {
+    // The overview branched on failed / ambiguous>0 / everything else, so
+    // partial, running and skipped all came out green.
+    expect(entraRunResultOutcome({ status: 'partial' })).toBe('partial');
+    expect(entraRunResultOutcome({ status: 'running' })).toBe('running');
+    expect(entraRunResultOutcome({ status: 'failed' })).toBe('failed');
+    expect(entraRunResultOutcome({ status: 'completed', ambiguous: 2 })).toBe('review');
+    expect(entraRunResultOutcome({ status: 'completed', ambiguous: 0 })).toBe('done');
+  });
+
+  it('puts the clients that need a person at the top', () => {
+    const sorted = sortEntraRunResultsWorstFirst([
+      { id: 'done', status: 'completed', ambiguous: 0 },
+      { id: 'review', status: 'completed', ambiguous: 3 },
+      { id: 'failed', status: 'failed', ambiguous: 0 },
+      { id: 'partial', status: 'partial', ambiguous: 0 },
+    ]);
+
+    expect(sorted.map((entry) => entry.id)).toEqual(['failed', 'partial', 'review', 'done']);
   });
 });
 

@@ -491,17 +491,19 @@
         "lastRun": {
           "columns": {
             "client": "Klant",
-            "created": "Nieuw",
-            "inactivated": "Inactief",
+            "created": "Aangemaakt",
+            "inactivated": "Inactief gemaakt",
             "linked": "Gekoppeld",
             "result": "Resultaat",
-            "when": "Wanneer"
+            "updated": "Gewijzigd"
           },
           "empty": "Er is nog geen synchronisatie uitgevoerd.",
           "fullHistory": "Volledige geschiedenis",
           "results": {
             "done": "Klaar",
             "failed": "Mislukt",
+            "partlyFailed": "Deels mislukt",
+            "running": "Bezig met synchroniseren",
             "toReview": "{{count}} te beoordelen"
           },
           "stats": {
@@ -513,7 +515,7 @@
             "inactivatedSub": "accounts uitgeschakeld",
             "linked": "Gekoppeld",
             "linkedSub": "bestaande contacten",
-            "updated": "Velden gewijzigd",
+            "updated": "Gewijzigd",
             "updatedSub": "waar u dat toestond"
           },
           "title": "Laatste synchronisatie",
@@ -525,7 +527,8 @@
             "running": "Gestart {{time}} en nog bezig.",
             "unknown": "Laatste uitvoering {{time}}."
           },
-          "progress": "{{processed}} van {{total}} klanten tot nu toe klaar."
+          "progress": "{{processed}} van {{total}} klanten tot nu toe klaar.",
+          "showAll": "Bekijk alle {{count}} klanten in deze uitvoering"
         },
         "lead": "{{clients}} klanten gekoppeld · verbonden via {{method}}",
         "overwrites": {

@@ -495,13 +495,15 @@
             "inactivated": "11111",
             "linked": "11111",
             "result": "11111",
-            "when": "11111"
+            "updated": "11111"
           },
           "empty": "11111",
           "fullHistory": "11111",
           "results": {
             "done": "11111",
             "failed": "11111",
+            "partlyFailed": "11111",
+            "running": "11111",
             "toReview": "11111"
           },
           "stats": {
@@ -525,7 +527,8 @@
             "running": "11111",
             "unknown": "11111"
           },
-          "progress": "11111"
+          "progress": "11111",
+          "showAll": "11111"
         },
         "lead": "11111",
         "overwrites": {

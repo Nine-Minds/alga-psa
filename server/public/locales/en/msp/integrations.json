@@ -491,17 +491,19 @@
         "lastRun": {
           "columns": {
             "client": "Client",
-            "created": "New",
-            "inactivated": "Inactive",
+            "created": "Created",
+            "inactivated": "Made inactive",
             "linked": "Linked",
             "result": "Result",
-            "when": "When"
+            "updated": "Changed"
           },
           "empty": "No sync has run yet.",
           "fullHistory": "Full history",
           "results": {
             "done": "Done",
             "failed": "Failed",
+            "partlyFailed": "Partly failed",
+            "running": "Syncing",
             "toReview": "{{count}} to review"
           },
           "stats": {
@@ -513,7 +515,7 @@
             "inactivatedSub": "accounts disabled",
             "linked": "Linked",
             "linkedSub": "existing contacts",
-            "updated": "Fields changed",
+            "updated": "Changed",
             "updatedSub": "where you allowed it"
           },
           "title": "Last sync",
@@ -525,7 +527,8 @@
             "running": "Started {{time}} and still running.",
             "unknown": "Last run {{time}}."
           },
-          "progress": "{{processed}} of {{total}} clients done so far."
+          "progress": "{{processed}} of {{total}} clients done so far.",
+          "showAll": "See all {{count}} clients in this run"
         },
         "lead": "{{clients}} clients mapped · connected via {{method}}",
         "overwrites": {
