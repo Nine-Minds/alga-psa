@@ -533,8 +533,9 @@
         "lead": "{{clients}} Kunden zugeordnet · verbunden über {{method}}",
         "overwrites": {
           "change": "Feldregeln ändern",
-          "off": "Aus",
-          "on": "An",
+          "inactivateOff": "Deaktivierte Microsoft-Konten bleiben unangetastet.",
+          "inactivateOn": "Deaktivierte Microsoft-Konten werden als inaktiv markiert.",
+          "none": "Nichts wird überschrieben.",
           "title": "Erlaubte Überschreibungen"
         },
         "schedule": {
@@ -793,7 +794,7 @@
           "saveFailed": "Die Feldregeln konnten nicht gespeichert werden.",
           "saved": "Feldregeln gespeichert.",
           "saving": "Wird gespeichert…",
-          "title": "Feldsynchronisationssteuerung"
+          "title": "Feldregeln"
         },
         "guidedStep": {
           "complete": "abgeschlossen",

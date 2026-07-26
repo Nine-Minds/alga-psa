@@ -533,8 +533,9 @@
         "lead": "{{clients}} klientów dopasowanych · połączono przez {{method}}",
         "overwrites": {
           "change": "Zmień reguły pól",
-          "off": "Wył.",
-          "on": "Wł.",
+          "inactivateOff": "Wyłączone konta Microsoft pozostają bez zmian.",
+          "inactivateOn": "Wyłączone konta Microsoft są oznaczane jako nieaktywne.",
+          "none": "Nic nie jest nadpisywane.",
           "title": "Dozwolone nadpisania"
         },
         "schedule": {
@@ -793,7 +794,7 @@
           "saveFailed": "Nie udało się zapisać reguł pól.",
           "saved": "Zapisano reguły pól.",
           "saving": "Zapisywanie…",
-          "title": "Ustawienia synchronizacji pól"
+          "title": "Reguły pól"
         },
         "guidedStep": {
           "complete": "ukończony",

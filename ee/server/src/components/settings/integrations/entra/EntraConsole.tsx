@@ -43,7 +43,7 @@ import { EntraClientsTab } from './EntraClientsTab';
 import { EntraHistoryTab } from './EntraHistoryTab';
 import { EntraScheduleTab } from './EntraScheduleTab';
 import { FieldSyncRules } from './FieldSyncRules';
-import { normalizeEntraFieldSyncConfig } from './fieldSyncModel';
+import { ENTRA_OVERWRITE_RULES, normalizeEntraFieldSyncConfig } from './fieldSyncModel';
 import { MarkList, type MarkListItem } from './MarkList';
 import { RelativeTime } from './RelativeTime';
 import { formatEntraExactTime, formatEntraRelativeTime } from './timeFormat';
@@ -610,6 +610,10 @@ export function EntraConsole({
       || t('integrations.entra.settings.validation.neverFormatted'),
   };
 
+  const overwrittenFields = ENTRA_OVERWRITE_RULES.filter(
+    (rule) => fieldSyncConfig[rule.key]
+  ).map((rule) => t(rule.labelKey));
+
   const permissionItems: MarkListItem[] = [
     {
       id: 'read-tenants',
@@ -953,40 +957,35 @@ export function EntraConsole({
             id="entra-console-rail-overwrites"
             title={t('integrations.entra.console.overwrites.title')}
           >
-            <KeyValue
-              label={t('integrations.entra.settings.fieldSync.options.displayName.label')}
-              value={
-                fieldSyncConfig.displayName
-                  ? t('integrations.entra.console.overwrites.on')
-                  : t('integrations.entra.console.overwrites.off')
-              }
-            />
-            <KeyValue
-              label={t('integrations.entra.settings.fieldSync.options.phone.label')}
-              value={
-                fieldSyncConfig.phone
-                  ? t('integrations.entra.console.overwrites.on')
-                  : t('integrations.entra.console.overwrites.off')
-              }
-            />
-            <KeyValue
-              label={t('integrations.entra.settings.fieldSync.options.role.label')}
-              value={
-                fieldSyncConfig.role
-                  ? t('integrations.entra.console.overwrites.on')
-                  : t('integrations.entra.console.overwrites.off')
-              }
-            />
-            <Button
-              id="entra-console-rail-field-rules"
-              type="button"
-              size="sm"
-              variant="ghost"
-              className="mt-2"
-              onClick={() => selectTab('field-rules')}
-            >
-              {t('integrations.entra.console.overwrites.change')}
-            </Button>
+            {/* Three of the five overwrite rules used to be listed here as
+                copy-pasted rows, so turning on the email or UPN rule changed
+                the sync and changed nothing on the card that exists to say what
+                the sync may change. Naming the rules that are on beats five
+                rows of "Off", four of which never vary on most tenants. */}
+            <p className="text-sm" id="entra-console-overwrites-summary">
+              {overwrittenFields.length === 0
+                ? t('integrations.entra.console.overwrites.none')
+                : overwrittenFields.join(', ')}
+            </p>
+            {/* The rule that produces the "Made inactive" number two cards to
+                the left, and the only one in the set that defaults on. It was
+                the one the card never mentioned. */}
+            <p className="mt-2 text-sm text-muted-foreground" id="entra-console-overwrites-inactivate">
+              {fieldSyncConfig.markInactiveWhenDisabled
+                ? t('integrations.entra.console.overwrites.inactivateOn')
+                : t('integrations.entra.console.overwrites.inactivateOff')}
+            </p>
+            <div className="mt-3">
+              <Button
+                id="entra-console-rail-field-rules"
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => selectTab('field-rules')}
+              >
+                {t('integrations.entra.console.overwrites.change')}
+              </Button>
+            </div>
           </RailCard>
         </div>
       </div>

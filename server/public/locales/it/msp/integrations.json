@@ -533,8 +533,9 @@
         "lead": "{{clients}} clienti abbinati · connesso tramite {{method}}",
         "overwrites": {
           "change": "Modifica le regole dei campi",
-          "off": "Disattivo",
-          "on": "Attivo",
+          "inactivateOff": "Gli account Microsoft disabilitati vengono lasciati invariati.",
+          "inactivateOn": "Gli account Microsoft disabilitati vengono contrassegnati come inattivi.",
+          "none": "Non viene sovrascritto nulla.",
           "title": "Sovrascritture consentite"
         },
         "schedule": {
@@ -793,7 +794,7 @@
           "saveFailed": "Non è stato possibile salvare le regole sui campi.",
           "saved": "Regole sui campi salvate.",
           "saving": "Salvataggio…",
-          "title": "Controlli di sincronizzazione dei campi"
+          "title": "Regole dei campi"
         },
         "guidedStep": {
           "complete": "completato",

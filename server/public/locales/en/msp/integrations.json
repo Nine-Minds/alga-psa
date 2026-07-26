@@ -533,8 +533,9 @@
         "lead": "{{clients}} clients mapped · connected via {{method}}",
         "overwrites": {
           "change": "Change field rules",
-          "off": "Off",
-          "on": "On",
+          "inactivateOff": "Disabled Microsoft accounts are left alone.",
+          "inactivateOn": "Disabled Microsoft accounts are marked inactive.",
+          "none": "Nothing is overwritten.",
           "title": "Overwrites allowed"
         },
         "schedule": {
@@ -763,7 +764,7 @@
           "options": {
             "displayName": {
               "description": "Allow Entra display name to overwrite contact full name on linked contacts.",
-              "label": "Display Name"
+              "label": "Display name"
             },
             "email": {
               "description": "Allow Entra email/UPN to overwrite contact email on linked contacts.",
@@ -793,7 +794,7 @@
           "saveFailed": "Could not save the field rules.",
           "saved": "Field rules saved.",
           "saving": "Saving…",
-          "title": "Field Sync Controls"
+          "title": "Field rules"
         },
         "guidedStep": {
           "complete": "complete",

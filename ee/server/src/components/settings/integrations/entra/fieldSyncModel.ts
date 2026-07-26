@@ -21,6 +21,33 @@ export const DEFAULT_ENTRA_FIELD_SYNC_CONFIG: EntraFieldSyncConfig = {
   markInactiveWhenDisabled: true,
 };
 
+export interface EntraFieldSyncRule {
+  key: keyof EntraFieldSyncConfig;
+  labelKey: string;
+  descriptionKey: string;
+}
+
+/**
+ * The overwrite rules, in order, as data.
+ *
+ * Every surface that shows "what may this sync change" reads this list rather
+ * than naming fields by hand: the console rail used to hard-code three of the
+ * five as copy-pasted rows, so turning on the email or UPN rule changed the
+ * sync and changed nothing on the card whose whole job is saying what the sync
+ * is allowed to change.
+ */
+export const ENTRA_OVERWRITE_RULES: EntraFieldSyncRule[] = [
+  'displayName',
+  'email',
+  'phone',
+  'role',
+  'upn',
+].map((key) => ({
+  key: key as keyof EntraFieldSyncConfig,
+  labelKey: `integrations.entra.settings.fieldSync.options.${key}.label`,
+  descriptionKey: `integrations.entra.settings.fieldSync.options.${key}.description`,
+}));
+
 export function normalizeEntraFieldSyncConfig(value: unknown): EntraFieldSyncConfig {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return { ...DEFAULT_ENTRA_FIELD_SYNC_CONFIG };

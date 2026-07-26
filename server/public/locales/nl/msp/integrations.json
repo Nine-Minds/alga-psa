@@ -533,8 +533,9 @@
         "lead": "{{clients}} klanten gekoppeld · verbonden via {{method}}",
         "overwrites": {
           "change": "Veldregels wijzigen",
-          "off": "Uit",
-          "on": "Aan",
+          "inactivateOff": "Uitgeschakelde Microsoft-accounts blijven ongemoeid.",
+          "inactivateOn": "Uitgeschakelde Microsoft-accounts worden als inactief gemarkeerd.",
+          "none": "Er wordt niets overschreven.",
           "title": "Toegestane overschrijvingen"
         },
         "schedule": {
@@ -793,7 +794,7 @@
           "saveFailed": "De veldregels konden niet worden opgeslagen.",
           "saved": "Veldregels opgeslagen.",
           "saving": "Opslaan…",
-          "title": "Veldsynchronisatiebesturingselementen"
+          "title": "Veldregels"
         },
         "guidedStep": {
           "complete": "voltooid",

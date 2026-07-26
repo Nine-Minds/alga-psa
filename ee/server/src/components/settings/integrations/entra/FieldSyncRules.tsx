@@ -14,47 +14,19 @@ import {
   type EntraPreflightResponse,
 } from '@alga-psa/integrations/actions';
 import { ContactPreflightReport } from './ContactPreflightReport';
-import { DEFAULT_ENTRA_FIELD_SYNC_CONFIG, normalizeEntraFieldSyncConfig } from './fieldSyncModel';
+import {
+  DEFAULT_ENTRA_FIELD_SYNC_CONFIG,
+  ENTRA_OVERWRITE_RULES,
+  normalizeEntraFieldSyncConfig,
+} from './fieldSyncModel';
 
 export { DEFAULT_ENTRA_FIELD_SYNC_CONFIG, normalizeEntraFieldSyncConfig };
-
-interface FieldSyncRuleOption {
-  key: keyof EntraFieldSyncConfig;
-  labelKey: string;
-  descriptionKey: string;
-}
 
 /**
  * Overwrite rules default off — a sync that quietly rewrites a technician's
  * carefully corrected contact record is the fastest way to lose trust in it.
  */
-const OVERWRITE_RULES: FieldSyncRuleOption[] = [
-  {
-    key: 'displayName',
-    labelKey: 'integrations.entra.settings.fieldSync.options.displayName.label',
-    descriptionKey: 'integrations.entra.settings.fieldSync.options.displayName.description',
-  },
-  {
-    key: 'email',
-    labelKey: 'integrations.entra.settings.fieldSync.options.email.label',
-    descriptionKey: 'integrations.entra.settings.fieldSync.options.email.description',
-  },
-  {
-    key: 'phone',
-    labelKey: 'integrations.entra.settings.fieldSync.options.phone.label',
-    descriptionKey: 'integrations.entra.settings.fieldSync.options.phone.description',
-  },
-  {
-    key: 'role',
-    labelKey: 'integrations.entra.settings.fieldSync.options.role.label',
-    descriptionKey: 'integrations.entra.settings.fieldSync.options.role.description',
-  },
-  {
-    key: 'upn',
-    labelKey: 'integrations.entra.settings.fieldSync.options.upn.label',
-    descriptionKey: 'integrations.entra.settings.fieldSync.options.upn.description',
-  },
-];
+const OVERWRITE_RULES = ENTRA_OVERWRITE_RULES;
 
 interface FieldSyncRulesProps {
   config: EntraFieldSyncConfig;

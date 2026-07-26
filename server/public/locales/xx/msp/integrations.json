@@ -533,8 +533,9 @@
         "lead": "11111",
         "overwrites": {
           "change": "11111",
-          "off": "11111",
-          "on": "11111",
+          "inactivateOff": "11111",
+          "inactivateOn": "11111",
+          "none": "11111",
           "title": "11111"
         },
         "schedule": {

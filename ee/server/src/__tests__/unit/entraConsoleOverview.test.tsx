@@ -464,9 +464,39 @@ describe('EntraConsole overview', () => {
       expect(document.getElementById('entra-console-rail-overwrites')).not.toBeNull()
     );
 
-    const rail = document.getElementById('entra-console-rail-overwrites');
-    expect(rail?.textContent).toContain('Phone');
-    expect(rail?.textContent).toContain('On');
-    expect(rail?.textContent).toContain('Off');
+    // Naming the rules that are on, rather than five rows of "Off".
+    const summary = document.getElementById('entra-console-overwrites-summary');
+    expect(summary?.textContent).toBe('Phone');
+
+    // The card listed three of the five overwrite rules and never mentioned
+    // inactivation — the only rule that defaults on, and the one that produces
+    // the "Made inactive" number two cards to the left.
+    expect(document.getElementById('entra-console-overwrites-inactivate')?.textContent).toContain(
+      'marked inactive'
+    );
+  });
+
+  it('names every overwrite rule that is on, including the two it used to omit', async () => {
+    renderConsole(
+      statusOf({
+        fieldSyncConfig: {
+          displayName: false,
+          email: true,
+          phone: false,
+          role: false,
+          upn: true,
+          markInactiveWhenDisabled: false,
+        },
+      })
+    );
+
+    await waitFor(() =>
+      expect(document.getElementById('entra-console-overwrites-summary')?.textContent).toBe(
+        'Email, UPN'
+      )
+    );
+    expect(document.getElementById('entra-console-overwrites-inactivate')?.textContent).toContain(
+      'left alone'
+    );
   });
 });

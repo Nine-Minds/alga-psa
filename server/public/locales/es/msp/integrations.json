@@ -533,8 +533,9 @@
         "lead": "{{clients}} clientes asociados · conectado mediante {{method}}",
         "overwrites": {
           "change": "Cambiar reglas de campos",
-          "off": "Desactivado",
-          "on": "Activado",
+          "inactivateOff": "Las cuentas de Microsoft deshabilitadas se dejan como están.",
+          "inactivateOn": "Las cuentas de Microsoft deshabilitadas se marcan como inactivas.",
+          "none": "No se sobrescribe nada.",
           "title": "Sobrescrituras permitidas"
         },
         "schedule": {
@@ -763,7 +764,7 @@
           "options": {
             "displayName": {
               "description": "Permitir que el nombre visible de Entra sobrescriba el nombre completo en los contactos vinculados.",
-              "label": "Nombre visible"
+              "label": "Nombre para mostrar"
             },
             "email": {
               "description": "Permitir que el correo/UPN de Entra sobrescriba el correo del contacto en los contactos vinculados.",
@@ -793,7 +794,7 @@
           "saveFailed": "No se pudieron guardar las reglas de campo.",
           "saved": "Reglas de campo guardadas.",
           "saving": "Guardando…",
-          "title": "Controles de sincronización de campos"
+          "title": "Reglas de campos"
         },
         "guidedStep": {
           "complete": "completo",

@@ -533,8 +533,9 @@
         "lead": "{{clients}} clientes associados · ligado via {{method}}",
         "overwrites": {
           "change": "Alterar regras de campos",
-          "off": "Desligado",
-          "on": "Ligado",
+          "inactivateOff": "As contas Microsoft desativadas ficam intactas.",
+          "inactivateOn": "As contas Microsoft desativadas são marcadas como inativas.",
+          "none": "Nada é substituído.",
           "title": "Substituições permitidas"
         },
         "schedule": {
@@ -763,7 +764,7 @@
           "options": {
             "displayName": {
               "description": "Permitir que o nome de exibição do Entra substitua o nome completo do contato nos contatos vinculados.",
-              "label": "Nome de exibição"
+              "label": "Nome a apresentar"
             },
             "email": {
               "description": "Permitir que o email/UPN do Entra substitua o email do contato nos contatos vinculados.",
@@ -793,7 +794,7 @@
           "saveFailed": "Não foi possível guardar as regras de campo.",
           "saved": "Regras de campo guardadas.",
           "saving": "A guardar…",
-          "title": "Controles de sincronização de campo"
+          "title": "Regras de campos"
         },
         "guidedStep": {
           "complete": "completo",

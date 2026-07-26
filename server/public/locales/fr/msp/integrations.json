@@ -533,8 +533,9 @@
         "lead": "{{clients}} clients associés · connecté via {{method}}",
         "overwrites": {
           "change": "Modifier les règles de champs",
-          "off": "Désactivé",
-          "on": "Activé",
+          "inactivateOff": "Les comptes Microsoft désactivés sont laissés tels quels.",
+          "inactivateOn": "Les comptes Microsoft désactivés sont marqués comme inactifs.",
+          "none": "Rien n'est écrasé.",
           "title": "Écrasements autorisés"
         },
         "schedule": {
@@ -763,7 +764,7 @@
           "options": {
             "displayName": {
               "description": "Autoriser le nom d'affichage Entra à écraser le nom complet du contact sur les contacts liés.",
-              "label": "Nom affiché"
+              "label": "Nom d'affichage"
             },
             "email": {
               "description": "Autoriser l'e-mail/UPN Entra à écraser l'e-mail du contact sur les contacts liés.",
@@ -793,7 +794,7 @@
           "saveFailed": "Impossible d'enregistrer les règles de champ.",
           "saved": "Règles de champ enregistrées.",
           "saving": "Enregistrement…",
-          "title": "Contrôles de synchronisation des champs"
+          "title": "Règles de champs"
         },
         "guidedStep": {
           "complete": "terminé",
