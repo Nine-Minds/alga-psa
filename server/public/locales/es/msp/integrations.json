@@ -516,10 +516,16 @@
             "updated": "Campos cambiados",
             "updatedSub": "donde usted lo permitió"
           },
-          "summary": "{{status}} a las {{time}}",
-          "tenants": "{{succeeded}} de {{total}} clientes con éxito",
           "title": "Última sincronización",
-          "unavailable": "No se pudo leer el historial de ejecuciones."
+          "unavailable": "No se pudo leer el historial de ejecuciones.",
+          "summaries": {
+            "completed": "Finalizó {{time}}.",
+            "failed": "Falló {{time}}.",
+            "partial": "Finalizó {{time}}, con errores.",
+            "running": "Comenzó {{time}} y sigue en curso.",
+            "unknown": "Última ejecución {{time}}."
+          },
+          "progress": "{{processed}} de {{total}} clientes completados hasta ahora."
         },
         "lead": "{{clients}} clientes asociados · conectado mediante {{method}}",
         "overwrites": {
@@ -572,8 +578,7 @@
           "overview": "Resumen",
           "reviewQueue": "Cola de revisión",
           "schedule": "Sincronización y programación"
-        },
-        "title": "Operaciones de Microsoft Entra"
+        }
       },
       "pilot": {
         "actions": {

@@ -516,10 +516,16 @@
             "updated": "11111",
             "updatedSub": "11111"
           },
-          "summary": "11111",
-          "tenants": "11111",
           "title": "11111",
-          "unavailable": "11111"
+          "unavailable": "11111",
+          "summaries": {
+            "completed": "11111",
+            "failed": "11111",
+            "partial": "11111",
+            "running": "11111",
+            "unknown": "11111"
+          },
+          "progress": "11111"
         },
         "lead": "11111",
         "overwrites": {
@@ -572,8 +578,7 @@
           "overview": "11111",
           "reviewQueue": "11111",
           "schedule": "11111"
-        },
-        "title": "11111"
+        }
       },
       "pilot": {
         "actions": {

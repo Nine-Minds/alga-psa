@@ -516,10 +516,16 @@
             "updated": "Champs modifiés",
             "updatedSub": "là où vous l'avez autorisé"
           },
-          "summary": "{{status}} à {{time}}",
-          "tenants": "{{succeeded}} clients sur {{total}} ont réussi",
           "title": "Dernière synchronisation",
-          "unavailable": "L'historique des exécutions n'a pas pu être lu."
+          "unavailable": "L'historique des exécutions n'a pas pu être lu.",
+          "summaries": {
+            "completed": "Terminé {{time}}.",
+            "failed": "Échec {{time}}.",
+            "partial": "Terminé {{time}}, avec des échecs.",
+            "running": "Démarré {{time}} et toujours en cours.",
+            "unknown": "Dernière exécution {{time}}."
+          },
+          "progress": "{{processed}} clients sur {{total}} traités jusqu'ici."
         },
         "lead": "{{clients}} clients associés · connecté via {{method}}",
         "overwrites": {
@@ -572,8 +578,7 @@
           "overview": "Aperçu",
           "reviewQueue": "File de revue",
           "schedule": "Synchronisation et planification"
-        },
-        "title": "Exploitation Microsoft Entra"
+        }
       },
       "pilot": {
         "actions": {

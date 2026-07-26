@@ -230,6 +230,62 @@ describe('EntraConsole overview', () => {
     expect(table?.textContent).not.toContain('managed-1');
   });
 
+  it('says what the run did in words, not by printing its database status', async () => {
+    renderConsole();
+
+    await waitFor(() =>
+      expect(document.getElementById('entra-console-last-run')).not.toBeNull()
+    );
+
+    // It used to interpolate the raw enum into "{{status}} at {{time}}" and
+    // render "partial at 7/25/2026, 3:05:00 AM" in all ten locales.
+    const summary = document.getElementById('entra-console-last-run')?.textContent || '';
+    expect(summary).toContain('with failures');
+    expect(summary).not.toContain('partial');
+    expect(summary).not.toMatch(/\d{4}/);
+  });
+
+  it('reports a run still in flight as running, not as a run that did nothing', async () => {
+    getEntraSyncRunHistoryMock.mockResolvedValue({
+      success: true,
+      data: {
+        runs: [
+          {
+            runId: 'run-live',
+            status: 'running',
+            runType: 'all-tenants',
+            startedAt: '2026-07-25T03:04:00.000Z',
+            completedAt: null,
+            totalTenants: 2,
+            processedTenants: 1,
+            succeededTenants: 1,
+            failedTenants: 0,
+            isDryRun: false,
+          },
+        ],
+      },
+    });
+    getEntraSyncRunDetailMock.mockResolvedValue({
+      success: true,
+      data: { run: null, tenantResults: [] },
+    });
+
+    renderConsole();
+
+    // The per-client results are not written until the run ends, so the stat
+    // strip read 0 linked / 0 created — "the sync did nothing" rather than
+    // "the sync is not finished".
+    await waitFor(() =>
+      expect(document.getElementById('entra-console-last-run-progress')?.textContent).toContain(
+        '1 of 2 clients'
+      )
+    );
+    expect(document.getElementById('entra-console-last-run')?.textContent).toContain(
+      'still running'
+    );
+    expect(document.getElementById('entra-console-last-run-stats')).toBeNull();
+  });
+
   it('states what needs attention, why, and offers the action for it', async () => {
     renderConsole();
 

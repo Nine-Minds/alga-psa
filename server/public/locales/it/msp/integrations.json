@@ -516,10 +516,16 @@
             "updated": "Campi modificati",
             "updatedSub": "dove l'hai consentito"
           },
-          "summary": "{{status}} alle {{time}}",
-          "tenants": "{{succeeded}} client su {{total}} riusciti",
           "title": "Ultima sincronizzazione",
-          "unavailable": "Non è stato possibile leggere la cronologia delle esecuzioni."
+          "unavailable": "Non è stato possibile leggere la cronologia delle esecuzioni.",
+          "summaries": {
+            "completed": "Completato {{time}}.",
+            "failed": "Fallito {{time}}.",
+            "partial": "Completato {{time}}, con errori.",
+            "running": "Iniziato {{time}} e ancora in corso.",
+            "unknown": "Ultima esecuzione {{time}}."
+          },
+          "progress": "{{processed}} di {{total}} clienti completati finora."
         },
         "lead": "{{clients}} clienti abbinati · connesso tramite {{method}}",
         "overwrites": {
@@ -572,8 +578,7 @@
           "overview": "Panoramica",
           "reviewQueue": "Coda di revisione",
           "schedule": "Sincronizzazione e pianificazione"
-        },
-        "title": "Operatività Microsoft Entra"
+        }
       },
       "pilot": {
         "actions": {

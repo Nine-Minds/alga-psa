@@ -5,6 +5,7 @@ import { AlertCircle, AlertTriangle, Info } from 'lucide-react';
 import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
+import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { CustomTabs, type TabContent } from '@alga-psa/ui/components/CustomTabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@alga-psa/ui/components/Table';
@@ -44,6 +45,8 @@ import { EntraScheduleTab } from './EntraScheduleTab';
 import { FieldSyncRules } from './FieldSyncRules';
 import { normalizeEntraFieldSyncConfig } from './fieldSyncModel';
 import { MarkList, type MarkListItem } from './MarkList';
+import { RelativeTime } from './RelativeTime';
+import { formatEntraExactTime, formatEntraRelativeTime } from './timeFormat';
 import { wasEntraSyncAccepted } from './syncStart';
 import {
   ENTRA_CONSOLE_TABS,
@@ -85,12 +88,6 @@ const SEVERITY_CLASS: Record<EntraAttentionItem['severity'], string> = {
   warning: 'text-warning',
   info: 'text-muted-foreground',
 };
-
-function formatDateTime(value: string | null | undefined, fallback: string): string {
-  if (!value) return fallback;
-  const parsed = Date.parse(value);
-  return Number.isNaN(parsed) ? value : new Date(parsed).toLocaleString();
-}
 
 function formatTime(value: string | null | undefined, fallback: string): string {
   if (!value) return fallback;
@@ -567,6 +564,36 @@ export function EntraConsole({
             }
           : { variant: 'success', label: t('integrations.entra.console.health.healthy') };
 
+  /**
+   * The run, in a sentence.
+   *
+   * This used to be `"{{status}} at {{time}}"` with the backend enum passed
+   * straight through, so ten locales rendered "completed at 7/25/2026,
+   * 8:08:11 PM" — a lowercase database value doing the work of a verb, and a
+   * timestamp precise to the second on something that runs nightly at best.
+   */
+  const lastRunStatus = (lastRun?.status || '').toLowerCase();
+  const lastRunInProgress = Boolean(lastRun) && lastRunStatus === 'running';
+  const lastRunAt = lastRunInProgress
+    ? lastRun?.startedAt
+    : lastRun?.completedAt || lastRun?.startedAt;
+  const lastRunExactTime = formatEntraExactTime(lastRunAt) || '';
+
+  const LAST_RUN_SUMMARY_KEYS: Record<string, string> = {
+    completed: 'integrations.entra.console.lastRun.summaries.completed',
+    partial: 'integrations.entra.console.lastRun.summaries.partial',
+    failed: 'integrations.entra.console.lastRun.summaries.failed',
+    running: 'integrations.entra.console.lastRun.summaries.running',
+  };
+  const lastRunSummary = {
+    key:
+      LAST_RUN_SUMMARY_KEYS[lastRunStatus]
+      || 'integrations.entra.console.lastRun.summaries.unknown',
+    time:
+      formatEntraRelativeTime(lastRunAt)
+      || t('integrations.entra.settings.validation.neverFormatted'),
+  };
+
   const permissionItems: MarkListItem[] = [
     {
       id: 'read-tenants',
@@ -679,13 +706,27 @@ export function EntraConsole({
             </div>
           ) : lastRun ? (
             <>
-              <p className="mt-1 text-sm text-muted-foreground" id="entra-console-last-run">
-                {t('integrations.entra.console.lastRun.summary', {
-                  status: lastRun.status,
-                  time: formatDateTime(lastRun.completedAt || lastRun.startedAt, '—'),
-                })}
-              </p>
+              <Tooltip content={lastRunExactTime}>
+                <p
+                  className="mt-1 w-fit text-sm text-muted-foreground"
+                  id="entra-console-last-run"
+                  tabIndex={0}
+                >
+                  {t(lastRunSummary.key, { time: lastRunSummary.time })}
+                </p>
+              </Tooltip>
 
+              {/* A run still in flight has written no per-client results yet, so
+                  the stat strip would read 0 linked / 0 created — "the sync did
+                  nothing" rather than "the sync is not finished". */}
+              {lastRunInProgress ? (
+                <p className="mt-3 text-sm" id="entra-console-last-run-progress">
+                  {t('integrations.entra.console.lastRun.progress', {
+                    processed: lastRun.processedTenants,
+                    total: lastRun.totalTenants,
+                  })}
+                </p>
+              ) : (
               <div className="mt-3 flex flex-wrap gap-x-8 gap-y-3" id="entra-console-last-run-stats">
                 <Stat
                   id="entra-console-stat-linked"
@@ -721,8 +762,9 @@ export function EntraConsole({
                   />
                 ) : null}
               </div>
+              )}
 
-              {lastRunResults.length > 0 ? (
+              {!lastRunInProgress && lastRunResults.length > 0 ? (
                 <div className="mt-4 overflow-x-auto" id="entra-console-last-run-clients">
                   <Table>
                     <TableHeader>
@@ -855,10 +897,12 @@ export function EntraConsole({
                 attention row both already say so. */}
             <KeyValue
               label={t('integrations.entra.settings.validation.lastValidatedLabel')}
-              value={formatDateTime(
-                status?.lastValidatedAt,
-                t('integrations.entra.settings.validation.neverFormatted')
-              )}
+              value={
+                <RelativeTime
+                  value={status?.lastValidatedAt}
+                  fallback={t('integrations.entra.settings.validation.neverFormatted')}
+                />
+              }
             />
             <div className="mt-3">
               <Button
@@ -949,10 +993,12 @@ export function EntraConsole({
             ) : null}
             <KeyValue
               label={t('integrations.entra.settings.validation.lastValidatedLabel')}
-              value={formatDateTime(
-                status?.lastValidatedAt,
-                t('integrations.entra.settings.validation.neverFormatted')
-              )}
+              value={
+                <RelativeTime
+                  value={status?.lastValidatedAt}
+                  fallback={t('integrations.entra.settings.validation.neverFormatted')}
+                />
+              }
             />
           </div>
 

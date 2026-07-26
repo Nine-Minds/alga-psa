@@ -516,10 +516,16 @@
             "updated": "Felder geändert",
             "updatedSub": "wo Sie es erlaubt haben"
           },
-          "summary": "{{status}} um {{time}}",
-          "tenants": "{{succeeded}} von {{total}} Clients erfolgreich",
           "title": "Letzte Synchronisierung",
-          "unavailable": "Der Ausführungsverlauf konnte nicht gelesen werden."
+          "unavailable": "Der Ausführungsverlauf konnte nicht gelesen werden.",
+          "summaries": {
+            "completed": "Abgeschlossen {{time}}.",
+            "failed": "Fehlgeschlagen {{time}}.",
+            "partial": "Abgeschlossen {{time}}, mit Fehlern.",
+            "running": "Gestartet {{time}} und läuft noch.",
+            "unknown": "Letzter Lauf {{time}}."
+          },
+          "progress": "Bisher {{processed}} von {{total}} Clients erledigt."
         },
         "lead": "{{clients}} Kunden zugeordnet · verbunden über {{method}}",
         "overwrites": {
@@ -572,8 +578,7 @@
           "overview": "Übersicht",
           "reviewQueue": "Prüfliste",
           "schedule": "Synchronisierung & Zeitplan"
-        },
-        "title": "Microsoft Entra-Betrieb"
+        }
       },
       "pilot": {
         "actions": {

@@ -516,10 +516,16 @@
             "updated": "Zmienione pola",
             "updatedSub": "tam, gdzie na to pozwolono"
           },
-          "summary": "{{status}} o {{time}}",
-          "tenants": "Powodzenie: {{succeeded}} z {{total}} klientów",
           "title": "Ostatnia synchronizacja",
-          "unavailable": "Nie udało się odczytać historii uruchomień."
+          "unavailable": "Nie udało się odczytać historii uruchomień.",
+          "summaries": {
+            "completed": "Zakończono {{time}}.",
+            "failed": "Nieudane {{time}}.",
+            "partial": "Zakończono {{time}}, z błędami.",
+            "running": "Rozpoczęto {{time}} i wciąż trwa.",
+            "unknown": "Ostatnie uruchomienie {{time}}."
+          },
+          "progress": "Dotychczas {{processed}} z {{total}} klientów."
         },
         "lead": "{{clients}} klientów dopasowanych · połączono przez {{method}}",
         "overwrites": {
@@ -572,8 +578,7 @@
           "overview": "Przegląd",
           "reviewQueue": "Kolejka przeglądu",
           "schedule": "Synchronizacja i harmonogram"
-        },
-        "title": "Obsługa Microsoft Entra"
+        }
       },
       "pilot": {
         "actions": {

@@ -516,10 +516,16 @@
             "updated": "Velden gewijzigd",
             "updatedSub": "waar u dat toestond"
           },
-          "summary": "{{status}} om {{time}}",
-          "tenants": "{{succeeded}} van {{total}} klanten geslaagd",
           "title": "Laatste synchronisatie",
-          "unavailable": "De uitvoeringsgeschiedenis kon niet worden gelezen."
+          "unavailable": "De uitvoeringsgeschiedenis kon niet worden gelezen.",
+          "summaries": {
+            "completed": "Voltooid {{time}}.",
+            "failed": "Mislukt {{time}}.",
+            "partial": "Voltooid {{time}}, met fouten.",
+            "running": "Gestart {{time}} en nog bezig.",
+            "unknown": "Laatste uitvoering {{time}}."
+          },
+          "progress": "{{processed}} van {{total}} klanten tot nu toe klaar."
         },
         "lead": "{{clients}} klanten gekoppeld · verbonden via {{method}}",
         "overwrites": {
@@ -572,8 +578,7 @@
           "overview": "Overzicht",
           "reviewQueue": "Beoordelingswachtrij",
           "schedule": "Synchronisatie en planning"
-        },
-        "title": "Microsoft Entra-beheer"
+        }
       },
       "pilot": {
         "actions": {

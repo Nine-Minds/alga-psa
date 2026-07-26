@@ -516,10 +516,16 @@
             "updated": "Fields changed",
             "updatedSub": "where you allowed it"
           },
-          "summary": "{{status}} at {{time}}",
-          "tenants": "{{succeeded}} of {{total}} clients succeeded",
           "title": "Last sync",
-          "unavailable": "The run history could not be read."
+          "unavailable": "The run history could not be read.",
+          "summaries": {
+            "completed": "Finished {{time}}.",
+            "failed": "Failed {{time}}.",
+            "partial": "Finished {{time}}, with failures.",
+            "running": "Started {{time}} and still running.",
+            "unknown": "Last run {{time}}."
+          },
+          "progress": "{{processed}} of {{total}} clients done so far."
         },
         "lead": "{{clients}} clients mapped · connected via {{method}}",
         "overwrites": {
@@ -572,8 +578,7 @@
           "overview": "Overview",
           "reviewQueue": "Review queue",
           "schedule": "Sync & schedule"
-        },
-        "title": "Microsoft Entra operations"
+        }
       },
       "pilot": {
         "actions": {
