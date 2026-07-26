@@ -411,7 +411,7 @@
             "tenant": "Microsoft tenant",
             "users": "Users"
           },
-          "empty": "No clients match this filter.",
+          "empty": "No clients match this search.",
           "filters": {
             "all": "All",
             "failing": "Failing",
@@ -427,7 +427,11 @@
             "partlyFailed": "Partly failed",
             "synced": "Synced",
             "syncing": "Syncing"
-          }
+          },
+          "emptyTitle": "No clients are mapped yet",
+          "emptyDescription": "Match a Microsoft tenant to a client on the Connection tab. Clients appear here once they are mapped.",
+          "emptyAction": "Open the Connection tab",
+          "clearFilters": "Clear filters"
         },
         "connection": {
           "exportRecord": "Export connection record",

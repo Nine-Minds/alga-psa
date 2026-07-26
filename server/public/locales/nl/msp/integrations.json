@@ -411,7 +411,7 @@
             "tenant": "Microsoft-tenant",
             "users": "Gebruikers"
           },
-          "empty": "Geen klanten voldoen aan dit filter.",
+          "empty": "Geen klanten voldoen aan deze zoekopdracht.",
           "filters": {
             "all": "Alle",
             "failing": "Mislukt",
@@ -427,7 +427,11 @@
             "partlyFailed": "Deels mislukt",
             "synced": "Gesynchroniseerd",
             "syncing": "Bezig met synchroniseren"
-          }
+          },
+          "emptyTitle": "Nog geen klanten gekoppeld",
+          "emptyDescription": "Koppel een Microsoft-tenant aan een klant op het tabblad Verbinding. Gekoppelde klanten verschijnen hier.",
+          "emptyAction": "Tabblad Verbinding openen",
+          "clearFilters": "Filters wissen"
         },
         "connection": {
           "exportRecord": "Verbindingsrecord exporteren",

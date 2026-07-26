@@ -411,7 +411,7 @@
             "tenant": "Tenant Microsoft",
             "users": "Utenti"
           },
-          "empty": "Nessun client corrisponde a questo filtro.",
+          "empty": "Nessun cliente corrisponde a questa ricerca.",
           "filters": {
             "all": "Tutti",
             "failing": "In errore",
@@ -427,7 +427,11 @@
             "partlyFailed": "Parzialmente fallito",
             "synced": "Sincronizzato",
             "syncing": "Sincronizzazione"
-          }
+          },
+          "emptyTitle": "Nessun cliente ancora abbinato",
+          "emptyDescription": "Abbina un tenant Microsoft a un cliente nella scheda Connessione. I clienti abbinati compaiono qui.",
+          "emptyAction": "Apri la scheda Connessione",
+          "clearFilters": "Azzera i filtri"
         },
         "connection": {
           "exportRecord": "Esporta record di connessione",

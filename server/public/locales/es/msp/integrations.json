@@ -411,7 +411,7 @@
             "tenant": "Inquilino de Microsoft",
             "users": "Usuarios"
           },
-          "empty": "Ningún cliente coincide con este filtro.",
+          "empty": "Ningún cliente coincide con esta búsqueda.",
           "filters": {
             "all": "Todos",
             "failing": "Con fallos",
@@ -427,7 +427,11 @@
             "partlyFailed": "Parcialmente fallido",
             "synced": "Sincronizado",
             "syncing": "Sincronizando"
-          }
+          },
+          "emptyTitle": "Aún no hay clientes asociados",
+          "emptyDescription": "Asocie un inquilino de Microsoft a un cliente en la pestaña Conexión. Los clientes aparecen aquí una vez asociados.",
+          "emptyAction": "Abrir la pestaña Conexión",
+          "clearFilters": "Borrar filtros"
         },
         "connection": {
           "exportRecord": "Exportar registro de conexión",

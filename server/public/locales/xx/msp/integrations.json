@@ -427,7 +427,11 @@
             "partlyFailed": "11111",
             "synced": "11111",
             "syncing": "11111"
-          }
+          },
+          "emptyTitle": "11111",
+          "emptyDescription": "11111",
+          "emptyAction": "11111",
+          "clearFilters": "11111"
         },
         "connection": {
           "exportRecord": "11111",

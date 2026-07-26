@@ -411,7 +411,7 @@
             "tenant": "Microsoft-Mandant",
             "users": "Benutzer"
           },
-          "empty": "Keine Clients entsprechen diesem Filter.",
+          "empty": "Keine Kunden entsprechen dieser Suche.",
           "filters": {
             "all": "Alle",
             "failing": "Fehlerhaft",
@@ -427,7 +427,11 @@
             "partlyFailed": "Teilweise fehlgeschlagen",
             "synced": "Synchronisiert",
             "syncing": "Synchronisiert gerade"
-          }
+          },
+          "emptyTitle": "Noch keine Kunden zugeordnet",
+          "emptyDescription": "Ordnen Sie auf dem Tab „Verbindung“ einen Microsoft-Mandanten einem Kunden zu. Zugeordnete Kunden erscheinen hier.",
+          "emptyAction": "Tab „Verbindung“ öffnen",
+          "clearFilters": "Filter zurücksetzen"
         },
         "connection": {
           "exportRecord": "Verbindungsdatensatz exportieren",

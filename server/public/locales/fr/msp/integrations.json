@@ -411,7 +411,7 @@
             "tenant": "Locataire Microsoft",
             "users": "Utilisateurs"
           },
-          "empty": "Aucun client ne correspond à ce filtre.",
+          "empty": "Aucun client ne correspond à cette recherche.",
           "filters": {
             "all": "Tous",
             "failing": "En échec",
@@ -427,7 +427,11 @@
             "partlyFailed": "Partiellement en échec",
             "synced": "Synchronisé",
             "syncing": "Synchronisation"
-          }
+          },
+          "emptyTitle": "Aucun client associé pour l'instant",
+          "emptyDescription": "Associez un locataire Microsoft à un client dans l'onglet Connexion. Les clients associés apparaissent ici.",
+          "emptyAction": "Ouvrir l'onglet Connexion",
+          "clearFilters": "Effacer les filtres"
         },
         "connection": {
           "exportRecord": "Exporter l'enregistrement de connexion",

@@ -1017,7 +1017,14 @@ export function EntraConsole({
         onSaved={loadConsole}
       />
     ),
-    clients: <EntraClientsTab mappings={mappings} loading={loading} onChanged={loadConsole} />,
+    clients: (
+      <EntraClientsTab
+        mappings={mappings}
+        loading={loading}
+        onChanged={loadConsole}
+        onOpenConnection={() => selectTab('connection')}
+      />
+    ),
     'field-rules': (
       <FieldSyncRules
         config={fieldSyncConfig}

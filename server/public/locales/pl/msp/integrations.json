@@ -411,7 +411,7 @@
             "tenant": "Dzierżawa Microsoft",
             "users": "Użytkownicy"
           },
-          "empty": "Żaden klient nie pasuje do tego filtra.",
+          "empty": "Żaden klient nie pasuje do tego wyszukiwania.",
           "filters": {
             "all": "Wszyscy",
             "failing": "Z błędami",
@@ -427,7 +427,11 @@
             "partlyFailed": "Częściowo nieudane",
             "synced": "Zsynchronizowany",
             "syncing": "Synchronizacja"
-          }
+          },
+          "emptyTitle": "Nie dopasowano jeszcze żadnych klientów",
+          "emptyDescription": "Dopasuj dzierżawę Microsoft do klienta na karcie Połączenie. Dopasowani klienci pojawią się tutaj.",
+          "emptyAction": "Otwórz kartę Połączenie",
+          "clearFilters": "Wyczyść filtry"
         },
         "connection": {
           "exportRecord": "Eksportuj rekord połączenia",

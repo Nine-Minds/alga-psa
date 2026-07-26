@@ -4,6 +4,7 @@ import React from 'react';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
 import { SearchInput } from '@alga-psa/ui/components/SearchInput';
+import { EmptyState } from '@alga-psa/ui/components/EmptyState';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@alga-psa/ui/components/Table';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
@@ -32,6 +33,8 @@ interface EntraClientsTabProps {
   mappings: EntraConfirmedMapping[];
   loading: boolean;
   onChanged: () => void | Promise<void>;
+  /** Where a tenant with nothing mapped has to go next. */
+  onOpenConnection?: () => void;
 }
 
 function clientLabel(mapping: EntraConfirmedMapping): string {
@@ -49,6 +52,7 @@ export function EntraClientsTab({
   mappings,
   loading,
   onChanged,
+  onOpenConnection,
 }: EntraClientsTabProps): React.JSX.Element {
   const { t } = useTranslation('msp/integrations');
   const [search, setSearch] = React.useState('');
@@ -169,13 +173,54 @@ export function EntraClientsTab({
         </div>
       </div>
 
-      {message ? <p className="text-sm text-muted-foreground">{message}</p> : null}
-      {error ? <p className="text-sm text-destructive">{error}</p> : null}
+      {message ? (
+        <p className="text-sm text-muted-foreground" id="entra-clients-message">{message}</p>
+      ) : null}
+      {error ? (
+        <p className="text-sm text-destructive" id="entra-clients-error">{error}</p>
+      ) : null}
 
-      {visible.length === 0 ? (
-        <p className="text-sm text-muted-foreground" id="entra-clients-empty">
-          {t('integrations.entra.console.clients.empty')}
-        </p>
+      {mappings.length === 0 ? (
+        /* Nothing mapped is a setup problem, not a filter problem. Telling a
+           tenant that has never mapped a tenant that its filter matched nothing
+           describes the wrong screen and names no way forward. */
+        <div id="entra-clients-empty-unmapped">
+        <EmptyState
+          title={t('integrations.entra.console.clients.emptyTitle')}
+          description={t('integrations.entra.console.clients.emptyDescription')}
+          action={
+            onOpenConnection ? (
+              <Button
+                id="entra-clients-open-connection"
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={onOpenConnection}
+              >
+                {t('integrations.entra.console.clients.emptyAction')}
+              </Button>
+            ) : undefined
+          }
+        />
+        </div>
+      ) : visible.length === 0 ? (
+        <div className="flex flex-col items-start gap-2 py-6" id="entra-clients-empty">
+          <p className="text-sm text-muted-foreground">
+            {t('integrations.entra.console.clients.empty')}
+          </p>
+          <Button
+            id="entra-clients-clear-filters"
+            type="button"
+            size="xs"
+            variant="outline"
+            onClick={() => {
+              setSearch('');
+              setFilter('all');
+            }}
+          >
+            {t('integrations.entra.console.clients.clearFilters')}
+          </Button>
+        </div>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-border/70">
           <Table>
