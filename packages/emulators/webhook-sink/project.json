@@ -34,7 +34,10 @@
       "options": {
         "command": "vitest run",
         "cwd": "{projectRoot}"
-      }
+      },
+      "dependsOn": [
+        "^build"
+      ]
     }
   }
 }

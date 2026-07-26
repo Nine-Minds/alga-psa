@@ -1,6 +1,7 @@
 import express from 'express';
 import type { NextFunction, Request, Response, Router } from 'express';
 import { QboSimError } from '@alga-psa/billing/testing/qboSimulator';
+import { route } from '@alga-psa/emulator-host';
 import type { HostEnv } from '@alga-psa/emulator-host';
 import { QboWireError } from './core';
 import type { QboEmulatorCore } from './core';
@@ -74,7 +75,7 @@ export function wire(router: Router, core: QboEmulatorCore, _env: HostEnv): void
     next();
   });
 
-  company.get('/query', async (req, res) => {
+  company.get('/query', route(async (req, res) => {
     const selectQuery = String(req.query.query ?? '');
     if (/FROM\s+Preferences/i.test(selectQuery)) {
       res.json({ QueryResponse: { Preferences: [await core.sim.client.getPreferences()] } });
@@ -87,7 +88,7 @@ export function wire(router: Router, core: QboEmulatorCore, _env: HostEnv): void
     }
     const entityMatch = selectQuery.match(/FROM\s+(\w+)/i);
     res.json({ QueryResponse: { [entityMatch![1]]: rows } });
-  });
+  }));
 
   company.get('/companyinfo/:companyId', (_req, res) => {
     res.json({
@@ -95,7 +96,7 @@ export function wire(router: Router, core: QboEmulatorCore, _env: HostEnv): void
     });
   });
 
-  company.get('/cdc', async (req, res) => {
+  company.get('/cdc', route(async (req, res) => {
     const since = String(req.query.changedSince ?? new Date(0).toISOString());
     const { changes } = await core.sim.client.fetchChanges(since);
     const grouped: Record<string, unknown[]> = {};
@@ -104,18 +105,18 @@ export function wire(router: Router, core: QboEmulatorCore, _env: HostEnv): void
       (grouped[change.entityType] ??= []).push(row);
     }
     res.json({ CDCResponse: [{ QueryResponse: [grouped] }] });
-  });
+  }));
 
-  company.get('/:entityPath/:id', async (req, res) => {
+  company.get('/:entityPath/:id', route(async (req, res) => {
     const entityType = entityTypeFromPath(String(req.params.entityPath));
     const entity = await core.sim.client.read(entityType, String(req.params.id));
     if (!entity || (entity as { deleted?: boolean }).deleted) {
       throw new QboWireError(400, '610', `Object Not Found: ${entityType} ${req.params.id}`);
     }
     res.json({ [entityType]: entity });
-  });
+  }));
 
-  company.post('/:entityPath', async (req, res) => {
+  company.post('/:entityPath', route(async (req, res) => {
     const entityType = entityTypeFromPath(String(req.params.entityPath));
     const operation = String(req.query.operation ?? 'create');
     const body = req.body ?? {};
@@ -137,7 +138,7 @@ export function wire(router: Router, core: QboEmulatorCore, _env: HostEnv): void
       return;
     }
     throw new QboWireError(400, 'SIM_UNSUPPORTED', `Unsupported operation "${operation}" on ${entityType}`);
-  });
+  }));
 
   router.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
     if (err instanceof QboWireError) {

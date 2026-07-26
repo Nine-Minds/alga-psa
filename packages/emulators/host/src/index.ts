@@ -15,7 +15,7 @@ export { ControlError, EmulatorControls } from './registry';
 export { registerTransportFaults, TransportFaultState, transportFaultMiddleware } from './transportFaults';
 export { EmulatorHost } from './host';
 export type { EmulatorInstance, HostOptions } from './host';
-export { buildControlApp } from './controlApi';
+export { buildControlApp, route } from './controlApi';
 export { parseScenario, runScenario, ScenarioSchema } from './scenario';
 export type { Scenario, ScenarioStep, ScenarioStepResult } from './scenario';
 export { loadScenarioDir, loadScenarioFile } from './scenarioFiles';

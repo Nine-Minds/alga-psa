@@ -15,7 +15,7 @@ for pkg in "${PACKAGES[@]}"; do
   (cd "$pkg" && npx tsup)
 done
 
-STAGE=stage
+STAGE=.stage
 rm -rf "$STAGE"
 mkdir -p "$STAGE"
 

@@ -1,5 +1,6 @@
 import express from 'express';
 import type { NextFunction, Request, Response, Router } from 'express';
+import { route } from '@alga-psa/emulator-host';
 import type { HostEnv } from '@alga-psa/emulator-host';
 import { GraphApiError, publicSubscription } from './core';
 import type { MsGraphCore } from './core';
@@ -96,7 +97,7 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
     res.json({ value: core.listSubscriptions(authed(res).clientId).map(publicSubscription) });
   });
 
-  graph.post('/subscriptions', async (req, res) => {
+  graph.post('/subscriptions', route(async (req, res) => {
     const input = req.body as { notificationUrl?: string };
     if (!input?.notificationUrl) {
       throw new GraphApiError(400, { error: { code: 'ValidationError', message: 'notificationUrl is required' } });
@@ -107,7 +108,7 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
     }
     const subscription = core.createSubscription(authed(res).clientId, req.body);
     res.status(201).json(publicSubscription(subscription));
-  });
+  }));
 
   graph.patch('/subscriptions/:id', (req, res) => {
     const subscription = core.getSubscription(authed(res).clientId, String(req.params.id));

@@ -1,9 +1,9 @@
-# Built via build-image.sh, which stages the compiled packages into stage/
+# Built via build-image.sh, which stages the compiled packages into .stage/
 # first. Do not `docker build` directly against an unstaged tree.
 FROM node:22-alpine
 
 WORKDIR /algasim
-COPY stage/ ./
+COPY .stage/ ./
 RUN npm install --omit=dev --no-audit --no-fund && npm cache clean --force
 
 # msgraph / qbo / webhook-sink / smtp-sink vendor surfaces + control API
