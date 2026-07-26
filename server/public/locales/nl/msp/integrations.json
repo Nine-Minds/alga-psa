@@ -385,7 +385,8 @@
         "attention": {
           "actions": {
             "fixConnection": "Verbinding herstellen",
-            "openSchedule": "Planning openen",
+            "mapClients": "Klanten koppelen",
+            "openSchedule": "Inschakelen",
             "review": "Beoordelen",
             "viewClients": "Klanten bekijken"
           },
@@ -398,10 +399,14 @@
           "neverSynced": "{{count}} gekoppelde klanten zijn nooit gesynchroniseerd.",
           "neverSyncedDetail": "{{clients}}",
           "neverSyncedOne": "{{count}} gekoppelde klant is nooit gesynchroniseerd.",
+          "noClients": "Er zijn geen klanten gekoppeld, dus er kan niets synchroniseren.",
+          "noClientsDetail": "Koppel een Microsoft-tenant aan een klant om contacten te gaan synchroniseren.",
           "reviewQueue": "{{count}} identiteiten wachten op een beslissing.",
           "reviewQueueDetail": "Twee of meer contacten delen één Microsoft-e-mailadres, dus er gebeurt niets tot u kiest.",
           "reviewQueueOne": "{{count}} identiteit wacht op een beslissing.",
-          "scheduleOff": "Automatische synchronisatie staat uit. Contacten wijzigen alleen als u zelf synchroniseert.",
+          "scheduleNotApplied": "Automatische synchronisatie staat aan, maar het schema is nooit toegepast.",
+          "scheduleNotAppliedDetail": "Tot die tijd draait er niets vanzelf. Sla het schema opnieuw op om het te herhalen.",
+          "scheduleOff": "Automatische synchronisatie staat uit.",
           "scheduleOffDetail": "Contacten veranderen alleen als iemand handmatig een synchronisatie start.",
           "title": "Vraagt aandacht"
         },

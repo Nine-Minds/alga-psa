@@ -385,7 +385,8 @@
         "attention": {
           "actions": {
             "fixConnection": "Corrigir ligação",
-            "openSchedule": "Abrir agendamento",
+            "mapClients": "Associar clientes",
+            "openSchedule": "Ligá-la",
             "review": "Rever",
             "viewClients": "Ver clientes"
           },
@@ -398,10 +399,14 @@
           "neverSynced": "{{count}} clientes associados nunca sincronizaram.",
           "neverSyncedDetail": "{{clients}}",
           "neverSyncedOne": "{{count}} cliente associado nunca sincronizou.",
+          "noClients": "Nenhum cliente está associado, por isso nada pode sincronizar.",
+          "noClientsDetail": "Associe um inquilino Microsoft a um cliente para começar a sincronizar contactos.",
           "reviewQueue": "{{count}} identidades aguardam uma decisão.",
           "reviewQueueDetail": "Dois ou mais contactos partilham um e-mail Microsoft, por isso nada lhes acontece até escolher.",
           "reviewQueueOne": "{{count}} identidade aguarda uma decisão.",
-          "scheduleOff": "A sincronização automática está desligada. Os contactos só mudam quando executa uma sincronização.",
+          "scheduleNotApplied": "A sincronização automática está ligada, mas o agendamento nunca foi aplicado.",
+          "scheduleNotAppliedDetail": "Até lá nada será executado sozinho. Guarde o agendamento novamente para tentar de novo.",
+          "scheduleOff": "A sincronização automática está desligada.",
           "scheduleOffDetail": "Os contactos só mudam quando alguém executa uma sincronização à mão.",
           "title": "Precisa de atenção"
         },

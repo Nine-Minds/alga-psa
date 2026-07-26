@@ -385,7 +385,8 @@
         "attention": {
           "actions": {
             "fixConnection": "Ripara connessione",
-            "openSchedule": "Apri pianificazione",
+            "mapClients": "Associa clienti",
+            "openSchedule": "Attivala",
             "review": "Rivedi",
             "viewClients": "Vedi i clienti"
           },
@@ -398,10 +399,14 @@
           "neverSynced": "{{count}} client associati non sono mai stati sincronizzati.",
           "neverSyncedDetail": "{{clients}}",
           "neverSyncedOne": "{{count}} cliente abbinato non è mai stato sincronizzato.",
+          "noClients": "Nessun cliente è associato, quindi non può sincronizzarsi nulla.",
+          "noClientsDetail": "Associa un tenant Microsoft a un cliente per iniziare a sincronizzare i contatti.",
           "reviewQueue": "{{count}} identità attendono una decisione.",
           "reviewQueueDetail": "Due o più contatti condividono la stessa e-mail Microsoft: non succede nulla finché non scegli.",
           "reviewQueueOne": "{{count}} identità è in attesa di una decisione.",
-          "scheduleOff": "La sincronizzazione automatica è disattivata. I contatti cambiano solo quando esegui una sincronizzazione.",
+          "scheduleNotApplied": "La sincronizzazione automatica è attiva, ma la pianificazione non è mai stata applicata.",
+          "scheduleNotAppliedDetail": "Fino ad allora non verrà eseguito nulla da solo. Salva di nuovo la pianificazione per riprovare.",
+          "scheduleOff": "La sincronizzazione automatica è disattivata.",
           "scheduleOffDetail": "I contatti cambiano solo quando qualcuno avvia una sincronizzazione a mano.",
           "title": "Richiede attenzione"
         },

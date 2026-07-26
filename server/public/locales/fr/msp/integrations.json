@@ -385,7 +385,8 @@
         "attention": {
           "actions": {
             "fixConnection": "Réparer la connexion",
-            "openSchedule": "Ouvrir la planification",
+            "mapClients": "Associer des clients",
+            "openSchedule": "L'activer",
             "review": "Examiner",
             "viewClients": "Voir les clients"
           },
@@ -398,10 +399,14 @@
           "neverSynced": "{{count}} clients associés n'ont jamais été synchronisés.",
           "neverSyncedDetail": "{{clients}}",
           "neverSyncedOne": "{{count}} client associé n'a jamais été synchronisé.",
+          "noClients": "Aucun client n'est associé, donc rien ne peut se synchroniser.",
+          "noClientsDetail": "Associez un locataire Microsoft à un client pour commencer à synchroniser les contacts.",
           "reviewQueue": "{{count}} identités attendent une décision.",
           "reviewQueueDetail": "Deux contacts ou plus partagent une même adresse Microsoft : rien ne leur arrive tant que vous n'avez pas choisi.",
           "reviewQueueOne": "{{count}} identité attend une décision.",
-          "scheduleOff": "La synchronisation automatique est désactivée. Les contacts ne changent que lorsque vous lancez une synchronisation.",
+          "scheduleNotApplied": "La synchronisation automatique est activée, mais la planification n'a jamais été appliquée.",
+          "scheduleNotAppliedDetail": "D'ici là, rien ne s'exécutera tout seul. Enregistrez à nouveau la planification pour réessayer.",
+          "scheduleOff": "La synchronisation automatique est désactivée.",
           "scheduleOffDetail": "Les contacts ne changent que lorsqu'une synchronisation est lancée à la main.",
           "title": "Nécessite votre attention"
         },

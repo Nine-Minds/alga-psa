@@ -75,7 +75,7 @@ describe('buildEntraAttentionItems', () => {
     status: status(),
     mappings: [mapping()],
     reviewQueueCount: 0,
-    scheduleEnabled: true,
+    schedule: { syncEnabled: true, syncIntervalMinutes: 1440, updatedAt: null },
   };
 
   it('says nothing when nothing is wrong', () => {
@@ -163,13 +163,52 @@ describe('buildEntraAttentionItems', () => {
     const items = buildEntraAttentionItems({
       ...base,
       reviewQueueCount: 3,
-      scheduleEnabled: false,
+      schedule: { syncEnabled: false, syncIntervalMinutes: 1440, updatedAt: null },
       mappings: [mapping({ lastSyncedAt: null, lastRunStatus: null })],
     });
 
     expect(items.map((item) => item.id)).toEqual(['review-queue', 'never-synced', 'schedule-off']);
     expect(items.find((item) => item.id === 'review-queue')?.values).toEqual({ count: 3 });
     expect(items.find((item) => item.id === 'schedule-off')?.severity).toBe('info');
+  });
+
+  it('names the reason the connection failed instead of only that it did', () => {
+    const items = buildEntraAttentionItems({
+      ...base,
+      status: status({
+        status: 'validation_failed',
+        lastValidationError: { message: 'CIPP returned 401', checkedAt: '2026-07-25T09:30:00.000Z' },
+      }),
+    });
+
+    // The message was written to last_validation_error on every failure and
+    // read by nothing but the JSON export.
+    expect(items[0].detail).toBe('CIPP returned 401');
+  });
+
+  it('says nothing can sync when nothing is mapped', () => {
+    const items = buildEntraAttentionItems({ ...base, mappings: [] });
+
+    expect(items.map((item) => item.id)).toEqual(['no-clients']);
+    expect(items[0].severity).toBe('blocking');
+    expect(items[0].tab).toBe('connection');
+  });
+
+  it('does not let the console claim a schedule that Temporal never took', () => {
+    const items = buildEntraAttentionItems({
+      ...base,
+      schedule: {
+        syncEnabled: true,
+        syncIntervalMinutes: 1440,
+        updatedAt: null,
+        scheduleApplied: false,
+        scheduleError: 'Temporal client not available',
+      },
+    });
+
+    const item = items.find((entry) => entry.id === 'schedule-not-applied');
+    expect(item?.severity).toBe('blocking');
+    expect(item?.detail).toBe('Temporal client not available');
   });
 });
 

@@ -385,7 +385,8 @@
         "attention": {
           "actions": {
             "fixConnection": "Fix connection",
-            "openSchedule": "Open schedule",
+            "mapClients": "Map clients",
+            "openSchedule": "Turn it on",
             "review": "Review",
             "viewClients": "View clients"
           },
@@ -398,10 +399,14 @@
           "neverSynced": "{{count}} mapped clients have never synced.",
           "neverSyncedDetail": "{{clients}}",
           "neverSyncedOne": "{{count}} mapped client has never synced.",
+          "noClients": "No clients are mapped, so nothing can sync.",
+          "noClientsDetail": "Match a Microsoft tenant to a client to start syncing contacts.",
           "reviewQueue": "{{count}} identities are waiting for a decision.",
           "reviewQueueDetail": "Two or more contacts share one Microsoft email, so nothing happens to them until you choose.",
           "reviewQueueOne": "{{count}} identity is waiting for a decision.",
-          "scheduleOff": "Automatic sync is off. Contacts only change when you run a sync.",
+          "scheduleNotApplied": "Automatic sync is on, but the schedule was never applied.",
+          "scheduleNotAppliedDetail": "Nothing will run on its own until it is. Save the schedule again to retry.",
+          "scheduleOff": "Automatic sync is off.",
           "scheduleOffDetail": "Contacts only change when someone runs a sync by hand.",
           "title": "Needs attention"
         },

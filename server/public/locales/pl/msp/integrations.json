@@ -385,7 +385,8 @@
         "attention": {
           "actions": {
             "fixConnection": "Napraw połączenie",
-            "openSchedule": "Otwórz harmonogram",
+            "mapClients": "Powiąż klientów",
+            "openSchedule": "Włącz ją",
             "review": "Przejrzyj",
             "viewClients": "Zobacz klientów"
           },
@@ -398,10 +399,14 @@
           "neverSynced": "{{count}} przypisanych klientów nigdy nie było synchronizowanych.",
           "neverSyncedDetail": "{{clients}}",
           "neverSyncedOne": "{{count}} dopasowany klient nigdy nie był synchronizowany.",
+          "noClients": "Nie przypisano żadnych klientów, więc nic nie może się synchronizować.",
+          "noClientsDetail": "Powiąż dzierżawcę Microsoft z klientem, aby rozpocząć synchronizację kontaktów.",
           "reviewQueue": "{{count}} tożsamości czeka na decyzję.",
           "reviewQueueDetail": "Dwa lub więcej kontaktów ma ten sam e-mail Microsoft, więc nic się z nimi nie dzieje, dopóki nie wybierzesz.",
           "reviewQueueOne": "{{count}} tożsamość czeka na decyzję.",
-          "scheduleOff": "Automatyczna synchronizacja jest wyłączona. Kontakty zmieniają się tylko po ręcznym uruchomieniu.",
+          "scheduleNotApplied": "Synchronizacja automatyczna jest włączona, ale harmonogram nigdy nie został zastosowany.",
+          "scheduleNotAppliedDetail": "Do tego czasu nic nie uruchomi się samo. Zapisz harmonogram ponownie, aby spróbować jeszcze raz.",
+          "scheduleOff": "Synchronizacja automatyczna jest wyłączona.",
           "scheduleOffDetail": "Kontakty zmieniają się tylko wtedy, gdy ktoś ręcznie uruchomi synchronizację.",
           "title": "Wymaga uwagi"
         },

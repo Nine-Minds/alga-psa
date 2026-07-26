@@ -2,6 +2,7 @@ import type {
   EntraConfirmedMapping,
   EntraStatusResponse,
   EntraSyncHistoryRun,
+  EntraSyncScheduleSettings,
 } from '@alga-psa/integrations/actions';
 import { entraClientHealth } from './entraClientHealth';
 
@@ -55,6 +56,13 @@ export interface EntraAttentionItem {
    * to find out whether it is one problem or five.
    */
   detailKey?: string;
+  /**
+   * A detail that is not a translated string but a value from the server — the
+   * validation error the connection actually returned, say. Wins over
+   * detailKey, and keeps the locale files free of bare-placeholder entries
+   * whose whole content is "{{reason}}".
+   */
+  detail?: string;
   /** The button's own words — "Fix connection" beats a row of "Open"s. */
   actionKey: string;
   /** Interpolation values for the title and detail, already resolved to primitives. */
@@ -81,7 +89,22 @@ export interface BuildEntraAttentionInput {
   status: EntraStatusResponse | null;
   mappings: EntraConfirmedMapping[];
   reviewQueueCount: number;
-  scheduleEnabled: boolean;
+  schedule: EntraSyncScheduleSettings | null;
+}
+
+/**
+ * The reason the connection failed, as the server recorded it.
+ *
+ * `last_validation_error` is written as a snapshot with a `message`, and until
+ * now the only thing that ever read it was the JSON export blob — so the
+ * screen said "Fix the connection first" and withheld the one field that
+ * decides whether to rotate the credential, fix the CIPP server, or wait.
+ */
+function validationFailureReason(status: EntraStatusResponse | null): string | undefined {
+  const raw = status?.lastValidationError;
+  if (!raw || typeof raw !== 'object') return undefined;
+  const message = (raw as { message?: unknown }).message;
+  return typeof message === 'string' && message.trim() ? message.trim() : undefined;
 }
 
 /**
@@ -116,7 +139,22 @@ export function buildEntraAttentionItems(input: BuildEntraAttentionInput): Entra
       severity: 'blocking',
       titleKey: 'integrations.entra.console.attention.connection',
       detailKey: 'integrations.entra.console.attention.connectionDetail',
+      detail: validationFailureReason(input.status),
       actionKey: 'integrations.entra.console.attention.actions.fixConnection',
+      tab: 'connection',
+    });
+  }
+
+  // Nothing is mapped, so nothing can sync, and "Sync now" is disabled with no
+  // explanation. The Clients tab has a whole empty state for this; the tab an
+  // operator lands on said all-clear.
+  if (!connectionBroken && input.mappings.length === 0) {
+    items.push({
+      id: 'no-clients',
+      severity: 'blocking',
+      titleKey: 'integrations.entra.console.attention.noClients',
+      detailKey: 'integrations.entra.console.attention.noClientsDetail',
+      actionKey: 'integrations.entra.console.attention.actions.mapClients',
       tab: 'connection',
     });
   }
@@ -172,7 +210,23 @@ export function buildEntraAttentionItems(input: BuildEntraAttentionInput): Entra
     });
   }
 
-  if (!input.scheduleEnabled) {
+  // The setting saved and Temporal never took it: nothing will run
+  // automatically, while the rail says "Runs every day". The schedule tab
+  // already tells this truth on save; the console repeated the confident lie
+  // on every visit afterwards.
+  if (input.schedule?.syncEnabled && input.schedule.scheduleApplied === false) {
+    items.push({
+      id: 'schedule-not-applied',
+      severity: 'blocking',
+      titleKey: 'integrations.entra.console.attention.scheduleNotApplied',
+      detailKey: 'integrations.entra.console.attention.scheduleNotAppliedDetail',
+      detail: input.schedule.scheduleError || undefined,
+      actionKey: 'integrations.entra.console.attention.actions.openSchedule',
+      tab: 'schedule',
+    });
+  }
+
+  if (!input.schedule?.syncEnabled) {
     items.push({
       id: 'schedule-off',
       severity: 'info',

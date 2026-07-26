@@ -385,6 +385,7 @@
         "attention": {
           "actions": {
             "fixConnection": "55555",
+            "mapClients": "55555",
             "openSchedule": "55555",
             "review": "55555",
             "viewClients": "55555"
@@ -398,9 +399,13 @@
           "neverSynced": "55555",
           "neverSyncedDetail": "55555",
           "neverSyncedOne": "55555",
+          "noClients": "55555",
+          "noClientsDetail": "55555",
           "reviewQueue": "55555",
           "reviewQueueDetail": "55555",
           "reviewQueueOne": "55555",
+          "scheduleNotApplied": "55555",
+          "scheduleNotAppliedDetail": "55555",
           "scheduleOff": "55555",
           "scheduleOffDetail": "55555",
           "title": "55555"

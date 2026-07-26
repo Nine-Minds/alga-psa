@@ -329,7 +329,7 @@ export function EntraConsole({
     status,
     mappings,
     reviewQueueCount,
-    scheduleEnabled: Boolean(schedule?.syncEnabled),
+    schedule,
   });
   const lastRun = findLastRealRun(runs);
   const totals = summarizeEntraRunResults(lastRunResults);
@@ -681,9 +681,9 @@ export function EntraConsole({
                   />
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-medium">{t(item.titleKey, item.values)}</p>
-                    {item.detailKey ? (
+                    {item.detail || item.detailKey ? (
                       <p className="text-sm text-muted-foreground">
-                        {t(item.detailKey, item.values)}
+                        {item.detail || t(item.detailKey as string, item.values)}
                       </p>
                     ) : null}
                   </div>

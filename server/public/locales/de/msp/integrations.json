@@ -385,7 +385,8 @@
         "attention": {
           "actions": {
             "fixConnection": "Verbindung reparieren",
-            "openSchedule": "Zeitplan öffnen",
+            "mapClients": "Clients zuordnen",
+            "openSchedule": "Einschalten",
             "review": "Prüfen",
             "viewClients": "Kunden ansehen"
           },
@@ -398,10 +399,14 @@
           "neverSynced": "{{count}} zugeordnete Clients wurden noch nie synchronisiert.",
           "neverSyncedDetail": "{{clients}}",
           "neverSyncedOne": "{{count}} zugeordneter Kunde wurde noch nie synchronisiert.",
+          "noClients": "Keine Clients zugeordnet, daher kann nichts synchronisiert werden.",
+          "noClientsDetail": "Ordnen Sie einen Microsoft-Mandanten einem Client zu, um Kontakte zu synchronisieren.",
           "reviewQueue": "{{count}} Identitäten warten auf eine Entscheidung.",
           "reviewQueueDetail": "Zwei oder mehr Kontakte teilen sich eine Microsoft-E-Mail; bis Sie entscheiden, passiert mit ihnen nichts.",
           "reviewQueueOne": "{{count}} Identität wartet auf eine Entscheidung.",
-          "scheduleOff": "Automatische Synchronisierung ist aus. Kontakte ändern sich nur, wenn Sie manuell synchronisieren.",
+          "scheduleNotApplied": "Die automatische Synchronisierung ist aktiv, aber der Zeitplan wurde nie übernommen.",
+          "scheduleNotAppliedDetail": "Bis dahin läuft nichts von selbst. Speichern Sie den Zeitplan erneut.",
+          "scheduleOff": "Die automatische Synchronisierung ist aus.",
           "scheduleOffDetail": "Kontakte ändern sich nur, wenn jemand die Synchronisierung von Hand startet.",
           "title": "Erfordert Aufmerksamkeit"
         },

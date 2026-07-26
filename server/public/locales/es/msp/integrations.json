@@ -385,7 +385,8 @@
         "attention": {
           "actions": {
             "fixConnection": "Arreglar conexión",
-            "openSchedule": "Abrir programación",
+            "mapClients": "Asignar clientes",
+            "openSchedule": "Activarla",
             "review": "Revisar",
             "viewClients": "Ver clientes"
           },
@@ -398,10 +399,14 @@
           "neverSynced": "{{count}} clientes asignados nunca se han sincronizado.",
           "neverSyncedDetail": "{{clients}}",
           "neverSyncedOne": "{{count}} cliente asociado nunca se ha sincronizado.",
+          "noClients": "No hay clientes asignados, por lo que no se puede sincronizar nada.",
+          "noClientsDetail": "Asocie un inquilino de Microsoft a un cliente para empezar a sincronizar contactos.",
           "reviewQueue": "{{count}} identidades esperan una decisión.",
           "reviewQueueDetail": "Dos o más contactos comparten un correo de Microsoft, así que no les pasa nada hasta que usted elija.",
           "reviewQueueOne": "{{count}} identidad espera una decisión.",
-          "scheduleOff": "La sincronización automática está desactivada. Los contactos solo cambian cuando ejecuta una sincronización.",
+          "scheduleNotApplied": "La sincronización automática está activada, pero la programación nunca se aplicó.",
+          "scheduleNotAppliedDetail": "Hasta entonces no se ejecutará nada solo. Guarde la programación de nuevo para reintentarlo.",
+          "scheduleOff": "La sincronización automática está desactivada.",
           "scheduleOffDetail": "Los contactos solo cambian cuando alguien ejecuta una sincronización a mano.",
           "title": "Requiere atención"
         },
