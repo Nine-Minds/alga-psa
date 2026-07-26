@@ -15,3 +15,5 @@ export { registerTransportFaults, TransportFaultState, transportFaultMiddleware 
 export { EmulatorHost } from './host';
 export type { EmulatorInstance, HostOptions } from './host';
 export { buildControlApp } from './controlApi';
+export { parseScenario, runScenario, ScenarioSchema } from './scenario';
+export type { Scenario, ScenarioStep, ScenarioStepResult } from './scenario';

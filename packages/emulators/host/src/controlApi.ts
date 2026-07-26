@@ -1,6 +1,7 @@
 import express from 'express';
 import type { NextFunction, Request, Response } from 'express';
 import { ControlError } from './registry';
+import { parseScenario, runScenario } from './scenario';
 import type { EmulatorHost } from './host';
 
 /**
@@ -38,6 +39,28 @@ export function buildControlApp(host: EmulatorHost): express.Express {
     }
     host.clock.advance(duration);
     res.json({ ok: true, result: { now: host.clock.now().toISOString(), offsetMs: host.clock.offset } });
+  });
+
+  app.get('/control/scenarios', (_req, res) => {
+    res.json({
+      ok: true,
+      result: [...host.scenarios.values()].map(({ name, description, steps }) => ({
+        name,
+        description: description ?? null,
+        stepCount: steps.length,
+      })),
+    });
+  });
+
+  app.post('/control/scenarios/:name/run', async (req, res) => {
+    const steps = await runScenario(host, host.scenario(req.params.name));
+    res.json({ ok: true, result: { steps } });
+  });
+
+  app.post('/control/scenario', async (req, res) => {
+    const scenario = parseScenario(req.body);
+    const steps = await runScenario(host, scenario);
+    res.json({ ok: true, result: { steps } });
   });
 
   app.post('/control/:emu/reset', async (req, res) => {

@@ -1,8 +1,12 @@
 #!/usr/bin/env node
-import { resolve } from 'node:path';
+import { readdirSync, readFileSync } from 'node:fs';
+import { join, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { Command } from 'commander';
+import { parse as parseYaml } from 'yaml';
 import { EmulatorHost } from './host';
+import { parseScenario } from './scenario';
+import type { Scenario } from './scenario';
 import type { EmulatorPackage } from './types';
 
 const DEFAULT_URL = process.env.ALGASIM_URL ?? 'http://localhost:9500';
@@ -57,6 +61,17 @@ async function importEmulatorPackage(specifier: string): Promise<EmulatorPackage
   return pkg;
 }
 
+function loadScenarioFile(path: string): Scenario {
+  return parseScenario(parseYaml(readFileSync(resolve(path), 'utf8')));
+}
+
+function loadScenarioDir(dir: string): Scenario[] {
+  return readdirSync(resolve(dir))
+    .filter((file) => file.endsWith('.yaml') || file.endsWith('.yml'))
+    .sort()
+    .map((file) => loadScenarioFile(join(resolve(dir), file)));
+}
+
 const program = new Command('algasim').description('Alga PSA emulator suite');
 
 program
@@ -66,7 +81,8 @@ program
   .option('--control-port <port>', 'control API port (0 = ephemeral)', '9500')
   .option('--port <id=port...>', 'vendor-surface port override(s), e.g. --port qbo=9601')
   .option('--seed <n>', 'PRNG seed for reproducible runs', '1')
-  .action(async (opts: { module: string[]; controlPort: string; port?: string[]; seed: string }) => {
+  .option('--scenarios <dir>', 'directory of scenario .yaml files to load')
+  .action(async (opts: { module: string[]; controlPort: string; port?: string[]; seed: string; scenarios?: string }) => {
     const ports: Record<string, number> = {};
     for (const entry of opts.port ?? []) {
       const [id, port] = entry.split('=');
@@ -81,6 +97,7 @@ program
       controlPort: Number(opts.controlPort),
       ports,
       seed: Number(opts.seed),
+      scenarios: opts.scenarios ? loadScenarioDir(opts.scenarios) : [],
     });
     await host.start();
     const shutdown = async () => {
@@ -167,6 +184,27 @@ program
     run(async () =>
       printResult(await controlRequest(opts.url, 'POST', `/control/${emulator}/seed/${name}`, parseParamsOption(opts.params))),
     )(),
+  );
+
+const scenario = program.command('scenario').description('Run declarative scenario files');
+scenario
+  .command('run <file>')
+  .description('Run a local scenario .yaml against a running host')
+  .option(...urlOption)
+  .action((file: string, opts: { url: string }) =>
+    run(async () => printResult(await controlRequest(opts.url, 'POST', '/control/scenario', loadScenarioFile(file))))(),
+  );
+scenario
+  .command('list')
+  .description('List scenarios loaded into the host')
+  .option(...urlOption)
+  .action((opts: { url: string }) => run(async () => printResult(await controlRequest(opts.url, 'GET', '/control/scenarios')))());
+scenario
+  .command('play <name>')
+  .description('Run a scenario already loaded into the host')
+  .option(...urlOption)
+  .action((name: string, opts: { url: string }) =>
+    run(async () => printResult(await controlRequest(opts.url, 'POST', `/control/scenarios/${name}/run`)))(),
   );
 
 program.parseAsync().catch((err: unknown) => {

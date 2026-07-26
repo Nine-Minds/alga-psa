@@ -4,6 +4,7 @@ import { seededRng, VirtualClock } from './clock';
 import { buildControlApp } from './controlApi';
 import { ControlError, EmulatorControls } from './registry';
 import { registerTransportFaults, TransportFaultState, transportFaultMiddleware } from './transportFaults';
+import type { Scenario } from './scenario';
 import type { EmulatorCore, EmulatorPackage, HostEnv } from './types';
 
 export interface EmulatorInstance {
@@ -23,6 +24,8 @@ export interface HostOptions {
   ports?: Record<string, number>;
   /** PRNG seed. Same seed, same run. Default 1. */
   seed?: number;
+  /** Named scenarios runnable via the control API and console. */
+  scenarios?: Scenario[];
   log?: HostEnv['log'];
 }
 
@@ -53,6 +56,7 @@ function boundPort(server: Server): number {
 export class EmulatorHost {
   readonly clock = new VirtualClock();
   readonly env: HostEnv;
+  readonly scenarios = new Map<string, Scenario>();
   private readonly instances = new Map<string, EmulatorInstance>();
   private servers: Server[] = [];
   /** Actual bound control port (known after start()). */
@@ -78,6 +82,20 @@ export class EmulatorHost {
       pkg.register(controls, core);
       this.instances.set(pkg.id, { pkg, core, controls, transport, port: 0 });
     }
+    for (const scenario of options.scenarios ?? []) {
+      if (this.scenarios.has(scenario.name)) {
+        throw new Error(`Duplicate scenario name "${scenario.name}"`);
+      }
+      this.scenarios.set(scenario.name, scenario);
+    }
+  }
+
+  scenario(name: string): Scenario {
+    const scenario = this.scenarios.get(name);
+    if (!scenario) {
+      throw new ControlError(404, `Unknown scenario "${name}"`);
+    }
+    return scenario;
   }
 
   get emulators(): EmulatorInstance[] {
