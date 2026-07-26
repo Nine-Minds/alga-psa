@@ -431,7 +431,13 @@
           "emptyTitle": "Nessun cliente ancora abbinato",
           "emptyDescription": "Abbina un tenant Microsoft a un cliente nella scheda Connessione. I clienti abbinati compaiono qui.",
           "emptyAction": "Apri la scheda Connessione",
-          "clearFilters": "Azzera i filtri"
+          "clearFilters": "Azzera i filtri",
+          "unlinkConfirm": {
+            "body": "{{client}} smette di sincronizzarsi, ora e secondo la pianificazione. I suoi contatti restano invariati e mantengono il collegamento con Microsoft. Il tenant torna nella tabella di abbinamento nella scheda Connessione.",
+            "title": "Interrompere la sincronizzazione di {{client}}?"
+          },
+          "unlinked": "{{client}} non si sincronizza più.",
+          "unlinkFailed": "Non è stato possibile scollegare quel cliente."
         },
         "connection": {
           "exportRecord": "Esporta record di connessione",

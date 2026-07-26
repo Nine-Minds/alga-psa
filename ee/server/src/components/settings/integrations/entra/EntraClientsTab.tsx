@@ -124,14 +124,27 @@ export function EntraClientsTab({
   const handleUnlink = React.useCallback(async () => {
     if (!unlinkTarget) return;
     setBusyRow(unlinkTarget.managedTenantId);
+    setError(null);
+    setMessage(null);
     try {
-      await unmapEntraTenant({ managedTenantId: unlinkTarget.managedTenantId });
+      // The only irreversible action on this screen was the one action that
+      // never checked its result: unmapEntraTenant returns a Forbidden envelope
+      // rather than throwing, so a read-only admin watched the dialog close,
+      // the table refresh, and the row come back — and was told nothing.
+      const result = await unmapEntraTenant({ managedTenantId: unlinkTarget.managedTenantId });
+      if ('error' in result) {
+        setError(result.error || t('integrations.entra.console.clients.unlinkFailed'));
+        return;
+      }
+      setMessage(
+        t('integrations.entra.console.clients.unlinked', { client: clientLabel(unlinkTarget) })
+      );
       setUnlinkTarget(null);
       await onChanged();
     } finally {
       setBusyRow(null);
     }
-  }, [onChanged, unlinkTarget]);
+  }, [onChanged, t, unlinkTarget]);
 
   if (loading) {
     return <div className="h-24 animate-pulse rounded-md bg-muted" id="entra-clients-loading" />;
@@ -343,9 +356,11 @@ export function EntraClientsTab({
         onClose={() => setUnlinkTarget(null)}
         onConfirm={() => handleUnlink()}
         isConfirming={Boolean(unlinkTarget && busyRow === unlinkTarget.managedTenantId)}
-        title={t('integrations.entra.settings.unmapConfirm.title')}
-        message={t('integrations.entra.settings.unmapConfirm.body', {
-          tenant: unlinkTarget ? clientLabel(unlinkTarget) : '',
+        title={t('integrations.entra.console.clients.unlinkConfirm.title', {
+          client: unlinkTarget ? clientLabel(unlinkTarget) : '',
+        })}
+        message={t('integrations.entra.console.clients.unlinkConfirm.body', {
+          client: unlinkTarget ? clientLabel(unlinkTarget) : '',
         })}
         confirmLabel={t('integrations.entra.console.clients.unlink')}
         cancelLabel={t('integrations.entra.settings.actions.cancel')}

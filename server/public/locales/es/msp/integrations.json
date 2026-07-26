@@ -431,7 +431,13 @@
           "emptyTitle": "Aún no hay clientes asociados",
           "emptyDescription": "Asocie un inquilino de Microsoft a un cliente en la pestaña Conexión. Los clientes aparecen aquí una vez asociados.",
           "emptyAction": "Abrir la pestaña Conexión",
-          "clearFilters": "Borrar filtros"
+          "clearFilters": "Borrar filtros",
+          "unlinkConfirm": {
+            "body": "{{client}} deja de sincronizarse, ahora y según la programación. Sus contactos quedan tal cual y conservan su vínculo con Microsoft. El inquilino vuelve a la tabla de asociación en la pestaña Conexión.",
+            "title": "¿Dejar de sincronizar {{client}}?"
+          },
+          "unlinked": "{{client}} ya no se sincroniza.",
+          "unlinkFailed": "No se pudo desvincular ese cliente."
         },
         "connection": {
           "exportRecord": "Exportar registro de conexión",

@@ -431,7 +431,13 @@
           "emptyTitle": "Noch keine Kunden zugeordnet",
           "emptyDescription": "Ordnen Sie auf dem Tab „Verbindung“ einen Microsoft-Mandanten einem Kunden zu. Zugeordnete Kunden erscheinen hier.",
           "emptyAction": "Tab „Verbindung“ öffnen",
-          "clearFilters": "Filter zurücksetzen"
+          "clearFilters": "Filter zurücksetzen",
+          "unlinkConfirm": {
+            "body": "{{client}} wird nicht mehr synchronisiert, weder jetzt noch nach Zeitplan. Die Kontakte bleiben unverändert und behalten ihre Microsoft-Verknüpfung. Der Mandant erscheint wieder in der Zuordnungstabelle auf dem Tab „Verbindung“.",
+            "title": "Synchronisierung für {{client}} beenden?"
+          },
+          "unlinked": "{{client}} wird nicht mehr synchronisiert.",
+          "unlinkFailed": "Dieser Kunde konnte nicht getrennt werden."
         },
         "connection": {
           "exportRecord": "Verbindungsdatensatz exportieren",

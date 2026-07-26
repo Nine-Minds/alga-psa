@@ -431,7 +431,13 @@
           "emptyTitle": "Nie dopasowano jeszcze żadnych klientów",
           "emptyDescription": "Dopasuj dzierżawę Microsoft do klienta na karcie Połączenie. Dopasowani klienci pojawią się tutaj.",
           "emptyAction": "Otwórz kartę Połączenie",
-          "clearFilters": "Wyczyść filtry"
+          "clearFilters": "Wyczyść filtry",
+          "unlinkConfirm": {
+            "body": "{{client}} przestaje się synchronizować, teraz i zgodnie z harmonogramem. Kontakty pozostają bez zmian i zachowują powiązanie z Microsoft. Dzierżawa wraca do tabeli dopasowań na karcie Połączenie.",
+            "title": "Zatrzymać synchronizację klienta {{client}}?"
+          },
+          "unlinked": "{{client}} nie jest już synchronizowany.",
+          "unlinkFailed": "Nie udało się odłączyć tego klienta."
         },
         "connection": {
           "exportRecord": "Eksportuj rekord połączenia",

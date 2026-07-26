@@ -431,7 +431,13 @@
           "emptyTitle": "55555",
           "emptyDescription": "55555",
           "emptyAction": "55555",
-          "clearFilters": "55555"
+          "clearFilters": "55555",
+          "unlinkConfirm": {
+            "body": "55555",
+            "title": "55555"
+          },
+          "unlinked": "55555",
+          "unlinkFailed": "55555"
         },
         "connection": {
           "exportRecord": "55555",

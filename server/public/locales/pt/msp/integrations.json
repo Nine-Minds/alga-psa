@@ -431,7 +431,13 @@
           "emptyTitle": "Ainda não há clientes associados",
           "emptyDescription": "Associe um inquilino Microsoft a um cliente no separador Ligação. Os clientes associados aparecem aqui.",
           "emptyAction": "Abrir o separador Ligação",
-          "clearFilters": "Limpar filtros"
+          "clearFilters": "Limpar filtros",
+          "unlinkConfirm": {
+            "body": "{{client}} deixa de sincronizar, agora e no agendamento. Os seus contactos ficam como estão e mantêm a ligação à Microsoft. O inquilino volta à tabela de associação no separador Ligação.",
+            "title": "Parar de sincronizar {{client}}?"
+          },
+          "unlinked": "{{client}} já não sincroniza.",
+          "unlinkFailed": "Não foi possível desassociar esse cliente."
         },
         "connection": {
           "exportRecord": "Exportar registo de ligação",

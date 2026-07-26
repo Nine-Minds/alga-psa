@@ -431,7 +431,13 @@
           "emptyTitle": "No clients are mapped yet",
           "emptyDescription": "Match a Microsoft tenant to a client on the Connection tab. Clients appear here once they are mapped.",
           "emptyAction": "Open the Connection tab",
-          "clearFilters": "Clear filters"
+          "clearFilters": "Clear filters",
+          "unlinkConfirm": {
+            "body": "{{client}} stops syncing, now and on the schedule. Its contacts stay exactly as they are, and keep their Microsoft link. The tenant goes back to the mapping table on the Connection tab, where you can map it again.",
+            "title": "Stop syncing {{client}}?"
+          },
+          "unlinked": "{{client}} no longer syncs.",
+          "unlinkFailed": "That client could not be unlinked."
         },
         "connection": {
           "exportRecord": "Export connection record",

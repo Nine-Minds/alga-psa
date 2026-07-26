@@ -431,7 +431,13 @@
           "emptyTitle": "Nog geen klanten gekoppeld",
           "emptyDescription": "Koppel een Microsoft-tenant aan een klant op het tabblad Verbinding. Gekoppelde klanten verschijnen hier.",
           "emptyAction": "Tabblad Verbinding openen",
-          "clearFilters": "Filters wissen"
+          "clearFilters": "Filters wissen",
+          "unlinkConfirm": {
+            "body": "{{client}} synchroniseert niet meer, nu niet en volgens de planning niet. De contacten blijven zoals ze zijn en houden hun Microsoft-koppeling. De tenant keert terug naar de koppeltabel op het tabblad Verbinding.",
+            "title": "Stoppen met synchroniseren van {{client}}?"
+          },
+          "unlinked": "{{client}} synchroniseert niet meer.",
+          "unlinkFailed": "Die klant kon niet worden ontkoppeld."
         },
         "connection": {
           "exportRecord": "Verbindingsrecord exporteren",

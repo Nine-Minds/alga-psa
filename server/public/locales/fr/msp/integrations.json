@@ -431,7 +431,13 @@
           "emptyTitle": "Aucun client associé pour l'instant",
           "emptyDescription": "Associez un locataire Microsoft à un client dans l'onglet Connexion. Les clients associés apparaissent ici.",
           "emptyAction": "Ouvrir l'onglet Connexion",
-          "clearFilters": "Effacer les filtres"
+          "clearFilters": "Effacer les filtres",
+          "unlinkConfirm": {
+            "body": "{{client}} cesse d'être synchronisé, maintenant et selon la planification. Ses contacts restent tels quels et conservent leur lien Microsoft. Le locataire retourne dans le tableau d'association de l'onglet Connexion.",
+            "title": "Arrêter de synchroniser {{client}} ?"
+          },
+          "unlinked": "{{client}} n'est plus synchronisé.",
+          "unlinkFailed": "Ce client n'a pas pu être dissocié."
         },
         "connection": {
           "exportRecord": "Exporter l'enregistrement de connexion",
