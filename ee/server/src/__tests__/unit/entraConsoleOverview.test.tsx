@@ -274,6 +274,35 @@ describe('EntraConsole overview', () => {
     );
   });
 
+  it('does not answer the operator before it has asked the server', async () => {
+    // Every reader resolves on a promise the test controls, so the assertions
+    // below run against the first paint.
+    let release: (() => void) | null = null;
+    const held = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    getEntraConfirmedMappingsMock.mockImplementation(async () => {
+      await held;
+      return { success: true, data: { mappings: [CONTOSO, FABRIKAM] } };
+    });
+
+    renderConsole();
+
+    // The screen used to open with "Healthy" and "Nothing needs attention",
+    // both computed from empty arrays it had not filled yet.
+    expect(document.getElementById('entra-console-health')?.textContent).toBe('Checking…');
+    expect(document.getElementById('entra-console-attention-loading')).not.toBeNull();
+    expect(document.getElementById('entra-console-attention-empty')).toBeNull();
+    expect(document.getElementById('entra-console-last-run-empty')).toBeNull();
+
+    release?.();
+    await waitFor(() =>
+      expect(document.getElementById('entra-console-health')?.textContent).toContain(
+        '1 client failing'
+      )
+    );
+  });
+
   it('does not call a tenant healthy because its clients only partly failed', async () => {
     getEntraConfirmedMappingsMock.mockResolvedValue({
       success: true,

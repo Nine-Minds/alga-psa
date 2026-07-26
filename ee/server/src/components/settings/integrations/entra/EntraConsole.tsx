@@ -2,8 +2,9 @@
 
 import React from 'react';
 import { AlertCircle, AlertTriangle, Info } from 'lucide-react';
-import { Badge } from '@alga-psa/ui/components/Badge';
+import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
+import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { CustomTabs, type TabContent } from '@alga-psa/ui/components/CustomTabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@alga-psa/ui/components/Table';
@@ -192,6 +193,10 @@ export function EntraConsole({
     normalizeEntraFieldSyncConfig(null)
   );
   const [loading, setLoading] = React.useState(true);
+  // Distinct from `loading`: a refresh should not blank a screen the operator
+  // is already reading, but the *first* paint must not answer questions it has
+  // no data for.
+  const [loaded, setLoaded] = React.useState(false);
   const [syncAllBusy, setSyncAllBusy] = React.useState(false);
   const [pauseBusy, setPauseBusy] = React.useState(false);
   const [actionMessage, setActionMessage] = React.useState<string | null>(null);
@@ -260,6 +265,7 @@ export function EntraConsole({
       }
     } finally {
       setLoading(false);
+      setLoaded(true);
     }
   }, []);
 
@@ -270,6 +276,14 @@ export function EntraConsole({
   React.useEffect(() => {
     setFieldSyncConfig(normalizeEntraFieldSyncConfig(status?.fieldSyncConfig));
   }, [status?.fieldSyncConfig]);
+
+  /**
+   * Before the first load lands, `mappings`, `runs` and the queue are all empty
+   * — which the attention rules read as "nothing is wrong" and the header reads
+   * as "Healthy". The screen an operator opens to triage was opening with four
+   * reassurances it had not checked.
+   */
+  const initialLoad = loading && !loaded;
 
   const attention = buildEntraAttentionItems({
     status,
@@ -493,6 +507,33 @@ export function EntraConsole({
     ? t(`integrations.entra.settings.connection.types.${status.connectionType}`)
     : t('integrations.entra.settings.connection.notConfigured');
 
+  /**
+   * The one badge visible from every tab. A broken connection is known from
+   * `status`, which is a prop and already loaded; the per-client verdict is not,
+   * so during the first load the badge says it is still looking rather than
+   * asserting "Healthy" against an empty list.
+   */
+  const headline: { variant: BadgeVariant; label: string } = !connectionHealthy
+    ? {
+        variant: 'error',
+        label: t(`integrations.entra.settings.status.values.${status?.status || 'not_connected'}`, {
+          defaultValue: t('integrations.entra.settings.status.values.unknown'),
+        }),
+      }
+    : initialLoad
+      ? { variant: 'default-muted', label: t('integrations.entra.console.health.checking') }
+      : failingCount > 0
+        ? {
+            variant: 'warning',
+            label: t(
+              failingCount === 1
+                ? 'integrations.entra.console.health.failingClientsOne'
+                : 'integrations.entra.console.health.failingClients',
+              { count: failingCount }
+            ),
+          }
+        : { variant: 'success', label: t('integrations.entra.console.health.healthy') };
+
   const permissionItems: MarkListItem[] = [
     {
       id: 'read-tenants',
@@ -515,7 +556,12 @@ export function EntraConsole({
     <div className="space-y-4" id="entra-console-overview">
       <div className="rounded-lg border border-border/70 bg-background p-4">
         <p className="text-sm font-semibold">{t('integrations.entra.console.attention.title')}</p>
-        {attention.length === 0 ? (
+        {initialLoad ? (
+          <div className="mt-2 space-y-2" id="entra-console-attention-loading" aria-busy="true">
+            <Skeleton className="h-4 w-2/3" />
+            <Skeleton className="h-4 w-1/2" />
+          </div>
+        ) : attention.length === 0 ? (
           <p className="mt-2 text-sm text-muted-foreground" id="entra-console-attention-empty">
             {t('integrations.entra.console.attention.empty')}
           </p>
@@ -569,7 +615,12 @@ export function EntraConsole({
             </Button>
           </div>
 
-          {lastRun ? (
+          {initialLoad ? (
+            <div className="mt-3 space-y-3" id="entra-console-last-run-loading" aria-busy="true">
+              <Skeleton className="h-4 w-1/3" />
+              <Skeleton className="h-16 w-full" />
+            </div>
+          ) : lastRun ? (
             <>
               <p className="mt-1 text-sm text-muted-foreground" id="entra-console-last-run">
                 {t('integrations.entra.console.lastRun.summary', {
@@ -1085,22 +1136,8 @@ export function EntraConsole({
         </div>
 
         <div className="flex flex-shrink-0 flex-wrap items-center gap-2">
-          <Badge
-            id="entra-console-health"
-            variant={connectionHealthy ? (failingCount > 0 ? 'warning' : 'success') : 'error'}
-          >
-            {connectionHealthy
-              ? failingCount > 0
-                ? t(
-                    failingCount === 1
-                      ? 'integrations.entra.console.health.failingClientsOne'
-                      : 'integrations.entra.console.health.failingClients',
-                    { count: failingCount }
-                  )
-                : t('integrations.entra.console.health.healthy')
-              : t(`integrations.entra.settings.status.values.${status?.status || 'not_connected'}`, {
-                  defaultValue: t('integrations.entra.settings.status.values.unknown'),
-                })}
+          <Badge id="entra-console-health" variant={headline.variant}>
+            {headline.label}
           </Badge>
           <Button
             id="entra-console-sync-now"

@@ -456,6 +456,7 @@
           "validateFailed": "Die Verbindung konnte nicht geprüft werden."
         },
         "health": {
+          "checking": "Wird geprüft…",
           "failingClients": "{{count}} Kunden fehlerhaft",
           "failingClientsOne": "{{count}} Kunde fehlerhaft",
           "healthy": "In Ordnung"

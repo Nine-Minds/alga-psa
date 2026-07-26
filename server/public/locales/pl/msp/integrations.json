@@ -456,6 +456,7 @@
           "validateFailed": "Nie udało się zweryfikować połączenia."
         },
         "health": {
+          "checking": "Sprawdzanie…",
           "failingClients": "{{count}} klientów z błędami",
           "failingClientsOne": "{{count}} klient z błędem",
           "healthy": "Sprawne"

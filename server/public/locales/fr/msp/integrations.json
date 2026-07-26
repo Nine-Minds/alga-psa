@@ -456,6 +456,7 @@
           "validateFailed": "La connexion n'a pas pu être vérifiée."
         },
         "health": {
+          "checking": "Vérification…",
           "failingClients": "{{count}} clients en échec",
           "failingClientsOne": "{{count}} client en échec",
           "healthy": "Opérationnel"

@@ -456,6 +456,7 @@
           "validateFailed": "De verbinding kon niet worden gecontroleerd."
         },
         "health": {
+          "checking": "Controleren…",
           "failingClients": "{{count}} klanten mislukken",
           "failingClientsOne": "{{count}} klant mislukt",
           "healthy": "Gezond"

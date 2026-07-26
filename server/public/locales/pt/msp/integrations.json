@@ -456,6 +456,7 @@
           "validateFailed": "Não foi possível validar a ligação."
         },
         "health": {
+          "checking": "A verificar…",
           "failingClients": "{{count}} clientes com falhas",
           "failingClientsOne": "{{count}} cliente com falhas",
           "healthy": "Saudável"

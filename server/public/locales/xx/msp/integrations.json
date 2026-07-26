@@ -456,6 +456,7 @@
           "validateFailed": "11111"
         },
         "health": {
+          "checking": "11111",
           "failingClients": "11111",
           "failingClientsOne": "11111",
           "healthy": "11111"
