@@ -4,6 +4,10 @@ import { getMicrosoftGraphBaseUrl } from '@alga-psa/shared/services/email/micros
 import { refreshEntraDirectToken } from '../../auth/refreshDirectToken';
 import { ENTRA_DIRECT_SECRET_KEYS } from '../../secrets';
 import { normalizeEntraSyncUser } from '../../sync/types';
+import {
+  EntraOperatorError,
+  isTimeoutError,
+} from '../../entraOperatorError';
 import type {
   EntraListManagedTenantsInput,
   EntraListUsersForTenantInput,
@@ -11,6 +15,9 @@ import type {
   EntraManagedUserRecord,
   EntraProviderAdapter,
 } from '../types';
+
+/** How long one Graph page has to arrive before we call it a timeout. */
+const GRAPH_REQUEST_TIMEOUT_MS = 20_000;
 
 // Resolved per call: MICROSOFT_GRAPH_BASE_URL points the whole adapter at the
 // Graph emulator (test-harness/graph-emulator) so the integration can be walked
@@ -227,7 +234,7 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
     const request = async (accessToken: string) =>
       axios.get(url, {
         headers: { Authorization: `Bearer ${accessToken}` },
-        timeout: 20_000,
+        timeout: GRAPH_REQUEST_TIMEOUT_MS,
       });
 
     let accessToken = await this.getAccessToken(tenant);
@@ -242,6 +249,15 @@ export class DirectProviderAdapter implements EntraProviderAdapter {
         accessToken = refreshed.accessToken;
         const retry = await request(accessToken);
         return toObject(retry.data);
+      }
+      // A timeout is not a refusal. Graph is up and the directory read is
+      // simply taking longer than one request is allowed to; the remedy is to
+      // try again, not to go looking at the connection.
+      if (isTimeoutError(error)) {
+        throw new EntraOperatorError(
+          'timeout',
+          `Microsoft did not answer within ${Math.round(GRAPH_REQUEST_TIMEOUT_MS / 1000)} seconds. Large directories are read in pages — try again in a moment.`
+        );
       }
       throw error;
     }
