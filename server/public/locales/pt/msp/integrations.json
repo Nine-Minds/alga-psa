@@ -451,6 +451,7 @@
           "validating": "A testar…"
         },
         "errors": {
+          "loadFailed": "Este ecrã não pôde ser carregado, pelo que o que mostra pode estar incompleto.",
           "syncFailed": "Não foi possível iniciar a sincronização.",
           "syncNotStarted": "A sincronização não arrancou: o serviço em segundo plano está indisponível. Nada mudou — tente novamente quando voltar.",
           "validateFailed": "Não foi possível validar a ligação."
@@ -459,7 +460,8 @@
           "checking": "A verificar…",
           "failingClients": "{{count}} clientes com falhas",
           "failingClientsOne": "{{count}} cliente com falhas",
-          "healthy": "Saudável"
+          "healthy": "Saudável",
+          "unknown": "Estado desconhecido"
         },
         "history": {
           "allClients": "Todos os clientes",
@@ -515,7 +517,8 @@
           },
           "summary": "{{status}} às {{time}}",
           "tenants": "{{succeeded}} de {{total}} clientes com sucesso",
-          "title": "Última sincronização"
+          "title": "Última sincronização",
+          "unavailable": "Não foi possível ler o histórico de execuções."
         },
         "lead": "{{clients}} clientes associados · ligado via {{method}}",
         "overwrites": {

@@ -451,6 +451,7 @@
           "validating": "55555"
         },
         "errors": {
+          "loadFailed": "55555",
           "syncFailed": "55555",
           "syncNotStarted": "55555",
           "validateFailed": "55555"
@@ -459,7 +460,8 @@
           "checking": "55555",
           "failingClients": "55555",
           "failingClientsOne": "55555",
-          "healthy": "55555"
+          "healthy": "55555",
+          "unknown": "55555"
         },
         "history": {
           "allClients": "55555",
@@ -515,7 +517,8 @@
           },
           "summary": "55555",
           "tenants": "55555",
-          "title": "55555"
+          "title": "55555",
+          "unavailable": "55555"
         },
         "lead": "55555",
         "overwrites": {

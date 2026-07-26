@@ -451,6 +451,7 @@
           "validating": "Probando…"
         },
         "errors": {
+          "loadFailed": "Esta pantalla no se pudo cargar, por lo que lo que muestra puede estar incompleto.",
           "syncFailed": "No se pudo iniciar la sincronización.",
           "syncNotStarted": "La sincronización no se inició: el procesador en segundo plano no está disponible. No ha cambiado nada; inténtelo de nuevo cuando vuelva.",
           "validateFailed": "No se pudo validar la conexión."
@@ -459,7 +460,8 @@
           "checking": "Comprobando…",
           "failingClients": "{{count}} clientes con fallos",
           "failingClientsOne": "{{count}} cliente con fallos",
-          "healthy": "Correcto"
+          "healthy": "Correcto",
+          "unknown": "Estado desconocido"
         },
         "history": {
           "allClients": "Todos los clientes",
@@ -515,7 +517,8 @@
           },
           "summary": "{{status}} a las {{time}}",
           "tenants": "{{succeeded}} de {{total}} clientes con éxito",
-          "title": "Última sincronización"
+          "title": "Última sincronización",
+          "unavailable": "No se pudo leer el historial de ejecuciones."
         },
         "lead": "{{clients}} clientes asociados · conectado mediante {{method}}",
         "overwrites": {

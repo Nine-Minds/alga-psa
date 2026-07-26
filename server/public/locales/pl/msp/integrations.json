@@ -451,6 +451,7 @@
           "validating": "Testowanie…"
         },
         "errors": {
+          "loadFailed": "Nie udało się wczytać tego ekranu, więc to, co pokazuje, może być niekompletne.",
           "syncFailed": "Nie udało się uruchomić synchronizacji.",
           "syncNotStarted": "Synchronizacja nie wystartowała: usługa w tle jest niedostępna. Nic się nie zmieniło — spróbuj ponownie, gdy wróci.",
           "validateFailed": "Nie udało się zweryfikować połączenia."
@@ -459,7 +460,8 @@
           "checking": "Sprawdzanie…",
           "failingClients": "{{count}} klientów z błędami",
           "failingClientsOne": "{{count}} klient z błędem",
-          "healthy": "Sprawne"
+          "healthy": "Sprawne",
+          "unknown": "Status nieznany"
         },
         "history": {
           "allClients": "Wszyscy klienci",
@@ -515,7 +517,8 @@
           },
           "summary": "{{status}} o {{time}}",
           "tenants": "Powodzenie: {{succeeded}} z {{total}} klientów",
-          "title": "Ostatnia synchronizacja"
+          "title": "Ostatnia synchronizacja",
+          "unavailable": "Nie udało się odczytać historii uruchomień."
         },
         "lead": "{{clients}} klientów dopasowanych · połączono przez {{method}}",
         "overwrites": {

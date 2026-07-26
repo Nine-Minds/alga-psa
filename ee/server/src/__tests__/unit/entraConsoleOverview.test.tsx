@@ -303,6 +303,49 @@ describe('EntraConsole overview', () => {
     );
   });
 
+  it('says a read failed instead of rendering the failure as an empty tenant', async () => {
+    getEntraConfirmedMappingsMock.mockResolvedValue({
+      error: 'Forbidden: insufficient permissions to view Entra integration',
+    });
+
+    renderConsole();
+
+    // Every reader used to be an `if` with no `else`, so a Forbidden envelope
+    // left mappings at [] and the screen reported a healthy, empty tenant.
+    await waitFor(() =>
+      expect(document.getElementById('entra-console-load-error')?.textContent).toContain(
+        'Forbidden'
+      )
+    );
+    expect(document.getElementById('entra-console-attention-empty')).toBeNull();
+    expect(document.getElementById('entra-console-health')?.textContent).toBe('Status unknown');
+
+    // And it offers the way out rather than leaving the operator to guess.
+    getEntraConfirmedMappingsMock.mockResolvedValue({
+      success: true,
+      data: { mappings: [CONTOSO] },
+    });
+    fireEvent.click(document.getElementById('entra-console-load-retry') as HTMLButtonElement);
+    await waitFor(() =>
+      expect(document.getElementById('entra-console-health')?.textContent).toBe('Healthy')
+    );
+  });
+
+  it('says so when a reader never answers at all', async () => {
+    getEntraSyncRunHistoryMock.mockRejectedValue(new Error('Failed to fetch'));
+
+    renderConsole();
+
+    // A rejected action skipped the envelope checks entirely and left the
+    // state empty, which read as "no sync has run yet".
+    await waitFor(() =>
+      expect(document.getElementById('entra-console-load-error')?.textContent).toContain(
+        'Failed to fetch'
+      )
+    );
+    expect(document.getElementById('entra-console-last-run-empty')).toBeNull();
+  });
+
   it('does not call a tenant healthy because its clients only partly failed', async () => {
     getEntraConfirmedMappingsMock.mockResolvedValue({
       success: true,

@@ -197,6 +197,7 @@ export function EntraConsole({
   // is already reading, but the *first* paint must not answer questions it has
   // no data for.
   const [loaded, setLoaded] = React.useState(false);
+  const [loadError, setLoadError] = React.useState<string | null>(null);
   const [syncAllBusy, setSyncAllBusy] = React.useState(false);
   const [pauseBusy, setPauseBusy] = React.useState(false);
   const [actionMessage, setActionMessage] = React.useState<string | null>(null);
@@ -245,11 +246,26 @@ export function EntraConsole({
         getEntraReconciliationQueue(50),
       ]);
 
-      if (!('error' in mappingResult)) setMappings(mappingResult.data?.mappings || []);
-      if (!('error' in scheduleResult)) setSchedule(scheduleResult.data || null);
-      if (!('error' in queueResult)) setReviewQueueCount((queueResult.data?.items || []).length);
+      // Every reader returns a Forbidden or failure envelope rather than
+      // throwing. Each of these used to be an `if` with no `else`, which left
+      // the state at its empty default — so a read-only admin, or a backend
+      // outage, produced a screen reading "Healthy · 0 clients mapped ·
+      // Nothing needs attention", indistinguishable from a working tenant that
+      // happens to have nothing in it.
+      const failures: string[] = [];
 
-      if (!('error' in runsResult)) {
+      if ('error' in mappingResult) failures.push(mappingResult.error);
+      else setMappings(mappingResult.data?.mappings || []);
+
+      if ('error' in scheduleResult) failures.push(scheduleResult.error);
+      else setSchedule(scheduleResult.data || null);
+
+      if ('error' in queueResult) failures.push(queueResult.error);
+      else setReviewQueueCount((queueResult.data?.items || []).length);
+
+      if ('error' in runsResult) {
+        failures.push(runsResult.error);
+      } else {
         const loadedRuns = runsResult.data?.runs || [];
         setRuns(loadedRuns);
 
@@ -258,11 +274,26 @@ export function EntraConsole({
         const lastReal = findLastRealRun(loadedRuns);
         if (lastReal) {
           const detail = await getEntraSyncRunDetail(lastReal.runId);
-          setLastRunResults(!('error' in detail) ? detail.data?.tenantResults || [] : []);
+          if ('error' in detail) {
+            // Otherwise the stat strip reads 0/0/0/0 under a green "completed",
+            // which says the run did nothing rather than that we cannot tell.
+            failures.push(detail.error);
+            setLastRunResults([]);
+          } else {
+            setLastRunResults(detail.data?.tenantResults || []);
+          }
         } else {
           setLastRunResults([]);
         }
       }
+
+      setLoadError(failures[0] || null);
+    } catch (error) {
+      // The envelope check above covers a reader that refuses. A reader that
+      // never answers — the server action itself failing, the network dropping
+      // — rejects, and without this the state stays at its empty default and
+      // the screen tells the same lie by a different route.
+      setLoadError(error instanceof Error ? error.message : String(error));
     } finally {
       setLoading(false);
       setLoaded(true);
@@ -522,17 +553,19 @@ export function EntraConsole({
       }
     : initialLoad
       ? { variant: 'default-muted', label: t('integrations.entra.console.health.checking') }
-      : failingCount > 0
-        ? {
-            variant: 'warning',
-            label: t(
-              failingCount === 1
-                ? 'integrations.entra.console.health.failingClientsOne'
-                : 'integrations.entra.console.health.failingClients',
-              { count: failingCount }
-            ),
-          }
-        : { variant: 'success', label: t('integrations.entra.console.health.healthy') };
+      : loadError
+        ? { variant: 'warning', label: t('integrations.entra.console.health.unknown') }
+        : failingCount > 0
+          ? {
+              variant: 'warning',
+              label: t(
+                failingCount === 1
+                  ? 'integrations.entra.console.health.failingClientsOne'
+                  : 'integrations.entra.console.health.failingClients',
+                { count: failingCount }
+              ),
+            }
+          : { variant: 'success', label: t('integrations.entra.console.health.healthy') };
 
   const permissionItems: MarkListItem[] = [
     {
@@ -560,6 +593,30 @@ export function EntraConsole({
           <div className="mt-2 space-y-2" id="entra-console-attention-loading" aria-busy="true">
             <Skeleton className="h-4 w-2/3" />
             <Skeleton className="h-4 w-1/2" />
+          </div>
+        ) : loadError ? (
+          // The list below is computed from state the failed reader never
+          // filled, so "Nothing needs attention" would be a claim about data
+          // this screen does not have.
+          <div className="mt-2 flex items-start gap-3" id="entra-console-load-error">
+            <AlertCircle className="mt-0.5 h-4 w-4 flex-shrink-0 text-destructive" aria-hidden="true" />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-medium">
+                {t('integrations.entra.console.errors.loadFailed')}
+              </p>
+              <p className="text-sm text-muted-foreground">{loadError}</p>
+            </div>
+            <Button
+              id="entra-console-load-retry"
+              type="button"
+              size="sm"
+              variant="default"
+              className="flex-shrink-0"
+              onClick={() => void loadConsole()}
+              disabled={loading}
+            >
+              {t('integrations.entra.settings.actions.refresh')}
+            </Button>
           </div>
         ) : attention.length === 0 ? (
           <p className="mt-2 text-sm text-muted-foreground" id="entra-console-attention-empty">
@@ -733,8 +790,15 @@ export function EntraConsole({
               ) : null}
             </>
           ) : (
-            <p className="mt-2 text-sm text-muted-foreground" id="entra-console-last-run-empty">
-              {t('integrations.entra.console.lastRun.empty')}
+            <p
+              className="mt-2 text-sm text-muted-foreground"
+              id={loadError ? 'entra-console-last-run-unavailable' : 'entra-console-last-run-empty'}
+            >
+              {/* "No sync has run yet" is a fact about the run history. Without
+                  the run history, it is a guess. */}
+              {loadError
+                ? t('integrations.entra.console.lastRun.unavailable')
+                : t('integrations.entra.console.lastRun.empty')}
             </p>
           )}
         </div>

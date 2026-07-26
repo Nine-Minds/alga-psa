@@ -451,6 +451,7 @@
           "validating": "Testen…"
         },
         "errors": {
+          "loadFailed": "Dit scherm kon niet worden geladen, dus wat het toont kan onvolledig zijn.",
           "syncFailed": "De synchronisatie kon niet worden gestart.",
           "syncNotStarted": "De synchronisatie is niet gestart: de achtergrondverwerker is niet beschikbaar. Er is niets gewijzigd — probeer het opnieuw zodra die terug is.",
           "validateFailed": "De verbinding kon niet worden gecontroleerd."
@@ -459,7 +460,8 @@
           "checking": "Controleren…",
           "failingClients": "{{count}} klanten mislukken",
           "failingClientsOne": "{{count}} klant mislukt",
-          "healthy": "Gezond"
+          "healthy": "Gezond",
+          "unknown": "Status onbekend"
         },
         "history": {
           "allClients": "Alle klanten",
@@ -515,7 +517,8 @@
           },
           "summary": "{{status}} om {{time}}",
           "tenants": "{{succeeded}} van {{total}} klanten geslaagd",
-          "title": "Laatste synchronisatie"
+          "title": "Laatste synchronisatie",
+          "unavailable": "De uitvoeringsgeschiedenis kon niet worden gelezen."
         },
         "lead": "{{clients}} klanten gekoppeld · verbonden via {{method}}",
         "overwrites": {

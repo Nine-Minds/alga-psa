@@ -451,6 +451,7 @@
           "validating": "Prova in corso…"
         },
         "errors": {
+          "loadFailed": "Questa schermata non è stata caricata, quindi ciò che mostra potrebbe essere incompleto.",
           "syncFailed": "Non è stato possibile avviare la sincronizzazione.",
           "syncNotStarted": "La sincronizzazione non è partita: il servizio in background non è disponibile. Non è cambiato nulla — riprova quando sarà tornato.",
           "validateFailed": "Non è stato possibile verificare la connessione."
@@ -459,7 +460,8 @@
           "checking": "Verifica…",
           "failingClients": "{{count}} clienti in errore",
           "failingClientsOne": "{{count}} cliente in errore",
-          "healthy": "In salute"
+          "healthy": "In salute",
+          "unknown": "Stato sconosciuto"
         },
         "history": {
           "allClients": "Tutti i client",
@@ -515,7 +517,8 @@
           },
           "summary": "{{status}} alle {{time}}",
           "tenants": "{{succeeded}} client su {{total}} riusciti",
-          "title": "Ultima sincronizzazione"
+          "title": "Ultima sincronizzazione",
+          "unavailable": "Non è stato possibile leggere la cronologia delle esecuzioni."
         },
         "lead": "{{clients}} clienti abbinati · connesso tramite {{method}}",
         "overwrites": {

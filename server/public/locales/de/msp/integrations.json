@@ -451,6 +451,7 @@
           "validating": "Wird getestet…"
         },
         "errors": {
+          "loadFailed": "Dieser Bildschirm konnte nicht geladen werden; die Anzeige kann unvollständig sein.",
           "syncFailed": "Die Synchronisierung konnte nicht gestartet werden.",
           "syncNotStarted": "Die Synchronisierung wurde nicht gestartet: Der Hintergrunddienst ist nicht erreichbar. Es hat sich nichts geändert — versuchen Sie es erneut, sobald er wieder da ist.",
           "validateFailed": "Die Verbindung konnte nicht geprüft werden."
@@ -459,7 +460,8 @@
           "checking": "Wird geprüft…",
           "failingClients": "{{count}} Kunden fehlerhaft",
           "failingClientsOne": "{{count}} Kunde fehlerhaft",
-          "healthy": "In Ordnung"
+          "healthy": "In Ordnung",
+          "unknown": "Status unbekannt"
         },
         "history": {
           "allClients": "Alle Clients",
@@ -515,7 +517,8 @@
           },
           "summary": "{{status}} um {{time}}",
           "tenants": "{{succeeded}} von {{total}} Clients erfolgreich",
-          "title": "Letzte Synchronisierung"
+          "title": "Letzte Synchronisierung",
+          "unavailable": "Der Ausführungsverlauf konnte nicht gelesen werden."
         },
         "lead": "{{clients}} Kunden zugeordnet · verbunden über {{method}}",
         "overwrites": {

@@ -451,6 +451,7 @@
           "validating": "Test en cours…"
         },
         "errors": {
+          "loadFailed": "Cet écran n'a pas pu être chargé ; ce qu'il affiche peut être incomplet.",
           "syncFailed": "La synchronisation n'a pas pu démarrer.",
           "syncNotStarted": "La synchronisation n'a pas démarré : le service d'arrière-plan est indisponible. Rien n'a changé — réessayez lorsqu'il sera de retour.",
           "validateFailed": "La connexion n'a pas pu être vérifiée."
@@ -459,7 +460,8 @@
           "checking": "Vérification…",
           "failingClients": "{{count}} clients en échec",
           "failingClientsOne": "{{count}} client en échec",
-          "healthy": "Opérationnel"
+          "healthy": "Opérationnel",
+          "unknown": "État inconnu"
         },
         "history": {
           "allClients": "Tous les clients",
@@ -515,7 +517,8 @@
           },
           "summary": "{{status}} à {{time}}",
           "tenants": "{{succeeded}} clients sur {{total}} ont réussi",
-          "title": "Dernière synchronisation"
+          "title": "Dernière synchronisation",
+          "unavailable": "L'historique des exécutions n'a pas pu être lu."
         },
         "lead": "{{clients}} clients associés · connecté via {{method}}",
         "overwrites": {

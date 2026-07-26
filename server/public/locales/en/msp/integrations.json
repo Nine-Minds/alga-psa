@@ -451,6 +451,7 @@
           "validating": "Testing…"
         },
         "errors": {
+          "loadFailed": "This screen could not be loaded, so what it shows may be incomplete.",
           "syncFailed": "The sync could not be started.",
           "syncNotStarted": "The sync did not start: the background worker is unavailable. Nothing has changed — try again once it is back.",
           "validateFailed": "The connection could not be validated."
@@ -459,7 +460,8 @@
           "checking": "Checking…",
           "failingClients": "{{count}} clients failing",
           "failingClientsOne": "{{count}} client failing",
-          "healthy": "Healthy"
+          "healthy": "Healthy",
+          "unknown": "Status unknown"
         },
         "history": {
           "allClients": "All clients",
@@ -515,7 +517,8 @@
           },
           "summary": "{{status}} at {{time}}",
           "tenants": "{{succeeded}} of {{total}} clients succeeded",
-          "title": "Last sync"
+          "title": "Last sync",
+          "unavailable": "The run history could not be read."
         },
         "lead": "{{clients}} clients mapped · connected via {{method}}",
         "overwrites": {
