@@ -1,8 +1,19 @@
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import express from 'express';
 import type { NextFunction, Request, Response } from 'express';
 import { ControlError } from './registry';
 import { parseScenario, runScenario } from './scenario';
 import type { EmulatorHost } from './host';
+
+function consoleDir(): string {
+  // dist/*.js (ESM), dist/*.cjs, and src/*.ts all sit one level below the
+  // package root, so ../console resolves from any of them.
+  if (typeof __dirname !== 'undefined') {
+    return join(__dirname, '../console');
+  }
+  return join(dirname(fileURLToPath(import.meta.url)), '../console');
+}
 
 /**
  * The uniform control surface. Everything here is generated from emulator
@@ -12,6 +23,7 @@ import type { EmulatorHost } from './host';
 export function buildControlApp(host: EmulatorHost): express.Express {
   const app = express();
   app.use(express.json());
+  app.use(express.static(consoleDir()));
 
   app.get('/control/catalog', (_req, res) => {
     res.json({

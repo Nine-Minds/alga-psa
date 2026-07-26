@@ -179,6 +179,14 @@ describe('EmulatorHost', () => {
     expect(rejected.status).toBe(500);
   });
 
+  it('serves the console on the control port', async () => {
+    const h = await startHost();
+    const page = await fetch(`http://localhost:${h.controlPort}/`);
+    expect(page.status).toBe(200);
+    expect(page.headers.get('content-type')).toContain('text/html');
+    expect(await page.text()).toContain('algasim');
+  });
+
   it('404s unknown emulators and controls', async () => {
     const h = await startHost();
     expect((await controlPost(h, '/control/nope/reset')).status).toBe(404);
