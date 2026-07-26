@@ -764,18 +764,11 @@ export function EntraConsole({
 
       <div className="grid gap-4 lg:grid-cols-3">
         <div className="rounded-lg border border-border/70 bg-background p-4 lg:col-span-2">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="text-sm font-semibold">{t('integrations.entra.console.lastRun.title')}</p>
-            <Button
-              id="entra-console-open-history"
-              type="button"
-              size="sm"
-              variant="ghost"
-              onClick={() => selectTab('history')}
-            >
-              {t('integrations.entra.console.lastRun.fullHistory')}
-            </Button>
-          </div>
+          {/* "Full history" was a button whose whole job was to select a tab
+              visible 150px above it — and once the truncated table grew its own
+              "See all N clients in this run" link, the card offered two routes
+              to the same place. */}
+          <p className="text-sm font-semibold">{t('integrations.entra.console.lastRun.title')}</p>
 
           {initialLoad ? (
             <div className="mt-3 space-y-3" id="entra-console-last-run-loading" aria-busy="true">

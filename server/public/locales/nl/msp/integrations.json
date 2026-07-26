@@ -511,7 +511,6 @@
             "updated": "Gewijzigd"
           },
           "empty": "Er is nog geen synchronisatie uitgevoerd.",
-          "fullHistory": "Volledige geschiedenis",
           "progress": "{{processed}} van {{total}} klanten tot nu toe klaar.",
           "results": {
             "done": "Klaar",

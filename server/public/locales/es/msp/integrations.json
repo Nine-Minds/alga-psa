@@ -511,7 +511,6 @@
             "updated": "Cambiado"
           },
           "empty": "Todavía no se ha ejecutado ninguna sincronización.",
-          "fullHistory": "Historial completo",
           "progress": "{{processed}} de {{total}} clientes completados hasta ahora.",
           "results": {
             "done": "Hecho",

@@ -511,7 +511,6 @@
             "updated": "Changed"
           },
           "empty": "No sync has run yet.",
-          "fullHistory": "Full history",
           "progress": "{{processed}} of {{total}} clients done so far.",
           "results": {
             "done": "Done",
