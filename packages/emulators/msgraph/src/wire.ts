@@ -87,7 +87,12 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
       res.json(core.getMessage(String(req.params.messageId)));
     });
 
-    graph.get(`${root}/messages/:messageId/$value`, (req, res) => {
+    // "$value" is matched as a param: a literal "$" in the route pattern
+    // behaves differently across path-to-regexp builds.
+    graph.get(`${root}/messages/:messageId/:variant`, (req, res) => {
+      if (req.params.variant !== '$value') {
+        throw new GraphApiError(404, { error: { code: 'NotFound', message: String(req.params.variant) } });
+      }
       const message = core.getMessage(String(req.params.messageId));
       res.type('message/rfc822').send(core.messageMime(message));
     });
