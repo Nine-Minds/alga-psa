@@ -16,6 +16,7 @@ import {
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { ContactPreflightReport } from './ContactPreflightReport';
 import { wasEntraSyncAccepted } from './syncStart';
+import { formatEntraExactTime, formatEntraRelativeTime } from './timeFormat';
 
 interface EntraClientsTabProps {
   mappings: EntraConfirmedMapping[];
@@ -196,10 +197,17 @@ export function EntraClientsTab({
                       <TableCell className="text-right tabular-nums">
                         {mapping.sourceUserCount}
                       </TableCell>
-                      <TableCell className="text-muted-foreground">
-                        {mapping.lastSyncedAt
-                          ? new Date(mapping.lastSyncedAt).toLocaleString()
-                          : t('integrations.entra.console.clients.neverSynced')}
+                      <TableCell className="whitespace-nowrap text-muted-foreground">
+                        {/* The badge beside this already says "Never synced";
+                            repeating it here spends a column on a fact the next
+                            column carries. */}
+                        {mapping.lastSyncedAt ? (
+                          <span title={formatEntraExactTime(mapping.lastSyncedAt) ?? undefined}>
+                            {formatEntraRelativeTime(mapping.lastSyncedAt)}
+                          </span>
+                        ) : (
+                          <span aria-hidden="true">—</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         <Badge
