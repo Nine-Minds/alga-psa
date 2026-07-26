@@ -172,10 +172,16 @@ export function EntraClientsTab({
 
   return (
     <div className="space-y-3" id="entra-console-clients">
-      <div className="flex flex-wrap items-end gap-2">
-        <div className="w-64">
+      {/* items-center, not items-end: both children are the same height, and
+          the filter group was being baseline-dragged out of line. */}
+      <div className="flex flex-wrap items-center gap-2">
+        {/* SearchInput's own input has no width rule, so without w-full it
+            renders at the browser's default size, overflows this wrapper, and
+            the filter group draws on top of it. */}
+        <div className="min-w-[14rem] max-w-sm flex-1">
           <SearchInput
             id="entra-clients-search"
+            className="w-full"
             placeholder={t('integrations.entra.console.clients.searchPlaceholder')}
             value={search}
             onChange={(event) => setSearch(event.target.value)}
@@ -186,7 +192,10 @@ export function EntraClientsTab({
             container so the neutral "All" state stops being the loudest
             control on the screen. Counts say whether a filter is worth a
             click — "Failing" alone answers nothing. */}
-        <div className="flex flex-wrap items-center gap-0.5 rounded-md border border-border/70 p-0.5" role="group">
+        <div
+          className="flex flex-shrink-0 flex-wrap items-center gap-0.5 rounded-md border border-border/70 p-0.5"
+          role="group"
+        >
           {ENTRA_CLIENT_FILTERS.map((candidate) => (
             <Button
               key={candidate}
