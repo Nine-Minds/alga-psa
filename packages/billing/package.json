@@ -32,6 +32,10 @@
     "./services": {
       "types": "./src/services/index.ts",
       "import": "./dist/services/index.mjs"
+    },
+    "./testing/qboSimulator": {
+      "types": "./src/services/accountingSync/testing/qboSimulator.ts",
+      "import": "./src/services/accountingSync/testing/qboSimulator.ts"
     }
   },
   "scripts": {

@@ -73,7 +73,7 @@ export function register(reg: ControlRegistry, core: MsGraphCore): void {
       remaining: z.number().int().positive().optional(),
     }),
     arm: ({ operation, status, body, remaining }) => {
-      core.injectOperationFault(operation, { status, body: body ?? { error: 'injected_fault' }, remaining });
+      core.injectOperationFault(operation, { status: status ?? 500, body: body ?? { error: 'injected_fault' }, remaining });
     },
     disarm: () => core.clearOperationFaults(),
   });
