@@ -749,12 +749,27 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                       className={cn(
                         'group relative h-8 whitespace-nowrap border-b border-r border-[rgb(var(--color-border-200)/0.7)] px-3 py-1.5 text-[12px] font-medium text-[rgb(var(--color-text-500))] transition-colors first:pl-4 last:border-r-0 last:pr-4',
                         isSortable && 'cursor-pointer hover:bg-[rgb(var(--color-border-200)/0.2)] hover:text-[rgb(var(--color-text-700))]',
-                        colDef?.headerClassName?.includes('text-center') ? 'text-center' : 'text-left',
+                        colDef?.headerClassName?.includes('text-center')
+                          ? 'text-center'
+                          : colDef?.headerClassName?.includes('text-right')
+                            ? 'text-right'
+                            : 'text-left',
                         colDef?.headerClassName ?? ''
                       )}
                       style={{ width: header.getSize() }}
                     >
-                        <div className={`flex min-w-0 items-center gap-1.5 ${colDef?.headerClassName?.includes('text-center') ? 'justify-center' : ''}`}>
+                        {/* The header is a flex row, so text-align alone cannot
+                            move it — it needs a matching justify. text-center was
+                            handled and text-right was not, which left numeric
+                            columns with right-aligned values under a
+                            left-aligned label. */}
+                        <div
+                          className={cn(
+                            'flex min-w-0 items-center gap-1.5',
+                            colDef?.headerClassName?.includes('text-center') && 'justify-center',
+                            colDef?.headerClassName?.includes('text-right') && 'justify-end'
+                          )}
+                        >
                           <OverflowTooltipSpan className="min-w-0 overflow-hidden text-ellipsis" text={headerTitle}>{flexRender(header.column.columnDef.header, header.getContext())}</OverflowTooltipSpan>
                           {isSortable && (
                             <span className="shrink-0 text-[rgb(var(--color-text-400))]">

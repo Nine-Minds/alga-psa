@@ -1,14 +1,27 @@
 'use client';
 
 import React from 'react';
-import { AlertCircle, AlertTriangle, Info } from 'lucide-react';
+import {
+  AlertCircle,
+  AlertTriangle,
+  Building2,
+  CheckCircle2,
+  Clock,
+  Info,
+  KeyRound,
+  PencilLine,
+  Plug,
+  RefreshCw,
+  SkipForward,
+} from 'lucide-react';
 import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
+import { DataTable } from '@alga-psa/ui/components/DataTable';
+import type { ColumnDefinition } from '@alga-psa/types';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { CustomTabs, type TabContent } from '@alga-psa/ui/components/CustomTabs';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@alga-psa/ui/components/Table';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   disconnectEntraIntegration,
@@ -44,6 +57,7 @@ import { EntraHistoryTab } from './EntraHistoryTab';
 import { EntraScheduleTab } from './EntraScheduleTab';
 import { FieldSyncRules } from './FieldSyncRules';
 import { ENTRA_OVERWRITE_RULES, normalizeEntraFieldSyncConfig } from './fieldSyncModel';
+import { EntraSection, type EntraSectionTone } from './EntraSection';
 import { MarkList, type MarkListItem } from './MarkList';
 import { RelativeTime } from './RelativeTime';
 import { formatEntraExactTime, formatEntraRelativeTime } from './timeFormat';
@@ -182,27 +196,6 @@ function KeyValue({
       >
         {value}
       </span>
-    </div>
-  );
-}
-
-function RailCard({
-  id,
-  title,
-  children,
-}: {
-  id: string;
-  title: string;
-  children: React.ReactNode;
-}): React.JSX.Element {
-  return (
-    <div className="rounded-lg border border-border/70 bg-background p-4" id={id}>
-      {/* Card titles are sentence-case semibold across this panel. These used
-          the uppercase micro-label class, which everywhere else in the feature
-          marks a *sub*-label — so "AUTOMATIC SYNC", a card, read quieter than
-          "LINKED", a label nested two levels inside its sibling. */}
-      <p className="text-sm font-semibold">{title}</p>
-      <div className="mt-2">{children}</div>
     </div>
   );
 }
@@ -658,6 +651,98 @@ export function EntraConsole({
     (rule) => fieldSyncConfig[rule.key]
   ).map((rule) => t(rule.labelKey));
 
+  /**
+   * The section's tone is the tone of what it holds — a card that is red
+   * whatever it contains teaches an operator to stop looking at it.
+   */
+  const attentionTone: EntraSectionTone = loadError
+    ? 'blocking'
+    : attention.some((item) => item.severity === 'blocking')
+      ? 'blocking'
+      : attention.some((item) => item.severity === 'warning')
+        ? 'warning'
+        : attention.length === 0 && !initialLoad
+          ? 'success'
+          : 'default';
+
+  /**
+   * One row per client in the last run, worst first.
+   *
+   * Counts take pixel widths: they hold one or two digits at any viewport, and
+   * an explicit pixel width is also the one thing that bypasses DataTable's
+   * natural-width floor — with percentages the header labels alone were wide
+   * enough to push three columns into the "3 columns hidden" state inside a
+   * two-thirds-width card. The client name takes whatever is left, which is
+   * the column that actually benefits from more room.
+   */
+  const lastRunColumns: ColumnDefinition<EntraSyncRunTenantResult>[] = [
+    {
+      title: t('integrations.entra.console.lastRun.columns.client'),
+      dataIndex: 'managedTenantId',
+      render: (_value, result) => (
+        <div className="min-w-0">
+          <span className="font-medium">{resultClientName(result)}</span>
+          {/* Why it failed, where the failure is: "Failed" on its own sends the
+              operator hunting through logs. */}
+          {result.errorMessage ? (
+            <span className="mt-0.5 block whitespace-normal text-xs text-destructive">
+              {result.errorMessage}
+            </span>
+          ) : null}
+        </div>
+      ),
+    },
+    {
+      title: t('integrations.entra.console.lastRun.columns.result'),
+      dataIndex: 'status',
+      width: '112px',
+      render: (_value, result) => {
+        const outcome = entraRunResultOutcome(result);
+        return (
+          <Badge
+            variant={RUN_RESULT_BADGE_VARIANTS[outcome]}
+            size="sm"
+            className="whitespace-nowrap"
+          >
+            {outcome === 'review'
+              ? t('integrations.entra.console.lastRun.results.toReview', {
+                  count: result.ambiguous,
+                })
+              : t(RUN_RESULT_LABEL_KEYS[outcome])}
+          </Badge>
+        );
+      },
+    },
+    {
+      title: t('integrations.entra.console.lastRun.columns.linked'),
+      dataIndex: 'linked',
+      width: '72px',
+      headerClassName: 'text-right',
+      cellClassName: 'text-right tabular-nums',
+    },
+    {
+      title: t('integrations.entra.console.lastRun.columns.created'),
+      dataIndex: 'created',
+      width: '78px',
+      headerClassName: 'text-right',
+      cellClassName: 'text-right tabular-nums',
+    },
+    {
+      title: t('integrations.entra.console.lastRun.columns.updated'),
+      dataIndex: 'updated',
+      width: '84px',
+      headerClassName: 'text-right',
+      cellClassName: 'text-right tabular-nums',
+    },
+    {
+      title: t('integrations.entra.console.lastRun.columns.inactivated'),
+      dataIndex: 'inactivated',
+      width: '110px',
+      headerClassName: 'text-right',
+      cellClassName: 'text-right tabular-nums',
+    },
+  ];
+
   /** Why "Sync now" is unavailable, in the words the operator needs. */
   const syncBlockedReason = !connectionHealthy
     ? t('integrations.entra.console.actions.syncNeedsConnection')
@@ -685,8 +770,12 @@ export function EntraConsole({
 
   const overviewPanel = (
     <div className="space-y-4" id="entra-console-overview">
-      <div className="rounded-lg border border-border/70 bg-background p-4">
-        <p className="text-sm font-semibold">{t('integrations.entra.console.attention.title')}</p>
+      <EntraSection
+        icon={attentionTone === 'success' ? CheckCircle2 : AlertTriangle}
+        title={t('integrations.entra.console.attention.title')}
+        tone={attentionTone}
+        bodyClassName="mt-3"
+      >
         {initialLoad ? (
           <div className="mt-2 space-y-2" id="entra-console-attention-loading" aria-busy="true">
             <Skeleton className="h-4 w-2/3" />
@@ -760,18 +849,14 @@ export function EntraConsole({
             })}
           </ul>
         )}
-      </div>
+      </EntraSection>
 
-      <div className="grid gap-4 lg:grid-cols-3">
-        <div className="rounded-lg border border-border/70 bg-background p-4 lg:col-span-2">
-          {/* "Full history" was a button whose whole job was to select a tab
-              visible 150px above it — and once the truncated table grew its own
-              "See all N clients in this run" link, the card offered two routes
-              to the same place. */}
-          <p className="text-sm font-semibold">{t('integrations.entra.console.lastRun.title')}</p>
-
+        <EntraSection
+          icon={RefreshCw}
+          title={t('integrations.entra.console.lastRun.title')}
+        >
           {initialLoad ? (
-            <div className="mt-3 space-y-3" id="entra-console-last-run-loading" aria-busy="true">
+            <div className="space-y-3" id="entra-console-last-run-loading" aria-busy="true">
               <Skeleton className="h-4 w-1/3" />
               <Skeleton className="h-16 w-full" />
             </div>
@@ -779,7 +864,7 @@ export function EntraConsole({
             <>
               <Tooltip content={lastRunExactTime}>
                 <p
-                  className="mt-1 w-fit text-sm text-muted-foreground"
+                  className="w-fit text-sm text-muted-foreground"
                   id="entra-console-last-run"
                   tabIndex={0}
                 >
@@ -836,75 +921,13 @@ export function EntraConsole({
               )}
 
               {!lastRunInProgress && lastRunResults.length > 0 ? (
-                <div className="mt-4 overflow-x-auto" id="entra-console-last-run-clients">
-                  <Table>
-                    {/* The console labels every group this way (Stat, RailCard);
-                        the Clients tab was brought to this standard already and
-                        this table was the last one left at the framework's
-                        sentence-case 14px default. */}
-                    <TableHeader>
-                      <TableRow className="[&>th]:h-9 [&>th]:whitespace-nowrap [&>th]:text-xs [&>th]:uppercase [&>th]:tracking-wide">
-                        <TableHead>{t('integrations.entra.console.lastRun.columns.client')}</TableHead>
-                        <TableHead>{t('integrations.entra.console.lastRun.columns.result')}</TableHead>
-                        <TableHead className="text-right">
-                          {t('integrations.entra.console.lastRun.columns.linked')}
-                        </TableHead>
-                        <TableHead className="text-right">
-                          {t('integrations.entra.console.lastRun.columns.created')}
-                        </TableHead>
-                        <TableHead className="text-right">
-                          {t('integrations.entra.console.lastRun.columns.updated')}
-                        </TableHead>
-                        <TableHead className="text-right">
-                          {t('integrations.entra.console.lastRun.columns.inactivated')}
-                        </TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {shownRunResults.map((result) => {
-                        const outcome = entraRunResultOutcome(result);
-                        return (
-                        <TableRow
-                          key={`${result.managedTenantId || result.clientId}`}
-                          className="border-b border-border/60"
-                        >
-                          <TableCell className="font-medium">
-                            {resultClientName(result)}
-                            {/* Why it failed, where the failure is: "Failed" on
-                                its own sends the operator hunting through logs. */}
-                            {result.errorMessage ? (
-                              <span className="mt-0.5 block text-xs font-normal text-destructive">
-                                {result.errorMessage}
-                              </span>
-                            ) : null}
-                          </TableCell>
-                          <TableCell>
-                            <Badge
-                              variant={RUN_RESULT_BADGE_VARIANTS[outcome]}
-                              size="sm"
-                              className="whitespace-nowrap"
-                            >
-                              {outcome === 'review'
-                                ? t('integrations.entra.console.lastRun.results.toReview', {
-                                    count: result.ambiguous,
-                                  })
-                                : t(RUN_RESULT_LABEL_KEYS[outcome])}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right tabular-nums">{result.linked}</TableCell>
-                          <TableCell className="text-right tabular-nums">{result.created}</TableCell>
-                          <TableCell className="text-right tabular-nums">{result.updated}</TableCell>
-                          <TableCell className="text-right tabular-nums">
-                            {result.inactivated}
-                          </TableCell>
-                        </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                  {/* A summary that lists two hundred clients is not a summary.
-                      The worst are on top; the rest are one click away on the
-                      tab built to page through them. */}
+                <div className="mt-4" id="entra-console-last-run-clients">
+                  <DataTable
+                    id="entra-console-last-run-table"
+                    data={shownRunResults}
+                    columns={lastRunColumns}
+                    pagination={false}
+                  />
                   {lastRunResults.length > shownRunResults.length ? (
                     <Button
                       id="entra-console-last-run-show-all"
@@ -924,7 +947,7 @@ export function EntraConsole({
             </>
           ) : (
             <p
-              className="mt-2 text-sm text-muted-foreground"
+              className="text-sm text-muted-foreground"
               id={loadError ? 'entra-console-last-run-unavailable' : 'entra-console-last-run-empty'}
             >
               {/* "No sync has run yet" is a fact about the run history. Without
@@ -934,10 +957,19 @@ export function EntraConsole({
                 : t('integrations.entra.console.lastRun.empty')}
             </p>
           )}
-        </div>
+        </EntraSection>
 
-        <div className="space-y-4" id="entra-console-side-rail">
-          <RailCard id="entra-console-rail-schedule" title={t('integrations.entra.console.schedule.title')}>
+        {/* The machinery, three abreast rather than stacked in a third of the
+            width. The run table is six columns wide; squeezed into two thirds
+            it hid three of them behind DataTable's "show all" banner, and the
+            rail it was making room for is three short cards that read better
+            side by side anyway. */}
+        <div className="grid gap-4 md:grid-cols-3" id="entra-console-side-rail">
+          <EntraSection
+            id="entra-console-rail-schedule"
+            icon={Clock}
+            title={t('integrations.entra.console.schedule.title')}
+          >
             {/* "Last run" and "Covers" used to sit here: the first is the same
                 timestamp as the last-sync card 600px to the left, the second
                 the same count as the header lead and the Clients tab badge.
@@ -955,11 +987,13 @@ export function EntraConsole({
                 {t('integrations.entra.console.schedule.changeAction')}
               </Button>
             </div>
-          </RailCard>
+          </EntraSection>
 
-          <RailCard
+          <EntraSection
             id="entra-console-rail-connection"
+            icon={Plug}
             title={t('integrations.entra.settings.connection.details')}
+            tone={connectionHealthy ? 'default' : 'blocking'}
           >
             {/* The connection *type* is in the header lead ("connected via
                 CIPP"); what belongs here is where it points, which the lead
@@ -1006,10 +1040,11 @@ export function EntraConsole({
                 {t('integrations.entra.console.connection.changeAction')}
               </Button>
             </div>
-          </RailCard>
+          </EntraSection>
 
-          <RailCard
+          <EntraSection
             id="entra-console-rail-overwrites"
+            icon={PencilLine}
             title={t('integrations.entra.console.overwrites.title')}
           >
             {/* Three of the five overwrite rules used to be listed here as
@@ -1041,8 +1076,7 @@ export function EntraConsole({
                 {t('integrations.entra.console.overwrites.change')}
               </Button>
             </div>
-          </RailCard>
-        </div>
+          </EntraSection>
       </div>
     </div>
   );
@@ -1050,11 +1084,12 @@ export function EntraConsole({
   const connectionPanel = (
     <div className="space-y-4" id="entra-console-connection">
       <div className="grid gap-4 md:grid-cols-2">
-        <div className="rounded-lg border border-border/70 bg-background p-4">
-          <p className="text-sm font-semibold">
-            {t('integrations.entra.settings.connection.details')}
-          </p>
-          <div className="mt-2">
+        <EntraSection
+          icon={Plug}
+          title={t('integrations.entra.settings.connection.details')}
+          tone={connectionHealthy ? 'default' : 'blocking'}
+        >
+          <div>
             <KeyValue
               label={t('integrations.entra.settings.overview.connectionTypeLabel')}
               value={connectionMethodLabel}
@@ -1144,24 +1179,23 @@ export function EntraConsole({
               {t('integrations.entra.settings.actions.disconnect')}
             </Button>
           </div>
-        </div>
+        </EntraSection>
 
-        <div className="rounded-lg border border-border/70 bg-background p-4" id="entra-console-permissions">
-          <p className="text-sm font-semibold">
-            {t('integrations.entra.console.connection.permissionsTitle')}
-          </p>
-          <MarkList className="mt-2" items={permissionItems} />
-        </div>
+        <EntraSection
+          id="entra-console-permissions"
+          icon={KeyRound}
+          title={t('integrations.entra.console.connection.permissionsTitle')}
+        >
+          <MarkList items={permissionItems} />
+        </EntraSection>
       </div>
 
-      <div className="rounded-lg border border-border/70 bg-background p-4">
-        <p className="text-sm font-semibold">
-          {t('integrations.entra.console.connection.mappingTitle')}
-        </p>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {t('integrations.entra.console.connection.mappingDescription')}
-        </p>
-        <div className="mb-3 mt-3 grid gap-2 text-sm text-muted-foreground sm:grid-cols-4">
+      <EntraSection
+        icon={Building2}
+        title={t('integrations.entra.console.connection.mappingTitle')}
+        description={t('integrations.entra.console.connection.mappingDescription')}
+      >
+        <div className="mb-3 grid gap-2 text-sm text-muted-foreground sm:grid-cols-4">
           <p>
             <span className="font-medium text-foreground">
               {t('integrations.entra.settings.mapping.savedLabel')}
@@ -1192,15 +1226,16 @@ export function EntraConsole({
           onSkippedTenantsChange={setSkippedTenants}
           onPersistedMappingChange={() => void loadConsole()}
         />
-      </div>
+      </EntraSection>
 
-      <div
-        className="rounded-lg border border-border/70 bg-background p-4"
+      <EntraSection
         id="entra-skipped-tenants-panel"
+        icon={SkipForward}
+        title={t('integrations.entra.settings.skipped.title')}
+        tone={skippedTenants.length > 0 ? 'warning' : 'default'}
       >
-        <p className="text-sm font-semibold">{t('integrations.entra.settings.skipped.title')}</p>
         {skippedTenants.length === 0 ? (
-          <p className="mt-1 text-sm text-muted-foreground">
+          <p className="text-sm text-muted-foreground">
             {t('integrations.entra.settings.skipped.empty')}
           </p>
         ) : (
@@ -1233,7 +1268,7 @@ export function EntraConsole({
             ))}
           </div>
         )}
-      </div>
+      </EntraSection>
     </div>
   );
 
