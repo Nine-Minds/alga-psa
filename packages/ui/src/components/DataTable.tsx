@@ -285,6 +285,7 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
     onVisibleRowsChange,
     onItemsPerPageChange,
     itemsPerPageOptions,
+    expandedRowRender,
   } = props;
   const { t } = useTranslation('common');
   const defaultItemsPerPageOptions = useMemo(() => [
@@ -808,13 +809,17 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
               ))}
             </thead>
             <tbody className="divide-y divide-[rgb(var(--color-border-200)/0.7)] bg-[rgb(var(--color-card))]">
-              {table.getPaginationRowModel().rows.map((row): React.JSX.Element => {
+              {table.getPaginationRowModel().rows.map((row, rowIndex): React.JSX.Element => {
                 // Use the id property if it exists in the data, otherwise use row.id
                 const rowId = ('id' in row.original) ? (row.original as { id: string }).id : row.id;
                 const extraRowClass = typeof rowClassName === 'function' ? rowClassName(row.original as any) : '';
+                const expanded = expandedRowRender
+                  ? expandedRowRender(row.original as T, rowIndex)
+                  : null;
+                const visibleCellCount = row.getVisibleCells().length;
                 return (
+                  <React.Fragment key={`row_group_${rowId}`}>
                   <tr
-                    key={`row_${rowId}`}
                     onClick={(e) => handleRowClick(e, row)}
                     className={`
                     bg-[rgb(var(--color-card))]
@@ -853,6 +858,25 @@ export const DataTable = <T extends object>(props: ExtendedDataTableProps<T>): R
                       );
                     })}
                   </tr>
+                  {expanded ? (
+                    /* `!border-t-0` beats the tbody's divide-y, which would
+                       otherwise draw a line between a row and its own detail —
+                       separating the two things that belong together. The left
+                       rule does the opposite job: it ties the panel to the row
+                       above it. */
+                    <tr
+                      key={`row_detail_${rowId}`}
+                      className="!border-t-0 bg-[rgb(var(--color-border-50)/0.4)]"
+                      data-automation-id={id ? `${id}-expanded-${rowId}` : undefined}
+                    >
+                      <td colSpan={visibleCellCount} className="p-0">
+                        <div className="border-l-2 border-[rgb(var(--color-primary-400))] px-4 py-3">
+                          {expanded}
+                        </div>
+                      </td>
+                    </tr>
+                  ) : null}
+                  </React.Fragment>
                 );
               })}
             </tbody>
