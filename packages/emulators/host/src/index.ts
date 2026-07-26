@@ -18,3 +18,4 @@ export type { EmulatorInstance, HostOptions } from './host';
 export { buildControlApp } from './controlApi';
 export { parseScenario, runScenario, ScenarioSchema } from './scenario';
 export type { Scenario, ScenarioStep, ScenarioStepResult } from './scenario';
+export { loadScenarioDir, loadScenarioFile } from './scenarioFiles';

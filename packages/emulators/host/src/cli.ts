@@ -1,12 +1,9 @@
 #!/usr/bin/env node
-import { readdirSync, readFileSync } from 'node:fs';
-import { join, resolve } from 'node:path';
+import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { Command } from 'commander';
-import { parse as parseYaml } from 'yaml';
 import { EmulatorHost } from './host';
-import { parseScenario } from './scenario';
-import type { Scenario } from './scenario';
+import { loadScenarioDir, loadScenarioFile } from './scenarioFiles';
 import type { EmulatorPackage } from './types';
 
 const DEFAULT_URL = process.env.ALGASIM_URL ?? 'http://localhost:9500';
@@ -59,17 +56,6 @@ async function importEmulatorPackage(specifier: string): Promise<EmulatorPackage
     throw new Error(`Module "${specifier}" does not export an EmulatorPackage (default or named "emulator")`);
   }
   return pkg;
-}
-
-function loadScenarioFile(path: string): Scenario {
-  return parseScenario(parseYaml(readFileSync(resolve(path), 'utf8')));
-}
-
-function loadScenarioDir(dir: string): Scenario[] {
-  return readdirSync(resolve(dir))
-    .filter((file) => file.endsWith('.yaml') || file.endsWith('.yml'))
-    .sort()
-    .map((file) => loadScenarioFile(join(resolve(dir), file)));
 }
 
 const program = new Command('algasim').description('Alga PSA emulator suite');

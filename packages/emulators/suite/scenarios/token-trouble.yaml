@@ -1,0 +1,9 @@
+name: token-trouble
+description: Registered OAuth clients on both vendors with every access token expired
+steps:
+  - seed: msgraph/client
+    params: { clientId: premise-app, clientSecret: premise-secret }
+  - seed: qbo/client
+    params: { clientId: alga-app, clientSecret: alga-secret }
+  - action: msgraph/expire-access-tokens
+  - action: qbo/expire-access-tokens
