@@ -1,4 +1,11 @@
 if (typeof window !== 'undefined') {
+  await import('@testing-library/jest-dom/vitest');
+  const { cleanup } = await import('@testing-library/react');
+  const { afterEach } = await import('vitest');
+  afterEach(() => {
+    cleanup();
+  });
+
   // CI runs the affected nx projects in parallel, so a saturated runner can
   // stretch renders past testing-library's 1s default async timeout (waitFor,
   // findBy*) and flake component suites that pass everywhere else. Configure
