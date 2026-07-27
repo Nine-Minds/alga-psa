@@ -28,18 +28,18 @@ const STALE_TARGET_GRACE_HOURS = 48;
 
 /**
  * Canonical public base URL for absolute links in outbound marketing email
- * (unsubscribe link, tracking pixel, click redirect). Internal service and
- * authentication URLs are deliberately not eligible because recipients must
- * be able to reach every generated link.
+ * (unsubscribe link, tracking pixel, click redirect). These server-only
+ * variables are resolved when the job runs, unlike NEXT_PUBLIC_* variables
+ * that Next.js can freeze into the image during compilation.
  */
 function getPublicBaseUrl(): string {
   const raw =
-    process.env.NEXT_PUBLIC_BASE_URL
-    || process.env.NEXT_PUBLIC_APP_URL
+    process.env.APPLICATION_URL
+    || process.env.NEXTAUTH_URL
     || '';
   if (!raw) {
     throw new Error(
-      'No public marketing base URL available (NEXT_PUBLIC_BASE_URL or NEXT_PUBLIC_APP_URL); refusing to send sequence steps',
+      'No runtime public marketing base URL available (APPLICATION_URL or NEXTAUTH_URL); refusing to send sequence steps',
     );
   }
   return raw.endsWith('/') ? raw.slice(0, -1) : raw;
