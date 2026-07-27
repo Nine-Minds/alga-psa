@@ -1,7 +1,7 @@
 import { badRequest, dynamic, ok, runtime } from '../../../_responses';
-import { requireEntraUiFlagEnabled } from '../../../_guards';
-import { getEntraSyncRunProgress } from '@enterprise/lib/integrations/entra/entraWorkflowClient';
-import { serializeEntraSyncRunProgress } from '@enterprise/lib/integrations/entra/sync/syncResultSerializer';
+import { requireEntraAccess } from '../../../_guards';
+import { getEntraSyncRunProgress } from '@ee/lib/integrations/entra/entraWorkflowClient';
+import { serializeEntraSyncRunProgress } from '@ee/lib/integrations/entra/sync/syncResultSerializer';
 
 export { dynamic, runtime };
 
@@ -9,9 +9,9 @@ export async function GET(
   _request: Request,
   context: { params: Promise<{ runId: string }> }
 ): Promise<Response> {
-  const flagGate = await requireEntraUiFlagEnabled('read');
-  if (flagGate instanceof Response) {
-    return flagGate;
+  const accessGate = await requireEntraAccess('read');
+  if (accessGate instanceof Response) {
+    return accessGate;
   }
 
   const { runId } = await context.params;
@@ -19,7 +19,7 @@ export async function GET(
     return badRequest('runId is required.');
   }
 
-  const result = await getEntraSyncRunProgress(flagGate.tenantId, runId);
+  const result = await getEntraSyncRunProgress(accessGate.tenantId, runId);
   if (!result.run) {
     return badRequest('Sync run not found.');
   }

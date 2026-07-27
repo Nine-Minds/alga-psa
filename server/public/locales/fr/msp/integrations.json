@@ -346,16 +346,357 @@
       }
     },
     "entra": {
+      "cippDialog": {
+        "actions": {
+          "cancel": "Annuler",
+          "connect": "Connecter",
+          "connecting": "Connexion...",
+          "test": "Tester la connexion",
+          "testing": "Test en cours…"
+        },
+        "description": "Saisissez l'URL de votre instance CIPP et un jeton API pour permettre à Alga de découvrir et de synchroniser les données Entra.",
+        "encryptionNote": "La clé d'API est chiffrée au repos et n'est plus jamais affichée après l'enregistrement.",
+        "errors": {
+          "missingFields": "L'URL de base et le jeton API sont requis.",
+          "testFirst": "Testez la connexion avant d'enregistrer.",
+          "unknown": "Une erreur inconnue s'est produite."
+        },
+        "fields": {
+          "apiToken": "Jeton API",
+          "apiTokenHelp": "Dans CIPP : Paramètres → CIPP → Accès API. Copiez la clé d'API, pas un secret client Azure.",
+          "apiTokenPlaceholder": "Saisir le jeton...",
+          "baseUrl": "URL de base CIPP",
+          "baseUrlHelp": "Il s'agit de l'hôte de la function app CIPP-API (par exemple my-cipp-api.azurewebsites.net), pas du frontend CIPP où vous vous connectez.",
+          "baseUrlPlaceholder": "https://cipp.yourdomain.com"
+        },
+        "test": {
+          "passed": "CIPP a répondu. {{count}} locataires visibles.",
+          "required": "Testez la connexion avant d'enregistrer."
+        },
+        "title": "Connecter CIPP"
+      },
+      "console": {
+        "actions": {
+          "pause": "Suspendre la synchro",
+          "resume": "Reprendre la synchro",
+          "syncNeedsClients": "Associez au moins un client avant de synchroniser.",
+          "syncNeedsConnection": "Réparez la connexion avant de synchroniser.",
+          "syncNow": "Synchroniser maintenant",
+          "syncingNow": "Démarrage…"
+        },
+        "attention": {
+          "actions": {
+            "fixConnection": "Réparer la connexion",
+            "mapClients": "Associer des clients",
+            "openSchedule": "L'activer",
+            "review": "Examiner",
+            "viewClients": "Voir les clients"
+          },
+          "connection": "La connexion ne fonctionne pas. Rien ne sera synchronisé tant qu'elle n'est pas rétablie.",
+          "connectionDetail": "Réparez d'abord la connexion — tant qu'elle échoue, tous les clients échouent de la même façon.",
+          "empty": "Rien ne nécessite votre attention.",
+          "failedClients": "{{count}} clients ne se sont pas synchronisés correctement.",
+          "failedClientsDetail": "{{clients}}",
+          "failedClientsOne": "{{count}} client ne s'est pas synchronisé correctement.",
+          "neverSynced": "{{count}} clients associés n'ont jamais été synchronisés.",
+          "neverSyncedDetail": "{{clients}}",
+          "neverSyncedOne": "{{count}} client associé n'a jamais été synchronisé.",
+          "noClients": "Aucun client n'est associé, donc rien ne peut se synchroniser.",
+          "noClientsDetail": "Associez un locataire Microsoft à un client pour commencer à synchroniser les contacts.",
+          "reviewQueue": "{{count}} identités attendent une décision.",
+          "reviewQueueAtLeast": "Au moins {{count}} identités attendent une décision.",
+          "reviewQueueDetail": "Deux contacts ou plus partagent une même adresse Microsoft : rien ne leur arrive tant que vous n'avez pas choisi.",
+          "reviewQueueOne": "{{count}} identité attend une décision.",
+          "scheduleNotApplied": "La synchronisation automatique est activée, mais la planification n'a jamais été appliquée.",
+          "scheduleNotAppliedDetail": "D'ici là, rien ne s'exécutera tout seul. Enregistrez à nouveau la planification pour réessayer.",
+          "scheduleOff": "La synchronisation automatique est désactivée.",
+          "scheduleOffDetail": "Les contacts ne changent que lorsqu'une synchronisation est lancée à la main.",
+          "severity": {
+            "blocking": "Bloquant",
+            "info": "Pour information",
+            "warning": "Avertissement"
+          },
+          "title": "Nécessite votre attention"
+        },
+        "clients": {
+          "columns": {
+            "lastSync": "Dernière synchro",
+            "tenant": "Locataire Microsoft",
+            "users": "Utilisateurs"
+          },
+          "empty": "Aucun client ne correspond à cette recherche.",
+          "filters": {
+            "all": "Tous",
+            "failing": "En échec",
+            "never-synced": "Jamais synchronisés",
+            "synced": "Synchronisé"
+          },
+          "searchPlaceholder": "Rechercher des clients ou domaines",
+          "sync": "Synchroniser",
+          "unlink": "Dissocier",
+          "status": {
+            "failed": "En échec",
+            "neverSynced": "Jamais synchronisé",
+            "partlyFailed": "Partiellement en échec",
+            "synced": "Synchronisé",
+            "syncing": "Synchronisation"
+          },
+          "emptyTitle": "Aucun client associé pour l'instant",
+          "emptyDescription": "Associez un locataire Microsoft à un client dans l'onglet Connexion. Les clients associés apparaissent ici.",
+          "emptyAction": "Ouvrir l'onglet Connexion",
+          "clearFilters": "Effacer les filtres",
+          "unlinkConfirm": {
+            "body": "{{client}} cesse d'être synchronisé, maintenant et selon la planification. Ses contacts restent tels quels et conservent leur lien Microsoft. Le locataire retourne dans le tableau d'association de l'onglet Connexion.",
+            "title": "Arrêter de synchroniser {{client}} ?"
+          },
+          "unlinked": "{{client}} n'est plus synchronisé.",
+          "unlinkFailed": "Ce client n'a pas pu être dissocié.",
+          "hidePreview": "Masquer l'aperçu",
+          "previewLoading": "Lecture de l'annuaire de {{client}} depuis Microsoft…",
+          "previewLoadingHint": "La durée dépend du nombre d'utilisateurs du client."
+        },
+        "connection": {
+          "changeAction": "Modifier la connexion",
+          "exportRecord": "Exporter l'enregistrement de connexion",
+          "mappingDescription": "Vérifiez ou modifiez le client auquel appartient chaque locataire Microsoft.",
+          "mappingTitle": "Association des locataires",
+          "methodLabel": "Méthode",
+          "permissionsTitle": "Autorisations en vigueur",
+          "rotate": "Renouveler l'identifiant",
+          "validate": "Tester la connexion",
+          "validated": "La connexion fonctionne.",
+          "validating": "Test en cours…"
+        },
+        "errors": {
+          "loadFailed": "Cet écran n'a pas pu être chargé ; ce qu'il affiche peut être incomplet.",
+          "syncFailed": "La synchronisation n'a pas pu démarrer.",
+          "syncNotStarted": "La synchronisation n'a pas démarré : le service d'arrière-plan est indisponible. Rien n'a changé — réessayez lorsqu'il sera de retour.",
+          "validateFailed": "La connexion n'a pas pu être vérifiée."
+        },
+        "health": {
+          "checking": "Vérification…",
+          "failingClients": "{{count}} clients en échec",
+          "failingClientsOne": "{{count}} client en échec",
+          "healthy": "Opérationnel",
+          "unknown": "État inconnu"
+        },
+        "history": {
+          "allClients": "Tous les clients",
+          "columns": {
+            "clients": "Clients",
+            "failed": "En échec",
+            "scope": "Portée",
+            "succeeded": "Réussis",
+            "trigger": "Déclencheur",
+            "when": "Quand"
+          },
+          "empty": "Aucune exécution ne correspond à ces filtres.",
+          "export": "Exporter en CSV",
+          "includePreviews": "Inclure les prévisualisations",
+          "next": "Suivant",
+          "onlyFailures": "Échecs uniquement",
+          "page": "Page {{page}} sur {{pages}}",
+          "previewBadge": "prévisualisation",
+          "previous": "Précédent",
+          "triggers": {
+            "all": "Toutes les exécutions",
+            "manual": "Manuelles",
+            "scheduled": "Planifiées"
+          }
+        },
+        "lastRun": {
+          "columns": {
+            "client": "Client",
+            "created": "Créés",
+            "inactivated": "Désactivés",
+            "linked": "Liés",
+            "result": "Résultat",
+            "updated": "Modifié"
+          },
+          "empty": "Aucune synchronisation n'a encore été exécutée.",
+          "progress": "{{processed}} clients sur {{total}} traités jusqu'ici.",
+          "results": {
+            "done": "Terminé",
+            "failed": "En échec",
+            "partlyFailed": "Partiellement en échec",
+            "running": "Synchronisation",
+            "toReview": "{{count}} à examiner"
+          },
+          "showAll": "Voir les {{count}} clients de cette exécution",
+          "stats": {
+            "created": "Créés",
+            "createdSub": "nouveaux contacts",
+            "failed": "En échec",
+            "failedSub": "clients",
+            "inactivated": "Rendus inactifs",
+            "inactivatedSub": "comptes désactivés",
+            "linked": "Liés",
+            "linkedSub": "contacts existants",
+            "updated": "Modifiés",
+            "updatedSub": "là où vous l'avez autorisé"
+          },
+          "summaries": {
+            "completed": "Terminé {{time}}.",
+            "failed": "Échec {{time}}.",
+            "partial": "Terminé {{time}}, avec des échecs.",
+            "running": "Démarré {{time}} et toujours en cours.",
+            "unknown": "Dernière exécution {{time}}."
+          },
+          "title": "Dernière synchronisation",
+          "unavailable": "L'historique des exécutions n'a pas pu être lu."
+        },
+        "lead": "{{clients}} clients associés · connecté via {{method}}",
+        "overwrites": {
+          "change": "Modifier les règles de champs",
+          "inactivateOff": "Les comptes Microsoft désactivés sont laissés tels quels.",
+          "inactivateOn": "Les comptes Microsoft désactivés sont marqués comme inactifs.",
+          "none": "Rien n'est écrasé.",
+          "title": "Écrasements autorisés"
+        },
+        "schedule": {
+          "cadence": {
+            "10080": "chaque semaine",
+            "1440": "chaque jour",
+            "240": "toutes les 4 heures",
+            "60": "toutes les heures",
+            "720": "toutes les 12 heures"
+          },
+          "changeAction": "Modifier la planification",
+          "description": "Lorsqu'elle est activée, Alga synchronise chaque client associé à cette cadence. La désactiver arrête les exécutions planifiées ; vous pouvez toujours synchroniser manuellement.",
+          "enablePrompt": "Le pilote a réussi. Activez la synchronisation automatique pour garder les contacts à jour sans intervention.",
+          "intervalLabel": "Exécuter toutes les",
+          "intervals": {
+            "10080": "Semaine",
+            "1440": "Jour",
+            "240": "4 heures",
+            "60": "Heure",
+            "720": "12 heures"
+          },
+          "pause": "Mettre en pause",
+          "pauseHint": "En pause. Enregistrez pour appliquer.",
+          "paused": "Synchronisation automatique suspendue.",
+          "resumed": "Synchronisation automatique reprise.",
+          "save": "Enregistrer la planification",
+          "saveFailed": "Impossible d'enregistrer la planification.",
+          "saved": "Planification enregistrée.",
+          "savedPending": "Réglage enregistré. La planification sera mise à jour lors de la prochaine réconciliation du worker.",
+          "saving": "Enregistrement…",
+          "title": "Synchronisation automatique"
+        },
+        "sideRail": {
+          "runs": "S'exécute {{cadence}}",
+          "runsMinutes": "S'exécute toutes les {{minutes}} minutes",
+          "scheduleOff": "Désactivé"
+        },
+        "syncStarted": "Synchronisation lancée pour tous les clients associés.",
+        "tabs": {
+          "clients": "Clients",
+          "connection": "Connexion",
+          "fieldRules": "Règles de champ",
+          "history": "Historique",
+          "overview": "Aperçu",
+          "reviewQueue": "File de revue",
+          "schedule": "Synchronisation et planification"
+        }
+      },
+      "pilot": {
+        "actions": {
+          "preview": "Prévisualiser les changements",
+          "previewing": "Prévisualisation…",
+          "syncOne": "Synchroniser ce client",
+          "syncOneNamed": "Synchroniser {{client}} uniquement",
+          "syncRemaining": "Synchroniser les {{count}} restants",
+          "syncingOne": "Démarrage…",
+          "syncingRemaining": "Démarrage…"
+        },
+        "clientLabel": "Client pilote",
+        "empty": "Confirmez d'abord une association locataire-client ; il n'y a rien à piloter pour l'instant.",
+        "errors": {
+          "loadMappings": "Impossible de charger les clients associés.",
+          "preflightFailed": "La prévisualisation n'a pas pu être effectuée.",
+          "syncFailed": "La synchronisation n'a pas pu démarrer."
+        },
+        "gateNote": "Synchronisez d'abord un client. Les autres se débloquent une fois son exécution terminée.",
+        "previewPrompt": "Prévisualisez les changements pour ce client avant toute écriture.",
+        "remainingStarted": "Synchronisation lancée pour les {{count}} clients restants.",
+        "started": "Synchronisation lancée pour {{client}}."
+      },
+      "preflight": {
+        "buckets": {
+          "create": {
+            "description": "Aucun contact de ce client ne correspond à l'e-mail ; un contact serait créé.",
+            "label": "Nouveaux contacts"
+          },
+          "link": {
+            "description": "Un contact existant correspond par e-mail et serait lié, puis mis à jour là où vos règles de champ l'autorisent.",
+            "label": "Liés à des contacts existants"
+          },
+          "markInactive": {
+            "description": "Le compte Microsoft est désactivé ; le contact lié serait marqué inactif. Rien n'est supprimé.",
+            "label": "Marqués inactifs"
+          },
+          "needsDecision": {
+            "description": "Plusieurs contacts correspondent ; la synchronisation ne devine pas. Ils vont dans la file de revue.",
+            "label": "Décision requise"
+          },
+          "noChange": {
+            "description": "Déjà lié, et rien de ce que vos règles synchronisent n'a changé.",
+            "label": "Aucun changement"
+          }
+        },
+        "checkAgain": "Vérifier à nouveau",
+        "checkedLabel": "Vérifié",
+        "hideNames": "Masquer les noms",
+        "moreNames": "et {{count}} de plus",
+        "nothingWritten": "Rien n'a encore été écrit",
+        "showNames": "Afficher les noms",
+        "summary": "{{count}} identités vérifiées à {{time}}. Rien n'a été modifié.",
+        "summaryNoTime": "{{count}} identités vérifiées. Rien n'a été modifié.",
+        "title": "Ce que cette synchronisation ferait"
+      },
+      "reconciliation": {
+        "actions": {
+          "dismiss": "Ignorer",
+          "refresh": "Actualiser",
+          "resolveExisting": "Résoudre vers existant",
+          "resolveNew": "Résoudre vers nouveau"
+        },
+        "candidate": {
+          "fallback": "candidat",
+          "label": "Contacts candidats : {{count}}"
+        },
+        "contactPicker": {
+          "label": "Contact existant",
+          "placeholder": "Sélectionner un contact existant..."
+        },
+        "empty": "Aucune correspondance ambiguë en attente d'examen.",
+        "errors": {
+          "enterContactId": "Saisissez un ID de contact pour résoudre vers un contact existant.",
+          "loadQueue": "Échec du chargement de la file de réconciliation.",
+          "resolveFailed": "Échec de la résolution de l'élément de file."
+        },
+        "loading": "Chargement de la file…",
+        "noEmailIdentity": "Aucune identité e-mail",
+        "queuedAt": "{{identity}} · mis en file {{time}}",
+        "scopedToMappedClient": "Les options de contact existant sont limitées à ce client mappé.",
+        "success": {
+          "dismissed": "{{identity}} ignoré. Il ne reviendra pas à la prochaine synchronisation.",
+          "resolvedExisting": "Élément de file {{queueItemId}} résolu vers le contact existant {{contactNameId}}.",
+          "resolvedNew": "Élément de file {{queueItemId}} résolu en créant le contact {{contactNameId}}."
+        },
+        "title": "File de correspondances ambiguës"
+      },
       "settings": {
         "actions": {
+          "cancel": "Annuler",
           "disconnect": "Déconnecter",
-          "reconnect": "Reconnecter",
+          "hideReviewRemap": "Masquer Vérifier / Remapper",
+          "reconnect": "Reconnecter {{connectionType}}",
           "reconnecting": "Reconnexion…",
           "refresh": "Actualiser",
           "resetFieldSync": "Réinitialiser",
           "reviewMappings": "Vérifier les mappages",
           "reviewRemap": "Vérifier / Remapper",
-          "hideReviewRemap": "Masquer Vérifier / Remapper",
           "runDiscovery": "Exécuter la découverte",
           "runDiscoveryAgain": "Réexécuter la découverte",
           "runDiscoveryRunning": "Découverte en cours…",
@@ -371,17 +712,26 @@
           "reviewBeforeInitialSync": "Vérifier avant la synchronisation initiale"
         },
         "connection": {
+          "callbackErrors": {
+            "consentMissing": "Microsoft vous a connecté mais a refusé l'accès à votre liste de locataires gérés. Un administrateur général doit accorder le consentement administrateur pour les autorisations demandées. Rien n'a été enregistré — réessayez une fois le consentement accordé.",
+            "expired": "La tentative de connexion a expiré avant de se terminer. Rien n'a été enregistré — relancez la connexion.",
+            "generic": "Microsoft Entra n'a pas été connecté et rien n'a été enregistré. Veuillez réessayer.",
+            "validationFailed": "Microsoft vous a connecté, mais votre liste de locataires gérés n'a pas pu être lue, donc rien n'a été enregistré. Vérifiez les autorisations de la connexion et réessayez."
+          },
+          "cippServerLabel": "Serveur CIPP",
           "connectingSuffix": " (Connexion...)",
           "details": "Détails de la connexion",
           "directCredentialSourceLabel": "Source des identifiants :",
           "directTenantDefault": "common (multi-tenant)",
-          "directTenantLabel": "Tenant Microsoft :",
-          "cippServerLabel": "Serveur CIPP :",
+          "directTenantLabel": "Locataire Microsoft",
           "notAvailable": "Non disponible",
           "notConfigured": "Non configuré",
-          "notConnectedStatus": "not_connected",
           "optionsTitle": "Options de connexion",
-          "promptDetails": "Connectez Entra pour remplir les détails du fournisseur."
+          "promptDetails": "Connectez Entra pour remplir les détails du fournisseur.",
+          "types": {
+            "cipp": "CIPP",
+            "direct": "Microsoft Entra Direct"
+          }
         },
         "currentStep": {
           "connect": {
@@ -408,6 +758,12 @@
           "description": "L'interface d'intégration Entra est actuellement désactivée pour ce tenant.",
           "title": "Intégration Microsoft Entra"
         },
+        "disconnectConfirm": {
+          "keeps": "Les contacts, les mappages de clients et l’historique de synchronisation sont conservés tels quels. Rien n’est supprimé.",
+          "reconnect": "Une reconnexion ultérieure rétablit la synchronisation sans refaire vos mappages.",
+          "stops": "Les synchronisations planifiées et manuelles s’arrêtent et l’identifiant stocké est supprimé.",
+          "title": "Déconnecter Microsoft Entra ?"
+        },
         "discovery": {
           "completed": "Découverte terminée. {{count}} tenants découverts.",
           "completedOne": "Découverte terminée. {{count}} tenant découvert.",
@@ -426,11 +782,15 @@
           "options": {
             "displayName": {
               "description": "Autoriser le nom d'affichage Entra à écraser le nom complet du contact sur les contacts liés.",
-              "label": "Nom affiché"
+              "label": "Nom d'affichage"
             },
             "email": {
               "description": "Autoriser l'e-mail/UPN Entra à écraser l'e-mail du contact sur les contacts liés.",
               "label": "E-mail"
+            },
+            "markInactiveWhenDisabled": {
+              "description": "Les contacts liés sont marqués inactifs, jamais supprimés. Désactivez ceci pour laisser les contacts intacts lorsque leur compte est désactivé.",
+              "label": "Marquer les contacts inactifs lorsque le compte Microsoft est désactivé"
             },
             "phone": {
               "description": "Autoriser les valeurs de téléphone Entra à écraser le numéro de téléphone du contact sur les contacts liés.",
@@ -445,11 +805,22 @@
               "label": "UPN"
             }
           },
-          "title": "Contrôles de synchronisation des champs"
+          "preview": "Prévisualiser l'effet",
+          "previewClientEmpty": "Aucun client associé ne correspond à cette recherche.",
+          "previewClientLabel": "Client",
+          "previewClientSearch": "Rechercher des clients associés",
+          "previewDescription": "Applique les règles telles qu'éditées à un client sans rien écrire, pour voir l'effet avant qu'il ne concerne tout le monde.",
+          "previewTitle": "Essayez les règles avant de les enregistrer",
+          "previewing": "Prévisualisation…",
+          "save": "Enregistrer les règles",
+          "saveFailed": "Impossible d'enregistrer les règles de champ.",
+          "saved": "Règles de champ enregistrées.",
+          "saving": "Enregistrement…",
+          "title": "Règles de champs"
         },
         "guidedStep": {
-          "current": "en cours",
           "complete": "terminé",
+          "current": "en cours",
           "locked": "verrouillé",
           "stepLabel": "Étape {{number}}",
           "thisIsCurrent": "Il s'agit de votre étape d'intégration actuelle."
@@ -483,12 +854,9 @@
           "title": "Opérations continues"
         },
         "overview": {
-          "connectionLabel": "Connexion :",
           "connectionTypeLabel": "Type de connexion :",
           "label": "Vue d'ensemble",
-          "mappedTenantsLabel": "Tenants mappés :",
-          "nextSyncIntervalEvery": "Toutes les {{minutes}} minutes",
-          "nextSyncIntervalLabel": "Intervalle de prochaine synchronisation :"
+          "mappedTenantsLabel": "Tenants mappés :"
         },
         "skipped": {
           "empty": "Aucun tenant n'est actuellement marqué comme ignoré.",
@@ -498,7 +866,14 @@
         },
         "status": {
           "connectionHealth": "Santé de la connexion",
-          "label": "Statut"
+          "label": "Statut",
+          "values": {
+            "connected": "Connecté",
+            "disconnected": "Déconnecté",
+            "not_connected": "Non connecté",
+            "unknown": "Inconnu",
+            "validation_failed": "Connecté, mais la validation échoue"
+          }
         },
         "syncAll": {
           "failed": "Échec du démarrage de la synchronisation Entra complète.",
@@ -506,10 +881,14 @@
           "startedNoId": "Demande de démarrage de synchronisation acceptée."
         },
         "title": "Intégration Microsoft Entra",
+        "unmapConfirm": {
+          "body": "Cela supprime la décision de mappage enregistrée pour {{tenant}} afin qu’il réapparaisse dans le tableau de mappage. Les contacts déjà synchronisés ne sont pas modifiés.",
+          "title": "Remapper ce locataire ?"
+        },
         "validation": {
           "label": "Validation et découverte",
           "lastDiscoveryLabel": "Dernière découverte :",
-          "lastValidatedLabel": "Dernière validation :",
+          "lastValidatedLabel": "Dernière vérification",
           "neverFormatted": "Jamais",
           "noneValidationError": "Aucune",
           "validationErrorLabel": "Erreur de validation :"
@@ -533,8 +912,143 @@
           }
         }
       },
+      "setup": {
+        "backToCurrentStep": "Retour à {{step}}",
+        "chooser": {
+          "cipp": {
+            "description": "Alga lit les locataires via l'instance CIPP que vous exploitez déjà.",
+            "label": "CIPP (CyberDrain Improved Partner Portal)",
+            "prerequisites": {
+              "apiHost": "L'hôte de la function app CIPP-API, pas le frontend CIPP.",
+              "apiKey": "Une clé d'API CIPP avec accès à la liste des locataires.",
+              "instance": "Une instance CIPP en fonctionnement."
+            }
+          },
+          "cippReassurance": "Alga testera la connexion avant de l'enregistrer.",
+          "continue": "Continuer",
+          "continueCipp": "Configurer la connexion CIPP",
+          "continueDirect": "Continuer avec Direct",
+          "continuing": "En cours…",
+          "direct": {
+            "description": "Alga dialogue avec Microsoft Graph via votre relation de partenaire.",
+            "label": "Partenaire Microsoft direct",
+            "prerequisites": {
+              "appRegistration": "Des identifiants OAuth Microsoft configurés pour ce locataire.",
+              "globalAdmin": "Un administrateur général capable d'approuver les autorisations.",
+              "partnerRelationship": "Une relation de partenaire (GDAP) avec les locataires que vous gérez."
+            }
+          },
+          "directReassurance": "Vous verrez la demande d'autorisations avant que quoi que ce soit ne soit accordé.",
+          "prerequisitesTitle": "Il vous faudra",
+          "recommendation": "La plupart des MSP devraient choisir Direct. Choisissez CIPP uniquement si vous exploitez déjà une instance.",
+          "recommendedBadge": "Recommandé",
+          "title": "Choisissez le mode de connexion"
+        },
+        "connectedVia": "Connecté via {{method}}",
+        "description": "Faites entrer dans Alga, comme contacts clients, les personnes des locataires Microsoft que vous gérez. Rien n'est écrit dans vos contacts tant que vous n'avez pas vu un aperçu et donné votre accord.",
+        "directConsent": {
+          "adminNote": "Un administrateur général doit approuver ces autorisations. Sinon, la connexion aboutira mais sera refusée, et rien ne sera enregistré.",
+          "cancel": "Annuler",
+          "continue": "Continuer vers Microsoft",
+          "intro": "Vous allez quitter Alga et vous connecter chez Microsoft. Voici les autorisations qui seront demandées.",
+          "redirecting": "Redirection…",
+          "servicePrincipalNote": "La connexion s'exécute ensuite en tant que principal de service, et non sous votre compte, afin de continuer à fonctionner en votre absence.",
+          "title": "Avant de continuer vers Microsoft"
+        },
+        "disclosure": {
+          "capabilities": {
+            "noMailbox": "Ne lit jamais les e-mails, fichiers, calendriers ni messages Teams",
+            "noWrite": "N'écrit jamais rien dans Microsoft",
+            "readTenants": "Lire la liste des locataires Microsoft que vous gérez",
+            "readUsers": "Lire les utilisateurs de ces locataires — nom, e-mail, téléphone, fonction"
+          },
+          "capabilitiesTitle": "Ce qu'Alga sera autorisé à faire",
+          "contacts": {
+            "ambiguous": "Deux contacts partagent une adresse ? Le cas est mis de côté pour votre décision — jamais deviné.",
+            "creation": "Une identité sans correspondance devient un nouveau contact chez ce client.",
+            "deletion": "Rien n'est jamais supprimé.",
+            "matching": "Les contacts sont rapprochés par adresse e-mail au sein du client auquel vous associez le locataire.",
+            "overwrite": "Les noms, e-mails, téléphones et fonctions existants ne sont pas écrasés sauf si vous l'activez."
+          },
+          "contactsTitle": "Ce qui arrive à vos contacts",
+          "copied": "Copié",
+          "copy": "Copier pour un enregistrement de changement",
+          "description": "Lisez ceci avant d'autoriser. Vous pouvez le copier dans un enregistrement de changement.",
+          "inactiveNote": "Un compte Microsoft désactivé marque le contact comme inactif. Vous pouvez le désactiver à l'étape 4.",
+          "recordGeneratedAt": "Préparé {{time}}",
+          "recordHeading": "Intégration Microsoft Entra — enregistrement de changement",
+          "scopes": {
+            "directory": "Lit les données d'annuaire de votre propre locataire. Utilisé uniquement par le mode de test mono-locataire.",
+            "managedTenants": "Répertorie les locataires clients couverts par votre relation de partenaire et leurs utilisateurs. C'est ainsi que les clients et contacts sont découverts.",
+            "offlineAccess": "Maintient la connexion après la fermeture du navigateur, pour que les synchronisations planifiées puissent s'exécuter.",
+            "unknown": "Demandé par la connexion.",
+            "userRead": "Confirme qui se connecte. Lit uniquement votre propre profil."
+          },
+          "scopesAllReadOnly": "Tous en lecture seule.",
+          "scopesTitle": "Autorisations demandées",
+          "title": "Ce qu'Alga lira et ce qu'il modifiera"
+        },
+        "stepLabel": "Étape {{number}}",
+        "steps": {
+          "connect": {
+            "description": "Choisissez comment Alga atteint Microsoft, puis autorisez-le.",
+            "short": "Connexion",
+            "title": "Connecter Microsoft Entra"
+          },
+          "discover": {
+            "description": "Demandez à Microsoft quels locataires clients votre relation de partenaire couvre.",
+            "short": "Trouver les locataires",
+            "title": "Découvrir les locataires gérés"
+          },
+          "map": {
+            "description": "Décidez à quel client Alga appartient chaque locataire Microsoft. Rien n'est synchronisé avant confirmation.",
+            "short": "Associer aux clients",
+            "title": "Associer les locataires aux clients"
+          },
+          "sync": {
+            "description": "Importez les contacts des clients associés.",
+            "short": "Aperçu et pilote",
+            "title": "Lancer la première synchronisation"
+          }
+        },
+        "title": "Configurer Microsoft Entra"
+      },
+      "summary": {
+        "backToIntegrations": "Retour aux intégrations",
+        "description": "Découvrez les locataires que vous gérez, associez-les à des clients et gardez les contacts à jour.",
+        "open": "Ouvrir",
+        "title": "Microsoft Entra"
+      },
+      "syncHistory": {
+        "actions": {
+          "hideDetails": "Masquer les détails",
+          "refresh": "Actualiser",
+          "viewDetails": "Voir les détails"
+        },
+        "details": {
+          "noResults": "Aucun résultat de tenant enregistré.",
+          "stats": "créés {{created}}, liés {{linked}}, mis à jour {{updated}}, ambigus {{ambiguous}}, désactivés {{inactivated}}",
+          "tenantHeader": "Tenant {{tenant}} · {{status}}",
+          "unknownTenant": "inconnu"
+        },
+        "empty": "Aucune exécution de synchronisation trouvée pour le moment.",
+        "errors": {
+          "loadDetailFailed": "Échec du chargement du détail de l'exécution.",
+          "loadFailed": "Échec du chargement de l'historique de synchronisation.",
+          "loadRunFailed": "Échec du chargement de l'exécution {{runId}}."
+        },
+        "loading": "Chargement de l'historique de synchronisation…",
+        "run": {
+          "header": "{{runType}} · {{status}}",
+          "inProgress": "En cours",
+          "tenants": "Tenants : {{processed}}/{{total}} · Succès : {{success}} · Échecs : {{failed}}",
+          "timing": "Démarré {{started}} · Terminé {{completed}}"
+        },
+        "title": "Exécutions de synchronisation récentes"
+      },
       "tenantMapping": {
         "actions": {
+          "cancel": "Annuler",
           "confirmSelected": "Confirmer les mappages sélectionnés",
           "confirming": "Confirmation…",
           "import": "Importer comme nouveau client",
@@ -565,6 +1079,11 @@
           "confirmed": "{{count}} mappages confirmés.",
           "confirmedOne": "{{count}} mappage confirmé."
         },
+        "importConfirm": {
+          "body": "Un nouveau client sera créé à partir du locataire Entra {{tenant}}, et le locataire y sera mappé.",
+          "similarWarning": "Ces clients existants ont des noms similaires — mappez plutôt vers l’un d’eux s’il s’agit de la même organisation :",
+          "title": "Importer comme nouveau client ?"
+        },
         "noSuggestion": "Aucune suggestion",
         "picker": {
           "placeholder": "Sélectionner un client...",
@@ -583,82 +1102,6 @@
           "unmatched": "Non apparié"
         },
         "title": "Aperçu du mappage des tenants"
-      },
-      "cippDialog": {
-        "actions": {
-          "cancel": "Annuler",
-          "connect": "Connecter",
-          "connecting": "Connexion..."
-        },
-        "description": "Saisissez l'URL de votre instance CIPP et un jeton API pour permettre à Alga de découvrir et de synchroniser les données Entra.",
-        "errors": {
-          "missingFields": "L'URL de base et le jeton API sont requis.",
-          "unknown": "Une erreur inconnue s'est produite."
-        },
-        "fields": {
-          "apiToken": "Jeton API",
-          "apiTokenPlaceholder": "Saisir le jeton...",
-          "baseUrl": "URL de base CIPP",
-          "baseUrlPlaceholder": "https://cipp.yourdomain.com"
-        },
-        "title": "Connecter CIPP"
-      },
-      "reconciliation": {
-        "actions": {
-          "refresh": "Actualiser",
-          "resolveExisting": "Résoudre vers existant",
-          "resolveNew": "Résoudre vers nouveau"
-        },
-        "candidate": {
-          "fallback": "candidat",
-          "label": "Contacts candidats : {{count}}"
-        },
-        "contactPicker": {
-          "label": "Contact existant",
-          "placeholder": "Sélectionner un contact existant..."
-        },
-        "errors": {
-          "enterContactId": "Saisissez un ID de contact pour résoudre vers un contact existant.",
-          "loadQueue": "Échec du chargement de la file de réconciliation.",
-          "resolveFailed": "Échec de la résolution de l'élément de file."
-        },
-        "empty": "Aucune correspondance ambiguë en attente d'examen.",
-        "loading": "Chargement de la file…",
-        "noEmailIdentity": "Aucune identité e-mail",
-        "queuedAt": "{{identity}} · mis en file {{time}}",
-        "scopedToMappedClient": "Les options de contact existant sont limitées à ce client mappé.",
-        "success": {
-          "resolvedExisting": "Élément de file {{queueItemId}} résolu vers le contact existant {{contactNameId}}.",
-          "resolvedNew": "Élément de file {{queueItemId}} résolu en créant le contact {{contactNameId}}."
-        },
-        "title": "File de correspondances ambiguës"
-      },
-      "syncHistory": {
-        "actions": {
-          "hideDetails": "Masquer les détails",
-          "refresh": "Actualiser",
-          "viewDetails": "Voir les détails"
-        },
-        "details": {
-          "noResults": "Aucun résultat de tenant enregistré.",
-          "stats": "créés {{created}}, liés {{linked}}, mis à jour {{updated}}, ambigus {{ambiguous}}, désactivés {{inactivated}}",
-          "tenantHeader": "Tenant {{tenant}} · {{status}}",
-          "unknownTenant": "inconnu"
-        },
-        "empty": "Aucune exécution de synchronisation trouvée pour le moment.",
-        "errors": {
-          "loadDetailFailed": "Échec du chargement du détail de l'exécution.",
-          "loadFailed": "Échec du chargement de l'historique de synchronisation.",
-          "loadRunFailed": "Échec du chargement de l'exécution {{runId}}."
-        },
-        "loading": "Chargement de l'historique de synchronisation…",
-        "run": {
-          "header": "{{runType}} · {{status}}",
-          "inProgress": "En cours",
-          "tenants": "Tenants : {{processed}}/{{total}} · Succès : {{success}} · Échecs : {{failed}}",
-          "timing": "Démarré {{started}} · Terminé {{completed}}"
-        },
-        "title": "Exécutions de synchronisation récentes"
       }
     },
     "google": {

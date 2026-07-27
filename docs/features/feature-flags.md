@@ -180,6 +180,29 @@ Temporarily controls discovery and ambient UI for project billing before release
 - A persisted Billing view preference without an explicit billing URL falls back to Kanban.
 - Backend actions, APIs, services, events, jobs, invoice behavior, database logic, and authorization are always available regardless of flag state.
 
+### 12. `entra-sync-feature`
+Temporarily controls discovery of the Microsoft Entra sync integration before release.
+
+**Affected Areas:**
+- **MSP Portal:**
+  - Identity category tab on Settings › Integrations (Settings › Integrations › Identity)
+
+**Behavior:**
+- When disabled (default): The Identity tab is absent from the category strip. Dropping
+  the Entra entry empties the category, and empty categories are already filtered out, so
+  the tab disappears rather than rendering empty.
+- The Entra console at `/msp/settings/integrations/entra` remains reachable by direct URL,
+  bookmark or history. This flag is a discovery gate, not an access control.
+- Backend actions, API routes, workflows and authorization are unaffected. Access to Entra
+  is still EE edition + the `ENTRA_SYNC` tier (Pro and above) + `system_settings` RBAC,
+  which is what the retired `entra-integration-ui` flag left in place when it was removed.
+- Off while the flag is still resolving, and off if PostHog cannot be reached: a rollout
+  control that fails open is not a rollout control. Use
+  `NEXT_PUBLIC_DISABLE_FEATURE_FLAGS=true` for local development.
+
+**Note:** A future non-Entra identity integration would keep the Identity tab visible on
+its own; the flag gates the Entra entry, not the category.
+
 ## Implementation Details
 
 ### User Identification

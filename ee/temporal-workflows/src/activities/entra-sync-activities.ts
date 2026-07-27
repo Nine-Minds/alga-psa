@@ -6,7 +6,11 @@ import { getAdminConnection } from '@alga-psa/db/admin.js';
 import { getEntraProviderAdapter } from '@ee/lib/integrations/entra/providers';
 import { executeEntraSync } from '@ee/lib/integrations/entra/sync/syncEngine';
 import { filterEntraUsersForTenant } from '@ee/lib/integrations/entra/settingsService';
-import { markDisabledEntraUsersInactive } from '@ee/lib/integrations/entra/sync/disableHandler';
+import { decideEntraRunNotifications } from '@ee/lib/integrations/entra/notifications/entraSyncNotificationRules';
+import {
+  deliverEntraNotifications,
+  getEntraNotificationConfig,
+} from '@ee/lib/integrations/entra/notifications/entraSyncNotifications';
 import type { EntraConnectionType } from '@ee/interfaces/entra.interfaces';
 import type {
   LoadMappedTenantsActivityInput,
@@ -130,24 +134,27 @@ export async function syncTenantUsersActivity(
       : {};
   });
 
+  const disabledIdentities = filteredUsers.excluded
+    .filter((entry) => entry.reason === 'account_disabled')
+    .map((entry) => ({
+      entraTenantId: entry.user.entraTenantId,
+      entraObjectId: entry.user.entraObjectId,
+      displayName: entry.user.displayName,
+      email: entry.user.email,
+      userPrincipalName: entry.user.userPrincipalName,
+    }));
+
+  // Inactivation goes through executeEntraSync rather than beside it, so the
+  // dry-run guard covers every write this activity can cause.
   const syncResult = await executeEntraSync({
     tenantId: input.tenantId,
     clientId: input.mapping.clientId,
     managedTenantId: input.mapping.managedTenantId,
     users: filteredUsers.included,
     fieldSyncConfig,
-    dryRun: false,
+    dryRun: Boolean(input.dryRun),
+    disabledIdentities,
   });
-
-  const disabledIdentities = filteredUsers.excluded
-    .filter((entry) => entry.reason === 'account_disabled')
-    .map((entry) => ({
-      entraTenantId: entry.user.entraTenantId,
-      entraObjectId: entry.user.entraObjectId,
-    }));
-  const inactivatedCount = disabledIdentities.length
-    ? await markDisabledEntraUsersInactive(input.tenantId, disabledIdentities)
-    : 0;
 
   return {
     managedTenantId: input.mapping.managedTenantId,
@@ -157,7 +164,7 @@ export async function syncTenantUsersActivity(
     linked: syncResult.counters.linked,
     updated: syncResult.counters.updated,
     ambiguous: syncResult.counters.ambiguous,
-    inactivated: syncResult.counters.inactivated + inactivatedCount,
+    inactivated: syncResult.counters.inactivated,
     errorMessage: null,
   };
 }
@@ -206,6 +213,8 @@ export async function upsertSyncRunActivity(
           run_type: input.runType,
           status: 'running',
           initiated_by: input.initiatedBy || null,
+          scope_managed_tenant_id: input.scopeManagedTenantId || null,
+          scope_client_id: input.scopeClientId || null,
           started_at: now,
           completed_at: null,
           total_tenants: 0,
@@ -239,7 +248,18 @@ export async function finalizeSyncRunActivity(
         const { knex } = await createTenantKnex();
         const now = knex.fn.now();
 
-        await tenantDb(knex, input.tenantId).table('entra_sync_runs')
+        const db = tenantDb(knex, input.tenantId);
+
+        // The previous real runs decide whether this failure is "repeated";
+        // previews changed nothing and are not part of that history.
+        const previousRuns = await db.table('entra_sync_runs')
+          .where({ is_dry_run: false })
+          .whereNot({ run_id: input.runId })
+          .orderBy('started_at', 'desc')
+          .limit(3)
+          .select(['status']);
+
+        await db.table('entra_sync_runs')
           .where({
             run_id: input.runId,
           })
@@ -253,6 +273,32 @@ export async function finalizeSyncRunActivity(
             summary: knex.raw('?::jsonb', [JSON.stringify(input.summary)]),
             updated_at: now,
           });
+
+        // Best effort, and never inside the run's own success path: a sync that
+        // worked must not be reported as failed because a notification was not
+        // delivered.
+        try {
+          const config = await getEntraNotificationConfig(knex, input.tenantId);
+          const notifications = decideEntraRunNotifications({
+            status: input.status,
+            summary: input.summary,
+            previousRunStatuses: (previousRuns as Array<{ status?: unknown }>).map((row) =>
+              String(row.status || '')
+            ),
+            config,
+          });
+          await deliverEntraNotifications({
+            knex,
+            tenantId: input.tenantId,
+            notifications,
+          });
+        } catch (error: unknown) {
+          logger.warn('Entra run notifications were not delivered', {
+            tenantId: input.tenantId,
+            runId: input.runId,
+            error: error instanceof Error ? error.message : 'unknown error',
+          });
+        }
       }),
     { logLabel: 'finalizeSyncRunActivity' }
   );

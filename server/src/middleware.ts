@@ -91,7 +91,7 @@ const apiKeySkipPaths = [
   '/api/integrations/xero/callback',
   '/api/integrations/qbo/connect',
   '/api/integrations/qbo/callback',
-  // Entra integration API routes use session auth via requireEntraUiFlagEnabled
+  // Entra integration API routes use session auth via requireEntraAccess
   '/api/integrations/entra/',
   // AI chat endpoints are session-authenticated (MSP UI)
   '/api/chat/',

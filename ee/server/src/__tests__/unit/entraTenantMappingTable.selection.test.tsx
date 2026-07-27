@@ -18,6 +18,11 @@ const {
   getAllClientsMock: vi.fn(),
 }));
 
+vi.mock('@alga-psa/ui/lib/i18n/client', async () => {
+  const { createLocaleTranslationMock } = await import('../utils/localeTranslationMock');
+  return createLocaleTranslationMock('msp/integrations');
+});
+
 vi.mock('@alga-psa/integrations/actions', () => ({
   getEntraMappingPreview: getEntraMappingPreviewMock,
   confirmEntraMappings: confirmEntraMappingsMock,
@@ -132,14 +137,17 @@ describe('EntraTenantMappingTable client selection', () => {
     expect(fuzzyRow).toBeTruthy();
     expect(unmatchedRow).toBeTruthy();
 
-    const fuzzySelect = within(fuzzyRow as HTMLElement).getByRole('combobox') as HTMLSelectElement;
-    const unmatchedSelect = within(unmatchedRow as HTMLElement).getByRole('combobox') as HTMLSelectElement;
+    // Re-query between the two changes: the table re-renders on the first
+    // selection, so a node captured beforehand can be detached by the second.
+    const pickerIn = (label: string) =>
+      within(screen.getByText(label).closest('tr') as HTMLElement)
+        .getByRole('combobox') as HTMLSelectElement;
 
-    fireEvent.change(fuzzySelect, { target: { value: 'client-alpha' } });
-    fireEvent.change(unmatchedSelect, { target: { value: 'client-beta' } });
+    fireEvent.change(pickerIn('Fuzzy Tenant'), { target: { value: 'client-alpha' } });
+    fireEvent.change(pickerIn('Unmatched Tenant'), { target: { value: 'client-beta' } });
 
-    expect(fuzzySelect.value).toBe('client-alpha');
-    expect(unmatchedSelect.value).toBe('client-beta');
+    expect(pickerIn('Fuzzy Tenant').value).toBe('client-alpha');
+    expect(pickerIn('Unmatched Tenant').value).toBe('client-beta');
 
     await waitFor(() => {
       expect(onSummaryChange).toHaveBeenCalledWith(
@@ -241,6 +249,15 @@ describe('EntraTenantMappingTable client selection', () => {
 
     fireEvent.click(within(initialRow).getByRole('button', { name: 'Import as new client' }));
 
+    // Importing is gated behind a confirmation dialog so an accidental click cannot create a client.
+    const importConfirmButton = await waitFor(() => {
+      const button = document.getElementById('entra-import-confirm-dialog-confirm');
+      expect(button).not.toBeNull();
+      return button as HTMLElement;
+    });
+    expect(importEntraTenantAsClientMock).not.toHaveBeenCalled();
+    fireEvent.click(importConfirmButton);
+
     await waitFor(() => {
       expect(importEntraTenantAsClientMock).toHaveBeenCalledWith({
         managedTenantId: 'managed-unmapped-130',
@@ -248,7 +265,12 @@ describe('EntraTenantMappingTable client selection', () => {
     });
 
     await waitFor(() => {
-      const updatedRow = screen.getByText('Unmapped Import Tenant').closest('tr') as HTMLElement;
+      // Scope to the table: the imported client's name now also appears in every row's client picker.
+      const table = document.getElementById('entra-mapping-table') as HTMLElement;
+      const updatedRow = within(table)
+        .getAllByText('Unmapped Import Tenant')
+        .map((node) => node.closest('tr'))
+        .find((row): row is HTMLTableRowElement => row !== null) as HTMLElement;
       expect(within(updatedRow).getByText('Imported')).toBeTruthy();
       expect(within(updatedRow).queryByText('Auto-matched')).toBeNull();
       const updatedSelect = within(updatedRow).getByRole('combobox') as HTMLSelectElement;

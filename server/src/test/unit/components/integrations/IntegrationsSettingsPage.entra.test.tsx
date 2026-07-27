@@ -5,9 +5,19 @@ import React from 'react';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { cleanup, render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';
+import { ENTRA_SYNC_FEATURE_FLAG } from '@alga-psa/integrations/components/settings/integrations/integrationsFeatureFlags';
 
 const useSearchParamsMock = vi.hoisted(() => vi.fn());
 const useFeatureFlagMock = vi.hoisted(() => vi.fn());
+
+/** Answer per flag key, so one flag can be off while the others are on. */
+function setFlags(values: Record<string, boolean>): void {
+  useFeatureFlagMock.mockImplementation((flagKey: string) => ({
+    enabled: values[flagKey] ?? false,
+    loading: false,
+    error: null,
+  }));
+}
 
 vi.mock('next/navigation', () => ({
   useSearchParams: useSearchParamsMock,
@@ -117,10 +127,10 @@ vi.mock('@alga-psa/integrations/components', () => ({
   CalendarIntegrationsSettings: () => <div data-testid="calendar-integrations-settings-stub" />,
 }));
 
-// The page imports the Entra settings surface from the integrations entry barrel.
+// The Identity category renders Entra's summary card; the surface itself has its own route.
 vi.mock('@alga-psa/integrations/entra/components/entry', () => ({
   __esModule: true,
-  EntraIntegrationSettings: () => (
+  EntraIntegrationSummaryCard: () => (
     <div data-testid="entra-integration-settings-shell">Loading Entra integration settings...</div>
   ),
 }));
@@ -144,12 +154,9 @@ describe('IntegrationsSettingsPage Entra placement', () => {
       get: (key: string) => (key === 'category' ? 'identity' : null),
     });
 
-    useFeatureFlagMock.mockReturnValue({
-      enabled: true,
-      isLoading: false,
-      error: null,
-      value: true,
-    });
+    // Key-aware: the Identity tab now hangs off one specific flag, so a blanket
+    // "all flags on/off" mock can no longer tell the two cases apart.
+    setFlags({ [ENTRA_SYNC_FEATURE_FLAG]: true });
   });
 
   afterEach(() => {
@@ -175,32 +182,8 @@ describe('IntegrationsSettingsPage Entra placement', () => {
     expect(screen.getByText('Loading Entra integration settings...')).toBeInTheDocument();
   });
 
-  it('hides Entra settings surface when entra-integration-ui flag is disabled', async () => {
-    useFeatureFlagMock.mockReturnValue({
-      enabled: false,
-      isLoading: false,
-      error: null,
-      value: false,
-    });
-
-    const { default: IntegrationsSettingsPage } = await import(
-      '@alga-psa/integrations/components/settings/integrations/IntegrationsSettingsPage'
-    );
-
-    render(<IntegrationsSettingsPage />);
-
-    expect(screen.queryByText('Identity')).not.toBeInTheDocument();
-    expect(screen.queryByText('Identity Integrations')).not.toBeInTheDocument();
-    expect(screen.queryByText('Loading Entra integration settings...')).not.toBeInTheDocument();
-  });
-
-  it('shows Entra settings surface when entra-integration-ui flag is enabled', async () => {
-    useFeatureFlagMock.mockReturnValue({
-      enabled: true,
-      isLoading: false,
-      error: null,
-      value: true,
-    });
+  it('shows Entra settings surface regardless of unrelated feature flags', async () => {
+    setFlags({ [ENTRA_SYNC_FEATURE_FLAG]: true, 'some-other-flag': false });
 
     const { default: IntegrationsSettingsPage } = await import(
       '@alga-psa/integrations/components/settings/integrations/IntegrationsSettingsPage'
@@ -210,9 +193,38 @@ describe('IntegrationsSettingsPage Entra placement', () => {
 
     expect(screen.getByText('Identity')).toBeInTheDocument();
     expect(screen.getByText('Identity Integrations')).toBeInTheDocument();
-    expect(
-      screen.queryByText('Loading Entra integration settings...') ||
-      screen.queryByTestId('entra-integration-settings-shell')
-    ).toBeTruthy();
+    expect(screen.getByText('Loading Entra integration settings...')).toBeInTheDocument();
+  });
+
+  it('hides the Identity tab entirely when the entra-sync flag is off', async () => {
+    setFlags({ [ENTRA_SYNC_FEATURE_FLAG]: false });
+
+    const { default: IntegrationsSettingsPage } = await import(
+      '@alga-psa/integrations/components/settings/integrations/IntegrationsSettingsPage'
+    );
+
+    render(<IntegrationsSettingsPage />);
+
+    // Dropping the only entry empties the category, and an empty category is
+    // filtered out — so the tab goes, not just its contents.
+    expect(screen.queryByText('Identity')).not.toBeInTheDocument();
+    expect(screen.queryByText('Identity Integrations')).not.toBeInTheDocument();
+    expect(screen.queryByText('Loading Entra integration settings...')).not.toBeInTheDocument();
+    // The rest of the page is untouched.
+    expect(screen.getByTestId('custom-tabs-mock')).toBeInTheDocument();
+  });
+
+  it('keeps the tab hidden while the flag is still resolving', async () => {
+    // A rollout gate that renders on optimistically flashes the feature at
+    // everyone for as long as PostHog takes to answer.
+    useFeatureFlagMock.mockReturnValue({ enabled: false, loading: true, error: null });
+
+    const { default: IntegrationsSettingsPage } = await import(
+      '@alga-psa/integrations/components/settings/integrations/IntegrationsSettingsPage'
+    );
+
+    render(<IntegrationsSettingsPage />);
+
+    expect(screen.queryByText('Identity')).not.toBeInTheDocument();
   });
 });

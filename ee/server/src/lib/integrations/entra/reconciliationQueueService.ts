@@ -91,6 +91,21 @@ export async function queueAmbiguousEntraMatch(
       return { queueItemId: String(existing.queue_item_id) };
     }
 
+    // A dismissed identity stays dismissed: the operator has already said this
+    // ambiguity is not worth their attention, and re-queueing it every sync is
+    // how a review queue becomes a screen nobody opens.
+    const dismissed = await db.table('entra_contact_reconciliation_queue')
+      .where({
+        entra_tenant_id: input.user.entraTenantId,
+        entra_object_id: input.user.entraObjectId,
+        status: 'dismissed',
+      })
+      .first(['queue_item_id']);
+
+    if (dismissed?.queue_item_id) {
+      return { queueItemId: String(dismissed.queue_item_id) };
+    }
+
     const queueItemId = randomUUID();
     await db.table('entra_contact_reconciliation_queue').insert({
       tenant: input.tenantId,
@@ -110,6 +125,59 @@ export async function queueAmbiguousEntraMatch(
     });
 
     return { queueItemId };
+  });
+}
+
+export interface DismissEntraQueueItemInput {
+  tenantId: string;
+  queueItemId: string;
+  userId?: string | null;
+  reason?: string | null;
+}
+
+/**
+ * Dismiss an ambiguous match. Until now items could only accumulate, so the
+ * queue only ever grew and stopped being worth opening. The resolution is
+ * recorded on the row — who dismissed it, when, and why — so a dismissal is
+ * auditable rather than a disappearance.
+ */
+export async function dismissEntraQueueItem(
+  input: DismissEntraQueueItemInput
+): Promise<{ queueItemId: string; status: string }> {
+  return runWithTenant(input.tenantId, async () => {
+    const { knex } = await createTenantKnex();
+    const db = tenantDb(knex, input.tenantId);
+    const now = knex.fn.now();
+
+    const existing = await db.table('entra_contact_reconciliation_queue')
+      .where({ queue_item_id: input.queueItemId })
+      .first(['queue_item_id', 'status']);
+
+    if (!existing?.queue_item_id) {
+      throw new Error('Queue item does not exist for this tenant.');
+    }
+
+    if (String(existing.status) !== 'open') {
+      return { queueItemId: input.queueItemId, status: String(existing.status) };
+    }
+
+    await db.table('entra_contact_reconciliation_queue')
+      .where({ queue_item_id: input.queueItemId })
+      .update({
+        status: 'dismissed',
+        resolution_action: 'dismissed',
+        resolved_by: input.userId || null,
+        resolved_at: now,
+        payload: knex.raw('?::jsonb', [
+          JSON.stringify({
+            reason: 'dismissed_by_operator',
+            note: input.reason || null,
+          }),
+        ]),
+        updated_at: now,
+      });
+
+    return { queueItemId: input.queueItemId, status: 'dismissed' };
   });
 }
 

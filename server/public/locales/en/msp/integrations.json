@@ -346,16 +346,357 @@
       }
     },
     "entra": {
+      "cippDialog": {
+        "actions": {
+          "cancel": "Cancel",
+          "connect": "Connect",
+          "connecting": "Connecting...",
+          "test": "Test connection",
+          "testing": "Testing…"
+        },
+        "description": "Enter your CIPP instance URL and an API token to allow Alga to discover and sync Entra data.",
+        "encryptionNote": "The API key is encrypted at rest and is never shown again after saving.",
+        "errors": {
+          "missingFields": "Both Base URL and API Token are required.",
+          "testFirst": "Test the connection before saving.",
+          "unknown": "An unknown error occurred."
+        },
+        "fields": {
+          "apiToken": "API Token",
+          "apiTokenHelp": "In CIPP: Settings → CIPP → API access. Copy the API key, not an Azure client secret.",
+          "apiTokenPlaceholder": "Enter token...",
+          "baseUrl": "CIPP Base URL",
+          "baseUrlHelp": "This is the CIPP-API function app host (for example my-cipp-api.azurewebsites.net), not the CIPP frontend you sign in to.",
+          "baseUrlPlaceholder": "https://cipp.yourdomain.com"
+        },
+        "test": {
+          "passed": "CIPP responded. {{count}} tenants visible.",
+          "required": "Test the connection before saving."
+        },
+        "title": "Connect CIPP"
+      },
+      "console": {
+        "actions": {
+          "pause": "Pause sync",
+          "resume": "Resume sync",
+          "syncNeedsClients": "Map at least one client before syncing.",
+          "syncNeedsConnection": "Fix the connection before syncing.",
+          "syncNow": "Sync now",
+          "syncingNow": "Starting…"
+        },
+        "attention": {
+          "actions": {
+            "fixConnection": "Fix connection",
+            "mapClients": "Map clients",
+            "openSchedule": "Turn it on",
+            "review": "Review",
+            "viewClients": "View clients"
+          },
+          "connection": "The connection is not working. Nothing will sync until it is fixed.",
+          "connectionDetail": "Fix the connection first — every client fails the same way until it works.",
+          "empty": "Nothing needs attention.",
+          "failedClients": "{{count}} clients did not sync cleanly.",
+          "failedClientsDetail": "{{clients}}",
+          "failedClientsOne": "{{count}} client did not sync cleanly.",
+          "neverSynced": "{{count}} mapped clients have never synced.",
+          "neverSyncedDetail": "{{clients}}",
+          "neverSyncedOne": "{{count}} mapped client has never synced.",
+          "noClients": "No clients are mapped, so nothing can sync.",
+          "noClientsDetail": "Match a Microsoft tenant to a client to start syncing contacts.",
+          "reviewQueue": "{{count}} identities are waiting for a decision.",
+          "reviewQueueAtLeast": "At least {{count}} identities are waiting for a decision.",
+          "reviewQueueDetail": "Two or more contacts share one Microsoft email, so nothing happens to them until you choose.",
+          "reviewQueueOne": "{{count}} identity is waiting for a decision.",
+          "scheduleNotApplied": "Automatic sync is on, but the schedule was never applied.",
+          "scheduleNotAppliedDetail": "Nothing will run on its own until it is. Save the schedule again to retry.",
+          "scheduleOff": "Automatic sync is off.",
+          "scheduleOffDetail": "Contacts only change when someone runs a sync by hand.",
+          "severity": {
+            "blocking": "Blocking",
+            "info": "For information",
+            "warning": "Warning"
+          },
+          "title": "Needs attention"
+        },
+        "clients": {
+          "columns": {
+            "lastSync": "Last sync",
+            "tenant": "Microsoft tenant",
+            "users": "Users"
+          },
+          "empty": "No clients match this search.",
+          "filters": {
+            "all": "All",
+            "failing": "Failing",
+            "never-synced": "Never synced",
+            "synced": "Synced"
+          },
+          "searchPlaceholder": "Search clients or domains",
+          "sync": "Sync",
+          "unlink": "Unlink",
+          "status": {
+            "failed": "Failed",
+            "neverSynced": "Never synced",
+            "partlyFailed": "Partly failed",
+            "synced": "Synced",
+            "syncing": "Syncing"
+          },
+          "emptyTitle": "No clients are mapped yet",
+          "emptyDescription": "Match a Microsoft tenant to a client on the Connection tab. Clients appear here once they are mapped.",
+          "emptyAction": "Open the Connection tab",
+          "clearFilters": "Clear filters",
+          "unlinkConfirm": {
+            "body": "{{client}} stops syncing, now and on the schedule. Its contacts stay exactly as they are, and keep their Microsoft link. The tenant goes back to the mapping table on the Connection tab, where you can map it again.",
+            "title": "Stop syncing {{client}}?"
+          },
+          "unlinked": "{{client}} no longer syncs.",
+          "unlinkFailed": "That client could not be unlinked.",
+          "hidePreview": "Hide preview",
+          "previewLoading": "Reading {{client}}'s directory from Microsoft…",
+          "previewLoadingHint": "How long this takes depends on how many users the client has."
+        },
+        "connection": {
+          "changeAction": "Change connection",
+          "exportRecord": "Export connection record",
+          "mappingDescription": "Review or change which client each Microsoft tenant belongs to.",
+          "mappingTitle": "Tenant mapping",
+          "methodLabel": "Method",
+          "permissionsTitle": "Permissions in effect",
+          "rotate": "Rotate credential",
+          "validate": "Test connection",
+          "validated": "The connection is working.",
+          "validating": "Testing…"
+        },
+        "errors": {
+          "loadFailed": "This screen could not be loaded, so what it shows may be incomplete.",
+          "syncFailed": "The sync could not be started.",
+          "syncNotStarted": "The sync did not start: the background worker is unavailable. Nothing has changed — try again once it is back.",
+          "validateFailed": "The connection could not be validated."
+        },
+        "health": {
+          "checking": "Checking…",
+          "failingClients": "{{count}} clients failing",
+          "failingClientsOne": "{{count}} client failing",
+          "healthy": "Healthy",
+          "unknown": "Status unknown"
+        },
+        "history": {
+          "allClients": "All clients",
+          "columns": {
+            "clients": "Clients",
+            "failed": "Failed",
+            "scope": "Scope",
+            "succeeded": "Succeeded",
+            "trigger": "Trigger",
+            "when": "When"
+          },
+          "empty": "No runs match these filters.",
+          "export": "Export CSV",
+          "includePreviews": "Include previews",
+          "next": "Next",
+          "onlyFailures": "Failures only",
+          "page": "Page {{page}} of {{pages}}",
+          "previewBadge": "preview",
+          "previous": "Previous",
+          "triggers": {
+            "all": "All runs",
+            "manual": "Manual",
+            "scheduled": "Scheduled"
+          }
+        },
+        "lastRun": {
+          "columns": {
+            "client": "Client",
+            "created": "Created",
+            "inactivated": "Made inactive",
+            "linked": "Linked",
+            "result": "Result",
+            "updated": "Changed"
+          },
+          "empty": "No sync has run yet.",
+          "progress": "{{processed}} of {{total}} clients done so far.",
+          "results": {
+            "done": "Done",
+            "failed": "Failed",
+            "partlyFailed": "Partly failed",
+            "running": "Syncing",
+            "toReview": "{{count}} to review"
+          },
+          "showAll": "See all {{count}} clients in this run",
+          "stats": {
+            "created": "Created",
+            "createdSub": "new contacts",
+            "failed": "Failed",
+            "failedSub": "clients",
+            "inactivated": "Made inactive",
+            "inactivatedSub": "accounts disabled",
+            "linked": "Linked",
+            "linkedSub": "existing contacts",
+            "updated": "Changed",
+            "updatedSub": "where you allowed it"
+          },
+          "summaries": {
+            "completed": "Finished {{time}}.",
+            "failed": "Failed {{time}}.",
+            "partial": "Finished {{time}}, with failures.",
+            "running": "Started {{time}} and still running.",
+            "unknown": "Last run {{time}}."
+          },
+          "title": "Last sync",
+          "unavailable": "The run history could not be read."
+        },
+        "lead": "{{clients}} clients mapped · connected via {{method}}",
+        "overwrites": {
+          "change": "Change field rules",
+          "inactivateOff": "Disabled Microsoft accounts are left alone.",
+          "inactivateOn": "Disabled Microsoft accounts are marked inactive.",
+          "none": "Nothing is overwritten.",
+          "title": "Overwrites allowed"
+        },
+        "schedule": {
+          "cadence": {
+            "10080": "every week",
+            "1440": "every day",
+            "240": "every 4 hours",
+            "60": "every hour",
+            "720": "every 12 hours"
+          },
+          "changeAction": "Change schedule",
+          "description": "When on, Alga syncs every mapped client on this cadence. Turning it off stops scheduled runs; you can still sync by hand.",
+          "enablePrompt": "The pilot succeeded. Turn on automatic sync to keep contacts in step without running it by hand.",
+          "intervalLabel": "Run every",
+          "intervals": {
+            "10080": "Week",
+            "1440": "Day",
+            "240": "4 hours",
+            "60": "Hour",
+            "720": "12 hours"
+          },
+          "pause": "Pause",
+          "pauseHint": "Paused. Save to apply.",
+          "paused": "Automatic sync paused.",
+          "resumed": "Automatic sync resumed.",
+          "save": "Save schedule",
+          "saveFailed": "Could not save the schedule.",
+          "saved": "Schedule saved.",
+          "savedPending": "Setting saved. The schedule itself will update when the worker next reconciles.",
+          "saving": "Saving…",
+          "title": "Automatic sync"
+        },
+        "sideRail": {
+          "runs": "Runs {{cadence}}",
+          "runsMinutes": "Runs every {{minutes}} minutes",
+          "scheduleOff": "Off"
+        },
+        "syncStarted": "Sync started for all mapped clients.",
+        "tabs": {
+          "clients": "Clients",
+          "connection": "Connection",
+          "fieldRules": "Field rules",
+          "history": "History",
+          "overview": "Overview",
+          "reviewQueue": "Review queue",
+          "schedule": "Sync & schedule"
+        }
+      },
+      "pilot": {
+        "actions": {
+          "preview": "Preview changes",
+          "previewing": "Previewing…",
+          "syncOne": "Sync this client",
+          "syncOneNamed": "Sync {{client}} only",
+          "syncRemaining": "Sync the remaining {{count}}",
+          "syncingOne": "Starting…",
+          "syncingRemaining": "Starting…"
+        },
+        "clientLabel": "Pilot client",
+        "empty": "Confirm a tenant-to-client mapping first; there is nothing to pilot yet.",
+        "errors": {
+          "loadMappings": "Could not load the mapped clients.",
+          "preflightFailed": "The preview could not be completed.",
+          "syncFailed": "The sync could not be started."
+        },
+        "gateNote": "Sync one client first. The rest unlock once its run finishes.",
+        "previewPrompt": "Preview the changes for this client before anything is written.",
+        "remainingStarted": "Sync started for the remaining {{count}} clients.",
+        "started": "Sync started for {{client}}."
+      },
+      "preflight": {
+        "buckets": {
+          "create": {
+            "description": "No contact in this client matches the email, so one would be created.",
+            "label": "New contacts"
+          },
+          "link": {
+            "description": "An existing contact matches by email and would be linked, and updated where your field rules allow.",
+            "label": "Linked to existing contacts"
+          },
+          "markInactive": {
+            "description": "The Microsoft account is disabled, so the linked contact would be marked inactive. Nothing is deleted.",
+            "label": "Marked inactive"
+          },
+          "needsDecision": {
+            "description": "More than one contact matches, so the sync will not guess. These land in the review queue.",
+            "label": "Needs a decision"
+          },
+          "noChange": {
+            "description": "Already linked, and nothing your rules sync has changed.",
+            "label": "No change"
+          }
+        },
+        "checkAgain": "Check again",
+        "checkedLabel": "Checked",
+        "hideNames": "Hide names",
+        "moreNames": "and {{count}} more",
+        "nothingWritten": "Nothing written yet",
+        "showNames": "Show names",
+        "summary": "{{count}} identities checked at {{time}}. Nothing was changed.",
+        "summaryNoTime": "{{count}} identities checked. Nothing was changed.",
+        "title": "What this sync would do"
+      },
+      "reconciliation": {
+        "actions": {
+          "dismiss": "Dismiss",
+          "refresh": "Refresh",
+          "resolveExisting": "Resolve to Existing",
+          "resolveNew": "Resolve to New"
+        },
+        "candidate": {
+          "fallback": "candidate",
+          "label": "Candidate contacts: {{count}}"
+        },
+        "contactPicker": {
+          "label": "Existing Contact",
+          "placeholder": "Select existing contact..."
+        },
+        "empty": "No ambiguous matches are waiting for review.",
+        "errors": {
+          "enterContactId": "Enter a contact ID to resolve to existing contact.",
+          "loadQueue": "Failed to load reconciliation queue.",
+          "resolveFailed": "Failed to resolve queue item."
+        },
+        "loading": "Loading queue…",
+        "noEmailIdentity": "No email identity",
+        "queuedAt": "{{identity}} · queued {{time}}",
+        "scopedToMappedClient": "Existing contact options are limited to this mapped client.",
+        "success": {
+          "dismissed": "Dismissed {{identity}}. It will not come back on the next sync.",
+          "resolvedExisting": "Resolved queue item {{queueItemId}} to existing contact {{contactNameId}}.",
+          "resolvedNew": "Resolved queue item {{queueItemId}} by creating contact {{contactNameId}}."
+        },
+        "title": "Ambiguous Match Queue"
+      },
       "settings": {
         "actions": {
+          "cancel": "Cancel",
           "disconnect": "Disconnect",
-          "reconnect": "Reconnect",
+          "hideReviewRemap": "Hide Review / Remap",
+          "reconnect": "Reconnect {{connectionType}}",
           "reconnecting": "Reconnecting…",
           "refresh": "Refresh",
           "resetFieldSync": "Reset",
           "reviewMappings": "Review Mappings",
           "reviewRemap": "Review / Remap",
-          "hideReviewRemap": "Hide Review / Remap",
           "runDiscovery": "Run Discovery",
           "runDiscoveryAgain": "Run Discovery Again",
           "runDiscoveryRunning": "Running Discovery…",
@@ -371,17 +712,26 @@
           "reviewBeforeInitialSync": "Review Before Initial Sync"
         },
         "connection": {
+          "callbackErrors": {
+            "consentMissing": "Microsoft signed you in but refused access to your managed tenant list. A Global Administrator must grant admin consent for the requested permissions. Nothing was saved — try again once consent is granted.",
+            "expired": "The connection attempt expired before it finished. Nothing was saved — start the connection again.",
+            "generic": "Microsoft Entra was not connected, and nothing was saved. Please try again.",
+            "validationFailed": "Microsoft signed you in, but we could not read your managed tenant list, so nothing was saved. Check the connection's permissions and try again."
+          },
+          "cippServerLabel": "CIPP server",
           "connectingSuffix": " (Connecting...)",
-          "details": "Connection Details",
+          "details": "Connection details",
           "directCredentialSourceLabel": "Credential Source:",
           "directTenantDefault": "common (multi-tenant)",
-          "directTenantLabel": "Microsoft Tenant:",
-          "cippServerLabel": "CIPP Server:",
+          "directTenantLabel": "Microsoft tenant",
           "notAvailable": "Not available",
           "notConfigured": "Not configured",
-          "notConnectedStatus": "not_connected",
           "optionsTitle": "Connection Options",
-          "promptDetails": "Connect Entra to populate provider details."
+          "promptDetails": "Connect Entra to populate provider details.",
+          "types": {
+            "cipp": "CIPP",
+            "direct": "Microsoft Entra Direct"
+          }
         },
         "currentStep": {
           "connect": {
@@ -408,6 +758,12 @@
           "description": "Entra integration UI is currently disabled for this tenant.",
           "title": "Microsoft Entra Integration"
         },
+        "disconnectConfirm": {
+          "keeps": "Contacts, client mappings and sync history are kept exactly as they are. Nothing is deleted.",
+          "reconnect": "Reconnecting later restores syncing without redoing your mappings.",
+          "stops": "Scheduled and manual syncs stop, and the stored credential is removed.",
+          "title": "Disconnect Microsoft Entra?"
+        },
         "discovery": {
           "completed": "Discovery completed. {{count}} tenants discovered.",
           "completedOne": "Discovery completed. {{count}} tenant discovered.",
@@ -426,11 +782,15 @@
           "options": {
             "displayName": {
               "description": "Allow Entra display name to overwrite contact full name on linked contacts.",
-              "label": "Display Name"
+              "label": "Display name"
             },
             "email": {
               "description": "Allow Entra email/UPN to overwrite contact email on linked contacts.",
               "label": "Email"
+            },
+            "markInactiveWhenDisabled": {
+              "description": "Linked contacts are marked inactive, never deleted. Turn this off to leave contacts alone when their account is disabled.",
+              "label": "Mark contacts inactive when the Microsoft account is disabled"
             },
             "phone": {
               "description": "Allow Entra phone values to overwrite contact phone number on linked contacts.",
@@ -445,11 +805,22 @@
               "label": "UPN"
             }
           },
-          "title": "Field Sync Controls"
+          "preview": "Preview effect",
+          "previewClientEmpty": "No mapped client matches that search.",
+          "previewClientLabel": "Client",
+          "previewClientSearch": "Search mapped clients",
+          "previewDescription": "Runs the rules as edited against one client and writes nothing, so you can see what a change would do before it applies to everyone.",
+          "previewTitle": "Try the rules before you save them",
+          "previewing": "Previewing…",
+          "save": "Save rules",
+          "saveFailed": "Could not save the field rules.",
+          "saved": "Field rules saved.",
+          "saving": "Saving…",
+          "title": "Field rules"
         },
         "guidedStep": {
-          "current": "current",
           "complete": "complete",
+          "current": "current",
           "locked": "locked",
           "stepLabel": "Step {{number}}",
           "thisIsCurrent": "This is your current onboarding step."
@@ -483,12 +854,9 @@
           "title": "Ongoing Operations"
         },
         "overview": {
-          "connectionLabel": "Connection:",
           "connectionTypeLabel": "Connection Type:",
           "label": "Overview",
-          "mappedTenantsLabel": "Mapped Tenants:",
-          "nextSyncIntervalEvery": "Every {{minutes}} minutes",
-          "nextSyncIntervalLabel": "Next Sync Interval:"
+          "mappedTenantsLabel": "Mapped Tenants:"
         },
         "skipped": {
           "empty": "No tenants are currently marked as skipped.",
@@ -498,7 +866,14 @@
         },
         "status": {
           "connectionHealth": "Connection Health",
-          "label": "Status"
+          "label": "Status",
+          "values": {
+            "connected": "Connected",
+            "disconnected": "Disconnected",
+            "not_connected": "Not connected",
+            "unknown": "Unknown",
+            "validation_failed": "Connected, but failing validation"
+          }
         },
         "syncAll": {
           "failed": "Failed to start full Entra sync.",
@@ -506,10 +881,14 @@
           "startedNoId": "Sync start request accepted."
         },
         "title": "Microsoft Entra Integration",
+        "unmapConfirm": {
+          "body": "This removes the saved mapping decision for {{tenant}} so it reappears in the mapping table. Contacts already synced are not changed.",
+          "title": "Remap this tenant?"
+        },
         "validation": {
           "label": "Validation & Discovery",
           "lastDiscoveryLabel": "Last Discovery:",
-          "lastValidatedLabel": "Last Validated:",
+          "lastValidatedLabel": "Last checked",
           "neverFormatted": "Never",
           "noneValidationError": "None",
           "validationErrorLabel": "Validation Error:"
@@ -533,8 +912,143 @@
           }
         }
       },
+      "setup": {
+        "backToCurrentStep": "Back to {{step}}",
+        "chooser": {
+          "cipp": {
+            "description": "Alga reads tenants through the CIPP instance you already run.",
+            "label": "CIPP (CyberDrain Improved Partner Portal)",
+            "prerequisites": {
+              "apiHost": "The CIPP-API function app host, not the CIPP frontend.",
+              "apiKey": "A CIPP API key with tenant list access.",
+              "instance": "A running CIPP instance."
+            }
+          },
+          "cippReassurance": "Alga will test the connection before saving it.",
+          "continue": "Continue",
+          "continueCipp": "Set up CIPP connection",
+          "continueDirect": "Continue with Direct",
+          "continuing": "Continuing…",
+          "direct": {
+            "description": "Alga talks to Microsoft Graph through your partner relationship.",
+            "label": "Direct Microsoft partner",
+            "prerequisites": {
+              "appRegistration": "Microsoft OAuth credentials configured for this tenant.",
+              "globalAdmin": "A Global Administrator who can approve the permissions.",
+              "partnerRelationship": "A partner relationship (GDAP) with the tenants you manage."
+            }
+          },
+          "directReassurance": "You will review the permission prompt before anything is granted.",
+          "prerequisitesTitle": "You will need",
+          "recommendation": "Most MSPs should choose Direct. Choose CIPP only if you already run an instance.",
+          "recommendedBadge": "Recommended",
+          "title": "Choose how to connect"
+        },
+        "connectedVia": "Connected via {{method}}",
+        "description": "Bring the people from the Microsoft tenants you manage into Alga as client contacts. Nothing is written to your contacts until you have seen a preview and approved it.",
+        "directConsent": {
+          "adminNote": "A Global Administrator must approve these permissions. If you are not one, the sign-in will complete but the connection will be refused, and nothing will be saved.",
+          "cancel": "Cancel",
+          "continue": "Continue to Microsoft",
+          "intro": "You are about to leave Alga and sign in at Microsoft. These are the permissions that will be requested.",
+          "redirecting": "Redirecting…",
+          "servicePrincipalNote": "The connection then runs as a service principal, not as your sign-in, so it keeps working when you are away.",
+          "title": "Before you continue to Microsoft"
+        },
+        "disclosure": {
+          "capabilities": {
+            "noMailbox": "Never reads mail, files, calendars or Teams messages",
+            "noWrite": "Never writes anything back to Microsoft",
+            "readTenants": "Read the list of Microsoft tenants you manage",
+            "readUsers": "Read users in those tenants — name, email, phone, job title"
+          },
+          "capabilitiesTitle": "What Alga will be allowed to do",
+          "contacts": {
+            "ambiguous": "Two contacts share an email? It is set aside for you to decide — never guessed.",
+            "creation": "An identity with no match becomes a new contact in that client.",
+            "deletion": "Nothing is ever deleted.",
+            "matching": "Contacts are matched by email address within the client you map the tenant to.",
+            "overwrite": "Existing names, emails, phone numbers and job titles are not overwritten unless you turn that on."
+          },
+          "contactsTitle": "What happens to your contacts",
+          "copied": "Copied",
+          "copy": "Copy for a change record",
+          "description": "Read this before you authorize. You can copy it into a change record.",
+          "inactiveNote": "A disabled Microsoft account marks the contact inactive. You can turn that off in step 4.",
+          "recordGeneratedAt": "Prepared {{time}}",
+          "recordHeading": "Microsoft Entra integration — change record",
+          "scopes": {
+            "directory": "Reads directory data in your own tenant. Used only by the self-tenant test mode.",
+            "managedTenants": "Lists the customer tenants your partner relationship covers, and the users inside them. This is how clients and contacts are discovered.",
+            "offlineAccess": "Keeps the connection working after you close the browser, so scheduled syncs can run.",
+            "unknown": "Requested by the connection.",
+            "userRead": "Confirms who is signing in. Reads your own profile only."
+          },
+          "scopesAllReadOnly": "All read-only.",
+          "scopesTitle": "Permissions requested",
+          "title": "What Alga will read, and what it will change"
+        },
+        "stepLabel": "Step {{number}}",
+        "steps": {
+          "connect": {
+            "description": "Choose how Alga reaches Microsoft, then authorize it.",
+            "short": "Connect",
+            "title": "Connect Microsoft Entra"
+          },
+          "discover": {
+            "description": "Ask Microsoft which customer tenants your partner relationship covers.",
+            "short": "Find tenants",
+            "title": "Discover managed tenants"
+          },
+          "map": {
+            "description": "Decide which Alga client each Microsoft tenant belongs to. Nothing syncs until this is confirmed.",
+            "short": "Match to clients",
+            "title": "Map tenants to clients"
+          },
+          "sync": {
+            "description": "Bring contacts in for the clients you mapped.",
+            "short": "Preview & pilot",
+            "title": "Run the first sync"
+          }
+        },
+        "title": "Set up Microsoft Entra"
+      },
+      "summary": {
+        "backToIntegrations": "Back to integrations",
+        "description": "Discover the tenants you manage, map them to clients, and keep contacts in step.",
+        "open": "Open",
+        "title": "Microsoft Entra"
+      },
+      "syncHistory": {
+        "actions": {
+          "hideDetails": "Hide details",
+          "refresh": "Refresh",
+          "viewDetails": "View details"
+        },
+        "details": {
+          "noResults": "No tenant results recorded.",
+          "stats": "created {{created}}, linked {{linked}}, updated {{updated}}, ambiguous {{ambiguous}}, inactivated {{inactivated}}",
+          "tenantHeader": "Tenant {{tenant}} · {{status}}",
+          "unknownTenant": "unknown"
+        },
+        "empty": "No sync runs found yet.",
+        "errors": {
+          "loadDetailFailed": "Failed to load run detail.",
+          "loadFailed": "Failed to load sync history.",
+          "loadRunFailed": "Failed to load run {{runId}}."
+        },
+        "loading": "Loading sync history…",
+        "run": {
+          "header": "{{runType}} · {{status}}",
+          "inProgress": "In progress",
+          "tenants": "Tenants: {{processed}}/{{total}} · Success: {{success}} · Failed: {{failed}}",
+          "timing": "Started {{started}} · Completed {{completed}}"
+        },
+        "title": "Recent Sync Runs"
+      },
       "tenantMapping": {
         "actions": {
+          "cancel": "Cancel",
           "confirmSelected": "Confirm Selected Mappings",
           "confirming": "Confirming…",
           "import": "Import as new client",
@@ -565,6 +1079,11 @@
           "confirmed": "Confirmed {{count}} mappings.",
           "confirmedOne": "Confirmed {{count}} mapping."
         },
+        "importConfirm": {
+          "body": "A new client will be created from the Entra tenant {{tenant}}, and the tenant will be mapped to it.",
+          "similarWarning": "These existing clients have similar names — map to one of them instead if this is the same organization:",
+          "title": "Import as a new client?"
+        },
         "noSuggestion": "No suggestion",
         "picker": {
           "placeholder": "Select client...",
@@ -583,82 +1102,6 @@
           "unmatched": "Unmatched"
         },
         "title": "Tenant Mapping Preview"
-      },
-      "cippDialog": {
-        "actions": {
-          "cancel": "Cancel",
-          "connect": "Connect",
-          "connecting": "Connecting..."
-        },
-        "description": "Enter your CIPP instance URL and an API token to allow Alga to discover and sync Entra data.",
-        "errors": {
-          "missingFields": "Both Base URL and API Token are required.",
-          "unknown": "An unknown error occurred."
-        },
-        "fields": {
-          "apiToken": "API Token",
-          "apiTokenPlaceholder": "Enter token...",
-          "baseUrl": "CIPP Base URL",
-          "baseUrlPlaceholder": "https://cipp.yourdomain.com"
-        },
-        "title": "Connect CIPP"
-      },
-      "reconciliation": {
-        "actions": {
-          "refresh": "Refresh",
-          "resolveExisting": "Resolve to Existing",
-          "resolveNew": "Resolve to New"
-        },
-        "candidate": {
-          "fallback": "candidate",
-          "label": "Candidate contacts: {{count}}"
-        },
-        "contactPicker": {
-          "label": "Existing Contact",
-          "placeholder": "Select existing contact..."
-        },
-        "errors": {
-          "enterContactId": "Enter a contact ID to resolve to existing contact.",
-          "loadQueue": "Failed to load reconciliation queue.",
-          "resolveFailed": "Failed to resolve queue item."
-        },
-        "empty": "No ambiguous matches are waiting for review.",
-        "loading": "Loading queue…",
-        "noEmailIdentity": "No email identity",
-        "queuedAt": "{{identity}} · queued {{time}}",
-        "scopedToMappedClient": "Existing contact options are limited to this mapped client.",
-        "success": {
-          "resolvedExisting": "Resolved queue item {{queueItemId}} to existing contact {{contactNameId}}.",
-          "resolvedNew": "Resolved queue item {{queueItemId}} by creating contact {{contactNameId}}."
-        },
-        "title": "Ambiguous Match Queue"
-      },
-      "syncHistory": {
-        "actions": {
-          "hideDetails": "Hide details",
-          "refresh": "Refresh",
-          "viewDetails": "View details"
-        },
-        "details": {
-          "noResults": "No tenant results recorded.",
-          "stats": "created {{created}}, linked {{linked}}, updated {{updated}}, ambiguous {{ambiguous}}, inactivated {{inactivated}}",
-          "tenantHeader": "Tenant {{tenant}} · {{status}}",
-          "unknownTenant": "unknown"
-        },
-        "empty": "No sync runs found yet.",
-        "errors": {
-          "loadDetailFailed": "Failed to load run detail.",
-          "loadFailed": "Failed to load sync history.",
-          "loadRunFailed": "Failed to load run {{runId}}."
-        },
-        "loading": "Loading sync history…",
-        "run": {
-          "header": "{{runType}} · {{status}}",
-          "inProgress": "In progress",
-          "tenants": "Tenants: {{processed}}/{{total}} · Success: {{success}} · Failed: {{failed}}",
-          "timing": "Started {{started}} · Completed {{completed}}"
-        },
-        "title": "Recent Sync Runs"
       }
     },
     "google": {

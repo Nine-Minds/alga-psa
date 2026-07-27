@@ -3,9 +3,8 @@
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getSecretProviderInstance } from '@alga-psa/core/secrets';
-import { isFeatureFlagEnabled } from '@alga-psa/core';
 import { routes } from '@alga-psa/integrations/entra/routes/entry';
-import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { generateMicrosoftAuthUrl, generateNonce } from '../../utils/email/oauthHelpers';
 import { createIntegrationClient } from '../clientLookupActions';
 
@@ -62,47 +61,10 @@ function normalizeCippBaseUrl(input: string): string | null {
   }
 }
 
-async function isEntraUiEnabledForTenant(params: {
-  tenantId: string;
-  userId?: string;
-}): Promise<boolean> {
-  return isFeatureFlagEnabled('entra-integration-ui', {
-    tenantId: params.tenantId,
-    userId: params.userId,
-  });
-}
-
-async function isEntraAmbiguousQueueEnabledForTenant(params: {
-  tenantId: string;
-  userId?: string;
-}): Promise<boolean> {
-  return isFeatureFlagEnabled('entra-integration-ambiguous-queue', {
-    tenantId: params.tenantId,
-    userId: params.userId,
-  });
-}
-
-async function isEntraFieldSyncEnabledForTenant(params: {
-  tenantId: string;
-  userId?: string;
-}): Promise<boolean> {
-  return isFeatureFlagEnabled('entra-integration-field-sync', {
-    tenantId: params.tenantId,
-    userId: params.userId,
-  });
-}
-
 function eeUnavailableResult<T>(): EntraActionResult<T> {
   return {
     success: false,
     error: 'Microsoft Entra integration is only available in Enterprise Edition.',
-  };
-}
-
-function flagDisabledResult<T>(): EntraActionResult<T> {
-  return {
-    success: false,
-    error: 'Microsoft Entra integration is disabled for this tenant.',
   };
 }
 
@@ -210,6 +172,8 @@ export type EntraStatusResponse = {
   lastDiscoveryAt: string | null;
   mappedTenantCount: number;
   nextSyncIntervalMinutes: number | null;
+  /** True once one real sync has completed — the switch from setup to console. */
+  hasCompletedFirstSync?: boolean;
   availableConnectionTypes: EntraConnectionType[];
   lastValidatedAt: string | null;
   lastValidationError: Record<string, unknown> | null;
@@ -240,6 +204,62 @@ export type EntraCippValidationResponse = {
   endpoint: string;
 };
 
+export type EntraSyncScheduleSettings = {
+  syncEnabled: boolean;
+  syncIntervalMinutes: number;
+  updatedAt: string | null;
+  /** False when Temporal was unreachable: the setting saved, the schedule lags. */
+  scheduleApplied?: boolean;
+  scheduleError?: string | null;
+};
+
+export type EntraConfirmedMapping = {
+  managedTenantId: string;
+  entraTenantId: string;
+  clientId: string;
+  clientName: string | null;
+  displayName: string | null;
+  primaryDomain: string | null;
+  sourceUserCount: number;
+  lastSyncedAt: string | null;
+  lastRunStatus: string | null;
+};
+
+export type EntraPreflightBucketId =
+  | 'create'
+  | 'link'
+  | 'needs_decision'
+  | 'no_change'
+  | 'mark_inactive';
+
+export type EntraPreflightIdentity = {
+  bucket: EntraPreflightBucketId;
+  entraObjectId: string;
+  displayName: string | null;
+  email: string | null;
+  userPrincipalName: string | null;
+};
+
+export type EntraPreflightResponse = {
+  runId: string;
+  managedTenantId: string;
+  clientId: string;
+  checkedAt: string;
+  totalIdentities: number;
+  counters: {
+    created: number;
+    linked: number;
+    updated: number;
+    ambiguous: number;
+    inactivated: number;
+  };
+  buckets: Array<{
+    bucket: EntraPreflightBucketId;
+    count: number;
+    samples: EntraPreflightIdentity[];
+  }>;
+};
+
 export type EntraSyncHistoryRun = {
   runId: string;
   status: string;
@@ -250,10 +270,45 @@ export type EntraSyncHistoryRun = {
   processedTenants: number;
   succeededTenants: number;
   failedTenants: number;
+  /** A preflight: it classified identities and wrote nothing. */
+  isDryRun?: boolean;
+  scopeManagedTenantId?: string | null;
+  scopeClientId?: string | null;
 };
 
 export type EntraSyncHistoryResponse = {
   runs: EntraSyncHistoryRun[];
+};
+
+/** What one run did to one client. */
+export type EntraSyncRunTenantResult = {
+  managedTenantId: string | null;
+  clientId: string | null;
+  status: string;
+  created: number;
+  linked: number;
+  updated: number;
+  ambiguous: number;
+  inactivated: number;
+  errorMessage: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
+};
+
+export type EntraSyncRunDetail = {
+  run: {
+    runId: string;
+    status: string;
+    runType: string;
+    startedAt: string;
+    completedAt: string | null;
+    totalTenants: number;
+    processedTenants: number;
+    succeededTenants: number;
+    failedTenants: number;
+    summary: Record<string, unknown>;
+  } | null;
+  tenantResults: EntraSyncRunTenantResult[];
 };
 
 export type EntraReconciliationQueueItem = {
@@ -285,6 +340,13 @@ export type EntraFieldSyncConfig = {
   phone: boolean;
   role: boolean;
   upn: boolean;
+  /**
+   * Mark a contact inactive when its Microsoft account is disabled. This has
+   * always happened; it was simply unconditional and unnamed in the UI, which
+   * made it the one destructive-feeling behaviour nobody had agreed to. It
+   * defaults on to preserve today's behaviour, and can now be turned off.
+   */
+  markInactiveWhenDisabled: boolean;
 };
 
 const DEFAULT_ENTRA_FIELD_SYNC_CONFIG: EntraFieldSyncConfig = {
@@ -293,6 +355,7 @@ const DEFAULT_ENTRA_FIELD_SYNC_CONFIG: EntraFieldSyncConfig = {
   phone: false,
   role: false,
   upn: false,
+  markInactiveWhenDisabled: true,
 };
 
 const ENTRA_FIELD_SYNC_ALIASES: Record<keyof EntraFieldSyncConfig, string[]> = {
@@ -301,6 +364,7 @@ const ENTRA_FIELD_SYNC_ALIASES: Record<keyof EntraFieldSyncConfig, string[]> = {
   phone: ['phone', 'phoneNumber', 'phone_number', 'mobilePhone', 'mobile_phone'],
   role: ['role', 'jobTitle', 'job_title'],
   upn: ['upn', 'userPrincipalName', 'user_principal_name'],
+  markInactiveWhenDisabled: ['markInactiveWhenDisabled', 'mark_inactive_when_disabled'],
 };
 
 function isTruthyFlagValue(value: unknown): boolean {
@@ -315,7 +379,15 @@ function normalizeEntraFieldSyncConfig(input: unknown): EntraFieldSyncConfig {
   const source = input as Record<string, unknown>;
   const normalized = { ...DEFAULT_ENTRA_FIELD_SYNC_CONFIG };
   (Object.keys(ENTRA_FIELD_SYNC_ALIASES) as Array<keyof EntraFieldSyncConfig>).forEach((key) => {
-    normalized[key] = ENTRA_FIELD_SYNC_ALIASES[key].some((alias) => isTruthyFlagValue(source[alias]));
+    const aliases = ENTRA_FIELD_SYNC_ALIASES[key];
+    const present = aliases.find((alias) => source[alias] !== undefined);
+    if (present === undefined) {
+      // Absent means "keep the default", which matters for the inactivation
+      // rule: settings rows written before it existed must keep behaving as
+      // they did, not silently switch it off.
+      return;
+    }
+    normalized[key] = aliases.some((alias) => isTruthyFlagValue(source[alias]));
   });
   return normalized;
 }
@@ -337,22 +409,17 @@ export const initiateEntraDirectOAuth = withAuth(async (user, { tenant }) => {
     return { success: false, error: 'Forbidden: insufficient permissions to configure Entra integration' } as const;
   }
 
-  const enabled = await isEntraUiEnabledForTenant({
-    tenantId: tenant,
-    userId: (user as { user_id?: string } | undefined)?.user_id,
-  });
-  if (!enabled) {
-    return flagDisabledResult<{ authUrl: string; state: string }>();
-  }
-
   const resolverModule = await import('@enterprise/lib/integrations/entra/auth/microsoftCredentialResolver');
   const credentials = await resolverModule.resolveMicrosoftCredentialsForTenant(tenant);
   if (!credentials) {
     return { success: false, error: 'Microsoft OAuth credentials are not configured for Entra direct connection' } as const;
   }
 
-  await clearStaleCredentialsForConnectionType(tenant, 'direct');
-
+  // Initiating OAuth is not connecting. The operator has not consented yet, the
+  // probe has not run, and either can still fail or be cancelled — at which
+  // point they are back on the Entra screen with whatever connection they had.
+  // Retiring the CIPP credentials here would have already broken it. The stale
+  // credentials are cleared by the callback, after the swap to Direct commits.
   const secretProvider = await getSecretProviderInstance();
   const baseUrl =
     process.env.NEXT_PUBLIC_BASE_URL ||
@@ -404,15 +471,6 @@ export const getEntraIntegrationStatus = withAuth(async (user, { tenant }) => {
     return { success: false, error: 'Forbidden: insufficient permissions to view Entra integration' } as const;
   }
 
-  const enabled = await isEntraUiEnabledForTenant({
-    tenantId: tenant,
-    userId: (user as { user_id?: string } | undefined)?.user_id,
-  });
-
-  if (!enabled) {
-    return flagDisabledResult<EntraStatusResponse>();
-  }
-
   const routeResult = await callEeRoute<EntraStatusResponse>({
     importFn: routes.route,
     method: 'GET',
@@ -448,23 +506,6 @@ export const updateEntraFieldSyncConfig = withAuth(async (
   const canUpdate = await hasPermission(user as any, 'system_settings', 'update');
   if (!canUpdate) {
     return { success: false, error: 'Forbidden: insufficient permissions to configure Entra integration' } as const;
-  }
-
-  const userId = (user as { user_id?: string } | undefined)?.user_id;
-  const enabled = await isEntraUiEnabledForTenant({
-    tenantId: tenant,
-    userId,
-  });
-  if (!enabled) {
-    return flagDisabledResult<EntraFieldSyncConfig>();
-  }
-
-  const fieldSyncEnabled = await isEntraFieldSyncEnabledForTenant({
-    tenantId: tenant,
-    userId,
-  });
-  if (!fieldSyncEnabled) {
-    return flagDisabledResult<EntraFieldSyncConfig>();
   }
 
   const normalizedConfig = normalizeEntraFieldSyncConfig(input);
@@ -504,14 +545,6 @@ export const connectEntraIntegration = withAuth(async (
     return { success: false, error: 'Forbidden: insufficient permissions to configure Entra integration' } as const;
   }
 
-  const enabled = await isEntraUiEnabledForTenant({
-    tenantId: tenant,
-    userId: (user as { user_id?: string } | undefined)?.user_id,
-  });
-  if (!enabled) {
-    return flagDisabledResult<{ status: string; connectionType: EntraConnectionType }>();
-  }
-
   await clearStaleCredentialsForConnectionType(tenant, input.connectionType);
 
   return callEeRoute<{ status: string; connectionType: EntraConnectionType }>({
@@ -519,6 +552,61 @@ export const connectEntraIntegration = withAuth(async (
     method: 'POST',
     body: input,
   });
+});
+
+/**
+ * Test a candidate CIPP credential without saving it. This is the same probe
+ * connectEntraCipp runs before persisting, exposed on its own so the connect
+ * dialog can offer Test separately from Save: an operator can find out the
+ * host or key is wrong without committing anything, and Save stays disabled
+ * until a test has passed.
+ */
+export const testEntraCippCredentials = withAuth(async (
+  user,
+  _ctx,
+  input: { baseUrl: string; apiToken: string }
+) => {
+  if (isClientPortalUser(user)) {
+    return { success: false, error: 'Forbidden' } as const;
+  }
+
+  const canUpdate = await hasPermission(user as any, 'system_settings', 'update');
+  if (!canUpdate) {
+    return { success: false, error: 'Forbidden: insufficient permissions to configure Entra integration' } as const;
+  }
+
+  const normalizedBaseUrl = normalizeCippBaseUrl(input.baseUrl);
+  if (!normalizedBaseUrl) {
+    return { success: false, error: 'CIPP base URL must be a valid http(s) URL.' } as const;
+  }
+
+  const apiToken = String(input.apiToken || '').trim();
+  if (!apiToken) {
+    return { success: false, error: 'CIPP API token is required.' } as const;
+  }
+
+  const { isFailedCippProbe, probeCippCredentials } = await import(
+    '@enterprise/lib/integrations/entra/providers/cipp/cippProbe'
+  );
+
+  const probe = await probeCippCredentials({ baseUrl: normalizedBaseUrl, apiToken });
+
+  if (isFailedCippProbe(probe)) {
+    return {
+      success: false,
+      error: probe.error || 'Unable to validate the CIPP connection.',
+    } as const;
+  }
+
+  return {
+    success: true,
+    data: {
+      valid: true as const,
+      checkedAt: probe.checkedAt,
+      tenantCountSample: probe.tenantCountSample,
+      baseUrl: normalizedBaseUrl,
+    },
+  } as const;
 });
 
 export const connectEntraCipp = withAuth(async (
@@ -535,14 +623,6 @@ export const connectEntraCipp = withAuth(async (
     return { success: false, error: 'Forbidden: insufficient permissions to configure Entra integration' } as const;
   }
 
-  const enabled = await isEntraUiEnabledForTenant({
-    tenantId: tenant,
-    userId: (user as { user_id?: string } | undefined)?.user_id,
-  });
-  if (!enabled) {
-    return flagDisabledResult<{ status: string; connectionType: EntraConnectionType; baseUrl: string }>();
-  }
-
   const normalizedBaseUrl = normalizeCippBaseUrl(input.baseUrl);
   if (!normalizedBaseUrl) {
     return { success: false, error: 'CIPP base URL must be a valid http(s) URL.' } as const;
@@ -553,45 +633,99 @@ export const connectEntraCipp = withAuth(async (
     return { success: false, error: 'CIPP API token is required.' } as const;
   }
 
-  await clearStaleCredentialsForConnectionType(tenant, 'cipp');
+  // Validate before persisting anything, and validate without side effects: the
+  // probe takes the candidate credential as an argument, so nothing is written
+  // to the secret store or to the connection row until CIPP has accepted it. A
+  // failed connect must leave no trace — neither a staged credential, nor a row
+  // claiming status 'connected', nor a validation_failed stamp on whatever
+  // connection the tenant already had working.
+  const { isFailedCippProbe, probeCippCredentials } = await import(
+    '@enterprise/lib/integrations/entra/providers/cipp/cippProbe'
+  );
+
+  const probe = await probeCippCredentials({ baseUrl: normalizedBaseUrl, apiToken });
+
+  if (isFailedCippProbe(probe)) {
+    return {
+      success: false,
+      error: probe.error || 'Unable to validate the CIPP connection.',
+    } as const;
+  }
 
   const cippSecretStore = await import('@enterprise/lib/integrations/entra/providers/cipp/cippSecretStore');
+
+  // The new row's token_secret_ref has to resolve to something, so the
+  // credential is written before the swap — but there is one slot per tenant,
+  // so writing it overwrites whatever CIPP connection the tenant already had.
+  // Hold the predecessor: if the swap fails, it goes back, and the tenant is
+  // left on the connection it came in with rather than on a row pointing at a
+  // credential we replaced.
+  const previousCredentials = await cippSecretStore
+    .getEntraCippCredentials(tenant)
+    .catch(() => null);
+
   await cippSecretStore.saveEntraCippCredentials(tenant, {
     baseUrl: normalizedBaseUrl,
     apiToken,
   });
 
   const { knex } = await createTenantKnex();
-  const db = tenantDb(knex, tenant);
-  const now = knex.fn.now();
   const userId = String((user as { user_id?: string } | undefined)?.user_id || '');
 
-  await db.table('entra_partner_connections')
-    .where({ is_active: true })
-    .update({
-      is_active: false,
-      status: 'disconnected',
-      disconnected_at: now,
-      updated_at: now,
-      updated_by: userId || null,
-    });
+  // Retiring the old connection and recording the new one is one swap, not two
+  // writes: a failure between them would leave the tenant disconnected from a
+  // connection that still works.
+  try {
+    await withTransaction(knex, async (trx) => {
+      const db = tenantDb(trx, tenant);
+      const now = trx.fn.now();
 
-  await db.table('entra_partner_connections').insert({
-    tenant,
-    connection_type: 'cipp',
-    status: 'connected',
-    is_active: true,
-    cipp_base_url: normalizedBaseUrl,
-    token_secret_ref: 'entra_cipp',
-    connected_at: now,
-    disconnected_at: null,
-    last_validated_at: null,
-    last_validation_error: knex.raw(`'{}'::jsonb`),
-    created_by: userId || null,
-    updated_by: userId || null,
-    created_at: now,
-    updated_at: now,
-  });
+      await db.table('entra_partner_connections')
+        .where({ is_active: true })
+        .update({
+          is_active: false,
+          status: 'disconnected',
+          disconnected_at: now,
+          updated_at: now,
+          updated_by: userId || null,
+        });
+
+      await db.table('entra_partner_connections').insert({
+        tenant,
+        connection_type: 'cipp',
+        status: 'connected',
+        is_active: true,
+        cipp_base_url: normalizedBaseUrl,
+        token_secret_ref: 'entra_cipp',
+        connected_at: now,
+        disconnected_at: null,
+        last_validated_at: now,
+        last_validation_error: trx.raw(`'{}'::jsonb`),
+        created_by: userId || null,
+        updated_by: userId || null,
+        created_at: now,
+        updated_at: now,
+      });
+    });
+  } catch (error: unknown) {
+    console.error('[Entra] Failed to record the CIPP connection; rolling the credential back', error);
+
+    if (previousCredentials) {
+      await cippSecretStore.saveEntraCippCredentials(tenant, previousCredentials).catch(() => undefined);
+    } else {
+      await cippSecretStore.clearEntraCippCredentials(tenant).catch(() => undefined);
+    }
+
+    return {
+      success: false,
+      error: 'Unable to record the CIPP connection. Your previous connection was left in place.',
+    } as const;
+  }
+
+  // Only now is the Direct token set stale. Until the swap committed, it was
+  // still backing the tenant's active connection, and a failed connect had to
+  // leave it working.
+  await clearStaleCredentialsForConnectionType(tenant, 'cipp');
 
   return {
     success: true,
@@ -613,14 +747,6 @@ export const validateEntraDirectConnection = withAuth(async (user, { tenant }) =
     return { success: false, error: 'Forbidden: insufficient permissions to validate Entra integration' } as const;
   }
 
-  const enabled = await isEntraUiEnabledForTenant({
-    tenantId: tenant,
-    userId: (user as { user_id?: string } | undefined)?.user_id,
-  });
-  if (!enabled) {
-    return flagDisabledResult<EntraDirectValidationResponse>();
-  }
-
   return callEeRoute<EntraDirectValidationResponse>({
     importFn: routes.validateDirectRoute,
     method: 'POST',
@@ -635,14 +761,6 @@ export const validateEntraCippConnection = withAuth(async (user, { tenant }) => 
   const canUpdate = await hasPermission(user as any, 'system_settings', 'update');
   if (!canUpdate) {
     return { success: false, error: 'Forbidden: insufficient permissions to validate Entra integration' } as const;
-  }
-
-  const enabled = await isEntraUiEnabledForTenant({
-    tenantId: tenant,
-    userId: (user as { user_id?: string } | undefined)?.user_id,
-  });
-  if (!enabled) {
-    return flagDisabledResult<EntraCippValidationResponse>();
   }
 
   return callEeRoute<EntraCippValidationResponse>({
@@ -661,14 +779,6 @@ export const disconnectEntraIntegration = withAuth(async (user, { tenant }) => {
     return { success: false, error: 'Forbidden: insufficient permissions to configure Entra integration' } as const;
   }
 
-  const enabled = await isEntraUiEnabledForTenant({
-    tenantId: tenant,
-    userId: (user as { user_id?: string } | undefined)?.user_id,
-  });
-  if (!enabled) {
-    return flagDisabledResult<{ status: string }>();
-  }
-
   return callEeRoute<{ status: string }>({
     importFn: routes.disconnectRoute,
     method: 'POST',
@@ -683,14 +793,6 @@ export const getEntraSyncRunHistory = withAuth(async (user, { tenant }, limit: n
   const canRead = await hasPermission(user as any, 'system_settings', 'read');
   if (!canRead) {
     return { success: false, error: 'Forbidden: insufficient permissions to view Entra integration' } as const;
-  }
-
-  const enabled = await isEntraUiEnabledForTenant({
-    tenantId: tenant,
-    userId: (user as { user_id?: string } | undefined)?.user_id,
-  });
-  if (!enabled) {
-    return flagDisabledResult<EntraSyncHistoryResponse>();
   }
 
   const safeLimit = Number.isFinite(limit) ? Math.max(1, Math.min(50, Math.floor(limit))) : 10;
@@ -714,6 +816,36 @@ export const getEntraSyncRunHistory = withAuth(async (user, { tenant }, limit: n
   });
 });
 
+/**
+ * One run in detail: what it did to each client.
+ *
+ * The history list carries tenant counts only, which is enough to say a run
+ * failed and not enough to say what it changed. The overview needs the second
+ * thing — "1,842 linked, 18 created, 4 made inactive" is the answer to "did
+ * last night's sync do anything alarming?".
+ */
+export const getEntraSyncRunDetail = withAuth(async (user, _ctx, runId: string) => {
+  if (isClientPortalUser(user)) {
+    return { success: false, error: 'Forbidden' } as const;
+  }
+
+  const canRead = await hasPermission(user as any, 'system_settings', 'read');
+  if (!canRead) {
+    return { success: false, error: 'Forbidden: insufficient permissions to view Entra integration' } as const;
+  }
+
+  const safeRunId = String(runId || '').trim();
+  if (!safeRunId) {
+    return { success: false, error: 'A run id is required.' } as const;
+  }
+
+  return callEeRoute<EntraSyncRunDetail>({
+    importFn: routes.syncRunsRoute,
+    method: 'GET',
+    query: { runId: safeRunId },
+  });
+});
+
 export const getEntraReconciliationQueue = withAuth(async (user, { tenant }, limit: number = 50) => {
   if (isClientPortalUser(user)) {
     return { success: false, error: 'Forbidden' } as const;
@@ -724,22 +856,6 @@ export const getEntraReconciliationQueue = withAuth(async (user, { tenant }, lim
     return { success: false, error: 'Forbidden: insufficient permissions to view Entra integration' } as const;
   }
 
-  const userId = (user as { user_id?: string } | undefined)?.user_id;
-  const enabled = await isEntraUiEnabledForTenant({
-    tenantId: tenant,
-    userId,
-  });
-  if (!enabled) {
-    return flagDisabledResult<EntraReconciliationQueueResponse>();
-  }
-
-  const queueFlagEnabled = await isEntraAmbiguousQueueEnabledForTenant({
-    tenantId: tenant,
-    userId,
-  });
-  if (!queueFlagEnabled) {
-    return flagDisabledResult<EntraReconciliationQueueResponse>();
-  }
 
   const safeLimit = Number.isFinite(limit) ? Math.max(1, Math.min(200, Math.floor(limit))) : 50;
   return callEeRoute<EntraReconciliationQueueResponse>({
@@ -763,22 +879,6 @@ export const resolveEntraQueueToExisting = withAuth(async (
     return { success: false, error: 'Forbidden: insufficient permissions to resolve queue items' } as const;
   }
 
-  const userId = (user as { user_id?: string } | undefined)?.user_id;
-  const enabled = await isEntraUiEnabledForTenant({
-    tenantId: tenant,
-    userId,
-  });
-  if (!enabled) {
-    return flagDisabledResult<EntraQueueResolutionResponse>();
-  }
-
-  const queueFlagEnabled = await isEntraAmbiguousQueueEnabledForTenant({
-    tenantId: tenant,
-    userId,
-  });
-  if (!queueFlagEnabled) {
-    return flagDisabledResult<EntraQueueResolutionResponse>();
-  }
 
   return callEeRoute<EntraQueueResolutionResponse>({
     importFn: routes.resolveExistingRoute,
@@ -801,25 +901,35 @@ export const resolveEntraQueueToNew = withAuth(async (
     return { success: false, error: 'Forbidden: insufficient permissions to resolve queue items' } as const;
   }
 
-  const userId = (user as { user_id?: string } | undefined)?.user_id;
-  const enabled = await isEntraUiEnabledForTenant({
-    tenantId: tenant,
-    userId,
-  });
-  if (!enabled) {
-    return flagDisabledResult<EntraQueueResolutionResponse>();
-  }
-
-  const queueFlagEnabled = await isEntraAmbiguousQueueEnabledForTenant({
-    tenantId: tenant,
-    userId,
-  });
-  if (!queueFlagEnabled) {
-    return flagDisabledResult<EntraQueueResolutionResponse>();
-  }
 
   return callEeRoute<EntraQueueResolutionResponse>({
     importFn: routes.resolveNewRoute,
+    method: 'POST',
+    body: input,
+  });
+});
+
+/**
+ * Dismiss an ambiguous match. The queue could only ever grow before, which is
+ * why nobody opened it; a dismissal is recorded with actor, time and reason
+ * rather than deleting the row.
+ */
+export const dismissEntraQueueItem = withAuth(async (
+  user,
+  _ctx,
+  input: { queueItemId: string; reason?: string }
+) => {
+  if (isClientPortalUser(user)) {
+    return { success: false, error: 'Forbidden' } as const;
+  }
+
+  const canUpdate = await hasPermission(user as any, 'system_settings', 'update');
+  if (!canUpdate) {
+    return { success: false, error: 'Forbidden: insufficient permissions to resolve queue items' } as const;
+  }
+
+  return callEeRoute<{ queueItemId: string; status: string }>({
+    importFn: routes.dismissQueueItemRoute,
     method: 'POST',
     body: input,
   });
@@ -833,14 +943,6 @@ export const discoverEntraManagedTenants = withAuth(async (user, { tenant }) => 
   const canUpdate = await hasPermission(user as any, 'system_settings', 'update');
   if (!canUpdate) {
     return { success: false, error: 'Forbidden: insufficient permissions to configure Entra integration' } as const;
-  }
-
-  const enabled = await isEntraUiEnabledForTenant({
-    tenantId: tenant,
-    userId: (user as { user_id?: string } | undefined)?.user_id,
-  });
-  if (!enabled) {
-    return flagDisabledResult<{ discoveredTenantCount: number; discoveredTenants: unknown[] }>();
   }
 
   return callEeRoute<{ discoveredTenantCount: number; discoveredTenants: unknown[] }>({
@@ -857,14 +959,6 @@ export const getEntraMappingPreview = withAuth(async (user, { tenant }) => {
   const canRead = await hasPermission(user as any, 'system_settings', 'read');
   if (!canRead) {
     return { success: false, error: 'Forbidden: insufficient permissions to view Entra integration' } as const;
-  }
-
-  const enabled = await isEntraUiEnabledForTenant({
-    tenantId: tenant,
-    userId: (user as { user_id?: string } | undefined)?.user_id,
-  });
-  if (!enabled) {
-    return flagDisabledResult<EntraMappingPreviewResponse>();
   }
 
   return callEeRoute<EntraMappingPreviewResponse>({
@@ -885,14 +979,6 @@ export const confirmEntraMappings = withAuth(async (
   const canUpdate = await hasPermission(user as any, 'system_settings', 'update');
   if (!canUpdate) {
     return { success: false, error: 'Forbidden: insufficient permissions to configure Entra integration' } as const;
-  }
-
-  const enabled = await isEntraUiEnabledForTenant({
-    tenantId: tenant,
-    userId: (user as { user_id?: string } | undefined)?.user_id,
-  });
-  if (!enabled) {
-    return flagDisabledResult<{ confirmedMappings: number }>();
   }
 
   const confirmResult = await callEeRoute<{ confirmedMappings: number }>({
@@ -942,14 +1028,6 @@ export const skipEntraTenantMapping = withAuth(async (
   const canUpdate = await hasPermission(user as any, 'system_settings', 'update');
   if (!canUpdate) {
     return { success: false, error: 'Forbidden: insufficient permissions to configure Entra integration' } as const;
-  }
-
-  const enabled = await isEntraUiEnabledForTenant({
-    tenantId: tenant,
-    userId: (user as { user_id?: string } | undefined)?.user_id,
-  });
-  if (!enabled) {
-    return flagDisabledResult<{ managedTenantId: string; mappingState: string }>();
   }
 
   const managedTenantId = String(input.managedTenantId || '').trim();
@@ -1011,14 +1089,6 @@ export const importEntraTenantAsClient = withAuth(async (
     return { success: false, error: 'Forbidden: insufficient permissions to configure Entra integration' } as const;
   }
 
-  const enabled = await isEntraUiEnabledForTenant({
-    tenantId: tenant,
-    userId: (user as { user_id?: string } | undefined)?.user_id,
-  });
-  if (!enabled) {
-    return flagDisabledResult<{ managedTenantId: string; }>();
-  }
-
   const { knex } = await createTenantKnex();
 
   const managedTenant = await tenantDb(knex, tenant).table('entra_managed_tenants')
@@ -1076,14 +1146,6 @@ export const unmapEntraTenant = withAuth(async (
     return { success: false, error: 'Forbidden: insufficient permissions to configure Entra integration' } as const;
   }
 
-  const enabled = await isEntraUiEnabledForTenant({
-    tenantId: tenant,
-    userId: (user as { user_id?: string } | undefined)?.user_id,
-  });
-  if (!enabled) {
-    return flagDisabledResult<{ managedTenantId: string; status: string }>();
-  }
-
   return callEeRoute<{ managedTenantId: string; status: string }>({
     importFn: routes.mappingsUnmapRoute,
     method: 'POST',
@@ -1105,14 +1167,6 @@ export const remapEntraTenant = withAuth(async (
     return { success: false, error: 'Forbidden: insufficient permissions to configure Entra integration' } as const;
   }
 
-  const enabled = await isEntraUiEnabledForTenant({
-    tenantId: tenant,
-    userId: (user as { user_id?: string } | undefined)?.user_id,
-  });
-  if (!enabled) {
-    return flagDisabledResult<{ managedTenantId: string; targetClientId: string; status: string }>();
-  }
-
   return callEeRoute<{ managedTenantId: string; targetClientId: string; status: string }>({
     importFn: routes.mappingsRemapRoute,
     method: 'POST',
@@ -1120,10 +1174,50 @@ export const remapEntraTenant = withAuth(async (
   });
 });
 
-export const startEntraSync = withAuth(async (
+/**
+ * The confirmed tenant-to-client mappings, named. Read-gated: it exposes client
+ * names and directory sizes, not credentials.
+ */
+/**
+ * Whether the current user may start an Entra sync.
+ *
+ * The per-client "Sync Entra Now" control rendered for anyone who could see the
+ * client, while the server requires system_settings:update — so a technician
+ * pressed a visible button and got a Forbidden toast. The UI asks first now.
+ */
+export const canManageEntraIntegration = withAuth(async (user, _ctx) => {
+  if (isClientPortalUser(user)) {
+    return false;
+  }
+
+  return hasPermission(user as any, 'system_settings', 'update');
+});
+
+export const getEntraSyncSchedule = withAuth(async (user, _ctx) => {
+  if (isClientPortalUser(user)) {
+    return { success: false, error: 'Forbidden' } as const;
+  }
+
+  const canRead = await hasPermission(user as any, 'system_settings', 'read');
+  if (!canRead) {
+    return { success: false, error: 'Forbidden: insufficient permissions to view Entra integration' } as const;
+  }
+
+  return callEeRoute<EntraSyncScheduleSettings>({
+    importFn: routes.scheduleRoute,
+    method: 'GET',
+  });
+});
+
+/**
+ * Turn automatic sync on or off and set its cadence. The settings row has
+ * existed since phase 1 and nothing ever wrote it, which is why the schedule
+ * was unsettable and Pause did not exist.
+ */
+export const saveEntraSyncSchedule = withAuth(async (
   user,
-  { tenant },
-  input: { scope: EntraSyncScope; clientId?: string }
+  _ctx,
+  input: { syncEnabled: boolean; syncIntervalMinutes: number }
 ) => {
   if (isClientPortalUser(user)) {
     return { success: false, error: 'Forbidden' } as const;
@@ -1134,12 +1228,85 @@ export const startEntraSync = withAuth(async (
     return { success: false, error: 'Forbidden: insufficient permissions to configure Entra integration' } as const;
   }
 
-  const enabled = await isEntraUiEnabledForTenant({
-    tenantId: tenant,
-    userId: (user as { user_id?: string } | undefined)?.user_id,
+  return callEeRoute<EntraSyncScheduleSettings>({
+    importFn: routes.scheduleRoute,
+    method: 'POST',
+    body: input,
   });
-  if (!enabled) {
-    return flagDisabledResult<{ accepted: boolean; scope: EntraSyncScope; runId: string | null }>();
+});
+
+export const getEntraConfirmedMappings = withAuth(async (user, _ctx) => {
+  if (isClientPortalUser(user)) {
+    return { success: false, error: 'Forbidden' } as const;
+  }
+
+  const canRead = await hasPermission(user as any, 'system_settings', 'read');
+  if (!canRead) {
+    return { success: false, error: 'Forbidden: insufficient permissions to view Entra integration' } as const;
+  }
+
+  return callEeRoute<{ mappings: EntraConfirmedMapping[] }>({
+    importFn: routes.mappingsRoute,
+    method: 'GET',
+  });
+});
+
+/**
+ * Preview what a sync would do to one mapped client, without doing any of it.
+ *
+ * The preview runs the real reconciliation with writes disabled, so its counts
+ * are the counts the following sync will report on unchanged data. It is an
+ * update-gated action because it reads the customer directory and records an
+ * audit row, even though it changes no contact.
+ */
+export const runEntraPreflight = withAuth(async (
+  user,
+  _ctx,
+  input: {
+    managedTenantId?: string;
+    clientId?: string;
+    sampleLimit?: number;
+    /** Preview these rules instead of the stored ones. */
+    fieldSyncConfig?: EntraFieldSyncConfig;
+  }
+) => {
+  if (isClientPortalUser(user)) {
+    return { success: false, error: 'Forbidden' } as const;
+  }
+
+  const canUpdate = await hasPermission(user as any, 'system_settings', 'update');
+  if (!canUpdate) {
+    return { success: false, error: 'Forbidden: insufficient permissions to configure Entra integration' } as const;
+  }
+
+  if (!input.managedTenantId && !input.clientId) {
+    return { success: false, error: 'A preflight needs a mapped tenant or client to preview.' } as const;
+  }
+
+  return callEeRoute<EntraPreflightResponse>({
+    importFn: routes.syncPreflightRoute,
+    method: 'POST',
+    body: {
+      managedTenantId: input.managedTenantId,
+      clientId: input.clientId,
+      sampleLimit: input.sampleLimit,
+      fieldSyncConfig: input.fieldSyncConfig,
+    },
+  });
+});
+
+export const startEntraSync = withAuth(async (
+  user,
+  { tenant },
+  input: { scope: EntraSyncScope; clientId?: string; managedTenantId?: string }
+) => {
+  if (isClientPortalUser(user)) {
+    return { success: false, error: 'Forbidden' } as const;
+  }
+
+  const canUpdate = await hasPermission(user as any, 'system_settings', 'update');
+  if (!canUpdate) {
+    return { success: false, error: 'Forbidden: insufficient permissions to configure Entra integration' } as const;
   }
 
   if (input.scope === 'all-tenants') {

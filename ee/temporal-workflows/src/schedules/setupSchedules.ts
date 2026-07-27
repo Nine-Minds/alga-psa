@@ -2,7 +2,8 @@ import { Client, Connection, ScheduleOverlapPolicy } from '@temporalio/client';
 import { createLogger, format, transports } from 'winston';
 import { tenantDb } from '@alga-psa/db';
 import { getAdminConnection } from '@alga-psa/db/admin.js';
-import { ADD_ONS } from '@alga-psa/types';
+import { TIER_FEATURES, tierHasFeature } from '@alga-psa/types';
+import { resolveTenantTier } from '@alga-psa/licensing';
 import { seedNinjaOneProactiveRefreshFromStoredCredentials } from '@ee/lib/integrations/ninjaone/proactiveRefresh';
 import {
   applianceCheckInWorkflow,
@@ -79,7 +80,7 @@ interface EntraScheduleConfigRow {
   syncEnabled: boolean;
   syncIntervalMinutes: number;
   hasActiveConnection: boolean;
-  hasEnterpriseAddOn: boolean;
+  hasEntraTier: boolean;
 }
 
 interface NinjaOneBackfillRow {
@@ -293,15 +294,6 @@ async function loadEntraScheduleConfigs(): Promise<EntraScheduleConfigRow[]> {
       join.andOn(knex.raw('c.is_active = true'));
     },
   });
-  db.tenantJoin(query, 'tenant_addons as a', 's.tenant', 'a.tenant', {
-    type: 'left',
-    on: (join) => {
-      join
-        .andOn(knex.raw('a.addon_key = ?', [ADD_ONS.ENTERPRISE]))
-        .andOn(knex.raw('(a.expires_at IS NULL OR a.expires_at > now())'));
-    },
-  });
-
   const rows = await query
     .join('tenants as t', 's.tenant', 't.tenant')
     .whereNull('t.suspended_at')
@@ -310,16 +302,37 @@ async function loadEntraScheduleConfigs(): Promise<EntraScheduleConfigRow[]> {
       's.sync_enabled as syncEnabled',
       's.sync_interval_minutes as syncIntervalMinutes',
       'c.connection_id as activeConnectionId',
-      'a.addon_key as activeEnterpriseAddOn',
     ]);
 
-  return rows.map((row: any) => ({
-    tenantId: String(row.tenantId),
-    syncEnabled: Boolean(row.syncEnabled),
-    syncIntervalMinutes: normalizeIntervalMinutes(row.syncIntervalMinutes),
-    hasActiveConnection: Boolean(row.activeConnectionId),
-    hasEnterpriseAddOn: Boolean(row.activeEnterpriseAddOn),
+  // Entra sync is tier-gated (Pro+), matching requireEntraAccess in the API
+  // guard. Resolving the tier here rather than joining an add-on table is the
+  // whole point: the previous add-on join silently deleted the schedules of
+  // Pro tenants that the UI and the API both let sync.
+  const configs = await Promise.all(rows.map(async (row: any) => {
+    const tenantId = String(row.tenantId);
+    let hasEntraTier: boolean;
+    try {
+      hasEntraTier = tierHasFeature(await resolveTenantTier(tenantId), TIER_FEATURES.ENTRA_SYNC);
+    } catch (error: any) {
+      // A transient tier lookup failure must not delete a working schedule, so
+      // drop the tenant from this pass entirely and retry on the next boot.
+      logger.warn(
+        `Skipping Entra schedule reconciliation for tenant: ${error?.message || 'unknown error'}`,
+        { tenantId }
+      );
+      return null;
+    }
+
+    return {
+      tenantId,
+      syncEnabled: Boolean(row.syncEnabled),
+      syncIntervalMinutes: normalizeIntervalMinutes(row.syncIntervalMinutes),
+      hasActiveConnection: Boolean(row.activeConnectionId),
+      hasEntraTier,
+    };
   }));
+
+  return configs.filter((config): config is EntraScheduleConfigRow => config !== null);
 }
 
 export async function setupSchedules() {
@@ -445,7 +458,7 @@ export async function setupSchedules() {
     const entraConfigs = await loadEntraScheduleConfigs();
     for (const config of entraConfigs) {
       const tenantScheduleId = `${ENTRA_SCHEDULE_ID_PREFIX}:${config.tenantId}`;
-      if (!config.syncEnabled || !config.hasActiveConnection || !config.hasEnterpriseAddOn) {
+      if (!config.syncEnabled || !config.hasActiveConnection || !config.hasEntraTier) {
         await deleteScheduleIfExists(client, tenantScheduleId);
         continue;
       }

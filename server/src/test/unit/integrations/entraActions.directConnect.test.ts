@@ -1,11 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+// The Entra actions are EE-only and dispatch to EE route handlers; connectEntraCipp
+// now validates through one before it persists anything, so the suite has to run
+// as EE. Set before the dynamic imports below, which read this at module scope.
+process.env.EDITION = 'ee';
+
 const hasPermissionMock = vi.fn();
 const featureFlagIsEnabledMock = vi.fn();
 const resolveMicrosoftCredentialsForTenantMock = vi.fn();
 const clearEntraCippCredentialsMock = vi.fn();
 const saveEntraCippCredentialsMock = vi.fn();
+const getEntraCippCredentialsMock = vi.fn();
+const validateCippRoutePostMock = vi.fn();
 const clearEntraDirectTokenSetMock = vi.fn();
+const probeCippCredentialsMock = vi.fn();
 const getSecretProviderInstanceMock = vi.fn();
 const createTenantKnexMock = vi.fn();
 const discoveryRoutePostMock = vi.fn();
@@ -40,9 +48,17 @@ vi.mock('@enterprise/lib/integrations/entra/auth/microsoftCredentialResolver', (
   resolveMicrosoftCredentialsForTenant: resolveMicrosoftCredentialsForTenantMock,
 }));
 
+vi.mock('@enterprise/lib/integrations/entra/providers/cipp/cippProbe', () => ({
+  probeCippCredentials: probeCippCredentialsMock,
+  // The action narrows through the guard rather than `!probe.valid`, because
+  // ee/server compiles without strictNullChecks where that does not narrow.
+  isFailedCippProbe: (probe: { valid?: boolean }) => probe.valid === false,
+}));
+
 vi.mock('@enterprise/lib/integrations/entra/providers/cipp/cippSecretStore', () => ({
   clearEntraCippCredentials: clearEntraCippCredentialsMock,
   saveEntraCippCredentials: saveEntraCippCredentialsMock,
+  getEntraCippCredentials: getEntraCippCredentialsMock,
 }));
 
 vi.mock('@enterprise/lib/integrations/entra/auth/tokenStore', () => ({
@@ -59,6 +75,8 @@ vi.mock('@alga-psa/core/secrets', async (importOriginal) => {
 
 vi.mock('@alga-psa/db', () => ({
   createTenantKnex: createTenantKnexMock,
+  withTransaction: async (knexOrTrx: any, callback: (trx: any) => Promise<unknown>) =>
+    callback(knexOrTrx),
   tenantDb: (conn: any, tenant: string) => ({
     table: (t: string) => {
       const builder = conn(t);
@@ -94,6 +112,7 @@ vi.mock('@alga-psa/integrations/entra/routes/entry', () => ({
     route: async () => ({ GET: statusRouteGetMock }),
     discoveryRoute: async () => ({ POST: discoveryRoutePostMock }),
     mappingsConfirmRoute: async () => ({ POST: confirmMappingsRoutePostMock }),
+    validateCippRoute: async () => ({ POST: validateCippRoutePostMock }),
   },
 }));
 
@@ -109,6 +128,22 @@ describe('Entra direct connect action permissions', () => {
     resolveMicrosoftCredentialsForTenantMock.mockReset();
     clearEntraCippCredentialsMock.mockReset();
     saveEntraCippCredentialsMock.mockReset();
+    getEntraCippCredentialsMock.mockReset();
+    getEntraCippCredentialsMock.mockResolvedValue(null);
+    probeCippCredentialsMock.mockReset();
+    probeCippCredentialsMock.mockResolvedValue({
+      valid: true,
+      checkedAt: '2026-07-25T00:00:00.000Z',
+      tenantCountSample: 1,
+      endpoint: 'https://cipp.example.com/api/listtenants',
+    });
+    validateCippRoutePostMock.mockReset();
+    validateCippRoutePostMock.mockResolvedValue(
+      new Response(JSON.stringify({ success: true, data: { valid: true } }), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      })
+    );
     clearEntraDirectTokenSetMock.mockReset();
     getSecretProviderInstanceMock.mockReset();
     createTenantKnexMock.mockReset();
@@ -213,26 +248,6 @@ describe('Entra direct connect action permissions', () => {
       'system_settings',
       'update'
     );
-  });
-
-  it('T139: disabling entra-integration-ui hides settings reads without touching persisted Entra data paths', async () => {
-    hasPermissionMock.mockResolvedValue(true);
-    featureFlagIsEnabledMock.mockResolvedValue(false);
-
-    const { getEntraIntegrationStatus } = await import(
-      '@alga-psa/integrations/actions/integrations/entraActions'
-    );
-    const result = await getEntraIntegrationStatus(
-      { user_id: 'user-139', user_type: 'internal' } as any,
-      { tenant: 'tenant-139' }
-    );
-
-    expect(result).toEqual({
-      success: false,
-      error: 'Microsoft Entra integration is disabled for this tenant.',
-    });
-    expect(statusRouteGetMock).not.toHaveBeenCalled();
-    expect(createTenantKnexMock).not.toHaveBeenCalled();
   });
 
   it('T032: direct connect initiation returns OAuth URL with encoded nonce/state', async () => {
@@ -362,7 +377,7 @@ describe('Entra direct connect action permissions', () => {
     expect(Object.values(insertedRow)).not.toContain('cipp-token-37');
   });
 
-  it('T041: switching direct<->CIPP clears stale credentials from the previous mode', async () => {
+  it('T041: switching direct<->CIPP clears stale credentials once the swap has committed, not before', async () => {
     hasPermissionMock.mockResolvedValue(true);
     featureFlagIsEnabledMock.mockResolvedValue(true);
 
@@ -384,7 +399,11 @@ describe('Entra direct connect action permissions', () => {
       { user_id: 'user-41a', user_type: 'internal' } as any,
       { tenant: 'tenant-41a' }
     );
-    expect(clearEntraCippCredentialsMock).toHaveBeenCalledWith('tenant-41a');
+    // Handing the operator an authorize URL is not connecting them. They can
+    // still cancel at the Microsoft consent screen, or fail the probe in the
+    // callback, and land back on a tenant whose CIPP connection has to still
+    // work. The callback retires it after the swap to Direct commits.
+    expect(clearEntraCippCredentialsMock).not.toHaveBeenCalled();
 
     clearEntraDirectTokenSetMock.mockResolvedValue(undefined);
     saveEntraCippCredentialsMock.mockResolvedValue(undefined);

@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const requireEntraUiFlagEnabledMock = vi.fn();
+const requireEntraAccessMock = vi.fn();
 const clearEntraDirectTokenSetMock = vi.fn();
 const clearEntraCippCredentialsMock = vi.fn();
 const disconnectActiveEntraConnectionMock = vi.fn();
 
 vi.mock('@ee/app/api/integrations/entra/_guards', () => ({
-  requireEntraUiFlagEnabled: requireEntraUiFlagEnabledMock,
+  requireEntraAccess: requireEntraAccessMock,
 }));
 
 vi.mock('@ee/lib/integrations/entra/auth/tokenStore', () => ({
@@ -24,14 +24,14 @@ vi.mock('@ee/lib/integrations/entra/connectionRepository', () => ({
 describe('disconnect Entra route', () => {
   beforeEach(() => {
     vi.resetModules();
-    requireEntraUiFlagEnabledMock.mockReset();
+    requireEntraAccessMock.mockReset();
     clearEntraDirectTokenSetMock.mockReset();
     clearEntraCippCredentialsMock.mockReset();
     disconnectActiveEntraConnectionMock.mockReset();
   });
 
   it('T040: clears provider secrets and marks active connection disconnected', async () => {
-    requireEntraUiFlagEnabledMock.mockResolvedValue({
+    requireEntraAccessMock.mockResolvedValue({
       tenantId: 'tenant-40',
       userId: 'user-40',
     });

@@ -11,6 +11,8 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import CustomTabs, { TabContent } from '@alga-psa/ui/components/CustomTabs';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
+import { ENTRA_SYNC_FEATURE_FLAG } from './integrationsFeatureFlags';
 import {
   Building2,
   Monitor,
@@ -30,7 +32,6 @@ import { CalendarEnterpriseIntegrationSettings } from './CalendarEnterpriseInteg
 import { TeamsEnterpriseIntegrationSettings } from './TeamsEnterpriseIntegrationSettings';
 import dynamic from 'next/dynamic';
 import Spinner from '@alga-psa/ui/components/Spinner';
-import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getVisibleIntegrationCategoryIds,
@@ -57,7 +58,7 @@ const StripeConnectionSettings = dynamic(
   }
 );
 
-import { EntraIntegrationSettings } from '@alga-psa/integrations/entra/components/entry';
+import { EntraIntegrationSummaryCard } from '@alga-psa/integrations/entra/components/entry';
 import { useHuduIntegrationEnabled } from './useHuduIntegrationEnabled';
 
 // Dynamic import for Hudu (EE feature) — `@enterprise` resolves to the real EE
@@ -143,10 +144,12 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
 }) => {
   const { t } = useTranslation('msp/settings');
   const isEEAvailable = isCalendarEnterpriseEdition();
-  const entraUiFlag = useFeatureFlag('entra-integration-ui', { defaultValue: false });
-  const isEntraUiEnabled = isEEAvailable && entraUiFlag.enabled;
   const huduGate = useHuduIntegrationEnabled();
   const isHuduEnabled = huduGate.enabled;
+  // Gates the Identity tab only. Off while the flag is still loading and off if
+  // PostHog cannot be reached, so the tab appears once it is known to be on
+  // rather than flashing and withdrawing.
+  const { enabled: isEntraSyncFlagEnabled } = useFeatureFlag(ENTRA_SYNC_FEATURE_FLAG);
   const searchParams = useSearchParams();
   const categoryParam = searchParams?.get('category');
   const visibleCategoryIds = useMemo(() => getVisibleIntegrationCategoryIds(isEEAvailable), [isEEAvailable]);
@@ -286,12 +289,17 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
       description: t('integrations.categories.identity.description'),
       icon: Shield,
       integrations: [
-        ...(isEntraUiEnabled ? [{
+        // Dropping the entry empties the category, and the existing
+        // "filter out empty categories" rule below takes the tab with it —
+        // which is also why a future non-Entra identity integration would
+        // keep the tab rather than inherit this flag.
+        ...(isEEAvailable && isEntraSyncFlagEnabled ? [{
           id: 'entra',
           name: t('integrations.items.entra.name'),
           description: t('integrations.items.entra.description'),
+          // Entra owns its own route now; the category keeps a summary and a way in.
           component: canUseEntraSync
-            ? () => <EntraIntegrationSettings canUseCipp={canUseCipp} />
+            ? () => <EntraIntegrationSummaryCard />
             : () => (
                 <AddOnRequiredNotice
                   featureName={t('integrations.items.entra.name')}
@@ -318,7 +326,7 @@ const IntegrationsSettingsPage: React.FC<IntegrationsSettingsPageProps> = ({
         }] : []),
       ],
     },
-  ], [canUseCipp, canUseEntraSync, canUseTeams, isEEAvailable, isEntraUiEnabled, isHuduEnabled, t]);
+  ], [canUseCipp, canUseEntraSync, canUseTeams, isEEAvailable, isEntraSyncFlagEnabled, isHuduEnabled, t]);
 
   // Filter out empty categories
   const visibleCategories = categories.filter((category) => {

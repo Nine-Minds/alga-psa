@@ -1,0 +1,447 @@
+import type { BadgeVariant } from '@alga-psa/ui/components/Badge';
+import type {
+  EntraConfirmedMapping,
+  EntraStatusResponse,
+  EntraSyncHistoryRun,
+  EntraSyncScheduleSettings,
+} from '@alga-psa/integrations/actions';
+import { entraClientHealth } from './entraClientHealth';
+
+/**
+ * What the console decides without the DOM: which tab a URL means, and what
+ * deserves attention on the Overview. Kept pure so the attention rules — the
+ * part an operator trusts to be complete — are testable directly.
+ */
+
+export const ENTRA_CONSOLE_TABS = [
+  'overview',
+  'schedule',
+  'clients',
+  'field-rules',
+  'review-queue',
+  'history',
+  'connection',
+] as const;
+
+export type EntraConsoleTab = (typeof ENTRA_CONSOLE_TABS)[number];
+
+export const DEFAULT_ENTRA_CONSOLE_TAB: EntraConsoleTab = 'overview';
+
+export function parseEntraConsoleTab(value: string | null | undefined): EntraConsoleTab {
+  const candidate = (value || '').trim().toLowerCase();
+  return (ENTRA_CONSOLE_TABS as readonly string[]).includes(candidate)
+    ? (candidate as EntraConsoleTab)
+    : DEFAULT_ENTRA_CONSOLE_TAB;
+}
+
+/**
+ * The cadences automatic sync offers. Lives here because two surfaces need it:
+ * the schedule tab builds its select from it, and the overview rail has to know
+ * whether a stored interval is one of them before it can name it in a sentence.
+ */
+export const ENTRA_SYNC_INTERVAL_CHOICES = [60, 240, 720, 1440, 10080] as const;
+
+export function isEntraSyncIntervalChoice(minutes: number | null | undefined): boolean {
+  return (ENTRA_SYNC_INTERVAL_CHOICES as readonly number[]).includes(minutes ?? -1);
+}
+
+export type EntraAttentionSeverity = 'blocking' | 'warning' | 'info';
+
+export interface EntraAttentionItem {
+  id: string;
+  severity: EntraAttentionSeverity;
+  titleKey: string;
+  /**
+   * The line under the title: what it means, or which clients it is about. An
+   * attention list that only states counts makes the operator open every item
+   * to find out whether it is one problem or five.
+   */
+  detailKey?: string;
+  /**
+   * A detail that is not a translated string but a value from the server — the
+   * validation error the connection actually returned, say. Wins over
+   * detailKey, and keeps the locale files free of bare-placeholder entries
+   * whose whole content is "{{reason}}".
+   */
+  detail?: string;
+  /** The button's own words — "Fix connection" beats a row of "Open"s. */
+  actionKey: string;
+  /** Interpolation values for the title and detail, already resolved to primitives. */
+  values?: Record<string, string | number>;
+  /** Tab to open when the operator acts on this. */
+  tab: EntraConsoleTab;
+}
+
+/** At most three names, then a count — a list of 39 is not a summary. */
+const NAMED_CLIENT_LIMIT = 3;
+
+function namedClients(mappings: EntraConfirmedMapping[]): string {
+  const names = mappings
+    .map((mapping) => mapping.clientName || mapping.displayName || mapping.primaryDomain)
+    .filter((name): name is string => Boolean(name));
+
+  if (names.length <= NAMED_CLIENT_LIMIT) {
+    return names.join(', ');
+  }
+  return `${names.slice(0, NAMED_CLIENT_LIMIT).join(', ')} +${names.length - NAMED_CLIENT_LIMIT}`;
+}
+
+export interface BuildEntraAttentionInput {
+  status: EntraStatusResponse | null;
+  mappings: EntraConfirmedMapping[];
+  reviewQueueCount: number;
+  /** The queue read came back full, so the count is a floor, not a total. */
+  reviewQueueAtLimit?: boolean;
+  schedule: EntraSyncScheduleSettings | null;
+}
+
+/**
+ * The reason the connection failed, as the server recorded it.
+ *
+ * `last_validation_error` is written as a snapshot with a `message`, and until
+ * now the only thing that ever read it was the JSON export blob — so the
+ * screen said "Fix the connection first" and withheld the one field that
+ * decides whether to rotate the credential, fix the CIPP server, or wait.
+ */
+function validationFailureReason(status: EntraStatusResponse | null): string | undefined {
+  const raw = status?.lastValidationError;
+  if (!raw || typeof raw !== 'object') return undefined;
+  const message = (raw as { message?: unknown }).message;
+  return typeof message === 'string' && message.trim() ? message.trim() : undefined;
+}
+
+/**
+ * One question, one answer. "Which clients are in trouble" is settled by
+ * `entraClientHealth`, the module written after the same expression was found
+ * in three places disagreeing — including its verdict that `partial` is a
+ * failure, because that is how the backend's notification rules count it.
+ */
+export function failingEntraClients(
+  mappings: EntraConfirmedMapping[]
+): EntraConfirmedMapping[] {
+  return mappings.filter((mapping) => {
+    const health = entraClientHealth(mapping);
+    return health === 'failed' || health === 'partial';
+  });
+}
+
+/**
+ * The Overview's attention list, worst first.
+ *
+ * Failing clients are grouped into one item rather than one per client: a
+ * broken connection produces N identical failures, and a list that repeats the
+ * same root cause N times is a list nobody reads to the end.
+ */
+export function buildEntraAttentionItems(input: BuildEntraAttentionInput): EntraAttentionItem[] {
+  const items: EntraAttentionItem[] = [];
+
+  const connectionBroken = Boolean(input.status && input.status.status !== 'connected');
+  if (connectionBroken) {
+    items.push({
+      id: 'connection',
+      severity: 'blocking',
+      titleKey: 'integrations.entra.console.attention.connection',
+      detailKey: 'integrations.entra.console.attention.connectionDetail',
+      detail: validationFailureReason(input.status),
+      actionKey: 'integrations.entra.console.attention.actions.fixConnection',
+      tab: 'connection',
+    });
+  }
+
+  // Nothing is mapped, so nothing can sync, and "Sync now" is disabled with no
+  // explanation. The Clients tab has a whole empty state for this; the tab an
+  // operator lands on said all-clear.
+  if (!connectionBroken && input.mappings.length === 0) {
+    items.push({
+      id: 'no-clients',
+      severity: 'blocking',
+      titleKey: 'integrations.entra.console.attention.noClients',
+      detailKey: 'integrations.entra.console.attention.noClientsDetail',
+      actionKey: 'integrations.entra.console.attention.actions.mapClients',
+      tab: 'connection',
+    });
+  }
+
+  // Client failures are only worth listing when the connection itself is fine;
+  // otherwise they are all the same failure wearing different names.
+  const failedClients = failingEntraClients(input.mappings);
+  if (!connectionBroken && failedClients.length > 0) {
+    items.push({
+      id: 'failed-clients',
+      severity: 'blocking',
+      titleKey: failedClients.length === 1
+        ? 'integrations.entra.console.attention.failedClientsOne'
+        : 'integrations.entra.console.attention.failedClients',
+      detailKey: 'integrations.entra.console.attention.failedClientsDetail',
+      actionKey: 'integrations.entra.console.attention.actions.viewClients',
+      values: { count: failedClients.length, clients: namedClients(failedClients) },
+      tab: 'clients',
+    });
+  }
+
+  if (input.reviewQueueCount > 0) {
+    items.push({
+      id: 'review-queue',
+      severity: 'warning',
+      titleKey: input.reviewQueueAtLimit
+        ? 'integrations.entra.console.attention.reviewQueueAtLeast'
+        : input.reviewQueueCount === 1
+          ? 'integrations.entra.console.attention.reviewQueueOne'
+          : 'integrations.entra.console.attention.reviewQueue',
+      detailKey: 'integrations.entra.console.attention.reviewQueueDetail',
+      actionKey: 'integrations.entra.console.attention.actions.review',
+      values: { count: input.reviewQueueCount },
+      tab: 'review-queue',
+    });
+  }
+
+  // Never means never: a client in the middle of its first run has no
+  // lastSyncedAt yet, and being told it has "never synced" while the Clients
+  // tab badges it "Syncing" is how an operator learns not to trust the list.
+  const neverSynced = input.mappings.filter(
+    (mapping) => entraClientHealth(mapping) === 'never'
+  );
+  if (neverSynced.length > 0) {
+    items.push({
+      id: 'never-synced',
+      severity: 'warning',
+      titleKey: neverSynced.length === 1
+        ? 'integrations.entra.console.attention.neverSyncedOne'
+        : 'integrations.entra.console.attention.neverSynced',
+      detailKey: 'integrations.entra.console.attention.neverSyncedDetail',
+      actionKey: 'integrations.entra.console.attention.actions.viewClients',
+      values: { count: neverSynced.length, clients: namedClients(neverSynced) },
+      tab: 'clients',
+    });
+  }
+
+  // The setting saved and Temporal never took it: nothing will run
+  // automatically, while the rail says "Runs every day". The schedule tab
+  // already tells this truth on save; the console repeated the confident lie
+  // on every visit afterwards.
+  if (input.schedule?.syncEnabled && input.schedule.scheduleApplied === false) {
+    items.push({
+      id: 'schedule-not-applied',
+      severity: 'blocking',
+      titleKey: 'integrations.entra.console.attention.scheduleNotApplied',
+      detailKey: 'integrations.entra.console.attention.scheduleNotAppliedDetail',
+      detail: input.schedule.scheduleError || undefined,
+      actionKey: 'integrations.entra.console.attention.actions.openSchedule',
+      tab: 'schedule',
+    });
+  }
+
+  if (!input.schedule?.syncEnabled) {
+    items.push({
+      id: 'schedule-off',
+      severity: 'info',
+      titleKey: 'integrations.entra.console.attention.scheduleOff',
+      detailKey: 'integrations.entra.console.attention.scheduleOffDetail',
+      actionKey: 'integrations.entra.console.attention.actions.openSchedule',
+      tab: 'schedule',
+    });
+  }
+
+  return items;
+}
+
+export interface EntraRunTotals {
+  linked: number;
+  created: number;
+  updated: number;
+  inactivated: number;
+  ambiguous: number;
+  failed: number;
+}
+
+/**
+ * The run, added up. The overview leads with what last night's sync did to the
+ * contact list, which is a sum across clients, not a per-client table read.
+ */
+export function summarizeEntraRunResults(
+  results: Array<{
+    status?: string;
+    created?: number;
+    linked?: number;
+    updated?: number;
+    inactivated?: number;
+    ambiguous?: number;
+  }>
+): EntraRunTotals {
+  return results.reduce<EntraRunTotals>(
+    (totals, result) => ({
+      linked: totals.linked + (result.linked || 0),
+      created: totals.created + (result.created || 0),
+      updated: totals.updated + (result.updated || 0),
+      inactivated: totals.inactivated + (result.inactivated || 0),
+      ambiguous: totals.ambiguous + (result.ambiguous || 0),
+      failed: totals.failed + (result.status === 'failed' ? 1 : 0),
+    }),
+    { linked: 0, created: 0, updated: 0, inactivated: 0, ambiguous: 0, failed: 0 }
+  );
+}
+
+export type EntraRunResultOutcome = 'failed' | 'partial' | 'running' | 'review' | 'done';
+
+/**
+ * What one client's slice of a run came to.
+ *
+ * The overview used to branch on `failed` / `ambiguous > 0` / everything else,
+ * which put `partial`, `running` and `skipped` behind a green "Done" — a third
+ * status vocabulary on a console that already has two, and the only one that
+ * lies.
+ */
+export function entraRunResultOutcome(result: {
+  status?: string;
+  ambiguous?: number;
+}): EntraRunResultOutcome {
+  const status = (result.status || '').toLowerCase();
+  if (status === 'failed') return 'failed';
+  if (status === 'partial') return 'partial';
+  if (status === 'running') return 'running';
+  return (result.ambiguous || 0) > 0 ? 'review' : 'done';
+}
+
+export const ENTRA_RUN_RESULT_BADGE_VARIANTS: Record<EntraRunResultOutcome, BadgeVariant> = {
+  failed: 'error',
+  partial: 'warning',
+  running: 'default-muted',
+  review: 'warning',
+  done: 'success',
+};
+
+export const ENTRA_RUN_RESULT_LABEL_KEYS: Record<EntraRunResultOutcome, string> = {
+  failed: 'integrations.entra.console.lastRun.results.failed',
+  partial: 'integrations.entra.console.lastRun.results.partlyFailed',
+  running: 'integrations.entra.console.lastRun.results.running',
+  review: 'integrations.entra.console.lastRun.results.toReview',
+  done: 'integrations.entra.console.lastRun.results.done',
+};
+
+const RUN_RESULT_RANK: Record<EntraRunResultOutcome, number> = {
+  failed: 0,
+  partial: 1,
+  review: 2,
+  running: 3,
+  done: 4,
+};
+
+/**
+ * Worst first. The server returns per-client results in whatever order it
+ * wrote them, which at two clients is invisible and at two hundred means the
+ * one that failed is wherever the run happened to put it — on a card the
+ * operator reads to find exactly that.
+ */
+export function sortEntraRunResultsWorstFirst<T extends { status?: string; ambiguous?: number }>(
+  results: T[]
+): T[] {
+  return [...results].sort(
+    (left, right) =>
+      RUN_RESULT_RANK[entraRunResultOutcome(left)] - RUN_RESULT_RANK[entraRunResultOutcome(right)]
+  );
+}
+
+/** How many per-client rows a summary shows before it stops being a summary. */
+export const ENTRA_RUN_RESULT_ROW_LIMIT = 8;
+
+/** The last run that actually changed something — previews are not runs. */
+export function findLastRealRun(runs: EntraSyncHistoryRun[]): EntraSyncHistoryRun | null {
+  return runs.find((run) => !run.isDryRun) || null;
+}
+
+export interface EntraHistoryFilters {
+  onlyFailures: boolean;
+  trigger: 'all' | 'scheduled' | 'manual';
+  includePreviews: boolean;
+}
+
+export const DEFAULT_ENTRA_HISTORY_FILTERS: EntraHistoryFilters = {
+  onlyFailures: false,
+  trigger: 'all',
+  includePreviews: true,
+};
+
+const SCHEDULED_RUN_TYPES = new Set(['all-tenants']);
+
+/**
+ * Whether the schedule started this run, or a person did.
+ *
+ * The history table used to print `runType` straight out of the database —
+ * "all-tenants", "single-tenant", "preflight" — which is schema vocabulary
+ * leaking onto a screen that already has words for this in its own filter.
+ */
+export function isScheduledEntraRun(run: { runType: string }): boolean {
+  return SCHEDULED_RUN_TYPES.has(run.runType);
+}
+
+export function filterEntraRuns(
+  runs: EntraSyncHistoryRun[],
+  filters: EntraHistoryFilters
+): EntraSyncHistoryRun[] {
+  return runs.filter((run) => {
+    if (!filters.includePreviews && run.isDryRun) {
+      return false;
+    }
+    if (filters.onlyFailures && run.status !== 'failed' && run.status !== 'partial') {
+      return false;
+    }
+    if (filters.trigger === 'scheduled' && !SCHEDULED_RUN_TYPES.has(run.runType)) {
+      return false;
+    }
+    if (filters.trigger === 'manual' && SCHEDULED_RUN_TYPES.has(run.runType)) {
+      return false;
+    }
+    return true;
+  });
+}
+
+const CSV_COLUMNS = [
+  'runId',
+  'runType',
+  'status',
+  'isDryRun',
+  'scope',
+  'startedAt',
+  'completedAt',
+  'totalTenants',
+  'succeededTenants',
+  'failedTenants',
+];
+
+function csvCell(value: unknown): string {
+  const text = value === null || value === undefined ? '' : String(value);
+  return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
+/**
+ * History as CSV, with the scope resolved to a client name — the whole point of
+ * F12 is that a run report identifies clients the way the MSP does, not by
+ * Microsoft tenant GUID.
+ */
+export function buildEntraRunHistoryCsv(
+  runs: EntraSyncHistoryRun[],
+  clientNamesByMappedTenant: Map<string, string>
+): string {
+  const lines = [CSV_COLUMNS.join(',')];
+
+  for (const run of runs) {
+    const scope = run.scopeManagedTenantId
+      ? clientNamesByMappedTenant.get(run.scopeManagedTenantId) || run.scopeManagedTenantId
+      : 'all clients';
+
+    lines.push([
+      run.runId,
+      run.runType,
+      run.status,
+      run.isDryRun ? 'preview' : 'sync',
+      scope,
+      run.startedAt,
+      run.completedAt || '',
+      run.totalTenants,
+      run.succeededTenants,
+      run.failedTenants,
+    ].map(csvCell).join(','));
+  }
+
+  return lines.join('\n');
+}
