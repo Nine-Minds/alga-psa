@@ -307,6 +307,22 @@ interface CreateFixedPlanOptions {
   clientContractLineIsActive?: boolean;
 }
 
+interface AssignContractLineOptions {
+  clientId?: string;
+  contractId?: string;
+  clientContractId?: string;
+  clientContractLineId?: string;
+  contractName?: string;
+  billingFrequency?: string;
+  startDate?: string;
+  endDate?: string | null;
+  isActive?: boolean;
+  contractHeaderIsActive?: boolean;
+  contractHeaderStatus?: string;
+  assignmentStatus?: string;
+  materializeServicePeriods?: boolean;
+}
+
 interface AddServiceToPlanOptions {
   quantity?: number;
   detailBaseRateCents?: number;
@@ -947,6 +963,9 @@ export async function createFixedPlanAssignment(
       });
   }
 
+  await ensureClientBillingEmail(context, targetClientId);
+  await materializeRecurringServicePeriods(context, contractLineId);
+
   return {
     planId: legacyPlanId,
     clientBillingPlanId: legacyClientPlanId,
@@ -955,6 +974,226 @@ export async function createFixedPlanAssignment(
     contractId,
     clientContractId
   };
+}
+
+// Invoice generation refuses clients without a billing email
+// (validateClientBillingEmail), which is read off a billing-or-default
+// client_locations row. Clients created straight through createEntity have none.
+export async function ensureClientBillingEmail(
+  context: TestContext,
+  clientId?: string
+): Promise<void> {
+  const targetClientId = clientId ?? context.clientId;
+
+  const existing = await tenantTable(context, 'client_locations')
+    .where({ client_id: targetClientId })
+    .andWhere(function scopeToBillable(this: Knex.QueryBuilder) {
+      this.where('is_billing_address', true).orWhere('is_default', true);
+    })
+    .whereNotNull('email')
+    .first();
+
+  if (existing) {
+    return;
+  }
+
+  await tenantTable(context, 'client_locations').insert({
+    tenant: context.tenantId,
+    location_id: uuidv4(),
+    client_id: targetClientId,
+    location_name: 'Billing',
+    address_line1: '123 Test St',
+    city: 'Test City',
+    country_code: 'US',
+    country_name: 'United States',
+    region_code: 'US-NY',
+    is_billing_address: true,
+    is_default: false,
+    email: `billing-${targetClientId}@example.com`,
+    is_active: true,
+    created_at: context.db.fn.now(),
+    updated_at: context.db.fn.now()
+  });
+}
+
+// generateInvoice resolves its billing window through recurring_service_periods.
+// Fixtures that only write contracts/contract_lines leave that table empty, and
+// the action then returns "Recurring service periods were not materialized...".
+export async function materializeRecurringServicePeriods(
+  context: TestContext,
+  contractLineId: string
+): Promise<void> {
+  const { syncRecurringServicePeriodsForContractLine } = await import(
+    '@alga-psa/billing/actions/recurringServicePeriodSync'
+  );
+
+  await context.db.transaction(async (trx) => {
+    await syncRecurringServicePeriodsForContractLine(trx, {
+      tenant: context.tenantId,
+      contractLineId,
+      sourceRunPrefix: 'test-fixture'
+    });
+  });
+}
+
+// generateInvoice resolves to {actionError}/{permissionError} for expected
+// failures. Those objects are truthy, so `if (!invoice) throw` waves them
+// through and the real cause only shows up as `expected undefined to be ...`.
+export function unwrapInvoiceResult<T = any>(result: unknown): T {
+  const value = result as { actionError?: string; permissionError?: string } | null;
+  if (value && (value.actionError || value.permissionError)) {
+    throw new Error(value.permissionError ?? value.actionError);
+  }
+  if (!result) {
+    throw new Error('generateInvoice returned no invoice');
+  }
+  return result as T;
+}
+
+// generateManualInvoice returns a {success, invoice} | {success:false, error}
+// union rather than the invoice itself; reading .invoice_id off the wrapper
+// silently yields undefined and surfaces later as an undefined-binding error.
+export function unwrapManualInvoice<T = any>(result: unknown): T {
+  const value = result as { success?: boolean; invoice?: T; error?: string } | null;
+  if (!value || value.success !== true || !value.invoice) {
+    throw new Error(value?.error ?? 'generateManualInvoice failed');
+  }
+  return value.invoice;
+}
+
+// persistInvoiceCharges marks each usage charge's source usage_tracking row
+// invoiced and throws when it can't, so every fabricated usageId needs a real
+// row behind it. Recurring charges carrying service-period fields also need a
+// config_id for the invoice_charge_details linkage.
+export async function seedBillingChargeSources(
+  context: TestContext,
+  charges: Array<Record<string, unknown>>,
+  options: { clientId?: string; usageDate?: string } = {}
+): Promise<void> {
+  const targetClientId = options.clientId ?? context.clientId;
+
+  for (const charge of charges) {
+    if (!charge.config_id) {
+      charge.config_id = uuidv4();
+    }
+
+    if (charge.type !== 'usage' || !charge.usageId) {
+      continue;
+    }
+
+    await tenantTable(context, 'usage_tracking')
+      .insert({
+        tenant: context.tenantId,
+        usage_id: charge.usageId as string,
+        service_id: charge.serviceId as string,
+        client_id: targetClientId,
+        usage_date: (charge.servicePeriodStart as string) ?? options.usageDate ?? '2023-01-01',
+        quantity: (charge.quantity as number) ?? 1,
+        invoiced: false
+      })
+      .onConflict(['tenant', 'usage_id'])
+      .ignore();
+  }
+}
+
+// Attaches an already-created contract_lines row to a client. Replaces the
+// direct client_contract_lines inserts tests used before that table was dropped
+// (20251207140000); the live chain is contracts -> client_contracts, with
+// contract_lines.contract_id pointing at the header.
+export async function assignContractLineToClient(
+  context: TestContext,
+  contractLineId: string,
+  options: AssignContractLineOptions = {}
+): Promise<{ contractId: string; clientContractId: string; clientContractLineId: string }> {
+  const contractId = options.contractId ?? uuidv4();
+  const clientContractId = options.clientContractId ?? uuidv4();
+  const clientContractLineId = options.clientContractLineId ?? uuidv4();
+  const targetClientId = options.clientId ?? context.clientId;
+  const startDate = options.startDate ?? '2025-02-01';
+  const endDate = options.endDate ?? null;
+  const isActive = options.isActive ?? true;
+  const contractName = options.contractName ?? 'Test Contract';
+  const billingFrequency = options.billingFrequency ?? 'monthly';
+
+  if (await context.db.schema.hasTable('contracts')) {
+    const contractColumns = await context.db('contracts').columnInfo();
+    const contractData: Record<string, unknown> = {
+      tenant: context.tenantId,
+      contract_id: contractId,
+      contract_name: contractName,
+      contract_description: `${contractName} fixture`,
+      billing_frequency: billingFrequency,
+      is_active: options.contractHeaderIsActive ?? true,
+      status: options.contractHeaderStatus ?? 'Active',
+      is_template: false,
+      currency_code: 'USD',
+      created_at: context.db.fn.now(),
+      updated_at: context.db.fn.now()
+    };
+
+    if ('owner_client_id' in contractColumns) {
+      contractData.owner_client_id = targetClientId;
+    }
+
+    await tenantTable(context, 'contracts')
+      .insert(contractData)
+      .onConflict(['tenant', 'contract_id'])
+      .merge({ contract_name: contractName, updated_at: context.db.fn.now() });
+  }
+
+  if (await context.db.schema.hasTable('client_contracts')) {
+    await tenantTable(context, 'client_contracts')
+      .insert({
+        tenant: context.tenantId,
+        client_contract_id: clientContractId,
+        client_id: targetClientId,
+        contract_id: contractId,
+        start_date: startDate,
+        end_date: endDate,
+        // client_contracts.status is the renewal status
+        // (client_contracts_renewal_status_check), not an assignment state.
+        is_active: isActive,
+        status: options.assignmentStatus ?? 'pending',
+        po_required: false,
+        po_number: null,
+        po_amount: null,
+        template_contract_id: null,
+        created_at: context.db.fn.now(),
+        updated_at: context.db.fn.now()
+      })
+      .onConflict(['tenant', 'client_contract_id'])
+      .merge({ is_active: isActive, start_date: startDate, end_date: endDate, updated_at: context.db.fn.now() });
+  }
+
+  const contractLineColumns = await context.db('contract_lines').columnInfo();
+  if ('contract_id' in contractLineColumns) {
+    await tenantTable(context, 'contract_lines')
+      .where({ contract_line_id: contractLineId })
+      .update({ contract_id: contractId });
+  }
+
+  if (await context.db.schema.hasTable('client_contract_lines')) {
+    await tenantTable(context, 'client_contract_lines')
+      .insert({
+        tenant: context.tenantId,
+        client_contract_line_id: clientContractLineId,
+        client_id: targetClientId,
+        contract_line_id: contractLineId,
+        start_date: startDate,
+        end_date: endDate,
+        is_active: isActive
+      })
+      .onConflict(['tenant', 'client_contract_line_id'])
+      .merge({ contract_line_id: contractLineId, is_active: isActive });
+  }
+
+  await ensureClientBillingEmail(context, targetClientId);
+
+  if (options.materializeServicePeriods ?? true) {
+    await materializeRecurringServicePeriods(context, contractLineId);
+  }
+
+  return { contractId, clientContractId, clientContractLineId };
 }
 
 export async function createConcurrentFixedPlanAssignments(
