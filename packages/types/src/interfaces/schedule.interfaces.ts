@@ -44,7 +44,6 @@ export interface IResource extends TenantEntity {
   resource_id: string;
   user_id: string;
   user?: IUser;
-  availability: any;
   skills: string[];
   max_daily_capacity: number;
   max_weekly_capacity: number;
