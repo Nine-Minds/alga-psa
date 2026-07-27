@@ -292,11 +292,11 @@ export async function finalizeSyncRunActivity(
             tenantId: input.tenantId,
             notifications,
           });
-        } catch (error: any) {
+        } catch (error: unknown) {
           logger.warn('Entra run notifications were not delivered', {
             tenantId: input.tenantId,
             runId: input.runId,
-            error: error?.message || 'unknown error',
+            error: error instanceof Error ? error.message : 'unknown error',
           });
         }
       }),

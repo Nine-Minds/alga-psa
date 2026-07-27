@@ -78,7 +78,8 @@ describe('Entra Temporal workflow/activity contracts', () => {
     const activity = readRepoFile('ee/temporal-workflows/src/activities/entra-sync-activities.ts');
 
     expect(activity).toContain('export async function finalizeSyncRunActivity');
-    expect(activity).toContain("tenantDb(knex, input.tenantId).table('entra_sync_runs')");
+    expect(activity).toContain('const db = tenantDb(knex, input.tenantId);');
+    expect(activity).toContain("db.table('entra_sync_runs')");
     expect(activity).toContain('status: input.status');
     expect(activity).toContain('completed_at: now');
     expect(activity).toContain('total_tenants: input.summary.totalTenants');
@@ -108,7 +109,7 @@ describe('Entra Temporal workflow/activity contracts', () => {
     expect(scheduleSource).toContain('const ENTRA_SCHEDULE_ID_PREFIX = \'entra-all-tenants-sync-schedule\'');
     expect(scheduleSource).toContain('const entraConfigs = await loadEntraScheduleConfigs();');
     expect(scheduleSource).toContain('for (const config of entraConfigs)');
-    expect(scheduleSource).toContain('if (!config.syncEnabled || !config.hasActiveConnection || !config.hasEnterpriseAddOn)');
+    expect(scheduleSource).toContain('if (!config.syncEnabled || !config.hasActiveConnection || !config.hasEntraTier)');
     expect(scheduleSource).toContain('await upsertSchedule(client, tenantScheduleId, {');
     expect(scheduleSource).toContain('workflowType: entraAllTenantsSyncWorkflow');
     expect(scheduleSource).toContain("trigger: 'scheduled'");
