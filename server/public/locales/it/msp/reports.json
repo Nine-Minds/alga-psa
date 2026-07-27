@@ -172,7 +172,8 @@
       "age": "Eta",
       "workedHours": "Ore lavorate",
       "capacityHours": "Ore di capacità",
-      "utilization": "Utilizzo"
+      "utilization": "Utilizzo",
+      "capacityEstimated": "Stimato dalla capacità settimanale; nessun orario di lavoro impostato."
     },
     "statusValues": {
       "connected": "Connesso",

@@ -728,6 +728,11 @@ function EmployeeUtilizationView({ rangeDays }: { rangeDays: ReportRangeDays }) 
   const printSubtitle = t('reportsPage.dateRange.lastDays', { defaultValue: 'Last {{count}} days', count: report.rangeDays });
   const formatPercent = (value: number | null) => (value === null ? noCapacityText : `${value}%`);
   const formatCapacity = (value: number | null) => (value === null ? noCapacityText : formatHours(value));
+  // A denominator estimated from the weekly override is worth flagging: it
+  // assumes every week in the range looks the same.
+  const estimatedText = t('reportsPage.table.capacityEstimated', {
+    defaultValue: 'Estimated from weekly capacity; no working hours set.',
+  });
   const overallUtilization =
     report.summary.overallUtilizationPercent === null
       ? t('reportsPage.empty.notAvailable', { defaultValue: 'n/a' })
@@ -737,7 +742,11 @@ function EmployeeUtilizationView({ rangeDays }: { rangeDays: ReportRangeDays }) 
   const byUserColumns: PrintableTableColumn<ByUserRow>[] = [
     { key: 'name', header: t('reportsPage.table.user', { defaultValue: 'User' }), render: (row) => row.name },
     { key: 'worked', header: t('reportsPage.table.workedHours', { defaultValue: 'Worked hours' }), render: (row) => formatHours(row.workedHours) },
-    { key: 'capacity', header: t('reportsPage.table.capacityHours', { defaultValue: 'Capacity hours' }), render: (row) => formatCapacity(row.capacityHours) },
+    {
+      key: 'capacity',
+      header: t('reportsPage.table.capacityHours', { defaultValue: 'Capacity hours' }),
+      render: (row) => (row.capacitySource === 'weekly' ? `${formatCapacity(row.capacityHours)} *` : formatCapacity(row.capacityHours)),
+    },
     { key: 'utilization', header: t('reportsPage.table.utilization', { defaultValue: 'Utilization' }), render: (row) => formatPercent(row.utilizationPercent) },
   ];
 
@@ -779,7 +788,14 @@ function EmployeeUtilizationView({ rangeDays }: { rangeDays: ReportRangeDays }) 
                     <tr key={row.userId}>
                       <td className="px-4 py-3 font-medium text-[rgb(var(--color-text-900))]">{row.name}</td>
                       <td className="px-4 py-3 text-right text-[rgb(var(--color-text-700))]">{formatHours(row.workedHours)}</td>
-                      <td className="px-4 py-3 text-right text-[rgb(var(--color-text-700))]">{formatCapacity(row.capacityHours)}</td>
+                      <td className="px-4 py-3 text-right text-[rgb(var(--color-text-700))]">
+                        {formatCapacity(row.capacityHours)}
+                        {row.capacitySource === 'weekly' ? (
+                          <span className="ml-1 text-[rgb(var(--color-text-500))]" title={estimatedText}>
+                            *
+                          </span>
+                        ) : null}
+                      </td>
                       <td className="px-4 py-3">
                         {row.utilizationPercent === null ? (
                           <span className="text-[rgb(var(--color-text-500))]">{noCapacityText}</span>

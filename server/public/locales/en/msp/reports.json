@@ -172,7 +172,8 @@
       "age": "Age",
       "workedHours": "Worked hours",
       "capacityHours": "Capacity hours",
-      "utilization": "Utilization"
+      "utilization": "Utilization",
+      "capacityEstimated": "Estimated from weekly capacity; no working hours set."
     },
     "statusValues": {
       "connected": "Connected",

@@ -172,7 +172,8 @@
       "age": "55555",
       "workedHours": "55555",
       "capacityHours": "55555",
-      "utilization": "55555"
+      "utilization": "55555",
+      "capacityEstimated": "55555"
     },
     "statusValues": {
       "connected": "55555",

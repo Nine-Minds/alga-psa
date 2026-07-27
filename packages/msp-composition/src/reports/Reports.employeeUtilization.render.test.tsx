@@ -91,6 +91,21 @@ describe('Employee Utilization report rendering', () => {
     expect(screen.queryByText('Infinity%')).toBeNull();
   });
 
+  it('marks a capacity that was only estimated from the weekly override', async () => {
+    getEmployeeUtilizationReport.mockResolvedValue(
+      reportWith([
+        { userId: 'u3', name: 'Scarecrow', workedHours: 80, billableHours: 60, entries: 9, capacityHours: 171.4, capacitySource: 'weekly', utilizationPercent: 47 },
+        { userId: 'u4', name: 'Tin Man', workedHours: 80, billableHours: 60, entries: 9, capacityHours: 168, capacitySource: 'schedule', utilizationPercent: 48 },
+      ]),
+    );
+
+    await openEmployeeUtilization();
+
+    // Only the estimated row is flagged; a scheduled denominator is exact.
+    const flags = await screen.findAllByTitle('Estimated from weekly capacity; no working hours set.');
+    expect(flags.length).toBe(1);
+  });
+
   it('renders the empty state when no active users are returned', async () => {
     getEmployeeUtilizationReport.mockResolvedValue(reportWith([]));
 

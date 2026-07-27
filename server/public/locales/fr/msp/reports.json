@@ -172,7 +172,8 @@
       "age": "Age",
       "workedHours": "Heures travaillées",
       "capacityHours": "Heures de capacité",
-      "utilization": "Utilisation"
+      "utilization": "Utilisation",
+      "capacityEstimated": "Estimé à partir de la capacité hebdomadaire ; aucune heure de travail définie."
     },
     "statusValues": {
       "connected": "Connecte",

@@ -172,7 +172,8 @@
       "age": "Leeftijd",
       "workedHours": "Gewerkte uren",
       "capacityHours": "Capaciteitsuren",
-      "utilization": "Benutting"
+      "utilization": "Benutting",
+      "capacityEstimated": "Geschat op basis van de weekcapaciteit; geen werktijden ingesteld."
     },
     "statusValues": {
       "connected": "Verbonden",

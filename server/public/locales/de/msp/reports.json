@@ -172,7 +172,8 @@
       "age": "Alter",
       "workedHours": "Geleistete Stunden",
       "capacityHours": "Kapazitätsstunden",
-      "utilization": "Auslastung"
+      "utilization": "Auslastung",
+      "capacityEstimated": "Geschätzt aus der Wochenkapazität; keine Arbeitszeiten festgelegt."
     },
     "statusValues": {
       "connected": "Verbunden",

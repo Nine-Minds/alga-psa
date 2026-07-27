@@ -172,7 +172,8 @@
       "age": "11111",
       "workedHours": "11111",
       "capacityHours": "11111",
-      "utilization": "11111"
+      "utilization": "11111",
+      "capacityEstimated": "11111"
     },
     "statusValues": {
       "connected": "11111",

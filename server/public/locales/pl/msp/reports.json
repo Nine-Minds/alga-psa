@@ -172,7 +172,8 @@
       "age": "Wiek",
       "workedHours": "Przepracowane godziny",
       "capacityHours": "Godziny wydajności",
-      "utilization": "Wykorzystanie"
+      "utilization": "Wykorzystanie",
+      "capacityEstimated": "Oszacowano na podstawie tygodniowej dostępności; nie ustawiono godzin pracy."
     },
     "statusValues": {
       "connected": "Polaczony",
