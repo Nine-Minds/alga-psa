@@ -282,10 +282,26 @@
         "label": "Reporta a",
         "placeholder": "Seleccionar gerente"
       },
+      "workSchedule": {
+        "label": "Horario laboral",
+        "help": "Cuándo esta persona está de servicio. Se usa en los informes de utilización. No es la disponibilidad de reserva para clientes.",
+        "setHours": "Definir horario laboral",
+        "clear": "Borrar",
+        "weeklyTotal": "{{hours}} h por semana",
+        "days": {
+          "0": "Domingo",
+          "1": "Lunes",
+          "2": "Martes",
+          "3": "Miércoles",
+          "4": "Jueves",
+          "5": "Viernes",
+          "6": "Sábado"
+        }
+      },
       "weeklyCapacity": {
         "label": "Capacidad semanal (horas)",
         "placeholder": "p. ej., 40",
-        "help": "Horas de trabajo previstas por semana. Se usa en los informes de utilización."
+        "help": "Solo se usa como alternativa cuando no hay horario laboral definido arriba."
       },
       "lastLogin": "Último inicio de sesión",
       "roles": "Roles",
@@ -332,7 +348,8 @@
         "reportsToSelf": "Un usuario no puede reportarse a sí mismo",
         "reportsToCycle": "Esto crearía una cadena de reporte circular",
         "permissionDenied": "No tienes permiso para cambiar los roles de usuario.",
-        "invalidCapacity": "La capacidad semanal debe ser un número positivo."
+        "invalidCapacity": "La capacidad semanal debe ser un número positivo.",
+        "invalidWorkSchedule": "El horario laboral debe ser un intervalo válido que termine después de comenzar."
       }
     },
     "loading": "Cargando detalles del usuario..."

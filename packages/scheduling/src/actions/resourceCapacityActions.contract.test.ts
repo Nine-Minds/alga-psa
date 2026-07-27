@@ -44,3 +44,37 @@ describe('resource capacity actions contract', () => {
     expect(update).toContain('if (!updated) {');
   });
 });
+
+describe('work schedule actions contract', () => {
+  it('runs both actions through withAuth and the tenant-scoped builder', () => {
+    expect(source).toContain('export const getUserWorkSchedule = withAuth(');
+    expect(source).toContain('export const updateUserWorkSchedule = withAuth(');
+    expect(source).toContain("tenantDb(db, tenant).table('user_work_schedules')");
+    expect(source).not.toContain("db('user_work_schedules')");
+    expect(source).not.toContain("trx('user_work_schedules')");
+  });
+
+  it('gates reads and writes on the matching user permission', () => {
+    expect(section('getUserWorkSchedule')).toContain("hasPermission(user, 'user', 'read', db)");
+    expect(section('updateUserWorkSchedule')).toContain("hasPermission(user, 'user', 'update', db)");
+  });
+
+  it('replaces the whole week inside one transaction', () => {
+    const update = section('updateUserWorkSchedule');
+
+    // A partial upsert could leave a stale day still contributing capacity.
+    expect(update).toContain('withTransaction(db,');
+    expect(update).toContain("scopedDb.table('user_work_schedules').where({ user_id: userId }).delete()");
+    expect(update).toContain('if (parsed.value.length > 0) {');
+  });
+
+  it('validates through the shared parser before touching the database', () => {
+    const update = section('updateUserWorkSchedule');
+    const parseAt = update.indexOf('parseWorkSchedule(days)');
+    const writeAt = update.indexOf('withTransaction(db,');
+
+    expect(parseAt).toBeGreaterThanOrEqual(0);
+    expect(writeAt).toBeGreaterThan(parseAt);
+    expect(update).toContain('workScheduleRejectionMessage(parsed.reason)');
+  });
+});

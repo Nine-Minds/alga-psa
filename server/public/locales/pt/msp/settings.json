@@ -282,10 +282,26 @@
         "label": "Relatórios para",
         "placeholder": "Selecione o gerente"
       },
+      "workSchedule": {
+        "label": "Horário de trabalho",
+        "help": "Quando esta pessoa está de serviço. Usado nos relatórios de utilização. Não é a disponibilidade de agendamento para clientes.",
+        "setHours": "Definir horário de trabalho",
+        "clear": "Limpar",
+        "weeklyTotal": "{{hours}} h por semana",
+        "days": {
+          "0": "Domingo",
+          "1": "Segunda-feira",
+          "2": "Terça-feira",
+          "3": "Quarta-feira",
+          "4": "Quinta-feira",
+          "5": "Sexta-feira",
+          "6": "Sábado"
+        }
+      },
       "weeklyCapacity": {
         "label": "Capacidade semanal (horas)",
         "placeholder": "ex.: 40",
-        "help": "Horas de trabalho previstas por semana. Usado nos relatórios de utilização."
+        "help": "Usado apenas quando nenhum horário de trabalho é definido acima."
       },
       "lastLogin": "Último login",
       "roles": "Funções",
@@ -332,7 +348,8 @@
         "passwordChangeFailed": "Falha ao alterar a senha",
         "passwordChangeError": "Ocorreu um erro ao alterar a senha",
         "permissionDenied": "Você não tem permissão para alterar funções de usuário.",
-        "invalidCapacity": "A capacidade semanal deve ser um número positivo."
+        "invalidCapacity": "A capacidade semanal deve ser um número positivo.",
+        "invalidWorkSchedule": "O horário de trabalho deve ser um intervalo válido que termine depois de começar."
       }
     },
     "loading": "Carregando detalhes do usuário..."

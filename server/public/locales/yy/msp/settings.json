@@ -282,6 +282,22 @@
         "label": "55555",
         "placeholder": "55555"
       },
+      "workSchedule": {
+        "label": "55555",
+        "help": "55555",
+        "setHours": "55555",
+        "clear": "55555",
+        "weeklyTotal": "55555 {{hours}} 55555",
+        "days": {
+          "0": "55555",
+          "1": "55555",
+          "2": "55555",
+          "3": "55555",
+          "4": "55555",
+          "5": "55555",
+          "6": "55555"
+        }
+      },
       "weeklyCapacity": {
         "label": "55555",
         "placeholder": "55555",
@@ -332,7 +348,8 @@
         "passwordChangeFailed": "55555",
         "passwordChangeError": "55555",
         "permissionDenied": "55555",
-        "invalidCapacity": "55555"
+        "invalidCapacity": "55555",
+        "invalidWorkSchedule": "55555"
       }
     },
     "loading": "55555"

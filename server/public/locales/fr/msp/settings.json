@@ -282,10 +282,26 @@
         "label": "Supérieur hiérarchique",
         "placeholder": "Sélectionner un responsable"
       },
+      "workSchedule": {
+        "label": "Heures de travail",
+        "help": "Quand cette personne est en service. Utilisé dans les rapports d’utilisation. Il ne s’agit pas de la disponibilité de réservation client.",
+        "setHours": "Définir les heures de travail",
+        "clear": "Effacer",
+        "weeklyTotal": "{{hours}} h par semaine",
+        "days": {
+          "0": "Dimanche",
+          "1": "Lundi",
+          "2": "Mardi",
+          "3": "Mercredi",
+          "4": "Jeudi",
+          "5": "Vendredi",
+          "6": "Samedi"
+        }
+      },
       "weeklyCapacity": {
         "label": "Capacité hebdomadaire (heures)",
         "placeholder": "p. ex. 40",
-        "help": "Heures de travail prévues par semaine. Utilisé dans les rapports d’utilisation."
+        "help": "Utilisé uniquement à défaut d’heures de travail définies ci-dessus."
       },
       "lastLogin": "Dernière connexion",
       "roles": "Rôles",
@@ -332,7 +348,8 @@
         "reportsToSelf": "Un utilisateur ne peut pas être son propre responsable",
         "reportsToCycle": "Cela créerait une chaîne hiérarchique circulaire",
         "permissionDenied": "Vous n'avez pas la permission de modifier les rôles des utilisateurs.",
-        "invalidCapacity": "La capacité hebdomadaire doit être un nombre positif."
+        "invalidCapacity": "La capacité hebdomadaire doit être un nombre positif.",
+        "invalidWorkSchedule": "Les heures de travail doivent former une plage valide se terminant après son début."
       }
     },
     "loading": "Chargement des détails de l'utilisateur..."

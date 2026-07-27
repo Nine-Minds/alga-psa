@@ -6,8 +6,14 @@ import { findUserById, getCurrentUser, getAllUsers, getUserRoles } from '@alga-p
 import { getUserAvatarUrlsBatchAction } from '@alga-psa/user-composition/actions/avatarActions';
 import { updateUser, adminChangeUserPassword } from '@alga-psa/users/actions/user-actions/userActions';
 import { getRoles, assignRoleToUser, removeRoleFromUser } from '@alga-psa/users/lib/roleActions';
-import { getUserCapacity, updateUserCapacity } from '@alga-psa/scheduling/actions/resourceCapacityActions';
+import {
+  getUserCapacity,
+  updateUserCapacity,
+  getUserWorkSchedule,
+  updateUserWorkSchedule,
+} from '@alga-psa/scheduling/actions/resourceCapacityActions';
 import { parseWeeklyCapacityHours } from '@alga-psa/scheduling/lib/resourceCapacity';
+import { parseWorkSchedule, weeklyScheduledHours, type WorkScheduleDay } from '@alga-psa/scheduling/lib/workSchedule';
 import { useDrawer } from "@alga-psa/ui";
 import { Text, Flex } from '@radix-ui/themes';
 import { Input } from '@alga-psa/ui/components/Input';
@@ -32,6 +38,20 @@ interface UserDetailsProps {
   onUpdate: () => void;
 }
 
+// Monday first: a work week reads better than a calendar week here.
+const WORK_WEEK_ORDER: WorkScheduleDay['dayOfWeek'][] = [1, 2, 3, 4, 5, 6, 0];
+
+// Weekend days keep a valid window so they satisfy the table's end > start
+// CHECK while contributing no capacity.
+function defaultWorkSchedule(): WorkScheduleDay[] {
+  return WORK_WEEK_ORDER.map((dayOfWeek) => ({
+    dayOfWeek,
+    isWorking: dayOfWeek >= 1 && dayOfWeek <= 5,
+    startTime: '09:00',
+    endTime: '17:00',
+  })).sort((left, right) => left.dayOfWeek - right.dayOfWeek);
+}
+
 const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
   const { t } = useTranslation('msp/settings');
   const [user, setUser] = useState<IUserWithRoles | null>(null);
@@ -47,6 +67,8 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
   const [reportsToOptions, setReportsToOptions] = useState<SelectOption[]>([]);
   const [weeklyCapacity, setWeeklyCapacity] = useState<string>('');
   const [savedCapacity, setSavedCapacity] = useState<number | null>(null);
+  const [workSchedule, setWorkSchedule] = useState<WorkScheduleDay[]>([]);
+  const [savedSchedule, setSavedSchedule] = useState<WorkScheduleDay[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { closeDrawer } = useDrawer();
@@ -161,11 +183,18 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
         setIsActive(!userWithRoles.is_inactive);
         setRoles(userRoles);
         try {
-          const capacityResult = await getUserCapacity(userId);
+          const [capacityResult, scheduleResult] = await Promise.all([
+            getUserCapacity(userId),
+            getUserWorkSchedule(userId),
+          ]);
           if (capacityResult.success && capacityResult.data) {
             const capacity = capacityResult.data.maxWeeklyCapacity ?? null;
             setSavedCapacity(capacity);
             setWeeklyCapacity(capacity != null ? String(capacity) : '');
+          }
+          if (scheduleResult.success && scheduleResult.data) {
+            setSavedSchedule(scheduleResult.data.days);
+            setWorkSchedule(scheduleResult.data.days);
           }
         } catch (capacityErr) {
           console.error('Error fetching user capacity:', capacityErr);
@@ -268,6 +297,12 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
           return;
         }
 
+        const parsedSchedule = parseWorkSchedule(workSchedule);
+        if (!parsedSchedule.ok) {
+          toast.error(t('userDetails.messages.error.invalidWorkSchedule'));
+          return;
+        }
+
         const updatedUserData: Partial<IUser> = {
           first_name: firstName,
           last_name: lastName,
@@ -296,6 +331,14 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
               return;
             }
             setSavedCapacity(parsedCapacity.value);
+          }
+          if (JSON.stringify(parsedSchedule.value) !== JSON.stringify(savedSchedule)) {
+            const scheduleResult = await updateUserWorkSchedule(user.user_id, parsedSchedule.value);
+            if (!scheduleResult.success) {
+              toast.error(scheduleResult.error || t('userDetails.messages.error.updateFailed'));
+              return;
+            }
+            setSavedSchedule(parsedSchedule.value);
           }
           setUser(result.user);
           onUpdate();
@@ -428,6 +471,80 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
             placeholder={t('userDetails.fields.reportsTo.placeholder')}
             allowClear
           />
+        </div>
+
+        <div>
+          <Text as="label" size="2" weight="medium" className="mb-2 block">
+            {t('userDetails.fields.workSchedule.label')}
+          </Text>
+          {workSchedule.length === 0 ? (
+            <Button
+              id="user-work-schedule-add"
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setWorkSchedule(defaultWorkSchedule())}
+            >
+              {t('userDetails.fields.workSchedule.setHours')}
+            </Button>
+          ) : (
+            <div className="space-y-1">
+              {WORK_WEEK_ORDER.map((dayOfWeek) => {
+                const day = workSchedule.find((entry) => entry.dayOfWeek === dayOfWeek);
+                if (!day) return null;
+                const update = (patch: Partial<WorkScheduleDay>) =>
+                  setWorkSchedule((current) =>
+                    current.map((entry) => (entry.dayOfWeek === dayOfWeek ? { ...entry, ...patch } : entry)),
+                  );
+                return (
+                  <div key={dayOfWeek} className="flex items-center gap-2">
+                    <label className="flex w-32 items-center gap-2 text-sm">
+                      <input
+                        id={`user-work-schedule-working-${dayOfWeek}`}
+                        type="checkbox"
+                        checked={day.isWorking}
+                        onChange={(e) => update({ isWorking: e.target.checked })}
+                      />
+                      {t(`userDetails.fields.workSchedule.days.${dayOfWeek}`)}
+                    </label>
+                    <Input
+                      id={`user-work-schedule-start-${dayOfWeek}`}
+                      type="time"
+                      value={day.startTime}
+                      disabled={!day.isWorking}
+                      onChange={(e) => update({ startTime: e.target.value })}
+                      className="w-32"
+                    />
+                    <Input
+                      id={`user-work-schedule-end-${dayOfWeek}`}
+                      type="time"
+                      value={day.endTime}
+                      disabled={!day.isWorking}
+                      onChange={(e) => update({ endTime: e.target.value })}
+                      className="w-32"
+                    />
+                  </div>
+                );
+              })}
+              <div className="flex items-center justify-between pt-1">
+                <Text size="1" color="gray">
+                  {t('userDetails.fields.workSchedule.weeklyTotal', { hours: weeklyScheduledHours(workSchedule) })}
+                </Text>
+                <Button
+                  id="user-work-schedule-clear"
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setWorkSchedule([])}
+                >
+                  {t('userDetails.fields.workSchedule.clear')}
+                </Button>
+              </div>
+            </div>
+          )}
+          <Text size="1" color="gray" className="mt-1 block">
+            {t('userDetails.fields.workSchedule.help')}
+          </Text>
         </div>
 
         <div>

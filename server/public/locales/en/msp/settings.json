@@ -282,10 +282,26 @@
         "label": "Reports To",
         "placeholder": "Select manager"
       },
+      "workSchedule": {
+        "label": "Working hours",
+        "help": "When this person is on the clock. Used by utilization reports. This is not client booking availability.",
+        "setHours": "Set working hours",
+        "clear": "Clear",
+        "weeklyTotal": "{{hours}}h per week",
+        "days": {
+          "0": "Sunday",
+          "1": "Monday",
+          "2": "Tuesday",
+          "3": "Wednesday",
+          "4": "Thursday",
+          "5": "Friday",
+          "6": "Saturday"
+        }
+      },
       "weeklyCapacity": {
         "label": "Weekly capacity (hours)",
         "placeholder": "e.g. 40",
-        "help": "Expected working hours per week. Used by utilization reports."
+        "help": "Fallback used only when no working hours are set above."
       },
       "lastLogin": "Last Login",
       "roles": "Roles",
@@ -332,7 +348,8 @@
         "passwordChangeFailed": "Failed to change password",
         "passwordChangeError": "An error occurred while changing password",
         "permissionDenied": "You do not have permission to change user roles.",
-        "invalidCapacity": "Weekly capacity must be a positive number."
+        "invalidCapacity": "Weekly capacity must be a positive number.",
+        "invalidWorkSchedule": "Working hours must be valid time ranges that end after they start."
       }
     },
     "loading": "Loading user details..."

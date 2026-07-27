@@ -282,10 +282,26 @@
         "label": "Rapporteert aan",
         "placeholder": "Manager selecteren"
       },
+      "workSchedule": {
+        "label": "Werktijden",
+        "help": "Wanneer deze persoon aan het werk is. Wordt gebruikt in bezettingsrapporten. Dit is niet de boekbaarheid voor klanten.",
+        "setHours": "Werktijden instellen",
+        "clear": "Wissen",
+        "weeklyTotal": "{{hours}} uur per week",
+        "days": {
+          "0": "Zondag",
+          "1": "Maandag",
+          "2": "Dinsdag",
+          "3": "Woensdag",
+          "4": "Donderdag",
+          "5": "Vrijdag",
+          "6": "Zaterdag"
+        }
+      },
       "weeklyCapacity": {
         "label": "Wekelijkse capaciteit (uren)",
         "placeholder": "bijv. 40",
-        "help": "Verwachte werkuren per week. Gebruikt in benuttingsrapporten."
+        "help": "Alleen gebruikt als hierboven geen werktijden zijn ingesteld."
       },
       "lastLogin": "Laatste aanmelding",
       "roles": "Rollen",
@@ -332,7 +348,8 @@
         "reportsToSelf": "Een gebruiker kan niet aan zichzelf rapporteren",
         "reportsToCycle": "Dit zou een circulaire rapportagelijn creëren",
         "permissionDenied": "Je hebt geen toestemming om gebruikersrollen te wijzigen.",
-        "invalidCapacity": "Wekelijkse capaciteit moet een positief getal zijn."
+        "invalidCapacity": "Wekelijkse capaciteit moet een positief getal zijn.",
+        "invalidWorkSchedule": "Werktijden moeten geldige tijdvakken zijn die eindigen na de starttijd."
       }
     },
     "loading": "Gebruikersdetails laden..."
