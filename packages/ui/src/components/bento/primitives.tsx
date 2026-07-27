@@ -145,6 +145,8 @@ export function BentoMicroBadge({ id, className, children }: { id?: string; clas
 export interface BentoFooterLink {
   id: string;
   label: string;
+  /** Optional leading glyph (`h-3 w-3`), e.g. a gear for a settings destination. */
+  icon?: React.ReactNode;
   onClick: () => void;
 }
 
@@ -172,8 +174,9 @@ export function BentoFooterLinks({
               id={`${idPrefix}-link-${link.id}`}
               type="button"
               onClick={link.onClick}
-              className="font-semibold text-[rgb(var(--color-primary-600))] hover:text-[rgb(var(--color-primary-800))]"
+              className="inline-flex items-center gap-1 font-semibold text-[rgb(var(--color-primary-600))] hover:text-[rgb(var(--color-primary-800))]"
             >
+              {link.icon}
               {link.label}
             </button>
           </React.Fragment>

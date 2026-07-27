@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { MapPin } from 'lucide-react';
+import { ArrowUpRight, FileText, Mail, MapPin, Phone, Plus, Settings } from 'lucide-react';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
 import {
   BentoChip,
@@ -33,7 +33,7 @@ export type CardFooterLink = BentoFooterLink;
 interface CardShellProps {
   id: string;
   title: string;
-  action?: { label: string; onClick: () => void } | null;
+  action?: { label: string; onClick: () => void; icon?: React.ReactNode } | null;
   /** Contextual entry links to related focus views (only live links render). */
   footerLinks?: Array<CardFooterLink | null>;
   className?: string;
@@ -51,9 +51,10 @@ export function CardShell({ id, title, action, footerLinks, className = '', chil
           id={`${id}-open`}
           type="button"
           onClick={action.onClick}
-          className="text-xs font-semibold text-primary-600 hover:text-primary-800 whitespace-nowrap"
+          className="inline-flex items-center gap-0.5 text-xs font-semibold text-primary-600 hover:text-primary-800 whitespace-nowrap"
         >
           {action.label}
+          {action.icon ?? <ArrowUpRight className="w-3 h-3" aria-hidden="true" />}
         </button>
       ) : undefined}
     >
@@ -62,6 +63,8 @@ export function CardShell({ id, title, action, footerLinks, className = '', chil
     </BentoTile>
   );
 }
+
+const CONTACT_ICON_CLASS = 'inline w-3 h-3 -mt-0.5 mr-1';
 
 const timeAgoDays = (iso: string): number =>
   Math.max(0, Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000));
@@ -134,7 +137,7 @@ export function ServiceCard({ id, data, onOpen, onOpenTicket, onNewTicket, class
     <CardShell
       id={id}
       title={t('clientCommandCenter.cards.service', { defaultValue: 'Service' })}
-      action={onOpen ? { label: t('clientCommandCenter.openView', { defaultValue: 'Open ↗' }), onClick: onOpen } : null}
+      action={onOpen ? { label: t('clientCommandCenter.openView', { defaultValue: 'Open' }), onClick: onOpen } : null}
       className={className}
     >
       <div className="flex gap-6 mb-3">
@@ -200,9 +203,10 @@ export function ServiceCard({ id, data, onOpen, onOpenTicket, onNewTicket, class
         id={`${id}-new-ticket`}
         type="button"
         onClick={onNewTicket}
-        className="mt-3 text-xs font-semibold text-primary-600 hover:text-primary-800"
+        className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-primary-600 hover:text-primary-800"
       >
-        {t('clientCommandCenter.service.newTicket', { defaultValue: '＋ New ticket' })}
+        <Plus className="w-3 h-3" aria-hidden="true" />
+        {t('clientCommandCenter.service.newTicket', { defaultValue: 'New ticket' })}
       </button>
     </CardShell>
   );
@@ -234,11 +238,16 @@ export function MoneyCard({ id, data, formatMoney, onOpen, onOpenInvoice, onOpen
     <CardShell
       id={id}
       title={t('clientCommandCenter.cards.money', { defaultValue: 'Money' })}
-      action={onOpen ? { label: t('clientCommandCenter.openView', { defaultValue: 'Open ↗' }), onClick: onOpen } : null}
+      action={onOpen ? { label: t('clientCommandCenter.openView', { defaultValue: 'Open' }), onClick: onOpen } : null}
       className={className}
       footerLinks={[
         onOpenBillingSetup
-          ? { id: 'billing-setup', label: t('clientCommandCenter.money.billingSetup', { defaultValue: '⚙ Billing setup' }), onClick: onOpenBillingSetup }
+          ? {
+            id: 'billing-setup',
+            label: t('clientCommandCenter.money.billingSetup', { defaultValue: 'Billing setup' }),
+            icon: <Settings className="w-3 h-3" aria-hidden="true" />,
+            onClick: onOpenBillingSetup,
+          }
           : null,
         onOpenTaxSettings
           ? { id: 'tax-settings', label: t('clientCommandCenter.money.taxSettings', { defaultValue: 'Tax settings' }), onClick: onOpenTaxSettings }
@@ -363,11 +372,16 @@ export function InstallBaseCard({ id, data, onOpen, onOpenAssetList, onOpenAsset
     <CardShell
       id={id}
       title={t('clientCommandCenter.cards.installBase', { defaultValue: 'Install base' })}
-      action={onOpen ? { label: t('clientCommandCenter.openView', { defaultValue: 'Open ↗' }), onClick: onOpen } : null}
+      action={onOpen ? { label: t('clientCommandCenter.openView', { defaultValue: 'Open' }), onClick: onOpen } : null}
       className={className}
       footerLinks={[
         onOpenAssetList
-          ? { id: 'assets', label: t('clientCommandCenter.installBase.assetsLink', { defaultValue: 'Managed assets ↗' }), onClick: onOpenAssetList }
+          ? {
+            id: 'assets',
+            label: t('clientCommandCenter.installBase.assetsLink', { defaultValue: 'Managed assets' }),
+            icon: <ArrowUpRight className="w-3 h-3" aria-hidden="true" />,
+            onClick: onOpenAssetList,
+          }
           : null,
       ]}
     >
@@ -430,9 +444,10 @@ export function InstallBaseCard({ id, data, onOpen, onOpenAssetList, onOpenAsset
                 <button
                   type="button"
                   onClick={() => onOpenAsset(unit.asset_id!)}
-                  className="text-primary-700 text-xs font-semibold hover:underline whitespace-nowrap"
+                  className="inline-flex items-center gap-0.5 text-primary-700 text-xs font-semibold hover:underline whitespace-nowrap"
                 >
-                  {t('clientCommandCenter.installBase.viewAsset', { defaultValue: 'asset ↗' })}
+                  {t('clientCommandCenter.installBase.viewAsset', { defaultValue: 'asset' })}
+                  <ArrowUpRight className="w-3 h-3" aria-hidden="true" />
                 </button>
               )}
             </BentoRow>
@@ -459,7 +474,7 @@ export function PeopleCard({ id, data, onOpen, onOpenContact, onAddContact, clas
     <CardShell
       id={id}
       title={t('clientCommandCenter.cards.people', { defaultValue: 'People' })}
-      action={onOpen ? { label: t('clientCommandCenter.openView', { defaultValue: 'Open ↗' }), onClick: onOpen } : null}
+      action={onOpen ? { label: t('clientCommandCenter.openView', { defaultValue: 'Open' }), onClick: onOpen } : null}
       className={className}
     >
       {data.top.length === 0 ? (
@@ -504,11 +519,15 @@ export function PeopleCard({ id, data, onOpen, onOpenContact, onAddContact, clas
                 })()}
                 <span className="block text-xs text-[rgb(var(--color-text-600))] truncate">
                   {contact.phone && (
-                    <a href={`tel:${contact.phone}`} className="hover:text-primary-700 hover:underline">☎ {contact.phone}</a>
+                    <a href={`tel:${contact.phone}`} className="hover:text-primary-700 hover:underline">
+                      <Phone className={CONTACT_ICON_CLASS} aria-hidden="true" />{contact.phone}
+                    </a>
                   )}
                   {contact.phone && contact.email && <span className="text-[rgb(var(--color-text-300))]"> · </span>}
                   {contact.email && (
-                    <a href={`mailto:${contact.email}`} className="hover:text-primary-700 hover:underline">✉ {contact.email}</a>
+                    <a href={`mailto:${contact.email}`} className="hover:text-primary-700 hover:underline">
+                      <Mail className={CONTACT_ICON_CLASS} aria-hidden="true" />{contact.email}
+                    </a>
                   )}
                   {!contact.phone && !contact.email && (
                     <span className="text-[rgb(var(--color-text-400))] italic">
@@ -531,9 +550,10 @@ export function PeopleCard({ id, data, onOpen, onOpenContact, onAddContact, clas
           id={`${id}-add-contact`}
           type="button"
           onClick={onAddContact}
-          className="mt-3 text-xs font-semibold text-primary-600 hover:text-primary-800 text-left"
+          className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-primary-600 hover:text-primary-800 text-left"
         >
-          {t('clientCommandCenter.people.addContact', { defaultValue: '＋ Add contact' })}
+          <Plus className="w-3 h-3" aria-hidden="true" />
+          {t('clientCommandCenter.people.addContact', { defaultValue: 'Add contact' })}
         </button>
       )}
     </CardShell>
@@ -553,7 +573,7 @@ export function LocationsCard({ id, locations, onManage, className, t }: {
     <CardShell
       id={id}
       title={t('clientCommandCenter.cards.locations', { defaultValue: 'Locations' })}
-      action={onManage ? { label: t('clientCommandCenter.locations.manage', { defaultValue: 'Manage ↗' }), onClick: onManage } : null}
+      action={onManage ? { label: t('clientCommandCenter.locations.manage', { defaultValue: 'Manage' }), onClick: onManage } : null}
       className={className}
     >
       {locations.length === 0 ? (
@@ -577,11 +597,15 @@ export function LocationsCard({ id, locations, onManage, className, t }: {
               {(location.phone || location.email) && (
                 <div className="text-xs text-[rgb(var(--color-text-600))] truncate">
                   {location.phone && (
-                    <a href={`tel:${location.phone}`} className="hover:text-primary-700 hover:underline">☎ {location.phone}</a>
+                    <a href={`tel:${location.phone}`} className="hover:text-primary-700 hover:underline">
+                      <Phone className={CONTACT_ICON_CLASS} aria-hidden="true" />{location.phone}
+                    </a>
                   )}
                   {location.phone && location.email && <span className="text-[rgb(var(--color-text-300))]"> · </span>}
                   {location.email && (
-                    <a href={`mailto:${location.email}`} className="hover:text-primary-700 hover:underline">✉ {location.email}</a>
+                    <a href={`mailto:${location.email}`} className="hover:text-primary-700 hover:underline">
+                      <Mail className={CONTACT_ICON_CLASS} aria-hidden="true" />{location.email}
+                    </a>
                   )}
                 </div>
               )}
@@ -623,7 +647,7 @@ export function DocumentsCard({ id, data, onOpen, className, t }: {
     <CardShell
       id={id}
       title={t('clientCommandCenter.cards.documents', { defaultValue: 'Documents' })}
-      action={onOpen ? { label: t('clientCommandCenter.openView', { defaultValue: 'Open ↗' }), onClick: onOpen } : null}
+      action={onOpen ? { label: t('clientCommandCenter.openView', { defaultValue: 'Open' }), onClick: onOpen } : null}
       className={className}
     >
       {data.recent.length === 0 ? (
@@ -634,7 +658,8 @@ export function DocumentsCard({ id, data, onOpen, className, t }: {
         <BentoRowList>
           {data.recent.map((doc) => (
             <BentoRow key={doc.document_id} meta={`${timeAgoDays(doc.updated_at)}d`}>
-              <span className="text-[rgb(var(--color-text-800))] truncate">📄 {doc.document_name}</span>
+              <FileText className="w-3.5 h-3.5 shrink-0 text-[rgb(var(--color-text-400))]" aria-hidden="true" />
+              <span className="text-[rgb(var(--color-text-800))] truncate">{doc.document_name}</span>
             </BentoRow>
           ))}
         </BentoRowList>
@@ -665,8 +690,9 @@ export function NotesCard({ id, data, onOpen, className, t }: {
       action={onOpen
         ? {
           label: data.hasNotes
-            ? t('clientCommandCenter.openView', { defaultValue: 'Open ↗' })
-            : t('clientCommandCenter.notes.add', { defaultValue: '＋ Add note ↗' }),
+            ? t('clientCommandCenter.openView', { defaultValue: 'Open' })
+            : t('clientCommandCenter.notes.add', { defaultValue: 'Add note' }),
+          icon: data.hasNotes ? undefined : <Plus className="w-3 h-3" aria-hidden="true" />,
           onClick: onOpen,
         }
         : null}
@@ -727,7 +753,7 @@ export function RecordCard({ id, data, onOpen, onOpenAdditionalInfo, className, 
     <CardShell
       id={id}
       title={t('clientCommandCenter.cards.record', { defaultValue: 'Client record' })}
-      action={onOpen ? { label: t('clientCommandCenter.record.edit', { defaultValue: 'Edit ↗' }), onClick: onOpen } : null}
+      action={onOpen ? { label: t('clientCommandCenter.record.edit', { defaultValue: 'Edit' }), onClick: onOpen } : null}
       className={className}
       footerLinks={[
         onOpenAdditionalInfo

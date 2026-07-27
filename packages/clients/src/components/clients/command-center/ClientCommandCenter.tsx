@@ -2,7 +2,7 @@
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { MapPin } from 'lucide-react';
+import { Globe, Mail, MapPin, Phone, type LucideIcon } from 'lucide-react';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import { BentoTile, BentoTileEmpty, BentoTileSkeleton, useTileData } from '@alga-psa/ui/components/bento';
 import type { TabContent } from '@alga-psa/ui/components/CustomTabs';
@@ -68,6 +68,8 @@ const SPAN_FULL = 'sm:col-span-2 md:col-span-4 lg:col-span-6';
 const SPAN_HERO = 'sm:col-span-2 md:col-span-4 lg:col-span-4';
 const SPAN_HALF = 'sm:col-span-1 md:col-span-2 lg:col-span-3';
 const SPAN_THIRD = 'sm:col-span-1 md:col-span-2 lg:col-span-2';
+
+const IDENTITY_ICON_CLASS = 'inline w-3.5 h-3.5 -mt-0.5 mr-1 text-[rgb(var(--color-text-500))]';
 
 export default function ClientCommandCenter({
   idPrefix,
@@ -228,26 +230,27 @@ export default function ClientCommandCenter({
   // and email, website, and primary address. Only fields that exist render.
   const identityLocation = pulse?.locations.find((location) => location.is_default) ?? pulse?.locations[0] ?? null;
   const identityItems: Array<{ key: string; href: string | null; text: React.ReactNode }> = [];
+  const identityText = (Icon: LucideIcon, value: string) => (
+    <>
+      <Icon className={IDENTITY_ICON_CLASS} aria-hidden="true" />
+      {value}
+    </>
+  );
   if (identityLocation?.phone) {
-    identityItems.push({ key: 'phone', href: `tel:${identityLocation.phone}`, text: `☎ ${identityLocation.phone}` });
+    identityItems.push({ key: 'phone', href: `tel:${identityLocation.phone}`, text: identityText(Phone, identityLocation.phone) });
   }
   if (identityLocation?.email) {
-    identityItems.push({ key: 'email', href: `mailto:${identityLocation.email}`, text: `✉ ${identityLocation.email}` });
+    identityItems.push({ key: 'email', href: `mailto:${identityLocation.email}`, text: identityText(Mail, identityLocation.email) });
   }
   if (pulse?.record.url) {
     const href = /^https?:\/\//i.test(pulse.record.url) ? pulse.record.url : `https://${pulse.record.url}`;
-    identityItems.push({ key: 'url', href, text: `🌐 ${pulse.record.url}` });
+    identityItems.push({ key: 'url', href, text: identityText(Globe, pulse.record.url) });
   }
   if (identityLocation?.address_line1) {
     identityItems.push({
       key: 'address',
       href: null,
-      text: (
-        <>
-          <MapPin className="inline w-3.5 h-3.5 -mt-0.5 mr-1 text-[rgb(var(--color-text-500))]" aria-hidden="true" />
-          {[identityLocation.address_line1, identityLocation.city].filter(Boolean).join(', ')}
-        </>
-      ),
+      text: identityText(MapPin, [identityLocation.address_line1, identityLocation.city].filter(Boolean).join(', ')),
     });
   }
 

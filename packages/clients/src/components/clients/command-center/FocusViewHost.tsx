@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { X } from 'lucide-react';
 import Drawer from '@alga-psa/ui/components/Drawer';
 import type { TabContent } from '@alga-psa/ui/components/CustomTabs';
 
@@ -79,9 +80,10 @@ export default function FocusViewHost({ idPrefix, tabs, activeTabId, onSelectTab
               id={`${idPrefix}-focus-close`}
               type="button"
               onClick={onClose}
-              className="text-sm font-medium text-[rgb(var(--color-text-500))] hover:text-[rgb(var(--color-text-800))] px-2 py-1 rounded"
+              aria-label={t('clientCommandCenter.rail.close', { defaultValue: 'Close' })}
+              className="text-[rgb(var(--color-text-500))] hover:text-[rgb(var(--color-text-800))] px-2 py-1 rounded"
             >
-              ✕
+              <X className="w-4 h-4" aria-hidden="true" />
             </button>
           </div>
           <div className="flex flex-1 min-h-0 min-w-0">
