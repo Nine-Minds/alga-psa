@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { canManageEntraIntegration } from '@alga-psa/integrations/actions';
+import { canManageEntraSync } from '../../actions/entraClientSyncActions';
 
 /**
  * Whether this user may start an Entra sync, probed the same way the equipment
@@ -16,7 +16,7 @@ export function useEntraSyncPermission(): { canManage: boolean; loading: boolean
     let cancelled = false;
     (async () => {
       try {
-        const allowed = await canManageEntraIntegration();
+        const allowed = await canManageEntraSync();
         if (!cancelled) setCanManage(allowed === true);
       } catch {
         if (!cancelled) setCanManage(false);

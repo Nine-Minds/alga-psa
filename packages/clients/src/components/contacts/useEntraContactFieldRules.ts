@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { getEntraIntegrationStatus } from '@alga-psa/integrations/actions';
+import { getEntraFieldSyncRules } from '../../actions/entraClientSyncActions';
 
 /**
  * The tenant's field-sync rules, fetched only for contacts that are actually
@@ -25,9 +25,9 @@ export function useEntraContactFieldRules(
     let cancelled = false;
     (async () => {
       try {
-        const result = await getEntraIntegrationStatus();
-        if (cancelled || 'error' in result) return;
-        setRules((result.data?.fieldSyncConfig as Record<string, unknown>) || null);
+        const result = await getEntraFieldSyncRules();
+        if (cancelled || !result.success) return;
+        setRules(result.data?.fieldSyncConfig || null);
       } catch {
         if (!cancelled) setRules(null);
       }
