@@ -1,19 +1,20 @@
 'use client';
 
-import React, { use, useEffect, useRef, useState } from 'react';
+import React from 'react';
 import { Calendar, CalendarCheck, Phone, CreditCard, Plus } from 'lucide-react';
 import { fromZonedTime } from 'date-fns-tz';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
-import { BentoTile, BentoTileEmpty } from '@alga-psa/ui/components/bento/BentoTile';
 import {
-  getErrorMessage,
-  isActionMessageError,
-  isActionPermissionError,
-  type ActionMessageError,
-  type ActionPermissionError,
-} from '@alga-psa/ui/lib/errorHandling';
+  BentoDateChip,
+  BentoRow,
+  BentoRowList,
+  BentoTile,
+  BentoTileEmpty,
+  TileSkeleton,
+  useTileData,
+} from '@alga-psa/ui/components/bento';
 import {
   getTicketScheduleEntries,
   getTicketInteractions,
@@ -24,79 +25,6 @@ import {
   type TicketBillingRollup,
   type TicketAppointmentRequestSummary,
 } from '../../../actions/ticketBentoActions';
-
-type TileActionError = ActionMessageError | ActionPermissionError;
-type TileDataResult<T> = T | TileActionError;
-
-const isTileActionError = (value: unknown): value is TileActionError =>
-  isActionMessageError(value) || isActionPermissionError(value);
-
-/**
- * Tile data source. When `initial` (a server-started promise from the RSC
- * page) is provided, the FIRST paint resolves it via React `use()` — the tile
- * suspends into its <Suspense> skeleton and issues NO network request. The
- * mount fetch is skipped; later dep changes (refreshKey after a mutation)
- * fall back to the client action as before. Without `initial`, behavior is
- * the legacy fetch-on-mount.
- */
-function useTileData<T>(
-  load: () => Promise<TileDataResult<T>>,
-  deps: React.DependencyList,
-  t: (key: string, defaultValue: string) => string,
-  initial?: Promise<TileDataResult<T>>,
-): {
-  data: T | null;
-  error: string | null;
-  loading: boolean;
-} {
-  // Conditional use() is allowed by React; a resolved streamed promise
-  // returns synchronously on re-renders.
-  const initialResult = initial ? use(initial) : null;
-  const initialData = initialResult && !isTileActionError(initialResult) ? initialResult : null;
-  const [data, setData] = useState<T | null>(initialData);
-  const [error, setError] = useState<string | null>(
-    initialResult && isTileActionError(initialResult) ? getErrorMessage(initialResult) : null,
-  );
-  const [loading, setLoading] = useState(!initial);
-  const skipFirstLoad = useRef(Boolean(initial));
-
-  useEffect(() => {
-    if (skipFirstLoad.current) {
-      skipFirstLoad.current = false;
-      return;
-    }
-    let cancelled = false;
-    setLoading(true);
-    setError(null);
-    load()
-      .then((result) => {
-        if (cancelled) return;
-        if (isTileActionError(result)) {
-          setData(null);
-          setError(getErrorMessage(result));
-          return;
-        }
-        setData(result);
-      })
-      .catch((err: unknown) => {
-        console.error('Failed to load ticket bento tile:', err);
-        if (!cancelled) setError(t('bento.tiles.couldNotLoad', 'Could not load this tile'));
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, deps);
-
-  return { data, error, loading };
-}
-
-function TileSkeleton({ id }: { id: string }) {
-  return <div id={id} className="animate-pulse bg-[rgb(var(--color-border-100))] h-16 rounded-md" />;
-}
 
 function formatShortDate(iso: string): { month: string; day: string } {
   const d = new Date(iso);
@@ -201,10 +129,7 @@ function ScheduleRow({ id, entry, t }: { id: string; entry: TicketScheduleEntryS
   const date = formatShortDate(entry.scheduledStart);
   return (
     <div id={id} className={`flex items-center gap-3 ${entry.isUpcoming ? '' : 'opacity-60'}`}>
-      <div className="w-10 flex-shrink-0 rounded-md bg-[rgb(var(--color-primary-50))] dark:bg-[rgb(var(--color-primary-400)/0.15)] text-center py-1">
-        <div className="text-[10px] font-semibold uppercase tracking-wide text-[rgb(var(--color-primary-500))]">{date.month}</div>
-        <div className="text-base font-semibold leading-none text-[rgb(var(--color-primary-600))] dark:text-[rgb(var(--color-primary-300))]">{date.day}</div>
-      </div>
+      <BentoDateChip month={date.month} day={date.day} />
       <div className="min-w-0">
         <div className="text-sm font-medium text-[rgb(var(--color-text-800))] truncate">{entry.title || t('bento.tiles.scheduledWork', 'Scheduled work')}</div>
         <div className="text-xs text-[rgb(var(--color-text-500))] truncate">
@@ -254,7 +179,7 @@ function AppointmentRequestRow({
   const when = formatAppointmentDateTime(request.requestedDate, request.requestedTime, request.requesterTimezone);
   const duration = request.requestedDurationMinutes ? formatMinutes(request.requestedDurationMinutes) : null;
   return (
-    <li id={id} className="flex items-start justify-between gap-2 py-1.5 first:pt-0 last:pb-0 text-sm">
+    <BentoRow id={id} align="start" className="justify-between">
       <div className="min-w-0">
         <div className="truncate text-[rgb(var(--color-text-700))]">
           {request.serviceName || t('bento.tiles.appointment', 'Appointment')}
@@ -267,7 +192,7 @@ function AppointmentRequestRow({
       <Badge variant={appointmentStatusVariant(request.status)} size="sm" className="flex-shrink-0">
         {t(`bento.tiles.apptStatus.${request.status}`, request.status)}
       </Badge>
-    </li>
+    </BentoRow>
   );
 }
 
@@ -306,7 +231,7 @@ export function AppointmentRequestsTile({
       ) : requests.length === 0 ? (
         <BentoTileEmpty id={`${id}-empty`}>{t('bento.tiles.noAppointmentRequests', 'No appointment requests')}</BentoTileEmpty>
       ) : (
-        <ul className="divide-y divide-[rgb(var(--color-border-100))]">
+        <BentoRowList>
           {requests.map((request) => (
             <AppointmentRequestRow
               key={request.appointmentRequestId}
@@ -315,7 +240,7 @@ export function AppointmentRequestsTile({
               t={t}
             />
           ))}
-        </ul>
+        </BentoRowList>
       )}
     </BentoTile>
   );
@@ -386,11 +311,11 @@ export function CallsEmailsTile({
       ) : !data || data.length === 0 ? (
         <BentoTileEmpty id={`${id}-empty`}>{t('bento.tiles.noCallsOrEmails', 'No calls or emails logged')}</BentoTileEmpty>
       ) : (
-        <ul className="divide-y divide-[rgb(var(--color-border-100))]">
+        <BentoRowList>
           {data.map((interaction) => (
             <InteractionRow key={interaction.interactionId} id={`${id}-row-${interaction.interactionId}`} interaction={interaction} t={t} />
           ))}
-        </ul>
+        </BentoRowList>
       )}
     </BentoTile>
   );
@@ -398,14 +323,14 @@ export function CallsEmailsTile({
 
 function InteractionRow({ id, interaction, t }: { id: string; interaction: TicketInteractionSummary; t: (key: string, defaultValue: string) => string }) {
   return (
-    <li id={id} className="py-1.5 first:pt-0 last:pb-0 flex items-baseline gap-2 text-sm">
+    <BentoRow
+      id={id}
+      meta={new Date(interaction.interactionDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
+    >
       <span className="min-w-0 truncate text-[rgb(var(--color-text-700))]">
         {interaction.title || interaction.typeName || t('bento.tiles.interaction', 'Interaction')}
       </span>
-      <span className="ml-auto flex-shrink-0 text-xs text-[rgb(var(--color-text-400))]">
-        {new Date(interaction.interactionDate).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}
-      </span>
-    </li>
+    </BentoRow>
   );
 }
 
