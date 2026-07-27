@@ -266,6 +266,9 @@ export function FieldSyncRules({
                   options are already in memory, so the search is local. */}
               <AsyncSearchableSelect
                 id="entra-field-sync-preview-client"
+                // The component's stacked-form margin, cancelled: this one sits
+                // in a row and has to share a baseline with the button.
+                className="mb-0"
                 label={t('integrations.entra.settings.fieldSync.previewClientLabel')}
                 value={previewClient}
                 onChange={setPreviewClient}
@@ -276,10 +279,12 @@ export function FieldSyncRules({
                 disabled={saving || previewBusy}
               />
             </div>
+            {/* size default, not sm: h-10 matches the picker's height so the two
+                controls in this row are the same object, not two objects that
+                happen to share a bottom edge. */}
             <Button
               id="entra-field-sync-preview"
               type="button"
-              size="sm"
               variant="outline"
               onClick={() => void handlePreviewRules()}
               disabled={saving || previewBusy || !previewClient}
