@@ -35,7 +35,7 @@ export default function EntraIntegrationRouteBody(): React.JSX.Element {
         <EntraIntegrationPage canUseCipp={canUseCipp} />
       ) : (
         <FeatureUpgradeNotice
-          featureName={t('integrations.items.entra.name')}
+          featureName={t('integrations.entra.summary.title')}
           requiredTier={FEATURE_MINIMUM_TIER[TIER_FEATURES.ENTRA_SYNC]}
         />
       )}
