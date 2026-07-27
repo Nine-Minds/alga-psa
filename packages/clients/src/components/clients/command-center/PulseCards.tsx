@@ -81,7 +81,12 @@ const formatMinutes = (minutes: number): string => {
   return `${Math.floor(abs / (24 * 60))}d`;
 };
 
-/** Per-ticket SLA state from tickets.sla_* columns — never a due_date proxy. */
+/**
+ * Per-ticket SLA state from tickets.sla_* columns — never a due_date proxy.
+ * The with-time and without-time phrasings are separate keys: a single key
+ * with a conditional defaultValue can't survive extraction, because the
+ * translated string would keep the {{over}} slot even with nothing to put in it.
+ */
 function SlaChip({ sla, t }: { sla: ClientPulseTicketSla; t: TFn }) {
   const remaining = sla.remainingMinutes != null ? formatMinutes(sla.remainingMinutes) : null;
   switch (sla.status) {
@@ -89,19 +94,17 @@ function SlaChip({ sla, t }: { sla: ClientPulseTicketSla; t: TFn }) {
     case 'resolution_breached':
       return (
         <BentoChip tone="danger">
-          {t('clientCommandCenter.sla.breached', {
-            defaultValue: remaining ? 'SLA breached {{over}} ago' : 'SLA breached',
-            over: remaining ?? '',
-          })}
+          {remaining
+            ? t('clientCommandCenter.sla.breachedAgo', { defaultValue: 'SLA breached {{over}} ago', over: remaining })
+            : t('clientCommandCenter.sla.breached', { defaultValue: 'SLA breached' })}
         </BentoChip>
       );
     case 'at_risk':
       return (
         <BentoChip tone="warning">
-          {t('clientCommandCenter.sla.atRisk', {
-            defaultValue: remaining ? 'SLA {{left}} left' : 'SLA at risk',
-            left: remaining ?? '',
-          })}
+          {remaining
+            ? t('clientCommandCenter.sla.atRiskLeft', { defaultValue: 'SLA {{left}} left', left: remaining })
+            : t('clientCommandCenter.sla.atRisk', { defaultValue: 'SLA at risk' })}
         </BentoChip>
       );
     case 'paused':
@@ -113,10 +116,9 @@ function SlaChip({ sla, t }: { sla: ClientPulseTicketSla; t: TFn }) {
     default:
       return (
         <span className="text-[10px] text-[rgb(var(--color-text-400))] whitespace-nowrap">
-          {t('clientCommandCenter.sla.onTrack', {
-            defaultValue: remaining ? 'SLA {{left}} left' : 'SLA on track',
-            left: remaining ?? '',
-          })}
+          {remaining
+            ? t('clientCommandCenter.sla.onTrackLeft', { defaultValue: 'SLA {{left}} left', left: remaining })
+            : t('clientCommandCenter.sla.onTrack', { defaultValue: 'SLA on track' })}
         </span>
       );
   }
