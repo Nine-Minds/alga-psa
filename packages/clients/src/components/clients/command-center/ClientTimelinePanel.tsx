@@ -6,6 +6,7 @@ import type {
   ClientTimelineEvent,
   ClientTimelineEventType,
 } from '../../../lib/commandCenterTypes';
+import { BentoTileEmpty } from '@alga-psa/ui/components/bento';
 import { CardShell } from './PulseCards';
 import {
   getErrorMessage,
@@ -160,10 +161,10 @@ export default function ClientTimelinePanel({ idPrefix, clientId, formatMoney, o
             id={`${idPrefix}-timeline-filter-${entry.key}`}
             type="button"
             onClick={() => setFilter(entry.key)}
-            className={`rounded-full px-2.5 py-0.5 text-[11px] font-semibold transition-colors ${
+            className={`rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors ${
               filter === entry.key
                 ? 'bg-primary-100 text-primary-800'
-                : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                : 'bg-[rgb(var(--color-border-100))] text-[rgb(var(--color-text-500))] hover:bg-[rgb(var(--color-border-200))]'
             }`}
           >
             {entry.label}
@@ -171,23 +172,23 @@ export default function ClientTimelinePanel({ idPrefix, clientId, formatMoney, o
         ))}
       </div>
 
-      {error && <p className="text-[13px] text-red-600">{error}</p>}
+      {error && <p id={`${idPrefix}-timeline-error`} className="text-sm text-red-600 dark:text-red-400">{error}</p>}
 
       {!error && events.length === 0 && !isLoading && (
-        <p className="text-[13px] text-gray-400 italic">
+        <BentoTileEmpty id={`${idPrefix}-timeline-empty`}>
           {t('clientCommandCenter.timeline.empty', { defaultValue: 'Nothing recorded yet for this client.' })}
-        </p>
+        </BentoTileEmpty>
       )}
 
       <ul className="relative pl-5 flex-1 overflow-y-auto min-h-0">
-        <span className="absolute left-[5px] top-1.5 bottom-1.5 w-0.5 bg-gray-100" aria-hidden />
+        <span className="absolute left-[5px] top-1.5 bottom-1.5 w-0.5 bg-[rgb(var(--color-border-100))]" aria-hidden />
         {events.map((event) => (
-          <li key={event.id} className="relative pb-3.5 text-[13px]">
+          <li key={event.id} className="relative pb-3.5 text-sm">
             <span
-              className={`absolute -left-5 top-1 w-2.5 h-2.5 rounded-full bg-white border-[3px] ${markerColor[event.type] ?? 'border-primary-200'}`}
+              className={`absolute -left-5 top-1 w-2.5 h-2.5 rounded-full bg-[rgb(var(--color-card))] border-[3px] ${markerColor[event.type] ?? 'border-primary-200'}`}
               aria-hidden
             />
-            <div className="text-gray-800 leading-snug">
+            <div className="text-[rgb(var(--color-text-800))] leading-snug">
               <span className="font-medium">{typeLabel(event)}</span>
               {' — '}
               <button
@@ -197,16 +198,16 @@ export default function ClientTimelinePanel({ idPrefix, clientId, formatMoney, o
               >
                 {event.refLabel}
               </button>
-              {event.summary ? <span className="text-gray-600"> · {event.summary}</span> : null}
-              {event.amountCents != null ? <span className="text-gray-500"> · {formatMoney(event.amountCents)}</span> : null}
+              {event.summary ? <span className="text-[rgb(var(--color-text-600))]"> · {event.summary}</span> : null}
+              {event.amountCents != null ? <span className="text-[rgb(var(--color-text-500))]"> · {formatMoney(event.amountCents)}</span> : null}
             </div>
-            <div className="text-[11px] text-gray-400 mt-0.5">{relativeTime(event.occurredAt, t)}</div>
+            <div className="text-xs text-[rgb(var(--color-text-400))] mt-0.5">{relativeTime(event.occurredAt, t)}</div>
           </li>
         ))}
       </ul>
 
       {isLoading && (
-        <p className="text-[12px] text-gray-400 py-1">
+        <p id={`${idPrefix}-timeline-loading`} className="text-xs text-[rgb(var(--color-text-400))] py-1">
           {t('clientCommandCenter.timeline.loading', { defaultValue: 'Loading…' })}
         </p>
       )}

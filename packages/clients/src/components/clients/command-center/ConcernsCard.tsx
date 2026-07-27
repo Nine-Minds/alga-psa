@@ -16,7 +16,7 @@ interface ConcernsCardProps {
 const severityDot: Record<ClientAttentionFlag['severity'], string> = {
   amber: 'bg-amber-400',
   blue: 'bg-blue-400',
-  gray: 'bg-gray-300',
+  gray: 'bg-[rgb(var(--color-text-300))]',
 };
 
 /**
@@ -110,12 +110,15 @@ export default function ConcernsCard({ id, flags, formatMoney, onFlagClick, clas
         id={id}
         title={t('clientCommandCenter.cards.concerns', { defaultValue: 'Concerns' })}
         action={
-          <span className="rounded-full bg-amber-200/70 text-amber-900 px-1.5 text-[10.5px] font-bold leading-4">
+          <span className="rounded-full bg-amber-200/70 dark:bg-amber-400/25 text-amber-900 dark:text-amber-200 px-2 py-0.5 text-[10px] font-semibold leading-4">
             {flags.length}
           </span>
         }
         className="h-full"
-        surfaceClassName="border-amber-200 bg-amber-50/50"
+        // Amber alert surface. The dark pair is explicit: the globals.css shim
+        // only rewrites gray/white utilities, so an amber-50 tile would stay
+        // light in dark mode and swallow its own text.
+        surfaceClassName="border-amber-200 dark:border-amber-900/50 bg-amber-50/50 dark:bg-amber-900/20"
       >
         <ul className="grid grid-cols-1 md:grid-cols-2 gap-x-6">
           {flags.map((flag, index) => (
@@ -124,11 +127,11 @@ export default function ConcernsCard({ id, flags, formatMoney, onFlagClick, clas
                 id={`${id}-flag-${flag.kind}-${index}`}
                 type="button"
                 onClick={() => onFlagClick(flag)}
-                className="w-full flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-[13px] text-gray-800 hover:bg-white/80 transition-colors"
+                className="w-full flex items-center gap-2.5 rounded-lg px-2 py-1.5 text-left text-sm text-[rgb(var(--color-text-800))] hover:bg-[rgb(var(--color-card)/0.8)] transition-colors"
               >
                 <span className={`w-2 h-2 rounded-full shrink-0 ${severityDot[flag.severity]}`} aria-hidden="true" />
                 <span className="min-w-0 truncate">{labelFor(flag)}</span>
-                <span className="ml-auto text-gray-400 shrink-0">→</span>
+                <span className="ml-auto text-[rgb(var(--color-text-400))] shrink-0">→</span>
               </button>
             </li>
           ))}

@@ -73,13 +73,13 @@ export default function FocusViewHost({ idPrefix, tabs, activeTabId, onSelectTab
     >
       {activeTab && (
         <div className="flex flex-col h-full min-w-0">
-          <div className="flex items-center justify-between pb-3 mb-0 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">{activeTab.label}</h2>
+          <div className="flex items-center justify-between pb-3 mb-0 border-b border-[rgb(var(--color-border-200))]">
+            <h2 className="text-lg font-semibold text-[rgb(var(--color-text-900))]">{activeTab.label}</h2>
             <button
               id={`${idPrefix}-focus-close`}
               type="button"
               onClick={onClose}
-              className="text-sm font-medium text-gray-500 hover:text-gray-800 px-2 py-1 rounded"
+              className="text-sm font-medium text-[rgb(var(--color-text-500))] hover:text-[rgb(var(--color-text-800))] px-2 py-1 rounded"
             >
               ✕
             </button>
@@ -87,13 +87,13 @@ export default function FocusViewHost({ idPrefix, tabs, activeTabId, onSelectTab
           <div className="flex flex-1 min-h-0 min-w-0">
             <nav
               id={`${idPrefix}-focus-rail`}
-              className="w-44 shrink-0 border-r border-gray-200 overflow-y-auto py-3 pr-2"
+              className="w-44 shrink-0 border-r border-[rgb(var(--color-border-200))] overflow-y-auto py-3 pr-2"
               aria-label={t('clientCommandCenter.rail.label', { defaultValue: 'Client views' })}
             >
               {groups.map((group) => (
                 <div key={group.key || 'top'} className="mb-1.5">
                   {groupLabel(group.key) && (
-                    <div className="px-2.5 pt-2 pb-1 text-[10px] font-bold uppercase tracking-wider text-gray-400">
+                    <div className="px-2.5 pt-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-[rgb(var(--color-text-400))]">
                       {groupLabel(group.key)}
                     </div>
                   )}
@@ -103,10 +103,10 @@ export default function FocusViewHost({ idPrefix, tabs, activeTabId, onSelectTab
                       id={`${idPrefix}-focus-rail-${tab.id}`}
                       type="button"
                       onClick={() => { if (tab.id !== activeTab.id) onSelectTab(tab.id); }}
-                      className={`block w-full text-left rounded-lg px-2.5 py-1.5 text-[13px] truncate ${
+                      className={`block w-full text-left rounded-lg px-2.5 py-1.5 text-sm truncate ${
                         tab.id === activeTab.id
                           ? 'bg-primary-50 text-primary-800 font-semibold'
-                          : 'text-gray-600 hover:bg-gray-100 hover:text-gray-900'
+                          : 'text-[rgb(var(--color-text-600))] hover:bg-[rgb(var(--color-border-100))] hover:text-[rgb(var(--color-text-900))]'
                       }`}
                     >
                       {tab.label}

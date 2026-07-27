@@ -3,7 +3,17 @@
 import React from 'react';
 import { MapPin } from 'lucide-react';
 import ContactAvatar from '@alga-psa/ui/components/ContactAvatar';
-import { BentoTile } from '@alga-psa/ui/components/bento/BentoTile';
+import {
+  BentoChip,
+  BentoFooterLinks,
+  BentoRow,
+  BentoRowList,
+  BentoRowMeta,
+  BentoStat,
+  BentoTile,
+  BentoTileEmpty,
+  type BentoFooterLink,
+} from '@alga-psa/ui/components/bento';
 import type {
   ClientPulseService,
   ClientPulseMoney,
@@ -18,11 +28,7 @@ import type {
 
 type TFn = (key: string, options?: Record<string, unknown>) => string;
 
-export interface CardFooterLink {
-  id: string;
-  label: string;
-  onClick: () => void;
-}
+export type CardFooterLink = BentoFooterLink;
 
 interface CardShellProps {
   id: string;
@@ -35,7 +41,6 @@ interface CardShellProps {
 }
 
 export function CardShell({ id, title, action, footerLinks, className = '', children }: CardShellProps) {
-  const liveFooterLinks = (footerLinks ?? []).filter((link): link is CardFooterLink => link != null);
   return (
     <BentoTile
       id={id}
@@ -53,41 +58,8 @@ export function CardShell({ id, title, action, footerLinks, className = '', chil
       ) : undefined}
     >
       {children}
-      {liveFooterLinks.length > 0 && (
-        // mt-auto pins the entry links to the tile's bottom edge, so footers
-        // align across a bento row of equal-height tiles.
-        <div className="mt-auto">
-          <div className="mt-3 pt-2 border-t border-[rgb(var(--color-border-100))] text-xs">
-            {liveFooterLinks.map((link, index) => (
-              <React.Fragment key={link.id}>
-                {index > 0 && <span className="text-gray-300 mx-1.5">·</span>}
-                <button
-                  id={`${id}-link-${link.id}`}
-                  type="button"
-                  onClick={link.onClick}
-                  className="font-semibold text-primary-600 hover:text-primary-800"
-                >
-                  {link.label}
-                </button>
-              </React.Fragment>
-            ))}
-          </div>
-        </div>
-      )}
+      <BentoFooterLinks idPrefix={id} links={footerLinks ?? []} />
     </BentoTile>
-  );
-}
-
-function EmptyLine({ text }: { text: string }) {
-  return <p className="text-[13px] text-gray-400 italic">{text}</p>;
-}
-
-function Stat({ value, label }: { value: React.ReactNode; label: string }) {
-  return (
-    <div>
-      <div className="text-2xl font-bold text-gray-900 leading-tight">{value}</div>
-      <div className="text-[11.5px] text-gray-500">{label}</div>
-    </div>
   );
 }
 
@@ -113,31 +85,31 @@ function SlaChip({ sla, t }: { sla: ClientPulseTicketSla; t: TFn }) {
     case 'response_breached':
     case 'resolution_breached':
       return (
-        <span className="rounded bg-red-100 text-red-700 px-1.5 text-[10.5px] font-bold whitespace-nowrap">
+        <BentoChip tone="danger">
           {t('clientCommandCenter.sla.breached', {
             defaultValue: remaining ? 'SLA breached {{over}} ago' : 'SLA breached',
             over: remaining ?? '',
           })}
-        </span>
+        </BentoChip>
       );
     case 'at_risk':
       return (
-        <span className="rounded bg-amber-100 text-amber-800 px-1.5 text-[10.5px] font-bold whitespace-nowrap">
+        <BentoChip tone="warning">
           {t('clientCommandCenter.sla.atRisk', {
             defaultValue: remaining ? 'SLA {{left}} left' : 'SLA at risk',
             left: remaining ?? '',
           })}
-        </span>
+        </BentoChip>
       );
     case 'paused':
       return (
-        <span className="rounded bg-gray-100 text-gray-600 px-1.5 text-[10.5px] font-semibold whitespace-nowrap">
+        <BentoChip tone="neutral">
           {t('clientCommandCenter.sla.paused', { defaultValue: 'SLA paused' })}
-        </span>
+        </BentoChip>
       );
     default:
       return (
-        <span className="text-gray-400 text-[10.5px] whitespace-nowrap">
+        <span className="text-[10px] text-[rgb(var(--color-text-400))] whitespace-nowrap">
           {t('clientCommandCenter.sla.onTrack', {
             defaultValue: remaining ? 'SLA {{left}} left' : 'SLA on track',
             left: remaining ?? '',
@@ -166,30 +138,31 @@ export function ServiceCard({ id, data, onOpen, onOpenTicket, onNewTicket, class
       className={className}
     >
       <div className="flex gap-6 mb-3">
-        <Stat value={data.openCount} label={t('clientCommandCenter.service.open', { defaultValue: 'open tickets' })} />
-        <Stat
+        <BentoStat value={data.openCount} label={t('clientCommandCenter.service.open', { defaultValue: 'open tickets' })} />
+        <BentoStat
           value={data.oldestOpenDays != null ? `${data.oldestOpenDays}d` : '—'}
           label={t('clientCommandCenter.service.oldest', { defaultValue: 'oldest open' })}
         />
-        <Stat value={data.overdueCount} label={t('clientCommandCenter.service.overdue', { defaultValue: 'overdue' })} />
+        <BentoStat value={data.overdueCount} label={t('clientCommandCenter.service.overdue', { defaultValue: 'overdue' })} />
       </div>
       {data.topOpen.length === 0 ? (
-        <EmptyLine text={t('clientCommandCenter.service.none', { defaultValue: 'No open tickets.' })} />
+        <BentoTileEmpty id={`${id}-empty`}>
+          {t('clientCommandCenter.service.none', { defaultValue: 'No open tickets.' })}
+        </BentoTileEmpty>
       ) : (
-        <ul className="divide-y divide-gray-100">
+        <BentoRowList>
           {data.topOpen.map((ticket) => (
-            <li key={ticket.ticket_id} className="py-1.5 text-[13px]">
+            <BentoRow key={ticket.ticket_id} stacked>
               <div className="flex items-baseline gap-2">
                 {ticket.priority_name && (
-                  <span
-                    className="inline-block rounded px-1.5 text-[10.5px] font-bold"
+                  <BentoChip
                     style={{
                       color: ticket.priority_color ?? '#374151',
                       backgroundColor: `${ticket.priority_color ?? '#9ca3af'}22`,
                     }}
                   >
                     {ticket.priority_name}
-                  </span>
+                  </BentoChip>
                 )}
                 <button
                   type="button"
@@ -198,20 +171,20 @@ export function ServiceCard({ id, data, onOpen, onOpenTicket, onNewTicket, class
                 >
                   #{ticket.ticket_number} {ticket.title}
                 </button>
-                <span className="ml-auto text-[11px] text-gray-400 whitespace-nowrap">
+                <BentoRowMeta>
                   {ticket.is_overdue
                     ? t('clientCommandCenter.service.overdueTag', { defaultValue: 'overdue' })
                     : `${timeAgoDays(ticket.entered_at)}d`}
-                </span>
+                </BentoRowMeta>
               </div>
               {/* Ownership + SLA (W1/W3) — rendered only when the pulse carries them. */}
               {(ticket.assigned_to_name !== undefined || ticket.sla) && (
-                <div className="mt-0.5 flex items-center gap-2 text-[11.5px]">
+                <div className="mt-0.5 flex items-center gap-2 text-xs">
                   {ticket.assigned_to_name !== undefined && (
                     ticket.assigned_to_name ? (
-                      <span className="text-gray-500 truncate">{ticket.assigned_to_name}</span>
+                      <span className="text-[rgb(var(--color-text-500))] truncate">{ticket.assigned_to_name}</span>
                     ) : (
-                      <span className="text-gray-400 italic">
+                      <span className="text-[rgb(var(--color-text-400))] italic">
                         {t('clientCommandCenter.service.unassigned', { defaultValue: 'Unassigned' })}
                       </span>
                     )
@@ -219,9 +192,9 @@ export function ServiceCard({ id, data, onOpen, onOpenTicket, onNewTicket, class
                   {ticket.sla && <SlaChip sla={ticket.sla} t={t} />}
                 </div>
               )}
-            </li>
+            </BentoRow>
           ))}
-        </ul>
+        </BentoRowList>
       )}
       <button
         id={`${id}-new-ticket`}
@@ -274,21 +247,21 @@ export function MoneyCard({ id, data, formatMoney, onOpen, onOpenInvoice, onOpen
     >
       {hasOutstanding ? (
         <>
-          <div className="flex items-end gap-2 h-16 mt-4 border-b border-gray-200">
+          <div className="flex items-end gap-2 h-16 mt-4 border-b border-[rgb(var(--color-border-200))]">
             {buckets.map((bucket) => (
               <div
                 key={bucket.key}
                 className="flex-1 flex flex-col justify-end items-stretch"
                 title={`${bucket.label}: ${formatMoney(bucket.cents)}`}
               >
-                <div className="text-center text-[10px] text-gray-500 mb-0.5">
+                <div className="text-center text-[10px] text-[rgb(var(--color-text-500))] mb-0.5">
                   {bucket.cents > 0 ? formatMoney(bucket.cents) : ''}
                 </div>
                 {/* A bucket with $0 renders no bar at all — a visibility floor on
                     zero would fake data the honesty rules forbid (D6). */}
                 {bucket.cents > 0 && (
                   <div
-                    className={`rounded-t ${bucket.warn ? 'bg-amber-200' : 'bg-primary-100'}`}
+                    className={`rounded-t ${bucket.warn ? 'bg-amber-200 dark:bg-amber-500/40' : 'bg-primary-100'}`}
                     style={{ height: `${Math.max(4, Math.round((bucket.cents / maxCents) * 44))}px` }}
                   />
                 )}
@@ -297,10 +270,10 @@ export function MoneyCard({ id, data, formatMoney, onOpen, onOpenInvoice, onOpen
           </div>
           <div className="flex gap-2 mb-1">
             {buckets.map((bucket) => (
-              <div key={bucket.key} className="flex-1 text-center text-[9.5px] text-gray-400">{bucket.label}</div>
+              <div key={bucket.key} className="flex-1 text-center text-[10px] text-[rgb(var(--color-text-400))]">{bucket.label}</div>
             ))}
           </div>
-          <p className="text-[11px] text-gray-400 mb-2">
+          <p className="text-xs text-[rgb(var(--color-text-400))] mb-2">
             {t('clientCommandCenter.money.agingNote', {
               defaultValue: '{{total}} outstanding · recorded payments deducted',
               total: formatMoney(data.outstandingTotalCents),
@@ -308,13 +281,13 @@ export function MoneyCard({ id, data, formatMoney, onOpen, onOpenInvoice, onOpen
           </p>
         </>
       ) : (
-        <p className="text-[13px] text-gray-400 italic mb-2 mt-1">
+        <BentoTileEmpty id={`${id}-empty`}>
           {t('clientCommandCenter.money.nothingOutstanding', { defaultValue: 'Nothing outstanding on finalized invoices.' })}
-        </p>
+        </BentoTileEmpty>
       )}
-      <ul className="divide-y divide-gray-100 border-t border-gray-100">
+      <BentoRowList className="mt-1 border-t border-[rgb(var(--color-border-100))] pt-1.5">
         {data.draftInvoices.map((invoice) => (
-          <li key={invoice.invoice_id} className="py-1.5 flex items-baseline gap-2 text-[13px]">
+          <BentoRow key={invoice.invoice_id} meta={formatMoney(invoice.totalCents)}>
             <button
               type="button"
               onClick={() => onOpenInvoice(invoice.invoice_id)}
@@ -322,29 +295,30 @@ export function MoneyCard({ id, data, formatMoney, onOpen, onOpenInvoice, onOpen
             >
               {invoice.invoice_number ?? invoice.invoice_id.slice(0, 8)}
             </button>
-            <span className="inline-block rounded bg-amber-100 text-amber-800 px-1.5 text-[10.5px] font-bold">
+            <BentoChip tone="warning">
               {t('clientCommandCenter.money.draft', { defaultValue: 'draft' })}
-            </span>
-            <span className="ml-auto text-gray-500">{formatMoney(invoice.totalCents)}</span>
-          </li>
+            </BentoChip>
+          </BentoRow>
         ))}
         {data.draftInvoiceCount > data.draftInvoices.length && (
-          <li className="py-1.5 text-[11px] text-gray-400">
-            {t('clientCommandCenter.money.moreDrafts', {
-              defaultValue_one: '+1 more draft',
-              defaultValue_other: '+{{count}} more drafts',
-              count: data.draftInvoiceCount - data.draftInvoices.length,
-            })}
-          </li>
+          <BentoRow id={`${id}-more-drafts`}>
+            <span className="text-xs text-[rgb(var(--color-text-400))]">
+              {t('clientCommandCenter.money.moreDrafts', {
+                defaultValue_one: '+1 more draft',
+                defaultValue_other: '+{{count}} more drafts',
+                count: data.draftInvoiceCount - data.draftInvoices.length,
+              })}
+            </span>
+          </BentoRow>
         )}
         {/* W2: time in hours (time entries carry no rate — no invented dollars);
             materials in exact cents. Rendered only when something is unbilled. */}
         {data.wip && (data.wip.unbilledEntryCount > 0 || data.wip.unbilledMaterialCount > 0) && (
-          <li className="py-1.5 flex items-baseline gap-2 text-[13px]">
-            <span className="text-gray-600">
+          <BentoRow>
+            <span className="text-[rgb(var(--color-text-600))]">
               {t('clientCommandCenter.money.unbilledWork', { defaultValue: 'Unbilled work' })}
             </span>
-            <span className="ml-auto font-semibold text-gray-900 whitespace-nowrap">
+            <span className="ml-auto font-semibold text-[rgb(var(--color-text-900))] whitespace-nowrap">
               {[
                 data.wip.unbilledEntryCount > 0
                   ? t('clientCommandCenter.money.unbilledHours', {
@@ -360,15 +334,15 @@ export function MoneyCard({ id, data, formatMoney, onOpen, onOpenInvoice, onOpen
                   : null,
               ].filter(Boolean).join(' · ')}
             </span>
-          </li>
+          </BentoRow>
         )}
-        <li className="py-1.5 flex items-baseline text-[13px]">
-          <span className="text-gray-600">
+        <BentoRow>
+          <span className="text-[rgb(var(--color-text-600))]">
             {t('clientCommandCenter.money.activeContracts', { defaultValue: 'Active contracts' })}
           </span>
-          <span className="ml-auto font-semibold text-gray-900">{data.activeContractCount}</span>
-        </li>
-      </ul>
+          <span className="ml-auto font-semibold text-[rgb(var(--color-text-900))]">{data.activeContractCount}</span>
+        </BentoRow>
+      </BentoRowList>
     </CardShell>
   );
 }
@@ -399,10 +373,10 @@ export function InstallBaseCard({ id, data, onOpen, onOpenAssetList, onOpenAsset
     >
       <div className="flex gap-6 mb-3">
         {data.managedAssetCount != null && (
-          <Stat value={data.managedAssetCount} label={t('clientCommandCenter.installBase.assets', { defaultValue: 'managed assets' })} />
+          <BentoStat value={data.managedAssetCount} label={t('clientCommandCenter.installBase.assets', { defaultValue: 'managed assets' })} />
         )}
-        <Stat value={data.soldUnitCount} label={t('clientCommandCenter.installBase.sold', { defaultValue: 'sold units' })} />
-        <Stat value={data.openRmaCount} label={t('clientCommandCenter.installBase.rmas', { defaultValue: 'open RMAs' })} />
+        <BentoStat value={data.soldUnitCount} label={t('clientCommandCenter.installBase.sold', { defaultValue: 'sold units' })} />
+        <BentoStat value={data.openRmaCount} label={t('clientCommandCenter.installBase.rmas', { defaultValue: 'open RMAs' })} />
       </div>
       {/* W4: renders only when at least one unit/asset carries a warranty date —
           a fleet that doesn't track warranties shows nothing, not zeros. */}
@@ -412,24 +386,24 @@ export function InstallBaseCard({ id, data, onOpen, onOpenAssetList, onOpenAsset
           type="button"
           onClick={onOpen ?? undefined}
           disabled={!onOpen}
-          className="mb-2 text-[12px] text-left text-gray-600 hover:text-primary-700 disabled:hover:text-gray-600"
+          className="mb-2 text-xs text-left text-[rgb(var(--color-text-600))] hover:text-primary-700 disabled:hover:text-[rgb(var(--color-text-600))]"
         >
-          <span className={data.warranty.expiredCount > 0 ? 'text-red-600 font-semibold' : ''}>
+          <span className={data.warranty.expiredCount > 0 ? 'text-red-600 dark:text-red-400 font-semibold' : ''}>
             {t('clientCommandCenter.installBase.warrantyExpired', {
               defaultValue_one: '1 out of warranty',
               defaultValue_other: '{{count}} out of warranty',
               count: data.warranty.expiredCount,
             })}
           </span>
-          <span className="text-gray-300"> · </span>
-          <span className={data.warranty.expiringSoonCount > 0 ? 'text-amber-700 font-semibold' : ''}>
+          <span className="text-[rgb(var(--color-text-300))]"> · </span>
+          <span className={data.warranty.expiringSoonCount > 0 ? 'text-amber-700 dark:text-amber-400 font-semibold' : ''}>
             {t('clientCommandCenter.installBase.warrantyExpiring', {
               defaultValue_one: '1 expiring ≤90d',
               defaultValue_other: '{{count}} expiring ≤90d',
               count: data.warranty.expiringSoonCount,
             })}
           </span>
-          <span className="text-gray-400">
+          <span className="text-[rgb(var(--color-text-400))]">
             {t('clientCommandCenter.installBase.warrantyTracked', {
               defaultValue: ' (of {{count}} tracked)',
               count: data.warranty.trackedCount,
@@ -438,30 +412,32 @@ export function InstallBaseCard({ id, data, onOpen, onOpenAssetList, onOpenAsset
         </button>
       )}
       {data.recentUnits.length === 0 ? (
-        <EmptyLine text={t('clientCommandCenter.installBase.none', { defaultValue: 'No delivered equipment yet.' })} />
+        <BentoTileEmpty id={`${id}-empty`}>
+          {t('clientCommandCenter.installBase.none', { defaultValue: 'No delivered equipment yet.' })}
+        </BentoTileEmpty>
       ) : (
-        <ul className="divide-y divide-gray-100">
+        <BentoRowList>
           {data.recentUnits.map((unit) => (
-            <li key={unit.unit_id} className="py-1.5 flex items-baseline gap-2 text-[13px]">
-              <span className="text-gray-800 truncate">
+            <BentoRow
+              key={unit.unit_id}
+              meta={unit.delivered_at ? `${timeAgoDays(unit.delivered_at)}d` : unit.status}
+            >
+              <span className="text-[rgb(var(--color-text-800))] truncate">
                 {unit.product_name}
-                {unit.serial_number ? <span className="text-gray-400"> · {unit.serial_number}</span> : null}
+                {unit.serial_number ? <span className="text-[rgb(var(--color-text-400))]"> · {unit.serial_number}</span> : null}
               </span>
               {unit.asset_id && (
                 <button
                   type="button"
                   onClick={() => onOpenAsset(unit.asset_id!)}
-                  className="text-primary-700 text-[11.5px] font-semibold hover:underline whitespace-nowrap"
+                  className="text-primary-700 text-xs font-semibold hover:underline whitespace-nowrap"
                 >
                   {t('clientCommandCenter.installBase.viewAsset', { defaultValue: 'asset ↗' })}
                 </button>
               )}
-              <span className="ml-auto text-[11px] text-gray-400 whitespace-nowrap">
-                {unit.delivered_at ? `${timeAgoDays(unit.delivered_at)}d` : unit.status}
-              </span>
-            </li>
+            </BentoRow>
           ))}
-        </ul>
+        </BentoRowList>
       )}
     </CardShell>
   );
@@ -487,11 +463,13 @@ export function PeopleCard({ id, data, onOpen, onOpenContact, onAddContact, clas
       className={className}
     >
       {data.top.length === 0 ? (
-        <EmptyLine text={t('clientCommandCenter.people.none', { defaultValue: 'No contacts yet.' })} />
+        <BentoTileEmpty id={`${id}-empty`}>
+          {t('clientCommandCenter.people.none', { defaultValue: 'No contacts yet.' })}
+        </BentoTileEmpty>
       ) : (
-        <ul className="divide-y divide-gray-100">
+        <BentoRowList>
           {data.top.map((contact) => (
-            <li key={contact.contact_name_id} className="py-2 flex items-center gap-2.5 text-[13px]">
+            <BentoRow key={contact.contact_name_id} align="center" className="gap-2.5 py-2">
               <ContactAvatar
                 contactId={contact.contact_name_id}
                 contactName={contact.full_name}
@@ -505,7 +483,7 @@ export function PeopleCard({ id, data, onOpen, onOpenContact, onAddContact, clas
                     <>
                       {contact.full_name}
                       {(contact.is_default || contact.role) && (
-                        <span className="ml-1.5 font-normal text-[11px] text-gray-400">
+                        <span className="ml-1.5 font-normal text-xs text-[rgb(var(--color-text-400))]">
                           {[contact.is_default ? t('clientCommandCenter.people.primary', { defaultValue: 'Primary' }) : null, contact.role]
                             .filter(Boolean).join(' · ')}
                         </span>
@@ -516,35 +494,35 @@ export function PeopleCard({ id, data, onOpen, onOpenContact, onAddContact, clas
                     <button
                       type="button"
                       onClick={() => onOpenContact(contact.contact_name_id)}
-                      className="block w-full text-left font-semibold text-gray-900 truncate hover:text-primary-700 hover:underline"
+                      className="block w-full text-left font-semibold text-[rgb(var(--color-text-900))] truncate hover:text-primary-700 hover:underline"
                     >
                       {nameLine}
                     </button>
                   ) : (
-                    <span className="block font-semibold text-gray-900 truncate">{nameLine}</span>
+                    <span className="block font-semibold text-[rgb(var(--color-text-900))] truncate">{nameLine}</span>
                   );
                 })()}
-                <span className="block text-[12px] text-gray-600 truncate">
+                <span className="block text-xs text-[rgb(var(--color-text-600))] truncate">
                   {contact.phone && (
                     <a href={`tel:${contact.phone}`} className="hover:text-primary-700 hover:underline">☎ {contact.phone}</a>
                   )}
-                  {contact.phone && contact.email && <span className="text-gray-300"> · </span>}
+                  {contact.phone && contact.email && <span className="text-[rgb(var(--color-text-300))]"> · </span>}
                   {contact.email && (
                     <a href={`mailto:${contact.email}`} className="hover:text-primary-700 hover:underline">✉ {contact.email}</a>
                   )}
                   {!contact.phone && !contact.email && (
-                    <span className="text-gray-400 italic">
+                    <span className="text-[rgb(var(--color-text-400))] italic">
                       {t('clientCommandCenter.people.noContactInfo', { defaultValue: 'no contact info on file' })}
                     </span>
                   )}
                 </span>
               </span>
-            </li>
+            </BentoRow>
           ))}
-        </ul>
+        </BentoRowList>
       )}
       {data.totalCount > data.top.length && (
-        <p className="mt-1.5 text-[11px] text-gray-400">
+        <p id={`${id}-more`} className="mt-1.5 text-xs text-[rgb(var(--color-text-400))]">
           {t('clientCommandCenter.people.more', { defaultValue: '+{{count}} more', count: data.totalCount - data.top.length })}
         </p>
       )}
@@ -579,27 +557,29 @@ export function LocationsCard({ id, locations, onManage, className, t }: {
       className={className}
     >
       {locations.length === 0 ? (
-        <EmptyLine text={t('clientCommandCenter.locations.none', { defaultValue: 'No locations yet.' })} />
+        <BentoTileEmpty id={`${id}-empty`}>
+          {t('clientCommandCenter.locations.none', { defaultValue: 'No locations yet.' })}
+        </BentoTileEmpty>
       ) : (
-        <ul className="divide-y divide-gray-100">
+        <BentoRowList>
           {locations.slice(0, 3).map((location) => (
-            <li key={location.location_id} className="py-2 text-[13px]">
-              <div className="font-semibold text-gray-900 flex items-center gap-1.5">
-                <MapPin className="w-3.5 h-3.5 text-gray-500 shrink-0" aria-hidden="true" />
+            <BentoRow key={location.location_id} stacked className="py-2">
+              <div className="font-semibold text-[rgb(var(--color-text-900))] flex items-center gap-1.5">
+                <MapPin className="w-3.5 h-3.5 text-[rgb(var(--color-text-500))] shrink-0" aria-hidden="true" />
                 <span className="truncate">
                   {location.location_name || location.address_line1}
                   {location.is_default ? ' ★' : ''}
                 </span>
               </div>
-              <div className="text-[12px] text-gray-500 truncate">
+              <div className="text-xs text-[rgb(var(--color-text-500))] truncate">
                 {[location.address_line1, location.city].filter(Boolean).join(', ')}
               </div>
               {(location.phone || location.email) && (
-                <div className="text-[12px] text-gray-600 truncate">
+                <div className="text-xs text-[rgb(var(--color-text-600))] truncate">
                   {location.phone && (
                     <a href={`tel:${location.phone}`} className="hover:text-primary-700 hover:underline">☎ {location.phone}</a>
                   )}
-                  {location.phone && location.email && <span className="text-gray-300"> · </span>}
+                  {location.phone && location.email && <span className="text-[rgb(var(--color-text-300))]"> · </span>}
                   {location.email && (
                     <a href={`mailto:${location.email}`} className="hover:text-primary-700 hover:underline">✉ {location.email}</a>
                   )}
@@ -607,22 +587,22 @@ export function LocationsCard({ id, locations, onManage, className, t }: {
               )}
               <div className="mt-1 flex gap-1">
                 {location.is_billing && (
-                  <span className="rounded bg-blue-100 text-blue-700 px-1.5 text-[10px] font-bold">
+                  <BentoChip tone="info">
                     {t('clientCommandCenter.locations.billing', { defaultValue: 'Billing' })}
-                  </span>
+                  </BentoChip>
                 )}
                 {location.is_shipping && (
-                  <span className="rounded bg-green-100 text-green-700 px-1.5 text-[10px] font-bold">
+                  <BentoChip tone="success">
                     {t('clientCommandCenter.locations.shipping', { defaultValue: 'Shipping' })}
-                  </span>
+                  </BentoChip>
                 )}
               </div>
-            </li>
+            </BentoRow>
           ))}
-        </ul>
+        </BentoRowList>
       )}
       {locations.length > 3 && (
-        <p className="mt-1.5 text-[11px] text-gray-400">
+        <p id={`${id}-more`} className="mt-1.5 text-xs text-[rgb(var(--color-text-400))]">
           {t('clientCommandCenter.locations.more', { defaultValue: '+{{count}} more', count: locations.length - 3 })}
         </p>
       )}
@@ -647,19 +627,20 @@ export function DocumentsCard({ id, data, onOpen, className, t }: {
       className={className}
     >
       {data.recent.length === 0 ? (
-        <EmptyLine text={t('clientCommandCenter.documents.none', { defaultValue: 'No documents yet.' })} />
+        <BentoTileEmpty id={`${id}-empty`}>
+          {t('clientCommandCenter.documents.none', { defaultValue: 'No documents yet.' })}
+        </BentoTileEmpty>
       ) : (
-        <ul className="divide-y divide-gray-100">
+        <BentoRowList>
           {data.recent.map((doc) => (
-            <li key={doc.document_id} className="py-1.5 flex items-baseline gap-2 text-[13px]">
-              <span className="text-gray-800 truncate">📄 {doc.document_name}</span>
-              <span className="ml-auto text-[11px] text-gray-400 whitespace-nowrap">{timeAgoDays(doc.updated_at)}d</span>
-            </li>
+            <BentoRow key={doc.document_id} meta={`${timeAgoDays(doc.updated_at)}d`}>
+              <span className="text-[rgb(var(--color-text-800))] truncate">📄 {doc.document_name}</span>
+            </BentoRow>
           ))}
-        </ul>
+        </BentoRowList>
       )}
       {data.totalCount > data.recent.length && (
-        <p className="mt-1.5 text-[11px] text-gray-400">
+        <p id={`${id}-more`} className="mt-1.5 text-xs text-[rgb(var(--color-text-400))]">
           {t('clientCommandCenter.documents.more', { defaultValue: '+{{count}} more', count: data.totalCount - data.recent.length })}
         </p>
       )}
@@ -691,16 +672,18 @@ export function NotesCard({ id, data, onOpen, className, t }: {
         : null}
     >
       {!data.hasNotes ? (
-        <EmptyLine text={t('clientCommandCenter.notes.none', { defaultValue: 'No notes yet.' })} />
+        <BentoTileEmpty id={`${id}-empty`}>
+          {t('clientCommandCenter.notes.none', { defaultValue: 'No notes yet.' })}
+        </BentoTileEmpty>
       ) : (
         <>
-          <div className="rounded-lg border border-amber-100 bg-amber-50/50 px-3 py-2 text-[13px] text-gray-700">
+          <div className="rounded-lg border border-amber-100 dark:border-amber-900/50 bg-amber-50/50 dark:bg-amber-900/20 px-3 py-2 text-sm text-[rgb(var(--color-text-700))]">
             {data.previewLines.map((line, index) => (
               <p key={index} className={`truncate ${index > 0 ? 'mt-1' : ''}`}>{line}</p>
             ))}
           </div>
           {data.lastEditedAt && (
-            <p className="mt-2 text-[11px] text-gray-400">
+            <p className="mt-2 text-xs text-[rgb(var(--color-text-400))]">
               {t('clientCommandCenter.notes.lastEdited', {
                 defaultValue: 'Shared client note · edited {{days}}d ago',
                 days: timeAgoDays(data.lastEditedAt),
@@ -752,16 +735,18 @@ export function RecordCard({ id, data, onOpen, onOpenAdditionalInfo, className, 
           : null,
       ]}
     >
-      <ul className="divide-y divide-gray-100">
+      <BentoRowList>
         {rows.map((row) => (
-          <li key={row.label} className="py-1.5 flex items-baseline gap-3 text-[13px]">
-            <span className="text-gray-600">{row.label}</span>
-            <span className={`ml-auto text-right truncate ${row.value ? 'text-gray-900' : 'text-gray-400 italic'}`}>
+          <BentoRow key={row.label} className="gap-3">
+            <span className="text-[rgb(var(--color-text-600))]">{row.label}</span>
+            <span
+              className={`ml-auto text-right truncate ${row.value ? 'text-[rgb(var(--color-text-900))]' : 'text-[rgb(var(--color-text-400))] italic'}`}
+            >
               {row.value ?? t('clientCommandCenter.record.unset', { defaultValue: 'not set' })}
             </span>
-          </li>
+          </BentoRow>
         ))}
-      </ul>
+      </BentoRowList>
     </CardShell>
   );
 }
