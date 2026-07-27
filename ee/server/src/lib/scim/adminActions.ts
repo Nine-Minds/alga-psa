@@ -1,12 +1,13 @@
 'use server';
 
 import type { Knex } from 'knex';
-import { randomUUID } from 'node:crypto';
-import { withAuth, hasPermission } from '@alga-psa/auth';
+import { withAuth, hasPermission, type AuthContext } from '@alga-psa/auth';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import logger from '@alga-psa/core/logger';
 import { TIER_FEATURES, type IUserWithRoles } from '@alga-psa/types';
-import { assertTierAccess } from 'server/src/lib/tier-gating/assertTierAccess';
+import { assertTierAccess, TierAccessError } from 'server/src/lib/tier-gating/assertTierAccess';
 
+import { writeScimAudit } from './audit';
 import { generateScimToken } from './credentials';
 import { normalizeEmail, ScimError } from './protocol';
 
@@ -85,6 +86,46 @@ interface ScimConnectionRow {
   last_error_code: string | null;
 }
 
+/**
+ * A failure an administrator can act on, phrased for them. Only these messages
+ * and the equally deliberate ScimError/TierAccessError messages are allowed to
+ * cross back to the browser; see guardScimAction.
+ */
+class ScimAdminError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = 'ScimAdminError';
+  }
+}
+
+/**
+ * Server actions cross a trust boundary, and an unexpected error's message can
+ * carry SQL text, schema names, or connection details. Anything we did not
+ * author is logged here with its full detail and replaced with a generic
+ * failure, so the settings screen can keep rendering `error.message` safely.
+ */
+function guardScimAction<Args extends unknown[], Result>(
+  operation: string,
+  run: (user: IUserWithRoles, ctx: AuthContext, ...args: Args) => Promise<Result>
+): (user: IUserWithRoles, ctx: AuthContext, ...args: Args) => Promise<Result> {
+  return async (user: IUserWithRoles, ctx: AuthContext, ...args: Args): Promise<Result> => {
+    try {
+      return await run(user, ctx, ...args);
+    } catch (error) {
+      if (
+        error instanceof ScimAdminError
+        || error instanceof ScimError
+        || error instanceof TierAccessError
+      ) {
+        throw error;
+      }
+
+      logger.error(`SCIM admin action ${operation} failed`, error);
+      throw new Error('SCIM provisioning could not complete. Check the server logs for details.');
+    }
+  };
+}
+
 async function requireScimPermission(
   user: IUserWithRoles,
   tenant: string,
@@ -93,7 +134,7 @@ async function requireScimPermission(
   await assertTierAccess(TIER_FEATURES.SCIM_PROVISIONING);
   const { knex } = await createTenantKnex();
   if (!await hasPermission(user, 'security_settings', action, knex)) {
-    throw new Error(`Permission denied: security_settings ${action} is required.`);
+    throw new ScimAdminError(`Permission denied: security_settings ${action} is required.`);
   }
   if (user.tenant !== tenant) {
     throw new Error('Tenant context mismatch.');
@@ -128,28 +169,7 @@ function connectionView(row: ScimConnectionRow): ScimConnectionView {
   };
 }
 
-async function writeAudit(
-  trx: Knex.Transaction,
-  tenant: string,
-  userId: string,
-  operation: string,
-  recordId: string,
-  details: Record<string, unknown>
-): Promise<void> {
-  await tenantDb(trx, tenant).table('audit_logs').insert({
-    tenant,
-    audit_id: randomUUID(),
-    user_id: userId,
-    operation,
-    table_name: 'scim_connections',
-    record_id: recordId,
-    changed_data: JSON.stringify({}),
-    details: JSON.stringify(details),
-    timestamp: trx.fn.now(),
-  });
-}
-
-export const getScimProvisioningOverview = withAuth(async (
+export const getScimProvisioningOverview = withAuth(guardScimAction('getScimProvisioningOverview', async (
   user,
   { tenant }
 ): Promise<ScimProvisioningOverview> => {
@@ -227,9 +247,9 @@ export const getScimProvisioningOverview = withAuth(async (
       createdAt: requiredIso(row.created_at, 'created_at'),
     })),
   };
-});
+}));
 
-export const createScimConnection = withAuth(async (
+export const createScimConnection = withAuth(guardScimAction('createScimConnection', async (
   user,
   { tenant }
 ): Promise<ScimTokenResult> => {
@@ -240,7 +260,7 @@ export const createScimConnection = withAuth(async (
     const db = tenantDb(trx, tenant);
     const existing = await db.table('scim_connections').forUpdate().first();
     if (existing) {
-      throw new Error('This tenant already has a SCIM connection.');
+      throw new ScimAdminError('This tenant already has a SCIM connection.');
     }
 
     const [connection] = await db.table('scim_connections').insert({
@@ -253,7 +273,7 @@ export const createScimConnection = withAuth(async (
       updated_at: trx.fn.now(),
     }).returning('*');
 
-    await writeAudit(trx, tenant, user.user_id, 'scim_connection_created', connection.connection_id, {
+    await writeScimAudit(trx, tenant, user.user_id, 'scim_connection_created', connection.connection_id, {
       enabled: true,
       tokenGeneration: 1,
     });
@@ -263,9 +283,9 @@ export const createScimConnection = withAuth(async (
       connection: connectionView(connection),
     };
   });
-});
+}));
 
-export const rotateScimToken = withAuth(async (
+export const rotateScimToken = withAuth(guardScimAction('rotateScimToken', async (
   user,
   { tenant }
 ): Promise<ScimTokenResult> => {
@@ -275,7 +295,7 @@ export const rotateScimToken = withAuth(async (
   return knex.transaction(async (trx) => {
     const db = tenantDb(trx, tenant);
     const connection = await db.table('scim_connections').forUpdate().first();
-    if (!connection) throw new Error('Configure SCIM before rotating its token.');
+    if (!connection) throw new ScimAdminError('Configure SCIM before rotating its token.');
 
     const previousTokenExpiresAt = new Date(Date.now() + TOKEN_OVERLAP_HOURS * 60 * 60 * 1000);
     const [updated] = await db.table('scim_connections')
@@ -290,7 +310,7 @@ export const rotateScimToken = withAuth(async (
       })
       .returning('*');
 
-    await writeAudit(trx, tenant, user.user_id, 'scim_token_rotated', connection.connection_id, {
+    await writeScimAudit(trx, tenant, user.user_id, 'scim_token_rotated', connection.connection_id, {
       tokenGeneration: updated.current_token_generation,
       overlapHours: TOKEN_OVERLAP_HOURS,
     });
@@ -299,9 +319,9 @@ export const rotateScimToken = withAuth(async (
       connection: connectionView(updated),
     };
   });
-});
+}));
 
-export const revokeScimToken = withAuth(async (
+export const revokeScimToken = withAuth(guardScimAction('revokeScimToken', async (
   user,
   { tenant },
   generation: 'current' | 'previous'
@@ -310,7 +330,7 @@ export const revokeScimToken = withAuth(async (
   return knex.transaction(async (trx) => {
     const db = tenantDb(trx, tenant);
     const connection = await db.table('scim_connections').forUpdate().first();
-    if (!connection) throw new Error('SCIM is not configured.');
+    if (!connection) throw new ScimAdminError('SCIM is not configured.');
 
     const patch = generation === 'current'
       ? { current_token_hash: null, current_token_created_at: null, updated_at: trx.fn.now() }
@@ -320,14 +340,14 @@ export const revokeScimToken = withAuth(async (
       .update(patch)
       .returning('*');
 
-    await writeAudit(trx, tenant, user.user_id, 'scim_token_revoked', connection.connection_id, {
+    await writeScimAudit(trx, tenant, user.user_id, 'scim_token_revoked', connection.connection_id, {
       generation,
     });
     return connectionView(updated);
   });
-});
+}));
 
-export const setScimConnectionEnabled = withAuth(async (
+export const setScimConnectionEnabled = withAuth(guardScimAction('setScimConnectionEnabled', async (
   user,
   { tenant },
   enabled: boolean
@@ -336,20 +356,20 @@ export const setScimConnectionEnabled = withAuth(async (
   return knex.transaction(async (trx) => {
     const db = tenantDb(trx, tenant);
     const connection = await db.table('scim_connections').forUpdate().first();
-    if (!connection) throw new Error('SCIM is not configured.');
+    if (!connection) throw new ScimAdminError('SCIM is not configured.');
     const [updated] = await db.table('scim_connections')
       .where('connection_id', connection.connection_id)
       .update({ enabled, updated_at: trx.fn.now() })
       .returning('*');
-    await writeAudit(trx, tenant, user.user_id, enabled ? 'scim_enabled' : 'scim_disabled', connection.connection_id, {
+    await writeScimAudit(trx, tenant, user.user_id, enabled ? 'scim_enabled' : 'scim_disabled', connection.connection_id, {
       enabled,
       userStatesPreserved: true,
     });
     return connectionView(updated);
   });
-});
+}));
 
-export const unlinkScimUser = withAuth(async (
+export const unlinkScimUser = withAuth(guardScimAction('unlinkScimUser', async (
   user,
   { tenant },
   linkId: string
@@ -362,7 +382,7 @@ export const unlinkScimUser = withAuth(async (
       .whereNot('link_state', 'unlinked')
       .forUpdate()
       .first();
-    if (!link) throw new Error('SCIM user link not found.');
+    if (!link) throw new ScimAdminError('SCIM user link not found.');
 
     await db.table('scim_user_links').where('link_id', linkId).update({
       link_state: 'unlinked',
@@ -378,15 +398,15 @@ export const unlinkScimUser = withAuth(async (
       sanitized_detail: JSON.stringify({ effectiveUserStateChanged: false }),
       created_at: trx.fn.now(),
     });
-    await writeAudit(trx, tenant, user.user_id, 'scim_user_unlinked', link.connection_id, {
+    await writeScimAudit(trx, tenant, user.user_id, 'scim_user_unlinked', link.connection_id, {
       linkId,
       userId: link.user_id,
       effectiveUserStateChanged: false,
     });
   });
-});
+}));
 
-export const resolveScimIdentity = withAuth(async (
+export const resolveScimIdentity = withAuth(guardScimAction('resolveScimIdentity', async (
   user,
   { tenant },
   unresolvedId: string,
@@ -400,14 +420,14 @@ export const resolveScimIdentity = withAuth(async (
       .where({ unresolved_id: unresolvedId, resolution_state: 'open' })
       .forUpdate()
       .first();
-    if (!unresolved) throw new Error('Unresolved SCIM identity not found.');
-    if (!unresolved.external_id) throw new Error('The directory identity is missing externalId.');
+    if (!unresolved) throw new ScimAdminError('Unresolved SCIM identity not found.');
+    if (!unresolved.external_id) throw new ScimAdminError('The directory identity is missing externalId.');
 
     const target = await db.table('users')
       .where({ user_id: targetUserId, user_type: 'internal', is_inactive: false })
       .forUpdate()
       .first();
-    if (!target) throw new Error('Select an active internal Alga user.');
+    if (!target) throw new ScimAdminError('Select an active internal Alga user.');
 
     const mismatch = Boolean(
       unresolved.observed_primary_email
@@ -422,7 +442,7 @@ export const resolveScimIdentity = withAuth(async (
       .where('user_id', targetUserId)
       .whereNot('link_state', 'unlinked')
       .first();
-    if (existingLink) throw new Error('The selected Alga user is already managed by SCIM.');
+    if (existingLink) throw new ScimAdminError('The selected Alga user is already managed by SCIM.');
 
     const [link] = await db.table('scim_user_links').insert({
       tenant,
@@ -474,10 +494,10 @@ export const resolveScimIdentity = withAuth(async (
       sanitized_detail: JSON.stringify({ emailMismatchConfirmed: mismatch }),
       created_at: trx.fn.now(),
     });
-    await writeAudit(trx, tenant, user.user_id, 'scim_identity_manually_linked', unresolved.connection_id, {
+    await writeScimAudit(trx, tenant, user.user_id, 'scim_identity_manually_linked', unresolved.connection_id, {
       linkId: link.link_id,
       userId: targetUserId,
       emailMismatchConfirmed: mismatch,
     });
   });
-});
+}));
