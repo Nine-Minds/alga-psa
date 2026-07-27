@@ -22,6 +22,7 @@
     "actions": "11111",
     "discrepancy": "11111",
     "detected": "11111",
+    "issueType": "11111",
     "expectedBalance": "11111",
     "actualBalance": "11111",
     "amountAvailable": "11111",
@@ -48,6 +49,7 @@
     "backToCredits": "11111",
     "viewAllCredits": "11111",
     "runReconciliation": "11111",
+    "runReconciliationAllClients": "11111",
     "running": "11111",
     "reset": "11111",
     "applyCredit": "11111",
@@ -60,7 +62,8 @@
   "tabs": {
     "activeCredits": "11111",
     "allCredits": "11111",
-    "expiredCredits": "11111"
+    "expiredCredits": "11111",
+    "reconciliation": "11111"
   },
   "settings": {
     "title": "11111",
@@ -107,7 +110,9 @@
     "totalCreditsExpired": "11111",
     "totalDiscrepancies": "11111",
     "totalDiscrepancyAmount": "11111",
-    "openIssues": "11111"
+    "openIssues": "11111",
+    "inReviewCount": "11111",
+    "resolvedCount": "11111"
   },
   "management": {
     "title": "11111",
@@ -121,6 +126,7 @@
   "reconciliation": {
     "title": "11111",
     "selectClient": "11111",
+    "allClients": "11111",
     "status": "11111",
     "allStatuses": "11111",
     "fromDate": "11111",
@@ -128,11 +134,119 @@
     "reconciliationReports": "11111",
     "reconciliationReportsDescription": "11111",
     "validationResult": "11111 {{balanceCount}} 11111 {{trackingCount}} 11111",
+    "validationCompletedAllClients": "11111",
+    "noReportsFound": "11111",
     "tabs": {
       "all": "11111",
       "open": "11111",
       "inReview": "11111",
       "resolved": "11111"
+    },
+    "issueTypes": {
+      "missingCreditTrackingEntry": "11111",
+      "inconsistentCreditRemainingAmount": "11111",
+      "balanceDiscrepancy": "11111"
+    },
+    "sections": {
+      "discrepancyDetails": "11111",
+      "creditApplications": "11111"
+    },
+    "fields": {
+      "expectedBalance": "11111",
+      "actualBalance": "11111",
+      "difference": "11111",
+      "detected": "11111",
+      "reportId": "11111",
+      "transactionId": "11111",
+      "transactionType": "11111",
+      "transactionAmount": "11111",
+      "transactionDate": "11111",
+      "creditId": "11111",
+      "originalAmount": "11111",
+      "correctionAmount": "11111",
+      "resolutionDate": "11111",
+      "resolutionNotes": "11111",
+      "date": "11111",
+      "amount": "11111"
+    },
+    "errors": {
+      "loadFailed": "11111",
+      "loadDetailFailed": "11111",
+      "reportNotFound": "11111",
+      "runFailed": "11111"
+    }
+  },
+  "recommendedFix": {
+    "title": "11111",
+    "applySuccess": "11111",
+    "panels": {
+      "recommendedFix": "11111",
+      "alternativeFix": "11111",
+      "noActionRequired": "11111",
+      "customAdjustment": "11111"
+    },
+    "buttons": {
+      "createTrackingEntry": "11111",
+      "updateRemainingAmount": "11111",
+      "applyAdjustment": "11111",
+      "applyCustomAdjustment": "11111",
+      "markResolvedNoAction": "11111",
+      "confirm": "11111",
+      "applying": "11111"
+    },
+    "descriptions": {
+      "missingTrackingRecommended": "11111",
+      "inconsistentRemainingRecommended": "11111",
+      "genericRecommended": "11111",
+      "genericCustom": "11111",
+      "createTrackingEntry": "11111",
+      "updateRemainingAmount": "11111",
+      "applyAdjustment": "11111",
+      "customAdjustment": "11111",
+      "noAction": "11111"
+    },
+    "dialog": {
+      "adjustmentAmount": "11111",
+      "adjustmentHint": "11111",
+      "notes": "11111",
+      "notesPlaceholder": "11111"
+    },
+    "errors": {
+      "notesRequired": "11111",
+      "invalidAmount": "11111",
+      "applyFailed": "11111"
+    },
+    "impactSummary": {
+      "title": "11111",
+      "currentBalance": "11111",
+      "newBalance": "11111"
+    },
+    "resolved": {
+      "title": "11111",
+      "description": "11111"
+    }
+  },
+  "addCredit": {
+    "description": "11111",
+    "fields": {
+      "client": "11111",
+      "amount": "11111",
+      "expirationDate": "11111"
+    },
+    "placeholders": {
+      "amount": "11111",
+      "expirationDate": "11111"
+    },
+    "hints": {
+      "expirationDate": "11111"
+    },
+    "submitting": "11111",
+    "success": "11111",
+    "errors": {
+      "allFieldsRequired": "11111",
+      "validAmount": "11111",
+      "loadClientsFailed": "11111",
+      "submitFailed": "11111"
     }
   },
   "application": {

@@ -4,7 +4,7 @@ import { type ReactNode, useEffect, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { CustomTabs } from '@alga-psa/ui/components/CustomTabs';
 
-const CREDIT_TAB_IDS = ['active', 'all', 'expired'] as const;
+const CREDIT_TAB_IDS = ['active', 'all', 'expired', 'reconciliation'] as const;
 const DEFAULT_TAB = 'active';
 
 interface CreditsTabsProps {

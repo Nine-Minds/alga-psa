@@ -119,6 +119,78 @@ function requireTenant(): string {
     return tenant;
 }
 
+function parseRowMetadata(metadata: unknown): Record<string, any> {
+    if (!metadata) return {};
+    if (typeof metadata === 'string') {
+        try {
+            return JSON.parse(metadata);
+        } catch {
+            return {};
+        }
+    }
+    return metadata as Record<string, any>;
+}
+
+/**
+ * Create a reconciliation report, or update the matching open report if one
+ * already exists, so re-running detection does not duplicate open reports.
+ * Reports match when they target the same client and issue type; tracking-type
+ * reports additionally match on the specific transaction/credit they concern.
+ */
+async function upsertOpenReconciliationReport(
+    trx: Knex.Transaction,
+    tenant: string,
+    reportData: {
+        client_id: string;
+        expected_balance: number;
+        actual_balance: number;
+        difference: number;
+        detection_date: string;
+        metadata: Record<string, any>;
+    }
+): Promise<{ report_id: string }> {
+    const openReports = (await tenantScopedTable(trx, tenant, 'credit_reconciliation_reports')
+        .where({ client_id: reportData.client_id })
+        .whereIn('status', ['open', 'in_review'])) as Array<{ report_id: string; metadata: unknown }>;
+
+    const newMetadata = reportData.metadata;
+    const issueType = newMetadata.issue_type ?? null;
+
+    const existing = openReports.find((row) => {
+        const rowMetadata = parseRowMetadata(row.metadata);
+        if ((rowMetadata.issue_type ?? null) !== issueType) return false;
+        if (issueType === 'missing_credit_tracking_entry') {
+            return rowMetadata.transaction_id === newMetadata.transaction_id;
+        }
+        if (issueType === 'inconsistent_credit_remaining_amount') {
+            return rowMetadata.credit_id === newMetadata.credit_id;
+        }
+        // Balance-discrepancy reports are keyed by client alone
+        return true;
+    });
+
+    if (existing) {
+        await tenantScopedTable(trx, tenant, 'credit_reconciliation_reports')
+            .where({ report_id: existing.report_id })
+            .update({
+                expected_balance: reportData.expected_balance,
+                actual_balance: reportData.actual_balance,
+                difference: reportData.difference,
+                detection_date: reportData.detection_date,
+                metadata: JSON.stringify(newMetadata),
+                updated_at: new Date().toISOString(),
+            });
+        return { report_id: existing.report_id };
+    }
+
+    const created = await CreditReconciliationReport.create({
+        ...reportData,
+        tenant,
+        status: 'open',
+    }, trx);
+    return { report_id: created.report_id };
+}
+
 type CreditInvoicePeriodSummary = {
     invoice_date_basis: 'financial_document_date' | 'canonical_recurring_service_period';
     invoice_service_period_start: string | null;
@@ -230,11 +302,20 @@ export async function validateCreditBalanceWithoutCorrection(
 
         // Process transactions
         for (const tx of transactions) {
+            const txAmount = Number(tx.amount);
+
+            // Balance-side reconciliation corrections are audit markers of a
+            // clients.credit_balance write, not ledger credit events — counting
+            // them would double-count the correction against the ledger.
+            if (tx.type === 'credit_adjustment' && parseRowMetadata(tx.metadata).reconciliation_balance_correction) {
+                continue;
+            }
+
             // For credit issuance transactions, check if they're expired (only if expiration is enabled)
             if (
                 isCreditExpirationEnabled &&
                 (tx.type === 'credit_issuance' || tx.type === 'credit_issuance_from_negative_invoice') &&
-                tx.amount > 0 &&
+                txAmount > 0 &&
                 tx.expiration_date &&
                 tx.expiration_date < now
             ) {
@@ -258,7 +339,7 @@ export async function validateCreditBalanceWithoutCorrection(
                     await tenantScopedTable(trx, tenant, 'transactions').insert({
                         transaction_id: expirationTxId,
                         client_id: clientId,
-                        amount: -tx.amount, // Negative amount to reduce the balance
+                        amount: -txAmount, // Negative amount to reduce the balance
                         type: 'credit_expiration',
                         status: 'completed',
                         description: `Credit expired (original transaction: ${tx.transaction_id})`,
@@ -293,7 +374,7 @@ export async function validateCreditBalanceWithoutCorrection(
                     transactions.push({
                         transaction_id: expirationTxId,
                         client_id: clientId,
-                        amount: -tx.amount,
+                        amount: -txAmount,
                         type: 'credit_expiration',
                         status: 'completed',
                         created_at: now,
@@ -305,7 +386,7 @@ export async function validateCreditBalanceWithoutCorrection(
                 }
             } else {
                 // For non-expired credits or other transaction types, include in balance
-                calculatedBalance += tx.amount;
+                calculatedBalance += txAmount;
             }
         }
 
@@ -331,21 +412,19 @@ export async function validateCreditBalanceWithoutCorrection(
                 difference
             });
 
-            // Create a reconciliation report
-            const report = await CreditReconciliationReport.create({
+            // Create a reconciliation report (or refresh the existing open one)
+            const report = await upsertOpenReconciliationReport(trx, tenant, {
                 client_id: clientId,
-                tenant,
                 expected_balance: expectedBalance,
                 actual_balance: actualBalance,
                 difference,
                 detection_date: now,
-                status: 'open',
                 metadata: {
                     reconciliation_date_basis: 'financial_document_date',
                     last_transaction_id: transactions.length > 0 ? transactions[transactions.length - 1].transaction_id : undefined,
                     last_transaction_type: transactions.length > 0 ? transactions[transactions.length - 1].type : undefined,
                 }
-            }, trx);
+            });
 
             reportId = report.report_id;
 
@@ -451,15 +530,13 @@ export async function validateCreditTrackingEntries(
         for (const tx of missingTrackingEntries) {
             console.log(`Missing credit tracking entry for transaction ${tx.transaction_id} (${tx.type}) with amount ${tx.amount}`);
 
-            // Create a reconciliation report for the missing tracking entry
-            const report = await CreditReconciliationReport.create({
+            // Create a reconciliation report for the missing tracking entry (or refresh the existing open one)
+            const report = await upsertOpenReconciliationReport(trx, tenant, {
                 client_id: clientId,
-                tenant,
                 expected_balance: 0, // Not applicable for this type of report
                 actual_balance: 0,   // Not applicable for this type of report
                 difference: 0,       // Not applicable for this type of report
                 detection_date: now,
-                status: 'open',
                 // Store additional metadata about the missing tracking entry
                 metadata: {
                     issue_type: 'missing_credit_tracking_entry',
@@ -469,7 +546,7 @@ export async function validateCreditTrackingEntries(
                     transaction_date: tx.created_at,
                     reconciliation_date_basis: 'financial_document_date',
                 }
-            }, trx);
+            });
 
             reportIds.push(report.report_id);
 
@@ -622,15 +699,13 @@ export async function validateCreditTrackingRemainingAmounts(
                     }))
                 });
 
-                // Create a reconciliation report for the inconsistent remaining amount
-                const report = await CreditReconciliationReport.create({
+                // Create a reconciliation report for the inconsistent remaining amount (or refresh the existing open one)
+                const report = await upsertOpenReconciliationReport(trx, tenant, {
                     client_id: clientId,
-                    tenant,
                     expected_balance: expectedRemainingAmount,
                     actual_balance: actualRemainingAmount,
                     difference: expectedRemainingAmount - actualRemainingAmount,
                     detection_date: now,
-                    status: 'open',
                     // Store additional metadata about the inconsistent remaining amount
                     metadata: {
                         issue_type: 'inconsistent_credit_remaining_amount',
@@ -650,7 +725,7 @@ export async function validateCreditTrackingRemainingAmounts(
                             invoice_service_period_end: applicationInvoiceContexts.get(app.transaction_id)?.invoice_service_period_end,
                         }))
                     }
-                }, trx);
+                });
 
                 reportIds.push(report.report_id);
 
@@ -952,27 +1027,46 @@ export const resolveReconciliationReport = withAuth(async (
 
             const now = new Date().toISOString();
 
-            // Create a transaction to record the correction
-            const transactionId = uuidv4();
-            await tenantScopedTable(transaction, tenant, 'transactions').insert({
-                transaction_id: transactionId,
-                client_id: report.client_id,
-                amount: report.difference, // This will be positive or negative depending on the discrepancy
-                type: 'credit_adjustment',
-                status: 'completed',
-                description: `Credit balance correction from reconciliation report ${reportId}`,
-                created_at: now,
-                balance_after: report.expected_balance,
-                tenant
-            });
+            // Only balance-discrepancy reports (no issue_type in metadata) carry a
+            // clients.credit_balance correction. Tracking-type reports concern
+            // credit_tracking rows; their expected_balance is not a client balance
+            // and must never be written to clients.credit_balance.
+            const isBalanceDiscrepancy = !report.metadata?.issue_type;
+            let transactionId: string | undefined;
 
-            // Update the client's credit balance
-            await tenantScopedTable(transaction, tenant, 'clients')
-                .where({ client_id: report.client_id })
-                .update({
-                    credit_balance: report.expected_balance,
-                    updated_at: now
+            if (isBalanceDiscrepancy) {
+                const expectedBalance = Number(report.expected_balance);
+                const difference = Number(report.difference);
+
+                // Create a transaction to record the correction. The ledger already
+                // sums to expected_balance, so this transaction is an audit marker of
+                // the balance write, not a ledger credit event — the detector skips
+                // transactions flagged reconciliation_balance_correction.
+                transactionId = uuidv4();
+                await tenantScopedTable(transaction, tenant, 'transactions').insert({
+                    transaction_id: transactionId,
+                    client_id: report.client_id,
+                    amount: difference, // This will be positive or negative depending on the discrepancy
+                    type: 'credit_adjustment',
+                    status: 'completed',
+                    description: `Credit balance correction from reconciliation report ${reportId}`,
+                    created_at: now,
+                    balance_after: expectedBalance,
+                    tenant,
+                    metadata: {
+                        report_id: reportId,
+                        reconciliation_balance_correction: true
+                    }
                 });
+
+                // Update the client's credit balance
+                await tenantScopedTable(transaction, tenant, 'clients')
+                    .where({ client_id: report.client_id })
+                    .update({
+                        credit_balance: expectedBalance,
+                        updated_at: now
+                    });
+            }
 
             // Resolve the reconciliation report
             const resolvedReport = await CreditReconciliationReport.resolveReport(

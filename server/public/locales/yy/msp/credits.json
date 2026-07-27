@@ -22,6 +22,7 @@
     "actions": "55555",
     "discrepancy": "55555",
     "detected": "55555",
+    "issueType": "55555",
     "expectedBalance": "55555",
     "actualBalance": "55555",
     "amountAvailable": "55555",
@@ -48,6 +49,7 @@
     "backToCredits": "55555",
     "viewAllCredits": "55555",
     "runReconciliation": "55555",
+    "runReconciliationAllClients": "55555",
     "running": "55555",
     "reset": "55555",
     "applyCredit": "55555",
@@ -60,7 +62,8 @@
   "tabs": {
     "activeCredits": "55555",
     "allCredits": "55555",
-    "expiredCredits": "55555"
+    "expiredCredits": "55555",
+    "reconciliation": "55555"
   },
   "settings": {
     "title": "55555",
@@ -107,7 +110,9 @@
     "totalCreditsExpired": "55555",
     "totalDiscrepancies": "55555",
     "totalDiscrepancyAmount": "55555",
-    "openIssues": "55555"
+    "openIssues": "55555",
+    "inReviewCount": "55555",
+    "resolvedCount": "55555"
   },
   "management": {
     "title": "55555",
@@ -121,6 +126,7 @@
   "reconciliation": {
     "title": "55555",
     "selectClient": "55555",
+    "allClients": "55555",
     "status": "55555",
     "allStatuses": "55555",
     "fromDate": "55555",
@@ -128,11 +134,119 @@
     "reconciliationReports": "55555",
     "reconciliationReportsDescription": "55555",
     "validationResult": "55555 {{balanceCount}} 55555 {{trackingCount}} 55555",
+    "validationCompletedAllClients": "55555",
+    "noReportsFound": "55555",
     "tabs": {
       "all": "55555",
       "open": "55555",
       "inReview": "55555",
       "resolved": "55555"
+    },
+    "issueTypes": {
+      "missingCreditTrackingEntry": "55555",
+      "inconsistentCreditRemainingAmount": "55555",
+      "balanceDiscrepancy": "55555"
+    },
+    "sections": {
+      "discrepancyDetails": "55555",
+      "creditApplications": "55555"
+    },
+    "fields": {
+      "expectedBalance": "55555",
+      "actualBalance": "55555",
+      "difference": "55555",
+      "detected": "55555",
+      "reportId": "55555",
+      "transactionId": "55555",
+      "transactionType": "55555",
+      "transactionAmount": "55555",
+      "transactionDate": "55555",
+      "creditId": "55555",
+      "originalAmount": "55555",
+      "correctionAmount": "55555",
+      "resolutionDate": "55555",
+      "resolutionNotes": "55555",
+      "date": "55555",
+      "amount": "55555"
+    },
+    "errors": {
+      "loadFailed": "55555",
+      "loadDetailFailed": "55555",
+      "reportNotFound": "55555",
+      "runFailed": "55555"
+    }
+  },
+  "recommendedFix": {
+    "title": "55555",
+    "applySuccess": "55555",
+    "panels": {
+      "recommendedFix": "55555",
+      "alternativeFix": "55555",
+      "noActionRequired": "55555",
+      "customAdjustment": "55555"
+    },
+    "buttons": {
+      "createTrackingEntry": "55555",
+      "updateRemainingAmount": "55555",
+      "applyAdjustment": "55555",
+      "applyCustomAdjustment": "55555",
+      "markResolvedNoAction": "55555",
+      "confirm": "55555",
+      "applying": "55555"
+    },
+    "descriptions": {
+      "missingTrackingRecommended": "55555",
+      "inconsistentRemainingRecommended": "55555",
+      "genericRecommended": "55555",
+      "genericCustom": "55555",
+      "createTrackingEntry": "55555",
+      "updateRemainingAmount": "55555",
+      "applyAdjustment": "55555",
+      "customAdjustment": "55555",
+      "noAction": "55555"
+    },
+    "dialog": {
+      "adjustmentAmount": "55555",
+      "adjustmentHint": "55555",
+      "notes": "55555",
+      "notesPlaceholder": "55555"
+    },
+    "errors": {
+      "notesRequired": "55555",
+      "invalidAmount": "55555",
+      "applyFailed": "55555"
+    },
+    "impactSummary": {
+      "title": "55555",
+      "currentBalance": "55555",
+      "newBalance": "55555"
+    },
+    "resolved": {
+      "title": "55555",
+      "description": "55555"
+    }
+  },
+  "addCredit": {
+    "description": "55555",
+    "fields": {
+      "client": "55555",
+      "amount": "55555",
+      "expirationDate": "55555"
+    },
+    "placeholders": {
+      "amount": "55555",
+      "expirationDate": "55555"
+    },
+    "hints": {
+      "expirationDate": "55555"
+    },
+    "submitting": "55555",
+    "success": "55555",
+    "errors": {
+      "allFieldsRequired": "55555",
+      "validAmount": "55555",
+      "loadClientsFailed": "55555",
+      "submitFailed": "55555"
     }
   },
   "application": {

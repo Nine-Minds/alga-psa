@@ -217,7 +217,6 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   invoice_charge_fixed_details: { scope: 'tenant' },
   invoice_charges: { scope: 'tenant' },
   invoice_annotations: { scope: 'tenant' },
-  invoice_credits: { scope: 'tenant' },
   invoice_items: { scope: 'tenant' },
   invoice_line_items: { scope: 'tenant' },
   invoice_payment_links: { scope: 'tenant' },

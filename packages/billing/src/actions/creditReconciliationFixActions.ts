@@ -361,7 +361,8 @@ export const applyCustomCreditAdjustment = withAuth(async (
       const now = new Date().toISOString();
 
       // Use the provided amount or default to the report difference
-      const adjustmentAmount = amount !== undefined ? amount : report.difference;
+      // (pg returns bigint columns as strings, so coerce before arithmetic)
+      const adjustmentAmount = amount !== undefined ? Number(amount) : Number(report.difference);
 
       // Get the current client credit balance
       const [client] = await tenantScopedTable(trx, tenant, 'clients')
@@ -391,7 +392,10 @@ export const applyCustomCreditAdjustment = withAuth(async (
           report_id: reportId,
           user_id: userId,
           notes,
-          is_custom_adjustment: true
+          is_custom_adjustment: true,
+          // This adjustment reconciles clients.credit_balance against the ledger;
+          // the balance detector must not count it as a ledger credit event.
+          reconciliation_balance_correction: true
         }
       });
 

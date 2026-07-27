@@ -1038,6 +1038,7 @@ export type TaxRateResponse = z.infer<typeof taxRateResponseSchema>;
 
 export type CreateCreditReconciliationReportRequest = z.infer<typeof createCreditReconciliationReportSchema>;
 export type CreditReconciliationReportResponse = z.infer<typeof creditReconciliationReportResponseSchema>;
+export type ReconciliationListQuery = z.infer<typeof reconciliationListQuerySchema>;
 
 export type AccountBalanceReport = z.infer<typeof accountBalanceReportSchema>;
 export type AgingReport = z.infer<typeof agingReportSchema>;

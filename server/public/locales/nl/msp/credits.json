@@ -26,7 +26,8 @@
     "actualBalance": "Werkelijk saldo",
     "amountAvailable": "Beschikbaar bedrag",
     "expiration": "Vervaldatum",
-    "select": "Selecteren"
+    "select": "Selecteren",
+    "issueType": "Probleemtype"
   },
   "status": {
     "active": "Actief",
@@ -55,12 +56,14 @@
     "select": "Selecteren",
     "selected": "Geselecteerd",
     "saveChanges": "Wijzigingen opslaan",
-    "saving": "Opslaan..."
+    "saving": "Opslaan...",
+    "runReconciliationAllClients": "Reconciliatie uitvoeren (alle klanten)"
   },
   "tabs": {
     "activeCredits": "Actieve kredieten",
     "allCredits": "Alle kredieten",
-    "expiredCredits": "Verlopen kredieten"
+    "expiredCredits": "Verlopen kredieten",
+    "reconciliation": "Reconciliatie"
   },
   "settings": {
     "title": "Instellingen voor kredietverval",
@@ -107,7 +110,9 @@
     "totalCreditsExpired": "Totaal verlopen kredieten",
     "totalDiscrepancies": "Totaal aantal afwijkingen",
     "totalDiscrepancyAmount": "Totaalbedrag van afwijkingen",
-    "openIssues": "Openstaande kwesties"
+    "openIssues": "Openstaande kwesties",
+    "inReviewCount": "In beoordeling",
+    "resolvedCount": "Opgelost"
   },
   "management": {
     "title": "Kredietbeheer",
@@ -133,6 +138,42 @@
       "open": "Openen",
       "inReview": "In beoordeling",
       "resolved": "Opgelost"
+    },
+    "allClients": "Alle klanten",
+    "validationCompletedAllClients": "Reconciliatie voltooid voor alle klanten.",
+    "noReportsFound": "Geen reconciliatierapporten gevonden",
+    "issueTypes": {
+      "missingCreditTrackingEntry": "Ontbrekende krediettrackingregel",
+      "inconsistentCreditRemainingAmount": "Inconsistent resterend kredietbedrag",
+      "balanceDiscrepancy": "Kredietsaldo-afwijking"
+    },
+    "sections": {
+      "discrepancyDetails": "Details van de afwijking",
+      "creditApplications": "Krediettoepassingen"
+    },
+    "fields": {
+      "expectedBalance": "Verwacht saldo",
+      "actualBalance": "Werkelijk saldo",
+      "difference": "Verschil",
+      "detected": "Gedetecteerd",
+      "reportId": "Rapport-ID",
+      "transactionId": "Transactie-ID",
+      "transactionType": "Transactietype",
+      "transactionAmount": "Transactiebedrag",
+      "transactionDate": "Transactiedatum",
+      "creditId": "Krediet-ID",
+      "originalAmount": "Oorspronkelijk bedrag",
+      "correctionAmount": "Correctiebedrag",
+      "resolutionDate": "Oplossingsdatum",
+      "resolutionNotes": "Oplossingsnotities",
+      "date": "Datum",
+      "amount": "Bedrag"
+    },
+    "errors": {
+      "loadFailed": "Reconciliatierapporten konden niet worden geladen. Vernieuw en probeer opnieuw.",
+      "loadDetailFailed": "Details van het reconciliatierapport konden niet worden geladen.",
+      "reportNotFound": "Reconciliatierapport niet gevonden. Het is mogelijk verwijderd of u heeft geen toestemming om het te bekijken.",
+      "runFailed": "Reconciliatie kon niet worden uitgevoerd. Probeer het opnieuw."
     }
   },
   "application": {
@@ -182,5 +223,78 @@
     "recurringLineagePreserved": "Herkomst van de terugkerende bron is behouden",
     "financialOnly": "Alleen financieel",
     "noRecurringServicePeriod": "Geen terugkerende serviceperiode"
+  },
+  "recommendedFix": {
+    "title": "Aanbevolen correcties",
+    "applySuccess": "De afwijking is opgelost en de factureringsgegevens zijn bijgewerkt.",
+    "panels": {
+      "recommendedFix": "Aanbevolen correctie",
+      "alternativeFix": "Alternatieve correctie",
+      "noActionRequired": "Geen actie vereist",
+      "customAdjustment": "Aangepaste correctie"
+    },
+    "buttons": {
+      "createTrackingEntry": "Krediettrackingregel aanmaken",
+      "updateRemainingAmount": "Resterend bedrag bijwerken",
+      "applyAdjustment": "Kredietcorrectie toepassen",
+      "applyCustomAdjustment": "Aangepaste correctie toepassen",
+      "markResolvedNoAction": "Markeren als opgelost (geen actie)",
+      "confirm": "Correctie toepassen",
+      "applying": "Toepassen..."
+    },
+    "descriptions": {
+      "missingTrackingRecommended": "Maak de ontbrekende krediettrackingregel aan zodat de transactie in het trackingregister wordt weergegeven.",
+      "inconsistentRemainingRecommended": "Werk het bijgehouden resterende bedrag bij zodat het overeenkomt met het verwachte saldo na toepassingen.",
+      "genericRecommended": "Pas de aanbevolen correctie toe om de saldi weer in lijn te brengen.",
+      "genericCustom": "Voer een aangepaste correctie in als een handmatige correctie nodig is.",
+      "createTrackingEntry": "Hiermee wordt een nieuwe krediettrackingregel voor de transactie aangemaakt.",
+      "updateRemainingAmount": "Hiermee wordt het resterende bedrag in de krediettrackingregel bijgewerkt.",
+      "applyAdjustment": "Hiermee wordt een kredietcorrectietransactie aangemaakt om het saldo te corrigeren.",
+      "customAdjustment": "Hiermee wordt een aangepaste kredietcorrectietransactie aangemaakt.",
+      "noAction": "Hiermee wordt de afwijking als opgelost gemarkeerd zonder wijzigingen aan te brengen."
+    },
+    "dialog": {
+      "adjustmentAmount": "Correctiebedrag",
+      "adjustmentHint": "Voer een positief bedrag in om het saldo te verhogen of een negatief bedrag om het te verlagen.",
+      "notes": "Notities",
+      "notesPlaceholder": "Licht de reden voor deze correctie toe..."
+    },
+    "errors": {
+      "notesRequired": "Geef notities op waarin de reden voor deze correctie wordt toegelicht",
+      "invalidAmount": "Voer een geldig bedrag in",
+      "applyFailed": "Reconciliatiecorrectie kon niet worden toegepast. Vernieuw en probeer opnieuw."
+    },
+    "impactSummary": {
+      "title": "Impactoverzicht",
+      "currentBalance": "Huidig saldo",
+      "newBalance": "Nieuw saldo"
+    },
+    "resolved": {
+      "title": "Deze afwijking is opgelost",
+      "description": "Er is geen verdere actie nodig, tenzij u de reconciliatiegeschiedenis wilt bekijken."
+    }
+  },
+  "addCredit": {
+    "description": "Maakt een vooruitbetalingsfactuur aan en rondt deze af, waardoor het krediet direct beschikbaar is voor de klant.",
+    "fields": {
+      "client": "Klant",
+      "amount": "Bedrag",
+      "expirationDate": "Vervaldatum (optioneel)"
+    },
+    "placeholders": {
+      "amount": "Voer bedrag in",
+      "expirationDate": "Selecteer vervaldatum"
+    },
+    "hints": {
+      "expirationDate": "Laat leeg om de kredietvervalinstellingen van deze klant te gebruiken."
+    },
+    "submitting": "Toevoegen...",
+    "success": "Krediet succesvol toegevoegd",
+    "errors": {
+      "allFieldsRequired": "Selecteer een klant en voer een bedrag in",
+      "validAmount": "Voer een geldig bedrag in",
+      "loadClientsFailed": "Klanten konden niet worden geladen. Probeer het opnieuw.",
+      "submitFailed": "Krediet kon niet worden toegevoegd. Probeer het opnieuw."
+    }
   }
 }

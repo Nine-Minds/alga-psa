@@ -91,16 +91,47 @@ export const fetchClientsForDropdown = withAuth(async (_user, { tenant }) => {
   const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
     try {
-      // This is a placeholder - in a real implementation, you would fetch clients from the database
-      // For now, we'll return a mock list
-      return [
-        { id: 'client1', name: 'Acme Inc' },
-        { id: 'client2', name: 'Globex Corp' },
-        { id: 'client3', name: 'Initech' },
-        { id: 'client4', name: 'Umbrella Corp' }
-      ];
+      const rows = await trx('clients')
+        .where('tenant', tenant)
+        .select('client_id', 'client_name')
+        .orderBy('client_name', 'asc');
+
+      return rows.map((row: { client_id: string; client_name: string }) => ({
+        id: row.client_id,
+        name: row.client_name
+      }));
     } catch (error) {
       console.error('Error fetching clients for dropdown:', error);
+      throw error;
+    }
+  });
+});
+
+/**
+ * Fetch a single reconciliation report by ID, with the client name resolved.
+ * @param reportId The ID of the reconciliation report
+ * @returns The report with client_name, or null if not found
+ */
+export const fetchReconciliationReportById = withAuth(async (_user, { tenant }, reportId: string) => {
+  const { knex: db } = await createTenantKnex();
+  return withTransaction(db, async (trx: Knex.Transaction) => {
+    try {
+      const report = await CreditReconciliationReport.getById(reportId);
+      if (!report) {
+        return null;
+      }
+
+      const client = await trx('clients')
+        .where('tenant', tenant)
+        .where('client_id', report.client_id)
+        .first('client_name');
+
+      return {
+        ...report,
+        client_name: (client?.client_name as string | undefined) || 'Unknown Client'
+      };
+    } catch (error) {
+      console.error(`Error fetching reconciliation report ${reportId}:`, error);
       throw error;
     }
   });

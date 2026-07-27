@@ -44,7 +44,6 @@ exports.seed = async function(knex) {
         { resource: 'credit', action: 'update', msp: true, client: false, description: 'Update credits' },
         { resource: 'credit', action: 'delete', msp: true, client: false, description: 'Delete credits' },
         { resource: 'credit', action: 'transfer', msp: true, client: false, description: 'Transfer credits' },
-        { resource: 'credit', action: 'reconcile', msp: true, client: false, description: 'Reconcile credits' },
 
         // Financial API permissions (v1 /api/v1/financial endpoints)
         { resource: 'financial', action: 'create', msp: true, client: false, description: 'Create financial records (transactions, payment methods, prepayment invoices)' },

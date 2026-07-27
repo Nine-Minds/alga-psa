@@ -22,6 +22,7 @@
     "actions": "Actions",
     "discrepancy": "Discrepancy",
     "detected": "Detected",
+    "issueType": "Issue Type",
     "expectedBalance": "Expected Balance",
     "actualBalance": "Actual Balance",
     "amountAvailable": "Amount Available",
@@ -48,6 +49,7 @@
     "backToCredits": "Back to Credits",
     "viewAllCredits": "View All Credits",
     "runReconciliation": "Run Reconciliation",
+    "runReconciliationAllClients": "Run Reconciliation (All Clients)",
     "running": "Running...",
     "reset": "Reset",
     "applyCredit": "Apply Credit",
@@ -60,7 +62,8 @@
   "tabs": {
     "activeCredits": "Active Credits",
     "allCredits": "All Credits",
-    "expiredCredits": "Expired Credits"
+    "expiredCredits": "Expired Credits",
+    "reconciliation": "Reconciliation"
   },
   "settings": {
     "title": "Credit Expiration Settings",
@@ -107,7 +110,9 @@
     "totalCreditsExpired": "Total Credits Expired",
     "totalDiscrepancies": "Total Discrepancies",
     "totalDiscrepancyAmount": "Total Discrepancy Amount",
-    "openIssues": "Open Issues"
+    "openIssues": "Open Issues",
+    "inReviewCount": "In Review",
+    "resolvedCount": "Resolved"
   },
   "management": {
     "title": "Credit Management",
@@ -121,6 +126,7 @@
   "reconciliation": {
     "title": "Credit Reconciliation Dashboard",
     "selectClient": "Select Client",
+    "allClients": "All Clients",
     "status": "Status",
     "allStatuses": "All Statuses",
     "fromDate": "From Date",
@@ -128,11 +134,119 @@
     "reconciliationReports": "Reconciliation Reports",
     "reconciliationReportsDescription": "View and manage credit balance discrepancies",
     "validationResult": "Validation completed: Found {{balanceCount}} balance discrepancies and {{trackingCount}} tracking issues.",
+    "validationCompletedAllClients": "Reconciliation completed for all clients.",
+    "noReportsFound": "No reconciliation reports found",
     "tabs": {
       "all": "All",
       "open": "Open",
       "inReview": "In Review",
       "resolved": "Resolved"
+    },
+    "issueTypes": {
+      "missingCreditTrackingEntry": "Missing Credit Tracking Entry",
+      "inconsistentCreditRemainingAmount": "Inconsistent Credit Remaining Amount",
+      "balanceDiscrepancy": "Credit Balance Discrepancy"
+    },
+    "sections": {
+      "discrepancyDetails": "Discrepancy Details",
+      "creditApplications": "Credit Applications"
+    },
+    "fields": {
+      "expectedBalance": "Expected Balance",
+      "actualBalance": "Actual Balance",
+      "difference": "Difference",
+      "detected": "Detected",
+      "reportId": "Report ID",
+      "transactionId": "Transaction ID",
+      "transactionType": "Transaction Type",
+      "transactionAmount": "Transaction Amount",
+      "transactionDate": "Transaction Date",
+      "creditId": "Credit ID",
+      "originalAmount": "Original Amount",
+      "correctionAmount": "Correction Amount",
+      "resolutionDate": "Resolution Date",
+      "resolutionNotes": "Resolution Notes",
+      "date": "Date",
+      "amount": "Amount"
+    },
+    "errors": {
+      "loadFailed": "Failed to load reconciliation reports. Please refresh and try again.",
+      "loadDetailFailed": "Failed to load reconciliation report details.",
+      "reportNotFound": "Reconciliation report not found. It may have been deleted or you may not have permission to view it.",
+      "runFailed": "Failed to run reconciliation. Please try again."
+    }
+  },
+  "recommendedFix": {
+    "title": "Recommended Fixes",
+    "applySuccess": "The discrepancy has been resolved and the billing records have been updated.",
+    "panels": {
+      "recommendedFix": "Recommended Fix",
+      "alternativeFix": "Alternative Fix",
+      "noActionRequired": "No Action Required",
+      "customAdjustment": "Custom Adjustment"
+    },
+    "buttons": {
+      "createTrackingEntry": "Create Credit Tracking Entry",
+      "updateRemainingAmount": "Update Remaining Amount",
+      "applyAdjustment": "Apply Credit Adjustment",
+      "applyCustomAdjustment": "Apply Custom Adjustment",
+      "markResolvedNoAction": "Mark as Resolved (No Action)",
+      "confirm": "Apply Fix",
+      "applying": "Applying..."
+    },
+    "descriptions": {
+      "missingTrackingRecommended": "Create the missing credit tracking entry so the transaction is reflected in the tracking ledger.",
+      "inconsistentRemainingRecommended": "Update the tracked remaining amount so it matches the expected balance after applications.",
+      "genericRecommended": "Apply the recommended correction to bring the balances back into alignment.",
+      "genericCustom": "Enter a custom adjustment if a manual correction is required.",
+      "createTrackingEntry": "This will create a new credit tracking entry for the transaction.",
+      "updateRemainingAmount": "This will update the remaining amount in the credit tracking entry.",
+      "applyAdjustment": "This will create a credit adjustment transaction to correct the balance.",
+      "customAdjustment": "This will create a custom credit adjustment transaction.",
+      "noAction": "This will mark the discrepancy as resolved without making any changes."
+    },
+    "dialog": {
+      "adjustmentAmount": "Adjustment Amount",
+      "adjustmentHint": "Enter a positive amount to increase the balance or a negative amount to decrease it.",
+      "notes": "Notes",
+      "notesPlaceholder": "Explain the reason for this correction..."
+    },
+    "errors": {
+      "notesRequired": "Please provide notes explaining the reason for this correction",
+      "invalidAmount": "Please enter a valid amount",
+      "applyFailed": "Failed to apply reconciliation fix. Please refresh and try again."
+    },
+    "impactSummary": {
+      "title": "Impact Summary",
+      "currentBalance": "Current Balance",
+      "newBalance": "New Balance"
+    },
+    "resolved": {
+      "title": "This discrepancy has been resolved",
+      "description": "No further action is required unless you need to review the reconciliation history."
+    }
+  },
+  "addCredit": {
+    "description": "Issues a prepayment invoice and finalizes it, making the credit immediately available to the client.",
+    "fields": {
+      "client": "Client",
+      "amount": "Amount",
+      "expirationDate": "Expiration Date (optional)"
+    },
+    "placeholders": {
+      "amount": "Enter amount",
+      "expirationDate": "Select expiration date"
+    },
+    "hints": {
+      "expirationDate": "Leave blank to use the credit expiration settings for this client."
+    },
+    "submitting": "Adding...",
+    "success": "Credit added successfully",
+    "errors": {
+      "allFieldsRequired": "Please select a client and enter an amount",
+      "validAmount": "Please enter a valid amount",
+      "loadClientsFailed": "Failed to load clients. Please try again.",
+      "submitFailed": "Failed to add credit. Please try again."
     }
   },
   "application": {

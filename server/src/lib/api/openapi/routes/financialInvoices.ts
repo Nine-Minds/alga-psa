@@ -748,6 +748,43 @@ export function registerFinancialInvoiceRoutes(registry: ApiOpenApiRegistry) {
   }
 
   registry.registerRoute({
+    method: 'get',
+    path: '/api/v1/financial/reconciliation',
+    summary: 'List reconciliation reports',
+    description: 'Lists credit reconciliation reports with filtering by client, status, detection date, and difference range.',
+    tags: [financialTag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { query: FinancialListQuery },
+    responses: {
+      200: { description: 'Reconciliation reports returned.', schema: ApiSuccess },
+      401: { description: 'API key missing/invalid.', schema: ApiError },
+      403: { description: 'financial:read permission denied.', schema: ApiError },
+      500: { description: 'Unexpected list failure.', schema: ApiError },
+    },
+    extensions: { ...commonExtensions, 'x-rbac-resource': 'financial', 'x-rbac-action': 'read' },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
+    method: 'get',
+    path: '/api/v1/financial/reconciliation/{id}',
+    summary: 'Get reconciliation report',
+    description: 'Returns one credit reconciliation report by id.',
+    tags: [financialTag],
+    security: [{ ApiKeyAuth: [] }],
+    request: { params: UuidIdParam },
+    responses: {
+      200: { description: 'Reconciliation report returned.', schema: ApiSuccess },
+      401: { description: 'API key missing/invalid.', schema: ApiError },
+      403: { description: 'financial:read permission denied.', schema: ApiError },
+      404: { description: 'Reconciliation report not found.', schema: ApiError },
+      500: { description: 'Unexpected fetch failure.', schema: ApiError },
+    },
+    extensions: { ...commonExtensions, 'x-rbac-resource': 'financial', 'x-rbac-action': 'read' },
+    edition: 'both',
+  });
+
+  registry.registerRoute({
     method: 'post',
     path: '/api/v1/financial/reconciliation/run',
     summary: 'Run financial reconciliation',
