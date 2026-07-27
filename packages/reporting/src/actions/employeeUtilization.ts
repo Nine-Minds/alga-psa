@@ -5,7 +5,15 @@
  * without loading the 'use server' action module.
  */
 
+import { scheduledHoursForRange, type WorkScheduleDay } from '@alga-psa/scheduling/lib/workSchedule';
+
 export type UtilizationRangeDays = 7 | 30 | 90;
+
+/**
+ * Where a user's capacity came from, so the UI can explain a denominator
+ * instead of showing an unexplained number.
+ */
+export type CapacitySource = 'schedule' | 'weekly' | null;
 
 export interface EmployeeUtilizationReport {
   rangeDays: UtilizationRangeDays;
@@ -25,6 +33,7 @@ export interface EmployeeUtilizationReport {
     billableHours: number;
     entries: number;
     capacityHours: number | null;
+    capacitySource: CapacitySource;
     utilizationPercent: number | null;
   }>;
 }
@@ -36,6 +45,7 @@ export interface EmployeeUtilizationInputRow {
   billableMinutes: number;
   entries: number;
   maxWeeklyCapacity: number | null;
+  workSchedule?: WorkScheduleDay[];
 }
 
 function toCount(value: unknown): number {
@@ -51,14 +61,40 @@ export function proratedCapacityHours(maxWeeklyCapacity: number | null, rangeDay
   return Math.round(((maxWeeklyCapacity * rangeDays) / 7) * 10) / 10;
 }
 
+/**
+ * A configured work schedule wins over the coarse weekly number, because it
+ * knows which days the range actually landed on. The weekly value stays as an
+ * override for tenants that only track contract hours.
+ */
+export function resolveCapacityHours(
+  row: EmployeeUtilizationInputRow,
+  rangeDays: number,
+  rangeEndDate: string,
+): { capacityHours: number | null; capacitySource: CapacitySource } {
+  const scheduled = row.workSchedule?.length
+    ? scheduledHoursForRange(row.workSchedule, rangeDays, rangeEndDate)
+    : null;
+  if (scheduled !== null) {
+    return { capacityHours: scheduled, capacitySource: 'schedule' };
+  }
+
+  const prorated = proratedCapacityHours(row.maxWeeklyCapacity, rangeDays);
+  if (prorated !== null) {
+    return { capacityHours: prorated, capacitySource: 'weekly' };
+  }
+
+  return { capacityHours: null, capacitySource: null };
+}
+
 export function buildEmployeeUtilizationReport(
   rows: EmployeeUtilizationInputRow[],
   rangeDays: UtilizationRangeDays,
+  rangeEndDate: string,
 ): EmployeeUtilizationReport {
   const byUser = rows.map((row) => {
     const workedHours = minutesToHours(row.workedMinutes);
     const billableHours = minutesToHours(row.billableMinutes);
-    const capacityHours = proratedCapacityHours(row.maxWeeklyCapacity, rangeDays);
+    const { capacityHours, capacitySource } = resolveCapacityHours(row, rangeDays, rangeEndDate);
     const utilizationPercent =
       capacityHours && capacityHours > 0 ? Math.round((workedHours / capacityHours) * 100) : null;
     return {
@@ -68,6 +104,7 @@ export function buildEmployeeUtilizationReport(
       billableHours,
       entries: toCount(row.entries),
       capacityHours,
+      capacitySource,
       utilizationPercent,
     };
   });
@@ -80,7 +117,9 @@ export function buildEmployeeUtilizationReport(
   });
 
   const totalWorkedHours = Math.round(byUser.reduce((sum, row) => sum + row.workedHours, 0) * 10) / 10;
-  const withCapacity = byUser.filter((row) => row.capacityHours !== null);
+  // A schedule with every day marked off yields 0 capacity, which is no more
+  // divisible than a missing one; both must stay out of the ratio.
+  const withCapacity = byUser.filter((row) => row.capacityHours !== null && row.capacityHours > 0);
   // Numerator and denominator must cover the same people: counting hours worked
   // by employees without a configured capacity would inflate the percentage.
   const workedHoursWithCapacity =

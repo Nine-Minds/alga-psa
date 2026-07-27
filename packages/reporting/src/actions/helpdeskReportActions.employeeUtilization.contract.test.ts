@@ -20,11 +20,30 @@ describe('employee utilization report tenant-scoped query contract', () => {
     expect(section).toContain("scopedDb.table('users')");
     expect(section).toContain("scopedDb.table('time_entries')");
     expect(section).toContain("scopedDb.table('resources')");
+    expect(section).toContain("scopedDb.table('user_work_schedules')");
 
     // No raw un-scoped table access.
     expect(section).not.toContain("knex('users')");
     expect(section).not.toContain("knex('time_entries')");
     expect(section).not.toContain("knex('resources')");
+    expect(section).not.toContain("knex('user_work_schedules')");
+  });
+
+  it('takes capacity from the work schedule, never from booking availability', () => {
+    const section = employeeUtilizationSection();
+
+    // availability_settings answers "when may a client book this person", which
+    // is not the same question as "when are they on the clock".
+    expect(section).not.toContain('availability_settings');
+    expect(section).not.toContain('availability_exceptions');
+    expect(section).toContain('workSchedule: scheduleByUser.get(row.user_id)');
+  });
+
+  it('anchors the capacity window to the database date, not the app clock', () => {
+    const section = employeeUtilizationSection();
+
+    expect(section).toContain('SELECT CURRENT_DATE::text AS today');
+    expect(section).toContain('buildEmployeeUtilizationReport(inputRows, rangeDays, rangeEndDate)');
   });
 
   it('restricts the roster to active internal users and windows time entries by calendar day', () => {
@@ -48,6 +67,6 @@ describe('employee utilization report tenant-scoped query contract', () => {
 
   it('delegates utilization math to the pure builder', () => {
     const section = employeeUtilizationSection();
-    expect(section).toContain('return buildEmployeeUtilizationReport(inputRows, rangeDays);');
+    expect(section).toContain('return buildEmployeeUtilizationReport(inputRows, rangeDays, rangeEndDate);');
   });
 });
