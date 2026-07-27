@@ -806,7 +806,11 @@
             }
           },
           "preview": "Wirkung vorschauen",
-          "previewClientLabel": "Vorschau für",
+          "previewClientEmpty": "Kein zugeordneter Client passt zu dieser Suche.",
+          "previewClientLabel": "Client",
+          "previewClientSearch": "Zugeordnete Clients suchen",
+          "previewDescription": "Wendet die bearbeiteten Regeln auf einen Client an und schreibt nichts, damit Sie eine Änderung sehen, bevor sie für alle gilt.",
+          "previewTitle": "Regeln testen, bevor Sie sie speichern",
           "previewing": "Vorschau läuft…",
           "save": "Regeln speichern",
           "saveFailed": "Die Feldregeln konnten nicht gespeichert werden.",

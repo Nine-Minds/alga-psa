@@ -806,7 +806,11 @@
             }
           },
           "preview": "Effect bekijken",
-          "previewClientLabel": "Bekijken met",
+          "previewClientEmpty": "Geen gekoppelde klant komt overeen met die zoekopdracht.",
+          "previewClientLabel": "Klant",
+          "previewClientSearch": "Gekoppelde klanten zoeken",
+          "previewDescription": "Past de bewerkte regels toe op één klant en schrijft niets, zodat u het effect ziet voordat het voor iedereen geldt.",
+          "previewTitle": "Test de regels voordat u ze opslaat",
           "previewing": "Bezig met bekijken…",
           "save": "Regels opslaan",
           "saveFailed": "De veldregels konden niet worden opgeslagen.",

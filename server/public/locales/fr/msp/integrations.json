@@ -806,7 +806,11 @@
             }
           },
           "preview": "Prévisualiser l'effet",
-          "previewClientLabel": "Prévisualiser avec",
+          "previewClientEmpty": "Aucun client associé ne correspond à cette recherche.",
+          "previewClientLabel": "Client",
+          "previewClientSearch": "Rechercher des clients associés",
+          "previewDescription": "Applique les règles telles qu'éditées à un client sans rien écrire, pour voir l'effet avant qu'il ne concerne tout le monde.",
+          "previewTitle": "Essayez les règles avant de les enregistrer",
           "previewing": "Prévisualisation…",
           "save": "Enregistrer les règles",
           "saveFailed": "Impossible d'enregistrer les règles de champ.",

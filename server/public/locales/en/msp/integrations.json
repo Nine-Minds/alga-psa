@@ -806,7 +806,11 @@
             }
           },
           "preview": "Preview effect",
-          "previewClientLabel": "Preview against",
+          "previewClientEmpty": "No mapped client matches that search.",
+          "previewClientLabel": "Client",
+          "previewClientSearch": "Search mapped clients",
+          "previewDescription": "Runs the rules as edited against one client and writes nothing, so you can see what a change would do before it applies to everyone.",
+          "previewTitle": "Try the rules before you save them",
           "previewing": "Previewing…",
           "save": "Save rules",
           "saveFailed": "Could not save the field rules.",

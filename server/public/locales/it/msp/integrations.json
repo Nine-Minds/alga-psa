@@ -806,7 +806,11 @@
             }
           },
           "preview": "Anteprima effetto",
-          "previewClientLabel": "Anteprima con",
+          "previewClientEmpty": "Nessun cliente associato corrisponde a questa ricerca.",
+          "previewClientLabel": "Cliente",
+          "previewClientSearch": "Cerca clienti associati",
+          "previewDescription": "Applica le regole così come sono state modificate a un cliente senza scrivere nulla, per vedere l'effetto prima che valga per tutti.",
+          "previewTitle": "Prova le regole prima di salvarle",
           "previewing": "Anteprima in corso…",
           "save": "Salva regole",
           "saveFailed": "Non è stato possibile salvare le regole sui campi.",

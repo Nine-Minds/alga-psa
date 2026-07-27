@@ -4,7 +4,7 @@ import React from 'react';
 import { PencilLine } from 'lucide-react';
 import { EntraSection } from './EntraSection';
 import { Button } from '@alga-psa/ui/components/Button';
-import CustomSelect from '@alga-psa/ui/components/CustomSelect';
+import { AsyncSearchableSelect } from '@alga-psa/ui/components/AsyncSearchableSelect';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
@@ -110,6 +110,42 @@ export function FieldSyncRules({
     }
   }, [config, onSaved, t]);
 
+  const clientLabelOf = React.useCallback(
+    (mapping: EntraConfirmedMapping) =>
+      mapping.clientName || mapping.displayName || mapping.entraTenantId,
+    []
+  );
+
+  const selectedPreviewClientLabel = React.useMemo(() => {
+    const match = mappings.find((mapping) => mapping.managedTenantId === previewClient);
+    return match ? clientLabelOf(match) : undefined;
+  }, [clientLabelOf, mappings, previewClient]);
+
+  /**
+   * The whole mapped list is already in state, so the search is local — this
+   * exists to satisfy the picker's async contract, not to reach a server.
+   */
+  const loadPreviewClientOptions = React.useCallback(
+    async ({ search, page, limit }: { search: string; page: number; limit: number }) => {
+      const needle = search.trim().toLowerCase();
+      const matches = mappings
+        .filter((mapping) => {
+          if (!needle) return true;
+          return [clientLabelOf(mapping), mapping.primaryDomain, mapping.entraTenantId]
+            .filter((value): value is string => Boolean(value))
+            .some((value) => value.toLowerCase().includes(needle));
+        })
+        .map((mapping) => ({
+          value: mapping.managedTenantId,
+          label: clientLabelOf(mapping),
+        }));
+
+      const start = Math.max(0, (page - 1) * limit);
+      return { options: matches.slice(start, start + limit), total: matches.length };
+    },
+    [clientLabelOf, mappings]
+  );
+
   const handlePreviewRules = React.useCallback(async () => {
     if (!previewClient) {
       return;
@@ -179,7 +215,11 @@ export function FieldSyncRules({
         </div>
       </div>
 
-      <div className="mt-3 flex flex-wrap items-end gap-2">
+      {/* Save commits the rules above; the preview is a separate job against a
+          single client. They used to share one `items-end` row, where the
+          picker's floating label pushed its control down and left the save
+          button sitting off the same baseline as everything beside it. */}
+      <div className="mt-4">
         <Button
           id="entra-field-sync-save"
           type="button"
@@ -191,19 +231,48 @@ export function FieldSyncRules({
             ? t('integrations.entra.settings.fieldSync.saving')
             : t('integrations.entra.settings.fieldSync.save')}
         </Button>
+      </div>
 
-        {showPreview && mappings.length > 0 ? (
-          <>
-            <div className="w-56">
-              <CustomSelect
+      {message ? (
+        <p className="mt-2 text-sm text-muted-foreground" id="entra-field-sync-message">
+          {message}
+        </p>
+      ) : null}
+      {error ? (
+        <p className="mt-2 text-sm text-destructive" id="entra-field-sync-error">
+          {error}
+        </p>
+      ) : null}
+
+      {showPreview && mappings.length > 0 ? (
+        <div
+          className="mt-4 rounded-md border border-border/60 bg-muted/20 p-3"
+          id="entra-field-sync-preview-panel"
+        >
+          <p className="text-sm font-medium">
+            {t('integrations.entra.settings.fieldSync.previewTitle')}
+          </p>
+          {/* "Preview against [client]" never said what it previewed or how
+              much of it: the answer is the edited rules, one client, nothing
+              written. */}
+          <p className="mt-0.5 text-sm text-muted-foreground">
+            {t('integrations.entra.settings.fieldSync.previewDescription')}
+          </p>
+
+          <div className="mt-3 flex flex-wrap items-end gap-2">
+            <div className="w-72">
+              {/* Searchable, because this list is every mapped client and a
+                  plain select stops being usable somewhere around thirty. The
+                  options are already in memory, so the search is local. */}
+              <AsyncSearchableSelect
                 id="entra-field-sync-preview-client"
                 label={t('integrations.entra.settings.fieldSync.previewClientLabel')}
                 value={previewClient}
-                onValueChange={setPreviewClient}
-                options={mappings.map((mapping) => ({
-                  value: mapping.managedTenantId,
-                  label: mapping.clientName || mapping.displayName || mapping.entraTenantId,
-                }))}
+                onChange={setPreviewClient}
+                loadOptions={loadPreviewClientOptions}
+                searchPlaceholder={t('integrations.entra.settings.fieldSync.previewClientSearch')}
+                emptyMessage={t('integrations.entra.settings.fieldSync.previewClientEmpty')}
+                selectedLabel={selectedPreviewClientLabel}
                 disabled={saving || previewBusy}
               />
             </div>
@@ -219,24 +288,17 @@ export function FieldSyncRules({
                 ? t('integrations.entra.settings.fieldSync.previewing')
                 : t('integrations.entra.settings.fieldSync.preview')}
             </Button>
-          </>
-        ) : null}
-      </div>
+          </div>
 
-      {message ? (
-        <p className="mt-2 text-sm text-muted-foreground" id="entra-field-sync-message">
-          {message}
-        </p>
-      ) : null}
-      {error ? (
-        <p className="mt-2 text-sm text-destructive" id="entra-field-sync-error">
-          {error}
-        </p>
-      ) : null}
-
-      {showPreview && preview ? (
-        <div className="mt-3">
-          <ContactPreflightReport report={preview} />
+          {preview ? (
+            <div className="mt-3">
+              <ContactPreflightReport
+                report={preview}
+                onRecheck={() => void handlePreviewRules()}
+                rechecking={previewBusy}
+              />
+            </div>
+          ) : null}
         </div>
       ) : null}
     </EntraSection>

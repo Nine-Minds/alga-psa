@@ -806,7 +806,11 @@
             }
           },
           "preview": "Previsualizar efecto",
-          "previewClientLabel": "Previsualizar con",
+          "previewClientEmpty": "Ningún cliente asignado coincide con esa búsqueda.",
+          "previewClientLabel": "Cliente",
+          "previewClientSearch": "Buscar clientes asignados",
+          "previewDescription": "Aplica las reglas tal como están editadas a un cliente y no escribe nada, para ver el efecto antes de que afecte a todos.",
+          "previewTitle": "Pruebe las reglas antes de guardarlas",
           "previewing": "Previsualizando…",
           "save": "Guardar reglas",
           "saveFailed": "No se pudieron guardar las reglas de campo.",

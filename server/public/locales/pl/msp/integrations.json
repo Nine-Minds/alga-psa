@@ -806,7 +806,11 @@
             }
           },
           "preview": "Podgląd efektu",
-          "previewClientLabel": "Podgląd dla",
+          "previewClientEmpty": "Żaden powiązany klient nie pasuje do wyszukiwania.",
+          "previewClientLabel": "Klient",
+          "previewClientSearch": "Szukaj powiązanych klientów",
+          "previewDescription": "Stosuje edytowane reguły do jednego klienta i nic nie zapisuje, więc widać efekt, zanim obejmie wszystkich.",
+          "previewTitle": "Przetestuj reguły przed zapisaniem",
           "previewing": "Trwa podgląd…",
           "save": "Zapisz reguły",
           "saveFailed": "Nie udało się zapisać reguł pól.",

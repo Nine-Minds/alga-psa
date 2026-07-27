@@ -164,13 +164,16 @@ export function ContactPreflightReport({
                 >
                   {count}
                 </span>
-                <span className="w-24 flex-shrink-0 text-right">
+                {/* w-24 was a pixel short of "Show names" at this size, so every
+                    row with a count wrapped its own button onto two lines. */}
+                <span className="w-28 flex-shrink-0 text-right">
                   {count > 0 ? (
                     <Button
                       id={`entra-preflight-expand-${bucketId}`}
                       type="button"
                       size="sm"
                       variant="ghost"
+                      className="whitespace-nowrap"
                       onClick={() => setExpanded(isExpanded ? null : bucketId)}
                     >
                       {isExpanded
