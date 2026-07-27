@@ -2,6 +2,7 @@
 
 import logger from '@alga-psa/core/logger';
 import { createTenantKnex, tenantDb } from '@alga-psa/db';
+import { fetchTenantParty } from '../lib/adapters/tenantPartyAdapter';
 import { getInvoiceForRendering } from './invoiceQueries';
 import { createPDFGenerationService } from '../services/pdfGenerationService';
 import { StorageService } from '@alga-psa/storage/StorageService';
@@ -244,8 +245,8 @@ export const getInvoiceEmailRecipientAction = withAuth(async (
 
   const fromEmail = process.env.EMAIL_FROM || 'noreply@example.com';
 
-  const tenantRecord = await tenantDb(knex, tenant).table('tenants').first();
-  const companyName = tenantRecord?.company_name || 'Your Company';
+  const tenantParty = await fetchTenantParty(knex, tenant);
+  const companyName = tenantParty?.name || 'Your Company';
 
   for (const invoiceId of invoiceIds) {
     try {
@@ -452,8 +453,8 @@ export const sendInvoiceEmailAction = withAuth(async (
   const pdfService = createPDFGenerationService(tenant);
   const results: SendInvoiceEmailResult[] = [];
 
-  const tenantRecord = await tenantDb(knex, tenant).table('tenants').first();
-  const companyName = tenantRecord?.company_name || 'Your Company';
+  const tenantParty = await fetchTenantParty(knex, tenant);
+  const companyName = tenantParty?.name || 'Your Company';
   const fromEmail = process.env.EMAIL_FROM || 'noreply@example.com';
 
   for (const invoiceId of invoiceIds) {
