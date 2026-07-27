@@ -6,8 +6,13 @@ import { hasPermission } from '@alga-psa/auth';
 import { tenantDb, withTransaction } from '@alga-psa/db';
 import { createTenantKnex } from '@alga-psa/db';
 import { Knex } from 'knex';
-import { publishEvent } from '@alga-psa/event-bus/publishers';
 import { withAuth } from '@alga-psa/auth';
+import {
+  addTicketResourceCore,
+  getTicketResourcesCore,
+  publishTicketResourceEvent,
+  removeTicketResourceCore,
+} from '../lib/ticketResourceCore';
 import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErrors';
 
 function tenantScopedTable(
@@ -27,92 +32,18 @@ export const addTicketResource = withAuth(async (
 ): Promise<ITicketResource | TicketActionError | null> => {
   const { knex: db } = await createTenantKnex();
   try {
-    return await withTransaction(db, async (trx: Knex.Transaction) => {
+    const { resource, event } = await withTransaction(db, async (trx: Knex.Transaction) => {
     if (!await hasPermission(user, 'ticket', 'update', trx)) {
       throw new Error('Permission denied: Cannot add ticket resource');
     }
 
-    // First, verify that the ticket exists and has the correct assigned_to
-    const ticket = await tenantScopedTable(trx, 'tickets', tenant)
-      .where({
-        ticket_id: ticketId,
-      })
-      .first();
-
-    if (!ticket) {
-      throw new Error(`Ticket not found in tenant ${tenant}`);
-    }
-
-    // If the ticket has no primary assignment yet, promote this user to primary
-    if (!ticket.assigned_to) {
-      const [updatedTicket] = await tenantScopedTable(trx, 'tickets', tenant)
-        .where({
-          ticket_id: ticketId,
-        })
-        .update({
-          assigned_to: additionalUserId,
-          updated_by: user.user_id,
-          updated_at: new Date()
-        })
-        .returning('*');
-
-      if (!updatedTicket) {
-        throw new Error(`Primary assignment update for ticket ${ticketId} completed without returning the updated ticket.`);
-      }
-
-      await publishEvent({
-        eventType: 'TICKET_ASSIGNED',
-        payload: {
-          tenantId: tenant,
-          ticketId: ticketId,
-          userId: additionalUserId,
-          assignedByUserId: user.user_id
-        }
-      });
-
-      return null;
-    }
-
-    // Check if resource already exists
-    const existingResource = await tenantScopedTable(trx, 'ticket_resources', tenant)
-      .where({
-        ticket_id: ticketId,
-        additional_user_id: additionalUserId,
-      })
-      .first();
-
-    if (existingResource) {
-      throw new Error(`Resource already exists for user ${additionalUserId} in tenant ${tenant}`);
-    }
-
-    // Create the resource with the ticket's assigned_to
-    const [resource] = await tenantScopedTable(trx, 'ticket_resources', tenant)
-      .insert({
-        ticket_id: ticketId,
-        assigned_to: ticket.assigned_to,
-        additional_user_id: additionalUserId,
-        role: role,
-        tenant: tenant,
-        assigned_at: new Date()
-      })
-      .returning('*');
-
-    // Publish TICKET_ADDITIONAL_AGENT_ASSIGNED event
-    const eventPayload = {
-      tenantId: tenant,
-      ticketId: ticketId,
-      primaryAgentId: ticket.assigned_to,
-      additionalAgentId: additionalUserId,
-      assignedByUserId: user.user_id
-    };
-    console.log('[ticketResourceActions] Publishing TICKET_ADDITIONAL_AGENT_ASSIGNED event:', JSON.stringify(eventPayload));
-    await publishEvent({
-      eventType: 'TICKET_ADDITIONAL_AGENT_ASSIGNED',
-      payload: eventPayload
+    return await addTicketResourceCore(trx, tenant, user.user_id, ticketId, additionalUserId, role);
     });
+
+    // Emit after the transaction commits so subscribers can see the data.
+    await publishTicketResourceEvent(event);
 
     return resource;
-    });
   } catch (error) {
     const expected = ticketActionErrorFrom(error);
     if (expected) {
@@ -135,22 +66,7 @@ export const removeTicketResource = withAuth(async (
       throw new Error('Permission denied: Cannot remove ticket resource');
     }
 
-    // Verify the resource exists before attempting to delete
-    const resource = await tenantScopedTable(trx, 'ticket_resources', tenant)
-      .where({
-        assignment_id: assignmentId,
-      })
-      .first();
-
-    if (!resource) {
-      throw new Error(`Ticket resource not found in tenant ${tenant}`);
-    }
-
-    await tenantScopedTable(trx, 'ticket_resources', tenant)
-      .where({
-        assignment_id: assignmentId,
-      })
-      .delete();
+    await removeTicketResourceCore(trx, tenant, assignmentId);
     });
   } catch (error) {
     const expected = ticketActionErrorFrom(error);
@@ -174,25 +90,7 @@ export const getTicketResources = withAuth(async (
       throw new Error('Permission denied: Cannot view ticket resources');
     }
 
-    // First verify the ticket exists
-    const ticket = await tenantScopedTable(trx, 'tickets', tenant)
-      .where({
-        ticket_id: ticketId,
-      })
-      .first();
-
-    if (!ticket) {
-      throw new Error(`Ticket not found in tenant ${tenant}`);
-    }
-
-    const resources = await tenantScopedTable(trx, 'ticket_resources', tenant)
-      .where({
-        ticket_id: ticketId,
-      })
-      .select('*')
-      .orderBy('assigned_at', 'desc');
-
-    return resources;
+    return await getTicketResourcesCore(trx, tenant, ticketId);
     });
   } catch (error) {
     const expected = ticketActionErrorFrom(error);
