@@ -854,20 +854,28 @@ export const createPrepaymentInvoice = withAuth(async (
     });
 });
 
-export const applyCreditToInvoice = withAuth(async (
-    user,
-    { tenant },
+/**
+ * Canonical apply-credit engine. Writes the full ledger for a credit
+ * application: credit_tracking draw-down (FIFO by expiration), the
+ * credit_application transaction, the credit_allocations row, invoice
+ * credit_applied, clients.credit_balance, workflow events, and the QBO
+ * apply_credit enqueue.
+ *
+ * Callers own permission checks and tenant context (must run inside
+ * runWithTenant / an authenticated server action). Both the
+ * applyCreditToInvoice server action and the REST services
+ * (FinancialService, InvoiceService) delegate here — there is exactly one
+ * implementation of credit application.
+ */
+export async function applyCreditToInvoiceInternal(
+    tenant: string,
+    userId: string,
     clientId: string,
     invoiceId: string,
     requestedAmount: number
-): Promise<void | CreditActionError> => {
-    return withCreditActionErrors(async () => {
-    // Check permission for credit updates (applying credits modifies credit balances)
-    if (!await hasPermission(user, 'credit', 'update')) {
-        throw new Error('Permission denied: Cannot apply credits to invoices');
-    }
-
+): Promise<{ appliedAmount: number }> {
     const { knex } = await createTenantKnex();
+    let appliedAmountResult = 0;
 
     let creditNoteAppliedEvents: Array<{
         creditNoteId: string;
@@ -1080,8 +1088,9 @@ export const applyCreditToInvoice = withAuth(async (
             totalAppliedAmount += amountToApplyFromCredit;
             remainingRequestedAmount -= amountToApplyFromCredit;
         }
-        
+
         // If no credits were applied, exit early
+        appliedAmountResult = totalAppliedAmount;
         if (totalAppliedAmount <= 0) {
             console.log(`No credits were applied for client ${clientId}`);
             return;
@@ -1161,7 +1170,7 @@ export const applyCreditToInvoice = withAuth(async (
             amountApplied: appliedCredit.amount,
             currency: invoiceCurrency,
             appliedAt: now,
-            appliedByUserId: user.user_id,
+            appliedByUserId: userId,
             idempotencyKey: `credit_note_applied:${creditTransaction.transaction_id}:${appliedCredit.creditId}`,
             appliedInvoiceNumber: appliedInvoice.invoice?.invoice_number ?? null,
             appliedInvoiceStatus: appliedInvoice.invoice?.status ?? null,
@@ -1226,6 +1235,24 @@ export const applyCreditToInvoice = withAuth(async (
         const { knex: syncKnex } = await createTenantKnex();
         void enqueueCreditApplication(syncKnex, tenant, op);
     }
+
+    return { appliedAmount: appliedAmountResult };
+}
+
+export const applyCreditToInvoice = withAuth(async (
+    user,
+    { tenant },
+    clientId: string,
+    invoiceId: string,
+    requestedAmount: number
+): Promise<void | CreditActionError> => {
+    return withCreditActionErrors(async () => {
+    // Check permission for credit updates (applying credits modifies credit balances)
+    if (!await hasPermission(user, 'credit', 'update')) {
+        throw new Error('Permission denied: Cannot apply credits to invoices');
+    }
+
+    await applyCreditToInvoiceInternal(tenant, user.user_id, clientId, invoiceId, requestedAmount);
     });
 });
 

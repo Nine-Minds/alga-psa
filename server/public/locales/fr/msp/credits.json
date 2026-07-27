@@ -26,7 +26,8 @@
     "actualBalance": "Solde réel",
     "amountAvailable": "Montant disponible",
     "expiration": "Expiration",
-    "select": "Sélectionner"
+    "select": "Sélectionner",
+    "issueType": "Type de problème"
   },
   "status": {
     "active": "Actif",
@@ -55,12 +56,14 @@
     "select": "Sélectionner",
     "selected": "Sélectionné",
     "saveChanges": "Enregistrer les modifications",
-    "saving": "Enregistrement..."
+    "saving": "Enregistrement...",
+    "runReconciliationAllClients": "Lancer le rapprochement (tous les clients)"
   },
   "tabs": {
     "activeCredits": "Crédits actifs",
     "allCredits": "Tous les crédits",
-    "expiredCredits": "Crédits expirés"
+    "expiredCredits": "Crédits expirés",
+    "reconciliation": "Rapprochement"
   },
   "settings": {
     "title": "Paramètres d'expiration des crédits",
@@ -107,7 +110,9 @@
     "totalCreditsExpired": "Total des crédits expirés",
     "totalDiscrepancies": "Total des écarts",
     "totalDiscrepancyAmount": "Montant total des écarts",
-    "openIssues": "Problèmes ouverts"
+    "openIssues": "Problèmes ouverts",
+    "inReviewCount": "En révision",
+    "resolvedCount": "Résolu"
   },
   "management": {
     "title": "Gestion des crédits",
@@ -133,6 +138,42 @@
       "open": "Ouvert",
       "inReview": "En révision",
       "resolved": "Résolu"
+    },
+    "allClients": "Tous les clients",
+    "validationCompletedAllClients": "Rapprochement terminé pour tous les clients.",
+    "noReportsFound": "Aucun rapport de rapprochement trouvé",
+    "issueTypes": {
+      "missingCreditTrackingEntry": "Entrée de suivi de crédit manquante",
+      "inconsistentCreditRemainingAmount": "Montant restant de crédit incohérent",
+      "balanceDiscrepancy": "Écart de solde de crédit"
+    },
+    "sections": {
+      "discrepancyDetails": "Détails de l'écart",
+      "creditApplications": "Applications de crédit"
+    },
+    "fields": {
+      "expectedBalance": "Solde attendu",
+      "actualBalance": "Solde réel",
+      "difference": "Différence",
+      "detected": "Détecté",
+      "reportId": "ID du rapport",
+      "transactionId": "ID de transaction",
+      "transactionType": "Type de transaction",
+      "transactionAmount": "Montant de la transaction",
+      "transactionDate": "Date de la transaction",
+      "creditId": "ID de crédit",
+      "originalAmount": "Montant d'origine",
+      "correctionAmount": "Montant de correction",
+      "resolutionDate": "Date de résolution",
+      "resolutionNotes": "Notes de résolution",
+      "date": "Date",
+      "amount": "Montant"
+    },
+    "errors": {
+      "loadFailed": "Impossible de charger les rapports de rapprochement. Veuillez actualiser et réessayer.",
+      "loadDetailFailed": "Impossible de charger les détails du rapport de rapprochement.",
+      "reportNotFound": "Rapport de rapprochement introuvable. Il a peut-être été supprimé ou vous n'avez pas l'autorisation de le consulter.",
+      "runFailed": "Impossible d'exécuter le rapprochement. Veuillez réessayer."
     }
   },
   "application": {
@@ -182,5 +223,78 @@
     "recurringLineagePreserved": "La filiation de la source récurrente est préservée",
     "financialOnly": "Financier uniquement",
     "noRecurringServicePeriod": "Aucune période de service récurrente"
+  },
+  "recommendedFix": {
+    "title": "Corrections recommandées",
+    "applySuccess": "L'écart a été résolu et les données de facturation ont été mises à jour.",
+    "panels": {
+      "recommendedFix": "Correction recommandée",
+      "alternativeFix": "Correction alternative",
+      "noActionRequired": "Aucune action requise",
+      "customAdjustment": "Ajustement personnalisé"
+    },
+    "buttons": {
+      "createTrackingEntry": "Créer une entrée de suivi de crédit",
+      "updateRemainingAmount": "Mettre à jour le montant restant",
+      "applyAdjustment": "Appliquer un ajustement de crédit",
+      "applyCustomAdjustment": "Appliquer un ajustement personnalisé",
+      "markResolvedNoAction": "Marquer comme résolu (sans action)",
+      "confirm": "Appliquer la correction",
+      "applying": "Application..."
+    },
+    "descriptions": {
+      "missingTrackingRecommended": "Créez l'entrée de suivi de crédit manquante afin que la transaction figure dans le registre de suivi.",
+      "inconsistentRemainingRecommended": "Mettez à jour le montant restant suivi pour qu'il corresponde au solde attendu après applications.",
+      "genericRecommended": "Appliquez la correction recommandée pour réaligner les soldes.",
+      "genericCustom": "Saisissez un ajustement personnalisé si une correction manuelle est nécessaire.",
+      "createTrackingEntry": "Cela créera une nouvelle entrée de suivi de crédit pour la transaction.",
+      "updateRemainingAmount": "Cela mettra à jour le montant restant dans l'entrée de suivi de crédit.",
+      "applyAdjustment": "Cela créera une transaction d'ajustement de crédit pour corriger le solde.",
+      "customAdjustment": "Cela créera une transaction d'ajustement de crédit personnalisée.",
+      "noAction": "Cela marquera l'écart comme résolu sans effectuer de modifications."
+    },
+    "dialog": {
+      "adjustmentAmount": "Montant de l'ajustement",
+      "adjustmentHint": "Saisissez un montant positif pour augmenter le solde ou négatif pour le diminuer.",
+      "notes": "Notes",
+      "notesPlaceholder": "Expliquez la raison de cette correction..."
+    },
+    "errors": {
+      "notesRequired": "Veuillez fournir des notes expliquant la raison de cette correction",
+      "invalidAmount": "Veuillez saisir un montant valide",
+      "applyFailed": "Impossible d'appliquer la correction de rapprochement. Veuillez actualiser et réessayer."
+    },
+    "impactSummary": {
+      "title": "Résumé de l'impact",
+      "currentBalance": "Solde actuel",
+      "newBalance": "Nouveau solde"
+    },
+    "resolved": {
+      "title": "Cet écart a été résolu",
+      "description": "Aucune autre action n'est requise, sauf si vous devez consulter l'historique de rapprochement."
+    }
+  },
+  "addCredit": {
+    "description": "Émet une facture de prépaiement et la finalise, rendant le crédit immédiatement disponible pour le client.",
+    "fields": {
+      "client": "Client",
+      "amount": "Montant",
+      "expirationDate": "Date d'expiration (facultatif)"
+    },
+    "placeholders": {
+      "amount": "Saisissez le montant",
+      "expirationDate": "Sélectionnez la date d'expiration"
+    },
+    "hints": {
+      "expirationDate": "Laissez vide pour utiliser les paramètres d'expiration de crédit de ce client."
+    },
+    "submitting": "Ajout...",
+    "success": "Crédit ajouté avec succès",
+    "errors": {
+      "allFieldsRequired": "Veuillez sélectionner un client et saisir un montant",
+      "validAmount": "Veuillez saisir un montant valide",
+      "loadClientsFailed": "Impossible de charger les clients. Veuillez réessayer.",
+      "submitFailed": "Impossible d'ajouter le crédit. Veuillez réessayer."
+    }
   }
 }

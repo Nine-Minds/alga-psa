@@ -370,7 +370,7 @@
           "baseUrlPlaceholder": "11111"
         },
         "test": {
-          "passed": "11111",
+          "passed": "11111 {{count}} 11111",
           "required": "11111"
         },
         "title": "11111"
@@ -395,18 +395,18 @@
           "connection": "11111",
           "connectionDetail": "11111",
           "empty": "11111",
-          "failedClients": "11111",
-          "failedClientsDetail": "11111",
-          "failedClientsOne": "11111",
-          "neverSynced": "11111",
-          "neverSyncedDetail": "11111",
-          "neverSyncedOne": "11111",
+          "failedClients": "11111 {{count}} 11111",
+          "failedClientsDetail": "11111 {{clients}} 11111",
+          "failedClientsOne": "11111 {{count}} 11111",
+          "neverSynced": "11111 {{count}} 11111",
+          "neverSyncedDetail": "11111 {{clients}} 11111",
+          "neverSyncedOne": "11111 {{count}} 11111",
           "noClients": "11111",
           "noClientsDetail": "11111",
-          "reviewQueue": "11111",
-          "reviewQueueAtLeast": "11111",
+          "reviewQueue": "11111 {{count}} 11111",
+          "reviewQueueAtLeast": "11111 {{count}} 11111",
           "reviewQueueDetail": "11111",
-          "reviewQueueOne": "11111",
+          "reviewQueueOne": "11111 {{count}} 11111",
           "scheduleNotApplied": "11111",
           "scheduleNotAppliedDetail": "11111",
           "scheduleOff": "11111",
@@ -446,13 +446,13 @@
           "emptyAction": "11111",
           "clearFilters": "11111",
           "unlinkConfirm": {
-            "body": "11111",
-            "title": "11111"
+            "body": "11111 {{client}} 11111",
+            "title": "11111 {{client}} 11111"
           },
-          "unlinked": "11111",
+          "unlinked": "11111 {{client}} 11111",
           "unlinkFailed": "11111",
           "hidePreview": "11111",
-          "previewLoading": "11111",
+          "previewLoading": "11111 {{client}} 11111",
           "previewLoadingHint": "11111"
         },
         "connection": {
@@ -475,8 +475,8 @@
         },
         "health": {
           "checking": "11111",
-          "failingClients": "11111",
-          "failingClientsOne": "11111",
+          "failingClients": "11111 {{count}} 11111",
+          "failingClientsOne": "11111 {{count}} 11111",
           "healthy": "11111",
           "unknown": "11111"
         },
@@ -495,7 +495,7 @@
           "includePreviews": "11111",
           "next": "11111",
           "onlyFailures": "11111",
-          "page": "11111",
+          "page": "11111 {{page}} 11111 {{pages}} 11111",
           "previewBadge": "11111",
           "previous": "11111",
           "triggers": {
@@ -514,15 +514,15 @@
             "updated": "11111"
           },
           "empty": "11111",
-          "progress": "11111",
+          "progress": "11111 {{processed}} 11111 {{total}} 11111",
           "results": {
             "done": "11111",
             "failed": "11111",
             "partlyFailed": "11111",
             "running": "11111",
-            "toReview": "11111"
+            "toReview": "11111 {{count}} 11111"
           },
-          "showAll": "11111",
+          "showAll": "11111 {{count}} 11111",
           "stats": {
             "created": "11111",
             "createdSub": "11111",
@@ -536,16 +536,16 @@
             "updatedSub": "11111"
           },
           "summaries": {
-            "completed": "11111",
-            "failed": "11111",
-            "partial": "11111",
-            "running": "11111",
-            "unknown": "11111"
+            "completed": "11111 {{time}} 11111",
+            "failed": "11111 {{time}} 11111",
+            "partial": "11111 {{time}} 11111",
+            "running": "11111 {{time}} 11111",
+            "unknown": "11111 {{time}} 11111"
           },
           "title": "11111",
           "unavailable": "11111"
         },
-        "lead": "11111",
+        "lead": "11111 {{clients}} 11111 {{method}} 11111",
         "overwrites": {
           "change": "11111",
           "inactivateOff": "11111",
@@ -555,22 +555,22 @@
         },
         "schedule": {
           "cadence": {
-            "10080": "11111",
-            "1440": "11111",
-            "240": "11111",
             "60": "11111",
-            "720": "11111"
+            "240": "11111",
+            "720": "11111",
+            "1440": "11111",
+            "10080": "11111"
           },
           "changeAction": "11111",
           "description": "11111",
           "enablePrompt": "11111",
           "intervalLabel": "11111",
           "intervals": {
-            "10080": "11111",
-            "1440": "11111",
-            "240": "11111",
             "60": "11111",
-            "720": "11111"
+            "240": "11111",
+            "720": "11111",
+            "1440": "11111",
+            "10080": "11111"
           },
           "pause": "11111",
           "pauseHint": "11111",
@@ -584,8 +584,8 @@
           "title": "11111"
         },
         "sideRail": {
-          "runs": "11111",
-          "runsMinutes": "11111",
+          "runs": "11111 {{cadence}} 11111",
+          "runsMinutes": "11111 {{minutes}} 11111",
           "scheduleOff": "11111"
         },
         "syncStarted": "11111",
@@ -604,8 +604,8 @@
           "preview": "11111",
           "previewing": "11111",
           "syncOne": "11111",
-          "syncOneNamed": "11111",
-          "syncRemaining": "11111",
+          "syncOneNamed": "11111 {{client}} 11111",
+          "syncRemaining": "11111 {{count}} 11111",
           "syncingOne": "11111",
           "syncingRemaining": "11111"
         },
@@ -618,8 +618,8 @@
         },
         "gateNote": "11111",
         "previewPrompt": "11111",
-        "remainingStarted": "11111",
-        "started": "11111"
+        "remainingStarted": "11111 {{count}} 11111",
+        "started": "11111 {{client}} 11111"
       },
       "preflight": {
         "buckets": {
@@ -647,11 +647,11 @@
         "checkAgain": "11111",
         "checkedLabel": "11111",
         "hideNames": "11111",
-        "moreNames": "11111",
+        "moreNames": "11111 {{count}} 11111",
         "nothingWritten": "11111",
         "showNames": "11111",
-        "summary": "11111",
-        "summaryNoTime": "11111",
+        "summary": "11111 {{count}} 11111 {{time}} 11111",
+        "summaryNoTime": "11111 {{count}} 11111",
         "title": "11111"
       },
       "reconciliation": {
@@ -680,7 +680,7 @@
         "queuedAt": "11111 {{identity}} 11111 {{time}} 11111",
         "scopedToMappedClient": "11111",
         "success": {
-          "dismissed": "11111",
+          "dismissed": "11111 {{identity}} 11111",
           "resolvedExisting": "11111 {{queueItemId}} 11111 {{contactNameId}} 11111",
           "resolvedNew": "11111 {{queueItemId}} 11111 {{contactNameId}} 11111"
         },
@@ -913,7 +913,7 @@
         }
       },
       "setup": {
-        "backToCurrentStep": "11111",
+        "backToCurrentStep": "11111 {{step}} 11111",
         "chooser": {
           "cipp": {
             "description": "11111",
@@ -944,7 +944,7 @@
           "recommendedBadge": "11111",
           "title": "11111"
         },
-        "connectedVia": "11111",
+        "connectedVia": "11111 {{method}} 11111",
         "description": "11111",
         "directConsent": {
           "adminNote": "11111",
@@ -975,7 +975,7 @@
           "copy": "11111",
           "description": "11111",
           "inactiveNote": "11111",
-          "recordGeneratedAt": "11111",
+          "recordGeneratedAt": "11111 {{time}} 11111",
           "recordHeading": "11111",
           "scopes": {
             "directory": "11111",
@@ -988,7 +988,7 @@
           "scopesTitle": "11111",
           "title": "11111"
         },
-        "stepLabel": "11111",
+        "stepLabel": "11111 {{number}} 11111",
         "steps": {
           "connect": {
             "description": "11111",

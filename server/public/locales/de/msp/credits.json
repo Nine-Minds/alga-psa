@@ -26,7 +26,8 @@
     "actualBalance": "Tatsächlicher Saldo",
     "amountAvailable": "Verfügbarer Betrag",
     "expiration": "Ablauf",
-    "select": "Auswählen"
+    "select": "Auswählen",
+    "issueType": "Problemtyp"
   },
   "status": {
     "active": "Aktiv",
@@ -55,12 +56,14 @@
     "select": "Auswählen",
     "selected": "Ausgewählt",
     "saveChanges": "Änderungen speichern",
-    "saving": "Wird gespeichert..."
+    "saving": "Wird gespeichert...",
+    "runReconciliationAllClients": "Abgleich ausführen (alle Kunden)"
   },
   "tabs": {
     "activeCredits": "Aktive Gutschriften",
     "allCredits": "Alle Gutschriften",
-    "expiredCredits": "Abgelaufene Gutschriften"
+    "expiredCredits": "Abgelaufene Gutschriften",
+    "reconciliation": "Abgleich"
   },
   "settings": {
     "title": "Einstellungen zur Ablaufzeit von Gutschriften",
@@ -107,7 +110,9 @@
     "totalCreditsExpired": "Summe abgelaufener Gutschriften",
     "totalDiscrepancies": "Gesamtzahl der Abweichungen",
     "totalDiscrepancyAmount": "Gesamtbetrag der Abweichungen",
-    "openIssues": "Offene Fälle"
+    "openIssues": "Offene Fälle",
+    "inReviewCount": "In Prüfung",
+    "resolvedCount": "Gelöst"
   },
   "management": {
     "title": "Kreditverwaltung",
@@ -133,6 +138,42 @@
       "open": "Offen",
       "inReview": "In Prüfung",
       "resolved": "Gelöst"
+    },
+    "allClients": "Alle Kunden",
+    "validationCompletedAllClients": "Abgleich für alle Kunden abgeschlossen.",
+    "noReportsFound": "Keine Abgleichsberichte gefunden",
+    "issueTypes": {
+      "missingCreditTrackingEntry": "Fehlender Guthaben-Verfolgungseintrag",
+      "inconsistentCreditRemainingAmount": "Inkonsistenter Guthaben-Restbetrag",
+      "balanceDiscrepancy": "Guthabensaldo-Abweichung"
+    },
+    "sections": {
+      "discrepancyDetails": "Abweichungsdetails",
+      "creditApplications": "Guthabenverwendungen"
+    },
+    "fields": {
+      "expectedBalance": "Erwarteter Saldo",
+      "actualBalance": "Tatsächlicher Saldo",
+      "difference": "Differenz",
+      "detected": "Erkannt",
+      "reportId": "Bericht-ID",
+      "transactionId": "Transaktions-ID",
+      "transactionType": "Transaktionstyp",
+      "transactionAmount": "Transaktionsbetrag",
+      "transactionDate": "Transaktionsdatum",
+      "creditId": "Guthaben-ID",
+      "originalAmount": "Ursprünglicher Betrag",
+      "correctionAmount": "Korrekturbetrag",
+      "resolutionDate": "Lösungsdatum",
+      "resolutionNotes": "Lösungsnotizen",
+      "date": "Datum",
+      "amount": "Betrag"
+    },
+    "errors": {
+      "loadFailed": "Abgleichsberichte konnten nicht geladen werden. Bitte aktualisieren und erneut versuchen.",
+      "loadDetailFailed": "Details des Abgleichsberichts konnten nicht geladen werden.",
+      "reportNotFound": "Abgleichsbericht nicht gefunden. Er wurde möglicherweise gelöscht oder Sie haben keine Berechtigung, ihn anzuzeigen.",
+      "runFailed": "Abgleich konnte nicht ausgeführt werden. Bitte erneut versuchen."
     }
   },
   "application": {
@@ -182,5 +223,78 @@
     "recurringLineagePreserved": "Herkunft der wiederkehrenden Quelle bleibt erhalten",
     "financialOnly": "Nur finanziell",
     "noRecurringServicePeriod": "Kein wiederkehrender Leistungszeitraum"
+  },
+  "recommendedFix": {
+    "title": "Empfohlene Korrekturen",
+    "applySuccess": "Die Abweichung wurde behoben und die Abrechnungsdaten wurden aktualisiert.",
+    "panels": {
+      "recommendedFix": "Empfohlene Korrektur",
+      "alternativeFix": "Alternative Korrektur",
+      "noActionRequired": "Keine Aktion erforderlich",
+      "customAdjustment": "Benutzerdefinierte Anpassung"
+    },
+    "buttons": {
+      "createTrackingEntry": "Guthaben-Verfolgungseintrag erstellen",
+      "updateRemainingAmount": "Restbetrag aktualisieren",
+      "applyAdjustment": "Guthabenanpassung anwenden",
+      "applyCustomAdjustment": "Benutzerdefinierte Anpassung anwenden",
+      "markResolvedNoAction": "Als gelöst markieren (ohne Aktion)",
+      "confirm": "Korrektur anwenden",
+      "applying": "Wird angewendet..."
+    },
+    "descriptions": {
+      "missingTrackingRecommended": "Erstellen Sie den fehlenden Guthaben-Verfolgungseintrag, damit die Transaktion im Verfolgungsregister erscheint.",
+      "inconsistentRemainingRecommended": "Aktualisieren Sie den verfolgten Restbetrag, damit er dem erwarteten Saldo nach Verwendungen entspricht.",
+      "genericRecommended": "Wenden Sie die empfohlene Korrektur an, um die Salden wieder in Einklang zu bringen.",
+      "genericCustom": "Geben Sie eine benutzerdefinierte Anpassung ein, wenn eine manuelle Korrektur erforderlich ist.",
+      "createTrackingEntry": "Dadurch wird ein neuer Guthaben-Verfolgungseintrag für die Transaktion erstellt.",
+      "updateRemainingAmount": "Dadurch wird der Restbetrag im Guthaben-Verfolgungseintrag aktualisiert.",
+      "applyAdjustment": "Dadurch wird eine Guthabenanpassungs-Transaktion zur Korrektur des Saldos erstellt.",
+      "customAdjustment": "Dadurch wird eine benutzerdefinierte Guthabenanpassungs-Transaktion erstellt.",
+      "noAction": "Dadurch wird die Abweichung als gelöst markiert, ohne Änderungen vorzunehmen."
+    },
+    "dialog": {
+      "adjustmentAmount": "Anpassungsbetrag",
+      "adjustmentHint": "Geben Sie einen positiven Betrag ein, um den Saldo zu erhöhen, oder einen negativen, um ihn zu verringern.",
+      "notes": "Notizen",
+      "notesPlaceholder": "Begründen Sie diese Korrektur..."
+    },
+    "errors": {
+      "notesRequired": "Bitte geben Sie Notizen mit der Begründung für diese Korrektur an",
+      "invalidAmount": "Bitte geben Sie einen gültigen Betrag ein",
+      "applyFailed": "Abgleichskorrektur konnte nicht angewendet werden. Bitte aktualisieren und erneut versuchen."
+    },
+    "impactSummary": {
+      "title": "Auswirkungsübersicht",
+      "currentBalance": "Aktueller Saldo",
+      "newBalance": "Neuer Saldo"
+    },
+    "resolved": {
+      "title": "Diese Abweichung wurde behoben",
+      "description": "Es sind keine weiteren Maßnahmen erforderlich, es sei denn, Sie möchten den Abgleichsverlauf überprüfen."
+    }
+  },
+  "addCredit": {
+    "description": "Erstellt eine Vorauszahlungsrechnung und schließt sie ab, sodass das Guthaben dem Kunden sofort zur Verfügung steht.",
+    "fields": {
+      "client": "Kunde",
+      "amount": "Betrag",
+      "expirationDate": "Ablaufdatum (optional)"
+    },
+    "placeholders": {
+      "amount": "Betrag eingeben",
+      "expirationDate": "Ablaufdatum auswählen"
+    },
+    "hints": {
+      "expirationDate": "Leer lassen, um die Guthaben-Ablaufeinstellungen dieses Kunden zu verwenden."
+    },
+    "submitting": "Wird hinzugefügt...",
+    "success": "Guthaben erfolgreich hinzugefügt",
+    "errors": {
+      "allFieldsRequired": "Bitte wählen Sie einen Kunden aus und geben Sie einen Betrag ein",
+      "validAmount": "Bitte geben Sie einen gültigen Betrag ein",
+      "loadClientsFailed": "Kunden konnten nicht geladen werden. Bitte erneut versuchen.",
+      "submitFailed": "Guthaben konnte nicht hinzugefügt werden. Bitte erneut versuchen."
+    }
   }
 }

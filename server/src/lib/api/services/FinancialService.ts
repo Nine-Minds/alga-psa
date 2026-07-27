@@ -26,6 +26,7 @@ import { TaxService } from '@alga-psa/billing/services/taxService';
 import { v4 as uuidv4 } from 'uuid';
 import { SharedNumberingService } from '@shared/services/numberingService';
 import { runScheduledCreditBalanceValidation } from '@alga-psa/billing/actions/creditReconciliationActions';
+import { applyCreditToInvoiceInternal } from '@alga-psa/billing/actions/creditActions';
 import {
   BadRequestError,
   ConflictError,
@@ -92,6 +93,7 @@ import {
   // Reconciliation types
   CreateCreditReconciliationReportRequest,
   CreditReconciliationReportResponse,
+  ReconciliationListQuery,
   
   // Reporting types
   AccountBalanceReport,
@@ -615,7 +617,12 @@ export class FinancialService extends BaseService<ITransaction> {
   // ============================================================================
 
   /**
-   * Apply credit to an invoice using existing credit actions
+   * Apply credit to an invoice.
+   *
+   * Delegates to the canonical apply-credit engine
+   * (creditActions.applyCreditToInvoiceInternal) so this REST path, the
+   * invoice REST path, and the UI server action produce identical ledger
+   * state for the same input.
    */
   async applyCreditToInvoice(
     request: ApplyCreditToInvoiceRequest,
@@ -624,152 +631,41 @@ export class FinancialService extends BaseService<ITransaction> {
     await this.validatePermissions('update', 'credit', context);
 
     const { knex } = await this.getKnex();
-    const tenant = context.tenant;
 
-    return withTransaction(knex, async (trx) => {
-      // Get the invoice and its currency
-      const invoice = await tenantDb(trx, tenant).table('invoices')
-        .where('invoice_id', request.invoice_id)
-        .select('credit_applied', 'currency_code', 'subtotal', 'tax', 'total_amount')
-        .first();
+    // Verify the invoice exists up front so the REST contract still 404s.
+    const invoice = await tenantDb(knex, context.tenant).table('invoices')
+      .where('invoice_id', request.invoice_id)
+      .select('invoice_id')
+      .first();
+    if (!invoice) {
+      throw new NotFoundError(`Invoice ${request.invoice_id} not found`);
+    }
 
-      if (!invoice) {
-        throw new NotFoundError(`Invoice ${request.invoice_id} not found`);
-      }
+    const { appliedAmount } = await applyCreditToInvoiceInternal(
+      context.tenant,
+      context.userId,
+      request.client_id,
+      request.invoice_id,
+      request.requested_amount
+    );
 
-      const invoiceCurrency = invoice.currency_code || 'USD';
-
-      // Check already-applied credit
-      const existingAllocations = await tenantDb(trx, tenant).table('credit_allocations')
-        .where('invoice_id', request.invoice_id)
-        .sum('amount as total_applied')
-        .first();
-      const alreadyApplied = Number(existingAllocations?.total_applied || 0);
-
-      const invoiceFullAmount = Number(invoice.subtotal) + Number(invoice.tax);
-      const maxAdditional = Math.max(0, invoiceFullAmount - alreadyApplied);
-      let requestedAmount = Math.min(request.requested_amount, maxAdditional);
-
-      if (requestedAmount <= 0) {
-        return {
-          data: { success: true, appliedAmount: 0 },
-          links: []
-        };
-      }
-
-      // Get client credit balance (lock row to prevent concurrent over-application)
-      const [client] = await tenantDb(trx, tenant).table('clients')
-        .where('client_id', request.client_id)
-        .select('credit_balance')
-        .forUpdate();
-      const availableCredit = client.credit_balance || 0;
-
-      if (availableCredit <= 0) {
-        return { data: { success: true, appliedAmount: 0 }, links: [] };
-      }
-
-      // Get active credit entries in the same currency (FIFO by expiration, locked for update)
-      const now = new Date().toISOString();
-      const creditEntries = await tenantDb(trx, tenant).table('credit_tracking')
-        .where('client_id', request.client_id)
-        .where('is_expired', false)
-        .where('currency_code', invoiceCurrency)
-        .where(function() {
-          this.whereNull('expiration_date').orWhere('expiration_date', '>', now);
-        })
-        .where('remaining_amount', '>', 0)
-        .orderBy([
-          { column: 'expiration_date', order: 'asc', nulls: 'last' },
-          { column: 'created_at', order: 'asc' }
-        ])
-        .forUpdate();
-
-      if (creditEntries.length === 0) {
-        return { data: { success: true, appliedAmount: 0 }, links: [] };
-      }
-
-      let remainingRequested = requestedAmount;
-      let totalApplied = 0;
-
-      for (const credit of creditEntries) {
-        if (remainingRequested <= 0) break;
-        const applyAmount = Math.min(remainingRequested, Number(credit.remaining_amount));
-        if (applyAmount <= 0) continue;
-
-        await tenantDb(trx, tenant).table('credit_tracking')
-          .where('credit_id', credit.credit_id)
-          .update({ remaining_amount: Number(credit.remaining_amount) - applyAmount, updated_at: now });
-
-        totalApplied += applyAmount;
-        remainingRequested -= applyAmount;
-      }
-
-      if (totalApplied <= 0) {
-        return { data: { success: true, appliedAmount: 0 }, links: [] };
-      }
-
-      const newBalance = availableCredit - totalApplied;
-
-      // Create credit application transaction
-      const [creditTransaction] = await tenantDb(trx, tenant).table('transactions').insert({
-        transaction_id: uuidv4(),
-        client_id: request.client_id,
-        invoice_id: request.invoice_id,
-        amount: -totalApplied,
-        type: 'credit_application',
-        status: 'completed',
-        description: `Applied credit to invoice ${request.invoice_id}`,
-        created_at: now,
-        balance_after: newBalance,
-        tenant,
-        currency_code: invoiceCurrency
-      }).returning('*');
-
-      // Create credit allocation record
-      await tenantDb(trx, tenant).table('credit_allocations').insert({
-        allocation_id: uuidv4(),
-        transaction_id: creditTransaction.transaction_id,
-        invoice_id: request.invoice_id,
-        amount: totalApplied,
-        created_at: now,
-        tenant
-      });
-
-      // Update invoice (read-then-update to avoid Citus-unsafe SET col = col +/- val)
-      const currentInvoice = await tenantDb(trx, tenant).table('invoices')
-        .where('invoice_id', request.invoice_id)
-        .select('credit_applied', 'total_amount')
-        .forUpdate()
-        .first();
-      await tenantDb(trx, tenant).table('invoices')
-        .where('invoice_id', request.invoice_id)
-        .update({
-          credit_applied: Number(currentInvoice.credit_applied || 0) + totalApplied,
-        });
-
-      // Update client balance
-      await tenantDb(trx, tenant).table('clients')
-        .where('client_id', request.client_id)
-        .update({ credit_balance: newBalance, updated_at: now });
-
-      return {
-        data: { success: true, appliedAmount: totalApplied },
-        links: [
-          {
-            rel: 'invoice',
-            href: `/api/v1/financial/invoices/${request.invoice_id}`,
-            method: 'GET',
-            description: 'View updated invoice'
-          },
-          {
-            rel: 'client-credits',
-            href: `/api/v1/financial/credits?client_id=${request.client_id}`,
-            method: 'GET',
-            description: 'View client credits'
-          }
-        ]
-      };
-    });
+    return {
+      data: { success: true, appliedAmount },
+      links: [
+        {
+          rel: 'invoice',
+          href: `/api/v1/financial/invoices/${request.invoice_id}`,
+          method: 'GET',
+          description: 'View updated invoice'
+        },
+        {
+          rel: 'client-credits',
+          href: `/api/v1/financial/credits?client_id=${request.client_id}`,
+          method: 'GET',
+          description: 'View client credits'
+        }
+      ]
+    };
   }
 
   /**
@@ -1858,6 +1754,127 @@ export class FinancialService extends BaseService<ITransaction> {
           description: 'View client details'
         }
       ] : []
+    };
+  }
+
+  /**
+   * List reconciliation reports with filtering and pagination
+   */
+  async listReconciliationReports(
+    query: ReconciliationListQuery,
+    context: ServiceContext
+  ): Promise<ListResult<ICreditReconciliationReport>> {
+    await this.validatePermissions('read', 'credit', context);
+
+    const { knex } = await this.getKnex();
+
+    const {
+      page = 1,
+      limit = 25,
+      client_id,
+      status,
+      detection_date_from,
+      detection_date_to,
+      difference_min,
+      difference_max,
+      sort = 'detection_date',
+      order = 'desc'
+    } = query;
+
+    const scopedDb = tenantDb(knex, context.tenant);
+    let dataQuery = scopedDb.table('credit_reconciliation_reports');
+    let countQuery = scopedDb.table('credit_reconciliation_reports');
+
+    if (client_id) {
+      dataQuery = dataQuery.where('client_id', client_id);
+      countQuery = countQuery.where('client_id', client_id);
+    }
+
+    if (status) {
+      dataQuery = dataQuery.where('status', status);
+      countQuery = countQuery.where('status', status);
+    }
+
+    if (detection_date_from) {
+      dataQuery = dataQuery.where('detection_date', '>=', detection_date_from);
+      countQuery = countQuery.where('detection_date', '>=', detection_date_from);
+    }
+
+    if (detection_date_to) {
+      dataQuery = dataQuery.where('detection_date', '<=', detection_date_to);
+      countQuery = countQuery.where('detection_date', '<=', detection_date_to);
+    }
+
+    if (difference_min !== undefined) {
+      dataQuery = dataQuery.where('difference', '>=', difference_min);
+      countQuery = countQuery.where('difference', '>=', difference_min);
+    }
+
+    if (difference_max !== undefined) {
+      dataQuery = dataQuery.where('difference', '<=', difference_max);
+      countQuery = countQuery.where('difference', '<=', difference_max);
+    }
+
+    const [reports, countRows] = await Promise.all([
+      dataQuery
+        .orderBy(sort, order)
+        .limit(limit)
+        .offset((page - 1) * limit),
+      countQuery.count('report_id as count') as unknown as Promise<Array<{ count: string | number }>>
+    ]);
+
+    return {
+      data: reports,
+      total: Number(countRows[0]?.count ?? 0)
+    };
+  }
+
+  /**
+   * Get a reconciliation report by ID
+   */
+  async getReconciliationReport(
+    reportId: string,
+    context: ServiceContext
+  ): Promise<FinancialResponse<ICreditReconciliationReport>> {
+    await this.validatePermissions('read', 'credit', context);
+
+    const { knex } = await this.getKnex();
+
+    const report = await tenantDb(knex, context.tenant).table('credit_reconciliation_reports')
+      .where('report_id', reportId)
+      .first();
+
+    if (!report) {
+      throw new NotFoundError(`Reconciliation report ${reportId} not found`);
+    }
+
+    const links: HATEOASLink[] = [
+      {
+        rel: 'self',
+        href: `/api/v1/financial/reconciliation/${reportId}`,
+        method: 'GET',
+        description: 'View reconciliation report'
+      },
+      {
+        rel: 'client',
+        href: `/api/v1/clients/${report.client_id}`,
+        method: 'GET',
+        description: 'View client details'
+      }
+    ];
+
+    if (report.status !== 'resolved') {
+      links.push({
+        rel: 'resolve',
+        href: `/api/v1/financial/reconciliation/${reportId}/resolve`,
+        method: 'POST',
+        description: 'Resolve reconciliation report'
+      });
+    }
+
+    return {
+      data: report,
+      links
     };
   }
 

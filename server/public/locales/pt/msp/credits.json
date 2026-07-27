@@ -26,7 +26,8 @@
     "actualBalance": "Saldo Real",
     "amountAvailable": "Quantidade disponível",
     "expiration": "Expiração",
-    "select": "Selecione"
+    "select": "Selecione",
+    "issueType": "Tipo de problema"
   },
   "status": {
     "active": "Ativo",
@@ -55,12 +56,14 @@
     "select": "Selecione",
     "selected": "Selecionado",
     "saveChanges": "Salvar alterações",
-    "saving": "Salvando..."
+    "saving": "Salvando...",
+    "runReconciliationAllClients": "Executar reconciliação (todos os clientes)"
   },
   "tabs": {
     "activeCredits": "Créditos Ativos",
     "allCredits": "Todos os créditos",
-    "expiredCredits": "Créditos expirados"
+    "expiredCredits": "Créditos expirados",
+    "reconciliation": "Reconciliação"
   },
   "settings": {
     "title": "Configurações de expiração de crédito",
@@ -107,7 +110,9 @@
     "totalCreditsExpired": "Total de créditos expirados",
     "totalDiscrepancies": "Discrepâncias totais",
     "totalDiscrepancyAmount": "Valor total de discrepância",
-    "openIssues": "Problemas em aberto"
+    "openIssues": "Problemas em aberto",
+    "inReviewCount": "Em revisão",
+    "resolvedCount": "Resolvido"
   },
   "management": {
     "title": "Gestão de Crédito",
@@ -133,6 +138,42 @@
       "open": "Abrir",
       "inReview": "Em revisão",
       "resolved": "Resolvido"
+    },
+    "allClients": "Todos os clientes",
+    "validationCompletedAllClients": "Reconciliação concluída para todos os clientes.",
+    "noReportsFound": "Nenhum relatório de reconciliação encontrado",
+    "issueTypes": {
+      "missingCreditTrackingEntry": "Entrada de rastreamento de crédito ausente",
+      "inconsistentCreditRemainingAmount": "Valor restante de crédito inconsistente",
+      "balanceDiscrepancy": "Discrepância de saldo de crédito"
+    },
+    "sections": {
+      "discrepancyDetails": "Detalhes da discrepância",
+      "creditApplications": "Aplicações de crédito"
+    },
+    "fields": {
+      "expectedBalance": "Saldo esperado",
+      "actualBalance": "Saldo real",
+      "difference": "Diferença",
+      "detected": "Detectado",
+      "reportId": "ID do relatório",
+      "transactionId": "ID da transação",
+      "transactionType": "Tipo de transação",
+      "transactionAmount": "Valor da transação",
+      "transactionDate": "Data da transação",
+      "creditId": "ID do crédito",
+      "originalAmount": "Valor original",
+      "correctionAmount": "Valor da correção",
+      "resolutionDate": "Data da resolução",
+      "resolutionNotes": "Notas da resolução",
+      "date": "Data",
+      "amount": "Valor"
+    },
+    "errors": {
+      "loadFailed": "Não foi possível carregar os relatórios de reconciliação. Atualize e tente novamente.",
+      "loadDetailFailed": "Não foi possível carregar os detalhes do relatório de reconciliação.",
+      "reportNotFound": "Relatório de reconciliação não encontrado. Ele pode ter sido excluído ou você pode não ter permissão para visualizá-lo.",
+      "runFailed": "Não foi possível executar a reconciliação. Tente novamente."
     }
   },
   "application": {
@@ -182,5 +223,78 @@
     "recurringLineagePreserved": "Linhagem de origem recorrente preservada",
     "financialOnly": "Somente financeiro",
     "noRecurringServicePeriod": "Nenhum período de serviço recorrente"
+  },
+  "recommendedFix": {
+    "title": "Correções recomendadas",
+    "applySuccess": "A discrepância foi resolvida e os registros de faturamento foram atualizados.",
+    "panels": {
+      "recommendedFix": "Correção recomendada",
+      "alternativeFix": "Correção alternativa",
+      "noActionRequired": "Nenhuma ação necessária",
+      "customAdjustment": "Ajuste personalizado"
+    },
+    "buttons": {
+      "createTrackingEntry": "Criar entrada de rastreamento de crédito",
+      "updateRemainingAmount": "Atualizar valor restante",
+      "applyAdjustment": "Aplicar ajuste de crédito",
+      "applyCustomAdjustment": "Aplicar ajuste personalizado",
+      "markResolvedNoAction": "Marcar como resolvido (sem ação)",
+      "confirm": "Aplicar correção",
+      "applying": "Aplicando..."
+    },
+    "descriptions": {
+      "missingTrackingRecommended": "Crie a entrada de rastreamento de crédito ausente para que a transação apareça no registro de rastreamento.",
+      "inconsistentRemainingRecommended": "Atualize o valor restante rastreado para que corresponda ao saldo esperado após as aplicações.",
+      "genericRecommended": "Aplique a correção recomendada para realinhar os saldos.",
+      "genericCustom": "Insira um ajuste personalizado se uma correção manual for necessária.",
+      "createTrackingEntry": "Isso criará uma nova entrada de rastreamento de crédito para a transação.",
+      "updateRemainingAmount": "Isso atualizará o valor restante na entrada de rastreamento de crédito.",
+      "applyAdjustment": "Isso criará uma transação de ajuste de crédito para corrigir o saldo.",
+      "customAdjustment": "Isso criará uma transação de ajuste de crédito personalizada.",
+      "noAction": "Isso marcará a discrepância como resolvida sem fazer alterações."
+    },
+    "dialog": {
+      "adjustmentAmount": "Valor do ajuste",
+      "adjustmentHint": "Insira um valor positivo para aumentar o saldo ou negativo para diminuí-lo.",
+      "notes": "Notas",
+      "notesPlaceholder": "Explique o motivo desta correção..."
+    },
+    "errors": {
+      "notesRequired": "Forneça notas explicando o motivo desta correção",
+      "invalidAmount": "Insira um valor válido",
+      "applyFailed": "Não foi possível aplicar a correção de reconciliação. Atualize e tente novamente."
+    },
+    "impactSummary": {
+      "title": "Resumo do impacto",
+      "currentBalance": "Saldo atual",
+      "newBalance": "Novo saldo"
+    },
+    "resolved": {
+      "title": "Esta discrepância foi resolvida",
+      "description": "Nenhuma ação adicional é necessária, a menos que você precise revisar o histórico de reconciliação."
+    }
+  },
+  "addCredit": {
+    "description": "Emite uma fatura de pré-pagamento e a finaliza, disponibilizando o crédito imediatamente para o cliente.",
+    "fields": {
+      "client": "Cliente",
+      "amount": "Valor",
+      "expirationDate": "Data de expiração (opcional)"
+    },
+    "placeholders": {
+      "amount": "Insira o valor",
+      "expirationDate": "Selecione a data de expiração"
+    },
+    "hints": {
+      "expirationDate": "Deixe em branco para usar as configurações de expiração de crédito deste cliente."
+    },
+    "submitting": "Adicionando...",
+    "success": "Crédito adicionado com sucesso",
+    "errors": {
+      "allFieldsRequired": "Selecione um cliente e insira um valor",
+      "validAmount": "Insira um valor válido",
+      "loadClientsFailed": "Não foi possível carregar os clientes. Tente novamente.",
+      "submitFailed": "Não foi possível adicionar o crédito. Tente novamente."
+    }
   }
 }

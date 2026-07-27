@@ -22,7 +22,9 @@ describe('invoice service credit tenant-scoped query contract', () => {
     expect(creditSection).toContain('tenantDb(');
     expect(creditSection).toContain(".table('invoices')");
     expect(creditSection).toContain(".table('invoice_payments')");
-    expect(creditSection).toContain("await tenantDb(trx, context.tenant).table('invoice_credits').insert(creditData)");
+    // Ledger writes are delegated to the canonical apply-credit engine.
+    expect(creditSection).toContain('applyCreditToInvoiceInternal(');
+    expect(creditSection).not.toContain("invoice_credits");
 
     expect(creditSection).not.toMatch(/trx\('invoices'\)\s*\.(?:where|update|first)/);
     expect(creditSection).not.toMatch(/trx\('invoice_payments'\)\s*\.(?:where|sum|first)/);

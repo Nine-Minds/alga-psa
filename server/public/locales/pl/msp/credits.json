@@ -26,7 +26,8 @@
     "actualBalance": "Rzeczywiste saldo",
     "amountAvailable": "Dostępna kwota",
     "expiration": "Wygaśnięcie",
-    "select": "Wybierz"
+    "select": "Wybierz",
+    "issueType": "Typ problemu"
   },
   "status": {
     "active": "Aktywny",
@@ -55,12 +56,14 @@
     "select": "Wybierz",
     "selected": "Wybrano",
     "saveChanges": "Zapisz zmiany",
-    "saving": "Zapisywanie..."
+    "saving": "Zapisywanie...",
+    "runReconciliationAllClients": "Uruchom uzgodnienie (wszyscy klienci)"
   },
   "tabs": {
     "activeCredits": "Aktywne kredyty",
     "allCredits": "Wszystkie kredyty",
-    "expiredCredits": "Wygasłe kredyty"
+    "expiredCredits": "Wygasłe kredyty",
+    "reconciliation": "Uzgodnienie"
   },
   "settings": {
     "title": "Ustawienia wygaśnięcia kredytów",
@@ -107,7 +110,9 @@
     "totalCreditsExpired": "Łącznie wygasłych kredytów",
     "totalDiscrepancies": "Łącznie różnic",
     "totalDiscrepancyAmount": "Łączna kwota różnic",
-    "openIssues": "Otwarte sprawy"
+    "openIssues": "Otwarte sprawy",
+    "inReviewCount": "W trakcie przeglądu",
+    "resolvedCount": "Rozwiązane"
   },
   "management": {
     "title": "Zarządzanie kredytami",
@@ -133,6 +138,42 @@
       "open": "Otwarte",
       "inReview": "W przeglądzie",
       "resolved": "Rozwiązane"
+    },
+    "allClients": "Wszyscy klienci",
+    "validationCompletedAllClients": "Uzgodnienie zakończone dla wszystkich klientów.",
+    "noReportsFound": "Nie znaleziono raportów uzgodnień",
+    "issueTypes": {
+      "missingCreditTrackingEntry": "Brakujący wpis śledzenia kredytu",
+      "inconsistentCreditRemainingAmount": "Niespójna pozostała kwota kredytu",
+      "balanceDiscrepancy": "Rozbieżność salda kredytu"
+    },
+    "sections": {
+      "discrepancyDetails": "Szczegóły rozbieżności",
+      "creditApplications": "Zastosowania kredytu"
+    },
+    "fields": {
+      "expectedBalance": "Oczekiwane saldo",
+      "actualBalance": "Rzeczywiste saldo",
+      "difference": "Różnica",
+      "detected": "Wykryto",
+      "reportId": "ID raportu",
+      "transactionId": "ID transakcji",
+      "transactionType": "Typ transakcji",
+      "transactionAmount": "Kwota transakcji",
+      "transactionDate": "Data transakcji",
+      "creditId": "ID kredytu",
+      "originalAmount": "Pierwotna kwota",
+      "correctionAmount": "Kwota korekty",
+      "resolutionDate": "Data rozwiązania",
+      "resolutionNotes": "Notatki dotyczące rozwiązania",
+      "date": "Data",
+      "amount": "Kwota"
+    },
+    "errors": {
+      "loadFailed": "Nie udało się załadować raportów uzgodnień. Odśwież stronę i spróbuj ponownie.",
+      "loadDetailFailed": "Nie udało się załadować szczegółów raportu uzgodnienia.",
+      "reportNotFound": "Nie znaleziono raportu uzgodnienia. Mógł zostać usunięty lub nie masz uprawnień do jego wyświetlenia.",
+      "runFailed": "Nie udało się uruchomić uzgodnienia. Spróbuj ponownie."
     }
   },
   "application": {
@@ -182,5 +223,78 @@
     "recurringLineagePreserved": "Zachowano pochodzenie źródła cyklicznego",
     "financialOnly": "Tylko finansowe",
     "noRecurringServicePeriod": "Brak cyklicznego okresu usługi"
+  },
+  "recommendedFix": {
+    "title": "Zalecane korekty",
+    "applySuccess": "Rozbieżność została rozwiązana, a dane rozliczeniowe zostały zaktualizowane.",
+    "panels": {
+      "recommendedFix": "Zalecana korekta",
+      "alternativeFix": "Korekta alternatywna",
+      "noActionRequired": "Nie jest wymagane żadne działanie",
+      "customAdjustment": "Korekta niestandardowa"
+    },
+    "buttons": {
+      "createTrackingEntry": "Utwórz wpis śledzenia kredytu",
+      "updateRemainingAmount": "Zaktualizuj pozostałą kwotę",
+      "applyAdjustment": "Zastosuj korektę kredytu",
+      "applyCustomAdjustment": "Zastosuj korektę niestandardową",
+      "markResolvedNoAction": "Oznacz jako rozwiązane (bez działania)",
+      "confirm": "Zastosuj korektę",
+      "applying": "Stosowanie..."
+    },
+    "descriptions": {
+      "missingTrackingRecommended": "Utwórz brakujący wpis śledzenia kredytu, aby transakcja była odzwierciedlona w rejestrze śledzenia.",
+      "inconsistentRemainingRecommended": "Zaktualizuj śledzoną pozostałą kwotę, aby odpowiadała oczekiwanemu saldu po zastosowaniach.",
+      "genericRecommended": "Zastosuj zalecaną korektę, aby ponownie wyrównać salda.",
+      "genericCustom": "Wprowadź korektę niestandardową, jeśli wymagana jest ręczna poprawka.",
+      "createTrackingEntry": "Spowoduje to utworzenie nowego wpisu śledzenia kredytu dla transakcji.",
+      "updateRemainingAmount": "Spowoduje to aktualizację pozostałej kwoty we wpisie śledzenia kredytu.",
+      "applyAdjustment": "Spowoduje to utworzenie transakcji korekty kredytu w celu poprawienia salda.",
+      "customAdjustment": "Spowoduje to utworzenie niestandardowej transakcji korekty kredytu.",
+      "noAction": "Spowoduje to oznaczenie rozbieżności jako rozwiązanej bez wprowadzania zmian."
+    },
+    "dialog": {
+      "adjustmentAmount": "Kwota korekty",
+      "adjustmentHint": "Wprowadź kwotę dodatnią, aby zwiększyć saldo, lub ujemną, aby je zmniejszyć.",
+      "notes": "Notatki",
+      "notesPlaceholder": "Wyjaśnij powód tej korekty..."
+    },
+    "errors": {
+      "notesRequired": "Podaj notatki wyjaśniające powód tej korekty",
+      "invalidAmount": "Wprowadź prawidłową kwotę",
+      "applyFailed": "Nie udało się zastosować korekty uzgodnienia. Odśwież stronę i spróbuj ponownie."
+    },
+    "impactSummary": {
+      "title": "Podsumowanie wpływu",
+      "currentBalance": "Bieżące saldo",
+      "newBalance": "Nowe saldo"
+    },
+    "resolved": {
+      "title": "Ta rozbieżność została rozwiązana",
+      "description": "Nie są wymagane dalsze działania, chyba że chcesz przejrzeć historię uzgodnień."
+    }
+  },
+  "addCredit": {
+    "description": "Wystawia fakturę przedpłatową i finalizuje ją, dzięki czemu kredyt jest natychmiast dostępny dla klienta.",
+    "fields": {
+      "client": "Klient",
+      "amount": "Kwota",
+      "expirationDate": "Data wygaśnięcia (opcjonalnie)"
+    },
+    "placeholders": {
+      "amount": "Wprowadź kwotę",
+      "expirationDate": "Wybierz datę wygaśnięcia"
+    },
+    "hints": {
+      "expirationDate": "Pozostaw puste, aby użyć ustawień wygasania kredytu tego klienta."
+    },
+    "submitting": "Dodawanie...",
+    "success": "Kredyt został pomyślnie dodany",
+    "errors": {
+      "allFieldsRequired": "Wybierz klienta i wprowadź kwotę",
+      "validAmount": "Wprowadź prawidłową kwotę",
+      "loadClientsFailed": "Nie udało się załadować klientów. Spróbuj ponownie.",
+      "submitFailed": "Nie udało się dodać kredytu. Spróbuj ponownie."
+    }
   }
 }

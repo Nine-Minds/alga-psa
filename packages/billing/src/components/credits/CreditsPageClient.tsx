@@ -16,6 +16,7 @@ import type { ColumnDefinition, ICreditExpirationSettings, ICreditTracking } fro
 import AddCreditButton from './AddCreditButton';
 import BackButton from './BackButton';
 import { CreditsTabs } from './CreditsTabs';
+import ReconciliationTab from './reconciliation/ReconciliationTab';
 
 type CreditRow = ICreditTracking & {
   transaction_description?: string;
@@ -290,6 +291,12 @@ export default function CreditsPageClient({
       ),
     });
   }
+
+  tabs.push({
+    id: 'reconciliation',
+    label: t('tabs.reconciliation', { defaultValue: 'Reconciliation' }),
+    content: <ReconciliationTab />,
+  });
 
   return (
     <div className="container mx-auto py-6 space-y-6">

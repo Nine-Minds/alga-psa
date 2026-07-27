@@ -26,7 +26,8 @@
     "actualBalance": "Saldo effettivo",
     "amountAvailable": "Importo disponibile",
     "expiration": "Scadenza",
-    "select": "Seleziona"
+    "select": "Seleziona",
+    "issueType": "Tipo di problema"
   },
   "status": {
     "active": "Attivo",
@@ -55,12 +56,14 @@
     "select": "Seleziona",
     "selected": "Selezionato",
     "saveChanges": "Salva modifiche",
-    "saving": "Salvataggio..."
+    "saving": "Salvataggio...",
+    "runReconciliationAllClients": "Esegui riconciliazione (tutti i clienti)"
   },
   "tabs": {
     "activeCredits": "Crediti attivi",
     "allCredits": "Tutti i crediti",
-    "expiredCredits": "Crediti scaduti"
+    "expiredCredits": "Crediti scaduti",
+    "reconciliation": "Riconciliazione"
   },
   "settings": {
     "title": "Impostazioni di scadenza dei crediti",
@@ -107,7 +110,9 @@
     "totalCreditsExpired": "Totale crediti scaduti",
     "totalDiscrepancies": "Totale scostamenti",
     "totalDiscrepancyAmount": "Importo totale degli scostamenti",
-    "openIssues": "Problemi aperti"
+    "openIssues": "Problemi aperti",
+    "inReviewCount": "In revisione",
+    "resolvedCount": "Risolto"
   },
   "management": {
     "title": "Gestione crediti",
@@ -133,6 +138,42 @@
       "open": "Aperto",
       "inReview": "In revisione",
       "resolved": "Risolto"
+    },
+    "allClients": "Tutti i clienti",
+    "validationCompletedAllClients": "Riconciliazione completata per tutti i clienti.",
+    "noReportsFound": "Nessun report di riconciliazione trovato",
+    "issueTypes": {
+      "missingCreditTrackingEntry": "Voce di tracciamento credito mancante",
+      "inconsistentCreditRemainingAmount": "Importo residuo del credito incoerente",
+      "balanceDiscrepancy": "Discrepanza del saldo credito"
+    },
+    "sections": {
+      "discrepancyDetails": "Dettagli della discrepanza",
+      "creditApplications": "Applicazioni del credito"
+    },
+    "fields": {
+      "expectedBalance": "Saldo previsto",
+      "actualBalance": "Saldo effettivo",
+      "difference": "Differenza",
+      "detected": "Rilevato",
+      "reportId": "ID report",
+      "transactionId": "ID transazione",
+      "transactionType": "Tipo di transazione",
+      "transactionAmount": "Importo della transazione",
+      "transactionDate": "Data della transazione",
+      "creditId": "ID credito",
+      "originalAmount": "Importo originale",
+      "correctionAmount": "Importo di correzione",
+      "resolutionDate": "Data di risoluzione",
+      "resolutionNotes": "Note di risoluzione",
+      "date": "Data",
+      "amount": "Importo"
+    },
+    "errors": {
+      "loadFailed": "Impossibile caricare i report di riconciliazione. Aggiorna e riprova.",
+      "loadDetailFailed": "Impossibile caricare i dettagli del report di riconciliazione.",
+      "reportNotFound": "Report di riconciliazione non trovato. Potrebbe essere stato eliminato o potresti non avere il permesso di visualizzarlo.",
+      "runFailed": "Impossibile eseguire la riconciliazione. Riprova."
     }
   },
   "application": {
@@ -182,5 +223,78 @@
     "recurringLineagePreserved": "La genealogia dell'origine ricorrente è stata preservata",
     "financialOnly": "Solo finanziario",
     "noRecurringServicePeriod": "Nessun periodo di servizio ricorrente"
+  },
+  "recommendedFix": {
+    "title": "Correzioni consigliate",
+    "applySuccess": "La discrepanza è stata risolta e i dati di fatturazione sono stati aggiornati.",
+    "panels": {
+      "recommendedFix": "Correzione consigliata",
+      "alternativeFix": "Correzione alternativa",
+      "noActionRequired": "Nessuna azione richiesta",
+      "customAdjustment": "Rettifica personalizzata"
+    },
+    "buttons": {
+      "createTrackingEntry": "Crea voce di tracciamento credito",
+      "updateRemainingAmount": "Aggiorna importo residuo",
+      "applyAdjustment": "Applica rettifica credito",
+      "applyCustomAdjustment": "Applica rettifica personalizzata",
+      "markResolvedNoAction": "Segna come risolto (nessuna azione)",
+      "confirm": "Applica correzione",
+      "applying": "Applicazione..."
+    },
+    "descriptions": {
+      "missingTrackingRecommended": "Crea la voce di tracciamento credito mancante affinché la transazione compaia nel registro di tracciamento.",
+      "inconsistentRemainingRecommended": "Aggiorna l'importo residuo tracciato affinché corrisponda al saldo previsto dopo le applicazioni.",
+      "genericRecommended": "Applica la correzione consigliata per riallineare i saldi.",
+      "genericCustom": "Inserisci una rettifica personalizzata se è necessaria una correzione manuale.",
+      "createTrackingEntry": "Verrà creata una nuova voce di tracciamento credito per la transazione.",
+      "updateRemainingAmount": "Verrà aggiornato l'importo residuo nella voce di tracciamento credito.",
+      "applyAdjustment": "Verrà creata una transazione di rettifica credito per correggere il saldo.",
+      "customAdjustment": "Verrà creata una transazione di rettifica credito personalizzata.",
+      "noAction": "La discrepanza verrà segnata come risolta senza apportare modifiche."
+    },
+    "dialog": {
+      "adjustmentAmount": "Importo della rettifica",
+      "adjustmentHint": "Inserisci un importo positivo per aumentare il saldo o negativo per diminuirlo.",
+      "notes": "Note",
+      "notesPlaceholder": "Spiega il motivo di questa correzione..."
+    },
+    "errors": {
+      "notesRequired": "Fornisci note che spieghino il motivo di questa correzione",
+      "invalidAmount": "Inserisci un importo valido",
+      "applyFailed": "Impossibile applicare la correzione di riconciliazione. Aggiorna e riprova."
+    },
+    "impactSummary": {
+      "title": "Riepilogo impatto",
+      "currentBalance": "Saldo attuale",
+      "newBalance": "Nuovo saldo"
+    },
+    "resolved": {
+      "title": "Questa discrepanza è stata risolta",
+      "description": "Non sono necessarie ulteriori azioni, a meno che non si debba rivedere la cronologia di riconciliazione."
+    }
+  },
+  "addCredit": {
+    "description": "Emette una fattura di pagamento anticipato e la finalizza, rendendo il credito immediatamente disponibile per il cliente.",
+    "fields": {
+      "client": "Cliente",
+      "amount": "Importo",
+      "expirationDate": "Data di scadenza (facoltativa)"
+    },
+    "placeholders": {
+      "amount": "Inserisci importo",
+      "expirationDate": "Seleziona la data di scadenza"
+    },
+    "hints": {
+      "expirationDate": "Lascia vuoto per usare le impostazioni di scadenza credito di questo cliente."
+    },
+    "submitting": "Aggiunta in corso...",
+    "success": "Credito aggiunto correttamente",
+    "errors": {
+      "allFieldsRequired": "Seleziona un cliente e inserisci un importo",
+      "validAmount": "Inserisci un importo valido",
+      "loadClientsFailed": "Impossibile caricare i clienti. Riprova.",
+      "submitFailed": "Impossibile aggiungere il credito. Riprova."
+    }
   }
 }

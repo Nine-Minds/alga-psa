@@ -615,6 +615,65 @@ export class ApiFinancialController extends ApiBaseController {
   // ============================================================================
 
   /**
+   * GET /api/v1/financial/reconciliation - List reconciliation reports
+   */
+  listReconciliationReports() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          await this.checkPermission(apiRequest, 'read');
+
+          const url = new URL(apiRequest.url);
+          const query: Record<string, any> = {};
+          url.searchParams.forEach((value, key) => {
+            query[key] = value;
+          });
+
+          const validatedQuery = reconciliationListQuerySchema.parse(query);
+
+          const result = await this.financialService.listReconciliationReports(validatedQuery, apiRequest.context!);
+
+          return createPaginatedResponse(
+            result.data,
+            result.total,
+            validatedQuery.page || 1,
+            validatedQuery.limit || 25,
+            {
+              filters: validatedQuery,
+              resource: 'financial/reconciliation'
+            }
+          );
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
+   * GET /api/v1/financial/reconciliation/{id} - Get reconciliation report by ID
+   */
+  getReconciliationReportById() {
+    return async (req: NextRequest): Promise<NextResponse> => {
+      try {
+        const apiRequest = await this.authenticate(req);
+
+        return await runWithTenant(apiRequest.context!.tenant, async () => {
+          await this.checkPermission(apiRequest, 'read');
+
+          const reportId = await this.extractIdFromPath(apiRequest);
+          const result = await this.financialService.getReconciliationReport(reportId, apiRequest.context!);
+          return createSuccessResponse(result);
+        });
+      } catch (error) {
+        return handleApiError(error);
+      }
+    };
+  }
+
+  /**
    * POST /api/v1/financial/reconciliation/run - Run reconciliation
    */
   runReconciliation() {
