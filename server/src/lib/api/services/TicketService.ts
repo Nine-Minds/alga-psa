@@ -18,9 +18,11 @@ import {
   TicketResourceError,
   addTicketResourceCore,
   getTicketResourcesCore,
+  publishTicketResourceEvent,
   removeTicketResourceCore,
 } from '@alga-psa/tickets/lib/ticketResourceCore';
 import {
+  TeamAssignmentError,
   assignTeamToTicketCore,
   removeTeamFromTicketCore,
   type RemoveTeamFromTicketOptions,
@@ -726,7 +728,7 @@ export class TicketService extends BaseService<ITicket> {
     const { knex } = await this.getKnex();
     this.assertValidTicketId(ticketId);
 
-    return withTransaction(knex, async (trx) => {
+    const { response, event } = await withTransaction(knex, async (trx) => {
       const agentUser = await tenantScopedTable(trx, 'users', context.tenant)
         .where({ user_id: data.user_id })
         .first();
@@ -734,8 +736,9 @@ export class TicketService extends BaseService<ITicket> {
         throw new NotFoundError('User not found');
       }
 
+      let added;
       try {
-        await addTicketResourceCore(
+        added = await addTicketResourceCore(
           trx,
           context.tenant,
           context.userId,
@@ -756,8 +759,16 @@ export class TicketService extends BaseService<ITicket> {
         .where({ ticket_id: ticketId })
         .first();
       const resources = await getTicketResourcesCore(trx, context.tenant, ticketId);
-      return this.buildTicketAgentsResponse(trx, context, ticket, resources);
+      return {
+        response: await this.buildTicketAgentsResponse(trx, context, ticket, resources),
+        event: added.event,
+      };
     });
+
+    // Emit after the transaction commits so subscribers can see the data.
+    await publishTicketResourceEvent(event);
+
+    return response;
   }
 
   /**
@@ -851,15 +862,20 @@ export class TicketService extends BaseService<ITicket> {
   }
 
   private mapTeamAssignmentError(error: unknown): unknown {
-    if (error instanceof Error) {
-      if (error.message === 'Ticket not found' || error.message === 'Team not found') {
-        return new NotFoundError(error.message);
-      }
-      if (error.message === 'Team lead not found') {
-        return new ValidationError('The selected team does not have a team lead');
-      }
+    if (!(error instanceof TeamAssignmentError)) {
+      return error;
     }
-    return error;
+
+    switch (error.kind) {
+      case 'ticket_not_found':
+        return new NotFoundError('Ticket not found');
+      case 'team_not_found':
+        return new NotFoundError('Team not found');
+      case 'team_lead_missing':
+        return new ValidationError('The selected team does not have a team lead');
+      default:
+        return error;
+    }
   }
 
   private async buildTicketAgentsResponse(
@@ -1547,7 +1563,9 @@ export class TicketService extends BaseService<ITicket> {
       // Changing the primary assignee requires clearing the ticket_resources
       // rows that reference the old one, then re-keying them afterwards.
       const isChangingAssignment =
-        'assigned_to' in cleanedData && cleanedData.assigned_to !== currentTicket.assigned_to;
+        'assigned_to' in cleanedData &&
+        cleanedData.assigned_to !== undefined &&
+        cleanedData.assigned_to !== currentTicket.assigned_to;
       const finalizeResourceReassignment = isChangingAssignment
         ? await prepareTicketResourceReassignment(
           trx,

@@ -10,6 +10,7 @@ import { withAuth } from '@alga-psa/auth';
 import {
   addTicketResourceCore,
   getTicketResourcesCore,
+  publishTicketResourceEvent,
   removeTicketResourceCore,
 } from '../lib/ticketResourceCore';
 import { ticketActionErrorFrom, type TicketActionError } from './ticketActionErrors';
@@ -31,13 +32,18 @@ export const addTicketResource = withAuth(async (
 ): Promise<ITicketResource | TicketActionError | null> => {
   const { knex: db } = await createTenantKnex();
   try {
-    return await withTransaction(db, async (trx: Knex.Transaction) => {
+    const { resource, event } = await withTransaction(db, async (trx: Knex.Transaction) => {
     if (!await hasPermission(user, 'ticket', 'update', trx)) {
       throw new Error('Permission denied: Cannot add ticket resource');
     }
 
     return await addTicketResourceCore(trx, tenant, user.user_id, ticketId, additionalUserId, role);
     });
+
+    // Emit after the transaction commits so subscribers can see the data.
+    await publishTicketResourceEvent(event);
+
+    return resource;
   } catch (error) {
     const expected = ticketActionErrorFrom(error);
     if (expected) {

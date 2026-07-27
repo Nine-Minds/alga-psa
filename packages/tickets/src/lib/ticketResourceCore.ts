@@ -21,12 +21,26 @@ export class TicketResourceError extends Error {
   }
 }
 
+type TicketResourceEvent = Parameters<typeof publishEvent>[0];
+
+export interface AddTicketResourceResult {
+  /** Null when the ticket had no primary assignee and the user was promoted. */
+  resource: ITicketResource | null;
+  event: TicketResourceEvent;
+}
+
+/** Publish what `addTicketResourceCore` returned, once its transaction commits. */
+export async function publishTicketResourceEvent(event: TicketResourceEvent): Promise<void> {
+  await publishEvent(event);
+}
+
 /**
- * Adds an additional agent to a ticket. Returns null when the ticket had no
- * primary assignee and the user was promoted to primary instead.
+ * Adds an additional agent to a ticket.
  *
  * Shared by the server action (`addTicketResource`) and the REST API so both
- * paths apply the same promote-to-primary rule, duplicate check, and events.
+ * paths apply the same promote-to-primary rule and duplicate check. The event
+ * is returned rather than published so the caller can emit it after the
+ * transaction commits.
  */
 export async function addTicketResourceCore(
   trx: Knex.Transaction,
@@ -35,7 +49,7 @@ export async function addTicketResourceCore(
   ticketId: string,
   additionalUserId: string,
   role: string
-): Promise<ITicketResource | null> {
+): Promise<AddTicketResourceResult> {
   const ticket = await tenantScopedTable(trx, 'tickets', tenant)
     .where({ ticket_id: ticketId })
     .first();
@@ -59,17 +73,18 @@ export async function addTicketResourceCore(
       throw new Error(`Primary assignment update for ticket ${ticketId} completed without returning the updated ticket.`);
     }
 
-    await publishEvent({
-      eventType: 'TICKET_ASSIGNED',
-      payload: {
-        tenantId: tenant,
-        ticketId: ticketId,
-        userId: additionalUserId,
-        assignedByUserId: actorUserId
+    return {
+      resource: null,
+      event: {
+        eventType: 'TICKET_ASSIGNED',
+        payload: {
+          tenantId: tenant,
+          ticketId: ticketId,
+          userId: additionalUserId,
+          assignedByUserId: actorUserId
+        }
       }
-    });
-
-    return null;
+    };
   }
 
   const existingResource = await tenantScopedTable(trx, 'ticket_resources', tenant)
@@ -97,18 +112,19 @@ export async function addTicketResourceCore(
     })
     .returning('*');
 
-  await publishEvent({
-    eventType: 'TICKET_ADDITIONAL_AGENT_ASSIGNED',
-    payload: {
-      tenantId: tenant,
-      ticketId: ticketId,
-      primaryAgentId: ticket.assigned_to,
-      additionalAgentId: additionalUserId,
-      assignedByUserId: actorUserId
+  return {
+    resource,
+    event: {
+      eventType: 'TICKET_ADDITIONAL_AGENT_ASSIGNED',
+      payload: {
+        tenantId: tenant,
+        ticketId: ticketId,
+        primaryAgentId: ticket.assigned_to,
+        additionalAgentId: additionalUserId,
+        assignedByUserId: actorUserId
+      }
     }
-  });
-
-  return resource;
+  };
 }
 
 export async function removeTicketResourceCore(

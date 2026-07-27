@@ -8,6 +8,23 @@ export interface RemoveTeamFromTicketOptions {
   keepUserIds?: string[];
 }
 
+export type TeamAssignmentErrorKind = 'ticket_not_found' | 'team_not_found' | 'team_lead_missing';
+
+// The messages are load-bearing: `ticketActionErrorFrom` maps them by prefix for
+// the server-action path. `kind` is what the REST layer should switch on.
+const TEAM_ASSIGNMENT_MESSAGES: Record<TeamAssignmentErrorKind, string> = {
+  ticket_not_found: 'Ticket not found',
+  team_not_found: 'Team not found',
+  team_lead_missing: 'Team lead not found',
+};
+
+export class TeamAssignmentError extends Error {
+  constructor(readonly kind: TeamAssignmentErrorKind) {
+    super(TEAM_ASSIGNMENT_MESSAGES[kind]);
+    this.name = 'TeamAssignmentError';
+  }
+}
+
 function tenantScopedTable(
   conn: Knex | Knex.Transaction,
   table: string,
@@ -34,7 +51,7 @@ export async function assignTeamToTicketCore(
     .first();
 
   if (!ticket) {
-    throw new Error('Ticket not found');
+    throw new TeamAssignmentError('ticket_not_found');
   }
 
   const team = await tenantScopedTable(trx, 'teams', tenant)
@@ -42,11 +59,11 @@ export async function assignTeamToTicketCore(
     .first();
 
   if (!team) {
-    throw new Error('Team not found');
+    throw new TeamAssignmentError('team_not_found');
   }
 
   if (!team.manager_id) {
-    throw new Error('Team lead not found');
+    throw new TeamAssignmentError('team_lead_missing');
   }
 
   const teamMembers = await tenantDb(trx, tenant)
@@ -119,7 +136,7 @@ export async function removeTeamFromTicketCore(
     .first();
 
   if (!ticket) {
-    throw new Error('Ticket not found');
+    throw new TeamAssignmentError('ticket_not_found');
   }
 
   const mode = options.mode;

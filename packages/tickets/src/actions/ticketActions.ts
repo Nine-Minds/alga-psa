@@ -740,8 +740,12 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
         }
       }
 
-      // Check if we're updating the assigned_to field
+      // Check if we're updating the assigned_to field. An explicit `undefined`
+      // is knex's "leave this column alone", so it must not count as a change —
+      // otherwise the reassignment clears the additional agents for an update
+      // that never touches assigned_to.
       const isChangingAssignment = 'assigned_to' in updateData &&
+                                  updateData.assigned_to !== undefined &&
                                   updateData.assigned_to !== currentTicket.assigned_to;
       const isBoardChange =
         'board_id' in updateData &&
