@@ -54,6 +54,7 @@ import { TicketModelEventPublisher } from '../lib/adapters/TicketModelEventPubli
 import { TicketModelAnalyticsTracker } from '../lib/adapters/TicketModelAnalyticsTracker';
 import { calculateItilPriority } from '@alga-psa/tickets/lib/itilUtils';
 import { enforceTicketCloseRules, TicketCloseValidationError, type CloseRuleFailure } from '../lib/validateTicketClosure';
+import { prepareTicketResourceReassignment } from '../lib/reassignTicketResources';
 import { applyMatchingChecklistTemplates } from '@alga-psa/shared/lib/ticketChecklists';
 import { withAuth } from '@alga-psa/auth';
 import {
@@ -825,71 +826,25 @@ export const updateTicket = withAuth(async (user, { tenant }, id: string, data: 
         }
       }
 
-      let updatedTicket;
+      // Changing assigned_to needs the ticket_resources rows keyed to the old
+      // assignee cleared first, then re-keyed to the new one.
+      const finalizeResourceReassignment = isChangingAssignment
+        ? await prepareTicketResourceReassignment(
+          trx,
+          tenant,
+          id,
+          currentTicket.assigned_to,
+          updateData.assigned_to
+        )
+        : null;
 
-      // If we're changing the assigned_to field, we need to handle the ticket_resources table
-      if (isChangingAssignment) {
-        // Step 1: Delete any ticket_resources where the new assigned_to is an additional_user_id
-        // to avoid constraint violations after the update
-        await tenantScopedTable(trx, 'ticket_resources', tenant)
-          .where({
-            ticket_id: id,
-            additional_user_id: updateData.assigned_to
-          })
-          .delete();
+      const [updatedTicket] = await tenantScopedTable(trx, 'tickets', tenant)
+        .where({ ticket_id: id })
+        .update(updateData)
+        .returning('*');
 
-        // Step 2: Get existing resources with the old assigned_to value
-        const existingResources = await tenantScopedTable(trx, 'ticket_resources', tenant)
-          .where({
-            ticket_id: id,
-            assigned_to: currentTicket.assigned_to
-          })
-          .select('*');
-
-        // Step 3: Store resources for recreation, excluding those that would violate constraints
-        const resourcesToRecreate: any[] = [];
-        for (const resource of existingResources) {
-          // Skip resources where additional_user_id would equal the new assigned_to
-          if (resource.additional_user_id !== updateData.assigned_to) {
-            // Clone the resource but exclude the primary key fields
-            const { assignment_id, ...resourceData } = resource;
-            resourcesToRecreate.push(resourceData);
-          }
-        }
-
-        // Step 4: Delete the existing resources with the old assigned_to
-        if (existingResources.length > 0) {
-          await tenantScopedTable(trx, 'ticket_resources', tenant)
-            .where({
-              ticket_id: id,
-              assigned_to: currentTicket.assigned_to
-            })
-            .delete();
-        }
-
-        // Step 5: Update the ticket with the new assigned_to
-        const [updated] = await tenantScopedTable(trx, 'tickets', tenant)
-          .where({ ticket_id: id })
-          .update(updateData)
-          .returning('*');
-
-        // Step 6: Re-create the resources with the new assigned_to
-        for (const resourceData of resourcesToRecreate) {
-          await tenantScopedTable(trx, 'ticket_resources', tenant).insert({
-            ...resourceData,
-            assigned_to: updateData.assigned_to
-          });
-        }
-
-        updatedTicket = updated;
-      } else {
-        // Regular update without changing assignment
-        const [updated] = await tenantScopedTable(trx, 'tickets', tenant)
-          .where({ ticket_id: id })
-          .update(updateData)
-          .returning('*');
-
-        updatedTicket = updated;
+      if (finalizeResourceReassignment) {
+        await finalizeResourceReassignment();
       }
 
     if (!updatedTicket) {

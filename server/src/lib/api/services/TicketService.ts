@@ -13,6 +13,7 @@ import { TICKET_ORIGINS } from '@alga-psa/types';
 import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
 import { deleteTicketChildRecords } from '@alga-psa/tickets/lib/deleteTicketChildRecords';
 import { enforceTicketCloseRules, TicketCloseValidationError } from '@alga-psa/tickets/lib/validateTicketClosure';
+import { prepareTicketResourceReassignment } from '@alga-psa/tickets/lib/reassignTicketResources';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import { NotFoundError, ValidationError, ConflictError } from '../middleware/apiMiddleware';
@@ -1319,11 +1320,29 @@ export class TicketService extends BaseService<ITicket> {
         updated_at: knex.raw('now()')
       };
 
+      // Changing the primary assignee requires clearing the ticket_resources
+      // rows that reference the old one, then re-keying them afterwards.
+      const isChangingAssignment =
+        'assigned_to' in cleanedData && cleanedData.assigned_to !== currentTicket.assigned_to;
+      const finalizeResourceReassignment = isChangingAssignment
+        ? await prepareTicketResourceReassignment(
+          trx,
+          context.tenant,
+          id,
+          currentTicket.assigned_to,
+          (cleanedData as { assigned_to?: string | null }).assigned_to
+        )
+        : null;
+
       // Update ticket
       const [ticket] = await tenantScopedTable(trx, 'tickets', context.tenant)
         .where({ ticket_id: id })
         .update(updateData)
         .returning('*');
+
+      if (finalizeResourceReassignment) {
+        await finalizeResourceReassignment();
+      }
 
       // Handle tags if provided
       if (data.tags) {
