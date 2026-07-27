@@ -9,6 +9,7 @@ import { TicketService } from '../services/TicketService';
 import { 
   createTicketSchema, updateTicketSchema, ticketListQuerySchema, ticketSearchSchema, ticketStatsResponseSchema, createTicketMaterialSchema, createTicketCommentSchema, updateTicketCommentSchema, updateTicketStatusSchema, updateTicketAssignmentSchema, createTicketFromAssetSchema, linkTicketAssetSchema, addTicketAgentSchema, assignTicketTeamSchema, removeTicketTeamSchema
 } from '../schemas/ticket';
+import { uuidSchema } from '../schemas/common';
 import { 
   ApiKeyServiceForApi 
 } from '../../services/apiKeyServiceForApi';
@@ -868,9 +869,9 @@ export class ApiTicketController extends ApiBaseController {
           const agentsIndex = segments.indexOf('agents');
           const userId = agentsIndex >= 0 ? segments[agentsIndex + 1] : undefined;
 
-          if (!userId) {
+          if (!userId || !uuidSchema.safeParse(userId).success) {
             throw new ValidationError('Validation failed', [
-              { path: ['userId'], message: 'user ID is required' },
+              { path: ['userId'], message: 'A valid user ID is required' },
             ]);
           }
 
