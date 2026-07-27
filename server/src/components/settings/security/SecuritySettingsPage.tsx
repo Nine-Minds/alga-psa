@@ -7,6 +7,7 @@ import dynamic from 'next/dynamic';
 import CustomTabs, { TabContent } from "@alga-psa/ui/components/CustomTabs";
 import { useSearchParams } from 'next/navigation';
 import SettingsTabSkeleton from '@alga-psa/ui/components/skeletons/SettingsTabSkeleton';
+import { useFeatureFlag } from '@alga-psa/ui/hooks';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 function RoleManagementLoading() {
@@ -141,13 +142,18 @@ const DEFAULT_SECURITY_TAB = 'roles';
 
 const SecuritySettingsPage = (): React.JSX.Element => {
   const { t } = useTranslation('msp/profile');
+  const { enabled: scimSupportEnabled } = useFeatureFlag('skim-support-feature', { defaultValue: false });
   const searchParams = useSearchParams();
   const tabParam = searchParams?.get('tab');
+  const availableSecurityTabIds = React.useMemo(
+    () => SECURITY_TAB_IDS.filter((tabId) => tabId !== 'user-provisioning' || scimSupportEnabled),
+    [scimSupportEnabled],
+  );
 
   // Determine initial active tab based on URL parameter
   const [activeTab, setActiveTab] = React.useState<string>(() => {
     const requestedTab = tabParam?.toLowerCase();
-    return requestedTab && SECURITY_TAB_IDS.includes(requestedTab as typeof SECURITY_TAB_IDS[number])
+    return requestedTab && availableSecurityTabIds.includes(requestedTab)
       ? requestedTab
       : DEFAULT_SECURITY_TAB;
   });
@@ -155,11 +161,11 @@ const SecuritySettingsPage = (): React.JSX.Element => {
   // Update active tab when URL parameter changes
   React.useEffect(() => {
     const requestedTab = tabParam?.toLowerCase();
-    const targetTab = requestedTab && SECURITY_TAB_IDS.includes(requestedTab as typeof SECURITY_TAB_IDS[number])
+    const targetTab = requestedTab && availableSecurityTabIds.includes(requestedTab)
       ? requestedTab
       : DEFAULT_SECURITY_TAB;
     setActiveTab((currentTab) => currentTab === targetTab ? currentTab : targetTab);
-  }, [tabParam]);
+  }, [availableSecurityTabIds, tabParam]);
 
   const tabContent: TabContent[] = [
     {
@@ -192,7 +198,7 @@ const SecuritySettingsPage = (): React.JSX.Element => {
         </>
       ),
     },
-    ...(isEnterpriseEdition
+    ...(isEnterpriseEdition && scimSupportEnabled
       ? [{
           id: 'user-provisioning',
           label: t('security.tabs.userProvisioning', { defaultValue: 'User provisioning' }),
