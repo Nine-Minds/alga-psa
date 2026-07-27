@@ -71,7 +71,8 @@
     "entraSync": "Microsoft Entra Sync — scoperta automatica dei tenant e sincronizzazione dei contatti da Entra ID",
     "cipp": "Integrazione CIPP — collega la tua istanza CIPP per la gestione multi-tenant di Entra",
     "teamsIntegration": "Microsoft Teams — integrazione delle riunioni e bot Teams per notifiche ticket",
-    "advancedAuthorizationBundles": "Bundle di Autorizzazione Avanzata — crea e gestisci bundle ABAC premium di restringimento"
+    "advancedAuthorizationBundles": "Bundle di Autorizzazione Avanzata — crea e gestisci bundle ABAC premium di restringimento",
+    "scimProvisioning": "SCIM User Provisioning — synchronize user activation from your identity provider"
   },
   "summary": {
     "licensesUsed": "Licenze Utilizzate",

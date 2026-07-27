@@ -160,6 +160,10 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'authorization_bundle_revisions', 'authorization_bundles',
 
   // User related details
+  // SCIM operations/unresolved rows depend on connections; user links also
+  // reference users, so all SCIM records must be removed before users.
+  'scim_operations', 'scim_unresolved_identities', 'scim_user_links',
+  'scim_connections',
   'user_activity_group_items', 'user_activity_groups',
   'user_notification_preferences', 'user_internal_notification_preferences', 'user_preferences',
   'role_permissions', 'user_roles', 'user_auth_accounts',
