@@ -5,6 +5,23 @@
  * A work schedule says when someone is on the clock. It is not the same thing as
  * `availability_settings`, which says when a client may book them — a
  * dispatch-only technician works full days and publishes no bookable hours.
+ *
+ * `resources.availability` used to be a third, nameless version of the same
+ * idea: an unvalidated jsonb blob with no readers anywhere in the repo and a
+ * single writer, the dev seed. It was dropped rather than repurposed
+ * (20260728120000_drop_resources_availability), because a column that already
+ * carries the word "availability" is exactly how a work schedule and a booking
+ * window get merged back together the next time someone needs somewhere to put
+ * working hours. Its contents are preserved in
+ * `resources_availability_archive`.
+ *
+ * Not modelled here, deliberately:
+ *  - PTO and holidays. They need their own leave calendar;
+ *    `availability_exceptions` is a booking concept and would repeat the same
+ *    conflation.
+ *  - Effective dating. A schedule edited today retroactively changes what last
+ *    quarter's capacity looks like. Rows, not a blob, is what makes adding it
+ *    later a migration rather than a rewrite.
  */
 
 export const DAYS_OF_WEEK = [0, 1, 2, 3, 4, 5, 6] as const;
