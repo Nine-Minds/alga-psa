@@ -37,6 +37,10 @@
       "import": "./src/lib/resourceCapacity.ts",
       "types": "./src/lib/resourceCapacity.ts"
     },
+    "./lib/workSchedule": {
+      "import": "./src/lib/workSchedule.ts",
+      "types": "./src/lib/workSchedule.ts"
+    },
     "./lib/timeEntryLauncher": {
       "import": "./src/lib/timeEntryLauncher.tsx",
       "types": "./src/lib/timeEntryLauncher.tsx"
