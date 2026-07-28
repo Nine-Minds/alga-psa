@@ -118,7 +118,6 @@
     "title": "Kreditverwaltung",
     "recentCredits": "Aktuelle Gutschriften",
     "recentCreditsDescription": "Sehen und verwalten Sie die Gutschriften Ihres Kunden. Gutschriften bleiben finanzielle Artefakte, und wiederkehrende Leistungszeiträume erscheinen nur dann, wenn die Ursprungsrechnung eine kanonische Abdeckung hatte.",
-    "addCreditPlaceholder": "Das Formular für Gutschriftbetrag und Details würde hier implementiert.",
     "loadErrorPrefix": "Fehler beim Laden der Gutschriften:",
     "noDataReturned": "Vom Server wurden keine Daten zurückgegeben",
     "noCreditsFound": "Keine Gutschriften gefunden"

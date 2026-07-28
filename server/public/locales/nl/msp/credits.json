@@ -118,7 +118,6 @@
     "title": "Kredietbeheer",
     "recentCredits": "Recente kredieten",
     "recentCreditsDescription": "Bekijk en beheer de kredieten van uw klant. Kredieten blijven financiële artefacten en terugkerende serviceperioden verschijnen alleen wanneer de bronfactuur canonieke dekking had.",
-    "addCreditPlaceholder": "Het formulier voor kredietbedrag en details zou hier worden geïmplementeerd.",
     "loadErrorPrefix": "Fout bij laden van kredieten:",
     "noDataReturned": "Geen gegevens ontvangen van de server",
     "noCreditsFound": "Geen kredieten gevonden"
