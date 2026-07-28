@@ -497,6 +497,9 @@ export interface InvoiceViewModel {
   credit_applied: number;
   billing_cycle_id?: string;
   is_manual: boolean;
+  /** Financial-document identity, stamped at finalization. */
+  invoice_type?: 'standard' | 'credit_note' | 'prepayment' | null;
+  is_prepayment?: boolean;
   tax_source?: 'internal' | 'external' | 'pending_external';
   recurring_execution_window_kind?: InvoiceRecurringExecutionWindowKind | null;
   recurring_cadence_source?: InvoiceRecurringCadenceSource | null;

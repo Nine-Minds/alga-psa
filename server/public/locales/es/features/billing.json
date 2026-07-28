@@ -73,7 +73,9 @@
     "emailSent": "Correo de la factura enviado correctamente.",
     "advanceTiming": "Anticipado",
     "arrearsTiming": "A plazo vencido",
-    "paymentSummaryServicePeriods": "El pago liquida el saldo de la factura para estos períodos de servicio recurrentes. Abra los detalles de la factura a continuación para ver el desglose completo línea por línea."
+    "paymentSummaryServicePeriods": "El pago liquida el saldo de la factura para estos períodos de servicio recurrentes. Abra los detalles de la factura a continuación para ver el desglose completo línea por línea.",
+    "creditNote": "Nota de crédito",
+    "prepayment": "Pago anticipado"
   },
   "frequency": {
     "monthly": "Mensual",
@@ -327,5 +329,11 @@
       "tenantDefault": "Predeterminado del tenant",
       "changeLayout": "Cambiar"
     }
+  },
+  "credits": {
+    "availableCredit": "Crédito disponible",
+    "appliedAutomatically": "Se aplica automáticamente a su próxima factura.",
+    "credit": "Crédito",
+    "expires": "Vence el {{date}}"
   }
 }

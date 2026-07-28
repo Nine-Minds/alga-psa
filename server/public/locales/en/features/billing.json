@@ -60,7 +60,9 @@
     "emailSent": "Invoice email sent successfully.",
     "advanceTiming": "Advance",
     "arrearsTiming": "Arrears",
-    "paymentSummaryServicePeriods": "Payment settles the invoice balance for these recurring service periods. Open the invoice details below for the full line-by-line breakdown."
+    "paymentSummaryServicePeriods": "Payment settles the invoice balance for these recurring service periods. Open the invoice details below for the full line-by-line breakdown.",
+    "creditNote": "Credit Note",
+    "prepayment": "Prepayment"
   },
   "invoices": {
     "locations": {
@@ -327,5 +329,11 @@
       "prepayment": "Advance payment or deposit invoices",
       "partially_applied": "Invoices with partial payments applied"
     }
+  },
+  "credits": {
+    "availableCredit": "Available Credit",
+    "appliedAutomatically": "Applied automatically to your next invoice.",
+    "credit": "Credit",
+    "expires": "Expires {{date}}"
   }
 }

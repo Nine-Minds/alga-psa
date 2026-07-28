@@ -73,7 +73,9 @@
     "emailSent": "Factuur-e-mail succesvol verzonden.",
     "advanceTiming": "Vooraf",
     "arrearsTiming": "Achteraf",
-    "paymentSummaryServicePeriods": "Betaling vereffent het factuursaldo voor deze terugkerende serviceperioden. Open hieronder de factuurdetails voor de volledige uitsplitsing per regel."
+    "paymentSummaryServicePeriods": "Betaling vereffent het factuursaldo voor deze terugkerende serviceperioden. Open hieronder de factuurdetails voor de volledige uitsplitsing per regel.",
+    "creditNote": "Creditnota",
+    "prepayment": "Vooruitbetaling"
   },
   "frequency": {
     "monthly": "Maandelijks",
@@ -327,5 +329,11 @@
       "tenantDefault": "Tenant-standaard",
       "changeLayout": "Wijzigen"
     }
+  },
+  "credits": {
+    "availableCredit": "Beschikbaar krediet",
+    "appliedAutomatically": "Wordt automatisch verrekend met uw volgende factuur.",
+    "credit": "Krediet",
+    "expires": "Verloopt op {{date}}"
   }
 }

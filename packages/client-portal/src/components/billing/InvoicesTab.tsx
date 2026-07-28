@@ -189,10 +189,15 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
     router.push(`/client-portal/billing/invoices/${invoiceId}/pay`);
   };
 
-  // Check if invoice can be paid (finalized and not fully paid)
+  // A credit note is money the MSP owes the client — never payable.
+  const isCreditNote = (invoice: InvoiceViewModel): boolean =>
+    invoice.invoice_type === 'credit_note' || invoice.total < 0;
+
+  // Check if invoice can be paid (finalized, not a credit note, not fully covered)
   const canPayInvoice = (invoice: InvoiceViewModel): boolean => {
     // Must be finalized
     if (!invoice.finalized_at) return false;
+    if (isCreditNote(invoice)) return false;
     // Check if already paid (total matches credit_applied or has paid status)
     if (invoice.credit_applied >= invoice.total) return false;
     return true;
@@ -202,7 +207,18 @@ const InvoicesTab: React.FC<InvoicesTabProps> = React.memo(({
   const invoiceColumns: ColumnDefinition<InvoiceViewModel>[] = useMemo(() => [
     {
       title: t('invoice.number'),
-      dataIndex: 'invoice_number'
+      dataIndex: 'invoice_number',
+      render: (value, record) => (
+        <span className="inline-flex items-center gap-2">
+          {value}
+          {isCreditNote(record) && (
+            <Badge variant="secondary">{t('invoice.creditNote', 'Credit Note')}</Badge>
+          )}
+          {record.invoice_type === 'prepayment' && (
+            <Badge variant="secondary">{t('invoice.prepayment', 'Prepayment')}</Badge>
+          )}
+        </span>
+      )
     },
     {
       title: t('invoice.date'),

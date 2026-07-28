@@ -73,7 +73,9 @@
     "emailSent": "Wiadomość z fakturą została wysłana pomyślnie.",
     "advanceTiming": "Z góry",
     "arrearsTiming": "Z dołu",
-    "paymentSummaryServicePeriods": "Płatność rozlicza saldo faktury dla tych cyklicznych okresów usług. Otwórz poniżej szczegóły faktury, aby zobaczyć pełny podział wiersz po wierszu."
+    "paymentSummaryServicePeriods": "Płatność rozlicza saldo faktury dla tych cyklicznych okresów usług. Otwórz poniżej szczegóły faktury, aby zobaczyć pełny podział wiersz po wierszu.",
+    "creditNote": "Nota kredytowa",
+    "prepayment": "Przedpłata"
   },
   "frequency": {
     "monthly": "Miesięcznie",
@@ -327,5 +329,11 @@
       "tenantDefault": "Domyślny dzierżawcy",
       "changeLayout": "Zmień"
     }
+  },
+  "credits": {
+    "availableCredit": "Dostępny kredyt",
+    "appliedAutomatically": "Zostanie automatycznie zastosowany do następnej faktury.",
+    "credit": "Kredyt",
+    "expires": "Wygasa {{date}}"
   }
 }
