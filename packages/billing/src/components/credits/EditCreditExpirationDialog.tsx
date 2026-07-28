@@ -60,7 +60,8 @@ export default function EditCreditExpirationDialog({ credit, onClose }: EditCred
       } else {
         setError(result.error || t('expirationDialog.updateError', { defaultValue: 'An error occurred while updating the expiration date' }));
       }
-    } catch {
+    } catch (err) {
+      console.error('Failed to update credit expiration:', err);
       setError(t('expirationDialog.updateError', { defaultValue: 'An error occurred while updating the expiration date' }));
     } finally {
       setIsSaving(false);

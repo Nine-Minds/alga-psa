@@ -8,6 +8,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { formatCurrencyFromMinorUnits, formatDateOnly } from '@alga-psa/core';
 import type { ICreditTracking, ITransaction } from '@alga-psa/types';
 import { getCreditDetail } from './actions';
+import DetailField from './DetailField';
 
 interface CreditDetailDialogProps {
   creditId: string | null;
@@ -19,15 +20,6 @@ interface CreditDetailData {
   credit: ICreditTracking;
   transactions: ITransaction[];
   invoice?: { invoice_number?: string };
-}
-
-function DetailField({ label, value, mono }: { label: string; value: React.ReactNode; mono?: boolean }) {
-  return (
-    <div>
-      <div className="text-xs text-[rgb(var(--color-text-500))]">{label}</div>
-      <div className={`text-sm font-medium ${mono ? 'font-mono' : ''}`}>{value}</div>
-    </div>
-  );
 }
 
 export default function CreditDetailDialog({ creditId, clientName, onClose }: CreditDetailDialogProps) {

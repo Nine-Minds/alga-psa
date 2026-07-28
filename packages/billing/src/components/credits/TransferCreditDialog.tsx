@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
-import { Input } from '@alga-psa/ui/components/Input';
+import { CurrencyInput } from '@alga-psa/ui/components/CurrencyInput';
 import { Label } from '@alga-psa/ui/components/Label';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
@@ -28,7 +28,7 @@ export default function TransferCreditDialog({ credit, onClose }: TransferCredit
   const [clients, setClients] = useState<IClient[]>([]);
   const [filterState, setFilterState] = useState<'all' | 'active' | 'inactive'>('all');
   const [targetClientId, setTargetClientId] = useState<string | null>(null);
-  const [amount, setAmount] = useState('');
+  const [amount, setAmount] = useState<number | undefined>(undefined);
   const [reason, setReason] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -38,7 +38,7 @@ export default function TransferCreditDialog({ credit, onClose }: TransferCredit
   useEffect(() => {
     if (credit) {
       setTargetClientId(null);
-      setAmount((remaining / 100).toString());
+      setAmount(remaining / 100);
       setReason('');
       setError(null);
     }
@@ -62,8 +62,8 @@ export default function TransferCreditDialog({ credit, onClose }: TransferCredit
       return;
     }
 
-    const parsed = parseFloat(amount);
-    if (isNaN(parsed) || parsed <= 0) {
+    const parsed = amount;
+    if (parsed === undefined || isNaN(parsed) || parsed <= 0) {
       setError(t('transferDialog.errors.validAmount', { defaultValue: 'Enter an amount greater than zero' }));
       return;
     }
@@ -103,8 +103,7 @@ export default function TransferCreditDialog({ credit, onClose }: TransferCredit
     }
   };
 
-  const parsedAmount = parseFloat(amount);
-  const newRemaining = isNaN(parsedAmount) ? remaining : remaining - toMinorUnits(parsedAmount, i18n.language);
+  const newRemaining = amount === undefined || isNaN(amount) ? remaining : remaining - toMinorUnits(amount, i18n.language);
 
   return (
     <Dialog isOpen={Boolean(credit)} onClose={onClose}>
@@ -137,18 +136,12 @@ export default function TransferCreditDialog({ credit, onClose }: TransferCredit
             </div>
 
             <div>
-              <Label htmlFor="transfer-credit-amount" className="text-sm font-medium">
-                {t('transferDialog.fields.amount', { defaultValue: 'Amount' })}{' '}
-                <span className="text-[rgb(var(--color-destructive-500))]">*</span>
-              </Label>
-              <Input
+              <CurrencyInput
                 id="transfer-credit-amount"
-                type="number"
-                step="0.01"
-                min="0"
+                label={t('transferDialog.fields.amount', { defaultValue: 'Amount' })}
+                required
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                className="mt-1"
+                onChange={setAmount}
               />
               <p className="text-xs text-[rgb(var(--color-text-500))] mt-1">
                 {t('transferDialog.hints.amount', {

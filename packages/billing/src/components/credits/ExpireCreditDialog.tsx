@@ -48,7 +48,8 @@ export default function ExpireCreditDialog({ credit, onClose }: ExpireCreditDial
       } else {
         setError(result.error || t('expireDialog.error', { defaultValue: 'An error occurred while expiring the credit' }));
       }
-    } catch {
+    } catch (err) {
+      console.error('Failed to expire credit:', err);
       setError(t('expireDialog.error', { defaultValue: 'An error occurred while expiring the credit' }));
     } finally {
       setIsExpiring(false);
