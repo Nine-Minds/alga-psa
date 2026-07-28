@@ -20,11 +20,16 @@ import {
  * same resolve/apply machinery Item CDC will later feed one change at a time.
  * Preview never writes; execute re-fetches and re-resolves (a stale preview
  * is advisory, not a contract), applies row-by-row in per-row transactions,
- * and seeds the sync-cycle cursor so a future Item CDC cycle continues
- * without gap or re-import.
+ * and seeds an item-scoped sync-cycle cursor so a future Item CDC cycle
+ * continues without gap or re-import.
  */
 
 const SYNC_ADAPTER_TYPE = 'quickbooks_online';
+// Item CDC gets its own cursor namespace: seeding under 'quickbooks_online'
+// would advance the shared accounting sync cursor and make runAccountingSyncCycle
+// skip unrelated QBO changes (invoices, payments) between its real cursor and
+// the import time.
+const ITEM_SYNC_ADAPTER_TYPE = 'quickbooks_online_items';
 const IMPORTED_ITEM_TYPES = "('Service', 'NonInventory', 'Inventory', 'Category')";
 
 export interface QboItemImportOptions {
@@ -378,7 +383,7 @@ export async function executeQboItemImportForTenant(params: {
     const cycles = new SyncCycleRepository(knex);
     const cycleId = await cycles.startCycle({
       tenant,
-      adapterType: SYNC_ADAPTER_TYPE,
+      adapterType: ITEM_SYNC_ADAPTER_TYPE,
       targetRealm: realm,
       cursorBefore: null
     });
