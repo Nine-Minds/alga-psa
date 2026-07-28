@@ -520,8 +520,14 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
         selectedClientId: effectiveClientId ?? null,
       })}
 
+      {props.surveySummaryCard ? props.surveySummaryCard : null}
+
       {props.associatedAssets ? (
         <div id={`${id}-assets-container`}>{props.associatedAssets}</div>
+      ) : null}
+
+      {!props.hideMaterials ? (
+        <TicketMaterialsCard id={`${id}-materials`} ticketId={ticketId} clientId={ticket.client_id} initialMaterials={props.bentoStreams?.materials} />
       ) : null}
 
       {!props.hideScheduling ? (
@@ -794,12 +800,6 @@ export function TicketBentoLayout(props: TicketBentoLayoutProps) {
         getUserAvatarUrlsBatch={getUserAvatarUrlsBatchAction}
         getTeamAvatarUrlsBatch={getTeamAvatarUrlsBatchAction}
       />
-
-      {!props.hideMaterials ? (
-        <TicketMaterialsCard id={`${id}-materials`} ticketId={ticketId} clientId={ticket.client_id} initialMaterials={props.bentoStreams?.materials} />
-      ) : null}
-
-      {props.surveySummaryCard ? props.surveySummaryCard : null}
 
       <DocumentsTile
         id={`${id}-documents-section`}
