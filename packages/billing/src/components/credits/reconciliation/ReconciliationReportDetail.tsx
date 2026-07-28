@@ -178,7 +178,7 @@ export default function ReconciliationReportDetail({ reportId, onDataChanged }: 
       case 'custom_adjustment':
         return t('recommendedFix.buttons.applyCustomAdjustment', { defaultValue: 'Apply Custom Adjustment' });
       case 'no_action':
-        return t('recommendedFix.buttons.markResolvedNoAction', { defaultValue: 'Mark as Resolved (No Action)' });
+        return t('recommendedFix.buttons.markResolvedNoAction', { defaultValue: 'Resolve Without Changes' });
     }
   };
 
@@ -493,7 +493,7 @@ export default function ReconciliationReportDetail({ reportId, onDataChanged }: 
                   defaultValue: 'This will mark the discrepancy as resolved without making any changes.',
                 }),
                 buttonId: 'no-action-button',
-                buttonLabel: t('recommendedFix.buttons.markResolvedNoAction', { defaultValue: 'Mark as Resolved (No Action)' }),
+                buttonLabel: t('recommendedFix.buttons.markResolvedNoAction', { defaultValue: 'Resolve Without Changes' }),
               })}
             </div>
           )}

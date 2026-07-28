@@ -58,24 +58,28 @@ export default function ExpireCreditDialog({ credit, onClose }: ExpireCreditDial
   return (
     <Dialog isOpen={Boolean(credit)} onClose={onClose}>
       <DialogContent>
-        <h2 className="text-xl font-semibold mb-2">
+        <h2 className="text-xl font-semibold mb-4">
           {t('expireDialog.title', { defaultValue: 'Expire Credit' })}
         </h2>
-        <p className="text-sm text-[rgb(var(--color-text-500))] mb-4">
-          {t('expireDialog.description', {
-            defaultValue: 'This will immediately expire the credit. The remaining balance will no longer be available to the client. This action cannot be undone.',
-          })}
-        </p>
 
         {credit && (
           <div className="space-y-4">
+            <Alert variant="destructive">
+              <AlertDescription>
+                {t('expireDialog.warning', {
+                  amount: formatCurrencyFromMinorUnits(Number(credit.remaining_amount)),
+                  defaultValue: 'The client loses the remaining {{amount}}. You can\'t undo this.',
+                })}
+              </AlertDescription>
+            </Alert>
+
             <div className="grid grid-cols-2 gap-2 text-sm">
               <span className="text-[rgb(var(--color-text-500))]">
-                {t('expirationDialog.creditAmount', { defaultValue: 'Credit Amount:' })}
+                {t('expireDialog.creditAmount', { defaultValue: 'Original' })}
               </span>
               <span className="font-medium text-right">{formatCurrencyFromMinorUnits(Number(credit.amount))}</span>
               <span className="text-[rgb(var(--color-text-500))]">
-                {t('expirationDialog.remainingAmount', { defaultValue: 'Remaining Amount:' })}
+                {t('expireDialog.remainingAmount', { defaultValue: 'Remaining' })}
               </span>
               <span className="font-medium text-right">{formatCurrencyFromMinorUnits(Number(credit.remaining_amount))}</span>
             </div>
@@ -88,7 +92,7 @@ export default function ExpireCreditDialog({ credit, onClose }: ExpireCreditDial
                 id="expire-credit-reason"
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
-                placeholder={t('expireDialog.reasonPlaceholder', { defaultValue: 'Explain why this credit is being expired...' })}
+                placeholder={t('expireDialog.reasonPlaceholder', { defaultValue: 'Why are you expiring this credit?' })}
                 className="w-full mt-1"
                 rows={3}
               />

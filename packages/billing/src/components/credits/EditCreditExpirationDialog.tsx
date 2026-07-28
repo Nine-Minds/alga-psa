@@ -70,26 +70,23 @@ export default function EditCreditExpirationDialog({ credit, onClose }: EditCred
   return (
     <Dialog isOpen={Boolean(credit)} onClose={onClose}>
       <DialogContent>
-        <h2 className="text-xl font-semibold mb-2">
-          {t('expirationDialog.title', { defaultValue: 'Modify Credit Expiration' })}
+        <h2 className="text-xl font-semibold mb-4">
+          {t('expirationDialog.title', { defaultValue: 'Edit Expiration Date' })}
         </h2>
-        <p className="text-sm text-[rgb(var(--color-text-500))] mb-4">
-          {t('expirationDialog.description', { defaultValue: 'Update the expiration date for this credit.' })}
-        </p>
 
         {credit && (
           <div className="space-y-4">
             <div className="grid grid-cols-2 gap-2 text-sm">
               <span className="text-[rgb(var(--color-text-500))]">
-                {t('expirationDialog.creditAmount', { defaultValue: 'Credit Amount:' })}
+                {t('expirationDialog.creditAmount', { defaultValue: 'Original' })}
               </span>
               <span className="font-medium text-right">{formatCurrencyFromMinorUnits(Number(credit.amount))}</span>
               <span className="text-[rgb(var(--color-text-500))]">
-                {t('expirationDialog.remainingAmount', { defaultValue: 'Remaining Amount:' })}
+                {t('expirationDialog.remainingAmount', { defaultValue: 'Remaining' })}
               </span>
               <span className="font-medium text-right">{formatCurrencyFromMinorUnits(Number(credit.remaining_amount))}</span>
               <span className="text-[rgb(var(--color-text-500))]">
-                {t('expirationDialog.currentExpiration', { defaultValue: 'Current Expiration:' })}
+                {t('expirationDialog.currentExpiration', { defaultValue: 'Current Expiration' })}
               </span>
               <span className="font-medium text-right">
                 {credit.expiration_date
@@ -99,9 +96,6 @@ export default function EditCreditExpirationDialog({ credit, onClose }: EditCred
             </div>
 
             <div>
-              <Label className="text-sm font-medium">
-                {t('expirationDialog.newExpirationDate', { defaultValue: 'New Expiration Date' })}
-              </Label>
               <div className="mt-1">
                 <DatePicker
                   id="edit-credit-expiration-date"
@@ -114,7 +108,7 @@ export default function EditCreditExpirationDialog({ credit, onClose }: EditCred
                 />
               </div>
               <p className="text-xs text-[rgb(var(--color-text-500))] mt-1">
-                {t('expirationDialog.removeExpiration', { defaultValue: 'Remove expiration date' })}
+                {t('expirationDialog.clearHint', { defaultValue: 'Clear the date to remove the expiration.' })}
               </p>
             </div>
 

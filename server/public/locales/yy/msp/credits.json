@@ -1,9 +1,6 @@
 {
   "page": {
-    "title": "55555",
-    "creditsOverview": "55555",
-    "overviewDescription": "55555",
-    "overviewDescriptionWithExpiration": "55555"
+    "title": "55555"
   },
   "columns": {
     "creditId": "55555",
@@ -28,20 +25,20 @@
     "select": "55555"
   },
   "filters": {
-    "client": "55555",
     "allClients": "55555"
   },
   "status": {
     "active": "55555",
     "expired": "55555",
-    "expiringSoon": "55555 {{days}} 55555",
     "open": "55555",
     "inReview": "55555",
     "resolved": "55555",
     "never": "55555",
     "na": "55555",
     "depleted": "55555",
-    "expiringSoonShort": "55555"
+    "expiringSoonShort": "55555",
+    "expiringSoon_one": "55555 {{count}} 55555",
+    "expiringSoon_other": "55555 {{count}} 55555"
   },
   "actions": {
     "view": "55555",
@@ -50,7 +47,6 @@
     "resolve": "55555",
     "addCredit": "55555",
     "cancel": "55555",
-    "backToCredits": "55555",
     "viewAllCredits": "55555",
     "runReconciliation": "55555",
     "runReconciliationAllClients": "55555",
@@ -69,15 +65,11 @@
     "reconciliation": "55555"
   },
   "settings": {
-    "title": "55555",
-    "creditExpiration": "55555",
-    "enabled": "55555",
-    "disabled": "55555",
-    "expirationPeriod": "55555",
-    "daysUnit": "55555 {{count}} 55555",
-    "notificationDays": "55555",
-    "none": "55555",
-    "loadErrorPrefix": "55555"
+    "loadErrorPrefix": "55555",
+    "captionEnabled": "55555 {{days}} 55555",
+    "captionDisabled": "55555",
+    "captionReminders": "55555 {{reminders}} 55555",
+    "editInSettings": "55555"
   },
   "stats": {
     "totalActiveCredits": "55555",
@@ -92,16 +84,12 @@
   },
   "management": {
     "title": "55555",
-    "loadErrorPrefix": "55555",
-    "noDataReturned": "55555",
     "noCreditsFound": "55555",
     "noMatchingCredits": "55555",
     "loadFailed": "55555"
   },
   "reconciliation": {
-    "selectClient": "55555",
     "allClients": "55555",
-    "status": "55555",
     "allStatuses": "55555",
     "fromDate": "55555",
     "toDate": "55555",
@@ -250,17 +238,16 @@
   },
   "expirationDialog": {
     "title": "55555",
-    "description": "55555",
     "creditAmount": "55555",
     "remainingAmount": "55555",
     "created": "55555",
     "currentExpiration": "55555",
     "noExpiration": "55555",
-    "removeExpiration": "55555",
     "newExpirationDate": "55555",
     "pastDateError": "55555",
     "updateError": "55555",
-    "updateSuccess": "55555"
+    "updateSuccess": "55555",
+    "clearHint": "55555"
   },
   "viewDialog": {
     "title": "55555",
@@ -272,13 +259,15 @@
   },
   "expireDialog": {
     "title": "55555",
-    "description": "55555",
     "reasonLabel": "55555",
     "reasonPlaceholder": "55555",
     "success": "55555",
     "error": "55555",
     "expiring": "55555",
-    "confirm": "55555"
+    "confirm": "55555",
+    "creditAmount": "55555",
+    "remainingAmount": "55555",
+    "warning": "55555 {{amount}} 55555"
   },
   "transferDialog": {
     "title": "55555",

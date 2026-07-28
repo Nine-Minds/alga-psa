@@ -47,8 +47,8 @@ function getStatusLabel(
       return (
         <span className="text-orange-500 font-medium">
           {t('status.expiringSoon', {
-            days: daysUntilExpiration,
-            defaultValue: 'Expiring Soon ({{days}} days)',
+            count: daysUntilExpiration,
+            defaultValue: 'Expires in {{count}} days',
           })}
         </span>
       );
@@ -241,45 +241,35 @@ export default function CreditsTable() {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-end gap-4">
-        <div>
-          <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
-            {t('filters.client', { defaultValue: 'Client' })}
-          </label>
-          <CustomSelect
-            id="credits-client-filter"
-            options={clientOptions}
-            value={selectedClient || null}
-            onValueChange={(value) => {
-              setSelectedClient(value);
-              setPage(1);
-            }}
-            placeholder={t('filters.allClients', { defaultValue: 'All Clients' })}
-            allowClear
-            className="w-64"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
-            {t('reconciliation.status', { defaultValue: 'Status' })}
-          </label>
-          <CustomSelect
-            id="credits-status-filter"
-            options={[
-              { value: 'active', label: t('status.active', { defaultValue: 'Active' }) },
-              { value: 'expiring_soon', label: t('status.expiringSoonShort', { defaultValue: 'Expiring Soon' }) },
-              { value: 'depleted', label: t('status.depleted', { defaultValue: 'Depleted' }) },
-              { value: 'expired', label: t('status.expired', { defaultValue: 'Expired' }) },
-            ]}
-            value={selectedStatus || null}
-            onValueChange={(value) => {
-              setSelectedStatus(value as CreditStatusFilter | '');
-              setPage(1);
-            }}
-            placeholder={t('reconciliation.allStatuses', { defaultValue: 'All Statuses' })}
-            allowClear
-            className="w-48"
-          />
-        </div>
+        <CustomSelect
+          id="credits-client-filter"
+          options={clientOptions}
+          value={selectedClient || null}
+          onValueChange={(value) => {
+            setSelectedClient(value);
+            setPage(1);
+          }}
+          placeholder={t('filters.allClients', { defaultValue: 'All Clients' })}
+          allowClear
+          className="w-64"
+        />
+        <CustomSelect
+          id="credits-status-filter"
+          options={[
+            { value: 'active', label: t('status.active', { defaultValue: 'Active' }) },
+            { value: 'expiring_soon', label: t('status.expiringSoonShort', { defaultValue: 'Expiring Soon' }) },
+            { value: 'depleted', label: t('status.depleted', { defaultValue: 'Depleted' }) },
+            { value: 'expired', label: t('status.expired', { defaultValue: 'Expired' }) },
+          ]}
+          value={selectedStatus || null}
+          onValueChange={(value) => {
+            setSelectedStatus(value as CreditStatusFilter | '');
+            setPage(1);
+          }}
+          placeholder={t('reconciliation.allStatuses', { defaultValue: 'All Statuses' })}
+          allowClear
+          className="w-48"
+        />
       </div>
 
       {loadError && (
