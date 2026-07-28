@@ -19,6 +19,35 @@ function tenantScopedReports(
   return tenantDb(conn, tenant).table<ICreditReconciliationReport>('credit_reconciliation_reports');
 }
 
+/**
+ * Normalize a raw credit_reconciliation_reports row into the shape the
+ * interface promises: metadata parsed from JSON, and the numeric columns
+ * (returned as strings by the pg driver) coerced to numbers so arithmetic
+ * on them doesn't silently concatenate.
+ */
+function normalizeReport<T extends ICreditReconciliationReport | undefined | null>(report: T): T {
+  if (!report) {
+    return report;
+  }
+
+  if (report.metadata && typeof report.metadata === 'string') {
+    try {
+      report.metadata = JSON.parse(report.metadata);
+    } catch (e) {
+      console.warn(`Failed to parse metadata for report ${report.report_id}:`, e);
+    }
+  }
+
+  for (const key of ['expected_balance', 'actual_balance', 'difference'] as const) {
+    const value = report[key];
+    if (typeof value === 'string') {
+      report[key] = parseFloat(value);
+    }
+  }
+
+  return report;
+}
+
 class CreditReconciliationReport {
   /**
    * Create a new credit reconciliation report
@@ -106,7 +135,7 @@ class CreditReconciliationReport {
         }
       }
 
-      return report || null;
+      return normalizeReport(report) || null;
     } catch (error) {
       console.error(`Error fetching reconciliation report ${reportId}:`, error);
       throw error;
@@ -146,17 +175,8 @@ class CreditReconciliationReport {
 
       const reports = await query;
 
-      // Parse metadata for each report
-      return reports.map(report => {
-        if (report.metadata && typeof report.metadata === 'string') {
-          try {
-            report.metadata = JSON.parse(report.metadata);
-          } catch (e) {
-            console.warn(`Failed to parse metadata for report ${report.report_id}:`, e);
-          }
-        }
-        return report;
-      });
+      // Parse metadata and coerce numeric columns for each report
+      return reports.map(report => normalizeReport(report));
     } catch (error) {
       console.error(`Error fetching reconciliation reports for client ${clientId}:`, error);
       throw error;
@@ -286,17 +306,8 @@ class CreditReconciliationReport {
         .limit(pageSize)
         .offset(offset);
 
-      // Parse metadata for each report
-      const reportsWithParsedMetadata = reports.map(report => {
-        if (report.metadata && typeof report.metadata === 'string') {
-          try {
-            report.metadata = JSON.parse(report.metadata);
-          } catch (e) {
-            console.warn(`Failed to parse metadata for report ${report.report_id}:`, e);
-          }
-        }
-        return report;
-      });
+      // Parse metadata and coerce numeric columns for each report
+      const reportsWithParsedMetadata = reports.map(report => normalizeReport(report));
 
       return {
         reports: reportsWithParsedMetadata,

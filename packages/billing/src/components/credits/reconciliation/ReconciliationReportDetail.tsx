@@ -17,7 +17,7 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 import { toast } from 'react-hot-toast';
 import { CheckCircle } from 'lucide-react';
-import { formatCurrencyFromMinorUnits, formatDateOnly } from '@alga-psa/core';
+import { formatCurrencyFromMinorUnits, formatDateOnly, toMinorUnits } from '@alga-psa/core';
 import type { ICreditReconciliationReport } from '@alga-psa/types';
 import { fetchReconciliationReportById } from '@alga-psa/reporting/actions/reconciliationReportActions';
 import {
@@ -60,7 +60,7 @@ function DetailField({ label, value, mono }: { label: string; value: React.React
 }
 
 export default function ReconciliationReportDetail({ reportId, onDataChanged }: ReconciliationReportDetailProps) {
-  const { t } = useTranslation('msp/credits');
+  const { t, i18n } = useTranslation('msp/credits');
 
   const [report, setReport] = useState<ReconciliationReportWithClient | null>(null);
   const [loading, setLoading] = useState(true);
@@ -104,8 +104,9 @@ export default function ReconciliationReportDetail({ reportId, onDataChanged }: 
     setNotes('');
     setFixError(null);
     if (fixType === 'custom_adjustment' && report) {
-      // Same unit as report.difference (matching the fix engine's default).
-      setCustomAmount(report.difference.toString());
+      // The engine works in minor units; the input takes major units (dollars)
+      // like every other money field in the app.
+      setCustomAmount((report.difference / 100).toString());
     }
   };
 
@@ -121,13 +122,14 @@ export default function ReconciliationReportDetail({ reportId, onDataChanged }: 
 
     let amount: number | undefined;
     if (selectedFix === 'custom_adjustment') {
-      amount = parseFloat(customAmount);
-      if (isNaN(amount)) {
+      const parsed = parseFloat(customAmount);
+      if (isNaN(parsed)) {
         setFixError(t('recommendedFix.errors.invalidAmount', {
           defaultValue: 'Please enter a valid amount',
         }));
         return;
       }
+      amount = toMinorUnits(parsed, i18n.language);
     }
 
     try {
@@ -578,7 +580,7 @@ export default function ReconciliationReportDetail({ reportId, onDataChanged }: 
                   </div>
                   <div className="font-medium text-right">
                     {selectedFix === 'custom_adjustment'
-                      ? formatCurrencyFromMinorUnits(report.actual_balance + (parseFloat(customAmount) || 0))
+                      ? formatCurrencyFromMinorUnits(report.actual_balance + toMinorUnits(parseFloat(customAmount) || 0, i18n.language))
                       : formatCurrencyFromMinorUnits(report.expected_balance)}
                   </div>
                 </div>
