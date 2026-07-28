@@ -145,7 +145,7 @@ export const creditNoteCreatedEventPayloadSchema = BaseDomainEventPayloadSchema.
   amount: z.string().min(1),
   currency: currencySchema,
   status: z.string().min(1),
-  sourceDocumentKind: z.enum(['prepayment_invoice', 'negative_invoice']).optional(),
+  sourceDocumentKind: z.enum(['prepayment_invoice', 'negative_invoice', 'direct_grant']).optional(),
   sourceInvoiceId: invoiceIdSchema.optional(),
   sourceInvoiceNumber: z.string().min(1).optional(),
   sourceInvoiceStatus: z.string().min(1).optional(),
