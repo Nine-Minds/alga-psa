@@ -2,7 +2,8 @@
  * Source-of-truth: quote-reminder-email template.
  *
  * Sent to a client to remind them that an outstanding quote is about to
- * expire. Currently only English is available.
+ * expire. Available in every supported locale; the send path looks the
+ * template up in the recipient's resolved locale and falls back to English.
  */
 
 const { wrapEmailLayout } = require('../../_shared/emailLayout.cjs');
@@ -19,13 +20,23 @@ const SUBTYPE_NAME = 'Quote Reminder';
 
 const SUBJECTS = {
   en: 'Reminder: Quote {{quote.number}} expires on {{quote.validUntil}}',
+  fr: 'Rappel : le devis {{quote.number}} expire le {{quote.validUntil}}',
+  es: 'Recordatorio: el presupuesto {{quote.number}} vence el {{quote.validUntil}}',
+  de: 'Erinnerung: Angebot {{quote.number}} läuft am {{quote.validUntil}} ab',
+  nl: 'Herinnering: offerte {{quote.number}} verloopt op {{quote.validUntil}}',
+  it: 'Promemoria: il preventivo {{quote.number}} scade il {{quote.validUntil}}',
+  pl: 'Przypomnienie: oferta {{quote.number}} wygasa {{quote.validUntil}}',
+  pt: 'Lembrete: o orçamento {{quote.number}} expira em {{quote.validUntil}}',
 };
 
+/* eslint-disable max-len */
 const COPY = {
   en: {
     headerLabel: 'Quote Reminder',
+    headerMeta: 'From {{company.name}}',
     greeting: 'Hello,',
     intro: 'This is a reminder that your quote from <strong>{{company.name}}</strong> expires on <strong>{{quote.validUntil}}</strong>.',
+    textIntro: 'This is a reminder that your quote from {{company.name}} expires on {{quote.validUntil}}.',
     quoteNumberLabel: 'Quote Number',
     totalLabel: 'Total',
     validUntilLabel: 'Valid Until',
@@ -36,8 +47,136 @@ const COPY = {
     footer: 'Powered by Alga PSA',
     textHeader: 'Reminder: Quote {{quote.number}} expires on {{quote.validUntil}}',
     textDetailsHeader: 'Quote Details:',
+    textNoteLabel: 'Note',
+  },
+  fr: {
+    headerLabel: 'Rappel de devis',
+    headerMeta: 'De {{company.name}}',
+    greeting: 'Bonjour,',
+    intro: 'Nous vous rappelons que votre devis de <strong>{{company.name}}</strong> expire le <strong>{{quote.validUntil}}</strong>.',
+    textIntro: 'Nous vous rappelons que votre devis de {{company.name}} expire le {{quote.validUntil}}.',
+    quoteNumberLabel: 'Numéro de devis',
+    totalLabel: 'Total',
+    validUntilLabel: 'Valable jusqu\'au',
+    customMessageLabel: 'Message de {{company.name}}',
+    portalLinkLabel: 'Consulter ce devis dans le portail client',
+    closingNote: 'Si vous avez des questions concernant ce devis, n\'hésitez pas à nous contacter.',
+    thankYou: 'Cordialement,',
+    footer: 'Powered by Alga PSA &middot; Gardons les équipes alignées',
+    textHeader: 'Rappel : le devis {{quote.number}} expire le {{quote.validUntil}}',
+    textDetailsHeader: 'Détails du devis :',
+    textNoteLabel: 'Remarque',
+  },
+  es: {
+    headerLabel: 'Recordatorio de presupuesto',
+    headerMeta: 'De {{company.name}}',
+    greeting: 'Hola:',
+    intro: 'Le recordamos que su presupuesto de <strong>{{company.name}}</strong> vence el <strong>{{quote.validUntil}}</strong>.',
+    textIntro: 'Le recordamos que su presupuesto de {{company.name}} vence el {{quote.validUntil}}.',
+    quoteNumberLabel: 'Número de presupuesto',
+    totalLabel: 'Total',
+    validUntilLabel: 'Válido hasta',
+    customMessageLabel: 'Mensaje de {{company.name}}',
+    portalLinkLabel: 'Revisar este presupuesto en el portal de clientes',
+    closingNote: 'Si tiene alguna pregunta sobre este presupuesto, no dude en contactarnos.',
+    thankYou: 'Atentamente,',
+    footer: 'Powered by Alga PSA &middot; Manteniendo a los equipos alineados',
+    textHeader: 'Recordatorio: el presupuesto {{quote.number}} vence el {{quote.validUntil}}',
+    textDetailsHeader: 'Detalles del presupuesto:',
+    textNoteLabel: 'Nota',
+  },
+  de: {
+    headerLabel: 'Angebotserinnerung',
+    headerMeta: 'Von {{company.name}}',
+    greeting: 'Guten Tag,',
+    intro: 'Wir möchten Sie daran erinnern, dass Ihr Angebot von <strong>{{company.name}}</strong> am <strong>{{quote.validUntil}}</strong> abläuft.',
+    textIntro: 'Wir möchten Sie daran erinnern, dass Ihr Angebot von {{company.name}} am {{quote.validUntil}} abläuft.',
+    quoteNumberLabel: 'Angebotsnummer',
+    totalLabel: 'Gesamtbetrag',
+    validUntilLabel: 'Gültig bis',
+    customMessageLabel: 'Nachricht von {{company.name}}',
+    portalLinkLabel: 'Dieses Angebot im Kundenportal ansehen',
+    closingNote: 'Bei Fragen zu diesem Angebot können Sie uns gerne kontaktieren.',
+    thankYou: 'Mit freundlichen Grüßen,',
+    footer: 'Powered by Alga PSA &middot; Teams auf Kurs halten',
+    textHeader: 'Erinnerung: Angebot {{quote.number}} läuft am {{quote.validUntil}} ab',
+    textDetailsHeader: 'Angebotsdetails:',
+    textNoteLabel: 'Hinweis',
+  },
+  nl: {
+    headerLabel: 'Offerteherinnering',
+    headerMeta: 'Van {{company.name}}',
+    greeting: 'Hallo,',
+    intro: 'Dit is een herinnering dat uw offerte van <strong>{{company.name}}</strong> verloopt op <strong>{{quote.validUntil}}</strong>.',
+    textIntro: 'Dit is een herinnering dat uw offerte van {{company.name}} verloopt op {{quote.validUntil}}.',
+    quoteNumberLabel: 'Offertenummer',
+    totalLabel: 'Totaal',
+    validUntilLabel: 'Geldig tot',
+    customMessageLabel: 'Bericht van {{company.name}}',
+    portalLinkLabel: 'Bekijk deze offerte in het klantenportaal',
+    closingNote: 'Als u vragen heeft over deze offerte, aarzel dan niet om contact met ons op te nemen.',
+    thankYou: 'Met vriendelijke groet,',
+    footer: 'Powered by Alga PSA &middot; Teams op één lijn houden',
+    textHeader: 'Herinnering: offerte {{quote.number}} verloopt op {{quote.validUntil}}',
+    textDetailsHeader: 'Offertegegevens:',
+    textNoteLabel: 'Opmerking',
+  },
+  it: {
+    headerLabel: 'Promemoria preventivo',
+    headerMeta: 'Da {{company.name}}',
+    greeting: 'Salve,',
+    intro: 'Le ricordiamo che il suo preventivo da parte di <strong>{{company.name}}</strong> scade il <strong>{{quote.validUntil}}</strong>.',
+    textIntro: 'Le ricordiamo che il suo preventivo da parte di {{company.name}} scade il {{quote.validUntil}}.',
+    quoteNumberLabel: 'Numero preventivo',
+    totalLabel: 'Totale',
+    validUntilLabel: 'Valido fino al',
+    customMessageLabel: 'Messaggio da {{company.name}}',
+    portalLinkLabel: 'Consulta questo preventivo nel portale clienti',
+    closingNote: 'Per qualsiasi domanda su questo preventivo, non esiti a contattarci.',
+    thankYou: 'Cordiali saluti,',
+    footer: 'Powered by Alga PSA &middot; Manteniamo i team allineati',
+    textHeader: 'Promemoria: il preventivo {{quote.number}} scade il {{quote.validUntil}}',
+    textDetailsHeader: 'Dettagli del preventivo:',
+    textNoteLabel: 'Nota',
+  },
+  pl: {
+    headerLabel: 'Przypomnienie o ofercie',
+    headerMeta: 'Od {{company.name}}',
+    greeting: 'Dzień dobry,',
+    intro: 'Przypominamy, że Państwa oferta od <strong>{{company.name}}</strong> wygasa {{quote.validUntil}}.',
+    textIntro: 'Przypominamy, że Państwa oferta od {{company.name}} wygasa {{quote.validUntil}}.',
+    quoteNumberLabel: 'Numer oferty',
+    totalLabel: 'Razem',
+    validUntilLabel: 'Ważna do',
+    customMessageLabel: 'Wiadomość od {{company.name}}',
+    portalLinkLabel: 'Zobacz tę ofertę w portalu klienta',
+    closingNote: 'W razie pytań dotyczących tej oferty prosimy o kontakt.',
+    thankYou: 'Z poważaniem,',
+    footer: 'Powered by Alga PSA',
+    textHeader: 'Przypomnienie: oferta {{quote.number}} wygasa {{quote.validUntil}}',
+    textDetailsHeader: 'Szczegóły oferty:',
+    textNoteLabel: 'Uwaga',
+  },
+  pt: {
+    headerLabel: 'Lembrete de orçamento',
+    headerMeta: 'De {{company.name}}',
+    greeting: 'Olá,',
+    intro: 'Este é um lembrete de que o seu orçamento de <strong>{{company.name}}</strong> expira em <strong>{{quote.validUntil}}</strong>.',
+    textIntro: 'Este é um lembrete de que o seu orçamento de {{company.name}} expira em {{quote.validUntil}}.',
+    quoteNumberLabel: 'Número do orçamento',
+    totalLabel: 'Total',
+    validUntilLabel: 'Válido até',
+    customMessageLabel: 'Observação de {{company.name}}',
+    portalLinkLabel: 'Consultar este orçamento no portal do cliente',
+    closingNote: 'Se tiver alguma dúvida sobre este orçamento, entre em contato conosco.',
+    thankYou: 'Atenciosamente,',
+    footer: 'Powered by Alga PSA',
+    textHeader: 'Lembrete: o orçamento {{quote.number}} expira em {{quote.validUntil}}',
+    textDetailsHeader: 'Detalhes do orçamento:',
+    textNoteLabel: 'Observação',
   },
 };
+/* eslint-enable max-len */
 
 function buildBodyHtml(c) {
   return `<p style="margin:0 0 16px 0;font-size:15px;color:#1f2933;line-height:1.5;">${c.greeting}</p>
@@ -78,7 +217,7 @@ function buildText(c) {
 
 ${c.greeting}
 
-This is a reminder that your quote from {{company.name}} expires on {{quote.validUntil}}.
+${c.textIntro}
 
 ${c.textDetailsHeader}
 - ${c.quoteNumberLabel}: {{quote.number}}
@@ -86,7 +225,7 @@ ${c.textDetailsHeader}
 - ${c.validUntilLabel}: {{quote.validUntil}}
 
 {{#if customMessage}}
-Note: {{customMessage}}
+${c.textNoteLabel}: {{customMessage}}
 {{/if}}
 {{#if portalLink}}
 ${c.portalLinkLabel}: {{portalLink}}
@@ -109,7 +248,7 @@ function getTemplate() {
         language: lang,
         headerLabel: copy.headerLabel,
         headerTitle: '{{quote.number}}',
-        headerMeta: 'From {{company.name}}',
+        headerMeta: copy.headerMeta,
         bodyHtml: buildBodyHtml(copy),
         footerText: copy.footer,
       }),

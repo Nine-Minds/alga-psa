@@ -2,7 +2,8 @@
  * Source-of-truth: quote-email template.
  *
  * Sent to a client when a quote is sent or resent, with the quote PDF
- * attached. Currently only English is available.
+ * attached. Available in every supported locale; the send path looks the
+ * template up in the recipient's resolved locale and falls back to English.
  */
 
 const { wrapEmailLayout } = require('../../_shared/emailLayout.cjs');
@@ -19,13 +20,23 @@ const SUBTYPE_NAME = 'Quote Email';
 
 const SUBJECTS = {
   en: 'Quote {{quote.number}} from {{company.name}}',
+  fr: 'Devis {{quote.number}} de {{company.name}}',
+  es: 'Presupuesto {{quote.number}} de {{company.name}}',
+  de: 'Angebot {{quote.number}} von {{company.name}}',
+  nl: 'Offerte {{quote.number}} van {{company.name}}',
+  it: 'Preventivo {{quote.number}} da {{company.name}}',
+  pl: 'Oferta {{quote.number}} od {{company.name}}',
+  pt: 'Orçamento {{quote.number}} de {{company.name}}',
 };
 
+/* eslint-disable max-len */
 const COPY = {
   en: {
     headerLabel: 'Quote',
+    headerMeta: 'From {{company.name}}',
     greeting: 'Hello,',
     intro: 'Your quote is attached and ready for review from <strong>{{company.name}}</strong>.',
+    textIntro: 'Your quote is attached and ready for review from {{company.name}}.',
     quoteNumberLabel: 'Quote Number',
     totalLabel: 'Total',
     validUntilLabel: 'Valid Until',
@@ -36,8 +47,136 @@ const COPY = {
     footer: 'Powered by Alga PSA',
     textHeader: 'Quote {{quote.number}} from {{company.name}}',
     textDetailsHeader: 'Quote Details:',
+    textNoteLabel: 'Note',
+  },
+  fr: {
+    headerLabel: 'Devis',
+    headerMeta: 'De {{company.name}}',
+    greeting: 'Bonjour,',
+    intro: 'Votre devis de <strong>{{company.name}}</strong> est joint et prêt à être consulté.',
+    textIntro: 'Votre devis de {{company.name}} est joint et prêt à être consulté.',
+    quoteNumberLabel: 'Numéro de devis',
+    totalLabel: 'Total',
+    validUntilLabel: 'Valable jusqu\'au',
+    customMessageLabel: 'Message de {{company.name}}',
+    portalLinkLabel: 'Consulter ce devis dans le portail client',
+    attachmentNote: 'Le devis est joint à cet e-mail au format PDF. Si vous avez des questions, n\'hésitez pas à nous contacter.',
+    thankYou: 'Cordialement,',
+    footer: 'Powered by Alga PSA &middot; Gardons les équipes alignées',
+    textHeader: 'Devis {{quote.number}} de {{company.name}}',
+    textDetailsHeader: 'Détails du devis :',
+    textNoteLabel: 'Remarque',
+  },
+  es: {
+    headerLabel: 'Presupuesto',
+    headerMeta: 'De {{company.name}}',
+    greeting: 'Hola:',
+    intro: 'Su presupuesto de <strong>{{company.name}}</strong> está adjunto y listo para su revisión.',
+    textIntro: 'Su presupuesto de {{company.name}} está adjunto y listo para su revisión.',
+    quoteNumberLabel: 'Número de presupuesto',
+    totalLabel: 'Total',
+    validUntilLabel: 'Válido hasta',
+    customMessageLabel: 'Mensaje de {{company.name}}',
+    portalLinkLabel: 'Revisar este presupuesto en el portal de clientes',
+    attachmentNote: 'El presupuesto está adjunto a este correo en formato PDF. Si tiene alguna pregunta, no dude en contactarnos.',
+    thankYou: 'Atentamente,',
+    footer: 'Powered by Alga PSA &middot; Manteniendo a los equipos alineados',
+    textHeader: 'Presupuesto {{quote.number}} de {{company.name}}',
+    textDetailsHeader: 'Detalles del presupuesto:',
+    textNoteLabel: 'Nota',
+  },
+  de: {
+    headerLabel: 'Angebot',
+    headerMeta: 'Von {{company.name}}',
+    greeting: 'Guten Tag,',
+    intro: 'Ihr Angebot von <strong>{{company.name}}</strong> ist beigefügt und steht zur Prüfung bereit.',
+    textIntro: 'Ihr Angebot von {{company.name}} ist beigefügt und steht zur Prüfung bereit.',
+    quoteNumberLabel: 'Angebotsnummer',
+    totalLabel: 'Gesamtbetrag',
+    validUntilLabel: 'Gültig bis',
+    customMessageLabel: 'Nachricht von {{company.name}}',
+    portalLinkLabel: 'Dieses Angebot im Kundenportal ansehen',
+    attachmentNote: 'Das Angebot ist dieser E-Mail als PDF beigefügt. Bei Fragen können Sie uns gerne kontaktieren.',
+    thankYou: 'Mit freundlichen Grüßen,',
+    footer: 'Powered by Alga PSA &middot; Teams auf Kurs halten',
+    textHeader: 'Angebot {{quote.number}} von {{company.name}}',
+    textDetailsHeader: 'Angebotsdetails:',
+    textNoteLabel: 'Hinweis',
+  },
+  nl: {
+    headerLabel: 'Offerte',
+    headerMeta: 'Van {{company.name}}',
+    greeting: 'Hallo,',
+    intro: 'Uw offerte van <strong>{{company.name}}</strong> is bijgevoegd en klaar om te bekijken.',
+    textIntro: 'Uw offerte van {{company.name}} is bijgevoegd en klaar om te bekijken.',
+    quoteNumberLabel: 'Offertenummer',
+    totalLabel: 'Totaal',
+    validUntilLabel: 'Geldig tot',
+    customMessageLabel: 'Bericht van {{company.name}}',
+    portalLinkLabel: 'Bekijk deze offerte in het klantenportaal',
+    attachmentNote: 'De offerte is als PDF bij deze e-mail gevoegd. Mocht u vragen hebben, aarzel dan niet om contact met ons op te nemen.',
+    thankYou: 'Met vriendelijke groet,',
+    footer: 'Powered by Alga PSA &middot; Teams op één lijn houden',
+    textHeader: 'Offerte {{quote.number}} van {{company.name}}',
+    textDetailsHeader: 'Offertegegevens:',
+    textNoteLabel: 'Opmerking',
+  },
+  it: {
+    headerLabel: 'Preventivo',
+    headerMeta: 'Da {{company.name}}',
+    greeting: 'Salve,',
+    intro: 'Il suo preventivo da parte di <strong>{{company.name}}</strong> è in allegato e pronto per la revisione.',
+    textIntro: 'Il suo preventivo da parte di {{company.name}} è in allegato e pronto per la revisione.',
+    quoteNumberLabel: 'Numero preventivo',
+    totalLabel: 'Totale',
+    validUntilLabel: 'Valido fino al',
+    customMessageLabel: 'Messaggio da {{company.name}}',
+    portalLinkLabel: 'Consulta questo preventivo nel portale clienti',
+    attachmentNote: 'Il preventivo è allegato a questa email in formato PDF. Per qualsiasi domanda, non esiti a contattarci.',
+    thankYou: 'Cordiali saluti,',
+    footer: 'Powered by Alga PSA &middot; Manteniamo i team allineati',
+    textHeader: 'Preventivo {{quote.number}} da {{company.name}}',
+    textDetailsHeader: 'Dettagli del preventivo:',
+    textNoteLabel: 'Nota',
+  },
+  pl: {
+    headerLabel: 'Oferta',
+    headerMeta: 'Od {{company.name}}',
+    greeting: 'Dzień dobry,',
+    intro: 'W załączeniu przesyłamy Państwa ofertę od <strong>{{company.name}}</strong> do zapoznania się.',
+    textIntro: 'W załączeniu przesyłamy Państwa ofertę od {{company.name}} do zapoznania się.',
+    quoteNumberLabel: 'Numer oferty',
+    totalLabel: 'Razem',
+    validUntilLabel: 'Ważna do',
+    customMessageLabel: 'Wiadomość od {{company.name}}',
+    portalLinkLabel: 'Zobacz tę ofertę w portalu klienta',
+    attachmentNote: 'Oferta jest załączona do tej wiadomości w formacie PDF. W razie pytań prosimy o kontakt.',
+    thankYou: 'Z poważaniem,',
+    footer: 'Powered by Alga PSA',
+    textHeader: 'Oferta {{quote.number}} od {{company.name}}',
+    textDetailsHeader: 'Szczegóły oferty:',
+    textNoteLabel: 'Uwaga',
+  },
+  pt: {
+    headerLabel: 'Orçamento',
+    headerMeta: 'De {{company.name}}',
+    greeting: 'Olá,',
+    intro: 'Segue em anexo o seu orçamento de <strong>{{company.name}}</strong>, pronto para análise.',
+    textIntro: 'Segue em anexo o seu orçamento de {{company.name}}, pronto para análise.',
+    quoteNumberLabel: 'Número do orçamento',
+    totalLabel: 'Total',
+    validUntilLabel: 'Válido até',
+    customMessageLabel: 'Observação de {{company.name}}',
+    portalLinkLabel: 'Consultar este orçamento no portal do cliente',
+    attachmentNote: 'O orçamento está anexado a este email como PDF. Se tiver alguma dúvida, entre em contato conosco.',
+    thankYou: 'Atenciosamente,',
+    footer: 'Powered by Alga PSA',
+    textHeader: 'Orçamento {{quote.number}} de {{company.name}}',
+    textDetailsHeader: 'Detalhes do orçamento:',
+    textNoteLabel: 'Observação',
   },
 };
+/* eslint-enable max-len */
 
 function buildBodyHtml(c) {
   return `<p style="margin:0 0 16px 0;font-size:15px;color:#1f2933;line-height:1.5;">${c.greeting}</p>
@@ -78,7 +217,7 @@ function buildText(c) {
 
 ${c.greeting}
 
-Your quote is attached and ready for review from {{company.name}}.
+${c.textIntro}
 
 ${c.textDetailsHeader}
 - ${c.quoteNumberLabel}: {{quote.number}}
@@ -86,7 +225,7 @@ ${c.textDetailsHeader}
 - ${c.validUntilLabel}: {{quote.validUntil}}
 
 {{#if customMessage}}
-Note: {{customMessage}}
+${c.textNoteLabel}: {{customMessage}}
 {{/if}}
 {{#if portalLink}}
 ${c.portalLinkLabel}: {{portalLink}}
@@ -109,7 +248,7 @@ function getTemplate() {
         language: lang,
         headerLabel: copy.headerLabel,
         headerTitle: '{{quote.number}}',
-        headerMeta: 'From {{company.name}}',
+        headerMeta: copy.headerMeta,
         bodyHtml: buildBodyHtml(copy),
         footerText: copy.footer,
       }),
