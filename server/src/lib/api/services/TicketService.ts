@@ -13,6 +13,20 @@ import { TICKET_ORIGINS } from '@alga-psa/types';
 import { maybeReopenBundleMasterFromChildReply } from '@alga-psa/tickets/actions/ticketBundleUtils';
 import { deleteTicketChildRecords } from '@alga-psa/tickets/lib/deleteTicketChildRecords';
 import { enforceTicketCloseRules, TicketCloseValidationError } from '@alga-psa/tickets/lib/validateTicketClosure';
+import { prepareTicketResourceReassignment } from '@alga-psa/tickets/lib/reassignTicketResources';
+import {
+  TicketResourceError,
+  addTicketResourceCore,
+  getTicketResourcesCore,
+  publishTicketResourceEvent,
+  removeTicketResourceCore,
+} from '@alga-psa/tickets/lib/ticketResourceCore';
+import {
+  TeamAssignmentError,
+  assignTeamToTicketCore,
+  removeTeamFromTicketCore,
+  type RemoveTeamFromTicketOptions,
+} from '@alga-psa/tickets/lib/teamAssignmentCore';
 import { deleteEntityWithValidation } from '@alga-psa/core/server';
 import { publishWorkflowEvent } from 'server/src/lib/eventBus/publishers';
 import { NotFoundError, ValidationError, ConflictError } from '../middleware/apiMiddleware';
@@ -36,7 +50,11 @@ import {
   CreateTicketMaterialData,
   UpdateTicketCommentData,
   TicketSearchData,
-  CreateTicketFromAssetData
+  CreateTicketFromAssetData,
+  AddTicketAgentData,
+  TicketAgentsResponse,
+  AssignTicketTeamData,
+  RemoveTicketTeamData
 } from '../schemas/ticket';
 import { ListOptions } from '../controllers/types';
 import { analytics } from '../../analytics/posthog';
@@ -675,6 +693,229 @@ export class TicketService extends BaseService<ITicket> {
     if (!deleted) {
       throw new NotFoundError('Asset-ticket association not found');
     }
+  }
+
+  /**
+   * List a ticket's primary agent (tickets.assigned_to) and its additional
+   * agents (ticket_resources).
+   */
+  async getTicketAgents(ticketId: string, context: ServiceContext): Promise<TicketAgentsResponse> {
+    const { knex } = await this.getKnex();
+    this.assertValidTicketId(ticketId);
+
+    return withTransaction(knex, async (trx) => {
+      const ticket = await tenantScopedTable(trx, 'tickets', context.tenant)
+        .where({ ticket_id: ticketId })
+        .first();
+      if (!ticket) {
+        throw new NotFoundError('Ticket not found');
+      }
+
+      const resources = await getTicketResourcesCore(trx, context.tenant, ticketId);
+      return this.buildTicketAgentsResponse(trx, context, ticket, resources);
+    });
+  }
+
+  /**
+   * Add an additional agent to a ticket. A ticket with no primary agent
+   * promotes the user to primary instead, matching the UI behaviour.
+   */
+  async addTicketAgent(
+    ticketId: string,
+    data: AddTicketAgentData,
+    context: ServiceContext
+  ): Promise<TicketAgentsResponse> {
+    const { knex } = await this.getKnex();
+    this.assertValidTicketId(ticketId);
+
+    const { response, event } = await withTransaction(knex, async (trx) => {
+      const agentUser = await tenantScopedTable(trx, 'users', context.tenant)
+        .where({ user_id: data.user_id })
+        .first();
+      if (!agentUser) {
+        throw new NotFoundError('User not found');
+      }
+
+      let added;
+      try {
+        added = await addTicketResourceCore(
+          trx,
+          context.tenant,
+          context.userId,
+          ticketId,
+          data.user_id,
+          data.role ?? 'support'
+        );
+      } catch (error) {
+        if (error instanceof TicketResourceError) {
+          throw error.kind === 'conflict'
+            ? new ConflictError('User is already an additional agent on this ticket')
+            : new NotFoundError('Ticket not found');
+        }
+        throw error;
+      }
+
+      const ticket = await tenantScopedTable(trx, 'tickets', context.tenant)
+        .where({ ticket_id: ticketId })
+        .first();
+      const resources = await getTicketResourcesCore(trx, context.tenant, ticketId);
+      return {
+        response: await this.buildTicketAgentsResponse(trx, context, ticket, resources),
+        event: added.event,
+      };
+    });
+
+    // Emit after the transaction commits so subscribers can see the data.
+    await publishTicketResourceEvent(event);
+
+    return response;
+  }
+
+  /**
+   * Remove an additional agent from a ticket by user id. The primary agent is
+   * changed through the assignment endpoint, not here.
+   */
+  async removeTicketAgent(ticketId: string, userId: string, context: ServiceContext): Promise<void> {
+    const { knex } = await this.getKnex();
+    this.assertValidTicketId(ticketId);
+
+    await withTransaction(knex, async (trx) => {
+      const resource = await tenantScopedTable(trx, 'ticket_resources', context.tenant)
+        .where({ ticket_id: ticketId, additional_user_id: userId })
+        .first();
+      if (!resource) {
+        throw new NotFoundError('Additional agent not found on this ticket');
+      }
+
+      await removeTicketResourceCore(trx, context.tenant, resource.assignment_id);
+    });
+  }
+
+  /**
+   * Assign a team to a ticket: sets assigned_team_id, resolves the primary
+   * agent (existing one, else the team lead) and adds the team's active members
+   * as additional agents.
+   */
+  async assignTeam(ticketId: string, data: AssignTicketTeamData, context: ServiceContext): Promise<ITicket> {
+    const { knex } = await this.getKnex();
+    this.assertValidTicketId(ticketId);
+
+    const { ticket, assignedTo } = await withTransaction(knex, async (trx) => {
+      let resolvedAssignedTo: string;
+      try {
+        resolvedAssignedTo = await assignTeamToTicketCore(
+          trx,
+          context.tenant,
+          context.userId,
+          ticketId,
+          data.team_id
+        );
+      } catch (error) {
+        throw this.mapTeamAssignmentError(error);
+      }
+
+      const updated = await tenantScopedTable(trx, 'tickets', context.tenant)
+        .where({ ticket_id: ticketId })
+        .first();
+
+      return { ticket: updated as ITicket, assignedTo: resolvedAssignedTo };
+    });
+
+    await this.safePublishEvent('TICKET_ASSIGNED', context, {
+      ticketId,
+      userId: assignedTo,
+      assignedByUserId: context.userId,
+      changes: { assigned_team_id: data.team_id },
+      suppressContactNotifications: data.suppressContactNotifications === true,
+      suppressInternalNotifications: data.suppressInternalNotifications === true,
+    });
+
+    return this.withDescriptionHtml(ticket);
+  }
+
+  /**
+   * Clear a ticket's team assignment, optionally pruning the additional agents
+   * the team assignment created.
+   */
+  async removeTeam(ticketId: string, data: RemoveTicketTeamData, context: ServiceContext): Promise<ITicket> {
+    const { knex } = await this.getKnex();
+    this.assertValidTicketId(ticketId);
+
+    const options: RemoveTeamFromTicketOptions = {
+      mode: data.mode,
+      keepUserIds: data.keep_user_ids,
+    };
+
+    return withTransaction(knex, async (trx) => {
+      try {
+        await removeTeamFromTicketCore(trx, context.tenant, context.userId, ticketId, options);
+      } catch (error) {
+        throw this.mapTeamAssignmentError(error);
+      }
+
+      const updated = await tenantScopedTable(trx, 'tickets', context.tenant)
+        .where({ ticket_id: ticketId })
+        .first();
+
+      return this.withDescriptionHtml(updated as ITicket);
+    });
+  }
+
+  private mapTeamAssignmentError(error: unknown): unknown {
+    if (!(error instanceof TeamAssignmentError)) {
+      return error;
+    }
+
+    switch (error.kind) {
+      case 'ticket_not_found':
+        return new NotFoundError('Ticket not found');
+      case 'team_not_found':
+        return new NotFoundError('Team not found');
+      case 'team_lead_missing':
+        return new ValidationError('The selected team does not have a team lead');
+      default:
+        return error;
+    }
+  }
+
+  private async buildTicketAgentsResponse(
+    trx: Knex.Transaction,
+    context: ServiceContext,
+    ticket: Record<string, any>,
+    resources: Array<Record<string, any>>
+  ): Promise<TicketAgentsResponse> {
+    const userIds = Array.from(new Set<string>([
+      ...(ticket.assigned_to ? [ticket.assigned_to as string] : []),
+      ...resources.map((resource) => resource.additional_user_id as string).filter(Boolean),
+    ]));
+
+    const users = userIds.length
+      ? await tenantScopedTable(trx, 'users', context.tenant)
+        .whereIn('user_id', userIds)
+        .select('user_id', 'first_name', 'last_name', 'email')
+      : [];
+    const usersById = new Map<string, any>(users.map((user: any) => [user.user_id, user]));
+
+    const toAgent = (userId: string) => {
+      const user = usersById.get(userId);
+      return {
+        user_id: userId,
+        first_name: user?.first_name ?? null,
+        last_name: user?.last_name ?? null,
+        email: user?.email ?? null,
+      };
+    };
+
+    return {
+      ticket_id: ticket.ticket_id as string,
+      primary_agent: ticket.assigned_to ? toAgent(ticket.assigned_to as string) : null,
+      additional_agents: resources.map((resource) => ({
+        ...toAgent(resource.additional_user_id as string),
+        assignment_id: resource.assignment_id as string,
+        role: resource.role ?? null,
+        assigned_at: resource.assigned_at ?? null,
+      })),
+    };
   }
 
   async uploadTicketDocument(ticketId: string, file: File, context: ServiceContext): Promise<IDocument> {
@@ -1319,11 +1560,31 @@ export class TicketService extends BaseService<ITicket> {
         updated_at: knex.raw('now()')
       };
 
+      // Changing the primary assignee requires clearing the ticket_resources
+      // rows that reference the old one, then re-keying them afterwards.
+      const isChangingAssignment =
+        'assigned_to' in cleanedData &&
+        cleanedData.assigned_to !== undefined &&
+        cleanedData.assigned_to !== currentTicket.assigned_to;
+      const finalizeResourceReassignment = isChangingAssignment
+        ? await prepareTicketResourceReassignment(
+          trx,
+          context.tenant,
+          id,
+          currentTicket.assigned_to,
+          (cleanedData as { assigned_to?: string | null }).assigned_to
+        )
+        : null;
+
       // Update ticket
       const [ticket] = await tenantScopedTable(trx, 'tickets', context.tenant)
         .where({ ticket_id: id })
         .update(updateData)
         .returning('*');
+
+      if (finalizeResourceReassignment) {
+        await finalizeResourceReassignment();
+      }
 
       // Handle tags if provided
       if (data.tags) {

@@ -14,6 +14,7 @@
     "src/test/integration/multiCurrencyGaps.integration.test.ts",
     "src/test/integration/ticketCreateBoardStatusValidation.integration.test.ts",
     "src/test/integration/ticketCloseRules.integration.test.ts",
+    "src/test/integration/ticketAssignmentResources.integration.test.ts",
     "src/test/integration/ticketStatusReadSurfaces.integration.test.ts",
     "src/test/integration/ticketActivityLog.integration.test.ts",
     "src/test/integration/autoCloseTickets.integration.test.ts",

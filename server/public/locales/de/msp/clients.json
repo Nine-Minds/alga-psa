@@ -296,6 +296,155 @@
     "parentClientClear": "Löschen",
     "parentClientLegacy": "Zuvor als Text eingegeben: {{name}}"
   },
+  "clientCommandCenter": {
+    "cards": {
+      "concerns": "Auffälligkeiten",
+      "documents": "Dokumente",
+      "installBase": "Installationsbasis",
+      "locations": "Standorte",
+      "money": "Finanzen",
+      "notes": "Notizen",
+      "people": "Personen",
+      "record": "Kundendatensatz",
+      "service": "Service",
+      "timeline": "Alles der Reihe nach"
+    },
+    "csatEmpty": "Noch keine Umfrageantworten.",
+    "discardCancel": "Weiter bearbeiten",
+    "discardConfirm": "Änderungen verwerfen",
+    "discardMessage": "Sie haben ungespeicherte Änderungen am Kundendatensatz. Schließen und verwerfen?",
+    "discardTitle": "Ungespeicherte Änderungen",
+    "documents": {
+      "more": "+{{count}} weitere",
+      "none": "Noch keine Dokumente."
+    },
+    "flags": {
+      "clientWaiting": "Kunde wartet seit {{days}} T — {{ref}}",
+      "draftInvoices_one": "1 Rechnungsentwurf — {{amount}} nicht abgerechnet · {{ref}}",
+      "draftInvoices_other": "{{count}} Rechnungsentwürfe — {{amount}} nicht abgerechnet · {{ref}}",
+      "rmaOpen_one": "1 offene RMA — {{days}} T",
+      "rmaOpen_other": "{{count}} offene RMAs — älteste {{days}} T",
+      "slaAtRisk_one": "SLA gefährdet — {{ref}}",
+      "slaAtRisk_other": "{{count}} Tickets mit SLA-Risiko — nächstes {{ref}}",
+      "slaBreached_one": "SLA verletzt — {{ref}}",
+      "slaBreached_other": "{{count}} SLA-Verletzungen — schwerste {{ref}}",
+      "soPartial": "{{ref}}: {{fulfilled}} von {{total}} Positionen erfüllt",
+      "ticketOverdue_one": "1 überfälliges Ticket — {{ref}} {{days}} T überfällig",
+      "ticketOverdue_other": "{{count}} überfällige Tickets — {{ref}} {{days}} T überfällig",
+      "ticketUnassigned_one": "1 nicht zugewiesenes Ticket — {{ref}}",
+      "ticketUnassigned_other": "{{count}} nicht zugewiesene Tickets — ältestes {{ref}}",
+      "wipAging_one": "1 nicht abgerechnete Position — {{days}} T alt{{materials}}",
+      "wipAging_other": "{{count}} nicht abgerechnete Positionen — älteste {{days}} T{{materials}}"
+    },
+    "installBase": {
+      "assets": "verwaltete Assets",
+      "assetsLink": "Verwaltete Assets",
+      "none": "Noch keine ausgelieferte Ausstattung.",
+      "rmas": "offene RMAs",
+      "sold": "verkaufte Einheiten",
+      "viewAsset": "Asset",
+      "warrantyExpired_one": "1 ohne Garantie",
+      "warrantyExpired_other": "{{count}} ohne Garantie",
+      "warrantyExpiring_one": "1 läuft in ≤90 T ab",
+      "warrantyExpiring_other": "{{count}} laufen in ≤90 T ab",
+      "warrantyTracked": " (von {{count}} erfasst)"
+    },
+    "locations": {
+      "billing": "Rechnung",
+      "manage": "Verwalten",
+      "more": "+{{count}} weitere",
+      "none": "Noch keine Standorte.",
+      "shipping": "Versand"
+    },
+    "money": {
+      "activeContracts": "Aktive Verträge",
+      "agingNote": "{{total}} offen · erfasste Zahlungen abgezogen",
+      "billingSetup": "Abrechnungs-Setup",
+      "current": "aktuell",
+      "draft": "Entwurf",
+      "moreDrafts_one": "+1 weiterer Entwurf",
+      "moreDrafts_other": "+{{count}} weitere Entwürfe",
+      "nothingOutstanding": "Keine offenen Posten bei finalisierten Rechnungen.",
+      "taxSettings": "Steuereinstellungen",
+      "unbilledHours": "{{hours}} Std.",
+      "unbilledMaterials": "{{amount}} Material",
+      "unbilledWork": "Nicht abgerechnete Arbeit"
+    },
+    "notes": {
+      "add": "Notiz hinzufügen",
+      "lastEdited": "Geteilte Kundennotiz · bearbeitet vor {{days}} T",
+      "none": "Noch keine Notizen."
+    },
+    "openView": "Öffnen",
+    "people": {
+      "addContact": "Kontakt hinzufügen",
+      "more": "+{{count}} weitere",
+      "noContactInfo": "keine Kontaktdaten hinterlegt",
+      "none": "Noch keine Kontakte.",
+      "primary": "Primär"
+    },
+    "pulseError": "Die Kundenübersicht konnte nicht geladen werden.",
+    "rail": {
+      "close": "Schließen",
+      "installBase": "Installationsbasis",
+      "label": "Kundenansichten",
+      "money": "Finanzen",
+      "more": "Mehr",
+      "records": "Datensätze",
+      "service": "Service"
+    },
+    "record": {
+      "accountManager": "Kundenbetreuer",
+      "additionalInfo": "Zusatzinformationen",
+      "clientSince": "Kunde seit",
+      "defaultContact": "Standardkontakt",
+      "edit": "Bearbeiten",
+      "unset": "nicht gesetzt"
+    },
+    "service": {
+      "newTicket": "Neues Ticket",
+      "none": "Keine offenen Tickets.",
+      "oldest": "ältestes offen",
+      "open": "offene Tickets",
+      "overdue": "überfällig",
+      "overdueTag": "überfällig",
+      "unassigned": "Nicht zugewiesen"
+    },
+    "sla": {
+      "atRisk": "SLA gefährdet",
+      "atRiskLeft": "SLA {{left}} übrig",
+      "breached": "SLA verletzt",
+      "breachedAgo": "SLA vor {{over}} verletzt",
+      "onTrack": "SLA im Plan",
+      "onTrackLeft": "SLA {{left}} übrig",
+      "paused": "SLA pausiert"
+    },
+    "timeline": {
+      "daysAgo": "vor {{count}} T",
+      "empty": "Für diesen Kunden ist noch nichts erfasst.",
+      "error": "Die Chronik konnte nicht geladen werden.",
+      "filterAll": "Alle",
+      "filterInteractions": "Interaktionen",
+      "filterInventory": "Bestand",
+      "filterMoney": "Finanzen",
+      "filterService": "Service",
+      "hoursAgo": "vor {{count}} Std.",
+      "interaction": "Interaktion",
+      "invoiceCreated": "Rechnung entworfen",
+      "invoiceFinalized": "Rechnung finalisiert",
+      "justNow": "gerade eben",
+      "loadMore": "Mehr laden",
+      "loading": "Wird geladen…",
+      "materialAdded": "Material verwendet",
+      "quoteActivity": "Angebotsaktivität",
+      "rmaClosed": "RMA geschlossen",
+      "rmaOpened": "RMA eröffnet",
+      "soCreated": "Auftrag erstellt",
+      "ticketClosed": "Ticket geschlossen",
+      "ticketOpened": "Ticket eröffnet",
+      "unitDelivered": "Ausstattung geliefert"
+    }
+  },
   "quickAddClient": {
     "lifecycleStatus": "Lebenszyklus",
     "title": "Neuen Kunden hinzufügen",

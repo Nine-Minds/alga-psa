@@ -296,6 +296,155 @@
     "parentClientClear": "Effacer",
     "parentClientLegacy": "Précédemment saisi comme texte : {{name}}"
   },
+  "clientCommandCenter": {
+    "cards": {
+      "concerns": "Points d’attention",
+      "documents": "Documents",
+      "installBase": "Parc installé",
+      "locations": "Sites",
+      "money": "Finances",
+      "notes": "Notes",
+      "people": "Personnes",
+      "record": "Fiche client",
+      "service": "Service",
+      "timeline": "Tout, dans l’ordre"
+    },
+    "csatEmpty": "Aucune réponse d’enquête pour l’instant.",
+    "discardCancel": "Continuer la modification",
+    "discardConfirm": "Abandonner les modifications",
+    "discardMessage": "Vous avez des modifications non enregistrées sur la fiche client. Fermer et les abandonner ?",
+    "discardTitle": "Modifications non enregistrées",
+    "documents": {
+      "more": "+{{count}} de plus",
+      "none": "Aucun document pour l’instant."
+    },
+    "flags": {
+      "clientWaiting": "Client en attente depuis {{days}} j — {{ref}}",
+      "draftInvoices_one": "1 facture en brouillon — {{amount}} non facturé · {{ref}}",
+      "draftInvoices_other": "{{count}} factures en brouillon — {{amount}} non facturé · {{ref}}",
+      "rmaOpen_one": "1 RMA ouverte — {{days}} j",
+      "rmaOpen_other": "{{count}} RMA ouvertes — la plus ancienne {{days}} j",
+      "slaAtRisk_one": "SLA à risque — {{ref}}",
+      "slaAtRisk_other": "{{count}} tickets avec SLA à risque — prochain {{ref}}",
+      "slaBreached_one": "SLA non respecté — {{ref}}",
+      "slaBreached_other": "{{count}} SLA non respectés — le plus grave {{ref}}",
+      "soPartial": "{{ref}} : {{fulfilled}} lignes sur {{total}} livrées",
+      "ticketOverdue_one": "1 ticket en retard — {{ref}} {{days}} j de retard",
+      "ticketOverdue_other": "{{count}} tickets en retard — {{ref}} {{days}} j de retard",
+      "ticketUnassigned_one": "1 ticket non attribué — {{ref}}",
+      "ticketUnassigned_other": "{{count}} tickets non attribués — le plus ancien {{ref}}",
+      "wipAging_one": "1 élément non facturé — {{days}} j{{materials}}",
+      "wipAging_other": "{{count}} éléments non facturés — le plus ancien {{days}} j{{materials}}"
+    },
+    "installBase": {
+      "assets": "actifs gérés",
+      "assetsLink": "Actifs gérés",
+      "none": "Aucun équipement livré pour l’instant.",
+      "rmas": "RMA ouvertes",
+      "sold": "unités vendues",
+      "viewAsset": "actif",
+      "warrantyExpired_one": "1 hors garantie",
+      "warrantyExpired_other": "{{count}} hors garantie",
+      "warrantyExpiring_one": "1 expire sous ≤90 j",
+      "warrantyExpiring_other": "{{count}} expirent sous ≤90 j",
+      "warrantyTracked": " (sur {{count}} suivis)"
+    },
+    "locations": {
+      "billing": "Facturation",
+      "manage": "Gérer",
+      "more": "+{{count}} de plus",
+      "none": "Aucun site pour l’instant.",
+      "shipping": "Livraison"
+    },
+    "money": {
+      "activeContracts": "Contrats actifs",
+      "agingNote": "{{total}} en souffrance · paiements enregistrés déduits",
+      "billingSetup": "Configuration de facturation",
+      "current": "à jour",
+      "draft": "brouillon",
+      "moreDrafts_one": "+1 brouillon de plus",
+      "moreDrafts_other": "+{{count}} brouillons de plus",
+      "nothingOutstanding": "Rien en souffrance sur les factures finalisées.",
+      "taxSettings": "Paramètres de taxes",
+      "unbilledHours": "{{hours}} h",
+      "unbilledMaterials": "{{amount}} de matériel",
+      "unbilledWork": "Travaux non facturés"
+    },
+    "notes": {
+      "add": "Ajouter une note",
+      "lastEdited": "Note client partagée · modifiée il y a {{days}} j",
+      "none": "Aucune note pour l’instant."
+    },
+    "openView": "Ouvrir",
+    "people": {
+      "addContact": "Ajouter un contact",
+      "more": "+{{count}} de plus",
+      "noContactInfo": "aucune coordonnée enregistrée",
+      "none": "Aucun contact pour l’instant.",
+      "primary": "Principal"
+    },
+    "pulseError": "Impossible de charger l’aperçu du client.",
+    "rail": {
+      "close": "Fermer",
+      "installBase": "Parc installé",
+      "label": "Vues du client",
+      "money": "Finances",
+      "more": "Plus",
+      "records": "Enregistrements",
+      "service": "Service"
+    },
+    "record": {
+      "accountManager": "Chargé de compte",
+      "additionalInfo": "Informations complémentaires",
+      "clientSince": "Client depuis",
+      "defaultContact": "Contact par défaut",
+      "edit": "Modifier",
+      "unset": "non défini"
+    },
+    "service": {
+      "newTicket": "Nouveau ticket",
+      "none": "Aucun ticket ouvert.",
+      "oldest": "le plus ancien ouvert",
+      "open": "tickets ouverts",
+      "overdue": "en retard",
+      "overdueTag": "en retard",
+      "unassigned": "Non attribué"
+    },
+    "sla": {
+      "atRisk": "SLA à risque",
+      "atRiskLeft": "SLA : {{left}} restant",
+      "breached": "SLA non respecté",
+      "breachedAgo": "SLA non respecté il y a {{over}}",
+      "onTrack": "SLA respecté",
+      "onTrackLeft": "SLA : {{left}} restant",
+      "paused": "SLA en pause"
+    },
+    "timeline": {
+      "daysAgo": "il y a {{count}} j",
+      "empty": "Rien n’est encore enregistré pour ce client.",
+      "error": "Impossible de charger la chronologie.",
+      "filterAll": "Tout",
+      "filterInteractions": "Interactions",
+      "filterInventory": "Stock",
+      "filterMoney": "Finances",
+      "filterService": "Service",
+      "hoursAgo": "il y a {{count}} h",
+      "interaction": "Interaction",
+      "invoiceCreated": "Facture en brouillon",
+      "invoiceFinalized": "Facture finalisée",
+      "justNow": "à l’instant",
+      "loadMore": "Charger plus",
+      "loading": "Chargement…",
+      "materialAdded": "Matériel utilisé",
+      "quoteActivity": "Activité de devis",
+      "rmaClosed": "RMA clôturée",
+      "rmaOpened": "RMA ouverte",
+      "soCreated": "Commande client créée",
+      "ticketClosed": "Ticket clôturé",
+      "ticketOpened": "Ticket ouvert",
+      "unitDelivered": "Équipement livré"
+    }
+  },
   "quickAddClient": {
     "lifecycleStatus": "Cycle de vie",
     "title": "Ajouter un nouveau client",

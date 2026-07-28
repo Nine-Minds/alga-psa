@@ -1,4 +1,7 @@
 import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const mockedTenantConnection = vi.hoisted(() => ({
   db: null as any,
@@ -71,12 +74,18 @@ describe('Quote infrastructure', () => {
     await cleanupContext();
   }, 30000);
 
+  // valid_until must stay in the future: Quote.getById auto-expires a 'sent'
+  // quote once it lapses, which silently turns every revision test into
+  // "Only sent or rejected quotes can be revised". A fixed literal here rotted
+  // once already. Tests that want a lapsed quote pass valid_until explicitly.
+  const validUntil = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+
   async function createFinancialQuote(overrides: Record<string, unknown> = {}) {
     return Quote.create(context.db, context.tenantId, {
       client_id: context.clientId,
       title: 'Financial quote',
       quote_date: '2026-03-13T00:00:00.000Z',
-      valid_until: '2026-03-20T00:00:00.000Z',
+      valid_until: validUntil,
       subtotal: 0,
       discount_total: 0,
       tax: 0,
@@ -1065,7 +1074,18 @@ describe('Quote infrastructure', () => {
   });
 
   it('T076a: Template migration: standard quote template seed upsert succeeds on repeated runs', async () => {
-    const migration = await import('../../../../../migrations/20260313131000_create_standard_quote_document_templates.cjs');
+    // Resolved by name, not by timestamp: this migration has been renumbered
+    // once already and a hardcoded prefix silently breaks the test.
+    const migrationsDir = path.resolve(
+      path.dirname(fileURLToPath(import.meta.url)),
+      '../../../../../migrations'
+    );
+    const migrationFile = (await fs.readdir(migrationsDir))
+      .find((name) => name.endsWith('_create_standard_quote_document_templates.cjs'));
+
+    expect(migrationFile).toBeTruthy();
+
+    const migration = await import(path.join(migrationsDir, migrationFile!));
 
     await migration.up(context.db);
     await migration.up(context.db);

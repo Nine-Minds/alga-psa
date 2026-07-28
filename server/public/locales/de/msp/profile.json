@@ -91,7 +91,8 @@
       "userRoles": "Benutzerrollen",
       "policies": "Richtlinien",
       "apiKeys": "API-Schlüssel",
-      "webhooks": "Webhooks"
+      "webhooks": "Webhooks",
+      "userProvisioning": "User provisioning"
     },
     "loading": {
       "roles": "Rollenkonfiguration wird geladen...",
@@ -101,7 +102,8 @@
       "apiKeys": "API-Key-Konfiguration wird geladen...",
       "webhooks": "Webhook-Konfiguration wird geladen...",
       "sso": "SSO-Verwaltungswerkzeuge werden geladen...",
-      "sessions": "Aktive Sitzungen werden geladen..."
+      "sessions": "Aktive Sitzungen werden geladen...",
+      "userProvisioning": "Loading SCIM provisioning..."
     },
     "sso": {
       "advanced": {
@@ -621,6 +623,79 @@
         "copySuccess": "API-Schlüssel in die Zwischenablage kopiert!",
         "copyFailed": "Kopieren des API-Schlüssels in die Zwischenablage fehlgeschlagen",
         "downloadFailed": "Herunterladen des API-Schlüssels fehlgeschlagen"
+      }
+    },
+    "scim": {
+      "title": "User provisioning",
+      "description": "Let Microsoft Entra deactivate and reactivate existing internal users. Alga remains authoritative for profiles, roles, teams, and licenses.",
+      "loading": "Loading user provisioning",
+      "status": {
+        "enabled": "Accepting requests",
+        "disabled": "Provisioning paused"
+      },
+      "errors": {
+        "load": "Unable to load SCIM provisioning.",
+        "update": "Unable to update SCIM provisioning."
+      },
+      "upgrade": {
+        "title": "Directory lifecycle provisioning",
+        "description": "SCIM user provisioning is available on Pro and higher plans."
+      },
+      "setup": {
+        "title": "Connect Microsoft Entra",
+        "description": "Generate a tenant-specific endpoint and one-time bearer token. No Alga users are created by SCIM.",
+        "create": "Generate connection"
+      },
+      "connection": {
+        "title": "Entra connection",
+        "description": "Use these values in the Provisioning section of your Entra enterprise application.",
+        "url": "Tenant URL",
+        "copyUrl": "Copy tenant URL",
+        "oneTimeToken": "Copy this token now",
+        "oneTimeWarning": "For security, Alga cannot show this value again.",
+        "rotate": "Rotate token",
+        "revokePrevious": "End token overlap",
+        "enabled": "Accept provisioning requests",
+        "disableWarning": "Pausing preserves every link and current user state."
+      },
+      "health": {
+        "title": "Connection health",
+        "lastRequest": "Last authenticated request",
+        "lastSuccess": "Last success",
+        "tokenAge": "Current token created",
+        "lastError": "Last error"
+      },
+      "mapping": {
+        "title": "Entra attribute mapping",
+        "description": "Keep Entra defaults for userName, externalId, active, names, title, and emails. Only active controls Alga access.",
+        "match": "Initial match",
+        "matchValue": "Exact primary email only",
+        "scope": "Provisioning scope",
+        "scopeValue": "Assigned users and groups",
+        "unsupported": "Not supported",
+        "unsupportedValue": "Groups, passwords, roles, teams"
+      },
+      "links": {
+        "title": "Managed users",
+        "user": "Alga user",
+        "directory": "Directory identity",
+        "state": "State",
+        "action": "Action",
+        "drift": "Email drift",
+        "active": "Upstream active",
+        "inactive": "Upstream inactive",
+        "accessOn": "Access enabled",
+        "accessOff": "Access disabled",
+        "unlink": "Unlink",
+        "empty": "No directory identities have linked yet."
+      },
+      "unresolved": {
+        "title": "Needs review",
+        "description": "These identities were rejected without changing an Alga user."
+      },
+      "state": {
+        "active": "Active upstream",
+        "inactive": "Inactive upstream"
       }
     }
   },

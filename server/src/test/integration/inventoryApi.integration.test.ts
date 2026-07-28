@@ -366,6 +366,9 @@ function withParams(req: NextRequest, params: Record<string, string>): NextReque
   return req;
 }
 
+// Best-effort: stock_movements is an append-only ledger (trg_stock_movements_immutable)
+// that app_user can't delete from or disable, and its rows FK-pin tenants/users/
+// stock_locations. DB is recreated per run with fresh UUIDs, so the residue is inert.
 async function cleanupTenant(tenant: string): Promise<void> {
   const safeDelete = async (name: string) => table(tenant, name).del().catch(() => undefined);
   for (const name of [
@@ -393,7 +396,7 @@ async function cleanupTenant(tenant: string): Promise<void> {
   ]) {
     await safeDelete(name);
   }
-  await tenantRows().where({ tenant }).del();
+  await tenantRows().where({ tenant }).del().catch(() => undefined);
 }
 
 describe('inventory REST API (integration)', () => {

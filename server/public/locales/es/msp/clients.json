@@ -296,6 +296,155 @@
     "parentClientClear": "Borrar",
     "parentClientLegacy": "Introducido anteriormente como texto: {{name}}"
   },
+  "clientCommandCenter": {
+    "cards": {
+      "concerns": "Puntos de atención",
+      "documents": "Documentos",
+      "installBase": "Base instalada",
+      "locations": "Ubicaciones",
+      "money": "Finanzas",
+      "notes": "Notas",
+      "people": "Personas",
+      "record": "Ficha del cliente",
+      "service": "Servicio",
+      "timeline": "Todo, en orden"
+    },
+    "csatEmpty": "Aún no hay respuestas de encuestas.",
+    "discardCancel": "Seguir editando",
+    "discardConfirm": "Descartar cambios",
+    "discardMessage": "Tiene cambios sin guardar en la ficha del cliente. ¿Cerrar y descartarlos?",
+    "discardTitle": "Cambios sin guardar",
+    "documents": {
+      "more": "+{{count}} más",
+      "none": "Aún no hay documentos."
+    },
+    "flags": {
+      "clientWaiting": "Cliente esperando {{days}} d — {{ref}}",
+      "draftInvoices_one": "1 factura en borrador — {{amount}} sin facturar · {{ref}}",
+      "draftInvoices_other": "{{count}} facturas en borrador — {{amount}} sin facturar · {{ref}}",
+      "rmaOpen_one": "1 RMA abierta — {{days}} d",
+      "rmaOpen_other": "{{count}} RMA abiertas — la más antigua {{days}} d",
+      "slaAtRisk_one": "SLA en riesgo — {{ref}}",
+      "slaAtRisk_other": "{{count}} tickets con SLA en riesgo — siguiente {{ref}}",
+      "slaBreached_one": "SLA incumplido — {{ref}}",
+      "slaBreached_other": "{{count}} incumplimientos de SLA — el peor {{ref}}",
+      "soPartial": "{{ref}}: {{fulfilled}} de {{total}} líneas completadas",
+      "ticketOverdue_one": "1 ticket vencido — {{ref}} {{days}} d de retraso",
+      "ticketOverdue_other": "{{count}} tickets vencidos — {{ref}} {{days}} d de retraso",
+      "ticketUnassigned_one": "1 ticket sin asignar — {{ref}}",
+      "ticketUnassigned_other": "{{count}} tickets sin asignar — el más antiguo {{ref}}",
+      "wipAging_one": "1 elemento sin facturar — {{days}} d de antigüedad{{materials}}",
+      "wipAging_other": "{{count}} elementos sin facturar — el más antiguo {{days}} d{{materials}}"
+    },
+    "installBase": {
+      "assets": "activos gestionados",
+      "assetsLink": "Activos gestionados",
+      "none": "Aún no hay equipos entregados.",
+      "rmas": "RMA abiertas",
+      "sold": "unidades vendidas",
+      "viewAsset": "activo",
+      "warrantyExpired_one": "1 fuera de garantía",
+      "warrantyExpired_other": "{{count}} fuera de garantía",
+      "warrantyExpiring_one": "1 vence en ≤90 d",
+      "warrantyExpiring_other": "{{count}} vencen en ≤90 d",
+      "warrantyTracked": " (de {{count}} con seguimiento)"
+    },
+    "locations": {
+      "billing": "Facturación",
+      "manage": "Gestionar",
+      "more": "+{{count}} más",
+      "none": "Aún no hay ubicaciones.",
+      "shipping": "Envío"
+    },
+    "money": {
+      "activeContracts": "Contratos activos",
+      "agingNote": "{{total}} pendiente · pagos registrados descontados",
+      "billingSetup": "Configuración de facturación",
+      "current": "al día",
+      "draft": "borrador",
+      "moreDrafts_one": "+1 borrador más",
+      "moreDrafts_other": "+{{count}} borradores más",
+      "nothingOutstanding": "Nada pendiente en facturas finalizadas.",
+      "taxSettings": "Configuración de impuestos",
+      "unbilledHours": "{{hours}} h",
+      "unbilledMaterials": "{{amount}} en materiales",
+      "unbilledWork": "Trabajo sin facturar"
+    },
+    "notes": {
+      "add": "Añadir nota",
+      "lastEdited": "Nota compartida del cliente · editada hace {{days}} d",
+      "none": "Aún no hay notas."
+    },
+    "openView": "Abrir",
+    "people": {
+      "addContact": "Añadir contacto",
+      "more": "+{{count}} más",
+      "noContactInfo": "sin datos de contacto registrados",
+      "none": "Aún no hay contactos.",
+      "primary": "Principal"
+    },
+    "pulseError": "No se pudo cargar el resumen del cliente.",
+    "rail": {
+      "close": "Cerrar",
+      "installBase": "Base instalada",
+      "label": "Vistas del cliente",
+      "money": "Finanzas",
+      "more": "Más",
+      "records": "Registros",
+      "service": "Servicio"
+    },
+    "record": {
+      "accountManager": "Responsable de cuenta",
+      "additionalInfo": "Información adicional",
+      "clientSince": "Cliente desde",
+      "defaultContact": "Contacto predeterminado",
+      "edit": "Editar",
+      "unset": "sin definir"
+    },
+    "service": {
+      "newTicket": "Nuevo ticket",
+      "none": "No hay tickets abiertos.",
+      "oldest": "más antiguo abierto",
+      "open": "tickets abiertos",
+      "overdue": "vencidos",
+      "overdueTag": "vencido",
+      "unassigned": "Sin asignar"
+    },
+    "sla": {
+      "atRisk": "SLA en riesgo",
+      "atRiskLeft": "SLA: quedan {{left}}",
+      "breached": "SLA incumplido",
+      "breachedAgo": "SLA incumplido hace {{over}}",
+      "onTrack": "SLA en plazo",
+      "onTrackLeft": "SLA: quedan {{left}}",
+      "paused": "SLA en pausa"
+    },
+    "timeline": {
+      "daysAgo": "hace {{count}} d",
+      "empty": "Aún no hay nada registrado para este cliente.",
+      "error": "No se pudo cargar la cronología.",
+      "filterAll": "Todo",
+      "filterInteractions": "Interacciones",
+      "filterInventory": "Inventario",
+      "filterMoney": "Finanzas",
+      "filterService": "Servicio",
+      "hoursAgo": "hace {{count}} h",
+      "interaction": "Interacción",
+      "invoiceCreated": "Factura en borrador",
+      "invoiceFinalized": "Factura finalizada",
+      "justNow": "ahora mismo",
+      "loadMore": "Cargar más",
+      "loading": "Cargando…",
+      "materialAdded": "Material utilizado",
+      "quoteActivity": "Actividad de presupuesto",
+      "rmaClosed": "RMA cerrada",
+      "rmaOpened": "RMA abierta",
+      "soCreated": "Pedido de venta creado",
+      "ticketClosed": "Ticket cerrado",
+      "ticketOpened": "Ticket abierto",
+      "unitDelivered": "Equipo entregado"
+    }
+  },
   "quickAddClient": {
     "lifecycleStatus": "Ciclo de vida",
     "title": "Agregar nuevo cliente",
