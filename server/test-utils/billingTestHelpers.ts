@@ -305,6 +305,8 @@ interface CreateFixedPlanOptions {
   assignmentPoNumber?: string | null;
   assignmentPoAmount?: number | null;
   clientContractLineIsActive?: boolean;
+  ensureBillingEmail?: boolean;
+  materializeServicePeriods?: boolean;
 }
 
 interface AssignContractLineOptions {
@@ -963,8 +965,16 @@ export async function createFixedPlanAssignment(
       });
   }
 
-  await ensureClientBillingEmail(context, targetClientId);
-  await materializeRecurringServicePeriods(context, contractLineId);
+  // Both are opt-in: this fixture is used by tier-1 suites that already
+  // materialize their own periods, and a second sync for the same
+  // schedule/period/revision violates
+  // recurring_service_periods_tenant_schedule_period_revision_uidx.
+  if (options.ensureBillingEmail) {
+    await ensureClientBillingEmail(context, targetClientId);
+  }
+  if (options.materializeServicePeriods) {
+    await materializeRecurringServicePeriods(context, contractLineId);
+  }
 
   return {
     planId: legacyPlanId,
