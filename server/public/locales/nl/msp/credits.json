@@ -1,9 +1,6 @@
 {
   "page": {
-    "title": "Kredietbeheer",
-    "creditsOverview": "Kredietoverzicht",
-    "overviewDescription": "Beheer de kredieten en overdrachten van uw klant",
-    "overviewDescriptionWithExpiration": "Beheer de kredieten van uw klant, inclusief vervaldatums en overdrachten"
+    "title": "Kredietbeheer"
   },
   "columns": {
     "creditId": "Krediet-ID",
@@ -28,20 +25,20 @@
     "issueType": "Probleemtype"
   },
   "filters": {
-    "client": "Klant",
     "allClients": "Alle klanten"
   },
   "status": {
     "active": "Actief",
     "expired": "Verlopen",
-    "expiringSoon": "Verloopt binnenkort ({{days}} dagen)",
     "open": "Openen",
     "inReview": "In beoordeling",
     "resolved": "Opgelost",
     "never": "Nooit",
     "na": "N.v.t.",
     "depleted": "Opgebruikt",
-    "expiringSoonShort": "Vervalt binnenkort"
+    "expiringSoonShort": "Vervalt binnenkort",
+    "expiringSoon_one": "Vervalt over {{count}} dag",
+    "expiringSoon_other": "Vervalt over {{count}} dagen"
   },
   "actions": {
     "view": "Bekijken",
@@ -50,7 +47,6 @@
     "resolve": "Oplossen",
     "addCredit": "Krediet toevoegen",
     "cancel": "Annuleren",
-    "backToCredits": "Terug naar kredieten",
     "viewAllCredits": "Alle kredieten bekijken",
     "runReconciliation": "Reconciliatie uitvoeren",
     "running": "Bezig...",
@@ -69,15 +65,11 @@
     "reconciliation": "Reconciliatie"
   },
   "settings": {
-    "title": "Instellingen voor kredietverval",
-    "creditExpiration": "Kredietverval:",
-    "enabled": "Ingeschakeld",
-    "disabled": "Uitgeschakeld",
-    "expirationPeriod": "Vervalperiode:",
-    "daysUnit": "{{count}} dagen",
-    "notificationDays": "Meldingsdagen:",
-    "none": "Geen",
-    "loadErrorPrefix": "Error loading credit expiration settings:"
+    "loadErrorPrefix": "Error loading credit expiration settings:",
+    "captionEnabled": "Kredietverval: {{days}} dagen",
+    "captionDisabled": "Kredietverval: uit",
+    "captionReminders": "herinneringen {{reminders}} dagen vooraf",
+    "editInSettings": "Bewerken in facturatie-instellingen"
   },
   "stats": {
     "totalActiveCredits": "Totaal actieve kredieten",
@@ -92,15 +84,11 @@
   },
   "management": {
     "title": "Kredietbeheer",
-    "loadErrorPrefix": "Fout bij laden van kredieten:",
-    "noDataReturned": "Geen gegevens ontvangen van de server",
     "noCreditsFound": "Geen kredieten gevonden",
     "noMatchingCredits": "Geen kredieten komen overeen met deze filters",
     "loadFailed": "Kredieten konden niet worden geladen. Probeer opnieuw."
   },
   "reconciliation": {
-    "selectClient": "Klant selecteren",
-    "status": "Status",
     "allStatuses": "Alle statussen",
     "fromDate": "Van datum",
     "toDate": "Tot datum",
@@ -176,18 +164,17 @@
     "creditOrderNote": "Kredieten worden toegepast op volgorde van vervaldatum (oudste eerst)"
   },
   "expirationDialog": {
-    "title": "Kredietverval wijzigen",
-    "description": "Werk de vervaldatum van dit krediet bij.",
-    "creditAmount": "Kredietbedrag:",
-    "remainingAmount": "Resterend bedrag:",
+    "title": "Vervaldatum bewerken",
+    "creditAmount": "Oorspronkelijk",
+    "remainingAmount": "Resterend",
     "created": "Aangemaakt op:",
-    "currentExpiration": "Huidige vervaldatum:",
+    "currentExpiration": "Huidige vervaldatum",
     "noExpiration": "Geen vervaldatum",
-    "removeExpiration": "Vervaldatum verwijderen",
     "newExpirationDate": "Nieuwe vervaldatum",
     "pastDateError": "Vervaldatum mag niet in het verleden liggen",
     "updateError": "Er is een fout opgetreden bij het bijwerken van de vervaldatum",
-    "updateSuccess": "Kredietverval bijgewerkt"
+    "updateSuccess": "Kredietverval bijgewerkt",
+    "clearHint": "Wis de datum om de vervaldatum te verwijderen."
   },
   "viewDialog": {
     "title": "Kredietdetails",
@@ -199,13 +186,15 @@
   },
   "expireDialog": {
     "title": "Krediet laten vervallen",
-    "description": "Hiermee vervalt het krediet onmiddellijk. Het resterende saldo is niet langer beschikbaar voor de klant. Deze actie kan niet ongedaan worden gemaakt.",
     "reasonLabel": "Reden (optioneel)",
     "reasonPlaceholder": "Leg uit waarom dit krediet vervalt...",
     "success": "Krediet vervallen",
     "error": "Er is een fout opgetreden bij het laten vervallen van het krediet",
     "expiring": "Vervallen...",
-    "confirm": "Krediet laten vervallen"
+    "confirm": "Krediet laten vervallen",
+    "creditAmount": "Oorspronkelijk",
+    "remainingAmount": "Resterend",
+    "warning": "De klant verliest het restant van {{amount}}. Dit kan niet ongedaan worden gemaakt."
   },
   "transferDialog": {
     "title": "Krediet overboeken",
@@ -259,7 +248,7 @@
       "updateRemainingAmount": "Resterend bedrag bijwerken",
       "applyAdjustment": "Kredietcorrectie toepassen",
       "applyCustomAdjustment": "Aangepaste correctie toepassen",
-      "markResolvedNoAction": "Markeren als opgelost (geen actie)",
+      "markResolvedNoAction": "Oplossen zonder wijzigingen",
       "confirm": "Correctie toepassen",
       "applying": "Toepassen..."
     },
@@ -296,7 +285,7 @@
     }
   },
   "addCredit": {
-    "description": "Maakt een vooruitbetalingsfactuur aan en rondt deze af, waardoor het krediet direct beschikbaar is voor de klant.",
+    "description": "Het krediet is direct beschikbaar voor de klant.",
     "fields": {
       "client": "Klant",
       "amount": "Bedrag",
@@ -307,7 +296,7 @@
       "expirationDate": "Selecteer vervaldatum"
     },
     "hints": {
-      "expirationDate": "Laat leeg om de kredietvervalinstellingen van deze klant te gebruiken."
+      "expirationDate": "Leeg laten om de standaardvervaldatum te gebruiken."
     },
     "submitting": "Toevoegen...",
     "success": "Krediet succesvol toegevoegd",

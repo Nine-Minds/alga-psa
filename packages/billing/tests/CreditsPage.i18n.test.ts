@@ -46,16 +46,14 @@ describe('CreditsPage i18n wiring contract', () => {
     expect(source).toContain("t('tabs.reconciliation', { defaultValue: 'Reconciliation' })");
   });
 
-  it('T007: CreditsPage settings summary resolves all settings labels through msp/credits', () => {
+  it('T007: CreditsPage expiration caption resolves its labels through msp/credits', () => {
     const source = read('../src/components/credits/CreditsPageClient.tsx');
 
-    expect(source).toContain("t('settings.title', { defaultValue: 'Credit Expiration Settings' })");
-    expect(source).toContain("t('settings.creditExpiration', { defaultValue: 'Credit Expiration:' })");
-    expect(source).toContain("t('settings.enabled', { defaultValue: 'Enabled' })");
-    expect(source).toContain("t('settings.disabled', { defaultValue: 'Disabled' })");
-    expect(source).toContain("t('settings.expirationPeriod', { defaultValue: 'Expiration Period:' })");
-    expect(source).toContain("t('settings.notificationDays', { defaultValue: 'Notification Days:' })");
-    expect(source).toContain("t('settings.none', { defaultValue: 'None' })");
+    expect(source).toContain("t('settings.captionEnabled', {");
+    expect(source).toContain("t('settings.captionDisabled', {");
+    expect(source).toContain("t('settings.captionReminders', {");
+    expect(source).toContain("t('settings.editInSettings', {");
+    expect(source).toContain("t('settings.loadErrorPrefix', {");
   });
 
   it('T008: xx pseudo-locale backs the representative CreditsPage shell keys', () => {
@@ -65,20 +63,19 @@ describe('CreditsPage i18n wiring contract', () => {
 
     const pseudoKeys = [
       'page.title',
-      'page.creditsOverview',
       'tabs.credits',
       'tabs.reconciliation',
-      'settings.title',
-      'columns.creditId',
+      'settings.editInSettings',
+      'columns.client',
       'columns.status',
       'status.depleted',
-      'filters.client',
+      'filters.allClients',
     ];
 
     for (const key of pseudoKeys) {
       expect(getLeaf(pseudo, key)).toBe('11111');
     }
 
-    expect(getLeaf(pseudo, 'status.expiringSoon')).toBe('11111 {{days}} 11111');
+    expect(getLeaf(pseudo, 'status.expiringSoon_other')).toBe('11111 {{count}} 11111');
   });
 });

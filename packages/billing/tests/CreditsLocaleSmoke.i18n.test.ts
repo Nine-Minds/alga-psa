@@ -72,15 +72,12 @@ describe('Credits locale smoke and parity contract', () => {
     );
     const pageSource = read('../src/components/credits/CreditsPageClient.tsx');
     const addButtonSource = read('../src/components/credits/AddCreditButton.tsx');
-    const backButtonSource = read('../src/components/credits/BackButton.tsx');
 
     expect(getLeaf(en, 'page.title')).toBe('Credit Management');
-    expect(getLeaf(en, 'page.creditsOverview')).toBe('Credits Overview');
+    expect(getLeaf(en, 'tabs.credits')).toBe('Credits');
     expect(getLeaf(en, 'actions.addCredit')).toBe('Add Credit');
-    expect(getLeaf(en, 'actions.backToCredits')).toBe('Back to Credits');
     expect(pageSource).toContain("useTranslation('msp/credits')");
     expect(addButtonSource).toContain("useTranslation('msp/credits')");
-    expect(backButtonSource).toContain("useTranslation('msp/credits')");
   });
 
   it('T030: german credits management/reconciliation locale values differ from english for representative dashboard keys', () => {
@@ -94,7 +91,7 @@ describe('Credits locale smoke and parity contract', () => {
     const representativeKeys = [
       'management.title',
       'stats.totalActiveCredits',
-      'reconciliation.selectClient',
+      'reconciliation.allClients',
       'status.inReview',
     ];
 
@@ -111,10 +108,9 @@ describe('Credits locale smoke and parity contract', () => {
 
     const pseudoKeys = [
       'page.title',
-      'actions.backToCredits',
       'actions.addCredit',
       'management.title',
-      'reconciliation.selectClient',
+      'reconciliation.allClients',
       'application.title',
       'application.noCreditsAvailable',
       'expiration.appliedCredits',

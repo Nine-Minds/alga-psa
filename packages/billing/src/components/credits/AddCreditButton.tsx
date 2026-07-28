@@ -140,7 +140,7 @@ export default function AddCreditButton() {
           <div className="py-4 space-y-4">
             <p className="text-sm text-muted-foreground">
               {t('addCredit.description', {
-                defaultValue: 'Issues a prepayment invoice and finalizes it, making the credit immediately available to the client.',
+                defaultValue: 'The credit is available to the client right away.',
               })}
             </p>
 
@@ -187,9 +187,6 @@ export default function AddCreditButton() {
             </div>
 
             <div>
-              <Label className="text-sm font-medium">
-                {t('addCredit.fields.expirationDate', { defaultValue: 'Expiration Date (optional)' })}
-              </Label>
               <div className="mt-1">
                 <DatePicker
                   id="add-credit-expiration-date"
@@ -203,7 +200,7 @@ export default function AddCreditButton() {
               </div>
               <p className="text-xs text-[rgb(var(--color-text-500))] mt-1">
                 {t('addCredit.hints.expirationDate', {
-                  defaultValue: 'Leave blank to use the credit expiration settings for this client.',
+                  defaultValue: 'Leave blank to use the default expiration.',
                 })}
               </p>
             </div>

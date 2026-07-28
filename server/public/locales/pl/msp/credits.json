@@ -1,9 +1,6 @@
 {
   "page": {
-    "title": "Zarządzanie kredytami",
-    "creditsOverview": "Przegląd kredytów",
-    "overviewDescription": "Zarządzaj kredytami i transferami klienta",
-    "overviewDescriptionWithExpiration": "Zarządzaj kredytami klienta, w tym datami wygaśnięcia, i transferami"
+    "title": "Zarządzanie kredytami"
   },
   "columns": {
     "creditId": "Identyfikator kredytu",
@@ -28,20 +25,22 @@
     "issueType": "Typ problemu"
   },
   "filters": {
-    "client": "Klient",
     "allClients": "Wszyscy klienci"
   },
   "status": {
     "active": "Aktywny",
     "expired": "Wygasły",
-    "expiringSoon": "Wygasa wkrótce ({{days}} dni)",
     "open": "Otwarte",
     "inReview": "W przeglądzie",
     "resolved": "Rozwiązane",
     "never": "Nigdy",
     "na": "Brak danych",
     "depleted": "Wyczerpany",
-    "expiringSoonShort": "Wkrótce wygasa"
+    "expiringSoonShort": "Wkrótce wygasa",
+    "expiringSoon_one": "Wygasa za {{count}} dzień",
+    "expiringSoon_other": "Wygasa za {{count}} dni",
+    "expiringSoon_few": "Wygasa za {{count}} dni",
+    "expiringSoon_many": "Wygasa za {{count}} dni"
   },
   "actions": {
     "view": "Zobacz",
@@ -50,7 +49,6 @@
     "resolve": "Rozwiąż",
     "addCredit": "Dodaj kredyt",
     "cancel": "Anuluj",
-    "backToCredits": "Powrót do kredytów",
     "viewAllCredits": "Zobacz wszystkie kredyty",
     "runReconciliation": "Uruchom uzgadnianie",
     "running": "Trwa...",
@@ -69,15 +67,11 @@
     "reconciliation": "Uzgodnienie"
   },
   "settings": {
-    "title": "Ustawienia wygaśnięcia kredytów",
-    "creditExpiration": "Wygaśnięcie kredytu:",
-    "enabled": "Włączone",
-    "disabled": "Wyłączone",
-    "expirationPeriod": "Okres wygaśnięcia:",
-    "daysUnit": "{{count}} dni",
-    "notificationDays": "Dni powiadomień:",
-    "none": "Brak",
-    "loadErrorPrefix": "Error loading credit expiration settings:"
+    "loadErrorPrefix": "Error loading credit expiration settings:",
+    "captionEnabled": "Wygaśnięcie kredytu: {{days}} dni",
+    "captionDisabled": "Wygaśnięcie kredytu: wyłączone",
+    "captionReminders": "przypomnienia {{reminders}} dni wcześniej",
+    "editInSettings": "Edytuj w ustawieniach rozliczeń"
   },
   "stats": {
     "totalActiveCredits": "Łącznie aktywnych kredytów",
@@ -92,15 +86,11 @@
   },
   "management": {
     "title": "Zarządzanie kredytami",
-    "loadErrorPrefix": "Błąd podczas ładowania kredytów:",
-    "noDataReturned": "Serwer nie zwrócił danych",
     "noCreditsFound": "Nie znaleziono kredytów",
     "noMatchingCredits": "Żadne kredyty nie pasują do tych filtrów",
     "loadFailed": "Nie udało się załadować kredytów. Spróbuj ponownie."
   },
   "reconciliation": {
-    "selectClient": "Wybierz klienta",
-    "status": "Status",
     "allStatuses": "Wszystkie statusy",
     "fromDate": "Data od",
     "toDate": "Data do",
@@ -176,18 +166,17 @@
     "creditOrderNote": "Kredyty są stosowane według daty wygaśnięcia (najstarsze najpierw)"
   },
   "expirationDialog": {
-    "title": "Zmień termin wygaśnięcia kredytu",
-    "description": "Zaktualizuj datę wygaśnięcia tego kredytu.",
-    "creditAmount": "Kwota kredytu:",
-    "remainingAmount": "Pozostała kwota:",
+    "title": "Edytuj datę wygaśnięcia",
+    "creditAmount": "Oryginalna",
+    "remainingAmount": "Pozostało",
     "created": "Utworzono:",
-    "currentExpiration": "Bieżące wygaśnięcie:",
+    "currentExpiration": "Bieżące wygaśnięcie",
     "noExpiration": "Brak wygaśnięcia",
-    "removeExpiration": "Usuń datę wygaśnięcia",
     "newExpirationDate": "Nowa data wygaśnięcia",
     "pastDateError": "Data wygaśnięcia nie może być w przeszłości",
     "updateError": "Wystąpił błąd podczas aktualizacji daty wygaśnięcia",
-    "updateSuccess": "Zaktualizowano wygaśnięcie kredytu"
+    "updateSuccess": "Zaktualizowano wygaśnięcie kredytu",
+    "clearHint": "Wyczyść datę, aby usunąć wygaśnięcie."
   },
   "viewDialog": {
     "title": "Szczegóły kredytu",
@@ -199,13 +188,15 @@
   },
   "expireDialog": {
     "title": "Wygasź kredyt",
-    "description": "Spowoduje to natychmiastowe wygaśnięcie kredytu. Pozostałe saldo nie będzie już dostępne dla klienta. Tej operacji nie można cofnąć.",
     "reasonLabel": "Powód (opcjonalnie)",
     "reasonPlaceholder": "Wyjaśnij, dlaczego ten kredyt wygasa...",
     "success": "Kredyt wygasł",
     "error": "Wystąpił błąd podczas wygaszania kredytu",
     "expiring": "Wygaszanie...",
-    "confirm": "Wygasź kredyt"
+    "confirm": "Wygasź kredyt",
+    "creditAmount": "Oryginalna",
+    "remainingAmount": "Pozostało",
+    "warning": "Klient traci pozostałe {{amount}}. Nie można tego cofnąć."
   },
   "transferDialog": {
     "title": "Przenieś kredyt",
@@ -259,7 +250,7 @@
       "updateRemainingAmount": "Zaktualizuj pozostałą kwotę",
       "applyAdjustment": "Zastosuj korektę kredytu",
       "applyCustomAdjustment": "Zastosuj korektę niestandardową",
-      "markResolvedNoAction": "Oznacz jako rozwiązane (bez działania)",
+      "markResolvedNoAction": "Rozwiąż bez zmian",
       "confirm": "Zastosuj korektę",
       "applying": "Stosowanie..."
     },
@@ -296,7 +287,7 @@
     }
   },
   "addCredit": {
-    "description": "Wystawia fakturę przedpłatową i finalizuje ją, dzięki czemu kredyt jest natychmiast dostępny dla klienta.",
+    "description": "Kredyt jest od razu dostępny dla klienta.",
     "fields": {
       "client": "Klient",
       "amount": "Kwota",
@@ -307,7 +298,7 @@
       "expirationDate": "Wybierz datę wygaśnięcia"
     },
     "hints": {
-      "expirationDate": "Pozostaw puste, aby użyć ustawień wygasania kredytu tego klienta."
+      "expirationDate": "Pozostaw puste, aby użyć domyślnego wygaśnięcia."
     },
     "submitting": "Dodawanie...",
     "success": "Kredyt został pomyślnie dodany",

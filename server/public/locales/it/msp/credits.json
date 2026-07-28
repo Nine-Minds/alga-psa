@@ -1,9 +1,6 @@
 {
   "page": {
-    "title": "Gestione crediti",
-    "creditsOverview": "Panoramica crediti",
-    "overviewDescription": "Gestisci i crediti e i trasferimenti del cliente",
-    "overviewDescriptionWithExpiration": "Gestisci i crediti del cliente, incluse le date di scadenza, e i trasferimenti"
+    "title": "Gestione crediti"
   },
   "columns": {
     "creditId": "ID credito",
@@ -28,20 +25,20 @@
     "issueType": "Tipo di problema"
   },
   "filters": {
-    "client": "Cliente",
     "allClients": "Tutti i clienti"
   },
   "status": {
     "active": "Attivo",
     "expired": "Scaduto",
-    "expiringSoon": "In scadenza ({{days}} giorni)",
     "open": "Aperto",
     "inReview": "In revisione",
     "resolved": "Risolto",
     "never": "Mai",
     "na": "N/D",
     "depleted": "Esaurito",
-    "expiringSoonShort": "In scadenza"
+    "expiringSoonShort": "In scadenza",
+    "expiringSoon_one": "Scade tra {{count}} giorno",
+    "expiringSoon_other": "Scade tra {{count}} giorni"
   },
   "actions": {
     "view": "Visualizza",
@@ -50,7 +47,6 @@
     "resolve": "Risolvi",
     "addCredit": "Aggiungi credito",
     "cancel": "Annulla",
-    "backToCredits": "Torna ai crediti",
     "viewAllCredits": "Vedi tutti i crediti",
     "runReconciliation": "Esegui riconciliazione",
     "running": "In esecuzione...",
@@ -69,15 +65,11 @@
     "reconciliation": "Riconciliazione"
   },
   "settings": {
-    "title": "Impostazioni di scadenza dei crediti",
-    "creditExpiration": "Scadenza del credito:",
-    "enabled": "Abilitata",
-    "disabled": "Disabilitata",
-    "expirationPeriod": "Periodo di scadenza:",
-    "daysUnit": "{{count}} giorni",
-    "notificationDays": "Giorni di notifica:",
-    "none": "Nessuno",
-    "loadErrorPrefix": "Error loading credit expiration settings:"
+    "loadErrorPrefix": "Error loading credit expiration settings:",
+    "captionEnabled": "Scadenza del credito: {{days}} giorni",
+    "captionDisabled": "Scadenza del credito: disattivata",
+    "captionReminders": "promemoria {{reminders}} giorni prima",
+    "editInSettings": "Modifica in Impostazioni di fatturazione"
   },
   "stats": {
     "totalActiveCredits": "Totale crediti attivi",
@@ -92,15 +84,11 @@
   },
   "management": {
     "title": "Gestione crediti",
-    "loadErrorPrefix": "Errore durante il caricamento dei crediti:",
-    "noDataReturned": "Nessun dato restituito dal server",
     "noCreditsFound": "Nessun credito trovato",
     "noMatchingCredits": "Nessun credito corrisponde a questi filtri",
     "loadFailed": "Impossibile caricare i crediti. Riprova."
   },
   "reconciliation": {
-    "selectClient": "Seleziona cliente",
-    "status": "Stato",
     "allStatuses": "Tutti gli stati",
     "fromDate": "Data iniziale",
     "toDate": "Data finale",
@@ -176,18 +164,17 @@
     "creditOrderNote": "I crediti vengono applicati in ordine di scadenza (prima i più vecchi)"
   },
   "expirationDialog": {
-    "title": "Modifica scadenza del credito",
-    "description": "Aggiorna la data di scadenza di questo credito.",
-    "creditAmount": "Importo del credito:",
-    "remainingAmount": "Importo residuo:",
+    "title": "Modifica data di scadenza",
+    "creditAmount": "Originale",
+    "remainingAmount": "Rimanente",
     "created": "Creato il:",
-    "currentExpiration": "Scadenza attuale:",
+    "currentExpiration": "Scadenza attuale",
     "noExpiration": "Nessuna scadenza",
-    "removeExpiration": "Rimuovi data di scadenza",
     "newExpirationDate": "Nuova data di scadenza",
     "pastDateError": "La data di scadenza non può essere nel passato",
     "updateError": "Si è verificato un errore durante l'aggiornamento della data di scadenza",
-    "updateSuccess": "Scadenza del credito aggiornata"
+    "updateSuccess": "Scadenza del credito aggiornata",
+    "clearHint": "Cancella la data per rimuovere la scadenza."
   },
   "viewDialog": {
     "title": "Dettagli del credito",
@@ -199,13 +186,15 @@
   },
   "expireDialog": {
     "title": "Scadi credito",
-    "description": "Questo farà scadere immediatamente il credito. Il saldo rimanente non sarà più disponibile per il cliente. Questa azione non può essere annullata.",
     "reasonLabel": "Motivo (facoltativo)",
     "reasonPlaceholder": "Spiega perché questo credito sta scadendo...",
     "success": "Credito scaduto",
     "error": "Si è verificato un errore durante la scadenza del credito",
     "expiring": "Scadenza...",
-    "confirm": "Scadi credito"
+    "confirm": "Scadi credito",
+    "creditAmount": "Originale",
+    "remainingAmount": "Rimanente",
+    "warning": "Il cliente perde il rimanente di {{amount}}. Non puoi annullare."
   },
   "transferDialog": {
     "title": "Trasferisci credito",
@@ -259,7 +248,7 @@
       "updateRemainingAmount": "Aggiorna importo residuo",
       "applyAdjustment": "Applica rettifica credito",
       "applyCustomAdjustment": "Applica rettifica personalizzata",
-      "markResolvedNoAction": "Segna come risolto (nessuna azione)",
+      "markResolvedNoAction": "Risolvi senza modifiche",
       "confirm": "Applica correzione",
       "applying": "Applicazione..."
     },
@@ -296,7 +285,7 @@
     }
   },
   "addCredit": {
-    "description": "Emette una fattura di pagamento anticipato e la finalizza, rendendo il credito immediatamente disponibile per il cliente.",
+    "description": "Il credito è subito disponibile per il cliente.",
     "fields": {
       "client": "Cliente",
       "amount": "Importo",
@@ -307,7 +296,7 @@
       "expirationDate": "Seleziona la data di scadenza"
     },
     "hints": {
-      "expirationDate": "Lascia vuoto per usare le impostazioni di scadenza credito di questo cliente."
+      "expirationDate": "Lascia vuoto per usare la scadenza predefinita."
     },
     "submitting": "Aggiunta in corso...",
     "success": "Credito aggiunto correttamente",
