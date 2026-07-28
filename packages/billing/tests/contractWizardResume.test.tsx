@@ -195,9 +195,13 @@ describe('ContractWizard resume behavior', () => {
   // which is what tipped it over 20s under CI's parallel library runs.
   let ContractWizard: typeof import('../src/components/billing-dashboard/contracts/ContractWizard')['ContractWizard'];
 
+  // 60s, not the 10s vitest hookTimeout default: this compiles the component's
+  // whole module graph (including the next-auth/@auth/core/next deps the config
+  // inlines) exactly once. The config raises testTimeout to 20s but leaves
+  // hookTimeout at its default, so a bare hook has *less* budget than a test.
   beforeAll(async () => {
     ({ ContractWizard } = await import('../src/components/billing-dashboard/contracts/ContractWizard'));
-  });
+  }, 60_000);
 
   beforeEach(() => {
     document.body.removeAttribute('data-scroll-locked');

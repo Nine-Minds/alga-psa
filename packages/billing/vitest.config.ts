@@ -13,6 +13,10 @@ export default defineConfig({
       'src/schemas/**/*.test.ts',
     ],
     testTimeout: 20000,
+    // Match testTimeout. The default hookTimeout is 10s, so a beforeAll doing
+    // setup work had half the budget of a test doing the same work — which is
+    // how hoisting a module compile out of a test made it fail sooner.
+    hookTimeout: 20000,
     // Inline next-auth/@auth/core/next so vite transforms them and the next/server
     // alias below applies to next-auth's internal `import "next/server"`. Without it
     // the contract-wizard / automatic-invoices component suites render-crash on a

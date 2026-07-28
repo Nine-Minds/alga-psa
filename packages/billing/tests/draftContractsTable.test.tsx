@@ -160,9 +160,13 @@ describe('Drafts tab DataTable', () => {
   // module graph's compile to that test's timeout budget.
   let Contracts: React.ComponentType;
 
+  // 60s, not the 10s vitest hookTimeout default: this compiles the component's
+  // whole module graph (including the next-auth/@auth/core/next deps the config
+  // inlines) exactly once. The config raises testTimeout to 20s but leaves
+  // hookTimeout at its default, so a bare hook has *less* budget than a test.
   beforeAll(async () => {
     Contracts = (await import('../src/components/billing-dashboard/contracts/Contracts')).default;
-  });
+  }, 60_000);
 
   // Tear down immediately, so a failed or timed-out test cannot leave its tree
   // mounted for the next test to trip over.
