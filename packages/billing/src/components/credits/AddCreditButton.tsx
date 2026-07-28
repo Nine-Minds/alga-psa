@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
 import { CurrencyInput } from '@alga-psa/ui/components/CurrencyInput';
+import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
@@ -14,8 +15,7 @@ import { isActionMessageError, isActionPermissionError, getErrorMessage } from '
 import { toast } from 'react-hot-toast';
 import { toMinorUnits } from '@alga-psa/core';
 import type { IClient } from '@alga-psa/types';
-import { createPrepaymentInvoice } from '@alga-psa/billing/actions/creditActions';
-import { finalizeInvoice } from '@alga-psa/billing/actions/invoiceModification';
+import { grantCredit } from '@alga-psa/billing/actions/creditActions';
 import { getAllClientsForBilling } from '@alga-psa/billing/actions/billingClientsActions';
 
 export default function AddCreditButton() {
@@ -27,6 +27,7 @@ export default function AddCreditButton() {
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
   const [amount, setAmount] = useState<number | undefined>(undefined);
   const [expirationDate, setExpirationDate] = useState<Date | undefined>(undefined);
+  const [description, setDescription] = useState('');
   const [filterState, setFilterState] = useState<'all' | 'active' | 'inactive'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -62,6 +63,7 @@ export default function AddCreditButton() {
     setSelectedClient(null);
     setAmount(undefined);
     setExpirationDate(undefined);
+    setDescription('');
     setError(null);
   };
 
@@ -90,20 +92,14 @@ export default function AddCreditButton() {
       // The ledger stores minor units (cents); the form takes major units.
       const amountInCents = toMinorUnits(amount, i18n.language);
 
-      const invoice = await createPrepaymentInvoice(
+      const result = await grantCredit(
         selectedClient,
         amountInCents,
         expirationDate ? expirationDate.toISOString() : undefined,
+        description.trim() || undefined,
       );
-      if (isActionMessageError(invoice) || isActionPermissionError(invoice)) {
-        setError(getErrorMessage(invoice));
-        return;
-      }
-
-      // Credit only becomes available once the prepayment invoice is finalized.
-      const finalizeResult = await finalizeInvoice(invoice.invoice_id);
-      if (isActionMessageError(finalizeResult) || isActionPermissionError(finalizeResult)) {
-        setError(getErrorMessage(finalizeResult));
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        setError(getErrorMessage(result));
         return;
       }
 
@@ -176,6 +172,18 @@ export default function AddCreditButton() {
                 value={amount}
                 onChange={setAmount}
                 placeholder={t('addCredit.placeholders.amount', { defaultValue: 'Enter amount' })}
+              />
+            </div>
+
+            <div>
+              <Input
+                id="add-credit-description"
+                label={t('addCredit.fields.description', { defaultValue: 'Description (optional)' })}
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                placeholder={t('addCredit.placeholders.description', {
+                  defaultValue: 'Reason for the credit',
+                })}
               />
             </div>
 
