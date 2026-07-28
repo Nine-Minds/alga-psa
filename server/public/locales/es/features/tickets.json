@@ -1489,7 +1489,6 @@
       "pausedHint": "El reloj está en pausa mientras el ticket permanece en un estado pausado."
     },
     "tiles": {
-      "request": "Solicitud",
       "openedBy": "Abierto por {{name}}",
       "showMore": "Mostrar más",
       "showLess": "Mostrar menos",
