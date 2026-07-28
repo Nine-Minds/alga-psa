@@ -13,7 +13,7 @@ import {
   updateUserWorkSchedule,
 } from '@alga-psa/scheduling/actions/resourceCapacityActions';
 import { parseWeeklyCapacityHours } from '@alga-psa/scheduling/lib/resourceCapacity';
-import { parseWorkSchedule, weeklyScheduledHours, type WorkScheduleDay } from '@alga-psa/scheduling/lib/workSchedule';
+import { parseWorkSchedule, weeklyScheduledHours, type WorkScheduleDay } from '@alga-psa/core/workSchedule';
 import { useDrawer } from "@alga-psa/ui";
 import { Text, Flex } from '@radix-ui/themes';
 import { Input } from '@alga-psa/ui/components/Input';

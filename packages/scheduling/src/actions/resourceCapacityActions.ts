@@ -3,13 +3,14 @@
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import { Knex } from 'knex';
 import { withAuth, hasPermission } from '@alga-psa/auth';
+import type { IUser } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import { parseWeeklyCapacityHours, weeklyCapacityRejectionMessage } from '../lib/resourceCapacity';
 import {
   parseWorkSchedule,
   workScheduleRejectionMessage,
   type WorkScheduleDay,
-} from '../lib/workSchedule';
+} from '@alga-psa/core/workSchedule';
 
 export interface UserCapacityResult {
   success: boolean;
@@ -41,11 +42,11 @@ function storedCapacity(value: unknown): number | null {
  * the hours they say they work", not "against hours a manager approved" —
  * an approval trail would be a separate feature, not a stricter check here.
  */
-async function mayRead(user: { user_id: string }, userId: string, db: Knex): Promise<boolean> {
+async function mayRead(user: IUser, userId: string, db: Knex): Promise<boolean> {
   return user.user_id === userId || (await hasPermission(user, 'user', 'read', db));
 }
 
-async function mayWrite(user: { user_id: string }, userId: string, db: Knex): Promise<boolean> {
+async function mayWrite(user: IUser, userId: string, db: Knex): Promise<boolean> {
   return user.user_id === userId || (await hasPermission(user, 'user', 'update', db));
 }
 

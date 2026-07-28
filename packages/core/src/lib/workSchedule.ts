@@ -2,6 +2,12 @@
  * Work-schedule math shared by the schedule editor, the server action and the
  * utilization report.
  *
+ * Lives in `core` rather than next to the scheduling actions that own the table,
+ * because `reporting` needs it too and `scheduling -> clients -> reporting` is a
+ * real edge: importing it from `scheduling` closed that loop into a dependency
+ * cycle. `core` is a leaf both sides already depend on. Nothing here touches the
+ * database or React, so it stays a leaf as well — keep it that way.
+ *
  * A work schedule says when someone is on the clock. It is not the same thing as
  * `availability_settings`, which says when a client may book them — a
  * dispatch-only technician works full days and publishes no bookable hours.

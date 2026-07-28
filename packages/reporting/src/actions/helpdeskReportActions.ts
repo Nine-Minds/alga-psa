@@ -8,7 +8,7 @@ import {
   reportingActionErrorFrom,
   type ReportingActionError,
 } from './report-actions/reportingActionErrors';
-import type { WorkScheduleDay } from '@alga-psa/scheduling/lib/workSchedule';
+import type { WorkScheduleDay } from '@alga-psa/core/workSchedule';
 import {
   buildEmployeeUtilizationReport,
   type EmployeeUtilizationInputRow,

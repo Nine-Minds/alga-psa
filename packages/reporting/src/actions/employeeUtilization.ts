@@ -5,7 +5,7 @@
  * without loading the 'use server' action module.
  */
 
-import { scheduledHoursForRange, type WorkScheduleDay } from '@alga-psa/scheduling/lib/workSchedule';
+import { scheduledHoursForRange, type WorkScheduleDay } from '@alga-psa/core/workSchedule';
 
 export type UtilizationRangeDays = 7 | 30 | 90;
 
