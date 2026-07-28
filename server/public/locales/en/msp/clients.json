@@ -1451,7 +1451,10 @@
         "serialNumber": "Serial number",
         "status": "Status",
         "type": "Type",
-        "warrantyEnd": "Warranty End"
+        "warrantyEnd": "Warranty End",
+        "agent": "Agent",
+        "patching": "Patching",
+        "coverage": "Coverage"
       },
       "details": {
         "local": "Local",

@@ -97,10 +97,10 @@ const MspLanguageSettings = () => {
     <Card>
       <CardHeader>
         <CardTitle>
-          <div className="flex items-center gap-2">
+          <span className="flex items-center gap-2">
             <Globe className="h-5 w-5" />
             {t('mspLanguage.title')}
-          </div>
+          </span>
         </CardTitle>
         <CardDescription>
           {t('mspLanguage.description')}

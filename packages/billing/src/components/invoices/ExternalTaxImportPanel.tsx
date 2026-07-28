@@ -167,10 +167,10 @@ export function ExternalTaxImportPanel({
     <Card id="external-tax-import-panel">
       <CardHeader>
         <CardTitle className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
+          <span className="flex items-center gap-2">
             <Cloud className="h-5 w-5 text-blue-600" />
             {t('externalTax.title', { defaultValue: 'External Tax Import' })}
-          </div>
+          </span>
           <Button
             id="toggle-import-history-button"
             variant="ghost"

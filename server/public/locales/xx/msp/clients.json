@@ -1451,7 +1451,10 @@
         "serialNumber": "11111",
         "status": "11111",
         "type": "11111",
-        "warrantyEnd": "11111"
+        "warrantyEnd": "11111",
+        "agent": "11111",
+        "patching": "11111",
+        "coverage": "11111"
       },
       "details": {
         "local": "11111",

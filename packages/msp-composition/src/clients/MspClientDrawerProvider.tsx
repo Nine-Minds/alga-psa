@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useCallback, useMemo, type ReactNode } from 'react';
-import { useDrawer, ClientDrawerContext } from '@alga-psa/ui';
+import { useDrawer, ClientDrawerContext, type ClientDrawerOptions } from '@alga-psa/ui';
 import ClientQuickView from '@alga-psa/clients/components/clients/ClientQuickView';
 import { getClientByIdForAssets } from '@alga-psa/assets/actions/clientLookupActions';
 import { MspClientCrossFeatureProvider } from './MspClientCrossFeatureProvider';
@@ -11,7 +11,7 @@ export function MspClientDrawerProvider({ children }: { children: ReactNode }) {
   const { t } = useTranslation('msp/clients');
   const { openDrawer, replaceDrawer } = useDrawer();
 
-  const openClientDrawer = useCallback(async (clientId: string) => {
+  const openClientDrawer = useCallback(async (clientId: string, options?: ClientDrawerOptions) => {
     if (!clientId) return;
 
     openDrawer(
@@ -38,6 +38,7 @@ export function MspClientDrawerProvider({ children }: { children: ReactNode }) {
             client={clientData}
             isInDrawer={true}
             quickView={true}
+            initialPanel={options?.initialPanel}
           />
         </MspClientCrossFeatureProvider>,
         undefined,
