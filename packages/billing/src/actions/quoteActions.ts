@@ -2,6 +2,7 @@
 /* eslint-disable custom-rules/no-feature-to-feature-imports -- Quote PDF generation creates document records - direct model access required in server action context */
 
 import { randomUUID } from 'crypto';
+import Handlebars from 'handlebars';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';
 import type { Knex } from 'knex';
 import { withAuth } from '@alga-psa/auth/withAuth';
@@ -13,7 +14,9 @@ import type { IContract, IInvoice, TemplateAst, IQuote, IQuoteItem, IQuoteListIt
 import Quote, { type QuoteListOptions } from '../models/quote';
 import QuoteActivity from '../models/quoteActivity';
 import QuoteItem from '../models/quoteItem';
-import { buildQuoteReminderEmailTemplate, buildQuoteSentEmailTemplate } from '../lib/quote-email-templates';
+import { buildQuoteReminderEmailTemplate, buildQuoteSentEmailTemplate, formatQuoteDate } from '../lib/quote-email-templates';
+import { fetchTenantParty } from '../lib/adapters/tenantPartyAdapter';
+import { resolveEmailLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import { getQuoteApprovalWorkflowSettings as loadQuoteApprovalWorkflowSettings, setQuoteApprovalWorkflowRequired as persistQuoteApprovalWorkflowRequired, type QuoteApprovalWorkflowSettings } from '../lib/quoteApprovalSettings';
 import { createQuoteItemSchema, createQuoteSchema, updateQuoteItemSchema, updateQuoteSchema } from '../schemas/quoteSchemas';
 import { buildQuoteConversionPreview, convertQuoteToDraftContract, convertQuoteToDraftContractAndInvoice, convertQuoteToDraftInvoice, convertQuoteToDraftSalesOrder, createPDFGenerationService } from '../services';
@@ -28,6 +31,7 @@ import {
 } from '@alga-psa/authorization/kernel';
 import { resolveBundleNarrowingRulesForEvaluation } from '@alga-psa/authorization/bundles/service';
 import { buildAuthorizationAwarePage } from '@alga-psa/authorization/pagination';
+import { formatCurrency } from '@alga-psa/core/lib/formatters';
 import { getClientLogoUrlsBatch } from '@alga-psa/formatting/avatarUtils';
 import { onQuoteAccepted, onQuoteSent } from '@alga-psa/opportunities/lib/quoteLifecycleHooks';
 
@@ -475,6 +479,119 @@ const storeQuotePdf = async (
   });
 
   return fileRecord.file_id;
+};
+
+type QuoteTemplateName = 'quote-email' | 'quote-reminder-email';
+
+interface QuoteEmailTemplate {
+  subject: string;
+  html_content: string;
+  text_content: string;
+}
+
+// Resolves the quote email template with the same precedence as invoices:
+// tenant override (locale, then English) before the system template, so
+// customisations made in Notification Settings > Email Templates are honoured.
+const getQuoteEmailTemplate = async (
+  knex: Knex | Knex.Transaction,
+  tenant: string,
+  name: QuoteTemplateName,
+  locale: string = 'en'
+): Promise<QuoteEmailTemplate | null> => {
+  const db = tenantDb(knex, tenant);
+  const languages = locale === 'en' ? ['en'] : [locale, 'en'];
+
+  for (const table of ['tenant_email_templates', 'system_email_templates']) {
+    for (const language_code of languages) {
+      const template = await db.table(table)
+        .where({ name, language_code })
+        .first<QuoteEmailTemplate | undefined>();
+
+      if (template) {
+        return {
+          subject: template.subject,
+          html_content: template.html_content,
+          text_content: template.text_content,
+        };
+      }
+    }
+  }
+
+  return null;
+};
+
+// Resolves the locale of the quote's primary recipient so the template lookup
+// matches the invoice send path; contacts are client-portal users, so the
+// client's default locale applies when the contact has no preference.
+const resolveQuoteRecipientLocale = async (
+  tenant: string,
+  quote: IQuote,
+  recipientEmail?: string
+): Promise<string> => {
+  if (!recipientEmail) {
+    return 'en';
+  }
+
+  try {
+    return await resolveEmailLocale(tenant, {
+      email: recipientEmail,
+      userType: 'client',
+      ...(quote.client_id ? { clientId: quote.client_id } : {}),
+    });
+  } catch {
+    // A locale lookup must never block sending the quote itself.
+    return 'en';
+  }
+};
+
+const renderQuoteEmail = async ({
+  knex,
+  tenant,
+  templateName,
+  quote,
+  companyName,
+  portalLink,
+  customMessage,
+  locale,
+}: {
+  knex: Knex;
+  tenant: string;
+  templateName: QuoteTemplateName;
+  quote: IQuote;
+  companyName: string;
+  portalLink?: string;
+  customMessage?: string;
+  locale?: string;
+}): Promise<{ subject: string; html: string; text: string }> => {
+  const template = await getQuoteEmailTemplate(knex, tenant, templateName, locale ?? 'en');
+
+  if (!template) {
+    const buildFallback = templateName === 'quote-reminder-email'
+      ? buildQuoteReminderEmailTemplate
+      : buildQuoteSentEmailTemplate;
+    return buildFallback({ quote, companyName, portalLink, customMessage });
+  }
+
+  const templateContext = {
+    quote: {
+      number: quote.quote_number ?? quote.quote_id,
+      amount: formatCurrency((quote.total_amount ?? 0) / 100, 'en-US', quote.currency_code || 'USD'),
+      validUntil: formatQuoteDate(quote.valid_until ?? null),
+    },
+    company: {
+      name: companyName,
+    },
+    portalLink: portalLink?.trim() || '',
+    customMessage: customMessage?.trim() || '',
+  };
+
+  // Subject and plain-text are not HTML — disable Handlebars' HTML escape so
+  // characters like `"` in quote titles don't render as `&quot;`.
+  return {
+    subject: Handlebars.compile(template.subject, { noEscape: true })(templateContext),
+    html: Handlebars.compile(template.html_content)(templateContext),
+    text: Handlebars.compile(template.text_content, { noEscape: true })(templateContext),
+  };
 };
 
 const sendQuoteEmailWithAttachment = async ({
@@ -1446,21 +1563,26 @@ export const sendQuote = withAuth(async (
   let emailRecipients: string[] = [];
   let emailMessageId: string | null = null;
   try {
-    const [recipients, tenantRecord] = await Promise.all([
+    const [recipients, tenantParty] = await Promise.all([
       getQuoteRecipients(knex, tenant, quote, input.email_addresses ?? []),
-      tenantDb(knex, tenant).table('tenants').select('client_name').first<{ client_name?: string | null }>(),
+      fetchTenantParty(knex, tenant),
     ]);
 
     if (recipients.length > 0) {
       emailRecipients = recipients;
-      const companyName = tenantRecord?.client_name?.trim() || 'Your Company';
+      const companyName = tenantParty?.name || 'Your Company';
       const portalBaseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
       const portalLink = `${portalBaseUrl}/client-portal/billing?tab=quotes`;
-      const renderedEmail = buildQuoteSentEmailTemplate({
+      const recipientLocale = await resolveQuoteRecipientLocale(tenant, quote, recipients[0]);
+      const renderedEmail = await renderQuoteEmail({
+        knex,
+        tenant,
+        templateName: 'quote-email',
         quote,
         companyName,
         portalLink,
         customMessage: input.message,
+        locale: recipientLocale,
       });
       const subject = input.subject?.trim() || renderedEmail.subject;
 
@@ -1541,23 +1663,28 @@ export const resendQuote = withAuth(async (
   let emailRecipients: string[] = [];
   let emailMessageId: string | null = null;
   try {
-    const [recipients, tenantRecord] = await Promise.all([
+    const [recipients, tenantParty] = await Promise.all([
       getQuoteRecipients(knex, tenant, quote, input.email_addresses ?? []),
-      tenantDb(knex, tenant).table('tenants').select('client_name').first<{ client_name?: string | null }>(),
+      fetchTenantParty(knex, tenant),
     ]);
 
     if (recipients.length > 0) {
       emailRecipients = recipients;
-      const companyName = tenantRecord?.client_name?.trim() || 'Your Company';
+      const companyName = tenantParty?.name || 'Your Company';
       const portalBaseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
       const portalLink = `${portalBaseUrl}/client-portal/billing?tab=quotes`;
-      const renderedEmail = buildQuoteSentEmailTemplate({
+      const recipientLocale = await resolveQuoteRecipientLocale(tenant, quote, recipients[0]);
+      const renderedEmail = await renderQuoteEmail({
+        knex,
+        tenant,
+        templateName: 'quote-email',
         quote,
         companyName,
         portalLink,
         customMessage: input.message,
+        locale: recipientLocale,
       });
-      const subject = input.subject?.trim() || `Reminder: ${renderedEmail.subject}`;
+      const subject = input.subject?.trim() || renderedEmail.subject;
 
       const emailResult = await sendQuoteEmailWithAttachment({
         tenant,
@@ -1632,21 +1759,26 @@ export const sendQuoteReminder = withAuth(async (
   let emailRecipients: string[] = [];
   let emailMessageId: string | null = null;
   try {
-    const [recipients, tenantRecord] = await Promise.all([
+    const [recipients, tenantParty] = await Promise.all([
       getQuoteRecipients(knex, tenant, quote, input.email_addresses ?? []),
-      tenantDb(knex, tenant).table('tenants').select('client_name').first<{ client_name?: string | null }>(),
+      fetchTenantParty(knex, tenant),
     ]);
 
     if (recipients.length > 0) {
       emailRecipients = recipients;
-      const companyName = tenantRecord?.client_name?.trim() || 'Your Company';
+      const companyName = tenantParty?.name || 'Your Company';
       const portalBaseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
       const portalLink = `${portalBaseUrl}/client-portal/billing?tab=quotes`;
-      const renderedEmail = buildQuoteReminderEmailTemplate({
+      const recipientLocale = await resolveQuoteRecipientLocale(tenant, quote, recipients[0]);
+      const renderedEmail = await renderQuoteEmail({
+        knex,
+        tenant,
+        templateName: 'quote-reminder-email',
         quote,
         companyName,
         portalLink,
         customMessage: input.message,
+        locale: recipientLocale,
       });
       const subject = input.subject?.trim() || renderedEmail.subject;
 

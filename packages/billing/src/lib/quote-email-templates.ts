@@ -8,7 +8,7 @@ interface QuoteEmailTemplateInput {
   customMessage?: string;
 }
 
-const formatQuoteDate = (value?: string | null): string => {
+export const formatQuoteDate = (value?: string | null): string => {
   if (!value) {
     return 'N/A';
   }
