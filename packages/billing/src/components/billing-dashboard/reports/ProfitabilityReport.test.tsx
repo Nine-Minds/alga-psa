@@ -2,10 +2,11 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, configure, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ColumnDefinition } from '@alga-psa/types';
+import { dateFromString, dateToString } from '@alga-psa/ui/lib/dateInput';
 
 const getProfitabilitySummaryMock = vi.hoisted(() => vi.fn());
 const getClientProfitabilityMock = vi.hoisted(() => vi.fn());
@@ -27,10 +28,11 @@ vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
   useTranslation: () => ({ t: tMock }),
   useFormatters: () => ({
     formatCurrency: (value: number, currency: string = 'USD') => `${currency} ${value.toFixed(2)}`,
+    formatDate: (value: string) => value,
   }),
 }));
 
-vi.mock('@alga-psa/billing/actions', () => ({
+vi.mock('@alga-psa/billing/actions/profitabilityReportActions', () => ({
   getProfitabilitySummary: (...args: unknown[]) => getProfitabilitySummaryMock(...args),
   getClientProfitability: (...args: unknown[]) => getClientProfitabilityMock(...args),
   getAgreementProfitability: (...args: unknown[]) => getAgreementProfitabilityMock(...args),
@@ -94,6 +96,24 @@ vi.mock('@alga-psa/ui/components/Input', () => ({
   Input: (props: React.InputHTMLAttributes<HTMLInputElement>) => <input {...props} />,
 }));
 
+// Stands in for the real DatePicker (popover + calendar) with a plain date input,
+// speaking the same Date-in/Date-out API so the component's dateFromString/dateToString
+// bridge is still exercised.
+vi.mock('@alga-psa/ui/components/DatePicker', () => ({
+  DatePicker: ({ id, value, onChange }: {
+    id: string;
+    value?: Date;
+    onChange: (date: Date | undefined) => void;
+  }) => (
+    <input
+      id={id}
+      type="date"
+      value={value ? dateToString(value) : ''}
+      onChange={(event) => onChange(dateFromString(event.target.value))}
+    />
+  ),
+}));
+
 vi.mock('@alga-psa/ui/components/Label', () => ({
   Label: ({ children, htmlFor }: React.PropsWithChildren<{ htmlFor?: string }>) => <label htmlFor={htmlFor}>{children}</label>,
 }));
@@ -105,6 +125,10 @@ vi.mock('@alga-psa/ui/components/Skeleton', () => ({
 vi.mock('next/link', () => ({
   default: ({ children, href }: React.PropsWithChildren<{ href: string }>) => <a href={href}>{children}</a>,
 }));
+
+// The print region mirrors the report's content into the DOM (hidden by @media print
+// CSS that jsdom never applies), so keep text queries scoped to the on-screen view.
+configure({ defaultIgnore: 'script, style, .app-print-only, .app-print-only *' });
 
 const metricFields = {
   revenue: 100000,
@@ -283,13 +307,48 @@ describe('ProfitabilityReport', () => {
     expect(screen.getByText(/4 material currency mismatches/)).toBeInTheDocument();
   });
 
-  it('renders an error state when an action fails', async () => {
+  it('mirrors the report into a print region scoped to the current selection', async () => {
+    await renderReport();
+    fireEvent.click(screen.getByText('Acme Corp'));
+    await screen.findByText('Agreements for Acme Corp');
+
+    const printRegion = document.getElementById('profitability-report-print') as HTMLElement;
+    expect(printRegion).toBeInTheDocument();
+    expect(printRegion.className).toContain('app-print-root');
+
+    // This suite ignores the print region by default; opt back in to inspect it.
+    const print = (text: string) => within(printRegion).getAllByText(text, { ignore: 'script, style' });
+
+    // Header states the window and what the numbers are scoped to.
+    expect(print('2026-06-01 to 2026-06-30').length).toBe(1);
+    expect(print('Acme Corp').length).toBeGreaterThan(0);
+    expect(print('EUR').length).toBe(1);
+
+    // Drill-down levels all reach the page, not just the top table.
+    expect(print('Managed Services').length).toBeGreaterThan(0);
+    expect(print('#123 Server issue').length).toBe(1);
+    expect(print('Exact (uncosted)').length).toBe(1);
+  });
+
+  it('renders a generic error state when an action throws', async () => {
     getProfitabilitySummaryMock.mockRejectedValue(new Error('boom'));
 
     const { default: ProfitabilityReport } = await import('./ProfitabilityReport');
     render(<ProfitabilityReport />);
 
     expect(await screen.findByText('Error Loading Profitability')).toBeInTheDocument();
-    expect(screen.getByText('boom')).toBeInTheDocument();
+    // Raw exception text stays out of the UI; only the safe copy is shown.
+    expect(screen.getByText('Failed to load profitability data')).toBeInTheDocument();
+    expect(screen.queryByText('boom')).not.toBeInTheDocument();
+  });
+
+  it('surfaces the message when an action returns a user-safe error', async () => {
+    getProfitabilitySummaryMock.mockResolvedValue({ actionError: 'Cost rates are locked' });
+
+    const { default: ProfitabilityReport } = await import('./ProfitabilityReport');
+    render(<ProfitabilityReport />);
+
+    expect(await screen.findByText('Error Loading Profitability')).toBeInTheDocument();
+    expect(screen.getByText('Cost rates are locked')).toBeInTheDocument();
   });
 });

@@ -258,7 +258,9 @@
         "hourlyRate": "11111 {{value}} 11111",
         "ticketWithNumber": "11111 {{number}} 11111 {{title}} 11111",
         "billableHours": "11111 {{value}} 11111",
-        "listSeparator": "11111"
+        "listSeparator": "11111",
+        "attributionUncosted": "11111 {{attribution}} 11111",
+        "unassignedLine": "11111 {{line}} 11111"
       },
       "errors": {
         "load": "11111",
@@ -308,7 +310,16 @@
         "costRates": "11111",
         "clients": "11111",
         "lines": "11111",
-        "tickets": "11111"
+        "tickets": "11111",
+        "agreements": "11111"
+      },
+      "print": {
+        "dateRange": "11111 {{start}} 11111 {{end}} 11111",
+        "client": "11111",
+        "allClients": "11111",
+        "agreement": "11111",
+        "allAgreements": "11111",
+        "currency": "11111"
       },
       "warnings": {
         "title": "11111",

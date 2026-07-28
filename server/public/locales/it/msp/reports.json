@@ -258,7 +258,9 @@
         "hourlyRate": "{{value}}/h",
         "ticketWithNumber": "#{{number}} {{title}}",
         "billableHours": "{{value}} h fatturabili",
-        "listSeparator": ", "
+        "listSeparator": ", ",
+        "attributionUncosted": "{{attribution}} (senza costo)",
+        "unassignedLine": "{{line}} (non assegnato)"
       },
       "errors": {
         "load": "Impossibile caricare i dati di redditività",
@@ -308,7 +310,8 @@
         "costRates": "Le tariffe di costo non sono configurate. Le ore di lavoro risultano senza costo finché non esiste una tariffa predefinita del tenant o una tariffa utente.",
         "clients": "Nessun dato di redditività per cliente disponibile in questo intervallo.",
         "lines": "Nessun dettaglio a livello di riga per questa voce.",
-        "tickets": "Nessun dato di redditività dei ticket disponibile per questa selezione."
+        "tickets": "Nessun dato di redditività dei ticket disponibile per questa selezione.",
+        "agreements": "Nessun dato di redditività per contratto disponibile per questa selezione."
       },
       "warnings": {
         "title": "Avvisi del report",
@@ -340,6 +343,14 @@
       },
       "fallbacks": {
         "untitledTicket": "Ticket senza titolo"
+      },
+      "print": {
+        "dateRange": "Dal {{start}} al {{end}}",
+        "client": "Cliente",
+        "allClients": "Tutti i clienti",
+        "agreement": "Contratto",
+        "allAgreements": "Tutti i contratti",
+        "currency": "Valuta"
       }
     }
   },

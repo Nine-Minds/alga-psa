@@ -6,6 +6,10 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { Label } from '@alga-psa/ui/components/Label';
 import { Badge } from '@alga-psa/ui/components/Badge';
+import { PrintButton } from '@alga-psa/ui/components/PrintButton';
+import { PrintableDetailHeader } from '@alga-psa/ui/components/PrintableDetailHeader';
+import { PrintableSummary } from '@alga-psa/ui/components/PrintableSummary';
+import { PrintableTable, type PrintableTableColumn } from '@alga-psa/ui/components/PrintableTable';
 import { toast } from 'react-hot-toast';
 import type { ColumnDefinition } from '@alga-psa/types';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -70,6 +74,13 @@ export function WriteOffsReport({ initialData }: { initialData: WriteOffReportDa
     },
   ];
 
+  const movementLabel = (rec: WriteOffRow): string =>
+    rec.count_session_id
+      ? t('writeOffs.badges.countCorrection', 'Count correction')
+      : rec.movement_type === 'retire'
+        ? t('writeOffs.badges.retired', 'Retired')
+        : t('writeOffs.badges.adjustment', 'Adjustment');
+
   const rowColumns: ColumnDefinition<WriteOffRow>[] = [
     {
       title: t('writeOffs.columns.when', 'When'),
@@ -90,14 +101,14 @@ export function WriteOffsReport({ initialData }: { initialData: WriteOffReportDa
     {
       title: t('writeOffs.columns.type', 'Type'),
       dataIndex: 'movement_type',
-      render: (v: any, rec) =>
-        rec.count_session_id ? (
-          <Badge variant="warning" size="sm">{t('writeOffs.badges.countCorrection', 'Count correction')}</Badge>
-        ) : v === 'retire' ? (
-          <Badge variant="error" size="sm">{t('writeOffs.badges.retired', 'Retired')}</Badge>
-        ) : (
-          <Badge variant="secondary" size="sm">{t('writeOffs.badges.adjustment', 'Adjustment')}</Badge>
-        ),
+      render: (v: any, rec) => (
+        <Badge
+          variant={rec.count_session_id ? 'warning' : v === 'retire' ? 'error' : 'secondary'}
+          size="sm"
+        >
+          {movementLabel(rec)}
+        </Badge>
+      ),
     },
     {
       title: t('writeOffs.columns.qty', 'Qty'),
@@ -117,6 +128,33 @@ export function WriteOffsReport({ initialData }: { initialData: WriteOffReportDa
     },
     { title: t('writeOffs.columns.reason', 'Reason'), dataIndex: 'reason', render: (v: any) => <span className="text-xs">{v || t('common.emptyValue', '—')}</span> },
     { title: t('writeOffs.columns.by', 'By'), dataIndex: 'performed_by_name', render: (v: any, rec) => v || rec.performed_by || t('common.emptyValue', '—') },
+  ];
+
+  const printUserColumns: PrintableTableColumn<WriteOffByUser>[] = [
+    { key: 'user', header: t('writeOffs.columns.user', 'User'), render: (row) => row.name || row.user_id || t('common.unknown', 'Unknown') },
+    { key: 'events', header: t('writeOffs.columns.events', 'Events'), render: (row) => row.events },
+    { key: 'writtenOff', header: t('writeOffs.columns.writtenOff', 'Written off'), render: (row) => money(Number(row.losses_cents), currencyCode) },
+    { key: 'foundAdded', header: t('writeOffs.columns.foundAdded', 'Found / added'), render: (row) => money(Number(row.gains_cents), currencyCode) },
+    { key: 'net', header: t('writeOffs.columns.net', 'Net'), render: (row) => money(Number(row.net_cents), currencyCode) },
+  ];
+
+  const printRowColumns: PrintableTableColumn<WriteOffRow>[] = [
+    {
+      key: 'when',
+      header: t('writeOffs.columns.when', 'When'),
+      render: (row) => new Date(row.created_at).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }),
+    },
+    {
+      key: 'product',
+      header: t('writeOffs.columns.product', 'Product'),
+      render: (row) => [row.service_name || t('common.emptyValue', '—'), row.serial_number].filter(Boolean).join(' · '),
+    },
+    { key: 'location', header: t('writeOffs.columns.location', 'Location'), render: (row) => row.location_name || t('common.emptyValue', '—') },
+    { key: 'type', header: t('writeOffs.columns.type', 'Type'), render: (row) => movementLabel(row) },
+    { key: 'qty', header: t('writeOffs.columns.qty', 'Qty'), render: (row) => (Number(row.quantity_delta) > 0 ? `+${row.quantity_delta}` : String(row.quantity_delta)) },
+    { key: 'value', header: t('writeOffs.columns.value', 'Value'), render: (row) => money(Number(row.value_cents), currencyCode) },
+    { key: 'reason', header: t('writeOffs.columns.reason', 'Reason'), render: (row) => row.reason || t('common.emptyValue', '—') },
+    { key: 'by', header: t('writeOffs.columns.by', 'By'), render: (row) => row.performed_by_name || row.performed_by || t('common.emptyValue', '—') },
   ];
 
   return (
@@ -140,6 +178,7 @@ export function WriteOffsReport({ initialData }: { initialData: WriteOffReportDa
           <Button id="write-offs-run" onClick={run} disabled={loading}>
             {loading ? t('common.running', 'Running…') : t('common.run', 'Run')}
           </Button>
+          <PrintButton id="write-offs-print" variant="outline" disabled={!data || loading} />
         </div>
       </div>
 
@@ -175,6 +214,41 @@ export function WriteOffsReport({ initialData }: { initialData: WriteOffReportDa
               </p>
             )}
             <DataTable id="write-offs-events-table" data={data.rows} columns={rowColumns} />
+          </div>
+
+          <div className="app-print-root app-print-only" id="write-offs-print-region">
+            <PrintableDetailHeader
+              title={t('writeOffs.title', 'Write-offs & adjustments')}
+              subtitle={t('writeOffs.subtitle', 'Every stock write-down, retirement, and count correction — with the name that signed it. Ledger-backed; nothing here can be edited after the fact.')}
+              fields={[
+                { label: t('common.from', 'From'), value: dateInputValue(data.from) },
+                { label: t('common.to', 'To'), value: dateInputValue(data.to) },
+              ]}
+            />
+            <PrintableSummary
+              metrics={[
+                { label: t('writeOffs.columns.writtenOff', 'Written off'), value: money(data.total_losses_cents, currencyCode) },
+                { label: t('writeOffs.columns.foundAdded', 'Found / added'), value: money(data.total_gains_cents, currencyCode) },
+                { label: t('writeOffs.columns.net', 'Net'), value: money(data.net_cents, currencyCode) },
+              ]}
+            />
+            <PrintableTable
+              title={t('writeOffs.byUser', 'By user')}
+              rows={data.by_user}
+              columns={printUserColumns}
+              getRowKey={(row) => row.user_id ?? row.name ?? 'unknown'}
+              emptyMessage={t('common.emptyValue', '—')}
+            />
+            <PrintableTable
+              title={t('writeOffs.eventsTitle', 'Events')}
+              subtitle={data.truncated
+                ? t('writeOffs.truncatedNotice', 'Showing the most recent {{count}} events — the totals above still cover the whole period. Narrow the date range to see everything itemized.', { count: data.rows.length })
+                : undefined}
+              rows={data.rows}
+              columns={printRowColumns}
+              getRowKey={(row) => row.movement_id}
+              emptyMessage={t('common.emptyValue', '—')}
+            />
           </div>
         </>
       )}

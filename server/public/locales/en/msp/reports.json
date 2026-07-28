@@ -258,7 +258,9 @@
         "hourlyRate": "{{value}}/hr",
         "ticketWithNumber": "#{{number}} {{title}}",
         "billableHours": "{{value}} billable hrs",
-        "listSeparator": ", "
+        "listSeparator": ", ",
+        "attributionUncosted": "{{attribution}} (uncosted)",
+        "unassignedLine": "{{line}} (unassigned)"
       },
       "errors": {
         "load": "Failed to load profitability data",
@@ -308,7 +310,16 @@
         "costRates": "Cost rates are not configured. Labor hours are shown as uncosted until a tenant default or user rate exists.",
         "clients": "No client profitability data available for this range.",
         "lines": "No line-level detail for this row.",
-        "tickets": "No ticket profitability data available for this selection."
+        "tickets": "No ticket profitability data available for this selection.",
+        "agreements": "No agreement profitability data available for this selection."
+      },
+      "print": {
+        "dateRange": "{{start}} to {{end}}",
+        "client": "Client",
+        "allClients": "All clients",
+        "agreement": "Agreement",
+        "allAgreements": "All agreements",
+        "currency": "Currency"
       },
       "warnings": {
         "title": "Report warnings",

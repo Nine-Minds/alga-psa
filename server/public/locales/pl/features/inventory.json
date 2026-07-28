@@ -2,6 +2,7 @@
   "common": {
     "actions": "Akcje",
     "active": "Aktywny",
+    "allTime": "Cały okres",
     "cancel": "Anuluj",
     "clear": "Wyczyść",
     "close": "Zamknij",
@@ -14,6 +15,7 @@
     "inactive": "Nieaktywny",
     "loading": "Ładowanie…",
     "name": "Nazwa",
+    "period": "Okres",
     "quantity": "Ilość",
     "refresh": "Odśwież",
     "refreshing": "Odświeżanie…",
@@ -28,6 +30,7 @@
     "search": "Szukaj",
     "status": "Status",
     "to": "Do",
+    "today": "Dzisiaj",
     "total": "Razem",
     "unknown": "Nieznany"
   },
@@ -432,6 +435,7 @@
     "candidateCapNote": " (pokazano pierwsze {{cap}})",
     "candidateCount": "{{count}} kandydat widmowy",
     "candidateCountPlural": "{{count}} kandydatów widmowych",
+    "candidatesTitle": "Kandydaci widmowi",
     "columns": {
       "aiVerdict": "Werdykt AI",
       "assignedTo": "Przypisane do",

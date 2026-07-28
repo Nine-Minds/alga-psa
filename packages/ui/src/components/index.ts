@@ -92,6 +92,7 @@ export * from './PrintButton';
 export * from './PrintOptionsDialog';
 export * from './PrintableDetailHeader';
 export * from './PrintableRegion';
+export * from './PrintableSummary';
 export * from './PrintableTable';
 export * from './ShareActionsMenu';
 export * from './Progress';

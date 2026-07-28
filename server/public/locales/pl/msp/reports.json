@@ -258,7 +258,9 @@
         "hourlyRate": "{{value}}/godz.",
         "ticketWithNumber": "#{{number}} {{title}}",
         "billableHours": "{{value}} godz. rozliczalnych",
-        "listSeparator": ", "
+        "listSeparator": ", ",
+        "attributionUncosted": "{{attribution}} (bez wyceny)",
+        "unassignedLine": "{{line}} (nieprzydzielone)"
       },
       "errors": {
         "load": "Nie udało się załadować danych o rentowności",
@@ -308,7 +310,8 @@
         "costRates": "Stawki kosztów nie są skonfigurowane. Godziny pracy są wykazywane jako bez wyceny, dopóki nie istnieje stawka domyślna tenanta lub stawka użytkownika.",
         "clients": "Brak danych o rentowności klientów dla tego zakresu.",
         "lines": "Brak szczegółów na poziomie pozycji dla tego wiersza.",
-        "tickets": "Brak danych o rentowności zgłoszeń dla tego wyboru."
+        "tickets": "Brak danych o rentowności zgłoszeń dla tego wyboru.",
+        "agreements": "Brak danych o rentowności umów dla tego wyboru."
       },
       "warnings": {
         "title": "Ostrzeżenia raportu",
@@ -340,6 +343,14 @@
       },
       "fallbacks": {
         "untitledTicket": "Zgłoszenie bez tytułu"
+      },
+      "print": {
+        "dateRange": "{{start}} do {{end}}",
+        "client": "Klient",
+        "allClients": "Wszyscy klienci",
+        "agreement": "Umowa",
+        "allAgreements": "Wszystkie umowy",
+        "currency": "Waluta"
       }
     }
   },

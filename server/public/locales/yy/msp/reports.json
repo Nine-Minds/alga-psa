@@ -258,7 +258,9 @@
         "hourlyRate": "55555 {{value}} 55555",
         "ticketWithNumber": "55555 {{number}} 55555 {{title}} 55555",
         "billableHours": "55555 {{value}} 55555",
-        "listSeparator": "55555"
+        "listSeparator": "55555",
+        "attributionUncosted": "55555 {{attribution}} 55555",
+        "unassignedLine": "55555 {{line}} 55555"
       },
       "errors": {
         "load": "55555",
@@ -308,7 +310,16 @@
         "costRates": "55555",
         "clients": "55555",
         "lines": "55555",
-        "tickets": "55555"
+        "tickets": "55555",
+        "agreements": "55555"
+      },
+      "print": {
+        "dateRange": "55555 {{start}} 55555 {{end}} 55555",
+        "client": "55555",
+        "allClients": "55555",
+        "agreement": "55555",
+        "allAgreements": "55555",
+        "currency": "55555"
       },
       "warnings": {
         "title": "55555",
