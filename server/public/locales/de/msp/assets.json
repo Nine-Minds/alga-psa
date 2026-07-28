@@ -122,7 +122,9 @@
       "agent": "Agent",
       "client": "Kunde",
       "location": "Standort",
-      "actions": "Aktionen"
+      "actions": "Aktionen",
+      "patching": "Patches",
+      "coverage": "Abdeckung"
     },
     "metrics": {
       "totalAssets": {
@@ -420,7 +422,7 @@
       "maintenance": "Wartung",
       "relatedAssets": "Zugehörige Vermögenswerte",
       "documentsPasswords": "Dokumente und Passwörter",
-      "auditLog": "Audit-Protokoll"
+      "timeline": "Verlauf"
     }
   },
   "assetDetailView": {
@@ -1114,17 +1116,6 @@
     "title": "Nutzungsleiste",
     "description": "Gemeinsame Fortschrittsbalkenkomponente für Auslastung und prozentuale Asset-Metriken"
   },
-  "auditLogTab": {
-    "title": "Audit-Protokoll",
-    "description": "Registerkarte „Asset-Audit-Verlauf“ für Zeitleistenereignisse und Datensatzänderungen",
-    "changedBy": "Geändert von {{name}}",
-    "userFallback": "Benutzer {{id}}",
-    "empty": "Keine Prüfhistorie verfügbar.",
-    "changeTypes": {
-      "created": "Erstellt",
-      "updated": "Aktualisiert"
-    }
-  },
   "createMaintenanceScheduleDialog": {
     "title": "Wartungsplan erstellen",
     "description": "Dialog zum Definieren von Wartungsplänen und Wiederholungsregeln für eine Anlage",
@@ -1369,6 +1360,135 @@
     "values": {
       "yes": "Ja",
       "no": "Nein"
+    }
+  },
+  "assetBento": {
+    "health": "Zustand",
+    "security": "Sicherheit",
+    "openTickets": "Offene Tickets",
+    "warranty": "Garantie",
+    "identity": "Identität",
+    "tag": "Tag",
+    "serial": "Seriennummer",
+    "status": "Status",
+    "location": "Standort",
+    "purchased": "Gekauft",
+    "warrantyEnds": "Garantie endet",
+    "hardware": "Hardware",
+    "os": "Betriebssystem",
+    "cpu": "CPU",
+    "cores": "Kerne",
+    "ram": "RAM",
+    "ip": "IP",
+    "noHardware": "Keine Hardwaredetails erfasst.",
+    "notes": "Notizen",
+    "liveVitals": "Live-Werte",
+    "checkedIn": "Zuletzt gemeldet",
+    "neverCheckedIn": "Nie gemeldet",
+    "memory": "Arbeitsspeicher",
+    "disk": "Festplatte",
+    "uptime": "Betriebszeit",
+    "signedIn": "Angemeldet",
+    "securityTitle": "Sicherheit",
+    "antivirus": "Virenschutz",
+    "pendingPatches": "Ausstehende Patches",
+    "failedPatches": "Fehlgeschlagene Patches",
+    "lastScan": "Letzter Scan",
+    "agentVersion": "Agent",
+    "noRelated": "Mit keinem anderen Asset verknüpft.",
+    "manage": "Verwalten",
+    "reportedFacts": "Gemeldete Werte",
+    "more": "Alles Weitere",
+    "views": "Asset-Ansichten",
+    "editAsset": "Asset bearbeiten",
+    "viewAll": "Alle anzeigen",
+    "open": "Öffnen",
+    "close": "Schließen",
+    "packagesReported": "{{count}} Pakete gemeldet",
+    "noSoftware": "Kein Softwarebestand gemeldet.",
+    "noService": "Keine Tickets verweisen auf dieses Asset.",
+    "activeSchedules": "Aktive Zeitpläne",
+    "compliance": "Einhaltung",
+    "lastDone": "Zuletzt erledigt",
+    "noMaintenance": "Nichts geplant.",
+    "docsHint": "Anhänge und Zugangsdaten für dieses Asset."
+  },
+  "assetTimeline": {
+    "title": "Verlauf",
+    "empty": "Für dieses Asset ist noch nichts erfasst.",
+    "emptyLane": "Keine {{lane}}-Ereignisse erfasst.",
+    "moreEvents": "{{shown}} von {{total}} Ereignissen werden angezeigt.",
+    "lanes": {
+      "all": "Alle",
+      "service": "Service",
+      "changes": "Änderungen",
+      "maintenance": "Wartung",
+      "system": "System"
+    },
+    "events": {
+      "maintenancePerformed": "Wartung durchgeführt",
+      "lastReboot": "Letzter Neustart",
+      "patchScan": "Patch-Scan",
+      "patchScanDetail": "{{pending}} ausstehend, {{failed}} fehlgeschlagen",
+      "purchased": "Gekauft"
+    },
+    "changeTypes": {
+      "created": "Erstellt",
+      "updated": "Aktualisiert",
+      "status_change": "Status geändert",
+      "location_change": "Standort geändert",
+      "rmm_linked": "RMM verknüpft",
+      "hardware_upgrade": "Hardware aufgerüstet",
+      "warranty_updated": "Garantie aktualisiert"
+    }
+  },
+  "assetSignals": {
+    "warranty": {
+      "daysLeft": "noch {{count}} T",
+      "expiresToday": "läuft heute ab",
+      "expiredAgo": "vor {{count}} T abgelaufen"
+    },
+    "duration": {
+      "dayHour": "{{days}} T {{hours}} Std.",
+      "hourMinute": "{{hours}} Std. {{minutes}} Min.",
+      "minute": "{{minutes}} Min."
+    },
+    "age": {
+      "justNow": "gerade eben",
+      "minutesAgo": "vor {{count}} Min.",
+      "hoursAgo": "vor {{count}} Std.",
+      "daysAgo": "vor {{count}} T"
+    },
+    "patching": {
+      "failed": "{{count}} fehlgeschlagen",
+      "pending": "{{count}} ausstehend",
+      "upToDate": "aktuell"
+    }
+  },
+  "assetCells": {
+    "agent": {
+      "unmanaged": "nicht verwaltet",
+      "noAgent": "kein RMM-Agent",
+      "seen": "gesehen {{age}}",
+      "neverSeen": "nie gesehen"
+    },
+    "agentStatus": {
+      "online": "online",
+      "offline": "offline",
+      "overdue": "überfällig",
+      "unknown": "unbekannt"
+    },
+    "patching": {
+      "scanned": "gescannt {{age}}",
+      "neverScanned": "nie gescannt"
+    },
+    "coverage": {
+      "noWarrantyDate": "kein Garantiedatum"
+    },
+    "status": {
+      "active": "aktiv",
+      "inactive": "inaktiv",
+      "maintenance": "Wartung"
     }
   }
 }

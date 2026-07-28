@@ -1451,7 +1451,10 @@
         "serialNumber": "55555",
         "status": "55555",
         "type": "55555",
-        "warrantyEnd": "55555"
+        "warrantyEnd": "55555",
+        "agent": "55555",
+        "patching": "55555",
+        "coverage": "55555"
       },
       "details": {
         "local": "55555",

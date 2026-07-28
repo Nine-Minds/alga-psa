@@ -122,7 +122,9 @@
       "agent": "11111",
       "client": "11111",
       "location": "11111",
-      "actions": "11111"
+      "actions": "11111",
+      "patching": "11111",
+      "coverage": "11111"
     },
     "metrics": {
       "totalAssets": {
@@ -420,7 +422,7 @@
       "maintenance": "11111",
       "relatedAssets": "11111",
       "documentsPasswords": "11111",
-      "auditLog": "11111"
+      "timeline": "11111"
     }
   },
   "assetDetailView": {
@@ -1114,17 +1116,6 @@
     "title": "11111",
     "description": "11111"
   },
-  "auditLogTab": {
-    "title": "11111",
-    "description": "11111",
-    "changedBy": "11111 {{name}} 11111",
-    "userFallback": "11111 {{id}} 11111",
-    "empty": "11111",
-    "changeTypes": {
-      "created": "11111",
-      "updated": "11111"
-    }
-  },
   "createMaintenanceScheduleDialog": {
     "title": "11111",
     "description": "11111",
@@ -1369,6 +1360,135 @@
     "values": {
       "yes": "11111",
       "no": "11111"
+    }
+  },
+  "assetBento": {
+    "health": "11111",
+    "security": "11111",
+    "openTickets": "11111",
+    "warranty": "11111",
+    "identity": "11111",
+    "tag": "11111",
+    "serial": "11111",
+    "status": "11111",
+    "location": "11111",
+    "purchased": "11111",
+    "warrantyEnds": "11111",
+    "hardware": "11111",
+    "os": "11111",
+    "cpu": "11111",
+    "cores": "11111",
+    "ram": "11111",
+    "ip": "11111",
+    "noHardware": "11111",
+    "notes": "11111",
+    "liveVitals": "11111",
+    "checkedIn": "11111",
+    "neverCheckedIn": "11111",
+    "memory": "11111",
+    "disk": "11111",
+    "uptime": "11111",
+    "signedIn": "11111",
+    "securityTitle": "11111",
+    "antivirus": "11111",
+    "pendingPatches": "11111",
+    "failedPatches": "11111",
+    "lastScan": "11111",
+    "agentVersion": "11111",
+    "noRelated": "11111",
+    "manage": "11111",
+    "reportedFacts": "11111",
+    "more": "11111",
+    "views": "11111",
+    "editAsset": "11111",
+    "viewAll": "11111",
+    "open": "11111",
+    "close": "11111",
+    "packagesReported": "11111 {{count}} 11111",
+    "noSoftware": "11111",
+    "noService": "11111",
+    "activeSchedules": "11111",
+    "compliance": "11111",
+    "lastDone": "11111",
+    "noMaintenance": "11111",
+    "docsHint": "11111"
+  },
+  "assetTimeline": {
+    "title": "11111",
+    "empty": "11111",
+    "emptyLane": "11111 {{lane}} 11111",
+    "moreEvents": "11111 {{shown}} 11111 {{total}} 11111",
+    "lanes": {
+      "all": "11111",
+      "service": "11111",
+      "changes": "11111",
+      "maintenance": "11111",
+      "system": "11111"
+    },
+    "events": {
+      "maintenancePerformed": "11111",
+      "lastReboot": "11111",
+      "patchScan": "11111",
+      "patchScanDetail": "11111 {{pending}} 11111 {{failed}} 11111",
+      "purchased": "11111"
+    },
+    "changeTypes": {
+      "created": "11111",
+      "updated": "11111",
+      "status_change": "11111",
+      "location_change": "11111",
+      "rmm_linked": "11111",
+      "hardware_upgrade": "11111",
+      "warranty_updated": "11111"
+    }
+  },
+  "assetSignals": {
+    "warranty": {
+      "daysLeft": "11111 {{count}} 11111",
+      "expiresToday": "11111",
+      "expiredAgo": "11111 {{count}} 11111"
+    },
+    "duration": {
+      "dayHour": "11111 {{days}} 11111 {{hours}} 11111",
+      "hourMinute": "11111 {{hours}} 11111 {{minutes}} 11111",
+      "minute": "11111 {{minutes}} 11111"
+    },
+    "age": {
+      "justNow": "11111",
+      "minutesAgo": "11111 {{count}} 11111",
+      "hoursAgo": "11111 {{count}} 11111",
+      "daysAgo": "11111 {{count}} 11111"
+    },
+    "patching": {
+      "failed": "11111 {{count}} 11111",
+      "pending": "11111 {{count}} 11111",
+      "upToDate": "11111"
+    }
+  },
+  "assetCells": {
+    "agent": {
+      "unmanaged": "11111",
+      "noAgent": "11111",
+      "seen": "11111 {{age}} 11111",
+      "neverSeen": "11111"
+    },
+    "agentStatus": {
+      "online": "11111",
+      "offline": "11111",
+      "overdue": "11111",
+      "unknown": "11111"
+    },
+    "patching": {
+      "scanned": "11111 {{age}} 11111",
+      "neverScanned": "11111"
+    },
+    "coverage": {
+      "noWarrantyDate": "11111"
+    },
+    "status": {
+      "active": "11111",
+      "inactive": "11111",
+      "maintenance": "11111"
     }
   }
 }

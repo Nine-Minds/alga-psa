@@ -119,10 +119,12 @@
       "type": "Type",
       "details": "Details",
       "status": "Status",
-      "agent": "Tussenpersoon",
+      "agent": "Agent",
       "client": "Cliënt",
       "location": "Locatie",
-      "actions": "Acties"
+      "actions": "Acties",
+      "patching": "Patches",
+      "coverage": "Dekking"
     },
     "metrics": {
       "totalAssets": {
@@ -420,7 +422,7 @@
       "maintenance": "Onderhoud",
       "relatedAssets": "Gerelateerde activa",
       "documentsPasswords": "Documenten en wachtwoorden",
-      "auditLog": "Auditlogboek"
+      "timeline": "Tijdlijn"
     }
   },
   "assetDetailView": {
@@ -1114,17 +1116,6 @@
     "title": "Gebruiksbalk",
     "description": "Gedeelde voortgangsbalkcomponent voor gebruik en op percentages gebaseerde activastatistieken"
   },
-  "auditLogTab": {
-    "title": "Auditlogboek",
-    "description": "Tabblad Activa-auditgeschiedenis voor tijdlijngebeurtenissen en recordwijzigingen",
-    "changedBy": "Gewijzigd door {{name}}",
-    "userFallback": "gebruiker {{id}}",
-    "empty": "Geen auditgeschiedenis beschikbaar.",
-    "changeTypes": {
-      "created": "Gemaakt",
-      "updated": "Bijgewerkt"
-    }
-  },
   "createMaintenanceScheduleDialog": {
     "title": "Onderhoudsschema maken",
     "description": "Dialoogvenster voor het definiëren van onderhoudsschema's en herhalingsregels voor een activum",
@@ -1369,6 +1360,135 @@
     "values": {
       "yes": "Ja",
       "no": "Nee"
+    }
+  },
+  "assetBento": {
+    "health": "Toestand",
+    "security": "Beveiliging",
+    "openTickets": "Open tickets",
+    "warranty": "Garantie",
+    "identity": "Identiteit",
+    "tag": "Label",
+    "serial": "Serienummer",
+    "status": "Status",
+    "location": "Locatie",
+    "purchased": "Gekocht",
+    "warrantyEnds": "Garantie eindigt",
+    "hardware": "Hardware",
+    "os": "Besturingssysteem",
+    "cpu": "CPU",
+    "cores": "Kernen",
+    "ram": "RAM",
+    "ip": "IP",
+    "noHardware": "Geen hardwaregegevens vastgelegd.",
+    "notes": "Notities",
+    "liveVitals": "Live-waarden",
+    "checkedIn": "Laatst gemeld",
+    "neverCheckedIn": "Nooit gemeld",
+    "memory": "Geheugen",
+    "disk": "Schijf",
+    "uptime": "Bedrijfstijd",
+    "signedIn": "Aangemeld",
+    "securityTitle": "Beveiliging",
+    "antivirus": "Antivirus",
+    "pendingPatches": "Openstaande patches",
+    "failedPatches": "Mislukte patches",
+    "lastScan": "Laatste scan",
+    "agentVersion": "Agent",
+    "noRelated": "Niet gekoppeld aan een ander asset.",
+    "manage": "Beheren",
+    "reportedFacts": "Gerapporteerde gegevens",
+    "more": "Al het overige",
+    "views": "Assetweergaven",
+    "editAsset": "Asset bewerken",
+    "viewAll": "Alles bekijken",
+    "open": "Openen",
+    "close": "Sluiten",
+    "packagesReported": "{{count}} pakketten gemeld",
+    "noSoftware": "Geen software-inventaris gemeld.",
+    "noService": "Geen tickets verwijzen naar dit asset.",
+    "activeSchedules": "Actieve planningen",
+    "compliance": "Naleving",
+    "lastDone": "Laatst uitgevoerd",
+    "noMaintenance": "Niets gepland.",
+    "docsHint": "Bijlagen en inloggegevens voor dit asset."
+  },
+  "assetTimeline": {
+    "title": "Tijdlijn",
+    "empty": "Er is nog niets vastgelegd voor dit asset.",
+    "emptyLane": "Geen {{lane}}-gebeurtenissen vastgelegd.",
+    "moreEvents": "{{shown}} van {{total}} gebeurtenissen weergegeven.",
+    "lanes": {
+      "all": "Alles",
+      "service": "Service",
+      "changes": "Wijzigingen",
+      "maintenance": "Onderhoud",
+      "system": "Systeem"
+    },
+    "events": {
+      "maintenancePerformed": "Onderhoud uitgevoerd",
+      "lastReboot": "Laatste herstart",
+      "patchScan": "Patchscan",
+      "patchScanDetail": "{{pending}} openstaand, {{failed}} mislukt",
+      "purchased": "Gekocht"
+    },
+    "changeTypes": {
+      "created": "Aangemaakt",
+      "updated": "Bijgewerkt",
+      "status_change": "Status gewijzigd",
+      "location_change": "Locatie gewijzigd",
+      "rmm_linked": "RMM gekoppeld",
+      "hardware_upgrade": "Hardware geüpgraded",
+      "warranty_updated": "Garantie bijgewerkt"
+    }
+  },
+  "assetSignals": {
+    "warranty": {
+      "daysLeft": "nog {{count}} d",
+      "expiresToday": "verloopt vandaag",
+      "expiredAgo": "{{count}} d geleden verlopen"
+    },
+    "duration": {
+      "dayHour": "{{days}} d {{hours}} u",
+      "hourMinute": "{{hours}} u {{minutes}} min",
+      "minute": "{{minutes}} min"
+    },
+    "age": {
+      "justNow": "zojuist",
+      "minutesAgo": "{{count}} min geleden",
+      "hoursAgo": "{{count}} u geleden",
+      "daysAgo": "{{count}} d geleden"
+    },
+    "patching": {
+      "failed": "{{count}} mislukt",
+      "pending": "{{count}} openstaand",
+      "upToDate": "up-to-date"
+    }
+  },
+  "assetCells": {
+    "agent": {
+      "unmanaged": "onbeheerd",
+      "noAgent": "geen RMM-agent",
+      "seen": "gezien {{age}}",
+      "neverSeen": "nooit gezien"
+    },
+    "agentStatus": {
+      "online": "online",
+      "offline": "offline",
+      "overdue": "te laat",
+      "unknown": "onbekend"
+    },
+    "patching": {
+      "scanned": "gescand {{age}}",
+      "neverScanned": "nooit gescand"
+    },
+    "coverage": {
+      "noWarrantyDate": "geen garantiedatum"
+    },
+    "status": {
+      "active": "actief",
+      "inactive": "inactief",
+      "maintenance": "onderhoud"
     }
   }
 }

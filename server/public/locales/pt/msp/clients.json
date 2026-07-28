@@ -1451,7 +1451,10 @@
         "serialNumber": "Número de série",
         "status": "Status",
         "type": "Tipo",
-        "warrantyEnd": "Fim da garantia"
+        "warrantyEnd": "Fim da garantia",
+        "agent": "Agente",
+        "patching": "Patches",
+        "coverage": "Cobertura"
       },
       "details": {
         "local": "Local",
