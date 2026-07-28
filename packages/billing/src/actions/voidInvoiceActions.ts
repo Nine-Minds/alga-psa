@@ -38,10 +38,8 @@ export async function reverseCreditApplicationsForInvoice(
     }
 
     if (totalRestored > 0) {
-      // Restore client credit balance
-      await tenantDb(trx, tenant).table('clients')
-        .where({ client_id: txn.client_id })
-        .increment('credit_balance', totalRestored);
+      // The restored remaining_amounts above put the credit back in the
+      // derived balance; only the reversing transaction is left to write.
 
       // Write reversing transaction
       await tenantDb(trx, tenant).table('transactions').insert({
@@ -181,12 +179,7 @@ export const voidInvoice = withAuth(async (
         if (creditRow && Number(creditRow.remaining_amount) > 0) {
           const clawedBack = Number(creditRow.remaining_amount);
 
-          // Decrement client.credit_balance by remaining amount
-          await tenantDb(trx, tenant).table('clients')
-            .where({ client_id: txn.client_id })
-            .decrement('credit_balance', clawedBack);
-
-          // Zero out the credit tracking entry
+          // Zero out the credit tracking entry (removes it from the derived balance)
           await tenantDb(trx, tenant).table('credit_tracking')
             .where({ credit_id: creditRow.credit_id })
             .update({ remaining_amount: 0, updated_at: now });

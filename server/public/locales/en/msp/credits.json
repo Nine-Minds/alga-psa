@@ -15,11 +15,6 @@
     "expires": "Expires",
     "status": "Status",
     "actions": "Actions",
-    "discrepancy": "Discrepancy",
-    "detected": "Detected",
-    "issueType": "Issue Type",
-    "expectedBalance": "Expected Balance",
-    "actualBalance": "Actual Balance",
     "amountAvailable": "Amount Available",
     "expiration": "Expiration",
     "select": "Select"
@@ -30,9 +25,6 @@
   "status": {
     "active": "Active",
     "expired": "Expired",
-    "open": "Open",
-    "inReview": "In Review",
-    "resolved": "Resolved",
     "never": "Never",
     "na": "N/A",
     "depleted": "Depleted",
@@ -44,12 +36,9 @@
     "view": "View",
     "edit": "Edit",
     "expire": "Expire",
-    "resolve": "Resolve",
     "addCredit": "Add Credit",
     "cancel": "Cancel",
     "viewAllCredits": "View All Credits",
-    "runReconciliation": "Run Reconciliation",
-    "runReconciliationAllClients": "Run Reconciliation (All Clients)",
     "running": "Running...",
     "reset": "Reset",
     "applyCredit": "Apply Credit",
@@ -59,10 +48,6 @@
     "saveChanges": "Save Changes",
     "saving": "Saving...",
     "transfer": "Transfer"
-  },
-  "tabs": {
-    "credits": "Credits",
-    "reconciliation": "Reconciliation"
   },
   "settings": {
     "loadErrorPrefix": "Error loading credit expiration settings:",
@@ -75,118 +60,13 @@
     "totalActiveCredits": "Total Active Credits",
     "expiringIn30Days": "Expiring in 30 Days",
     "totalCreditsApplied": "Total Credits Applied",
-    "totalCreditsExpired": "Total Credits Expired",
-    "totalDiscrepancies": "Total Discrepancies",
-    "totalDiscrepancyAmount": "Total Discrepancy Amount",
-    "openIssues": "Open Issues",
-    "inReviewCount": "In Review",
-    "resolvedCount": "Resolved"
+    "totalCreditsExpired": "Total Credits Expired"
   },
   "management": {
     "title": "Credit Management",
     "noCreditsFound": "No credits found",
     "noMatchingCredits": "No credits match these filters",
     "loadFailed": "Failed to load credits. Try again."
-  },
-  "reconciliation": {
-    "allClients": "All Clients",
-    "allStatuses": "All Statuses",
-    "fromDate": "From Date",
-    "toDate": "To Date",
-    "validationResult": "Reconciliation complete: {{count}} new issues found.",
-    "validationCompletedAllClients": "Reconciliation completed for all clients.",
-    "noReportsFound": "No reconciliation reports found",
-    "tabs": {
-      "all": "All",
-      "open": "Open",
-      "inReview": "In Review",
-      "resolved": "Resolved"
-    },
-    "issueTypes": {
-      "missingCreditTrackingEntry": "Credit not recorded",
-      "inconsistentCreditRemainingAmount": "Remaining amount doesn't match",
-      "balanceDiscrepancy": "Balance doesn't match",
-      "unknownIssue": "Unknown issue"
-    },
-    "sections": {
-      "discrepancyDetails": "Discrepancy Details",
-      "creditApplications": "Credit Applications"
-    },
-    "fields": {
-      "expectedBalance": "Expected Balance",
-      "actualBalance": "Actual Balance",
-      "difference": "Difference",
-      "detected": "Detected",
-      "reportId": "Report ID",
-      "transactionId": "Transaction ID",
-      "transactionType": "Transaction Type",
-      "transactionAmount": "Transaction Amount",
-      "transactionDate": "Transaction Date",
-      "creditId": "Credit ID",
-      "originalAmount": "Original Amount",
-      "correctionAmount": "Correction Amount",
-      "resolutionDate": "Resolution Date",
-      "resolutionNotes": "Resolution Notes",
-      "date": "Date",
-      "amount": "Amount",
-      "resolvedBy": "Resolved By"
-    },
-    "errors": {
-      "loadFailed": "Failed to load reconciliation reports. Please refresh and try again.",
-      "loadDetailFailed": "Failed to load reconciliation report details.",
-      "reportNotFound": "Reconciliation report not found. It may have been deleted or you may not have permission to view it.",
-      "runFailed": "Failed to run reconciliation. Please try again."
-    }
-  },
-  "recommendedFix": {
-    "title": "Recommended Fixes",
-    "applySuccess": "The discrepancy has been resolved and the billing records have been updated.",
-    "panels": {
-      "recommendedFix": "Recommended Fix",
-      "alternativeFix": "Alternative Fix",
-      "noActionRequired": "No Action Required",
-      "customAdjustment": "Custom Adjustment"
-    },
-    "buttons": {
-      "createTrackingEntry": "Create Credit Tracking Entry",
-      "updateRemainingAmount": "Update Remaining Amount",
-      "applyAdjustment": "Apply Credit Adjustment",
-      "applyCustomAdjustment": "Apply Custom Adjustment",
-      "markResolvedNoAction": "Resolve Without Changes",
-      "confirm": "Apply Fix",
-      "applying": "Applying..."
-    },
-    "descriptions": {
-      "missingTrackingRecommended": "Add the missing credit record so this transaction counts toward the balance.",
-      "inconsistentRemainingRecommended": "Set the tracked remaining amount to match the expected balance.",
-      "genericRecommended": "Apply the recommended correction.",
-      "genericCustom": "Enter a manual correction amount.",
-      "createTrackingEntry": "Adds the missing credit record for this transaction.",
-      "updateRemainingAmount": "Sets the remaining amount to the expected balance.",
-      "applyAdjustment": "Posts a credit adjustment to correct the balance.",
-      "customAdjustment": "Posts a custom credit adjustment.",
-      "noAction": "Marks this resolved. No balance change."
-    },
-    "dialog": {
-      "adjustmentAmount": "Adjustment Amount",
-      "adjustmentHint": "Enter a positive amount to increase the balance or a negative amount to decrease it.",
-      "notes": "Notes",
-      "notesPlaceholder": "Explain the reason for this correction..."
-    },
-    "errors": {
-      "notesRequired": "Please provide notes explaining the reason for this correction",
-      "invalidAmount": "Please enter a valid amount",
-      "applyFailed": "Failed to apply reconciliation fix. Please refresh and try again."
-    },
-    "impactSummary": {
-      "title": "Impact Summary",
-      "currentBalance": "Current Balance",
-      "newBalance": "New Balance"
-    },
-    "resolved": {
-      "title": "This discrepancy has been resolved",
-      "description": "No further action is required unless you need to review the reconciliation history."
-    }
   },
   "addCredit": {
     "description": "The credit is available to the client right away.",

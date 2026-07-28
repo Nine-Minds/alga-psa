@@ -21,7 +21,8 @@ describe('financial service create transaction tenant-scoped query contract', ()
 
     expect(createTransactionSection).toContain('tenantDb(');
     expect(createTransactionSection).toContain(".table('transactions')");
-    expect(createTransactionSection).toContain(".table('clients')");
+    // No clients write: the credit balance is derived, not cached.
+    expect(createTransactionSection).not.toContain(".table('clients')");
 
     expect(createTransactionSection).not.toMatch(/trx\('transactions'\)\s*\.(?:where|first|update|delete)/);
     expect(createTransactionSection).not.toMatch(/trx\('clients'\)\s*\.(?:where|first|update|delete)/);

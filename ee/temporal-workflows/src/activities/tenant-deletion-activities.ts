@@ -267,7 +267,7 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // Billing details
   // accounting_export_batches is referenced by transactions.accounting_export_batch_id
   // with NO ACTION, so the accounting_export_* tables must be deleted after transactions.
-  'credit_allocations', 'credit_reconciliation_reports', 'credit_tracking',
+  'credit_allocations', 'credit_tracking',
   'usage_tracking', 'bucket_usage', 'recurring_service_periods', 'transactions',
   'accounting_export_errors', 'accounting_export_lines', 'accounting_export_batches',
   // Accounting sync engine (leaf tables: nothing references them)

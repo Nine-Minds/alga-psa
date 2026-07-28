@@ -8,7 +8,7 @@ import { ITransaction, ICreditTracking } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
 import { generateInvoiceNumber } from './invoiceGeneration';
 import { Knex } from 'knex';
-import { validateCreditBalanceWithoutCorrection } from './creditReconciliationActions';
+import { getAvailableCredit } from '../lib/creditBalance';
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { getAnalyticsAsync } from '../lib/authHelpers';
@@ -389,111 +389,11 @@ async function attachInvoiceContextToTransaction(
 
 
 
-const calculateNewBalance = withAuth(async (
-    user,
-    { tenant },
-    clientId: string,
-    changeAmount: number,
-    trx?: Knex.Transaction
-): Promise<number> => {
-    const { knex } = await createTenantKnex();
-
-    if (trx) {
-        const [client] = await tenantScopedTable(trx, tenant, 'clients')
-            .where({ client_id: clientId })
-            .select('credit_balance');
-        return client.credit_balance + changeAmount;
-    } else {
-        return await withTransaction(knex, async (transaction: Knex.Transaction) => {
-            const [client] = await tenantScopedTable(transaction, tenant, 'clients')
-                .where({ client_id: clientId })
-                .select('credit_balance');
-            return client.credit_balance + changeAmount;
-        });
-    }
-});
-
 /**
- * Validates a client's credit balance and automatically corrects it if needed
- * This function is maintained for backward compatibility
- * It uses validateCreditBalanceWithoutCorrection and then applies corrections if needed
- *
- * @param clientId The ID of the client to validate
- * @param expectedBalance Optional expected balance for validation without correction
- * @param providedTrx Optional transaction object
- * @returns Object containing validation results
+ * Guard used before writing a credit-consuming transaction: the client's
+ * derived available credit (non-expired credit_tracking remainders) plus the
+ * change must not go negative.
  */
-export const validateCreditBalance = withAuth(async (
-    user,
-    { tenant },
-    clientId: string,
-    expectedBalance?: number,
-    providedTrx?: Knex.Transaction
-): Promise<{isValid: boolean, actualBalance: number, lastTransaction?: ITransaction} | CreditActionError> => {
-    return withCreditActionErrors(async () => {
-    const { knex } = await createTenantKnex();
-
-    // Check permission for credit reading
-    if (!await hasPermission(user, 'credit', 'read')) {
-        throw new Error('Permission denied: Cannot read credit balance information');
-    }
-
-    // Use provided transaction or create a new one
-    const executeWithTransaction = async (trx: Knex.Transaction) => {
-        // First, validate without making corrections
-        const validationResult = await validateCreditBalanceWithoutCorrection(clientId, trx);
-
-        // If there's a discrepancy and no expected balance is provided, apply the correction
-        if (!validationResult.isValid && expectedBalance === undefined) {
-            const now = new Date().toISOString();
-
-            // Update the client's credit balance to match the calculated balance
-            await tenantScopedTable(trx, tenant, 'clients')
-                .where({ client_id: clientId })
-                .update({
-                    credit_balance: validationResult.expectedBalance,
-                    updated_at: now
-                });
-
-            // Log the automatic correction
-            await auditLog(
-                trx,
-                {
-                    userId: 'system',
-                    operation: 'credit_balance_correction',
-                    tableName: 'clients',
-                    recordId: clientId,
-                    changedData: {
-                        previous_balance: validationResult.actualBalance,
-                        corrected_balance: validationResult.expectedBalance
-                    },
-                    details: {
-                        action: 'Credit balance automatically corrected',
-                        difference: validationResult.difference,
-                        reconciliation_report_id: validationResult.reportId
-                    }
-                }
-            );
-
-            console.log(`Credit balance for client ${clientId} automatically corrected from ${validationResult.actualBalance} to ${validationResult.expectedBalance}`);
-        }
-
-        return {
-            isValid: validationResult.isValid,
-            actualBalance: validationResult.expectedBalance, // Return the expected balance as the actual balance after correction
-            lastTransaction: validationResult.lastTransaction
-        };
-    };
-
-    // If a transaction is provided, use it; otherwise create a new one
-    if (providedTrx) {
-        return await executeWithTransaction(providedTrx);
-    } else {
-        return await withTransaction(knex, executeWithTransaction);
-    }
-    });
-});
-
 export async function validateTransactionBalance(
     clientId: string,
     amount: number,
@@ -501,66 +401,20 @@ export async function validateTransactionBalance(
     tenant: string,
     skipCreditBalanceCheck: boolean = false
 ): Promise<void> {
-    // If we're skipping the credit balance check for credit application,
-    // we should also skip the negative balance check
     if (!skipCreditBalanceCheck) {
-        // Get the available (non-expired) credit balance
-        const validation = await validateCreditBalance(clientId, undefined, trx);
-        if (isCreditActionError(validation)) {
-            throw new Error(getErrorMessage(validation));
-        }
-        const availableBalance = validation.actualBalance;
-        
-        const newBalance = availableBalance + amount;
-        
-        if (newBalance < 0) {
+        const availableBalance = await getAvailableCredit(trx, tenant, clientId);
+        if (availableBalance + amount < 0) {
             throw new Error('Insufficient credit balance');
-        }
-        
-        if (!validation.isValid) {
-            throw new Error('Credit balance validation failed');
         }
     }
 }
-
-/**
- * Run scheduled credit balance validation for all clients
- * This function is maintained for backward compatibility
- * It now uses the new runScheduledCreditBalanceValidation function
- * which creates reconciliation reports instead of making automatic corrections
- *
- * @returns Promise that resolves when validation is complete
- */
-export const scheduledCreditBalanceValidation = withAuth(async (
-    user,
-    { tenant }
-): Promise<void | CreditActionError> => {
-    return withCreditActionErrors(async () => {
-    // Check permission for credit reading (required for scheduled validation)
-    if (!await hasPermission(user, 'credit', 'read')) {
-        throw new Error('Permission denied: Cannot perform credit balance validation');
-    }
-
-    // Import and use the new function from creditReconciliationActions
-    const { runScheduledCreditBalanceValidation } = await import('./creditReconciliationActions');
-
-    // Run the validation and get the results
-    const results = await runScheduledCreditBalanceValidation();
-
-    // Log the results for backward compatibility
-    console.log(`Scheduled credit balance validation completed.`);
-    console.log(`Results: ${results.balanceValidCount} valid balances, ${results.balanceDiscrepancyCount} balance discrepancies found`);
-    console.log(`Credit tracking: ${results.missingTrackingCount} missing entries, ${results.inconsistentTrackingCount} inconsistent entries`);
-    console.log(`Errors: ${results.errorCount}`);
-    });
-});
 
 /**
  * Resolve the expiration date for a newly issued credit: an explicit date wins;
  * otherwise the client's billing settings (falling back to tenant defaults)
  * decide whether and when the credit expires.
  */
-async function resolveCreditExpirationDate(
+export async function resolveCreditExpirationDate(
     trx: Knex.Transaction,
     tenant: string,
     clientId: string,
@@ -681,12 +535,6 @@ export const grantCredit = withAuth(async (
             })
             .returning('*');
 
-        // Unlike prepayments, there is no finalize step: the balance moves now,
-        // in the same transaction as the ledger entries.
-        await tenantScopedTable(trx, tenant, 'clients')
-            .where({ client_id: clientId, tenant })
-            .increment('credit_balance', amount);
-
         return {
             creditTracking: {
                 ...creditTracking,
@@ -760,19 +608,12 @@ export const createPrepaymentInvoice = withAuth(async (
         throw new Error('Client not found');
     }
 
-    // Create prepayment invoice
-    let createdCreditNote: {
-        creditNoteId: string;
-        clientId: string;
-        createdAt: string;
-        createdByUserId: string;
-        amount: number;
-        currency: string;
-    } | null = null;
-
     const createdInvoice = await withTransaction(knex, async (trx: Knex.Transaction) => {
-        const expirationDate = await resolveCreditExpirationDate(trx, tenant, clientId, manualExpirationDate);
-        console.log('createPrepaymentInvoice: Final expiration date to use:', expirationDate);
+        // Only a manually chosen expiration is stamped on the invoice; when
+        // null, finalization resolves the client/default settings at issue time.
+        const expirationDate = manualExpirationDate
+            ? new Date(manualExpirationDate).toISOString()
+            : undefined;
 
         // Get client's currency
         const clientCurrency = client.default_currency_code || 'USD';
@@ -797,191 +638,20 @@ export const createPrepaymentInvoice = withAuth(async (
                 credit_applied: 0,
                 currency_code: clientCurrency,
                 is_prepayment: true,
+                credit_expiration_date: expirationDate,
             })
             .returning('*');
 
-        // Create credit issuance transaction
-        const currentBalance = await tenantScopedTable(trx, tenant, 'transactions')
-            .where({
-                client_id: clientId,
-                tenant
-            })
-            .orderBy('created_at', 'desc')
-            .first()
-            .then(lastTx => lastTx?.balance_after || 0);
-
-        const newBalance = currentBalance + amount;
-        await validateTransactionBalance(clientId, amount, trx, tenant, true); // Skip credit balance check for prepayment
-
-        // Create transaction with expiration date if applicable
-        const now = new Date().toISOString();
-        const transactionId = uuidv4();
-        console.log('createPrepaymentInvoice: Creating transaction with ID:', transactionId);
-        console.log('createPrepaymentInvoice: Transaction data:', {
-            transaction_id: transactionId,
-            client_id: clientId,
-            invoice_id: createdInvoice.invoice_id,
-            amount: amount,
-            type: 'credit_issuance',
-            status: 'completed',
-            description: 'Credit issued from prepayment',
-            created_at: new Date().toISOString(),
-            balance_after: newBalance,
-            tenant,
-            expiration_date: expirationDate
-        });
-        
-        // Log the SQL query that would be executed
-        const query = tenantScopedTable(trx, tenant, 'transactions')
-            .insert({
-                transaction_id: transactionId,
-                client_id: clientId,
-                invoice_id: createdInvoice.invoice_id,
-                amount: amount,
-                type: 'credit_issuance',
-                status: 'completed',
-                description: 'Credit issued from prepayment',
-                created_at: new Date().toISOString(),
-                balance_after: newBalance,
-                tenant,
-                expiration_date: expirationDate
-            })
-            .toSQL();
-        console.log('createPrepaymentInvoice: Transaction SQL:', query.sql);
-        console.log('createPrepaymentInvoice: Transaction bindings:', query.bindings);
-        
-        try {
-            await tenantScopedTable(trx, tenant, 'transactions').insert({
-                transaction_id: transactionId,
-                client_id: clientId,
-                invoice_id: createdInvoice.invoice_id,
-                amount: amount,
-                type: 'credit_issuance',
-                status: 'completed',
-                description: 'Credit issued from prepayment',
-                created_at: now,
-                balance_after: newBalance,
-                tenant,
-                expiration_date: expirationDate,
-                currency_code: clientCurrency
-            });
-            console.log('createPrepaymentInvoice: Transaction created successfully');
-        } catch (error) {
-            console.error('createPrepaymentInvoice: Error creating transaction:', error);
-            throw error;
-        }
-
-        // Create credit tracking entry
-        const creditId = uuidv4();
-        console.log('createPrepaymentInvoice: Creating credit tracking entry with ID:', creditId);
-        console.log('createPrepaymentInvoice: Credit tracking data:', {
-            credit_id: creditId,
-            tenant,
-            client_id: clientId,
-            transaction_id: transactionId,
-            amount: amount,
-            remaining_amount: amount,
-            created_at: new Date().toISOString(),
-            expiration_date: expirationDate,
-            is_expired: false,
-            updated_at: new Date().toISOString()
-        });
-        
-        try {
-            await tenantScopedTable(trx, tenant, 'credit_tracking').insert({
-                credit_id: creditId,
-                tenant,
-                client_id: clientId,
-                transaction_id: transactionId,
-                amount: amount,
-                remaining_amount: amount, // Initially, remaining amount equals the full amount
-                created_at: now,
-                expiration_date: expirationDate,
-                is_expired: false,
-                updated_at: now,
-                currency_code: clientCurrency
-            });
-            console.log('createPrepaymentInvoice: Credit tracking entry created successfully');
-            
-            // Verify the transaction and credit tracking entries were created correctly
-            const createdTransaction = await tenantScopedTable(trx, tenant, 'transactions')
-                .where({ transaction_id: transactionId })
-                .first();
-            console.log('createPrepaymentInvoice: Verified transaction:', {
-                transaction_id: createdTransaction?.transaction_id,
-                expiration_date: createdTransaction?.expiration_date
-            });
-            
-            const createdCreditTracking = await tenantScopedTable(trx, tenant, 'credit_tracking')
-                .where({ credit_id: creditId })
-                .first();
-            console.log('createPrepaymentInvoice: Verified credit tracking:', {
-                credit_id: createdCreditTracking?.credit_id,
-                expiration_date: createdCreditTracking?.expiration_date
-            });
-        } catch (error) {
-            console.error('createPrepaymentInvoice: Error creating credit tracking entry:', error);
-            throw error;
-        }
-
-        createdCreditNote = {
-            creditNoteId: creditId,
-            clientId,
-            createdAt: now,
-            createdByUserId: user.user_id,
-            amount,
-            currency: clientCurrency,
-        };
-
-        // Note: Credit balance will be updated when the invoice is finalized
-        console.log('Prepayment invoice created for client', clientId, 'with amount', amount);
-        if (expirationDate) {
-            console.log('Credit will expire on', expirationDate);
-        }
-        console.log('Credit will be applied when the invoice is finalized');
-
+        // No credit is issued here: the credit_issuance transaction and
+        // credit_tracking entry are created at finalization, so a draft
+        // prepayment grants nothing.
         return createdInvoice;
     });
-
-    if (createdCreditNote) {
-        const wfData: {
-            creditNoteId: string;
-            clientId: string;
-            createdAt: string;
-            createdByUserId: string;
-            amount: number;
-            currency: string;
-        } = createdCreditNote;
-        await publishWorkflowEvent({
-            eventType: 'CREDIT_NOTE_CREATED',
-            payload: buildCreditNoteCreatedPayload({
-                creditNoteId: wfData.creditNoteId,
-                clientId: wfData.clientId,
-                createdByUserId: wfData.createdByUserId,
-                createdAt: wfData.createdAt,
-                amount: wfData.amount,
-                currency: wfData.currency,
-                status: 'issued',
-                sourceDocumentKind: 'prepayment_invoice',
-                sourceInvoiceId: createdInvoice.invoice_id,
-                sourceInvoiceNumber: createdInvoice.invoice_number ?? null,
-                sourceInvoiceStatus: createdInvoice.status ?? null,
-                sourceInvoiceDateBasis: 'financial_document_date',
-                sourceServicePeriodStart: null,
-                sourceServicePeriodEnd: null,
-            }),
-            ctx: {
-                tenantId: tenant,
-                occurredAt: wfData.createdAt,
-                actor: { actorType: 'USER', actorUserId: wfData.createdByUserId },
-            },
-            idempotencyKey: `credit_note_created:${wfData.creditNoteId}`,
-        });
-    }
 
     return createdInvoice;
     });
 });
+
 
 /**
  * Canonical apply-credit engine. Writes the full ledger for a credit
@@ -1087,14 +757,9 @@ export async function applyCreditToInvoiceInternal(
             requestedAmount = adjustedRequestedAmount;
         }
         
-        // Get current credit balance
-        const [client] = await tenantScopedTable(trx, tenant, 'clients')
-            .where({ client_id: clientId })
-            .select('credit_balance');
-        
-        // Calculate the maximum amount of credit we can apply
-        const availableCredit = client.credit_balance || 0;
-        
+        // Available credit in the invoice's currency, derived from tracking rows
+        const availableCredit = await getAvailableCredit(trx, tenant, clientId, invoiceCurrency);
+
         // If no credit to apply, exit early
         if (availableCredit <= 0 || requestedAmount <= 0) {
             console.log(`No credit available to apply for client ${clientId}`);
@@ -1255,28 +920,18 @@ export async function applyCreditToInvoiceInternal(
             tenant
         });
 
-        // Update invoice and client credit balance. Invoice totals are
-        // immutable after finalization — credit application only moves
-        // credit_applied; balance due is derived (total − credit − payments).
-        await Promise.all([
-            tenantScopedTable(trx, tenant, 'invoices')
-                .where({
-                    invoice_id: invoiceId,
-                    tenant
-                })
-                .update({
-                    credit_applied: trx.raw('COALESCE(credit_applied, 0) + ?', [totalAppliedAmount])
-                }),
-            tenantScopedTable(trx, tenant, 'clients')
-                .where({
-                    client_id: clientId,
-                    tenant
-                })
-                .update({
-                    credit_balance: newBalance,
-                    updated_at: now
-                })
-        ]);
+        // Update the invoice. Invoice totals are immutable after finalization —
+        // credit application only moves credit_applied; balance due is derived
+        // (total − credit − payments). The client's credit balance is derived
+        // from the tracking rows drawn down above, so nothing else to write.
+        await tenantScopedTable(trx, tenant, 'invoices')
+            .where({
+                invoice_id: invoiceId,
+                tenant
+            })
+            .update({
+                credit_applied: trx.raw('COALESCE(credit_applied, 0) + ?', [totalAppliedAmount])
+            });
         
         // For each applied credit, create a related_transaction_id reference
         for (const appliedCredit of appliedCredits) {
@@ -1845,27 +1500,7 @@ export const manuallyExpireCredit = withAuth(async (
             related_transaction_id: credit.transaction_id
         });
 
-        // Update client credit balance
-        const [client] = await tenantScopedTable(trx, tenant, 'clients')
-            .where({
-                client_id: credit.client_id,
-                tenant
-            })
-            .select('credit_balance');
-
-        const newBalance = Number(client.credit_balance) - Number(credit.remaining_amount);
-        
-        await tenantScopedTable(trx, tenant, 'clients')
-            .where({
-                client_id: credit.client_id,
-                tenant
-            })
-            .update({
-                credit_balance: newBalance,
-                updated_at: now
-            });
-
-        // Update the credit tracking entry
+        // Update the credit tracking entry (the derived balance drops with it)
         const [updatedCredit] = await tenantScopedTable(trx, tenant, 'credit_tracking')
             .where({
                 credit_id: creditId,
@@ -2018,26 +1653,7 @@ export const transferCredit = withAuth(async (
             }
         });
 
-        // 3. Update source client credit balance
-        const [sourceClient] = await tenantScopedTable(trx, tenant, 'clients')
-            .where({
-                client_id: sourceCredit.client_id,
-                tenant
-            })
-            .select('credit_balance');
-
-        const newSourceBalance = Number(sourceClient.credit_balance) - amount;
-        await tenantScopedTable(trx, tenant, 'clients')
-            .where({
-                client_id: sourceCredit.client_id,
-                tenant
-            })
-            .update({
-                credit_balance: newSourceBalance,
-                updated_at: now
-            });
-
-        // 4. Create transfer-in transaction for target client
+        // 3. Create transfer-in transaction for target client
         const targetTransactionId = uuidv4();
         await tenantScopedTable(trx, tenant, 'transactions').insert({
             transaction_id: targetTransactionId,
@@ -2059,26 +1675,8 @@ export const transferCredit = withAuth(async (
             }
         });
 
-        // 5. Update target client credit balance
-        const [targetClientData] = await tenantScopedTable(trx, tenant, 'clients')
-            .where({
-                client_id: targetClientId,
-                tenant
-            })
-            .select('credit_balance');
-
-        const newTargetBalance = Number(targetClientData.credit_balance) + amount;
-        await tenantScopedTable(trx, tenant, 'clients')
-            .where({
-                client_id: targetClientId,
-                tenant
-            })
-            .update({
-                credit_balance: newTargetBalance,
-                updated_at: now
-            });
-
-        // 6. Create new credit tracking entry for target client
+        // 4. Create new credit tracking entry for target client
+        // (both clients' derived balances move via the tracking rows)
         // Inherit expiration date from source credit if it exists
         const newCreditId = uuidv4();
         const [newCredit] = await tenantScopedTable(trx, tenant, 'credit_tracking').insert({

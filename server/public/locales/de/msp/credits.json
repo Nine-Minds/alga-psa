@@ -15,14 +15,9 @@
     "expires": "Läuft ab am",
     "status": "Status",
     "actions": "Aktionen",
-    "discrepancy": "Abweichung",
-    "detected": "Erkannt am",
-    "expectedBalance": "Erwarteter Saldo",
-    "actualBalance": "Tatsächlicher Saldo",
     "amountAvailable": "Verfügbarer Betrag",
     "expiration": "Ablauf",
-    "select": "Auswählen",
-    "issueType": "Problemtyp"
+    "select": "Auswählen"
   },
   "filters": {
     "allClients": "Alle Kunden"
@@ -30,9 +25,6 @@
   "status": {
     "active": "Aktiv",
     "expired": "Abgelaufen",
-    "open": "Offen",
-    "inReview": "In Prüfung",
-    "resolved": "Gelöst",
     "never": "Nie",
     "na": "n. z.",
     "depleted": "Aufgebraucht",
@@ -44,11 +36,9 @@
     "view": "Anzeigen",
     "edit": "Bearbeiten",
     "expire": "Verfallen lassen",
-    "resolve": "Beheben",
     "addCredit": "Gutschrift hinzufügen",
     "cancel": "Abbrechen",
     "viewAllCredits": "Alle Gutschriften anzeigen",
-    "runReconciliation": "Abstimmung starten",
     "running": "Läuft...",
     "reset": "Zurücksetzen",
     "applyCredit": "Gutschrift anwenden",
@@ -57,12 +47,7 @@
     "selected": "Ausgewählt",
     "saveChanges": "Änderungen speichern",
     "saving": "Wird gespeichert...",
-    "runReconciliationAllClients": "Abgleich ausführen (alle Kunden)",
     "transfer": "Übertragen"
-  },
-  "tabs": {
-    "credits": "Gutschriften",
-    "reconciliation": "Abgleich"
   },
   "settings": {
     "loadErrorPrefix": "Error loading credit expiration settings:",
@@ -75,68 +60,13 @@
     "totalActiveCredits": "Summe aktiver Gutschriften",
     "expiringIn30Days": "Läuft in 30 Tagen ab",
     "totalCreditsApplied": "Summe verwendeter Gutschriften",
-    "totalCreditsExpired": "Summe abgelaufener Gutschriften",
-    "totalDiscrepancies": "Gesamtzahl der Abweichungen",
-    "totalDiscrepancyAmount": "Gesamtbetrag der Abweichungen",
-    "openIssues": "Offene Fälle",
-    "inReviewCount": "In Prüfung",
-    "resolvedCount": "Gelöst"
+    "totalCreditsExpired": "Summe abgelaufener Gutschriften"
   },
   "management": {
     "title": "Kreditverwaltung",
     "noCreditsFound": "Keine Gutschriften gefunden",
     "noMatchingCredits": "Keine Gutschriften entsprechen diesen Filtern",
     "loadFailed": "Gutschriften konnten nicht geladen werden. Erneut versuchen."
-  },
-  "reconciliation": {
-    "allStatuses": "Alle Status",
-    "fromDate": "Von Datum",
-    "toDate": "Bis Datum",
-    "validationResult": "Abstimmung abgeschlossen: {{count}} neue Probleme gefunden.",
-    "tabs": {
-      "all": "Alle",
-      "open": "Offen",
-      "inReview": "In Prüfung",
-      "resolved": "Gelöst"
-    },
-    "allClients": "Alle Kunden",
-    "validationCompletedAllClients": "Abgleich für alle Kunden abgeschlossen.",
-    "noReportsFound": "Keine Abgleichsberichte gefunden",
-    "issueTypes": {
-      "missingCreditTrackingEntry": "Gutschrift nicht erfasst",
-      "inconsistentCreditRemainingAmount": "Restbetrag stimmt nicht überein",
-      "balanceDiscrepancy": "Saldo stimmt nicht überein",
-      "unknownIssue": "Unbekanntes Problem"
-    },
-    "sections": {
-      "discrepancyDetails": "Abweichungsdetails",
-      "creditApplications": "Guthabenverwendungen"
-    },
-    "fields": {
-      "expectedBalance": "Erwarteter Saldo",
-      "actualBalance": "Tatsächlicher Saldo",
-      "difference": "Differenz",
-      "detected": "Erkannt",
-      "reportId": "Bericht-ID",
-      "transactionId": "Transaktions-ID",
-      "transactionType": "Transaktionstyp",
-      "transactionAmount": "Transaktionsbetrag",
-      "transactionDate": "Transaktionsdatum",
-      "creditId": "Guthaben-ID",
-      "originalAmount": "Ursprünglicher Betrag",
-      "correctionAmount": "Korrekturbetrag",
-      "resolutionDate": "Lösungsdatum",
-      "resolutionNotes": "Lösungsnotizen",
-      "date": "Datum",
-      "amount": "Betrag",
-      "resolvedBy": "Behoben von"
-    },
-    "errors": {
-      "loadFailed": "Abgleichsberichte konnten nicht geladen werden. Bitte aktualisieren und erneut versuchen.",
-      "loadDetailFailed": "Details des Abgleichsberichts konnten nicht geladen werden.",
-      "reportNotFound": "Abgleichsbericht nicht gefunden. Er wurde möglicherweise gelöscht oder Sie haben keine Berechtigung, ihn anzuzeigen.",
-      "runFailed": "Abgleich konnte nicht ausgeführt werden. Bitte erneut versuchen."
-    }
   },
   "application": {
     "title": "Gutschrift anwenden",
@@ -234,65 +164,17 @@
     "financialOnly": "Nur finanziell",
     "noRecurringServicePeriod": "Kein wiederkehrender Leistungszeitraum"
   },
-  "recommendedFix": {
-    "title": "Empfohlene Korrekturen",
-    "applySuccess": "Die Abweichung wurde behoben und die Abrechnungsdaten wurden aktualisiert.",
-    "panels": {
-      "recommendedFix": "Empfohlene Korrektur",
-      "alternativeFix": "Alternative Korrektur",
-      "noActionRequired": "Keine Aktion erforderlich",
-      "customAdjustment": "Benutzerdefinierte Anpassung"
-    },
-    "buttons": {
-      "createTrackingEntry": "Guthaben-Verfolgungseintrag erstellen",
-      "updateRemainingAmount": "Restbetrag aktualisieren",
-      "applyAdjustment": "Guthabenanpassung anwenden",
-      "applyCustomAdjustment": "Benutzerdefinierte Anpassung anwenden",
-      "markResolvedNoAction": "Ohne Änderungen beheben",
-      "confirm": "Korrektur anwenden",
-      "applying": "Wird angewendet..."
-    },
-    "descriptions": {
-      "missingTrackingRecommended": "Fügt den fehlenden Gutschriftdatensatz hinzu, damit diese Transaktion zum Saldo zählt.",
-      "inconsistentRemainingRecommended": "Setzt den erfassten Restbetrag auf den erwarteten Saldo.",
-      "genericRecommended": "Wendet die empfohlene Korrektur an.",
-      "genericCustom": "Geben Sie einen manuellen Korrekturbetrag ein.",
-      "createTrackingEntry": "Fügt den fehlenden Gutschriftdatensatz für diese Transaktion hinzu.",
-      "updateRemainingAmount": "Setzt den Restbetrag auf den erwarteten Saldo.",
-      "applyAdjustment": "Bucht eine Gutschriftenkorrektur zum Ausgleich des Saldos.",
-      "customAdjustment": "Bucht eine benutzerdefinierte Gutschriftenkorrektur.",
-      "noAction": "Markiert dies als behoben. Keine Saldoänderung."
-    },
-    "dialog": {
-      "adjustmentAmount": "Anpassungsbetrag",
-      "adjustmentHint": "Geben Sie einen positiven Betrag ein, um den Saldo zu erhöhen, oder einen negativen, um ihn zu verringern.",
-      "notes": "Notizen",
-      "notesPlaceholder": "Begründen Sie diese Korrektur..."
-    },
-    "errors": {
-      "notesRequired": "Bitte geben Sie Notizen mit der Begründung für diese Korrektur an",
-      "invalidAmount": "Bitte geben Sie einen gültigen Betrag ein",
-      "applyFailed": "Abgleichskorrektur konnte nicht angewendet werden. Bitte aktualisieren und erneut versuchen."
-    },
-    "impactSummary": {
-      "title": "Auswirkungsübersicht",
-      "currentBalance": "Aktueller Saldo",
-      "newBalance": "Neuer Saldo"
-    },
-    "resolved": {
-      "title": "Diese Abweichung wurde behoben",
-      "description": "Es sind keine weiteren Maßnahmen erforderlich, es sei denn, Sie möchten den Abgleichsverlauf überprüfen."
-    }
-  },
   "addCredit": {
     "description": "Die Gutschrift steht dem Kunden sofort zur Verfügung.",
     "fields": {
       "client": "Kunde",
       "amount": "Betrag",
+      "description": "Beschreibung (optional)",
       "expirationDate": "Ablaufdatum (optional)"
     },
     "placeholders": {
       "amount": "Betrag eingeben",
+      "description": "Grund für das Guthaben",
       "expirationDate": "Ablaufdatum auswählen"
     },
     "hints": {

@@ -11,7 +11,7 @@ import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { formatCurrencyFromMinorUnits, formatDateOnly } from '@alga-psa/core';
 import type { ColumnDefinition, ICreditTracking } from '@alga-psa/types';
 import { listCredits, type CreditStatusFilter } from './actions';
-import { fetchClientsForDropdown } from '@alga-psa/reporting/actions/reconciliationReportActions';
+import { fetchClientsForDropdown } from '@alga-psa/reporting/actions/clientDropdownActions';
 import CreditDetailDialog from './CreditDetailDialog';
 import EditCreditExpirationDialog from './EditCreditExpirationDialog';
 import ExpireCreditDialog from './ExpireCreditDialog';
