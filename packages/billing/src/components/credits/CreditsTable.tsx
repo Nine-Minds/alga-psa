@@ -8,7 +8,7 @@ import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
-import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
+import { formatCurrencyFromMinorUnits, formatDateOnly } from '@alga-psa/core';
 import type { ColumnDefinition, ICreditTracking } from '@alga-psa/types';
 import { listCredits, type CreditStatusFilter } from './actions';
 import { fetchClientsForDropdown } from '@alga-psa/reporting/actions/reconciliationReportActions';
@@ -69,19 +69,9 @@ function createColumns(
 ): ColumnDefinition<CreditRow>[] {
   return [
     {
-      title: t('columns.creditId', { defaultValue: 'Credit ID' }),
-      dataIndex: 'credit_id',
-      render: (value: string) => <span className="font-mono text-xs">{value.substring(0, 8)}...</span>,
-    },
-    {
       title: t('columns.client', { defaultValue: 'Client' }),
       dataIndex: 'client_name',
       render: (value: string | undefined) => value || t('status.na', { defaultValue: 'N/A' }),
-    },
-    {
-      title: t('columns.created', { defaultValue: 'Created' }),
-      dataIndex: 'created_at',
-      render: (value: string) => <span>{new Date(value).toLocaleDateString()}</span>,
     },
     {
       title: t('columns.description', { defaultValue: 'Description' }),
@@ -89,14 +79,22 @@ function createColumns(
       render: (value: string | undefined) => value || t('status.na', { defaultValue: 'N/A' }),
     },
     {
-      title: t('columns.originalAmount', { defaultValue: 'Original Amount' }),
-      dataIndex: 'amount',
-      render: (value: number) => formatCurrencyFromMinorUnits(value),
-    },
-    {
-      title: t('columns.remaining', { defaultValue: 'Remaining' }),
+      title: t('columns.balance', { defaultValue: 'Balance' }),
       dataIndex: 'remaining_amount',
-      render: (value: number) => formatCurrencyFromMinorUnits(value),
+      headerClassName: 'text-right',
+      cellClassName: 'text-right tabular-nums',
+      render: (value: number, record) => {
+        const original = Number(record.amount);
+        const remaining = Number(value);
+        return (
+          <span>
+            {formatCurrencyFromMinorUnits(remaining)}
+            {remaining !== original && (
+              <span className="text-[rgb(var(--color-text-500))]">{' '}{t('columns.balanceOf', { amount: formatCurrencyFromMinorUnits(original), defaultValue: 'of {{amount}}' })}</span>
+            )}
+          </span>
+        );
+      },
     },
     {
       title: t('columns.expires', { defaultValue: 'Expires' }),
@@ -106,7 +104,7 @@ function createColumns(
           return <span className="text-muted-foreground">{t('status.never', { defaultValue: 'Never' })}</span>;
         }
 
-        return <span>{new Date(value).toLocaleDateString()}</span>;
+        return <span>{formatDateOnly(new Date(value))}</span>;
       },
     },
     {
@@ -117,33 +115,30 @@ function createColumns(
     {
       title: t('columns.actions', { defaultValue: 'Actions' }),
       dataIndex: 'credit_id',
-      width: '10%',
+      cellClassName: 'whitespace-nowrap',
       render: (value: string, record) => {
         const isExpired = record.is_expired;
         const isDepleted = Number(record.remaining_amount) <= 0;
 
+        if (isExpired) {
+          return null;
+        }
+
         return (
           <div className="flex space-x-2">
-            <Button variant="outline" size="sm" id={`view-credit-${value}`} onClick={() => handlers.onView(record)}>
-              {t('actions.view', { defaultValue: 'View' })}
+            <Button variant="outline" size="sm" id={`edit-credit-${value}`} onClick={(e) => { e.stopPropagation(); handlers.onEdit(record); }}>
+              {t('actions.edit', { defaultValue: 'Edit' })}
             </Button>
-            {!isExpired && (
-              <>
-                <Button variant="outline" size="sm" id={`edit-credit-${value}`} onClick={() => handlers.onEdit(record)}>
-                  {t('actions.edit', { defaultValue: 'Edit' })}
-                </Button>
-                {!isDepleted && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    id={`expire-credit-${value}`}
-                    className="text-destructive hover:bg-destructive/10"
-                    onClick={() => handlers.onExpire(record)}
-                  >
-                    {t('actions.expire', { defaultValue: 'Expire' })}
-                  </Button>
-                )}
-              </>
+            {!isDepleted && (
+              <Button
+                variant="outline"
+                size="sm"
+                id={`expire-credit-${value}`}
+                className="text-destructive hover:bg-destructive/10"
+                onClick={(e) => { e.stopPropagation(); handlers.onExpire(record); }}
+              >
+                {t('actions.expire', { defaultValue: 'Expire' })}
+              </Button>
             )}
           </div>
         );
