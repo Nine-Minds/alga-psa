@@ -25,8 +25,10 @@ export function CreditsTabs({ tabs }: CreditsTabsProps) {
 
   useEffect(() => {
     const requestedTab = tabParam?.toLowerCase();
-    if (requestedTab && CREDIT_TAB_IDS.includes(requestedTab as typeof CREDIT_TAB_IDS[number]) && requestedTab !== activeTab) {
-      setActiveTab(requestedTab);
+    if (requestedTab && CREDIT_TAB_IDS.includes(requestedTab as typeof CREDIT_TAB_IDS[number])) {
+      if (requestedTab !== activeTab) {
+        setActiveTab(requestedTab);
+      }
     } else if (activeTab !== DEFAULT_TAB) {
       setActiveTab(DEFAULT_TAB);
     }

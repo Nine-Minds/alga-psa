@@ -16,8 +16,7 @@ import {
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { toast } from 'react-hot-toast';
-import { formatCurrency, formatDateOnly } from '@alga-psa/core';
-import { parseISO } from 'date-fns';
+import { formatCurrencyFromMinorUnits, formatDateOnly } from '@alga-psa/core';
 import type { ColumnDefinition, ICreditReconciliationReport, ReconciliationStatus } from '@alga-psa/types';
 import {
   fetchClientsForDropdown,
@@ -187,26 +186,26 @@ export default function ReconciliationTab() {
     {
       title: t('columns.expectedBalance', { defaultValue: 'Expected Balance' }),
       dataIndex: 'expected_balance',
-      render: (value: number) => formatCurrency(value),
+      render: (value: number) => formatCurrencyFromMinorUnits(value),
     },
     {
       title: t('columns.actualBalance', { defaultValue: 'Actual Balance' }),
       dataIndex: 'actual_balance',
-      render: (value: number) => formatCurrency(value),
+      render: (value: number) => formatCurrencyFromMinorUnits(value),
     },
     {
       title: t('columns.discrepancy', { defaultValue: 'Discrepancy' }),
       dataIndex: 'difference',
       render: (value: number) => (
         <span className={value >= 0 ? 'text-[rgb(var(--color-primary-700))]' : 'text-[rgb(var(--color-destructive-600))]'}>
-          {formatCurrency(value)}
+          {formatCurrencyFromMinorUnits(value)}
         </span>
       ),
     },
     {
       title: t('columns.detected', { defaultValue: 'Detected' }),
       dataIndex: 'detection_date',
-      render: (value: string) => <span>{formatDateOnly(parseISO(value))}</span>,
+      render: (value: string | Date) => <span>{formatDateOnly(new Date(value))}</span>,
     },
     {
       title: t('columns.status', { defaultValue: 'Status' }),
@@ -302,7 +301,7 @@ export default function ReconciliationTab() {
           />
           <StatCard
             label={t('stats.totalDiscrepancyAmount', { defaultValue: 'Total Discrepancy Amount' })}
-            value={formatCurrency(stats.totalAmount)}
+            value={formatCurrencyFromMinorUnits(stats.totalAmount)}
           />
         </div>
       )}

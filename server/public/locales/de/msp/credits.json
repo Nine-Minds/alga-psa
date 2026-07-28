@@ -212,7 +212,26 @@
     "removeExpiration": "Ablaufdatum entfernen",
     "newExpirationDate": "Neues Ablaufdatum",
     "pastDateError": "Das Ablaufdatum darf nicht in der Vergangenheit liegen",
-    "updateError": "Beim Aktualisieren des Ablaufdatums ist ein Fehler aufgetreten"
+    "updateError": "Beim Aktualisieren des Ablaufdatums ist ein Fehler aufgetreten",
+    "updateSuccess": "Kreditablauf aktualisiert"
+  },
+  "viewDialog": {
+    "title": "Kreditdetails",
+    "loadFailed": "Kreditdetails konnten nicht geladen werden.",
+    "invoice": "Rechnung",
+    "transactions": "Zugehörige Transaktionen",
+    "transactionType": "Typ",
+    "noTransactions": "Keine zugehörigen Transaktionen gefunden."
+  },
+  "expireDialog": {
+    "title": "Kredit verfallen lassen",
+    "description": "Dadurch verfällt der Kredit sofort. Das Restguthaben steht dem Kunden nicht mehr zur Verfügung. Diese Aktion kann nicht rückgängig gemacht werden.",
+    "reasonLabel": "Grund (optional)",
+    "reasonPlaceholder": "Erklären Sie, warum dieser Kredit verfällt...",
+    "success": "Kredit verfallen",
+    "error": "Beim Verfallen des Kredits ist ein Fehler aufgetreten",
+    "expiring": "Verfällt...",
+    "confirm": "Kredit verfallen lassen"
   },
   "context": {
     "lineageMissing": "Herkunft fehlt",

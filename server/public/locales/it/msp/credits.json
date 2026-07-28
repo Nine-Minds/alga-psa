@@ -212,7 +212,26 @@
     "removeExpiration": "Rimuovi data di scadenza",
     "newExpirationDate": "Nuova data di scadenza",
     "pastDateError": "La data di scadenza non può essere nel passato",
-    "updateError": "Si è verificato un errore durante l'aggiornamento della data di scadenza"
+    "updateError": "Si è verificato un errore durante l'aggiornamento della data di scadenza",
+    "updateSuccess": "Scadenza del credito aggiornata"
+  },
+  "viewDialog": {
+    "title": "Dettagli del credito",
+    "loadFailed": "Impossibile caricare i dettagli del credito.",
+    "invoice": "Fattura",
+    "transactions": "Transazioni correlate",
+    "transactionType": "Tipo",
+    "noTransactions": "Nessuna transazione correlata trovata."
+  },
+  "expireDialog": {
+    "title": "Scadi credito",
+    "description": "Questo farà scadere immediatamente il credito. Il saldo rimanente non sarà più disponibile per il cliente. Questa azione non può essere annullata.",
+    "reasonLabel": "Motivo (facoltativo)",
+    "reasonPlaceholder": "Spiega perché questo credito sta scadendo...",
+    "success": "Credito scaduto",
+    "error": "Si è verificato un errore durante la scadenza del credito",
+    "expiring": "Scadenza...",
+    "confirm": "Scadi credito"
   },
   "context": {
     "lineageMissing": "Genealogia mancante",

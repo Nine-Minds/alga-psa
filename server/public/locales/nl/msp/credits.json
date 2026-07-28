@@ -212,7 +212,26 @@
     "removeExpiration": "Vervaldatum verwijderen",
     "newExpirationDate": "Nieuwe vervaldatum",
     "pastDateError": "Vervaldatum mag niet in het verleden liggen",
-    "updateError": "Er is een fout opgetreden bij het bijwerken van de vervaldatum"
+    "updateError": "Er is een fout opgetreden bij het bijwerken van de vervaldatum",
+    "updateSuccess": "Kredietverval bijgewerkt"
+  },
+  "viewDialog": {
+    "title": "Kredietdetails",
+    "loadFailed": "Kredietdetails konden niet worden geladen.",
+    "invoice": "Factuur",
+    "transactions": "Gerelateerde transacties",
+    "transactionType": "Type",
+    "noTransactions": "Geen gerelateerde transacties gevonden."
+  },
+  "expireDialog": {
+    "title": "Krediet laten vervallen",
+    "description": "Hiermee vervalt het krediet onmiddellijk. Het resterende saldo is niet langer beschikbaar voor de klant. Deze actie kan niet ongedaan worden gemaakt.",
+    "reasonLabel": "Reden (optioneel)",
+    "reasonPlaceholder": "Leg uit waarom dit krediet vervalt...",
+    "success": "Krediet vervallen",
+    "error": "Er is een fout opgetreden bij het laten vervallen van het krediet",
+    "expiring": "Vervallen...",
+    "confirm": "Krediet laten vervallen"
   },
   "context": {
     "lineageMissing": "Herkomst ontbreekt",

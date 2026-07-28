@@ -1,5 +1,6 @@
 'use client';
 
+import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
@@ -11,16 +12,20 @@ import {
   isActionMessageError,
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
-import { formatCurrency } from '@alga-psa/core';
+import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 import type { ColumnDefinition, ICreditExpirationSettings, ICreditTracking } from '@alga-psa/types';
 import AddCreditButton from './AddCreditButton';
 import BackButton from './BackButton';
 import { CreditsTabs } from './CreditsTabs';
+import CreditDetailDialog from './CreditDetailDialog';
+import EditCreditExpirationDialog from './EditCreditExpirationDialog';
+import ExpireCreditDialog from './ExpireCreditDialog';
 import ReconciliationTab from './reconciliation/ReconciliationTab';
 
 type CreditRow = ICreditTracking & {
   transaction_description?: string;
   invoice_number?: string;
+  client_name?: string;
 };
 
 interface CreditsListResult {
@@ -72,14 +77,26 @@ function getStatusLabel(
   return <span className="text-blue-600 font-medium">{t('status.active', { defaultValue: 'Active' })}</span>;
 }
 
+interface CreditActionHandlers {
+  onView: (record: CreditRow) => void;
+  onEdit: (record: CreditRow) => void;
+  onExpire: (record: CreditRow) => void;
+}
+
 function createColumns(
   t: ReturnType<typeof useTranslation>['t'],
+  handlers: CreditActionHandlers,
 ): ColumnDefinition<CreditRow>[] {
   return [
     {
       title: t('columns.creditId', { defaultValue: 'Credit ID' }),
       dataIndex: 'credit_id',
       render: (value: string) => <span className="font-mono text-xs">{value.substring(0, 8)}...</span>,
+    },
+    {
+      title: t('columns.client', { defaultValue: 'Client' }),
+      dataIndex: 'client_name',
+      render: (value: string | undefined) => value || t('status.na', { defaultValue: 'N/A' }),
     },
     {
       title: t('columns.created', { defaultValue: 'Created' }),
@@ -94,12 +111,12 @@ function createColumns(
     {
       title: t('columns.originalAmount', { defaultValue: 'Original Amount' }),
       dataIndex: 'amount',
-      render: (value: number) => formatCurrency(value),
+      render: (value: number) => formatCurrencyFromMinorUnits(value),
     },
     {
       title: t('columns.remaining', { defaultValue: 'Remaining' }),
       dataIndex: 'remaining_amount',
-      render: (value: number) => formatCurrency(value),
+      render: (value: number) => formatCurrencyFromMinorUnits(value),
     },
     {
       title: t('columns.expires', { defaultValue: 'Expires' }),
@@ -126,12 +143,12 @@ function createColumns(
 
         return (
           <div className="flex space-x-2">
-            <Button variant="outline" size="sm" id={`view-credit-${value}`}>
+            <Button variant="outline" size="sm" id={`view-credit-${value}`} onClick={() => handlers.onView(record)}>
               {t('actions.view', { defaultValue: 'View' })}
             </Button>
             {!isExpired && (
               <>
-                <Button variant="outline" size="sm" id={`edit-credit-${value}`}>
+                <Button variant="outline" size="sm" id={`edit-credit-${value}`} onClick={() => handlers.onEdit(record)}>
                   {t('actions.edit', { defaultValue: 'Edit' })}
                 </Button>
                 <Button
@@ -139,6 +156,7 @@ function createColumns(
                   size="sm"
                   id={`expire-credit-${value}`}
                   className="text-destructive hover:bg-destructive/10"
+                  onClick={() => handlers.onExpire(record)}
                 >
                   {t('actions.expire', { defaultValue: 'Expire' })}
                 </Button>
@@ -242,7 +260,15 @@ export default function CreditsPageClient({
 }: CreditsPageClientProps) {
   const { t } = useTranslation('msp/credits');
 
-  const columns = createColumns(t);
+  const [viewCredit, setViewCredit] = useState<CreditRow | null>(null);
+  const [editCredit, setEditCredit] = useState<CreditRow | null>(null);
+  const [expireCreditRow, setExpireCreditRow] = useState<CreditRow | null>(null);
+
+  const columns = createColumns(t, {
+    onView: setViewCredit,
+    onEdit: setEditCredit,
+    onExpire: setExpireCreditRow,
+  });
   const allCredits = allCreditsResult.data?.credits ?? [];
   const expiredCredits = allCredits.filter((credit) => credit.is_expired);
   const settingsError = isCreditExpirationSettingsError(settings);
@@ -373,6 +399,20 @@ export default function CreditsPageClient({
           </CardContent>
         </Card>
       </div>
+
+      <CreditDetailDialog
+        creditId={viewCredit?.credit_id ?? null}
+        clientName={viewCredit?.client_name}
+        onClose={() => setViewCredit(null)}
+      />
+      <EditCreditExpirationDialog
+        credit={editCredit}
+        onClose={() => setEditCredit(null)}
+      />
+      <ExpireCreditDialog
+        credit={expireCreditRow}
+        onClose={() => setExpireCreditRow(null)}
+      />
     </div>
   );
 }

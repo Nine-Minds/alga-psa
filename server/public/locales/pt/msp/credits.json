@@ -212,7 +212,26 @@
     "removeExpiration": "Remover data de validade",
     "newExpirationDate": "Nova data de expiração",
     "pastDateError": "A data de expiração não pode estar no passado",
-    "updateError": "Ocorreu um erro ao atualizar a data de validade"
+    "updateError": "Ocorreu um erro ao atualizar a data de validade",
+    "updateSuccess": "Expiração do crédito atualizada"
+  },
+  "viewDialog": {
+    "title": "Detalhes do crédito",
+    "loadFailed": "Falha ao carregar os detalhes do crédito.",
+    "invoice": "Fatura",
+    "transactions": "Transações relacionadas",
+    "transactionType": "Tipo",
+    "noTransactions": "Nenhuma transação relacionada encontrada."
+  },
+  "expireDialog": {
+    "title": "Expirar crédito",
+    "description": "Isso expirará o crédito imediatamente. O saldo restante não estará mais disponível para o cliente. Esta ação não pode ser desfeita.",
+    "reasonLabel": "Motivo (opcional)",
+    "reasonPlaceholder": "Explique por que este crédito está expirando...",
+    "success": "Crédito expirado",
+    "error": "Ocorreu um erro ao expirar o crédito",
+    "expiring": "Expirando...",
+    "confirm": "Expirar crédito"
   },
   "context": {
     "lineageMissing": "Linhagem ausente",

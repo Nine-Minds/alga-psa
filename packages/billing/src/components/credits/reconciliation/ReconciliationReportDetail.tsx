@@ -17,8 +17,7 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 import { toast } from 'react-hot-toast';
 import { CheckCircle } from 'lucide-react';
-import { formatCurrency, formatDateOnly } from '@alga-psa/core';
-import { parseISO } from 'date-fns';
+import { formatCurrencyFromMinorUnits, formatDateOnly } from '@alga-psa/core';
 import type { ICreditReconciliationReport } from '@alga-psa/types';
 import { fetchReconciliationReportById } from '@alga-psa/reporting/actions/reconciliationReportActions';
 import {
@@ -283,7 +282,7 @@ export default function ReconciliationReportDetail({ reportId, onDataChanged }: 
             {t('reconciliation.fields.expectedBalance', { defaultValue: 'Expected Balance' })}
           </p>
           <p className="text-2xl font-bold text-[rgb(var(--color-primary-700))]">
-            {formatCurrency(report.expected_balance)}
+            {formatCurrencyFromMinorUnits(report.expected_balance)}
           </p>
         </div>
         <div className="bg-[rgb(var(--color-accent-50))] p-4 rounded-lg">
@@ -291,7 +290,7 @@ export default function ReconciliationReportDetail({ reportId, onDataChanged }: 
             {t('reconciliation.fields.actualBalance', { defaultValue: 'Actual Balance' })}
           </p>
           <p className="text-2xl font-bold text-[rgb(var(--color-accent-700))]">
-            {formatCurrency(report.actual_balance)}
+            {formatCurrencyFromMinorUnits(report.actual_balance)}
           </p>
         </div>
         <div className="col-span-2 bg-[rgb(var(--color-secondary-50))] p-4 rounded-lg">
@@ -301,7 +300,7 @@ export default function ReconciliationReportDetail({ reportId, onDataChanged }: 
           <p className={`text-2xl font-bold ${report.difference >= 0
             ? 'text-[rgb(var(--color-primary-700))]'
             : 'text-[rgb(var(--color-destructive-600))]'}`}>
-            {formatCurrency(report.difference)}
+            {formatCurrencyFromMinorUnits(report.difference)}
           </p>
         </div>
       </div>
@@ -320,7 +319,7 @@ export default function ReconciliationReportDetail({ reportId, onDataChanged }: 
             />
             <DetailField
               label={t('reconciliation.fields.detected', { defaultValue: 'Detected' })}
-              value={formatDateOnly(parseISO(report.detection_date))}
+              value={formatDateOnly(new Date(report.detection_date))}
             />
             {issueType === 'missing_credit_tracking_entry' && (
               <>
@@ -337,12 +336,12 @@ export default function ReconciliationReportDetail({ reportId, onDataChanged }: 
                 )}
                 <DetailField
                   label={t('reconciliation.fields.transactionAmount', { defaultValue: 'Transaction Amount' })}
-                  value={formatCurrency(metadata.transaction_amount ?? 0)}
+                  value={formatCurrencyFromMinorUnits(metadata.transaction_amount ?? 0)}
                 />
                 {metadata.transaction_date && (
                   <DetailField
                     label={t('reconciliation.fields.transactionDate', { defaultValue: 'Transaction Date' })}
-                    value={formatDateOnly(parseISO(metadata.transaction_date))}
+                    value={formatDateOnly(new Date(metadata.transaction_date))}
                   />
                 )}
               </>
@@ -364,7 +363,7 @@ export default function ReconciliationReportDetail({ reportId, onDataChanged }: 
                 {metadata.original_amount !== undefined && (
                   <DetailField
                     label={t('reconciliation.fields.originalAmount', { defaultValue: 'Original Amount' })}
-                    value={formatCurrency(metadata.original_amount)}
+                    value={formatCurrencyFromMinorUnits(metadata.original_amount)}
                   />
                 )}
               </>
@@ -374,7 +373,7 @@ export default function ReconciliationReportDetail({ reportId, onDataChanged }: 
                 {report.resolution_date && (
                   <DetailField
                     label={t('reconciliation.fields.resolutionDate', { defaultValue: 'Resolution Date' })}
-                    value={formatDateOnly(parseISO(report.resolution_date))}
+                    value={formatDateOnly(new Date(report.resolution_date))}
                   />
                 )}
                 {report.resolution_notes && (
@@ -414,9 +413,9 @@ export default function ReconciliationReportDetail({ reportId, onDataChanged }: 
                   {metadata.applications.map((app: { transaction_id: string; created_at: string; amount: number }, index: number) => (
                     <tr key={index} className="border-b border-[rgb(var(--color-border-200))]">
                       <td className="px-4 py-2 text-sm font-mono">{app.transaction_id.substring(0, 8)}...</td>
-                      <td className="px-4 py-2 text-sm">{formatDateOnly(parseISO(app.created_at))}</td>
+                      <td className="px-4 py-2 text-sm">{formatDateOnly(new Date(app.created_at))}</td>
                       <td className="px-4 py-2 text-sm font-medium text-[rgb(var(--color-destructive-600))]">
-                        {formatCurrency(app.amount)}
+                        {formatCurrencyFromMinorUnits(app.amount)}
                       </td>
                     </tr>
                   ))}
@@ -481,7 +480,7 @@ export default function ReconciliationReportDetail({ reportId, onDataChanged }: 
                 details: (
                   <ul className="list-disc list-inside mt-2 text-sm text-[rgb(var(--color-text-700))]">
                     <li>
-                      {t('reconciliation.fields.correctionAmount', { defaultValue: 'Correction Amount' })}: {formatCurrency(report.difference)}
+                      {t('reconciliation.fields.correctionAmount', { defaultValue: 'Correction Amount' })}: {formatCurrencyFromMinorUnits(report.difference)}
                     </li>
                   </ul>
                 ),
@@ -573,14 +572,14 @@ export default function ReconciliationReportDetail({ reportId, onDataChanged }: 
                   <div className="text-[rgb(var(--color-text-500))]">
                     {t('recommendedFix.impactSummary.currentBalance', { defaultValue: 'Current Balance' })}:
                   </div>
-                  <div className="font-medium text-right">{formatCurrency(report.actual_balance)}</div>
+                  <div className="font-medium text-right">{formatCurrencyFromMinorUnits(report.actual_balance)}</div>
                   <div className="text-[rgb(var(--color-text-500))]">
                     {t('recommendedFix.impactSummary.newBalance', { defaultValue: 'New Balance' })}:
                   </div>
                   <div className="font-medium text-right">
                     {selectedFix === 'custom_adjustment'
-                      ? formatCurrency(report.actual_balance + (parseFloat(customAmount) || 0))
-                      : formatCurrency(report.expected_balance)}
+                      ? formatCurrencyFromMinorUnits(report.actual_balance + (parseFloat(customAmount) || 0))
+                      : formatCurrencyFromMinorUnits(report.expected_balance)}
                   </div>
                 </div>
               </div>

@@ -1303,7 +1303,7 @@ export const getCreditHistory = withAuth(async (
 export const listClientCredits = withAuth(async (
     user,
     { tenant },
-    clientId: string,
+    clientId: string | undefined,
     includeExpired: boolean = false,
     page: number = 1,
     pageSize: number = 20
@@ -1326,12 +1326,15 @@ export const listClientCredits = withAuth(async (
     const offset = (page - 1) * pageSize;
 
     return await withTransaction(knex, async (trx: Knex.Transaction) => {
-        // Build base query
+        // Build base query; an absent clientId lists credits across all clients.
         const baseQuery = tenantScopedTable(trx, tenant, 'credit_tracking')
             .where({
-                'credit_tracking.client_id': clientId,
                 'credit_tracking.tenant': tenant
             });
+
+        if (clientId) {
+            baseQuery.where('credit_tracking.client_id', clientId);
+        }
 
         // Filter by expiration status if needed
         if (!includeExpired) {
@@ -1352,13 +1355,21 @@ export const listClientCredits = withAuth(async (
             'transactions.transaction_id',
             { type: 'left' }
         );
+        tenantDb(trx, tenant).tenantJoin(
+            creditsQuery,
+            'clients',
+            'credit_tracking.client_id',
+            'clients.client_id',
+            { type: 'left' }
+        );
         const credits = await creditsQuery
             .select(
                 'transactions.description as transaction_description',
                 'transactions.type as transaction_type',
                 'transactions.invoice_id',
                 'transactions.created_at as transaction_date',
-                'transactions.metadata as transaction_metadata'
+                'transactions.metadata as transaction_metadata',
+                'clients.client_name as client_name'
             )
             .orderBy([
                 { column: 'is_expired', order: 'asc' },

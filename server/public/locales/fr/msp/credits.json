@@ -212,7 +212,26 @@
     "removeExpiration": "Supprimer la date d'expiration",
     "newExpirationDate": "Nouvelle date d'expiration",
     "pastDateError": "La date d'expiration ne peut pas être passée",
-    "updateError": "Une erreur s'est produite lors de la mise à jour de la date d'expiration"
+    "updateError": "Une erreur s'est produite lors de la mise à jour de la date d'expiration",
+    "updateSuccess": "Expiration du crédit mise à jour"
+  },
+  "viewDialog": {
+    "title": "Détails du crédit",
+    "loadFailed": "Échec du chargement des détails du crédit.",
+    "invoice": "Facture",
+    "transactions": "Transactions associées",
+    "transactionType": "Type",
+    "noTransactions": "Aucune transaction associée trouvée."
+  },
+  "expireDialog": {
+    "title": "Faire expirer le crédit",
+    "description": "Cela fera expirer immédiatement le crédit. Le solde restant ne sera plus disponible pour le client. Cette action est irréversible.",
+    "reasonLabel": "Motif (facultatif)",
+    "reasonPlaceholder": "Expliquez pourquoi ce crédit expire...",
+    "success": "Crédit expiré",
+    "error": "Une erreur s'est produite lors de l'expiration du crédit",
+    "expiring": "Expiration...",
+    "confirm": "Faire expirer le crédit"
   },
   "context": {
     "lineageMissing": "Traçabilité manquante",

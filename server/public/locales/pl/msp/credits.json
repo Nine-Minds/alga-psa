@@ -212,7 +212,26 @@
     "removeExpiration": "Usuń datę wygaśnięcia",
     "newExpirationDate": "Nowa data wygaśnięcia",
     "pastDateError": "Data wygaśnięcia nie może być w przeszłości",
-    "updateError": "Wystąpił błąd podczas aktualizacji daty wygaśnięcia"
+    "updateError": "Wystąpił błąd podczas aktualizacji daty wygaśnięcia",
+    "updateSuccess": "Zaktualizowano wygaśnięcie kredytu"
+  },
+  "viewDialog": {
+    "title": "Szczegóły kredytu",
+    "loadFailed": "Nie udało się załadować szczegółów kredytu.",
+    "invoice": "Faktura",
+    "transactions": "Powiązane transakcje",
+    "transactionType": "Typ",
+    "noTransactions": "Nie znaleziono powiązanych transakcji."
+  },
+  "expireDialog": {
+    "title": "Wygasź kredyt",
+    "description": "Spowoduje to natychmiastowe wygaśnięcie kredytu. Pozostałe saldo nie będzie już dostępne dla klienta. Tej operacji nie można cofnąć.",
+    "reasonLabel": "Powód (opcjonalnie)",
+    "reasonPlaceholder": "Wyjaśnij, dlaczego ten kredyt wygasa...",
+    "success": "Kredyt wygasł",
+    "error": "Wystąpił błąd podczas wygaszania kredytu",
+    "expiring": "Wygaszanie...",
+    "confirm": "Wygasź kredyt"
   },
   "context": {
     "lineageMissing": "Brak pochodzenia",
