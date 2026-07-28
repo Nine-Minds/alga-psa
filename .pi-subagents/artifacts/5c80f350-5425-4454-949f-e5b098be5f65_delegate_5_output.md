@@ -1,0 +1,150 @@
+# LowEffortCritic: The Credit Management Screen, Audited for Effort
+
+Scope: `/msp/billing/credits` in worktree `feature-billing-credits-reconciliation`. Every claim below is grounded in a file, line, commit, or screenshot. Ranked worst-first by (damage × how cheap the proper fix was).
+
+Two premises from the brief were **stale** — and the forensic trail is more damning than the premise:
+
+- The `management.addCreditPlaceholder` string ("Credit amount and details form would be implemented here.") **was** shipped in all locales, but commit `a855c9c452` ("i18n(credits): cut dead addCreditPlaceholder string from all locales") — the HEAD commit of this branch — finally removed it. The placeholder survived in production locales long enough to need a dedicated cleanup commit. That is the smell: the placeholder wasn't caught by review; it was caught by archaeology.
+- The custom-adjustment input **was** in cents — the user literally had to type `2500` to adjust $25.00 — but the fix is sitting **uncommitted** in the working tree right now (`git status`: `M packages/billing/src/components/credits/reconciliation/ReconciliationReportDetail.tsx`). Committed code has `setCustomAmount(report.difference.toString())` with the comment "Same unit as report.difference" — a confession that the author knew the units were wrong for a user-facing field and shipped it anyway, letting the engine's internal representation leak into the UI. The uncommitted patch fixes it, and the patch itself is lazy (see #3).
+
+---
+
+## 1. Two shipped "features" that are loading spinners that never load
+
+**Location:** `packages/billing/src/components/credits/CreditsPageClient.tsx:383` and `:398`
+
+```tsx
+<CardContent>
+  <Skeleton className="h-40 w-full" />
+</CardContent>
+```
+
+"Credit Expiration Summary" and "Credit Usage Trends" are two titled, described cards on the main page whose entire body is a `Skeleton` — a component that exists to mean "data is coming." No data is coming. There is no fetch, no TODO, no feature flag, no `if (false)`. The skeleton IS the feature. A user sees a perpetually-pulsing grey box and reasonably concludes the page is broken or slow, forever.
+
+The rot is compounding: `server/public/locales/en/msp/credits.json:79-83` ships a full `charts.*` block (`expirationSummary`, `usageTrends`, etc.) — a complete duplicate set of translations for these phantom charts, translated into every supported locale, referenced by **zero** components (`grep -rn "charts\." packages/billing/src/components/credits/` → nothing). Someone wrote chart copy, had it translated, and never wrote the charts.
+
+**The shortcut betrayed:** Two roadmap items were de-scoped by rendering their chrome and skipping their substance, betting nobody would look twice at a loading state.
+**The non-lazy version:** Either delete the cards (one-line change, honest) or wire them — the data already exists on this page: `expiredCredits` is computed in the same file (`CreditsPageClient.tsx:275`), and expiration summaries are derivable from the credits already fetched. A summary card is an afternoon; a fake loading state shipped to users is a lie with a pulse.
+
+## 2. "All Credits" silently truncates at 20 rows — pagination props dropped on the floor
+
+**Location:** `packages/billing/src/components/credits/actions.ts:86-90` (`page: number = 1, pageSize: number = 20`) + `CreditsPageClient.tsx:185-218` (`CreditsList`) + `CreditsPage.tsx:37-40`
+
+`listCredits` is a paginated API. `CreditsPage` calls it with no page/pageSize, so it returns the first 20. `CreditsList` then renders `<DataTable id="credits-table" columns={columns} data={response.data.credits} />` — no `pagination`, no `currentPage`, no `totalItems`, no `onPageChange`. The result object isn't even unwrapped for a total. Contrast with `ReconciliationTab.tsx:340-349`, ten files over, which wires all of it up correctly for the same `DataTable`.
+
+So credit #21 onward is invisible. Not paginated-away — *gone*, with no UI hint anything is missing. On a screen whose entire job is accounting for money.
+
+**The shortcut betrayed:** The author threaded pagination through the server action signature (the hard part was done!) and then didn't spend the four props to finish it. Compare-and-contrast with the reconciliation tab in the same feature makes this indefensible — the correct pattern was sitting in a sibling file.
+**The non-lazy version:** Pass `pagination currentPage pageSize totalItems onPageChange` to `DataTable`, return `total` from `listCredits`, hold page state per tab. Exactly what `ReconciliationTab` already does.
+
+## 3. The cents-input "fix" is itself lazy: hardcoded `/100`, half-locale-aware
+
+**Location:** `packages/billing/src/components/credits/reconciliation/ReconciliationReportDetail.tsx:106-110` (uncommitted working-tree change)
+
+```tsx
+// The engine works in minor units; the input takes major units (dollars)
+// like every other money field in the app.
+setCustomAmount((report.difference / 100).toString());
+```
+
+The conversion *in* uses `toMinorUnits(parsed, i18n.language)` — locale-aware. The conversion *out* is a bare `/100` — hardcoded 2-decimal assumption, no locale, and not even the `fromMinorUnits`-style helper. And the input itself is `type="text"` with a hand-rolled regex gate (`/^-?\d*\.?\d*$/`, line ~447) while **`packages/ui/src/components/CurrencyInput.tsx` exists** — a purpose-built, tested (`CurrencyInput.test.tsx`) money input the author didn't reach for. `AddCreditButton.tsx:212` does the same thing with a raw `<Input type="number" step="0.01">`. The design system built the money field; the credits feature hand-rolled two of them.
+
+Bonus tell, same dialog: `parseFloat(customAmount) || 0` (line ~583) silently converts garbage to $0 in the "Impact Summary" instead of validating.
+
+**The shortcut betrayed:** Fixing the unit bug at the exact point of complaint with arithmetic, rather than at the layer (a CurrencyInput + a shared minor/major-unit boundary) that would make the whole class of bug impossible. The comment "like every other money field in the app" is aspiration masquerading as fact — every other money field is *supposed* to be CurrencyInput.
+**The non-lazy version:** `CurrencyInput` with a minor-units value, one conversion at the action boundary, zero regexes.
+
+## 4. Zero-UUID sentinel: a fake client ID as control flow
+
+**Location:** `packages/billing/src/components/credits/CreditsPage.tsx:29-33`
+
+```tsx
+const clientId = requestedClientId || '00000000-0000-0000-0000-000000000000';
+```
+
+When no client is selected, the page invents a magic UUID and passes it to `getCreditExpirationSettings`, relying on the *server-side fallback behavior* for an unknown client to return tenant defaults. The comment even narrates the hack ("The expiration settings fall back to tenant defaults for an unknown client, so keep the zero-UUID sentinel there"). A comment explaining why your sentinel is load-bearing is a comment confessing your API is wrong. Every downstream consumer of that settings API now has to know that a nonexistent client ID is a legitimate input — a ghost client haunting the billing settings.
+
+**The shortcut betrayed:** Making the server tolerant of garbage instead of making the parameter optional. The author *knew* — the comment proves the design conversation happened and was resolved with "just pass the zero UUID."
+**The non-lazy version:** `getCreditExpirationSettings(clientId: string | null)` with an explicit tenant-default branch, or a separate `getTenantCreditExpirationDefaults()`. Sentinel values as API contracts are how you get a settings row written for a client that doesn't exist one day.
+
+## 5. Hand-rolled `<table>` and re-derived status logic, with the right components one import away
+
+**Location:** `packages/billing/src/components/credits/CreditDetailDialog.tsx:152-170` (raw `<table>`), `CreditsPageClient.tsx:50-80` (`getStatusLabel`), `ReconciliationReportDetail.tsx:394-421` (second raw table, `key={index}`)
+
+- `CreditDetailDialog` hand-rolls a `<table>` for related transactions while the same page's list view uses `DataTable` — and gets no sorting, no empty handling, no consistent styling. `ReconciliationReportDetail` does it *again* for credit applications, with `key={index}` on rows whose `transaction_id` is right there.
+- `getStatusLabel` in `CreditsPageClient` re-implements expired / expiring-soon / active with a **7-day threshold and ad-hoc colored `<span>`s** — while `packages/ui/src/components/CreditExpirationBadge.tsx` exists, with tooltip, day-math done correctly (midnight normalization — the page's version does raw `Date` subtraction, so "days until expiration" shifts with the time of day), and a configurable `daysUntilWarning`. Same screen, worse version, hand-rolled.
+
+**The shortcut betrayed:** Not knowing — or not checking — what the design system already provides. `CreditExpirationBadge`, `DataTable`, `CurrencyInput`, `EmptyState` (the `CreditsList` empty state is a hand-rolled `<div className="p-8 text-center">`) — four skipped components on one screen.
+**The non-lazy version:** Import them. That's the whole fix. The lazy version cost more lines than the right one.
+
+## 6. Bare `catch {` swallows the error object entirely
+
+**Location:** `EditCreditExpirationDialog.tsx:67-69`, `ExpireCreditDialog.tsx:56-58`
+
+```tsx
+} catch {
+  setError(t('expireDialog.error', { defaultValue: 'An error occurred while expiring the credit' }));
+}
+```
+
+No `console.error`, no captured parameter, no distinction between "network died" and "server said no." The sibling `AddCreditButton` and `ReconciliationReportDetail` at least `console.error` before showing the generic message; these two dialogs throw the evidence away. When a user reports "expiring a credit failed," there will be nothing in any log to explain why.
+
+**The shortcut betrayed:** Saving one line (`catch (e) { console.error(...) }`) at the cost of all diagnosability.
+**The non-lazy version:** Capture and log the error; surface the server action's own message (`creditActionErrorMessage` in `actions.ts` already does the careful message-mapping work — the dialogs just don't benefit from unexpected throws).
+
+## 7. Copy-paste fingerprints across the dialogs
+
+- **`ExpireCreditDialog.tsx:82-90` reuses `t('expirationDialog.creditAmount')` / `t('expirationDialog.remainingAmount')`** — keys from the *Edit* dialog's namespace. The amount/remaining summary grid was pasted from `EditCreditExpirationDialog.tsx:86-100` and the author didn't even re-namespace the i18n keys. If the Edit dialog's copy ever changes, the Expire dialog changes too. That's not a shared component; that's a shared accident.
+- **`DetailField` is defined twice** with subtly different markup: `CreditDetailDialog.tsx:23-30` (uses `<div>`s, `text-xs` label) vs `ReconciliationReportDetail.tsx:57-64` (uses `<p>`s, `text-sm` label). Same name, same purpose, two files, two typography scales — so the same kind of field renders differently in the view dialog vs the reconciliation drawer. Third site: the Impact Summary in `ReconciliationReportDetail` hand-rolls the same label/value grid a third way.
+
+**The shortcut betrayed:** Duplicating instead of extracting a 8-line presentational component — and doing it *twice*, inconsistently.
+**The non-lazy version:** One `DetailField` (or a `CreditSummaryGrid`) in `packages/billing/src/components/credits/`, imported by all three dialogs.
+
+## 8. Hardcoded make-it-fit values, already failing to fit
+
+- **`width: '10%'` on the Actions column** (`CreditsPageClient.tsx:142`) holds three buttons (View/Edit/Expire). The screenshot `adr-active.png` shows the result: the DataTable gives up and reports **"3 columns hidden. Show all"** — Remaining, Expires, and Status are collapsed away on a desktop-width viewport because nine columns were crammed in and the actions column was starved to 10%.
+- `max-w-2xl` (`CreditDetailDialog.tsx:86`), `min-w-[560px]` inside a `width="720px"` Drawer (`ReconciliationReportDetail.tsx:226`, `ReconciliationTab.tsx:354`), `h-40` skeletons, `w-64`/`w-48` filter selects (`ReconciliationTab.tsx:280,298`). None derive from content; all are "looked right on my screen."
+- `value.substring(0, 8)...` for credit IDs in two places (`CreditsPageClient.tsx:95`, `ReconciliationReportDetail.tsx:404`) — truncated UUIDs with no tooltip or copy affordance, on a screen where the ID is the primary key you'd need to reconcile against anything else.
+
+**The shortcut betrayed:** Sizing to the author's monitor instead of to the content.
+**The non-lazy version:** Let the DataTable lay out its columns (or use the repo's own `dataTableColumnFit.ts`), put IDs in a mono cell with copy-on-click, drop the min-width arms race between Drawer and its child.
+
+## 9. The "Expired Credits" tab is a client-side costume change
+
+**Location:** `CreditsPageClient.tsx:275-291`
+
+The Expired tab doesn't query anything. It filters `allCredits` in the browser and **hand-assembles a fake `CreditsListResult`** (`{ success: true, data: { credits: expiredCredits } }`) to feed the same `CreditsList`. Combined with finding #2, this means "Expired Credits" is "the expired subset of the first 20 credits" — silently wrong as soon as a tenant has 21 credits. The boolean-trap signature `listCredits(clientId, includeExpired: boolean)` (actions.ts:88) is what made this the path of least resistance: there was no `status` filter to ask for, so the author filtered in the client and manufactured a result shape to keep the types quiet.
+
+**The shortcut betrayed:** Reusing a component by lying to it, instead of extending the query.
+**The non-lazy version:** `listCredits(clientId, { status: 'active' | 'expired' | 'all', page, pageSize })`, three server-filtered tabs, real totals. The three tabs sharing columns is legitimate structure; the fake response object is not.
+
+## 10. Escape-hatch typing in the action layer
+
+`grep` of the components is clean, but the seams leak:
+
+- `CreditDetailDialog.tsx:51` — `setDetail(result.data as CreditDetailData)`: the server action returns `{ success: true, data: result }` where `data` is untyped (`getCreditDetail` in `actions.ts:106` has no return type annotation), so the client casts blind. The `CreditDetailData` interface is declared *in the dialog file*, privately — the client defines what it hopes the server returns.
+- `ReconciliationTab.tsx:129` — `setReports(reportsResult.reports as ReconciliationReportRow[])`; `:253` — `value as ReconciliationStatus | ''` off a `CustomSelect` string.
+- `creditReconciliationActions.ts:121-131` — `parseRowMetadata` returns `Record<string, any>` and swallows JSON parse failures into `{}` (bare `catch {`), which then flows into `report.metadata?.issue_type` discrimination in `reconciliationPresentation.tsx:16-20` — a malformed metadata row is silently relabeled "Credit Balance Discrepancy," the bucket issue type. **A data-integrity screen that silently reclassifies corrupt data.**
+- `creditReconciliationFixActions.ts` — four separate `hasPermission(user as any, 'billing', 'update')` (lines 113, 226, 340, 481). The `as any` on the *user* object, in *permission checks*, copy-pasted four times.
+
+**The shortcut betrayed:** Type-checking as an obstacle course instead of a specification. Every `as` is a place the author chose "make the compiler stop" over "say what's true."
+**The non-lazy version:** Type the action return values at the boundary (`ICreditReconciliationReport` exists), give `metadata` a discriminated union per issue type, fail loud on unparseable metadata (or at least flag the report), and fix the `hasPermission` user type once instead of casting four times.
+
+---
+
+## Summary table
+
+| # | Sin | Where | Damage | Fix cost | Verdict |
+|---|-----|-------|--------|----------|---------|
+| 1 | Permanent skeletons as shipped features + dead `charts.*` locale block | CreditsPageClient.tsx:383,398 | Users see perpetual "loading" | Trivial (delete or wire) | Worst: dishonest UI |
+| 2 | Credits list drops pagination, truncates at 20 | actions.ts:88, CreditsList | Invisible financial records | 4 props + a total | Shipped-broken |
+| 3 | Cents input (committed); uncommitted fix hardcodes `/100`, skips CurrencyInput | ReconciliationReportDetail.tsx:107 | User-facing unit trap | One component import | Laziness passed to the user |
+| 4 | Zero-UUID sentinel client | CreditsPage.tsx:33 | Ghost client in settings API | Optional param | Confessed in a comment |
+| 5 | Raw tables, re-derived status badge, skipped design system | CreditDetailDialog, CreditsPageClient | Inconsistent UX, timezone-flaky day math | Imports exist already | Didn't look |
+| 6 | Bare `catch {` | Edit/Expire dialogs | Undiagnosable failures | One line | Cheap-out |
+| 7 | Cross-namespace i18n key reuse, duplicated DetailField | ExpireCreditDialog:82-90 | Copy-paste drift | Extract 8 lines | Pasted, not factored |
+| 8 | `width:'10%'`, fixed px everywhere, truncated IDs | CreditsPageClient:142 | "3 columns hidden" on desktop | Layout pass | Fit to my monitor |
+| 9 | Fake response object for Expired tab | CreditsPageClient:280-290 | Wrong data past 20 rows | Real status filter | Lying to the type system |
+| 10 | `as` casts at every seam, `Record<string, any>` metadata | actions + presentation | Silent reclassification of bad data | Type the boundary | Compiler bullied into silence |
+
+The pattern across all ten: **the correct layer existed — CurrencyInput, CreditExpirationBadge, DataTable pagination, EmptyState, typed action returns — and was skipped in favor of the nearest thing that compiled.** The screen isn't under-engineered; it's anti-engineered against its own substrate.

@@ -41,7 +41,6 @@ describe('MSP credits namespace and route i18n contract', () => {
       'actions',
       'tabs',
       'settings',
-      'charts',
       'stats',
       'management',
       'reconciliation',

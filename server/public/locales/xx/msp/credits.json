@@ -3,11 +3,7 @@
     "title": "11111",
     "creditsOverview": "11111",
     "overviewDescription": "11111",
-    "overviewDescriptionWithExpiration": "11111",
-    "expirationSummary": "11111",
-    "expirationSummaryDescription": "11111",
-    "usageTrends": "11111",
-    "usageTrendsDescription": "11111"
+    "overviewDescriptionWithExpiration": "11111"
   },
   "columns": {
     "creditId": "11111",
@@ -76,33 +72,6 @@
     "none": "11111",
     "loadErrorPrefix": "11111"
   },
-  "charts": {
-    "expirationSummary": "11111",
-    "expirationSummaryDescription": "11111",
-    "usageTrends": "11111",
-    "usageTrendsDescription": "11111",
-    "lessThan7Days": "11111",
-    "lessThan30Days": "11111",
-    "lessThan90Days": "11111",
-    "greaterThan90Days": "11111",
-    "creditsIssued": "11111",
-    "creditsApplied": "11111",
-    "creditsExpired": "11111",
-    "statusDistribution": "11111",
-    "statusDistributionDescription": "11111",
-    "discrepancyTrends": "11111",
-    "discrepancyTrendsDescription": "11111",
-    "numberOfDiscrepancies": "11111",
-    "totalAmount": "11111",
-    "months": {
-      "jan": "11111",
-      "feb": "11111",
-      "mar": "11111",
-      "apr": "11111",
-      "may": "11111",
-      "jun": "11111"
-    }
-  },
   "stats": {
     "totalActiveCredits": "11111",
     "expiringIn30Days": "11111",
@@ -116,22 +85,17 @@
   },
   "management": {
     "title": "11111",
-    "recentCredits": "11111",
-    "recentCreditsDescription": "11111",
     "loadErrorPrefix": "11111",
     "noDataReturned": "11111",
     "noCreditsFound": "11111"
   },
   "reconciliation": {
-    "title": "11111",
     "selectClient": "11111",
     "allClients": "11111",
     "status": "11111",
     "allStatuses": "11111",
     "fromDate": "11111",
     "toDate": "11111",
-    "reconciliationReports": "11111",
-    "reconciliationReportsDescription": "11111",
     "validationResult": "11111 {{balanceCount}} 11111 {{trackingCount}} 11111",
     "validationCompletedAllClients": "11111",
     "noReportsFound": "11111",

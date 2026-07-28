@@ -3,11 +3,7 @@
     "title": "Credit Management",
     "creditsOverview": "Credits Overview",
     "overviewDescription": "Manage your client credits and transfers",
-    "overviewDescriptionWithExpiration": "Manage your client credits, including expiration dates, and transfers",
-    "expirationSummary": "Credit Expiration Summary",
-    "expirationSummaryDescription": "Overview of credits expiring soon",
-    "usageTrends": "Credit Usage Trends",
-    "usageTrendsDescription": "Historical credit usage patterns"
+    "overviewDescriptionWithExpiration": "Manage your client credits, including expiration dates, and transfers"
   },
   "columns": {
     "creditId": "Credit ID",
@@ -76,33 +72,6 @@
     "none": "None",
     "loadErrorPrefix": "Error loading credit expiration settings:"
   },
-  "charts": {
-    "expirationSummary": "Credit Expiration Summary",
-    "expirationSummaryDescription": "Overview of credits expiring soon",
-    "usageTrends": "Credit Usage Trends",
-    "usageTrendsDescription": "Historical credit usage patterns",
-    "lessThan7Days": "< 7 days",
-    "lessThan30Days": "< 30 days",
-    "lessThan90Days": "< 90 days",
-    "greaterThan90Days": "> 90 days",
-    "creditsIssued": "Credits Issued",
-    "creditsApplied": "Credits Applied",
-    "creditsExpired": "Credits Expired",
-    "statusDistribution": "Status Distribution",
-    "statusDistributionDescription": "Overview of reconciliation report statuses",
-    "discrepancyTrends": "Discrepancy Trends",
-    "discrepancyTrendsDescription": "Monthly trends in credit discrepancies",
-    "numberOfDiscrepancies": "Number of Discrepancies",
-    "totalAmount": "Total Amount",
-    "months": {
-      "jan": "Jan",
-      "feb": "Feb",
-      "mar": "Mar",
-      "apr": "Apr",
-      "may": "May",
-      "jun": "Jun"
-    }
-  },
   "stats": {
     "totalActiveCredits": "Total Active Credits",
     "expiringIn30Days": "Expiring in 30 Days",
@@ -116,22 +85,17 @@
   },
   "management": {
     "title": "Credit Management",
-    "recentCredits": "Recent Credits",
-    "recentCreditsDescription": "View and manage your client credits. Credits stay financial artifacts, and recurring service periods appear only when the source invoice carried canonical coverage.",
     "loadErrorPrefix": "Error loading credits:",
     "noDataReturned": "No data returned from server",
     "noCreditsFound": "No credits found"
   },
   "reconciliation": {
-    "title": "Credit Reconciliation Dashboard",
     "selectClient": "Select Client",
     "allClients": "All Clients",
     "status": "Status",
     "allStatuses": "All Statuses",
     "fromDate": "From Date",
     "toDate": "To Date",
-    "reconciliationReports": "Reconciliation Reports",
-    "reconciliationReportsDescription": "View and manage credit balance discrepancies",
     "validationResult": "Validation completed: Found {{balanceCount}} balance discrepancies and {{trackingCount}} tracking issues.",
     "validationCompletedAllClients": "Reconciliation completed for all clients.",
     "noReportsFound": "No reconciliation reports found",

@@ -3,11 +3,7 @@
     "title": "Kredietbeheer",
     "creditsOverview": "Kredietoverzicht",
     "overviewDescription": "Beheer de kredieten en overdrachten van uw klant",
-    "overviewDescriptionWithExpiration": "Beheer de kredieten van uw klant, inclusief vervaldatums en overdrachten",
-    "expirationSummary": "Overzicht van kredietverval",
-    "expirationSummaryDescription": "Overzicht van kredieten die binnenkort verlopen",
-    "usageTrends": "Trends in kredietgebruik",
-    "usageTrendsDescription": "Historische patronen in kredietgebruik"
+    "overviewDescriptionWithExpiration": "Beheer de kredieten van uw klant, inclusief vervaldatums en overdrachten"
   },
   "columns": {
     "creditId": "Krediet-ID",
@@ -76,33 +72,6 @@
     "none": "Geen",
     "loadErrorPrefix": "Error loading credit expiration settings:"
   },
-  "charts": {
-    "expirationSummary": "Overzicht van kredietverval",
-    "expirationSummaryDescription": "Overzicht van kredieten die binnenkort verlopen",
-    "usageTrends": "Trends in kredietgebruik",
-    "usageTrendsDescription": "Historische patronen in kredietgebruik",
-    "lessThan7Days": "< 7 dagen",
-    "lessThan30Days": "< 30 dagen",
-    "lessThan90Days": "< 90 dagen",
-    "greaterThan90Days": "> 90 dagen",
-    "creditsIssued": "Uitgegeven kredieten",
-    "creditsApplied": "Toegepaste kredieten",
-    "creditsExpired": "Verlopen kredieten",
-    "statusDistribution": "Statusverdeling",
-    "statusDistributionDescription": "Overzicht van de statussen van reconciliatierapporten",
-    "discrepancyTrends": "Trends in afwijkingen",
-    "discrepancyTrendsDescription": "Maandelijkse trends in kredietafwijkingen",
-    "numberOfDiscrepancies": "Aantal afwijkingen",
-    "totalAmount": "Totaalbedrag",
-    "months": {
-      "jan": "Jan",
-      "feb": "feb",
-      "mar": "Mrt",
-      "apr": "apr",
-      "may": "Mei",
-      "jun": "Jun"
-    }
-  },
   "stats": {
     "totalActiveCredits": "Totaal actieve kredieten",
     "expiringIn30Days": "Verloopt binnen 30 dagen",
@@ -116,21 +85,16 @@
   },
   "management": {
     "title": "Kredietbeheer",
-    "recentCredits": "Recente kredieten",
-    "recentCreditsDescription": "Bekijk en beheer de kredieten van uw klant. Kredieten blijven financiële artefacten en terugkerende serviceperioden verschijnen alleen wanneer de bronfactuur canonieke dekking had.",
     "loadErrorPrefix": "Fout bij laden van kredieten:",
     "noDataReturned": "Geen gegevens ontvangen van de server",
     "noCreditsFound": "Geen kredieten gevonden"
   },
   "reconciliation": {
-    "title": "Dashboard kredietreconciliatie",
     "selectClient": "Klant selecteren",
     "status": "Status",
     "allStatuses": "Alle statussen",
     "fromDate": "Van datum",
     "toDate": "Tot datum",
-    "reconciliationReports": "Reconciliatierapporten",
-    "reconciliationReportsDescription": "Bekijk en beheer afwijkingen in kredietsaldo's",
     "validationResult": "Validatie voltooid: {{balanceCount}} saldoafwijkingen en {{trackingCount}} traceringsproblemen gevonden.",
     "tabs": {
       "all": "Alle",

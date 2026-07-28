@@ -3,11 +3,7 @@
     "title": "Zarządzanie kredytami",
     "creditsOverview": "Przegląd kredytów",
     "overviewDescription": "Zarządzaj kredytami i transferami klienta",
-    "overviewDescriptionWithExpiration": "Zarządzaj kredytami klienta, w tym datami wygaśnięcia, i transferami",
-    "expirationSummary": "Podsumowanie wygaśnięcia kredytów",
-    "expirationSummaryDescription": "Przegląd kredytów wygasających wkrótce",
-    "usageTrends": "Trendy wykorzystania kredytów",
-    "usageTrendsDescription": "Historyczne trendy wykorzystania kredytów"
+    "overviewDescriptionWithExpiration": "Zarządzaj kredytami klienta, w tym datami wygaśnięcia, i transferami"
   },
   "columns": {
     "creditId": "Identyfikator kredytu",
@@ -76,33 +72,6 @@
     "none": "Brak",
     "loadErrorPrefix": "Error loading credit expiration settings:"
   },
-  "charts": {
-    "expirationSummary": "Podsumowanie wygaśnięcia kredytów",
-    "expirationSummaryDescription": "Przegląd kredytów wygasających wkrótce",
-    "usageTrends": "Trendy wykorzystania kredytów",
-    "usageTrendsDescription": "Historyczne trendy wykorzystania kredytów",
-    "lessThan7Days": "< 7 dni",
-    "lessThan30Days": "< 30 dni",
-    "lessThan90Days": "< 90 dni",
-    "greaterThan90Days": "> 90 dni",
-    "creditsIssued": "Wyemitowane kredyty",
-    "creditsApplied": "Zastosowane kredyty",
-    "creditsExpired": "Wygasłe kredyty",
-    "statusDistribution": "Rozkład statusów",
-    "statusDistributionDescription": "Przegląd statusów raportów uzgadniania",
-    "discrepancyTrends": "Trendy różnic",
-    "discrepancyTrendsDescription": "Miesięczne trendy różnic w kredytach",
-    "numberOfDiscrepancies": "Liczba różnic",
-    "totalAmount": "Łączna kwota",
-    "months": {
-      "jan": "Sty",
-      "feb": "Lut",
-      "mar": "Mar",
-      "apr": "Kwi",
-      "may": "Maj",
-      "jun": "Cze"
-    }
-  },
   "stats": {
     "totalActiveCredits": "Łącznie aktywnych kredytów",
     "expiringIn30Days": "Wygasa w ciągu 30 dni",
@@ -116,21 +85,16 @@
   },
   "management": {
     "title": "Zarządzanie kredytami",
-    "recentCredits": "Ostatnie kredyty",
-    "recentCreditsDescription": "Przeglądaj i zarządzaj kredytami klienta. Kredyty pozostają artefaktami finansowymi, a okresy usług cyklicznych pojawiają się tylko wtedy, gdy faktura źródłowa miała kanoniczny zakres.",
     "loadErrorPrefix": "Błąd podczas ładowania kredytów:",
     "noDataReturned": "Serwer nie zwrócił danych",
     "noCreditsFound": "Nie znaleziono kredytów"
   },
   "reconciliation": {
-    "title": "Panel uzgadniania kredytów",
     "selectClient": "Wybierz klienta",
     "status": "Status",
     "allStatuses": "Wszystkie statusy",
     "fromDate": "Data od",
     "toDate": "Data do",
-    "reconciliationReports": "Raporty uzgadniania",
-    "reconciliationReportsDescription": "Przeglądaj i zarządzaj rozbieżnościami salda kredytów",
     "validationResult": "Walidacja zakończona: znaleziono {{balanceCount}} rozbieżności salda i {{trackingCount}} problemów śledzenia.",
     "tabs": {
       "all": "Wszystkie",

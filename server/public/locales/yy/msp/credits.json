@@ -3,11 +3,7 @@
     "title": "55555",
     "creditsOverview": "55555",
     "overviewDescription": "55555",
-    "overviewDescriptionWithExpiration": "55555",
-    "expirationSummary": "55555",
-    "expirationSummaryDescription": "55555",
-    "usageTrends": "55555",
-    "usageTrendsDescription": "55555"
+    "overviewDescriptionWithExpiration": "55555"
   },
   "columns": {
     "creditId": "55555",
@@ -76,33 +72,6 @@
     "none": "55555",
     "loadErrorPrefix": "55555"
   },
-  "charts": {
-    "expirationSummary": "55555",
-    "expirationSummaryDescription": "55555",
-    "usageTrends": "55555",
-    "usageTrendsDescription": "55555",
-    "lessThan7Days": "55555",
-    "lessThan30Days": "55555",
-    "lessThan90Days": "55555",
-    "greaterThan90Days": "55555",
-    "creditsIssued": "55555",
-    "creditsApplied": "55555",
-    "creditsExpired": "55555",
-    "statusDistribution": "55555",
-    "statusDistributionDescription": "55555",
-    "discrepancyTrends": "55555",
-    "discrepancyTrendsDescription": "55555",
-    "numberOfDiscrepancies": "55555",
-    "totalAmount": "55555",
-    "months": {
-      "jan": "55555",
-      "feb": "55555",
-      "mar": "55555",
-      "apr": "55555",
-      "may": "55555",
-      "jun": "55555"
-    }
-  },
   "stats": {
     "totalActiveCredits": "55555",
     "expiringIn30Days": "55555",
@@ -116,22 +85,17 @@
   },
   "management": {
     "title": "55555",
-    "recentCredits": "55555",
-    "recentCreditsDescription": "55555",
     "loadErrorPrefix": "55555",
     "noDataReturned": "55555",
     "noCreditsFound": "55555"
   },
   "reconciliation": {
-    "title": "55555",
     "selectClient": "55555",
     "allClients": "55555",
     "status": "55555",
     "allStatuses": "55555",
     "fromDate": "55555",
     "toDate": "55555",
-    "reconciliationReports": "55555",
-    "reconciliationReportsDescription": "55555",
     "validationResult": "55555 {{balanceCount}} 55555 {{trackingCount}} 55555",
     "validationCompletedAllClients": "55555",
     "noReportsFound": "55555",

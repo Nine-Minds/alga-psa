@@ -3,11 +3,7 @@
     "title": "Gestão de Crédito",
     "creditsOverview": "Visão geral dos créditos",
     "overviewDescription": "Gerencie os créditos e transferências de seus clientes",
-    "overviewDescriptionWithExpiration": "Gerencie os créditos de seus clientes, incluindo datas de vencimento e transferências",
-    "expirationSummary": "Resumo de expiração de crédito",
-    "expirationSummaryDescription": "Visão geral dos créditos que expiram em breve",
-    "usageTrends": "Tendências de uso de crédito",
-    "usageTrendsDescription": "Padrões históricos de uso de crédito"
+    "overviewDescriptionWithExpiration": "Gerencie os créditos de seus clientes, incluindo datas de vencimento e transferências"
   },
   "columns": {
     "creditId": "ID de crédito",
@@ -76,33 +72,6 @@
     "none": "Nenhum",
     "loadErrorPrefix": "Error loading credit expiration settings:"
   },
-  "charts": {
-    "expirationSummary": "Resumo de expiração de crédito",
-    "expirationSummaryDescription": "Visão geral dos créditos que expiram em breve",
-    "usageTrends": "Tendências de uso de crédito",
-    "usageTrendsDescription": "Padrões históricos de uso de crédito",
-    "lessThan7Days": "<7 dias",
-    "lessThan30Days": "<30 dias",
-    "lessThan90Days": "<90 dias",
-    "greaterThan90Days": "> 90 dias",
-    "creditsIssued": "Créditos emitidos",
-    "creditsApplied": "Créditos aplicados",
-    "creditsExpired": "Créditos expirados",
-    "statusDistribution": "Distribuição de status",
-    "statusDistributionDescription": "Visão geral dos status do relatório de reconciliação",
-    "discrepancyTrends": "Tendências de discrepância",
-    "discrepancyTrendsDescription": "Tendências mensais em discrepâncias de crédito",
-    "numberOfDiscrepancies": "Número de discrepâncias",
-    "totalAmount": "Montante total",
-    "months": {
-      "jan": "janeiro",
-      "feb": "fevereiro",
-      "mar": "março",
-      "apr": "abril",
-      "may": "Poderia",
-      "jun": "junho"
-    }
-  },
   "stats": {
     "totalActiveCredits": "Total de créditos ativos",
     "expiringIn30Days": "Expira em 30 dias",
@@ -116,21 +85,16 @@
   },
   "management": {
     "title": "Gestão de Crédito",
-    "recentCredits": "Créditos recentes",
-    "recentCreditsDescription": "Visualize e gerencie seus créditos de clientes. Os créditos permanecem como artefatos financeiros e os períodos de serviço recorrentes aparecem apenas quando a fatura de origem possui cobertura canônica.",
     "loadErrorPrefix": "Erro ao carregar créditos:",
     "noDataReturned": "Nenhum dado retornado do servidor",
     "noCreditsFound": "Nenhum crédito encontrado"
   },
   "reconciliation": {
-    "title": "Painel de reconciliação de crédito",
     "selectClient": "Selecione o cliente",
     "status": "Status",
     "allStatuses": "Todos os status",
     "fromDate": "Da data",
     "toDate": "A data",
-    "reconciliationReports": "Relatórios de reconciliação",
-    "reconciliationReportsDescription": "Visualize e gerencie discrepâncias de saldo de crédito",
     "validationResult": "Validação concluída: discrepâncias de saldo {{balanceCount}} encontradas e problemas de rastreamento {{trackingCount}}.",
     "tabs": {
       "all": "Todos",
