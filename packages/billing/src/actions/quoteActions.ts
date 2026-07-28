@@ -16,6 +16,7 @@ import QuoteActivity from '../models/quoteActivity';
 import QuoteItem from '../models/quoteItem';
 import { buildQuoteReminderEmailTemplate, buildQuoteSentEmailTemplate, formatQuoteDate } from '../lib/quote-email-templates';
 import { fetchTenantParty } from '../lib/adapters/tenantPartyAdapter';
+import { resolveEmailLocale } from '@alga-psa/notifications/notifications/emailLocaleResolver';
 import { getQuoteApprovalWorkflowSettings as loadQuoteApprovalWorkflowSettings, setQuoteApprovalWorkflowRequired as persistQuoteApprovalWorkflowRequired, type QuoteApprovalWorkflowSettings } from '../lib/quoteApprovalSettings';
 import { createQuoteItemSchema, createQuoteSchema, updateQuoteItemSchema, updateQuoteSchema } from '../schemas/quoteSchemas';
 import { buildQuoteConversionPreview, convertQuoteToDraftContract, convertQuoteToDraftContractAndInvoice, convertQuoteToDraftInvoice, convertQuoteToDraftSalesOrder, createPDFGenerationService } from '../services';
@@ -480,23 +481,23 @@ const storeQuotePdf = async (
   return fileRecord.file_id;
 };
 
-type EstimateTemplateName = 'estimate-email' | 'estimate-reminder-email';
+type QuoteTemplateName = 'quote-email' | 'quote-reminder-email';
 
-interface EstimateEmailTemplate {
+interface QuoteEmailTemplate {
   subject: string;
   html_content: string;
   text_content: string;
 }
 
-// Resolves the estimate email template with the same precedence as invoices:
+// Resolves the quote email template with the same precedence as invoices:
 // tenant override (locale, then English) before the system template, so
 // customisations made in Notification Settings > Email Templates are honoured.
-const getEstimateEmailTemplate = async (
+const getQuoteEmailTemplate = async (
   knex: Knex | Knex.Transaction,
   tenant: string,
-  name: EstimateTemplateName,
+  name: QuoteTemplateName,
   locale: string = 'en'
-): Promise<EstimateEmailTemplate | null> => {
+): Promise<QuoteEmailTemplate | null> => {
   const db = tenantDb(knex, tenant);
   const languages = locale === 'en' ? ['en'] : [locale, 'en'];
 
@@ -504,7 +505,7 @@ const getEstimateEmailTemplate = async (
     for (const language_code of languages) {
       const template = await db.table(table)
         .where({ name, language_code })
-        .first<EstimateEmailTemplate | undefined>();
+        .first<QuoteEmailTemplate | undefined>();
 
       if (template) {
         return {
@@ -519,7 +520,31 @@ const getEstimateEmailTemplate = async (
   return null;
 };
 
-const renderEstimateEmail = async ({
+// Resolves the locale of the quote's primary recipient so the template lookup
+// matches the invoice send path; contacts are client-portal users, so the
+// client's default locale applies when the contact has no preference.
+const resolveQuoteRecipientLocale = async (
+  tenant: string,
+  quote: IQuote,
+  recipientEmail?: string
+): Promise<string> => {
+  if (!recipientEmail) {
+    return 'en';
+  }
+
+  try {
+    return await resolveEmailLocale(tenant, {
+      email: recipientEmail,
+      userType: 'client',
+      ...(quote.client_id ? { clientId: quote.client_id } : {}),
+    });
+  } catch {
+    // A locale lookup must never block sending the quote itself.
+    return 'en';
+  }
+};
+
+const renderQuoteEmail = async ({
   knex,
   tenant,
   templateName,
@@ -527,26 +552,28 @@ const renderEstimateEmail = async ({
   companyName,
   portalLink,
   customMessage,
+  locale,
 }: {
   knex: Knex;
   tenant: string;
-  templateName: EstimateTemplateName;
+  templateName: QuoteTemplateName;
   quote: IQuote;
   companyName: string;
   portalLink?: string;
   customMessage?: string;
+  locale?: string;
 }): Promise<{ subject: string; html: string; text: string }> => {
-  const template = await getEstimateEmailTemplate(knex, tenant, templateName);
+  const template = await getQuoteEmailTemplate(knex, tenant, templateName, locale ?? 'en');
 
   if (!template) {
-    const buildFallback = templateName === 'estimate-reminder-email'
+    const buildFallback = templateName === 'quote-reminder-email'
       ? buildQuoteReminderEmailTemplate
       : buildQuoteSentEmailTemplate;
     return buildFallback({ quote, companyName, portalLink, customMessage });
   }
 
   const templateContext = {
-    estimate: {
+    quote: {
       number: quote.quote_number ?? quote.quote_id,
       amount: formatCurrency((quote.total_amount ?? 0) / 100, 'en-US', quote.currency_code || 'USD'),
       validUntil: formatQuoteDate(quote.valid_until ?? null),
@@ -559,7 +586,7 @@ const renderEstimateEmail = async ({
   };
 
   // Subject and plain-text are not HTML — disable Handlebars' HTML escape so
-  // characters like `"` in estimate titles don't render as `&quot;`.
+  // characters like `"` in quote titles don't render as `&quot;`.
   return {
     subject: Handlebars.compile(template.subject, { noEscape: true })(templateContext),
     html: Handlebars.compile(template.html_content)(templateContext),
@@ -596,7 +623,7 @@ const sendQuoteEmailWithAttachment = async ({
     text,
     attachments: [
       {
-        filename: `Estimate_${resolvedQuoteNumber}.pdf`,
+        filename: `Quote_${resolvedQuoteNumber}.pdf`,
         content: pdfBuffer,
         contentType: 'application/pdf',
       },
@@ -1546,14 +1573,16 @@ export const sendQuote = withAuth(async (
       const companyName = tenantParty?.name || 'Your Company';
       const portalBaseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
       const portalLink = `${portalBaseUrl}/client-portal/billing?tab=quotes`;
-      const renderedEmail = await renderEstimateEmail({
+      const recipientLocale = await resolveQuoteRecipientLocale(tenant, quote, recipients[0]);
+      const renderedEmail = await renderQuoteEmail({
         knex,
         tenant,
-        templateName: 'estimate-email',
+        templateName: 'quote-email',
         quote,
         companyName,
         portalLink,
         customMessage: input.message,
+        locale: recipientLocale,
       });
       const subject = input.subject?.trim() || renderedEmail.subject;
 
@@ -1644,14 +1673,16 @@ export const resendQuote = withAuth(async (
       const companyName = tenantParty?.name || 'Your Company';
       const portalBaseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
       const portalLink = `${portalBaseUrl}/client-portal/billing?tab=quotes`;
-      const renderedEmail = await renderEstimateEmail({
+      const recipientLocale = await resolveQuoteRecipientLocale(tenant, quote, recipients[0]);
+      const renderedEmail = await renderQuoteEmail({
         knex,
         tenant,
-        templateName: 'estimate-email',
+        templateName: 'quote-email',
         quote,
         companyName,
         portalLink,
         customMessage: input.message,
+        locale: recipientLocale,
       });
       const subject = input.subject?.trim() || renderedEmail.subject;
 
@@ -1738,14 +1769,16 @@ export const sendQuoteReminder = withAuth(async (
       const companyName = tenantParty?.name || 'Your Company';
       const portalBaseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
       const portalLink = `${portalBaseUrl}/client-portal/billing?tab=quotes`;
-      const renderedEmail = await renderEstimateEmail({
+      const recipientLocale = await resolveQuoteRecipientLocale(tenant, quote, recipients[0]);
+      const renderedEmail = await renderQuoteEmail({
         knex,
         tenant,
-        templateName: 'estimate-reminder-email',
+        templateName: 'quote-reminder-email',
         quote,
         companyName,
         portalLink,
         customMessage: input.message,
+        locale: recipientLocale,
       });
       const subject = input.subject?.trim() || renderedEmail.subject;
 

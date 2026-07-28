@@ -36,18 +36,18 @@ export function buildQuoteSentEmailTemplate({
   const validUntil = formatQuoteDate(quote.valid_until ?? null);
   const trimmedMessage = customMessage?.trim();
   const resolvedPortalLink = portalLink?.trim();
-  const subject = `Estimate ${quoteNumber} from ${companyName}`;
+  const subject = `Quote ${quoteNumber} from ${companyName}`;
 
   const htmlSections = [
     '<p>Hello,</p>',
-    `<p>Your estimate <strong>${quoteNumber}</strong> is attached and ready for review.</p>`,
+    `<p>Your quote <strong>${quoteNumber}</strong> is attached and ready for review.</p>`,
     '<ul>',
     `<li><strong>Total:</strong> ${formattedAmount}</li>`,
     `<li><strong>Valid Until:</strong> ${validUntil}</li>`,
     '</ul>',
     trimmedMessage ? `<p>${trimmedMessage}</p>` : '',
     resolvedPortalLink
-      ? `<p>You can also review this estimate in the client portal: <a href="${resolvedPortalLink}">${resolvedPortalLink}</a></p>`
+      ? `<p>You can also review this quote in the client portal: <a href="${resolvedPortalLink}">${resolvedPortalLink}</a></p>`
       : '',
     `<p>Thank you,<br />${companyName}</p>`,
   ];
@@ -55,7 +55,7 @@ export function buildQuoteSentEmailTemplate({
   const textSections = [
     'Hello,',
     '',
-    `Your estimate ${quoteNumber} is attached and ready for review.`,
+    `Your quote ${quoteNumber} is attached and ready for review.`,
     `Total: ${formattedAmount}`,
     `Valid Until: ${validUntil}`,
     trimmedMessage ? `\n${trimmedMessage}` : '',
@@ -81,23 +81,23 @@ export function buildQuoteReminderEmailTemplate({
   const validUntil = formatQuoteDate(quote.valid_until ?? null);
   const trimmedMessage = customMessage?.trim();
   const resolvedPortalLink = portalLink?.trim();
-  const subject = `Reminder: Estimate ${quoteNumber} expires on ${validUntil}`;
+  const subject = `Reminder: Quote ${quoteNumber} expires on ${validUntil}`;
 
   return {
     subject,
     html: [
       '<p>Hello,</p>',
-      `<p>This is a reminder that estimate <strong>${quoteNumber}</strong> for ${formattedAmount} expires on <strong>${validUntil}</strong>.</p>`,
+      `<p>This is a reminder that quote <strong>${quoteNumber}</strong> for ${formattedAmount} expires on <strong>${validUntil}</strong>.</p>`,
       trimmedMessage ? `<p>${trimmedMessage}</p>` : '',
       resolvedPortalLink
-        ? `<p>Review the estimate in the client portal: <a href="${resolvedPortalLink}">${resolvedPortalLink}</a></p>`
+        ? `<p>Review the quote in the client portal: <a href="${resolvedPortalLink}">${resolvedPortalLink}</a></p>`
         : '',
       `<p>Thank you,<br />${companyName}</p>`,
     ].filter(Boolean).join(''),
     text: [
       'Hello,',
       '',
-      `This is a reminder that estimate ${quoteNumber} for ${formattedAmount} expires on ${validUntil}.`,
+      `This is a reminder that quote ${quoteNumber} for ${formattedAmount} expires on ${validUntil}.`,
       trimmedMessage ? `\n${trimmedMessage}` : '',
       resolvedPortalLink ? `\nReview online: ${resolvedPortalLink}` : '',
       `\nThank you,\n${companyName}`,
@@ -116,22 +116,22 @@ export function buildQuoteAcceptedConfirmationEmailTemplate({
   const acceptedAt = formatQuoteDate(quote.accepted_at ?? null);
   const trimmedMessage = customMessage?.trim();
   const resolvedPortalLink = portalLink?.trim();
-  const subject = `Estimate ${quoteNumber} was accepted`;
+  const subject = `Quote ${quoteNumber} was accepted`;
 
   return {
     subject,
     html: [
       '<p>Hello,</p>',
-      `<p>Estimate <strong>${quoteNumber}</strong> has been accepted for <strong>${formattedAmount}</strong>.</p>`,
+      `<p>Quote <strong>${quoteNumber}</strong> has been accepted for <strong>${formattedAmount}</strong>.</p>`,
       `<p><strong>Accepted On:</strong> ${acceptedAt}</p>`,
       trimmedMessage ? `<p>${trimmedMessage}</p>` : '',
-      resolvedPortalLink ? `<p>Review the accepted estimate: <a href="${resolvedPortalLink}">${resolvedPortalLink}</a></p>` : '',
+      resolvedPortalLink ? `<p>Review the accepted quote: <a href="${resolvedPortalLink}">${resolvedPortalLink}</a></p>` : '',
       `<p>Thank you,<br />${companyName}</p>`,
     ].filter(Boolean).join(''),
     text: [
       'Hello,',
       '',
-      `Estimate ${quoteNumber} has been accepted for ${formattedAmount}.`,
+      `Quote ${quoteNumber} has been accepted for ${formattedAmount}.`,
       `Accepted On: ${acceptedAt}`,
       trimmedMessage ? `\n${trimmedMessage}` : '',
       resolvedPortalLink ? `\nReview online: ${resolvedPortalLink}` : '',

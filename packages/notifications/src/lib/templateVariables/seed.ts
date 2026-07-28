@@ -949,34 +949,34 @@ export const templateVariableSeed: TemplateVariableSeedCategory[] = [
     ]
   },
   {
-    "category": "estimates",
+    "category": "quotes",
     "templates": [
       {
-        "templateName": "estimate-email",
+        "templateName": "quote-email",
         "variables": [
           {
-            "path": "estimate.number",
+            "path": "quote.number",
             "type": "string",
-            "description": "The estimate's human-readable number as shown to the client.",
+            "description": "The quote's human-readable number as shown to the client.",
             "example": "Q-0042",
             "availability": "used",
             "notes": "From quote.quote_number, falling back to quote_id. Used in the subject, header title, detail row, and plain text."
           },
           {
-            "path": "estimate.amount",
+            "path": "quote.amount",
             "type": "string",
-            "description": "Total value of the estimate, pre-formatted as a currency string.",
+            "description": "Total value of the quote, pre-formatted as a currency string.",
             "example": "$10,000.00",
             "availability": "used",
-            "notes": "formatCurrency(total_amount / 100) in the estimate's currency_code, defaulting to USD."
+            "notes": "formatCurrency(total_amount / 100) in the quote's currency_code, defaulting to USD."
           },
           {
-            "path": "estimate.validUntil",
+            "path": "quote.validUntil",
             "type": "date-string",
-            "description": "The date the estimate expires, formatted for display.",
+            "description": "The date the quote expires, formatted for display.",
             "example": "March 31, 2026",
             "availability": "used",
-            "notes": "Falls back to 'N/A' when the estimate has no valid_until."
+            "notes": "Falls back to 'N/A' when the quote has no valid_until."
           },
           {
             "path": "company.name",
@@ -989,7 +989,7 @@ export const templateVariableSeed: TemplateVariableSeedCategory[] = [
           {
             "path": "portalLink",
             "type": "url",
-            "description": "Link to the client-portal estimates tab where the estimate can be reviewed; the block is hidden when empty.",
+            "description": "Link to the client-portal quotes tab where the quote can be reviewed; the block is hidden when empty.",
             "example": "https://app.example.com/client-portal/billing?tab=quotes",
             "availability": "used",
             "notes": "Built from NEXTAUTH_URL or NEXT_PUBLIC_APP_URL at send time; wrapped in {{#if portalLink}}."
@@ -1005,31 +1005,31 @@ export const templateVariableSeed: TemplateVariableSeedCategory[] = [
         ]
       },
       {
-        "templateName": "estimate-reminder-email",
+        "templateName": "quote-reminder-email",
         "variables": [
           {
-            "path": "estimate.number",
+            "path": "quote.number",
             "type": "string",
-            "description": "The estimate's human-readable number as shown to the client.",
+            "description": "The quote's human-readable number as shown to the client.",
             "example": "Q-0042",
             "availability": "used",
             "notes": "From quote.quote_number, falling back to quote_id. Used in the subject, header title, detail row, and plain text."
           },
           {
-            "path": "estimate.amount",
+            "path": "quote.amount",
             "type": "string",
-            "description": "Total value of the estimate, pre-formatted as a currency string.",
+            "description": "Total value of the quote, pre-formatted as a currency string.",
             "example": "$10,000.00",
             "availability": "used",
-            "notes": "formatCurrency(total_amount / 100) in the estimate's currency_code, defaulting to USD."
+            "notes": "formatCurrency(total_amount / 100) in the quote's currency_code, defaulting to USD."
           },
           {
-            "path": "estimate.validUntil",
+            "path": "quote.validUntil",
             "type": "date-string",
-            "description": "The date the estimate expires, formatted for display.",
+            "description": "The date the quote expires, formatted for display.",
             "example": "March 31, 2026",
             "availability": "used",
-            "notes": "Falls back to 'N/A' when the estimate has no valid_until."
+            "notes": "Falls back to 'N/A' when the quote has no valid_until."
           },
           {
             "path": "company.name",
@@ -1042,7 +1042,7 @@ export const templateVariableSeed: TemplateVariableSeedCategory[] = [
           {
             "path": "portalLink",
             "type": "url",
-            "description": "Link to the client-portal estimates tab where the estimate can be reviewed; the block is hidden when empty.",
+            "description": "Link to the client-portal quotes tab where the quote can be reviewed; the block is hidden when empty.",
             "example": "https://app.example.com/client-portal/billing?tab=quotes",
             "availability": "used",
             "notes": "Built from NEXTAUTH_URL or NEXT_PUBLIC_APP_URL at send time; wrapped in {{#if portalLink}}."
@@ -4169,7 +4169,7 @@ export const templateVariableSeed: TemplateVariableSeedCategory[] = [
             "path": "timeEntry.rejectionReason",
             "type": "string",
             "description": "The reason the approver gave for rejecting the time entry (rendered under the 'Reason' label)",
-            "example": "Duration exceeds the task estimate — please split into two entries",
+            "example": "Duration exceeds the task quote — please split into two entries",
             "availability": "used"
           },
           {
@@ -4688,7 +4688,7 @@ export const sharedBlockSeed: SharedVariableBlockSeed[] = [
       {
         "path": "referenceNumber",
         "type": "string",
-        "description": "Short reference code the customer can quote.",
+        "description": "Short reference code the customer ca quote.",
         "example": "APT-LZ3K9-QX7A",
         "availability": "used",
         "notes": "DUAL FORMAT for one variable: public route = generateReferenceNumber() 'APT-<base36 ts>-<random>'; portal = appointment_request_id.slice(0,8).toUpperCase() e.g. 'A1B2C3D4'. declined template (management-only) always uses the id-slice form."

@@ -1,13 +1,36 @@
 /**
- * Superseded by 20260728120000_add_estimate_email_templates.cjs.
- *
- * This migration originally seeded a "Quotes" notification category with
- * quote-email / quote-reminder-email templates. The client-facing wording was
- * changed to "Estimate" before the templates shipped, so the estimate
- * migration now seeds them (and renames any quote rows left on a development
- * database). Kept as a no-op so applied migration history stays intact.
+ * Seed the Quotes notification category, its subtypes, and the
+ * quote-email / quote-reminder-email templates so the quote send, resend, and
+ * reminder emails are customizable under
+ * Notification Settings > Email Templates.
  */
 
-exports.up = async function() {};
+const { upsertEmailCategoriesAndSubtypes } = require('./utils/templates/_shared/emailCategoriesAndSubtypes.cjs');
+const { upsertEmailTemplate } = require('./utils/templates/_shared/upsertEmailTemplates.cjs');
+const { getTemplate: quoteEmail } = require('./utils/templates/email/quotes/quoteEmail.cjs');
+const { getTemplate: quoteReminder } = require('./utils/templates/email/quotes/quoteReminder.cjs');
 
-exports.down = async function() {};
+exports.up = async function(knex) {
+  await upsertEmailCategoriesAndSubtypes(knex);
+  await upsertEmailTemplate(knex, quoteEmail());
+  await upsertEmailTemplate(knex, quoteReminder());
+};
+
+exports.down = async function(knex) {
+  await knex('system_email_templates')
+    .whereIn('name', ['quote-email', 'quote-reminder-email'])
+    .del();
+
+  await knex('notification_subtypes')
+    .whereIn('name', ['Quote Email', 'Quote Reminder'])
+    .del();
+
+  await knex('notification_categories')
+    .where({ name: 'Quotes' })
+    .whereNotExists(
+      knex('notification_subtypes')
+        .select(knex.raw('1'))
+        .whereRaw('notification_subtypes.category_id = notification_categories.id')
+    )
+    .del();
+};
