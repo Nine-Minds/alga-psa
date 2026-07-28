@@ -61,7 +61,8 @@
     "selected": "Seleccionado",
     "saveChanges": "Guardar cambios",
     "saving": "Guardando...",
-    "runReconciliationAllClients": "Ejecutar conciliación (todos los clientes)"
+    "runReconciliationAllClients": "Ejecutar conciliación (todos los clientes)",
+    "transfer": "Transferir"
   },
   "tabs": {
     "credits": "Créditos",
@@ -203,6 +204,34 @@
     "error": "Se produjo un error al vencer el crédito",
     "expiring": "Venciendo...",
     "confirm": "Vencer crédito"
+  },
+  "transferDialog": {
+    "title": "Transferir crédito",
+    "description": "Transfiere crédito de este cliente a otro.",
+    "fields": {
+      "targetClient": "Al cliente",
+      "amount": "Importe",
+      "reason": "Motivo (opcional)"
+    },
+    "placeholders": {
+      "reason": "¿Por qué se transfiere este crédito?"
+    },
+    "hints": {
+      "amount": "Hasta {{amount}} disponible"
+    },
+    "impact": {
+      "current": "Restante actual",
+      "after": "Restante tras la transferencia"
+    },
+    "errors": {
+      "selectClient": "Selecciona un cliente para la transferencia",
+      "validAmount": "Introduce un importe mayor que cero",
+      "exceedsRemaining": "La transferencia no puede superar el restante de {{amount}}"
+    },
+    "success": "Crédito transferido",
+    "error": "Se produjo un error al transferir el crédito",
+    "transferring": "Transfiriendo...",
+    "confirm": "Transferir crédito"
   },
   "context": {
     "lineageMissing": "Linaje faltante",
