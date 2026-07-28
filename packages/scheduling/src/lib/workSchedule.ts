@@ -12,8 +12,8 @@
  * (20260728120000_drop_resources_availability), because a column that already
  * carries the word "availability" is exactly how a work schedule and a booking
  * window get merged back together the next time someone needs somewhere to put
- * working hours. Its contents are preserved in
- * `resources_availability_archive`.
+ * working hours. Nothing was kept: the only row it ever held in production was
+ * the seed's own.
  *
  * Not modelled here, deliberately:
  *  - PTO and holidays. They need their own leave calendar;

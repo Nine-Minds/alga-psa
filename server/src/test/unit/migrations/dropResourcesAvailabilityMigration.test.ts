@@ -24,14 +24,12 @@ describe('drop resources.availability migration', () => {
     expect(migration).toContain('JSON.stringify(row)');
   });
 
-  it('archives into a coordinator-local table, idempotently', () => {
-    const archiveAt = migration.indexOf('INSERT INTO resources_availability_archive');
-    const dropAt = migration.indexOf('ALTER TABLE resources DROP COLUMN availability');
-    expect(archiveAt).toBeGreaterThan(-1);
-    expect(archiveAt).toBeLessThan(dropAt);
-    expect(migration).toContain('CREATE TABLE IF NOT EXISTS resources_availability_archive');
-    expect(migration).toContain('PRIMARY KEY (tenant, resource_id)');
-    expect(migration).toContain('ON CONFLICT (tenant, resource_id) DO NOTHING');
+  it('keeps no archive table, so nothing new needs a tenant-deletion entry', () => {
+    // Production holds one resources row and it is the dev seed's. An archive
+    // would be a second table to place on Citus and to remember in
+    // TENANT_TABLES_DELETION_ORDER, bought for no data worth keeping.
+    expect(migration).not.toContain('resources_availability_archive');
+    expect(migration).not.toContain('CREATE TABLE');
   });
 
   it('drops the column with plain DDL so the default transaction still applies', () => {
@@ -40,13 +38,9 @@ describe('drop resources.availability migration', () => {
     expect(migration).not.toContain('exports.config');
   });
 
-  it('restores the column and its values from the archive on rollback', () => {
+  it('restores the column on rollback', () => {
     const down = migration.slice(migration.indexOf('exports.down'));
     expect(down).toContain('ALTER TABLE resources ADD COLUMN availability jsonb');
-    expect(down).toContain("hasTable('resources_availability_archive')");
-    expect(down).toContain('SET availability = a.availability');
-    expect(down).toContain('r.tenant = a.tenant');
-    expect(down).toContain('r.resource_id = a.resource_id');
     expect(down).not.toContain('DROP TABLE');
   });
 });
