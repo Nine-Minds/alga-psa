@@ -1021,6 +1021,7 @@
       "copyPhases": "Kopiuj fazy",
       "copyStatuses": "Kopiuj statusy",
       "copyTasks": "Kopiuj zadania",
+      "copyDependencies": "Kopiuj zależności",
       "copyChecklists": "Kopiuj listy kontrolne",
       "copyTaskServices": "Kopiuj usługi zadań",
       "taskAssignments": "Przydziały zadań",

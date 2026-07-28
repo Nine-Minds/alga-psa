@@ -999,6 +999,7 @@
       "copyPhases": "Copia fasi",
       "copyStatuses": "Copia stati",
       "copyTasks": "Copia attività",
+      "copyDependencies": "Copia dipendenze",
       "copyChecklists": "Copia checklist",
       "copyTaskServices": "Copia servizi attività",
       "taskAssignments": "Assegnazioni attività",

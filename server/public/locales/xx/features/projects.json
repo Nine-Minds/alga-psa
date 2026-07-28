@@ -999,6 +999,7 @@
       "copyPhases": "11111",
       "copyStatuses": "11111",
       "copyTasks": "11111",
+      "copyDependencies": "11111",
       "copyChecklists": "11111",
       "copyTaskServices": "11111",
       "taskAssignments": "11111",

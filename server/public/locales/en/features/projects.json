@@ -999,6 +999,7 @@
       "copyPhases": "Copy Phases",
       "copyStatuses": "Copy Statuses",
       "copyTasks": "Copy Tasks",
+      "copyDependencies": "Copy Dependencies",
       "copyChecklists": "Copy Checklists",
       "copyTaskServices": "Copy Task Services",
       "taskAssignments": "Task Assignments",

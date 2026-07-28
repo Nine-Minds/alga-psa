@@ -999,6 +999,7 @@
       "copyPhases": "Phasen kopieren",
       "copyStatuses": "Status kopieren",
       "copyTasks": "Aufgaben kopieren",
+      "copyDependencies": "Abhängigkeiten kopieren",
       "copyChecklists": "Checklisten kopieren",
       "copyTaskServices": "Aufgaben-Services kopieren",
       "taskAssignments": "Aufgabenzuweisungen",
