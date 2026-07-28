@@ -555,6 +555,178 @@ export const scheduledCreditBalanceValidation = withAuth(async (
     });
 });
 
+/**
+ * Resolve the expiration date for a newly issued credit: an explicit date wins;
+ * otherwise the client's billing settings (falling back to tenant defaults)
+ * decide whether and when the credit expires.
+ */
+async function resolveCreditExpirationDate(
+    trx: Knex.Transaction,
+    tenant: string,
+    clientId: string,
+    manualExpirationDate?: string
+): Promise<string | undefined> {
+    const clientSettings = await tenantScopedTable(trx, tenant, 'client_billing_settings')
+        .where({ client_id: clientId, tenant })
+        .first();
+
+    const defaultSettings = await tenantScopedTable(trx, tenant, 'default_billing_settings')
+        .first();
+
+    let isCreditExpirationEnabled = true;
+    if (typeof clientSettings?.enable_credit_expiration === 'boolean') {
+        isCreditExpirationEnabled = clientSettings.enable_credit_expiration;
+    } else if (typeof defaultSettings?.enable_credit_expiration === 'boolean') {
+        isCreditExpirationEnabled = defaultSettings.enable_credit_expiration;
+    }
+
+    if (!isCreditExpirationEnabled) {
+        return undefined;
+    }
+
+    if (manualExpirationDate) {
+        return manualExpirationDate;
+    }
+
+    let expirationDays: number | undefined;
+    if (typeof clientSettings?.credit_expiration_days === 'number') {
+        expirationDays = clientSettings.credit_expiration_days;
+    } else if (typeof defaultSettings?.credit_expiration_days === 'number') {
+        expirationDays = defaultSettings.credit_expiration_days;
+    }
+
+    if (expirationDays && expirationDays > 0) {
+        const expDate = new Date();
+        expDate.setDate(expDate.getDate() + expirationDays);
+        return expDate.toISOString();
+    }
+
+    return undefined;
+}
+
+/**
+ * Grant credit to a client directly — no invoice is created. Writes the
+ * credit_issuance transaction, the credit_tracking entry, and the client's
+ * credit_balance atomically, so the credit is spendable immediately.
+ */
+export const grantCredit = withAuth(async (
+    user,
+    { tenant },
+    clientId: string,
+    amount: number,
+    manualExpirationDate?: string,
+    description?: string
+): Promise<ICreditTracking | CreditActionError> => {
+    return withCreditActionErrors(async () => {
+    if (!await hasPermission(user, 'credit', 'create')) {
+        throw new Error('Permission denied: Cannot issue credits');
+    }
+
+    if (!clientId) {
+        throw new Error('Client ID is required');
+    }
+    if (!Number.isFinite(amount) || amount <= 0) {
+        throw new Error('Credit amount must be greater than zero');
+    }
+
+    const { knex } = await createTenantKnex();
+
+    const createdCredit = await withTransaction(knex, async (trx: Knex.Transaction) => {
+        const client = await tenantScopedTable(trx, tenant, 'clients')
+            .where({ client_id: clientId, tenant })
+            .first();
+        if (!client) {
+            throw new Error('Client not found');
+        }
+
+        const clientCurrency = client.default_currency_code || 'USD';
+        const expirationDate = await resolveCreditExpirationDate(trx, tenant, clientId, manualExpirationDate);
+
+        const currentBalance = await tenantScopedTable(trx, tenant, 'transactions')
+            .where({ client_id: clientId, tenant })
+            .orderBy('created_at', 'desc')
+            .first()
+            .then(lastTx => lastTx?.balance_after || 0);
+
+        const now = new Date().toISOString();
+        const transactionId = uuidv4();
+        await tenantScopedTable(trx, tenant, 'transactions').insert({
+            transaction_id: transactionId,
+            client_id: clientId,
+            amount,
+            type: 'credit_issuance',
+            status: 'completed',
+            description: description?.trim() || 'Credit granted',
+            created_at: now,
+            balance_after: currentBalance + amount,
+            tenant,
+            expiration_date: expirationDate,
+            currency_code: clientCurrency
+        });
+
+        const creditId = uuidv4();
+        const [creditTracking] = await tenantScopedTable(trx, tenant, 'credit_tracking')
+            .insert({
+                credit_id: creditId,
+                tenant,
+                client_id: clientId,
+                transaction_id: transactionId,
+                amount,
+                remaining_amount: amount,
+                created_at: now,
+                expiration_date: expirationDate,
+                is_expired: false,
+                updated_at: now,
+                currency_code: clientCurrency
+            })
+            .returning('*');
+
+        // Unlike prepayments, there is no finalize step: the balance moves now,
+        // in the same transaction as the ledger entries.
+        await tenantScopedTable(trx, tenant, 'clients')
+            .where({ client_id: clientId, tenant })
+            .increment('credit_balance', amount);
+
+        return {
+            creditTracking: {
+                ...creditTracking,
+                expiration_date: creditTracking.expiration_date ?? undefined,
+            },
+            currency: clientCurrency,
+            createdAt: now,
+        };
+    });
+
+    await publishWorkflowEvent({
+        eventType: 'CREDIT_NOTE_CREATED',
+        payload: buildCreditNoteCreatedPayload({
+            creditNoteId: createdCredit.creditTracking.credit_id,
+            clientId,
+            createdByUserId: user.user_id,
+            createdAt: createdCredit.createdAt,
+            amount,
+            currency: createdCredit.currency,
+            status: 'issued',
+            sourceDocumentKind: 'direct_grant',
+            sourceInvoiceId: null,
+            sourceInvoiceNumber: null,
+            sourceInvoiceStatus: null,
+            sourceInvoiceDateBasis: 'financial_document_date',
+            sourceServicePeriodStart: null,
+            sourceServicePeriodEnd: null,
+        }),
+        ctx: {
+            tenantId: tenant,
+            occurredAt: createdCredit.createdAt,
+            actor: { actorType: 'USER', actorUserId: user.user_id },
+        },
+        idempotencyKey: `credit_note_created:${createdCredit.creditTracking.credit_id}`,
+    });
+
+    return createdCredit.creditTracking;
+    });
+});
+
 export const createPrepaymentInvoice = withAuth(async (
     user,
     { tenant },
@@ -599,50 +771,7 @@ export const createPrepaymentInvoice = withAuth(async (
     } | null = null;
 
     const createdInvoice = await withTransaction(knex, async (trx: Knex.Transaction) => {
-        // Get client's credit expiration settings or default settings
-        const clientSettings = await tenantScopedTable(trx, tenant, 'client_billing_settings')
-            .where({
-                client_id: clientId,
-                tenant
-            })
-            .first();
-        
-        const defaultSettings = await tenantScopedTable(trx, tenant, 'default_billing_settings')
-            .first();
-        
-        // Determine if credit expiration is enabled
-        // Client setting overrides default, if not specified use default
-        let isCreditExpirationEnabled = true; // Default to true if no settings found
-        if (typeof clientSettings?.enable_credit_expiration === 'boolean') {
-            isCreditExpirationEnabled = clientSettings.enable_credit_expiration;
-        } else if (typeof defaultSettings?.enable_credit_expiration === 'boolean') {
-            isCreditExpirationEnabled = defaultSettings.enable_credit_expiration;
-        }
-        
-        // Determine expiration days - use client setting if available, otherwise use default
-        let expirationDays: number | undefined;
-        if (typeof clientSettings?.credit_expiration_days === 'number') {
-            expirationDays = clientSettings.credit_expiration_days;
-        } else if (typeof defaultSettings?.credit_expiration_days === 'number') {
-            expirationDays = defaultSettings.credit_expiration_days;
-        }
-        
-        // Calculate expiration date if applicable and if expiration is enabled
-        let expirationDate: string | undefined = manualExpirationDate;
-        console.log('createPrepaymentInvoice: Manual expiration date provided:', manualExpirationDate);
-        
-        if (isCreditExpirationEnabled && !expirationDate && expirationDays && expirationDays > 0) {
-            const today = new Date();
-            const expDate = new Date(today);
-            expDate.setDate(today.getDate() + expirationDays);
-            expirationDate = expDate.toISOString();
-            console.log('createPrepaymentInvoice: Calculated expiration date from settings:', expirationDate);
-        } else if (!isCreditExpirationEnabled) {
-            // If credit expiration is disabled, don't set an expiration date
-            expirationDate = undefined;
-            console.log('createPrepaymentInvoice: Credit expiration disabled, no expiration date set');
-        }
-        
+        const expirationDate = await resolveCreditExpirationDate(trx, tenant, clientId, manualExpirationDate);
         console.log('createPrepaymentInvoice: Final expiration date to use:', expirationDate);
 
         // Get client's currency

@@ -193,10 +193,12 @@
     "fields": {
       "client": "Client",
       "amount": "Amount",
+      "description": "Description (optional)",
       "expirationDate": "Expiration Date (optional)"
     },
     "placeholders": {
       "amount": "Enter amount",
+      "description": "Reason for the credit",
       "expirationDate": "Select expiration date"
     },
     "hints": {
