@@ -6,7 +6,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { Dialog, DialogContent, DialogDescription, DialogFooter } from '@alga-psa/ui/components/Dialog';
-import { Input } from '@alga-psa/ui/components/Input';
+import { CurrencyInput } from '@alga-psa/ui/components/CurrencyInput';
 import { Label } from '@alga-psa/ui/components/Label';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -27,6 +27,7 @@ import {
   updateCreditTrackingRemainingAmount,
 } from '@alga-psa/billing/actions/creditReconciliationFixActions';
 import { getIssueType, getIssueTypeLabel, getStatusBadge } from './reconciliationPresentation';
+import DetailField from '../DetailField';
 
 type ReconciliationReportWithClient = ICreditReconciliationReport & { client_name: string; resolved_by_name?: string | null };
 
@@ -50,15 +51,6 @@ interface ReconciliationReportDetailProps {
   onDataChanged: () => void;
 }
 
-function DetailField({ label, value, mono }: { label: string; value: React.ReactNode; mono?: boolean }) {
-  return (
-    <div>
-      <p className="text-sm text-[rgb(var(--color-text-500))]">{label}</p>
-      <p className={`font-medium ${mono ? 'font-mono text-sm' : ''}`}>{value}</p>
-    </div>
-  );
-}
-
 export default function ReconciliationReportDetail({ reportId, onDataChanged }: ReconciliationReportDetailProps) {
   const { t, i18n } = useTranslation('msp/credits');
 
@@ -68,7 +60,7 @@ export default function ReconciliationReportDetail({ reportId, onDataChanged }: 
 
   const [selectedFix, setSelectedFix] = useState<FixType | null>(null);
   const [notes, setNotes] = useState('');
-  const [customAmount, setCustomAmount] = useState('');
+  const [customAmount, setCustomAmount] = useState<number | undefined>(undefined);
   const [isApplying, setIsApplying] = useState(false);
   const [fixError, setFixError] = useState<string | null>(null);
 
@@ -106,7 +98,7 @@ export default function ReconciliationReportDetail({ reportId, onDataChanged }: 
     if (fixType === 'custom_adjustment' && report) {
       // The engine works in minor units; the input takes major units (dollars)
       // like every other money field in the app.
-      setCustomAmount((report.difference / 100).toString());
+      setCustomAmount(report.difference / 100);
     }
   };
 
@@ -122,14 +114,13 @@ export default function ReconciliationReportDetail({ reportId, onDataChanged }: 
 
     let amount: number | undefined;
     if (selectedFix === 'custom_adjustment') {
-      const parsed = parseFloat(customAmount);
-      if (isNaN(parsed)) {
+      if (customAmount === undefined || isNaN(customAmount)) {
         setFixError(t('recommendedFix.errors.invalidAmount', {
           defaultValue: 'Please enter a valid amount',
         }));
         return;
       }
-      amount = toMinorUnits(parsed, i18n.language);
+      amount = toMinorUnits(customAmount, i18n.language);
     }
 
     try {
@@ -396,17 +387,17 @@ export default function ReconciliationReportDetail({ reportId, onDataChanged }: 
                     <th className="px-4 py-2 text-left text-sm font-medium text-[rgb(var(--color-text-500))]">
                       {t('reconciliation.fields.date', { defaultValue: 'Date' })}
                     </th>
-                    <th className="px-4 py-2 text-left text-sm font-medium text-[rgb(var(--color-text-500))]">
+                    <th className="px-4 py-2 text-right text-sm font-medium text-[rgb(var(--color-text-500))]">
                       {t('reconciliation.fields.amount', { defaultValue: 'Amount' })}
                     </th>
                   </tr>
                 </thead>
                 <tbody>
-                  {metadata.applications.map((app: { transaction_id: string; created_at: string; amount: number }, index: number) => (
-                    <tr key={index} className="border-b border-[rgb(var(--color-border-200))]">
+                  {metadata.applications.map((app: { transaction_id: string; created_at: string; amount: number }) => (
+                    <tr key={app.transaction_id} className="border-b border-[rgb(var(--color-border-200))]">
                       <td className="px-4 py-2 text-sm font-mono">{app.transaction_id.substring(0, 8)}...</td>
                       <td className="px-4 py-2 text-sm">{formatDateOnly(new Date(app.created_at))}</td>
-                      <td className="px-4 py-2 text-sm font-medium text-[rgb(var(--color-destructive-600))]">
+                      <td className="px-4 py-2 text-sm text-right font-medium text-[rgb(var(--color-destructive-600))]">
                         {formatCurrencyFromMinorUnits(app.amount)}
                       </td>
                     </tr>
@@ -514,21 +505,12 @@ export default function ReconciliationReportDetail({ reportId, onDataChanged }: 
           <div className="py-4 space-y-4">
             {selectedFix === 'custom_adjustment' && (
               <div>
-                <Label htmlFor="custom-adjustment-amount" className="text-sm font-medium">
-                  {t('recommendedFix.dialog.adjustmentAmount', { defaultValue: 'Adjustment Amount' })}{' '}
-                  <span className="text-[rgb(var(--color-destructive-500))]">*</span>
-                </Label>
-                <Input
+                <CurrencyInput
                   id="custom-adjustment-amount"
-                  type="text"
+                  label={t('recommendedFix.dialog.adjustmentAmount', { defaultValue: 'Adjustment Amount' })}
+                  required
                   value={customAmount}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    if (/^-?\d*\.?\d*$/.test(value)) {
-                      setCustomAmount(value);
-                    }
-                  }}
-                  className="mt-1"
+                  onChange={setCustomAmount}
                 />
                 <p className="text-xs text-[rgb(var(--color-text-500))] mt-1">
                   {t('recommendedFix.dialog.adjustmentHint', {
@@ -570,7 +552,7 @@ export default function ReconciliationReportDetail({ reportId, onDataChanged }: 
                   </div>
                   <div className="font-medium text-right">
                     {selectedFix === 'custom_adjustment'
-                      ? formatCurrencyFromMinorUnits(report.actual_balance + toMinorUnits(parseFloat(customAmount) || 0, i18n.language))
+                      ? formatCurrencyFromMinorUnits(report.actual_balance + toMinorUnits(customAmount ?? 0, i18n.language))
                       : formatCurrencyFromMinorUnits(report.expected_balance)}
                   </div>
                 </div>

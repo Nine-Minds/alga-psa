@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
-import { Input } from '@alga-psa/ui/components/Input';
+import { CurrencyInput } from '@alga-psa/ui/components/CurrencyInput';
 import { Label } from '@alga-psa/ui/components/Label';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { ClientPicker } from '@alga-psa/ui/components/ClientPicker';
@@ -25,7 +25,7 @@ export default function AddCreditButton() {
   const [isAddCreditModalOpen, setIsAddCreditModalOpen] = useState(false);
   const [clients, setClients] = useState<IClient[]>([]);
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
-  const [amount, setAmount] = useState('');
+  const [amount, setAmount] = useState<number | undefined>(undefined);
   const [expirationDate, setExpirationDate] = useState<Date | undefined>(undefined);
   const [filterState, setFilterState] = useState<'all' | 'active' | 'inactive'>('active');
   const [clientTypeFilter, setClientTypeFilter] = useState<'all' | 'company' | 'individual'>('all');
@@ -60,7 +60,7 @@ export default function AddCreditButton() {
 
   const resetForm = () => {
     setSelectedClient(null);
-    setAmount('');
+    setAmount(undefined);
     setExpirationDate(undefined);
     setError(null);
   };
@@ -78,8 +78,7 @@ export default function AddCreditButton() {
       return;
     }
 
-    const numericAmount = parseFloat(amount);
-    if (isNaN(numericAmount) || numericAmount <= 0) {
+    if (amount === undefined || isNaN(amount) || amount <= 0) {
       setError(t('addCredit.errors.validAmount', { defaultValue: 'Please enter a valid amount' }));
       return;
     }
@@ -89,7 +88,7 @@ export default function AddCreditButton() {
       setError(null);
 
       // The ledger stores minor units (cents); the form takes major units.
-      const amountInCents = toMinorUnits(numericAmount, i18n.language);
+      const amountInCents = toMinorUnits(amount, i18n.language);
 
       const invoice = await createPrepaymentInvoice(
         selectedClient,
@@ -170,19 +169,13 @@ export default function AddCreditButton() {
             </div>
 
             <div>
-              <Label htmlFor="add-credit-amount" className="text-sm font-medium">
-                {t('addCredit.fields.amount', { defaultValue: 'Amount' })}{' '}
-                <span className="text-[rgb(var(--color-destructive-500))]">*</span>
-              </Label>
-              <Input
+              <CurrencyInput
                 id="add-credit-amount"
-                type="number"
-                min="0.01"
-                step="0.01"
+                label={t('addCredit.fields.amount', { defaultValue: 'Amount' })}
+                required
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
+                onChange={setAmount}
                 placeholder={t('addCredit.placeholders.amount', { defaultValue: 'Enter amount' })}
-                className="mt-1"
               />
             </div>
 

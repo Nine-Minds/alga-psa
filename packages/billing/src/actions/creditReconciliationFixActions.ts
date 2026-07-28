@@ -110,7 +110,7 @@ export const createMissingCreditTrackingEntry = withAuth(async (
   notes: string
 ): Promise<ICreditReconciliationReport | CreditReconciliationFixActionError> => {
   return withCreditReconciliationFixActionErrors(async () => {
-  if (!await hasPermission(user as any, 'billing', 'update')) {
+  if (!await hasPermission(user, 'billing', 'update')) {
     throw new Error('Permission denied: billing update required');
   }
   const userId = user.user_id;
@@ -223,7 +223,7 @@ export const updateCreditTrackingRemainingAmount = withAuth(async (
   notes: string
 ): Promise<ICreditReconciliationReport | CreditReconciliationFixActionError> => {
   return withCreditReconciliationFixActionErrors(async () => {
-  if (!await hasPermission(user as any, 'billing', 'update')) {
+  if (!await hasPermission(user, 'billing', 'update')) {
     throw new Error('Permission denied: billing update required');
   }
   const userId = user.user_id;
@@ -337,7 +337,7 @@ export const applyCustomCreditAdjustment = withAuth(async (
   amount?: number
 ): Promise<ICreditReconciliationReport | CreditReconciliationFixActionError> => {
   return withCreditReconciliationFixActionErrors(async () => {
-  if (!await hasPermission(user as any, 'billing', 'update')) {
+  if (!await hasPermission(user, 'billing', 'update')) {
     throw new Error('Permission denied: billing update required');
   }
   const userId = user.user_id;
@@ -478,7 +478,7 @@ export const markReportAsResolvedNoAction = withAuth(async (
   notes: string
 ): Promise<ICreditReconciliationReport | CreditReconciliationFixActionError> => {
   return withCreditReconciliationFixActionErrors(async () => {
-  if (!await hasPermission(user as any, 'billing', 'update')) {
+  if (!await hasPermission(user, 'billing', 'update')) {
     throw new Error('Permission denied: billing update required');
   }
   const userId = user.user_id;
