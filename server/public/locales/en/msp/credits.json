@@ -285,7 +285,26 @@
     "removeExpiration": "Remove expiration date",
     "newExpirationDate": "New Expiration Date",
     "pastDateError": "Expiration date cannot be in the past",
-    "updateError": "An error occurred while updating the expiration date"
+    "updateError": "An error occurred while updating the expiration date",
+    "updateSuccess": "Credit expiration updated"
+  },
+  "viewDialog": {
+    "title": "Credit Details",
+    "loadFailed": "Failed to load credit details.",
+    "invoice": "Invoice",
+    "transactions": "Related Transactions",
+    "transactionType": "Type",
+    "noTransactions": "No related transactions found."
+  },
+  "expireDialog": {
+    "title": "Expire Credit",
+    "description": "This will immediately expire the credit. The remaining balance will no longer be available to the client. This action cannot be undone.",
+    "reasonLabel": "Reason (optional)",
+    "reasonPlaceholder": "Explain why this credit is being expired...",
+    "success": "Credit expired",
+    "error": "An error occurred while expiring the credit",
+    "expiring": "Expiring...",
+    "confirm": "Expire Credit"
   },
   "context": {
     "lineageMissing": "Lineage Missing",

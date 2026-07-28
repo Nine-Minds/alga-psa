@@ -212,7 +212,26 @@
     "removeExpiration": "Quitar fecha de vencimiento",
     "newExpirationDate": "Nueva fecha de vencimiento",
     "pastDateError": "La fecha de vencimiento no puede estar en el pasado",
-    "updateError": "Se produjo un error al actualizar la fecha de vencimiento"
+    "updateError": "Se produjo un error al actualizar la fecha de vencimiento",
+    "updateSuccess": "Vencimiento del crédito actualizado"
+  },
+  "viewDialog": {
+    "title": "Detalles del crédito",
+    "loadFailed": "No se pudieron cargar los detalles del crédito.",
+    "invoice": "Factura",
+    "transactions": "Transacciones relacionadas",
+    "transactionType": "Tipo",
+    "noTransactions": "No se encontraron transacciones relacionadas."
+  },
+  "expireDialog": {
+    "title": "Vencer crédito",
+    "description": "Esto vencerá el crédito inmediatamente. El saldo restante ya no estará disponible para el cliente. Esta acción no se puede deshacer.",
+    "reasonLabel": "Motivo (opcional)",
+    "reasonPlaceholder": "Explica por qué se vence este crédito...",
+    "success": "Crédito vencido",
+    "error": "Se produjo un error al vencer el crédito",
+    "expiring": "Venciendo...",
+    "confirm": "Vencer crédito"
   },
   "context": {
     "lineageMissing": "Linaje faltante",

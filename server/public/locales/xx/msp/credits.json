@@ -285,7 +285,26 @@
     "removeExpiration": "11111",
     "newExpirationDate": "11111",
     "pastDateError": "11111",
-    "updateError": "11111"
+    "updateError": "11111",
+    "updateSuccess": "11111"
+  },
+  "viewDialog": {
+    "title": "11111",
+    "loadFailed": "11111",
+    "invoice": "11111",
+    "transactions": "11111",
+    "transactionType": "11111",
+    "noTransactions": "11111"
+  },
+  "expireDialog": {
+    "title": "11111",
+    "description": "11111",
+    "reasonLabel": "11111",
+    "reasonPlaceholder": "11111",
+    "success": "11111",
+    "error": "11111",
+    "expiring": "11111",
+    "confirm": "11111"
   },
   "context": {
     "lineageMissing": "11111",

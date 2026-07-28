@@ -76,7 +76,7 @@ function creditActionErrorMessage(error: unknown, fallback: string): string {
 }
 
 export async function listCredits(
-  clientId: string,
+  clientId: string | undefined,
   includeExpired: boolean = false,
   page: number = 1,
   pageSize: number = 20

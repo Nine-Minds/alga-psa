@@ -7,6 +7,7 @@ import CreditsPageClient from './CreditsPageClient';
 type CreditRow = ICreditTracking & {
   transaction_description?: string;
   invoice_number?: string;
+  client_name?: string;
 };
 
 interface CreditsListResult {
@@ -19,9 +20,19 @@ interface CreditsListResult {
 
 type CreditExpirationSettingsResult = ICreditExpirationSettings | ActionMessageError | ActionPermissionError;
 
-export default async function CreditsPage({ params }: { params: Promise<{ clientId?: string }> }) {
-  const resolvedParams = await params;
-  const clientId = resolvedParams.clientId || '00000000-0000-0000-0000-000000000000';
+export default async function CreditsPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ clientId?: string }>;
+  searchParams: Promise<{ client?: string }>;
+}) {
+  const [resolvedParams, resolvedSearchParams] = await Promise.all([params, searchParams]);
+  const requestedClientId = resolvedParams.clientId || resolvedSearchParams.client;
+  // The expiration settings fall back to tenant defaults for an unknown client,
+  // so keep the zero-UUID sentinel there; the credits list itself should show
+  // every client's credits when no specific client was requested.
+  const clientId = requestedClientId || '00000000-0000-0000-0000-000000000000';
 
   const [settings, activeCreditsResult, allCreditsResult]: [
     CreditExpirationSettingsResult,
@@ -29,8 +40,8 @@ export default async function CreditsPage({ params }: { params: Promise<{ client
     CreditsListResult,
   ] = await Promise.all([
     getCreditExpirationSettings(clientId),
-    listCredits(clientId, false),
-    listCredits(clientId, true),
+    listCredits(requestedClientId || undefined, false),
+    listCredits(requestedClientId || undefined, true),
   ]);
 
   return (
