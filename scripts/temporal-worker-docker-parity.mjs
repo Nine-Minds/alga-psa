@@ -119,7 +119,23 @@ async function main() {
   cleanup();
 
   try {
-    console.log('\n[1/7] Build temporal worker dist locally...');
+    // production-prebuilt takes packages/*/dist from the build context instead of
+    // compiling in-container, so mirror the Dockerfile `development` build list here
+    // (limited to what .dockerignore whitelists). Not `nx run-many`: event-bus and
+    // friends declare nx:noop build targets and would silently produce no dist.
+    console.log('\n[1/7] Build prebuilt package dists and temporal worker dist locally...');
+    for (const pkg of [
+      'packages/core',
+      'packages/db',
+      'packages/event-schemas',
+      'packages/types',
+      'packages/event-bus',
+      'packages/email',
+      'packages/marketing',
+    ]) {
+      console.log(`  - ${pkg}`);
+      run('npm', ['--prefix', pkg, 'run', 'build']);
+    }
     run('npm', ['--prefix', 'ee/temporal-workflows', 'run', 'build']);
 
     console.log('\n[2/7] Build worker image...');

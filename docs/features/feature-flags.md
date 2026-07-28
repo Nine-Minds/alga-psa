@@ -203,6 +203,18 @@ Temporarily controls discovery of the Microsoft Entra sync integration before re
 **Note:** A future non-Entra identity integration would keep the Identity tab visible on
 its own; the flag gates the Entra entry, not the category.
 
+### 13. `skim-support-feature`
+Controls discovery of the SCIM user-provisioning administration UI while the feature is being rolled out.
+
+**Affected Areas:**
+- **MSP Portal:**
+  - Security Settings → User provisioning tab (hidden when disabled)
+
+**Behavior:**
+- When disabled (default): The User provisioning tab is hidden, and a direct `?tab=user-provisioning` URL falls back to the Roles tab.
+- When enabled: The SCIM user-provisioning tab is available to eligible enterprise-edition tenants; existing tier and permission checks still apply.
+- SCIM API routes, backend actions, authentication, schemas, migrations, and provisioning behavior remain active regardless of flag state.
+
 ## Implementation Details
 
 ### User Identification

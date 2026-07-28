@@ -19,6 +19,7 @@ describe('tierFeatures', () => {
       expect(TIER_FEATURES.TEAMS_INTEGRATION).toBe('TEAMS_INTEGRATION');
       expect(TIER_FEATURES.ENTRA_SYNC).toBe('ENTRA_SYNC');
       expect(TIER_FEATURES.CIPP).toBe('CIPP');
+      expect(TIER_FEATURES.SCIM_PROVISIONING).toBe('SCIM_PROVISIONING');
       expect(TIER_FEATURES.ADVANCED_AUTHORIZATION_BUNDLES).toBe('ADVANCED_AUTHORIZATION_BUNDLES');
     });
   });
@@ -47,6 +48,7 @@ describe('tierFeatures', () => {
         TIER_FEATURES.MOBILE_ACCESS,
         TIER_FEATURES.ENTRA_SYNC,
         TIER_FEATURES.CIPP,
+        TIER_FEATURES.SCIM_PROVISIONING,
       ]);
     });
 
@@ -61,6 +63,7 @@ describe('tierFeatures', () => {
         TIER_FEATURES.MOBILE_ACCESS,
         TIER_FEATURES.ENTRA_SYNC,
         TIER_FEATURES.CIPP,
+        TIER_FEATURES.SCIM_PROVISIONING,
         TIER_FEATURES.ADVANCED_AUTHORIZATION_BUNDLES,
         TIER_FEATURES.OPPORTUNITY_MANAGEMENT,
       ]);
@@ -89,6 +92,7 @@ describe('tierFeatures', () => {
     it('pro can access Entra Sync and CIPP but not premium features', () => {
       expect(tierHasFeature('pro', TIER_FEATURES.ENTRA_SYNC)).toBe(true);
       expect(tierHasFeature('pro', TIER_FEATURES.CIPP)).toBe(true);
+      expect(tierHasFeature('pro', TIER_FEATURES.SCIM_PROVISIONING)).toBe(true);
       expect(tierHasFeature('pro', TIER_FEATURES.ADVANCED_AUTHORIZATION_BUNDLES)).toBe(false);
       expect(tierHasFeature('pro', TIER_FEATURES.OPPORTUNITY_MANAGEMENT)).toBe(false);
     });
@@ -99,6 +103,7 @@ describe('tierFeatures', () => {
       expect(tierHasFeature('premium', TIER_FEATURES.TEAMS_INTEGRATION)).toBe(false);
       expect(tierHasFeature('premium', TIER_FEATURES.ENTRA_SYNC)).toBe(true);
       expect(tierHasFeature('premium', TIER_FEATURES.CIPP)).toBe(true);
+      expect(tierHasFeature('premium', TIER_FEATURES.SCIM_PROVISIONING)).toBe(true);
       expect(tierHasFeature('premium', TIER_FEATURES.ADVANCED_AUTHORIZATION_BUNDLES)).toBe(true);
       expect(tierHasFeature('premium', TIER_FEATURES.OPPORTUNITY_MANAGEMENT)).toBe(true);
     });
@@ -122,6 +127,7 @@ describe('tierFeatures', () => {
     it('maps Entra Sync and CIPP to Pro while retaining other Premium features', () => {
       expect(FEATURE_MINIMUM_TIER[TIER_FEATURES.ENTRA_SYNC]).toBe('pro');
       expect(FEATURE_MINIMUM_TIER[TIER_FEATURES.CIPP]).toBe('pro');
+      expect(FEATURE_MINIMUM_TIER[TIER_FEATURES.SCIM_PROVISIONING]).toBe('pro');
       expect(FEATURE_MINIMUM_TIER[TIER_FEATURES.ADVANCED_AUTHORIZATION_BUNDLES]).toBe('premium');
       expect(FEATURE_MINIMUM_TIER[TIER_FEATURES.OPPORTUNITY_MANAGEMENT]).toBe('premium');
     });

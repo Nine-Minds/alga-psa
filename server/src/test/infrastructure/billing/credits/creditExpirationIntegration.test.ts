@@ -2,6 +2,7 @@ import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } 
 import '../../../../../test-utils/nextApiMock';
 import { TestContext } from '../../../../../test-utils/testContext';
 import {
+  assignContractLineToClient,
   createTestService,
   createFixedPlanAssignment,
   setupClientTaxConfiguration,
@@ -320,14 +321,7 @@ describe('Credit Expiration Integration Tests', () => {
     }, 'billing_cycle_id');
 
     // Assign plan to client
-    await context.db('client_contract_lines').insert({
-      client_contract_line_id: uuidv4(),
-      client_id: clientId,
-      contract_line_id: planId,
-      tenant: context.tenantId,
-      start_date: startDate,
-      is_active: true
-    });
+    await assignContractLineToClient(context, planId, { clientId, startDate });
 
     // Check initial credit balance is zero
     const initialCredit = await ClientContractLine.getClientCredit(clientId);

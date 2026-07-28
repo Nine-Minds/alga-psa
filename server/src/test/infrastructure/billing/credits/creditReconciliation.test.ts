@@ -6,6 +6,7 @@ import { createPrepaymentInvoice, applyCreditToInvoice, validateCreditBalance } 
 import { finalizeInvoice } from '@alga-psa/billing/actions/invoiceModification';
 import { generateInvoice } from '@alga-psa/billing/actions/invoiceGeneration';
 import {
+  assignContractLineToClient,
   setupClientTaxConfiguration,
   assignServiceTaxRate
 } from '../../../../../test-utils/billingTestHelpers';
@@ -260,13 +261,9 @@ describe('Credit Reconciliation Tests', () => {
       contract_line_type: 'Fixed'
     });
 
-    await context.db('client_contract_lines').insert({
-      client_contract_line_id: uuidv4(),
-      tenant: context.tenantId,
-      client_id: client_id,
-      contract_line_id: contractLineId,
-      start_date: contractStartDate,
-      is_active: true
+    await assignContractLineToClient(context, contractLineId, {
+      clientId: client_id,
+      startDate: contractStartDate
     });
 
     // Create a manual positive invoice to reconcile against

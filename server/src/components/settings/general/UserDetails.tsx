@@ -260,6 +260,7 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
             EMAIL_ALREADY_EXISTS: 'userDetails.messages.error.emailAlreadyExists',
             REPORTS_TO_SELF: 'userDetails.messages.error.reportsToSelf',
             REPORTS_TO_CYCLE: 'userDetails.messages.error.reportsToCycle',
+            SCIM_MANAGED_INACTIVE: 'userDetails.messages.error.scimManagedInactive',
             PERMISSION_DENIED: 'userDetails.messages.error.permissionDenied',
             USER_UPDATE_FAILED: 'userDetails.messages.error.updateFailed',
           };

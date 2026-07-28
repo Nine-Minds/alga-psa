@@ -156,6 +156,9 @@ const servicePeriodPostInventoryRefs = new Set([
   'packages/billing/tests/recurringApprovalBlockers.servicePeriodBoundary.test.ts',
   'packages/integrations/src/lib/xero/__tests__/xeroInvoiceMapping.test.ts',
   'server/src/lib/api/services/InvoiceService.ts',
+  // seedBillingChargeSources backs fabricated usage charges with usage_tracking
+  // rows keyed off the charge's servicePeriodStart.
+  'server/test-utils/billingTestHelpers.ts',
   'server/src/test/infrastructure/billing/invoices/clientBillingCycleAnchors.test.ts',
   'server/src/test/integration/api/invoiceService.recurringCoexistence.integration.test.ts',
   'server/src/test/integration/billing/creditReconciliation.integration.test.ts',

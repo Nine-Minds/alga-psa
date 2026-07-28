@@ -748,13 +748,13 @@ describe('BoardsSettings ticket status copy flow', () => {
     fireEvent.change(screen.getByLabelText('ticketing.boards.fields.boardName.label'), {
       target: { value: 'Support Renamed' },
     });
-    const saveButton = screen.getByTestId('save-board-button');
-    // Generous timeout: under Nx parallel load the dirty-state re-render that
-    // enables the button can outlast waitFor's 1s default.
+    // Re-query on every poll. Holding one node across waitFor is what made this
+    // flaky: the dirty-state re-render can swap the button, leaving the captured
+    // reference detached and permanently disabled="" — which no timeout can fix.
     await waitFor(() => {
-      expect(saveButton).toBeEnabled();
+      expect(screen.getByTestId('save-board-button')).toBeEnabled();
     }, { timeout: 5_000 });
-    fireEvent.click(saveButton);
+    fireEvent.click(screen.getByTestId('save-board-button'));
 
     await waitFor(() => {
       expect(updateBoardMock).toHaveBeenCalled();

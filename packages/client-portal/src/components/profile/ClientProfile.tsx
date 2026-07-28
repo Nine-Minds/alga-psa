@@ -156,6 +156,7 @@ export function ClientProfile() {
           EMAIL_ALREADY_EXISTS: 'profile.messages.emailAlreadyExists',
           REPORTS_TO_SELF: 'profile.messages.reportsToSelf',
           REPORTS_TO_CYCLE: 'profile.messages.reportsToCycle',
+          SCIM_MANAGED_INACTIVE: 'profile.messages.scimManagedInactive',
           PERMISSION_DENIED: 'profile.messages.permissionDenied',
           USER_UPDATE_FAILED: 'profile.messages.updateFailed',
         };

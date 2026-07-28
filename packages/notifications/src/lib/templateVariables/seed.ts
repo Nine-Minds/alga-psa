@@ -1000,7 +1000,7 @@ export const templateVariableSeed: TemplateVariableSeedCategory[] = [
             "description": "The MSP's own company name, shown as the sender in subject, intro, and signature.",
             "example": "Contoso IT Services",
             "availability": "used",
-            "notes": "From tenants.company_name, defaults to 'Your Company'."
+            "notes": "From the tenant's default company in tenant_companies (clients.client_name), falling back to tenants.client_name, then 'Your Company'."
           },
           {
             "path": "customMessage",

@@ -51,6 +51,7 @@ export type UpdateUserErrorCode =
   | 'EMAIL_ALREADY_EXISTS'
   | 'REPORTS_TO_SELF'
   | 'REPORTS_TO_CYCLE'
+  | 'SCIM_MANAGED_INACTIVE'
   | 'PERMISSION_DENIED'
   | 'USER_UPDATE_FAILED';
 
@@ -756,6 +757,24 @@ export const updateUser = withAuth(async (
       for (const field of PROTECTED_USER_FIELDS) {
         if (field in userData) {
           delete (userData as Record<string, unknown>)[field as string];
+        }
+      }
+
+      if (
+        userData.is_inactive === false
+        && isEnterprise
+        && await trx.schema.hasTable('scim_user_links')
+      ) {
+        const upstreamInactiveLink = await tenantDb(trx, tenant).table('scim_user_links')
+          .where({ user_id: userId, upstream_active: false })
+          .whereNot('link_state', 'unlinked')
+          .first();
+        if (upstreamInactiveLink) {
+          return {
+            success: false,
+            code: 'SCIM_MANAGED_INACTIVE',
+            error: 'This user is inactive in the connected directory. Reactivate them upstream or unlink SCIM management first.',
+          };
         }
       }
 
