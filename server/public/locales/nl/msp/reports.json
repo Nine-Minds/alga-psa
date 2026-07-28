@@ -56,7 +56,8 @@
       "noOpenTicketsInRange": "Geen open tickets in deze periode.",
       "noDate": "Geen datum",
       "notAvailable": "n.v.t.",
-      "noEmailChannels": "Er zijn geen e-mailkanalen geconfigureerd."
+      "noEmailChannels": "Er zijn geen e-mailkanalen geconfigureerd.",
+      "noCapacity": "n.v.t. — geen capaciteit ingesteld"
     },
     "fallbackTitle": "Rapport",
     "dateRange": {
@@ -95,7 +96,12 @@
       "bucketOverageHours": "Bundeloverschrijding",
       "openAssigned": "Open toegewezen",
       "activeAssignees": "Actieve toegewezenen",
-      "avgResolutionTime": "Gem. oplostijd"
+      "avgResolutionTime": "Gem. oplostijd",
+      "workedHours": "Gewerkte uren",
+      "capacityHours": "Capaciteitsuren",
+      "utilization": "Benutting",
+      "usersWithoutCapacity": "Ontbrekende capaciteit",
+      "activeUsers": "Actieve gebruikers"
     },
     "sections": {
       "openByStatus": "Open per status",
@@ -113,7 +119,8 @@
       "upcomingRenewals": "Aankomende vernieuwingen",
       "bucketUsage": "Bundelgebruik",
       "performanceByAssignee": "Prestaties per toegewezene",
-      "closedByAssignee": "Gesloten per toegewezene"
+      "closedByAssignee": "Gesloten per toegewezene",
+      "utilizationByUser": "Benutting per gebruiker"
     },
     "reportCatalog": {
       "ticketWorkload": {
@@ -135,6 +142,10 @@
       "teamPerformance": {
         "title": "Teamprestaties",
         "description": "Teamdoorvoer en reactie-eigenaarschap voor werkruimten met meerdere gebruikers."
+      },
+      "employeeUtilization": {
+        "title": "Medewerkersbenutting",
+        "description": "Gewerkte uren ten opzichte van de wekelijkse capaciteit van elk teamlid."
       },
       "contractReports": {
         "title": "Contractrapporten",
@@ -158,7 +169,11 @@
       "entries": "Vermeldingen",
       "ticket": "Ticket",
       "entered": "Ingevoerd",
-      "age": "Leeftijd"
+      "age": "Leeftijd",
+      "workedHours": "Gewerkte uren",
+      "capacityHours": "Capaciteitsuren",
+      "utilization": "Benutting",
+      "capacityEstimated": "Geschat op basis van de weekcapaciteit; geen werktijden ingesteld."
     },
     "statusValues": {
       "connected": "Verbonden",

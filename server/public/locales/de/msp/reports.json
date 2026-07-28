@@ -56,7 +56,8 @@
       "noOpenTicketsInRange": "Keine offenen Tickets in diesem Zeitraum.",
       "noDate": "Kein Datum",
       "notAvailable": "k. A.",
-      "noEmailChannels": "Es sind keine E-Mail-Kanaele konfiguriert."
+      "noEmailChannels": "Es sind keine E-Mail-Kanaele konfiguriert.",
+      "noCapacity": "nicht verfügbar – keine Kapazität festgelegt"
     },
     "fallbackTitle": "Bericht",
     "dateRange": {
@@ -95,7 +96,12 @@
       "bucketOverageHours": "Kontingentueberziehung",
       "openAssigned": "Offen zugewiesen",
       "activeAssignees": "Aktive Bearbeiter",
-      "avgResolutionTime": "Durchschn. Loesungszeit"
+      "avgResolutionTime": "Durchschn. Loesungszeit",
+      "workedHours": "Geleistete Stunden",
+      "capacityHours": "Kapazitätsstunden",
+      "utilization": "Auslastung",
+      "usersWithoutCapacity": "Fehlende Kapazität",
+      "activeUsers": "Aktive Benutzer"
     },
     "sections": {
       "openByStatus": "Offen nach Status",
@@ -113,7 +119,8 @@
       "upcomingRenewals": "Anstehende Verlaengerungen",
       "bucketUsage": "Kontingentnutzung",
       "performanceByAssignee": "Leistung nach Bearbeiter",
-      "closedByAssignee": "Geschlossen nach Bearbeiter"
+      "closedByAssignee": "Geschlossen nach Bearbeiter",
+      "utilizationByUser": "Auslastung pro Benutzer"
     },
     "reportCatalog": {
       "ticketWorkload": {
@@ -135,6 +142,10 @@
       "teamPerformance": {
         "title": "Teamleistung",
         "description": "Teamdurchsatz und Antwortzustand für Arbeitsbereiche mit mehreren Benutzern."
+      },
+      "employeeUtilization": {
+        "title": "Mitarbeiterauslastung",
+        "description": "Geleistete Stunden im Verhältnis zur wöchentlichen Kapazität jedes Teammitglieds."
       },
       "contractReports": {
         "title": "Vertragsberichte",
@@ -158,7 +169,11 @@
       "entries": "Eintraege",
       "ticket": "Ticket",
       "entered": "Eingegeben",
-      "age": "Alter"
+      "age": "Alter",
+      "workedHours": "Geleistete Stunden",
+      "capacityHours": "Kapazitätsstunden",
+      "utilization": "Auslastung",
+      "capacityEstimated": "Geschätzt aus der Wochenkapazität; keine Arbeitszeiten festgelegt."
     },
     "statusValues": {
       "connected": "Verbunden",

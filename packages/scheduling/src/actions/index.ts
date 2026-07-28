@@ -24,6 +24,7 @@ export * from './appointmentRequestManagementActions';
 export * from './onlineMeetingSchedulingActions';
 export * from './onlineMeetingArtifactActions';
 export * from './availabilitySettingsActions';
+export * from './resourceCapacityActions';
 export * from './scheduleActions';
 export * from './scheduleActivityActions';
 export * from './serviceCatalogActions';

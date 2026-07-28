@@ -448,8 +448,9 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   // 3. Delete contacts after clients (before users that reference them)
   // 4. Delete contact_email_type_definitions after contacts
   //    (contacts.primary_email_custom_type_id → contact_email_type_definitions RESTRICT)
-  // 5. Delete password_reset_tokens, resources, tenant_telemetry_settings before users
-  //    (they all reference users via NO ACTION / RESTRICT)
+  // 5. Delete password_reset_tokens, resources, user_work_schedules,
+  //    tenant_telemetry_settings before users
+  //    (they all reference users via NO ACTION / RESTRICT / CASCADE)
   // 6. Delete users last (they have NOT NULL contact_id that references contacts)
 
   'contact_phone_numbers',
@@ -465,6 +466,13 @@ const TENANT_TABLES_DELETION_ORDER: string[] = [
   'contact_email_type_definitions', // contacts.primary_email_custom_type_id → this table (RESTRICT)
   'password_reset_tokens',     // password_reset_tokens.user_id → users with NO ACTION
   'resources',                 // resources.user_id → users with NO ACTION
+  // (tenant, user_id) → users with ON DELETE CASCADE, colocated with users.
+  // Deleted explicitly rather than left to the cascade: the tenant FK on this
+  // table is NO ACTION, so rows surviving until the final `tenants` delete would
+  // block it. Citus also rejects ON DELETE SET NULL on a key containing the
+  // distribution column, so CASCADE is the only automatic rule available here
+  // and an explicit delete is what keeps the order self-describing.
+  'user_work_schedules',
   'tenant_telemetry_settings', // tenant_telemetry_settings.updated_by → users with RESTRICT
 
   // === MCP agent governance (EE) ===

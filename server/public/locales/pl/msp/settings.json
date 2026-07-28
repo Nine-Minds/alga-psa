@@ -284,6 +284,27 @@
         "label": "Przełożony",
         "placeholder": "Wybierz przełożonego"
       },
+      "workSchedule": {
+        "label": "Godziny pracy",
+        "help": "Kiedy ta osoba jest na służbie. Używane w raportach wykorzystania. To nie jest dostępność do rezerwacji przez klientów.",
+        "setHours": "Ustaw godziny pracy",
+        "clear": "Wyczyść",
+        "weeklyTotal": "{{hours}} godz. tygodniowo",
+        "days": {
+          "0": "Niedziela",
+          "1": "Poniedziałek",
+          "2": "Wtorek",
+          "3": "Środa",
+          "4": "Czwartek",
+          "5": "Piątek",
+          "6": "Sobota"
+        }
+      },
+      "weeklyCapacity": {
+        "label": "Tygodniowa wydajność (godziny)",
+        "placeholder": "np. 40",
+        "help": "Używane tylko wtedy, gdy powyżej nie ustawiono godzin pracy."
+      },
       "lastLogin": "Ostatnie logowanie",
       "roles": "Role",
       "status": "Status",
@@ -328,7 +349,9 @@
         "emailAlreadyExists": "Użytkownik o tym adresie e-mail już istnieje",
         "reportsToSelf": "Użytkownik nie może podlegać samemu sobie",
         "reportsToCycle": "Spowodowałoby to cykliczną strukturę podległości",
-        "permissionDenied": "Nie masz uprawnień do zmiany ról użytkowników."
+        "permissionDenied": "Nie masz uprawnień do zmiany ról użytkowników.",
+        "invalidCapacity": "Tygodniowa wydajność musi być liczbą dodatnią.",
+        "invalidWorkSchedule": "Godziny pracy muszą być prawidłowymi przedziałami kończącymi się po rozpoczęciu."
       }
     },
     "loading": "Ładowanie szczegółów użytkownika..."

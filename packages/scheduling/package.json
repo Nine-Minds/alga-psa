@@ -29,6 +29,14 @@
       "import": "./src/actions/scheduleActivityCore.ts",
       "types": "./src/actions/scheduleActivityCore.ts"
     },
+    "./actions/resourceCapacityActions": {
+      "import": "./src/actions/resourceCapacityActions.ts",
+      "types": "./src/actions/resourceCapacityActions.ts"
+    },
+    "./lib/resourceCapacity": {
+      "import": "./src/lib/resourceCapacity.ts",
+      "types": "./src/lib/resourceCapacity.ts"
+    },
     "./lib/timeEntryLauncher": {
       "import": "./src/lib/timeEntryLauncher.tsx",
       "types": "./src/lib/timeEntryLauncher.tsx"

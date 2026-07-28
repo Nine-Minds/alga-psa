@@ -56,7 +56,8 @@
       "noOpenTicketsInRange": "Nessun ticket aperto in questo intervallo.",
       "noDate": "Nessuna data",
       "notAvailable": "n/d",
-      "noEmailChannels": "Nessun canale email configurato."
+      "noEmailChannels": "Nessun canale email configurato.",
+      "noCapacity": "n/d — nessuna capacità impostata"
     },
     "fallbackTitle": "Report",
     "dateRange": {
@@ -95,7 +96,12 @@
       "bucketOverageHours": "Extra pacchetto",
       "openAssigned": "Aperti assegnati",
       "activeAssignees": "Assegnatari attivi",
-      "avgResolutionTime": "Tempo medio risoluzione"
+      "avgResolutionTime": "Tempo medio risoluzione",
+      "workedHours": "Ore lavorate",
+      "capacityHours": "Ore di capacità",
+      "utilization": "Utilizzo",
+      "usersWithoutCapacity": "Capacità mancante",
+      "activeUsers": "Utenti attivi"
     },
     "sections": {
       "openByStatus": "Aperti per stato",
@@ -113,7 +119,8 @@
       "upcomingRenewals": "Rinnovi imminenti",
       "bucketUsage": "Uso pacchetto",
       "performanceByAssignee": "Prestazioni per assegnatario",
-      "closedByAssignee": "Chiusi per assegnatario"
+      "closedByAssignee": "Chiusi per assegnatario",
+      "utilizationByUser": "Utilizzo per utente"
     },
     "reportCatalog": {
       "ticketWorkload": {
@@ -135,6 +142,10 @@
       "teamPerformance": {
         "title": "Prestazioni del team",
         "description": "Volume del team, responsabilità della risposta, spazi di lavoro multiutente."
+      },
+      "employeeUtilization": {
+        "title": "Utilizzo dei dipendenti",
+        "description": "Ore lavorate rispetto alla capacità settimanale di ciascun membro del team."
       },
       "contractReports": {
         "title": "Report contratti",
@@ -158,7 +169,11 @@
       "entries": "Voci",
       "ticket": "Ticket",
       "entered": "Inserito",
-      "age": "Eta"
+      "age": "Eta",
+      "workedHours": "Ore lavorate",
+      "capacityHours": "Ore di capacità",
+      "utilization": "Utilizzo",
+      "capacityEstimated": "Stimato dalla capacità settimanale; nessun orario di lavoro impostato."
     },
     "statusValues": {
       "connected": "Connesso",

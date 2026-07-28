@@ -8,6 +8,14 @@ import {
   reportingActionErrorFrom,
   type ReportingActionError,
 } from './report-actions/reportingActionErrors';
+import type { WorkScheduleDay } from '@alga-psa/core/workSchedule';
+import {
+  buildEmployeeUtilizationReport,
+  type EmployeeUtilizationInputRow,
+  type EmployeeUtilizationReport,
+} from './employeeUtilization';
+
+export type { EmployeeUtilizationReport } from './employeeUtilization';
 
 export type ReportRangeDays = 7 | 30 | 90;
 
@@ -659,6 +667,100 @@ export const getTicketAgingReport = withAuth(
           ageDays: toCount(row.age_days),
         })),
       };
+    } catch (error) {
+      const expected = reportingActionErrorFrom(error);
+      if (expected) return expected;
+      throw error;
+    }
+  },
+);
+
+/**
+ * Employee utilization, v1 semantics:
+ * - roster: internal users that are active today (past employees are excluded,
+ *   including any hours they logged inside the range),
+ * - worked hours: every time entry in the range, whatever its approval status,
+ * - capacity: the user's work schedule counted over the real calendar days in
+ *   the range, falling back to the coarse weekly capacity override. Neither is
+ *   effective-dated, so editing a schedule today also changes what last quarter
+ *   looks like, and neither knows about PTO or holidays yet.
+ *
+ * Capacity deliberately does not come from `availability_settings`: that table
+ * says when a client may book someone, not when they are working.
+ */
+export const getEmployeeUtilizationReport = withAuth(
+  async (user, { tenant }, rangeDaysInput?: number): Promise<EmployeeUtilizationReport | ReportingActionError> => {
+    try {
+      const rangeDays = normalizeRangeDays(rangeDaysInput);
+      const { knex } = await createTenantKnex();
+      await assertCanReadReports(user, knex);
+      const scopedDb = tenantDb(knex, tenant);
+
+      const [userRows, timeRows, capacityRows, scheduleRows, todayRow] = await Promise.all([
+        scopedDb.table('users')
+          .where('user_type', 'internal')
+          .where('is_inactive', false)
+          .select(
+            'user_id',
+            knex.raw("COALESCE(NULLIF(TRIM(CONCAT(first_name, ' ', last_name)), ''), email, 'Unknown user') as name"),
+          ),
+        // work_date is the canonical calendar day of the entry (NOT NULL since the
+        // work_date migration), so the window matches the whole-day capacity
+        // denominator instead of a rolling timestamp window.
+        scopedDb.table('time_entries')
+          .where('work_date', '>=', knex.raw(`CURRENT_DATE - INTERVAL '${rangeDays - 1} days'`))
+          .where('work_date', '<=', knex.raw('CURRENT_DATE'))
+          .select(
+            'user_id',
+            knex.raw('COUNT(*)::int as entries'),
+            knex.raw('COALESCE(SUM(EXTRACT(EPOCH FROM (end_time - start_time)) / 60), 0) as worked_minutes'),
+            knex.raw('COALESCE(SUM(billable_duration), 0) as billable_minutes'),
+          )
+          .groupBy('user_id'),
+        // One capacity row per user is guaranteed by the resources_tenant_user_unique index.
+        scopedDb.table('resources').select('user_id', 'max_weekly_capacity'),
+        scopedDb.table('user_work_schedules').select('user_id', 'day_of_week', 'start_time', 'end_time', 'is_working'),
+        // The capacity denominator must be counted over the same calendar days
+        // the work_date window above selected, so take today from the database
+        // rather than from the app server's clock.
+        knex.raw("SELECT CURRENT_DATE::text AS today").then((result: any) => result.rows?.[0]),
+      ]);
+
+      const timeByUser = new Map<string, { worked_minutes: unknown; billable_minutes: unknown; entries: unknown }>();
+      for (const row of timeRows as any[]) {
+        timeByUser.set(row.user_id, row);
+      }
+      const capacityByUser = new Map<string, number | null>();
+      for (const row of capacityRows as any[]) {
+        capacityByUser.set(row.user_id, toNullableNumber(row.max_weekly_capacity));
+      }
+      const scheduleByUser = new Map<string, WorkScheduleDay[]>();
+      for (const row of scheduleRows as any[]) {
+        const days = scheduleByUser.get(row.user_id) ?? [];
+        days.push({
+          dayOfWeek: Number(row.day_of_week) as WorkScheduleDay['dayOfWeek'],
+          isWorking: Boolean(row.is_working),
+          startTime: String(row.start_time).slice(0, 5),
+          endTime: String(row.end_time).slice(0, 5),
+        });
+        scheduleByUser.set(row.user_id, days);
+      }
+
+      const inputRows: EmployeeUtilizationInputRow[] = (userRows as any[]).map((row) => {
+        const time = timeByUser.get(row.user_id);
+        return {
+          userId: row.user_id,
+          name: row.name,
+          workedMinutes: Number(time?.worked_minutes ?? 0) || 0,
+          billableMinutes: Number(time?.billable_minutes ?? 0) || 0,
+          entries: toCount(time?.entries),
+          maxWeeklyCapacity: capacityByUser.get(row.user_id) ?? null,
+          workSchedule: scheduleByUser.get(row.user_id) ?? [],
+        };
+      });
+
+      const rangeEndDate = String((todayRow as any)?.today ?? '').slice(0, 10);
+      return buildEmployeeUtilizationReport(inputRows, rangeDays, rangeEndDate);
     } catch (error) {
       const expected = reportingActionErrorFrom(error);
       if (expected) return expected;

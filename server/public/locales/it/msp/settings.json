@@ -282,6 +282,27 @@
         "label": "Riporta a",
         "placeholder": "Seleziona responsabile"
       },
+      "workSchedule": {
+        "label": "Orario di lavoro",
+        "help": "Quando questa persona è in servizio. Usato nei report di utilizzo. Non è la disponibilità di prenotazione per i clienti.",
+        "setHours": "Imposta orario di lavoro",
+        "clear": "Cancella",
+        "weeklyTotal": "{{hours}} h a settimana",
+        "days": {
+          "0": "Domenica",
+          "1": "Lunedì",
+          "2": "Martedì",
+          "3": "Mercoledì",
+          "4": "Giovedì",
+          "5": "Venerdì",
+          "6": "Sabato"
+        }
+      },
+      "weeklyCapacity": {
+        "label": "Capacità settimanale (ore)",
+        "placeholder": "es. 40",
+        "help": "Usato solo se sopra non è impostato alcun orario di lavoro."
+      },
       "lastLogin": "Ultimo accesso",
       "roles": "Ruoli",
       "status": "Stato",
@@ -326,7 +347,9 @@
         "emailAlreadyExists": "Esiste già un utente con questo indirizzo e-mail",
         "reportsToSelf": "Un utente non può riferire a se stesso",
         "reportsToCycle": "Questo creerebbe una catena di riporto circolare",
-        "permissionDenied": "Non disponi delle autorizzazioni per modificare i ruoli utente."
+        "permissionDenied": "Non disponi delle autorizzazioni per modificare i ruoli utente.",
+        "invalidCapacity": "La capacità settimanale deve essere un numero positivo.",
+        "invalidWorkSchedule": "L'orario di lavoro deve essere un intervallo valido che termina dopo l'inizio."
       }
     },
     "loading": "Caricamento dettagli utente..."

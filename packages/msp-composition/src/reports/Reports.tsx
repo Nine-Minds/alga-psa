@@ -7,6 +7,7 @@ import {
   BarChart3,
   Clock3,
   FileBarChart,
+  Gauge,
   Ghost,
   Lock,
   type LucideIcon,
@@ -36,11 +37,13 @@ import {
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
   getEmailChannelHealthReport,
+  getEmployeeUtilizationReport,
   getTeamPerformanceReport,
   getTicketAgingReport,
   getTicketWorkloadReport,
   getTimeUtilizationReport,
   type EmailChannelHealthReport,
+  type EmployeeUtilizationReport,
   type ReportBucket,
   type ReportRangeDays,
   type TeamPerformanceReport,
@@ -51,7 +54,7 @@ import {
 
 type ReportCategory = 'helpdesk' | 'operations' | 'billing' | 'inventory';
 type ReportKind = 'embedded' | 'link' | 'planned';
-type EmbeddedReportId = 'ticket-workload' | 'ticket-aging' | 'email-channel-health' | 'time-utilization' | 'team-performance';
+type EmbeddedReportId = 'ticket-workload' | 'ticket-aging' | 'email-channel-health' | 'time-utilization' | 'team-performance' | 'employee-utilization';
 type LinkReportId = 'contract-reports' | 'inventory-margin' | 'inventory-write-offs' | 'inventory-ghost-usage';
 
 interface ReportDefinition {
@@ -139,6 +142,18 @@ const REPORTS: ReportDefinition[] = [
     minimumTier: 'pro',
     kind: 'embedded',
     icon: Users,
+  },
+  {
+    id: 'employee-utilization',
+    titleKey: 'reportsPage.reportCatalog.employeeUtilization.title',
+    titleDefault: 'Employee Utilization',
+    descriptionKey: 'reportsPage.reportCatalog.employeeUtilization.description',
+    descriptionDefault: 'Hours worked against each team member’s weekly capacity.',
+    category: 'operations',
+    products: ['psa'],
+    minimumTier: 'pro',
+    kind: 'embedded',
+    icon: Gauge,
   },
   {
     id: 'contract-reports',
@@ -678,6 +693,155 @@ function TeamPerformanceView({ rangeDays }: { rangeDays: ReportRangeDays }) {
   );
 }
 
+function EmployeeUtilizationView({ rangeDays }: { rangeDays: ReportRangeDays }) {
+  const { t } = useTranslation('msp/reports');
+  const [report, setReport] = useState<EmployeeUtilizationReport | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    setReport(null);
+    setError(null);
+    getEmployeeUtilizationReport(rangeDays)
+      .then((data) => {
+        if (isReportActionError(data)) {
+          if (!cancelled) setError(getErrorMessage(data));
+          return;
+        }
+        if (!cancelled) setReport(data);
+      })
+      .catch((err) => {
+        console.error('Failed to load employee utilization report:', err);
+        if (!cancelled) setError(t('reportsPage.errors.loadReport', { defaultValue: 'Failed to load report.' }));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [rangeDays, t]);
+
+  if (error) return <p className="text-sm text-[rgb(var(--color-destructive-600))]">{error}</p>;
+  if (!report) return <LoadingReport />;
+
+  const emptyText = t('reportsPage.empty.noData', { defaultValue: 'No data for this report.' });
+  const noCapacityText = t('reportsPage.empty.noCapacity', { defaultValue: 'n/a — no capacity set' });
+  const printTitle = t('reportsPage.reportCatalog.employeeUtilization.title', { defaultValue: 'Employee Utilization' });
+  const printSubtitle = t('reportsPage.dateRange.lastDays', { defaultValue: 'Last {{count}} days', count: report.rangeDays });
+  const formatPercent = (value: number | null) => (value === null ? noCapacityText : `${value}%`);
+  const formatCapacity = (value: number | null) => (value === null ? noCapacityText : formatHours(value));
+  // A denominator estimated from the weekly override is worth flagging: it
+  // assumes every week in the range looks the same.
+  const estimatedText = t('reportsPage.table.capacityEstimated', {
+    defaultValue: 'Estimated from weekly capacity; no working hours set.',
+  });
+  const overallUtilization =
+    report.summary.overallUtilizationPercent === null
+      ? t('reportsPage.empty.notAvailable', { defaultValue: 'n/a' })
+      : `${report.summary.overallUtilizationPercent}%`;
+
+  type ByUserRow = (typeof report.byUser)[number];
+  const byUserColumns: PrintableTableColumn<ByUserRow>[] = [
+    { key: 'name', header: t('reportsPage.table.user', { defaultValue: 'User' }), render: (row) => row.name },
+    { key: 'worked', header: t('reportsPage.table.workedHours', { defaultValue: 'Worked hours' }), render: (row) => formatHours(row.workedHours) },
+    {
+      key: 'capacity',
+      header: t('reportsPage.table.capacityHours', { defaultValue: 'Capacity hours' }),
+      render: (row) => (row.capacitySource === 'weekly' ? `${formatCapacity(row.capacityHours)} *` : formatCapacity(row.capacityHours)),
+    },
+    { key: 'utilization', header: t('reportsPage.table.utilization', { defaultValue: 'Utilization' }), render: (row) => formatPercent(row.utilizationPercent) },
+  ];
+
+  return (
+    <>
+      <div className="space-y-4">
+        <div className="grid gap-3 md:grid-cols-5">
+          <MetricCard label={t('reportsPage.metrics.activeUsers', { defaultValue: 'Active users' })} value={report.summary.activeUsers} />
+          <MetricCard label={t('reportsPage.metrics.workedHours', { defaultValue: 'Worked hours' })} value={formatHours(report.summary.totalWorkedHours)} />
+          <MetricCard label={t('reportsPage.metrics.capacityHours', { defaultValue: 'Capacity hours' })} value={formatHours(report.summary.totalCapacityHours)} />
+          <MetricCard label={t('reportsPage.metrics.utilization', { defaultValue: 'Utilization' })} value={overallUtilization} />
+          <MetricCard label={t('reportsPage.metrics.usersWithoutCapacity', { defaultValue: 'Missing capacity' })} value={report.summary.usersWithoutCapacity} />
+        </div>
+        <div className="rounded-md border border-[rgb(var(--color-border-200))]">
+          <div className="border-b border-[rgb(var(--color-border-200))] p-4">
+            <h3 className="text-sm font-semibold text-[rgb(var(--color-text-900))]">
+              {t('reportsPage.sections.utilizationByUser', { defaultValue: 'Utilization by user' })}
+            </h3>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-[rgb(var(--color-border-200))] text-sm">
+              <thead className="bg-[rgb(var(--color-background-100))]">
+                <tr>
+                  <th className="px-4 py-3 text-left font-medium text-[rgb(var(--color-text-600))]">{t('reportsPage.table.user', { defaultValue: 'User' })}</th>
+                  <th className="px-4 py-3 text-right font-medium text-[rgb(var(--color-text-600))]">{t('reportsPage.table.workedHours', { defaultValue: 'Worked hours' })}</th>
+                  <th className="px-4 py-3 text-right font-medium text-[rgb(var(--color-text-600))]">{t('reportsPage.table.capacityHours', { defaultValue: 'Capacity hours' })}</th>
+                  <th className="px-4 py-3 text-left font-medium text-[rgb(var(--color-text-600))]">{t('reportsPage.table.utilization', { defaultValue: 'Utilization' })}</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[rgb(var(--color-border-200))]">
+                {report.byUser.length === 0 ? (
+                  <tr>
+                    <td className="px-4 py-5 text-[rgb(var(--color-text-500))]" colSpan={4}>
+                      {emptyText}
+                    </td>
+                  </tr>
+                ) : (
+                  report.byUser.map((row) => (
+                    <tr key={row.userId}>
+                      <td className="px-4 py-3 font-medium text-[rgb(var(--color-text-900))]">{row.name}</td>
+                      <td className="px-4 py-3 text-right text-[rgb(var(--color-text-700))]">{formatHours(row.workedHours)}</td>
+                      <td className="px-4 py-3 text-right text-[rgb(var(--color-text-700))]">
+                        {formatCapacity(row.capacityHours)}
+                        {row.capacitySource === 'weekly' ? (
+                          <span className="ml-1 text-[rgb(var(--color-text-500))]" title={estimatedText}>
+                            *
+                          </span>
+                        ) : null}
+                      </td>
+                      <td className="px-4 py-3">
+                        {row.utilizationPercent === null ? (
+                          <span className="text-[rgb(var(--color-text-500))]">{noCapacityText}</span>
+                        ) : (
+                          <div className="flex items-center gap-2">
+                            <div className="h-2 flex-1 rounded-full bg-[rgb(var(--color-border-200))]">
+                              <div
+                                className="h-2 rounded-full bg-[rgb(var(--color-primary-500))]"
+                                style={{ width: `${Math.min(100, Math.max(4, row.utilizationPercent))}%` }}
+                              />
+                            </div>
+                            <span className="w-12 text-right font-medium text-[rgb(var(--color-text-900))]">{row.utilizationPercent}%</span>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      <PrintReportRoot>
+        <PrintHeader title={printTitle} subtitle={printSubtitle} />
+        <PrintSummary
+          metrics={[
+            { label: t('reportsPage.metrics.activeUsers', { defaultValue: 'Active users' }), value: report.summary.activeUsers },
+            { label: t('reportsPage.metrics.workedHours', { defaultValue: 'Worked hours' }), value: formatHours(report.summary.totalWorkedHours) },
+            { label: t('reportsPage.metrics.capacityHours', { defaultValue: 'Capacity hours' }), value: formatHours(report.summary.totalCapacityHours) },
+            { label: t('reportsPage.metrics.utilization', { defaultValue: 'Utilization' }), value: overallUtilization },
+            { label: t('reportsPage.metrics.usersWithoutCapacity', { defaultValue: 'Missing capacity' }), value: report.summary.usersWithoutCapacity },
+          ]}
+        />
+        <PrintableTable
+          title={t('reportsPage.sections.utilizationByUser', { defaultValue: 'Utilization by user' })}
+          rows={report.byUser}
+          columns={byUserColumns}
+          getRowKey={(row) => row.userId}
+          emptyMessage={emptyText}
+        />
+      </PrintReportRoot>
+    </>
+  );
+}
+
 function EmailChannelHealthView({ rangeDays }: { rangeDays: ReportRangeDays }) {
   const { t } = useTranslation('msp/reports');
   const [report, setReport] = useState<EmailChannelHealthReport | null>(null);
@@ -1138,6 +1302,8 @@ export default function Reports({ productCode = 'psa', tier = 'pro' }: ReportsPr
               <TimeUtilizationView rangeDays={rangeDays} />
             ) : selectedReportId === 'team-performance' ? (
               <TeamPerformanceView rangeDays={rangeDays} />
+            ) : selectedReportId === 'employee-utilization' ? (
+              <EmployeeUtilizationView rangeDays={rangeDays} />
             ) : (
               <TicketWorkloadView rangeDays={rangeDays} />
             )}

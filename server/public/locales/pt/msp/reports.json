@@ -56,7 +56,8 @@
       "noOpenTicketsInRange": "Não há tickets abertos nesta faixa.",
       "noDate": "Sem data",
       "notAvailable": "n / D",
-      "noEmailChannels": "Nenhum canal de e-mail está configurado."
+      "noEmailChannels": "Nenhum canal de e-mail está configurado.",
+      "noCapacity": "n/d — sem capacidade definida"
     },
     "fallbackTitle": "Relatório",
     "dateRange": {
@@ -95,7 +96,12 @@
       "bucketOverageHours": "Excedente do intervalo",
       "openAssigned": "Aberto atribuído",
       "activeAssignees": "Responsáveis ​​ativos",
-      "avgResolutionTime": "Média tempo de resolução"
+      "avgResolutionTime": "Média tempo de resolução",
+      "workedHours": "Horas trabalhadas",
+      "capacityHours": "Horas de capacidade",
+      "utilization": "Utilização",
+      "usersWithoutCapacity": "Capacidade ausente",
+      "activeUsers": "Usuários ativos"
     },
     "sections": {
       "openByStatus": "Aberto por status",
@@ -113,7 +119,8 @@
       "upcomingRenewals": "Próximas renovações",
       "bucketUsage": "Uso de balde",
       "performanceByAssignee": "Desempenho por responsável",
-      "closedByAssignee": "Fechado pelo responsável"
+      "closedByAssignee": "Fechado pelo responsável",
+      "utilizationByUser": "Utilização por usuário"
     },
     "reportCatalog": {
       "ticketWorkload": {
@@ -135,6 +142,10 @@
       "teamPerformance": {
         "title": "Desempenho da equipe",
         "description": "Taxa de transferência e propriedade de resposta em nível de equipe para espaços de trabalho multiusuários."
+      },
+      "employeeUtilization": {
+        "title": "Utilização de funcionários",
+        "description": "Horas trabalhadas em relação à capacidade semanal de cada membro da equipe."
       },
       "contractReports": {
         "title": "Relatórios de contrato",
@@ -158,7 +169,11 @@
       "entries": "Entradas",
       "ticket": "Ticket",
       "entered": "Entrou",
-      "age": "Idade"
+      "age": "Idade",
+      "workedHours": "Horas trabalhadas",
+      "capacityHours": "Horas de capacidade",
+      "utilization": "Utilização",
+      "capacityEstimated": "Estimado a partir da capacidade semanal; sem horário de trabalho definido."
     },
     "statusValues": {
       "connected": "Conectado",
