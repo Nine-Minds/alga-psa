@@ -1,3 +1,4 @@
+/* eslint-disable custom-rules/no-feature-to-feature-imports -- QBO item import resolves QBO Items (integrations) against the billing catalog */
 import type { QboItem } from '@alga-psa/integrations/lib/qbo/types';
 
 /**

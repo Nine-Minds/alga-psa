@@ -1,5 +1,6 @@
 'use server';
 
+/* eslint-disable custom-rules/no-feature-to-feature-imports -- import actions resolve the connected QuickBooks realm */
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import { featureFlags } from '@alga-psa/core/server';

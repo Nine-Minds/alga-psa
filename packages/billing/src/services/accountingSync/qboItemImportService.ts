@@ -1,3 +1,4 @@
+/* eslint-disable custom-rules/no-feature-to-feature-imports -- QBO item import intentionally bridges billing catalog and the QuickBooks integration client */
 import { Knex } from 'knex';
 import logger from '@alga-psa/core/logger';
 import { createTenantKnex, tenantDb, withTransaction } from '@alga-psa/db';

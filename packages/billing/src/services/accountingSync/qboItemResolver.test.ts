@@ -1,3 +1,4 @@
+/* eslint-disable custom-rules/no-feature-to-feature-imports -- tests resolve QBO Items (integrations) against the billing catalog */
 import { describe, expect, it } from 'vitest';
 import type { QboItem } from '@alga-psa/integrations/lib/qbo/types';
 import {
