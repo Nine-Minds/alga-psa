@@ -47,6 +47,20 @@ export type ParsedWorkSchedule =
   | { ok: true; value: WorkScheduleDay[] }
   | { ok: false; reason: WorkScheduleRejection };
 
+/**
+ * Narrow with this rather than `if (!parsed.ok)`.
+ *
+ * ee/server sets `strict: false`, and with `strictNullChecks` off a boolean
+ * discriminant does not narrow a union at all — reading `.reason` in the
+ * failure branch fails to compile there while passing under the strict root
+ * config. A type predicate narrows under both.
+ */
+export function isWorkScheduleRejected(
+  parsed: ParsedWorkSchedule,
+): parsed is { ok: false; reason: WorkScheduleRejection } {
+  return !parsed.ok;
+}
+
 const TIME_PATTERN = /^([01]\d|2[0-3]):([0-5]\d)(?::([0-5]\d))?$/;
 
 export function parseTimeToMinutes(value: unknown): number | null {

@@ -12,6 +12,20 @@ export type ParsedWeeklyCapacity =
   | { ok: true; value: number | null }
   | { ok: false; reason: WeeklyCapacityRejection };
 
+/**
+ * Narrow with this rather than `if (!parsed.ok)`.
+ *
+ * ee/server sets `strict: false`, and with `strictNullChecks` off a boolean
+ * discriminant does not narrow a union at all — reading `.reason` in the
+ * failure branch fails to compile there while passing under the strict root
+ * config. A type predicate narrows under both.
+ */
+export function isWeeklyCapacityRejected(
+  parsed: ParsedWeeklyCapacity,
+): parsed is { ok: false; reason: WeeklyCapacityRejection } {
+  return !parsed.ok;
+}
+
 export function parseWeeklyCapacityHours(input: unknown): ParsedWeeklyCapacity {
   if (input === null || input === undefined) return { ok: true, value: null };
 

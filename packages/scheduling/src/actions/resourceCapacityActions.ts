@@ -5,10 +5,15 @@ import { Knex } from 'knex';
 import { withAuth, hasPermission } from '@alga-psa/auth';
 import type { IUser } from '@alga-psa/types';
 import { v4 as uuidv4 } from 'uuid';
-import { parseWeeklyCapacityHours, weeklyCapacityRejectionMessage } from '../lib/resourceCapacity';
+import {
+  parseWeeklyCapacityHours,
+  weeklyCapacityRejectionMessage,
+  isWeeklyCapacityRejected,
+} from '../lib/resourceCapacity';
 import {
   parseWorkSchedule,
   workScheduleRejectionMessage,
+  isWorkScheduleRejected,
   type WorkScheduleDay,
 } from '@alga-psa/core/workSchedule';
 
@@ -102,7 +107,7 @@ export const updateUserCapacity = withAuth(async (
 ): Promise<UserCapacityResult> => {
   try {
     const parsed = parseWeeklyCapacityHours(maxWeeklyCapacity);
-    if (!parsed.ok) {
+    if (isWeeklyCapacityRejected(parsed)) {
       return { success: false, error: weeklyCapacityRejectionMessage(parsed.reason) };
     }
     const capacity = parsed.value;
@@ -195,7 +200,7 @@ export const updateUserWorkSchedule = withAuth(async (
 ): Promise<UserWorkScheduleResult> => {
   try {
     const parsed = parseWorkSchedule(days);
-    if (!parsed.ok) {
+    if (isWorkScheduleRejected(parsed)) {
       return { success: false, error: workScheduleRejectionMessage(parsed.reason) };
     }
 
