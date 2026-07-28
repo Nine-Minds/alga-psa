@@ -8,7 +8,7 @@
 const CATEGORIES = [
   { name: 'Tickets', description: 'Notifications related to support tickets', is_enabled: true, is_default_enabled: true },
   { name: 'Invoices', description: 'Notifications related to billing and invoices', is_enabled: true, is_default_enabled: true },
-  { name: 'Quotes', description: 'Notifications related to quotes sent to clients', is_enabled: true, is_default_enabled: true },
+  { name: 'Estimates', description: 'Notifications related to estimates sent to clients', is_enabled: true, is_default_enabled: true },
   { name: 'Projects', description: 'Notifications related to project updates', is_enabled: true, is_default_enabled: true },
   { name: 'Time Entries', description: 'Notifications related to time tracking and approvals', is_enabled: true, is_default_enabled: true },
   { name: 'Surveys', description: 'Customer satisfaction surveys and feedback loops', is_enabled: true, is_default_enabled: true },
@@ -38,9 +38,9 @@ const SUBTYPES = [
   { category: 'Invoices', name: 'Payment Received', description: 'When a payment is received' },
   { category: 'Invoices', name: 'Payment Overdue', description: 'When an invoice payment is overdue' },
   { category: 'Invoices', name: 'Credit Expiring', description: 'When credits are about to expire' },
-  // Quotes
-  { category: 'Quotes', name: 'Quote Email', description: 'Email sent to client with the quote attached' },
-  { category: 'Quotes', name: 'Quote Reminder', description: 'Reminder email sent before a quote expires' },
+  // Estimates
+  { category: 'Estimates', name: 'Estimate Email', description: 'Email sent to client with the estimate attached' },
+  { category: 'Estimates', name: 'Estimate Reminder', description: 'Reminder email sent before an estimate expires' },
   // Projects
   { category: 'Projects', name: 'Project Created', description: 'When a new project is created' },
   { category: 'Projects', name: 'Project Updated', description: 'When a project is modified' },
