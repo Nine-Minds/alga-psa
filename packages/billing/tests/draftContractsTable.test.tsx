@@ -2,7 +2,7 @@
  * @vitest-environment jsdom
  */
 import React from 'react';
-import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, cleanup, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import '@testing-library/jest-dom/vitest';
@@ -156,6 +156,21 @@ describe('Drafts tab DataTable', () => {
     });
   });
 
+  // Compiled once here: doing it inside the first test charged the Contracts
+  // module graph's compile to that test's timeout budget.
+  let Contracts: React.ComponentType;
+
+  beforeAll(async () => {
+    Contracts = (await import('../src/components/billing-dashboard/contracts/Contracts')).default;
+  });
+
+  // Tear down immediately, so a failed or timed-out test cannot leave its tree
+  // mounted for the next test to trip over.
+  afterEach(() => {
+    cleanup();
+    document.body.innerHTML = '';
+  });
+
   beforeEach(async () => {
     document.body.removeAttribute('data-scroll-locked');
     document.body.removeAttribute('style');
@@ -192,7 +207,6 @@ describe('Drafts tab DataTable', () => {
       },
     ];
 
-    const Contracts = (await import('../src/components/billing-dashboard/contracts/Contracts')).default;
     render(<Contracts />);
 
     expect(await screen.findByText('Draft Alpha')).toBeInTheDocument();
@@ -209,7 +223,6 @@ describe('Drafts tab DataTable', () => {
       },
     ];
 
-    const Contracts = (await import('../src/components/billing-dashboard/contracts/Contracts')).default;
     render(<Contracts />);
 
     expect(await screen.findByText('Acme Co')).toBeInTheDocument();
@@ -228,7 +241,6 @@ describe('Drafts tab DataTable', () => {
       },
     ];
 
-    const Contracts = (await import('../src/components/billing-dashboard/contracts/Contracts')).default;
     render(<Contracts />);
 
     expect(await screen.findByText(createdAt.toLocaleDateString())).toBeInTheDocument();
@@ -247,7 +259,6 @@ describe('Drafts tab DataTable', () => {
       },
     ];
 
-    const Contracts = (await import('../src/components/billing-dashboard/contracts/Contracts')).default;
     render(<Contracts />);
 
     expect(await screen.findByText(updatedAt.toLocaleDateString())).toBeInTheDocument();
@@ -271,7 +282,6 @@ describe('Drafts tab DataTable', () => {
       },
     ];
 
-    const Contracts = (await import('../src/components/billing-dashboard/contracts/Contracts')).default;
     render(<Contracts />);
 
     const actionsButtons = await screen.findAllByRole('button', { name: /open menu/i });
@@ -289,7 +299,6 @@ describe('Drafts tab DataTable', () => {
       },
     ];
 
-    const Contracts = (await import('../src/components/billing-dashboard/contracts/Contracts')).default;
     render(<Contracts />);
 
     const user = userEvent.setup();
@@ -312,7 +321,6 @@ describe('Drafts tab DataTable', () => {
       },
     ];
 
-    const Contracts = (await import('../src/components/billing-dashboard/contracts/Contracts')).default;
     render(<Contracts />);
 
     const user = userEvent.setup();
@@ -342,7 +350,6 @@ describe('Drafts tab DataTable', () => {
       },
     ];
 
-    const Contracts = (await import('../src/components/billing-dashboard/contracts/Contracts')).default;
     render(<Contracts />);
 
     // Initial sorting is by updated_at desc, so "b draft" should be first.
@@ -383,7 +390,6 @@ describe('Drafts tab DataTable', () => {
       },
     ];
 
-    const Contracts = (await import('../src/components/billing-dashboard/contracts/Contracts')).default;
     render(<Contracts />);
 
     await screen.findByText('Draft Alpha');
@@ -419,7 +425,6 @@ describe('Drafts tab DataTable', () => {
       },
     ];
 
-    const Contracts = (await import('../src/components/billing-dashboard/contracts/Contracts')).default;
     render(<Contracts />);
 
     await screen.findByText('Draft Alpha');
@@ -448,7 +453,6 @@ describe('Drafts tab DataTable', () => {
       },
     ];
 
-    const Contracts = (await import('../src/components/billing-dashboard/contracts/Contracts')).default;
     render(<Contracts />);
 
     await screen.findByText('Draft Alpha');
@@ -471,7 +475,6 @@ describe('Drafts tab DataTable', () => {
       updated_at: new Date(2026, 0, idx + 1),
     }));
 
-    const Contracts = (await import('../src/components/billing-dashboard/contracts/Contracts')).default;
     render(<Contracts />);
 
     expect(await screen.findByText('Draft 11')).toBeInTheDocument();
@@ -492,7 +495,6 @@ describe('Drafts tab DataTable', () => {
       updated_at: new Date(2026, 0, idx + 1),
     }));
 
-    const Contracts = (await import('../src/components/billing-dashboard/contracts/Contracts')).default;
     render(<Contracts />);
 
     expect(await screen.findByText('Draft 11')).toBeInTheDocument();
@@ -513,7 +515,6 @@ describe('Drafts tab DataTable', () => {
   it('empty state displays when no drafts exist (T025)', async () => {
     mockDraftContracts = [];
 
-    const Contracts = (await import('../src/components/billing-dashboard/contracts/Contracts')).default;
     render(<Contracts />);
 
     expect(
@@ -524,7 +525,6 @@ describe('Drafts tab DataTable', () => {
   it('empty state message mentions saving drafts (T026)', async () => {
     mockDraftContracts = [];
 
-    const Contracts = (await import('../src/components/billing-dashboard/contracts/Contracts')).default;
     render(<Contracts />);
 
     expect(await screen.findByText(/start creating a new contract to save as draft/i)).toBeInTheDocument();
@@ -554,7 +554,6 @@ describe('Drafts tab DataTable', () => {
       },
     ];
 
-    const Contracts = (await import('../src/components/billing-dashboard/contracts/Contracts')).default;
     render(<Contracts />);
 
     const user = userEvent.setup();
@@ -598,7 +597,6 @@ describe('Drafts tab DataTable', () => {
       },
     ];
 
-    const Contracts = (await import('../src/components/billing-dashboard/contracts/Contracts')).default;
     render(<Contracts />);
 
     const user = userEvent.setup();
@@ -630,7 +628,6 @@ describe('Drafts tab DataTable', () => {
       },
     ];
 
-    const Contracts = (await import('../src/components/billing-dashboard/contracts/Contracts')).default;
     render(<Contracts />);
 
     const user = userEvent.setup();
@@ -656,7 +653,6 @@ describe('Drafts tab DataTable', () => {
       },
     ];
 
-    const Contracts = (await import('../src/components/billing-dashboard/contracts/Contracts')).default;
     render(<Contracts />);
 
     await screen.findByText('Draft Alpha');
@@ -684,7 +680,6 @@ describe('Drafts tab DataTable', () => {
       },
     ];
 
-    const Contracts = (await import('../src/components/billing-dashboard/contracts/Contracts')).default;
     render(<Contracts />);
 
     await screen.findByText('Draft Alpha');
@@ -712,7 +707,6 @@ describe('Drafts tab DataTable', () => {
       },
     ];
 
-    const Contracts = (await import('../src/components/billing-dashboard/contracts/Contracts')).default;
     render(<Contracts />);
 
     await screen.findByText('Draft Alpha');
@@ -741,7 +735,6 @@ describe('Drafts tab DataTable', () => {
       },
     ];
 
-    const Contracts = (await import('../src/components/billing-dashboard/contracts/Contracts')).default;
     render(<Contracts />);
 
     await screen.findByText('Draft Alpha');
@@ -769,7 +762,6 @@ describe('Drafts tab DataTable', () => {
       },
     ];
 
-    const Contracts = (await import('../src/components/billing-dashboard/contracts/Contracts')).default;
     render(<Contracts />);
 
     await screen.findByText('Draft Alpha');
@@ -799,7 +791,6 @@ describe('Drafts tab DataTable', () => {
 
     const { deleteContract } = await import('@alga-psa/billing/actions/contractActions');
 
-    const Contracts = (await import('../src/components/billing-dashboard/contracts/Contracts')).default;
     render(<Contracts />);
 
     await screen.findByText('Draft Alpha');
@@ -838,7 +829,6 @@ describe('Drafts tab DataTable', () => {
 
     const { deleteContract } = await import('@alga-psa/billing/actions/contractActions');
 
-    const Contracts = (await import('../src/components/billing-dashboard/contracts/Contracts')).default;
     render(<Contracts />);
 
     await screen.findByText('Draft Alpha');
@@ -876,7 +866,6 @@ describe('Drafts tab DataTable', () => {
       mockDraftContracts = [];
     });
 
-    const Contracts = (await import('../src/components/billing-dashboard/contracts/Contracts')).default;
     render(<Contracts />);
 
     await screen.findByText('Draft Alpha');
@@ -916,7 +905,6 @@ describe('Drafts tab DataTable', () => {
     const { deleteContract } = await import('@alga-psa/billing/actions/contractActions');
     (deleteContract as unknown as { mockResolvedValueOnce: (val: any) => void }).mockResolvedValueOnce(undefined);
 
-    const Contracts = (await import('../src/components/billing-dashboard/contracts/Contracts')).default;
     render(<Contracts />);
 
     await screen.findByText('Draft Alpha');
@@ -954,7 +942,6 @@ describe('Drafts tab DataTable', () => {
       new Error('Delete failed'),
     );
 
-    const Contracts = (await import('../src/components/billing-dashboard/contracts/Contracts')).default;
     render(<Contracts />);
 
     await screen.findByText('Draft Alpha');
@@ -994,7 +981,6 @@ describe('Drafts tab DataTable', () => {
       mockDraftContracts = [];
     });
 
-    const Contracts = (await import('../src/components/billing-dashboard/contracts/Contracts')).default;
     render(<Contracts />);
 
     await screen.findByText('Draft Alpha');
@@ -1032,7 +1018,6 @@ describe('Drafts tab DataTable', () => {
       mockDraftContracts = [];
     });
 
-    const Contracts = (await import('../src/components/billing-dashboard/contracts/Contracts')).default;
     render(<Contracts />);
 
     await screen.findByText('Draft Alpha');

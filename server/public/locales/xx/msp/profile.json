@@ -105,6 +105,79 @@
       "sessions": "11111",
       "userProvisioning": "11111"
     },
+    "scim": {
+      "title": "11111",
+      "description": "11111",
+      "loading": "11111",
+      "status": {
+        "enabled": "11111",
+        "disabled": "11111"
+      },
+      "errors": {
+        "load": "11111",
+        "update": "11111"
+      },
+      "upgrade": {
+        "title": "11111",
+        "description": "11111"
+      },
+      "setup": {
+        "title": "11111",
+        "description": "11111",
+        "create": "11111"
+      },
+      "connection": {
+        "title": "11111",
+        "description": "11111",
+        "url": "11111",
+        "copyUrl": "11111",
+        "oneTimeToken": "11111",
+        "oneTimeWarning": "11111",
+        "rotate": "11111",
+        "revokePrevious": "11111",
+        "enabled": "11111",
+        "disableWarning": "11111"
+      },
+      "health": {
+        "title": "11111",
+        "lastRequest": "11111",
+        "lastSuccess": "11111",
+        "tokenAge": "11111",
+        "lastError": "11111"
+      },
+      "mapping": {
+        "title": "11111",
+        "description": "11111",
+        "match": "11111",
+        "matchValue": "11111",
+        "scope": "11111",
+        "scopeValue": "11111",
+        "unsupported": "11111",
+        "unsupportedValue": "11111"
+      },
+      "links": {
+        "title": "11111",
+        "user": "11111",
+        "directory": "11111",
+        "state": "11111",
+        "action": "11111",
+        "drift": "11111",
+        "active": "11111",
+        "inactive": "11111",
+        "accessOn": "11111",
+        "accessOff": "11111",
+        "unlink": "11111",
+        "empty": "11111"
+      },
+      "unresolved": {
+        "title": "11111",
+        "description": "11111"
+      },
+      "state": {
+        "active": "11111",
+        "inactive": "11111"
+      }
+    },
     "sso": {
       "advanced": {
         "title": "11111",
@@ -623,79 +696,6 @@
         "copySuccess": "11111",
         "copyFailed": "11111",
         "downloadFailed": "11111"
-      }
-    },
-    "scim": {
-      "title": "11111",
-      "description": "11111",
-      "loading": "11111",
-      "status": {
-        "enabled": "11111",
-        "disabled": "11111"
-      },
-      "errors": {
-        "load": "11111",
-        "update": "11111"
-      },
-      "upgrade": {
-        "title": "11111",
-        "description": "11111"
-      },
-      "setup": {
-        "title": "11111",
-        "description": "11111",
-        "create": "11111"
-      },
-      "connection": {
-        "title": "11111",
-        "description": "11111",
-        "url": "11111",
-        "copyUrl": "11111",
-        "oneTimeToken": "11111",
-        "oneTimeWarning": "11111",
-        "rotate": "11111",
-        "revokePrevious": "11111",
-        "enabled": "11111",
-        "disableWarning": "11111"
-      },
-      "health": {
-        "title": "11111",
-        "lastRequest": "11111",
-        "lastSuccess": "11111",
-        "tokenAge": "11111",
-        "lastError": "11111"
-      },
-      "mapping": {
-        "title": "11111",
-        "description": "11111",
-        "match": "11111",
-        "matchValue": "11111",
-        "scope": "11111",
-        "scopeValue": "11111",
-        "unsupported": "11111",
-        "unsupportedValue": "11111"
-      },
-      "links": {
-        "title": "11111",
-        "user": "11111",
-        "directory": "11111",
-        "state": "11111",
-        "action": "11111",
-        "drift": "11111",
-        "active": "11111",
-        "inactive": "11111",
-        "accessOn": "11111",
-        "accessOff": "11111",
-        "unlink": "11111",
-        "empty": "11111"
-      },
-      "unresolved": {
-        "title": "11111",
-        "description": "11111"
-      },
-      "state": {
-        "active": "11111",
-        "inactive": "11111"
       }
     }
   },
