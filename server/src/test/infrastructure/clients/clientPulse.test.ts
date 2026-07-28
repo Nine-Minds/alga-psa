@@ -239,6 +239,14 @@ async function seedContact(context: TestContext, fullName: string, email: string
 
 async function seedLocation(context: TestContext, name: string, isDefault: boolean) {
   const locationId = randomUUID();
+  // createClient seeds its own default billing location. Drop it when this test
+  // supplies the default: ux_client_locations_default_per_client allows only one
+  // per client, and the location-count assertions expect just what is seeded here.
+  if (isDefault) {
+    await context.db('client_locations')
+      .where({ tenant: context.tenantId, client_id: context.clientId })
+      .del();
+  }
   await context.db('client_locations').insert({
     tenant: context.tenantId,
     location_id: locationId,

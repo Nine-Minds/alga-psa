@@ -5,6 +5,7 @@ import { TextEncoder as NodeTextEncoder } from 'util';
 
 import { TestContext } from '../../../../test-utils/testContext';
 import { createClient, createTenant, createUser } from '../../../../test-utils/testDataFactory';
+import { expectError } from '../../../../test-utils/errorUtils';
 import { getTicketTimelineEntries } from '@alga-psa/tickets/actions/ticketActivityActions';
 import {
   getTicketBillingRollup,
@@ -275,7 +276,6 @@ describeDb('Ticket bento data layer DB integration', () => {
       note: options.note,
       is_internal: options.isInternal ?? false,
       is_resolution: options.isResolution ?? false,
-      is_initial_description: false,
       created_at: options.createdAt,
       updated_at: options.createdAt,
     });
@@ -392,7 +392,6 @@ describeDb('Ticket bento data layer DB integration', () => {
       title: options.title,
       work_item_id: ticket.ticketId,
       work_item_type: 'ticket',
-      user_id: ticket.userId,
       scheduled_start: options.start.toISOString(),
       scheduled_end: options.end.toISOString(),
       status: options.status ?? 'scheduled',
@@ -560,11 +559,16 @@ describeDb('Ticket bento data layer DB integration', () => {
     const ticket = await createTicket();
     await createAudit(ticket, { occurredAt: '2026-07-01T12:00:00.000Z' });
 
+    // The action reports denials by returning {permissionError}, not by rejecting.
     setAuthUser({ user_type: 'client' });
-    await expect(getTicketTimelineEntries(ticket.ticketId)).rejects.toThrow(/internal-only/i);
+    await expectError(() => getTicketTimelineEntries(ticket.ticketId), {
+      messagePattern: /internal-only/i,
+    });
 
     setAuthUser({ user_type: 'internal' }, { canReadTicket: false });
-    await expect(getTicketTimelineEntries(ticket.ticketId)).rejects.toThrow(/cannot read ticket/i);
+    await expectError(() => getTicketTimelineEntries(ticket.ticketId), {
+      messagePattern: /cannot read ticket/i,
+    });
   });
 
   it('T004 scopes timeline reads to the authenticated tenant', async () => {

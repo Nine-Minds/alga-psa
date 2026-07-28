@@ -175,6 +175,9 @@ vi.mock('@alga-psa/tags/context', () => ({
 
 vi.mock('@alga-psa/tags/actions', () => ({
   findTagsByEntityId: vi.fn().mockResolvedValue([]),
+  // fetchTags() guards its result with this; omitting it made every tag load
+  // throw and get swallowed, so the component's tag path was never exercised.
+  isTagActionError: () => false,
 }));
 
 vi.mock('@alga-psa/tickets/actions', () => ({
@@ -206,6 +209,7 @@ vi.mock('@alga-psa/reference-data/actions', () => ({
 vi.mock('@alga-psa/teams/actions', () => ({
   getTeamById: vi.fn().mockResolvedValue(null),
   getTeams: vi.fn().mockResolvedValue([]),
+  isTeamActionError: () => false,
 }));
 
 vi.mock('../../../actions/ticketDisplaySettings', () => ({
