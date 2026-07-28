@@ -22,7 +22,7 @@ function getLeaf(record: Record<string, unknown>, dottedPath: string): unknown {
 describe('CreditsPage i18n wiring contract', () => {
   it('T005: CreditsPage client wrapper wires translated credits-table column titles through msp/credits', () => {
     const pageSource = read('../src/components/credits/CreditsPage.tsx');
-    const clientSource = read('../src/components/credits/CreditsPageClient.tsx');
+    const clientSource = read('../src/components/credits/CreditsTable.tsx');
 
     expect(pageSource).toContain("import CreditsPageClient from './CreditsPageClient';");
     expect(clientSource).toContain("const { t } = useTranslation('msp/credits');");
@@ -38,13 +38,14 @@ describe('CreditsPage i18n wiring contract', () => {
 
   it('T006: CreditsPage client wrapper wires status labels and tab labels through msp/credits', () => {
     const source = read('../src/components/credits/CreditsPageClient.tsx');
+    const tableSource = read('../src/components/credits/CreditsTable.tsx');
 
-    expect(source).toContain("t('status.expired', { defaultValue: 'Expired' })");
-    expect(source).toContain("t('status.active', { defaultValue: 'Active' })");
-    expect(source).toContain("t('status.expiringSoon', {");
-    expect(source).toContain("t('tabs.activeCredits', { defaultValue: 'Active Credits' })");
-    expect(source).toContain("t('tabs.allCredits', { defaultValue: 'All Credits' })");
-    expect(source).toContain("t('tabs.expiredCredits', { defaultValue: 'Expired Credits' })");
+    expect(tableSource).toContain("t('status.expired', { defaultValue: 'Expired' })");
+    expect(tableSource).toContain("t('status.active', { defaultValue: 'Active' })");
+    expect(tableSource).toContain("t('status.expiringSoon', {");
+    expect(tableSource).toContain("t('status.depleted', { defaultValue: 'Depleted' })");
+    expect(source).toContain("t('tabs.credits', { defaultValue: 'Credits' })");
+    expect(source).toContain("t('tabs.reconciliation', { defaultValue: 'Reconciliation' })");
   });
 
   it('T007: CreditsPage settings summary resolves all settings labels through msp/credits', () => {
@@ -67,14 +68,13 @@ describe('CreditsPage i18n wiring contract', () => {
     const pseudoKeys = [
       'page.title',
       'page.creditsOverview',
-      'tabs.activeCredits',
-      'tabs.allCredits',
-      'tabs.expiredCredits',
+      'tabs.credits',
+      'tabs.reconciliation',
       'settings.title',
       'columns.creditId',
       'columns.status',
-      'page.expirationSummary',
-      'page.usageTrends',
+      'status.depleted',
+      'filters.client',
     ];
 
     for (const key of pseudoKeys) {

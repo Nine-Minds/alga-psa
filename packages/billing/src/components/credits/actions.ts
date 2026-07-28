@@ -75,14 +75,21 @@ function creditActionErrorMessage(error: unknown, fallback: string): string {
   return expectedMessages.has(message) ? message : fallback;
 }
 
-export async function listCredits(
-  clientId: string | undefined,
-  includeExpired: boolean = false,
-  page: number = 1,
-  pageSize: number = 20
-) {
+export type CreditStatusFilter = 'active' | 'expiring_soon' | 'depleted' | 'expired';
+
+export async function listCredits({
+  clientId,
+  status,
+  page = 1,
+  pageSize = 20,
+}: {
+  clientId?: string;
+  status?: CreditStatusFilter;
+  page?: number;
+  pageSize?: number;
+}) {
   try {
-    const result = await listClientCredits(clientId, includeExpired, page, pageSize);
+    const result = await listClientCredits(clientId, true, page, pageSize, status);
     const returned = returnedCreditActionError(result);
     if (returned) {
       return { success: false, error: returned };

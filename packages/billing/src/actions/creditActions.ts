@@ -1306,7 +1306,8 @@ export const listClientCredits = withAuth(async (
     clientId: string | undefined,
     includeExpired: boolean = false,
     page: number = 1,
-    pageSize: number = 20
+    pageSize: number = 20,
+    status?: 'active' | 'expiring_soon' | 'depleted' | 'expired'
 ): Promise<{
     credits: ICreditTracking[],
     total: number,
@@ -1339,6 +1340,35 @@ export const listClientCredits = withAuth(async (
         // Filter by expiration status if needed
         if (!includeExpired) {
             baseQuery.where('credit_tracking.is_expired', false);
+        }
+
+        // Fine-grained status filter, mirroring the row-level status badges:
+        // expired > depleted (no remaining balance) > expiring soon (<= 7 days) > active.
+        if (status) {
+            const expiringSoonThreshold = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+            switch (status) {
+                case 'expired':
+                    baseQuery.where('credit_tracking.is_expired', true);
+                    break;
+                case 'depleted':
+                    baseQuery.where('credit_tracking.is_expired', false);
+                    baseQuery.where('credit_tracking.remaining_amount', '<=', 0);
+                    break;
+                case 'expiring_soon':
+                    baseQuery.where('credit_tracking.is_expired', false);
+                    baseQuery.where('credit_tracking.remaining_amount', '>', 0);
+                    baseQuery.whereNotNull('credit_tracking.expiration_date');
+                    baseQuery.where('credit_tracking.expiration_date', '<=', expiringSoonThreshold);
+                    break;
+                case 'active':
+                    baseQuery.where('credit_tracking.is_expired', false);
+                    baseQuery.where('credit_tracking.remaining_amount', '>', 0);
+                    baseQuery.where((qb) => {
+                        qb.whereNull('credit_tracking.expiration_date');
+                        qb.orWhere('credit_tracking.expiration_date', '>', expiringSoonThreshold);
+                    });
+                    break;
+            }
         }
 
         // Get total count for pagination

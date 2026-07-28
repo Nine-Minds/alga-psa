@@ -25,6 +25,10 @@
     "select": "Selecione",
     "issueType": "Tipo de problema"
   },
+  "filters": {
+    "client": "Cliente",
+    "allClients": "Todos os clientes"
+  },
   "status": {
     "active": "Ativo",
     "expired": "Expirado",
@@ -33,7 +37,9 @@
     "inReview": "Em revisão",
     "resolved": "Resolvido",
     "never": "Nunca",
-    "na": "N / D"
+    "na": "N / D",
+    "depleted": "Esgotado",
+    "expiringSoonShort": "Expira em breve"
   },
   "actions": {
     "view": "Visualizar",
@@ -56,9 +62,7 @@
     "runReconciliationAllClients": "Executar reconciliação (todos os clientes)"
   },
   "tabs": {
-    "activeCredits": "Créditos Ativos",
-    "allCredits": "Todos os créditos",
-    "expiredCredits": "Créditos expirados",
+    "credits": "Créditos",
     "reconciliation": "Reconciliação"
   },
   "settings": {
@@ -87,7 +91,9 @@
     "title": "Gestão de Crédito",
     "loadErrorPrefix": "Erro ao carregar créditos:",
     "noDataReturned": "Nenhum dado retornado do servidor",
-    "noCreditsFound": "Nenhum crédito encontrado"
+    "noCreditsFound": "Nenhum crédito encontrado",
+    "noMatchingCredits": "Nenhum crédito corresponde a estes filtros",
+    "loadFailed": "Falha ao carregar créditos. Tente novamente."
   },
   "reconciliation": {
     "selectClient": "Selecione o cliente",

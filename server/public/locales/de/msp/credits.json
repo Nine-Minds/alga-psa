@@ -25,6 +25,10 @@
     "select": "Auswählen",
     "issueType": "Problemtyp"
   },
+  "filters": {
+    "client": "Kunde",
+    "allClients": "Alle Kunden"
+  },
   "status": {
     "active": "Aktiv",
     "expired": "Abgelaufen",
@@ -33,7 +37,9 @@
     "inReview": "In Prüfung",
     "resolved": "Gelöst",
     "never": "Nie",
-    "na": "n. z."
+    "na": "n. z.",
+    "depleted": "Aufgebraucht",
+    "expiringSoonShort": "Läuft bald ab"
   },
   "actions": {
     "view": "Anzeigen",
@@ -56,9 +62,7 @@
     "runReconciliationAllClients": "Abgleich ausführen (alle Kunden)"
   },
   "tabs": {
-    "activeCredits": "Aktive Gutschriften",
-    "allCredits": "Alle Gutschriften",
-    "expiredCredits": "Abgelaufene Gutschriften",
+    "credits": "Gutschriften",
     "reconciliation": "Abgleich"
   },
   "settings": {
@@ -87,7 +91,9 @@
     "title": "Kreditverwaltung",
     "loadErrorPrefix": "Fehler beim Laden der Gutschriften:",
     "noDataReturned": "Vom Server wurden keine Daten zurückgegeben",
-    "noCreditsFound": "Keine Gutschriften gefunden"
+    "noCreditsFound": "Keine Gutschriften gefunden",
+    "noMatchingCredits": "Keine Gutschriften entsprechen diesen Filtern",
+    "loadFailed": "Gutschriften konnten nicht geladen werden. Erneut versuchen."
   },
   "reconciliation": {
     "selectClient": "Kunden auswählen",

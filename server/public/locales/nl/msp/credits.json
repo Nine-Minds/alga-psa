@@ -25,6 +25,10 @@
     "select": "Selecteren",
     "issueType": "Probleemtype"
   },
+  "filters": {
+    "client": "Klant",
+    "allClients": "Alle klanten"
+  },
   "status": {
     "active": "Actief",
     "expired": "Verlopen",
@@ -33,7 +37,9 @@
     "inReview": "In beoordeling",
     "resolved": "Opgelost",
     "never": "Nooit",
-    "na": "N.v.t."
+    "na": "N.v.t.",
+    "depleted": "Opgebruikt",
+    "expiringSoonShort": "Vervalt binnenkort"
   },
   "actions": {
     "view": "Bekijken",
@@ -56,9 +62,7 @@
     "runReconciliationAllClients": "Reconciliatie uitvoeren (alle klanten)"
   },
   "tabs": {
-    "activeCredits": "Actieve kredieten",
-    "allCredits": "Alle kredieten",
-    "expiredCredits": "Verlopen kredieten",
+    "credits": "Kredieten",
     "reconciliation": "Reconciliatie"
   },
   "settings": {
@@ -87,7 +91,9 @@
     "title": "Kredietbeheer",
     "loadErrorPrefix": "Fout bij laden van kredieten:",
     "noDataReturned": "Geen gegevens ontvangen van de server",
-    "noCreditsFound": "Geen kredieten gevonden"
+    "noCreditsFound": "Geen kredieten gevonden",
+    "noMatchingCredits": "Geen kredieten komen overeen met deze filters",
+    "loadFailed": "Kredieten konden niet worden geladen. Probeer opnieuw."
   },
   "reconciliation": {
     "selectClient": "Klant selecteren",
