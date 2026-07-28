@@ -949,6 +949,117 @@ export const templateVariableSeed: TemplateVariableSeedCategory[] = [
     ]
   },
   {
+    "category": "estimates",
+    "templates": [
+      {
+        "templateName": "estimate-email",
+        "variables": [
+          {
+            "path": "estimate.number",
+            "type": "string",
+            "description": "The estimate's human-readable number as shown to the client.",
+            "example": "Q-0042",
+            "availability": "used",
+            "notes": "From quote.quote_number, falling back to quote_id. Used in the subject, header title, detail row, and plain text."
+          },
+          {
+            "path": "estimate.amount",
+            "type": "string",
+            "description": "Total value of the estimate, pre-formatted as a currency string.",
+            "example": "$10,000.00",
+            "availability": "used",
+            "notes": "formatCurrency(total_amount / 100) in the estimate's currency_code, defaulting to USD."
+          },
+          {
+            "path": "estimate.validUntil",
+            "type": "date-string",
+            "description": "The date the estimate expires, formatted for display.",
+            "example": "March 31, 2026",
+            "availability": "used",
+            "notes": "Falls back to 'N/A' when the estimate has no valid_until."
+          },
+          {
+            "path": "company.name",
+            "type": "string",
+            "description": "The MSP's own company name, shown as the sender in the subject, intro, and signature.",
+            "example": "Contoso IT Services",
+            "availability": "used",
+            "notes": "From the tenant's default company in tenant_companies (clients.client_name) via fetchTenantParty, falling back to tenants.client_name, then 'Your Company'."
+          },
+          {
+            "path": "portalLink",
+            "type": "url",
+            "description": "Link to the client-portal estimates tab where the estimate can be reviewed; the block is hidden when empty.",
+            "example": "https://app.example.com/client-portal/billing?tab=quotes",
+            "availability": "used",
+            "notes": "Built from NEXTAUTH_URL or NEXT_PUBLIC_APP_URL at send time; wrapped in {{#if portalLink}}."
+          },
+          {
+            "path": "customMessage",
+            "type": "string",
+            "description": "Optional free-text note from the MSP shown in a highlighted box; the box is hidden when empty.",
+            "example": "Let us know if you would like us to adjust the scope.",
+            "availability": "used",
+            "notes": "Passed as input.message to sendQuote / resendQuote; defaults to '' so the {{#if}} block is omitted."
+          }
+        ]
+      },
+      {
+        "templateName": "estimate-reminder-email",
+        "variables": [
+          {
+            "path": "estimate.number",
+            "type": "string",
+            "description": "The estimate's human-readable number as shown to the client.",
+            "example": "Q-0042",
+            "availability": "used",
+            "notes": "From quote.quote_number, falling back to quote_id. Used in the subject, header title, detail row, and plain text."
+          },
+          {
+            "path": "estimate.amount",
+            "type": "string",
+            "description": "Total value of the estimate, pre-formatted as a currency string.",
+            "example": "$10,000.00",
+            "availability": "used",
+            "notes": "formatCurrency(total_amount / 100) in the estimate's currency_code, defaulting to USD."
+          },
+          {
+            "path": "estimate.validUntil",
+            "type": "date-string",
+            "description": "The date the estimate expires, formatted for display.",
+            "example": "March 31, 2026",
+            "availability": "used",
+            "notes": "Falls back to 'N/A' when the estimate has no valid_until."
+          },
+          {
+            "path": "company.name",
+            "type": "string",
+            "description": "The MSP's own company name, shown as the sender in the subject, intro, and signature.",
+            "example": "Contoso IT Services",
+            "availability": "used",
+            "notes": "From the tenant's default company in tenant_companies (clients.client_name) via fetchTenantParty, falling back to tenants.client_name, then 'Your Company'."
+          },
+          {
+            "path": "portalLink",
+            "type": "url",
+            "description": "Link to the client-portal estimates tab where the estimate can be reviewed; the block is hidden when empty.",
+            "example": "https://app.example.com/client-portal/billing?tab=quotes",
+            "availability": "used",
+            "notes": "Built from NEXTAUTH_URL or NEXT_PUBLIC_APP_URL at send time; wrapped in {{#if portalLink}}."
+          },
+          {
+            "path": "customMessage",
+            "type": "string",
+            "description": "Optional free-text note from the MSP shown in a highlighted box; the box is hidden when empty.",
+            "example": "Let us know if you would like us to adjust the scope.",
+            "availability": "used",
+            "notes": "Passed as input.message to sendQuoteReminder; defaults to '' so the {{#if}} block is omitted."
+          }
+        ]
+      }
+    ]
+  },
+  {
     "category": "invoices",
     "templates": [
       {
@@ -1000,7 +1111,7 @@ export const templateVariableSeed: TemplateVariableSeedCategory[] = [
             "description": "The MSP's own company name, shown as the sender in subject, intro, and signature.",
             "example": "Contoso IT Services",
             "availability": "used",
-            "notes": "From the tenant's default company in tenant_companies (clients.client_name), falling back to tenants.client_name, then 'Your Company'."
+            "notes": "From tenants.company_name, defaults to 'Your Company'."
           },
           {
             "path": "customMessage",
