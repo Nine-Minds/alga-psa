@@ -28,7 +28,7 @@ import {
 } from '@alga-psa/billing/actions/creditReconciliationFixActions';
 import { getIssueType, getIssueTypeLabel, getStatusBadge } from './reconciliationPresentation';
 
-type ReconciliationReportWithClient = ICreditReconciliationReport & { client_name: string };
+type ReconciliationReportWithClient = ICreditReconciliationReport & { client_name: string; resolved_by_name?: string | null };
 
 /**
  * Fix types, mapped from the discrepancy issue type (ported from the legacy
@@ -186,30 +186,30 @@ export default function ReconciliationReportDetail({ reportId, onDataChanged }: 
     switch (fixType) {
       case 'create_tracking_entry':
         return t('recommendedFix.descriptions.createTrackingEntry', {
-          defaultValue: 'This will create a new credit tracking entry for the transaction.',
+          defaultValue: 'Adds the missing credit record for this transaction.',
         });
       case 'update_remaining_amount':
         return t('recommendedFix.descriptions.updateRemainingAmount', {
-          defaultValue: 'This will update the remaining amount in the credit tracking entry.',
+          defaultValue: 'Sets the remaining amount to the expected balance.',
         });
       case 'apply_adjustment':
         return t('recommendedFix.descriptions.applyAdjustment', {
-          defaultValue: 'This will create a credit adjustment transaction to correct the balance.',
+          defaultValue: 'Posts a credit adjustment to correct the balance.',
         });
       case 'custom_adjustment':
         return t('recommendedFix.descriptions.customAdjustment', {
-          defaultValue: 'This will create a custom credit adjustment transaction.',
+          defaultValue: 'Posts a custom credit adjustment.',
         });
       case 'no_action':
         return t('recommendedFix.descriptions.noAction', {
-          defaultValue: 'This will mark the discrepancy as resolved without making any changes.',
+          defaultValue: 'Marks this resolved. No balance change.',
         });
     }
   };
 
   if (loading) {
     return (
-      <div className="space-y-4 p-4 w-full min-w-[560px]">
+      <div className="space-y-4 p-4 w-full">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-32 w-full" />
         <Skeleton className="h-64 w-full" />
@@ -219,7 +219,7 @@ export default function ReconciliationReportDetail({ reportId, onDataChanged }: 
 
   if (!report) {
     return (
-      <div className="p-4 min-w-[560px]">
+      <div className="p-4">
         <Alert variant="destructive">
           <AlertDescription>
             {loadError || t('reconciliation.errors.reportNotFound', {
@@ -268,7 +268,7 @@ export default function ReconciliationReportDetail({ reportId, onDataChanged }: 
   );
 
   return (
-    <div className="space-y-6 p-4 w-full min-w-[560px]">
+    <div className="space-y-6 p-4 w-full">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h2 className="text-xl font-bold">{getIssueTypeLabel(t, report)}</h2>
@@ -278,34 +278,23 @@ export default function ReconciliationReportDetail({ reportId, onDataChanged }: 
       </div>
 
       {/* Balance comparison */}
-      <div className="grid grid-cols-2 gap-4">
-        <div className="bg-[rgb(var(--color-primary-50))] p-4 rounded-lg">
-          <p className="text-sm text-[rgb(var(--color-text-500))]">
-            {t('reconciliation.fields.expectedBalance', { defaultValue: 'Expected Balance' })}
-          </p>
-          <p className="text-2xl font-bold text-[rgb(var(--color-primary-700))]">
-            {formatCurrencyFromMinorUnits(report.expected_balance)}
-          </p>
-        </div>
-        <div className="bg-[rgb(var(--color-accent-50))] p-4 rounded-lg">
-          <p className="text-sm text-[rgb(var(--color-text-500))]">
-            {t('reconciliation.fields.actualBalance', { defaultValue: 'Actual Balance' })}
-          </p>
-          <p className="text-2xl font-bold text-[rgb(var(--color-accent-700))]">
-            {formatCurrencyFromMinorUnits(report.actual_balance)}
-          </p>
-        </div>
-        <div className="col-span-2 bg-[rgb(var(--color-secondary-50))] p-4 rounded-lg">
-          <p className="text-sm text-[rgb(var(--color-text-500))]">
-            {t('reconciliation.fields.difference', { defaultValue: 'Difference' })}
-          </p>
-          <p className={`text-2xl font-bold ${report.difference >= 0
-            ? 'text-[rgb(var(--color-primary-700))]'
-            : 'text-[rgb(var(--color-destructive-600))]'}`}>
-            {formatCurrencyFromMinorUnits(report.difference)}
-          </p>
-        </div>
-      </div>
+      <p className="text-lg">
+        <span className="text-[rgb(var(--color-text-500))]">
+          {t('reconciliation.fields.expectedBalance', { defaultValue: 'Expected Balance' })}
+        </span>{' '}
+        <span className="font-semibold">{formatCurrencyFromMinorUnits(report.expected_balance)}</span>
+        {' → '}
+        <span className="text-[rgb(var(--color-text-500))]">
+          {t('reconciliation.fields.actualBalance', { defaultValue: 'Actual Balance' })}
+        </span>{' '}
+        <span className="font-semibold">{formatCurrencyFromMinorUnits(report.actual_balance)}</span>
+        {' · '}
+        <span className={report.difference >= 0
+          ? 'font-semibold text-[rgb(var(--color-primary-700))]'
+          : 'font-semibold text-[rgb(var(--color-destructive-600))]'}>
+          Δ {formatCurrencyFromMinorUnits(report.difference)}
+        </span>
+      </p>
 
       {/* Discrepancy details */}
       <Card>
@@ -314,11 +303,6 @@ export default function ReconciliationReportDetail({ reportId, onDataChanged }: 
         </CardHeader>
         <CardContent>
           <div className="grid grid-cols-2 gap-4">
-            <DetailField
-              label={t('reconciliation.fields.reportId', { defaultValue: 'Report ID' })}
-              value={report.report_id}
-              mono
-            />
             <DetailField
               label={t('reconciliation.fields.detected', { defaultValue: 'Detected' })}
               value={formatDateOnly(new Date(report.detection_date))}
@@ -376,6 +360,12 @@ export default function ReconciliationReportDetail({ reportId, onDataChanged }: 
                   <DetailField
                     label={t('reconciliation.fields.resolutionDate', { defaultValue: 'Resolution Date' })}
                     value={formatDateOnly(new Date(report.resolution_date))}
+                  />
+                )}
+                {report.resolved_by_name && (
+                  <DetailField
+                    label={t('reconciliation.fields.resolvedBy', { defaultValue: 'Resolved By' })}
+                    value={report.resolved_by_name}
                   />
                 )}
                 {report.resolution_notes && (

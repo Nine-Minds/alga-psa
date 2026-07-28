@@ -105,7 +105,7 @@
     "allStatuses": "11111",
     "fromDate": "11111",
     "toDate": "11111",
-    "validationResult": "11111 {{balanceCount}} 11111 {{trackingCount}} 11111",
+    "validationResult": "11111 {{count}} 11111",
     "validationCompletedAllClients": "11111",
     "noReportsFound": "11111",
     "tabs": {
@@ -117,7 +117,8 @@
     "issueTypes": {
       "missingCreditTrackingEntry": "11111",
       "inconsistentCreditRemainingAmount": "11111",
-      "balanceDiscrepancy": "11111"
+      "balanceDiscrepancy": "11111",
+      "unknownIssue": "11111"
     },
     "sections": {
       "discrepancyDetails": "11111",
@@ -139,7 +140,8 @@
       "resolutionDate": "11111",
       "resolutionNotes": "11111",
       "date": "11111",
-      "amount": "11111"
+      "amount": "11111",
+      "resolvedBy": "11111"
     },
     "errors": {
       "loadFailed": "11111",

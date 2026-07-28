@@ -104,7 +104,7 @@
     "allStatuses": "Todos los estados",
     "fromDate": "Desde",
     "toDate": "Hasta",
-    "validationResult": "La validación se completó: se encontraron {{balanceCount}} discrepancias de saldo y {{trackingCount}} problemas de seguimiento.",
+    "validationResult": "Conciliación completa: se encontraron {{count}} problemas nuevos.",
     "tabs": {
       "all": "Todos",
       "open": "Abierto",
@@ -115,9 +115,10 @@
     "validationCompletedAllClients": "Conciliación completada para todos los clientes.",
     "noReportsFound": "No se encontraron informes de conciliación",
     "issueTypes": {
-      "missingCreditTrackingEntry": "Entrada de seguimiento de crédito faltante",
-      "inconsistentCreditRemainingAmount": "Importe restante de crédito inconsistente",
-      "balanceDiscrepancy": "Discrepancia de saldo de crédito"
+      "missingCreditTrackingEntry": "Crédito no registrado",
+      "inconsistentCreditRemainingAmount": "El importe restante no coincide",
+      "balanceDiscrepancy": "El saldo no coincide",
+      "unknownIssue": "Problema desconocido"
     },
     "sections": {
       "discrepancyDetails": "Detalles de la discrepancia",
@@ -139,7 +140,8 @@
       "resolutionDate": "Fecha de resolución",
       "resolutionNotes": "Notas de resolución",
       "date": "Fecha",
-      "amount": "Importe"
+      "amount": "Importe",
+      "resolvedBy": "Resuelto por"
     },
     "errors": {
       "loadFailed": "No se pudieron cargar los informes de conciliación. Actualice e inténtelo de nuevo.",
@@ -262,15 +264,15 @@
       "applying": "Aplicando..."
     },
     "descriptions": {
-      "missingTrackingRecommended": "Cree la entrada de seguimiento de crédito faltante para que la transacción se refleje en el registro de seguimiento.",
-      "inconsistentRemainingRecommended": "Actualice el importe restante registrado para que coincida con el saldo esperado tras las aplicaciones.",
-      "genericRecommended": "Aplique la corrección recomendada para volver a alinear los saldos.",
-      "genericCustom": "Introduzca un ajuste personalizado si se requiere una corrección manual.",
-      "createTrackingEntry": "Esto creará una nueva entrada de seguimiento de crédito para la transacción.",
-      "updateRemainingAmount": "Esto actualizará el importe restante en la entrada de seguimiento de crédito.",
-      "applyAdjustment": "Esto creará una transacción de ajuste de crédito para corregir el saldo.",
-      "customAdjustment": "Esto creará una transacción de ajuste de crédito personalizada.",
-      "noAction": "Esto marcará la discrepancia como resuelta sin realizar cambios."
+      "missingTrackingRecommended": "Agrega el registro de crédito faltante para que esta transacción cuente para el saldo.",
+      "inconsistentRemainingRecommended": "Establece el importe restante registrado para que coincida con el saldo esperado.",
+      "genericRecommended": "Aplica la corrección recomendada.",
+      "genericCustom": "Introduce un importe de corrección manual.",
+      "createTrackingEntry": "Agrega el registro de crédito faltante para esta transacción.",
+      "updateRemainingAmount": "Establece el importe restante en el saldo esperado.",
+      "applyAdjustment": "Registra un ajuste de crédito para corregir el saldo.",
+      "customAdjustment": "Registra un ajuste de crédito personalizado.",
+      "noAction": "Marca esto como resuelto. Sin cambio de saldo."
     },
     "dialog": {
       "adjustmentAmount": "Importe del ajuste",

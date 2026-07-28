@@ -126,9 +126,22 @@ export const fetchReconciliationReportById = withAuth(async (_user, { tenant }, 
         .where('client_id', report.client_id)
         .first('client_name');
 
+      let resolvedByName: string | null = null;
+      if (report.resolution_user) {
+        const resolver = await trx('users')
+          .where('tenant', tenant)
+          .where('user_id', report.resolution_user)
+          .first('first_name', 'last_name', 'email');
+        if (resolver) {
+          const fullName = [resolver.first_name, resolver.last_name].filter(Boolean).join(' ').trim();
+          resolvedByName = fullName || (resolver.email as string);
+        }
+      }
+
       return {
         ...report,
-        client_name: (client?.client_name as string | undefined) || 'Unknown Client'
+        client_name: (client?.client_name as string | undefined) || 'Unknown Client',
+        resolved_by_name: resolvedByName
       };
     } catch (error) {
       console.error(`Error fetching reconciliation report ${reportId}:`, error);

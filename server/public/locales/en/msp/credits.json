@@ -105,7 +105,7 @@
     "allStatuses": "All Statuses",
     "fromDate": "From Date",
     "toDate": "To Date",
-    "validationResult": "Validation completed: Found {{balanceCount}} balance discrepancies and {{trackingCount}} tracking issues.",
+    "validationResult": "Reconciliation complete: {{count}} new issues found.",
     "validationCompletedAllClients": "Reconciliation completed for all clients.",
     "noReportsFound": "No reconciliation reports found",
     "tabs": {
@@ -115,9 +115,10 @@
       "resolved": "Resolved"
     },
     "issueTypes": {
-      "missingCreditTrackingEntry": "Missing Credit Tracking Entry",
-      "inconsistentCreditRemainingAmount": "Inconsistent Credit Remaining Amount",
-      "balanceDiscrepancy": "Credit Balance Discrepancy"
+      "missingCreditTrackingEntry": "Credit not recorded",
+      "inconsistentCreditRemainingAmount": "Remaining amount doesn't match",
+      "balanceDiscrepancy": "Balance doesn't match",
+      "unknownIssue": "Unknown issue"
     },
     "sections": {
       "discrepancyDetails": "Discrepancy Details",
@@ -139,7 +140,8 @@
       "resolutionDate": "Resolution Date",
       "resolutionNotes": "Resolution Notes",
       "date": "Date",
-      "amount": "Amount"
+      "amount": "Amount",
+      "resolvedBy": "Resolved By"
     },
     "errors": {
       "loadFailed": "Failed to load reconciliation reports. Please refresh and try again.",
@@ -167,15 +169,15 @@
       "applying": "Applying..."
     },
     "descriptions": {
-      "missingTrackingRecommended": "Create the missing credit tracking entry so the transaction is reflected in the tracking ledger.",
-      "inconsistentRemainingRecommended": "Update the tracked remaining amount so it matches the expected balance after applications.",
-      "genericRecommended": "Apply the recommended correction to bring the balances back into alignment.",
-      "genericCustom": "Enter a custom adjustment if a manual correction is required.",
-      "createTrackingEntry": "This will create a new credit tracking entry for the transaction.",
-      "updateRemainingAmount": "This will update the remaining amount in the credit tracking entry.",
-      "applyAdjustment": "This will create a credit adjustment transaction to correct the balance.",
-      "customAdjustment": "This will create a custom credit adjustment transaction.",
-      "noAction": "This will mark the discrepancy as resolved without making any changes."
+      "missingTrackingRecommended": "Add the missing credit record so this transaction counts toward the balance.",
+      "inconsistentRemainingRecommended": "Set the tracked remaining amount to match the expected balance.",
+      "genericRecommended": "Apply the recommended correction.",
+      "genericCustom": "Enter a manual correction amount.",
+      "createTrackingEntry": "Adds the missing credit record for this transaction.",
+      "updateRemainingAmount": "Sets the remaining amount to the expected balance.",
+      "applyAdjustment": "Posts a credit adjustment to correct the balance.",
+      "customAdjustment": "Posts a custom credit adjustment.",
+      "noAction": "Marks this resolved. No balance change."
     },
     "dialog": {
       "adjustmentAmount": "Adjustment Amount",

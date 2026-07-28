@@ -104,7 +104,7 @@
     "allStatuses": "Alle Status",
     "fromDate": "Von Datum",
     "toDate": "Bis Datum",
-    "validationResult": "Validierung abgeschlossen: {{balanceCount}} Saldoabweichungen und {{trackingCount}} Nachverfolgungsprobleme gefunden.",
+    "validationResult": "Abstimmung abgeschlossen: {{count}} neue Probleme gefunden.",
     "tabs": {
       "all": "Alle",
       "open": "Offen",
@@ -115,9 +115,10 @@
     "validationCompletedAllClients": "Abgleich für alle Kunden abgeschlossen.",
     "noReportsFound": "Keine Abgleichsberichte gefunden",
     "issueTypes": {
-      "missingCreditTrackingEntry": "Fehlender Guthaben-Verfolgungseintrag",
-      "inconsistentCreditRemainingAmount": "Inkonsistenter Guthaben-Restbetrag",
-      "balanceDiscrepancy": "Guthabensaldo-Abweichung"
+      "missingCreditTrackingEntry": "Gutschrift nicht erfasst",
+      "inconsistentCreditRemainingAmount": "Restbetrag stimmt nicht überein",
+      "balanceDiscrepancy": "Saldo stimmt nicht überein",
+      "unknownIssue": "Unbekanntes Problem"
     },
     "sections": {
       "discrepancyDetails": "Abweichungsdetails",
@@ -139,7 +140,8 @@
       "resolutionDate": "Lösungsdatum",
       "resolutionNotes": "Lösungsnotizen",
       "date": "Datum",
-      "amount": "Betrag"
+      "amount": "Betrag",
+      "resolvedBy": "Behoben von"
     },
     "errors": {
       "loadFailed": "Abgleichsberichte konnten nicht geladen werden. Bitte aktualisieren und erneut versuchen.",
@@ -262,15 +264,15 @@
       "applying": "Wird angewendet..."
     },
     "descriptions": {
-      "missingTrackingRecommended": "Erstellen Sie den fehlenden Guthaben-Verfolgungseintrag, damit die Transaktion im Verfolgungsregister erscheint.",
-      "inconsistentRemainingRecommended": "Aktualisieren Sie den verfolgten Restbetrag, damit er dem erwarteten Saldo nach Verwendungen entspricht.",
-      "genericRecommended": "Wenden Sie die empfohlene Korrektur an, um die Salden wieder in Einklang zu bringen.",
-      "genericCustom": "Geben Sie eine benutzerdefinierte Anpassung ein, wenn eine manuelle Korrektur erforderlich ist.",
-      "createTrackingEntry": "Dadurch wird ein neuer Guthaben-Verfolgungseintrag für die Transaktion erstellt.",
-      "updateRemainingAmount": "Dadurch wird der Restbetrag im Guthaben-Verfolgungseintrag aktualisiert.",
-      "applyAdjustment": "Dadurch wird eine Guthabenanpassungs-Transaktion zur Korrektur des Saldos erstellt.",
-      "customAdjustment": "Dadurch wird eine benutzerdefinierte Guthabenanpassungs-Transaktion erstellt.",
-      "noAction": "Dadurch wird die Abweichung als gelöst markiert, ohne Änderungen vorzunehmen."
+      "missingTrackingRecommended": "Fügt den fehlenden Gutschriftdatensatz hinzu, damit diese Transaktion zum Saldo zählt.",
+      "inconsistentRemainingRecommended": "Setzt den erfassten Restbetrag auf den erwarteten Saldo.",
+      "genericRecommended": "Wendet die empfohlene Korrektur an.",
+      "genericCustom": "Geben Sie einen manuellen Korrekturbetrag ein.",
+      "createTrackingEntry": "Fügt den fehlenden Gutschriftdatensatz für diese Transaktion hinzu.",
+      "updateRemainingAmount": "Setzt den Restbetrag auf den erwarteten Saldo.",
+      "applyAdjustment": "Bucht eine Gutschriftenkorrektur zum Ausgleich des Saldos.",
+      "customAdjustment": "Bucht eine benutzerdefinierte Gutschriftenkorrektur.",
+      "noAction": "Markiert dies als behoben. Keine Saldoänderung."
     },
     "dialog": {
       "adjustmentAmount": "Anpassungsbetrag",

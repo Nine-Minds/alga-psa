@@ -104,7 +104,7 @@
     "allStatuses": "Tutti gli stati",
     "fromDate": "Data iniziale",
     "toDate": "Data finale",
-    "validationResult": "Validazione completata: trovati {{balanceCount}} scostamenti di saldo e {{trackingCount}} problemi di tracciamento.",
+    "validationResult": "Riconciliazione completata: trovati {{count}} nuovi problemi.",
     "tabs": {
       "all": "Tutti",
       "open": "Aperto",
@@ -115,9 +115,10 @@
     "validationCompletedAllClients": "Riconciliazione completata per tutti i clienti.",
     "noReportsFound": "Nessun report di riconciliazione trovato",
     "issueTypes": {
-      "missingCreditTrackingEntry": "Voce di tracciamento credito mancante",
-      "inconsistentCreditRemainingAmount": "Importo residuo del credito incoerente",
-      "balanceDiscrepancy": "Discrepanza del saldo credito"
+      "missingCreditTrackingEntry": "Credito non registrato",
+      "inconsistentCreditRemainingAmount": "L'importo rimanente non corrisponde",
+      "balanceDiscrepancy": "Il saldo non corrisponde",
+      "unknownIssue": "Problema sconosciuto"
     },
     "sections": {
       "discrepancyDetails": "Dettagli della discrepanza",
@@ -139,7 +140,8 @@
       "resolutionDate": "Data di risoluzione",
       "resolutionNotes": "Note di risoluzione",
       "date": "Data",
-      "amount": "Importo"
+      "amount": "Importo",
+      "resolvedBy": "Risolto da"
     },
     "errors": {
       "loadFailed": "Impossibile caricare i report di riconciliazione. Aggiorna e riprova.",
@@ -262,15 +264,15 @@
       "applying": "Applicazione..."
     },
     "descriptions": {
-      "missingTrackingRecommended": "Crea la voce di tracciamento credito mancante affinché la transazione compaia nel registro di tracciamento.",
-      "inconsistentRemainingRecommended": "Aggiorna l'importo residuo tracciato affinché corrisponda al saldo previsto dopo le applicazioni.",
-      "genericRecommended": "Applica la correzione consigliata per riallineare i saldi.",
-      "genericCustom": "Inserisci una rettifica personalizzata se è necessaria una correzione manuale.",
-      "createTrackingEntry": "Verrà creata una nuova voce di tracciamento credito per la transazione.",
-      "updateRemainingAmount": "Verrà aggiornato l'importo residuo nella voce di tracciamento credito.",
-      "applyAdjustment": "Verrà creata una transazione di rettifica credito per correggere il saldo.",
-      "customAdjustment": "Verrà creata una transazione di rettifica credito personalizzata.",
-      "noAction": "La discrepanza verrà segnata come risolta senza apportare modifiche."
+      "missingTrackingRecommended": "Aggiunge il record di credito mancante affinché questa transazione conti ai fini del saldo.",
+      "inconsistentRemainingRecommended": "Imposta l'importo rimanente tracciato in modo che corrisponda al saldo previsto.",
+      "genericRecommended": "Applica la correzione consigliata.",
+      "genericCustom": "Inserisci un importo di rettifica manuale.",
+      "createTrackingEntry": "Aggiunge il record di credito mancante per questa transazione.",
+      "updateRemainingAmount": "Imposta l'importo rimanente sul saldo previsto.",
+      "applyAdjustment": "Registra una rettifica di credito per correggere il saldo.",
+      "customAdjustment": "Registra una rettifica di credito personalizzata.",
+      "noAction": "Segna come risolto. Nessuna modifica al saldo."
     },
     "dialog": {
       "adjustmentAmount": "Importo della rettifica",
