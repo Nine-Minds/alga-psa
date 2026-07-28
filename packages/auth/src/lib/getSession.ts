@@ -1,16 +1,56 @@
 import type { Session } from 'next-auth';
 
 import logger from '@alga-psa/core/logger';
+import { UserSession } from '@alga-psa/db/models/UserSession';
 import { auth as edgeAuth } from '../nextauth/edge-auth';
 import { auth as fullAuth } from '../nextauth/auth';
 
 /**
- * Returns the current session using the edge-safe Auth.js instance.
- * This is optimized for performance and avoids database calls.
+ * Decoding a session cookie only proves the JWT is authentic; it says nothing
+ * about whether the session is still alive. Revocation state lives in the
+ * sessions table (SCIM deactivation, admin revoke, sign out everywhere), so
+ * every session handed to a caller is checked against it on every request and
+ * fails closed:
  *
- * For session revocation checks, use getSessionWithRevocationCheck() instead.
+ * - a session with no tracked tenant/session identifier (e.g. an OAuth token
+ *   minted before session tracking existed) is treated as revoked, and
+ * - an unreachable sessions table is treated as revoked.
+ *
+ * This is the single gate for the edge-decoded path, which cannot query the
+ * database itself, and the reason callers may authorize on any session this
+ * module returns.
  */
-export async function getSession(): Promise<Session | null> {
+async function requireLiveSession(session: Session | null): Promise<Session | null> {
+  if (!session?.user) {
+    return null;
+  }
+
+  const tenant = (session.user as { tenant?: unknown }).tenant;
+  const sessionId = (session as { session_id?: unknown }).session_id;
+
+  if (
+    typeof tenant !== 'string'
+    || tenant.length === 0
+    || typeof sessionId !== 'string'
+    || sessionId.length === 0
+  ) {
+    logger.warn('[auth] Rejecting session without a tracked tenant or session identifier');
+    return null;
+  }
+
+  try {
+    if (await UserSession.isRevoked(tenant, sessionId)) {
+      return null;
+    }
+  } catch (error) {
+    logger.error('[auth] Session revocation check failed closed', error);
+    return null;
+  }
+
+  return session;
+}
+
+async function decodeSession(): Promise<Session | null> {
   try {
     const edgeSession = await edgeAuth();
     if (edgeSession) {
@@ -32,13 +72,25 @@ export async function getSession(): Promise<Session | null> {
 }
 
 /**
- * Returns the current session using the full Node.js Auth.js instance.
- * This includes JWT callbacks with session revocation checks.
+ * Returns the current session, decoded on the edge-safe Auth.js instance when
+ * possible, after confirming it has not been revoked.
+ */
+export async function getSession(): Promise<Session | null> {
+  return requireLiveSession(await decodeSession());
+}
+
+/**
+ * Returns the current session using the full Node.js Auth.js instance, which
+ * additionally refreshes plan/tier claims and slides the session expiry.
  *
- * Use this in layouts and critical auth paths where revocation must be checked.
- * For better performance in non-critical paths, use getSession() instead.
+ * Use this in layouts and critical auth paths that need those refreshed claims.
+ * Revocation is enforced identically by both helpers.
  */
 export async function getSessionWithRevocationCheck(): Promise<Session | null> {
+  return requireLiveSession(await decodeSessionWithFullAuthFirst());
+}
+
+async function decodeSessionWithFullAuthFirst(): Promise<Session | null> {
   try {
     const session = await fullAuth();
     if (session) {

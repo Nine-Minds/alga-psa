@@ -72,6 +72,7 @@ const FEATURE_TRANSLATION_KEYS: Record<TIER_FEATURES, string> = {
   [TIER_FEATURES.ENTRA_SYNC]: 'features.entraSync',
   [TIER_FEATURES.CIPP]: 'features.cipp',
   [TIER_FEATURES.TEAMS_INTEGRATION]: 'features.teamsIntegration',
+  [TIER_FEATURES.SCIM_PROVISIONING]: 'features.scimProvisioning',
   [TIER_FEATURES.ADVANCED_AUTHORIZATION_BUNDLES]: 'features.advancedAuthorizationBundles',
 };
 
@@ -1257,7 +1258,11 @@ export default function AccountManagement() {
                   {displayedTierFeatures.map((feature) => (
                     <li key={feature} className="flex items-center space-x-2 text-sm">
                       <CheckCircle className="h-4 w-4 text-green-500" />
-                      <span>{t(FEATURE_TRANSLATION_KEYS[feature])}</span>
+                      <span>{t(FEATURE_TRANSLATION_KEYS[feature], {
+                        defaultValue: feature === TIER_FEATURES.SCIM_PROVISIONING
+                          ? 'SCIM user provisioning'
+                          : FEATURE_TRANSLATION_KEYS[feature],
+                      })}</span>
                     </li>
                   ))}
                 </ul>

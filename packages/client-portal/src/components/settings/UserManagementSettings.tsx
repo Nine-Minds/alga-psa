@@ -251,6 +251,7 @@ export function UserManagementSettings() {
           EMAIL_ALREADY_EXISTS: 'clientSettings.users.emailAlreadyExists',
           REPORTS_TO_SELF: 'clientSettings.users.reportsToSelf',
           REPORTS_TO_CYCLE: 'clientSettings.users.reportsToCycle',
+          SCIM_MANAGED_INACTIVE: 'clientSettings.users.scimManagedInactive',
           PERMISSION_DENIED: 'clientSettings.users.permissionDenied',
           USER_UPDATE_FAILED: 'clientSettings.users.updateFailed',
         };

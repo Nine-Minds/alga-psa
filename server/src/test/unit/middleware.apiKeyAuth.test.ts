@@ -3,6 +3,11 @@ import { describe, expect, it } from 'vitest';
 import { shouldSkipApiKeyAuth } from 'server/src/middleware';
 
 describe('shouldSkipApiKeyAuth', () => {
+  it('allows SCIM routes to perform Bearer authentication in the route handler', () => {
+    expect(shouldSkipApiKeyAuth('/api/scim/v2/connection-id/Users')).toBe(true);
+    expect(shouldSkipApiKeyAuth('/api/scim-malicious/v2/connection-id/Users')).toBe(false);
+  });
+
   it('allows the Teams package download route to use session auth', () => {
     expect(shouldSkipApiKeyAuth('/api/teams/package/download')).toBe(true);
   });

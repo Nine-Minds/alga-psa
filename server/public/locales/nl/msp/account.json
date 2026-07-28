@@ -71,7 +71,8 @@
     "entraSync": "Microsoft Entra Sync — ontdek automatisch tenants en synchroniseer contacten vanuit Entra ID",
     "cipp": "CIPP-integratie — verbind uw CIPP-instantie voor multi-tenant Entra-beheer",
     "teamsIntegration": "Microsoft Teams — vergaderintegratie en Teams-bot voor ticketmeldingen",
-    "advancedAuthorizationBundles": "Geavanceerde autorisatiebundels — maak en beheer premium ABAC-inperkingsbundels"
+    "advancedAuthorizationBundles": "Geavanceerde autorisatiebundels — maak en beheer premium ABAC-inperkingsbundels",
+    "scimProvisioning": "SCIM User Provisioning — synchronize user activation from your identity provider"
   },
   "summary": {
     "licensesUsed": "Gebruikte licenties",

@@ -199,6 +199,18 @@ export const API_RULES: readonly ApiRule[] = [
     behaviorByProduct: { psa: 'allowed', algadesk: 'denied' },
     visibleInMetadataByProduct: { psa: false, algadesk: false },
   },
+  {
+    // SCIM 2.0 service provider for directory-driven user lifecycle. Entra
+    // authenticates with a tenant-scoped bearer token, so these endpoints are
+    // not v1 API surface and never appear in /api/v1/meta metadata. PSA-only,
+    // matching the Pro-tier SCIM_PROVISIONING feature.
+    group: 'api_scim_provisioning',
+    staticPrefixes: [
+      '/api/scim',
+    ],
+    behaviorByProduct: { psa: 'allowed', algadesk: 'denied' },
+    visibleInMetadataByProduct: { psa: false, algadesk: false },
+  },
 ];
 
 function normalizePathname(pathname: string): string {

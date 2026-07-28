@@ -56,6 +56,7 @@ export type RevocationReason =
   | 'admin_revoke'
   | 'max_sessions'
   | 'security'
+  | 'scim'
   | 'inactivity'
   | 'expired';
 
@@ -167,19 +168,10 @@ export class UserSession {
       revoked_reason: reason,
       updated_at: knex.fn.now(),
     });
-
-    const cacheKey = `${tenant}:${sessionId}`;
-    this.revocationCache.delete(cacheKey);
   }
 
   static async revokeAllExcept(tenant: string, userId: string, keepSessionId: string): Promise<number> {
     const knex = await getConnection(tenant);
-
-    const sessionsToRevoke = await sessions(knex, tenant)
-      .where({ user_id: userId })
-      .whereNot({ session_id: keepSessionId })
-      .whereNull('revoked_at')
-      .select('session_id');
 
     const count = await sessions(knex, tenant)
       .where({ user_id: userId })
@@ -191,21 +183,11 @@ export class UserSession {
         updated_at: knex.fn.now(),
       });
 
-    sessionsToRevoke.forEach(({ session_id }: any) => {
-      const cacheKey = `${tenant}:${session_id}`;
-      this.revocationCache.delete(cacheKey);
-    });
-
     return Number(count);
   }
 
   static async revokeAllForUser(tenant: string, userId: string): Promise<number> {
     const knex = await getConnection(tenant);
-
-    const sessionsToRevoke = await sessions(knex, tenant)
-      .where({ user_id: userId })
-      .whereNull('revoked_at')
-      .select('session_id');
 
     const count = await sessions(knex, tenant)
       .where({ user_id: userId })
@@ -216,47 +198,20 @@ export class UserSession {
         updated_at: knex.fn.now(),
       });
 
-    sessionsToRevoke.forEach(({ session_id }: any) => {
-      const cacheKey = `${tenant}:${session_id}`;
-      this.revocationCache.delete(cacheKey);
-    });
-
     return Number(count);
   }
 
-  private static revocationCache = new Map<string, { revoked: boolean; timestamp: number }>();
-  private static readonly CACHE_TTL_MS = 30000;
-
   static async isRevoked(tenant: string, sessionId: string): Promise<boolean> {
-    const cacheKey = `${tenant}:${sessionId}`;
-    const now = Date.now();
-
-    const cached = this.revocationCache.get(cacheKey);
-    if (cached && now - cached.timestamp < this.CACHE_TTL_MS) {
-      return cached.revoked;
-    }
-
     const knex = await getConnection(tenant);
 
     const session = await sessions(knex, tenant).where({ session_id: sessionId }).select('revoked_at').first();
 
-    const isRevoked = session ? (session as any).revoked_at !== null : true;
-
-    this.revocationCache.set(cacheKey, { revoked: isRevoked, timestamp: now });
-
-    if (this.revocationCache.size > 1000) {
-      const entries = Array.from(this.revocationCache.entries());
-      entries.sort((a, b) => a[1].timestamp - b[1].timestamp);
-      entries.slice(0, 500).forEach(([key]) => this.revocationCache.delete(key));
-    }
-
-    return isRevoked;
+    return session ? (session as any).revoked_at !== null : true;
   }
 
   static async enforceMaxSessions(tenant: string, userId: string, maxSessions: number): Promise<void> {
     const knex = await getConnection(tenant);
 
-    const revokedSessionIds: string[] = [];
     await knex.transaction(async (trx) => {
       const activeSessions = await sessions(trx, tenant)
         .where({ user_id: userId })
@@ -269,7 +224,6 @@ export class UserSession {
         const toRevoke = activeSessions.length - maxSessions + 1;
         const sessionsToRevoke = activeSessions.slice(0, toRevoke);
         const sessionIdsToRevoke = sessionsToRevoke.map((s: any) => s.session_id);
-        revokedSessionIds.push(...sessionIdsToRevoke);
 
         await sessions(trx, tenant)
           .where({ user_id: userId })
@@ -280,11 +234,6 @@ export class UserSession {
             updated_at: trx.fn.now(),
           });
       }
-    });
-
-    revokedSessionIds.forEach((sessionId) => {
-      const cacheKey = `${tenant}:${sessionId}`;
-      this.revocationCache.delete(cacheKey);
     });
   }
 

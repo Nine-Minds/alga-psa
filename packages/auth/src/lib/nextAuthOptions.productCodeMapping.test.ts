@@ -84,10 +84,16 @@ vi.mock('./sso/mspSsoResolution', () => ({
   getMspSsoSigningSecret: async () => 'unit-test-secret',
   parseAndVerifyMspSsoResolutionCookie: vi.fn(() => null),
 }));
-vi.mock('@alga-psa/db/models/UserSession', () => ({ UserSession: {} }));
+vi.mock('@alga-psa/db/models/UserSession', () => ({
+  UserSession: {
+    create: vi.fn(async () => 'session-1'),
+    isRevoked: vi.fn(async () => false),
+    updateLocation: vi.fn(),
+  },
+}));
 vi.mock('./ipAddress', () => ({ getClientIp: vi.fn() }));
 vi.mock('./deviceFingerprint', () => ({ generateDeviceFingerprint: vi.fn(), getDeviceInfo: vi.fn() }));
-vi.mock('./geolocation', () => ({ getLocationFromIp: vi.fn() }));
+vi.mock('./geolocation', () => ({ getLocationFromIp: vi.fn(async () => null) }));
 vi.mock('@alga-psa/db', () => ({
   getConnection: vi.fn(),
   tenantDb: (conn: any, tenant: string) => ({
