@@ -15,6 +15,7 @@ import { fetchClientsForDropdown } from '@alga-psa/reporting/actions/reconciliat
 import CreditDetailDialog from './CreditDetailDialog';
 import EditCreditExpirationDialog from './EditCreditExpirationDialog';
 import ExpireCreditDialog from './ExpireCreditDialog';
+import TransferCreditDialog from './TransferCreditDialog';
 
 export type CreditRow = ICreditTracking & {
   transaction_description?: string;
@@ -61,6 +62,7 @@ interface CreditActionHandlers {
   onView: (record: CreditRow) => void;
   onEdit: (record: CreditRow) => void;
   onExpire: (record: CreditRow) => void;
+  onTransfer: (record: CreditRow) => void;
 }
 
 function createColumns(
@@ -130,15 +132,25 @@ function createColumns(
               {t('actions.edit', { defaultValue: 'Edit' })}
             </Button>
             {!isDepleted && (
-              <Button
-                variant="outline"
-                size="sm"
-                id={`expire-credit-${value}`}
-                className="text-destructive hover:bg-destructive/10"
-                onClick={(e) => { e.stopPropagation(); handlers.onExpire(record); }}
-              >
-                {t('actions.expire', { defaultValue: 'Expire' })}
-              </Button>
+              <>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  id={`transfer-credit-${value}`}
+                  onClick={(e) => { e.stopPropagation(); handlers.onTransfer(record); }}
+                >
+                  {t('actions.transfer', { defaultValue: 'Transfer' })}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  id={`expire-credit-${value}`}
+                  className="text-destructive hover:bg-destructive/10"
+                  onClick={(e) => { e.stopPropagation(); handlers.onExpire(record); }}
+                >
+                  {t('actions.expire', { defaultValue: 'Expire' })}
+                </Button>
+              </>
             )}
           </div>
         );
@@ -168,6 +180,7 @@ export default function CreditsTable() {
   const [viewCredit, setViewCredit] = useState<CreditRow | null>(null);
   const [editCredit, setEditCredit] = useState<CreditRow | null>(null);
   const [expireCreditRow, setExpireCreditRow] = useState<CreditRow | null>(null);
+  const [transferCreditRow, setTransferCreditRow] = useState<CreditRow | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -220,6 +233,7 @@ export default function CreditsTable() {
     onView: setViewCredit,
     onEdit: setEditCredit,
     onExpire: setExpireCreditRow,
+    onTransfer: setTransferCreditRow,
   });
 
   const hasActiveFilters = Boolean(selectedClient || selectedStatus);
@@ -310,6 +324,10 @@ export default function CreditsTable() {
       <ExpireCreditDialog
         credit={expireCreditRow}
         onClose={() => setExpireCreditRow(null)}
+      />
+      <TransferCreditDialog
+        credit={transferCreditRow}
+        onClose={() => setTransferCreditRow(null)}
       />
     </div>
   );

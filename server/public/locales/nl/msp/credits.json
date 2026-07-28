@@ -61,7 +61,8 @@
     "selected": "Geselecteerd",
     "saveChanges": "Wijzigingen opslaan",
     "saving": "Opslaan...",
-    "runReconciliationAllClients": "Reconciliatie uitvoeren (alle klanten)"
+    "runReconciliationAllClients": "Reconciliatie uitvoeren (alle klanten)",
+    "transfer": "Overboeken"
   },
   "tabs": {
     "credits": "Kredieten",
@@ -203,6 +204,34 @@
     "error": "Er is een fout opgetreden bij het laten vervallen van het krediet",
     "expiring": "Vervallen...",
     "confirm": "Krediet laten vervallen"
+  },
+  "transferDialog": {
+    "title": "Krediet overboeken",
+    "description": "Boek krediet over van deze klant naar een andere.",
+    "fields": {
+      "targetClient": "Naar klant",
+      "amount": "Bedrag",
+      "reason": "Reden (optioneel)"
+    },
+    "placeholders": {
+      "reason": "Waarom wordt dit krediet overgeboekt?"
+    },
+    "hints": {
+      "amount": "Tot {{amount}} beschikbaar"
+    },
+    "impact": {
+      "current": "Huidig restant",
+      "after": "Restant na overboeking"
+    },
+    "errors": {
+      "selectClient": "Selecteer een klant voor de overboeking",
+      "validAmount": "Voer een bedrag groter dan nul in",
+      "exceedsRemaining": "De overboeking mag het restant van {{amount}} niet overschrijden"
+    },
+    "success": "Krediet overgeboekt",
+    "error": "Er is een fout opgetreden bij het overboeken van het krediet",
+    "transferring": "Overboeken...",
+    "confirm": "Krediet overboeken"
   },
   "context": {
     "lineageMissing": "Herkomst ontbreekt",

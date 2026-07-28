@@ -61,7 +61,8 @@
     "select": "11111",
     "selected": "11111",
     "saveChanges": "11111",
-    "saving": "11111"
+    "saving": "11111",
+    "transfer": "11111"
   },
   "tabs": {
     "credits": "11111",
@@ -275,6 +276,34 @@
     "success": "11111",
     "error": "11111",
     "expiring": "11111",
+    "confirm": "11111"
+  },
+  "transferDialog": {
+    "title": "11111",
+    "description": "11111",
+    "fields": {
+      "targetClient": "11111",
+      "amount": "11111",
+      "reason": "11111"
+    },
+    "placeholders": {
+      "reason": "11111"
+    },
+    "hints": {
+      "amount": "11111 {{amount}} 11111"
+    },
+    "impact": {
+      "current": "11111",
+      "after": "11111"
+    },
+    "errors": {
+      "selectClient": "11111",
+      "validAmount": "11111",
+      "exceedsRemaining": "11111 {{amount}} 11111"
+    },
+    "success": "11111",
+    "error": "11111",
+    "transferring": "11111",
     "confirm": "11111"
   },
   "context": {

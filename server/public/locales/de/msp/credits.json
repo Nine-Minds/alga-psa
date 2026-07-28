@@ -61,7 +61,8 @@
     "selected": "Ausgewählt",
     "saveChanges": "Änderungen speichern",
     "saving": "Wird gespeichert...",
-    "runReconciliationAllClients": "Abgleich ausführen (alle Kunden)"
+    "runReconciliationAllClients": "Abgleich ausführen (alle Kunden)",
+    "transfer": "Übertragen"
   },
   "tabs": {
     "credits": "Gutschriften",
@@ -203,6 +204,34 @@
     "error": "Beim Verfallen des Kredits ist ein Fehler aufgetreten",
     "expiring": "Verfällt...",
     "confirm": "Kredit verfallen lassen"
+  },
+  "transferDialog": {
+    "title": "Gutschrift übertragen",
+    "description": "Gutschrift von diesem Kunden an einen anderen übertragen.",
+    "fields": {
+      "targetClient": "An Kunden",
+      "amount": "Betrag",
+      "reason": "Grund (optional)"
+    },
+    "placeholders": {
+      "reason": "Warum wird diese Gutschrift übertragen?"
+    },
+    "hints": {
+      "amount": "Bis zu {{amount}} verfügbar"
+    },
+    "impact": {
+      "current": "Aktuelles Restguthaben",
+      "after": "Restguthaben nach Übertragung"
+    },
+    "errors": {
+      "selectClient": "Wählen Sie einen Kunden für die Übertragung",
+      "validAmount": "Geben Sie einen Betrag größer als null ein",
+      "exceedsRemaining": "Die Übertragung darf das Restguthaben von {{amount}} nicht überschreiten"
+    },
+    "success": "Gutschrift übertragen",
+    "error": "Beim Übertragen der Gutschrift ist ein Fehler aufgetreten",
+    "transferring": "Übertragen...",
+    "confirm": "Gutschrift übertragen"
   },
   "context": {
     "lineageMissing": "Herkunft fehlt",

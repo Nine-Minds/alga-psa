@@ -61,7 +61,8 @@
     "selected": "Sélectionné",
     "saveChanges": "Enregistrer les modifications",
     "saving": "Enregistrement...",
-    "runReconciliationAllClients": "Lancer le rapprochement (tous les clients)"
+    "runReconciliationAllClients": "Lancer le rapprochement (tous les clients)",
+    "transfer": "Transférer"
   },
   "tabs": {
     "credits": "Crédits",
@@ -203,6 +204,34 @@
     "error": "Une erreur s'est produite lors de l'expiration du crédit",
     "expiring": "Expiration...",
     "confirm": "Faire expirer le crédit"
+  },
+  "transferDialog": {
+    "title": "Transférer le crédit",
+    "description": "Transférez le crédit de ce client vers un autre.",
+    "fields": {
+      "targetClient": "Vers le client",
+      "amount": "Montant",
+      "reason": "Motif (facultatif)"
+    },
+    "placeholders": {
+      "reason": "Pourquoi ce crédit est-il transféré ?"
+    },
+    "hints": {
+      "amount": "Jusqu'à {{amount}} disponible"
+    },
+    "impact": {
+      "current": "Restant actuel",
+      "after": "Restant après transfert"
+    },
+    "errors": {
+      "selectClient": "Sélectionnez un client pour le transfert",
+      "validAmount": "Saisissez un montant supérieur à zéro",
+      "exceedsRemaining": "Le transfert ne peut pas dépasser le restant de {{amount}}"
+    },
+    "success": "Crédit transféré",
+    "error": "Une erreur s'est produite lors du transfert du crédit",
+    "transferring": "Transfert...",
+    "confirm": "Transférer le crédit"
   },
   "context": {
     "lineageMissing": "Traçabilité manquante",

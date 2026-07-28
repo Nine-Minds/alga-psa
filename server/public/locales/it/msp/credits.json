@@ -61,7 +61,8 @@
     "selected": "Selezionato",
     "saveChanges": "Salva modifiche",
     "saving": "Salvataggio...",
-    "runReconciliationAllClients": "Esegui riconciliazione (tutti i clienti)"
+    "runReconciliationAllClients": "Esegui riconciliazione (tutti i clienti)",
+    "transfer": "Trasferisci"
   },
   "tabs": {
     "credits": "Crediti",
@@ -203,6 +204,34 @@
     "error": "Si è verificato un errore durante la scadenza del credito",
     "expiring": "Scadenza...",
     "confirm": "Scadi credito"
+  },
+  "transferDialog": {
+    "title": "Trasferisci credito",
+    "description": "Sposta il credito da questo cliente a un altro.",
+    "fields": {
+      "targetClient": "Al cliente",
+      "amount": "Importo",
+      "reason": "Motivo (facoltativo)"
+    },
+    "placeholders": {
+      "reason": "Perché questo credito viene trasferito?"
+    },
+    "hints": {
+      "amount": "Fino a {{amount}} disponibile"
+    },
+    "impact": {
+      "current": "Rimanente attuale",
+      "after": "Rimanente dopo il trasferimento"
+    },
+    "errors": {
+      "selectClient": "Seleziona un cliente per il trasferimento",
+      "validAmount": "Inserisci un importo maggiore di zero",
+      "exceedsRemaining": "Il trasferimento non può superare il rimanente di {{amount}}"
+    },
+    "success": "Credito trasferito",
+    "error": "Si è verificato un errore durante il trasferimento del credito",
+    "transferring": "Trasferimento...",
+    "confirm": "Trasferisci credito"
   },
   "context": {
     "lineageMissing": "Genealogia mancante",

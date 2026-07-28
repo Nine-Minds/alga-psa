@@ -61,7 +61,8 @@
     "selected": "Wybrano",
     "saveChanges": "Zapisz zmiany",
     "saving": "Zapisywanie...",
-    "runReconciliationAllClients": "Uruchom uzgodnienie (wszyscy klienci)"
+    "runReconciliationAllClients": "Uruchom uzgodnienie (wszyscy klienci)",
+    "transfer": "Przenieś"
   },
   "tabs": {
     "credits": "Kredyty",
@@ -203,6 +204,34 @@
     "error": "Wystąpił błąd podczas wygaszania kredytu",
     "expiring": "Wygaszanie...",
     "confirm": "Wygasź kredyt"
+  },
+  "transferDialog": {
+    "title": "Przenieś kredyt",
+    "description": "Przenieś kredyt z tego klienta na innego.",
+    "fields": {
+      "targetClient": "Do klienta",
+      "amount": "Kwota",
+      "reason": "Powód (opcjonalnie)"
+    },
+    "placeholders": {
+      "reason": "Dlaczego ten kredyt jest przenoszony?"
+    },
+    "hints": {
+      "amount": "Dostępne do {{amount}}"
+    },
+    "impact": {
+      "current": "Bieżące saldo",
+      "after": "Saldo po przeniesieniu"
+    },
+    "errors": {
+      "selectClient": "Wybierz klienta do przeniesienia",
+      "validAmount": "Wprowadź kwotę większą od zera",
+      "exceedsRemaining": "Przeniesienie nie może przekroczyć salda {{amount}}"
+    },
+    "success": "Kredyt przeniesiony",
+    "error": "Wystąpił błąd podczas przenoszenia kredytu",
+    "transferring": "Przenoszenie...",
+    "confirm": "Przenieś kredyt"
   },
   "context": {
     "lineageMissing": "Brak pochodzenia",

@@ -61,7 +61,8 @@
     "select": "Select",
     "selected": "Selected",
     "saveChanges": "Save Changes",
-    "saving": "Saving..."
+    "saving": "Saving...",
+    "transfer": "Transfer"
   },
   "tabs": {
     "credits": "Credits",
@@ -276,6 +277,34 @@
     "error": "An error occurred while expiring the credit",
     "expiring": "Expiring...",
     "confirm": "Expire Credit"
+  },
+  "transferDialog": {
+    "title": "Transfer Credit",
+    "description": "Move credit from this client to another.",
+    "fields": {
+      "targetClient": "To Client",
+      "amount": "Amount",
+      "reason": "Reason (optional)"
+    },
+    "placeholders": {
+      "reason": "Why is this credit being transferred?"
+    },
+    "hints": {
+      "amount": "Up to {{amount}} available"
+    },
+    "impact": {
+      "current": "Current Remaining",
+      "after": "Remaining After Transfer"
+    },
+    "errors": {
+      "selectClient": "Select a client to transfer to",
+      "validAmount": "Enter an amount greater than zero",
+      "exceedsRemaining": "The transfer cannot exceed the remaining {{amount}}"
+    },
+    "success": "Credit transferred",
+    "error": "An error occurred while transferring the credit",
+    "transferring": "Transferring...",
+    "confirm": "Transfer Credit"
   },
   "context": {
     "lineageMissing": "Lineage Missing",

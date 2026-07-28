@@ -52,6 +52,7 @@ describe('MSP credits namespace and route i18n contract', () => {
       'expirationDialog',
       'viewDialog',
       'expireDialog',
+      'transferDialog',
       'context',
     ]);
   });
