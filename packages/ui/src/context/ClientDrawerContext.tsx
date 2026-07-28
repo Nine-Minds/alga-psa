@@ -2,8 +2,13 @@
 
 import { createContext, useContext } from 'react';
 
+export interface ClientDrawerOptions {
+  /** Opens a sub-panel of the client quick view on mount. */
+  initialPanel?: 'locations';
+}
+
 export interface ClientDrawerContextType {
-  openClientDrawer: (clientId: string) => void;
+  openClientDrawer: (clientId: string, options?: ClientDrawerOptions) => void;
 }
 
 export const ClientDrawerContext = createContext<ClientDrawerContextType | undefined>(undefined);
