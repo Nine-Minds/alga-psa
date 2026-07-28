@@ -10,9 +10,7 @@ import {
 } from '@alga-psa/ui/lib/errorHandling';
 import type { ICreditExpirationSettings } from '@alga-psa/types';
 import AddCreditButton from './AddCreditButton';
-import { CreditsTabs } from './CreditsTabs';
 import CreditsTable from './CreditsTable';
-import ReconciliationTab from './reconciliation/ReconciliationTab';
 
 interface CreditsPageClientProps {
   settings: ICreditExpirationSettings | { actionError: string } | { permissionError: string };
@@ -51,19 +49,6 @@ export default function CreditsPageClient({ settings }: CreditsPageClientProps) 
 
   const settingsError = isCreditExpirationSettingsError(settings);
 
-  const tabs = [
-    {
-      id: 'credits',
-      label: t('tabs.credits', { defaultValue: 'Credits' }),
-      content: <CreditsTable />,
-    },
-    {
-      id: 'reconciliation',
-      label: t('tabs.reconciliation', { defaultValue: 'Reconciliation' }),
-      content: <ReconciliationTab />,
-    },
-  ];
-
   return (
     <div className="container mx-auto py-6 space-y-6">
       <div className="flex justify-between items-center">
@@ -85,7 +70,7 @@ export default function CreditsPageClient({ settings }: CreditsPageClientProps) 
         <AddCreditButton />
       </div>
 
-      <CreditsTabs tabs={tabs} />
+      <CreditsTable />
     </div>
   );
 }

@@ -15,14 +15,9 @@
     "expires": "Expira",
     "status": "Status",
     "actions": "Ações",
-    "discrepancy": "Discrepância",
-    "detected": "Detectado",
-    "expectedBalance": "Saldo Esperado",
-    "actualBalance": "Saldo Real",
     "amountAvailable": "Quantidade disponível",
     "expiration": "Expiração",
-    "select": "Selecione",
-    "issueType": "Tipo de problema"
+    "select": "Selecione"
   },
   "filters": {
     "allClients": "Todos os clientes"
@@ -30,9 +25,6 @@
   "status": {
     "active": "Ativo",
     "expired": "Expirado",
-    "open": "Abrir",
-    "inReview": "Em revisão",
-    "resolved": "Resolvido",
     "never": "Nunca",
     "na": "N / D",
     "depleted": "Esgotado",
@@ -44,11 +36,9 @@
     "view": "Visualizar",
     "edit": "Editar",
     "expire": "Expirar",
-    "resolve": "Resolver",
     "addCredit": "Adicionar crédito",
     "cancel": "Cancelar",
     "viewAllCredits": "Ver todos os créditos",
-    "runReconciliation": "Executar reconciliação",
     "running": "Em execução...",
     "reset": "Reiniciar",
     "applyCredit": "Aplicar crédito",
@@ -57,12 +47,7 @@
     "selected": "Selecionado",
     "saveChanges": "Salvar alterações",
     "saving": "Salvando...",
-    "runReconciliationAllClients": "Executar reconciliação (todos os clientes)",
     "transfer": "Transferir"
-  },
-  "tabs": {
-    "credits": "Créditos",
-    "reconciliation": "Reconciliação"
   },
   "settings": {
     "loadErrorPrefix": "Error loading credit expiration settings:",
@@ -75,68 +60,13 @@
     "totalActiveCredits": "Total de créditos ativos",
     "expiringIn30Days": "Expira em 30 dias",
     "totalCreditsApplied": "Total de créditos aplicados",
-    "totalCreditsExpired": "Total de créditos expirados",
-    "totalDiscrepancies": "Discrepâncias totais",
-    "totalDiscrepancyAmount": "Valor total de discrepância",
-    "openIssues": "Problemas em aberto",
-    "inReviewCount": "Em revisão",
-    "resolvedCount": "Resolvido"
+    "totalCreditsExpired": "Total de créditos expirados"
   },
   "management": {
     "title": "Gestão de Crédito",
     "noCreditsFound": "Nenhum crédito encontrado",
     "noMatchingCredits": "Nenhum crédito corresponde a estes filtros",
     "loadFailed": "Falha ao carregar créditos. Tente novamente."
-  },
-  "reconciliation": {
-    "allStatuses": "Todos os status",
-    "fromDate": "Da data",
-    "toDate": "A data",
-    "validationResult": "Reconciliação concluída: {{count}} novos problemas encontrados.",
-    "tabs": {
-      "all": "Todos",
-      "open": "Abrir",
-      "inReview": "Em revisão",
-      "resolved": "Resolvido"
-    },
-    "allClients": "Todos os clientes",
-    "validationCompletedAllClients": "Reconciliação concluída para todos os clientes.",
-    "noReportsFound": "Nenhum relatório de reconciliação encontrado",
-    "issueTypes": {
-      "missingCreditTrackingEntry": "Crédito não registrado",
-      "inconsistentCreditRemainingAmount": "O valor restante não corresponde",
-      "balanceDiscrepancy": "O saldo não corresponde",
-      "unknownIssue": "Problema desconhecido"
-    },
-    "sections": {
-      "discrepancyDetails": "Detalhes da discrepância",
-      "creditApplications": "Aplicações de crédito"
-    },
-    "fields": {
-      "expectedBalance": "Saldo esperado",
-      "actualBalance": "Saldo real",
-      "difference": "Diferença",
-      "detected": "Detectado",
-      "reportId": "ID do relatório",
-      "transactionId": "ID da transação",
-      "transactionType": "Tipo de transação",
-      "transactionAmount": "Valor da transação",
-      "transactionDate": "Data da transação",
-      "creditId": "ID do crédito",
-      "originalAmount": "Valor original",
-      "correctionAmount": "Valor da correção",
-      "resolutionDate": "Data da resolução",
-      "resolutionNotes": "Notas da resolução",
-      "date": "Data",
-      "amount": "Valor",
-      "resolvedBy": "Resolvido por"
-    },
-    "errors": {
-      "loadFailed": "Não foi possível carregar os relatórios de reconciliação. Atualize e tente novamente.",
-      "loadDetailFailed": "Não foi possível carregar os detalhes do relatório de reconciliação.",
-      "reportNotFound": "Relatório de reconciliação não encontrado. Ele pode ter sido excluído ou você pode não ter permissão para visualizá-lo.",
-      "runFailed": "Não foi possível executar a reconciliação. Tente novamente."
-    }
   },
   "application": {
     "title": "Aplicar crédito",
@@ -234,65 +164,17 @@
     "financialOnly": "Somente financeiro",
     "noRecurringServicePeriod": "Nenhum período de serviço recorrente"
   },
-  "recommendedFix": {
-    "title": "Correções recomendadas",
-    "applySuccess": "A discrepância foi resolvida e os registros de faturamento foram atualizados.",
-    "panels": {
-      "recommendedFix": "Correção recomendada",
-      "alternativeFix": "Correção alternativa",
-      "noActionRequired": "Nenhuma ação necessária",
-      "customAdjustment": "Ajuste personalizado"
-    },
-    "buttons": {
-      "createTrackingEntry": "Criar entrada de rastreamento de crédito",
-      "updateRemainingAmount": "Atualizar valor restante",
-      "applyAdjustment": "Aplicar ajuste de crédito",
-      "applyCustomAdjustment": "Aplicar ajuste personalizado",
-      "markResolvedNoAction": "Resolver sem alterações",
-      "confirm": "Aplicar correção",
-      "applying": "Aplicando..."
-    },
-    "descriptions": {
-      "missingTrackingRecommended": "Adiciona o registro de crédito ausente para que esta transação conte para o saldo.",
-      "inconsistentRemainingRecommended": "Define o valor restante registrado para corresponder ao saldo esperado.",
-      "genericRecommended": "Aplica a correção recomendada.",
-      "genericCustom": "Insira um valor de correção manual.",
-      "createTrackingEntry": "Adiciona o registro de crédito ausente para esta transação.",
-      "updateRemainingAmount": "Define o valor restante para o saldo esperado.",
-      "applyAdjustment": "Lança um ajuste de crédito para corrigir o saldo.",
-      "customAdjustment": "Lança um ajuste de crédito personalizado.",
-      "noAction": "Marca como resolvido. Sem alteração de saldo."
-    },
-    "dialog": {
-      "adjustmentAmount": "Valor do ajuste",
-      "adjustmentHint": "Insira um valor positivo para aumentar o saldo ou negativo para diminuí-lo.",
-      "notes": "Notas",
-      "notesPlaceholder": "Explique o motivo desta correção..."
-    },
-    "errors": {
-      "notesRequired": "Forneça notas explicando o motivo desta correção",
-      "invalidAmount": "Insira um valor válido",
-      "applyFailed": "Não foi possível aplicar a correção de reconciliação. Atualize e tente novamente."
-    },
-    "impactSummary": {
-      "title": "Resumo do impacto",
-      "currentBalance": "Saldo atual",
-      "newBalance": "Novo saldo"
-    },
-    "resolved": {
-      "title": "Esta discrepância foi resolvida",
-      "description": "Nenhuma ação adicional é necessária, a menos que você precise revisar o histórico de reconciliação."
-    }
-  },
   "addCredit": {
     "description": "O crédito fica disponível para o cliente imediatamente.",
     "fields": {
       "client": "Cliente",
       "amount": "Valor",
+      "description": "Descrição (opcional)",
       "expirationDate": "Data de expiração (opcional)"
     },
     "placeholders": {
       "amount": "Insira o valor",
+      "description": "Motivo do crédito",
       "expirationDate": "Selecione a data de expiração"
     },
     "hints": {

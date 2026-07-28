@@ -1,4 +1,4 @@
-import { initializeScheduler, scheduleExpiredCreditsJob, scheduleExpiringCreditsNotificationJob, scheduleCreditReconciliationJob, scheduleQuoteAutoExpirationJob, scheduleReconcileBucketUsageJob, scheduleCleanupTemporaryFormsJob, scheduleCleanupWebhookDeliveriesJob, scheduleCleanupAiSessionKeysJob, scheduleMicrosoftWebhookRenewalJob, scheduleTeamsMeetingArtifactSubscriptionRenewalJob, scheduleTeamsMeetingSweepJob, scheduleGooglePubSubVerificationJob, scheduleGoogleGmailWatchRenewalJob, scheduleEmailWebhookMaintenanceJob, scheduleRenewalQueueProcessingJob, scheduleSlaTimerJob, scheduleWorkflowQuotaResumeScanJob, scheduleSearchReconcileJob, scheduleAutoCloseTicketsJob, scheduleLowStockNotificationJob, scheduleOpportunityDisciplineJob, scheduleOpportunityWeeklyDigestJob, scheduleOpportunityGeneratorsJob, scheduleMarketingFlipDuePostsJob, scheduleMarketingExpireStaleTargetsJob, scheduleMarketingSendSequenceStepsJob, scheduleProjectDateReadinessJob } from './index';
+import { initializeScheduler, scheduleExpiredCreditsJob, scheduleExpiringCreditsNotificationJob, scheduleQuoteAutoExpirationJob, scheduleReconcileBucketUsageJob, scheduleCleanupTemporaryFormsJob, scheduleCleanupWebhookDeliveriesJob, scheduleCleanupAiSessionKeysJob, scheduleMicrosoftWebhookRenewalJob, scheduleTeamsMeetingArtifactSubscriptionRenewalJob, scheduleTeamsMeetingSweepJob, scheduleGooglePubSubVerificationJob, scheduleGoogleGmailWatchRenewalJob, scheduleEmailWebhookMaintenanceJob, scheduleRenewalQueueProcessingJob, scheduleSlaTimerJob, scheduleWorkflowQuotaResumeScanJob, scheduleSearchReconcileJob, scheduleAutoCloseTicketsJob, scheduleLowStockNotificationJob, scheduleOpportunityDisciplineJob, scheduleOpportunityWeeklyDigestJob, scheduleOpportunityGeneratorsJob, scheduleMarketingFlipDuePostsJob, scheduleMarketingExpireStaleTargetsJob, scheduleMarketingSendSequenceStepsJob, scheduleProjectDateReadinessJob } from './index';
 import { scheduleAccountingSyncCycleJob } from './handlers/accountingSyncCycleHandler';
 import { scheduleHuduAutoSyncJob } from './handlers/huduAutoSyncHandler';
 import logger from '@alga-psa/core/logger';
@@ -122,22 +122,6 @@ export async function initializeScheduledJobs(): Promise<void> {
         },
       });
 
-      // Schedule daily job to run credit reconciliation (runs at 2:00 AM)
-      try {
-        const cron = '0 2 * * *';
-        const reconciliationJobId = await scheduleCreditReconciliationJob(tenantId, undefined, cron);
-        if (reconciliationJobId) {
-          logger.info(`Scheduled credit reconciliation job for tenant ${tenantId} with job ID ${reconciliationJobId}`);
-        } else {
-          logger.info('Credit reconciliation job already scheduled (singleton active)', {
-            tenantId,
-            cron,
-            returnedJobId: reconciliationJobId
-          });
-        }
-      } catch (error) {
-        logger.error(`Failed to schedule credit reconciliation job for tenant ${tenantId}`, error);
-      }
      
      // Schedule daily job to reconcile bucket usage (runs at 3:00 AM)
      try {

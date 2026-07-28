@@ -34,16 +34,13 @@ describe('CreditsPage i18n wiring contract', () => {
     expect(clientSource).toContain("t('columns.actions', { defaultValue: 'Actions' })");
   });
 
-  it('T006: CreditsPage client wrapper wires status labels and tab labels through msp/credits', () => {
-    const source = read('../src/components/credits/CreditsPageClient.tsx');
+  it('T006: CreditsPage table wires status labels through msp/credits', () => {
     const tableSource = read('../src/components/credits/CreditsTable.tsx');
 
     expect(tableSource).toContain("t('status.expired', { defaultValue: 'Expired' })");
     expect(tableSource).toContain("t('status.active', { defaultValue: 'Active' })");
     expect(tableSource).toContain("t('status.expiringSoon', {");
     expect(tableSource).toContain("t('status.depleted', { defaultValue: 'Depleted' })");
-    expect(source).toContain("t('tabs.credits', { defaultValue: 'Credits' })");
-    expect(source).toContain("t('tabs.reconciliation', { defaultValue: 'Reconciliation' })");
   });
 
   it('T007: CreditsPage expiration caption resolves its labels through msp/credits', () => {
@@ -63,8 +60,6 @@ describe('CreditsPage i18n wiring contract', () => {
 
     const pseudoKeys = [
       'page.title',
-      'tabs.credits',
-      'tabs.reconciliation',
       'settings.editInSettings',
       'columns.client',
       'columns.status',

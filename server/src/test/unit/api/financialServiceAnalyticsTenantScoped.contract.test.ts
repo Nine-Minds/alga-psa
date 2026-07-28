@@ -17,14 +17,15 @@ function sectionBetween(startMarker: string, endMarker: string): string {
 
 describe('financial service analytics tenant-scoped query contract', () => {
   it('uses structural tenant scoping for analytics aggregate roots', () => {
-    const analyticsSection = sectionBetween('async getFinancialAnalytics', '// RECONCILIATION MANAGEMENT');
+    const analyticsSection = sectionBetween('async getFinancialAnalytics', '// BULK OPERATIONS');
 
     expect(analyticsSection).toContain('tenantDb(');
     expect(analyticsSection).toContain(".table('invoices')");
     expect(analyticsSection).toContain(".table('transactions')");
-    expect(analyticsSection).toContain(".table('clients')");
+    // The credit-balance aggregate is derived from credit_tracking now.
+    expect(analyticsSection).toContain(".table('credit_tracking')");
 
-    expect(analyticsSection).not.toMatch(/knex\('(?:invoices|transactions|clients)'\)\s*\./);
+    expect(analyticsSection).not.toMatch(/knex\('(?:invoices|transactions|credit_tracking)'\)\s*\./);
     expect(analyticsSection).not.toMatch(/\.where\('tenant', context\.tenant\)/);
   });
 });

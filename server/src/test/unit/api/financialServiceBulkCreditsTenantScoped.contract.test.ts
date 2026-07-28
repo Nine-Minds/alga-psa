@@ -22,7 +22,8 @@ describe('financial service bulk credits tenant-scoped query contract', () => {
     expect(bulkCreditSection).toContain('tenantDb(');
     expect(bulkCreditSection).toContain('tenantDb(');
     expect(bulkCreditSection).toContain(".table('credit_tracking')");
-    expect(bulkCreditSection).toContain(".table('clients')");
+    // clients.credit_balance no longer exists; expiry writes only ledger + tracking rows.
+    expect(bulkCreditSection).toContain(".table('transactions')");
 
     expect(bulkCreditSection).not.toMatch(/knex\('credit_tracking'\)\s*\.(?:where|first|update|delete)/);
     expect(bulkCreditSection).not.toMatch(/trx\('(?:credit_tracking|clients)'\)\s*\.(?:where|first|update|delete|select)/);

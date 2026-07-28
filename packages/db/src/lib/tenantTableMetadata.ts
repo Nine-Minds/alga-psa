@@ -132,7 +132,6 @@ export const tenantTableMetadata: Record<string, TenantTableScope> = {
   conditional_display_rules: { scope: 'tenant' },
   countries: { scope: 'global' },
   credit_allocations: { scope: 'tenant' },
-  credit_reconciliation_reports: { scope: 'tenant' },
   credit_tracking: { scope: 'tenant' },
   custom_fields: { scope: 'tenant' },
   custom_reports: { scope: 'tenant' },

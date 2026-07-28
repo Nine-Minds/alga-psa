@@ -43,7 +43,7 @@ describe('Credits locale smoke and parity contract', () => {
 
     expect(italian).toContain('più');
     expect(italian).toContain("Si è verificato");
-    expect(italian).toContain('Tutti gli stati');
+    expect(italian).toContain('Tutti i clienti');
     expect(italian).not.toContain('piu');
     expect(italian).not.toContain('Si e verificato');
   });
@@ -74,7 +74,7 @@ describe('Credits locale smoke and parity contract', () => {
     const addButtonSource = read('../src/components/credits/AddCreditButton.tsx');
 
     expect(getLeaf(en, 'page.title')).toBe('Credit Management');
-    expect(getLeaf(en, 'tabs.credits')).toBe('Credits');
+    expect(getLeaf(en, 'actions.transfer')).toBe('Transfer');
     expect(getLeaf(en, 'actions.addCredit')).toBe('Add Credit');
     expect(pageSource).toContain("useTranslation('msp/credits')");
     expect(addButtonSource).toContain("useTranslation('msp/credits')");
@@ -91,8 +91,8 @@ describe('Credits locale smoke and parity contract', () => {
     const representativeKeys = [
       'management.title',
       'stats.totalActiveCredits',
-      'reconciliation.allClients',
-      'status.inReview',
+      'filters.allClients',
+      'status.expired',
     ];
 
     for (const key of representativeKeys) {
@@ -101,7 +101,7 @@ describe('Credits locale smoke and parity contract', () => {
     }
   });
 
-  it('T031: xx pseudo-locale exposes representative pseudo fill across credits page, management, reconciliation, application, and expiration flows', () => {
+  it('T031: xx pseudo-locale exposes representative pseudo fill across credits page, management, application, and expiration flows', () => {
     const xx = readJson<Record<string, unknown>>(
       '../../../server/public/locales/xx/msp/credits.json',
     );
@@ -110,7 +110,7 @@ describe('Credits locale smoke and parity contract', () => {
       'page.title',
       'actions.addCredit',
       'management.title',
-      'reconciliation.allClients',
+      'filters.allClients',
       'application.title',
       'application.noCreditsAvailable',
       'expiration.appliedCredits',
@@ -122,9 +122,6 @@ describe('Credits locale smoke and parity contract', () => {
       expect(getLeaf(xx, key)).toBe('11111');
     }
 
-    expect(getLeaf(xx, 'reconciliation.validationResult')).toBe(
-      '11111 {{count}} 11111',
-    );
     expect(getLeaf(xx, 'expiration.creditsAppliedToInvoice')).toBe(
       '11111 {{amount}} 11111',
     );

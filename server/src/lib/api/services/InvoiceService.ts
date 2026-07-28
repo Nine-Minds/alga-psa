@@ -34,6 +34,7 @@ import {
   previewInvoiceForSelectionInput,
 } from '@alga-psa/billing/actions/invoiceGeneration';
 import { BillingEngine } from '@alga-psa/billing/services';
+import { applyCreditToInvoiceInternal } from '@alga-psa/billing/actions/creditActions';
 import { TaxService } from '@alga-psa/billing/services/taxService';
 import { NumberingService } from '@shared/services/numberingService';
 import { PDFGenerationService, createPDFGenerationService } from '@alga-psa/billing/services';

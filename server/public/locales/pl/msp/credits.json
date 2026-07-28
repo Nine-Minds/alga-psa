@@ -15,14 +15,9 @@
     "expires": "Wygasa",
     "status": "Status",
     "actions": "Akcje",
-    "discrepancy": "Różnica",
-    "detected": "Wykryto",
-    "expectedBalance": "Oczekiwane saldo",
-    "actualBalance": "Rzeczywiste saldo",
     "amountAvailable": "Dostępna kwota",
     "expiration": "Wygaśnięcie",
-    "select": "Wybierz",
-    "issueType": "Typ problemu"
+    "select": "Wybierz"
   },
   "filters": {
     "allClients": "Wszyscy klienci"
@@ -30,9 +25,6 @@
   "status": {
     "active": "Aktywny",
     "expired": "Wygasły",
-    "open": "Otwarte",
-    "inReview": "W przeglądzie",
-    "resolved": "Rozwiązane",
     "never": "Nigdy",
     "na": "Brak danych",
     "depleted": "Wyczerpany",
@@ -46,11 +38,9 @@
     "view": "Zobacz",
     "edit": "Edytuj",
     "expire": "Wygasz",
-    "resolve": "Rozwiąż",
     "addCredit": "Dodaj kredyt",
     "cancel": "Anuluj",
     "viewAllCredits": "Zobacz wszystkie kredyty",
-    "runReconciliation": "Uruchom uzgadnianie",
     "running": "Trwa...",
     "reset": "Resetuj",
     "applyCredit": "Zastosuj kredyt",
@@ -59,12 +49,7 @@
     "selected": "Wybrano",
     "saveChanges": "Zapisz zmiany",
     "saving": "Zapisywanie...",
-    "runReconciliationAllClients": "Uruchom uzgodnienie (wszyscy klienci)",
     "transfer": "Przenieś"
-  },
-  "tabs": {
-    "credits": "Kredyty",
-    "reconciliation": "Uzgodnienie"
   },
   "settings": {
     "loadErrorPrefix": "Error loading credit expiration settings:",
@@ -77,68 +62,13 @@
     "totalActiveCredits": "Łącznie aktywnych kredytów",
     "expiringIn30Days": "Wygasa w ciągu 30 dni",
     "totalCreditsApplied": "Łącznie zastosowanych kredytów",
-    "totalCreditsExpired": "Łącznie wygasłych kredytów",
-    "totalDiscrepancies": "Łącznie różnic",
-    "totalDiscrepancyAmount": "Łączna kwota różnic",
-    "openIssues": "Otwarte sprawy",
-    "inReviewCount": "W trakcie przeglądu",
-    "resolvedCount": "Rozwiązane"
+    "totalCreditsExpired": "Łącznie wygasłych kredytów"
   },
   "management": {
     "title": "Zarządzanie kredytami",
     "noCreditsFound": "Nie znaleziono kredytów",
     "noMatchingCredits": "Żadne kredyty nie pasują do tych filtrów",
     "loadFailed": "Nie udało się załadować kredytów. Spróbuj ponownie."
-  },
-  "reconciliation": {
-    "allStatuses": "Wszystkie statusy",
-    "fromDate": "Data od",
-    "toDate": "Data do",
-    "validationResult": "Uzgadnianie zakończone: znaleziono {{count}} nowe problemy.",
-    "tabs": {
-      "all": "Wszystkie",
-      "open": "Otwarte",
-      "inReview": "W przeglądzie",
-      "resolved": "Rozwiązane"
-    },
-    "allClients": "Wszyscy klienci",
-    "validationCompletedAllClients": "Uzgodnienie zakończone dla wszystkich klientów.",
-    "noReportsFound": "Nie znaleziono raportów uzgodnień",
-    "issueTypes": {
-      "missingCreditTrackingEntry": "Kredyt nie zarejestrowany",
-      "inconsistentCreditRemainingAmount": "Pozostała kwota nie zgadza się",
-      "balanceDiscrepancy": "Saldo nie zgadza się",
-      "unknownIssue": "Nieznany problem"
-    },
-    "sections": {
-      "discrepancyDetails": "Szczegóły rozbieżności",
-      "creditApplications": "Zastosowania kredytu"
-    },
-    "fields": {
-      "expectedBalance": "Oczekiwane saldo",
-      "actualBalance": "Rzeczywiste saldo",
-      "difference": "Różnica",
-      "detected": "Wykryto",
-      "reportId": "ID raportu",
-      "transactionId": "ID transakcji",
-      "transactionType": "Typ transakcji",
-      "transactionAmount": "Kwota transakcji",
-      "transactionDate": "Data transakcji",
-      "creditId": "ID kredytu",
-      "originalAmount": "Pierwotna kwota",
-      "correctionAmount": "Kwota korekty",
-      "resolutionDate": "Data rozwiązania",
-      "resolutionNotes": "Notatki dotyczące rozwiązania",
-      "date": "Data",
-      "amount": "Kwota",
-      "resolvedBy": "Rozwiązane przez"
-    },
-    "errors": {
-      "loadFailed": "Nie udało się załadować raportów uzgodnień. Odśwież stronę i spróbuj ponownie.",
-      "loadDetailFailed": "Nie udało się załadować szczegółów raportu uzgodnienia.",
-      "reportNotFound": "Nie znaleziono raportu uzgodnienia. Mógł zostać usunięty lub nie masz uprawnień do jego wyświetlenia.",
-      "runFailed": "Nie udało się uruchomić uzgodnienia. Spróbuj ponownie."
-    }
   },
   "application": {
     "title": "Zastosuj kredyt",
@@ -236,65 +166,17 @@
     "financialOnly": "Tylko finansowe",
     "noRecurringServicePeriod": "Brak cyklicznego okresu usługi"
   },
-  "recommendedFix": {
-    "title": "Zalecane korekty",
-    "applySuccess": "Rozbieżność została rozwiązana, a dane rozliczeniowe zostały zaktualizowane.",
-    "panels": {
-      "recommendedFix": "Zalecana korekta",
-      "alternativeFix": "Korekta alternatywna",
-      "noActionRequired": "Nie jest wymagane żadne działanie",
-      "customAdjustment": "Korekta niestandardowa"
-    },
-    "buttons": {
-      "createTrackingEntry": "Utwórz wpis śledzenia kredytu",
-      "updateRemainingAmount": "Zaktualizuj pozostałą kwotę",
-      "applyAdjustment": "Zastosuj korektę kredytu",
-      "applyCustomAdjustment": "Zastosuj korektę niestandardową",
-      "markResolvedNoAction": "Rozwiąż bez zmian",
-      "confirm": "Zastosuj korektę",
-      "applying": "Stosowanie..."
-    },
-    "descriptions": {
-      "missingTrackingRecommended": "Dodaje brakujący zapis kredytu, aby ta transakcja liczyła się do salda.",
-      "inconsistentRemainingRecommended": "Ustawia śledzoną pozostałą kwotę zgodnie z oczekiwanym saldem.",
-      "genericRecommended": "Stosuje zalecaną korektę.",
-      "genericCustom": "Wprowadź ręczną kwotę korekty.",
-      "createTrackingEntry": "Dodaje brakujący zapis kredytu dla tej transakcji.",
-      "updateRemainingAmount": "Ustawia pozostałą kwotę na oczekiwane saldo.",
-      "applyAdjustment": "Księguje korektę kredytu w celu wyrównania salda.",
-      "customAdjustment": "Księguje niestandardową korektę kredytu.",
-      "noAction": "Oznacza jako rozwiązane. Bez zmiany salda."
-    },
-    "dialog": {
-      "adjustmentAmount": "Kwota korekty",
-      "adjustmentHint": "Wprowadź kwotę dodatnią, aby zwiększyć saldo, lub ujemną, aby je zmniejszyć.",
-      "notes": "Notatki",
-      "notesPlaceholder": "Wyjaśnij powód tej korekty..."
-    },
-    "errors": {
-      "notesRequired": "Podaj notatki wyjaśniające powód tej korekty",
-      "invalidAmount": "Wprowadź prawidłową kwotę",
-      "applyFailed": "Nie udało się zastosować korekty uzgodnienia. Odśwież stronę i spróbuj ponownie."
-    },
-    "impactSummary": {
-      "title": "Podsumowanie wpływu",
-      "currentBalance": "Bieżące saldo",
-      "newBalance": "Nowe saldo"
-    },
-    "resolved": {
-      "title": "Ta rozbieżność została rozwiązana",
-      "description": "Nie są wymagane dalsze działania, chyba że chcesz przejrzeć historię uzgodnień."
-    }
-  },
   "addCredit": {
     "description": "Kredyt jest od razu dostępny dla klienta.",
     "fields": {
       "client": "Klient",
       "amount": "Kwota",
+      "description": "Opis (opcjonalnie)",
       "expirationDate": "Data wygaśnięcia (opcjonalnie)"
     },
     "placeholders": {
       "amount": "Wprowadź kwotę",
+      "description": "Powód przyznania kredytu",
       "expirationDate": "Wybierz datę wygaśnięcia"
     },
     "hints": {
