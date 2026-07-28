@@ -25,6 +25,10 @@
     "expiration": "Expiration",
     "select": "Select"
   },
+  "filters": {
+    "client": "Client",
+    "allClients": "All Clients"
+  },
   "status": {
     "active": "Active",
     "expired": "Expired",
@@ -33,7 +37,9 @@
     "inReview": "In Review",
     "resolved": "Resolved",
     "never": "Never",
-    "na": "N/A"
+    "na": "N/A",
+    "depleted": "Depleted",
+    "expiringSoonShort": "Expiring Soon"
   },
   "actions": {
     "view": "View",
@@ -56,9 +62,7 @@
     "saving": "Saving..."
   },
   "tabs": {
-    "activeCredits": "Active Credits",
-    "allCredits": "All Credits",
-    "expiredCredits": "Expired Credits",
+    "credits": "Credits",
     "reconciliation": "Reconciliation"
   },
   "settings": {
@@ -87,7 +91,9 @@
     "title": "Credit Management",
     "loadErrorPrefix": "Error loading credits:",
     "noDataReturned": "No data returned from server",
-    "noCreditsFound": "No credits found"
+    "noCreditsFound": "No credits found",
+    "noMatchingCredits": "No credits match these filters",
+    "loadFailed": "Failed to load credits. Try again."
   },
   "reconciliation": {
     "selectClient": "Select Client",

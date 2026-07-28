@@ -1,9 +1,6 @@
 'use client';
 
-import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
-import { DataTable } from '@alga-psa/ui/components/DataTable';
-import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import {
@@ -11,204 +8,21 @@ import {
   isActionMessageError,
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
-import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
-import type { ColumnDefinition, ICreditExpirationSettings, ICreditTracking } from '@alga-psa/types';
+import type { ICreditExpirationSettings } from '@alga-psa/types';
 import AddCreditButton from './AddCreditButton';
 import BackButton from './BackButton';
 import { CreditsTabs } from './CreditsTabs';
-import CreditDetailDialog from './CreditDetailDialog';
-import EditCreditExpirationDialog from './EditCreditExpirationDialog';
-import ExpireCreditDialog from './ExpireCreditDialog';
+import CreditsTable from './CreditsTable';
 import ReconciliationTab from './reconciliation/ReconciliationTab';
-
-type CreditRow = ICreditTracking & {
-  transaction_description?: string;
-  invoice_number?: string;
-  client_name?: string;
-};
-
-interface CreditsListResult {
-  success: boolean;
-  data?: {
-    credits: CreditRow[];
-  };
-  error?: string;
-}
 
 interface CreditsPageClientProps {
   settings: ICreditExpirationSettings | { actionError: string } | { permissionError: string };
-  activeCreditsResult: CreditsListResult;
-  allCreditsResult: CreditsListResult;
 }
 
 const isCreditExpirationSettingsError = (
   settings: CreditsPageClientProps['settings'],
 ): settings is { actionError: string } | { permissionError: string } =>
   isActionMessageError(settings) || isActionPermissionError(settings);
-
-function getStatusLabel(
-  t: ReturnType<typeof useTranslation>['t'],
-  record: CreditRow,
-) {
-  if (record.is_expired) {
-    return <span className="text-red-600 font-medium">{t('status.expired', { defaultValue: 'Expired' })}</span>;
-  }
-
-  if (!record.expiration_date) {
-    return <span className="text-blue-600 font-medium">{t('status.active', { defaultValue: 'Active' })}</span>;
-  }
-
-  const now = new Date();
-  const expDate = new Date(record.expiration_date);
-  const daysUntilExpiration = Math.ceil((expDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-
-  if (daysUntilExpiration <= 7) {
-    return (
-      <span className="text-orange-500 font-medium">
-        {t('status.expiringSoon', {
-          days: daysUntilExpiration,
-          defaultValue: 'Expiring Soon ({{days}} days)',
-        })}
-      </span>
-    );
-  }
-
-  return <span className="text-blue-600 font-medium">{t('status.active', { defaultValue: 'Active' })}</span>;
-}
-
-interface CreditActionHandlers {
-  onView: (record: CreditRow) => void;
-  onEdit: (record: CreditRow) => void;
-  onExpire: (record: CreditRow) => void;
-}
-
-function createColumns(
-  t: ReturnType<typeof useTranslation>['t'],
-  handlers: CreditActionHandlers,
-): ColumnDefinition<CreditRow>[] {
-  return [
-    {
-      title: t('columns.creditId', { defaultValue: 'Credit ID' }),
-      dataIndex: 'credit_id',
-      render: (value: string) => <span className="font-mono text-xs">{value.substring(0, 8)}...</span>,
-    },
-    {
-      title: t('columns.client', { defaultValue: 'Client' }),
-      dataIndex: 'client_name',
-      render: (value: string | undefined) => value || t('status.na', { defaultValue: 'N/A' }),
-    },
-    {
-      title: t('columns.created', { defaultValue: 'Created' }),
-      dataIndex: 'created_at',
-      render: (value: string) => <span>{new Date(value).toLocaleDateString()}</span>,
-    },
-    {
-      title: t('columns.description', { defaultValue: 'Description' }),
-      dataIndex: 'transaction_description',
-      render: (value: string | undefined) => value || t('status.na', { defaultValue: 'N/A' }),
-    },
-    {
-      title: t('columns.originalAmount', { defaultValue: 'Original Amount' }),
-      dataIndex: 'amount',
-      render: (value: number) => formatCurrencyFromMinorUnits(value),
-    },
-    {
-      title: t('columns.remaining', { defaultValue: 'Remaining' }),
-      dataIndex: 'remaining_amount',
-      render: (value: number) => formatCurrencyFromMinorUnits(value),
-    },
-    {
-      title: t('columns.expires', { defaultValue: 'Expires' }),
-      dataIndex: 'expiration_date',
-      render: (value: string | undefined) => {
-        if (!value) {
-          return <span className="text-muted-foreground">{t('status.never', { defaultValue: 'Never' })}</span>;
-        }
-
-        return <span>{new Date(value).toLocaleDateString()}</span>;
-      },
-    },
-    {
-      title: t('columns.status', { defaultValue: 'Status' }),
-      dataIndex: 'is_expired',
-      render: (_value: boolean, record) => getStatusLabel(t, record),
-    },
-    {
-      title: t('columns.actions', { defaultValue: 'Actions' }),
-      dataIndex: 'credit_id',
-      width: '10%',
-      render: (value: string, record) => {
-        const isExpired = record.is_expired;
-
-        return (
-          <div className="flex space-x-2">
-            <Button variant="outline" size="sm" id={`view-credit-${value}`} onClick={() => handlers.onView(record)}>
-              {t('actions.view', { defaultValue: 'View' })}
-            </Button>
-            {!isExpired && (
-              <>
-                <Button variant="outline" size="sm" id={`edit-credit-${value}`} onClick={() => handlers.onEdit(record)}>
-                  {t('actions.edit', { defaultValue: 'Edit' })}
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  id={`expire-credit-${value}`}
-                  className="text-destructive hover:bg-destructive/10"
-                  onClick={() => handlers.onExpire(record)}
-                >
-                  {t('actions.expire', { defaultValue: 'Expire' })}
-                </Button>
-              </>
-            )}
-          </div>
-        );
-      },
-    },
-  ];
-}
-
-function CreditsList({
-  columns,
-  response,
-  emptyKey,
-}: {
-  columns: ColumnDefinition<CreditRow>[];
-  response: CreditsListResult;
-  emptyKey: string;
-}) {
-  const { t } = useTranslation('msp/credits');
-
-  if (!response.success) {
-    return (
-      <Alert variant="destructive" className="p-4 rounded-md">
-        <AlertDescription>
-          {t('management.loadErrorPrefix', { defaultValue: 'Error loading credits:' })} {response.error}
-        </AlertDescription>
-      </Alert>
-    );
-  }
-
-  if (!response.data) {
-    return (
-      <Alert variant="destructive" className="p-4 rounded-md">
-        <AlertDescription>
-          {t('management.noDataReturned', { defaultValue: 'No data returned from server' })}
-        </AlertDescription>
-      </Alert>
-    );
-  }
-
-  if (response.data.credits.length === 0) {
-    return (
-      <div className="p-8 text-center">
-        <p className="text-muted-foreground">{t(emptyKey, { defaultValue: 'No credits found' })}</p>
-      </div>
-    );
-  }
-
-  return <DataTable id="credits-table" columns={columns} data={response.data.credits} />;
-}
 
 function CreditExpirationSettingsPanel({ settings }: { settings: ICreditExpirationSettings }) {
   const { t } = useTranslation('msp/credits');
@@ -252,76 +66,24 @@ function CreditExpirationSettingsPanel({ settings }: { settings: ICreditExpirati
   );
 }
 
-export default function CreditsPageClient({
-  settings,
-  activeCreditsResult,
-  allCreditsResult,
-}: CreditsPageClientProps) {
+export default function CreditsPageClient({ settings }: CreditsPageClientProps) {
   const { t } = useTranslation('msp/credits');
 
-  const [viewCredit, setViewCredit] = useState<CreditRow | null>(null);
-  const [editCredit, setEditCredit] = useState<CreditRow | null>(null);
-  const [expireCreditRow, setExpireCreditRow] = useState<CreditRow | null>(null);
-
-  const columns = createColumns(t, {
-    onView: setViewCredit,
-    onEdit: setEditCredit,
-    onExpire: setExpireCreditRow,
-  });
-  const allCredits = allCreditsResult.data?.credits ?? [];
-  const expiredCredits = allCredits.filter((credit) => credit.is_expired);
   const settingsError = isCreditExpirationSettingsError(settings);
   const creditExpirationEnabled = !settingsError && settings.enable_credit_expiration;
 
   const tabs = [
     {
-      id: 'active',
-      label: t('tabs.activeCredits', { defaultValue: 'Active Credits' }),
-      content: (
-        <CreditsList
-          columns={columns}
-          response={activeCreditsResult}
-          emptyKey="management.noCreditsFound"
-        />
-      ),
+      id: 'credits',
+      label: t('tabs.credits', { defaultValue: 'Credits' }),
+      content: <CreditsTable />,
     },
     {
-      id: 'all',
-      label: t('tabs.allCredits', { defaultValue: 'All Credits' }),
-      content: (
-        <CreditsList
-          columns={columns}
-          response={allCreditsResult}
-          emptyKey="management.noCreditsFound"
-        />
-      ),
+      id: 'reconciliation',
+      label: t('tabs.reconciliation', { defaultValue: 'Reconciliation' }),
+      content: <ReconciliationTab />,
     },
   ];
-
-  if (creditExpirationEnabled) {
-    tabs.push({
-      id: 'expired',
-      label: t('tabs.expiredCredits', { defaultValue: 'Expired Credits' }),
-      content: (
-        <CreditsList
-          columns={columns}
-          response={allCreditsResult.success && allCreditsResult.data
-            ? {
-                success: true,
-                data: { credits: expiredCredits },
-              }
-            : allCreditsResult}
-          emptyKey="management.noCreditsFound"
-        />
-      ),
-    });
-  }
-
-  tabs.push({
-    id: 'reconciliation',
-    label: t('tabs.reconciliation', { defaultValue: 'Reconciliation' }),
-    content: <ReconciliationTab />,
-  });
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -364,20 +126,6 @@ export default function CreditsPageClient({
           <CreditsTabs tabs={tabs} />
         </CardContent>
       </Card>
-
-      <CreditDetailDialog
-        creditId={viewCredit?.credit_id ?? null}
-        clientName={viewCredit?.client_name}
-        onClose={() => setViewCredit(null)}
-      />
-      <EditCreditExpirationDialog
-        credit={editCredit}
-        onClose={() => setEditCredit(null)}
-      />
-      <ExpireCreditDialog
-        credit={expireCreditRow}
-        onClose={() => setExpireCreditRow(null)}
-      />
     </div>
   );
 }

@@ -25,6 +25,10 @@
     "expiration": "55555",
     "select": "55555"
   },
+  "filters": {
+    "client": "55555",
+    "allClients": "55555"
+  },
   "status": {
     "active": "55555",
     "expired": "55555",
@@ -33,7 +37,9 @@
     "inReview": "55555",
     "resolved": "55555",
     "never": "55555",
-    "na": "55555"
+    "na": "55555",
+    "depleted": "55555",
+    "expiringSoonShort": "55555"
   },
   "actions": {
     "view": "55555",
@@ -56,9 +62,7 @@
     "saving": "55555"
   },
   "tabs": {
-    "activeCredits": "55555",
-    "allCredits": "55555",
-    "expiredCredits": "55555",
+    "credits": "55555",
     "reconciliation": "55555"
   },
   "settings": {
@@ -87,7 +91,9 @@
     "title": "55555",
     "loadErrorPrefix": "55555",
     "noDataReturned": "55555",
-    "noCreditsFound": "55555"
+    "noCreditsFound": "55555",
+    "noMatchingCredits": "55555",
+    "loadFailed": "55555"
   },
   "reconciliation": {
     "selectClient": "55555",
