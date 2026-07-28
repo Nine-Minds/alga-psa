@@ -37,7 +37,7 @@ describe('quote-email-templates', () => {
         quote: baseQuote,
         companyName: 'Acme Corp',
       });
-      expect(subject).toBe('Quote Q-0042 from Acme Corp');
+      expect(subject).toBe('Estimate Q-0042 from Acme Corp');
     });
 
     it('T251: includes formatted total and valid-until date in HTML', () => {
@@ -47,6 +47,17 @@ describe('quote-email-templates', () => {
       });
       expect(html).toContain('Q-0042');
       expect(html).toContain('March 31, 2026');
+    });
+
+    it('T251a: uses estimate wording rather than quote wording', () => {
+      const { html, text } = buildQuoteSentEmailTemplate({
+        quote: baseQuote,
+        companyName: 'Acme Corp',
+      });
+      expect(html).toContain('Your estimate');
+      expect(text).toContain('Your estimate');
+      expect(html.toLowerCase()).not.toContain('quote');
+      expect(text.toLowerCase()).not.toContain('quote');
     });
 
     it('T252: includes custom message when provided', () => {
@@ -108,7 +119,7 @@ describe('quote-email-templates', () => {
         quote: baseQuote,
         companyName: 'Acme Corp',
       });
-      expect(subject).toContain('Reminder');
+      expect(subject).toContain('Reminder: Estimate');
       expect(subject).toContain('Q-0042');
       expect(subject).toContain('March 31, 2026');
     });
@@ -118,8 +129,9 @@ describe('quote-email-templates', () => {
         quote: baseQuote,
         companyName: 'Acme Corp',
       });
-      expect(html).toContain('reminder');
+      expect(html).toContain('reminder that estimate');
       expect(html).toContain('expires');
+      expect(html.toLowerCase()).not.toContain('quote');
     });
 
     it('T259: reminder includes custom message when provided', () => {
@@ -139,7 +151,7 @@ describe('quote-email-templates', () => {
         quote: acceptedQuote,
         companyName: 'Acme Corp',
       });
-      expect(subject).toContain('Q-0042');
+      expect(subject).toContain('Estimate Q-0042');
       expect(subject).toContain('accepted');
     });
 

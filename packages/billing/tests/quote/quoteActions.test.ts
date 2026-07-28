@@ -29,6 +29,10 @@ const generateAndStoreMock = vi.fn();
 const approvalSettingsMock = vi.fn();
 const documentInsertMock = vi.fn();
 const documentAssociationCreateMock = vi.fn();
+const fetchTenantPartyMock = vi.fn();
+// Rows returned by the estimate email template lookup, keyed by table so tests
+// can exercise the tenant-override-before-system-template precedence.
+const emailTemplateRows: Record<string, any> = {};
 
 const makeQuery = (result: any) => {
   const chain: any = {};
@@ -78,6 +82,10 @@ vi.mock('@alga-psa/email', () => ({
   TenantEmailService: {
     getInstance: (...args: any[]) => getTenantEmailServiceInstance(...args),
   },
+}));
+
+vi.mock('../../src/lib/adapters/tenantPartyAdapter', () => ({
+  fetchTenantParty: (...args: any[]) => fetchTenantPartyMock(...args),
 }));
 
 vi.mock('../../src/lib/quoteApprovalSettings', async (importOriginal) => {
@@ -201,12 +209,24 @@ describe('quoteActions', () => {
       if (table === 'tenants') {
         return makeQuery({ client_name: 'Acme MSP' });
       }
+      if (table === 'tenant_email_templates' || table === 'system_email_templates') {
+        return makeQuery(emailTemplateRows[table]);
+      }
       if (table === 'user_roles' || table === 'team_members' || table === 'users') {
         return makeListQuery([]);
       }
       throw new Error(`Unexpected mockKnex table access: ${table}`);
     });
     createTenantKnex.mockResolvedValue({ knex: mockKnex, tenant: TENANT_ID });
+    delete emailTemplateRows.tenant_email_templates;
+    delete emailTemplateRows.system_email_templates;
+    fetchTenantPartyMock.mockResolvedValue({
+      name: 'Acme MSP',
+      address: null,
+      email: null,
+      phone: null,
+      logo_url: null,
+    });
     hasPermissionMock.mockResolvedValue(true);
     generatePDFMock.mockResolvedValue(Buffer.from('pdf-content'));
     generateAndStoreMock.mockResolvedValue({ file_id: 'stored-file-1', storage_path: 'tenant/pdfs/Q-0001.pdf', file_size: 1024 });
@@ -960,10 +980,85 @@ describe('quoteActions', () => {
     await sendQuote(QUOTE_ID, { email_addresses: ['client@example.com'] });
 
     expect(sendEmailMock).toHaveBeenCalledWith(expect.objectContaining({
-      subject: 'Quote Q-0001 from Acme MSP',
+      subject: 'Estimate Q-0001 from Acme MSP',
       html: expect.stringContaining('Q-0001'),
       text: expect.stringContaining('Valid Until:'),
-      attachments: [expect.objectContaining({ filename: 'Quote_Q-0001.pdf', content: Buffer.from('pdf-content') })],
+      attachments: [expect.objectContaining({ filename: 'Estimate_Q-0001.pdf', content: Buffer.from('pdf-content') })],
+    }));
+  });
+
+  it('T092a: estimate email prefers a tenant template override over the system template', async () => {
+    emailTemplateRows.tenant_email_templates = {
+      subject: 'Tenant estimate {{estimate.number}} from {{company.name}}',
+      html_content: '<p>{{estimate.amount}} until {{estimate.validUntil}}</p>',
+      text_content: 'Tenant estimate {{estimate.number}}',
+    };
+    emailTemplateRows.system_email_templates = {
+      subject: 'System estimate {{estimate.number}}',
+      html_content: '<p>system</p>',
+      text_content: 'system',
+    };
+    const sendableQuote = {
+      quote_id: QUOTE_ID,
+      quote_number: 'Q-0001',
+      title: 'Quote',
+      total_amount: 5000,
+      currency_code: 'USD',
+      valid_until: '2026-03-20T00:00:00.000Z',
+      status: 'draft',
+      is_template: false,
+      client_id: null,
+      contact_id: null,
+    };
+    vi.spyOn(Quote, 'getById')
+      .mockResolvedValueOnce(sendableQuote as any)
+      .mockResolvedValueOnce({ ...sendableQuote, status: 'sent' } as any);
+
+    const { sendQuote } = await import('../../src/actions/quoteActions');
+    await sendQuote(QUOTE_ID, { email_addresses: ['client@example.com'] });
+
+    expect(sendEmailMock).toHaveBeenCalledWith(expect.objectContaining({
+      subject: 'Tenant estimate Q-0001 from Acme MSP',
+      html: expect.stringContaining('$50.00 until '),
+      text: 'Tenant estimate Q-0001',
+    }));
+  });
+
+  it('T092b: estimate email falls back to the system template and the tenant default company name', async () => {
+    emailTemplateRows.system_email_templates = {
+      subject: 'System estimate {{estimate.number}} from {{company.name}}',
+      html_content: '<p>{{estimate.amount}}</p>',
+      text_content: 'System estimate {{estimate.number}}',
+    };
+    fetchTenantPartyMock.mockResolvedValue({
+      name: 'Contoso IT Services',
+      address: null,
+      email: null,
+      phone: null,
+      logo_url: null,
+    });
+    const sendableQuote = {
+      quote_id: QUOTE_ID,
+      quote_number: 'Q-0001',
+      title: 'Quote',
+      total_amount: 5000,
+      currency_code: 'USD',
+      valid_until: '2026-03-20T00:00:00.000Z',
+      status: 'draft',
+      is_template: false,
+      client_id: null,
+      contact_id: null,
+    };
+    vi.spyOn(Quote, 'getById')
+      .mockResolvedValueOnce(sendableQuote as any)
+      .mockResolvedValueOnce({ ...sendableQuote, status: 'sent' } as any);
+
+    const { sendQuote } = await import('../../src/actions/quoteActions');
+    await sendQuote(QUOTE_ID, { email_addresses: ['client@example.com'] });
+
+    expect(fetchTenantPartyMock).toHaveBeenCalledWith(mockKnex, TENANT_ID);
+    expect(sendEmailMock).toHaveBeenCalledWith(expect.objectContaining({
+      subject: 'System estimate Q-0001 from Contoso IT Services',
     }));
   });
 
