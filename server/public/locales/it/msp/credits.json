@@ -8,6 +8,8 @@
   "columns": {
     "creditId": "ID credito",
     "client": "Cliente",
+    "balance": "Saldo",
+    "balanceOf": "di {{amount}}",
     "created": "Creato il",
     "description": "Descrizione",
     "context": "Contesto",

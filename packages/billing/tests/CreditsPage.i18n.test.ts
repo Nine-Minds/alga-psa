@@ -26,11 +26,9 @@ describe('CreditsPage i18n wiring contract', () => {
 
     expect(pageSource).toContain("import CreditsPageClient from './CreditsPageClient';");
     expect(clientSource).toContain("const { t } = useTranslation('msp/credits');");
-    expect(clientSource).toContain("t('columns.creditId', { defaultValue: 'Credit ID' })");
-    expect(clientSource).toContain("t('columns.created', { defaultValue: 'Created' })");
+    expect(clientSource).toContain("t('columns.client', { defaultValue: 'Client' })");
     expect(clientSource).toContain("t('columns.description', { defaultValue: 'Description' })");
-    expect(clientSource).toContain("t('columns.originalAmount', { defaultValue: 'Original Amount' })");
-    expect(clientSource).toContain("t('columns.remaining', { defaultValue: 'Remaining' })");
+    expect(clientSource).toContain("t('columns.balance', { defaultValue: 'Balance' })");
     expect(clientSource).toContain("t('columns.expires', { defaultValue: 'Expires' })");
     expect(clientSource).toContain("t('columns.status', { defaultValue: 'Status' })");
     expect(clientSource).toContain("t('columns.actions', { defaultValue: 'Actions' })");
