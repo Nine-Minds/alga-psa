@@ -93,11 +93,8 @@ describe('Credits locale smoke and parity contract', () => {
 
     const representativeKeys = [
       'management.title',
-      'charts.expirationSummary',
       'stats.totalActiveCredits',
-      'reconciliation.title',
-      'reconciliation.reconciliationReports',
-      'charts.statusDistribution',
+      'reconciliation.selectClient',
       'status.inReview',
     ];
 
@@ -117,9 +114,7 @@ describe('Credits locale smoke and parity contract', () => {
       'actions.backToCredits',
       'actions.addCredit',
       'management.title',
-      'management.recentCredits',
-      'reconciliation.title',
-      'reconciliation.reconciliationReports',
+      'reconciliation.selectClient',
       'application.title',
       'application.noCreditsAvailable',
       'expiration.appliedCredits',

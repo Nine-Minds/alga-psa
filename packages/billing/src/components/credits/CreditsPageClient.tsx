@@ -2,7 +2,6 @@
 
 import { useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@alga-psa/ui/components/Card';
-import { Skeleton } from '@alga-psa/ui/components/Skeleton';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -365,40 +364,6 @@ export default function CreditsPageClient({
           <CreditsTabs tabs={tabs} />
         </CardContent>
       </Card>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {creditExpirationEnabled && (
-          <Card>
-            <CardHeader>
-              <CardTitle>
-                {t('page.expirationSummary', { defaultValue: 'Credit Expiration Summary' })}
-              </CardTitle>
-              <CardDescription>
-                {t('page.expirationSummaryDescription', {
-                  defaultValue: 'Overview of credits expiring soon',
-                })}
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Skeleton className="h-40 w-full" />
-            </CardContent>
-          </Card>
-        )}
-
-        <Card>
-          <CardHeader>
-            <CardTitle>{t('page.usageTrends', { defaultValue: 'Credit Usage Trends' })}</CardTitle>
-            <CardDescription>
-              {t('page.usageTrendsDescription', {
-                defaultValue: 'Historical credit usage patterns',
-              })}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Skeleton className="h-40 w-full" />
-          </CardContent>
-        </Card>
-      </div>
 
       <CreditDetailDialog
         creditId={viewCredit?.credit_id ?? null}

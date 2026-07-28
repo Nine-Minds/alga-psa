@@ -3,11 +3,7 @@
     "title": "Kreditverwaltung",
     "creditsOverview": "Kreditübersicht",
     "overviewDescription": "Verwalten Sie die Gutschriften und Übertragungen Ihres Kunden",
-    "overviewDescriptionWithExpiration": "Verwalten Sie die Gutschriften Ihres Kunden einschließlich Ablaufdaten und Übertragungen",
-    "expirationSummary": "Ablaufübersicht der Gutschriften",
-    "expirationSummaryDescription": "Übersicht über bald ablaufende Gutschriften",
-    "usageTrends": "Nutzungstrends der Gutschriften",
-    "usageTrendsDescription": "Historische Muster der Gutschriftnutzung"
+    "overviewDescriptionWithExpiration": "Verwalten Sie die Gutschriften Ihres Kunden einschließlich Ablaufdaten und Übertragungen"
   },
   "columns": {
     "creditId": "Kredit-ID",
@@ -76,33 +72,6 @@
     "none": "Keine",
     "loadErrorPrefix": "Error loading credit expiration settings:"
   },
-  "charts": {
-    "expirationSummary": "Ablaufübersicht der Gutschriften",
-    "expirationSummaryDescription": "Übersicht über bald ablaufende Gutschriften",
-    "usageTrends": "Nutzungstrends der Gutschriften",
-    "usageTrendsDescription": "Historische Muster der Gutschriftnutzung",
-    "lessThan7Days": "< 7 Tage",
-    "lessThan30Days": "< 30 Tage",
-    "lessThan90Days": "< 90 Tage",
-    "greaterThan90Days": "> 90 Tage",
-    "creditsIssued": "Ausgegebene Gutschriften",
-    "creditsApplied": "Verwendete Gutschriften",
-    "creditsExpired": "Abgelaufene Gutschriften",
-    "statusDistribution": "Statusverteilung",
-    "statusDistributionDescription": "Überblick über die Status der Abstimmungsberichte",
-    "discrepancyTrends": "Trends bei Abweichungen",
-    "discrepancyTrendsDescription": "Monatliche Trends bei Gutschriftsabweichungen",
-    "numberOfDiscrepancies": "Anzahl der Abweichungen",
-    "totalAmount": "Gesamtbetrag",
-    "months": {
-      "jan": "Jan.",
-      "feb": "Feb.",
-      "mar": "Mär",
-      "apr": "Apr.",
-      "may": "Mai",
-      "jun": "Jun."
-    }
-  },
   "stats": {
     "totalActiveCredits": "Summe aktiver Gutschriften",
     "expiringIn30Days": "Läuft in 30 Tagen ab",
@@ -116,21 +85,16 @@
   },
   "management": {
     "title": "Kreditverwaltung",
-    "recentCredits": "Aktuelle Gutschriften",
-    "recentCreditsDescription": "Sehen und verwalten Sie die Gutschriften Ihres Kunden. Gutschriften bleiben finanzielle Artefakte, und wiederkehrende Leistungszeiträume erscheinen nur dann, wenn die Ursprungsrechnung eine kanonische Abdeckung hatte.",
     "loadErrorPrefix": "Fehler beim Laden der Gutschriften:",
     "noDataReturned": "Vom Server wurden keine Daten zurückgegeben",
     "noCreditsFound": "Keine Gutschriften gefunden"
   },
   "reconciliation": {
-    "title": "Dashboard zur Gutschriftenabstimmung",
     "selectClient": "Kunden auswählen",
     "status": "Status",
     "allStatuses": "Alle Status",
     "fromDate": "Von Datum",
     "toDate": "Bis Datum",
-    "reconciliationReports": "Abstimmungsberichte",
-    "reconciliationReportsDescription": "Gutschrift-Saldoabweichungen anzeigen und verwalten",
     "validationResult": "Validierung abgeschlossen: {{balanceCount}} Saldoabweichungen und {{trackingCount}} Nachverfolgungsprobleme gefunden.",
     "tabs": {
       "all": "Alle",

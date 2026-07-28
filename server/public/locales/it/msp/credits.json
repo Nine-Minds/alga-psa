@@ -3,11 +3,7 @@
     "title": "Gestione crediti",
     "creditsOverview": "Panoramica crediti",
     "overviewDescription": "Gestisci i crediti e i trasferimenti del cliente",
-    "overviewDescriptionWithExpiration": "Gestisci i crediti del cliente, incluse le date di scadenza, e i trasferimenti",
-    "expirationSummary": "Riepilogo scadenza crediti",
-    "expirationSummaryDescription": "Panoramica dei crediti in scadenza a breve",
-    "usageTrends": "Andamenti di utilizzo dei crediti",
-    "usageTrendsDescription": "Andamento storico dell'utilizzo dei crediti"
+    "overviewDescriptionWithExpiration": "Gestisci i crediti del cliente, incluse le date di scadenza, e i trasferimenti"
   },
   "columns": {
     "creditId": "ID credito",
@@ -76,33 +72,6 @@
     "none": "Nessuno",
     "loadErrorPrefix": "Error loading credit expiration settings:"
   },
-  "charts": {
-    "expirationSummary": "Riepilogo scadenza crediti",
-    "expirationSummaryDescription": "Panoramica dei crediti in scadenza a breve",
-    "usageTrends": "Andamenti di utilizzo dei crediti",
-    "usageTrendsDescription": "Andamento storico dell'utilizzo dei crediti",
-    "lessThan7Days": "< 7 giorni",
-    "lessThan30Days": "< 30 giorni",
-    "lessThan90Days": "< 90 giorni",
-    "greaterThan90Days": "> 90 giorni",
-    "creditsIssued": "Crediti emessi",
-    "creditsApplied": "Crediti applicati",
-    "creditsExpired": "Crediti scaduti",
-    "statusDistribution": "Distribuzione per stato",
-    "statusDistributionDescription": "Panoramica degli stati dei report di riconciliazione",
-    "discrepancyTrends": "Andamenti degli scostamenti",
-    "discrepancyTrendsDescription": "Andamenti mensili degli scostamenti dei crediti",
-    "numberOfDiscrepancies": "Numero di scostamenti",
-    "totalAmount": "Importo totale",
-    "months": {
-      "jan": "Gen",
-      "feb": "feb",
-      "mar": "Mar",
-      "apr": "apr",
-      "may": "Mag",
-      "jun": "Giu"
-    }
-  },
   "stats": {
     "totalActiveCredits": "Totale crediti attivi",
     "expiringIn30Days": "In scadenza entro 30 giorni",
@@ -116,21 +85,16 @@
   },
   "management": {
     "title": "Gestione crediti",
-    "recentCredits": "Crediti recenti",
-    "recentCreditsDescription": "Visualizza e gestisci i crediti del cliente. I crediti restano artefatti finanziari e i periodi di servizio ricorrenti compaiono solo quando la fattura di origine aveva una copertura canonica.",
     "loadErrorPrefix": "Errore durante il caricamento dei crediti:",
     "noDataReturned": "Nessun dato restituito dal server",
     "noCreditsFound": "Nessun credito trovato"
   },
   "reconciliation": {
-    "title": "Dashboard di riconciliazione crediti",
     "selectClient": "Seleziona cliente",
     "status": "Stato",
     "allStatuses": "Tutti gli stati",
     "fromDate": "Data iniziale",
     "toDate": "Data finale",
-    "reconciliationReports": "Report di riconciliazione",
-    "reconciliationReportsDescription": "Visualizza e gestisci gli scostamenti del saldo crediti",
     "validationResult": "Validazione completata: trovati {{balanceCount}} scostamenti di saldo e {{trackingCount}} problemi di tracciamento.",
     "tabs": {
       "all": "Tutti",
