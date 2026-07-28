@@ -118,7 +118,6 @@
     "title": "Gestion des crédits",
     "recentCredits": "Crédits récents",
     "recentCreditsDescription": "Consultez et gérez les crédits de votre client. Les crédits restent des artefacts financiers, et les périodes de service récurrentes n'apparaissent que lorsque la facture source portait une couverture canonique.",
-    "addCreditPlaceholder": "Le formulaire du montant du crédit et des détails serait implémenté ici.",
     "loadErrorPrefix": "Erreur lors du chargement des crédits :",
     "noDataReturned": "Aucune donnée renvoyée par le serveur",
     "noCreditsFound": "Aucun crédit trouvé"

@@ -118,7 +118,6 @@
     "title": "Gestione crediti",
     "recentCredits": "Crediti recenti",
     "recentCreditsDescription": "Visualizza e gestisci i crediti del cliente. I crediti restano artefatti finanziari e i periodi di servizio ricorrenti compaiono solo quando la fattura di origine aveva una copertura canonica.",
-    "addCreditPlaceholder": "Il modulo per importo e dettagli del credito verrebbe implementato qui.",
     "loadErrorPrefix": "Errore durante il caricamento dei crediti:",
     "noDataReturned": "Nessun dato restituito dal server",
     "noCreditsFound": "Nessun credito trovato"

@@ -118,7 +118,6 @@
     "title": "Credit Management",
     "recentCredits": "Recent Credits",
     "recentCreditsDescription": "View and manage your client credits. Credits stay financial artifacts, and recurring service periods appear only when the source invoice carried canonical coverage.",
-    "addCreditPlaceholder": "Credit amount and details form would be implemented here.",
     "loadErrorPrefix": "Error loading credits:",
     "noDataReturned": "No data returned from server",
     "noCreditsFound": "No credits found"

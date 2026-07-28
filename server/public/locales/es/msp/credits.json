@@ -118,7 +118,6 @@
     "title": "Gestión de créditos",
     "recentCredits": "Créditos recientes",
     "recentCreditsDescription": "Consulta y gestiona los créditos de tu cliente. Los créditos siguen siendo artefactos financieros, y los periodos de servicio recurrentes solo aparecen cuando la factura de origen tenía cobertura canónica.",
-    "addCreditPlaceholder": "Aquí se implementaría el formulario del importe del crédito y sus detalles.",
     "loadErrorPrefix": "Error al cargar los créditos:",
     "noDataReturned": "El servidor no devolvió datos",
     "noCreditsFound": "No se encontraron créditos"

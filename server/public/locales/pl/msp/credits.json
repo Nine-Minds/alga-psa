@@ -118,7 +118,6 @@
     "title": "Zarządzanie kredytami",
     "recentCredits": "Ostatnie kredyty",
     "recentCreditsDescription": "Przeglądaj i zarządzaj kredytami klienta. Kredyty pozostają artefaktami finansowymi, a okresy usług cyklicznych pojawiają się tylko wtedy, gdy faktura źródłowa miała kanoniczny zakres.",
-    "addCreditPlaceholder": "Formularz kwoty kredytu i szczegółów zostałby zaimplementowany tutaj.",
     "loadErrorPrefix": "Błąd podczas ładowania kredytów:",
     "noDataReturned": "Serwer nie zwrócił danych",
     "noCreditsFound": "Nie znaleziono kredytów"
