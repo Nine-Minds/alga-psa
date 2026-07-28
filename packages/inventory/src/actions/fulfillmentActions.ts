@@ -27,6 +27,7 @@ import {
   timestampPayload,
 } from '../lib';
 import { createAndLinkDeliveredAsset, PendingAssetLink } from '../lib/assetLink';
+import { assertFulfillableSo } from '../lib/salesOrderState';
 
 async function requireSoPerm(user: any, action: 'create' | 'read' | 'update' | 'delete'): Promise<void> {
   if (!(await hasPermission(user, 'sales_order', action))) {
@@ -292,9 +293,7 @@ export const fulfillSalesOrderLine = withAuth(
         .forUpdate()
         .first()) as ISalesOrderLine | undefined;
       if (!line) throw new Error('Sales order line not found');
-      if (so.status === 'cancelled' || so.status === 'closed') {
-        throw new Error(`Cannot fulfill a ${so.status} sales order`);
-      }
+      assertFulfillableSo(so.status);
       if (line.fulfillment_type === 'drop_ship') {
         throw new Error('Drop-ship lines are fulfilled through the drop-ship receipt flow, not from stock');
       }

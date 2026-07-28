@@ -22,6 +22,7 @@ import {
 } from '@alga-psa/types';
 import { publishInventoryEvent, recordStockMovement, timestampPayload } from '../lib';
 import { resolveTenantCurrency } from '../lib';
+import { assertFulfillableSo, assertProcurableSo, assertReceivablePo } from '../lib/salesOrderState';
 
 export type InventoryActionError = ActionMessageError | ActionPermissionError;
 
@@ -59,7 +60,13 @@ function dropShipActionErrorFrom(error: unknown): InventoryActionError | null {
       case 'Sales order line is already fully fulfilled':
         return actionError('This sales order line is already fully fulfilled.');
       default:
-        if (error.message.startsWith('Shipment of ')) {
+        if (
+          error.message.startsWith('Shipment of ') ||
+          error.message.startsWith('Cannot fulfill a ') ||
+          error.message.startsWith('Cannot receive against a ') ||
+          error.message.startsWith('Cannot create purchase orders for a ') ||
+          error.message.startsWith('Drop-ship purchase order ')
+        ) {
           return actionError(error.message);
         }
     }
@@ -141,23 +148,53 @@ export const createDropShipForSoLine = withAuth(
     input: CreateDropShipForSoLineInput,
   ): Promise<CreateDropShipForSoLineResult> => {
     try {
-      await requireSoPerm(user, 'create');
+      // Raising a vendor commitment is a purchase-order act; the sales_order grant alone
+      // must not authorize it. (The sibling backorder path already requires this.)
+      await requireSoPerm(user, 'update');
+      if (!(await hasPermission(user, 'purchase_order', 'create'))) {
+        throw new Error('Permission denied: purchase_order create required');
+      }
       if (!input?.vendor_id) throw new Error('vendor_id is required');
 
       const { knex: db } = await createTenantKnex();
       const result = await withTransaction(db, async (trx: Knex.Transaction) => {
+        const lineProbe = (await trx('sales_order_lines')
+          .where({ tenant, so_line_id: soLineId })
+          .select('so_id')
+          .first()) as { so_id: string } | undefined;
+        if (!lineProbe) throw new Error('Sales order line not found');
+
+        // Canonical SO header → line lock order, so a concurrent create/confirm/cancel
+        // serializes instead of racing the duplicate check below.
+        const so = (await trx('sales_orders')
+          .where({ tenant, so_id: lineProbe.so_id })
+          .forUpdate()
+          .first()) as ISalesOrder | undefined;
+        if (!so) throw new Error('Sales order not found');
         const soLine = (await trx('sales_order_lines')
           .where({ tenant, so_line_id: soLineId })
+          .forUpdate()
           .first()) as ISalesOrderLine | undefined;
         if (!soLine) throw new Error('Sales order line not found');
         if (soLine.fulfillment_type !== 'drop_ship') {
           throw new Error('Sales order line is not a drop-ship line');
         }
+        assertProcurableSo(so.status);
 
-        const so = (await trx('sales_orders')
-          .where({ tenant, so_id: soLine.so_id })
-          .first()) as ISalesOrder | undefined;
-        if (!so) throw new Error('Sales order not found');
+        // One live vendor commitment per line. Without this a double-click or retry sends
+        // two POs for the same goods, and `source_so_line_id` carries only a non-unique
+        // index so nothing downstream would catch it.
+        const existingPo = (await trx('purchase_order_lines as pol')
+          .join('purchase_orders as po', function () {
+            this.on('po.po_id', '=', 'pol.po_id').andOn('po.tenant', '=', 'pol.tenant');
+          })
+          .where({ 'pol.tenant': tenant, 'pol.source_so_line_id': soLineId })
+          .whereNot('po.status', 'cancelled')
+          .select('po.po_number')
+          .first()) as { po_number: string } | undefined;
+        if (existingPo) {
+          throw new Error(`Drop-ship purchase order ${existingPo.po_number} already exists for this line`);
+        }
 
         const vendor = await trx('vendors').where({ tenant, vendor_id: input.vendor_id }).first();
         if (!vendor) throw new Error('Vendor not found');
@@ -310,6 +347,15 @@ export const confirmDropShipShipment = withAuth(
         .forUpdate()
         .first()) as IPurchaseOrderLine | undefined;
       if (!poLine) throw new Error('Drop-ship purchase order line not found');
+
+      // Validated under the locks, not from the probe reads: a shipment recorded against
+      // a cancelled order still creates delivered units and COGS, and leaves the header
+      // cancelled — the stock left the vendor but the order says it never happened.
+      assertFulfillableSo(so.status);
+      assertReceivablePo(po.status);
+      if (soLine.fulfillment_type !== 'drop_ship') {
+        throw new Error('Sales order line is not a drop-ship line');
+      }
 
       const settings = await trx('product_inventory_settings')
         .where({ tenant, service_id: soLine.service_id })
