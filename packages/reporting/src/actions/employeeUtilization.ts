@@ -56,9 +56,16 @@ function minutesToHours(value: unknown): number {
   return Math.round(((Number(value ?? 0) || 0) / 60) * 10) / 10;
 }
 
+/**
+ * Whole hours on purpose. This number assumes every week in the range looks
+ * like every other, so a tenth of an hour is precision it does not have —
+ * 40h/week over 90 days yields 514.3, while the same person's actual weekday
+ * count is 512. The `*` in the report already says "estimated"; a lone
+ * fractional figure beside exact schedule-derived ones says the opposite.
+ */
 export function proratedCapacityHours(maxWeeklyCapacity: number | null, rangeDays: number): number | null {
   if (maxWeeklyCapacity === null || !(maxWeeklyCapacity > 0)) return null;
-  return Math.round(((maxWeeklyCapacity * rangeDays) / 7) * 10) / 10;
+  return Math.round((maxWeeklyCapacity * rangeDays) / 7);
 }
 
 /**

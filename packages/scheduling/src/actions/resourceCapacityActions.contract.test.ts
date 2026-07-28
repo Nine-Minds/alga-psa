@@ -22,8 +22,8 @@ describe('resource capacity actions contract', () => {
   });
 
   it('gates reads and writes on the matching user permission', () => {
-    expect(section('getUserCapacity')).toContain("hasPermission(user, 'user', 'read', db)");
-    expect(section('updateUserCapacity')).toContain("hasPermission(user, 'user', 'update', db)");
+    expect(section('getUserCapacity')).toContain('mayRead(user, userId, db)');
+    expect(section('updateUserCapacity')).toContain('mayWrite(user, userId, db)');
   });
 
   it('validates the capacity before touching the database', () => {
@@ -55,8 +55,8 @@ describe('work schedule actions contract', () => {
   });
 
   it('gates reads and writes on the matching user permission', () => {
-    expect(section('getUserWorkSchedule')).toContain("hasPermission(user, 'user', 'read', db)");
-    expect(section('updateUserWorkSchedule')).toContain("hasPermission(user, 'user', 'update', db)");
+    expect(section('getUserWorkSchedule')).toContain('mayRead(user, userId, db)');
+    expect(section('updateUserWorkSchedule')).toContain('mayWrite(user, userId, db)');
   });
 
   it('replaces the whole week inside one transaction', () => {
@@ -76,5 +76,31 @@ describe('work schedule actions contract', () => {
     expect(parseAt).toBeGreaterThanOrEqual(0);
     expect(writeAt).toBeGreaterThan(parseAt);
     expect(update).toContain('workScheduleRejectionMessage(parsed.reason)');
+  });
+});
+
+describe('self-edit carve-out', () => {
+  it('lets a user edit their own hours without the user permission', () => {
+    // Self is checked first so the common path costs no permission lookup, and
+    // so a technician is not blocked on an admin to record their own shift.
+    expect(source).toContain(
+      "return user.user_id === userId || (await hasPermission(user, 'user', 'read', db));",
+    );
+    expect(source).toContain(
+      "return user.user_id === userId || (await hasPermission(user, 'user', 'update', db));",
+    );
+  });
+
+  it('still requires the permission for somebody else', () => {
+    // The carve-out is an OR on identity, never a replacement for the check:
+    // dropping hasPermission here would make every user editable by anyone.
+    expect(source).toContain("hasPermission(user, 'user', 'read', db)");
+    expect(source).toContain("hasPermission(user, 'user', 'update', db)");
+  });
+
+  it('reports the write right to the caller so the editor can hide itself', () => {
+    // Without this the UI can only discover a refusal by attempting a save.
+    expect(section('getUserCapacity')).toContain('canEdit: await mayWrite(user, userId, db)');
+    expect(section('getUserWorkSchedule')).toContain('canEdit: await mayWrite(user, userId, db)');
   });
 });

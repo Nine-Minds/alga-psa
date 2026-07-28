@@ -27,7 +27,7 @@ describe('UserDetails weekly capacity save flow', () => {
   });
 
   it('only writes capacity when it changed and surfaces a failed write', () => {
-    expect(handleSave).toContain('if (parsedCapacity.value !== savedCapacity) {');
+    expect(handleSave).toContain('parsedCapacity.value !== savedCapacity');
     expect(handleSave).toContain('await updateUserCapacity(user.user_id, parsedCapacity.value)');
     expect(handleSave).toContain('if (!capacityResult.success) {');
 
@@ -70,6 +70,21 @@ describe('UserDetails work schedule save flow', () => {
     // Weekends keep a real window; end_time > start_time is enforced in SQL.
     expect(defaults).toContain("startTime: '09:00'");
     expect(defaults).toContain("endTime: '17:00'");
+  });
+
+  it('hides the section, and skips both writes, when the viewer cannot save', () => {
+    // The server is the real gate; this keeps a reader (user:read without
+    // user:update) from filling in a form that is only refused on submit.
+    expect(source).toContain('{canEditCapacity && (');
+    expect(handleSave).toContain('if (canEditCapacity && parsedCapacity.value !== savedCapacity) {');
+    expect(handleSave).toContain('if (canEditCapacity && JSON.stringify(parsedSchedule.value)');
+  });
+
+  it('defaults the edit right closed until both loads confirm it', () => {
+    expect(source).toContain('useState(false)');
+    expect(source).toContain(
+      'Boolean(capacityResult.data?.canEdit) && Boolean(scheduleResult.data?.canEdit)',
+    );
   });
 
   it('labels the weekly capacity field as a fallback, not a second schedule', () => {

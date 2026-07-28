@@ -17,6 +17,7 @@ import { parseWorkSchedule, weeklyScheduledHours, type WorkScheduleDay } from '@
 import { useDrawer } from "@alga-psa/ui";
 import { Text, Flex } from '@radix-ui/themes';
 import { Input } from '@alga-psa/ui/components/Input';
+import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Switch } from '@alga-psa/ui/components/Switch';
 import { Card } from '@alga-psa/ui/components/Card';
@@ -69,6 +70,7 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
   const [savedCapacity, setSavedCapacity] = useState<number | null>(null);
   const [workSchedule, setWorkSchedule] = useState<WorkScheduleDay[]>([]);
   const [savedSchedule, setSavedSchedule] = useState<WorkScheduleDay[]>([]);
+  const [canEditCapacity, setCanEditCapacity] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { closeDrawer } = useDrawer();
@@ -196,6 +198,11 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
             setSavedSchedule(scheduleResult.data.days);
             setWorkSchedule(scheduleResult.data.days);
           }
+          // Both actions report the same right; either failing to load leaves
+          // this false, so the section stays hidden rather than half-usable.
+          setCanEditCapacity(
+            Boolean(capacityResult.data?.canEdit) && Boolean(scheduleResult.data?.canEdit),
+          );
         } catch (capacityErr) {
           console.error('Error fetching user capacity:', capacityErr);
         }
@@ -324,7 +331,7 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
           return;
         }
         if (result.user) {
-          if (parsedCapacity.value !== savedCapacity) {
+          if (canEditCapacity && parsedCapacity.value !== savedCapacity) {
             const capacityResult = await updateUserCapacity(user.user_id, parsedCapacity.value);
             if (!capacityResult.success) {
               toast.error(capacityResult.error || t('userDetails.messages.error.updateFailed'));
@@ -332,7 +339,7 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
             }
             setSavedCapacity(parsedCapacity.value);
           }
-          if (JSON.stringify(parsedSchedule.value) !== JSON.stringify(savedSchedule)) {
+          if (canEditCapacity && JSON.stringify(parsedSchedule.value) !== JSON.stringify(savedSchedule)) {
             const scheduleResult = await updateUserWorkSchedule(user.user_id, parsedSchedule.value);
             if (!scheduleResult.success) {
               toast.error(scheduleResult.error || t('userDetails.messages.error.updateFailed'));
@@ -473,6 +480,11 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
           />
         </div>
 
+        {/* Hidden outright rather than disabled when the viewer cannot save:
+            these two fields are one unit with one Save button, and a filled-in
+            form that is refused on submit is worse than an absent one. */}
+        {canEditCapacity && (
+        <>
         <div>
           <Text as="label" size="2" weight="medium" className="mb-2 block">
             {t('userDetails.fields.workSchedule.label')}
@@ -498,15 +510,13 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
                   );
                 return (
                   <div key={dayOfWeek} className="flex items-center gap-2">
-                    <label className="flex w-32 items-center gap-2 text-sm">
-                      <input
-                        id={`user-work-schedule-working-${dayOfWeek}`}
-                        type="checkbox"
-                        checked={day.isWorking}
-                        onChange={(e) => update({ isWorking: e.target.checked })}
-                      />
-                      {t(`userDetails.fields.workSchedule.days.${dayOfWeek}`)}
-                    </label>
+                    <Checkbox
+                      id={`user-work-schedule-working-${dayOfWeek}`}
+                      label={t(`userDetails.fields.workSchedule.days.${dayOfWeek}`)}
+                      checked={day.isWorking}
+                      onChange={(e) => update({ isWorking: e.target.checked })}
+                      containerClassName="w-32"
+                    />
                     <Input
                       id={`user-work-schedule-start-${dayOfWeek}`}
                       type="time"
@@ -564,6 +574,8 @@ const UserDetails: React.FC<UserDetailsProps> = ({ userId, onUpdate }) => {
             {t('userDetails.fields.weeklyCapacity.help')}
           </Text>
         </div>
+        </>
+        )}
 
         {/* Last Login Info */}
         {user?.last_login_at && (

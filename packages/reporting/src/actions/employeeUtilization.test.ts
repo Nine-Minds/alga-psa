@@ -23,9 +23,14 @@ describe('proratedCapacityHours', () => {
     expect(proratedCapacityHours(40, 7)).toBe(40);
   });
 
-  it('prorates the weekly capacity across a 30-day window', () => {
-    // 40 * 30 / 7 = 171.428..., rounded to one decimal
-    expect(proratedCapacityHours(40, 30)).toBe(171.4);
+  it('prorates the weekly capacity across a 30-day window, in whole hours', () => {
+    // 40 * 30 / 7 = 171.428...; the estimate is not precise to a tenth of an hour.
+    expect(proratedCapacityHours(40, 30)).toBe(171);
+  });
+
+  it('does not report a fraction for a range that is not whole weeks', () => {
+    // The case that showed up in the 90-day view: 40 * 90 / 7 = 514.285...
+    expect(proratedCapacityHours(40, 90)).toBe(514);
   });
 
   it('treats null and non-positive capacity as unset', () => {
@@ -141,7 +146,7 @@ describe('capacity resolution', () => {
       RANGE_END,
     );
 
-    // Real weekdays in the range, not 40 * 30 / 7 = 171.4.
+    // Real weekdays in the range, not 40 * 30 / 7 = 171.
     expect(report.byUser[0].capacityHours).toBe(168);
     expect(report.byUser[0].capacitySource).toBe('schedule');
   });
@@ -153,7 +158,7 @@ describe('capacity resolution', () => {
       RANGE_END,
     );
 
-    expect(report.byUser[0].capacityHours).toBe(171.4);
+    expect(report.byUser[0].capacityHours).toBe(171);
     expect(report.byUser[0].capacitySource).toBe('weekly');
   });
 

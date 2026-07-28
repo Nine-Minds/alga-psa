@@ -13,19 +13,40 @@ import {
 
 export interface UserCapacityResult {
   success: boolean;
-  data?: { userId: string; maxWeeklyCapacity: number | null };
+  data?: { userId: string; maxWeeklyCapacity: number | null; canEdit: boolean };
   error?: string;
 }
 
 export interface UserWorkScheduleResult {
   success: boolean;
-  data?: { userId: string; days: WorkScheduleDay[] };
+  data?: { userId: string; days: WorkScheduleDay[]; canEdit: boolean };
   error?: string;
 }
 
 function storedCapacity(value: unknown): number | null {
   const parsed = parseWeeklyCapacityHours(value);
   return parsed.ok ? parsed.value : null;
+}
+
+/**
+ * Own working hours are self-service; anyone else's needs the `user` permission.
+ *
+ * The self case is checked first and short-circuits, so the common path costs no
+ * permission lookup. Comparing user ids is safe without re-checking the tenant:
+ * `withAuth` resolves the caller inside one tenant and every query below is
+ * tenant-scoped, so a foreign id can never match.
+ *
+ * Note this lets someone edit the denominator of their own utilization figure.
+ * That is the point of self-service, but it means the report answers "against
+ * the hours they say they work", not "against hours a manager approved" —
+ * an approval trail would be a separate feature, not a stricter check here.
+ */
+async function mayRead(user: { user_id: string }, userId: string, db: Knex): Promise<boolean> {
+  return user.user_id === userId || (await hasPermission(user, 'user', 'read', db));
+}
+
+async function mayWrite(user: { user_id: string }, userId: string, db: Knex): Promise<boolean> {
+  return user.user_id === userId || (await hasPermission(user, 'user', 'update', db));
 }
 
 /**
@@ -38,7 +59,7 @@ export const getUserCapacity = withAuth(async (
 ): Promise<UserCapacityResult> => {
   try {
     const { knex: db } = await createTenantKnex();
-    if (!(await hasPermission(user, 'user', 'read', db))) {
+    if (!(await mayRead(user, userId, db))) {
       return { success: false, error: 'Insufficient permissions to view user capacity' };
     }
 
@@ -51,6 +72,10 @@ export const getUserCapacity = withAuth(async (
       data: {
         userId,
         maxWeeklyCapacity: row ? storedCapacity(row.max_weekly_capacity) : null,
+        // Returned so the editor can hide itself rather than fail on save: a
+        // reader without update rights would otherwise fill the form in and
+        // only learn it was refused afterwards.
+        canEdit: await mayWrite(user, userId, db),
       },
     };
   } catch (error) {
@@ -82,7 +107,7 @@ export const updateUserCapacity = withAuth(async (
     const capacity = parsed.value;
 
     const { knex: db } = await createTenantKnex();
-    if (!(await hasPermission(user, 'user', 'update', db))) {
+    if (!(await mayWrite(user, userId, db))) {
       return { success: false, error: 'Insufficient permissions to update user capacity' };
     }
 
@@ -105,7 +130,8 @@ export const updateUserCapacity = withAuth(async (
       }
     });
 
-    return { success: true, data: { userId, maxWeeklyCapacity: capacity } };
+    // The write just succeeded, so the caller demonstrably may edit.
+    return { success: true, data: { userId, maxWeeklyCapacity: capacity, canEdit: true } };
   } catch (error) {
     console.error('Error updating user capacity:', error);
     return { success: false, error: 'Failed to update user capacity' };
@@ -124,7 +150,7 @@ export const getUserWorkSchedule = withAuth(async (
 ): Promise<UserWorkScheduleResult> => {
   try {
     const { knex: db } = await createTenantKnex();
-    if (!(await hasPermission(user, 'user', 'read', db))) {
+    if (!(await mayRead(user, userId, db))) {
       return { success: false, error: 'Insufficient permissions to view work schedules' };
     }
 
@@ -143,6 +169,7 @@ export const getUserWorkSchedule = withAuth(async (
           startTime: String(row.start_time).slice(0, 5),
           endTime: String(row.end_time).slice(0, 5),
         })),
+        canEdit: await mayWrite(user, userId, db),
       },
     };
   } catch (error) {
@@ -172,7 +199,7 @@ export const updateUserWorkSchedule = withAuth(async (
     }
 
     const { knex: db } = await createTenantKnex();
-    if (!(await hasPermission(user, 'user', 'update', db))) {
+    if (!(await mayWrite(user, userId, db))) {
       return { success: false, error: 'Insufficient permissions to update work schedules' };
     }
 
@@ -197,7 +224,7 @@ export const updateUserWorkSchedule = withAuth(async (
       }
     });
 
-    return { success: true, data: { userId, days: parsed.value } };
+    return { success: true, data: { userId, days: parsed.value, canEdit: true } };
   } catch (error) {
     console.error('Error updating user work schedule:', error);
     return { success: false, error: 'Failed to update work schedule' };
