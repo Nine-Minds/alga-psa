@@ -1142,7 +1142,7 @@ export function BentoHero({
           </div>
         ) : null}
 
-        <div id={`${id}-description-section`} className="mt-3 border-t border-[rgb(var(--color-border-200))] pt-3">
+        <div id={`${id}-description-section`} className="mt-4">
           <div className="flex items-center gap-2 mb-1">
             <span className="text-[10px] font-semibold uppercase tracking-wider text-[rgb(var(--color-text-400))]">
               {t('fields.description', 'Description')}
