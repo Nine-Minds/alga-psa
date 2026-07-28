@@ -1489,7 +1489,6 @@
       "pausedHint": "De klok is gepauzeerd terwijl het ticket in een gepauzeerde status wacht."
     },
     "tiles": {
-      "request": "Verzoek",
       "openedBy": "Geopend door {{name}}",
       "showMore": "Meer weergeven",
       "showLess": "Minder weergeven",

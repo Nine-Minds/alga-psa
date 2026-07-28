@@ -1497,7 +1497,6 @@
       "pausedHint": "The clock is paused while the ticket waits in a paused status."
     },
     "tiles": {
-      "request": "Request",
       "openedBy": "Opened by {{name}}",
       "showMore": "Show more",
       "showLess": "Show less",

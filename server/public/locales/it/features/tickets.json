@@ -1489,7 +1489,6 @@
       "pausedHint": "Il contatore è in pausa mentre il ticket resta in uno stato sospeso."
     },
     "tiles": {
-      "request": "Richiesta",
       "openedBy": "Aperto da {{name}}",
       "showMore": "Mostra altro",
       "showLess": "Mostra meno",

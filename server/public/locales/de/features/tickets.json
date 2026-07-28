@@ -1489,7 +1489,6 @@
       "pausedHint": "Die Uhr ist pausiert, während das Ticket in einem pausierten Status wartet."
     },
     "tiles": {
-      "request": "Anfrage",
       "openedBy": "Geöffnet von {{name}}",
       "showMore": "Mehr anzeigen",
       "showLess": "Weniger anzeigen",
