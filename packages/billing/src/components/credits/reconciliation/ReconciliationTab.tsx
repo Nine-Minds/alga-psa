@@ -1,7 +1,6 @@
 'use client';
 
 import { useCallback, useEffect, useState } from 'react';
-import { Card, CardContent } from '@alga-psa/ui/components/Card';
 import { Button } from '@alga-psa/ui/components/Button';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
@@ -46,17 +45,6 @@ interface ReconciliationStats {
 interface ClientOption {
   id: string;
   name: string;
-}
-
-function StatCard({ label, value }: { label: string; value: string | number }) {
-  return (
-    <Card>
-      <CardContent className="p-4">
-        <p className="text-sm text-[rgb(var(--color-text-500))]">{label}</p>
-        <p className="text-2xl font-bold text-[rgb(var(--color-text-900))]">{value}</p>
-      </CardContent>
-    </Card>
-  );
 }
 
 export default function ReconciliationTab() {
@@ -141,9 +129,8 @@ export default function ReconciliationTab() {
           return;
         }
         toast.success(t('reconciliation.validationResult', {
-          balanceCount: result.balanceDiscrepancyCount,
-          trackingCount: result.missingTrackingCount + result.inconsistentTrackingCount,
-          defaultValue: 'Validation completed: Found {{balanceCount}} balance discrepancies and {{trackingCount}} tracking issues.',
+          count: result.balanceDiscrepancyCount + result.missingTrackingCount + result.inconsistentTrackingCount,
+          defaultValue: 'Reconciliation complete: {{count}} new issues found.',
         }));
       } else {
         const result = await scheduledCreditBalanceValidation();
@@ -186,16 +173,22 @@ export default function ReconciliationTab() {
     {
       title: t('columns.expectedBalance', { defaultValue: 'Expected Balance' }),
       dataIndex: 'expected_balance',
+      headerClassName: 'text-right',
+      cellClassName: 'text-right tabular-nums',
       render: (value: number) => formatCurrencyFromMinorUnits(value),
     },
     {
       title: t('columns.actualBalance', { defaultValue: 'Actual Balance' }),
       dataIndex: 'actual_balance',
+      headerClassName: 'text-right',
+      cellClassName: 'text-right tabular-nums',
       render: (value: number) => formatCurrencyFromMinorUnits(value),
     },
     {
       title: t('columns.discrepancy', { defaultValue: 'Discrepancy' }),
       dataIndex: 'difference',
+      headerClassName: 'text-right',
+      cellClassName: 'text-right tabular-nums',
       render: (value: number) => (
         <span className={value >= 0 ? 'text-[rgb(var(--color-primary-700))]' : 'text-[rgb(var(--color-destructive-600))]'}>
           {formatCurrencyFromMinorUnits(value)}
@@ -216,7 +209,6 @@ export default function ReconciliationTab() {
 
   const statusOptions = [
     { value: 'open', label: t('status.open', { defaultValue: 'Open' }) },
-    { value: 'in_review', label: t('status.inReview', { defaultValue: 'In Review' }) },
     { value: 'resolved', label: t('status.resolved', { defaultValue: 'Resolved' }) },
   ];
 
@@ -226,51 +218,39 @@ export default function ReconciliationTab() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex flex-wrap items-end gap-4">
-          <div>
-            <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
-              {t('reconciliation.selectClient', { defaultValue: 'Select Client' })}
-            </label>
-            <CustomSelect
-              id="reconciliation-client-filter"
-              options={clientOptions}
-              value={selectedClient || null}
-              onValueChange={(value) => {
-                setSelectedClient(value);
-                setPage(1);
-              }}
-              placeholder={t('reconciliation.allClients', { defaultValue: 'All Clients' })}
-              allowClear
-              className="w-64"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-[rgb(var(--color-text-700))] mb-1">
-              {t('reconciliation.status', { defaultValue: 'Status' })}
-            </label>
-            <CustomSelect
-              id="reconciliation-status-filter"
-              options={statusOptions}
-              value={selectedStatus || null}
-              onValueChange={(value) => {
-                setSelectedStatus(value as ReconciliationStatus | '');
-                setPage(1);
-              }}
-              placeholder={t('reconciliation.allStatuses', { defaultValue: 'All Statuses' })}
-              allowClear
-              className="w-48"
-            />
-          </div>
-          <Button
-            id="reconciliation-reset-filters-button"
-            variant="outline"
-            onClick={() => {
-              setSelectedClient('');
-              setSelectedStatus('');
+          <CustomSelect
+            id="reconciliation-client-filter"
+            options={clientOptions}
+            value={selectedClient || null}
+            onValueChange={(value) => {
+              setSelectedClient(value);
               setPage(1);
             }}
-          >
-            {t('actions.reset', { defaultValue: 'Reset' })}
-          </Button>
+            placeholder={t('reconciliation.allClients', { defaultValue: 'All Clients' })}
+            allowClear
+            className="w-64"
+          />
+          <CustomSelect
+            id="reconciliation-status-filter"
+            options={statusOptions}
+            value={selectedStatus || null}
+            onValueChange={(value) => {
+              setSelectedStatus(value as ReconciliationStatus | '');
+              setPage(1);
+            }}
+            placeholder={t('reconciliation.allStatuses', { defaultValue: 'All Statuses' })}
+            allowClear
+            className="w-48"
+          />
+          {stats && (
+            <p className="text-sm text-[rgb(var(--color-text-500))] pb-2">
+              <span className={stats.openCount > 0 ? 'font-medium text-[rgb(var(--color-destructive-600))]' : ''}>
+                {stats.openCount} {t('status.open', { defaultValue: 'Open' }).toLowerCase()}
+              </span>
+              {' · '}
+              {stats.resolvedCount} {t('status.resolved', { defaultValue: 'Resolved' }).toLowerCase()}
+            </p>
+          )}
         </div>
         <Button
           id="run-reconciliation-button"
@@ -279,32 +259,9 @@ export default function ReconciliationTab() {
         >
           {runningValidation
             ? t('actions.running', { defaultValue: 'Running...' })
-            : selectedClient
-              ? t('actions.runReconciliation', { defaultValue: 'Run Reconciliation' })
-              : t('actions.runReconciliationAllClients', { defaultValue: 'Run Reconciliation (All Clients)' })}
+            : t('actions.runReconciliation', { defaultValue: 'Run Reconciliation' })}
         </Button>
       </div>
-
-      {stats && (
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <StatCard
-            label={t('stats.openIssues', { defaultValue: 'Open Issues' })}
-            value={stats.openCount}
-          />
-          <StatCard
-            label={t('stats.inReviewCount', { defaultValue: 'In Review' })}
-            value={stats.inReviewCount}
-          />
-          <StatCard
-            label={t('stats.resolvedCount', { defaultValue: 'Resolved' })}
-            value={stats.resolvedCount}
-          />
-          <StatCard
-            label={t('stats.totalDiscrepancyAmount', { defaultValue: 'Total Discrepancy Amount' })}
-            value={formatCurrencyFromMinorUnits(stats.totalAmount)}
-          />
-        </div>
-      )}
 
       {loadError && (
         <Alert variant="destructive">

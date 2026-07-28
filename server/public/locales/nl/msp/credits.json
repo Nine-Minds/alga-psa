@@ -104,7 +104,7 @@
     "allStatuses": "Alle statussen",
     "fromDate": "Van datum",
     "toDate": "Tot datum",
-    "validationResult": "Validatie voltooid: {{balanceCount}} saldoafwijkingen en {{trackingCount}} traceringsproblemen gevonden.",
+    "validationResult": "Reconciliatie voltooid: {{count}} nieuwe problemen gevonden.",
     "tabs": {
       "all": "Alle",
       "open": "Openen",
@@ -115,9 +115,10 @@
     "validationCompletedAllClients": "Reconciliatie voltooid voor alle klanten.",
     "noReportsFound": "Geen reconciliatierapporten gevonden",
     "issueTypes": {
-      "missingCreditTrackingEntry": "Ontbrekende krediettrackingregel",
-      "inconsistentCreditRemainingAmount": "Inconsistent resterend kredietbedrag",
-      "balanceDiscrepancy": "Kredietsaldo-afwijking"
+      "missingCreditTrackingEntry": "Krediet niet geregistreerd",
+      "inconsistentCreditRemainingAmount": "Restant klopt niet",
+      "balanceDiscrepancy": "Saldo klopt niet",
+      "unknownIssue": "Onbekend probleem"
     },
     "sections": {
       "discrepancyDetails": "Details van de afwijking",
@@ -139,7 +140,8 @@
       "resolutionDate": "Oplossingsdatum",
       "resolutionNotes": "Oplossingsnotities",
       "date": "Datum",
-      "amount": "Bedrag"
+      "amount": "Bedrag",
+      "resolvedBy": "Opgelost door"
     },
     "errors": {
       "loadFailed": "Reconciliatierapporten konden niet worden geladen. Vernieuw en probeer opnieuw.",
@@ -262,15 +264,15 @@
       "applying": "Toepassen..."
     },
     "descriptions": {
-      "missingTrackingRecommended": "Maak de ontbrekende krediettrackingregel aan zodat de transactie in het trackingregister wordt weergegeven.",
-      "inconsistentRemainingRecommended": "Werk het bijgehouden resterende bedrag bij zodat het overeenkomt met het verwachte saldo na toepassingen.",
-      "genericRecommended": "Pas de aanbevolen correctie toe om de saldi weer in lijn te brengen.",
-      "genericCustom": "Voer een aangepaste correctie in als een handmatige correctie nodig is.",
-      "createTrackingEntry": "Hiermee wordt een nieuwe krediettrackingregel voor de transactie aangemaakt.",
-      "updateRemainingAmount": "Hiermee wordt het resterende bedrag in de krediettrackingregel bijgewerkt.",
-      "applyAdjustment": "Hiermee wordt een kredietcorrectietransactie aangemaakt om het saldo te corrigeren.",
-      "customAdjustment": "Hiermee wordt een aangepaste kredietcorrectietransactie aangemaakt.",
-      "noAction": "Hiermee wordt de afwijking als opgelost gemarkeerd zonder wijzigingen aan te brengen."
+      "missingTrackingRecommended": "Voegt het ontbrekende kredietrecord toe zodat deze transactie meetelt voor het saldo.",
+      "inconsistentRemainingRecommended": "Stelt het gevolgde restant in zodat het overeenkomt met het verwachte saldo.",
+      "genericRecommended": "Past de aanbevolen correctie toe.",
+      "genericCustom": "Voer een handmatig correctiebedrag in.",
+      "createTrackingEntry": "Voegt het ontbrekende kredietrecord voor deze transactie toe.",
+      "updateRemainingAmount": "Stelt het restant in op het verwachte saldo.",
+      "applyAdjustment": "Boekt een kredietcorrectie om het saldo te corrigeren.",
+      "customAdjustment": "Boekt een aangepaste kredietcorrectie.",
+      "noAction": "Markeert dit als opgelost. Geen saldowijziging."
     },
     "dialog": {
       "adjustmentAmount": "Correctiebedrag",

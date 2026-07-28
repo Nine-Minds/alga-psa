@@ -104,7 +104,7 @@
     "allStatuses": "Tous les statuts",
     "fromDate": "Date de début",
     "toDate": "Date de fin",
-    "validationResult": "Le contrôle est terminé : {{balanceCount}} écarts de solde et {{trackingCount}} problèmes de suivi ont été trouvés.",
+    "validationResult": "Rapprochement terminé : {{count}} nouveaux problèmes trouvés.",
     "tabs": {
       "all": "Tous",
       "open": "Ouvert",
@@ -115,9 +115,10 @@
     "validationCompletedAllClients": "Rapprochement terminé pour tous les clients.",
     "noReportsFound": "Aucun rapport de rapprochement trouvé",
     "issueTypes": {
-      "missingCreditTrackingEntry": "Entrée de suivi de crédit manquante",
-      "inconsistentCreditRemainingAmount": "Montant restant de crédit incohérent",
-      "balanceDiscrepancy": "Écart de solde de crédit"
+      "missingCreditTrackingEntry": "Crédit non enregistré",
+      "inconsistentCreditRemainingAmount": "Le montant restant ne correspond pas",
+      "balanceDiscrepancy": "Le solde ne correspond pas",
+      "unknownIssue": "Problème inconnu"
     },
     "sections": {
       "discrepancyDetails": "Détails de l'écart",
@@ -139,7 +140,8 @@
       "resolutionDate": "Date de résolution",
       "resolutionNotes": "Notes de résolution",
       "date": "Date",
-      "amount": "Montant"
+      "amount": "Montant",
+      "resolvedBy": "Résolu par"
     },
     "errors": {
       "loadFailed": "Impossible de charger les rapports de rapprochement. Veuillez actualiser et réessayer.",
@@ -262,15 +264,15 @@
       "applying": "Application..."
     },
     "descriptions": {
-      "missingTrackingRecommended": "Créez l'entrée de suivi de crédit manquante afin que la transaction figure dans le registre de suivi.",
-      "inconsistentRemainingRecommended": "Mettez à jour le montant restant suivi pour qu'il corresponde au solde attendu après applications.",
-      "genericRecommended": "Appliquez la correction recommandée pour réaligner les soldes.",
-      "genericCustom": "Saisissez un ajustement personnalisé si une correction manuelle est nécessaire.",
-      "createTrackingEntry": "Cela créera une nouvelle entrée de suivi de crédit pour la transaction.",
-      "updateRemainingAmount": "Cela mettra à jour le montant restant dans l'entrée de suivi de crédit.",
-      "applyAdjustment": "Cela créera une transaction d'ajustement de crédit pour corriger le solde.",
-      "customAdjustment": "Cela créera une transaction d'ajustement de crédit personnalisée.",
-      "noAction": "Cela marquera l'écart comme résolu sans effectuer de modifications."
+      "missingTrackingRecommended": "Ajoute l'enregistrement de crédit manquant pour que cette transaction compte dans le solde.",
+      "inconsistentRemainingRecommended": "Définit le montant restant suivi pour correspondre au solde attendu.",
+      "genericRecommended": "Applique la correction recommandée.",
+      "genericCustom": "Saisissez un montant de correction manuel.",
+      "createTrackingEntry": "Ajoute l'enregistrement de crédit manquant pour cette transaction.",
+      "updateRemainingAmount": "Définit le montant restant sur le solde attendu.",
+      "applyAdjustment": "Comptabilise un ajustement de crédit pour corriger le solde.",
+      "customAdjustment": "Comptabilise un ajustement de crédit personnalisé.",
+      "noAction": "Marque ceci comme résolu. Aucun changement de solde."
     },
     "dialog": {
       "adjustmentAmount": "Montant de l'ajustement",

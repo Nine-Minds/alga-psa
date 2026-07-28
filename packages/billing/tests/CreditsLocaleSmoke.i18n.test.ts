@@ -127,7 +127,7 @@ describe('Credits locale smoke and parity contract', () => {
     }
 
     expect(getLeaf(xx, 'reconciliation.validationResult')).toBe(
-      '11111 {{balanceCount}} 11111 {{trackingCount}} 11111',
+      '11111 {{count}} 11111',
     );
     expect(getLeaf(xx, 'expiration.creditsAppliedToInvoice')).toBe(
       '11111 {{amount}} 11111',

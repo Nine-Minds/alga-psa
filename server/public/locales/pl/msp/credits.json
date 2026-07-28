@@ -104,7 +104,7 @@
     "allStatuses": "Wszystkie statusy",
     "fromDate": "Data od",
     "toDate": "Data do",
-    "validationResult": "Walidacja zakończona: znaleziono {{balanceCount}} rozbieżności salda i {{trackingCount}} problemów śledzenia.",
+    "validationResult": "Uzgadnianie zakończone: znaleziono {{count}} nowe problemy.",
     "tabs": {
       "all": "Wszystkie",
       "open": "Otwarte",
@@ -115,9 +115,10 @@
     "validationCompletedAllClients": "Uzgodnienie zakończone dla wszystkich klientów.",
     "noReportsFound": "Nie znaleziono raportów uzgodnień",
     "issueTypes": {
-      "missingCreditTrackingEntry": "Brakujący wpis śledzenia kredytu",
-      "inconsistentCreditRemainingAmount": "Niespójna pozostała kwota kredytu",
-      "balanceDiscrepancy": "Rozbieżność salda kredytu"
+      "missingCreditTrackingEntry": "Kredyt nie zarejestrowany",
+      "inconsistentCreditRemainingAmount": "Pozostała kwota nie zgadza się",
+      "balanceDiscrepancy": "Saldo nie zgadza się",
+      "unknownIssue": "Nieznany problem"
     },
     "sections": {
       "discrepancyDetails": "Szczegóły rozbieżności",
@@ -139,7 +140,8 @@
       "resolutionDate": "Data rozwiązania",
       "resolutionNotes": "Notatki dotyczące rozwiązania",
       "date": "Data",
-      "amount": "Kwota"
+      "amount": "Kwota",
+      "resolvedBy": "Rozwiązane przez"
     },
     "errors": {
       "loadFailed": "Nie udało się załadować raportów uzgodnień. Odśwież stronę i spróbuj ponownie.",
@@ -262,15 +264,15 @@
       "applying": "Stosowanie..."
     },
     "descriptions": {
-      "missingTrackingRecommended": "Utwórz brakujący wpis śledzenia kredytu, aby transakcja była odzwierciedlona w rejestrze śledzenia.",
-      "inconsistentRemainingRecommended": "Zaktualizuj śledzoną pozostałą kwotę, aby odpowiadała oczekiwanemu saldu po zastosowaniach.",
-      "genericRecommended": "Zastosuj zalecaną korektę, aby ponownie wyrównać salda.",
-      "genericCustom": "Wprowadź korektę niestandardową, jeśli wymagana jest ręczna poprawka.",
-      "createTrackingEntry": "Spowoduje to utworzenie nowego wpisu śledzenia kredytu dla transakcji.",
-      "updateRemainingAmount": "Spowoduje to aktualizację pozostałej kwoty we wpisie śledzenia kredytu.",
-      "applyAdjustment": "Spowoduje to utworzenie transakcji korekty kredytu w celu poprawienia salda.",
-      "customAdjustment": "Spowoduje to utworzenie niestandardowej transakcji korekty kredytu.",
-      "noAction": "Spowoduje to oznaczenie rozbieżności jako rozwiązanej bez wprowadzania zmian."
+      "missingTrackingRecommended": "Dodaje brakujący zapis kredytu, aby ta transakcja liczyła się do salda.",
+      "inconsistentRemainingRecommended": "Ustawia śledzoną pozostałą kwotę zgodnie z oczekiwanym saldem.",
+      "genericRecommended": "Stosuje zalecaną korektę.",
+      "genericCustom": "Wprowadź ręczną kwotę korekty.",
+      "createTrackingEntry": "Dodaje brakujący zapis kredytu dla tej transakcji.",
+      "updateRemainingAmount": "Ustawia pozostałą kwotę na oczekiwane saldo.",
+      "applyAdjustment": "Księguje korektę kredytu w celu wyrównania salda.",
+      "customAdjustment": "Księguje niestandardową korektę kredytu.",
+      "noAction": "Oznacza jako rozwiązane. Bez zmiany salda."
     },
     "dialog": {
       "adjustmentAmount": "Kwota korekty",
