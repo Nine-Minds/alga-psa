@@ -20,7 +20,8 @@
     "select": "Seleccionar"
   },
   "filters": {
-    "allClients": "Todos los clientes"
+    "allClients": "Todos los clientes",
+    "allStatuses": "Todos los estados"
   },
   "status": {
     "active": "Activo",
@@ -112,7 +113,9 @@
     "invoice": "Factura",
     "transactions": "Transacciones relacionadas",
     "transactionType": "Tipo",
-    "noTransactions": "No se encontraron transacciones relacionadas."
+    "noTransactions": "No se encontraron transacciones relacionadas.",
+    "date": "Fecha",
+    "amount": "Importe"
   },
   "expireDialog": {
     "title": "Vencer crédito",

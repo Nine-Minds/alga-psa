@@ -20,7 +20,8 @@
     "select": "Wybierz"
   },
   "filters": {
-    "allClients": "Wszyscy klienci"
+    "allClients": "Wszyscy klienci",
+    "allStatuses": "Wszystkie statusy"
   },
   "status": {
     "active": "Aktywny",
@@ -114,7 +115,9 @@
     "invoice": "Faktura",
     "transactions": "Powiązane transakcje",
     "transactionType": "Typ",
-    "noTransactions": "Nie znaleziono powiązanych transakcji."
+    "noTransactions": "Nie znaleziono powiązanych transakcji.",
+    "date": "Data",
+    "amount": "Kwota"
   },
   "expireDialog": {
     "title": "Wygasź kredyt",

@@ -20,7 +20,8 @@
     "select": "Auswählen"
   },
   "filters": {
-    "allClients": "Alle Kunden"
+    "allClients": "Alle Kunden",
+    "allStatuses": "Alle Status"
   },
   "status": {
     "active": "Aktiv",
@@ -112,7 +113,9 @@
     "invoice": "Rechnung",
     "transactions": "Zugehörige Transaktionen",
     "transactionType": "Typ",
-    "noTransactions": "Keine zugehörigen Transaktionen gefunden."
+    "noTransactions": "Keine zugehörigen Transaktionen gefunden.",
+    "date": "Datum",
+    "amount": "Betrag"
   },
   "expireDialog": {
     "title": "Kredit verfallen lassen",

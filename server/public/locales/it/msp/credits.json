@@ -20,7 +20,8 @@
     "select": "Seleziona"
   },
   "filters": {
-    "allClients": "Tutti i clienti"
+    "allClients": "Tutti i clienti",
+    "allStatuses": "Tutti gli stati"
   },
   "status": {
     "active": "Attivo",
@@ -112,7 +113,9 @@
     "invoice": "Fattura",
     "transactions": "Transazioni correlate",
     "transactionType": "Tipo",
-    "noTransactions": "Nessuna transazione correlata trovata."
+    "noTransactions": "Nessuna transazione correlata trovata.",
+    "date": "Data",
+    "amount": "Importo"
   },
   "expireDialog": {
     "title": "Scadi credito",

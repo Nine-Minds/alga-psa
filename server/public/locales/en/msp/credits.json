@@ -20,7 +20,8 @@
     "select": "Select"
   },
   "filters": {
-    "allClients": "All Clients"
+    "allClients": "All Clients",
+    "allStatuses": "All Statuses"
   },
   "status": {
     "active": "Active",
@@ -137,7 +138,9 @@
     "invoice": "Invoice",
     "transactions": "Related Transactions",
     "transactionType": "Type",
-    "noTransactions": "No related transactions found."
+    "noTransactions": "No related transactions found.",
+    "date": "Date",
+    "amount": "Amount"
   },
   "expireDialog": {
     "title": "Expire Credit",

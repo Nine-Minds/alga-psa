@@ -1604,6 +1604,13 @@ export const transferCredit = withAuth(async (
             throw new Error(`Target client with ID ${targetClientId} not found`);
         }
 
+        // Credits never change currency: the target client must bill in the
+        // same currency as the source credit.
+        const transferCurrency = sourceCredit.currency_code || 'USD';
+        if ((targetClient.default_currency_code || 'USD') !== transferCurrency) {
+            throw new Error('Credits cannot mix currencies: the target client uses a different currency');
+        }
+
         const now = new Date().toISOString();
         const sourceCreditTransaction = await tenantScopedTable(trx, tenant, 'transactions')
             .where({
@@ -1642,6 +1649,7 @@ export const transferCredit = withAuth(async (
             created_at: now,
             tenant,
             related_transaction_id: sourceCredit.transaction_id,
+            currency_code: transferCurrency,
             metadata: {
                 transfer_to: targetClientId,
                 transfer_reason: reason || 'Administrative transfer',
@@ -1664,6 +1672,7 @@ export const transferCredit = withAuth(async (
             description: reason || `Credit transferred from client ${sourceCredit.client_id}`,
             created_at: now,
             tenant,
+            currency_code: transferCurrency,
             metadata: {
                 transfer_from: sourceCredit.client_id,
                 transfer_reason: reason || 'Administrative transfer',
@@ -1689,7 +1698,8 @@ export const transferCredit = withAuth(async (
             created_at: now,
             expiration_date: sourceCredit.expiration_date,
             is_expired: false,
-            updated_at: now
+            updated_at: now,
+            currency_code: transferCurrency
         }).returning('*');
 
         // 7. Create audit logs

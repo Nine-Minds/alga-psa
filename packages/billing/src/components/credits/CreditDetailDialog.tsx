@@ -63,6 +63,7 @@ export default function CreditDetailDialog({ creditId, clientName, onClose }: Cr
   }, [creditId, t]);
 
   const credit = detail?.credit;
+  const creditCurrency = credit?.currency_code || 'USD';
 
   return (
     <Dialog isOpen={Boolean(creditId)} onClose={onClose}>
@@ -98,11 +99,11 @@ export default function CreditDetailDialog({ creditId, clientName, onClose }: Cr
               />
               <DetailField
                 label={t('columns.originalAmount', { defaultValue: 'Original Amount' })}
-                value={formatCurrencyFromMinorUnits(Number(credit.amount))}
+                value={formatCurrencyFromMinorUnits(Number(credit.amount), undefined, creditCurrency)}
               />
               <DetailField
                 label={t('columns.remaining', { defaultValue: 'Remaining' })}
-                value={formatCurrencyFromMinorUnits(Number(credit.remaining_amount))}
+                value={formatCurrencyFromMinorUnits(Number(credit.remaining_amount), undefined, creditCurrency)}
               />
               <DetailField
                 label={t('columns.created', { defaultValue: 'Created' })}
@@ -141,8 +142,8 @@ export default function CreditDetailDialog({ creditId, clientName, onClose }: Cr
                   <thead>
                     <tr className="border-b border-[rgb(var(--color-border-200))] text-left">
                       <th className="px-2 py-1">{t('viewDialog.transactionType', { defaultValue: 'Type' })}</th>
-                      <th className="px-2 py-1">{t('reconciliation.fields.date', { defaultValue: 'Date' })}</th>
-                      <th className="px-2 py-1 text-right">{t('reconciliation.fields.amount', { defaultValue: 'Amount' })}</th>
+                      <th className="px-2 py-1">{t('viewDialog.date', { defaultValue: 'Date' })}</th>
+                      <th className="px-2 py-1 text-right">{t('viewDialog.amount', { defaultValue: 'Amount' })}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -150,7 +151,7 @@ export default function CreditDetailDialog({ creditId, clientName, onClose }: Cr
                       <tr key={tx.transaction_id} className="border-b border-[rgb(var(--color-border-200))]">
                         <td className="px-2 py-1">{tx.description || tx.type}</td>
                         <td className="px-2 py-1">{formatDateOnly(new Date(tx.created_at))}</td>
-                        <td className="px-2 py-1 text-right">{formatCurrencyFromMinorUnits(Number(tx.amount))}</td>
+                        <td className="px-2 py-1 text-right">{formatCurrencyFromMinorUnits(Number(tx.amount), undefined, creditCurrency)}</td>
                       </tr>
                     ))}
                   </tbody>
