@@ -258,7 +258,9 @@
         "hourlyRate": "{{value}}/u",
         "ticketWithNumber": "#{{number}} {{title}}",
         "billableHours": "{{value}} factureerbare uren",
-        "listSeparator": ", "
+        "listSeparator": ", ",
+        "attributionUncosted": "{{attribution}} (zonder kostentarief)",
+        "unassignedLine": "{{line}} (niet toegewezen)"
       },
       "errors": {
         "load": "Winstgevendheidsgegevens konden niet worden geladen",
@@ -308,7 +310,8 @@
         "costRates": "Er zijn geen kostentarieven geconfigureerd. Arbeidsuren worden zonder kostentarief weergegeven totdat er een tenantstandaard of gebruikerstarief bestaat.",
         "clients": "Geen winstgevendheidsgegevens per klant beschikbaar voor deze periode.",
         "lines": "Geen detailgegevens op regelniveau voor deze rij.",
-        "tickets": "Geen winstgevendheidsgegevens per ticket beschikbaar voor deze selectie."
+        "tickets": "Geen winstgevendheidsgegevens per ticket beschikbaar voor deze selectie.",
+        "agreements": "Geen winstgevendheidsgegevens per contract beschikbaar voor deze selectie."
       },
       "warnings": {
         "title": "Rapportwaarschuwingen",
@@ -340,6 +343,14 @@
       },
       "fallbacks": {
         "untitledTicket": "Ticket zonder titel"
+      },
+      "print": {
+        "dateRange": "{{start}} tot {{end}}",
+        "client": "Klant",
+        "allClients": "Alle klanten",
+        "agreement": "Contract",
+        "allAgreements": "Alle contracten",
+        "currency": "Valuta"
       }
     }
   },

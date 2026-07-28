@@ -2,6 +2,7 @@
   "common": {
     "actions": "Azioni",
     "active": "Attivo",
+    "allTime": "Tutto il periodo",
     "cancel": "Annulla",
     "clear": "Cancella",
     "close": "Chiudi",
@@ -14,6 +15,7 @@
     "inactive": "Inattivo",
     "loading": "Caricamento…",
     "name": "Nome",
+    "period": "Periodo",
     "quantity": "Quantità",
     "refresh": "Aggiorna",
     "refreshing": "Aggiornamento…",
@@ -28,6 +30,7 @@
     "search": "Cerca",
     "status": "Stato",
     "to": "A",
+    "today": "Oggi",
     "total": "Totale",
     "unknown": "Sconosciuto"
   },
@@ -432,6 +435,7 @@
     "candidateCapNote": " (mostrati i primi {{cap}})",
     "candidateCount": "{{count}} candidato fantasma",
     "candidateCountPlural": "{{count}} candidati fantasma",
+    "candidatesTitle": "Candidati fantasma",
     "columns": {
       "aiVerdict": "Verdetto AI",
       "assignedTo": "Assegnato a",

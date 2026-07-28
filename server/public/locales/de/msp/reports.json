@@ -258,7 +258,9 @@
         "hourlyRate": "{{value}}/Std.",
         "ticketWithNumber": "#{{number}} {{title}}",
         "billableHours": "{{value}} abrechenbare Std.",
-        "listSeparator": ", "
+        "listSeparator": ", ",
+        "attributionUncosted": "{{attribution}} (ohne Kostensatz)",
+        "unassignedLine": "{{line}} (nicht zugewiesen)"
       },
       "errors": {
         "load": "Rentabilitätsdaten konnten nicht geladen werden",
@@ -308,7 +310,8 @@
         "costRates": "Es sind keine Kostensätze konfiguriert. Arbeitsstunden werden als ohne Kostensatz angezeigt, bis ein Mandantenstandard oder ein Benutzersatz vorhanden ist.",
         "clients": "Für diesen Zeitraum sind keine Kunden-Rentabilitätsdaten verfügbar.",
         "lines": "Keine Details auf Positionsebene für diese Zeile.",
-        "tickets": "Für diese Auswahl sind keine Ticket-Rentabilitätsdaten verfügbar."
+        "tickets": "Für diese Auswahl sind keine Ticket-Rentabilitätsdaten verfügbar.",
+        "agreements": "Für diese Auswahl sind keine Vertrags-Rentabilitätsdaten verfügbar."
       },
       "warnings": {
         "title": "Berichtswarnungen",
@@ -340,6 +343,14 @@
       },
       "fallbacks": {
         "untitledTicket": "Ticket ohne Titel"
+      },
+      "print": {
+        "dateRange": "{{start}} bis {{end}}",
+        "client": "Kunde",
+        "allClients": "Alle Kunden",
+        "agreement": "Vertrag",
+        "allAgreements": "Alle Verträge",
+        "currency": "Währung"
       }
     }
   },

@@ -258,7 +258,9 @@
         "hourlyRate": "{{value}}/h",
         "ticketWithNumber": "#{{number}} {{title}}",
         "billableHours": "{{value}} h facturables",
-        "listSeparator": ", "
+        "listSeparator": ", ",
+        "attributionUncosted": "{{attribution}} (non valorisé)",
+        "unassignedLine": "{{line}} (non assigné)"
       },
       "errors": {
         "load": "Impossible de charger les données de rentabilité",
@@ -308,7 +310,8 @@
         "costRates": "Les taux de coût ne sont pas configurés. Les heures de main-d'œuvre apparaissent comme non valorisées tant qu'aucun taux par défaut du locataire ou taux utilisateur n'existe.",
         "clients": "Aucune donnée de rentabilité client disponible pour cette période.",
         "lines": "Aucun détail par ligne de contrat pour cette entrée.",
-        "tickets": "Aucune donnée de rentabilité des tickets disponible pour cette sélection."
+        "tickets": "Aucune donnée de rentabilité des tickets disponible pour cette sélection.",
+        "agreements": "Aucune donnée de rentabilité par contrat disponible pour cette sélection."
       },
       "warnings": {
         "title": "Avertissements du rapport",
@@ -340,6 +343,14 @@
       },
       "fallbacks": {
         "untitledTicket": "Ticket sans titre"
+      },
+      "print": {
+        "dateRange": "Du {{start}} au {{end}}",
+        "client": "Client",
+        "allClients": "Tous les clients",
+        "agreement": "Contrat",
+        "allAgreements": "Tous les contrats",
+        "currency": "Devise"
       }
     }
   },

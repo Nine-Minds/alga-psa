@@ -277,6 +277,7 @@
   },
   "dashboard": {
     "loadingInsights": "Chargement des indicateurs d'enquête...",
+    "printTitle": "Tableau de bord des enquêtes",
     "responseMetrics": {
       "cards": {
         "sent": "Invitations envoyées",
@@ -422,6 +423,43 @@
     },
     "fallbacks": {
       "none": "-"
+    }
+  },
+  "print": {
+    "emptyValue": "—",
+    "columns": {
+      "date": "Date",
+      "averageRating": "Note moyenne",
+      "responses": "Réponses",
+      "rating": "Note",
+      "share": "Part",
+      "ticket": "Ticket",
+      "client": "Client",
+      "contact": "Contact",
+      "agent": "Agent",
+      "technician": "Technicien",
+      "submitted": "Soumis le",
+      "comment": "Commentaire"
+    },
+    "metrics": {
+      "averageRating": "Note moyenne",
+      "invitations": "Invitations",
+      "outstanding": "En attente",
+      "recentNegative": "Négatives récentes",
+      "responseRate": "Taux de réponse",
+      "responses": "Réponses"
+    },
+    "sections": {
+      "trend": "Tendance des réponses",
+      "distribution": "Répartition de la satisfaction",
+      "topIssues": "Principaux problèmes",
+      "recentResponses": "Réponses récentes"
+    },
+    "empty": {
+      "trend": "Aucune réponse sur cette période.",
+      "distribution": "Aucune réponse notée sur cette période.",
+      "topIssues": "Aucune réponse négative sur cette période.",
+      "recentResponses": "Aucune réponse sur cette période."
     }
   }
 }
