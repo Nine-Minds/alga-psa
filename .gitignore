@@ -231,3 +231,6 @@ server/secrets-playwright/
 
 # build memory harness artifacts
 .build-mem/
+
+# pi subagent artifacts (never commit)
+.pi-subagents/
