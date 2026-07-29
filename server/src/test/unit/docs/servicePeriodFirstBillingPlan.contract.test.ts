@@ -63,10 +63,6 @@ const portalDashboardSource = fs.readFileSync(
   path.join(repoRoot, 'packages', 'client-portal', 'src', 'actions', 'client-portal-actions', 'dashboard.ts'),
   'utf8'
 );
-const reconciliationReportActionsSource = fs.readFileSync(
-  path.join(repoRoot, 'packages', 'reporting', 'src', 'actions', 'reconciliationReportActions.ts'),
-  'utf8'
-);
 const financialServiceSource = fs.readFileSync(
   path.join(repoRoot, 'server', 'src', 'lib', 'api', 'services', 'FinancialService.ts'),
   'utf8'
@@ -161,7 +157,6 @@ const servicePeriodPostInventoryRefs = new Set([
   'server/test-utils/billingTestHelpers.ts',
   'server/src/test/infrastructure/billing/invoices/clientBillingCycleAnchors.test.ts',
   'server/src/test/integration/api/invoiceService.recurringCoexistence.integration.test.ts',
-  'server/src/test/integration/billing/creditReconciliation.integration.test.ts',
   'server/src/test/integration/contractWizard.integration.test.ts',
   // P0 journey suites (tests/p0_journeys) landed after the pass-0 snapshot and
   // assert persisted service-period columns on generated invoices.
@@ -193,6 +188,13 @@ const servicePeriodPostInventoryRefs = new Set([
 // accurate record of its point in time.
 const servicePeriodPostInventoryRemovals = new Set([
   'packages/billing/tests/invoiceQueries.recurringDetailRefresh.wiring.test.ts',
+  // Deleted with the credit-reconciliation subsystem (credit balance is now
+  // derived from the ledger, so the reconciliation feature and its orphaned
+  // dashboard UI are gone).
+  'packages/billing/src/actions/creditReconciliationActions.ts',
+  'packages/billing/src/components/billing-dashboard/CreditManagement.tsx',
+  'packages/reporting/src/actions/reconciliationReportActions.servicePeriods.test.ts',
+  'server/src/test/unit/billing/creditReconciliation.servicePeriods.test.ts',
 ]);
 
 describe('service-period-first billing plan artifacts', () => {
@@ -952,15 +954,12 @@ describe('service-period-first billing plan artifacts', () => {
     expect(reportingDateBasis).toContain('transactions.created_at');
   });
 
-  it('T222: contract revenue, expiration, and reconciliation families use the documented date basis', () => {
+  it('T222: contract revenue and expiration families use the documented date basis', () => {
     expect(reportingDateBasis).toContain('| Contract revenue reporting |');
     expect(reportingDateBasis).toContain('`invoice_charge_details.service_period_end` when canonical recurring detail rows exist');
     expect(reportingDateBasis).toContain('| Contract expiration and renewal-decision reporting |');
     expect(reportingDateBasis).toContain('`client_contracts.end_date` and renewal `decision_due_date`');
-    expect(reportingDateBasis).toContain('| Credit reconciliation and discrepancy reporting |');
-    expect(reportingDateBasis).toContain('`credit_reconciliation_reports.detection_date`');
     expect(contractReportActionsSource).toContain('Contract revenue is the report family that intentionally pivots to');
-    expect(reconciliationReportActionsSource).toContain('Reconciliation reporting remains discrepancy-status and financial-date');
   });
 
   it('T223: financial analytics remain explicitly invoice-date and transaction-date based when mixed cadence can diverge from coverage dates', () => {

@@ -61,8 +61,8 @@
       "body": "11111 {{number}} 11111",
       "title": "11111"
     },
-  "detail": {
-    "backToList": "11111",
+    "detail": {
+      "backToList": "11111",
       "confidence": "11111",
       "confidenceNote": "11111",
       "createQuote": "11111",
@@ -88,7 +88,7 @@
       "unlinkQuote": "11111",
       "value": "11111",
       "valuesFromQuote": "11111",
-      "whyNumber": "11111 {{number}} 11111 ",
+      "whyNumber": "11111 {{number}} 11111",
       "whyPeriod": "11111"
     },
     "draft": {
@@ -297,8 +297,8 @@
       "queue": "11111",
       "suggestions": "11111"
     },
-  "timeline": {
-    "created": "11111",
+    "timeline": {
+      "created": "11111",
       "empty": "11111"
     },
     "toast": {

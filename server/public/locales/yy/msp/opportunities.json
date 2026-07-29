@@ -61,8 +61,8 @@
       "body": "55555 {{number}} 55555",
       "title": "55555"
     },
-  "detail": {
-    "backToList": "55555",
+    "detail": {
+      "backToList": "55555",
       "confidence": "55555",
       "confidenceNote": "55555",
       "createQuote": "55555",
@@ -88,7 +88,7 @@
       "unlinkQuote": "55555",
       "value": "55555",
       "valuesFromQuote": "55555",
-      "whyNumber": "55555 {{number}} 55555 ",
+      "whyNumber": "55555 {{number}} 55555",
       "whyPeriod": "55555"
     },
     "draft": {
@@ -297,8 +297,8 @@
       "queue": "55555",
       "suggestions": "55555"
     },
-  "timeline": {
-    "created": "55555",
+    "timeline": {
+      "created": "55555",
       "empty": "55555"
     },
     "toast": {

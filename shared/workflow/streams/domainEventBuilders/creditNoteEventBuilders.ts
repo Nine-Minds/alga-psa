@@ -11,7 +11,7 @@ export function buildCreditNoteCreatedPayload(params: {
   amount: number;
   currency: string;
   status: string;
-  sourceDocumentKind?: 'prepayment_invoice' | 'negative_invoice';
+  sourceDocumentKind?: 'prepayment_invoice' | 'negative_invoice' | 'direct_grant';
   sourceInvoiceId?: string | null;
   sourceInvoiceNumber?: string | null;
   sourceInvoiceStatus?: string | null;

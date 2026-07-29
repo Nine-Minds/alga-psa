@@ -504,7 +504,6 @@ export const createClient = withAuth(async (
       const clientData = {
         client_name: data.clientName,
         url: data.clientUrl,
-        credit_balance: 0,
         is_inactive: false,
         is_tax_exempt: false,
         billing_cycle: 'monthly' as const,

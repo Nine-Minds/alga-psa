@@ -492,7 +492,6 @@ export async function setupSchedules() {
     // post-downtime replay storms; crons keep their original (UTC) cadence.
     const MAINTENANCE_FANOUT_SCHEDULES: Array<{ jobName: string; cron: string }> = [
       { jobName: 'expired-credits', cron: '0 1 * * *' },
-      { jobName: 'credit-reconciliation', cron: '0 2 * * *' },
       { jobName: 'cleanup-temporary-workflow-forms', cron: '0 2 * * *' },
       { jobName: 'reconcile-bucket-usage', cron: '0 3 * * *' },
       { jobName: 'process-renewal-queue', cron: '0 5 * * *' },

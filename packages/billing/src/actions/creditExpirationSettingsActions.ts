@@ -36,7 +36,7 @@ function creditExpirationSettingsErrorMessage(error: unknown): string {
 export const getCreditExpirationSettings = withAuth(async (
   user,
   { tenant },
-  clientId: string
+  clientId: string | null
 ): Promise<CreditExpirationSettingsResult> => {
   if (!await hasPermission(user, 'billing', 'read')) {
     return permissionError('Permission denied: billing read required');
@@ -45,11 +45,14 @@ export const getCreditExpirationSettings = withAuth(async (
   if (!tenant) return actionError('Tenant context not found');
 
   const db = tenantDb(knex, tenant);
-  const clientSettings = await db.table('client_billing_settings')
-    .where({
-      client_id: clientId,
-    })
-    .first();
+  // A null clientId asks for the tenant defaults directly.
+  const clientSettings = clientId
+    ? await db.table('client_billing_settings')
+        .where({
+          client_id: clientId,
+        })
+        .first()
+    : undefined;
 
   const defaultSettings = await db.table('default_billing_settings').first();
 

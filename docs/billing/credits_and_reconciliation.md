@@ -27,7 +27,7 @@
 
 ## Introduction
 
-The credit system allows companies to maintain prepaid balances that can be applied to invoices. The credit reconciliation system ensures the integrity of these balances by detecting and reporting discrepancies between the expected and actual credit balances, as well as issues with credit tracking entries.
+The credit system allows clients to maintain prepaid balances that can be applied to invoices. The credit reconciliation system ensures the integrity of these balances by detecting and reporting discrepancies between the expected and actual credit balances, as well as issues with credit tracking entries.
 
 This document provides a comprehensive overview of how credits and credit reconciliation work in the system, including the underlying architecture, reconciliation process, and resolution workflow.
 
@@ -37,7 +37,7 @@ This document provides a comprehensive overview of how credits and credit reconc
 
 The credit system is built around several key data structures:
 
-1. **Company Credit Balance**: Each company has a `credit_balance` field that stores the total available credit.
+1. **Client Credit Balance**: Each client has a `credit_balance` field that stores the total available credit.
 
 2. **Credit Tracking Entries**: The `credit_tracking` table maintains detailed records of all credits, including:
    - Original amount
@@ -52,7 +52,7 @@ The credit system is built around several key data structures:
    - `credit_application`: Credits applied to invoices
    - `credit_adjustment`: Adjustments to credit balances
    - `credit_expiration`: Credits that have expired
-   - `credit_transfer`: Credits transferred between companies
+   - `credit_transfer`: Credits transferred between clients
 
 4. **Credit Allocations**: The `credit_allocations` table links credit applications to specific invoices.
 
@@ -62,12 +62,12 @@ The credit system is built around several key data structures:
 
 Credits can be created through several mechanisms:
 
-1. **Prepayment Invoices**: The primary method for creating credits is through prepayment invoices. These are special invoices with no billing cycle that represent funds added to a company's account.
+1. **Prepayment Invoices**: The primary method for creating credits is through prepayment invoices. These are special invoices with no billing cycle that represent funds added to a client's account.
 
    ```typescript
    // Creating a prepayment invoice
    const prepaymentInvoice = await createPrepaymentInvoice(
-     companyId,
+     clientId,
      amount,
      expirationDate // Optional
    );
@@ -83,7 +83,7 @@ Credits can be created through several mechanisms:
 When credits are created:
 - A `credit_issuance` transaction is recorded
 - A credit tracking entry is created with the full amount as the remaining amount
-- The company's credit balance is increased
+- The client's credit balance is increased
 
 ### Credit Application
 
@@ -95,7 +95,7 @@ Credits are applied to invoices during the finalization process:
 
    ```typescript
    // Applying credit to an invoice
-   await applyCreditToInvoice(companyId, invoiceId, amount);
+   await applyCreditToInvoice(clientId, invoiceId, amount);
    ```
 
 The credit application process:
@@ -103,14 +103,14 @@ The credit application process:
 2. Prioritizes credits by expiration date (oldest first)
 3. Creates `credit_application` and `credit_adjustment` transactions
 4. Updates the remaining amount in credit tracking entries
-5. Updates the company's credit balance
+5. Updates the client's credit balance
 6. Creates credit allocation records linking transactions to invoices
 
 ### Credit Expiration
 
 Credits can have expiration dates, after which they are no longer available for use:
 
-1. **Expiration Configuration**: Companies can configure:
+1. **Expiration Configuration**: Clients can configure:
    - Whether credits expire (`enable_credit_expiration`)
    - How many days until expiration (`credit_expiration_days`)
    - When to send notifications before expiration (`credit_expiration_notification_days`)
@@ -118,20 +118,20 @@ Credits can have expiration dates, after which they are no longer available for 
 2. **Expiration Process**:
    - Expired credits have their remaining amount set to zero
    - A `credit_expiration` transaction is created
-   - The company's credit balance is reduced by the expired amount
+   - The client's credit balance is reduced by the expired amount
 
 3. **Scheduled Job**: A daily job runs to process expired credits automatically.
 
 ### Credit Transfers
 
-Credits can be transferred between companies:
+Credits can be transferred between clients:
 
-1. The source company's credit tracking entry is updated to reduce the remaining amount
-2. A `credit_transfer` transaction is created for the source company (negative amount)
-3. The source company's credit balance is reduced
-4. A new `credit_transfer` transaction is created for the target company (positive amount)
-5. The target company's credit balance is increased
-6. A new credit tracking entry is created for the target company
+1. The source client's credit tracking entry is updated to reduce the remaining amount
+2. A `credit_transfer` transaction is created for the source client (negative amount)
+3. The source client's credit balance is reduced
+4. A new `credit_transfer` transaction is created for the target client (positive amount)
+5. The target client's credit balance is increased
+6. A new credit tracking entry is created for the target client
 
 ## Credit Reconciliation System
 
@@ -151,7 +151,7 @@ The credit reconciliation system is designed around these key principles:
 
 The system detects three main types of discrepancies:
 
-1. **Credit Balance Discrepancies**: Differences between the expected credit balance (calculated from transactions) and the actual credit balance stored in the company record.
+1. **Credit Balance Discrepancies**: Differences between the expected credit balance (calculated from transactions) and the actual credit balance stored in the client record.
 
 2. **Missing Credit Tracking Entries**: Transactions that should have corresponding credit tracking entries but don't.
 
@@ -163,7 +163,7 @@ The credit reconciliation process involves these steps:
 
 1. **Balance Validation**:
    - Calculate the expected credit balance by summing all credit-related transactions
-   - Compare with the actual credit balance in the company record
+   - Compare with the actual credit balance in the client record
    - Create a reconciliation report if there's a discrepancy
 
 2. **Credit Tracking Validation**:
@@ -181,9 +181,9 @@ The credit reconciliation process involves these steps:
 
 Credit reconciliation runs automatically through scheduled jobs:
 
-1. **Daily Validation**: A scheduled job runs daily at 2:00 AM to validate all companies.
+1. **Daily Validation**: A scheduled job runs daily at 2:00 AM to validate all clients.
 
-2. **Company-Specific Validation**: Administrators can also trigger validation for specific companies through the UI.
+2. **Client-Specific Validation**: Administrators can also trigger validation for specific clients through the UI.
 
 3. **Tenant-Aware**: The validation process respects tenant boundaries, ensuring data isolation.
 
@@ -220,6 +220,12 @@ All reconciliation activities are logged for accountability:
 
 ## User Interface Components
 
+The reconciliation UI lives on the **Reconciliation** tab of the credits page
+(`/msp/billing/credits?tab=reconciliation`); components are under
+`packages/billing/src/components/credits/reconciliation/`. The same page's
+**Add Credit** button issues new credits by creating and finalizing a
+prepayment invoice.
+
 ### Reconciliation Dashboard
 
 The reconciliation dashboard provides an overview of all credit discrepancies:
@@ -230,28 +236,28 @@ The reconciliation dashboard provides an overview of all credit discrepancies:
    - Open issues count
 
 2. **Filtering Options**:
-   - By company
+   - By client
    - By status (open, in review, resolved)
    - By date range
 
 3. **Tabular View**:
-   - Company name
+   - Client name
    - Discrepancy amount
    - Detection date
    - Status
    - Expected and actual balances
    - Action buttons
 
-4. **Company-Specific Reconciliation**:
-   - Dropdown to select a company
-   - Button to run reconciliation for the selected company
+4. **Client-Specific Reconciliation**:
+   - Dropdown to select a client
+   - Button to run reconciliation for the selected client
 
 ### Discrepancy Detail View
 
 The discrepancy detail view provides comprehensive information about a specific discrepancy:
 
 1. **Basic Information**:
-   - Company details
+   - Client details
    - Discrepancy amount
    - Detection date
    - Status
@@ -291,6 +297,33 @@ The resolution workflow guides users through the process of resolving discrepanc
 
 ## Technical Implementation
 
+### Canonical Apply-Credit Engine
+
+All credit application flows share one implementation:
+`applyCreditToInvoiceInternal` in
+`packages/billing/src/actions/creditActions.ts`. It draws down
+`credit_tracking` FIFO by expiration date (same-currency only), writes the
+`credit_application` transaction and `credit_allocations` row, updates
+`invoices.credit_applied` and `clients.credit_balance`, publishes workflow
+events, and enqueues accounting-sync ops. The `applyCreditToInvoice` server
+action, `FinancialService.applyCreditToInvoice`
+(`POST /api/v1/financial/credits/apply`), and `InvoiceService.applyCredit`
+(`POST /api/v1/invoices/{id}/credit`) all delegate to it. There is no
+`invoice_credits` table.
+
+### Permissions
+
+`billing:read` to view reconciliation reports; `billing:update` to
+resolve/fix them. The old `credit:reconcile` permission was never checked and
+has been removed.
+
+### REST API
+
+- `POST /api/v1/financial/reconciliation/run` — run detection (optional `?client_id=`)
+- `GET /api/v1/financial/reconciliation` — list reports (filters + pagination)
+- `GET /api/v1/financial/reconciliation/{id}` — report detail
+- `POST /api/v1/financial/reconciliation/{id}/resolve` — resolve with notes
+
 ### Server Actions
 
 The credit reconciliation system is implemented through several server actions:
@@ -300,7 +333,7 @@ The credit reconciliation system is implemented through several server actions:
    - `validateCreditTrackingEntries()`: Validates credit tracking entries
    - `validateCreditTrackingRemainingAmounts()`: Validates remaining amounts
    - `validateAllCreditTracking()`: Runs both tracking validations
-   - `runScheduledCreditBalanceValidation()`: Runs validation for all companies or a specific company
+   - `runScheduledCreditBalanceValidation()`: Runs validation for all clients or a specific client
 
 2. **Resolution Actions**:
    - `resolveReconciliationReport()`: Resolves a reconciliation report
@@ -319,13 +352,19 @@ The credit reconciliation system uses scheduled jobs for automation:
 
 1. **Credit Reconciliation Job**:
    - Runs daily at 2:00 AM
-   - Validates all companies in a tenant
+   - Validates all clients in a tenant
    - Creates reconciliation reports for any discrepancies
+   - EE (hosted/appliance) runs it via the Temporal `maintenance-fanout`
+     schedule (`ee/temporal-workflows/src/schedules/setupSchedules.ts` →
+     `maintenanceJobWorkflow` → `packages/jobs/src/lib/maintenanceJobFanout.ts`
+     → `creditReconciliationHandler`); CE uses the pg-boss cron in
+     `server/src/lib/jobs/index.ts`. New async entry points must keep this
+     edition split.
 
 2. **Expired Credits Job**:
    - Runs daily at 1:00 AM
    - Processes expired credits
-   - Updates credit tracking entries and company balances
+   - Updates credit tracking entries and client balances
 
 3. **Expiring Credits Notification Job**:
    - Runs daily at 9:00 AM
@@ -337,7 +376,7 @@ The credit reconciliation system uses these key database tables:
 
 1. **credit_reconciliation_reports**:
    - `report_id`: Unique identifier
-   - `company_id`: The company with the discrepancy
+   - `client_id`: The client with the discrepancy
    - `expected_balance`: The calculated correct balance
    - `actual_balance`: The stored balance
    - `difference`: The discrepancy amount

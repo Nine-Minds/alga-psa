@@ -9,7 +9,6 @@
  * - Financial reporting and analytics
  * - Payment method management
  * - Transaction history and auditing
- * - Financial reconciliation processes
  * - Bulk financial operations
  *
  * Financial analytics intentionally stay on invoice / transaction document
@@ -25,7 +24,7 @@ import { auditLog } from '../../logging/auditLog';
 import { TaxService } from '@alga-psa/billing/services/taxService';
 import { v4 as uuidv4 } from 'uuid';
 import { SharedNumberingService } from '@shared/services/numberingService';
-import { runScheduledCreditBalanceValidation } from '@alga-psa/billing/actions/creditReconciliationActions';
+import { applyCreditToInvoiceInternal } from '@alga-psa/billing/actions/creditActions';
 import {
   BadRequestError,
   ConflictError,
@@ -89,10 +88,6 @@ import {
   UpdateTaxRateRequest,
   TaxRateResponse,
   
-  // Reconciliation types
-  CreateCreditReconciliationReportRequest,
-  CreditReconciliationReportResponse,
-  
   // Reporting types
   AccountBalanceReport,
   AgingReport,
@@ -110,8 +105,7 @@ import {
   
   // Enums
   TransactionType,
-  InvoiceStatus,
-  ReconciliationStatus
+  InvoiceStatus
 } from '../schemas/financialSchemas';
 
 import {
@@ -120,7 +114,6 @@ import {
   PaymentMethod,
   IContractLine,
   ITaxRate,
-  ICreditReconciliationReport,
   IDefaultBillingSettings,
   IClientContractLineSettings
 } from '../../../interfaces/billing.interfaces';
@@ -330,15 +323,7 @@ export class FinancialService extends BaseService<ITransaction> {
         .insert(transactionData)
         .returning('*');
 
-      // Update client credit balance if this is a credit-related transaction
-      if (['credit_issuance', 'credit_application', 'credit_adjustment'].includes(data.type)) {
-        await tenantDb(trx, context.tenant).table('clients')
-          .where('client_id', data.client_id)
-          .update({
-            credit_balance: balanceAfter,
-            updated_at: new Date().toISOString()
-          });
-      }
+      // Client credit balance is derived from credit_tracking; nothing to sync.
 
       // Audit log
       await auditLog(trx, {
@@ -615,7 +600,12 @@ export class FinancialService extends BaseService<ITransaction> {
   // ============================================================================
 
   /**
-   * Apply credit to an invoice using existing credit actions
+   * Apply credit to an invoice.
+   *
+   * Delegates to the canonical apply-credit engine
+   * (creditActions.applyCreditToInvoiceInternal) so this REST path, the
+   * invoice REST path, and the UI server action produce identical ledger
+   * state for the same input.
    */
   async applyCreditToInvoice(
     request: ApplyCreditToInvoiceRequest,
@@ -624,152 +614,41 @@ export class FinancialService extends BaseService<ITransaction> {
     await this.validatePermissions('update', 'credit', context);
 
     const { knex } = await this.getKnex();
-    const tenant = context.tenant;
 
-    return withTransaction(knex, async (trx) => {
-      // Get the invoice and its currency
-      const invoice = await tenantDb(trx, tenant).table('invoices')
-        .where('invoice_id', request.invoice_id)
-        .select('credit_applied', 'currency_code', 'subtotal', 'tax', 'total_amount')
-        .first();
+    // Verify the invoice exists up front so the REST contract still 404s.
+    const invoice = await tenantDb(knex, context.tenant).table('invoices')
+      .where('invoice_id', request.invoice_id)
+      .select('invoice_id')
+      .first();
+    if (!invoice) {
+      throw new NotFoundError(`Invoice ${request.invoice_id} not found`);
+    }
 
-      if (!invoice) {
-        throw new NotFoundError(`Invoice ${request.invoice_id} not found`);
-      }
+    const { appliedAmount } = await applyCreditToInvoiceInternal(
+      context.tenant,
+      context.userId,
+      request.client_id,
+      request.invoice_id,
+      request.requested_amount
+    );
 
-      const invoiceCurrency = invoice.currency_code || 'USD';
-
-      // Check already-applied credit
-      const existingAllocations = await tenantDb(trx, tenant).table('credit_allocations')
-        .where('invoice_id', request.invoice_id)
-        .sum('amount as total_applied')
-        .first();
-      const alreadyApplied = Number(existingAllocations?.total_applied || 0);
-
-      const invoiceFullAmount = Number(invoice.subtotal) + Number(invoice.tax);
-      const maxAdditional = Math.max(0, invoiceFullAmount - alreadyApplied);
-      let requestedAmount = Math.min(request.requested_amount, maxAdditional);
-
-      if (requestedAmount <= 0) {
-        return {
-          data: { success: true, appliedAmount: 0 },
-          links: []
-        };
-      }
-
-      // Get client credit balance (lock row to prevent concurrent over-application)
-      const [client] = await tenantDb(trx, tenant).table('clients')
-        .where('client_id', request.client_id)
-        .select('credit_balance')
-        .forUpdate();
-      const availableCredit = client.credit_balance || 0;
-
-      if (availableCredit <= 0) {
-        return { data: { success: true, appliedAmount: 0 }, links: [] };
-      }
-
-      // Get active credit entries in the same currency (FIFO by expiration, locked for update)
-      const now = new Date().toISOString();
-      const creditEntries = await tenantDb(trx, tenant).table('credit_tracking')
-        .where('client_id', request.client_id)
-        .where('is_expired', false)
-        .where('currency_code', invoiceCurrency)
-        .where(function() {
-          this.whereNull('expiration_date').orWhere('expiration_date', '>', now);
-        })
-        .where('remaining_amount', '>', 0)
-        .orderBy([
-          { column: 'expiration_date', order: 'asc', nulls: 'last' },
-          { column: 'created_at', order: 'asc' }
-        ])
-        .forUpdate();
-
-      if (creditEntries.length === 0) {
-        return { data: { success: true, appliedAmount: 0 }, links: [] };
-      }
-
-      let remainingRequested = requestedAmount;
-      let totalApplied = 0;
-
-      for (const credit of creditEntries) {
-        if (remainingRequested <= 0) break;
-        const applyAmount = Math.min(remainingRequested, Number(credit.remaining_amount));
-        if (applyAmount <= 0) continue;
-
-        await tenantDb(trx, tenant).table('credit_tracking')
-          .where('credit_id', credit.credit_id)
-          .update({ remaining_amount: Number(credit.remaining_amount) - applyAmount, updated_at: now });
-
-        totalApplied += applyAmount;
-        remainingRequested -= applyAmount;
-      }
-
-      if (totalApplied <= 0) {
-        return { data: { success: true, appliedAmount: 0 }, links: [] };
-      }
-
-      const newBalance = availableCredit - totalApplied;
-
-      // Create credit application transaction
-      const [creditTransaction] = await tenantDb(trx, tenant).table('transactions').insert({
-        transaction_id: uuidv4(),
-        client_id: request.client_id,
-        invoice_id: request.invoice_id,
-        amount: -totalApplied,
-        type: 'credit_application',
-        status: 'completed',
-        description: `Applied credit to invoice ${request.invoice_id}`,
-        created_at: now,
-        balance_after: newBalance,
-        tenant,
-        currency_code: invoiceCurrency
-      }).returning('*');
-
-      // Create credit allocation record
-      await tenantDb(trx, tenant).table('credit_allocations').insert({
-        allocation_id: uuidv4(),
-        transaction_id: creditTransaction.transaction_id,
-        invoice_id: request.invoice_id,
-        amount: totalApplied,
-        created_at: now,
-        tenant
-      });
-
-      // Update invoice (read-then-update to avoid Citus-unsafe SET col = col +/- val)
-      const currentInvoice = await tenantDb(trx, tenant).table('invoices')
-        .where('invoice_id', request.invoice_id)
-        .select('credit_applied', 'total_amount')
-        .forUpdate()
-        .first();
-      await tenantDb(trx, tenant).table('invoices')
-        .where('invoice_id', request.invoice_id)
-        .update({
-          credit_applied: Number(currentInvoice.credit_applied || 0) + totalApplied,
-        });
-
-      // Update client balance
-      await tenantDb(trx, tenant).table('clients')
-        .where('client_id', request.client_id)
-        .update({ credit_balance: newBalance, updated_at: now });
-
-      return {
-        data: { success: true, appliedAmount: totalApplied },
-        links: [
-          {
-            rel: 'invoice',
-            href: `/api/v1/financial/invoices/${request.invoice_id}`,
-            method: 'GET',
-            description: 'View updated invoice'
-          },
-          {
-            rel: 'client-credits',
-            href: `/api/v1/financial/credits?client_id=${request.client_id}`,
-            method: 'GET',
-            description: 'View client credits'
-          }
-        ]
-      };
-    });
+    return {
+      data: { success: true, appliedAmount },
+      links: [
+        {
+          rel: 'invoice',
+          href: `/api/v1/financial/invoices/${request.invoice_id}`,
+          method: 'GET',
+          description: 'View updated invoice'
+        },
+        {
+          rel: 'client-credits',
+          href: `/api/v1/financial/credits?client_id=${request.client_id}`,
+          method: 'GET',
+          description: 'View client credits'
+        }
+      ]
+    };
   }
 
   /**
@@ -796,40 +675,14 @@ export class FinancialService extends BaseService<ITransaction> {
       const now = new Date().toISOString();
       const clientCurrency = client.default_currency_code || 'USD';
 
-      // Determine credit expiration settings
-      const clientSettings = await tenantDb(trx, tenant).table('client_billing_settings')
-        .where('client_id', request.client_id)
-        .first();
-      const defaultSettings = await tenantDb(trx, tenant).table('default_billing_settings')
-        .first();
-
-      let isCreditExpirationEnabled = true;
-      if (clientSettings?.enable_credit_expiration !== undefined) {
-        isCreditExpirationEnabled = clientSettings.enable_credit_expiration;
-      } else if (defaultSettings?.enable_credit_expiration !== undefined) {
-        isCreditExpirationEnabled = defaultSettings.enable_credit_expiration;
-      }
-
-      let expirationDays: number | undefined;
-      if (clientSettings?.credit_expiration_days !== undefined) {
-        expirationDays = clientSettings.credit_expiration_days;
-      } else if (defaultSettings?.credit_expiration_days !== undefined) {
-        expirationDays = defaultSettings.credit_expiration_days;
-      }
-
-      let expirationDate: string | undefined = request.manual_expiration_date;
-      if (isCreditExpirationEnabled && !expirationDate && expirationDays && expirationDays > 0) {
-        const expDate = new Date();
-        expDate.setDate(expDate.getDate() + expirationDays);
-        expirationDate = expDate.toISOString();
-      } else if (!isCreditExpirationEnabled) {
-        expirationDate = undefined;
-      }
-
       // Generate invoice number
       const invoiceNumber = await SharedNumberingService.getNextNumber('INVOICE', { knex: trx, tenant });
 
-      // Create prepayment invoice
+      // Create the prepayment invoice. No credit is issued here: the
+      // credit_issuance transaction and credit_tracking entry are created at
+      // finalization, so a draft prepayment grants nothing. Only a manually
+      // chosen expiration is stamped on the invoice; when null, finalization
+      // resolves the client/default settings at issue time.
       const [invoice] = await tenantDb(trx, tenant).table('invoices')
         .insert({
           client_id: request.client_id,
@@ -846,50 +699,13 @@ export class FinancialService extends BaseService<ITransaction> {
           billing_period_start: now,
           billing_period_end: now,
           credit_applied: 0,
-          currency_code: clientCurrency
+          currency_code: clientCurrency,
+          is_prepayment: true,
+          credit_expiration_date: request.manual_expiration_date
+            ? new Date(request.manual_expiration_date).toISOString()
+            : null
         })
         .returning('*');
-
-      // Get current balance
-      const lastTx = await tenantDb(trx, tenant).table('transactions')
-        .where('client_id', request.client_id)
-        .orderBy('created_at', 'desc')
-        .first();
-      const currentBalance = lastTx?.balance_after || 0;
-      const newBalance = currentBalance + request.amount;
-
-      // Create credit issuance transaction
-      const transactionId = uuidv4();
-      await tenantDb(trx, tenant).table('transactions').insert({
-        transaction_id: transactionId,
-        client_id: request.client_id,
-        invoice_id: invoice.invoice_id,
-        amount: request.amount,
-        type: 'credit_issuance',
-        status: 'completed',
-        description: 'Credit issued from prepayment',
-        created_at: now,
-        balance_after: newBalance,
-        tenant,
-        expiration_date: expirationDate,
-        currency_code: clientCurrency
-      });
-
-      // Create credit tracking entry
-      const creditId = uuidv4();
-      await tenantDb(trx, tenant).table('credit_tracking').insert({
-        credit_id: creditId,
-        tenant,
-        client_id: request.client_id,
-        transaction_id: transactionId,
-        amount: request.amount,
-        remaining_amount: request.amount,
-        created_at: now,
-        expiration_date: expirationDate,
-        is_expired: false,
-        updated_at: now,
-        currency_code: clientCurrency
-      });
 
       return invoice;
     });
@@ -962,16 +778,7 @@ export class FinancialService extends BaseService<ITransaction> {
         metadata: { transfer_to: request.target_client_id, transfer_reason: request.reason || 'Administrative transfer' }
       });
 
-      // 3. Update source client balance
-      const [sourceClient] = await tenantDb(trx, tenant).table('clients')
-        .where('client_id', sourceCredit.client_id)
-        .select('credit_balance');
-      const newSourceBalance = Number(sourceClient.credit_balance) - request.amount;
-      await tenantDb(trx, tenant).table('clients')
-        .where('client_id', sourceCredit.client_id)
-        .update({ credit_balance: newSourceBalance, updated_at: now });
-
-      // 4. Create transfer-in transaction for target
+      // 3. Create transfer-in transaction for target
       const targetTransactionId = uuidv4();
       await tenantDb(trx, tenant).table('transactions').insert({
         transaction_id: targetTransactionId,
@@ -985,13 +792,8 @@ export class FinancialService extends BaseService<ITransaction> {
         metadata: { transfer_from: sourceCredit.client_id, transfer_reason: request.reason || 'Administrative transfer', source_credit_id: request.source_credit_id }
       });
 
-      // 5. Update target client balance
-      const newTargetBalance = Number(targetClient.credit_balance) + request.amount;
-      await tenantDb(trx, tenant).table('clients')
-        .where('client_id', request.target_client_id)
-        .update({ credit_balance: newTargetBalance, updated_at: now });
-
-      // 6. Create new credit tracking for target
+      // 4. Create new credit tracking for target
+      // (both clients' derived balances move via the tracking rows)
       const newCreditId = uuidv4();
       const [newCredit] = await tenantDb(trx, tenant).table('credit_tracking').insert({
         credit_id: newCreditId,
@@ -1074,75 +876,7 @@ export class FinancialService extends BaseService<ITransaction> {
     };
   }
 
-  /**
-   * Validate credit balance for a client
-   */
-  async validateCreditBalance(
-    clientId: string,
-    context: ServiceContext
-  ): Promise<FinancialResponse<CreditValidationResult>> {
-    await this.validatePermissions('read', 'credit', context);
-
-    const { knex } = await this.getKnex();
-    const tenant = context.tenant;
-
-    // Sum credit-related transactions
-    const transactions = await tenantDb(knex, tenant).table('transactions')
-      .where('client_id', clientId)
-      .whereIn('type', [
-        'credit_issuance', 'credit_application', 'credit_adjustment',
-        'credit_expiration', 'credit_transfer', 'credit_issuance_from_negative_invoice'
-      ])
-      .orderBy('created_at', 'asc');
-
-    let calculatedBalance = 0;
-    for (const tx of transactions) {
-      calculatedBalance += Number(tx.amount);
-    }
-
-    // Get client's actual balance
-    const client = await tenantDb(knex, tenant).table('clients')
-      .where('client_id', clientId)
-      .select('credit_balance')
-      .first();
-
-    const actualBalance = Number(client?.credit_balance || 0);
-    const expectedBalance = calculatedBalance;
-    const difference = expectedBalance - actualBalance;
-    const isValid = Math.abs(difference) < 0.01;
-
-    const lastTransaction = transactions.length > 0 ? transactions[transactions.length - 1] : undefined;
-
-    return {
-      data: {
-        is_valid: isValid,
-        actual_balance: actualBalance,
-        expected_balance: expectedBalance,
-        difference,
-        last_transaction: lastTransaction ? {
-          ...lastTransaction,
-          status: lastTransaction.status || 'pending',
-          tenant: lastTransaction.tenant || ''
-        } as unknown as any : undefined
-      },
-      links: [
-        {
-          rel: 'client',
-          href: `/api/v1/clients/${clientId}`,
-          method: 'GET',
-          description: 'View client details'
-        },
-        {
-          rel: 'reconciliation-reports',
-          href: `/api/v1/financial/reconciliation?client_id=${clientId}`,
-          method: 'GET',
-          description: 'View reconciliation reports'
-        }
-      ]
-    };
-  }
-
-  // ============================================================================
+    // ============================================================================
   // BILLING AND INVOICING
   // ============================================================================
 
@@ -1432,7 +1166,8 @@ export class FinancialService extends BaseService<ITransaction> {
 
     const report: AccountBalanceReport = {
       client_id: clientId,
-      current_balance: client.credit_balance || 0,
+      // Derived: current balance IS the available (non-expired) credit.
+      current_balance: Number((availableCredits as Array<{ total: string }>)[0]?.total) || 0,
       available_credit: Number((availableCredits as Array<{ total: string }>)[0]?.total) || 0,
       expired_credit: Number((expiredCredits as Array<{ total: string }>)[0]?.total) || 0,
       pending_invoices: Number(pendingInvoices[0]?.total) || 0,
@@ -1656,14 +1391,18 @@ export class FinancialService extends BaseService<ITransaction> {
     // Calculate additional credit metrics
     const creditAnalytics = await Promise.all(
       creditData.map(async (period: any) => {
-        // Get credit balance at end of period
-        const balanceQuery = tenantDb(knex, context.tenant).table('clients')
-          .sum('credit_balance as total_balance');
-        
+        // Current derived credit balance (sum of non-expired remainders)
+        const balanceQuery = tenantDb(knex, context.tenant).table('credit_tracking')
+          .where('is_expired', false)
+          .where((qb: any) => {
+            qb.whereNull('expiration_date').orWhere('expiration_date', '>', new Date().toISOString());
+          })
+          .sum('remaining_amount as total_balance');
+
         if (client_id) {
           balanceQuery.where('client_id', client_id);
         }
-        
+
         const balanceResult = await balanceQuery.first();
         const creditBalance = Number(balanceResult?.total_balance) || 0;
         
@@ -1717,147 +1456,6 @@ export class FinancialService extends BaseService<ITransaction> {
           description: 'View account balance report'
         }
       ]
-    };
-  }
-
-  // ============================================================================
-  // RECONCILIATION MANAGEMENT
-  // ============================================================================
-
-  /**
-   * Run credit reconciliation for clients
-   */
-  async runCreditReconciliation(
-    clientId?: string,
-    context?: ServiceContext
-  ): Promise<FinancialResponse<{
-    totalClients: number;
-    balanceValidCount: number;
-    balanceDiscrepancyCount: number;
-    missingTrackingCount: number;
-    inconsistentTrackingCount: number;
-    errorCount: number;
-  }>> {
-    if (context) {
-      await this.validatePermissions('update', 'credit', context);
-    }
-    
-    const userId = context?.userId || 'system';
-    const result = await runScheduledCreditBalanceValidation(clientId, userId);
-
-    return {
-      data: result,
-      links: context ? [
-        {
-          rel: 'reconciliation-reports',
-          href: `/api/v1/financial/reconciliation${clientId ? `?client_id=${clientId}` : ''}`,
-          method: 'GET',
-          description: 'View reconciliation reports'
-        }
-      ] : []
-    };
-  }
-
-  /**
-   * Resolve a reconciliation report
-   */
-  async resolveReconciliationReport(
-    reportId: string,
-    notes?: string,
-    context?: ServiceContext
-  ): Promise<FinancialResponse<ICreditReconciliationReport>> {
-    if (context) {
-      await this.validatePermissions('update', 'credit', context);
-    }
-
-    const { knex, tenant: defaultTenant } = await this.getKnex();
-    const tenant = context?.tenant || defaultTenant;
-    const userId = context?.userId || 'system';
-
-    const resolvedReport = await withTransaction(knex, async (trx) => {
-      // Get the report
-      const report = await tenantDb(trx, tenant).table('credit_reconciliation_reports')
-        .where('report_id', reportId)
-        .first();
-
-      if (!report) {
-        throw new NotFoundError(`Reconciliation report ${reportId} not found`);
-      }
-      if (report.status === 'resolved') {
-        throw new ConflictError(`Reconciliation report ${reportId} is already resolved`);
-      }
-
-      const now = new Date().toISOString();
-
-      // Create adjustment transaction
-      const transactionId = uuidv4();
-      await tenantDb(trx, tenant).table('transactions').insert({
-        transaction_id: transactionId,
-        client_id: report.client_id,
-        amount: report.difference,
-        type: 'credit_adjustment',
-        status: 'completed',
-        description: `Credit balance correction from reconciliation report ${reportId}`,
-        created_at: now,
-        balance_after: report.expected_balance,
-        tenant
-      });
-
-      // Update client balance
-      await tenantDb(trx, tenant).table('clients')
-        .where('client_id', report.client_id)
-        .update({ credit_balance: report.expected_balance, updated_at: now });
-
-      // Resolve the report
-      const [resolved] = await tenantDb(trx, tenant).table('credit_reconciliation_reports')
-        .where('report_id', reportId)
-        .update({
-          status: 'resolved',
-          resolution_date: now,
-          resolution_user: userId,
-          resolution_notes: notes,
-          resolution_transaction_id: transactionId,
-          updated_at: now
-        })
-        .returning('*');
-
-      // Audit log
-      await auditLog(trx, {
-        userId,
-        operation: 'credit_balance_correction',
-        tableName: 'clients',
-        recordId: report.client_id,
-        changedData: {
-          previous_balance: report.actual_balance,
-          corrected_balance: report.expected_balance
-        },
-        details: {
-          action: 'Credit balance corrected from reconciliation report',
-          report_id: reportId,
-          difference: report.difference,
-          notes: notes || 'No notes provided'
-        }
-      });
-
-      return resolved;
-    });
-
-    return {
-      data: resolvedReport,
-      links: context ? [
-        {
-          rel: 'self',
-          href: `/api/v1/financial/reconciliation/${reportId}`,
-          method: 'GET',
-          description: 'View reconciliation report'
-        },
-        {
-          rel: 'client',
-          href: `/api/v1/clients/${resolvedReport.client_id}`,
-          method: 'GET',
-          description: 'View client details'
-        }
-      ] : []
     };
   }
 
@@ -1982,7 +1580,8 @@ export class FinancialService extends BaseService<ITransaction> {
    * `approve` and `reject` set the transaction status. `reverse` posts a
    * compensating transaction (negated amount, linked to the original via
    * related_transaction_id), recomputes the running balance, marks the original
-   * reversed, and keeps the client's credit_balance in sync for credit types.
+   * reversed. Available credit is derived from credit-tracking rows, so there
+   * is no client balance cache to synchronize.
    * Each id is processed independently; one failure does not abort the rest.
    */
   async bulkTransactionOperation(
@@ -1992,8 +1591,6 @@ export class FinancialService extends BaseService<ITransaction> {
     await this.validatePermissions('update', 'transaction', context);
 
     const { knex } = await this.getKnex();
-    const CREDIT_TYPES = ['credit_issuance', 'credit_application', 'credit_adjustment', 'credit_transfer', 'credit_expiration'];
-
     return withTransaction(knex, async (trx) => {
       const results: Array<{ id: string; success: boolean; error?: string; result?: any }> = [];
 
@@ -2059,11 +1656,6 @@ export class FinancialService extends BaseService<ITransaction> {
                 .where('transaction_id', transactionId)
                 .update({ status: 'reversed' });
 
-              if (CREDIT_TYPES.includes(existing.type)) {
-                await tenantDb(trx, context.tenant).table('clients')
-                  .where('client_id', existing.client_id)
-                  .update({ credit_balance: balanceAfter, updated_at: new Date().toISOString() });
-              }
               result = reversal;
               break;
             }
@@ -2115,8 +1707,8 @@ export class FinancialService extends BaseService<ITransaction> {
   /**
    * Bulk expire / extend-expiration / transfer existing credits.
    *
-   * `expire` forfeits the unused remainder (credit_expiration transaction +
-   * client balance reduction) and flags the credit. `extend_expiration` moves
+   * `expire` forfeits the unused remainder (credit_expiration transaction;
+   * the derived balance drops with the tracking row) and flags the credit. `extend_expiration` moves
    * the expiration date. `transfer` reuses transferCredit() to move the
    * remaining amount to another client. Each credit is processed in its own
    * transaction so a single failure is isolated (transferCredit manages its own
@@ -2170,10 +1762,10 @@ export class FinancialService extends BaseService<ITransaction> {
               }
               const remaining = Number(credit.remaining_amount);
               if (remaining > 0) {
-                const [client] = await tenantDb(trx, context.tenant).table('clients')
+                const lastTransaction = await tenantDb(trx, context.tenant).table('transactions')
                   .where('client_id', credit.client_id)
-                  .select('credit_balance');
-                const newBalance = Number(client?.credit_balance || 0) - remaining;
+                  .orderBy('created_at', 'desc')
+                  .first();
                 await tenantDb(trx, context.tenant).table('transactions').insert({
                   transaction_id: uuidv4(),
                   client_id: credit.client_id,
@@ -2182,14 +1774,11 @@ export class FinancialService extends BaseService<ITransaction> {
                   status: 'completed',
                   description: operation.parameters?.reason || `Credit ${creditId} expired`,
                   created_at: now,
-                  balance_after: newBalance,
+                  balance_after: Number(lastTransaction?.balance_after || 0) - remaining,
                   tenant: context.tenant,
                   related_transaction_id: credit.transaction_id,
                   currency_code: credit.currency_code
                 });
-                await tenantDb(trx, context.tenant).table('clients')
-                  .where('client_id', credit.client_id)
-                  .update({ credit_balance: newBalance, updated_at: now });
               }
               const [updated] = await tenantDb(trx, context.tenant).table('credit_tracking')
                 .where('credit_id', creditId)
