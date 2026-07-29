@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import type {
-  OpportunityCheckpoint,
   OpportunityConfidence,
   OpportunityGeneratorKey,
   OpportunityListFilters,
@@ -108,7 +107,13 @@ export const loseOpportunitySchema = z.object({
   lost_to: z.string().trim().optional().nullable(),
 });
 
-const declaredCheckpointSchema: z.ZodType<Extract<OpportunityCheckpoint, 'qualified'>> = z.enum(['qualified']);
+const declaredCheckpointSchema: z.ZodType<Exclude<OpportunityStage, 'won' | 'lost'>> = z.enum([
+  'identified',
+  'qualified',
+  'assessment',
+  'proposed',
+  'verbal',
+]);
 
 export const recordDeclaredEvidenceSchema = z.object({
   checkpoint: declaredCheckpointSchema,

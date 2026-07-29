@@ -5,20 +5,13 @@ import { useEffect, useState } from 'react';
 import { ArrowRight, BriefcaseBusiness, Clock3, PauseCircle } from 'lucide-react';
 import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 import { getOpportunityDashboardSnapshot } from '@alga-psa/opportunities/actions';
-import type { IOpportunityDashboardSnapshot, OpportunityStage } from '@alga-psa/types';
+import { OPPORTUNITY_STAGE_LABELS } from '@alga-psa/opportunities/lib/opportunityStages';
+import type { IOpportunityDashboardSnapshot } from '@alga-psa/types';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
-
-const stageLabels: Record<OpportunityStage, string> = {
-  identified: 'Identified',
-  qualified: 'Qualified',
-  assessment: 'Assessment',
-  proposed: 'Proposed',
-  verbal: 'Verbal',
-  won: 'Won',
-  lost: 'Lost',
-};
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 
 export default function OpportunitySnapshotCard() {
+  const { t } = useTranslation('msp/opportunities');
   const opportunityFlag = useFeatureFlag('opportunities-module', { defaultValue: false });
   const enabled = typeof opportunityFlag === 'boolean'
     ? opportunityFlag
@@ -64,11 +57,14 @@ export default function OpportunitySnapshotCard() {
               id="opportunity-dashboard-snapshot-title"
               className="text-lg font-semibold text-[rgb(var(--color-text-900))]"
             >
-              Opportunity snapshot
+              {t('opportunities.snapshot.title', 'Opportunity snapshot')}
             </h2>
           </div>
           <p className="mt-1 text-sm text-[rgb(var(--color-text-500))]">
-            Open pipeline and follow-up work that needs attention.
+            {t(
+              'opportunities.snapshot.subtitle',
+              'Open pipeline and follow-up work that needs attention.',
+            )}
           </p>
         </div>
         <Link
@@ -76,17 +72,23 @@ export default function OpportunitySnapshotCard() {
           href="/msp/opportunities"
           className="inline-flex items-center gap-1 text-sm font-medium text-[rgb(var(--color-primary-600))] hover:text-[rgb(var(--color-primary-700))]"
         >
-          Open opportunities
+          {t('opportunities.snapshot.open', 'Open opportunities')}
           <ArrowRight className="h-4 w-4" aria-hidden="true" />
         </Link>
       </div>
 
       {loadFailed ? (
         <p className="mt-4 rounded-md bg-[rgb(var(--color-warning-50))] px-3 py-2 text-sm text-[rgb(var(--color-text-700))]">
-          Opportunity totals are temporarily unavailable. Open Opportunities to continue working.
+          {t(
+            'opportunities.snapshot.unavailable',
+            'Opportunity totals are temporarily unavailable. Open Opportunities to continue working.',
+          )}
         </p>
       ) : !snapshot ? (
-        <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3" aria-label="Loading opportunity snapshot">
+        <div
+          className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3"
+          aria-label={t('opportunities.snapshot.loading', 'Loading opportunity snapshot')}
+        >
           {[0, 1, 2].map((item) => (
             <div key={item} className="h-16 animate-pulse rounded-md bg-[rgb(var(--color-border-100))]" />
           ))}
@@ -94,15 +96,19 @@ export default function OpportunitySnapshotCard() {
       ) : (
         <>
           <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <Metric label="Open opportunities" value={snapshot.open_count} icon={BriefcaseBusiness} />
-            <Metric label="Actions due" value={snapshot.queue_counts.actions_due} icon={Clock3} />
-            <Metric label="Stalled" value={snapshot.queue_counts.stalled} icon={PauseCircle} />
+            <Metric label={t('opportunities.snapshot.openCount', 'Open opportunities')} value={snapshot.open_count} icon={BriefcaseBusiness} />
+            <Metric label={t('opportunities.snapshot.actionsDue', 'Actions due')} value={snapshot.queue_counts.actions_due} icon={Clock3} />
+            <Metric label={t('opportunities.snapshot.stalled', 'Stalled')} value={snapshot.queue_counts.stalled} icon={PauseCircle} />
           </div>
 
           <div className="mt-5 border-t border-[rgb(var(--color-border-100))] pt-4">
-            <h3 className="text-sm font-semibold text-[rgb(var(--color-text-800))]">Pipeline by stage</h3>
+            <h3 className="text-sm font-semibold text-[rgb(var(--color-text-800))]">
+              {t('opportunities.snapshot.pipelineByStage', 'Pipeline by stage')}
+            </h3>
             {snapshot.pipeline_by_stage.length === 0 ? (
-              <p className="mt-2 text-sm text-[rgb(var(--color-text-500))]">No open opportunities yet.</p>
+              <p className="mt-2 text-sm text-[rgb(var(--color-text-500))]">
+                {t('opportunities.snapshot.empty', 'No open opportunities yet.')}
+              </p>
             ) : (
               <div className="mt-2 grid grid-cols-1 gap-2 md:grid-cols-2">
                 {snapshot.pipeline_by_stage.map((row) => (
@@ -112,15 +118,32 @@ export default function OpportunitySnapshotCard() {
                   >
                     <div>
                       <p className="text-sm font-medium text-[rgb(var(--color-text-800))]">
-                        {stageLabels[row.stage] ?? row.stage}
+                        {t(
+                          OPPORTUNITY_STAGE_LABELS[row.stage].key,
+                          OPPORTUNITY_STAGE_LABELS[row.stage].fallback,
+                        )}
                       </p>
                       <p className="text-xs text-[rgb(var(--color-text-500))]">
-                        {row.opportunity_count} {row.opportunity_count === 1 ? 'opportunity' : 'opportunities'}
+                        {t(
+                          'opportunities.snapshot.opportunityCount',
+                          row.opportunity_count === 1
+                            ? '{{count}} opportunity'
+                            : '{{count}} opportunities',
+                          { count: row.opportunity_count },
+                        )}
                       </p>
                     </div>
                     <div className="text-right text-xs text-[rgb(var(--color-text-600))]">
-                      <p>{formatCurrencyFromMinorUnits(row.mrr_cents, undefined, row.currency_code)} MRR</p>
-                      <p>{formatCurrencyFromMinorUnits(row.nrr_cents, undefined, row.currency_code)} NRR</p>
+                      <p>
+                        {t('opportunities.snapshot.mrr', '{{amount}} MRR', {
+                          amount: formatCurrencyFromMinorUnits(row.mrr_cents, undefined, row.currency_code),
+                        })}
+                      </p>
+                      <p>
+                        {t('opportunities.snapshot.nrr', '{{amount}} NRR', {
+                          amount: formatCurrencyFromMinorUnits(row.nrr_cents, undefined, row.currency_code),
+                        })}
+                      </p>
                     </div>
                   </div>
                 ))}

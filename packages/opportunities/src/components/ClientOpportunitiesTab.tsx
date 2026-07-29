@@ -16,7 +16,7 @@ import { CreateOpportunityDialog, type CreateOpportunityInput } from './dialogs/
  * create shortcut with the client already fixed.
  */
 export function ClientOpportunitiesTab({ clientId, clientName }: { clientId: string; clientName: string }) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('msp/opportunities');
   const router = useRouter();
   const [items, setItems] = useState<IOpportunityListItem[]>([]);
   const [loaded, setLoaded] = useState(false);

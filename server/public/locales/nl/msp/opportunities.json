@@ -1,0 +1,414 @@
+{
+  "common": {
+    "back": "Terug",
+    "cancel": "Annuleer",
+    "delete": "Verwijderen",
+    "edit": "Bewerken",
+    "saveChanges": "Wijzigingen opslaan"
+  },
+  "opportunities": {
+    "board": {
+      "daysQuiet": "{{count}}d stil",
+      "nextDue": "volgende: {{date}}",
+      "recentlyClosed": "Onlangs gesloten"
+    },
+    "clientTab": {
+      "emptyBody": "Maak er een, of laat een offerte het pad beginnen.",
+      "emptyTitle": "Er zijn nog geen mogelijkheden voor deze klant"
+    },
+    "commitments": {
+      "add": "Neem het op",
+      "coveredByQuote": "Gedekt door {{quote}}",
+      "declined": "Geweigerd - gebeurt niet",
+      "help": "Schrijf elke belofte op zodra deze je mond verlaat. Ze komen allemaal tot een prijsopgaveregel of worden afgewezen voordat de deal wordt gesloten.",
+      "openCount": "{{count}} onopgelost — blokken bijna gewonnen",
+      "placeholder": "bijv. E-mailmigratie inbegrepen bij onboarding",
+      "resolve": "Oplossen…",
+      "status": {
+        "agreement_line": "overeenkomst lijn",
+        "declined": "geweigerd",
+        "open": "geopend",
+        "project_task": "projecttaak",
+        "quote_line": "citaatregel"
+      },
+      "title": "Toezeggingen"
+    },
+    "completeDialog": {
+      "due": "Verschuldigd",
+      "nextAction": "Volgende actie",
+      "placeholder": "bijv. Vervolg op het voorstel",
+      "submit": "Voltooien en volgende plannen",
+      "title": "Klaar. Wat gebeurt er daarna?"
+    },
+    "confidence": {
+      "committed": "Toegewijd",
+      "high": "Hoog",
+      "low": "Laag",
+      "medium": "Middelmatig"
+    },
+    "createDialog": {
+      "client": "Klant",
+      "dealTitle": "Titel",
+      "due": "Verschuldigd",
+      "expectedClose": "Verwacht dichtbij",
+      "nextAction": "Eerste actie",
+      "nextActionPlaceholder": "bijv. Verstuur het beoordelingsvoorstel",
+      "submit": "Creëer kansen",
+      "title": "Nieuwe kans",
+      "titlePlaceholder": "bijv. Beheerde dienstenovereenkomst"
+    },
+    "deleteDialog": {
+      "body": "{{number}} definitief verwijderen? Dit kan niet ongedaan worden gemaakt. Opportunities met gekoppelde offertes kunnen niet worden verwijderd.",
+      "title": "Mogelijkheid verwijderen"
+    },
+  "detail": {
+    "backToList": "Terug naar verkoopkansen",
+      "confidence": "Jouw vertrouwen",
+      "confidenceNote": "Vertrouwen is van jou; het podium komt voort uit bewijsmateriaal. De twee worden vergeleken, nooit samengevoegd.",
+      "createQuote": "Offerte maken",
+      "draftFollowUp": "Stel het vervolg op",
+      "due": "vervalt {{date}}",
+      "evidence": "Bewijs",
+      "expectedClose": "Verwacht dichtbij",
+      "hardware": "Hardware",
+      "linkQuote": "Bestaande koppeling",
+      "markLost": "Mark heeft verloren",
+      "markWon": "Mark heeft gewonnen",
+      "metadataTitle": "Gelegenheid",
+      "nextAction": "Volgende actie",
+      "nextActionOverdue": "Volgende actie · te laat",
+      "noQuotes": "Nog geen citaat. Een verzonden offerte verplaatst deze deal op zichzelf naar Voorgesteld.",
+      "oneTime": "Eenmalig",
+      "owner": "Eigenaar",
+      "quotes": "Citaten",
+      "quoteTitle": "Offerte voor {{title}}",
+      "recurring": "Terugkerend",
+      "setStageHint": "Selecteer een controlepunt om het podium te bepalen",
+      "timeline": "Tijdlijn",
+      "unlinkQuote": "Ontkoppelen",
+      "value": "Waarde",
+      "valuesFromQuote": "van geaccepteerde offerte",
+      "whyNumber": "{{number}} bevindt zich in ",
+      "whyPeriod": "."
+    },
+    "draft": {
+      "body": "Lichaam",
+      "copied": "Gekopieerd. Plak het in uw e-mail.",
+      "copy": "Kopieer",
+      "instructions": "Vertel de agent wat hij moet veranderen",
+      "instructionsPlaceholder": "bijv. korter, warmer, formeler",
+      "loadingRecipient": "Het gekoppelde contact controleren...",
+      "noRecipient": "Koppel een contact aan een primair e-mailadres voordat u verzendt.",
+      "recipient": "Verzendt naar {{recipient}} via de e-mailprovider van uw huurder.",
+      "regenerate": "Herschrijf",
+      "send": "Vervolg sturen",
+      "sent": "Follow-up verzonden en ingelogd op de deal.",
+      "subject": "Onderwerp",
+      "title": "Vervolgontwerp"
+    },
+    "editDialog": {
+      "title": "Mogelijkheid bewerken"
+    },
+    "forecast": {
+      "basis": "Geteld omdat",
+      "calibrated": "gekalibreerd",
+      "ceiling": "Plafond – op bewijs gewogen",
+      "deal": "Overeenkomst",
+      "floor": "Verdieping - ondertekend en mondeling",
+      "floorCol": "Verdieping",
+      "note": "Dit kwartaal. Gewichten komen uit de bewijsfasen en worden vervangen door de eigen sluitingspercentages van elke verkoper zodra hij twintig historische deals heeft gesloten.",
+      "plusOneTime": "+ {{amount}} eenmalig",
+      "weighted": "{{stage}} · gewogen {{pct}}%",
+      "won": "Deze periode gewonnen"
+    },
+    "ladder": "Bewijsladder",
+    "setStage": "Fase instellen op {{stage}}",
+    "linkQuoteDialog": {
+      "confirm": "Link citaat",
+      "empty": "Voor deze klant zijn geen ontkoppelde offertes beschikbaar.",
+      "title": "Koppel een bestaande offerte"
+    },
+    "list": {
+      "confidence": "Vertrouwen",
+      "deal": "Overeenkomst",
+      "mrr": "Terugkerend",
+      "nextAction": "Volgende actie",
+      "oneTime": "Eenmalig",
+      "owner": "Eigenaar",
+      "stage": "Stadium"
+    },
+    "loseDialog": {
+      "lostTo": "Verloren aan",
+      "notes": "Opmerkingen",
+      "notesPlaceholder": "Alles wat in de toekomst ligt, moet je weten",
+      "reasonPlaceholder": "Waarom stierf het?",
+      "submit": "Mark heeft verloren",
+      "title": "Mark heeft verloren"
+    },
+    "lossReason": {
+      "chose_competitor": "Kies een concurrent",
+      "no_budget": "Geen begroting",
+      "no_response": "Ze werden stil",
+      "not_a_fit": "Geen pasvorm",
+      "other": "Anders",
+      "price": "Prijs",
+      "timing": "Tijdstip"
+    },
+    "meeting": {
+      "daysAgo": "{{count}} dagen geleden",
+      "done": "Pijpleiding beoordeeld. {{count}} deals geregistreerd.",
+      "evidenceSays": "Bewijs zegt",
+      "gap": "Het vertrouwen is {{confidence}}, maar het bewijs stopt bij {{stage}}. Wat heeft de cliënt daadwerkelijk gedaan?",
+      "keys": "← terug · → beoordeeld",
+      "markReviewed": "Beoordeeld → volgende",
+      "next": "Volgende actie:",
+      "noAction": "geen ingesteld",
+      "progress": "Aanbieding {{n}} van {{total}}",
+      "repSays": "Eigenaar zegt",
+      "reviewed": "Beoordeeld",
+      "silence": "Laatste aanraking"
+    },
+    "new": "Nieuwe kans",
+    "onePager": {
+      "average": "Maandelijks gemiddelde",
+      "billed": "Gefactureerd",
+      "month": "Maand",
+      "printTitle": "{{client}} — ondersteuningsuitgaven over een periode van twaalf maanden",
+      "summary": "{{client}} heeft de afgelopen twaalf maanden {{total}} betaald voor ondersteuning per uur. Dat is gemiddeld {{avg}} per maand.",
+      "title": "Tijd & materialen, laatste 12 maanden"
+    },
+    "oneTime": "eenmalig",
+    "oneTimeAmount": "{{amount}} eenmalig",
+    "pageTitle": "Kansen",
+    "perMonthSuffix": "/mnd",
+    "prospect": "Vooruitzicht",
+    "queue": {
+      "actions": "Acties",
+      "allClear": "Allemaal duidelijk. Voor elke open deal is een volgende stap gepland.",
+      "bottom": "Dat is alles. Niets anders heeft jou vandaag nodig.",
+      "cardsView": "Kaarten",
+      "completeAction": "Klaar → volgende instellen",
+      "completeActionFor": "Voltooi actie voor {{title}}",
+      "daysOverdue": "{{count}} dagen te laat",
+      "daysQuiet": "{{count}} dagen rustig",
+      "doToday": "Vandaag doen",
+      "goingQuiet": "Het wordt stil",
+      "greetingAfternoon": "Goedemiddag, {{name}}.",
+      "greetingEvening": "Goedenavond, {{name}}.",
+      "greetingMorning": "Goedemorgen, {{name}}.",
+      "lesson": {
+        "reviewPipeline": "Controleer de pijplijn",
+        "viewAssessmentDeals": "Bekijk assessmentdeals"
+      },
+      "markLost": "Mark heeft verloren",
+      "moneyFound": "Geld gevonden",
+      "moneyFoundSource": "van facturering, contracten en activa",
+      "needsYou_one": "{{count}} ding heeft je vandaag nodig.",
+      "needsYou_other": "{{count}} dingen hebben je vandaag nodig.",
+      "nothingDue": "Er hoeft vandaag niets te gebeuren.",
+      "openDeal": "Open overeenkomst",
+      "openDealNamed": "Open {{title}}",
+      "reviewDraft": "Bekijk het concept",
+      "snooze": "Snoozen",
+      "snoozeNamed": "Snoozen {{title}}",
+      "stakesMrr": "{{amount}}/maand staat in je eigen gegevens, er is niets ingetypt.",
+      "stakesNrr": "{{amount}} projectwerk zit in uw eigen gegevens.",
+      "table": {
+        "actions": "Acties",
+        "client": "Klant",
+        "due": "Verschuldigd",
+        "nextAction": "Volgende actie",
+        "value": "Waarde"
+      },
+      "tableView": "Tafel",
+      "viewLabel": "Wachtrijweergave"
+    },
+    "snapshot": {
+      "actionsDue": "Acties verschuldigd",
+      "empty": "Er zijn nog geen openstaande mogelijkheden.",
+      "loading": "Momentopname van mogelijkheid laden",
+      "mrr": "{{amount}} MRR",
+      "nrr": "{{amount}} NRR",
+      "open": "Open kansen",
+      "openCount": "Open kansen",
+      "opportunityCount_one": "{{count}} mogelijkheid",
+      "opportunityCount_other": "{{count}} mogelijkheden",
+      "pipelineByStage": "Pijplijn per fase",
+      "stalled": "Vastgelopen",
+      "subtitle": "Open pijplijn en vervolgwerkzaamheden die aandacht behoeven.",
+      "title": "Momentopname van kansen",
+      "unavailable": "Opportunitytotalen zijn tijdelijk niet beschikbaar. Open kansen om te blijven werken."
+    },
+    "stage": {
+      "assessment": "Beoordeling",
+      "identified": "Geïdentificeerd",
+      "lost": "Verloren",
+      "proposed": "Voorgesteld",
+      "qualified": "Gekwalificeerd",
+      "verbal": "Verbaal",
+      "won": "Gewonnen"
+    },
+    "status": {
+      "lost": "Verloren",
+      "won": "Gewonnen"
+    },
+    "suggestedActions": {
+      "bookAssessment": "Boekbeoordeling",
+      "confirmDecisionMaker": "Bevestig de beslisser",
+      "confirmRequirements": "Bevestig vereisten en budget",
+      "confirmStartDate": "Bevestig de startdatum",
+      "followUpQuote": "Vervolg offerte",
+      "label": "Voorgestelde volgende acties",
+      "prepareQuote": "Offerte voorbereiden",
+      "reviewFindings": "Beoordeel de bevindingen van de beoordeling",
+      "scheduleDiscovery": "Plan een ontdekkingsgesprek",
+      "scheduleProposalReview": "Plan de beoordeling van het voorstel",
+      "sendContract": "Contract versturen"
+    },
+    "suggestionHow": {
+      "assetAging_one": "Voer een vernieuwing uit voor {{count}} verouderde activa.",
+      "assetAging_other": "Voer een vernieuwing uit voor {{count}} verouderde activa.",
+      "inboundLead": "Follow-up terwijl de interesse warm is.",
+      "renewal": "Start het verlengingsgesprek van {{clientName}} vóór de deadline.",
+      "tmConversion": "Vergelijk lopende T&M-uitgaven met een terugkerende overeenkomst.",
+      "whitespace": "Toon {{clientName}} de ontbrekende dekking voor {{serviceName}}."
+    },
+    "suggestions": {
+      "accept": "Creëer kansen",
+      "dismiss": "Negeren",
+      "emptyBody": "Generatoren houden uw contracten, facturering en activa in de gaten en brengen hier deals naar voren zodra ze deze vinden.",
+      "emptyTitle": "Er zijn momenteel geen suggesties",
+      "intro": "Gevonden in uw gegevens. Accepteer om de kans te creëren, of negeer het en het blijft weg.",
+      "seeNumbers": "Zie de cijfers",
+      "snooze": "Snoozen"
+    },
+    "suggestionTitles": {
+      "assetAging": "{{clientName}} item vernieuwen",
+      "inboundLead": "{{clientName}} inkomende mogelijkheid",
+      "renewal": "{{contractName}} verlenging",
+      "tmConversion": "{{clientName}} Conversie van T&M-overeenkomsten",
+      "whitespace": "{{clientName}}: {{serviceName}} mogelijkheid"
+    },
+    "tabs": {
+      "board": "Bord",
+      "forecast": "Voorspelling",
+      "meeting": "Vergadering",
+      "pipeline": "Pijpleiding",
+      "queue": "Wachtrij",
+      "suggestions": "Suggesties"
+    },
+  "timeline": {
+    "created": "Verkoopkans aangemaakt",
+      "empty": "Nog niets ingelogd. Voltooide acties komen hier vanzelf terecht."
+    },
+    "toast": {
+      "actionCompleted": "Klaar. Volgende actie gepland.",
+      "created": "Kans gecreëerd",
+      "deleted": "Mogelijkheid verwijderd",
+      "lost": "Gemarkeerd als verloren",
+      "qualified": "Gekwalificeerd controlepunt geregistreerd",
+      "quoteLinked": "Citaat gekoppeld",
+      "quoteUnlinked": "Citaat ontkoppeld",
+      "saved": "Opgeslagen",
+      "snoozed": "Een paar dagen gesnoozed",
+      "stageSet": "Fase ingesteld op {{stage}}",
+      "suggestionAccepted": "Mogelijkheid gecreëerd op basis van de suggestie",
+      "suggestionDismissed": "Ontslagen. Het zal niet terugkomen.",
+      "suggestionSnoozed": "Eén week gesnoozed",
+      "whitespaceSuggestionCreated": "Suggestie klaar voor beoordeling",
+      "whitespaceSuggestionDismissed": "Dit voorstel werd eerder verworpen",
+      "whitespaceSuggestionKnown": "Deze suggestie is al bekend",
+      "won": "Gewonnen"
+    },
+    "type": {
+      "expansion": "Uitbreiding",
+      "new_logo": "Nieuwe klant",
+      "project": "Project",
+      "renewal": "Verlenging"
+    },
+    "valuesDialog": {
+      "hardware": "Hardware",
+      "mrr": "Terugkerend (maandelijks)",
+      "note": "Dit zijn jouw schattingen. Een geaccepteerde offerte vervangt ze door de echte cijfers.",
+      "nrr": "Eenmalige diensten",
+      "title": "Geschatte waarde"
+    },
+    "whitespace": {
+      "adoption": "{{pct}}% van uw klanten met een overeenkomst kopen dit",
+      "client": "Klant",
+      "empty": "Het raster wordt ingevuld zodra klanten een actieve overeenkomst hebben.",
+      "sell": "Begin {{category}} voor {{client}}",
+      "subtitle": "Wat elke overeenkomstklant koopt. Een lege cel is een gesprek dat je nog niet hebt gevoerd.",
+      "title": "Het hele boek"
+    },
+    "why": {
+      "actionDue": {
+        "deadlinePast_one": " en {{count}} dag voorbij je eigen deadline.",
+        "deadlinePast_other": " en {{count}} dagen na je eigen deadline.",
+        "dueToday": "Vandaag verschuldigd",
+        "inboundChase_one": " Sinds je laatste antwoord hebben ze één keer geschreven.",
+        "inboundChase_other": " Ze hebben {{count}} keer geschreven sinds je laatste antwoord.",
+        "pastDue_one": "{{count}} dag over tijd",
+        "pastDue_other": "{{count}} dagen over tijd",
+        "proposalAge_one": "Dag {{count}} sinds het voorstel",
+        "proposalAge_other": "Dag {{count}} sinds het voorstel",
+        "proposalAgeShort_one": "{{count}} dag.",
+        "proposalAgeShort_other": "{{count}} dagen.",
+        "quoteIntro": "{{clientName}} heeft een quote {{quoteNumber}} gehad voor "
+      },
+      "assetAging": {
+        "age_one": "{{count}} item dat meer dan {{oldestYears}} jaar oud is",
+        "age_other": "{{count}} items die meer dan {{oldestYears}} jaar oud zijn",
+        "quoteRefresh": " bij {{clientName}}. Citeer de vernieuwing voordat deze een storingsticket wordt."
+      },
+      "forClient": " voor {{clientName}}.",
+      "goingQuiet": {
+        "nudge": " bij {{clientName}}. Deals die zo stil zijn, sterven meestal zonder een duwtje in de rug.",
+        "paperworkMissing": ". Het papierwerk is nooit uitgegaan.",
+        "quietAge_one": "Stil gedurende {{count}} dag",
+        "quietAge_other": "Stil gedurende {{count}} dagen",
+        "verbalAge_one": "{{count}} dag sinds hun mondelinge ja",
+        "verbalAge_other": "{{count}} dagen sinds hun mondelinge ja"
+      },
+      "inboundLead": {
+        "raisedHand": "{{clientName}} stak zijn hand op",
+        "source": " via {{formName}}. Inkomende interesse koelt snel af."
+      },
+      "lesson": {
+        "assessmentGap_one": " U heeft er al {{count}} maand geen voorgesteld. Betaalde aanslagen zijn je sterkste openingszet.",
+        "assessmentGap_other": " U heeft al {{count}} maanden geen voorstel ingediend. Betaalde aanslagen zijn je sterkste openingszet.",
+        "assessmentRate": "U sluit {{wonPerFive}} van elke 5 assessments die u voorstelt.",
+        "quoteVelocity": "Offertes die u binnen een week verzendt, sluiten {{ratio}}x zo vaak aan",
+        "quoteVelocityCompared": " als degenen die wachten."
+      },
+      "renewal": {
+        "age_one": "Wordt over {{count}} dag verlengd",
+        "age_other": "Wordt over {{count}} dagen verlengd",
+        "startNow": ". Nu beginnen betekent dat het vernieuwingsgesprek niet overhaast wordt gevoerd."
+      },
+      "tmConversion": {
+        "counted_one": "{{count}} klant betaalde meer aan T&M dan een overeenkomst kost",
+        "counted_other": "{{count}} klanten betaalden meer aan T&M dan een overeenkomst kost",
+        "named": "{{clientNames}} heeft meer betaald aan T&M dan een overeenkomst kost",
+        "trailing": " gedurende de daaropvolgende twaalf maanden. De one-pager maakt het hun idee."
+      },
+      "whitespace": {
+        "comparable": " nog van jou. Iedere vergelijkbare klant doet dat.",
+        "missing": "{{clientName}} koopt {{serviceName}} niet"
+      }
+    },
+    "winDialog": {
+      "body": "De deal wordt gesloten als gewonnen. Converteer de geaccepteerde offerte achteraf naar een overeenkomst vanuit het offertescherm.",
+      "bodyProspect": "{{client}} wordt een actieve klant. Converteer de geaccepteerde offerte achteraf naar een overeenkomst vanuit het offertescherm.",
+      "confirm": "Mark heeft gewonnen",
+      "convertQuote": "Een geaccepteerde offerte omzetten naar een conceptovereenkomst (optioneel)",
+      "noConvertQuote": "Converteer een offerte niet",
+      "noProject": "Maak geen project aan",
+      "projectName": "Projectnaam",
+      "projectStart": "Startdatum",
+      "projectStatus": "Initiële status",
+      "projectTemplate": "Maak een onboardingproject aan (optioneel)",
+      "title": "Mark heeft gewonnen"
+    }
+  }
+}

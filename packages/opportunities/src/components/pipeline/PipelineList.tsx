@@ -1,10 +1,12 @@
 'use client';
 
 import { DataTable } from '@alga-psa/ui/components/DataTable';
+import Link from 'next/link';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
-import type { ColumnDefinition, IOpportunityListItem } from '@alga-psa/types';
+import type { ColumnDefinition, IOpportunityListItem, OpportunityStage } from '@alga-psa/types';
+import { OPPORTUNITY_STAGE_LABELS } from '../../lib/opportunityStages';
 
 const NUM_CELL = 'text-right tabular-nums';
 
@@ -17,15 +19,19 @@ export function PipelineList({
   items,
   onOpen,
   pagination,
+  initialStage,
 }: {
   items: IOpportunityListItem[];
   onOpen: (opportunityId: string) => void;
   /** Server-side pagination handled by the host page. */
   pagination?: { currentPage: number; pageSize: number; totalItems: number; onPageChange: (page: number) => void };
+  initialStage?: OpportunityStage;
 }) {
-  const { t } = useTranslation();
-  const stageLabel = (stage: string) =>
-    t(`opportunities.stage.${stage}`, stage.charAt(0).toUpperCase() + stage.slice(1));
+  const { t } = useTranslation('msp/opportunities');
+  const stageLabel = (stage: OpportunityStage) => {
+    const label = OPPORTUNITY_STAGE_LABELS[stage];
+    return t(label.key, label.fallback);
+  };
 
   const columns: ColumnDefinition<IOpportunityListItem>[] = [
     {
@@ -35,7 +41,13 @@ export function PipelineList({
         <div>
           <div className="font-medium text-[rgb(var(--color-text-900))]">{record.title}</div>
           <div className="flex items-center gap-1.5 text-xs text-[rgb(var(--color-text-500))]">
-            {record.client_name}
+            <Link
+              href={`/msp/clients/${record.client_id}`}
+              className="text-[rgb(var(--color-primary-600))] hover:underline"
+              onClick={(event) => event.stopPropagation()}
+            >
+              {record.client_name}
+            </Link>
             {record.client_lifecycle_status === 'prospect' ? (
               <Badge variant="default-muted" size="sm">{t('opportunities.prospect', 'Prospect')}</Badge>
             ) : null}
@@ -115,11 +127,12 @@ export function PipelineList({
       dataIndex: 'owner_name',
     },
   ];
+  const visibleItems = initialStage ? items.filter((item) => item.stage === initialStage) : items;
 
   return (
     <DataTable
       id="opportunities-pipeline-table"
-      data={items}
+      data={visibleItems}
       columns={columns}
       onRowClick={(record: IOpportunityListItem) => onOpen(record.opportunity_id)}
       {...(pagination

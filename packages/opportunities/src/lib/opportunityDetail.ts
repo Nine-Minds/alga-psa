@@ -78,7 +78,20 @@ export async function getOpportunityDetail(
       accepted_at: optionalIso(quote.accepted_at),
     })),
     why: {
-      segments: [{ text: `${opportunity.opportunity_number} is at ${opportunity.stage}.`, emphasis: true }],
+      segments: [
+        {
+          message: {
+            key: 'opportunities.detail.whyNumber',
+            params: { number: opportunity.opportunity_number },
+          },
+          emphasis: true,
+        },
+        {
+          message: { key: `opportunities.stage.${opportunity.stage}` },
+          emphasis: true,
+        },
+        { message: { key: 'opportunities.detail.whyPeriod' } },
+      ],
     },
   };
 }

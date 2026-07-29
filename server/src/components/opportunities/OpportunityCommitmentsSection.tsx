@@ -20,7 +20,7 @@ import {
  * stop evaporating in the handoff.
  */
 export function OpportunityCommitmentsSection({ detail }: { detail: IOpportunityDetail }) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('msp/opportunities');
   const [commitments, setCommitments] = useState<IOpportunityCommitment[]>([]);
   const [description, setDescription] = useState('');
   const [busy, setBusy] = useState(false);
