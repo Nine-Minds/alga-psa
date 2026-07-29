@@ -15,3 +15,5 @@ export * from './opportunityWin';
 export * from './opportunityHandoff';
 export * from './lessons';
 export * from './opportunityTimelineCore';
+export * from './opportunityStages';
+export * from './suggestedNextActions';

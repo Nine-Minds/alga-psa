@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import Spinner from '@alga-psa/ui/components/Spinner';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
@@ -104,7 +105,12 @@ export function OpportunityActivityPanel({ opportunityId, onClose }: Opportunity
         <div>
           <div className="text-xs font-medium text-gray-500">{opportunity.opportunity_number}</div>
           <h2 className="text-xl font-semibold text-gray-900">{opportunity.title}</h2>
-          <div className="mt-1 text-sm text-gray-600">{opportunity.client_name}</div>
+          <Link
+            href={`/msp/clients/${opportunity.client_id}`}
+            className="mt-1 inline-block text-sm font-medium text-[rgb(var(--color-primary-600))] hover:underline"
+          >
+            {opportunity.client_name}
+          </Link>
         </div>
 
         {opportunity.next_action ? (

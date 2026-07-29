@@ -27,6 +27,12 @@ export function QueueGreeting({
   const needsYou = actionCount + quietCount;
   const foundMrr = formatCurrencyFromMinorUnits(foundMrrCents, undefined, currencyCode);
   const foundNrr = formatCurrencyFromMinorUnits(foundNrrCents, undefined, currencyCode);
+  const hour = new Date().getHours();
+  const greeting = hour < 12
+    ? t('opportunities.queue.greetingMorning', 'Good morning, {{name}}.', { name: firstName })
+    : hour < 18
+      ? t('opportunities.queue.greetingAfternoon', 'Good afternoon, {{name}}.', { name: firstName })
+      : t('opportunities.queue.greetingEvening', 'Good evening, {{name}}.', { name: firstName });
 
   let stakes: string | null = null;
   if (foundMrrCents > 0) {
@@ -46,11 +52,15 @@ export function QueueGreeting({
   return (
     <header id="opportunities-queue-greeting" className="mb-7">
       <h2 className="font-semibold text-2xl text-[rgb(var(--color-text-900))]">
-        {t('opportunities.queue.greeting', 'Morning, {{name}}.', { name: firstName })}
+        {greeting}
       </h2>
       <p className="mt-1 text-sm text-[rgb(var(--color-text-500))]">
         {needsYou > 0
-          ? t('opportunities.queue.needsYou', '{{count}} things need you today.', { count: needsYou })
+          ? t(
+              'opportunities.queue.needsYou',
+              needsYou === 1 ? '{{count}} thing needs you today.' : '{{count}} things need you today.',
+              { count: needsYou },
+            )
           : t('opportunities.queue.nothingDue', 'Nothing is due today.')}
         {stakes ? ` ${stakes}` : ''}
       </p>

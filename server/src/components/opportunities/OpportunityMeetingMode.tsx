@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { toast } from 'react-hot-toast';
 import { CheckCircle2 } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -120,7 +121,13 @@ export function OpportunityMeetingMode() {
           ) : null}
         </div>
         <div className="mb-4 text-sm text-[rgb(var(--color-text-500))]">
-          {deal.client_name} · {deal.owner_name} ·{' '}
+          <Link
+            href={`/msp/clients/${deal.client_id}`}
+            className="font-medium text-[rgb(var(--color-primary-600))] hover:underline"
+          >
+            {deal.client_name}
+          </Link>
+          {' · '}{deal.owner_name} ·{' '}
           <span className="tabular-nums">
             {fmt(deal.mrr_cents)}{t('opportunities.perMonthSuffix', '/mo')}
             {deal.nrr_cents + deal.hardware_cents > 0 ? ` + ${fmt(deal.nrr_cents + deal.hardware_cents)}` : ''}

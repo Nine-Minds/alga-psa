@@ -26,6 +26,7 @@ import {
   buildOpportunityStatusChangedPayload,
   completeOpportunityNextAction,
   correctEvidence,
+  declareStage,
   getOpportunityDetail,
   onQuoteAccepted,
   onQuoteSent,
@@ -405,7 +406,7 @@ export class OpportunityService extends BaseService<IOpportunity | IOpportunityL
       await recordEvidence(trx, context.tenant, {
         opportunityId: id,
         checkpoint: 'won',
-        source: 'declared',
+        source: 'user_declared',
         detail: 'Opportunity marked won',
         recordedBy: context.userId,
       });
@@ -457,15 +458,16 @@ export class OpportunityService extends BaseService<IOpportunity | IOpportunityL
     id: string,
     data: DeclaredOpportunityEvidenceApi,
     context: ServiceContext,
-  ): Promise<IOpportunityEvidence> {
+  ): Promise<IOpportunity> {
     const knex = await this.getDbForContext(context);
-    return withTransaction(knex, (trx) => recordEvidence(trx, context.tenant, {
-      opportunityId: id,
-      checkpoint: data.checkpoint,
-      source: 'declared',
-      detail: data.detail?.trim() || 'Decision-maker and budget conversation confirmed',
-      recordedBy: context.userId,
-    })).catch(throwOpportunityApiError);
+    return withTransaction(knex, (trx) => declareStage(
+      trx,
+      context.tenant,
+      id,
+      data.checkpoint,
+      context.userId,
+      data.detail,
+    )).catch(throwOpportunityApiError);
   }
 
   async correctEvidence(

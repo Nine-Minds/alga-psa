@@ -43,7 +43,11 @@ export function OpportunityTimelinePanel({ opportunityId }: { opportunityId: str
             {new Date(entry.interaction_date).toLocaleDateString()}
           </span>
           <span className="min-w-0 flex-1">
-            <span className="text-[rgb(var(--color-text-700))]">{entry.title}</span>
+            <span className="text-[rgb(var(--color-text-700))]">
+              {entry.interaction_id.startsWith('opportunity-created:')
+                ? t('opportunities.timeline.created', 'Opportunity created')
+                : entry.title}
+            </span>
             {entry.user_name ? (
               <span className="text-[rgb(var(--color-text-400))]"> · {entry.user_name}</span>
             ) : null}

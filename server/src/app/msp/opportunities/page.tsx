@@ -79,6 +79,7 @@ export default async function OpportunitiesPage() {
       initialClients={clients}
       draftingAvailable={draftingAvailable}
       eeTabs={eeTabs}
+      userPreferenceKey={String((session.user as any).user_id ?? session.user.email ?? 'current-user')}
     />
   );
 }

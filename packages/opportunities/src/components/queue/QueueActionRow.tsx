@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { Check } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Badge } from '@alga-psa/ui/components/Badge';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
@@ -11,7 +12,7 @@ import { opportunityValueParts } from '../../lib/format';
 export interface QueueActionRowProps {
   item: IQueueActionItem;
   /** Complete the next action; the caller opens the set-next-action prompt (the chain never breaks). */
-  onComplete: (opportunityId: string) => void;
+  onComplete: (opportunityId: string, stage: IQueueActionItem['stage']) => void;
   onOpen: (opportunityId: string) => void;
   onSnooze: (opportunityId: string) => void;
   /** Only offered on going-quiet rows. */
@@ -35,19 +36,24 @@ export function QueueActionRow({ item, onComplete, onOpen, onSnooze, onMarkLost,
   const idBase = `opportunity-queue-row-${item.opportunity_id}`;
 
   const primaryLabel = primaryOverride?.label ?? t('opportunities.queue.completeAction', 'Done → set next');
-  const primaryClick = primaryOverride?.onClick ?? (() => onComplete(item.opportunity_id));
+  const primaryClick = primaryOverride?.onClick ?? (() => onComplete(item.opportunity_id, item.stage));
 
   return (
     <div
       id={idBase}
-      className="mb-2 flex gap-3.5 rounded-xl border border-[rgb(var(--color-border-200))] bg-white p-4 transition-colors hover:border-[rgb(var(--color-primary-300))] dark:bg-[rgb(var(--color-card-bg,255_255_255))]"
+      className="flex h-full gap-3.5 rounded-xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4 transition-all hover:-translate-y-0.5 hover:border-[rgb(var(--color-primary-300))] hover:shadow-sm"
     >
-      <span
-        aria-hidden
+      <button
+        id={`${idBase}-complete-control`}
+        type="button"
+        aria-label={t('opportunities.queue.completeActionFor', 'Complete action for {{title}}', { title: item.title })}
+        onClick={() => onComplete(item.opportunity_id, item.stage)}
         className={`mt-0.5 h-5 w-5 flex-none rounded-full border-2 ${
           overdue ? 'border-[rgb(var(--color-accent-400))]' : 'border-[rgb(var(--color-border-400))]'
-        }`}
-      />
+        } group grid place-items-center transition-colors hover:border-[rgb(var(--color-primary-500))] hover:bg-[rgb(var(--color-primary-50))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-primary-400))]`}
+      >
+        <Check className="h-3 w-3 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100" aria-hidden />
+      </button>
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-baseline gap-x-2.5 gap-y-0.5">
           <span className="text-sm font-semibold text-[rgb(var(--color-text-900))]">

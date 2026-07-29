@@ -45,11 +45,11 @@ export function WhitespaceGridView({
   }
 
   return (
-    <div className="overflow-x-auto rounded-xl border border-[rgb(var(--color-border-200))] bg-white">
+    <div className="overflow-x-auto rounded-xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))]">
       <table className="w-full border-collapse text-[13px]">
         <thead>
           <tr className="border-b border-[rgb(var(--color-border-200))]">
-            <th className="sticky left-0 bg-white px-3 py-2 text-left font-semibold text-[rgb(var(--color-text-700))]">
+            <th className="sticky left-0 bg-[rgb(var(--color-card))] px-3 py-2 text-left font-semibold text-[rgb(var(--color-text-700))]">
               {t('opportunities.whitespace.client', 'Client')}
             </th>
             {grid.categories.map((cat) => (
@@ -68,7 +68,7 @@ export function WhitespaceGridView({
         <tbody>
           {grid.clients.map((client) => (
             <tr key={client.client_id} className="border-b border-[rgb(var(--color-border-100,241_245_249))] last:border-b-0">
-              <td className="sticky left-0 bg-white px-3 py-1.5 font-medium text-[rgb(var(--color-text-900))]">
+              <td className="sticky left-0 bg-[rgb(var(--color-card))] px-3 py-1.5 font-medium text-[rgb(var(--color-text-900))]">
                 {client.client_name}
               </td>
               {grid.categories.map((cat) => {

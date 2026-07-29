@@ -5,9 +5,9 @@ import { createTenantKnex, registerAfterCommit, tenantDb, withTransaction } from
 import { withAuth } from '@alga-psa/auth';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import type { IOpportunity, IOpportunityDetail, IOpportunityEvidence, IOpportunityHandoff, IQuote, OpportunityListFilters } from '@alga-psa/types';
-import { createOpportunitySchema, updateOpportunitySchema, loseOpportunitySchema, completeNextActionSchema, opportunityListFiltersSchema, winOpportunitySchema } from '../schemas/opportunitySchemas';
+import { createOpportunitySchema, updateOpportunitySchema, loseOpportunitySchema, completeNextActionSchema, opportunityListFiltersSchema, recordDeclaredEvidenceSchema, winOpportunitySchema } from '../schemas/opportunitySchemas';
 import { OpportunityModel } from '../models/opportunityModel';
-import { correctEvidence, recordEvidence } from '../lib/stageEngine';
+import { correctEvidence, declareStage, recordEvidence } from '../lib/stageEngine';
 import { onQuoteAccepted, onQuoteSent, recomputeAcceptedQuoteValues } from '../lib/quoteLifecycleHooks';
 import { buildOpportunityCreatedPayload, buildOpportunityStatusChangedPayload } from '../lib/opportunityEventBuilders';
 import { publishOpportunityEventAfterCommit } from '../lib/opportunityEvents';
@@ -107,10 +107,38 @@ export const completeNextAction = withAuth(async (user, { tenant }, opportunityI
   ));
 });
 
-export const declareQualified = withAuth(async (user, { tenant }, opportunityId: string, detail?: string): Promise<IOpportunityEvidence> => {
+export const declareOpportunityStage = withAuth(async (
+  user,
+  { tenant },
+  opportunityId: string,
+  stage: 'identified' | 'qualified' | 'assessment' | 'proposed' | 'verbal',
+  detail?: string,
+): Promise<IOpportunity> => {
+  await requirePermission(user, 'update');
+  const data = recordDeclaredEvidenceSchema.parse({ checkpoint: stage, detail });
+  const { knex } = await createTenantKnex();
+  return withTransaction(knex, (trx) => declareStage(
+    trx,
+    tenant,
+    opportunityId,
+    data.checkpoint,
+    actorId(user),
+    data.detail,
+  ));
+});
+
+/** @deprecated Use declareOpportunityStage so every open stage follows one path. */
+export const declareQualified = withAuth(async (user, { tenant }, opportunityId: string, detail?: string): Promise<IOpportunity> => {
   await requirePermission(user, 'update');
   const { knex } = await createTenantKnex();
-  return withTransaction(knex, (trx) => recordEvidence(trx, tenant, { opportunityId, checkpoint: 'qualified', source: 'declared', detail: detail?.trim() || 'Decision-maker and budget conversation confirmed', recordedBy: actorId(user) }));
+  return withTransaction(knex, (trx) => declareStage(
+    trx,
+    tenant,
+    opportunityId,
+    'qualified',
+    actorId(user),
+    detail || 'Decision-maker and budget conversation confirmed',
+  ));
 });
 
 export const correctOpportunityEvidence = withAuth(async (user, { tenant }, evidenceId: string, correctionNote: string): Promise<IOpportunityEvidence> => {
@@ -177,7 +205,7 @@ export const winOpportunity = withAuth(async (
     await recordEvidence(trx, tenant, {
       opportunityId,
       checkpoint: 'won',
-      source: 'declared',
+      source: 'user_declared',
       detail: conversions.converted_project_id
         ? `Opportunity marked won; project ${conversions.converted_project_id} created from template`
         : 'Opportunity marked won',

@@ -4,17 +4,9 @@ import React, { useMemo, useState } from 'react';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { IOpportunityListItem, OpportunityStage } from '@alga-psa/types';
 import { BoardCard } from './BoardCard';
+import { OPEN_OPPORTUNITY_STAGES, OPPORTUNITY_STAGE_LABELS } from '../../lib/opportunityStages';
 
-const OPEN_COLUMNS: OpportunityStage[] = ['identified', 'qualified', 'assessment', 'proposed', 'verbal'];
-
-const COLUMN_LABEL_KEYS: Record<string, [string, string]> = {
-  identified: ['opportunities.stage.identified', 'Identified'],
-  qualified: ['opportunities.stage.qualified', 'Qualified'],
-  assessment: ['opportunities.stage.assessment', 'Assessment'],
-  proposed: ['opportunities.stage.proposed', 'Proposed'],
-  verbal: ['opportunities.stage.verbal', 'Verbal'],
-  closed: ['opportunities.board.recentlyClosed', 'Recently closed'],
-};
+const OPEN_COLUMNS: OpportunityStage[] = [...OPEN_OPPORTUNITY_STAGES];
 
 /**
  * The board view: stage columns whose cards move by evidence, not by hand.
@@ -95,11 +87,11 @@ export function OpportunityBoard({
   return (
     <div id="opportunities-board" className="flex gap-3 overflow-x-auto pb-2">
       {OPEN_COLUMNS.map((stage) => {
-        const [key, fallback] = COLUMN_LABEL_KEYS[stage];
+        const label = OPPORTUNITY_STAGE_LABELS[stage];
         const columnItems = byStage.get(stage) ?? [];
         return columnShell(
           stage,
-          t(key, fallback),
+          t(label.key, label.fallback),
           columnItems.map((item) => (
             <BoardCard
               key={item.opportunity_id}
@@ -114,7 +106,7 @@ export function OpportunityBoard({
       })}
       {columnShell(
         'closed',
-        t(...COLUMN_LABEL_KEYS.closed as [string, string]),
+        t('opportunities.board.recentlyClosed', 'Recently closed'),
         recentlyClosed.map((item) => (
           <div key={item.opportunity_id} className="opacity-70">
             <BoardCard item={item} onOpen={onOpen} />

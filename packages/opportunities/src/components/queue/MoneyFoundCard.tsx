@@ -30,7 +30,7 @@ export function MoneyFoundCard({ item, onAccept, onDismiss, onSnooze, onViewEvid
   return (
     <div
       id={idBase}
-      className="flex flex-col rounded-xl border border-[rgb(var(--color-border-200))] bg-white p-4 transition-colors hover:border-[rgb(var(--color-primary-300))] dark:bg-[rgb(var(--color-card-bg,255_255_255))]"
+      className="flex flex-col rounded-xl border border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-card))] p-4 transition-colors hover:border-[rgb(var(--color-primary-300))] dark:bg-[rgb(var(--color-card-bg,255_255_255))]"
     >
       <div className="text-xl font-semibold tabular-nums text-[rgb(var(--badge-success-text))]">
         {value.amount}

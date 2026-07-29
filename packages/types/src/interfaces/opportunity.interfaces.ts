@@ -19,13 +19,13 @@ export type OpportunityStage =
   | 'won'
   | 'lost';
 
-/** Checkpoints that evidence can attest. 'qualified' is the one declared-type checkpoint. */
+/** Checkpoints that evidence can attest. Every checkpoint may be declared by a user. */
 export type OpportunityCheckpoint = 'qualified' | 'assessment' | 'proposed' | 'verbal' | 'won';
 
 /** Rep-declared confidence. Deliberately an enum — no percentages anywhere. Never alters derived stage. */
 export type OpportunityConfidence = 'low' | 'medium' | 'high' | 'committed';
 
-export type OpportunityEvidenceSource = 'system' | 'declared';
+export type OpportunityEvidenceSource = 'system' | 'declared' | 'user_declared';
 
 export type OpportunityEvidenceRefType =
   | 'quote'
