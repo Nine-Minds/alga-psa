@@ -732,10 +732,18 @@ export const templateVariableSeed: TemplateVariableSeedCategory[] = [
           {
             "path": "clientName",
             "type": "string",
-            "description": "The client/company whose customer portal the recipient is being invited to.",
+            "description": "The recipient's own client company, named in the invitation intro.",
             "example": "Acme Corporation",
             "availability": "used",
-            "notes": "Used in subject, intro, and footer copyright. Also an {{#if clientName}} condition in the Polish subject."
+            "notes": "Used only in the intro sentence ('invited to access the customer portal for <clientName>'). Falls back to tenantName when the contact has no client."
+          },
+          {
+            "path": "tenantName",
+            "type": "string",
+            "description": "The MSP sending the invitation, shown in the subject and footer copyright.",
+            "example": "Northwind Managed Services",
+            "availability": "used",
+            "notes": "Assembled from the tenant's default client name. Used in subject, footer copyright, and the {{#if tenantName}} condition in the Polish subject."
           },
           {
             "path": "portalLink",
@@ -754,20 +762,36 @@ export const templateVariableSeed: TemplateVariableSeedCategory[] = [
             "notes": "Used in the time-sensitive warning box and its text equivalent."
           },
           {
+            "path": "supportEmail",
+            "type": "string",
+            "description": "The MSP's support email, shown in the Need Assistance box and footer (also the email Reply-To).",
+            "example": "support@northwind.example",
+            "availability": "used",
+            "notes": "Assembled from tenant_settings.settings.supportEmail, falling back to the default client's location email. Defaults to 'Not provided' when neither is set. Used in contact-info Email, footerUnexpected, and text. Also passed as replyTo."
+          },
+          {
+            "path": "supportPhone",
+            "type": "string",
+            "description": "The MSP's support phone number, shown in the Need Assistance box.",
+            "example": "+1 (555) 010-1234",
+            "availability": "used",
+            "notes": "Assembled from tenant_settings.settings.supportPhone, falling back to the default client's location phone. Defaults to 'Not provided' when neither is set. Used in contact-info Phone and text."
+          },
+          {
             "path": "clientLocationEmail",
             "type": "string",
-            "description": "The client location's contact email, shown in the Need Assistance box and footer (also the email Reply-To).",
-            "example": "support@acme.com",
-            "availability": "used",
-            "notes": "Defaults to 'Not provided' when the caller omits it. Used in contact-info Email, footerUnexpected, and text. Also passed as replyTo."
+            "description": "Legacy alias of supportEmail, kept for template rows that predate the rename.",
+            "example": "support@northwind.example",
+            "availability": "available-unused",
+            "notes": "Still supplied with the same value as supportEmail so un-migrated template rows keep rendering, but no current template references it."
           },
           {
             "path": "clientLocationPhone",
             "type": "string",
-            "description": "The client location's contact phone number, shown in the Need Assistance box.",
+            "description": "Legacy alias of supportPhone, kept for template rows that predate the rename.",
             "example": "+1 (555) 010-1234",
-            "availability": "used",
-            "notes": "Defaults to 'Not provided' when the caller omits it. Used in contact-info Phone and text."
+            "availability": "available-unused",
+            "notes": "Still supplied with the same value as supportPhone so un-migrated template rows keep rendering, but no current template references it."
           },
           {
             "path": "currentYear",
@@ -4261,7 +4285,7 @@ export const sharedBlockSeed: SharedVariableBlockSeed[] = [
         "description": "Name shown as the sending organization in the footer / header.",
         "example": "Wolf River IT",
         "availability": "used",
-        "notes": "VARIANTS for the same slot: tenantClientName (auth email-verification, from tenants.client_name), clientName (auth password-reset footer, from the passed org), tenant_name (surveys, tenant.client_name||tenant.name, default 'Your Team'), company.name (invoices/billing MSP sender). These are NOT interchangeable across categories - see client block for the client-vs-MSP-company collision."
+        "notes": "VARIANTS for the same slot: tenantClientName (auth email-verification, from tenants.client_name), clientName (auth password-reset footer, from the passed org), tenantName (auth portal-invitation subject + footer, from the tenant's default client), tenant_name (surveys, tenant.client_name||tenant.name, default 'Your Team'), company.name (invoices/billing MSP sender). These are NOT interchangeable across categories - see client block for the client-vs-MSP-company collision."
       },
       {
         "path": "platformName",
@@ -4287,7 +4311,7 @@ export const sharedBlockSeed: SharedVariableBlockSeed[] = [
         "description": "Support email address the recipient can reach out to (often also set as Reply-To).",
         "example": "support@acme-it.com",
         "availability": "used",
-        "notes": "VARIANTS: supportEmail (auth password-reset, also replyTo), clientLocationEmail (auth portal-invitation, defaults 'Not provided', also replyTo). Assembled-but-unused in new-appointment-request (staff template)."
+        "notes": "VARIANT: supportEmail (auth password-reset and auth portal-invitation, defaults 'Not provided', also replyTo). Assembled-but-unused in new-appointment-request (staff template)."
       },
       {
         "path": "contactPhone",
@@ -4295,7 +4319,7 @@ export const sharedBlockSeed: SharedVariableBlockSeed[] = [
         "description": "Support phone number, shown only when provided.",
         "example": "+1 (555) 010-1234",
         "availability": "used",
-        "notes": "Optional; every appointment template guards it with {{#if contactPhone}}. VARIANT: clientLocationPhone (auth portal-invitation, defaults 'Not provided')."
+        "notes": "Optional; every appointment template guards it with {{#if contactPhone}}. VARIANT: supportPhone (auth portal-invitation, defaults 'Not provided')."
       }
     ]
   },
