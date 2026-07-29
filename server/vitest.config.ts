@@ -90,6 +90,11 @@ export default defineConfig({
         '**/node_modules/**',
         '**/migrations/**',
         '**/seeds/**',
+        // Codegen output (e.g. the 59k-line MCP registry) reads as ~100%
+        // covered because importing a data literal executes it — one file
+        // inflated the suite's lines% by ~7 points and moved the trend line
+        // whenever the generator re-ran.
+        '**/*.generated.ts',
       ],
       reportsDirectory: path.resolve(__dirname, './coverage'),
       reporter: ['text', 'html', 'lcov'],
