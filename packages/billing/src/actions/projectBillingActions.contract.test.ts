@@ -27,7 +27,10 @@ const state = vi.hoisted(() => ({
   transitionFailure: false,
   configUpdateFailure: false,
   publishedEvents: [] as any[],
-  generatedInvoiceId: '10000000-0000-4000-8000-000000000009',
+  generatedInvoiceResult: {
+    invoice_id: '10000000-0000-4000-8000-000000000009',
+    warnings: [] as string[],
+  } as any,
 }));
 
 vi.mock('@alga-psa/auth', () => ({
@@ -51,7 +54,7 @@ vi.mock('@alga-psa/event-bus/publishers', () => ({
 }));
 
 vi.mock('./invoiceGeneration', () => ({
-  generateProjectInvoice: vi.fn(async () => ({ invoice_id: state.generatedInvoiceId })),
+  generateProjectInvoice: vi.fn(async () => state.generatedInvoiceResult),
 }));
 
 vi.mock('@alga-psa/db', () => {
@@ -227,6 +230,7 @@ import {
   updateProjectBillingConfig,
 } from './projectBillingConfigActions';
 import {
+  approveAndInvoiceNow,
   approveScheduleEntry,
   cancelScheduleEntry,
   createScheduleEntry,
@@ -317,6 +321,10 @@ beforeEach(() => {
   state.transitionFailure = false;
   state.configUpdateFailure = false;
   state.publishedEvents = [];
+  state.generatedInvoiceResult = {
+    invoice_id: IDS.invoice,
+    warnings: [],
+  };
   vi.clearAllMocks();
 });
 
@@ -439,6 +447,28 @@ describe('project billing schedule action contract', () => {
 
     const thawed = await unapproveScheduleEntry(IDS.entry1);
     expect(thawed).toMatchObject({ status: 'ready', frozen_amount: null });
+  });
+
+  it('T004: thaws approval when invoice generation returns a structured error', async () => {
+    state.entries = [makeEntry({
+      status: 'ready',
+      amount: 10_000,
+      frozen_amount: null,
+    })];
+    state.generatedInvoiceResult = {
+      actionError: 'Nothing to bill',
+      errorType: 'validation',
+    };
+
+    const result = await approveAndInvoiceNow(IDS.entry1);
+
+    expect(returnedErrorMessage(result)).toBe('Nothing to bill');
+    expect(state.entries[0]).toMatchObject({
+      status: 'ready',
+      approved_by: null,
+      approved_at: null,
+      frozen_amount: null,
+    });
   });
 
   it('T004: atomically creates an amount add-on and increases the project total', async () => {

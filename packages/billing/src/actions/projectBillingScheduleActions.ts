@@ -589,11 +589,14 @@ export const approveAndInvoiceNow = withAuth(withProjectBillingActionErrors(asyn
   });
 
   let invoice: Awaited<ReturnType<typeof generateProjectInvoice>>;
+  let invoiceId: string;
   try {
     invoice = await generateProjectInvoice(approved.projectId, [entryId]);
+    invoiceId = invoiceIdFrom(invoice);
   } catch (error) {
     // Approval and invoice generation cross a server-action boundary. Restore
-    // the ready state if generation fails before the schedule entry is linked.
+    // the ready state if generation throws or returns a structured action error
+    // before the schedule entry is linked.
     await withTransaction(knex, async (trx: Knex.Transaction) => {
       const current = await ProjectBillingScheduleEntry.getById(entryId, trx);
       if (current?.status === 'approved') {
@@ -609,7 +612,6 @@ export const approveAndInvoiceNow = withAuth(withProjectBillingActionErrors(asyn
     revalidateProjectBilling(approved.projectId);
     throw error;
   }
-  const invoiceId = invoiceIdFrom(invoice);
   const entry = await scheduleEntryView(knex, tenant, entryId);
   revalidateProjectBilling(approved.projectId);
   const warnings = invoice && typeof invoice === 'object' && 'warnings' in invoice
