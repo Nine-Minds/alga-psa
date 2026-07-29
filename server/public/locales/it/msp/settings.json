@@ -1056,6 +1056,15 @@
     "openMenu": "Apri menu"
   },
   "clientPortal": {
+    "features": {
+      "title": "Funzionalità del portale",
+      "description": "Scelga a quali funzionalità self-service possono accedere i clienti.",
+      "appointmentsLabel": "Appuntamenti",
+      "appointmentsHelp": "Consenta ai clienti di visualizzare e richiedere appuntamenti dal portale clienti.",
+      "appointmentsEnabled": "Gli appuntamenti sono ora disponibili nel portale clienti",
+      "appointmentsDisabled": "Gli appuntamenti sono ora nascosti nel portale clienti",
+      "updateFailed": "Impossibile aggiornare le funzionalità del portale clienti"
+    },
     "branding": {
       "title": "Branding e aspetto",
       "description": "Personalizzi l'aspetto del Suo portale clienti con il marchio della Sua azienda.",

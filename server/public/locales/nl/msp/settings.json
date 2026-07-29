@@ -1056,6 +1056,15 @@
     "openMenu": "Menu openen"
   },
   "clientPortal": {
+    "features": {
+      "title": "Portaalfuncties",
+      "description": "Kies tot welke selfservicefuncties klanten toegang hebben.",
+      "appointmentsLabel": "Afspraken",
+      "appointmentsHelp": "Sta klanten toe om afspraken in het klantenportaal te bekijken en aan te vragen.",
+      "appointmentsEnabled": "Afspraken zijn nu beschikbaar in het klantenportaal",
+      "appointmentsDisabled": "Afspraken zijn nu verborgen in het klantenportaal",
+      "updateFailed": "De functies van het klantenportaal konden niet worden bijgewerkt"
+    },
     "branding": {
       "title": "Huisstijl en uiterlijk",
       "description": "Pas het uiterlijk van uw klantenportaal aan met uw bedrijfshuisstijl.",
