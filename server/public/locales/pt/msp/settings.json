@@ -53,9 +53,9 @@
       "saveDefaultTimezone": "Salvar fuso horário padrão"
     },
     "clients": {
-      "title": "Sua empresa e clientes",
+      "title": "Sua empresa",
       "help": "O cliente marcado como sua empresa representa sua própria organização. O nome, o endereço e o logotipo desse cliente aparecem em faturas, orçamentos e comunicações com clientes.",
-      "currentDefault": "Padrão atual: {{name}}",
+      "currentDefault": "Atualmente, sua empresa é {{name}}.",
       "yourCompanyBadge": "Sua empresa",
       "table": {
         "name": "Nome",

@@ -53,9 +53,9 @@
       "saveDefaultTimezone": "Standaard tijdzone opslaan"
     },
     "clients": {
-      "title": "Uw bedrijf & klanten",
+      "title": "Uw bedrijf",
       "help": "De klant die als uw bedrijf is gemarkeerd, is uw eigen organisatie. De naam, het adres en het logo van deze klant verschijnen op facturen, offertes en communicatie naar klanten.",
-      "currentDefault": "Huidige standaard: {{name}}",
+      "currentDefault": "Uw bedrijf is momenteel {{name}}.",
       "yourCompanyBadge": "Uw bedrijf",
       "table": {
         "name": "Naam",

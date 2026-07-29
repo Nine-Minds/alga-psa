@@ -53,9 +53,9 @@
       "saveDefaultTimezone": "Guardar zona horaria predeterminada"
     },
     "clients": {
-      "title": "Su empresa y clientes",
+      "title": "Su empresa",
       "help": "El cliente marcado como su empresa es su propia organización. Su nombre, dirección y logotipo aparecen en facturas, presupuestos y comunicaciones con los clientes.",
-      "currentDefault": "Predeterminado actual: {{name}}",
+      "currentDefault": "Actualmente su empresa es {{name}}.",
       "yourCompanyBadge": "Su empresa",
       "table": {
         "name": "Nombre",

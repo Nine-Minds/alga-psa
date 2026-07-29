@@ -53,9 +53,9 @@
       "saveDefaultTimezone": "Standardzeitzone speichern"
     },
     "clients": {
-      "title": "Ihr Unternehmen & Kunden",
+      "title": "Ihr Unternehmen",
       "help": "Der als Ihr Unternehmen markierte Kunde ist Ihre eigene Organisation. Name, Adresse und Logo dieses Kunden erscheinen auf Rechnungen, Angeboten und in der Kundenkommunikation.",
-      "currentDefault": "Aktueller Standard: {{name}}",
+      "currentDefault": "Ihr Unternehmen ist derzeit {{name}}.",
       "yourCompanyBadge": "Ihr Unternehmen",
       "table": {
         "name": "Name",

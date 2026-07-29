@@ -55,9 +55,9 @@
       "saveDefaultTimezone": "Zapisz domyślną strefę czasową"
     },
     "clients": {
-      "title": "Państwa firma i klienci",
+      "title": "Państwa firma",
       "help": "Klient oznaczony jako Państwa firma reprezentuje Państwa własną organizację. Jego nazwa, adres i logo pojawiają się na fakturach, ofertach oraz w komunikacji z klientami.",
-      "currentDefault": "Bieżący domyślny: {{name}}",
+      "currentDefault": "Państwa firmą jest obecnie {{name}}.",
       "yourCompanyBadge": "Państwa firma",
       "table": {
         "name": "Nazwa",

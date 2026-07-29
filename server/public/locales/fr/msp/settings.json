@@ -53,9 +53,9 @@
       "saveDefaultTimezone": "Enregistrer le fuseau horaire par défaut"
     },
     "clients": {
-      "title": "Votre entreprise et clients",
+      "title": "Votre entreprise",
       "help": "Le client marqué comme votre entreprise correspond à votre propre organisation. Son nom, son adresse et son logo apparaissent sur les factures, les devis et les communications adressées aux clients.",
-      "currentDefault": "Valeur par défaut actuelle : {{name}}",
+      "currentDefault": "Votre entreprise est actuellement {{name}}.",
       "yourCompanyBadge": "Votre entreprise",
       "table": {
         "name": "Nom",

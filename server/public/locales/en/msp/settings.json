@@ -53,9 +53,9 @@
       "saveDefaultTimezone": "Save Default Time Zone"
     },
     "clients": {
-      "title": "Your Company & Clients",
+      "title": "Your Company",
       "help": "The client marked as your company is your own organization. Its name, address, and logo appear on invoices, quotes, and client-facing communications.",
-      "currentDefault": "Current default: {{name}}",
+      "currentDefault": "Your company is currently {{name}}.",
       "yourCompanyBadge": "Your company",
       "table": {
         "name": "Name",
