@@ -174,7 +174,7 @@ Audit trail for all quote state changes.
 ### Document Template Tables
 
 | Table | Purpose |
-|-------|---------|
+|-------|--------|
 | `quote_document_templates` | Tenant-specific PDF rendering templates (AST JSON) |
 | `standard_quote_document_templates` | System-wide default templates |
 | `quote_document_template_assignments` | Tenant-to-template mapping |
@@ -313,24 +313,49 @@ In-browser preview renders the template without Puppeteer, using the same AST ev
 ### Send Quote Action
 
 1. Validates quote is in sendable state (draft or approved)
-2. Generates PDF
-3. Sends email to one or more addresses (defaults to primary contact, supports additional recipients)
-4. Updates `sent_at` timestamp, status → `sent`
-5. Logs activity
+2. Generates PDF (attached as `Estimate_<number>.pdf`, e.g. `Estimate_QUO-0042.pdf`)
+3. Resolves outbound email subject, HTML, and plain-text body from the tenant's configured Estimates template (see [Template Resolution](#template-resolution) below)
+4. Sends email to one or more addresses (defaults to primary contact, supports additional recipients); sender name is derived from the tenant's billing party via `fetchTenantParty`
+5. Updates `sent_at` timestamp, status → `sent`
+6. Logs activity
 
 ### Email Templates
 
-| Template | Trigger |
-|----------|---------|
-| Quote Sent | When MSP sends quote to client |
-| Quote Reminder | For quotes approaching `valid_until` |
-| Quote Accepted | Sent to MSP when client accepts |
+Quote email templates are customizable per tenant through **Settings > Notifications & Email > Email Templates** under the **Estimates** category. Two templates cover client-facing sends:
+
+| Template key | Trigger |
+|---|---|
+| `estimate-email` | When MSP sends or resends a quote to the client |
+| `estimate-reminder-email` | For quotes approaching their `valid_until` date (expiry reminder) |
+
+The "Quote Accepted" event is delivered to the MSP through the standard in-app notification system, not the Email Templates engine.
+
+### Template Resolution
+
+Each send, resend, and reminder action resolves its email content through a three-step fallback chain:
+
+1. **Tenant custom template** — if the tenant has customized the Estimates template in Email Templates settings, that version is used.
+2. **System template** — the default Estimates system template seeded at deployment (`estimate-email` / `estimate-reminder-email`).
+3. **In-code fallback** — hard-coded subjects and body copy in `packages/billing/src/lib/quote-email-templates.ts`, used only when no template record exists (e.g. fresh installations before migration runs).
+
+Source files for the system templates: `packages/billing/src/lib/email/estimates/estimateEmail.cjs`, `estimateReminder.cjs`.
+
+### Template Variables
+
+The following variables are available inside Estimates email templates:
+
+| Variable | Description |
+|---|---|
+| `{{estimate.number}}` | The quote's human-readable number (e.g. `QUO-0042`) |
+| `{{estimate.amount}}` | The quote's formatted total amount |
+| `{{estimate.validUntil}}` | The quote's expiration date |
+| `{{company.name}}` | The MSP's company/trading name (from tenant billing party) |
+| `{{portalLink}}` | Client portal deep-link to the quote detail page |
+| `{{customMessage}}` | The optional personal note entered by the MSP when sending |
 
 ### Email Logging
 
 All sent emails are logged in `email_sending_logs` with `entity_type = 'quote'`, including delivery metadata.
-
-Templates: `packages/billing/src/lib/quote-email-templates.ts`
 
 ---
 
@@ -523,14 +548,14 @@ Runtime flag: defined in `packages/core/src/lib/featureFlagRuntime.ts`
 ### Types and Schemas
 
 | File | Purpose |
-|------|---------|
+|------|--------|
 | `packages/types/src/interfaces/quote.interfaces.ts` | Core TypeScript interfaces (`IQuote`, `IQuoteItem`, `IQuoteActivity`, `QuoteStatus`) |
 | `packages/billing/src/schemas/quoteSchemas.ts` | Zod validation schemas and status transition rules |
 
 ### Models (Data Access)
 
 | File | Purpose |
-|------|---------|
+|------|--------|
 | `packages/billing/src/models/quote.ts` | Quote CRUD, listing, auto-expiration |
 | `packages/billing/src/models/quoteItem.ts` | Line item CRUD, reorder, service catalog lookup |
 | `packages/billing/src/models/quoteActivity.ts` | Audit trail entries |
@@ -539,7 +564,7 @@ Runtime flag: defined in `packages/core/src/lib/featureFlagRuntime.ts`
 ### Server Actions
 
 | File | Purpose |
-|------|---------|
+|------|--------|
 | `packages/billing/src/actions/quoteActions.ts` | All quote server actions (CRUD, send, convert, approve, duplicate) |
 | `packages/billing/src/actions/quoteDocumentTemplates.ts` | Document template actions |
 | `packages/billing/src/actions/quoteTemplatePreview.ts` | Template preview actions |
@@ -547,7 +572,7 @@ Runtime flag: defined in `packages/core/src/lib/featureFlagRuntime.ts`
 ### Services
 
 | File | Purpose |
-|------|---------|
+|------|--------|
 | `packages/billing/src/services/quoteCalculationService.ts` | Totals recalculation |
 | `packages/billing/src/services/quoteConversionService.ts` | Quote to contract/invoice conversion |
 | `packages/billing/src/services/pdfGenerationService.ts` | PDF generation (invoices, quotes, documents) |
@@ -555,7 +580,7 @@ Runtime flag: defined in `packages/core/src/lib/featureFlagRuntime.ts`
 ### UI Components (MSP)
 
 | File | Purpose |
-|------|---------|
+|------|--------|
 | `packages/billing/src/components/billing-dashboard/quotes/QuotesTab.tsx` | Quote list with filters |
 | `packages/billing/src/components/billing-dashboard/quotes/QuoteForm.tsx` | Create/edit form |
 | `packages/billing/src/components/billing-dashboard/quotes/QuoteDetail.tsx` | Read-only detail view with actions |
@@ -569,7 +594,7 @@ Runtime flag: defined in `packages/core/src/lib/featureFlagRuntime.ts`
 ### UI Components (Client Portal)
 
 | File | Purpose |
-|------|---------|
+|------|--------|
 | `packages/client-portal/src/components/billing/QuotesTab.tsx` | Client quote list |
 | `packages/client-portal/src/components/billing/QuoteDetailPage.tsx` | Client quote detail with accept/reject |
 | `packages/client-portal/src/client-portal-actions/client-billing.ts` | Portal server actions |
@@ -577,7 +602,7 @@ Runtime flag: defined in `packages/core/src/lib/featureFlagRuntime.ts`
 ### Template AST
 
 | File | Purpose |
-|------|---------|
+|------|--------|
 | `packages/billing/src/lib/quote-template-ast/bindings.ts` | Quote-specific AST bindings |
 | `packages/billing/src/lib/quote-template-ast/standardTemplates.ts` | Default and detailed template ASTs |
 | `packages/billing/src/lib/quote-template-ast/templateSelection.ts` | Template resolution logic |
@@ -586,7 +611,7 @@ Runtime flag: defined in `packages/core/src/lib/featureFlagRuntime.ts`
 ### Database
 
 | File | Purpose |
-|------|---------|
+|------|--------|
 | `server/migrations/20260320100000_create_quotes_tables.cjs` | Core tables migration |
 | `server/migrations/20260320101000_add_tax_source_to_quotes.cjs` | Tax source field |
 | `server/migrations/20260320102000_create_quote_document_templates.cjs` | Document template tables |
@@ -604,7 +629,7 @@ Runtime flag: defined in `packages/core/src/lib/featureFlagRuntime.ts`
 ### Routes
 
 | Route | Purpose |
-|-------|---------|
+|-------|--------|
 | `/msp/billing?tab=quotes` | Billing dashboard quotes tab (quote detail rendered in-page, not via a dedicated route) |
 | `/msp/quote-approvals` | Approval dashboard |
 | `/msp/quote-document-templates` | Document template editor |
