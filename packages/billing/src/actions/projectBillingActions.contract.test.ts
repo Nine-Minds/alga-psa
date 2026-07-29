@@ -25,6 +25,7 @@ const state = vi.hoisted(() => ({
   config: null as any,
   entries: [] as any[],
   transitionFailure: false,
+  configUpdateFailure: false,
   publishedEvents: [] as any[],
   generatedInvoiceId: '10000000-0000-4000-8000-000000000009',
 }));
@@ -98,7 +99,17 @@ vi.mock('@alga-psa/db', () => {
 
   return {
     createTenantKnex: vi.fn(async () => ({ knex: {}, tenant: state.tenant })),
-    withTransaction: vi.fn(async (_knex: unknown, callback: (trx: unknown) => unknown) => callback({})),
+    withTransaction: vi.fn(async (_knex: unknown, callback: (trx: unknown) => unknown) => {
+      const configBefore = state.config ? { ...state.config } : null;
+      const entriesBefore = state.entries.map((entry) => ({ ...entry }));
+      try {
+        return await callback({});
+      } catch (error) {
+        state.config = configBefore;
+        state.entries = entriesBefore;
+        throw error;
+      }
+    }),
     tenantDb: vi.fn(() => ({
       table: vi.fn((table: string) => queryFor(table)),
       tenantJoin: vi.fn(),
@@ -139,6 +150,7 @@ vi.mock('../models/projectBillingConfig', () => ({
       return state.config;
     }),
     update: vi.fn(async (configId: string, updates: any) => {
+      if (state.configUpdateFailure) throw new Error('Config update failed');
       if (state.config?.config_id !== configId) return null;
       state.config = { ...state.config, ...updates };
       return state.config;
@@ -222,6 +234,7 @@ import {
   holdScheduleEntry,
   markEntryReady,
   releaseScheduleEntryHold,
+  unapproveScheduleEntry,
   updateScheduleEntry,
 } from './projectBillingScheduleActions';
 
@@ -256,6 +269,7 @@ function makeEntry(overrides: Record<string, unknown> = {}) {
     description: 'Discovery complete',
     amount: 5_000,
     percentage: null,
+    frozen_amount: null,
     trigger_type: 'manual',
     phase_id: null,
     trigger_date: null,
@@ -301,6 +315,7 @@ beforeEach(() => {
   state.config = null;
   state.entries = [];
   state.transitionFailure = false;
+  state.configUpdateFailure = false;
   state.publishedEvents = [];
   vi.clearAllMocks();
 });
@@ -366,6 +381,22 @@ describe('project billing config action contract', () => {
       allocation_warning: 'Schedule allocation differs from total price by 3000 cents.',
     });
   });
+
+  it('T003: preserves frozen amounts and rejects a total below the locked sum', async () => {
+    state.config = makeConfig();
+    state.entries = [
+      makeEntry({ status: 'approved', amount: null, percentage: 50, frozen_amount: 5_000 }),
+      makeEntry({ schedule_entry_id: IDS.entry2, amount: null, percentage: 50, display_order: 1 }),
+    ];
+
+    const updated = await updateProjectBillingConfig(IDS.config, { total_price: 12_000 });
+    expect(updated).toMatchObject({ total_price: 12_000 });
+    expect(state.entries[0].frozen_amount).toBe(5_000);
+
+    const rejected = await updateProjectBillingConfig(IDS.config, { total_price: 4_999 });
+    expect(returnedErrorMessage(rejected)).toContain('5000 cents already locked');
+    expect(state.config.total_price).toBe(12_000);
+  });
 });
 
 describe('project billing schedule action contract', () => {
@@ -380,9 +411,9 @@ describe('project billing schedule action contract', () => {
       percentage: 25,
       trigger_type: 'manual',
     });
-    expect(created).toMatchObject({ status: 'pending', percentage: 25, amount: null });
+    expect(created.entry).toMatchObject({ status: 'pending', percentage: 25, amount: null });
 
-    const updated = await updateScheduleEntry(created.schedule_entry_id, { amount: 2_500 });
+    const updated = await updateScheduleEntry(created.entry.schedule_entry_id, { amount: 2_500 });
     expect(updated).toMatchObject({ amount: 2_500, percentage: null });
 
     const invalid = await createScheduleEntry(IDS.config, {
@@ -393,6 +424,57 @@ describe('project billing schedule action contract', () => {
       trigger_type: 'manual',
     });
     expect(returnedErrorMessage(invalid)).toMatch(/exactly one of amount or percentage is required/i);
+  });
+
+  it('T004: snapshots approval dollars and thaws them when approval is removed', async () => {
+    state.entries = [makeEntry({
+      status: 'ready',
+      amount: null,
+      percentage: 100,
+      frozen_amount: null,
+    })];
+
+    const approved = await approveScheduleEntry(IDS.entry1);
+    expect(approved.entry).toMatchObject({ status: 'approved', frozen_amount: 10_000 });
+
+    const thawed = await unapproveScheduleEntry(IDS.entry1);
+    expect(thawed).toMatchObject({ status: 'ready', frozen_amount: null });
+  });
+
+  it('T004: atomically creates an amount add-on and increases the project total', async () => {
+    state.entries = [makeEntry({
+      status: 'approved',
+      amount: 5_000,
+      frozen_amount: 5_000,
+    })];
+
+    const result = await createScheduleEntry(IDS.config, {
+      entry_type: 'milestone',
+      description: 'Scope change',
+      amount: 2_500,
+      trigger_type: 'manual',
+      increase_total: true,
+    });
+
+    expect(result.config.total_price).toBe(12_500);
+    expect(result.entry).toMatchObject({ amount: 2_500 });
+    expect(state.entries[0].frozen_amount).toBe(5_000);
+
+    state.config = makeConfig();
+    state.entries = [];
+    state.configUpdateFailure = true;
+    const failed = await createScheduleEntry(IDS.config, {
+      entry_type: 'milestone',
+      description: 'Rolled back scope change',
+      amount: 1_000,
+      trigger_type: 'manual',
+      increase_total: true,
+    });
+    expect(returnedErrorMessage(failed)).toBe(
+      'Project billing could not complete the request. Please refresh and try again.',
+    );
+    expect(state.config.total_price).toBe(10_000);
+    expect(state.entries).toHaveLength(0);
   });
 
   it('T004: keeps invoiced entries immutable and undeletable', async () => {

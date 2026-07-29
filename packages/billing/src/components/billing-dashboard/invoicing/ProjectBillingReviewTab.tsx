@@ -9,7 +9,7 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
 import { TextArea } from '@alga-psa/ui/components/TextArea';
 import { Alert, AlertDescription } from '@alga-psa/ui/components/Alert';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { ConfirmationDialog } from '@alga-psa/ui/components/ConfirmationDialog';
 import LoadingIndicator from '@alga-psa/ui/components/LoadingIndicator';
 import {
@@ -22,6 +22,7 @@ import { CheckCircle, MoreVertical, PauseCircle, Receipt, XCircle } from 'lucide
 import type { ColumnDefinition } from '@alga-psa/types';
 import { useFormatters, useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { useRangeSelection } from '@alga-psa/ui/hooks';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import {
   getErrorMessage,
   isActionMessageError,
@@ -54,7 +55,8 @@ const ProjectBillingReviewTab: React.FC<ProjectBillingReviewTabProps> = ({
   refreshTrigger,
 }) => {
   const { t } = useTranslation('msp/invoicing');
-  const { formatCurrency, formatDate } = useFormatters();
+  const { formatDate } = useFormatters();
+  const { money } = useCurrencyFormat();
 
   const [rows, setRows] = useState<ReadyQueueRow[]>([]);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -352,9 +354,7 @@ const ProjectBillingReviewTab: React.FC<ProjectBillingReviewTabProps> = ({
     {
       title: t('projectBilling.columns.amount', { defaultValue: 'Amount' }),
       dataIndex: ['entry', 'computed_amount'],
-      render: (_, record) => formatCurrency(record.entry.computed_amount / 100, record.currency ?? 'USD', {
-        minimumFractionDigits: 2,
-      }),
+      render: (_, record) => money(record.entry.computed_amount, record.currency ?? undefined),
     },
     {
       title: t('projectBilling.columns.trigger', { defaultValue: 'Trigger' }),
@@ -424,7 +424,7 @@ const ProjectBillingReviewTab: React.FC<ProjectBillingReviewTabProps> = ({
         </div>
       ),
     },
-  ], [formatCurrency, isBusy, rangeSelect, rows.length, selected.size, t, triggerLabel]);
+  ], [isBusy, money, rangeSelect, rows.length, selected.size, t, triggerLabel]);
 
   return (
     <div className="space-y-4">
@@ -514,6 +514,25 @@ const ProjectBillingReviewTab: React.FC<ProjectBillingReviewTabProps> = ({
               defaultValue: 'Hold {{count}} entries',
             })
           : t('projectBilling.holdDialog.title', { defaultValue: 'Hold entry' })}
+        footer={(
+          <>
+            <Button
+              id="project-billing-hold-cancel"
+              variant="ghost"
+              onClick={closeHoldDialog}
+              disabled={isConfirming}
+            >
+              {t('projectBilling.holdDialog.cancel', { defaultValue: 'Cancel' })}
+            </Button>
+            <Button
+              id="project-billing-hold-confirm"
+              onClick={handleHoldConfirm}
+              disabled={isConfirming || !holdReason.trim()}
+            >
+              {t('projectBilling.holdDialog.confirm', { defaultValue: 'Hold' })}
+            </Button>
+          </>
+        )}
       >
         <DialogContent>
           <div className="space-y-3">
@@ -532,23 +551,6 @@ const ProjectBillingReviewTab: React.FC<ProjectBillingReviewTabProps> = ({
               rows={3}
             />
           </div>
-          <DialogFooter>
-            <Button
-              id="project-billing-hold-cancel"
-              variant="ghost"
-              onClick={closeHoldDialog}
-              disabled={isConfirming}
-            >
-              {t('projectBilling.holdDialog.cancel', { defaultValue: 'Cancel' })}
-            </Button>
-            <Button
-              id="project-billing-hold-confirm"
-              onClick={handleHoldConfirm}
-              disabled={isConfirming || !holdReason.trim()}
-            >
-              {t('projectBilling.holdDialog.confirm', { defaultValue: 'Hold' })}
-            </Button>
-          </DialogFooter>
         </DialogContent>
       </Dialog>
 

@@ -7,7 +7,7 @@ import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Receipt } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { toMinorUnits } from '@alga-psa/core';
@@ -24,6 +24,7 @@ import {
   isActionMessageError,
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 
 interface BillingSetupWizardProps {
   projectId: string;
@@ -42,6 +43,7 @@ const NO_CONTRACT = '__none__';
  */
 export default function BillingSetupWizard({ projectId, clientId, canManage, onEnabled }: BillingSetupWizardProps) {
   const { t, i18n } = useTranslation(['features/projects', 'common']);
+  const { currencyCode } = useCurrencyFormat();
   const [open, setOpen] = useState(false);
   const [model, setModel] = useState<ProjectBillingModel>('fixed_price');
   const [totalText, setTotalText] = useState('');
@@ -51,7 +53,7 @@ export default function BillingSetupWizard({ projectId, clientId, canManage, onE
   const [thresholdsText, setThresholdsText] = useState('75, 90, 100');
   const [contractId, setContractId] = useState(NO_CONTRACT);
   const [contracts, setContracts] = useState<{ value: string; label: string }[]>([]);
-  const [currency, setCurrency] = useState('USD');
+  const [currency, setCurrency] = useState(currencyCode);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
@@ -144,7 +146,22 @@ export default function BillingSetupWizard({ projectId, clientId, canManage, onE
       )}
 
       {open && (
-        <Dialog isOpen onClose={() => setOpen(false)} id="billing-setup-dialog" title={t('billing.setup.dialogTitle', 'Enable project billing')}>
+        <Dialog
+          isOpen
+          onClose={() => setOpen(false)}
+          id="billing-setup-dialog"
+          title={t('billing.setup.dialogTitle', 'Enable project billing')}
+          footer={(
+            <>
+              <Button id="billing-setup-cancel" variant="outline" onClick={() => setOpen(false)} disabled={saving}>
+                {t('common:actions.cancel', 'Cancel')}
+              </Button>
+              <Button id="billing-setup-create" onClick={handleCreate} disabled={saving}>
+                {saving ? t('billing.setup.enabling', 'Enabling...') : t('billing.setup.enable', 'Enable billing')}
+              </Button>
+            </>
+          )}
+        >
           <DialogContent>
             <div className="flex flex-col gap-4 text-left">
               <div>
@@ -249,14 +266,6 @@ export default function BillingSetupWizard({ projectId, clientId, canManage, onE
               </div>
             </div>
           </DialogContent>
-          <DialogFooter>
-            <Button id="billing-setup-cancel" variant="outline" onClick={() => setOpen(false)} disabled={saving}>
-              {t('common:actions.cancel', 'Cancel')}
-            </Button>
-            <Button id="billing-setup-create" onClick={handleCreate} disabled={saving}>
-              {saving ? t('billing.setup.enabling', 'Enabling...') : t('billing.setup.enable', 'Enable billing')}
-            </Button>
-          </DialogFooter>
         </Dialog>
       )}
     </Card>

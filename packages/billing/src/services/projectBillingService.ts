@@ -18,7 +18,7 @@ const FULL_PERCENTAGE_SCALED = 100 * PERCENTAGE_SCALE;
 type AllocationConfig = Pick<IProjectBillingConfig, 'total_price'>;
 type AllocationEntry = Pick<
   IProjectBillingScheduleEntry,
-  'amount' | 'percentage' | 'status'
+  'amount' | 'percentage' | 'frozen_amount' | 'status'
 >;
 
 export interface AllocationValidationResult {
@@ -36,6 +36,25 @@ export interface DepositReconciliationEntry {
   entry_type: ProjectBillingScheduleEntryType;
   status: ProjectBillingScheduleStatus;
   computed_amount: number;
+}
+
+export function totalFrozenAmount(
+  entries: readonly Pick<IProjectBillingScheduleEntry, 'frozen_amount'>[],
+): number {
+  return entries.reduce((sum, entry) => sum + (entry.frozen_amount ?? 0), 0);
+}
+
+export function assertTotalCoversFrozenAmounts(
+  totalPrice: number | null,
+  entries: readonly Pick<IProjectBillingScheduleEntry, 'frozen_amount'>[],
+): void {
+  if (totalPrice === null) return;
+  const frozenTotal = totalFrozenAmount(entries);
+  if (totalPrice < frozenTotal) {
+    throw new Error(
+      `Project total cannot be less than the ${frozenTotal} cents already locked at approval.`,
+    );
+  }
 }
 
 function assertNonNegativeCents(value: number, label: string): void {
@@ -67,6 +86,20 @@ function calculateBaseAmounts(
   let exactAllocationNumerator = 0n;
 
   const amounts = entries.map((entry): number => {
+    if (entry.frozen_amount !== null) {
+      assertNonNegativeCents(entry.frozen_amount, 'frozen amount');
+      if (entry.amount !== null) {
+        assertNonNegativeCents(entry.amount, 'entry amount');
+        exactAllocationNumerator += BigInt(entry.amount) * denominator;
+      } else if (entry.percentage !== null) {
+        exactAllocationNumerator += totalPriceBigInt
+          * BigInt(percentageAsScaledInteger(entry.percentage));
+      } else {
+        throw new Error('Project billing entry must have an amount or percentage');
+      }
+      return entry.frozen_amount;
+    }
+
     if (entry.amount !== null) {
       assertNonNegativeCents(entry.amount, 'entry amount');
       exactAllocationNumerator += BigInt(entry.amount) * denominator;
@@ -90,8 +123,8 @@ function calculateBaseAmounts(
  * Resolves schedule entries to cents in input order.
  *
  * When the non-canceled schedule allocates the exact total before cent rounding,
- * the last non-canceled entry absorbs the cent remainder. Material allocation
- * gaps are intentionally left visible for validateAllocation.
+ * the last non-canceled, unfrozen entry absorbs the cent remainder. Material
+ * allocation gaps are intentionally left visible for validateAllocation.
  */
 export function computeEntryAmounts(
   config: AllocationConfig,
@@ -111,12 +144,15 @@ export function computeEntryAmounts(
   const activeResult = calculateBaseAmounts(config.total_price, activeEntries);
   const expectedNumerator = BigInt(config.total_price) * BigInt(FULL_PERCENTAGE_SCALED);
 
-  if (activeEntries.length > 0 && activeResult.exactAllocationNumerator === expectedNumerator) {
-    const finalIndex = activeResult.amounts.length - 1;
-    const precedingTotal = activeResult.amounts
-      .slice(0, finalIndex)
-      .reduce((sum, amount) => sum + amount, 0);
-    activeResult.amounts[finalIndex] = config.total_price - precedingTotal;
+  const finalUnfrozenIndex = activeEntries.findLastIndex((entry) => entry.frozen_amount === null);
+  const roundedTotal = activeResult.amounts.reduce((sum, amount) => sum + amount, 0);
+  const roundingDelta = config.total_price - roundedTotal;
+  if (
+    finalUnfrozenIndex >= 0
+    && activeResult.exactAllocationNumerator === expectedNumerator
+    && Math.abs(roundingDelta) <= activeEntries.length
+  ) {
+    activeResult.amounts[finalUnfrozenIndex] += roundingDelta;
   }
 
   let activeIndex = 0;

@@ -2111,7 +2111,7 @@ export const generateProjectInvoice = withAuth(async (
   { tenant },
   projectId: string,
   entryIds?: string[],
-): Promise<{ invoice_id: string } | InvoiceGenerationActionError> => {
+): Promise<{ invoice_id: string; warnings: string[] } | InvoiceGenerationActionError> => {
   return withInvoiceGenerationActionErrors(async () => {
   if (!await hasPermission(user, 'invoice', 'create') && !await hasPermission(user, 'invoice', 'generate')) {
     throw new Error('Permission denied: Cannot generate invoices');
@@ -2145,7 +2145,7 @@ export const generateProjectInvoice = withAuth(async (
     throw new Error(billingResult.error);
   }
   if (billingResult.charges.length === 0) {
-    throw new Error('Nothing to bill');
+    throw new Error(billingResult.warnings?.[0] ?? 'Nothing to bill');
   }
 
   const cycleStart = toISOTimestamp(toPlainDate(project.start_date ?? project.created_at));
@@ -2160,7 +2160,10 @@ export const generateProjectInvoice = withAuth(async (
     { projectId },
   );
 
-  return { invoice_id: createdInvoice.invoice_id };
+  return {
+    invoice_id: createdInvoice.invoice_id,
+    warnings: billingResult.warnings ?? [],
+  };
   });
 });
 
@@ -2780,7 +2783,7 @@ export const createInvoiceFromBillingResult = withAuth(async (
             project_id: options.projectId,
             is_billed: false,
           })
-          .andWhere('currency_code', '=', billingResult.currency_code || 'USD')
+          .andWhere('currency_code', '=', billingResult.currency_code)
           .update({
             is_billed: true,
             billed_invoice_id: newInvoice!.invoice_id,
@@ -2790,7 +2793,7 @@ export const createInvoiceFromBillingResult = withAuth(async (
       } else {
         await tenantDb(trx, tenant).table('ticket_materials')
           .where({ client_id: client.client_id, is_billed: false })
-          .andWhere('currency_code', '=', billingResult.currency_code || 'USD')
+          .andWhere('currency_code', '=', billingResult.currency_code)
           .andWhere('created_at', '>=', cycleStart)
           .andWhere('created_at', '<', cycleEnd)
           .update({
@@ -2802,7 +2805,7 @@ export const createInvoiceFromBillingResult = withAuth(async (
 
         await tenantDb(trx, tenant).table('project_materials')
           .where({ client_id: client.client_id, is_billed: false })
-          .andWhere('currency_code', '=', billingResult.currency_code || 'USD')
+          .andWhere('currency_code', '=', billingResult.currency_code)
           .andWhere('created_at', '>=', cycleStart)
           .andWhere('created_at', '<', cycleEnd)
           .update({

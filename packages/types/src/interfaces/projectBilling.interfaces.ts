@@ -33,6 +33,7 @@ export interface IProjectBillingScheduleEntry extends TenantEntity {
   description: string;
   amount: number | null;
   percentage: number | null;
+  frozen_amount: number | null;
   trigger_type: ProjectBillingTriggerType;
   phase_id: string | null;
   trigger_date: string | null;

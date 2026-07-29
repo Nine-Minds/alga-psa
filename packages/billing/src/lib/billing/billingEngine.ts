@@ -157,6 +157,7 @@ export type ProjectCapThresholdCrossing = {
 export type ProjectBillingEngineResult = IBillingResult & {
   error?: string;
   projectCapThresholdCrossings?: ProjectCapThresholdCrossing[];
+  warnings?: string[];
 };
 
 type ProjectAnnotatedCharge = IBillingCharge & {
@@ -1050,22 +1051,26 @@ export class BillingEngine {
         : {};
     const nonContractSelection = options.nonContractSelection;
 
-    const materialCharges = options.projectTarget
-      && targetProjectConfig?.billing_model !== "time_and_materials"
-      ? []
-      : projectBillingContext
-        ? await this.calculateMaterialCharges(
-            clientId,
-            billingPeriod,
-            billingCurrency,
-            options.projectTarget?.projectId,
-            projectBillingContext,
-          )
-        : await this.calculateMaterialCharges(
-            clientId,
-            billingPeriod,
-            billingCurrency,
-          );
+    const materialCharges = projectBillingContext
+      ? await this.calculateMaterialCharges(
+          clientId,
+          billingPeriod,
+          billingCurrency,
+          options.projectTarget?.projectId,
+          projectBillingContext,
+        )
+      : await this.calculateMaterialCharges(
+          clientId,
+          billingPeriod,
+          billingCurrency,
+        );
+    const projectMaterialWarnings = options.projectTarget
+      ? await this.getProjectMaterialCurrencyWarnings(
+          clientId,
+          options.projectTarget.projectId,
+          billingCurrency,
+        )
+      : [];
 
     if (clientContractLines.length === 0 && !nonContractSelection?.include) {
       if (materialCharges.length === 0 && !projectBillingContext) {
@@ -1076,6 +1081,7 @@ export class BillingEngine {
           adjustments: [],
           finalAmount: 0,
           currency_code: billingCurrency,
+          warnings: projectMaterialWarnings,
           error:
             "No active contract lines found for this client in the selected billing period.",
         };
@@ -1329,8 +1335,36 @@ export class BillingEngine {
       ? {
           ...finalCharges,
           projectCapThresholdCrossings: capResult.thresholdCrossings,
+          warnings: projectMaterialWarnings,
         }
       : finalCharges;
+  }
+
+  private async getProjectMaterialCurrencyWarnings(
+    clientId: string,
+    projectId: string,
+    invoiceCurrency: string,
+  ): Promise<string[]> {
+    await this.initKnex();
+    if (!this.tenant) {
+      throw new Error("tenant context not found");
+    }
+
+    const rows = await tenantDb(this.knex, this.tenant)
+      .table("project_materials")
+      .where({
+        client_id: clientId,
+        project_id: projectId,
+        is_billed: false,
+      })
+      .whereNot("currency_code", invoiceCurrency)
+      .groupBy("currency_code")
+      .select("currency_code")
+      .count<{ currency_code: string; count: string }[]>({ count: "*" });
+
+    return rows.map((row) => (
+      `${Number(row.count)} materials in ${row.currency_code} were skipped — invoice currency is ${invoiceCurrency}`
+    ));
   }
 
   private async calculateProjectMilestoneCharges(
@@ -1418,8 +1452,12 @@ export class BillingEngine {
           continue;
         }
 
-        const computedAmount =
-          context.computedAmountsByEntryId.get(entry.schedule_entry_id) ?? 0;
+        if (entry.frozen_amount === null) {
+          throw new Error(
+            `Approved project billing schedule entry ${entry.schedule_entry_id} has no frozen amount`,
+          );
+        }
+        const computedAmount = entry.frozen_amount;
         const amount = entryType === "milestone"
           && finalMilestone?.schedule_entry_id === entry.schedule_entry_id
           ? Math.max(0, computedAmount - depositReconciliation)
