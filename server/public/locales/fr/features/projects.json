@@ -999,6 +999,7 @@
       "copyPhases": "Copier les phases",
       "copyStatuses": "Copier les statuts",
       "copyTasks": "Copier les tâches",
+      "copyDependencies": "Copier les dépendances",
       "copyChecklists": "Copier les checklists",
       "copyTaskServices": "Copier les services de tâche",
       "taskAssignments": "Affectations des tâches",
