@@ -233,7 +233,7 @@ export const generateManualInvoice = withAuth(async (
         client,
         tenant,
         invoiceNumber,
-        isPrepayment ? expirationDate : undefined,
+        isPrepayment && expirationDate ? expirationDate : undefined,
       );
 
       const createdInvoice = await Invoice.getFullInvoiceById(trx, tenant, invoiceId);
