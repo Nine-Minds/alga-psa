@@ -533,6 +533,7 @@ describe('BoardsSettings ticket status copy flow', () => {
     });
     await waitFor(() => {
       expect(getBoardTicketStatusesMock).toHaveBeenCalledWith('board-source');
+      expect(screen.getByDisplayValue('Support Open')).toBeInTheDocument();
     });
 
     fireEvent.click(screen.getByTestId('save-board-button'));
