@@ -188,6 +188,13 @@ const servicePeriodPostInventoryRefs = new Set([
 // accurate record of its point in time.
 const servicePeriodPostInventoryRemovals = new Set([
   'packages/billing/tests/invoiceQueries.recurringDetailRefresh.wiring.test.ts',
+  // Deleted with the credit-reconciliation subsystem (credit balance is now
+  // derived from the ledger, so the reconciliation feature and its orphaned
+  // dashboard UI are gone).
+  'packages/billing/src/actions/creditReconciliationActions.ts',
+  'packages/billing/src/components/billing-dashboard/CreditManagement.tsx',
+  'packages/reporting/src/actions/reconciliationReportActions.servicePeriods.test.ts',
+  'server/src/test/unit/billing/creditReconciliation.servicePeriods.test.ts',
 ]);
 
 describe('service-period-first billing plan artifacts', () => {

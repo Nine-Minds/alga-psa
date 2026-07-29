@@ -20,7 +20,8 @@
     "select": "Auswählen"
   },
   "filters": {
-    "allClients": "Alle Kunden"
+    "allClients": "Alle Kunden",
+    "allStatuses": "Alle Status"
   },
   "status": {
     "active": "Aktiv",
@@ -112,6 +113,8 @@
     "invoice": "Rechnung",
     "transactions": "Zugehörige Transaktionen",
     "transactionType": "Typ",
+    "date": "Datum",
+    "amount": "Betrag",
     "noTransactions": "Keine zugehörigen Transaktionen gefunden."
   },
   "expireDialog": {

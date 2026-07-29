@@ -20,7 +20,8 @@
     "select": "Selecteren"
   },
   "filters": {
-    "allClients": "Alle klanten"
+    "allClients": "Alle klanten",
+    "allStatuses": "Alle statussen"
   },
   "status": {
     "active": "Actief",
@@ -112,6 +113,8 @@
     "invoice": "Factuur",
     "transactions": "Gerelateerde transacties",
     "transactionType": "Type",
+    "date": "Datum",
+    "amount": "Bedrag",
     "noTransactions": "Geen gerelateerde transacties gevonden."
   },
   "expireDialog": {

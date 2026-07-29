@@ -76,25 +76,4 @@ describe('Credit application and expiration i18n contract', () => {
     );
   });
 
-  it('T025: CreditExpirationModificationDialog wires title, labels, switch, and button states through msp/credits', () => {
-    const source = read('../src/components/billing-dashboard/CreditExpirationModificationDialog.tsx');
-
-    expect(source).toContain("const { t } = useTranslation('msp/credits');");
-    expect(source).toContain("t('expirationDialog.title', { defaultValue: 'Modify Credit Expiration' })");
-    expect(source).toContain("t('expirationDialog.creditAmount', { defaultValue: 'Credit Amount:' })");
-    expect(source).toContain("t('expirationDialog.remainingAmount', { defaultValue: 'Remaining Amount:' })");
-    expect(source).toContain("t('expirationDialog.currentExpiration', { defaultValue: 'Current Expiration:' })");
-    expect(source).toContain("t('expirationDialog.removeExpiration', { defaultValue: 'Remove expiration date' })");
-    expect(source).toContain("t('expirationDialog.newExpirationDate', { defaultValue: 'New Expiration Date' })");
-    expect(source).toContain("t('actions.saveChanges', { defaultValue: 'Save Changes' })");
-    expect(source).toContain("t('actions.saving', { defaultValue: 'Saving...' })");
-  });
-
-  it('T026: CreditExpirationModificationDialog translates validation and generic error copy', () => {
-    const source = read('../src/components/billing-dashboard/CreditExpirationModificationDialog.tsx');
-
-    expect(source).toContain("t('expirationDialog.pastDateError', { defaultValue: 'Expiration date cannot be in the past' })");
-    expect(source).toContain("t('expirationDialog.updateError', {");
-    expect(source).toContain("t('actions.cancel', { defaultValue: 'Cancel' })");
-  });
 });

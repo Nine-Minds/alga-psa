@@ -266,7 +266,7 @@ export default function CreditsTable() {
             setSelectedStatus(value as CreditStatusFilter | '');
             setPage(1);
           }}
-          placeholder={t('reconciliation.allStatuses', { defaultValue: 'All Statuses' })}
+          placeholder={t('filters.allStatuses', { defaultValue: 'All Statuses' })}
           allowClear
           className="w-48"
         />

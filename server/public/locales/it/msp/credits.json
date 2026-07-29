@@ -20,7 +20,8 @@
     "select": "Seleziona"
   },
   "filters": {
-    "allClients": "Tutti i clienti"
+    "allClients": "Tutti i clienti",
+    "allStatuses": "Tutti gli stati"
   },
   "status": {
     "active": "Attivo",
@@ -112,6 +113,8 @@
     "invoice": "Fattura",
     "transactions": "Transazioni correlate",
     "transactionType": "Tipo",
+    "date": "Data",
+    "amount": "Importo",
     "noTransactions": "Nessuna transazione correlata trovata."
   },
   "expireDialog": {
