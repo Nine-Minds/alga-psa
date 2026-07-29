@@ -9,8 +9,8 @@ import { getProjectBillingOverview } from '@alga-psa/billing/actions/projectBill
 import ProjectBillingView from '@alga-psa/billing/components/project-billing/ProjectBillingView';
 import ProjectPaymentWarningBanner from '@alga-psa/billing/components/project-billing/ProjectPaymentWarningBanner';
 import ProjectBilledBar from '@alga-psa/billing/components/project-billing/ProjectBilledBar';
-import { listProjectMaterials } from '@alga-psa/projects/actions';
-import { ProjectMaterialsDrawer } from '@alga-psa/projects/components';
+import { listProjectMaterials } from '@alga-psa/projects/actions/materialCatalogActions';
+import ProjectMaterialsDrawer from '@alga-psa/projects/components/ProjectMaterialsDrawer';
 import { useDrawer } from '@alga-psa/ui';
 import type { ProjectBillingViewProps } from '@alga-psa/projects/context/ProjectBillingIntegrationContext';
 

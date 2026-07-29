@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
 
 const migrationUrl = new URL(
-  '../../../../migrations/20260729120000_add_frozen_amount_to_project_billing_schedule_entries.cjs',
+  '../../../../migrations/20260728220000_add_frozen_amount_to_project_billing_schedule_entries.cjs',
   import.meta.url,
 );
 const migrationSource = readFileSync(

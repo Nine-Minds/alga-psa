@@ -1525,6 +1525,20 @@
     "paymentSchedule": "Zahlungsplan",
     "invoicedOn": "Abgerechnet am {{date}}",
     "loading": "Abrechnung wird geladen...",
+    "materials": {
+      "title": "Materialien & Produkte",
+      "hint": "Durchlaufposten, die zusätzlich zur Projektgebühr abgerechnet werden.",
+      "manage": "Produkte verwalten",
+      "loading": "Produkte werden geladen...",
+      "empty": "Diesem Projekt sind keine Produkte zugeordnet.",
+      "product": "Produkt",
+      "quantityRate": "Menge × Preis",
+      "extended": "Gesamt",
+      "status": "Status",
+      "unnamed": "Produkt",
+      "billed": "Abgerechnet",
+      "unbilled": "Nicht abgerechnet"
+    },
     "status": {
       "pending": "Ausstehend",
       "ready": "Bereit",

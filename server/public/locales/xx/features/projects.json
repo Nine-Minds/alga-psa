@@ -1525,6 +1525,20 @@
     "paymentSchedule": "11111",
     "invoicedOn": "11111 {{date}} 11111",
     "loading": "11111",
+    "materials": {
+      "title": "11111",
+      "hint": "11111",
+      "manage": "11111",
+      "loading": "11111",
+      "empty": "11111",
+      "product": "11111",
+      "quantityRate": "11111",
+      "extended": "11111",
+      "status": "11111",
+      "unnamed": "11111",
+      "billed": "11111",
+      "unbilled": "11111"
+    },
     "status": {
       "pending": "11111",
       "ready": "11111",

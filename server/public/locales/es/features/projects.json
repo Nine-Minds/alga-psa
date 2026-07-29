@@ -1525,6 +1525,20 @@
     "paymentSchedule": "Calendario de pagos",
     "invoicedOn": "Facturado el {{date}}",
     "loading": "Cargando facturación...",
+    "materials": {
+      "title": "Materiales y productos",
+      "hint": "Artículos repercutidos que se facturan además de la tarifa del proyecto.",
+      "manage": "Gestionar productos",
+      "loading": "Cargando productos...",
+      "empty": "No hay productos asociados a este proyecto.",
+      "product": "Producto",
+      "quantityRate": "Cant. × tarifa",
+      "extended": "Importe",
+      "status": "Estado",
+      "unnamed": "Producto",
+      "billed": "Facturado",
+      "unbilled": "Sin facturar"
+    },
     "status": {
       "pending": "Pendiente",
       "ready": "Listo",

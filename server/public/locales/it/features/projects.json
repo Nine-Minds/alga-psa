@@ -1525,6 +1525,20 @@
     "paymentSchedule": "Piano di pagamento",
     "invoicedOn": "Fatturato il {{date}}",
     "loading": "Caricamento fatturazione...",
+    "materials": {
+      "title": "Materiali e prodotti",
+      "hint": "Voci riaddebitate oltre al compenso del progetto.",
+      "manage": "Gestisci prodotti",
+      "loading": "Caricamento prodotti...",
+      "empty": "Nessun prodotto è associato a questo progetto.",
+      "product": "Prodotto",
+      "quantityRate": "Qtà × tariffa",
+      "extended": "Totale",
+      "status": "Stato",
+      "unnamed": "Prodotto",
+      "billed": "Fatturato",
+      "unbilled": "Non fatturato"
+    },
     "status": {
       "pending": "In attesa",
       "ready": "Pronto",

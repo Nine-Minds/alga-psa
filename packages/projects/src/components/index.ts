@@ -9,7 +9,6 @@ export { default as ProjectDetail } from './ProjectDetail';
 export { default as ProjectInfo } from './ProjectInfo';
 export { default as ProjectPage } from './ProjectPage';
 export { default as ProjectQuickAdd } from './ProjectQuickAdd';
-export { default as ProjectMaterialsDrawer } from './ProjectMaterialsDrawer';
 export { default as TaskEdit } from './TaskEdit';
 export { default as DonutChart } from './DonutChart';
 export { default as HoursProgressBar } from './HoursProgressBar';
