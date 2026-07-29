@@ -20,6 +20,25 @@ describe('project billing schedule date-only schema', () => {
       trigger_date: '2026-11-01',
       requires_payment_before_work: true,
     }).requires_payment_before_work).toBe(true);
+    expect(createProjectBillingScheduleEntrySchema.parse({
+      ...validEntry,
+      trigger_date: '2026-11-01',
+    }).increase_total).toBe(false);
+  });
+
+  it('allows total increases only for amount-based entries', () => {
+    expect(createProjectBillingScheduleEntrySchema.safeParse({
+      ...validEntry,
+      trigger_date: '2026-11-01',
+      increase_total: true,
+    }).success).toBe(true);
+    expect(createProjectBillingScheduleEntrySchema.safeParse({
+      ...validEntry,
+      amount: null,
+      percentage: 25,
+      trigger_date: '2026-11-01',
+      increase_total: true,
+    }).success).toBe(false);
   });
 
   it('keeps a valid calendar date as a YYYY-MM-DD string', () => {

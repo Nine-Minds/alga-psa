@@ -52,6 +52,7 @@ The payment schedule (milestones and deposits).
 
 - `entry_type` `'milestone' | 'deposit'`, `description`
 - `amount` (cents) **or** `percentage` of `total_price` — exactly one
+- `frozen_amount` (nullable cents) — populated atomically when an entry is approved and retained while invoiced; clearing approval clears the snapshot
 - `trigger_type` `'phase' | 'date' | 'manual'`, `phase_id` nullable FK, `trigger_date` nullable
 - `status`: `pending → ready → approved → invoiced` (+ `canceled`); `ready_at`, `approved_by`, `invoice_id`, `invoice_charge_id`
 - Guardrail: entries must sum to `total_price` — validated at approval time (block final entry), warning in UI
@@ -76,7 +77,7 @@ Changes live in `billingEngine.ts` plus a new `packages/billing/src/services/pro
 
 ### New calculators (called from `calculateBilling()` per client, same pattern as `calculateProductCharges`)
 
-- **`calculateProjectMilestoneCharges`** — picks up `approved` schedule entries for the client's projects, respecting `invoice_mode` (recurring runs pick up only `'recurring'` entries; standalone generation targets one project explicitly). Amount = `amount` or `percentage × total_price`. Emits `'project_milestone'` charges.
+- **`calculateProjectMilestoneCharges`** — picks up `approved` schedule entries for the client's projects, respecting `invoice_mode` (recurring runs pick up only `'recurring'` entries; standalone generation targets one project explicitly). Amount = the approval-time `frozen_amount`; pending/ready percentages continue to derive from the full current `total_price`. Emits `'project_milestone'` charges.
 - **`calculateProjectDepositCharges`** — same mechanics for deposits. `deposit_treatment: 'credit'`: invoice finalization creates a client credit (via `creditActions`) earmarked with `project_id`, drawn down by later project invoices through existing credit application. `'deduct_final'`: the final milestone is reduced by prior deposits at calculation time.
 
 ### Changes to `calculateTimeBasedCharges` (and the unresolved-non-contract path)
@@ -127,7 +128,7 @@ The project screen has no tab structure — it is `ProjectInfo` (header) over `P
 Billing view content:
 
 - **Setup:** compact "Enable billing" wizard — model, price/cap, invoice mode, optional contract link.
-- **Fixed-price:** payment schedule table — entries (amount or %, trigger: phase picker / date / manual), sum-to-total allocation footer, status chips with invoice links, Approve & invoice / Hold row actions on ready entries.
+- **Fixed-price:** payment schedule table — entries (amount or %, trigger: phase picker / date / manual), sum-to-total allocation footer, locked-at-approval indicators, status chips with invoice links, Approve & invoice / Hold row actions on ready entries. Amount entries may optionally increase the project total atomically for add-on/scope-change work.
 - **T&M:** cap config, thresholds, behavior toggle; phase rate overrides editor.
 - **Budget vs actual card** (both models): budget vs consumed (billed + pending approved time at rates for T&M; schedule progress for fixed-price), burn bar with threshold markers, written-down amount. Honors client-portal config flag conventions.
 - **Delivery economics card:** hours logged at cost, labor + materials cost, projected margin.
@@ -164,7 +165,7 @@ No new tenant settings beyond notification templates for the two new events.
 - Schedule doesn't sum to total → block approval of the final entry; earlier entries proceed with a warning.
 - Linked phase deleted → entry falls back to `manual`, flagged in UI.
 - Project canceled → un-invoiced entries auto-cancel; invoiced ones untouched; prompt for a reconciling entry if deposits exceed billed.
-- `total_price` edits re-validate the schedule; `billing_model` immutable once any entry is invoiced.
+- `total_price` edits re-validate the schedule but never change approved/invoiced `frozen_amount` values; reductions below the frozen sum are rejected. Unfrozen entries re-derive from the new total, and frozen percentage displays are recomputed from frozen dollars divided by the current total. `billing_model` is immutable once any entry is invoiced.
 - Config currency must match client billing currency (validated at setup).
 
 ### Testing

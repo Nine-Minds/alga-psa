@@ -56,7 +56,7 @@ Rejected alternatives (see design doc §Approach): hidden auto-managed contracts
 Four new tenant-scoped tables (migrations in `server/migrations/`, registered in `packages/db/src/lib/tenantTableMetadata.ts`):
 
 - **`project_billing_configs`** — one row per billable project: `billing_model` (`fixed_price` | `time_and_materials`, immutable once any entry invoiced), `total_price` cents + `currency` (must match client billing currency), `invoice_mode` (`recurring` | `standalone`), optional `contract_id`, cap fields (`cap_amount`, hard-cap behavior, `cap_notify_thresholds`), `deposit_treatment` (`credit`|`deduct_final`), taxability config.
-- **`project_billing_schedule_entries`** — `entry_type` (`milestone`|`deposit`), `description`, `amount` XOR `percentage`, `trigger_type` (`phase`|`date`|`manual`) + `phase_id`/`trigger_date`, `status` lifecycle `pending → ready → approved → invoiced` with durable `ready → held → ready` and `canceled` paths, `ready_at`, hold/approval audit fields, `invoice_id`, `invoice_charge_id`, and `requires_payment_before_work` (explicit advisory-warning policy). Sum must equal `total_price` (validated at approval of final entry; UI warning earlier).
+- **`project_billing_schedule_entries`** — `entry_type` (`milestone`|`deposit`), `description`, `amount` XOR `percentage`, nullable `frozen_amount`, `trigger_type` (`phase`|`date`|`manual`) + `phase_id`/`trigger_date`, `status` lifecycle `pending → ready → approved → invoiced` with durable `ready → held → ready`, `approved → ready`, and `canceled` paths, `ready_at`, hold/approval audit fields, `invoice_id`, `invoice_charge_id`, and `requires_payment_before_work` (explicit advisory-warning policy). Approval snapshots the computed cents into `frozen_amount`; unapproval clears it; invoicing consumes it unchanged. Sum must equal `total_price` (validated at approval of final entry; UI warning earlier).
 - **`project_phase_rate_overrides`** — `phase_id`, nullable `service_id` (null = all), nullable `rate`, nullable `override_service_id`.
 - **`project_billing_cap_usage`** — `billed_amount`, `written_down_amount`, `notified_thresholds`; row locked `FOR UPDATE` during invoice generation (mirrors `bucket_usage`).
 
@@ -112,7 +112,7 @@ Other schema: `project_phases.completed_at` (explicit phase completion), `invoic
 - Schedule ≠ total → block approval of final entry; earlier entries proceed with warning.
 - Linked phase deleted → entry falls back to `manual`, flagged.
 - Project canceled → un-invoiced entries auto-cancel; prompt for reconciling entry if deposits exceed billed.
-- `total_price` edit re-validates schedule; `billing_model` immutable once invoiced.
+- `total_price` edits re-validate the schedule while leaving approved/invoiced `frozen_amount` values unchanged; a reduction below the frozen sum is rejected. Pending/ready percentages re-derive from the new total, and amount-based add-on entries can atomically increase the total. `billing_model` is immutable once invoiced.
 - Currency mismatch with client billing currency rejected at setup.
 - Un-finalize/delete draft invoice reverts entry statuses within the transaction.
 - Public project-billing actions return structured action/permission errors for expected failures; unfinalize preserves safe underlying business reasons.

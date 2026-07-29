@@ -4,13 +4,13 @@ import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Loader2, Pencil } from 'lucide-react';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { toast } from 'react-hot-toast';
-import { currencyFractionDigits, toMinorUnits } from '@alga-psa/core';
-import type { IProjectPhase, ProjectBillingInvoiceMode } from '@alga-psa/types';
+import { toMinorUnits } from '@alga-psa/core';
+import type { IProjectBillingConfig, IProjectPhase, ProjectBillingInvoiceMode } from '@alga-psa/types';
 import type { ProjectBillingOverview } from '@alga-psa/types';
 import { updateProjectBillingConfig } from '../../actions/projectBillingConfigActions';
 import { generateProjectInvoice } from '../../actions/invoiceGeneration';
@@ -27,7 +27,8 @@ import CapPanel from './CapPanel';
 import PhaseRateOverridesEditor from './PhaseRateOverridesEditor';
 import BudgetVsActualCard from './BudgetVsActualCard';
 import DeliveryEconomicsCard from './DeliveryEconomicsCard';
-import { formatCents } from './billingViewHelpers';
+import ProjectMaterialsCard from './ProjectMaterialsCard';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 
 interface ProjectBillingViewProps {
   projectId: string;
@@ -39,6 +40,8 @@ interface ProjectBillingViewProps {
   /** Schedule entry to highlight after a phase-completion deep link (F139). */
   highlightEntryId?: string | null;
   onChanged: () => void;
+  loadMaterials?: (projectId: string) => Promise<unknown>;
+  onManageMaterials?: () => void;
 }
 
 /**
@@ -55,8 +58,11 @@ export default function ProjectBillingView({
   canManage,
   highlightEntryId,
   onChanged,
+  loadMaterials,
+  onManageMaterials,
 }: ProjectBillingViewProps) {
   const { t } = useTranslation(['features/projects', 'common']);
+  const { money } = useCurrencyFormat();
   const { openDrawer } = useDrawer();
   const [editingTerms, setEditingTerms] = useState(false);
   const [generatingInvoice, setGeneratingInvoice] = useState(false);
@@ -84,6 +90,8 @@ export default function ProjectBillingView({
   }
 
   const isFixed = config.billing_model === 'fixed_price';
+  const frozenEntries = entries.filter((entry) => entry.frozen_amount !== null);
+  const frozenTotal = frozenEntries.reduce((sum, entry) => sum + (entry.frozen_amount ?? 0), 0);
 
   const openInvoice = (invoiceId: string) => {
     openDrawer(
@@ -103,6 +111,7 @@ export default function ProjectBillingView({
         return;
       }
       toast.success(t('billing.tm.invoiceGenerated', 'Project invoice generated'));
+      result.warnings.forEach((warning) => toast(warning, { icon: '⚠️' }));
       onChanged();
       openInvoice(result.invoice_id);
     } catch (error) {
@@ -119,7 +128,7 @@ export default function ProjectBillingView({
           <div className="flex items-center justify-between">
             <div className="text-sm text-[rgb(var(--color-text-600))]">
               {t('billing.terms.fixed', '{{total}} fixed price · {{mode}} invoicing', {
-                total: formatCents(config.total_price, config.currency),
+                total: money(config.total_price ?? 0, config.currency ?? undefined),
                 mode: config.invoice_mode === 'standalone'
                   ? t('billing.mode.standalone', 'standalone')
                   : t('billing.mode.recurring', 'recurring'),
@@ -175,12 +184,22 @@ export default function ProjectBillingView({
         <DeliveryEconomicsCard economics={economics} currency={config.currency} billingModel={config.billing_model} />
       </div>
 
+      <ProjectMaterialsCard
+        projectId={projectId}
+        billingCurrency={config.currency}
+        loadMaterials={loadMaterials}
+        onManageMaterials={onManageMaterials}
+        onOpenInvoice={openInvoice}
+      />
+
       {editingTerms && isFixed && (
         <TermsDialog
           configId={config.config_id}
           currency={config.currency}
           totalPrice={config.total_price}
           invoiceMode={config.invoice_mode}
+          frozenEntryCount={frozenEntries.length}
+          frozenTotal={frozenTotal}
           onClose={() => setEditingTerms(false)}
           onSaved={() => { setEditingTerms(false); onChanged(); }}
         />
@@ -194,6 +213,8 @@ interface TermsDialogProps {
   currency: string | null;
   totalPrice: number | null;
   invoiceMode: ProjectBillingInvoiceMode;
+  frozenEntryCount: number;
+  frozenTotal: number;
   onClose: () => void;
   onSaved: () => void;
 }
@@ -203,9 +224,20 @@ interface TermsDialogProps {
  * server-side; the billing model is immutable once an entry is invoiced. Both
  * failures come back as structured results, surfaced here as a clear toast.
  */
-function TermsDialog({ configId, currency, totalPrice, invoiceMode, onClose, onSaved }: TermsDialogProps) {
+function TermsDialog({
+  configId,
+  currency,
+  totalPrice,
+  invoiceMode,
+  frozenEntryCount,
+  frozenTotal,
+  onClose,
+  onSaved,
+}: TermsDialogProps) {
   const { t, i18n } = useTranslation(['features/projects', 'common']);
-  const digits = currencyFractionDigits(currency ?? 'USD');
+  const { currencyCode, fractionDigits, money } = useCurrencyFormat();
+  const resolvedCurrency = currency ?? currencyCode;
+  const digits = fractionDigits(currency ?? undefined);
   const [totalText, setTotalText] = useState(totalPrice != null ? (totalPrice / Math.pow(10, digits)).toString() : '');
   const [mode, setMode] = useState<ProjectBillingInvoiceMode>(invoiceMode);
   const [saving, setSaving] = useState(false);
@@ -219,14 +251,20 @@ function TermsDialog({ configId, currency, totalPrice, invoiceMode, onClose, onS
     setSaving(true);
     try {
       const result = await updateProjectBillingConfig(configId, {
-        total_price: toMinorUnits(major, i18n.language, currency ?? 'USD'),
+        total_price: toMinorUnits(major, i18n.language, resolvedCurrency),
         invoice_mode: mode,
       });
       if (isActionMessageError(result) || isActionPermissionError(result)) {
         toast.error(getErrorMessage(result));
         return;
       }
+      const allocationWarning = (result as IProjectBillingConfig & {
+        allocation_warning?: string | null;
+      }).allocation_warning;
       toast.success(t('billing.terms.saved', 'Billing terms updated'));
+      if (allocationWarning) {
+        toast(allocationWarning, { icon: '⚠️' });
+      }
       onSaved();
     } catch (error) {
       toast.error(error instanceof Error ? error.message : String(error));
@@ -235,13 +273,30 @@ function TermsDialog({ configId, currency, totalPrice, invoiceMode, onClose, onS
     }
   };
 
+  const footer = (
+    <div className="flex justify-end gap-2">
+      <Button id="billing-terms-cancel" variant="outline" onClick={onClose} disabled={saving}>
+        {t('common:actions.cancel', 'Cancel')}
+      </Button>
+      <Button id="billing-terms-save" onClick={handleSave} disabled={saving}>
+        {saving ? t('billing.entry.saving', 'Saving...') : t('common:actions.save', 'Save')}
+      </Button>
+    </div>
+  );
+
   return (
-    <Dialog isOpen onClose={onClose} id="billing-terms-dialog" title={t('billing.terms.dialogTitle', 'Edit billing terms')}>
+    <Dialog
+      isOpen
+      onClose={onClose}
+      id="billing-terms-dialog"
+      title={t('billing.terms.dialogTitle', 'Edit billing terms')}
+      footer={footer}
+    >
       <DialogContent>
         <div className="flex flex-col gap-4">
           <div>
             <Label htmlFor="billing-terms-total">
-              {t('billing.setup.total', 'Total price')} ({currency ?? 'USD'})
+              {t('billing.setup.total', 'Total price')} ({resolvedCurrency})
             </Label>
             <Input
               id="billing-terms-total"
@@ -252,6 +307,15 @@ function TermsDialog({ configId, currency, totalPrice, invoiceMode, onClose, onS
               onChange={(e) => setTotalText(e.target.value)}
             />
           </div>
+          {frozenEntryCount > 0 && (
+            <div className="rounded-md border border-[rgb(var(--badge-info-border))] bg-[rgb(var(--badge-info-bg))] px-3 py-2 text-xs text-[rgb(var(--badge-info-text))]">
+              {t(
+                'billing.terms.lockedSummary',
+                '{{count}} entries totaling {{amount}} are locked and will not change.',
+                { count: frozenEntryCount, amount: money(frozenTotal, currency ?? undefined) },
+              )}
+            </div>
+          )}
           <div>
             <Label htmlFor="billing-terms-mode">{t('billing.setup.invoiceMode', 'Invoicing')}</Label>
             <CustomSelect
@@ -266,14 +330,6 @@ function TermsDialog({ configId, currency, totalPrice, invoiceMode, onClose, onS
           </div>
         </div>
       </DialogContent>
-      <DialogFooter>
-        <Button id="billing-terms-cancel" variant="outline" onClick={onClose} disabled={saving}>
-          {t('common:actions.cancel', 'Cancel')}
-        </Button>
-        <Button id="billing-terms-save" onClick={handleSave} disabled={saving}>
-          {saving ? t('billing.entry.saving', 'Saving...') : t('common:actions.save', 'Save')}
-        </Button>
-      </DialogFooter>
     </Dialog>
   );
 }

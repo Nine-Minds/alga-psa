@@ -46,6 +46,19 @@ describe('project invoice lifecycle contracts', () => {
     expect(schedulePersistence).toContain('trx,');
   });
 
+  it('marks only materials that match the generated invoice currency', () => {
+    const materialPersistence = section(
+      invoiceGeneration,
+      '// Mark ticket/project materials in this billing window as billed by this invoice.',
+      'for (const discount of billingResult.discounts)',
+    );
+
+    expect(materialPersistence).toContain(
+      ".andWhere('currency_code', '=', billingResult.currency_code)",
+    );
+    expect(materialPersistence).not.toContain("billingResult.currency_code || 'USD'");
+  });
+
   it('T019: finalization issues project-earmarked deposit credit and application prefers the matching project', () => {
     const issueCredit = section(invoiceModification, 'async function issueProjectDepositCreditsForInvoice', 'async function rollbackProjectDepositCreditsForInvoice');
     const finalize = section(invoiceModification, 'export const finalizeInvoice', 'export const unfinalizeInvoice');

@@ -1551,6 +1551,20 @@
     "paymentSchedule": "Harmonogram płatności",
     "invoicedOn": "Zafakturowano {{date}}",
     "loading": "Wczytywanie rozliczeń...",
+    "materials": {
+      "title": "Materiały i produkty",
+      "hint": "Pozycje refakturowane dodatkowo poza opłatą za projekt.",
+      "manage": "Zarządzaj produktami",
+      "loading": "Wczytywanie produktów...",
+      "empty": "Do tego projektu nie przypisano żadnych produktów.",
+      "product": "Produkt",
+      "quantityRate": "Ilość × stawka",
+      "extended": "Wartość",
+      "status": "Status",
+      "unnamed": "Produkt",
+      "billed": "Zafakturowano",
+      "unbilled": "Niezafakturowane"
+    },
     "status": {
       "pending": "Oczekujące",
       "ready": "Gotowe",

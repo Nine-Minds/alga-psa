@@ -1525,6 +1525,20 @@
     "paymentSchedule": "Payment Schedule",
     "invoicedOn": "Invoiced {{date}}",
     "loading": "Loading billing...",
+    "materials": {
+      "title": "Materials & products",
+      "hint": "Pass-through items billed in addition to the project fee.",
+      "manage": "Manage products",
+      "loading": "Loading products...",
+      "empty": "No products are attached to this project.",
+      "product": "Product",
+      "quantityRate": "Qty × rate",
+      "extended": "Extended",
+      "status": "Status",
+      "unnamed": "Product",
+      "billed": "Billed",
+      "unbilled": "Unbilled"
+    },
     "status": {
       "pending": "Pending",
       "ready": "Ready",

@@ -25,7 +25,11 @@ import {
   createProjectBillingConfigSchema,
   updateProjectBillingConfigSchema,
 } from '../schemas/projectBillingSchemas';
-import { computeEntryAmounts, validateAllocation } from '../services/projectBillingService';
+import {
+  computeEntryAmounts,
+  validateAllocation,
+} from '../services/projectBillingService';
+import { persistProjectBillingConfigUpdate } from '../services/projectBillingConfigUpdateService';
 import { withProjectBillingActionErrors } from './projectBillingActionErrors';
 
 // View DTOs live in @alga-psa/types — import them from there. A type re-export
@@ -503,8 +507,7 @@ export const updateProjectBillingConfig = withAuth(withProjectBillingActionError
 
     const candidate = { ...existing, ...parsed };
     validateConfigModelFields(candidate);
-    const updated = await ProjectBillingConfig.update(configId, parsed, trx);
-    if (!updated) throw new Error('Project billing config not found');
+    const updated = await persistProjectBillingConfigUpdate(configId, parsed, entries, trx);
 
     let allocationWarning: string | null = null;
     if (Object.prototype.hasOwnProperty.call(parsed, 'total_price')) {

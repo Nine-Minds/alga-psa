@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
@@ -10,7 +10,7 @@ import { Checkbox } from '@alga-psa/ui/components/Checkbox';
 import CustomSelect from '@alga-psa/ui/components/CustomSelect';
 import { DatePicker } from '@alga-psa/ui/components/DatePicker';
 import { toast } from 'react-hot-toast';
-import { currencyFractionDigits, toMinorUnits } from '@alga-psa/core';
+import { toMinorUnits } from '@alga-psa/core';
 import type { IProjectPhase } from '@alga-psa/types';
 import type { ScheduleEntryView } from '@alga-psa/types';
 import {
@@ -22,6 +22,7 @@ import {
   isActionMessageError,
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 
 type EntryType = 'milestone' | 'deposit';
 type ValueMode = 'amount' | 'percentage';
@@ -38,8 +39,7 @@ interface ScheduleEntryDialogProps {
   onSaved: () => void;
 }
 
-function centsToMajor(cents: number, currency: string | null): string {
-  const digits = currencyFractionDigits(currency ?? 'USD');
+function centsToMajor(cents: number, digits: number): string {
   return (cents / Math.pow(10, digits)).toString();
 }
 
@@ -74,13 +74,15 @@ export default function ScheduleEntryDialog({
   onSaved,
 }: ScheduleEntryDialogProps) {
   const { t, i18n } = useTranslation(['features/projects', 'common']);
+  const { currencyCode, fractionDigits } = useCurrencyFormat();
+  const resolvedCurrency = currency ?? currencyCode;
   const isEdit = entry != null;
 
   const [description, setDescription] = useState(entry?.description ?? '');
   const [entryType, setEntryType] = useState<EntryType>(entry?.entry_type ?? 'milestone');
   const [valueMode, setValueMode] = useState<ValueMode>(entry?.percentage != null ? 'percentage' : 'amount');
   const [amountText, setAmountText] = useState(
-    entry?.amount != null ? centsToMajor(entry.amount, currency) : '',
+    entry?.amount != null ? centsToMajor(entry.amount, fractionDigits(currency ?? undefined)) : '',
   );
   const [percentageText, setPercentageText] = useState(
     entry?.percentage != null ? String(entry.percentage) : '',
@@ -93,6 +95,7 @@ export default function ScheduleEntryDialog({
   const [requiresPaymentBeforeWork, setRequiresPaymentBeforeWork] = useState(
     entry?.requires_payment_before_work ?? false,
   );
+  const [increaseTotal, setIncreaseTotal] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const phaseOptions = useMemo(
@@ -113,7 +116,7 @@ export default function ScheduleEntryDialog({
         toast.error(t('billing.entry.errorAmount', 'Enter an amount greater than zero'));
         return;
       }
-      amount = toMinorUnits(major, i18n.language, currency ?? 'USD');
+      amount = toMinorUnits(major, i18n.language, resolvedCurrency);
     } else {
       const value = Number(percentageText);
       if (!Number.isFinite(value) || value <= 0 || value > 100) {
@@ -140,6 +143,7 @@ export default function ScheduleEntryDialog({
       phase_id: triggerType === 'phase' ? phaseId : null,
       trigger_date: triggerType === 'date' && triggerDate ? formatDateOnly(triggerDate) : null,
       requires_payment_before_work: requiresPaymentBeforeWork,
+      ...(!isEdit ? { increase_total: valueMode === 'amount' && increaseTotal } : {}),
     };
 
     setSaving(true);
@@ -168,6 +172,21 @@ export default function ScheduleEntryDialog({
     }
   };
 
+  const footer = (
+    <div className="flex justify-end gap-2">
+      <Button id="billing-entry-cancel" variant="outline" onClick={onClose} disabled={saving}>
+        {t('common:actions.cancel', 'Cancel')}
+      </Button>
+      <Button id="billing-entry-save" onClick={handleSave} disabled={saving}>
+        {saving
+          ? t('billing.entry.saving', 'Saving...')
+          : isEdit
+            ? t('common:actions.save', 'Save')
+            : t('billing.entry.add', 'Add entry')}
+      </Button>
+    </div>
+  );
+
   return (
     <Dialog
       isOpen
@@ -176,6 +195,7 @@ export default function ScheduleEntryDialog({
       title={isEdit
         ? t('billing.entry.editTitle', 'Edit schedule entry')
         : t('billing.entry.addTitle', 'Add milestone or deposit')}
+      footer={footer}
     >
       <DialogContent>
         <div className="flex flex-col gap-4">
@@ -219,7 +239,7 @@ export default function ScheduleEntryDialog({
           {valueMode === 'amount' ? (
             <div>
               <Label htmlFor="billing-entry-amount">
-                {t('billing.entry.amount', 'Amount ({{currency}})', { currency: currency ?? 'USD' })}
+                {t('billing.entry.amount', 'Amount ({{currency}})', { currency: resolvedCurrency })}
               </Label>
               <Input
                 id="billing-entry-amount"
@@ -230,6 +250,25 @@ export default function ScheduleEntryDialog({
                 onChange={(e) => setAmountText(e.target.value)}
                 placeholder="0.00"
               />
+              {!isEdit && (
+                <div className="mt-3 rounded-md border border-[rgb(var(--color-border-200))] p-3">
+                  <Checkbox
+                    id="billing-entry-increase-total"
+                    checked={increaseTotal}
+                    onChange={(event) => setIncreaseTotal(event.currentTarget.checked)}
+                    label={t(
+                      'billing.entry.increaseTotal',
+                      'Increase project total by this amount',
+                    )}
+                  />
+                  <p className="mt-1 pl-6 text-xs text-[rgb(var(--color-text-500))]">
+                    {t(
+                      'billing.entry.increaseTotalHint',
+                      'For add-on / scope-change work. The project total increases and existing percentage allocations are recalculated against the new total.',
+                    )}
+                  </p>
+                </div>
+              )}
             </div>
           ) : (
             <div>
@@ -306,18 +345,6 @@ export default function ScheduleEntryDialog({
           </div>
         </div>
       </DialogContent>
-      <DialogFooter>
-        <Button id="billing-entry-cancel" variant="outline" onClick={onClose} disabled={saving}>
-          {t('common:actions.cancel', 'Cancel')}
-        </Button>
-        <Button id="billing-entry-save" onClick={handleSave} disabled={saving}>
-          {saving
-            ? t('billing.entry.saving', 'Saving...')
-            : isEdit
-              ? t('common:actions.save', 'Save')
-              : t('billing.entry.add', 'Add entry')}
-        </Button>
-      </DialogFooter>
     </Dialog>
   );
 }

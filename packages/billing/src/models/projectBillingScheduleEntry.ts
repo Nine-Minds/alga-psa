@@ -20,6 +20,7 @@ export interface CreateProjectBillingScheduleEntryModelInput {
   description: string;
   amount: number | null;
   percentage: number | null;
+  frozen_amount?: number | null;
   trigger_type: ProjectBillingTriggerType;
   phase_id?: string | null;
   trigger_date?: string | null;
@@ -193,6 +194,12 @@ const ProjectBillingScheduleEntry = {
       updated_at: _updatedAt,
       ...safeExtra
     } = extra as Partial<IProjectBillingScheduleEntry>;
+    if (from === 'ready' && to === 'approved' && safeExtra.frozen_amount == null) {
+      throw new Error('Approving a project billing schedule entry requires a frozen amount');
+    }
+    if (to !== 'approved' && to !== 'invoiced') {
+      safeExtra.frozen_amount = null;
+    }
     const [row] = await tenantDb(connection, tenant).table('project_billing_schedule_entries')
       .where({
         schedule_entry_id: entryId,

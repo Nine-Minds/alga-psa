@@ -1525,6 +1525,20 @@
     "paymentSchedule": "Betalingsschema",
     "invoicedOn": "Gefactureerd op {{date}}",
     "loading": "Facturering laden...",
+    "materials": {
+      "title": "Materialen en producten",
+      "hint": "Doorbelaste items die naast de projectkosten worden gefactureerd.",
+      "manage": "Producten beheren",
+      "loading": "Producten laden...",
+      "empty": "Er zijn geen producten aan dit project gekoppeld.",
+      "product": "Product",
+      "quantityRate": "Aantal × tarief",
+      "extended": "Totaal",
+      "status": "Status",
+      "unnamed": "Product",
+      "billed": "Gefactureerd",
+      "unbilled": "Niet gefactureerd"
+    },
     "status": {
       "pending": "In behandeling",
       "ready": "Gereed",

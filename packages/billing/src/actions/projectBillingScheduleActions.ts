@@ -17,7 +17,11 @@ import ProjectBillingScheduleEntry from '../models/projectBillingScheduleEntry';
 import {
   createProjectBillingScheduleEntrySchema,
 } from '../schemas/projectBillingSchemas';
-import { computeEntryAmounts, validateAllocation } from '../services/projectBillingService';
+import {
+  computeEntryAmounts,
+  validateAllocation,
+} from '../services/projectBillingService';
+import { persistProjectBillingConfigUpdate } from '../services/projectBillingConfigUpdateService';
 import { generateProjectInvoice } from './invoiceGeneration';
 import {
   assertProjectBillingMutationPermission,
@@ -35,9 +39,15 @@ export interface CreateScheduleEntryActionInput {
   phase_id?: string | null;
   trigger_date?: string | null;
   requires_payment_before_work?: boolean;
+  increase_total?: boolean;
 }
 
-export type UpdateScheduleEntryActionInput = Partial<CreateScheduleEntryActionInput>;
+export type UpdateScheduleEntryActionInput = Partial<Omit<CreateScheduleEntryActionInput, 'increase_total'>>;
+
+export interface CreateScheduleEntryResult {
+  entry: ScheduleEntryView;
+  config: IProjectBillingConfig;
+}
 
 interface EntryContext {
   entry: IProjectBillingScheduleEntry;
@@ -194,6 +204,11 @@ async function approveEntryInTransaction(
   }
 
   const entries = await ProjectBillingScheduleEntry.listByConfig(context.config.config_id, trx);
+  const entryIndex = entries.findIndex((entry) => entry.schedule_entry_id === entryId);
+  if (entryIndex < 0) {
+    throw new Error('Project billing schedule entry not found');
+  }
+  const frozenAmount = computeEntryAmounts(context.config, entries)[entryIndex];
   const allocation = validateAllocation(context.config, entries);
   if (allocation.isFinalEntryBlocked) {
     throw new Error(allocationWarning(allocation.delta));
@@ -207,6 +222,7 @@ async function approveEntryInTransaction(
     {
       approved_by: user.user_id,
       approved_at: approvedAt,
+      frozen_amount: frozenAmount,
     },
     trx,
   );
@@ -267,7 +283,7 @@ export const createScheduleEntry = withAuth(withProjectBillingActionErrors(async
   { tenant },
   configId: string,
   input: CreateScheduleEntryActionInput,
-): Promise<ScheduleEntryView> => {
+): Promise<CreateScheduleEntryResult> => {
   const { knex } = await createTenantKnex();
   await assertProjectBillingMutationPermission(user, knex);
   const parsed = createProjectBillingScheduleEntrySchema.parse({
@@ -279,11 +295,18 @@ export const createScheduleEntry = withAuth(withProjectBillingActionErrors(async
     trigger_date: input.trigger_date ?? null,
     status: 'pending',
     requires_payment_before_work: input.requires_payment_before_work ?? false,
+    increase_total: input.increase_total ?? false,
   });
 
   const result = await withTransaction(knex, async (trx: Knex.Transaction) => {
     const config = await ProjectBillingConfig.getById(configId, trx);
     if (!config) throw new Error('Project billing config not found');
+    if (parsed.increase_total && parsed.amount == null) {
+      throw new Error('Only amount-based schedule entries can increase the project total');
+    }
+    if (parsed.increase_total && config.total_price == null) {
+      throw new Error('A project total is required before it can be increased');
+    }
     await assertValidTrigger(trx, tenant, config.project_id, {
       trigger_type: parsed.trigger_type,
       phase_id: parsed.phase_id ?? null,
@@ -307,8 +330,20 @@ export const createScheduleEntry = withAuth(withProjectBillingActionErrors(async
       requires_payment_before_work: parsed.requires_payment_before_work,
       display_order: displayOrder,
     }, trx);
+    let updatedConfig = config;
+    if (parsed.increase_total) {
+      const entries = await ProjectBillingScheduleEntry.listByConfig(configId, trx);
+      const nextTotal = config.total_price! + parsed.amount!;
+      updatedConfig = await persistProjectBillingConfigUpdate(
+        configId,
+        { total_price: nextTotal },
+        entries,
+        trx,
+      );
+    }
     return {
-      entry: await scheduleEntryView(trx, tenant, entry.schedule_entry_id, config),
+      entry: await scheduleEntryView(trx, tenant, entry.schedule_entry_id, updatedConfig),
+      config: updatedConfig,
       projectId: config.project_id,
     };
   });
@@ -320,7 +355,21 @@ export const createScheduleEntry = withAuth(withProjectBillingActionErrors(async
     projectId: result.projectId,
     entry: result.entry,
   });
-  return result.entry;
+  if (parsed.increase_total) {
+    await publishEvent({
+      eventType: 'PROJECT_BILLING_CONFIG_UPDATED',
+      payload: {
+        tenantId: tenant,
+        projectId: result.projectId,
+        configId: result.config.config_id,
+        billingModel: result.config.billing_model,
+        invoiceMode: result.config.invoice_mode,
+        userId: user.user_id,
+        changes: { total_price: result.config.total_price, source: 'schedule_add_on' },
+      },
+    });
+  }
+  return { entry: result.entry, config: result.config };
 }));
 
 export const updateScheduleEntry = withAuth(withProjectBillingActionErrors(async (
@@ -498,11 +547,37 @@ export const approveScheduleEntry = withAuth(withProjectBillingActionErrors(asyn
   return { entry: result.entry, allocation_warning: result.allocation_warning };
 }));
 
+export const unapproveScheduleEntry = withAuth(withProjectBillingActionErrors(async (
+  user,
+  { tenant },
+  entryId: string,
+): Promise<ScheduleEntryView> => {
+  const { knex } = await createTenantKnex();
+  await assertProjectBillingMutationPermission(user, knex);
+  const result = await withTransaction(knex, (trx: Knex.Transaction) => (
+    transitionEntry(tenant, trx, entryId, 'approved', 'ready', {
+      approved_by: null,
+      approved_at: null,
+      frozen_amount: null,
+    })
+  ));
+  revalidateProjectBilling(result.projectId);
+  await publishScheduleEvent({
+    eventType: 'PROJECT_BILLING_SCHEDULE_STATUS_CHANGED',
+    tenant,
+    userId: user.user_id,
+    projectId: result.projectId,
+    entry: result.entry,
+    previousStatus: 'approved',
+  });
+  return result.entry;
+}));
+
 export const approveAndInvoiceNow = withAuth(withProjectBillingActionErrors(async (
   user,
   { tenant },
   entryId: string,
-): Promise<{ entry: ScheduleEntryView; invoice_id: string }> => {
+): Promise<{ entry: ScheduleEntryView; invoice_id: string; warnings: string[] }> => {
   const { knex } = await createTenantKnex();
   await assertProjectBillingMutationPermission(user, knex);
   const approved = await withTransaction(knex, async (trx: Knex.Transaction) => {
@@ -514,11 +589,14 @@ export const approveAndInvoiceNow = withAuth(withProjectBillingActionErrors(asyn
   });
 
   let invoice: Awaited<ReturnType<typeof generateProjectInvoice>>;
+  let invoiceId: string;
   try {
     invoice = await generateProjectInvoice(approved.projectId, [entryId]);
+    invoiceId = invoiceIdFrom(invoice);
   } catch (error) {
     // Approval and invoice generation cross a server-action boundary. Restore
-    // the ready state if generation fails before the schedule entry is linked.
+    // the ready state if generation throws or returns a structured action error
+    // before the schedule entry is linked.
     await withTransaction(knex, async (trx: Knex.Transaction) => {
       const current = await ProjectBillingScheduleEntry.getById(entryId, trx);
       if (current?.status === 'approved') {
@@ -526,7 +604,7 @@ export const approveAndInvoiceNow = withAuth(withProjectBillingActionErrors(asyn
           entryId,
           'approved',
           'ready',
-          { approved_by: null, approved_at: null },
+          { approved_by: null, approved_at: null, frozen_amount: null },
           trx,
         );
       }
@@ -534,10 +612,13 @@ export const approveAndInvoiceNow = withAuth(withProjectBillingActionErrors(asyn
     revalidateProjectBilling(approved.projectId);
     throw error;
   }
-  const invoiceId = invoiceIdFrom(invoice);
   const entry = await scheduleEntryView(knex, tenant, entryId);
   revalidateProjectBilling(approved.projectId);
-  return { entry, invoice_id: invoiceId };
+  const warnings = invoice && typeof invoice === 'object' && 'warnings' in invoice
+    && Array.isArray(invoice.warnings)
+    ? invoice.warnings.filter((warning): warning is string => typeof warning === 'string')
+    : [];
+  return { entry, invoice_id: invoiceId, warnings };
 }));
 
 export const holdScheduleEntry = withAuth(withProjectBillingActionErrors(async (

@@ -2,7 +2,6 @@
 
 import React, { useEffect, useState } from 'react';
 import { useTranslation, useFormatters } from '@alga-psa/ui/lib/i18n/client';
-import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 import {
   isActionMessageError,
   isActionPermissionError,
@@ -12,6 +11,7 @@ import {
   type ClientProjectBillingSummary,
 } from '@alga-psa/client-portal/actions';
 import { useFeatureFlag } from '@alga-psa/ui/hooks';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 
 interface ProjectBillingSummarySectionProps {
   projectId: string;
@@ -20,8 +20,9 @@ interface ProjectBillingSummarySectionProps {
 // Read-only billing summary for the client portal. Renders nothing unless the MSP
 // has enabled `show_billing` for this project and a billing config exists.
 export default function ProjectBillingSummarySection({ projectId }: ProjectBillingSummarySectionProps) {
-  const { t, i18n } = useTranslation('features/projects');
+  const { t } = useTranslation('features/projects');
   const { formatDate } = useFormatters();
+  const { money } = useCurrencyFormat();
   const { enabled: projectBillingUiEnabled } = useFeatureFlag('project-billing-ui', { defaultValue: false });
   const [summary, setSummary] = useState<ClientProjectBillingSummary | null>(null);
 
@@ -44,8 +45,7 @@ export default function ProjectBillingSummarySection({ projectId }: ProjectBilli
 
   if (!projectBillingUiEnabled || !summary || !summary.enabled) return null;
 
-  const currency = summary.currency ?? 'USD';
-  const money = (minorUnits: number) => formatCurrencyFromMinorUnits(minorUnits, i18n.language, currency);
+  const currency = summary.currency ?? undefined;
 
   return (
     <div className="bg-white rounded-lg shadow" id="client-portal-project-billing">
@@ -58,12 +58,12 @@ export default function ProjectBillingSummarySection({ projectId }: ProjectBilli
           {summary.total_price !== null && (
             <div>
               <p className="text-sm text-gray-600">{t('billing.totalPrice', 'Total Price')}</p>
-              <p className="font-medium">{money(summary.total_price)}</p>
+              <p className="font-medium">{money(summary.total_price, currency)}</p>
             </div>
           )}
           <div>
             <p className="text-sm text-gray-600">{t('billing.invoicedToDate', 'Invoiced to Date')}</p>
-            <p className="font-medium">{money(summary.invoiced_to_date)}</p>
+            <p className="font-medium">{money(summary.invoiced_to_date, currency)}</p>
           </div>
         </div>
 
@@ -87,7 +87,7 @@ export default function ProjectBillingSummarySection({ projectId }: ProjectBilli
                     )}
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
-                    <span className="text-sm font-medium text-gray-900">{money(entry.computed_amount)}</span>
+                    <span className="text-sm font-medium text-gray-900">{money(entry.computed_amount, currency)}</span>
                     {entry.status === 'invoiced' ? (
                       <span className="text-xs px-2 py-0.5 rounded-full bg-green-100 text-green-700">
                         {t('billing.status.invoiced', 'Invoiced')}

@@ -3,10 +3,10 @@
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@alga-psa/ui/components/Button';
-import { Dialog, DialogContent, DialogFooter } from '@alga-psa/ui/components/Dialog';
+import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
-import { Plus, Pencil, Trash2 } from 'lucide-react';
+import { LockKeyhole, Plus, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import type { IProjectBillingConfig, IProjectPhase } from '@alga-psa/types';
 import type {
@@ -21,16 +21,19 @@ import {
   holdScheduleEntry,
   markEntryReady,
   releaseScheduleEntryHold,
+  unapproveScheduleEntry,
 } from '../../actions/projectBillingScheduleActions';
 import StatusChip from './StatusChip';
 import ScheduleEntryDialog from './ScheduleEntryDialog';
-import { formatCents } from './billingViewHelpers';
 import {
   getErrorMessage,
   isActionMessageError,
   isActionPermissionError,
 } from '@alga-psa/ui/lib/errorHandling';
 import { useFormatters } from '@alga-psa/ui/lib/i18n/client';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
+import { Tooltip } from '@alga-psa/ui/components/Tooltip';
+import { getEntryDisplayPercentage } from './billingViewHelpers';
 
 interface ScheduleTableProps {
   config: IProjectBillingConfig;
@@ -74,6 +77,7 @@ export default function ScheduleTable({
 }: ScheduleTableProps) {
   const { t } = useTranslation(['features/projects', 'common']);
   const { formatDate } = useFormatters();
+  const { money } = useCurrencyFormat();
   const currency = config.currency;
   const [busyId, setBusyId] = useState<string | null>(null);
   const [dialogEntry, setDialogEntry] = useState<ScheduleEntryView | null>(null);
@@ -188,7 +192,10 @@ export default function ScheduleTable({
                   () => approveAndInvoiceNow(entry.schedule_entry_id),
                   'billing.schedule.invoiced',
                   'Invoice generated',
-                  (result) => onOpenInvoice(result.invoice_id, result.entry.invoice_number ?? result.invoice_id),
+                  (result) => {
+                    result.warnings.forEach((warning) => toast(warning, { icon: '⚠️' }));
+                    onOpenInvoice(result.invoice_id, result.entry.invoice_number ?? result.invoice_id);
+                  },
                 )}
               >
                 {t('billing.schedule.approveInvoice', 'Approve & invoice')}
@@ -231,15 +238,31 @@ export default function ScheduleTable({
           </Button>
         )}
         {entry.status === 'approved' && (
-          <Button
-            id={`billing-cancel-${entry.schedule_entry_id}`}
-            size="xs"
-            variant="outline"
-            disabled={busy}
-            onClick={() => run(entry.schedule_entry_id, () => cancelScheduleEntry(entry.schedule_entry_id), 'billing.schedule.canceled', 'Entry canceled')}
-          >
-            {t('common:actions.cancel', 'Cancel')}
-          </Button>
+          <>
+            <Button
+              id={`billing-unapprove-${entry.schedule_entry_id}`}
+              size="xs"
+              variant="outline"
+              disabled={busy}
+              onClick={() => run(
+                entry.schedule_entry_id,
+                () => unapproveScheduleEntry(entry.schedule_entry_id),
+                'billing.schedule.unapproved',
+                'Approval removed',
+              )}
+            >
+              {t('billing.schedule.unapprove', 'Unapprove')}
+            </Button>
+            <Button
+              id={`billing-cancel-${entry.schedule_entry_id}`}
+              size="xs"
+              variant="outline"
+              disabled={busy}
+              onClick={() => run(entry.schedule_entry_id, () => cancelScheduleEntry(entry.schedule_entry_id), 'billing.schedule.canceled', 'Entry canceled')}
+            >
+              {t('common:actions.cancel', 'Cancel')}
+            </Button>
+          </>
         )}
         {entry.status === 'held' && (
           <Button
@@ -294,11 +317,11 @@ export default function ScheduleTable({
     ? t('billing.schedule.allocatedFull', '✓ Schedule allocates 100% of contract value')
     : allocation.delta > 0
       ? t('billing.schedule.allocatedUnder', 'Under-allocated by {{amount}} ({{pct}}%)', {
-        amount: formatCents(allocation.delta, currency),
+        amount: money(allocation.delta, currency ?? undefined),
         pct: allocation.pct.toFixed(0),
       })
       : t('billing.schedule.allocatedOver', 'Over-allocated by {{amount}}', {
-        amount: formatCents(-allocation.delta, currency),
+        amount: money(-allocation.delta, currency ?? undefined),
       });
 
   return (
@@ -347,10 +370,22 @@ export default function ScheduleTable({
                   </td>
                   <td className="px-3.5 py-3 text-[rgb(var(--color-text-700))]">{renderTriggerCell(entry)}</td>
                   <td className="px-3.5 py-3 text-right tabular-nums text-[rgb(var(--color-text-700))]">
-                    {entry.percentage != null ? `${entry.percentage}%` : '—'}
+                    {getEntryDisplayPercentage(entry, config.total_price) != null ? (
+                      <span className="inline-flex items-center justify-end gap-1">
+                        {Number(getEntryDisplayPercentage(entry, config.total_price)!.toFixed(2))}%
+                        {entry.frozen_amount !== null && (
+                          <Tooltip content={t('billing.schedule.amountLocked', 'Amount locked at approval')}>
+                            <LockKeyhole
+                              className="h-3 w-3 text-[rgb(var(--color-text-400))]"
+                              aria-label={t('billing.schedule.amountLocked', 'Amount locked at approval')}
+                            />
+                          </Tooltip>
+                        )}
+                      </span>
+                    ) : '—'}
                   </td>
                   <td className="px-3.5 py-3 text-right font-semibold tabular-nums text-[rgb(var(--color-text-900))]">
-                    {formatCents(entry.computed_amount, currency)}
+                    {money(entry.computed_amount, currency ?? undefined)}
                   </td>
                   <td className="px-3.5 py-3"><StatusChip status={entry.status} /></td>
                   <td className="px-3.5 py-3">
@@ -378,7 +413,7 @@ export default function ScheduleTable({
           <tr className="border-t border-[rgb(var(--color-border-200))] bg-[rgb(var(--color-border-100))] text-[12px]">
             <td colSpan={3} className={`px-3.5 py-2.5 font-semibold ${allocationTone}`}>{allocationMessage}</td>
             <td className="px-3.5 py-2.5 text-right font-semibold tabular-nums text-[rgb(var(--color-text-900))]">
-              {formatCents(allocation.total, currency)}
+              {money(allocation.total, currency ?? undefined)}
             </td>
             <td colSpan={3} className="px-3.5 py-2.5 text-right">
               {canManage && (
@@ -404,7 +439,22 @@ export default function ScheduleTable({
       )}
 
       {holdTarget && (
-        <Dialog isOpen onClose={() => setHoldTarget(null)} id="billing-hold-dialog" title={t('billing.schedule.holdTitle', 'Hold entry')}>
+        <Dialog
+          isOpen
+          onClose={() => setHoldTarget(null)}
+          id="billing-hold-dialog"
+          title={t('billing.schedule.holdTitle', 'Hold entry')}
+          footer={(
+            <>
+              <Button id="billing-hold-cancel" variant="outline" onClick={() => setHoldTarget(null)}>
+                {t('common:actions.cancel', 'Cancel')}
+              </Button>
+              <Button id="billing-hold-confirm" onClick={submitHold}>
+                {t('billing.schedule.hold', 'Hold')}
+              </Button>
+            </>
+          )}
+        >
           <DialogContent>
             <Label htmlFor="billing-hold-reason">{t('billing.schedule.holdReason', 'Reason')}</Label>
             <Input
@@ -414,14 +464,6 @@ export default function ScheduleTable({
               placeholder={t('billing.schedule.holdReasonPlaceholder', 'Why is this entry being held?')}
             />
           </DialogContent>
-          <DialogFooter>
-            <Button id="billing-hold-cancel" variant="outline" onClick={() => setHoldTarget(null)}>
-              {t('common:actions.cancel', 'Cancel')}
-            </Button>
-            <Button id="billing-hold-confirm" onClick={submitHold}>
-              {t('billing.schedule.hold', 'Hold')}
-            </Button>
-          </DialogFooter>
         </Dialog>
       )}
     </div>
