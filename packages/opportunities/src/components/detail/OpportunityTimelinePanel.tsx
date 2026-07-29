@@ -10,7 +10,7 @@ import {
 
 /** Read-only courtship timeline; entries accrue from completed actions, logged interactions, and sent drafts. */
 export function OpportunityTimelinePanel({ opportunityId }: { opportunityId: string }) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('msp/opportunities');
   const [entries, setEntries] = useState<IOpportunityTimelineEntry[] | null>(null);
 
   useEffect(() => {

@@ -20,7 +20,7 @@ import { getActiveMeetingSession, markDealReviewed, startMeetingSession } from '
  * the gap is the conversation.
  */
 export function OpportunityMeetingMode() {
-  const { t } = useTranslation();
+  const { t } = useTranslation('msp/opportunities');
   const router = useRouter();
   const [session, setSession] = useState<IOpportunityMeetingSessionDetail | null>(null);
   const [deals, setDeals] = useState<IOpportunityListItem[] | null>(null);

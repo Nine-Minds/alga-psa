@@ -36,7 +36,7 @@ export function EditOpportunityDialog({
   initial: EditOpportunityInput;
   onSubmit: (input: EditOpportunityInput) => Promise<void> | void;
 }) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('msp/opportunities');
   const [title, setTitle] = useState(initial.title);
   const [type, setType] = useState(initial.opportunity_type);
   const [nextAction, setNextAction] = useState(initial.next_action);

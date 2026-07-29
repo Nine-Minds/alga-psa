@@ -19,7 +19,7 @@ export function QueueActionsTable({
   onOpen: (opportunityId: string) => void;
   onSnooze: (opportunityId: string) => void;
 }) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('msp/opportunities');
   const columns: ColumnDefinition<IQueueActionItem>[] = [
     {
       title: t('opportunities.queue.table.nextAction', 'Next action'),

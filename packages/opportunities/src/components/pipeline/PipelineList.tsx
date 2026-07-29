@@ -6,6 +6,7 @@ import { Badge } from '@alga-psa/ui/components/Badge';
 import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import { formatCurrencyFromMinorUnits } from '@alga-psa/core';
 import type { ColumnDefinition, IOpportunityListItem, OpportunityStage } from '@alga-psa/types';
+import { OPPORTUNITY_STAGE_LABELS } from '../../lib/opportunityStages';
 
 const NUM_CELL = 'text-right tabular-nums';
 
@@ -26,9 +27,11 @@ export function PipelineList({
   pagination?: { currentPage: number; pageSize: number; totalItems: number; onPageChange: (page: number) => void };
   initialStage?: OpportunityStage;
 }) {
-  const { t } = useTranslation();
-  const stageLabel = (stage: string) =>
-    t(`opportunities.stage.${stage}`, stage.charAt(0).toUpperCase() + stage.slice(1));
+  const { t } = useTranslation('msp/opportunities');
+  const stageLabel = (stage: OpportunityStage) => {
+    const label = OPPORTUNITY_STAGE_LABELS[stage];
+    return t(label.key, label.fallback);
+  };
 
   const columns: ColumnDefinition<IOpportunityListItem>[] = [
     {

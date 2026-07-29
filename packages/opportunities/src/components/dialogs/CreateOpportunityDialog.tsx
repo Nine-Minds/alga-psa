@@ -60,7 +60,7 @@ export function CreateOpportunityDialog({
   }) => React.ReactNode;
   onSubmit: (input: CreateOpportunityInput) => Promise<void> | void;
 }) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('msp/opportunities');
   const [clientId, setClientId] = useState<string | null>(lockedClient?.client_id ?? defaultClientId ?? null);
   const [filterState, setFilterState] = useState<'all' | 'active' | 'inactive'>('active');
   const [typeFilter, setTypeFilter] = useState<'all' | 'company' | 'individual'>('all');

@@ -45,7 +45,7 @@ export function WorkQueue({
   onReviewDraft,
   preferenceKey,
 }: WorkQueueProps) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('msp/opportunities');
   const [view, setView] = useState<'cards' | 'table'>('cards');
   const actionItems = useMemo(
     () => [...queue.do_today, ...queue.going_quiet],

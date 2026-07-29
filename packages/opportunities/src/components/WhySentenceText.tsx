@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from '@alga-psa/ui/lib/i18n/client';
 import type { WhySentence } from '@alga-psa/types';
 
 /**
@@ -7,15 +8,17 @@ import type { WhySentence } from '@alga-psa/types';
  * bold span so the fact that matters most reads at a glance.
  */
 export function WhySentenceText({ why, className }: { why: WhySentence; className?: string }) {
+  const { t } = useTranslation('msp/opportunities');
+
   return (
     <span className={className}>
       {why.segments.map((segment, i) =>
         segment.emphasis ? (
           <strong key={i} className="font-semibold text-[rgb(var(--color-text-900))]">
-            {segment.text}
+            {t(segment.message.key, segment.message.params)}
           </strong>
         ) : (
-          <React.Fragment key={i}>{segment.text}</React.Fragment>
+          <React.Fragment key={i}>{t(segment.message.key, segment.message.params)}</React.Fragment>
         )
       )}
     </span>

@@ -74,7 +74,7 @@ export function OpportunityDetailHost({
   commitments?: ReactNode;
   returnTab?: string;
 }) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('msp/opportunities');
   const router = useRouter();
   const [completeOpen, setCompleteOpen] = useState(false);
   const [loseOpen, setLoseOpen] = useState(false);
@@ -191,7 +191,9 @@ export function OpportunityDetailHost({
             quoteId: 'new',
             opportunityId: detail.opportunity_id,
             clientId: detail.client_id,
-            title: `Quote for ${detail.title}`,
+            title: t('opportunities.detail.quoteTitle', 'Quote for {{title}}', {
+              title: detail.title,
+            }),
           });
           if (detail.contact_id) params.set('contactId', detail.contact_id);
           router.push(`/msp/billing?${params.toString()}`);

@@ -21,6 +21,7 @@ import {
 import { prepareOpportunityWinConversions, type WinOpportunityOptions } from '../lib/opportunityWin';
 import { getOpportunityHandoffData } from '../lib/opportunityHandoff';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
+import { promoteProspectClientAfterWin } from '../lib/clientLifecyclePromotion';
 
 export interface LinkableOpportunityQuote {
   quote_id: string;
@@ -211,11 +212,7 @@ export const winOpportunity = withAuth(async (
         : 'Opportunity marked won',
       recordedBy: actorId(user),
     });
-    const client = await tenantDb(trx, tenant).table('clients').where({ client_id: updated.client_id }).first();
-    if (client?.lifecycle_status === 'prospect') {
-      await tenantDb(trx, tenant).table('clients').where({ client_id: updated.client_id }).update({ lifecycle_status: 'active', updated_at: now });
-      publishOpportunityEventAfterCommit(trx, tenant, 'CLIENT_STATUS_CHANGED', { clientId: updated.client_id, previousStatus: 'prospect', newStatus: 'active', changedAt: now }, `client_status_changed:${updated.client_id}:${now}`);
-    }
+    await promoteProspectClientAfterWin(trx, tenant, updated.client_id, now);
     return updated;
   });
 });

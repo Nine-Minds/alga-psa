@@ -63,7 +63,7 @@ export function OpportunityDetailView({
   onEditDetails,
   onDraftFollowUp,
 }: OpportunityDetailViewProps) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('msp/opportunities');
   const fmt = (cents: number) => formatCurrencyFromMinorUnits(cents, undefined, detail.currency_code);
   const open = detail.status === 'open';
   const overdue =

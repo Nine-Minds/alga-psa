@@ -19,6 +19,23 @@ export function evidenceIdsAboveStage(
     .map((item) => item.evidence_id);
 }
 
+export function buildStageDeclarationPlan(
+  evidence: Array<Pick<IOpportunityEvidence, 'evidence_id' | 'checkpoint'>>,
+  stage: ManuallyDeclaredOpportunityStage,
+  detail?: string | null,
+) {
+  return {
+    correctionEvidenceIds: evidenceIdsAboveStage(evidence, stage),
+    evidence: stage === 'identified'
+      ? null
+      : {
+          checkpoint: stage,
+          source: 'user_declared' as const,
+          detail: detail?.trim() || `Stage manually set to ${stage}`,
+        },
+  };
+}
+
 export function deriveOpportunityStage(opportunity: Pick<IOpportunity, 'status'>, evidence: Array<Pick<IOpportunityEvidence, 'checkpoint' | 'corrected_at'>>): OpportunityStage {
   if (opportunity.status === 'won') return 'won';
   if (opportunity.status === 'lost') return 'lost';
@@ -89,11 +106,11 @@ export async function declareStage(
     .where({ opportunity_id: opportunityId })
     .whereNull('corrected_at') as IOpportunityEvidence[];
   const correctionAt = new Date().toISOString();
-  const higherEvidenceIds = evidenceIdsAboveStage(activeEvidence, stage);
+  const plan = buildStageDeclarationPlan(activeEvidence, stage, detail);
 
-  if (higherEvidenceIds.length > 0) {
+  if (plan.correctionEvidenceIds.length > 0) {
     await db.table('opportunity_evidence')
-      .whereIn('evidence_id', higherEvidenceIds)
+      .whereIn('evidence_id', plan.correctionEvidenceIds)
       .update({
         correction_note: `Stage manually set to ${stage}`,
         corrected_by: recordedBy,
@@ -101,14 +118,12 @@ export async function declareStage(
       });
   }
 
-  if (stage === 'identified') {
+  if (!plan.evidence) {
     await updateDerivedStage(trx, tenant, opportunity, `user_declared:${recordedBy}:${correctionAt}`);
   } else {
     await recordEvidence(trx, tenant, {
       opportunityId,
-      checkpoint: stage,
-      source: 'user_declared',
-      detail: detail?.trim() || `Stage manually set to ${stage}`,
+      ...plan.evidence,
       recordedBy,
     });
   }

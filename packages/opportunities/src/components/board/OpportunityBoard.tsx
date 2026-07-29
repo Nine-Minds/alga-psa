@@ -29,7 +29,7 @@ export function OpportunityBoard({
   /** Dropping any open card on the closed rail prompts the loss-reason dialog. */
   onMarkLost: (opportunityId: string) => void;
 }) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('msp/opportunities');
   const [dragging, setDragging] = useState<IOpportunityListItem | null>(null);
   const [dropTarget, setDropTarget] = useState<string | null>(null);
 

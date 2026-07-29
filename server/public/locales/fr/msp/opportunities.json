@@ -1,0 +1,413 @@
+{
+  "common": {
+    "back": "Retour",
+    "cancel": "Annuler",
+    "delete": "Supprimer",
+    "edit": "Modifier",
+    "saveChanges": "Enregistrer les modifications"
+  },
+  "opportunities": {
+    "board": {
+      "daysQuiet": "{{count}}d silencieux",
+      "nextDue": "suivant : {{date}}",
+      "recentlyClosed": "Récemment fermé"
+    },
+    "clientTab": {
+      "emptyBody": "Créez-en un ou laissez un devis démarrer le parcours.",
+      "emptyTitle": "Aucune opportunité pour ce client pour l'instant"
+    },
+    "commitments": {
+      "add": "Enregistrez-le",
+      "coveredByQuote": "Couvert par {{quote}}",
+      "declined": "Refusé – cela ne se produit pas",
+      "help": "Notez chaque promesse telle qu’elle sort de votre bouche. Chacun se résout en une ligne de devis ou est refusé avant la clôture de la transaction.",
+      "openCount": "{{count}} non résolu – blocs remportés de près",
+      "placeholder": "par ex. Migration des e-mails incluse dans l'intégration",
+      "resolve": "Résoudre…",
+      "status": {
+        "agreement_line": "ligne d'accord",
+        "declined": "refusé",
+        "open": "ouvert",
+        "project_task": "tâche de projet",
+        "quote_line": "ligne de citation"
+      },
+      "title": "Engagements"
+    },
+    "completeDialog": {
+      "due": "Due",
+      "nextAction": "Action suivante",
+      "placeholder": "par ex. Suivi de la proposition",
+      "submit": "Terminer et programmer ensuite",
+      "title": "Terminé. Que se passe-t-il ensuite ?"
+    },
+    "confidence": {
+      "committed": "Engagé",
+      "high": "Élevé",
+      "low": "Faible",
+      "medium": "Moyen"
+    },
+    "createDialog": {
+      "client": "Client",
+      "dealTitle": "Titre",
+      "due": "Due",
+      "expectedClose": "Clôture attendue",
+      "nextAction": "Première action",
+      "nextActionPlaceholder": "par ex. Envoyer la proposition d'évaluation",
+      "submit": "Créer une opportunité",
+      "title": "Nouvelle opportunité",
+      "titlePlaceholder": "par ex. Contrat de services gérés"
+    },
+    "deleteDialog": {
+      "body": "Supprimer {{number}} définitivement ? Cela ne peut pas être annulé. Les opportunités avec des devis liés ne peuvent pas être supprimées.",
+      "title": "Supprimer l'opportunité"
+    },
+  "detail": {
+    "backToList": "Retour aux opportunités",
+      "confidence": "Votre confiance",
+      "confidenceNote": "La confiance est à vous ; la scène vient des preuves. Les deux sont comparés, jamais fusionnés.",
+      "createQuote": "Créer un devis",
+      "draftFollowUp": "Rédiger le suivi",
+      "due": "dû {{date}}",
+      "evidence": "Preuve",
+      "expectedClose": "Clôture attendue",
+      "hardware": "Matériel",
+      "linkQuote": "Lien existant",
+      "markLost": "Marc a perdu",
+      "markWon": "Marc a gagné",
+      "metadataTitle": "Opportunité",
+      "nextAction": "Action suivante",
+      "nextActionOverdue": "Action suivante · en retard",
+      "noQuotes": "Pas encore de devis. Un devis envoyé déplace cet accord vers Proposé.",
+      "oneTime": "Une fois",
+      "owner": "Propriétaire",
+      "quotes": "Citations",
+      "quoteTitle": "Citation pour {{title}}",
+      "recurring": "Récurrent",
+      "setStageHint": "Sélectionnez un point de contrôle pour préparer le terrain",
+      "timeline": "Chronologie",
+      "unlinkQuote": "Dissocier",
+      "value": "Valeur",
+      "valuesFromQuote": "à partir du devis accepté",
+      "whyNumber": "{{number}} est à l’étape ",
+      "whyPeriod": "."
+    },
+    "draft": {
+      "body": "Corps",
+      "copied": "Copié. Collez-le dans votre e-mail.",
+      "copy": "Copier",
+      "instructions": "Dites à l'agent quoi changer",
+      "instructionsPlaceholder": "par ex. plus court, plus chaleureux, plus formel",
+      "loadingRecipient": "Vérification du contact lié...",
+      "noRecipient": "Associez un contact à une adresse e-mail principale avant de l'envoyer.",
+      "recipient": "Envoie à {{recipient}} via votre fournisseur de messagerie client.",
+      "regenerate": "Réécrire",
+      "send": "Envoyer un suivi",
+      "sent": "Suivi envoyé et enregistré sur la transaction.",
+      "subject": "Sujet",
+      "title": "Projet de suivi"
+    },
+    "editDialog": {
+      "title": "Modifier l'opportunité"
+    },
+    "forecast": {
+      "basis": "Compté parce que",
+      "calibrated": "calibré",
+      "ceiling": "Plafond — pondéré par des données probantes",
+      "deal": "Accord",
+      "floor": "Étage — signé et verbal",
+      "floorCol": "Sol",
+      "note": "Ce trimestre. Les pondérations proviennent des étapes de preuve, remplacées par les propres taux de clôture de chaque vendeur une fois qu'il a conclu vingt transactions historiques.",
+      "plusOneTime": "+ {{amount}} une fois",
+      "weighted": "{{stage}} · {{pct}} % pondérés",
+      "won": "A gagné cette période"
+    },
+    "ladder": "Échelle de preuves",
+    "linkQuoteDialog": {
+      "confirm": "Citation de lien",
+      "empty": "Aucun devis non lié n'est disponible pour ce client.",
+      "title": "Lier un devis existant"
+    },
+    "list": {
+      "confidence": "Confiance",
+      "deal": "Accord",
+      "mrr": "Récurrent",
+      "nextAction": "Action suivante",
+      "oneTime": "Une fois",
+      "owner": "Propriétaire",
+      "stage": "Scène"
+    },
+    "loseDialog": {
+      "lostTo": "Perdu pour",
+      "notes": "Remarques",
+      "notesPlaceholder": "Tout ce qui est futur, tu devrais le savoir",
+      "reasonPlaceholder": "Pourquoi est-il mort ?",
+      "submit": "Marc a perdu",
+      "title": "Marc a perdu"
+    },
+    "lossReason": {
+      "chose_competitor": "Choisissez un concurrent",
+      "no_budget": "Pas de budget",
+      "no_response": "Ils se sont tus",
+      "not_a_fit": "Pas un ajustement",
+      "other": "Autre",
+      "price": "Prix",
+      "timing": "Calendrier"
+    },
+    "meeting": {
+      "daysAgo": "il y a {{count}} jours",
+      "done": "Pipeline révisé. {{count}} offres enregistrées.",
+      "evidenceSays": "Les preuves disent",
+      "gap": "La confiance est {{confidence}} mais la preuve s'arrête à {{stage}}. Qu’a réellement fait le client ?",
+      "keys": "← retour · → commenté",
+      "markReviewed": "Révisé → suivant",
+      "next": "Action suivante :",
+      "noAction": "aucun défini",
+      "progress": "Offrez {{n}} de {{total}}",
+      "repSays": "Le propriétaire dit",
+      "reviewed": "Révisé",
+      "silence": "Dernière touche"
+    },
+    "new": "Nouvelle opportunité",
+    "onePager": {
+      "average": "Moyenne mensuelle",
+      "billed": "Facturé",
+      "month": "Mois",
+      "printTitle": "{{client}} – dépenses d'assistance sur 12 mois consécutifs",
+      "summary": "{{client}} a payé {{total}} pour une assistance horaire au cours des 12 derniers mois. Cela représente {{avg}} par mois en moyenne.",
+      "title": "Temps et matériel, 12 derniers mois"
+    },
+    "oneTime": "une fois",
+    "oneTimeAmount": "{{amount}} une fois",
+    "pageTitle": "Opportunités",
+    "perMonthSuffix": "/mois",
+    "prospect": "Perspective",
+    "queue": {
+      "actions": "Actions",
+      "allClear": "Tout est clair. Chaque accord ouvert a une prochaine étape programmée.",
+      "bottom": "C'est tout. Rien d'autre n'a besoin de vous aujourd'hui.",
+      "cardsView": "Cartes",
+      "completeAction": "Terminé → définir ensuite",
+      "completeActionFor": "Terminer l'action pour {{title}}",
+      "daysOverdue": "{{count}} jours de retard",
+      "daysQuiet": "{{count}} jours calmes",
+      "doToday": "Faire aujourd'hui",
+      "goingQuiet": "Se taire",
+      "greetingAfternoon": "Bonjour, {{name}}.",
+      "greetingEvening": "Bonsoir, {{name}}.",
+      "greetingMorning": "Bonjour, {{name}}.",
+      "lesson": {
+        "reviewPipeline": "Examiner le pipeline",
+        "viewAssessmentDeals": "Voir les offres d'évaluation"
+      },
+      "markLost": "Marc a perdu",
+      "moneyFound": "Argent trouvé",
+      "moneyFoundSource": "de la facturation, des contrats et des actifs",
+      "needsYou_one": "{{count}} chose a besoin de vous aujourd'hui.",
+      "needsYou_other": "{{count}} choses ont besoin de vous aujourd'hui.",
+      "nothingDue": "Rien n'est dû aujourd'hui.",
+      "openDeal": "Accord ouvert",
+      "openDealNamed": "Ouvrir {{title}}",
+      "reviewDraft": "Examiner le brouillon",
+      "snooze": "Répéter",
+      "snoozeNamed": "Répéter {{title}}",
+      "stakesMrr": "{{amount}}/mo se trouve dans vos propres données, rien n'est saisi.",
+      "stakesNrr": "{{amount}} du travail du projet se trouve dans vos propres données.",
+      "table": {
+        "actions": "Actions",
+        "client": "Client",
+        "due": "Due",
+        "nextAction": "Action suivante",
+        "value": "Valeur"
+      },
+      "tableView": "Tableau",
+      "viewLabel": "Vue de la file d'attente"
+    },
+    "snapshot": {
+      "actionsDue": "Actions dues",
+      "empty": "Aucune opportunité ouverte pour le moment.",
+      "loading": "Chargement de l'instantané de l'opportunité",
+      "mrr": "{{amount}} MRR",
+      "nrr": "{{amount}} NRR",
+      "open": "Opportunités ouvertes",
+      "openCount": "Opportunités ouvertes",
+      "opportunityCount_one": "{{count}} opportunité",
+      "opportunityCount_other": "{{count}} opportunités",
+      "pipelineByStage": "Pipeline par étape",
+      "stalled": "Bloqué",
+      "subtitle": "Pipeline ouvert et travaux de suivi qui nécessitent une attention particulière.",
+      "title": "Aperçu de l'opportunité",
+      "unavailable": "Les totaux des opportunités sont temporairement indisponibles. Opportunités ouvertes pour continuer à travailler."
+    },
+    "stage": {
+      "assessment": "Évaluation",
+      "identified": "Identifié",
+      "lost": "Perdu",
+      "proposed": "Proposé",
+      "qualified": "Qualifié",
+      "verbal": "Verbal",
+      "won": "Gagné"
+    },
+    "status": {
+      "lost": "Perdu",
+      "won": "Gagné"
+    },
+    "suggestedActions": {
+      "bookAssessment": "Évaluation du livre",
+      "confirmDecisionMaker": "Confirmer le décideur",
+      "confirmRequirements": "Confirmer les exigences et le budget",
+      "confirmStartDate": "Confirmer la date de début",
+      "followUpQuote": "Suivi du devis",
+      "label": "Prochaines actions suggérées",
+      "prepareQuote": "Préparer un devis",
+      "reviewFindings": "Examiner les résultats de l’évaluation",
+      "scheduleDiscovery": "Planifier un appel de découverte",
+      "scheduleProposalReview": "Planifier l'examen de la proposition",
+      "sendContract": "Envoyer le contrat"
+    },
+    "suggestionHow": {
+      "assetAging_one": "Étendez une actualisation pour {{count}} actifs vieillissants.",
+      "assetAging_other": "Étendez une actualisation pour {{count}} actifs vieillissants.",
+      "inboundLead": "Faites un suivi pendant que l’intérêt est chaleureux.",
+      "renewal": "Démarrez la conversation de renouvellement de {{clientName}} avant la date limite.",
+      "tmConversion": "Comparez les dépenses de T&M en fin de contrat avec un accord récurrent.",
+      "whitespace": "Afficher à {{clientName}} la couverture {{serviceName}} manquante."
+    },
+    "suggestions": {
+      "accept": "Créer une opportunité",
+      "dismiss": "Rejeter",
+      "emptyBody": "Les générateurs surveillent vos contrats, votre facturation et vos actifs, et font apparaître les offres ici au fur et à mesure qu'ils les trouvent.",
+      "emptyTitle": "Aucune suggestion pour le moment",
+      "intro": "Trouvé dans vos données. Acceptez de créer l’opportunité, ou rejetez-la et elle disparaîtra.",
+      "seeNumbers": "Voir les chiffres",
+      "snooze": "Répéter"
+    },
+    "suggestionTitles": {
+      "assetAging": "{{clientName}} actualisation de l'élément",
+      "inboundLead": "{{clientName}} opportunité entrante",
+      "renewal": "Renouvellement de {{contractName}}",
+      "tmConversion": "{{clientName}} Conversion de l'accord T&M",
+      "whitespace": "{{clientName}} : opportunité {{serviceName}}"
+    },
+    "tabs": {
+      "board": "Conseil",
+      "forecast": "Prévisions",
+      "meeting": "Réunion",
+      "pipeline": "Pipeline",
+      "queue": "File d'attente",
+      "suggestions": "Suggestions"
+    },
+  "timeline": {
+    "created": "Opportunité créée",
+      "empty": "Rien d'enregistré pour l'instant. Les actions terminées atterrissent ici d’elles-mêmes."
+    },
+    "toast": {
+      "actionCompleted": "Terminé. Prochaine action programmée.",
+      "created": "Opportunité créée",
+      "deleted": "Opportunité supprimée",
+      "lost": "Marqué perdu",
+      "qualified": "Point de contrôle qualifié enregistré",
+      "quoteLinked": "Citation liée",
+      "quoteUnlinked": "Citation non liée",
+      "saved": "Enregistré",
+      "snoozed": "Répété pendant quelques jours",
+      "stageSet": "La scène est prête à {{stage}}",
+      "suggestionAccepted": "Opportunité créée à partir de la suggestion",
+      "suggestionDismissed": "Rejeté. Cela ne reviendra pas.",
+      "suggestionSnoozed": "Mis en veille pendant une semaine",
+      "whitespaceSuggestionCreated": "Suggestion prête à être examinée",
+      "whitespaceSuggestionDismissed": "Cette suggestion a été précédemment rejetée",
+      "whitespaceSuggestionKnown": "Cette suggestion est déjà connue",
+      "won": "Gagné"
+    },
+    "type": {
+      "expansion": "Extension",
+      "new_logo": "Nouveau client",
+      "project": "Projet",
+      "renewal": "Renouvellement"
+    },
+    "valuesDialog": {
+      "hardware": "Matériel",
+      "mrr": "Récurrent (mensuel)",
+      "note": "Ce sont vos estimations. Un devis accepté les remplace par les chiffres réels.",
+      "nrr": "Prestations ponctuelles",
+      "title": "Valeur estimée"
+    },
+    "whitespace": {
+      "adoption": "{{pct}} % de vos clients agréés achètent ceci",
+      "client": "Client",
+      "empty": "La grille se remplit une fois que les clients ont conclu des accords actifs.",
+      "sell": "Démarrez {{category}} pour {{client}}",
+      "subtitle": "Ce que chaque client du contrat achète. Une cellule vide est une conversation que vous n'avez pas encore eue.",
+      "title": "Le livre entier"
+    },
+    "why": {
+      "actionDue": {
+        "deadlinePast_one": " et {{count}} jour après votre propre date limite.",
+        "deadlinePast_other": " et {{count}} jours après votre propre date limite.",
+        "dueToday": "À rendre aujourd'hui",
+        "inboundChase_one": " Ils ont écrit une fois depuis votre dernière réponse.",
+        "inboundChase_other": " Ils ont écrit {{count}} fois depuis votre dernière réponse.",
+        "pastDue_one": "{{count}} jours de retard",
+        "pastDue_other": "{{count}} jours en retard",
+        "proposalAge_one": "Jour {{count}} depuis la proposition",
+        "proposalAge_other": "Jour {{count}} depuis la proposition",
+        "proposalAgeShort_one": "{{count}} jour.",
+        "proposalAgeShort_other": "{{count}} jours.",
+        "quoteIntro": "{{clientName}} a eu un devis {{quoteNumber}} pour "
+      },
+      "assetAging": {
+        "age_one": "{{count}} actifs âgés de plus de {{oldestYears}} ans",
+        "age_other": "{{count}} actifs âgés de plus de {{oldestYears}} ans",
+        "quoteRefresh": " à {{clientName}}. Citez l'actualisation avant qu'elle ne devienne un ticket de panne."
+      },
+      "forClient": " pour {{clientName}}.",
+      "goingQuiet": {
+        "nudge": " à {{clientName}}. Les offres aussi silencieuses meurent généralement sans coup de pouce.",
+        "paperworkMissing": ". Les papiers n'ont jamais été distribués.",
+        "quietAge_one": "Calme pendant {{count}} jour",
+        "quietAge_other": "Calme pendant {{count}} jours",
+        "verbalAge_one": "{{count}} jour depuis leur oui verbal",
+        "verbalAge_other": "{{count}} jours depuis leur oui verbal"
+      },
+      "inboundLead": {
+        "raisedHand": "{{clientName}} a levé la main",
+        "source": " via {{formName}}. L’intérêt entrant refroidit rapidement."
+      },
+      "lesson": {
+        "assessmentGap_one": " Vous n'en avez pas proposé depuis {{count}} mois. Les évaluations payantes sont votre meilleur coup d’ouverture.",
+        "assessmentGap_other": " Vous n'en avez pas proposé depuis {{count}} mois. Les évaluations payantes sont votre meilleur coup d’ouverture.",
+        "assessmentRate": "Vous clôturez {{wonPerFive}} toutes les 5 évaluations que vous proposez.",
+        "quoteVelocity": "Les devis que vous envoyez dans la semaine se rapprochent {{ratio}}x aussi souvent",
+        "quoteVelocityCompared": " comme ceux qui attendent."
+      },
+      "renewal": {
+        "age_one": "Renouvelle dans {{count}} jour",
+        "age_other": "Renouvelle dans {{count}} jours",
+        "startNow": ". Commencer maintenant signifie que la conversation sur le renouvellement n’est pas précipitée."
+      },
+      "tmConversion": {
+        "counted_one": "{{count}} client a payé plus pour T&M que ce que coûte un accord",
+        "counted_other": "{{count}} clients ont payé plus en T&M que les coûts d'un accord",
+        "named": "{{clientNames}} a payé plus pour T&M que ce qu'un accord coûte",
+        "trailing": " au cours des 12 derniers mois. Le one-pager en fait leur idée."
+      },
+      "whitespace": {
+        "comparable": " de toi encore. Tous les clients comparables le font.",
+        "missing": "{{clientName}} n'achète pas {{serviceName}}"
+      }
+    },
+    "winDialog": {
+      "body": "L’affaire est conclue comme gagnée. Convertissez ensuite le devis accepté en accord à partir de l’écran de devis.",
+      "bodyProspect": "{{client}} devient un client actif. Convertissez ensuite le devis accepté en accord à partir de l’écran de devis.",
+      "confirm": "Marc a gagné",
+      "convertQuote": "Convertir un devis accepté en projet d'accord (facultatif)",
+      "noConvertQuote": "Ne pas convertir un devis",
+      "noProject": "Ne créez pas de projet",
+      "projectName": "Nom du projet",
+      "projectStart": "Date de début",
+      "projectStatus": "Statut initial",
+      "projectTemplate": "Créer un projet d'intégration (facultatif)",
+      "title": "Marc a gagné"
+    }
+  }
+}

@@ -22,7 +22,7 @@ export function BoardCard({
   draggable?: boolean;
   onDragStart?: (e: React.DragEvent, item: IOpportunityListItem) => void;
 }) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('msp/opportunities');
   const value = opportunityValueParts(item.mrr_cents, item.nrr_cents, item.hardware_cents, item.currency_code);
 
   return (

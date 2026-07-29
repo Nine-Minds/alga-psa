@@ -62,7 +62,7 @@ export function OpportunitiesHub({
   /** EE surfaces (Meeting, Forecast) injected by the host app when the management tier allows them. */
   eeTabs?: Array<{ id: string; label: string; content: ReactNode }>;
 }) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('msp/opportunities');
   const router = useRouter();
   const searchParams = useSearchParams();
   const [items, setItems] = useState<IOpportunityListItem[]>(initialItems);

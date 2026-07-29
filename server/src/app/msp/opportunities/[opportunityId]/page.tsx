@@ -6,17 +6,19 @@ import { getOpportunityDraftingAvailability } from '@enterprise/lib/opportunitie
 import { getManagementAvailability } from '@enterprise/lib/opportunities/actions';
 import { OpportunityDetailWithDrafting } from '@/components/opportunities/OpportunityDetailWithDrafting';
 import { enforceServerProductRoute } from '@/lib/serverProductRouteGuard';
+import { getServerTranslation } from '@alga-psa/ui/lib/i18n/serverOnly';
 
 export async function generateMetadata({
   params,
 }: {
   params: Promise<{ opportunityId: string }>;
 }): Promise<Metadata> {
+  const { t } = await getServerTranslation(undefined, 'msp/opportunities');
   try {
     const detail = await getOpportunity((await params).opportunityId);
     return { title: detail.title };
   } catch {
-    return { title: 'Opportunity' };
+    return { title: t('opportunities.detail.metadataTitle', 'Opportunity') };
   }
 }
 

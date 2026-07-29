@@ -241,13 +241,17 @@ export interface IOpportunityDashboardSnapshot {
 /* Why-sentences (the design language's fact-templated copy)           */
 /* ------------------------------------------------------------------ */
 
+export interface TranslatableText {
+  key: string;
+  params?: Record<string, string | number>;
+}
+
 /**
- * A composed why-sentence, rendered as segments so the UI can bold exactly
- * one clause. Composed server-side by the fact-templating engine — never
- * stored, always derived from current facts, no AI dependency.
+ * A structured why-sentence, rendered as translated segments so the UI can
+ * bold the clause that matters without receiving server-composed English.
  */
 export interface WhySentence {
-  segments: Array<{ text: string; emphasis?: boolean }>;
+  segments: Array<{ message: TranslatableText; emphasis?: boolean }>;
 }
 
 /* ------------------------------------------------------------------ */
@@ -334,12 +338,12 @@ export interface IQueueSuggestionItem {
   kind: 'suggestion';
   suggestion_id: string;
   generator_key: OpportunityGeneratorKey;
-  title: string;
+  title: TranslatableText;
   client_name: string;
   mrr_cents: number;
   nrr_cents: number;
   currency_code: string;
-  how: string;
+  how: TranslatableText;
   why: WhySentence;
 }
 
@@ -347,7 +351,7 @@ export interface IQueueLesson {
   /** e.g. 'assessment_conversion', 'quote_velocity' — from the insight library. */
   insight_key: string;
   why: WhySentence;
-  action_label: string;
+  action_label: TranslatableText;
   action_href: string;
 }
 

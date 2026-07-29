@@ -23,7 +23,7 @@ export function QueueGreeting({
   foundNrrCents: number;
   currencyCode: string;
 }) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('msp/opportunities');
   const needsYou = actionCount + quietCount;
   const foundMrr = formatCurrencyFromMinorUnits(foundMrrCents, undefined, currencyCode);
   const foundNrr = formatCurrencyFromMinorUnits(foundNrrCents, undefined, currencyCode);

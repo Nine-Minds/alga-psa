@@ -20,7 +20,7 @@ export function WhitespaceGridView({
     category: { category_id: string; category_name: string },
   ) => void;
 }) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('msp/opportunities');
   const [grid, setGrid] = useState<IWhitespaceGrid | null>(null);
   const [failed, setFailed] = useState(false);
 

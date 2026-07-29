@@ -30,7 +30,7 @@ export interface QueueActionRowProps {
  * primary (item.is_screen_primary) — every other row stays soft/ghost.
  */
 export function QueueActionRow({ item, onComplete, onOpen, onSnooze, onMarkLost, primaryOverride }: QueueActionRowProps) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('msp/opportunities');
   const overdue = item.days_overdue > 0;
   const value = opportunityValueParts(item.mrr_cents, item.nrr_cents, item.hardware_cents, item.currency_code);
   const idBase = `opportunity-queue-row-${item.opportunity_id}`;

@@ -24,7 +24,7 @@ export function CompleteActionDialog({
   onSubmit: (nextAction: string, nextActionDueIso: string) => Promise<void> | void;
   stage?: OpportunityStage;
 }) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('msp/opportunities');
   const [nextAction, setNextAction] = useState('');
   const [due, setDue] = useState<Date | undefined>(undefined);
   const [saving, setSaving] = useState(false);

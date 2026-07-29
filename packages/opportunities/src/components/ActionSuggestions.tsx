@@ -14,7 +14,7 @@ export function ActionSuggestions({
   stage: OpportunityStage;
   onSelect: (value: string) => void;
 }) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('msp/opportunities');
   const suggestions = SUGGESTED_NEXT_ACTIONS[stage];
   if (suggestions.length === 0) return null;
 

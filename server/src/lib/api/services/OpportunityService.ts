@@ -41,6 +41,7 @@ import {
   runOpportunityCloseGates,
   prepareOpportunityWinConversions,
   listOpportunityTimelineCore,
+  promoteProspectClientAfterWin,
   type IOpportunityTimelineEntry,
 } from '@alga-psa/opportunities';
 import {
@@ -411,22 +412,7 @@ export class OpportunityService extends BaseService<IOpportunity | IOpportunityL
         recordedBy: context.userId,
       });
 
-      const db = tenantDb(trx, context.tenant);
-      const client = await db.table('clients')
-        .where({ client_id: updated.client_id })
-        .select('lifecycle_status')
-        .first();
-      if (client?.lifecycle_status === 'prospect') {
-        await db.table('clients')
-          .where({ client_id: updated.client_id })
-          .update({ lifecycle_status: 'active', updated_at: now });
-        publishOpportunityEventAfterCommit(trx, context.tenant, 'CLIENT_STATUS_CHANGED', {
-          clientId: updated.client_id,
-          previousStatus: 'prospect',
-          newStatus: 'active',
-          changedAt: now,
-        }, `client_status_changed:${updated.client_id}:${now}`);
-      }
+      await promoteProspectClientAfterWin(trx, context.tenant, updated.client_id, now);
       return updated;
     }).catch(throwOpportunityApiError);
   }

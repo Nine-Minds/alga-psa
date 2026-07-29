@@ -22,7 +22,7 @@ export function EvidenceLadder({
   id?: string;
   onStageSelect?: (stage: IOpportunityEvidenceLadderStep['checkpoint']) => void;
 }) {
-  const { t } = useTranslation();
+  const { t } = useTranslation('msp/opportunities');
 
   return (
     <ol id={id} className="flex flex-wrap items-center gap-y-2" aria-label={t('opportunities.ladder', 'Evidence ladder')}>
