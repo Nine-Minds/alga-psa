@@ -122,6 +122,7 @@
       "won": "Ha vinto questo periodo"
     },
     "ladder": "Scala delle prove",
+    "setStage": "Imposta la fase su {{stage}}",
     "linkQuoteDialog": {
       "confirm": "Citazione del collegamento",
       "empty": "Per questo cliente non sono disponibili preventivi non collegati.",

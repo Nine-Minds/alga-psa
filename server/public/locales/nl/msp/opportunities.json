@@ -122,6 +122,7 @@
       "won": "Deze periode gewonnen"
     },
     "ladder": "Bewijsladder",
+    "setStage": "Fase instellen op {{stage}}",
     "linkQuoteDialog": {
       "confirm": "Link citaat",
       "empty": "Voor deze klant zijn geen ontkoppelde offertes beschikbaar.",

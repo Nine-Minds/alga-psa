@@ -48,7 +48,7 @@ export function EvidenceLadder({
             id={`${id}-set-${step.checkpoint}`}
             type="button"
             className="group flex items-center rounded-md p-0.5 transition-colors hover:bg-[rgb(var(--color-primary-50))] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[rgb(var(--color-primary-400))]"
-            aria-label={t('opportunities.ladder.setStage', 'Set stage to {{stage}}', { stage: label })}
+            aria-label={t('opportunities.setStage', 'Set stage to {{stage}}', { stage: label })}
             onClick={() => onStageSelect(step.checkpoint)}
           >
             {dot}

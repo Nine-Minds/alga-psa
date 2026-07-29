@@ -122,6 +122,7 @@
       "won": "Wygrał ten okres"
     },
     "ladder": "Drabina dowodów",
+    "setStage": "Ustaw etap na {{stage}}",
     "linkQuoteDialog": {
       "confirm": "Cytat linku",
       "empty": "Dla tego klienta nie są dostępne żadne niepowiązane wyceny.",

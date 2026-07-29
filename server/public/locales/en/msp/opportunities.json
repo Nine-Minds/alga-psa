@@ -122,6 +122,7 @@
       "won": "Won this period"
     },
     "ladder": "Evidence ladder",
+    "setStage": "Set stage to {{stage}}",
     "linkQuoteDialog": {
       "confirm": "Link quote",
       "empty": "No unlinked quotes are available for this client.",

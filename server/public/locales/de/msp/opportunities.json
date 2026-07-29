@@ -122,6 +122,7 @@
       "won": "Habe diese Periode gewonnen"
     },
     "ladder": "Beweisleiter",
+    "setStage": "Phase auf {{stage}} setzen",
     "linkQuoteDialog": {
       "confirm": "Link-Zitat",
       "empty": "Für diesen Kunden sind keine nicht verknüpften Angebote verfügbar.",

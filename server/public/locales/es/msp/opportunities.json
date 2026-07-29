@@ -122,6 +122,7 @@
       "won": "Ganó este período"
     },
     "ladder": "Escalera de evidencia",
+    "setStage": "Establecer la etapa en {{stage}}",
     "linkQuoteDialog": {
       "confirm": "cotización de enlace",
       "empty": "No hay cotizaciones desvinculadas disponibles para este cliente.",

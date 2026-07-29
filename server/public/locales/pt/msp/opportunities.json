@@ -122,6 +122,7 @@
       "won": "Venceu este período"
     },
     "ladder": "Escada de evidências",
+    "setStage": "Definir fase como {{stage}}",
     "linkQuoteDialog": {
       "confirm": "Citação do link",
       "empty": "Nenhuma cotação desvinculada está disponível para este cliente.",

@@ -122,6 +122,7 @@
       "won": "55555"
     },
     "ladder": "55555",
+    "setStage": "55555 {{stage}} 55555",
     "linkQuoteDialog": {
       "confirm": "55555",
       "empty": "55555",

@@ -122,6 +122,7 @@
       "won": "A gagné cette période"
     },
     "ladder": "Échelle de preuves",
+    "setStage": "Définir l’étape sur {{stage}}",
     "linkQuoteDialog": {
       "confirm": "Citation de lien",
       "empty": "Aucun devis non lié n'est disponible pour ce client.",
