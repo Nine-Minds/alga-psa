@@ -1079,6 +1079,15 @@
     "openMenu": "Ouvrir le menu"
   },
   "clientPortal": {
+    "features": {
+      "title": "Fonctionnalités du portail",
+      "description": "Choisissez les fonctionnalités en libre-service auxquelles les clients peuvent accéder.",
+      "appointmentsLabel": "Rendez-vous",
+      "appointmentsHelp": "Permettez aux clients de consulter et de demander des rendez-vous depuis le portail client.",
+      "appointmentsEnabled": "Les rendez-vous sont désormais disponibles dans le portail client",
+      "appointmentsDisabled": "Les rendez-vous sont désormais masqués dans le portail client",
+      "updateFailed": "Impossible de mettre à jour les fonctionnalités du portail client"
+    },
     "branding": {
       "title": "Image de marque et apparence",
       "description": "Personnalisez l'apparence de votre portail client avec l'image de marque de votre entreprise.",

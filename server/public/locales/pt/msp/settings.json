@@ -1079,6 +1079,15 @@
     "openMenu": "Abrir menu"
   },
   "clientPortal": {
+    "features": {
+      "title": "Funcionalidades do portal",
+      "description": "Escolha as funcionalidades de autoatendimento a que os clientes podem aceder.",
+      "appointmentsLabel": "Agendamentos",
+      "appointmentsHelp": "Permita que os clientes vejam e solicitem agendamentos no portal do cliente.",
+      "appointmentsEnabled": "Os agendamentos estão agora disponíveis no portal do cliente",
+      "appointmentsDisabled": "Os agendamentos estão agora ocultos no portal do cliente",
+      "updateFailed": "Não foi possível atualizar as funcionalidades do portal do cliente"
+    },
     "branding": {
       "title": "Marca e aparência",
       "description": "Personalize a aparência do portal do seu cliente com a marca da sua empresa.",

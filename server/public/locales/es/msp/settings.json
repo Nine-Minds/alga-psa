@@ -1079,6 +1079,15 @@
     "openMenu": "Abrir menú"
   },
   "clientPortal": {
+    "features": {
+      "title": "Funciones del portal",
+      "description": "Elija a qué funciones de autoservicio pueden acceder los clientes.",
+      "appointmentsLabel": "Citas",
+      "appointmentsHelp": "Permita que los clientes vean y soliciten citas desde el portal del cliente.",
+      "appointmentsEnabled": "Las citas ya están disponibles en el portal del cliente",
+      "appointmentsDisabled": "Las citas ahora están ocultas en el portal del cliente",
+      "updateFailed": "No se pudieron actualizar las funciones del portal del cliente"
+    },
     "branding": {
       "title": "Marca y apariencia",
       "description": "Personalice la apariencia de su portal del cliente con la marca de su empresa.",

@@ -1085,6 +1085,15 @@
     "openMenu": "Otwórz menu"
   },
   "clientPortal": {
+    "features": {
+      "title": "Funkcje portalu",
+      "description": "Wybierz funkcje samoobsługowe, do których klienci mają dostęp.",
+      "appointmentsLabel": "Spotkania",
+      "appointmentsHelp": "Zezwól klientom na wyświetlanie spotkań i wysyłanie próśb o spotkanie w portalu klienta.",
+      "appointmentsEnabled": "Spotkania są teraz dostępne w portalu klienta",
+      "appointmentsDisabled": "Spotkania są teraz ukryte w portalu klienta",
+      "updateFailed": "Nie udało się zaktualizować funkcji portalu klienta"
+    },
     "branding": {
       "title": "Branding i wygląd",
       "description": "Dostosuj wygląd portalu klienta za pomocą identyfikacji wizualnej Państwa firmy.",

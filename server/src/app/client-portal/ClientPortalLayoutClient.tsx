@@ -20,6 +20,7 @@ interface Props {
   session: Session | null;
   branding: TenantBranding | null;
   productCode: ProductCode;
+  appointmentsEnabled?: boolean;
   /** Tenant default currency (default_billing_settings) for CurrencyFormatProvider. */
   currencyCode?: string;
   initialLocale?: SupportedLocale | null;
@@ -31,6 +32,7 @@ export function ClientPortalLayoutClient({
   session,
   branding,
   productCode,
+  appointmentsEnabled = true,
   currencyCode,
   initialLocale,
   initialSidebarCollapsed = false,
@@ -47,6 +49,7 @@ export function ClientPortalLayoutClient({
           <ClientPortalDocumentsProvider>
             <ClientPortalLayout
               productCode={productCode}
+              appointmentsEnabled={appointmentsEnabled}
               initialSidebarCollapsed={initialSidebarCollapsed}
             >
               {productCode === 'algadesk' && routeBehavior !== 'allowed'

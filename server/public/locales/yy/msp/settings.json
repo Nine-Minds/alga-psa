@@ -1079,6 +1079,15 @@
     "openMenu": "55555"
   },
   "clientPortal": {
+    "features": {
+      "title": "55555",
+      "description": "55555",
+      "appointmentsLabel": "55555",
+      "appointmentsHelp": "55555",
+      "appointmentsEnabled": "55555",
+      "appointmentsDisabled": "55555",
+      "updateFailed": "55555"
+    },
     "branding": {
       "title": "55555",
       "description": "55555",

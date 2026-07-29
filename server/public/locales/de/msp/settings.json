@@ -1079,6 +1079,15 @@
     "openMenu": "Menü öffnen"
   },
   "clientPortal": {
+    "features": {
+      "title": "Portal-Funktionen",
+      "description": "Wählen Sie aus, auf welche Self-Service-Funktionen Kunden zugreifen können.",
+      "appointmentsLabel": "Termine",
+      "appointmentsHelp": "Erlauben Sie Kunden, Termine im Kundenportal anzuzeigen und anzufragen.",
+      "appointmentsEnabled": "Termine sind jetzt im Kundenportal verfügbar",
+      "appointmentsDisabled": "Termine sind jetzt im Kundenportal ausgeblendet",
+      "updateFailed": "Die Funktionen des Kundenportals konnten nicht aktualisiert werden"
+    },
     "branding": {
       "title": "Branding & Erscheinungsbild",
       "description": "Passen Sie das Erscheinungsbild Ihres Kundenportals mit Ihrem Unternehmensbranding an.",
