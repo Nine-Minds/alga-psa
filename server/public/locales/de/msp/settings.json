@@ -38,7 +38,7 @@
   },
   "general": {
     "title": "Allgemeine Einstellungen",
-    "description": "Verwalten Sie Ihren Organisationsnamen und den Standardkunden. Der Standardkunde wird zu Konfigurationszwecken verwendet und repräsentiert Ihren MSP.",
+    "description": "Verwalten Sie Ihren Organisationsnamen und legen Sie fest, welcher Kundendatensatz Ihr eigenes Unternehmen darstellt. Die Daten dieses Kunden erscheinen auf Rechnungen, Angeboten und in der Kundenkommunikation.",
     "fields": {
       "organizationName": {
         "label": "Organisationsname"
@@ -53,14 +53,24 @@
       "saveDefaultTimezone": "Standardzeitzone speichern"
     },
     "clients": {
-      "title": "Kunden",
+      "title": "Ihr Unternehmen & Kunden",
+      "help": "Der als Ihr Unternehmen markierte Kunde ist Ihre eigene Organisation. Name, Adresse und Logo dieses Kunden erscheinen auf Rechnungen, Angeboten und in der Kundenkommunikation.",
+      "currentDefault": "Aktueller Standard: {{name}}",
+      "yourCompanyBadge": "Ihr Unternehmen",
       "table": {
         "name": "Name",
-        "default": "Standard",
+        "default": "Ihr Unternehmen (Standard)",
         "actions": "Aktionen"
       },
       "placeholder": "Wählen Sie einen Kunden zum Hinzufügen aus",
-      "addClient": "Kunde hinzufügen"
+      "addClient": "Kunde hinzufügen",
+      "confirmDialog": {
+        "title": "Ihr Unternehmen ändern?",
+        "message": "Dadurch wird Ihr Unternehmen von {{current}} auf {{next}} geändert. {{next}} repräsentiert dann Ihre eigene Organisation auf Rechnungen, Angeboten sowie in E-Mails und Einladungen an Kunden.",
+        "messageInitial": "Dadurch wird {{next}} als Ihr Unternehmen festgelegt. {{next}} repräsentiert dann Ihre eigene Organisation auf Rechnungen, Angeboten sowie in E-Mails und Einladungen an Kunden.",
+        "confirm": "Unternehmen ändern",
+        "cancel": "Abbrechen"
+      }
     },
     "messages": {
       "success": {

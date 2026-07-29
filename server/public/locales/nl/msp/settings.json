@@ -38,7 +38,7 @@
   },
   "general": {
     "title": "Algemene instellingen",
-    "description": "Beheer uw organisatienaam en standaardklant. De standaardklant wordt gebruikt voor configuratiedoeleinden en vertegenwoordigt uw MSP.",
+    "description": "Beheer uw organisatienaam en kies welke klantregistratie uw eigen bedrijf vertegenwoordigt. De gegevens van die klant verschijnen op facturen, offertes en communicatie naar klanten.",
     "fields": {
       "organizationName": {
         "label": "Organisatienaam"
@@ -53,14 +53,24 @@
       "saveDefaultTimezone": "Standaard tijdzone opslaan"
     },
     "clients": {
-      "title": "Klanten",
+      "title": "Uw bedrijf & klanten",
+      "help": "De klant die als uw bedrijf is gemarkeerd, is uw eigen organisatie. De naam, het adres en het logo van deze klant verschijnen op facturen, offertes en communicatie naar klanten.",
+      "currentDefault": "Huidige standaard: {{name}}",
+      "yourCompanyBadge": "Uw bedrijf",
       "table": {
         "name": "Naam",
-        "default": "Standaard",
+        "default": "Uw bedrijf (standaard)",
         "actions": "Acties"
       },
       "placeholder": "Selecteer een klant om toe te voegen",
-      "addClient": "Klant toevoegen"
+      "addClient": "Klant toevoegen",
+      "confirmDialog": {
+        "title": "Uw bedrijf wijzigen?",
+        "message": "Hiermee wijzigt u uw bedrijf van {{current}} naar {{next}}. {{next}} vertegenwoordigt dan uw eigen organisatie op facturen, offertes en in e-mails en uitnodigingen aan klanten.",
+        "messageInitial": "Hiermee stelt u {{next}} in als uw bedrijf. {{next}} vertegenwoordigt dan uw eigen organisatie op facturen, offertes en in e-mails en uitnodigingen aan klanten.",
+        "confirm": "Bedrijf wijzigen",
+        "cancel": "Annuleren"
+      }
     },
     "messages": {
       "success": {

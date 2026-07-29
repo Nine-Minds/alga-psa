@@ -54,13 +54,23 @@
     },
     "clients": {
       "title": "11111",
+      "help": "11111",
+      "currentDefault": "11111 {{name}} 11111",
+      "yourCompanyBadge": "11111",
       "table": {
         "name": "11111",
         "default": "11111",
         "actions": "11111"
       },
       "placeholder": "11111",
-      "addClient": "11111"
+      "addClient": "11111",
+      "confirmDialog": {
+        "title": "11111",
+        "message": "11111 {{current}} 11111 {{next}} 11111 {{next}} 11111",
+        "messageInitial": "11111 {{next}} 11111 {{next}} 11111",
+        "confirm": "11111",
+        "cancel": "11111"
+      }
     },
     "messages": {
       "success": {
