@@ -86,6 +86,7 @@
         "updateTimezone": "11111",
         "selectClient": "11111",
         "clientNotFound": "11111",
+        "clientAlreadyAdded": "11111",
         "addClient": "11111",
         "removeClient": "11111",
         "setDefaultClient": "11111",

@@ -86,6 +86,7 @@
         "updateTimezone": "Kan tijdzone niet bijwerken",
         "selectClient": "Selecteer een klant",
         "clientNotFound": "Klant niet gevonden",
+        "clientAlreadyAdded": "Die klant staat hier al in de lijst",
         "addClient": "Kan klant niet toevoegen",
         "removeClient": "Kan klant niet verwijderen",
         "setDefaultClient": "Kan standaardklant niet instellen",

@@ -86,6 +86,7 @@
         "updateTimezone": "Error al actualizar la zona horaria",
         "selectClient": "Seleccione un cliente",
         "clientNotFound": "Cliente no encontrado",
+        "clientAlreadyAdded": "Ese cliente ya está en la lista",
         "addClient": "Error al agregar el cliente",
         "removeClient": "Error al eliminar el cliente",
         "setDefaultClient": "Error al establecer el cliente predeterminado",

@@ -88,6 +88,7 @@
         "updateTimezone": "Nie udało się zaktualizować strefy czasowej",
         "selectClient": "Proszę wybrać klienta",
         "clientNotFound": "Nie znaleziono klienta",
+        "clientAlreadyAdded": "Ten klient już znajduje się na liście",
         "addClient": "Nie udało się dodać klienta",
         "removeClient": "Nie udało się usunąć klienta",
         "setDefaultClient": "Nie udało się ustawić domyślnego klienta",

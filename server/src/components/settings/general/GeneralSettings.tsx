@@ -43,6 +43,7 @@ const GeneralSettings = () => {
   const [pendingDefaultClient, setPendingDefaultClient] = React.useState<{ id: string; name: string } | null>(null);
 
   const defaultClient = clients.find(c => c.isDefault) ?? null;
+  const selectableClients = allClients.filter(c => !clients.some(tc => tc.id === c.client_id));
 
   const loadTenantData = async () => {
     try {
@@ -97,6 +98,12 @@ const GeneralSettings = () => {
       const clientToAdd = allClients.find(c => c.client_id === selectedClientId);
       if (!clientToAdd) {
         throw new Error(t('general.messages.error.clientNotFound'));
+      }
+
+      if (clients.some(c => c.id === selectedClientId)) {
+        toast.error(t('general.messages.error.clientAlreadyAdded'));
+        setSelectedClientId(null);
+        return;
       }
 
       const newClient = {
@@ -254,7 +261,7 @@ const GeneralSettings = () => {
           <div className="space-y-4">
             <ClientPicker
               id="tenant-client-picker"
-              clients={allClients}
+              clients={selectableClients}
               onSelect={setSelectedClientId}
               selectedClientId={selectedClientId}
               filterState={filterState}

@@ -86,6 +86,7 @@
         "updateTimezone": "Zeitzone konnte nicht aktualisiert werden",
         "selectClient": "Bitte wählen Sie einen Kunden aus",
         "clientNotFound": "Kunde nicht gefunden",
+        "clientAlreadyAdded": "Dieser Kunde ist hier bereits aufgeführt",
         "addClient": "Kunde konnte nicht hinzugefügt werden",
         "removeClient": "Kunde konnte nicht entfernt werden",
         "setDefaultClient": "Standardkunde konnte nicht festgelegt werden",

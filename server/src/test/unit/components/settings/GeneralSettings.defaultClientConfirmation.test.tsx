@@ -58,11 +58,20 @@ vi.mock('@alga-psa/tenancy/actions/tenant-settings-actions/tenantSettingsActions
 }));
 
 vi.mock('@alga-psa/clients/actions/queryActions', () => ({
-  getAllClients: vi.fn().mockResolvedValue([]),
+  getAllClients: vi.fn().mockResolvedValue([
+    { client_id: 'client-1', client_name: 'Acme MSP' },
+    { client_id: 'client-2', client_name: 'Globex' },
+    { client_id: 'client-3', client_name: 'Initech' },
+  ]),
 }));
 
+const clientPickerProps = vi.fn();
+
 vi.mock('@alga-psa/ui/components/ClientPicker', () => ({
-  ClientPicker: () => <div data-testid="client-picker" />,
+  ClientPicker: (props: { clients: { client_id: string }[] }) => {
+    clientPickerProps(props);
+    return <div data-testid="client-picker" />;
+  },
 }));
 
 vi.mock('@alga-psa/ui/components/TimezonePicker', () => ({
@@ -88,6 +97,7 @@ const radioFor = (clientId: string) =>
 describe('GeneralSettings default client confirmation', () => {
   beforeEach(() => {
     setDefaultClient.mockClear();
+    clientPickerProps.mockClear();
   });
 
   afterEach(() => {
@@ -155,5 +165,17 @@ describe('GeneralSettings default client confirmation', () => {
     await waitFor(() => expect(setDefaultClient).toHaveBeenCalledWith('client-2'));
     await waitFor(() => expect(radioFor('client-2').checked).toBe(true));
     expect(radioFor('client-1').checked).toBe(false);
+  });
+
+  it('does not offer clients that are already listed', async () => {
+    render(<GeneralSettings />);
+
+    await waitFor(() => expect(radioFor('client-2')).toBeTruthy());
+    await waitFor(() => {
+      const lastCall = clientPickerProps.mock.calls.at(-1)?.[0];
+      expect(lastCall.clients.map((c: { client_id: string }) => c.client_id)).toEqual([
+        'client-3',
+      ]);
+    });
   });
 });

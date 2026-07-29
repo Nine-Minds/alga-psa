@@ -86,6 +86,7 @@
         "updateTimezone": "Failed to update timezone",
         "selectClient": "Please select a client",
         "clientNotFound": "Client not found",
+        "clientAlreadyAdded": "That client is already listed here",
         "addClient": "Failed to add client",
         "removeClient": "Failed to remove client",
         "setDefaultClient": "Failed to set default client",

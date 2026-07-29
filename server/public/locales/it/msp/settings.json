@@ -86,6 +86,7 @@
         "updateTimezone": "Impossibile aggiornare il fuso orario",
         "selectClient": "Selezioni un cliente",
         "clientNotFound": "Cliente non trovato",
+        "clientAlreadyAdded": "Questo cliente è già presente nell’elenco",
         "addClient": "Impossibile aggiungere il cliente",
         "removeClient": "Impossibile rimuovere il cliente",
         "setDefaultClient": "Impossibile impostare il cliente predefinito",

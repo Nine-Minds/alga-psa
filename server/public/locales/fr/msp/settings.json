@@ -86,6 +86,7 @@
         "updateTimezone": "Échec de la mise à jour du fuseau horaire",
         "selectClient": "Veuillez sélectionner un client",
         "clientNotFound": "Client introuvable",
+        "clientAlreadyAdded": "Ce client figure déjà dans la liste",
         "addClient": "Échec de l'ajout du client",
         "removeClient": "Échec de la suppression du client",
         "setDefaultClient": "Échec de la définition du client par défaut",
