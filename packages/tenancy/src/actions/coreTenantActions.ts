@@ -51,12 +51,17 @@ export const updateTenantName = withAuth(async (_user, { tenant }, name: string)
 export const addClientToTenant = withAuth(async (_user, { tenant }, clientId: string): Promise<void> => {
   const { knex: db } = await createTenantKnex();
   return withTransaction(db, async (trx: Knex.Transaction) => {
+    // Re-adding a client that was previously removed hits the (tenant, client_id)
+    // primary key, so revive the soft-deleted row instead of failing.
     await tenantScopedTable(trx, 'tenant_companies', tenant)
       .insert({
         tenant,
         client_id: clientId,
-        is_default: false
-      });
+        is_default: false,
+        deleted_at: null
+      })
+      .onConflict(['tenant', 'client_id'])
+      .merge(['deleted_at']);
   });
 });
 

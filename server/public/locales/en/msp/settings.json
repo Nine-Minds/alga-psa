@@ -38,7 +38,7 @@
   },
   "general": {
     "title": "General Settings",
-    "description": "Manage your organization name and default client. The default client is used for configuration purposes and represents your MSP.",
+    "description": "Manage your organization name and choose which client record represents your own company. That client's details appear on invoices, quotes, and client-facing communications.",
     "fields": {
       "organizationName": {
         "label": "Organization Name"
@@ -53,14 +53,24 @@
       "saveDefaultTimezone": "Save Default Time Zone"
     },
     "clients": {
-      "title": "Clients",
+      "title": "Your Company",
+      "help": "The client marked as your company is your own organization. Its name, address, and logo appear on invoices, quotes, and client-facing communications.",
+      "currentDefault": "Your company is currently {{name}}.",
+      "yourCompanyBadge": "Your company",
       "table": {
         "name": "Name",
-        "default": "Default",
+        "default": "Your Company (Default)",
         "actions": "Actions"
       },
       "placeholder": "Select a client to add",
-      "addClient": "Add Client"
+      "addClient": "Add Client",
+      "confirmDialog": {
+        "title": "Change your company?",
+        "message": "This will change your company from {{current}} to {{next}}. {{next}} will represent your own organization on invoices, quotes, and client-facing emails and invitations.",
+        "messageInitial": "This will set {{next}} as your company. {{next}} will represent your own organization on invoices, quotes, and client-facing emails and invitations.",
+        "confirm": "Change Company",
+        "cancel": "Cancel"
+      }
     },
     "messages": {
       "success": {
@@ -76,6 +86,7 @@
         "updateTimezone": "Failed to update timezone",
         "selectClient": "Please select a client",
         "clientNotFound": "Client not found",
+        "clientAlreadyAdded": "That client is already listed here",
         "addClient": "Failed to add client",
         "removeClient": "Failed to remove client",
         "setDefaultClient": "Failed to set default client",

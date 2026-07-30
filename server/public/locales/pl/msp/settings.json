@@ -40,7 +40,7 @@
   },
   "general": {
     "title": "Ustawienia ogólne",
-    "description": "Zarządzanie nazwą organizacji i domyślnym klientem. Domyślny klient jest używany do celów konfiguracyjnych i reprezentuje Państwa MSP.",
+    "description": "Zarządzanie nazwą organizacji i wybór rekordu klienta, który reprezentuje Państwa własną firmę. Dane tego klienta pojawiają się na fakturach, ofertach oraz w komunikacji z klientami.",
     "fields": {
       "organizationName": {
         "label": "Nazwa organizacji"
@@ -55,14 +55,24 @@
       "saveDefaultTimezone": "Zapisz domyślną strefę czasową"
     },
     "clients": {
-      "title": "Klienci",
+      "title": "Państwa firma",
+      "help": "Klient oznaczony jako Państwa firma reprezentuje Państwa własną organizację. Jego nazwa, adres i logo pojawiają się na fakturach, ofertach oraz w komunikacji z klientami.",
+      "currentDefault": "Państwa firmą jest obecnie {{name}}.",
+      "yourCompanyBadge": "Państwa firma",
       "table": {
         "name": "Nazwa",
-        "default": "Domyślny",
+        "default": "Państwa firma (domyślny)",
         "actions": "Akcje"
       },
       "placeholder": "Wybierz klienta do dodania",
-      "addClient": "Dodaj klienta"
+      "addClient": "Dodaj klienta",
+      "confirmDialog": {
+        "title": "Zmienić Państwa firmę?",
+        "message": "Spowoduje to zmianę Państwa firmy z {{current}} na {{next}}. {{next}} będzie reprezentować Państwa własną organizację na fakturach, ofertach oraz w wiadomościach e-mail i zaproszeniach kierowanych do klientów.",
+        "messageInitial": "Spowoduje to ustawienie {{next}} jako Państwa firmy. {{next}} będzie reprezentować Państwa własną organizację na fakturach, ofertach oraz w wiadomościach e-mail i zaproszeniach kierowanych do klientów.",
+        "confirm": "Zmień firmę",
+        "cancel": "Anuluj"
+      }
     },
     "messages": {
       "success": {
@@ -78,6 +88,7 @@
         "updateTimezone": "Nie udało się zaktualizować strefy czasowej",
         "selectClient": "Proszę wybrać klienta",
         "clientNotFound": "Nie znaleziono klienta",
+        "clientAlreadyAdded": "Ten klient już znajduje się na liście",
         "addClient": "Nie udało się dodać klienta",
         "removeClient": "Nie udało się usunąć klienta",
         "setDefaultClient": "Nie udało się ustawić domyślnego klienta",
