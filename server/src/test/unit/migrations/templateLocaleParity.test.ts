@@ -10,6 +10,7 @@
 import { describe, expect, it } from 'vitest';
 import path from 'node:path';
 import { createRequire } from 'node:module';
+import { LOCALE_CONFIG } from '../../../../../packages/email/src/lib/localeConfig';
 
 const require = createRequire(import.meta.url);
 const migrationsDir = path.resolve(__dirname, '../../../../migrations');
@@ -270,10 +271,6 @@ describe('template locale parity', () => {
   });
 
   it('keeps the migration locale list aligned with the runtime locale config', () => {
-    const { LOCALE_CONFIG } = require(path.resolve(
-      __dirname,
-      '../../../../../packages/email/src/lib/localeConfig.ts',
-    ));
     expect([...SUPPORTED_LANGUAGES].sort()).toEqual([...LOCALE_CONFIG.supportedLocales].sort());
   });
 
