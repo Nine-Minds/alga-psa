@@ -188,15 +188,31 @@ function makeKnex() {
 function emailTemplateDefs() {
   const { TEMPLATE_GETTERS } = require(path.join(migrationsDir, '20260625120000_add_portuguese_email_templates.cjs'));
   const defs = TEMPLATE_GETTERS.map((getter: any) => getter());
-  // Locale-gapped modules not yet folded into the pt migration's getter list.
+  // Modules not yet folded into the pt migration's getter list.
   defs.push(require(path.join(migrationsDir, 'utils/templates/email/opportunities/opportunityWeeklyDigest.cjs')).getTemplate());
+  defs.push(require(path.join(migrationsDir, 'utils/templates/email/rmm/rmmAlertTriggered.cjs')).getTemplate());
   return defs;
 }
 
 function internalTemplateDefs() {
   const { ALL_TEMPLATES } = require(path.join(migrationsDir, '20260625121000_add_portuguese_internal_notification_templates.cjs'));
-  const { TEMPLATES: opportunityTemplates } = require(path.join(migrationsDir, 'utils/templates/internal/opportunities.cjs'));
-  return [...ALL_TEMPLATES, ...opportunityTemplates];
+  const load = (module: string) => require(path.join(migrationsDir, `utils/templates/internal/${module}.cjs`)).TEMPLATES;
+  return [...ALL_TEMPLATES, ...load('opportunities'), ...load('rmm'), ...load('inventory')];
+}
+
+/**
+ * Categories/subtypes these templates hang off are created by their own
+ * feature migrations rather than the shared category seeders.
+ */
+async function seedFeatureSubtypes(knex: any) {
+  for (const migration of [
+    '20260712105300_add_opportunity_notification_templates.cjs',
+    '20260612090200_add_rmm_alert_notifications.cjs',
+    '20260701091000_inventory_low_stock_notification.cjs',
+    '20260702151000_inventory_po_received_notification.cjs',
+  ]) {
+    await require(path.join(migrationsDir, migration)).up(knex);
+  }
 }
 
 function rowsByTemplate(rows: Row[]): Map<string, Set<string>> {
@@ -212,8 +228,8 @@ describe('template locale parity', () => {
   it('ships every supported locale for every module-defined system email template', async () => {
     const knex = makeKnex();
     await upsertEmailCategoriesAndSubtypes(knex);
-    // Creates the 'Opportunities' category + 'Opportunity Weekly Digest' subtype.
-    await require(path.join(migrationsDir, '20260712105300_add_opportunity_notification_templates.cjs')).up(knex);
+    await upsertCategoriesAndSubtypes(knex);
+    await seedFeatureSubtypes(knex);
     const defs = emailTemplateDefs();
     for (const def of defs) {
       await upsertEmailTemplate(knex, def);
@@ -234,9 +250,9 @@ describe('template locale parity', () => {
 
   it('ships every supported locale for every module-defined internal notification template', async () => {
     const knex = makeKnex();
+    await upsertEmailCategoriesAndSubtypes(knex);
     await upsertCategoriesAndSubtypes(knex);
-    // The opportunity category/subtypes are created by their own migration.
-    await require(path.join(migrationsDir, '20260712105300_add_opportunity_notification_templates.cjs')).up(knex);
+    await seedFeatureSubtypes(knex);
     const defs = internalTemplateDefs();
     await upsertInternalTemplates(knex, defs);
     const rows = await knex('internal_notification_templates').select('name', 'language_code');
@@ -261,36 +277,23 @@ describe('template locale parity', () => {
     expect([...SUPPORTED_LANGUAGES].sort()).toEqual([...LOCALE_CONFIG.supportedLocales].sort());
   });
 
-  it('ships every supported locale for the inline-defined templates', async () => {
-    // These templates are defined inline in their own migrations rather than
-    // in a shared template module, so they drifted without a shared def to
-    // check. Run their migrations plus the locale-fill migration and assert
-    // full coverage.
+  it('covers every template the migrations write through a shared module', async () => {
+    // Guards the split the reviewer flagged: a template whose copy is only
+    // defined inline in its own migration escapes the parity checks above.
     const knex = makeKnex();
     await upsertEmailCategoriesAndSubtypes(knex);
     await upsertCategoriesAndSubtypes(knex);
-    // The fill migration also re-upserts the opportunity templates.
-    await require(path.join(migrationsDir, '20260712105300_add_opportunity_notification_templates.cjs')).up(knex);
-    await require(path.join(migrationsDir, '20260612090200_add_rmm_alert_notifications.cjs')).up(knex);
-    await require(path.join(migrationsDir, '20260701091000_inventory_low_stock_notification.cjs')).up(knex);
-    await require(path.join(migrationsDir, '20260702151000_inventory_po_received_notification.cjs')).up(knex);
+    await seedFeatureSubtypes(knex);
     await require(path.join(migrationsDir, '20260730093000_add_missing_locale_email_and_internal_templates.cjs')).up(knex);
 
-    const expectations: Array<[string, string[]]> = [
-      ['system_email_templates', ['rmm-alert-triggered']],
-      ['internal_notification_templates', ['rmm-alert-triggered', 'inventory-low-stock', 'inventory-po-received']],
-    ];
-    const missing: string[] = [];
-    for (const [table, names] of expectations) {
-      const rows = await knex(table).select('name', 'language_code');
-      const byTemplate = rowsByTemplate(rows);
-      for (const name of names) {
-        const shipped = byTemplate.get(name) || new Set();
-        for (const locale of SUPPORTED_LANGUAGES) {
-          if (!shipped.has(locale)) missing.push(`${name}:${locale}`);
-        }
-      }
+    const moduleNames = new Set<string>([
+      ...emailTemplateDefs().map((def: any) => def.templateName),
+      ...internalTemplateDefs().map((def: any) => def.templateName),
+    ]);
+    const written = new Set<string>();
+    for (const table of ['system_email_templates', 'internal_notification_templates']) {
+      for (const row of await knex(table).select('name')) written.add(row.name);
     }
-    expect(missing).toEqual([]);
+    expect([...written].filter((name) => !moduleNames.has(name))).toEqual([]);
   });
 });
