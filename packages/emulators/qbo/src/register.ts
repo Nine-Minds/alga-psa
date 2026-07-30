@@ -21,6 +21,23 @@ export function register(reg: ControlRegistry, core: QboEmulatorCore): void {
   });
 
   reg.seeder({
+    name: 'item',
+    description: 'Create a QBO Item (product/service catalog entry)',
+    params: z.object({
+      name: z.string(),
+      type: z.enum(['Service', 'NonInventory', 'Inventory', 'Category']),
+      sku: z.string().optional(),
+      description: z.string().optional(),
+      unitPrice: z.number().optional(),
+      purchaseCost: z.number().optional(),
+      active: z.boolean().optional(),
+      taxCodeId: z.string().optional(),
+      fullyQualifiedName: z.string().optional(),
+    }),
+    run: (params) => core.sim.seedItem(params),
+  });
+
+  reg.seeder({
     name: 'invoice',
     description: 'Create a QBO invoice with a single sales line',
     params: z.object({
@@ -100,6 +117,7 @@ export function register(reg: ControlRegistry, core: QboEmulatorCore): void {
     ['invoices', 'Invoice'],
     ['credit-memos', 'CreditMemo'],
     ['payments', 'Payment'],
+    ['items', 'Item'],
   ] as const) {
     reg.stateView({
       name: view,

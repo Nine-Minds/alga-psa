@@ -118,6 +118,12 @@ export {
   type HistMatch,
 } from './qboOnboardingActions';
 
+// QBO products & services import (EE only, flag-gated)
+export {
+  previewQboItemImport,
+  executeQboItemImport,
+} from './qboItemImportActions';
+
 // Accounting sync actions (EE only)
 export {
   getAccountingSyncSettingsAction,
