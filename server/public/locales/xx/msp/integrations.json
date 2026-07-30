@@ -453,7 +453,11 @@
           "unlinkFailed": "11111",
           "hidePreview": "11111",
           "previewLoading": "11111 {{client}} 11111",
-          "previewLoadingHint": "11111"
+          "previewLoadingHint": "11111",
+          "previousCount": "11111",
+          "syncFinished": "11111 {{client}} 11111",
+          "syncing": "11111",
+          "syncTrackingFailed": "11111"
         },
         "connection": {
           "changeAction": "11111",
@@ -601,6 +605,7 @@
       },
       "pilot": {
         "actions": {
+          "createAndSync": "11111",
           "preview": "11111",
           "previewing": "11111",
           "syncOne": "11111",
@@ -617,6 +622,7 @@
           "syncFailed": "11111"
         },
         "gateNote": "11111",
+        "pendingCreate": "11111 {{count}} 11111",
         "previewPrompt": "11111",
         "remainingStarted": "11111 {{count}} 11111",
         "started": "11111 {{client}} 11111"
