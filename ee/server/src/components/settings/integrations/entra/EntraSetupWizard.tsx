@@ -20,7 +20,7 @@ import { EntraDirectConsentDialog } from './EntraDirectConsentDialog';
 import { normalizeEntraFieldSyncConfig } from './fieldSyncModel';
 import { PilotSyncControl } from './PilotSyncControl';
 import { PreConsentDisclosure } from './PreConsentDisclosure';
-import { SetupLadder } from './SetupLadder';
+import { WizardProgress } from '@alga-psa/ui/components/onboarding/WizardProgress';
 import {
   ENTRA_SETUP_STEP_SHORT_LABEL_KEYS,
   deriveEntraSetupSteps,
@@ -300,11 +300,14 @@ export function EntraSetupWizard({
         </div>
 
         <div className="mt-4">
-          <SetupLadder
+          <WizardProgress
             id="entra-setup-ladder"
-            steps={steps}
-            labels={ladderLabels}
-            onRevisit={setRevisiting}
+            steps={steps.map((step) => ({
+              id: step.id,
+              label: ladderLabels[step.id],
+              state: step.state,
+            }))}
+            onStepClick={(_index, step) => setRevisiting(step.id as EntraSetupStepId)}
           />
         </div>
       </div>
