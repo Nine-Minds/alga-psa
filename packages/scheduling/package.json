@@ -45,10 +45,6 @@
       "import": "./src/lib/appointmentApprovers.ts",
       "types": "./src/lib/appointmentApprovers.ts"
     },
-    "./lib/projectTaskActualHours": {
-      "import": "./src/lib/projectTaskActualHours.ts",
-      "types": "./src/lib/projectTaskActualHours.ts"
-    },
     "./context/*": {
       "import": "./src/context/*.tsx",
       "types": "./src/context/*.tsx"

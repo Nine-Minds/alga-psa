@@ -1,5 +1,5 @@
 import type { Knex } from 'knex';
-import { tenantDb } from '@alga-psa/db';
+import { tenantDb } from '../lib/tenantDb';
 
 export interface ProjectTaskTimeEntryRef {
   work_item_id?: string | null;

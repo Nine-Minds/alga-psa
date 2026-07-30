@@ -15,7 +15,7 @@ import {
   timeSheetActionErrorFrom,
   type TimeSheetActionError,
 } from './timeSheetActionErrors';
-import { recalculateProjectTaskActualHours } from '../lib/projectTaskActualHours';
+import { recalculateProjectTaskActualHours } from '@alga-psa/db';
 
 const NON_BILLABLE_FALLBACK_WORK_ITEM_ID = '__non_billable__';
 

@@ -7,7 +7,7 @@ import {
   type InboundActionResult,
 } from '@alga-psa/shared/inboundWebhooks/actions/registry';
 import { writeEntityMapping } from '@alga-psa/shared/inboundWebhooks/externalEntityMappings';
-import { recalculateProjectTaskActualHoursForEntryChange } from '../lib/projectTaskActualHours';
+import { recalculateProjectTaskActualHoursForEntryChange } from '@alga-psa/db';
 
 interface CreateTimeEntryMappedValues extends Record<string, unknown> {
   user_id: string;

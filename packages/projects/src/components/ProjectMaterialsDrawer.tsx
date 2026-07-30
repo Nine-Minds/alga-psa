@@ -29,10 +29,9 @@ import {
   updateProjectMaterial,
 } from '../actions/materialCatalogActions';
 import {
-  createSeparateProjectProductInvoices,
-  getSeparateProjectProductInvoiceReview,
+  useProjectBillingIntegration,
   type SeparateProjectProductInvoiceReview,
-} from '@alga-psa/billing/actions';
+} from '../context/ProjectBillingIntegrationContext';
 import { Dialog } from '@alga-psa/ui/components/Dialog';
 import {
   getProductAvailability,
@@ -72,6 +71,7 @@ export default function ProjectMaterialsDrawer({
   clientId,
 }: ProjectMaterialsDrawerProps) {
   const { t } = useTranslation(['features/projects', 'common']);
+  const billingIntegration = useProjectBillingIntegration();
   const materialsT = useCallback((key: string, fallback: string, options?: Record<string, unknown>) =>
     t(`materials.${key}`, { defaultValue: fallback, ...(options ?? {}) }), [t]);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -425,9 +425,10 @@ export default function ProjectMaterialsDrawer({
   };
 
   const openInvoiceReview = async () => {
+    if (!billingIntegration) return;
     setIsLoadingInvoiceReview(true);
     try {
-      const result = await getSeparateProjectProductInvoiceReview(projectId);
+      const result = await billingIntegration.getSeparateProjectProductInvoiceReview(projectId);
       if (isReturnedActionError(result)) {
         handleError(result, materialsT('invoiceReviewFailed', 'Failed to load invoice review'));
         return;
@@ -443,9 +444,10 @@ export default function ProjectMaterialsDrawer({
   };
 
   const handleCreateProductInvoices = async () => {
+    if (!billingIntegration) return;
     setIsCreatingProductInvoices(true);
     try {
-      const result = await createSeparateProjectProductInvoices(projectId, [...selectedInvoiceRows]);
+      const result = await billingIntegration.createSeparateProjectProductInvoices(projectId, [...selectedInvoiceRows]);
       if (isReturnedActionError(result)) {
         handleError(result, materialsT('invoiceCreateFailed', 'Failed to create product invoices'));
         return;
@@ -475,7 +477,7 @@ export default function ProjectMaterialsDrawer({
             {materialsT('title', 'Project Materials')}
           </h2>
           <div className="flex items-center gap-2">
-            {materials.some((material) => !material.is_billed && material.billing_destination === 'separate') && (
+            {billingIntegration && materials.some((material) => !material.is_billed && material.billing_destination === 'separate') && (
               <Button
                 {...withDataAutomationId({ id: `${id}-create-product-invoices-btn` })}
                 variant="outline"

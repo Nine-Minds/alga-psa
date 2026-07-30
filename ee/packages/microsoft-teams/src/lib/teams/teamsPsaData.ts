@@ -11,7 +11,7 @@ import {
 } from '@alga-psa/db';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import type { IUserWithRoles } from '@alga-psa/types';
-import { recalculateProjectTaskActualHoursForEntryChange } from '@alga-psa/scheduling/lib/projectTaskActualHours';
+import { recalculateProjectTaskActualHoursForEntryChange } from '@alga-psa/db';
 
 export interface TeamsTicketRecord {
   ticket_id: string;

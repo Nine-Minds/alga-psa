@@ -25,7 +25,7 @@ import { ConflictError, ForbiddenError, NotFoundError, NotImplementedError, Vali
 import { computeWorkDateFields, resolveUserTimeZone, truncateToMinute } from 'server/src/lib/utils/workDate';
 import { buildTicketTimeEntryAddedWorkflowEvent } from './timeEntryWorkflowEvents';
 import { hasPermission } from '../../auth/rbac';
-import { recalculateProjectTaskActualHoursForEntryChange } from '@alga-psa/scheduling/lib/projectTaskActualHours';
+import { recalculateProjectTaskActualHoursForEntryChange } from '@alga-psa/db';
 
 export class TimeEntryService extends BaseService<any> {
   constructor() {

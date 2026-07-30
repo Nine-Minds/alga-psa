@@ -33,7 +33,6 @@
   },
   "dependencies": {
     "@alga-psa/authorization": "*",
-    "@alga-psa/billing": "*",
     "@alga-psa/clients": "*",
     "@alga-psa/core": "*",
     "@alga-psa/db": "*",

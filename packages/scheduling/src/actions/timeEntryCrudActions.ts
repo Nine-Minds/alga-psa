@@ -41,7 +41,7 @@ import {
   timeSheetActionErrorFrom,
   type TimeSheetActionError,
 } from './timeSheetActionErrors';
-import { recalculateProjectTaskActualHoursForEntryChange } from '../lib/projectTaskActualHours';
+import { recalculateProjectTaskActualHoursForEntryChange } from '@alga-psa/db';
 
 function captureAnalytics(_event: string, _properties?: Record<string, any>, _userId?: string): void {
   // Intentionally no-op: avoid pulling analytics (and its tenancy/client-portal deps) into scheduling.
