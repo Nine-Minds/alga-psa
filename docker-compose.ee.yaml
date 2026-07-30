@@ -50,6 +50,13 @@ services:
       TEMPORAL_ADDRESS: ${TEMPORAL_ADDRESS:-temporal-dev:7233}
       TEMPORAL_NAMESPACE: ${TEMPORAL_NAMESPACE:-default}
       TEMPORAL_JOB_TASK_QUEUE: ${TEMPORAL_JOB_TASK_QUEUE:-alga-jobs}
+      # Microsoft Graph / Entra. Unset means the real Microsoft endpoints; point the
+      # base URLs at test-harness/graph-emulator to walk Entra sync without a tenant.
+      # Discovery runs here, sync runs in temporal-worker — both need these.
+      MICROSOFT_CLIENT_ID: ${MICROSOFT_CLIENT_ID:-}
+      MICROSOFT_CLIENT_SECRET: ${MICROSOFT_CLIENT_SECRET:-}
+      MICROSOFT_LOGIN_BASE_URL: ${MICROSOFT_LOGIN_BASE_URL:-}
+      MICROSOFT_GRAPH_BASE_URL: ${MICROSOFT_GRAPH_BASE_URL:-}
       # Secret provider configuration (EE edition - for local dev, vault is disabled by default)
       # For production with vault, set SECRET_READ_CHAIN=env,filesystem,vault in your environment
       SECRET_READ_CHAIN: ${SECRET_READ_CHAIN:-env,filesystem}
@@ -473,6 +480,13 @@ services:
       - PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE=${PORTAL_DOMAIN_BASE_VIRTUAL_SERVICE:-msp/alga-psa-vs}
       - REDIS_HOST=${REDIS_HOST:-redis}
       - REDIS_PORT=${REDIS_PORT:-6379}
+      # Microsoft Graph / Entra. syncTenantUsersActivity runs here, so the worker needs the
+      # same endpoint overrides the server has — otherwise discovery hits the emulator and
+      # the sync silently hits real Graph.
+      - MICROSOFT_CLIENT_ID=${MICROSOFT_CLIENT_ID:-}
+      - MICROSOFT_CLIENT_SECRET=${MICROSOFT_CLIENT_SECRET:-}
+      - MICROSOFT_LOGIN_BASE_URL=${MICROSOFT_LOGIN_BASE_URL:-}
+      - MICROSOFT_GRAPH_BASE_URL=${MICROSOFT_GRAPH_BASE_URL:-}
       # Smoke-only: defaults to unset so the worker uses the real GDAP endpoints. Override in
       # the compose invocation or shell env to test self-tenant mode without CSP/GDAP.
       - ENTRA_DIRECT_SMOKE_SELF_TENANT_MODE=${ENTRA_DIRECT_SMOKE_SELF_TENANT_MODE:-}
