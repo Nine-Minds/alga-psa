@@ -388,12 +388,6 @@ export function TemplateCreationWizard({
             currentStep={currentStep}
             completedSteps={completedSteps}
             onStepClick={handleStepClick}
-            canNavigateToStep={(stepIndex) =>
-              stepIndex === 0 ||
-              stepIndex === currentStep ||
-              completedSteps.has(stepIndex) ||
-              (stepIndex > 0 && completedSteps.has(stepIndex - 1))
-            }
           />
         </div>
 
