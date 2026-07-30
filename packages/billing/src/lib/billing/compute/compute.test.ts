@@ -2,7 +2,10 @@ import { describe, expect, it } from 'vitest';
 import type { IClientContractLine } from '@alga-psa/types';
 import { computeFixedCharges } from './computeFixedCharges';
 import { computeTimeBasedCharges } from './computeTimeBasedCharges';
-import { computeUsageBasedCharges } from './computeUsageBasedCharges';
+import {
+  computeUsageBasedCharges,
+  type UsageServiceConfigEntry,
+} from './computeUsageBasedCharges';
 import type { ChargeComputeTaxPorts, ChargeComputeTiming } from './types';
 
 const TEN_PERCENT_PORTS: ChargeComputeTaxPorts = {
@@ -366,7 +369,7 @@ describe('computeTimeBasedCharges', () => {
 });
 
 describe('computeUsageBasedCharges', () => {
-  const USAGE_CONFIG = {
+  const USAGE_CONFIG: UsageServiceConfigEntry = {
     config: {
       config_id: 'cfg-u',
       custom_rate: 250,
@@ -381,7 +384,7 @@ describe('computeUsageBasedCharges', () => {
   };
 
   function usageInputs(overrides: {
-    serviceConfigMap?: Map<string, typeof USAGE_CONFIG>;
+    serviceConfigMap?: Map<string, UsageServiceConfigEntry>;
     usageRecords?: any[];
     clientContractLine?: IClientContractLine;
   } = {}) {

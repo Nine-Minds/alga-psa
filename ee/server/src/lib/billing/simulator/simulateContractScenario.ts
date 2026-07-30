@@ -7,8 +7,8 @@
  * calculateTax provisions default client tax settings); all tax/region
  * lookups flow through the read-only ports in ./readOnlyTaxPorts.
  *
- * v1 scope: Fixed and Hourly service families are priced. Usage and Bucket
- * configurations emit diagnostics and are excluded from totals.
+ * Fixed, Hourly, and Usage service families are priced through shared compute.
+ * Bucket configurations emit diagnostics until their stateful extraction lands.
  */
 
 import type { Knex } from 'knex';
@@ -25,6 +25,7 @@ import type {
   IRecurringServicePeriodRecord,
   ISO8601String,
   ITimeBasedCharge,
+  IUsageBasedCharge,
   ScenarioLine,
   ScenarioLineService,
   ScenarioPricingSchedule,
@@ -43,11 +44,13 @@ import {
 import {
   computeFixedCharges,
   computeTimeBasedCharges,
+  computeUsageBasedCharges,
   type ChargeComputeClient,
   type ChargeComputeTaxPorts,
   type ChargeComputeTiming,
   type FixedPlanServiceRow,
   type TimeEntryComputeRow,
+  type UsageRecordComputeRow,
 } from '@alga-psa/billing/lib/billing/compute';
 import {
   assignServicePeriodsToInvoicePeriods,
@@ -61,7 +64,10 @@ import {
 import {
   buildHourlyServiceConfigMap,
   buildSyntheticTimeEntry,
+  buildSyntheticUsageRecord,
+  buildUsageServiceConfigMap,
   hasResolvableHourlyRate,
+  hasResolvableUsageRate,
   resolveAssumedQuantity,
   syntheticConfigId,
 } from './syntheticActivity';
@@ -139,8 +145,6 @@ export async function simulateContractScenario(
     }),
   );
 
-  await emitLiveOvertimeDiagnostics(db, scenario, diagnostics);
-
   const contractStartDate = scenario.contract_start_date
     ? toISODate(toPlainDate(scenario.contract_start_date))
     : null;
@@ -188,6 +192,9 @@ export async function simulateContractScenario(
     );
     const hourlyServices = line.services.filter(
       (service) => service.configuration.configuration_type === 'Hourly',
+    );
+    const usageServices = line.services.filter(
+      (service) => service.configuration.configuration_type === 'Usage',
     );
 
     const clientContractLine = buildSyntheticClientContractLine(
@@ -246,6 +253,23 @@ export async function simulateContractScenario(
           diagnostics,
         });
       }
+
+      if (usageServices.length > 0) {
+        await simulateUsageCharges({
+          scenario,
+          line,
+          usageServices,
+          client,
+          clientContractLine,
+          billingPeriod,
+          timing,
+          taxPorts,
+          currencyCode,
+          lineCycle,
+          accumulator,
+          diagnostics,
+        });
+      }
     }
   }
 
@@ -290,7 +314,7 @@ function simulateLineDiagnostics(
 
   for (const service of line.services) {
     const configType = service.configuration.configuration_type;
-    if (configType === 'Usage' || configType === 'Bucket') {
+    if (configType === 'Bucket') {
       diagnostics.push({
         severity: 'info',
         line_key: line.key,
@@ -302,37 +326,114 @@ function simulateLineDiagnostics(
   }
 }
 
-async function emitLiveOvertimeDiagnostics(
-  db: ReturnType<typeof tenantDb>,
-  scenario: ContractScenario,
-  diagnostics: SimulationDiagnostic[],
+/* ------------------------------------------------------------------ */
+/* Usage charges                                                      */
+/* ------------------------------------------------------------------ */
+
+async function simulateUsageCharges(
+  input: SimulateFamilyInput & {
+    usageServices: ScenarioLineService[];
+    diagnostics: SimulationDiagnostic[];
+  },
 ): Promise<void> {
-  const originByLineId = new Map<string, ScenarioLine>();
-  for (const line of scenario.lines) {
-    if (line.origin_contract_line_id) {
-      originByLineId.set(line.origin_contract_line_id, line);
+  const {
+    scenario,
+    line,
+    usageServices,
+    client,
+    clientContractLine,
+    billingPeriod,
+    timing,
+    taxPorts,
+    currencyCode,
+    lineCycle,
+    accumulator,
+    diagnostics,
+  } = input;
+  const periodIndex = accumulator.window.index;
+  const usageRecords: UsageRecordComputeRow[] = [];
+
+  for (const service of usageServices) {
+    const assumedQuantity = resolveAssumedQuantity(
+      scenario.assumptions,
+      line.key,
+      service.service_id,
+      periodIndex,
+    );
+    if (!(assumedQuantity > 0)) continue;
+    if (!hasResolvableUsageRate(service)) {
+      diagnostics.push({
+        severity: 'warning',
+        line_key: line.key,
+        message:
+          `Missing pricing for usage service "${service.service_name}" on line ` +
+          `"${line.contract_line_name}" in ${currencyCode}; assumed usage for ` +
+          `period ${periodIndex + 1} was not priced.`,
+      });
+      continue;
     }
-  }
-  if (originByLineId.size === 0) {
-    return;
+    usageRecords.push(
+      buildSyntheticUsageRecord({
+        line,
+        service,
+        periodIndex,
+        assumedQuantity,
+      }),
+    );
   }
 
-  const overtimeLines = await db
-    .table('contract_lines')
-    .whereIn('contract_line_id', Array.from(originByLineId.keys()))
-    .where('enable_overtime', true)
-    .select('contract_line_id', 'contract_line_name');
+  if (usageRecords.length === 0) return;
+  const { charges, explanations } = await computeUsageBasedCharges(
+    {
+      billingPeriod,
+      clientContractLine,
+      timing,
+      client,
+      serviceConfigMap: buildUsageServiceConfigMap(line),
+      usageRecords,
+      contractCurrency: currencyCode,
+    },
+    taxPorts,
+  );
+  const explanationByKey = new Map(
+    explanations.map((explanation) => [explanation.chargeKey, explanation]),
+  );
 
-  for (const row of overtimeLines) {
-    const line = originByLineId.get(row.contract_line_id);
-    diagnostics.push({
-      severity: 'info',
-      line_key: line?.key,
-      message:
-        `Live contract line "${row.contract_line_name}" has overtime enabled; ` +
-        'the simulator does not model overtime in this draft.',
+  for (const charge of charges) {
+    const service = usageServices.find(
+      (candidate) => candidate.service_id === charge.serviceId,
+    );
+    pushChargeLine({
+      accumulator,
+      lineKey: line.key,
+      lineCycle,
+      charge: {
+        serviceId: charge.serviceId ?? null,
+        serviceName: charge.serviceName,
+        chargeType: charge.type,
+        quantityLabel: `${formatHours(charge.quantity ?? 0)} ${
+          service?.configuration.configuration_type === 'Usage'
+            ? service.configuration.unit_of_measure
+            : 'units'
+        }`,
+        rate: charge.rate ?? 0,
+        net: charge.total ?? 0,
+        tax: charge.tax_amount ?? 0,
+      },
+      currencyCode,
+      explanation:
+        explanationByKey.get(
+          usageChargeExplanationKey(charge, clientContractLine),
+        ) ?? null,
     });
   }
+}
+
+function usageChargeExplanationKey(
+  charge: IUsageBasedCharge,
+  clientContractLine: IClientContractLine,
+): string {
+  return `${charge.config_id ?? clientContractLine.client_contract_line_id}:${charge.serviceId}:${charge.usageId}`;
 }
 
 /* ------------------------------------------------------------------ */

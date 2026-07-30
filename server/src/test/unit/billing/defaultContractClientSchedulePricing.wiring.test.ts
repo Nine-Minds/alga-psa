@@ -15,6 +15,13 @@ const timeComputeSource = readFileSync(
   ),
   'utf8',
 );
+const usageComputeSource = readFileSync(
+  resolve(
+    __dirname,
+    '../../../../../packages/billing/src/lib/billing/compute/computeUsageBasedCharges.ts',
+  ),
+  'utf8',
+);
 
 describe('system-managed default runtime billing routing and pricing wiring', () => {
   it('F075: forces client schedule cadence semantics for system-managed default lines', () => {
@@ -30,7 +37,7 @@ describe('system-managed default runtime billing routing and pricing wiring', ()
     // assignment inside the time-rate resolution chain rather than a standalone if-statement.
     expect(timeComputeSource).toContain('!isSystemManagedDefault &&');
     expect(timeComputeSource).toContain('serviceConfig.userTypeRates.has(entry.user_type)');
-    expect(billingEngineSource).toContain('serviceConfig.config.custom_rate');
-    expect(billingEngineSource).toContain('serviceConfig.config.enable_tiered_pricing');
+    expect(usageComputeSource).toContain('serviceConfig?.config.custom_rate');
+    expect(usageComputeSource).toContain('serviceConfig?.config.enable_tiered_pricing');
   });
 });

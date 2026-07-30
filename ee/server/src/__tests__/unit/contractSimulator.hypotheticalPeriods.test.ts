@@ -15,6 +15,8 @@ import {
 } from '@ee/lib/billing/simulator/hypotheticalPeriods';
 import {
   buildSyntheticTimeEntry,
+  buildSyntheticUsageRecord,
+  buildUsageServiceConfigMap,
   resolveAssumedQuantity,
 } from '@ee/lib/billing/simulator/syntheticActivity';
 
@@ -287,5 +289,58 @@ describe('buildSyntheticTimeEntry', () => {
         servicePeriodStart: '2026-08-01',
       }),
     ).toThrow(/positive assumed hours/);
+  });
+});
+
+describe('synthetic usage', () => {
+  const line = buildLine({ contract_line_type: 'Usage' });
+  const service = {
+    service_id: 'svc-usage',
+    service_name: 'Managed devices',
+    quantity: 1,
+    custom_rate: 225,
+    default_rate: 250,
+    tax_rate_id: null,
+    item_kind: 'service',
+    is_license: false,
+    configuration: {
+      configuration_type: 'Usage' as const,
+      unit_of_measure: 'device',
+      enable_tiered_pricing: false,
+      minimum_usage: 5,
+      base_rate: 200,
+      tiers: [],
+    },
+  };
+
+  it('builds a stable aggregate usage record from the assumption', () => {
+    expect(
+      buildSyntheticUsageRecord({
+        line,
+        service,
+        periodIndex: 2,
+        assumedQuantity: 18,
+      }),
+    ).toEqual({
+      usage_id: 'sim-line-1-svc-usage-2',
+      service_id: 'svc-usage',
+      service_name: 'Managed devices',
+      quantity: 18,
+      tax_rate_id: null,
+      currency_rate: 250,
+    });
+  });
+
+  it('maps scenario pricing, minimums, and tiers into shared compute inputs', () => {
+    const map = buildUsageServiceConfigMap({ ...line, services: [service] });
+    expect(map.get('svc-usage')).toEqual({
+      config: {
+        config_id: 'line-1:svc-usage',
+        custom_rate: 225,
+        minimum_usage: 5,
+        enable_tiered_pricing: false,
+      },
+      rateTiers: [],
+    });
   });
 });

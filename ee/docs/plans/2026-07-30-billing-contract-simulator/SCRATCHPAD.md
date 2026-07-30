@@ -22,6 +22,7 @@
 - (2026-07-30) `packages/billing/src/lib/billing/compute/compute.test.ts` contains 10 tests but is excluded by `packages/billing/vitest.config.ts` include globs.
 - (2026-07-30) Added the compute-test include glob; all 10 fixed/hourly compute tests now execute and pass.
 - (2026-07-30) Scenario snapshots now retain effective invoice schedule anchors, line location/overtime fields, system-default provenance, and catalog product/license identity.
+- (2026-07-30) Usage pricing was extracted without moving its DB allocation/query rules; production and simulator now share minimum, custom/currency rate, tier, tax, and explanation behavior.
 - (2026-07-30) Existing untracked `.smoke-tmp/` predates this implementation pass and must remain untouched.
 
 ## Commands / Runbooks
