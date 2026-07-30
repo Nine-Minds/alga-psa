@@ -1775,11 +1775,13 @@ export const updateProject = withAuth(async (user, { tenant }, projectId: string
         if (billingCloseResult !== undefined) {
             revalidatePath('/msp/billing');
         }
+        const depositReconciliationNeeded = billingCloseResult?.depositReconciliationNeeded ?? false;
+        const productsMovedToHold = billingCloseResult?.productsMovedToHold ?? 0;
         return billingCloseResult === undefined
             ? updatedProject
             : Object.assign(updatedProject, {
-                deposit_reconciliation_needed: billingCloseResult?.depositReconciliationNeeded ?? false,
-                products_moved_to_hold: billingCloseResult?.productsMovedToHold ?? 0,
+                deposit_reconciliation_needed: depositReconciliationNeeded,
+                products_moved_to_hold: productsMovedToHold,
             });
     } catch (error) {
         console.error('Error updating project:', error);
