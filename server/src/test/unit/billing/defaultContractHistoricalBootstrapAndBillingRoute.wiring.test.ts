@@ -14,6 +14,14 @@ const billingAndTaxSource = readFileSync(
   resolve(__dirname, '../../../../../packages/billing/src/actions/billingAndTax.ts'),
   'utf8',
 );
+// Time-entry duration/rate math was extracted into the pure compute layer.
+const timeComputeSource = readFileSync(
+  resolve(
+    __dirname,
+    '../../../../../packages/billing/src/lib/billing/compute/computeTimeBasedCharges.ts',
+  ),
+  'utf8',
+);
 
 // This test locks the cross-module contract required for historical backdated unmatched work:
 // history bootstrap creates historical client schedule windows, and default-contract runtime
@@ -28,7 +36,7 @@ describe('historical bootstrap + default-contract billing route wiring', () => {
     expect(billingEngineSource).toContain('const isSystemManagedDefault = (clientContractLine as { is_system_managed_default?: boolean | null })');
     expect(billingEngineSource).toContain('const cadenceOwner = isSystemManagedDefault');
     expect(billingEngineSource).toContain('? "client"');
-    expect(billingEngineSource).toContain('if (serviceConfig && !isSystemManagedDefault) {');
+    expect(timeComputeSource).toContain('if (serviceConfig && !isSystemManagedDefault) {');
 
     expect(billingAndTaxSource).toContain("source === 'system_managed_default_contract'");
     expect(billingAndTaxSource).toContain("label: source === 'system_managed_default_contract'");

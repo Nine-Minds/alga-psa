@@ -6,6 +6,13 @@ import React from 'react';
 import PaymentSettingsComponent from '@ee/components/settings/billing/PaymentSettings';
 import StripeConnectionSettingsComponent from '@ee/components/settings/integrations/StripeConnectionSettings';
 import PaymentSettingsConfigComponent from '@ee/components/settings/billing/PaymentSettingsConfig';
+import ContractSimulatorWorkspace from '@ee/components/billing/simulator/ContractSimulatorWorkspace';
+
+interface ContractSimulatorProps {
+  contractId: string;
+  clientContractId: string | null;
+  clientId: string | null;
+}
 
 // Import OSS stubs for features not yet implemented in EE
 export {
@@ -19,6 +26,9 @@ export {
 export const PaymentSettings = () => <PaymentSettingsComponent />;
 export const StripeConnectionSettings = () => <StripeConnectionSettingsComponent />;
 export const PaymentSettingsConfig = () => <PaymentSettingsConfigComponent />;
+export const ContractSimulator = (props: ContractSimulatorProps) => (
+  <ContractSimulatorWorkspace {...props} />
+);
 
 // Default export
 export default {
@@ -29,4 +39,5 @@ export default {
   PaymentSettings,
   StripeConnectionSettings,
   PaymentSettingsConfig,
+  ContractSimulator,
 };

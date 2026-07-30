@@ -75,6 +75,17 @@ export const StripeConnectionSettings: React.FC = () => {
   );
 };
 
+export const ContractSimulator = () => {
+  return (
+    <div className="text-center py-8 text-muted-foreground">
+      <p className="text-lg font-medium">Enterprise Feature</p>
+      <p className="mt-2 text-sm">
+        The contract simulator is available in the Enterprise edition of Alga PSA. Please upgrade to access this feature.
+      </p>
+    </div>
+  );
+};
+
 export const PaymentSettingsConfig = () => {
   return (
     <div className="text-center py-8 text-muted-foreground">
@@ -94,5 +105,6 @@ export default {
   BillingReports,
   PaymentSettings,
   StripeConnectionSettings,
+  ContractSimulator,
   PaymentSettingsConfig,
 };

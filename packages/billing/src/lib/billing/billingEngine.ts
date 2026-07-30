@@ -75,6 +75,11 @@ import ContractLineFixedConfig from "../../models/contractLineFixedConfig"; // A
 import contractLine from "../../models/contractLine";
 import service from "../../models/service";
 import { TaxService } from "../../services/taxService";
+import {
+  computeFixedCharges,
+  computeTimeBasedCharges,
+  type ChargeComputeTaxPorts,
+} from "./compute";
 import { ClientContractServiceConfigurationService } from "../../services/clientContractServiceConfigurationService";
 import {
   computeCapWriteDown,
@@ -531,6 +536,30 @@ export class BillingEngine {
       // Service exists but tax_rate_id is NULL, explicitly non-taxable
       return { taxRegion: null, isTaxable: false };
     }
+  }
+
+  /**
+   * Ports handed to the pure compute layer. Backed by the engine's memoized
+   * region lookups and TaxService so extracted math behaves exactly as it did
+   * inline.
+   */
+  private chargeComputeTaxPorts(): ChargeComputeTaxPorts {
+    return {
+      getTaxInfoFromService: (service) => this.getTaxInfoFromService(service),
+      getLocationTaxRegionCode: (locationId) =>
+        this.getLocationTaxRegionCode(locationId),
+      getClientDefaultTaxRegionCode: (clientId) =>
+        this.getClientDefaultTaxRegionCode(clientId),
+      calculateTax: (clientId, netAmountInCents, date, regionCode, isTaxable, currencyCode) =>
+        new TaxService().calculateTax(
+          clientId,
+          netAmountInCents,
+          date,
+          regionCode,
+          isTaxable,
+          currencyCode,
+        ),
+    };
   }
 
   // Removed getDefaultTaxRatePercentage function as it uses outdated logic
@@ -2411,6 +2440,8 @@ export class BillingEngine {
     // Note: Fixed plan rates are stored as dollars (decimal) in the database,
     // but need to be converted to cents (integer) for consistency with other monetary values in the system.
     // Custom contract-level rates are assumed to be in cents already.
+    // Load phase only: gather the rows the pure compute layer needs, then
+    // delegate the charge math to computeFixedCharges (lib/billing/compute/).
     await this.initKnex();
     if (!this.tenant) {
       throw new Error("tenant context not found");
@@ -2436,14 +2467,11 @@ export class BillingEngine {
     }
 
     const {
-      duePosition: lineBillingTiming,
       servicePeriodStart,
       servicePeriodEnd,
       servicePeriodStartExclusive,
       servicePeriodEndExclusive,
-      coverageRatio,
     } = timingResolution;
-    let fixedProrationEnabled = false;
 
     // --- Custom Rate Check (Contracts & Pricing Schedules) ---
     // Check if a custom rate is defined for this plan assignment (provided via contract association)
@@ -2452,8 +2480,10 @@ export class BillingEngine {
     // Ensure custom_rate is not null and not undefined before using it.
 
     let effectiveCustomRate = clientContractLine.custom_rate;
-    let generatedCharges: IFixedPriceCharge[] | null = null;
-    let generatedChargeAmountsUseCoverage = false;
+    let customRateSource: "pricing_schedule" | "assignment" | null =
+      effectiveCustomRate !== null && effectiveCustomRate !== undefined
+        ? "assignment"
+        : null;
 
     // Check for an active pricing schedule that overlaps the due service period.
     if (clientContractLine.contract_id) {
@@ -2479,6 +2509,7 @@ export class BillingEngine {
           activePricingSchedule.custom_rate !== undefined
         ) {
           effectiveCustomRate = activePricingSchedule.custom_rate;
+          customRateSource = "pricing_schedule";
           console.log(
             `[PRICING_SCHEDULE] Using pricing schedule rate ${activePricingSchedule.custom_rate} cents for contract ${clientContractLine.contract_id} during service period ${servicePeriodStart} to ${servicePeriodEnd}. Schedule ID: ${activePricingSchedule.schedule_id}`,
           );
@@ -2491,256 +2522,83 @@ export class BillingEngine {
       }
     }
 
-    if (!generatedCharges) {
-      // If no custom rate, proceed with calculating based on individual services or plan's fixed rate
-      console.log(
-        `No custom rate found for plan ${clientContractLine.contract_line_name} (ID: ${clientContractLine.contract_line_id}). Calculating based on services/plan rate.`,
+    const client = (await db.table("clients")
+      .where({
+        client_id: clientId,
+        tenant: this.tenant,
+      })
+      .first()) as IClient;
+
+    if (!client) {
+      throw new Error(
+        `Client ${clientId} not found in tenant ${this.tenant}`,
       );
-      const client = (await db.table("clients")
-        .where({
-          client_id: clientId,
-          tenant: this.tenant,
-        })
-        .first()) as IClient;
+    }
 
-      if (!client) {
-        throw new Error(
-          `Client ${clientId} not found in tenant ${this.tenant}`,
-        );
-      }
+    const tenant = this.tenant; // Capture tenant value for joins
 
-      // Removed old logic fetching tax region via client_tax_settings (Phase 1.2)
+    // Get the contract line details to determine if this is a fixed fee plan
+    const contractLineDetails = await db.table("contract_lines")
+      .where({
+        contract_line_id: clientContractLine.contract_line_id,
+        tenant: client.tenant,
+      })
+      .first();
 
-      const tenant = this.tenant; // Capture tenant value for joins
+    // Query services from contract_line_services (the contract definition)
+    // Note: client_contract_line_id is actually a contract_line_id value (see getClientContractLinesAndCycle)
+    const planServicesQuery = db.table<any>("contract_line_services as cls");
+    db.tenantJoin(planServicesQuery, "contract_line_service_configuration as clsc", "clsc.contract_line_id", "cls.contract_line_id", {
+      on(join) {
+        join.andOn("clsc.service_id", "=", "cls.service_id");
+      },
+    });
+    db.tenantJoin(planServicesQuery, "contract_line_service_fixed_config as clsfc", "clsfc.config_id", "clsc.config_id", { type: "left" });
+    db.tenantJoin(planServicesQuery, "service_catalog as sc", "sc.service_id", "cls.service_id");
 
-      // Get the contract line details to determine if this is a fixed fee plan
-      const contractLineDetails = await db.table("contract_lines")
-        .where({
-          contract_line_id: clientContractLine.contract_line_id,
-          tenant: client.tenant,
-        })
-        .first();
+    const planServices = await planServicesQuery
+      .where({
+        "cls.contract_line_id": clientContractLine.client_contract_line_id,
+        "cls.tenant": tenant,
+        "clsc.configuration_type": "Fixed",
+      })
+      .whereNot("sc.item_kind", "product")
+      .select(
+        "sc.service_id",
+        "sc.service_name",
+        "sc.default_rate",
+        "sc.tax_rate_id",
+        "cls.quantity as service_quantity",
+        "cls.custom_rate as service_line_custom_rate",
+        "clsc.quantity as configuration_quantity",
+        "clsc.custom_rate as configuration_custom_rate",
+        "clsc.config_id",
+        "clsfc.base_rate as service_base_rate",
+        // Note: enable_proration is on contract_lines, not service config
+      );
 
-      const isFixedFeePlan =
-        contractLineDetails?.contract_line_type === "Fixed";
-
-      // --- Fetch Plan-Level Fixed Config (Base Rate and coverage settlement) ---
-      let planLevelBaseRate: number | null = null; // Store plan base rate in dollars
-      let planLevelEnableProration = false;
-
-      if (isFixedFeePlan && contractLineDetails) {
-        if (
-          contractLineDetails.custom_rate !== undefined &&
-          contractLineDetails.custom_rate !== null
-        ) {
-          const parsedContractRate =
-            typeof contractLineDetails.custom_rate === "string"
-              ? parseFloat(contractLineDetails.custom_rate)
-              : Number(contractLineDetails.custom_rate);
-          if (!Number.isNaN(parsedContractRate)) {
-            // custom_rate is stored in cents, convert to dollars for planLevelBaseRate
-            planLevelBaseRate = parsedContractRate / 100;
-            console.log(
-              `[BILLING DEBUG] custom_rate from DB: ${contractLineDetails.custom_rate}, parsedContractRate: ${parsedContractRate}, planLevelBaseRate (dollars): ${planLevelBaseRate}`,
-            );
-          }
-        }
-
-        if (
-          contractLineDetails.enable_proration !== undefined &&
-          contractLineDetails.enable_proration !== null
-        ) {
-          planLevelEnableProration = Boolean(
-            contractLineDetails.enable_proration,
-          );
-        }
-        fixedProrationEnabled = planLevelEnableProration;
-      }
-
-      if (isFixedFeePlan) {
-        // Use the contract line's custom_rate directly
-        // (client_contract_line_pricing table has been deprecated)
-        if (
-          planLevelBaseRate === null &&
-          clientContractLine.custom_rate != null
-        ) {
-          const parsedAssignmentRate =
-            typeof clientContractLine.custom_rate === "string"
-              ? parseFloat(clientContractLine.custom_rate)
-              : Number(clientContractLine.custom_rate);
-          if (!Number.isNaN(parsedAssignmentRate)) {
-            // custom_rate is stored in cents, convert to dollars for planLevelBaseRate
-            planLevelBaseRate = parsedAssignmentRate / 100;
-          }
-        }
-      }
-
-      // Query services from contract_line_services (the contract definition)
-      // Note: client_contract_line_id is actually a contract_line_id value (see getClientContractLinesAndCycle)
-      const planServicesQuery = db.table<any>("contract_line_services as cls");
-      db.tenantJoin(planServicesQuery, "contract_line_service_configuration as clsc", "clsc.contract_line_id", "cls.contract_line_id", {
-        on(join) {
-          join.andOn("clsc.service_id", "=", "cls.service_id");
+    let fallbackService = null;
+    if (planServices.length === 0) {
+      // config_id lives on contract_line_service_configuration, not on
+      // contract_line_services; selecting it from cls_fallback raised
+      // "column cls_fallback.config_id does not exist" and aborted billing
+      // for any fixed line whose catalog items are all products/licenses.
+      const fallbackServiceQuery = db.table<any>("contract_line_services as cls_fallback");
+      db.tenantJoin(
+        fallbackServiceQuery,
+        "contract_line_service_configuration as clsc_fallback",
+        "clsc_fallback.contract_line_id",
+        "cls_fallback.contract_line_id",
+        {
+          on(join) {
+            join.andOn("clsc_fallback.service_id", "=", "cls_fallback.service_id");
+          },
         },
-      });
-      db.tenantJoin(planServicesQuery, "contract_line_service_fixed_config as clsfc", "clsfc.config_id", "clsc.config_id", { type: "left" });
-      db.tenantJoin(planServicesQuery, "service_catalog as sc", "sc.service_id", "cls.service_id");
-
-      const planServices = await planServicesQuery
-        .where({
-          "cls.contract_line_id": clientContractLine.client_contract_line_id,
-          "cls.tenant": tenant,
-          "clsc.configuration_type": "Fixed",
-        })
-        .whereNot("sc.item_kind", "product")
-        .select(
-          "sc.service_id",
-          "sc.service_name",
-          "sc.default_rate",
-          "sc.tax_rate_id",
-          "cls.quantity as service_quantity",
-          "cls.custom_rate as service_line_custom_rate",
-          "clsc.quantity as configuration_quantity",
-          "clsc.custom_rate as configuration_custom_rate",
-          "clsc.config_id",
-          "clsfc.base_rate as service_base_rate",
-          // Note: enable_proration is on contract_lines, not service config
-        );
-
-      const normalizedPlanServices = planServices.map((service: any) => {
-        const quantityValue =
-          service.configuration_quantity ??
-          service.service_quantity ??
-          service.quantity ??
-          1;
-        return {
-          ...service,
-          quantity: Number(quantityValue ?? 1) || 1,
-        };
-      });
-
-      if (!planLevelEnableProration) {
-        const prorationFromService = planServices.find(
-          (service: any) => service.enable_proration,
-        );
-        if (prorationFromService?.enable_proration) {
-          planLevelEnableProration = Boolean(
-            prorationFromService.enable_proration,
-          );
-        }
-      }
-      fixedProrationEnabled = planLevelEnableProration;
-
-      if (
-        isFixedFeePlan &&
-        (planLevelBaseRate === null || Number.isNaN(planLevelBaseRate))
-      ) {
-        let derivedBaseRate = 0;
-        let hasServiceBaseRate = false;
-
-        for (const service of planServices) {
-          const rawServiceBaseRate = service.service_base_rate;
-          if (rawServiceBaseRate !== null && rawServiceBaseRate !== undefined) {
-            const parsedServiceBaseRate =
-              typeof rawServiceBaseRate === "string"
-                ? parseFloat(rawServiceBaseRate)
-                : Number(rawServiceBaseRate);
-            if (!Number.isNaN(parsedServiceBaseRate)) {
-              const quantity =
-                Number(
-                  service.configuration_quantity ??
-                    service.service_quantity ??
-                    1,
-                ) || 1;
-              derivedBaseRate += parsedServiceBaseRate * quantity;
-              hasServiceBaseRate = true;
-            }
-          }
-        }
-
-        if (hasServiceBaseRate) {
-          // service_base_rate is stored in cents, convert to dollars for planLevelBaseRate
-          planLevelBaseRate = derivedBaseRate / 100;
-          console.log(
-            `[DEBUG] Contract Line ${clientContractLine.contract_line_id} - Derived plan base rate from service configs: ${planLevelBaseRate} (converted from ${derivedBaseRate} cents)`,
-          );
-        }
-      }
-
-      if (
-        isFixedFeePlan &&
-        (planLevelBaseRate === null || Number.isNaN(planLevelBaseRate))
-      ) {
-        const totalDefaultRateCents = planServices.reduce(
-          (sum: number, service: any) => {
-            const rate = Number(service.default_rate ?? 0);
-            const quantity =
-              Number(
-                service.configuration_quantity ?? service.service_quantity ?? 1,
-              ) || 1;
-            return sum + rate * quantity;
-          },
-          0,
-        );
-        if (totalDefaultRateCents !== 0) {
-          planLevelBaseRate = totalDefaultRateCents / 100;
-          console.log(
-            `[DEBUG] Contract Line ${clientContractLine.contract_line_id} - Derived plan base rate from service default rates: ${planLevelBaseRate}`,
-          );
-        }
-      }
-
-      if (
-        isFixedFeePlan &&
-        (planLevelBaseRate === null || Number.isNaN(planLevelBaseRate))
-      ) {
-        console.error(
-          `[DEBUG] Unable to determine base_rate for contract line ${clientContractLine.contract_line_id}.`,
-        );
-        return [];
-      }
-
-      const planLevelBaseRateCents =
-        planLevelBaseRate !== null && !Number.isNaN(planLevelBaseRate)
-          ? Math.round(planLevelBaseRate * 100)
-          : null;
-      console.log(
-        `[BILLING DEBUG] planLevelBaseRate (dollars): ${planLevelBaseRate}, planLevelBaseRateCents: ${planLevelBaseRateCents}`,
       );
+      db.tenantJoin(fallbackServiceQuery, "service_catalog as sc", "sc.service_id", "cls_fallback.service_id");
 
-      const hasCustomRateOverride =
-        effectiveCustomRate !== null &&
-        effectiveCustomRate !== undefined &&
-        (planLevelBaseRateCents === null ||
-          Math.round(Number(effectiveCustomRate)) !== planLevelBaseRateCents);
-
-      if (planServices.length === 0) {
-        if (!isFixedFeePlan || planLevelBaseRateCents === null) {
-          return [];
-        }
-
-        const baseRateInCents = hasCustomRateOverride
-          ? Math.round(Number(effectiveCustomRate))
-          : planLevelBaseRateCents;
-        // config_id lives on contract_line_service_configuration, not on
-        // contract_line_services; selecting it from cls_fallback raised
-        // "column cls_fallback.config_id does not exist" and aborted billing
-        // for any fixed line whose catalog items are all products/licenses.
-        const fallbackServiceQuery = db.table<any>("contract_line_services as cls_fallback");
-        db.tenantJoin(
-          fallbackServiceQuery,
-          "contract_line_service_configuration as clsc_fallback",
-          "clsc_fallback.contract_line_id",
-          "cls_fallback.contract_line_id",
-          {
-            on(join) {
-              join.andOn("clsc_fallback.service_id", "=", "cls_fallback.service_id");
-            },
-          },
-        );
-        db.tenantJoin(fallbackServiceQuery, "service_catalog as sc", "sc.service_id", "cls_fallback.service_id");
-
-        const fallbackService = await fallbackServiceQuery
+      fallbackService =
+        (await fallbackServiceQuery
           .where({
             "cls_fallback.contract_line_id":
               clientContractLine.client_contract_line_id,
@@ -2753,482 +2611,41 @@ export class BillingEngine {
             "sc.service_name",
             "sc.tax_rate_id",
             "clsc_fallback.config_id",
-          );
-
-        if (!fallbackService?.service_id || !fallbackService?.config_id) {
-          return [];
-        }
-
-        const { taxRegion: fallbackServiceTaxRegion, isTaxable: fallbackIsTaxable } =
-          await this.getTaxInfoFromService(fallbackService);
-        const fallbackTaxRegion =
-          fallbackServiceTaxRegion ??
-          (await this.getLocationTaxRegionCode(clientContractLine.location_id)) ??
-          (await this.getClientDefaultTaxRegionCode(client.client_id));
-        let fallbackTaxAmount = 0;
-        let fallbackTaxRate = 0;
-        if (!client.is_tax_exempt && fallbackIsTaxable && fallbackTaxRegion) {
-          const taxServiceInstance = new TaxService();
-          const taxResult = await taxServiceInstance.calculateTax(
-            client.client_id,
-            baseRateInCents,
-            servicePeriodEnd,
-            fallbackTaxRegion,
-            true,
-            clientContractLine.currency_code || "USD",
-          );
-          fallbackTaxRate = taxResult.taxRate;
-          fallbackTaxAmount = taxResult.taxAmount;
-        }
-
-        generatedCharges = [
-          {
-            type: "fixed",
-            serviceId: fallbackService.service_id,
-            config_id: fallbackService.config_id,
-            serviceName:
-              fallbackService.service_name ||
-              clientContractLine.contract_line_name ||
-              "Fixed Plan Charge",
-            quantity: 1,
-            rate: baseRateInCents,
-            total: baseRateInCents,
-            tax_amount: fallbackTaxAmount,
-            tax_rate: fallbackTaxRate,
-            tax_region: fallbackTaxRegion ?? undefined,
-            is_taxable: fallbackIsTaxable,
-            client_contract_line_id: clientContractLine.client_contract_line_id,
-            client_contract_id:
-              clientContractLine.client_contract_id || undefined,
-            contract_name: clientContractLine.contract_name || undefined,
-            location_id: clientContractLine.location_id ?? null,
-            base_rate: baseRateInCents,
-            enable_proration: planLevelEnableProration,
-            fmv: baseRateInCents,
-            proportion: 1,
-            allocated_amount: baseRateInCents,
-          },
-        ];
-      }
-
-      if (!generatedCharges && isFixedFeePlan) {
-        // For fixed fee plans, we want to create a single consolidated charge
-        // but internally allocate the tax based on FMV of each service
-
-        const baseRateInCents = hasCustomRateOverride
-          ? Math.round(Number(effectiveCustomRate))
-          : Math.round(planLevelBaseRate! * 100);
-        const baseRate = baseRateInCents / 100;
-
-        if (hasCustomRateOverride) {
-          console.log(
-            `Using custom rate ${baseRateInCents} cents for plan ${clientContractLine.contract_line_name} (ID: ${clientContractLine.contract_line_id}) from contract ${clientContractLine.contract_name || "N/A"}`,
-          );
-        }
-
-        console.log(
-          `[DEBUG] Plan ${clientContractLine.contract_line_id} - Using Plan Level Base Rate: ${baseRate}`,
-        );
-
-        // Calculate the total FMV (Fair Market Value) of all services
-        // Calculate the total FMV (Fair Market Value) of all services in CENTS
-        const totalFMVCents = normalizedPlanServices.reduce((sum, service) => {
-          const serviceFMV =
-            Number(service.default_rate ?? 0) * service.quantity;
-          return sum + serviceFMV;
-        }, 0);
-        console.log(
-          `[DEBUG] Plan ${clientContractLine.contract_line_id} - Calculated totalFMVCents: ${totalFMVCents}`,
-        ); // DEBUG LOG
-
-        // If totalFMVCents is exactly zero, we can't allocate properly
-        // Note: Negative FMV is valid for credit-generating services and should be processed
-        if (totalFMVCents === 0) {
-          console.log(
-            `Total FMV (cents) for services in plan ${clientContractLine.contract_line_id} is zero`,
-          );
-          return [];
-        }
-
-        // Calculate tax for each service based on its proportion of the total FMV
-        let totalTaxAmount = 0;
-        let totalTaxableAmount = 0;
-        let totalNonTaxableAmount = 0;
-
-        // For detailed tax calculation and audit purposes
-
-        // Instantiate TaxService
-        const taxServiceInstance = new TaxService(); // Corrected instantiation
-
-        const serviceAllocations = await Promise.all(
-          normalizedPlanServices.map(async (service) => {
-            // Calculate the FMV for this service in CENTS
-            // Use custom_rate from plan config if available (assume dollars), otherwise fallback to service default_rate (assume cents).
-            console.log(
-              "[DEBUG] Processing service object:",
-              JSON.stringify(service, null, 2),
-            ); // DEBUG LOG - Inspect the service object
-            // FMV should always be based on the service's default rate, not plan overrides.
-            // Assume service.default_rate is stored in cents.
-            const rateForFMV = Number(service.default_rate || 0); // Ensure it's a number, default to 0 if null/undefined
-            const serviceFMVCents = Math.round(rateForFMV * service.quantity); // FMV is now correctly in cents
-            console.log(
-              `[DEBUG] Service ${service.service_id} - Calculated serviceFMVCents: ${serviceFMVCents} (Rate: ${rateForFMV}, Qty: ${service.quantity})`,
-            ); // DEBUG LOG
-
-            // Calculate the proportion of the total fixed fee that should be allocated to this service
-            const proportion =
-              totalFMVCents !== 0 ? serviceFMVCents / totalFMVCents : 0; // Use totalFMVCents and handle division by zero
-            console.log(
-              `[DEBUG] Service ${service.service_id} - Calculated proportion: ${proportion} (${serviceFMVCents} / ${totalFMVCents})`,
-            ); // DEBUG LOG
-
-            // --- Proration Calculation ---
-            let prorationFactor = 1.0;
-            let effectiveBaseRateInCents = baseRateInCents; // Start with full rate in cents
-
-            // Use the plan-level partial-period setting fetched earlier for fixed plans
-            if (planLevelEnableProration) {
-              prorationFactor = coverageRatio;
-              effectiveBaseRateInCents = Math.round(
-                effectiveBaseRateInCents * prorationFactor,
-              );
-              console.log(
-                `[DEBUG] Service ${service.service_id} - Proration Enabled. Factor: ${prorationFactor.toFixed(4)}, Prorated Base (cents): ${effectiveBaseRateInCents}`,
-              );
-            } else {
-              console.log(
-                `[DEBUG] Service ${service.service_id} - Proration Disabled.`,
-              );
-            }
-            // --- End Proration Calculation ---
-
-            // Allocate a portion of the (potentially prorated) fixed fee to this service
-            const allocatedAmount = Math.round(
-              effectiveBaseRateInCents * proportion,
-            ); // Use effective rate, round final cents value
-            console.log(
-              `[DEBUG] Service ${service.service_id} - Calculated allocatedAmount (cents): ${allocatedAmount} (Effective Base: ${effectiveBaseRateInCents}, Prop: ${proportion})`,
-            ); // DEBUG LOG
-
-            // Determine tax info using the helper function
-            const { taxRegion: serviceTaxRegion, isTaxable } =
-              await this.getTaxInfoFromService(service);
-
-            // Calculate tax if applicable
-            let taxAmount = 0;
-            let taxRate = 0;
-
-            // ***** START OF CORRECTED BLOCK *****
-            if (!client.is_tax_exempt && isTaxable) {
-              // Use the region derived from tax_rate_id, fallback to location then client default
-              const effectiveTaxRegion =
-                serviceTaxRegion ??
-                (await this.getLocationTaxRegionCode(clientContractLine.location_id)) ??
-                (await this.getClientDefaultTaxRegionCode(client.client_id)) ??
-                "";
-              if (effectiveTaxRegion) {
-                // Use TaxService to calculate tax
-                // allocatedAmount is already in cents
-                const taxResult = await taxServiceInstance.calculateTax(
-                  client.client_id,
-                  allocatedAmount,
-                  servicePeriodEnd,
-                  effectiveTaxRegion,
-                  true,
-                  clientContractLine.currency_code || "USD",
-                );
-                taxRate = taxResult.taxRate;
-                taxAmount = taxResult.taxAmount;
-                console.log(
-                  `[DEBUG] Service ${service.service_id} - Tax calculated (TaxService): Rate=${taxRate}, Amount=${taxAmount}, Base=${allocatedAmount}, Region=${effectiveTaxRegion}`,
-                ); // DEBUG LOG
-              } else {
-                // No region from service's tax_rate_id AND no client default region.
-                console.warn(
-                  `[BillingEngine] No tax region found (from service tax_rate_id or client default via getClientDefaultTaxRegionCode) for service ${service.service_id} / client ${clientId}. Using zero tax rate.`,
-                );
-                taxRate = 0;
-                taxAmount = 0;
-                console.log(
-                  `[DEBUG] Service ${service.service_id} - Tax calculation skipped (No effective region found)`,
-                ); // DEBUG LOG
-              }
-              // Add the pre-tax allocated amount to the total taxable amount
-              totalTaxableAmount += allocatedAmount;
-            } else {
-              // Add to the total non-taxable amount
-              totalNonTaxableAmount += allocatedAmount;
-              console.log(
-                `[DEBUG] Service ${service.service_id} - Tax calculation skipped (Client exempt: ${client.is_tax_exempt} or service not taxable: ${!isTaxable})`,
-              ); // DEBUG LOG
-            }
-            // ***** END OF CORRECTED BLOCK *****
-
-            // Add to the total tax amount
-            totalTaxAmount += taxAmount;
-
-            return {
-              serviceId: service.service_id,
-              serviceName: service.service_name,
-              fmv: serviceFMVCents, // Store FMV in cents
-              proportion,
-              allocatedAmount,
-              isTaxable: isTaxable, // Use derived value
-              taxRate: taxRate,
-              taxAmount, // This is the final calculated tax for this allocation
-            };
-          }),
-        );
-
-        // Log the detailed allocation for audit purposes
-        console.log(
-          `Fixed fee plan ${clientContractLine.contract_line_id} tax allocation:`,
-          {
-            baseRate: baseRate, // Dollar amount from database
-            baseRateInCents: baseRate * 100, // Converted to cents for calculations
-            totalFMVCents,
-            totalTaxableAmount,
-            totalNonTaxableAmount,
-            totalTaxAmount,
-            serviceAllocations,
-          },
-        );
-
-        // Create an array to hold the detailed charges
-        const detailedCharges: IFixedPriceCharge[] = [];
-
-        // Iterate through the service allocations and create a detailed charge for each
-        for (const allocation of serviceAllocations) {
-          // Find the corresponding planService data
-          const planService = normalizedPlanServices.find(
-            (ps) => ps.service_id === allocation.serviceId,
-          );
-
-          if (!planService) {
-            console.warn(
-              `Could not find planService data for serviceId: ${allocation.serviceId} in plan ${clientContractLine.contract_line_id}`,
-            );
-            continue; // Skip this allocation if data is missing
-          }
-
-          const quantity = Number(planService.quantity ?? 1) || 1;
-
-          const detailedCharge: IFixedPriceCharge = {
-            // Common IBillingCharge fields
-            type: "fixed",
-            serviceId: allocation.serviceId,
-            serviceName: allocation.serviceName,
-            quantity, // Default to 1 if quantity is null
-            rate: allocation.allocatedAmount, // Rate is the PRORATED allocated amount in cents
-            total: allocation.allocatedAmount, // Total is the PRORATED allocated amount in cents
-            tax_amount: allocation.taxAmount, // Per-allocation tax in cents
-            tax_rate: allocation.taxRate, // Per-allocation tax rate
-            is_taxable: allocation.isTaxable, // Use the derived isTaxable from the allocation object
-            // Determine effective region for the charge record
-            // We need the taxRegion derived from the service's tax_rate_id for this specific allocation
-            // Let's re-fetch it here for clarity, although it was calculated during allocation.
-            // Ideally, the allocation object would carry the derived taxRegion.
-            // For now, re-derive with the location fallback chain:
-            tax_region:
-              (await this.getTaxInfoFromService(planService)).taxRegion ??
-              (await this.getLocationTaxRegionCode(clientContractLine.location_id)) ??
-              (await this.getClientDefaultTaxRegionCode(client.client_id)) ??
-              undefined, // Use derived region, fallback to location then client default
-            // planId: clientContractLine.contract_line_id, // Removed - planId not part of IFixedPriceCharge
-            client_contract_line_id: clientContractLine.client_contract_line_id, // Link back to the plan assignment
-
-            // Add contract association information for all fixed charges when the plan is covered by a contract assignment
-            client_contract_id:
-              clientContractLine.client_contract_id || undefined,
-            contract_name: clientContractLine.contract_name || undefined,
-            location_id: clientContractLine.location_id ?? null,
-
-            // IFixedPriceCharge specific fields (newly added)
-            config_id: planService.config_id, // From the modified query
-            base_rate: baseRateInCents, // Use the PLAN-LEVEL base rate in cents used for allocation
-            enable_proration: planLevelEnableProration, // Use plan-level setting
-            fmv: allocation.fmv, // Use FMV directly from allocation (already in cents)
-            proportion: allocation.proportion, // Numeric proportion
-            allocated_amount: allocation.allocatedAmount, // PRORATED allocated amount in cents
-
-            // taxAllocationDetails: undefined, // Remove this property as details are now fields
-          };
-          detailedCharges.push(detailedCharge);
-        }
-
-        console.log(
-          `Detailed fixed price charges for client ${clientId}, plan ${clientContractLine.contract_line_id}:`,
-          detailedCharges,
-        );
-        generatedCharges = detailedCharges;
-        generatedChargeAmountsUseCoverage = planLevelEnableProration;
-      } else if (!generatedCharges) {
-        // This block handles cases where the plan type isn't 'Fixed', but a service within it
-        // is configured as 'Fixed'. This might be legacy or an edge case.
-        // We should still use the plan-level coverage settings if the plan *was* fixed.
-        // If the plan itself isn't fixed, proration likely doesn't apply anyway.
-        // TODO: Review if this logic block is still necessary or correct after the refactor.
-        console.warn(
-          `[BillingEngine] Processing fixed service config for a non-fixed plan type (${contractLineDetails?.contract_line_type}) for plan ${clientContractLine.contract_line_id}. Review this logic.`,
-        );
-
-        const fixedCharges: IFixedPriceCharge[] = await Promise.all(
-          normalizedPlanServices.map(
-            async (service): Promise<IFixedPriceCharge> => {
-              const quantity = service.quantity;
-
-              const parsedBaseRate =
-                service.service_base_rate !== null &&
-                service.service_base_rate !== undefined
-                  ? Number(service.service_base_rate)
-                  : null;
-              // service_base_rate is already stored in cents, no conversion needed
-              const baseRateInCents =
-                parsedBaseRate !== null && !Number.isNaN(parsedBaseRate)
-                  ? Math.round(parsedBaseRate)
-                  : Number(service.default_rate ?? 0);
-              const total = baseRateInCents * quantity;
-
-              // Determine tax info for this edge-case service
-              const { taxRegion: serviceTaxRegion, isTaxable } =
-                await this.getTaxInfoFromService(service);
-
-              const charge: IFixedPriceCharge = {
-                serviceId: service.service_id,
-                serviceName: service.service_name,
-                quantity,
-                rate: baseRateInCents, // Rate in cents
-                total, // Total in cents
-                type: "fixed",
-                client_contract_line_id: clientContractLine.client_contract_line_id,
-                client_contract_id:
-                  clientContractLine.client_contract_id || undefined,
-                contract_name: clientContractLine.contract_name || undefined,
-                location_id: clientContractLine.location_id ?? null,
-                tax_amount: 0,
-                tax_rate: 0,
-                tax_region:
-                  serviceTaxRegion ??
-                  (await this.getLocationTaxRegionCode(
-                    clientContractLine.location_id,
-                  )) ??
-                  (await this.getClientDefaultTaxRegionCode(
-                    client.client_id,
-                  )) ??
-                  undefined, // Use derived region, fallback to location then client default
-                is_taxable: isTaxable, // Use derived value
-                // Use plan-level settings fetched earlier, even if plan type isn't strictly 'Fixed' now
-                // This maintains consistency if a plan type was changed.
-                enable_proration: planLevelEnableProration, // Use plan-level setting
-                // Add other relevant fields from IFixedPriceCharge if needed
-                config_id: service.config_id,
-                base_rate: baseRateInCents,
-                // FMV/Proportion/AllocatedAmount might not be relevant here if not a true fixed plan
-              };
-              // Recalculate tax based on derived info for this edge case
-              if (!client.is_tax_exempt && charge.is_taxable) {
-                const effectiveTaxRegion = charge.tax_region ?? ""; // Use the already set region (derived or client default fallback)
-                if (effectiveTaxRegion) {
-                  // Use TaxService instance if available, or instantiate if needed
-                  const taxServiceInstance = new TaxService(); // Assuming it's okay to instantiate here
-                  const taxResult = await taxServiceInstance.calculateTax(
-                    client.client_id,
-                    charge.total,
-                    servicePeriodEnd,
-                    effectiveTaxRegion,
-                    true,
-                    clientContractLine.currency_code || "USD",
-                  );
-                  charge.tax_rate = taxResult.taxRate;
-                  charge.tax_amount = taxResult.taxAmount;
-                } else {
-                  console.warn(
-                    `No effective tax region found for edge-case fixed service ${service.service_id}, using zero tax rate`,
-                  );
-                  charge.tax_rate = 0;
-                  charge.tax_amount = 0;
-                }
-              } else {
-                console.warn(
-                  `No effective tax region found for edge-case fixed service ${service.service_id}, using zero tax rate`,
-                );
-                charge.tax_rate = 0;
-                charge.tax_amount = 0;
-              }
-
-              return charge;
-            },
-          ),
-        );
-
-        console.log(
-          `Fixed price charges for client ${clientId}:`,
-          fixedCharges,
-        );
-        generatedCharges = fixedCharges;
-      }
+          )) ?? null;
     }
 
-    if (!generatedCharges || generatedCharges.length === 0) {
-      return [];
-    }
-
-    const requiresAdvanceTerminationSettlement =
-      this.shouldApplyAdvanceTerminationCoverageSettlement(
-        clientContractLine,
+    const { charges, advanceGuard } = await computeFixedCharges(
+      {
+        clientId,
         billingPeriod,
-        lineBillingTiming,
-        coverageRatio,
+        clientContractLine,
+        timing: timingResolution,
+        client,
+        contractLineDetails,
+        effectiveCustomRate,
+        customRateSource,
+        planServices,
+        fallbackService,
+      },
+      this.chargeComputeTaxPorts(),
+    );
+
+    if (advanceGuard) {
+      const existingAdvance = await this.hasExistingServicePeriodCharge(
+        clientContractLine.client_contract_line_id,
+        advanceGuard.servicePeriodStart,
+        advanceGuard.servicePeriodEnd,
+        "advance",
       );
-    const chargesAfterSettlement =
-      !generatedChargeAmountsUseCoverage &&
-      (fixedProrationEnabled || requiresAdvanceTerminationSettlement)
-        ? this.applyFixedChargeCoverageSettlement(
-            generatedCharges,
-            coverageRatio,
-            requiresAdvanceTerminationSettlement
-              ? "unused_credit_net"
-              : "coverage_ratio",
-          )
-        : generatedCharges;
-
-    const chargesWithMeta = chargesAfterSettlement.map((charge) => ({
-      ...charge,
-      servicePeriodStart,
-      servicePeriodEnd,
-      billingTiming: lineBillingTiming,
-    }));
-
-    let positiveCharges: IFixedPriceCharge[] = chargesWithMeta;
-
-    if (lineBillingTiming === "advance") {
-      const endedBeforeAdvance = clientContractLine.end_date
-        ? Temporal.PlainDate.compare(
-            toPlainDate(clientContractLine.end_date),
-            toPlainDate(servicePeriodStart),
-          ) < 0
-        : false;
-
-      let existingAdvance = false;
-      if (!endedBeforeAdvance) {
-        existingAdvance = await this.hasExistingServicePeriodCharge(
-          clientContractLine.client_contract_line_id,
-          servicePeriodStart,
-          servicePeriodEnd,
-          "advance",
-        );
-      }
-
-      if (endedBeforeAdvance || existingAdvance) {
+      if (existingAdvance) {
         console.log(
-          `[BillingEngine] Skipping advance billing for contract line ${clientContractLine.contract_line_id}: ${endedBeforeAdvance ? "line ends before next period" : "charge already persisted for service period"}`,
+          `[BillingEngine] Skipping advance billing for contract line ${clientContractLine.contract_line_id}: charge already persisted for service period`,
         );
-        positiveCharges = [];
+        return [];
       }
     }
 
-    return positiveCharges;
+    return charges;
   }
 
   private resolveFixedRecurringChargeTiming(
@@ -3960,182 +3377,33 @@ export class BillingEngine {
 
     const timeEntries = await query;
 
-    const timeBasedChargesPromises = timeEntries.map(
-      async (entry: any): Promise<ITimeBasedCharge> => {
-        const startDateTime = Temporal.PlainDateTime.from(
-          entry.start_time.toISOString().replace("Z", ""),
-        );
-        const endDateTime = Temporal.PlainDateTime.from(
-          entry.end_time.toISOString().replace("Z", ""),
-        );
-
-        // Get the service configuration if available
-        const serviceConfig = serviceConfigMap.get(entry.service_id);
-        const isSystemManagedDefault = (clientContractLine as { is_system_managed_default?: boolean | null })
-          .is_system_managed_default === true;
-
-        // Calculate duration based on configuration settings
-        let durationMinutes = startDateTime.until(endDateTime, {
-          largestUnit: "minutes",
-        }).minutes;
-
-        if (serviceConfig && !isSystemManagedDefault) {
-          // Apply minimum billable time
-          if (durationMinutes < serviceConfig.config.minimum_billable_time) {
-            durationMinutes = serviceConfig.config.minimum_billable_time;
-          }
-
-          // Round up to nearest increment
-          if (serviceConfig.config.round_up_to_nearest > 0) {
-            const remainder =
-              durationMinutes % serviceConfig.config.round_up_to_nearest;
-            if (remainder > 0) {
-              durationMinutes +=
-                serviceConfig.config.round_up_to_nearest - remainder;
-            }
-          }
-        }
-
-        // Convert to hours. Bill the fractional hours that remain after the
-        // minimum-billable-time and round-up-to-nearest rules above. Previously
-        // this used Math.ceil(durationMinutes / 60), which forced every entry up
-        // to a whole hour and silently overrode the configured rounding
-        // increment (e.g. a 4h10m entry on a 15-minute increment was rounded to
-        // 4h15m and then ceiled to 5h). The rate is per hour, so the quantity
-        // must carry the partial hour.
-        const duration = durationMinutes / 60;
-
-        // Resolve rate, preferring overrides over the currency-specific catalog price.
-        // Order: per-entry custom rate → per-user-type rate (contract-line config) → service_prices
-        // row in the contract's currency. We deliberately do NOT fall back to the legacy
-        // service_catalog.default_rate column because it is currency-untagged and would
-        // silently bill a USD-intended amount in a non-USD contract.
-        const userTypeRate =
-          !isSystemManagedDefault &&
-          serviceConfig &&
-          serviceConfig.userTypeRates.has(entry.user_type)
-            ? (serviceConfig.userTypeRates.get(entry.user_type) as number)
-            : undefined;
-        const resolvedRate =
-          entry.custom_rate ??
-          userTypeRate ??
-          (entry.currency_rate != null ? Number(entry.currency_rate) : undefined);
-        const phaseOverride = this.resolveProjectPhaseRateOverride(
-          projectBillingContext ?? null,
-          entry.project_phase_id,
-          entry.service_id,
-        );
-        if (resolvedRate === undefined && phaseOverride?.rate === undefined) {
-          throw new Error(
-            `Missing pricing for time entry on service "${entry.service_name}" (${entry.service_id}) in ${contractCurrency}. ` +
-              `Add a ${contractCurrency} price in the service catalog or set a custom rate on the time entry / contract line.`,
-          );
-        }
-        const effectiveServiceId = phaseOverride?.override_service_id ?? entry.service_id;
-        const effectiveServiceName = phaseOverride?.override_service_name ?? entry.service_name;
-        const effectiveTaxRateId = phaseOverride?.override_tax_rate_id ?? entry.tax_rate_id;
-        const rate = Math.ceil(
-          phaseOverride?.rate ?? (Number(resolvedRate) || 0),
-        );
-
-        // Check for overtime if applicable
-        let total = Math.round(duration * rate);
-        // Use plan-wide settings from the fetched 'plan' object
-        if (
-          plan.enable_overtime &&
-          plan.overtime_threshold &&
-          duration > plan.overtime_threshold
-        ) {
-          const regularHours = plan.overtime_threshold;
-          const overtimeHours = duration - regularHours;
-          // Use plan's overtime_rate, fallback to 1.5x the calculated rate (user or service specific)
-          const overtimeRate = plan.overtime_rate || rate * 1.5;
-          total = Math.round(
-            regularHours * rate + overtimeHours * overtimeRate,
-          );
-        }
-
-        // Determine tax info using the helper function
-        // Pass a minimal service object containing the necessary IDs
-        const { taxRegion: serviceTaxRegion, isTaxable } =
-          await this.getTaxInfoFromService({
-            service_id: effectiveServiceId,
-            tax_rate_id: effectiveTaxRateId,
-          });
-
-        // Calculate tax amount (will be recalculated later in invoiceService, but set initial values)
-        let taxAmount = 0;
-        let taxRate = 0;
-        const effectiveTaxRegion =
-          serviceTaxRegion ??
-          (await this.getLocationTaxRegionCode(clientContractLine.location_id)) ??
-          (await this.getClientDefaultTaxRegionCode(client.client_id)) ??
-          undefined;
-
-        if (!client.is_tax_exempt && isTaxable && effectiveTaxRegion) {
-          try {
-            const taxServiceInstance = new TaxService();
-            const taxResult = await taxServiceInstance.calculateTax(
-              client.client_id,
-              total,
-              billingPeriod.endDate,
-              effectiveTaxRegion,
-              true,
-              clientContractLine.currency_code || "USD",
-            );
-            taxRate = taxResult.taxRate;
-            taxAmount = taxResult.taxAmount;
-          } catch (error) {
-            console.error(
-              `Error calculating initial tax for time entry ${entry.entry_id}:`,
-              error,
-            );
-          }
-        }
-
-        const projectConfig = entry.project_id
-          ? projectBillingContext?.configsByProjectId.get(entry.project_id)
-          : undefined;
-
-        return {
-          serviceId: effectiveServiceId,
-          serviceName: effectiveServiceName,
-          config_id: serviceConfig?.config.config_id,
-          client_contract_line_id: clientContractLine.client_contract_line_id,
-          userId: entry.user_id,
-          duration,
-          quantity: duration,
-          rate,
-          total,
-          type: "time",
-          tax_amount: taxAmount, // Set initial tax amount
-          tax_rate: taxRate, // Set initial tax rate
-          tax_region: effectiveTaxRegion, // Use derived region, fallback to location then client default
-          entryId: entry.entry_id,
-          is_taxable: isTaxable, // Use derived value
-          servicePeriodStart,
-          servicePeriodEnd,
-          billingTiming: timingResolution.duePosition,
-          // Add contract association information when the plan is covered by a contract assignment
-          client_contract_id:
-            clientContractLine.client_contract_id || undefined,
-          contract_name: clientContractLine.contract_name || undefined,
-          location_id: clientContractLine.location_id ?? null,
-          ...(projectConfig?.billing_model === "time_and_materials"
-            ? {
-                project_id: projectConfig.project_id,
-                project_name: projectConfig.project_name,
-                project_number: projectConfig.project_number,
-                project_billing_config_id: projectConfig.config_id,
-              }
-            : {}),
-        };
+    const { charges } = await computeTimeBasedCharges(
+      {
+        billingPeriod,
+        clientContractLine,
+        timing: timingResolution,
+        client,
+        plan: {
+          enable_overtime: plan.enable_overtime,
+          overtime_threshold: plan.overtime_threshold,
+          overtime_rate: plan.overtime_rate,
+        },
+        serviceConfigMap,
+        timeEntries,
+        contractCurrency,
+        resolvePhaseRateOverride: (phaseId, serviceId) =>
+          this.resolveProjectPhaseRateOverride(
+            projectBillingContext ?? null,
+            phaseId,
+            serviceId,
+          ),
+        getProjectChargeConfig: (projectId) =>
+          projectBillingContext?.configsByProjectId.get(projectId),
       },
+      this.chargeComputeTaxPorts(),
     );
 
-    const timeBasedCharges = await Promise.all(timeBasedChargesPromises);
-
-    return timeBasedCharges;
+    return charges;
   }
 
   private async calculateUsageBasedCharges(
@@ -5244,78 +4512,6 @@ export class BillingEngine {
     return Boolean(recurringLinkedCharge);
   }
 
-  private shouldApplyAdvanceTerminationCoverageSettlement(
-    clientContractLine: IClientContractLine,
-    billingPeriod: IBillingPeriod,
-    billingTiming: "arrears" | "advance",
-    coverageRatio: number,
-  ): boolean {
-    if (
-      billingTiming !== "advance" ||
-      !clientContractLine.end_date ||
-      coverageRatio >= 1
-    ) {
-      return false;
-    }
-
-    const lineEndExclusive = toPlainDate(clientContractLine.end_date).add({
-      days: 1,
-    });
-    const currentPeriodEndExclusive = toPlainDate(billingPeriod.endDate);
-    return (
-      Temporal.PlainDate.compare(lineEndExclusive, currentPeriodEndExclusive) <
-      0
-    );
-  }
-
-  private applyFixedChargeCoverageSettlement(
-    charges: IFixedPriceCharge[],
-    coverageRatio: number,
-    roundingMode: "coverage_ratio" | "unused_credit_net",
-  ): IFixedPriceCharge[] {
-    return charges
-      .map((charge) => {
-        const settledTotal = this.settleFixedChargeAmount(
-          charge.total ?? 0,
-          coverageRatio,
-          roundingMode,
-        );
-        const settledTax = this.settleFixedChargeAmount(
-          charge.tax_amount ?? 0,
-          coverageRatio,
-          roundingMode,
-        );
-        const settledRate = this.settleFixedChargeAmount(
-          charge.rate ?? charge.total ?? 0,
-          coverageRatio,
-          roundingMode,
-        );
-        const settledAllocatedAmount =
-          charge.allocated_amount === undefined
-            ? undefined
-            : this.settleFixedChargeAmount(
-                charge.allocated_amount,
-                coverageRatio,
-                roundingMode,
-              );
-
-        if (settledTotal === 0 && settledTax === 0) {
-          return null;
-        }
-
-        return {
-          ...charge,
-          total: settledTotal,
-          tax_amount: settledTax,
-          rate: settledRate,
-          ...(settledAllocatedAmount === undefined
-            ? {}
-            : { allocated_amount: settledAllocatedAmount }),
-        };
-      })
-      .filter((charge): charge is IFixedPriceCharge => charge !== null);
-  }
-
   private applyQuantityChargeCoverageSettlement<
     TCharge extends IProductCharge | ILicenseCharge,
   >(charges: TCharge[], coverageRatio: number): TCharge[] {
@@ -5337,27 +4533,6 @@ export class BillingEngine {
         tax_amount: proratedTax,
       };
     });
-  }
-
-  private settleFixedChargeAmount(
-    amount: number,
-    coverageRatio: number,
-    roundingMode: "coverage_ratio" | "unused_credit_net",
-  ): number {
-    if (!Number.isFinite(amount) || amount === 0) {
-      return 0;
-    }
-
-    const boundedCoverageRatio = Math.max(0, Math.min(coverageRatio, 1));
-    const sign = amount < 0 ? -1 : 1;
-    const absoluteAmount = Math.abs(amount);
-
-    if (roundingMode === "unused_credit_net") {
-      const unusedRatio = 1 - boundedCoverageRatio;
-      return sign * (absoluteAmount - Math.round(absoluteAmount * unusedRatio));
-    }
-
-    return sign * Math.round(absoluteAmount * boundedCoverageRatio);
   }
 
   private calculatePeriodDaysExclusive(
