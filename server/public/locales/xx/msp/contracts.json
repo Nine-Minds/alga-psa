@@ -259,7 +259,9 @@
       "invoices": "11111",
       "lines": "11111",
       "overview": "11111",
-      "pricing": "11111"
+      "pricing": "11111",
+      "simulator": "11111",
+      "enterpriseBadge": "11111"
     },
     "validation": {
       "billingFrequencyRequired": "11111",
@@ -2067,6 +2069,72 @@
         "contract": "11111",
         "client": "11111"
       }
+    }
+  },
+  "contractSimulator": {
+    "assumptions": {
+      "empty": "11111",
+      "hoursUnit": "11111",
+      "periodLabel": "11111 {{number}} 11111",
+      "rowLabel": "11111 {{unit}} 11111 {{service}} 11111",
+      "subtitle": "11111",
+      "title": "11111",
+      "varyByPeriod": "11111"
+    },
+    "emptyScenario": {
+      "description": "11111",
+      "title": "11111"
+    },
+    "explanation": {
+      "amount": "11111",
+      "close": "11111",
+      "inputs": "11111",
+      "noBreakdown": "11111",
+      "steps": "11111",
+      "title": "11111"
+    },
+    "invoiceDetail": {
+      "columns": {
+        "amount": "11111",
+        "line": "11111",
+        "qty": "11111",
+        "rate": "11111"
+      },
+      "draftNote": "11111",
+      "explainHint": "11111",
+      "subtotal": "11111",
+      "tax": "11111",
+      "title": "11111 {{period}} 11111",
+      "total": "11111"
+    },
+    "loadFailed": "11111",
+    "loadingSnapshot": "11111",
+    "runBar": {
+      "compareToggle": "11111",
+      "horizonOption": "11111 {{count}} 11111",
+      "lastRun": "11111 {{count}} 11111",
+      "neverRun": "11111",
+      "simulate": "11111",
+      "simulating": "11111",
+      "stale": "11111"
+    },
+    "scenario": {
+      "bucketIncluded": "11111 {{hours}} 11111",
+      "defaultRate": "11111",
+      "lineCount": "11111 {{count}} 11111",
+      "modified": "11111",
+      "resetAll": "11111",
+      "title": "11111"
+    },
+    "timeline": {
+      "deltaDown": "11111 {{amount}} 11111",
+      "deltaUp": "11111 {{amount}} 11111",
+      "empty": "11111",
+      "noDelta": "11111"
+    },
+    "unavailable": {
+      "description": "11111",
+      "title": "11111"
     }
   }
 }

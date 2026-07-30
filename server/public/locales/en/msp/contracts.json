@@ -259,7 +259,9 @@
       "invoices": "Invoices",
       "lines": "Contract Lines",
       "overview": "Overview",
-      "pricing": "Pricing Schedules"
+      "pricing": "Pricing Schedules",
+      "simulator": "Simulator",
+      "enterpriseBadge": "Enterprise"
     },
     "validation": {
       "billingFrequencyRequired": "Billing frequency is required.",
@@ -2067,6 +2069,72 @@
         "contract": "If you save this recurring line, future periods would materialize on an anniversary-style preview anchored to the 8th before invoice generation.",
         "client": "If you save this recurring line, future periods would materialize on the client billing schedule preview before invoice generation."
       }
+    }
+  },
+  "contractSimulator": {
+    "assumptions": {
+      "empty": "Fixed-only scenario — nothing to assume.",
+      "hoursUnit": "hrs",
+      "periodLabel": "P{{number}}",
+      "rowLabel": "Assumed {{unit}} — {{service}}",
+      "subtitle": "flat per period",
+      "title": "Assumptions",
+      "varyByPeriod": "vary by period"
+    },
+    "emptyScenario": {
+      "description": "This contract has no contract lines. Add contract lines first, then come back to simulate.",
+      "title": "Nothing to simulate yet"
+    },
+    "explanation": {
+      "amount": "Amount",
+      "close": "Close",
+      "inputs": "Inputs",
+      "noBreakdown": "No breakdown available",
+      "steps": "Arithmetic",
+      "title": "Charge breakdown"
+    },
+    "invoiceDetail": {
+      "columns": {
+        "amount": "Amount",
+        "line": "Line",
+        "qty": "Qty",
+        "rate": "Rate"
+      },
+      "draftNote": "draft, not issued",
+      "explainHint": "Show how this amount was computed",
+      "subtotal": "Subtotal",
+      "tax": "Tax",
+      "title": "Projected invoice — {{period}}",
+      "total": "Total"
+    },
+    "loadFailed": "Failed to load the contract scenario.",
+    "loadingSnapshot": "Loading scenario…",
+    "runBar": {
+      "compareToggle": "Compare to live contract",
+      "horizonOption": "{{count}} periods",
+      "lastRun": "Simulated just now · {{count}} periods",
+      "neverRun": "Not simulated yet",
+      "simulate": "Simulate",
+      "simulating": "Simulating…",
+      "stale": "Scenario edited — simulate to refresh"
+    },
+    "scenario": {
+      "bucketIncluded": "Includes {{hours}} hrs; rate above is the overage rate",
+      "defaultRate": "default",
+      "lineCount": "{{count}} lines",
+      "modified": "Modified",
+      "resetAll": "Reset all",
+      "title": "Scenario"
+    },
+    "timeline": {
+      "deltaDown": "−{{amount}} vs live",
+      "deltaUp": "+{{amount}} vs live",
+      "empty": "Press Simulate to project the upcoming billing periods for this scenario.",
+      "noDelta": "no change vs live"
+    },
+    "unavailable": {
+      "description": "The contract simulator is available in the Enterprise edition of Alga PSA.",
+      "title": "Enterprise Feature"
     }
   }
 }

@@ -259,7 +259,9 @@
       "invoices": "Facturen",
       "lines": "Contractlijnen",
       "overview": "Overzicht",
-      "pricing": "Prijsschema's"
+      "pricing": "Prijsschema's",
+      "simulator": "Simulator",
+      "enterpriseBadge": "Enterprise"
     },
     "validation": {
       "billingFrequencyRequired": "Factureringsfrequentie is vereist.",
@@ -2067,6 +2069,72 @@
         "contract": "Als je deze terugkerende regel opslaat, zouden toekomstige perioden worden gematerialiseerd in een verjaardagsgebaseerde voorvertoning verankerd op de 8e vóór de factuurgeneratie.",
         "client": "Als je deze terugkerende regel opslaat, zouden toekomstige perioden worden gematerialiseerd in de voorvertoning van het facturatieschema van de klant vóór de factuurgeneratie."
       }
+    }
+  },
+  "contractSimulator": {
+    "assumptions": {
+      "empty": "Scenario met alleen vaste prijzen — niets aan te nemen.",
+      "hoursUnit": "uur",
+      "periodLabel": "P{{number}}",
+      "rowLabel": "Aangenomen {{unit}} — {{service}}",
+      "subtitle": "vast per periode",
+      "title": "Aannames",
+      "varyByPeriod": "variëren per periode"
+    },
+    "emptyScenario": {
+      "description": "Dit contract heeft geen contractregels. Voeg eerst contractregels toe en kom dan terug om te simuleren.",
+      "title": "Nog niets te simuleren"
+    },
+    "explanation": {
+      "amount": "Bedrag",
+      "close": "Sluiten",
+      "inputs": "Invoer",
+      "noBreakdown": "Geen specificatie beschikbaar",
+      "steps": "Berekening",
+      "title": "Specificatie van het bedrag"
+    },
+    "invoiceDetail": {
+      "columns": {
+        "amount": "Bedrag",
+        "line": "Regel",
+        "qty": "Aantal",
+        "rate": "Tarief"
+      },
+      "draftNote": "concept, niet uitgegeven",
+      "explainHint": "Toon hoe dit bedrag is berekend",
+      "subtotal": "Subtotaal",
+      "tax": "Btw",
+      "title": "Geprojecteerde factuur — {{period}}",
+      "total": "Totaal"
+    },
+    "loadFailed": "Het contractscenario kon niet worden geladen.",
+    "loadingSnapshot": "Scenario laden…",
+    "runBar": {
+      "compareToggle": "Vergelijken met live contract",
+      "horizonOption": "{{count}} perioden",
+      "lastRun": "Zojuist gesimuleerd · {{count}} perioden",
+      "neverRun": "Nog niet gesimuleerd",
+      "simulate": "Simuleren",
+      "simulating": "Simuleren…",
+      "stale": "Scenario bewerkt — simuleer om te vernieuwen"
+    },
+    "scenario": {
+      "bucketIncluded": "Inclusief {{hours}} uur; het tarief hierboven is het meerverbruikstarief",
+      "defaultRate": "standaard",
+      "lineCount": "{{count}} regels",
+      "modified": "Gewijzigd",
+      "resetAll": "Alles resetten",
+      "title": "Scenario"
+    },
+    "timeline": {
+      "deltaDown": "−{{amount}} t.o.v. live",
+      "deltaUp": "+{{amount}} t.o.v. live",
+      "empty": "Druk op Simuleren om de komende factureringsperioden voor dit scenario te projecteren.",
+      "noDelta": "geen verschil t.o.v. live"
+    },
+    "unavailable": {
+      "description": "De contractsimulator is beschikbaar in de Enterprise-editie van Alga PSA.",
+      "title": "Enterprise-functie"
     }
   }
 }

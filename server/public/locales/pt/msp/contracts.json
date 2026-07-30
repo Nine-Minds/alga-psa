@@ -259,7 +259,9 @@
       "invoices": "Faturas",
       "lines": "Linhas de Contrato",
       "overview": "Visão geral",
-      "pricing": "Cronogramas de preços"
+      "pricing": "Cronogramas de preços",
+      "simulator": "Simulador",
+      "enterpriseBadge": "Enterprise"
     },
     "validation": {
       "billingFrequencyRequired": "A frequência de cobrança é obrigatória.",
@@ -2067,6 +2069,72 @@
         "contract": "Se você salvar esta linha recorrente, os períodos futuros se materializarão em uma visualização estilo aniversário ancorada no dia 8 antes da geração da fatura.",
         "client": "Se você salvar essa linha recorrente, os períodos futuros se materializarão na visualização da programação de faturamento do cliente antes da geração da fatura."
       }
+    }
+  },
+  "contractSimulator": {
+    "assumptions": {
+      "empty": "Cenário apenas de preço fixo — nada a assumir.",
+      "hoursUnit": "h",
+      "periodLabel": "P{{number}}",
+      "rowLabel": "{{unit}} assumidas — {{service}}",
+      "subtitle": "fixo por período",
+      "title": "Pressupostos",
+      "varyByPeriod": "variar por período"
+    },
+    "emptyScenario": {
+      "description": "Este contrato não tem linhas de contrato. Adicione primeiro linhas de contrato e depois volte para simular.",
+      "title": "Ainda nada para simular"
+    },
+    "explanation": {
+      "amount": "Valor",
+      "close": "Fechar",
+      "inputs": "Entradas",
+      "noBreakdown": "Nenhum detalhamento disponível",
+      "steps": "Cálculo",
+      "title": "Detalhamento da cobrança"
+    },
+    "invoiceDetail": {
+      "columns": {
+        "amount": "Valor",
+        "line": "Linha",
+        "qty": "Qtd.",
+        "rate": "Tarifa"
+      },
+      "draftNote": "rascunho, não emitida",
+      "explainHint": "Mostrar como este valor foi calculado",
+      "subtotal": "Subtotal",
+      "tax": "Impostos",
+      "title": "Fatura projetada — {{period}}",
+      "total": "Total"
+    },
+    "loadFailed": "Falha ao carregar o cenário do contrato.",
+    "loadingSnapshot": "Carregando cenário…",
+    "runBar": {
+      "compareToggle": "Comparar com o contrato ativo",
+      "horizonOption": "{{count}} períodos",
+      "lastRun": "Simulado agora mesmo · {{count}} períodos",
+      "neverRun": "Ainda não simulado",
+      "simulate": "Simular",
+      "simulating": "Simulando…",
+      "stale": "Cenário editado — simule para atualizar"
+    },
+    "scenario": {
+      "bucketIncluded": "Inclui {{hours}} h; a tarifa acima é a tarifa excedente",
+      "defaultRate": "padrão",
+      "lineCount": "{{count}} linhas",
+      "modified": "Modificado",
+      "resetAll": "Redefinir tudo",
+      "title": "Cenário"
+    },
+    "timeline": {
+      "deltaDown": "−{{amount}} vs. ativo",
+      "deltaUp": "+{{amount}} vs. ativo",
+      "empty": "Pressione Simular para projetar os próximos períodos de faturamento deste cenário.",
+      "noDelta": "sem alteração vs. ativo"
+    },
+    "unavailable": {
+      "description": "O simulador de contratos está disponível na edição Enterprise do Alga PSA.",
+      "title": "Recurso Enterprise"
     }
   }
 }

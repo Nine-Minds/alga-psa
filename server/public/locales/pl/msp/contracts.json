@@ -259,7 +259,9 @@
       "invoices": "Faktury",
       "lines": "Linie kontraktowe",
       "overview": "Przegląd",
-      "pricing": "Harmonogramy cenowe"
+      "pricing": "Harmonogramy cenowe",
+      "simulator": "Symulator",
+      "enterpriseBadge": "Enterprise"
     },
     "validation": {
       "billingFrequencyRequired": "Wymagana jest częstotliwość rozliczeń.",
@@ -2071,6 +2073,72 @@
         "contract": "Jeśli zapiszesz tę cykliczną linię, przyszłe okresy zostałyby zmaterializowane w podglądzie typu rocznicowego zakotwiczonym na 8. dniu przed wygenerowaniem faktur.",
         "client": "Jeśli zapiszesz tę cykliczną linię, przyszłe okresy zostałyby zmaterializowane w podglądzie harmonogramu rozliczeń klienta przed wygenerowaniem faktur."
       }
+    }
+  },
+  "contractSimulator": {
+    "assumptions": {
+      "empty": "Scenariusz tylko ze stałą ceną — nic do założenia.",
+      "hoursUnit": "godz.",
+      "periodLabel": "P{{number}}",
+      "rowLabel": "Zakładane {{unit}} — {{service}}",
+      "subtitle": "stałe na okres",
+      "title": "Założenia",
+      "varyByPeriod": "różnicuj według okresu"
+    },
+    "emptyScenario": {
+      "description": "Ta umowa nie ma pozycji umowy. Najpierw dodaj pozycje umowy, a następnie wróć, aby przeprowadzić symulację.",
+      "title": "Na razie nie ma czego symulować"
+    },
+    "explanation": {
+      "amount": "Kwota",
+      "close": "Zamknij",
+      "inputs": "Dane wejściowe",
+      "noBreakdown": "Brak dostępnego zestawienia",
+      "steps": "Obliczenia",
+      "title": "Zestawienie opłaty"
+    },
+    "invoiceDetail": {
+      "columns": {
+        "amount": "Kwota",
+        "line": "Pozycja",
+        "qty": "Ilość",
+        "rate": "Stawka"
+      },
+      "draftNote": "wersja robocza, nie wystawiona",
+      "explainHint": "Pokaż, jak obliczono tę kwotę",
+      "subtotal": "Suma częściowa",
+      "tax": "Podatek",
+      "title": "Prognozowana faktura — {{period}}",
+      "total": "Razem"
+    },
+    "loadFailed": "Nie udało się załadować scenariusza umowy.",
+    "loadingSnapshot": "Ładowanie scenariusza…",
+    "runBar": {
+      "compareToggle": "Porównaj z aktywną umową",
+      "horizonOption": "{{count}} okresów",
+      "lastRun": "Zasymulowano przed chwilą · {{count}} okresów",
+      "neverRun": "Jeszcze nie symulowano",
+      "simulate": "Symuluj",
+      "simulating": "Symulowanie…",
+      "stale": "Scenariusz zmieniony — symuluj, aby odświeżyć"
+    },
+    "scenario": {
+      "bucketIncluded": "Obejmuje {{hours}} godz.; powyższa stawka to stawka za nadwyżkę",
+      "defaultRate": "domyślna",
+      "lineCount": "{{count}} pozycji",
+      "modified": "Zmodyfikowano",
+      "resetAll": "Resetuj wszystko",
+      "title": "Scenariusz"
+    },
+    "timeline": {
+      "deltaDown": "−{{amount}} wzgl. aktywnej",
+      "deltaUp": "+{{amount}} wzgl. aktywnej",
+      "empty": "Naciśnij Symuluj, aby zaprognozować nadchodzące okresy rozliczeniowe dla tego scenariusza.",
+      "noDelta": "bez zmian wzgl. aktywnej"
+    },
+    "unavailable": {
+      "description": "Symulator umów jest dostępny w wersji Enterprise Alga PSA.",
+      "title": "Funkcja Enterprise"
     }
   }
 }

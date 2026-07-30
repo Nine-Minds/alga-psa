@@ -259,7 +259,9 @@
       "invoices": "Factures",
       "lines": "Lignes de contrat",
       "overview": "Aperçu",
-      "pricing": "Barèmes de prix"
+      "pricing": "Barèmes de prix",
+      "simulator": "Simulateur",
+      "enterpriseBadge": "Enterprise"
     },
     "validation": {
       "billingFrequencyRequired": "La fréquence de facturation est requise.",
@@ -2067,6 +2069,72 @@
         "contract": "Si vous enregistrez cette ligne récurrente, les périodes futures se matérialiseraient selon un aperçu de type anniversaire ancré au 8 avant la génération des factures.",
         "client": "Si vous enregistrez cette ligne récurrente, les périodes futures se matérialiseraient selon l'aperçu du calendrier de facturation client avant la génération des factures."
       }
+    }
+  },
+  "contractSimulator": {
+    "assumptions": {
+      "empty": "Scénario à prix fixe uniquement — rien à supposer.",
+      "hoursUnit": "h",
+      "periodLabel": "P{{number}}",
+      "rowLabel": "{{unit}} supposées — {{service}}",
+      "subtitle": "forfaitaire par période",
+      "title": "Hypothèses",
+      "varyByPeriod": "varier par période"
+    },
+    "emptyScenario": {
+      "description": "Ce contrat ne comporte aucune ligne de contrat. Ajoutez d'abord des lignes de contrat, puis revenez pour simuler.",
+      "title": "Rien à simuler pour le moment"
+    },
+    "explanation": {
+      "amount": "Montant",
+      "close": "Fermer",
+      "inputs": "Entrées",
+      "noBreakdown": "Aucun détail disponible",
+      "steps": "Calcul",
+      "title": "Détail du montant"
+    },
+    "invoiceDetail": {
+      "columns": {
+        "amount": "Montant",
+        "line": "Ligne",
+        "qty": "Qté",
+        "rate": "Taux"
+      },
+      "draftNote": "brouillon, non émise",
+      "explainHint": "Afficher comment ce montant a été calculé",
+      "subtotal": "Sous-total",
+      "tax": "Taxes",
+      "title": "Facture projetée — {{period}}",
+      "total": "Total"
+    },
+    "loadFailed": "Échec du chargement du scénario de contrat.",
+    "loadingSnapshot": "Chargement du scénario…",
+    "runBar": {
+      "compareToggle": "Comparer au contrat en vigueur",
+      "horizonOption": "{{count}} périodes",
+      "lastRun": "Simulé à l'instant · {{count}} périodes",
+      "neverRun": "Pas encore simulé",
+      "simulate": "Simuler",
+      "simulating": "Simulation en cours…",
+      "stale": "Scénario modifié — simulez pour actualiser"
+    },
+    "scenario": {
+      "bucketIncluded": "Inclut {{hours}} h ; le taux ci-dessus est le taux de dépassement",
+      "defaultRate": "par défaut",
+      "lineCount": "{{count}} lignes",
+      "modified": "Modifié",
+      "resetAll": "Tout réinitialiser",
+      "title": "Scénario"
+    },
+    "timeline": {
+      "deltaDown": "−{{amount}} vs contrat en vigueur",
+      "deltaUp": "+{{amount}} vs contrat en vigueur",
+      "empty": "Appuyez sur Simuler pour projeter les prochaines périodes de facturation de ce scénario.",
+      "noDelta": "aucun changement vs contrat en vigueur"
+    },
+    "unavailable": {
+      "description": "Le simulateur de contrat est disponible dans l'édition Enterprise d'Alga PSA.",
+      "title": "Fonctionnalité Enterprise"
     }
   }
 }

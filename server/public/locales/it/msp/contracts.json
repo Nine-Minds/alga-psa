@@ -259,7 +259,9 @@
       "invoices": "Fatture",
       "lines": "Linee contrattuali",
       "overview": "Panoramica",
-      "pricing": "Piani dei prezzi"
+      "pricing": "Piani dei prezzi",
+      "simulator": "Simulatore",
+      "enterpriseBadge": "Enterprise"
     },
     "validation": {
       "billingFrequencyRequired": "La frequenza di fatturazione è obbligatoria.",
@@ -2067,6 +2069,72 @@
         "contract": "Se salvi questa riga ricorrente, i periodi futuri si materializzerebbero in un'anteprima di tipo anniversario ancorata all'8 prima della generazione delle fatture.",
         "client": "Se salvi questa riga ricorrente, i periodi futuri si materializzerebbero nell'anteprima della pianificazione di fatturazione del cliente prima della generazione delle fatture."
       }
+    }
+  },
+  "contractSimulator": {
+    "assumptions": {
+      "empty": "Scenario a solo prezzo fisso — niente da ipotizzare.",
+      "hoursUnit": "ore",
+      "periodLabel": "P{{number}}",
+      "rowLabel": "{{unit}} ipotizzate — {{service}}",
+      "subtitle": "fisso per periodo",
+      "title": "Ipotesi",
+      "varyByPeriod": "varia per periodo"
+    },
+    "emptyScenario": {
+      "description": "Questo contratto non ha righe di contratto. Aggiungi prima le righe di contratto, poi torna per simulare.",
+      "title": "Ancora niente da simulare"
+    },
+    "explanation": {
+      "amount": "Importo",
+      "close": "Chiudi",
+      "inputs": "Input",
+      "noBreakdown": "Nessun dettaglio disponibile",
+      "steps": "Calcolo",
+      "title": "Dettaglio dell'addebito"
+    },
+    "invoiceDetail": {
+      "columns": {
+        "amount": "Importo",
+        "line": "Riga",
+        "qty": "Qtà",
+        "rate": "Tariffa"
+      },
+      "draftNote": "bozza, non emessa",
+      "explainHint": "Mostra come è stato calcolato questo importo",
+      "subtotal": "Subtotale",
+      "tax": "Imposte",
+      "title": "Fattura prevista — {{period}}",
+      "total": "Totale"
+    },
+    "loadFailed": "Impossibile caricare lo scenario del contratto.",
+    "loadingSnapshot": "Caricamento dello scenario…",
+    "runBar": {
+      "compareToggle": "Confronta con il contratto attivo",
+      "horizonOption": "{{count}} periodi",
+      "lastRun": "Simulato proprio ora · {{count}} periodi",
+      "neverRun": "Non ancora simulato",
+      "simulate": "Simula",
+      "simulating": "Simulazione in corso…",
+      "stale": "Scenario modificato — simula per aggiornare"
+    },
+    "scenario": {
+      "bucketIncluded": "Include {{hours}} ore; la tariffa sopra è la tariffa di eccedenza",
+      "defaultRate": "predefinita",
+      "lineCount": "{{count}} righe",
+      "modified": "Modificato",
+      "resetAll": "Reimposta tutto",
+      "title": "Scenario"
+    },
+    "timeline": {
+      "deltaDown": "−{{amount}} vs attivo",
+      "deltaUp": "+{{amount}} vs attivo",
+      "empty": "Premi Simula per proiettare i prossimi periodi di fatturazione per questo scenario.",
+      "noDelta": "nessuna variazione vs attivo"
+    },
+    "unavailable": {
+      "description": "Il simulatore di contratti è disponibile nell'edizione Enterprise di Alga PSA.",
+      "title": "Funzionalità Enterprise"
     }
   }
 }

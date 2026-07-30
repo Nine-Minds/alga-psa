@@ -259,7 +259,9 @@
       "invoices": "Rechnungen",
       "lines": "Vertragslinien",
       "overview": "Überblick",
-      "pricing": "Preispläne"
+      "pricing": "Preispläne",
+      "simulator": "Simulator",
+      "enterpriseBadge": "Enterprise"
     },
     "validation": {
       "billingFrequencyRequired": "Die Häufigkeit der Abrechnung ist erforderlich.",
@@ -2067,6 +2069,72 @@
         "contract": "Wenn du diese wiederkehrende Zeile speicherst, würden zukünftige Zeiträume in einer jubiläumsbasierten Vorschau am 8. vor der Rechnungserstellung materialisiert.",
         "client": "Wenn du diese wiederkehrende Zeile speicherst, würden zukünftige Zeiträume in der Vorschau des Kundenabrechnungsplans vor der Rechnungserstellung materialisiert."
       }
+    }
+  },
+  "contractSimulator": {
+    "assumptions": {
+      "empty": "Nur-Festpreis-Szenario — nichts anzunehmen.",
+      "hoursUnit": "Std.",
+      "periodLabel": "P{{number}}",
+      "rowLabel": "Angenommene {{unit}} — {{service}}",
+      "subtitle": "pauschal pro Zeitraum",
+      "title": "Annahmen",
+      "varyByPeriod": "pro Zeitraum variieren"
+    },
+    "emptyScenario": {
+      "description": "Dieser Vertrag hat keine Vertragspositionen. Fügen Sie zuerst Vertragspositionen hinzu und kehren Sie dann zur Simulation zurück.",
+      "title": "Noch nichts zu simulieren"
+    },
+    "explanation": {
+      "amount": "Betrag",
+      "close": "Schließen",
+      "inputs": "Eingaben",
+      "noBreakdown": "Keine Aufschlüsselung verfügbar",
+      "steps": "Berechnung",
+      "title": "Kostenaufschlüsselung"
+    },
+    "invoiceDetail": {
+      "columns": {
+        "amount": "Betrag",
+        "line": "Position",
+        "qty": "Menge",
+        "rate": "Satz"
+      },
+      "draftNote": "Entwurf, nicht ausgestellt",
+      "explainHint": "Anzeigen, wie dieser Betrag berechnet wurde",
+      "subtotal": "Zwischensumme",
+      "tax": "Steuer",
+      "title": "Prognostizierte Rechnung — {{period}}",
+      "total": "Gesamt"
+    },
+    "loadFailed": "Das Vertragsszenario konnte nicht geladen werden.",
+    "loadingSnapshot": "Szenario wird geladen…",
+    "runBar": {
+      "compareToggle": "Mit Live-Vertrag vergleichen",
+      "horizonOption": "{{count}} Zeiträume",
+      "lastRun": "Gerade simuliert · {{count}} Zeiträume",
+      "neverRun": "Noch nicht simuliert",
+      "simulate": "Simulieren",
+      "simulating": "Simulation läuft…",
+      "stale": "Szenario geändert — zum Aktualisieren simulieren"
+    },
+    "scenario": {
+      "bucketIncluded": "Beinhaltet {{hours}} Std.; der obige Satz ist der Mehrverbrauchssatz",
+      "defaultRate": "Standard",
+      "lineCount": "{{count}} Positionen",
+      "modified": "Geändert",
+      "resetAll": "Alle zurücksetzen",
+      "title": "Szenario"
+    },
+    "timeline": {
+      "deltaDown": "−{{amount}} ggü. live",
+      "deltaUp": "+{{amount}} ggü. live",
+      "empty": "Drücken Sie auf Simulieren, um die kommenden Abrechnungszeiträume für dieses Szenario zu prognostizieren.",
+      "noDelta": "keine Änderung ggü. live"
+    },
+    "unavailable": {
+      "description": "Der Vertragssimulator ist in der Enterprise-Edition von Alga PSA verfügbar.",
+      "title": "Enterprise-Funktion"
     }
   }
 }
