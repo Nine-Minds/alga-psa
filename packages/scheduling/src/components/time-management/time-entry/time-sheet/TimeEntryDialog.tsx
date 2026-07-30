@@ -52,6 +52,11 @@ interface TimeEntryDialogProps {
   inDrawer?: boolean;
 }
 
+function splitPaymentWarning(message: string): [string, string] {
+  const match = message.match(/^(.+?[.!?])(?:\s+|$)(.*)$/s);
+  return match ? [match[1], match[2]] : [message, ''];
+}
+
 // Main dialog content component
 const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeEntryDialogProps): React.JSX.Element {
   const {
@@ -302,6 +307,13 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
   const title = hasExistingEntry
     ? `${isEditable ? 'Edit' : 'View'} Time Entry for ${workItem.name}`
     : `Add New Time Entry for ${workItem.name}`;
+  // LEVERAGE: pattern payment-warning-banner — this duplicates the project-billing warning presentation because scheduling cannot import billing UI; extract through the cross-feature composition layer if another consumer appears.
+  const [paymentWarningEmphasis, paymentWarningRest] = splitPaymentWarning(t(
+    'workItemPicker.paymentWarning',
+    {
+      defaultValue: 'Payment is required for a flagged project billing milestone and has not been confirmed. Confirm payment before continuing work.',
+    },
+  ));
   const footerActions = (
     <div className="flex justify-end space-x-2">
       <Button
@@ -338,9 +350,8 @@ const TimeEntryDialogContent = memo(function TimeEntryDialogContent(props: TimeE
                 defaultValue: 'Payment prerequisite warning',
               })}
             </span>{' '}
-            {t('workItemPicker.paymentWarning', {
-              defaultValue: 'Payment is required for a flagged project billing milestone and has not been confirmed. Confirm payment before continuing work.',
-            })}
+            <strong>{paymentWarningEmphasis}</strong>
+            {paymentWarningRest && <> {paymentWarningRest}</>}
           </AlertDescription>
         </Alert>
       )}

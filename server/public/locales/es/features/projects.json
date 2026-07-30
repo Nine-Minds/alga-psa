@@ -1618,6 +1618,7 @@
       "manualSub": "Desencadenante manual",
       "phaseRemoved": "Manual · fase eliminada",
       "phaseTrigger": "Finalización de fase",
+      "phaseOverdue": "La fecha de finalización de la fase ya pasó — marque la fase como completada para que esta entrada quede lista",
       "approve": "Aprobar",
       "approveInvoice": "Aprobar y facturar",
       "hold": "Retener",
@@ -1690,9 +1691,9 @@
       "saving": "Guardando...",
       "errorAmount": "Introduzca un límite mayor que cero"
     },
+    "generateProjectInvoice": "Generar factura del proyecto",
+    "generatingProjectInvoice": "Generando factura...",
     "tm": {
-      "generateInvoice": "Generar factura del proyecto",
-      "generatingInvoice": "Generando factura...",
       "invoiceGenerated": "Factura del proyecto generada"
     },
     "overrides": {

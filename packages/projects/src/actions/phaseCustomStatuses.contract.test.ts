@@ -192,7 +192,7 @@ describe('per-phase custom status scenarios', () => {
 
     it('refreshes status count after dialog closes', () => {
       // The useEffect depends on showStatusDialog, so closing the dialog triggers a re-fetch
-      expect(phaseListItemSource).toContain('[isEditing, showStatusDialog, projectId, phase.phase_id]');
+      expect(phaseListItemSource).toContain('[effectiveIsEditing, showStatusDialog, projectId, phase.phase_id]');
     });
   });
 

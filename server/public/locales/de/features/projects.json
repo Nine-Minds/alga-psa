@@ -1618,6 +1618,7 @@
       "manualSub": "Manueller Auslöser",
       "phaseRemoved": "Manuell · Phase entfernt",
       "phaseTrigger": "Phasenabschluss",
+      "phaseOverdue": "Das Enddatum der Phase ist verstrichen — markieren Sie die Phase als abgeschlossen, damit dieser Eintrag abrechnungsbereit wird",
       "approve": "Genehmigen",
       "approveInvoice": "Genehmigen und abrechnen",
       "hold": "Zurückstellen",
@@ -1690,9 +1691,9 @@
       "saving": "Wird gespeichert...",
       "errorAmount": "Geben Sie eine Obergrenze größer als null ein"
     },
+    "generateProjectInvoice": "Projektrechnung erstellen",
+    "generatingProjectInvoice": "Rechnung wird erstellt...",
     "tm": {
-      "generateInvoice": "Projektrechnung erstellen",
-      "generatingInvoice": "Rechnung wird erstellt...",
       "invoiceGenerated": "Projektrechnung erstellt"
     },
     "overrides": {

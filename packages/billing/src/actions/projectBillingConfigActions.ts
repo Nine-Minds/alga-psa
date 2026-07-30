@@ -197,15 +197,22 @@ async function listScheduleEntryViews(
       ? []
       : tenantDb(connection, tenant).table('project_phases')
         .whereIn('phase_id', phaseIds)
-        .select<{ phase_id: string; phase_name: string }[]>('phase_id', 'phase_name'),
+        .select<{ phase_id: string; phase_name: string; end_date: Date | string | null }[]>(
+          'phase_id',
+          'phase_name',
+          'end_date',
+        ),
     invoiceIds.length === 0
       ? []
       : tenantDb(connection, tenant).table('invoices')
         .whereIn('invoice_id', invoiceIds)
         .select<{ invoice_id: string; invoice_number: string }[]>('invoice_id', 'invoice_number'),
   ]);
-  const phaseNames = new Map<string, string>(
-    phaseRows.map((row): [string, string] => [row.phase_id, row.phase_name]),
+  const phasesById = new Map<string, { name: string; endDate: Date | string | null }>(
+    phaseRows.map((row): [string, { name: string; endDate: Date | string | null }] => [
+      row.phase_id,
+      { name: row.phase_name, endDate: row.end_date },
+    ]),
   );
   const invoiceNumbers = new Map<string, string>(
     invoiceRows.map((row): [string, string] => [row.invoice_id, row.invoice_number]),
@@ -214,12 +221,14 @@ async function listScheduleEntryViews(
 
   return entries.map((entry, index) => {
     const phaseDeleted = entry.trigger_type === 'phase'
-      && (entry.phase_id === null || !phaseNames.has(entry.phase_id));
+      && (entry.phase_id === null || !phasesById.has(entry.phase_id));
+    const phase = entry.phase_id ? phasesById.get(entry.phase_id) : undefined;
     return {
       ...entry,
       trigger_type: phaseDeleted ? 'manual' : entry.trigger_type,
       computed_amount: computedAmounts[index],
-      phase_name: entry.phase_id ? phaseNames.get(entry.phase_id) ?? null : null,
+      phase_name: phase?.name ?? null,
+      phase_end_date: phase?.endDate ?? null,
       invoice_number: entry.invoice_id ? invoiceNumbers.get(entry.invoice_id) ?? null : null,
       phase_deleted: phaseDeleted,
     };
@@ -623,6 +632,7 @@ export const recalculateProjectTotalFromSchedule = withAuth(withProjectBillingAc
         ...entry,
         computed_amount: amounts[index],
         phase_name: null,
+        phase_end_date: null,
         invoice_number: null,
         phase_deleted: false,
       })),

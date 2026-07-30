@@ -1618,6 +1618,7 @@
       "manualSub": "Attivazione manuale",
       "phaseRemoved": "Manuale · fase rimossa",
       "phaseTrigger": "Completamento fase",
+      "phaseOverdue": "La data di fine della fase è trascorsa — contrassegna la fase come completata per rendere pronta questa voce",
       "approve": "Approva",
       "approveInvoice": "Approva e fattura",
       "hold": "Sospendi",
@@ -1690,9 +1691,9 @@
       "saving": "Salvataggio...",
       "errorAmount": "Inserisci un limite maggiore di zero"
     },
+    "generateProjectInvoice": "Genera fattura progetto",
+    "generatingProjectInvoice": "Generazione fattura...",
     "tm": {
-      "generateInvoice": "Genera fattura progetto",
-      "generatingInvoice": "Generazione fattura...",
       "invoiceGenerated": "Fattura progetto generata"
     },
     "overrides": {

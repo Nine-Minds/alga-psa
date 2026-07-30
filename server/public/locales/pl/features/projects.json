@@ -1644,6 +1644,7 @@
       "manualSub": "Wyzwalacz ręczny",
       "phaseRemoved": "Ręcznie · faza usunięta",
       "phaseTrigger": "Ukończenie fazy",
+      "phaseOverdue": "Data zakończenia fazy minęła — oznacz fazę jako ukończoną, aby przygotować ten wpis",
       "approve": "Zatwierdź",
       "approveInvoice": "Zatwierdź i zafakturuj",
       "hold": "Wstrzymaj",
@@ -1716,9 +1717,9 @@
       "saving": "Zapisywanie...",
       "errorAmount": "Wprowadź limit większy od zera"
     },
+    "generateProjectInvoice": "Wygeneruj fakturę projektu",
+    "generatingProjectInvoice": "Generowanie faktury...",
     "tm": {
-      "generateInvoice": "Wygeneruj fakturę projektu",
-      "generatingInvoice": "Generowanie faktury...",
       "invoiceGenerated": "Faktura projektu wygenerowana"
     },
     "overrides": {
