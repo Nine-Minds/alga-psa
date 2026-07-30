@@ -142,6 +142,16 @@ const servicePeriodPostInventoryRefs = new Set([
   'packages/billing/src/actions/profitabilityReportActions.ts',
   'packages/billing/src/actions/recurringApprovalBlockers.ts',
   'packages/billing/src/actions/recurringServicePeriodActions.ts',
+  // The charge-compute extraction (feature/billing-contract-simulator) moved
+  // billingEngine.ts compute logic — including its service-period field
+  // handling — into the pure compute layer; billingEngine.ts itself is
+  // excluded by name above.
+  'packages/billing/src/lib/billing/compute/compute.test.ts',
+  'packages/billing/src/lib/billing/compute/computeBucketCharges.ts',
+  'packages/billing/src/lib/billing/compute/computeFixedCharges.ts',
+  'packages/billing/src/lib/billing/compute/computeTimeBasedCharges.ts',
+  'packages/billing/src/lib/billing/compute/computeUsageBasedCharges.ts',
+  'packages/billing/src/lib/billing/compute/types.ts',
   'packages/billing/src/components/billing-dashboard/AutomaticInvoices.tsx',
   'packages/billing/src/components/invoice-designer/inspector/TableEditorWidget.integration.test.tsx',
   'packages/billing/src/components/invoice-designer/inspector/widgets/TableEditorWidget.tsx',
