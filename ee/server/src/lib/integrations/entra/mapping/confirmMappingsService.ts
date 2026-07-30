@@ -1,10 +1,11 @@
 import { createTenantKnex, runWithTenant } from '@/lib/db';
 import { tenantDb } from '@alga-psa/db';
+import type { Knex } from 'knex';
 
 export interface ConfirmEntraMappingInput {
   managedTenantId: string;
   clientId?: string | null;
-  mappingState?: 'mapped' | 'skip_for_now' | 'needs_review';
+  mappingState?: 'mapped' | 'create_new' | 'skip_for_now' | 'needs_review';
   confidenceScore?: number | null;
 }
 
@@ -12,8 +13,21 @@ export interface ConfirmEntraMappingsResult {
   confirmedMappings: number;
 }
 
-function normalizeMappingState(input: ConfirmEntraMappingInput): 'mapped' | 'skip_for_now' | 'needs_review' {
-  if (input.mappingState === 'skip_for_now' || input.mappingState === 'needs_review') {
+export interface ConfirmEntraMappingsParams {
+  tenant: string;
+  userId: string;
+  mappings: ConfirmEntraMappingInput[];
+}
+
+function normalizeMappingState(
+  input: ConfirmEntraMappingInput
+): 'mapped' | 'create_new' | 'skip_for_now' | 'needs_review' {
+  if (
+    input.mappingState === 'mapped'
+    || input.mappingState === 'create_new'
+    || input.mappingState === 'skip_for_now'
+    || input.mappingState === 'needs_review'
+  ) {
     return input.mappingState;
   }
   if (input.clientId) {
@@ -22,23 +36,18 @@ function normalizeMappingState(input: ConfirmEntraMappingInput): 'mapped' | 'ski
   return 'skip_for_now';
 }
 
-export async function confirmEntraMappings(
-  params: {
-    tenant: string;
-    userId: string;
-    mappings: ConfirmEntraMappingInput[];
-  }
+export async function confirmEntraMappingsWithDb(
+  knex: Knex | Knex.Transaction,
+  params: ConfirmEntraMappingsParams
 ): Promise<ConfirmEntraMappingsResult> {
   if (params.mappings.length === 0) {
     return { confirmedMappings: 0 };
   }
 
-  return runWithTenant(params.tenant, async () => {
-    const { knex } = await createTenantKnex();
-    const now = knex.fn.now();
-    let confirmedMappings = 0;
+  const now = knex.fn.now();
+  let confirmedMappings = 0;
 
-    await knex.transaction(async (trx) => {
+  await knex.transaction(async (trx) => {
       const db = tenantDb(trx, params.tenant);
       for (const mapping of params.mappings) {
         const managedTenantId = String(mapping.managedTenantId || '').trim();
@@ -46,8 +55,12 @@ export async function confirmEntraMappings(
           continue;
         }
 
-        const clientId = mapping.clientId ? String(mapping.clientId).trim() : null;
         const mappingState = normalizeMappingState(mapping);
+        const requestedClientId = mapping.clientId ? String(mapping.clientId).trim() : null;
+        if (mappingState === 'mapped' && !requestedClientId) {
+          throw new Error('A mapped Entra tenant decision requires a client ID.');
+        }
+        const clientId = mappingState === 'mapped' ? requestedClientId : null;
         const confidenceScore =
           typeof mapping.confidenceScore === 'number' ? mapping.confidenceScore : null;
 
@@ -121,8 +134,16 @@ export async function confirmEntraMappings(
 
         confirmedMappings += 1;
       }
-    });
+  });
 
-    return { confirmedMappings };
+  return { confirmedMappings };
+}
+
+export async function confirmEntraMappings(
+  params: ConfirmEntraMappingsParams
+): Promise<ConfirmEntraMappingsResult> {
+  return runWithTenant(params.tenant, async () => {
+    const { knex } = await createTenantKnex();
+    return confirmEntraMappingsWithDb(knex, params);
   });
 }

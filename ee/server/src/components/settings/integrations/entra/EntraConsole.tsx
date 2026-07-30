@@ -731,7 +731,7 @@ export function EntraConsole({
   /** Why "Sync now" is unavailable, in the words the operator needs. */
   const syncBlockedReason = !connectionHealthy
     ? t('integrations.entra.console.actions.syncNeedsConnection')
-    : mappings.length === 0
+    : mappings.length + (status?.pendingCreateTenantCount ?? 0) === 0
       ? t('integrations.entra.console.actions.syncNeedsClients')
       : null;
 

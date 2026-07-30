@@ -377,4 +377,20 @@ describe('EntraSetupWizard', () => {
     expect(stepFour?.getAttribute('data-step-state')).toBe('current');
     expect(stepFour?.querySelector('#entra-pilot-control-stub')).not.toBeNull();
   });
+
+  it('T146: advances to explicit sync when only create-new decisions are confirmed', () => {
+    renderWizard(
+      statusOf({
+        status: 'connected',
+        connectionType: 'direct',
+        lastDiscoveryAt: '2026-07-25T00:00:00.000Z',
+        mappedTenantCount: 0,
+        pendingCreateTenantCount: 1,
+      })
+    );
+
+    const stepFour = document.getElementById('entra-setup-step-4');
+    expect(stepFour?.getAttribute('data-step-state')).toBe('current');
+    expect(stepFour?.querySelector('#entra-pilot-control-stub')).not.toBeNull();
+  });
 });

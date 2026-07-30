@@ -1364,5 +1364,90 @@
     "locations": [
       "ee/docs"
     ]
+  },
+  {
+    "id": "F121",
+    "description": "Completed-sync user-count projection: persist each successful non-dry-run tenant sync's eligible Entra user count (including zero) and observation timestamp separately from discovery metadata, and expose that value through confirmed client mappings with the discovery count as the pre-sync fallback.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Data model (EE)",
+      "Acceptance Criteria"
+    ],
+    "locations": [
+      "ee/server/migrations",
+      "ee/temporal-workflows/src/activities/entra-sync-activities.ts",
+      "ee/server/src/lib/integrations/entra/mapping/confirmedMappingsService.ts"
+    ]
+  },
+  {
+    "id": "F122",
+    "description": "Post-sync Clients-table reconciliation: track a manually started single-client Temporal workflow through terminal status and reload confirmed mappings on completion so the affected row's Users value no longer remains at its pre-sync cached value.",
+    "implemented": true,
+    "prdRefs": [
+      "UX / UI Notes",
+      "Functional Requirements",
+      "Acceptance Criteria"
+    ],
+    "locations": [
+      "ee/server/src/components/settings/integrations/entra/EntraClientsTab.tsx",
+      "packages/integrations/src/actions/integrations/entraActions.ts"
+    ]
+  },
+  {
+    "id": "F123",
+    "description": "Provisional mapping review: existing-client, create-new, and skip row controls update local review state only, with no client creation or per-row mapping persistence before the operator confirms the decision set.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "UX / UI Notes",
+      "Acceptance Criteria"
+    ],
+    "locations": [
+      "ee/server/src/components/settings/integrations/EntraTenantMappingTable.tsx"
+    ]
+  },
+  {
+    "id": "F124",
+    "description": "Mapping decision persistence: confirmation atomically stores existing-client mappings, `create_new` intents with no client ID, and `skip_for_now` decisions without provisioning clients.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Data model (EE)",
+      "Acceptance Criteria"
+    ],
+    "locations": [
+      "ee/server/src/lib/integrations/entra/mapping/confirmMappingsService.ts",
+      "packages/integrations/src/actions/integrations/entraActions.ts"
+    ]
+  },
+  {
+    "id": "F125",
+    "description": "Explicit-sync client provisioning: initial and operator-started manual sync workflows idempotently create the Alga client for each approved `create_new` decision, promote the decision to a resolved mapped client, and then synchronize contacts into it.",
+    "implemented": true,
+    "prdRefs": [
+      "Users and Primary Flows",
+      "Functional Requirements",
+      "Temporal placement",
+      "Acceptance Criteria"
+    ],
+    "locations": [
+      "ee/temporal-workflows/src/activities/entra-sync-activities.ts",
+      "ee/temporal-workflows/src/workflows/entra-initial-sync-workflow.ts",
+      "ee/temporal-workflows/src/workflows/entra-all-tenants-sync-workflow.ts"
+    ]
+  },
+  {
+    "id": "F126",
+    "description": "Scheduled-sync provisioning guard: recurring scheduled runs load resolved mapped clients only and never create clients for pending `create_new` decisions.",
+    "implemented": true,
+    "prdRefs": [
+      "Functional Requirements",
+      "Acceptance Criteria"
+    ],
+    "locations": [
+      "ee/temporal-workflows/src/activities/entra-sync-activities.ts",
+      "ee/temporal-workflows/src/workflows/entra-all-tenants-sync-workflow.ts"
+    ]
   }
 ]

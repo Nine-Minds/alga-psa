@@ -30,6 +30,29 @@ export interface GraphSubscription {
   clientId: string;
 }
 
+export interface GraphOrganization {
+  id: string;
+  displayName: string;
+  verifiedDomains: Array<{
+    name: string;
+    isDefault: boolean;
+    isInitial: boolean;
+  }>;
+}
+
+export interface GraphDirectoryUser {
+  id: string;
+  displayName: string;
+  givenName: string | null;
+  surname: string | null;
+  mail: string | null;
+  userPrincipalName: string;
+  accountEnabled: boolean;
+  jobTitle: string | null;
+  mobilePhone: string | null;
+  businessPhones: string[];
+}
+
 export interface OperationFault {
   status: number;
   body: unknown;
@@ -54,6 +77,25 @@ export interface SeedMessageInput {
   receivedDateTime?: string;
 }
 
+export interface SeedOrganizationInput {
+  id?: string;
+  displayName?: string;
+  primaryDomain?: string;
+}
+
+export interface SeedDirectoryUserInput {
+  id?: string;
+  displayName?: string;
+  givenName?: string | null;
+  surname?: string | null;
+  mail?: string | null;
+  userPrincipalName?: string;
+  accountEnabled?: boolean;
+  jobTitle?: string | null;
+  mobilePhone?: string | null;
+  businessPhones?: string[];
+}
+
 /**
  * Pure state machine for the emulated Microsoft login + Graph service.
  * All time flows through the host clock, so `algasim clock advance 2h`
@@ -66,6 +108,8 @@ export class MsGraphCore implements EmulatorCore {
   private readonly accessTokens = new Map<string, { clientId: string; expiresAt: number }>();
   readonly messages = new Map<string, GraphMessage>();
   readonly subscriptions = new Map<string, GraphSubscription>();
+  readonly organizations = new Map<string, GraphOrganization>();
+  readonly directoryUsers = new Map<string, GraphDirectoryUser>();
   readonly faults = new Map<string, OperationFault>();
   accessTokenTtlSeconds = 3600;
   rotateRefreshTokens = true;
@@ -80,6 +124,8 @@ export class MsGraphCore implements EmulatorCore {
     this.accessTokens.clear();
     this.messages.clear();
     this.subscriptions.clear();
+    this.organizations.clear();
+    this.directoryUsers.clear();
     this.faults.clear();
     this.accessTokenTtlSeconds = 3600;
     this.rotateRefreshTokens = true;
@@ -176,6 +222,58 @@ export class MsGraphCore implements EmulatorCore {
       record.revoked = true;
     }
     return Boolean(record);
+  }
+
+  // --- Directory ---
+
+  addOrganization(input: SeedOrganizationInput): GraphOrganization {
+    const id = input.id ?? this.newId('organization');
+    const primaryDomain = input.primaryDomain ?? 'example.test';
+    const organization: GraphOrganization = {
+      id,
+      displayName: input.displayName ?? 'Emulated Entra Organization',
+      verifiedDomains: [
+        { name: primaryDomain, isDefault: true, isInitial: false },
+        { name: `${id}.onmicrosoft.com`, isDefault: false, isInitial: true },
+      ],
+    };
+    this.organizations.set(id, organization);
+    return organization;
+  }
+
+  listOrganizations(): GraphOrganization[] {
+    return [...this.organizations.values()];
+  }
+
+  addDirectoryUser(input: SeedDirectoryUserInput): GraphDirectoryUser {
+    const id = input.id ?? this.newId('directory-user');
+    const userPrincipalName = input.userPrincipalName ?? input.mail ?? `${id}@example.test`;
+    const user: GraphDirectoryUser = {
+      id,
+      displayName: input.displayName ?? 'Emulated Entra User',
+      givenName: input.givenName ?? null,
+      surname: input.surname ?? null,
+      mail: input.mail === undefined ? userPrincipalName : input.mail,
+      userPrincipalName,
+      accountEnabled: input.accountEnabled ?? true,
+      jobTitle: input.jobTitle ?? null,
+      mobilePhone: input.mobilePhone ?? null,
+      businessPhones: input.businessPhones ?? [],
+    };
+    this.directoryUsers.set(id, user);
+    return user;
+  }
+
+  listDirectoryUsers(): GraphDirectoryUser[] {
+    return [...this.directoryUsers.values()];
+  }
+
+  getDirectoryUser(id: string): GraphDirectoryUser {
+    const user = this.directoryUsers.get(id);
+    if (!user) {
+      throw new GraphApiError(404, { error: { code: 'Request_ResourceNotFound' } });
+    }
+    return user;
   }
 
   // --- Faults ---

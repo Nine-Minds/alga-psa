@@ -171,6 +171,7 @@ export type EntraStatusResponse = {
   connectionType: EntraConnectionType | null;
   lastDiscoveryAt: string | null;
   mappedTenantCount: number;
+  pendingCreateTenantCount?: number;
   nextSyncIntervalMinutes: number | null;
   /** True once one real sync has completed — the switch from setup to console. */
   hasCompletedFirstSync?: boolean;
@@ -220,7 +221,12 @@ export type EntraConfirmedMapping = {
   clientName: string | null;
   displayName: string | null;
   primaryDomain: string | null;
+  /** Raw count from the latest tenant discovery. */
   sourceUserCount: number;
+  /** Latest successful sync count, falling back to discovery before one exists. */
+  userCount: number;
+  userCountSource: 'sync' | 'discovery';
+  userCountObservedAt: string | null;
   lastSyncedAt: string | null;
   lastRunStatus: string | null;
 };
@@ -979,6 +985,17 @@ export const confirmEntraMappings = withAuth(async (
   const canUpdate = await hasPermission(user as any, 'system_settings', 'update');
   if (!canUpdate) {
     return { success: false, error: 'Forbidden: insufficient permissions to configure Entra integration' } as const;
+  }
+
+  const requestsClientCreation = input.mappings.some((mapping) => {
+    const state = mapping.mappingState ?? mapping.mapping_state;
+    return state === 'create_new';
+  });
+  if (requestsClientCreation) {
+    const canCreateClient = await hasPermission(user as any, 'client', 'create');
+    if (!canCreateClient) {
+      return { success: false, error: 'Forbidden: insufficient permissions to create clients' } as const;
+    }
   }
 
   const confirmResult = await callEeRoute<{ confirmedMappings: number }>({

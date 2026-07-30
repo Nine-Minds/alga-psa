@@ -65,9 +65,28 @@ export function wire(router: Router, core: MsGraphCore, env: HostEnv): void {
     next();
   });
 
-  const user = { id: 'emulated-user', userPrincipalName: 'support@example.test', mail: 'support@example.test' };
-  graph.get('/me', (_req, res) => res.json(user));
-  graph.get('/users/:userId', (_req, res) => res.json(user));
+  const mailboxUser = { id: 'emulated-user', userPrincipalName: 'support@example.test', mail: 'support@example.test' };
+  graph.get('/me', (_req, res) => res.json(mailboxUser));
+
+  // Entra self-tenant smoke surface. The production adapter deliberately uses
+  // these standard Graph routes when ENTRA_DIRECT_SMOKE_SELF_TENANT_MODE=true,
+  // avoiding a dependency on a real CSP/GDAP relationship during local tests.
+  graph.get('/organization', (_req, res) => {
+    res.json({ value: core.listOrganizations() });
+  });
+
+  graph.get('/users', (_req, res) => {
+    res.json({ value: core.listDirectoryUsers() });
+  });
+
+  graph.get('/users/:userId', (req, res) => {
+    const userId = String(req.params.userId);
+    if (core.directoryUsers.has(userId)) {
+      res.json(core.getDirectoryUser(userId));
+      return;
+    }
+    res.json(mailboxUser);
+  });
 
   const mailboxRoots = ['/me', '/users/:userId'];
   for (const root of mailboxRoots) {

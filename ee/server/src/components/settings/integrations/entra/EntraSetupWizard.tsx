@@ -97,12 +97,13 @@ export function EntraSetupWizard({
   // entirely on any tenant whose domain happened to auto-match, landing the
   // operator on "Preview & pilot" being told to go back and map something.
   const mappedCount = status?.mappedTenantCount ?? 0;
+  const approvedMappingCount = mappedCount + (status?.pendingCreateTenantCount ?? 0);
 
   const isConnected = status?.status === 'connected';
   const steps: EntraSetupStep[] = deriveEntraSetupSteps({
     isConnected,
     hasDiscovery: Boolean(status?.lastDiscoveryAt),
-    hasConfirmedMappings: mappedCount > 0,
+    hasConfirmedMappings: approvedMappingCount > 0,
   });
   const furthest = steps.find((step) => step.state === 'current') ?? steps[0];
 
@@ -253,6 +254,7 @@ export function EntraSetupWizard({
     return (
       <PilotSyncControl
         onPilotStarted={onStatusChanged}
+        approvedMappingCount={approvedMappingCount}
         fieldSyncConfig={fieldSyncConfig}
         onFieldSyncConfigChange={setFieldSyncConfig}
         onFieldSyncSaved={onStatusChanged}
