@@ -127,10 +127,7 @@ export async function simulateContractScenario(
   // --- Invoice timeline (contract billing frequency) ---
   const invoicePeriods = buildInvoicePeriods(
     scenario.horizon,
-    scenario.billing_frequency,
-  );
-  const contractCycleMonths = monthsPerCycle(
-    normalizeBillingCycle(scenario.billing_frequency),
+    scenario.invoice_schedule,
   );
 
   const periodAccumulators: PeriodAccumulator[] = invoicePeriods.map(
@@ -166,7 +163,7 @@ export async function simulateContractScenario(
     const records = generateLineServicePeriods({
       line,
       horizon: scenario.horizon,
-      contractBillingFrequency: scenario.billing_frequency,
+      invoiceSchedule: scenario.invoice_schedule,
       contractStartDate: scenario.contract_start_date,
       scenarioId: scenario.scenario_id,
     });
@@ -253,7 +250,7 @@ export async function simulateContractScenario(
   }
 
   const periods: SimulatedPeriod[] = periodAccumulators.map((accumulator) =>
-    finalizePeriod(accumulator, scenario, contractCycleMonths, contractEndDate),
+    finalizePeriod(accumulator, scenario, contractEndDate),
   );
 
   return {
@@ -417,11 +414,12 @@ function buildSyntheticClientContractLine(
     currency_code: scenario.currency_code,
     custom_rate: line.custom_rate ?? undefined,
     enable_proration: line.enable_proration,
+    location_id: line.location_id,
+    is_system_managed_default: scenario.is_system_managed_default,
     contract_id: scenario.contract_id ?? undefined,
     contract_line_name: line.contract_line_name,
     contract_line_type: line.contract_line_type,
     billing_frequency: line.billing_frequency,
-    location_id: null,
   };
 }
 
@@ -672,8 +670,11 @@ async function simulateHourlyCharges(
       clientContractLine,
       timing,
       client,
-      // Line-level overtime fields are not part of the scenario model in v1.
-      plan: { enable_overtime: false },
+      plan: {
+        enable_overtime: line.enable_overtime,
+        overtime_threshold: line.overtime_threshold ?? undefined,
+        overtime_rate: line.overtime_rate ?? undefined,
+      },
       serviceConfigMap: buildHourlyServiceConfigMap(line),
       timeEntries,
       contractCurrency: currencyCode,
@@ -763,7 +764,6 @@ function pushChargeLine(input: {
 function finalizePeriod(
   accumulator: PeriodAccumulator,
   scenario: ContractScenario,
-  contractCycleMonths: number,
   contractEndDate: ISO8601String | null,
 ): SimulatedPeriod {
   const { window, lines } = accumulator;
@@ -799,7 +799,11 @@ function finalizePeriod(
     index: window.index,
     period_start: `${window.startDate}T00:00:00Z`,
     period_end: `${endInclusive}T00:00:00Z`,
-    label: formatPeriodLabel(window.startDate, endInclusive, contractCycleMonths),
+    label: formatPeriodLabel(
+      window.startDate,
+      endInclusive,
+      scenario.invoice_schedule.billing_cycle,
+    ),
     lines,
     subtotal,
     tax,
@@ -839,7 +843,7 @@ function cadenceQuantityLabel(lineCycle: string): string {
 function formatPeriodLabel(
   startDate: ISO8601String,
   endInclusive: ISO8601String,
-  contractCycleMonths: number,
+  billingCycle: string,
 ): string {
   const formatter = new Intl.DateTimeFormat('en-US', {
     month: 'short',
@@ -847,7 +851,7 @@ function formatPeriodLabel(
     timeZone: 'UTC',
   });
   const startLabel = formatter.format(new Date(`${startDate}T00:00:00Z`));
-  if (contractCycleMonths === 1) {
+  if (billingCycle === 'monthly') {
     return startLabel;
   }
   const endLabel = formatter.format(new Date(`${endInclusive}T00:00:00Z`));

@@ -1,6 +1,7 @@
 import type { ISO8601String } from '../lib/temporal';
 import type { CadenceOwner } from './recurringTiming.interfaces';
 import type { ChargeExplanation } from './billingCompute.interfaces';
+import type { BillingCycleType } from './billing.interfaces';
 
 /**
  * Contract simulator scenario model (EE feature; types are shared so CE code
@@ -70,6 +71,8 @@ export interface ScenarioLineService {
   /** Catalog default rate in cents (currency-resolved), for rate fallback. */
   default_rate: number | null;
   tax_rate_id: string | null;
+  item_kind: string | null;
+  is_license: boolean;
   configuration: ScenarioServiceConfig;
 }
 
@@ -86,6 +89,11 @@ export interface ScenarioLine {
   /** Cents; line-level custom rate (Fixed lines). */
   custom_rate: number | null;
   enable_proration: boolean;
+  location_id: string | null;
+  enable_overtime: boolean;
+  overtime_threshold: number | null;
+  /** Cents per hour. */
+  overtime_rate: number | null;
   services: ScenarioLineService[];
 }
 
@@ -115,11 +123,23 @@ export interface SimulationHorizon {
   period_count: number;
 }
 
+export interface ScenarioBillingSchedule {
+  billing_cycle: BillingCycleType;
+  anchor: {
+    day_of_month: number | null;
+    month_of_year: number | null;
+    day_of_week: number | null;
+    reference_date: ISO8601String | null;
+  };
+}
+
 export interface ContractScenario {
   scenario_id: string;
   name: string;
   contract_id: string | null;
+  is_system_managed_default: boolean;
   client_binding: ScenarioClientBinding;
+  invoice_schedule: ScenarioBillingSchedule;
   billing_frequency: string;
   contract_start_date: ISO8601String | null;
   contract_end_date: ISO8601String | null;

@@ -20,6 +20,7 @@ import type {
   IPersistedRecurringObligationRef,
   IRecurringServicePeriodRecord,
   ISO8601String,
+  ScenarioBillingSchedule,
   ScenarioLine,
   SimulationHorizon,
 } from '@alga-psa/types';
@@ -27,6 +28,11 @@ import { toISODate, toPlainDate } from '@alga-psa/core';
 import { materializeClientCadenceServicePeriods } from '@alga-psa/shared/billingClients/materializeClientCadenceServicePeriods';
 import { materializeContractCadenceServicePeriods } from '@alga-psa/shared/billingClients/materializeContractCadenceServicePeriods';
 import { resolveCadenceOwner } from '@alga-psa/shared/billingClients/recurringTiming';
+import {
+  getBillingPeriodForDate,
+  getNextBillingBoundaryAfter,
+  normalizeAnchorSettingsForCycle,
+} from '@alga-psa/shared/billingClients/billingCycleAnchors';
 
 export type SimulatorBillingCycle =
   | 'monthly'
@@ -102,7 +108,7 @@ export interface SimulatedInvoicePeriodWindow {
 
 export function buildInvoicePeriods(
   horizon: SimulationHorizon,
-  contractBillingFrequency: string | null | undefined,
+  schedule: ScenarioBillingSchedule,
 ): SimulatedInvoicePeriodWindow[] {
   if (!Number.isInteger(horizon.period_count) || horizon.period_count < 1) {
     throw new Error(
@@ -113,14 +119,32 @@ export function buildInvoicePeriods(
     throw new Error('Simulation horizon requires a start_date');
   }
 
-  const months = monthsPerCycle(normalizeBillingCycle(contractBillingFrequency));
-  const start = toPlainDate(horizon.start_date);
+  const anchor = normalizeAnchorSettingsForCycle(schedule.billing_cycle, {
+    dayOfMonth: schedule.anchor.day_of_month,
+    monthOfYear: schedule.anchor.month_of_year,
+    dayOfWeek: schedule.anchor.day_of_week,
+    referenceDate: schedule.anchor.reference_date,
+  });
+  const first = getBillingPeriodForDate(
+    toUtcMidnight(horizon.start_date),
+    schedule.billing_cycle,
+    anchor,
+  );
+  const periods: SimulatedInvoicePeriodWindow[] = [];
+  let start = first.periodStartDate;
+  let end = first.periodEndDate;
 
-  return Array.from({ length: horizon.period_count }, (_, index) => ({
-    index,
-    startDate: toISODate(start.add({ months: index * months })),
-    endDateExclusive: toISODate(start.add({ months: (index + 1) * months })),
-  }));
+  for (let index = 0; index < horizon.period_count; index += 1) {
+    periods.push({
+      index,
+      startDate: toISODate(toPlainDate(start)),
+      endDateExclusive: toISODate(toPlainDate(end)),
+    });
+    start = end;
+    end = getNextBillingBoundaryAfter(end, schedule.billing_cycle, anchor);
+  }
+
+  return periods;
 }
 
 function toUtcMidnight(value: ISO8601String): ISO8601String {
@@ -130,8 +154,7 @@ function toUtcMidnight(value: ISO8601String): ISO8601String {
 export interface GenerateLineServicePeriodsInput {
   line: ScenarioLine;
   horizon: SimulationHorizon;
-  /** The contract header's billing frequency (drives the invoice timeline). */
-  contractBillingFrequency: string | null | undefined;
+  invoiceSchedule: ScenarioBillingSchedule;
   /** Anchor for contract-cadence lines; null anchors at the horizon start. */
   contractStartDate: ISO8601String | null;
   scenarioId: string;
@@ -145,11 +168,16 @@ export interface GenerateLineServicePeriodsInput {
 export function generateLineServicePeriods(
   input: GenerateLineServicePeriodsInput,
 ): IRecurringServicePeriodRecord[] {
-  const { line, horizon, contractBillingFrequency, contractStartDate, scenarioId } =
+  const {
+    line,
+    horizon,
+    invoiceSchedule,
+    contractStartDate,
+    scenarioId,
+  } =
     input;
 
   const lineCycle = normalizeBillingCycle(line.billing_frequency);
-  const contractCycle = normalizeBillingCycle(contractBillingFrequency);
   const duePosition = line.billing_timing === 'advance' ? 'advance' : 'arrears';
   const cadenceOwner = resolveCadenceOwner(line.cadence_owner);
   const asOf = toUtcMidnight(horizon.start_date);
@@ -164,9 +192,14 @@ export function generateLineServicePeriods(
 
   // Cover the whole invoice timeline plus one extra line-cadence period so
   // boundary periods (arrears due at the horizon edge) are always generated.
-  const horizonMonths = horizon.period_count * monthsPerCycle(contractCycle);
+  const invoicePeriods = buildInvoicePeriods(horizon, invoiceSchedule);
+  const finalInvoiceEnd = invoicePeriods.at(-1)?.endDateExclusive ?? toISODate(toPlainDate(horizon.start_date));
+  const invoiceHorizonDays = toPlainDate(horizon.start_date).until(
+    toPlainDate(finalInvoiceEnd),
+    { largestUnit: 'days' },
+  ).days;
   const targetHorizonDays =
-    (horizonMonths + monthsPerCycle(lineCycle)) * 31 + 60;
+    invoiceHorizonDays + monthsPerCycle(lineCycle) * 31 + 60;
 
   const common = {
     asOf,
@@ -182,7 +215,15 @@ export function generateLineServicePeriods(
 
   return cadenceOwner === 'contract'
     ? materializeContractCadenceServicePeriods({ ...common, anchorDate }).records
-    : materializeClientCadenceServicePeriods(common).records;
+    : materializeClientCadenceServicePeriods({
+        ...common,
+        anchorSettings: {
+          dayOfMonth: invoiceSchedule.anchor.day_of_month,
+          monthOfYear: invoiceSchedule.anchor.month_of_year,
+          dayOfWeek: invoiceSchedule.anchor.day_of_week,
+          referenceDate: invoiceSchedule.anchor.reference_date,
+        },
+      }).records;
 }
 
 export interface ServicePeriodAssignment {

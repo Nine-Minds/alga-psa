@@ -78,7 +78,9 @@ import { TaxService } from "../../services/taxService";
 import {
   computeFixedCharges,
   computeTimeBasedCharges,
+  computeUsageBasedCharges,
   type ChargeComputeTaxPorts,
+  type UsageServiceConfigEntry,
 } from "./compute";
 import { ClientContractServiceConfigurationService } from "../../services/clientContractServiceConfigurationService";
 import {
@@ -3218,8 +3220,6 @@ export class BillingEngine {
 
     const servicePeriodStartExclusive = timingResolution.servicePeriodStartExclusive;
     const servicePeriodEndExclusive = timingResolution.servicePeriodEndExclusive;
-    const servicePeriodStart = timingResolution.servicePeriodStart;
-    const servicePeriodEnd = timingResolution.servicePeriodEnd;
 
     // Create a map of service IDs to their hourly configurations
     const serviceConfigMap = new Map<
@@ -3572,140 +3572,23 @@ export class BillingEngine {
 
     const usageRecords = await usageRecordQuery;
 
-    const usageBasedChargesPromises = usageRecords.map(
-      async (record: any): Promise<IUsageBasedCharge> => {
-        // Get the service configuration if available
-        const serviceConfig = serviceConfigMap.get(record.service_id);
-        const isSystemManagedDefault = (clientContractLine as { is_system_managed_default?: boolean | null })
-          .is_system_managed_default === true;
-
-        // Apply minimum usage if configured
-        let quantity = record.quantity;
-        if (
-          !isSystemManagedDefault &&
-          serviceConfig &&
-          quantity < (serviceConfig.config.minimum_usage ?? 0)
-        ) {
-          quantity = serviceConfig.config.minimum_usage;
-        }
-
-        // Determine rate and calculate total.
-        // Order: contract-line configured custom_rate → service_prices row in the contract
-        // currency. The legacy service_catalog.default_rate is intentionally not used here
-        // because it is currency-untagged and would silently mis-price non-USD contracts.
-        const configuredCustomRate =
-          !isSystemManagedDefault && serviceConfig && serviceConfig.config.custom_rate
-            ? Number(serviceConfig.config.custom_rate)
-            : undefined;
-        const resolvedRate =
-          configuredCustomRate ??
-          (record.currency_rate != null ? Number(record.currency_rate) : undefined);
-        const willUseTieredPricing =
-          !isSystemManagedDefault &&
-          serviceConfig &&
-          serviceConfig.config.enable_tiered_pricing &&
-          serviceConfig.rateTiers.length > 0;
-        if (resolvedRate === undefined && !willUseTieredPricing) {
-          throw new Error(
-            `Missing pricing for usage on service "${record.service_name}" (${record.service_id}) in ${contractCurrency}. ` +
-              `Add a ${contractCurrency} price in the service catalog, set a custom rate on the contract line, or enable tiered pricing.`,
-          );
-        }
-        let rate = Math.ceil(resolvedRate ?? 0);
-        let total = Math.ceil(quantity * rate);
-
-        // Apply tiered pricing if enabled
-        if (
-          !isSystemManagedDefault &&
-          serviceConfig &&
-          serviceConfig.config.enable_tiered_pricing &&
-          serviceConfig.rateTiers.length > 0
-        ) {
-          total = 0;
-          let remainingQuantity = quantity;
-
-          for (const tier of serviceConfig.rateTiers) {
-            if (remainingQuantity <= 0) break;
-
-            const tierMax = tier.max_quantity || Number.MAX_SAFE_INTEGER;
-            const tierQuantity = Math.min(
-              remainingQuantity,
-              tierMax - tier.min_quantity + 1,
-            );
-
-            if (tierQuantity > 0) {
-              total += Math.ceil(tierQuantity * tier.rate);
-              remainingQuantity -= tierQuantity;
-            }
-          }
-        }
-
-        // Determine tax info using the helper function
-        const { taxRegion: serviceTaxRegion, isTaxable } =
-          await this.getTaxInfoFromService({
-            service_id: record.service_id,
-            tax_rate_id: record.tax_rate_id, // Pass the fetched tax_rate_id
-          });
-
-        // Calculate tax amount (will be recalculated later)
-        let taxAmount = 0;
-        let taxRate = 0;
-        const effectiveTaxRegion =
-          serviceTaxRegion ??
-          (await this.getLocationTaxRegionCode(clientContractLine.location_id)) ??
-          (await this.getClientDefaultTaxRegionCode(client.client_id)) ??
-          undefined;
-
-        if (!client.is_tax_exempt && isTaxable && effectiveTaxRegion) {
-          try {
-            const taxServiceInstance = new TaxService();
-            const taxResult = await taxServiceInstance.calculateTax(
-              client.client_id,
-              total,
-              billingPeriod.endDate,
-              effectiveTaxRegion,
-              true,
-              clientContractLine.currency_code || "USD",
-            );
-            taxRate = taxResult.taxRate;
-            taxAmount = taxResult.taxAmount;
-          } catch (error) {
-            console.error(
-              `Error calculating initial tax for usage record ${record.usage_id}:`,
-              error,
-            );
-          }
-        }
-
-        return {
-          serviceId: record.service_id,
-          config_id: serviceConfig?.config.config_id,
-          serviceName: record.service_name,
-          client_contract_line_id: clientContractLine.client_contract_line_id,
-          quantity,
-          rate,
-          total,
-          tax_region: effectiveTaxRegion, // Use derived region, fallback to location then client default
-          type: "usage",
-          tax_amount: taxAmount, // Set initial tax amount
-          tax_rate: taxRate, // Set initial tax rate
-          usageId: record.usage_id,
-          is_taxable: isTaxable, // Use derived value
-          servicePeriodStart,
-          servicePeriodEnd,
-          billingTiming: timingResolution.duePosition,
-          // Add contract association information when the plan is covered by a contract assignment
-          client_contract_id:
-            clientContractLine.client_contract_id || undefined,
-          contract_name: clientContractLine.contract_name || undefined,
-          location_id: clientContractLine.location_id ?? null,
-        };
+    const { charges } = await computeUsageBasedCharges(
+      {
+        billingPeriod,
+        clientContractLine,
+        timing: timingResolution,
+        client,
+        serviceConfigMap: serviceConfigMap as Map<
+          string,
+          UsageServiceConfigEntry
+        >,
+        usageRecords,
+        contractCurrency,
       },
+      this.chargeComputeTaxPorts(),
     );
 
-    const usageBasedCharges = await Promise.all(usageBasedChargesPromises);
-
-    return usageBasedCharges;
+    return charges;
   }
 
   private async getUniquelyAssignableServiceIdsForLine(input: {

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { IClientContractLine } from '@alga-psa/types';
 import { computeFixedCharges } from './computeFixedCharges';
 import { computeTimeBasedCharges } from './computeTimeBasedCharges';
+import { computeUsageBasedCharges } from './computeUsageBasedCharges';
 import type { ChargeComputeTaxPorts, ChargeComputeTiming } from './types';
 
 const TEN_PERCENT_PORTS: ChargeComputeTaxPorts = {
@@ -361,5 +362,137 @@ describe('computeTimeBasedCharges', () => {
         TEN_PERCENT_PORTS,
       ),
     ).rejects.toThrow(/Missing pricing for time entry/);
+  });
+});
+
+describe('computeUsageBasedCharges', () => {
+  const USAGE_CONFIG = {
+    config: {
+      config_id: 'cfg-u',
+      custom_rate: 250,
+      minimum_usage: 0,
+      enable_tiered_pricing: false,
+    },
+    rateTiers: [] as Array<{
+      min_quantity: number;
+      max_quantity: number | null;
+      rate: number;
+    }>,
+  };
+
+  function usageInputs(overrides: {
+    serviceConfigMap?: Map<string, typeof USAGE_CONFIG>;
+    usageRecords?: any[];
+    clientContractLine?: IClientContractLine;
+  } = {}) {
+    return {
+      billingPeriod: PERIOD,
+      clientContractLine:
+        overrides.clientContractLine ?? line({ contract_line_type: 'Usage' }),
+      timing: timing(),
+      client: CLIENT,
+      serviceConfigMap:
+        overrides.serviceConfigMap ?? new Map([['svc-u', USAGE_CONFIG]]),
+      usageRecords: overrides.usageRecords ?? [usageRecord()],
+      contractCurrency: 'USD',
+    };
+  }
+
+  function usageRecord(overrides: Record<string, unknown> = {}) {
+    return {
+      usage_id: 'usage-1',
+      service_id: 'svc-u',
+      service_name: 'Managed endpoints',
+      quantity: 10,
+      tax_rate_id: 'tax-1',
+      currency_rate: 300,
+      ...overrides,
+    };
+  }
+
+  it('prefers the configured custom rate and emits an arithmetic explanation', async () => {
+    const result = await computeUsageBasedCharges(
+      usageInputs(),
+      TEN_PERCENT_PORTS,
+    );
+
+    expect(result.charges[0]).toMatchObject({
+      quantity: 10,
+      rate: 250,
+      total: 2500,
+      tax_amount: 250,
+    });
+    expect(result.explanations[0].steps.at(-1)).toContain('$25.00');
+  });
+
+  it('applies minimum usage before flat-rate pricing', async () => {
+    const config = {
+      ...USAGE_CONFIG,
+      config: { ...USAGE_CONFIG.config, minimum_usage: 25 },
+    };
+    const result = await computeUsageBasedCharges(
+      usageInputs({ serviceConfigMap: new Map([['svc-u', config]]) }),
+      TEN_PERCENT_PORTS,
+    );
+
+    expect(result.charges[0].quantity).toBe(25);
+    expect(result.charges[0].total).toBe(6250);
+    expect(result.explanations[0].markers).toContain('minimum_applied');
+  });
+
+  it('prices progressively across configured tiers', async () => {
+    const config = {
+      config: {
+        ...USAGE_CONFIG.config,
+        custom_rate: null,
+        enable_tiered_pricing: true,
+      },
+      rateTiers: [
+        { min_quantity: 1, max_quantity: 10, rate: 100 },
+        { min_quantity: 11, max_quantity: null, rate: 75 },
+      ],
+    };
+    const result = await computeUsageBasedCharges(
+      usageInputs({
+        serviceConfigMap: new Map([['svc-u', config]]),
+        usageRecords: [usageRecord({ quantity: 15, currency_rate: null })],
+      }),
+      TEN_PERCENT_PORTS,
+    );
+
+    expect(result.charges[0].total).toBe(1375);
+    expect(result.explanations[0].markers).toContain('rate_tier');
+    expect(result.explanations[0].steps).toHaveLength(3);
+  });
+
+  it('uses currency pricing and ignores authored overrides for a system-managed default line', async () => {
+    const result = await computeUsageBasedCharges(
+      usageInputs({
+        clientContractLine: line({
+          contract_line_type: 'Usage',
+          is_system_managed_default: true,
+        }),
+      }),
+      TEN_PERCENT_PORTS,
+    );
+
+    expect(result.charges[0].rate).toBe(300);
+    expect(result.charges[0].total).toBe(3000);
+  });
+
+  it('throws when neither a currency rate nor tier pricing can resolve an amount', async () => {
+    const config = {
+      ...USAGE_CONFIG,
+      config: { ...USAGE_CONFIG.config, custom_rate: null },
+    };
+    await expect(
+      computeUsageBasedCharges(
+        usageInputs({
+          serviceConfigMap: new Map([['svc-u', config]]),
+          usageRecords: [usageRecord({ currency_rate: null })],
+        }),
+        TEN_PERCENT_PORTS,
+      ),
+    ).rejects.toThrow(/Missing pricing for usage/);
   });
 });

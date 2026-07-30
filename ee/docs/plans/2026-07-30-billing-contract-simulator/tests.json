@@ -1,7 +1,7 @@
 [
   {"id":"T001","description":"Unit: shared cadence generation covers supported frequencies, advance/arrears assignment, horizon guards, and assumption override precedence.","implemented":true,"featureIds":["F016","F017","F018","F019"]},
-  {"id":"T002","description":"Unit: fixed compute covers plan pricing, FMV allocation, proration, advance termination, duplicate guard, tax, and explanations.","implemented":false,"featureIds":["F001","F002","F047"]},
-  {"id":"T003","description":"Unit: hourly compute covers duration, minimums, rounding, rate precedence, overtime, missing pricing, tax, and explanations.","implemented":false,"featureIds":["F001","F003","F047"]},
+  {"id":"T002","description":"Unit: fixed compute covers plan pricing, FMV allocation, proration, advance termination, duplicate guard, tax, and explanations.","implemented":true,"featureIds":["F001","F002","F047"]},
+  {"id":"T003","description":"Unit: hourly compute covers duration, minimums, rounding, rate precedence, overtime, missing pricing, tax, and explanations.","implemented":true,"featureIds":["F001","F003","F047"]},
   {"id":"T004","description":"Unit: usage compute covers minimums, flat and tiered boundaries, rate precedence, tax, and explanations.","implemented":false,"featureIds":["F004","F020","F023","F047"]},
   {"id":"T005","description":"Unit: bucket compute covers base fee, included consumption, rollover, overage, expiry, and multi-period state.","implemented":false,"featureIds":["F005","F021","F023","F047"]},
   {"id":"T006","description":"Unit: product and license compute covers quantity, currency price, overrides, proration, tax, and item classification.","implemented":false,"featureIds":["F006","F007","F013","F023","F047"]},

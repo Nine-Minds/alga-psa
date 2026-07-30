@@ -9,17 +9,21 @@ import { v4 as uuidv4 } from 'uuid';
 import { Temporal } from '@js-temporal/polyfill';
 import type {
   ContractScenario,
+  BillingCycleType,
   ISO8601String,
   ScenarioClientBinding,
   ScenarioAssumption,
   ScenarioLine,
   ScenarioLineService,
   ScenarioPricingSchedule,
+  ScenarioBillingSchedule,
   ScenarioServiceConfig,
 } from '@alga-psa/types';
 import { toISODate, toPlainDate } from '@alga-psa/core';
 import { tenantDb } from '@alga-psa/db';
 import { resolveCadenceOwner } from '@alga-psa/shared/billingClients/recurringTiming';
+import { getClientBillingCycleAnchor } from '@alga-psa/shared/billingClients/billingSchedule';
+import { normalizeAnchorSettingsForCycle } from '@alga-psa/shared/billingClients/billingCycleAnchors';
 import {
   ClientContractServiceConfigurationService,
   type ClientContractServiceConfigDetails,
@@ -39,6 +43,7 @@ interface ContractRow {
   owner_client_id: string | null;
   billing_frequency: string;
   currency_code: string | null;
+  is_system_managed_default: boolean | null;
 }
 
 interface ContractLineRow {
@@ -50,6 +55,10 @@ interface ContractLineRow {
   cadence_owner: string | null;
   custom_rate: number | string | null;
   enable_proration: boolean | null;
+  location_id: string | null;
+  enable_overtime: boolean | null;
+  overtime_threshold: number | string | null;
+  overtime_rate: number | string | null;
 }
 
 interface CatalogRateRow {
@@ -58,6 +67,8 @@ interface CatalogRateRow {
   default_rate: number | string | null;
   tax_rate_id: string | null;
   currency_rate: number | string | null;
+  item_kind: string | null;
+  is_license: boolean | null;
 }
 
 function toCents(value: number | string | null | undefined): number | null {
@@ -95,6 +106,7 @@ export async function snapshotContractToScenario(
       'owner_client_id',
       'billing_frequency',
       'currency_code',
+      'is_system_managed_default',
     )) as ContractRow | undefined;
 
   if (!contract) {
@@ -119,6 +131,10 @@ export async function snapshotContractToScenario(
       'cadence_owner',
       'custom_rate',
       'enable_proration',
+      'location_id',
+      'enable_overtime',
+      'overtime_threshold',
+      'overtime_rate',
     )) as ContractLineRow[];
 
   const configService = new ClientContractServiceConfigurationService(
@@ -163,6 +179,8 @@ export async function snapshotContractToScenario(
         'sc.default_rate',
         'sc.tax_rate_id',
         'sp.rate as currency_rate',
+        'sc.item_kind',
+        'sc.is_license',
       )) as CatalogRateRow[];
     for (const row of catalogRows) {
       catalogByServiceId.set(row.service_id, row);
@@ -180,8 +198,8 @@ export async function snapshotContractToScenario(
 
   const pricingSchedules = await loadPricingSchedules(db, params.contractId);
 
-  const { clientBinding, contractStartDate, contractEndDate } =
-    await resolveClientBinding(db, tenant, params, contract, currencyCode);
+  const { clientBinding, contractStartDate, contractEndDate, invoiceSchedule } =
+    await resolveClientBinding(knex, db, tenant, params, contract, currencyCode);
 
   const assumptions: Record<string, ScenarioAssumption> = {};
   for (const line of lines) {
@@ -199,7 +217,9 @@ export async function snapshotContractToScenario(
     scenario_id: uuidv4(),
     name: `${contract.contract_name} scenario`,
     contract_id: contract.contract_id,
+    is_system_managed_default: Boolean(contract.is_system_managed_default),
     client_binding: clientBinding,
+    invoice_schedule: invoiceSchedule,
     billing_frequency: contract.billing_frequency,
     contract_start_date: contractStartDate,
     contract_end_date: contractEndDate,
@@ -249,6 +269,8 @@ function buildScenarioLine(
       default_rate:
         toCents(catalog.currency_rate) ?? toCents(catalog.default_rate),
       tax_rate_id: catalog.tax_rate_id ?? null,
+      item_kind: catalog.item_kind ?? null,
+      is_license: Boolean(catalog.is_license),
       configuration: buildScenarioServiceConfig(configDetails),
     };
   });
@@ -265,6 +287,11 @@ function buildScenarioLine(
     ),
     custom_rate: toCents(lineRow.custom_rate),
     enable_proration: Boolean(lineRow.enable_proration),
+    location_id: lineRow.location_id ?? null,
+    enable_overtime: Boolean(lineRow.enable_overtime),
+    overtime_threshold:
+      lineRow.overtime_threshold != null ? Number(lineRow.overtime_threshold) : null,
+    overtime_rate: toCents(lineRow.overtime_rate),
     services,
   };
 }
@@ -367,6 +394,7 @@ async function loadPricingSchedules(
 }
 
 async function resolveClientBinding(
+  knex: Knex,
   db: ReturnType<typeof tenantDb>,
   tenant: string,
   params: SnapshotContractToScenarioParams,
@@ -376,6 +404,7 @@ async function resolveClientBinding(
   clientBinding: ScenarioClientBinding;
   contractStartDate: ISO8601String | null;
   contractEndDate: ISO8601String | null;
+  invoiceSchedule: ScenarioBillingSchedule;
 }> {
   if (params.clientContractId) {
     const clientContract = await db
@@ -417,6 +446,11 @@ async function resolveClientBinding(
       contractEndDate: clientContract.end_date
         ? toMidnightIso(clientContract.end_date)
         : null,
+      invoiceSchedule: await loadClientInvoiceSchedule(
+        knex,
+        tenant,
+        client.client_id,
+      ),
     };
   }
 
@@ -440,6 +474,11 @@ async function resolveClientBinding(
       },
       contractStartDate: null,
       contractEndDate: null,
+      invoiceSchedule: await loadClientInvoiceSchedule(
+        knex,
+        tenant,
+        client.client_id,
+      ),
     };
   }
 
@@ -453,5 +492,63 @@ async function resolveClientBinding(
     },
     contractStartDate: null,
     contractEndDate: null,
+    invoiceSchedule: buildDefaultInvoiceSchedule(contract.billing_frequency),
   };
+}
+
+async function loadClientInvoiceSchedule(
+  knex: Knex,
+  tenant: string,
+  clientId: string,
+): Promise<ScenarioBillingSchedule> {
+  const schedule = await getClientBillingCycleAnchor(
+    knex,
+    tenant,
+    clientId,
+  );
+  return {
+    billing_cycle: schedule.billingCycle,
+    anchor: {
+      day_of_month: schedule.anchor.dayOfMonth,
+      month_of_year: schedule.anchor.monthOfYear,
+      day_of_week: schedule.anchor.dayOfWeek,
+      reference_date: schedule.anchor.referenceDate,
+    },
+  };
+}
+
+function buildDefaultInvoiceSchedule(frequency: string): ScenarioBillingSchedule {
+  const billingCycle = normalizeScenarioBillingCycle(frequency);
+  const anchor = normalizeAnchorSettingsForCycle(billingCycle, {});
+  return {
+    billing_cycle: billingCycle,
+    anchor: {
+      day_of_month: anchor.dayOfMonth,
+      month_of_year: anchor.monthOfYear,
+      day_of_week: anchor.dayOfWeek,
+      reference_date: anchor.referenceDate,
+    },
+  };
+}
+
+function normalizeScenarioBillingCycle(frequency: string): BillingCycleType {
+  switch (frequency.trim().toLowerCase()) {
+    case 'weekly':
+      return 'weekly';
+    case 'bi-weekly':
+    case 'biweekly':
+      return 'bi-weekly';
+    case 'quarterly':
+      return 'quarterly';
+    case 'semi-annually':
+    case 'semi-annual':
+    case 'semiannually':
+      return 'semi-annually';
+    case 'annually':
+    case 'annual':
+    case 'yearly':
+      return 'annually';
+    default:
+      return 'monthly';
+  }
 }

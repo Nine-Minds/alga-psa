@@ -23,6 +23,16 @@ const HORIZON: SimulationHorizon = {
   period_count: 3,
 };
 
+const MONTHLY_FIRST = {
+  billing_cycle: 'monthly' as const,
+  anchor: {
+    day_of_month: 1,
+    month_of_year: null,
+    day_of_week: null,
+    reference_date: null,
+  },
+};
+
 function buildLine(overrides: Partial<ScenarioLine> = {}): ScenarioLine {
   return {
     key: 'line-1',
@@ -34,6 +44,10 @@ function buildLine(overrides: Partial<ScenarioLine> = {}): ScenarioLine {
     cadence_owner: 'contract',
     custom_rate: null,
     enable_proration: false,
+    location_id: null,
+    enable_overtime: false,
+    overtime_threshold: null,
+    overtime_rate: null,
     services: [],
     ...overrides,
   };
@@ -52,7 +66,7 @@ describe('normalizeBillingCycle', () => {
 
 describe('buildInvoicePeriods', () => {
   it('builds consecutive periods of the contract billing frequency', () => {
-    const periods = buildInvoicePeriods(HORIZON, 'monthly');
+    const periods = buildInvoicePeriods(HORIZON, MONTHLY_FIRST);
 
     expect(periods).toEqual([
       { index: 0, startDate: '2026-08-01', endDateExclusive: '2026-09-01' },
@@ -64,18 +78,46 @@ describe('buildInvoicePeriods', () => {
   it('sizes periods by the contract cadence', () => {
     const periods = buildInvoicePeriods(
       { ...HORIZON, period_count: 2 },
-      'quarterly',
+      {
+        billing_cycle: 'quarterly',
+        anchor: {
+          day_of_month: 1,
+          month_of_year: 1,
+          day_of_week: null,
+          reference_date: null,
+        },
+      },
     );
 
     expect(periods).toEqual([
-      { index: 0, startDate: '2026-08-01', endDateExclusive: '2026-11-01' },
-      { index: 1, startDate: '2026-11-01', endDateExclusive: '2027-02-01' },
+      { index: 0, startDate: '2026-07-01', endDateExclusive: '2026-10-01' },
+      { index: 1, startDate: '2026-10-01', endDateExclusive: '2027-01-01' },
     ]);
   });
 
   it('fails fast on a non-positive period count', () => {
-    expect(() => buildInvoicePeriods({ ...HORIZON, period_count: 0 }, 'monthly'))
+    expect(() => buildInvoicePeriods({ ...HORIZON, period_count: 0 }, MONTHLY_FIRST))
       .toThrow(/positive integer period_count/);
+  });
+
+  it('aligns the first window to the client billing anchor containing the horizon start', () => {
+    const periods = buildInvoicePeriods(
+      { start_date: '2026-08-12T00:00:00Z', period_count: 2 },
+      {
+        billing_cycle: 'monthly',
+        anchor: {
+          day_of_month: 15,
+          month_of_year: null,
+          day_of_week: null,
+          reference_date: null,
+        },
+      },
+    );
+
+    expect(periods).toEqual([
+      { index: 0, startDate: '2026-07-15', endDateExclusive: '2026-08-15' },
+      { index: 1, startDate: '2026-08-15', endDateExclusive: '2026-09-15' },
+    ]);
   });
 });
 
@@ -85,11 +127,11 @@ describe('generateLineServicePeriods + assignServicePeriodsToInvoicePeriods', ()
     const records = generateLineServicePeriods({
       line,
       horizon: HORIZON,
-      contractBillingFrequency: 'monthly',
+      invoiceSchedule: MONTHLY_FIRST,
       contractStartDate: '2026-08-01T00:00:00Z',
       scenarioId: 'scenario-1',
     });
-    const invoicePeriods = buildInvoicePeriods(HORIZON, 'monthly');
+    const invoicePeriods = buildInvoicePeriods(HORIZON, MONTHLY_FIRST);
     const assignments = assignServicePeriodsToInvoicePeriods(
       records,
       invoicePeriods,
@@ -118,11 +160,11 @@ describe('generateLineServicePeriods + assignServicePeriodsToInvoicePeriods', ()
     const records = generateLineServicePeriods({
       line,
       horizon: HORIZON,
-      contractBillingFrequency: 'monthly',
+      invoiceSchedule: MONTHLY_FIRST,
       contractStartDate: '2026-08-01T00:00:00Z',
       scenarioId: 'scenario-1',
     });
-    const invoicePeriods = buildInvoicePeriods(HORIZON, 'monthly');
+    const invoicePeriods = buildInvoicePeriods(HORIZON, MONTHLY_FIRST);
     const assignments = assignServicePeriodsToInvoicePeriods(
       records,
       invoicePeriods,
@@ -153,11 +195,11 @@ describe('generateLineServicePeriods + assignServicePeriodsToInvoicePeriods', ()
     const records = generateLineServicePeriods({
       line,
       horizon: HORIZON,
-      contractBillingFrequency: 'monthly',
+      invoiceSchedule: MONTHLY_FIRST,
       contractStartDate: '2026-08-01T00:00:00Z',
       scenarioId: 'scenario-1',
     });
-    const invoicePeriods = buildInvoicePeriods(HORIZON, 'monthly');
+    const invoicePeriods = buildInvoicePeriods(HORIZON, MONTHLY_FIRST);
 
     expect(
       assignServicePeriodsToInvoicePeriods(records, invoicePeriods),
@@ -189,6 +231,8 @@ describe('buildSyntheticTimeEntry', () => {
     custom_rate: 15000,
     default_rate: 18000,
     tax_rate_id: null,
+    item_kind: 'service',
+    is_license: false,
     configuration: {
       configuration_type: 'Hourly' as const,
       hourly_rate: 17500,
