@@ -108,12 +108,6 @@ export function useFeatureFlag(
         const distinctId = userId || 'anonymous';
         void distinctId;
 
-        if (posthog.isFeatureEnabled === undefined) {
-          console.warn(`[FeatureFlag] PostHog not ready yet for ${flagKey}`);
-          setTimeout(() => checkFlag(), 100);
-          return;
-        }
-
         const flagValue = posthog.isFeatureEnabled(flagKey);
 
         if (process.env.NODE_ENV === 'development') {
@@ -140,15 +134,23 @@ export function useFeatureFlag(
       checkFlag();
     }, 200);
 
+    const unsubscribeFromFeatureFlags = posthog.onFeatureFlags(() => {
+      void checkFlag();
+    });
+
     if (options.pollInterval && options.pollInterval > 0) {
       const interval = setInterval(checkFlag, options.pollInterval);
       return () => {
         clearTimeout(timeoutId);
         clearInterval(interval);
+        unsubscribeFromFeatureFlags();
       };
     }
 
-    return () => clearTimeout(timeoutId);
+    return () => {
+      clearTimeout(timeoutId);
+      unsubscribeFromFeatureFlags();
+    };
   }, [posthog, flagKey, session?.user?.id, session?.user?.tenant, options.userId, options.pollInterval, forcedValue]);
 
   return { enabled, loading, error };

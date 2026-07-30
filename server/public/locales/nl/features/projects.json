@@ -1618,6 +1618,7 @@
       "manualSub": "Handmatige activering",
       "phaseRemoved": "Handmatig · fase verwijderd",
       "phaseTrigger": "Voltooiing van fase",
+      "phaseOverdue": "De einddatum van de fase is verstreken — markeer de fase als voltooid om deze post gereed te maken",
       "approve": "Goedkeuren",
       "approveInvoice": "Goedkeuren en factureren",
       "hold": "Aanhouden",
@@ -1690,9 +1691,9 @@
       "saving": "Opslaan...",
       "errorAmount": "Voer een limiet groter dan nul in"
     },
+    "generateProjectInvoice": "Projectfactuur genereren",
+    "generatingProjectInvoice": "Factuur genereren...",
     "tm": {
-      "generateInvoice": "Projectfactuur genereren",
-      "generatingInvoice": "Factuur genereren...",
       "invoiceGenerated": "Projectfactuur gegenereerd"
     },
     "overrides": {

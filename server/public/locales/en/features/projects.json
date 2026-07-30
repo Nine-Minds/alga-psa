@@ -1637,6 +1637,7 @@
       "manualSub": "Manual trigger",
       "phaseRemoved": "Manual · phase removed",
       "phaseTrigger": "Phase completion",
+      "phaseOverdue": "Phase end date has passed — mark the phase complete to make this entry ready",
       "approve": "Approve",
       "approveInvoice": "Approve & invoice",
       "hold": "Hold",
@@ -1715,9 +1716,9 @@
       "saving": "Saving...",
       "errorAmount": "Enter a cap greater than zero"
     },
+    "generateProjectInvoice": "Generate project invoice",
+    "generatingProjectInvoice": "Generating invoice...",
     "tm": {
-      "generateInvoice": "Generate project invoice",
-      "generatingInvoice": "Generating invoice...",
       "invoiceGenerated": "Project invoice generated"
     },
     "overrides": {

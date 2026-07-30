@@ -1,12 +1,12 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Button } from '@alga-psa/ui/components/Button';
 import { Dialog, DialogContent } from '@alga-psa/ui/components/Dialog';
 import { Input } from '@alga-psa/ui/components/Input';
 import { Label } from '@alga-psa/ui/components/Label';
-import { LockKeyhole, Plus, Pencil, Trash2 } from 'lucide-react';
+import { AlertTriangle, LockKeyhole, Plus, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import type { IProjectBillingConfig, IProjectPhase } from '@alga-psa/types';
 import type {
@@ -35,6 +35,7 @@ import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { getEntryDisplayPercentage } from './billingViewHelpers';
 import { recalculateProjectTotalFromSchedule } from '../../actions/projectBillingConfigActions';
+import { getCurrentDateInUserTimeZone, isPhaseBillingOverdue } from '@alga-psa/core';
 
 interface ScheduleTableProps {
   config: IProjectBillingConfig;
@@ -87,6 +88,11 @@ export default function ScheduleTable({
   const [holdReason, setHoldReason] = useState('');
   const [recalculateOpen, setRecalculateOpen] = useState(false);
   const [recalculating, setRecalculating] = useState(false);
+  const [today, setToday] = useState<string | null>(null);
+
+  useEffect(() => {
+    setToday(getCurrentDateInUserTimeZone());
+  }, []);
 
   const allocation = useMemo(() => {
     const total = config.total_price ?? 0;
@@ -432,7 +438,25 @@ export default function ScheduleTable({
                   <td className="px-3.5 py-3 text-right font-semibold tabular-nums text-[rgb(var(--color-text-900))]">
                     {money(entry.computed_amount, currency ?? undefined)}
                   </td>
-                  <td className="px-3.5 py-3"><StatusChip status={entry.status} /></td>
+                  <td className="px-3.5 py-3">
+                    <span className="inline-flex items-center gap-1.5">
+                      <StatusChip status={entry.status} />
+                      {isPhaseBillingOverdue(entry, today) && (
+                        <Tooltip content={t(
+                          'billing.schedule.phaseOverdue',
+                          'Phase end date has passed — mark the phase complete to make this entry ready',
+                        )}>
+                          <AlertTriangle
+                            className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400"
+                            aria-label={t(
+                              'billing.schedule.phaseOverdue',
+                              'Phase end date has passed — mark the phase complete to make this entry ready',
+                            )}
+                          />
+                        </Tooltip>
+                      )}
+                    </span>
+                  </td>
                   <td className="px-3.5 py-3">
                     {entry.invoice_number && entry.invoice_id ? (
                       <button

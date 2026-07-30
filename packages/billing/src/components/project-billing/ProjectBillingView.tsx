@@ -102,7 +102,7 @@ export default function ProjectBillingView({
     );
   };
 
-  const handleGenerateTmInvoice = async () => {
+  const handleGenerateProjectInvoice = async () => {
     setGeneratingInvoice(true);
     try {
       const result = await generateProjectInvoice(projectId);
@@ -123,6 +123,20 @@ export default function ProjectBillingView({
 
   return (
     <div className="flex flex-col gap-3.5 pb-4">
+      {config.invoice_mode === 'standalone' && canManage && (
+        <div className="flex justify-end">
+          <Button
+            id="billing-generate-project-invoice"
+            onClick={handleGenerateProjectInvoice}
+            disabled={generatingInvoice}
+          >
+            {generatingInvoice && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
+            {generatingInvoice
+              ? t('billing.generatingProjectInvoice', 'Generating invoice...')
+              : t('billing.generateProjectInvoice', 'Generate project invoice')}
+          </Button>
+        </div>
+      )}
       {isFixed ? (
         <>
           <div className="flex items-center justify-between">
@@ -154,20 +168,6 @@ export default function ProjectBillingView({
         </>
       ) : (
         <>
-          {config.invoice_mode === 'standalone' && canManage && (
-            <div className="flex justify-end">
-              <Button
-                id="billing-generate-tm-invoice"
-                onClick={handleGenerateTmInvoice}
-                disabled={generatingInvoice}
-              >
-                {generatingInvoice && <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />}
-                {generatingInvoice
-                  ? t('billing.tm.generatingInvoice', 'Generating invoice...')
-                  : t('billing.tm.generateInvoice', 'Generate project invoice')}
-              </Button>
-            </div>
-          )}
           <CapPanel config={config} canManage={canManage} onChanged={onChanged} />
           <PhaseRateOverridesEditor
             overrides={overrides}
@@ -305,6 +305,7 @@ function TermsDialog({
               step="0.01"
               value={totalText}
               onChange={(e) => setTotalText(e.target.value)}
+              onWheel={(e) => (e.target as HTMLInputElement).blur()}
             />
           </div>
           {frozenEntryCount > 0 && (

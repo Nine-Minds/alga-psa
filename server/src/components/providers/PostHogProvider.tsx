@@ -2,7 +2,7 @@
 
 import posthog from 'posthog-js';
 import { PostHogProvider as PHProvider, usePostHog } from 'posthog-js/react';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { isPostHogEnabled, posthogConfig } from '@alga-psa/analytics/client';
 
@@ -21,9 +21,15 @@ function SuspendedPostHogPageView() {
   return null;
 }
 
-export function PostHogProvider({ children }: { children: React.ReactNode }) {
+interface PostHogProviderProps {
+  children: React.ReactNode;
+  initialFeatureFlags: Record<string, boolean | string>;
+}
+
+export function PostHogProvider({ children, initialFeatureFlags }: PostHogProviderProps) {
   const [isInitialized, setIsInitialized] = useState(false);
   const [isHydrated, setIsHydrated] = useState(false);
+  const initialFeatureFlagsRef = useRef(initialFeatureFlags);
 
   useEffect(() => {
     setIsHydrated(true);
@@ -57,7 +63,7 @@ export function PostHogProvider({ children }: { children: React.ReactNode }) {
       bootstrap: {
         distinctID: undefined,
         isIdentifiedID: false,
-        featureFlags: {},
+        featureFlags: initialFeatureFlagsRef.current,
       },
       disable_session_recording: posthogConfig.features.sessionRecording === false,
     });

@@ -95,6 +95,7 @@ export interface ProjectBillingEconomics {
 export interface ScheduleEntryView extends IProjectBillingScheduleEntry {
   computed_amount: number;
   phase_name: string | null;
+  phase_end_date: Date | string | null;
   invoice_number: string | null;
   phase_deleted: boolean;
 }

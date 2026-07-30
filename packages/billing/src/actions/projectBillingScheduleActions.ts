@@ -183,8 +183,8 @@ async function scheduleEntryView(
     context.entry.phase_id
       ? tenantDb(connection, tenant).table('project_phases')
         .where({ phase_id: context.entry.phase_id })
-        .select('phase_name')
-        .first<{ phase_name: string }>()
+        .select('phase_name', 'end_date')
+        .first<{ phase_name: string; end_date: Date | string | null }>()
       : null,
     context.entry.invoice_id
       ? tenantDb(connection, tenant).table('invoices')
@@ -200,6 +200,7 @@ async function scheduleEntryView(
     trigger_type: phaseDeleted ? 'manual' : context.entry.trigger_type,
     computed_amount: amounts[entryIndex],
     phase_name: phase?.phase_name ?? null,
+    phase_end_date: phase?.end_date ?? null,
     invoice_number: invoice?.invoice_number ?? null,
     phase_deleted: phaseDeleted,
   };

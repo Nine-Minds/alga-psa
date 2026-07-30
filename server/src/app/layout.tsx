@@ -18,6 +18,7 @@ import { cookies, headers } from 'next/headers.js';
 import { generateBrandingStyles } from "@alga-psa/tenancy";
 import { resolveDeploymentCapabilities } from '@/lib/deployment/deploymentProfile';
 import { resolveRequestHost, resolveRequestOrigin } from '@/lib/deployment/requestHost';
+import { checkFeatureFlag } from '@/lib/feature-flags/serverFeatureFlags';
 import '@mantine/core/styles.css';
 import 'reactflow/dist/style.css';
 // Loaded last so the Inter font-token overrides win over Mantine/Radix defaults.
@@ -125,6 +126,8 @@ export default async function RootLayout({
     brandingStyles = branding?.computedStyles || generateBrandingStyles(branding);
   }
 
+  const projectBillingUiEnabled = await checkFeatureFlag('project-billing-ui');
+
   return (
     <html lang="en" className={`${inter.variable} ${jetbrainsMono.variable} ${inter.className}`} suppressHydrationWarning>
       <head>
@@ -139,7 +142,7 @@ export default async function RootLayout({
         )}
       </head>
       <body className={`${inter.className} ${inter.variable}`} suppressHydrationWarning>
-        <PostHogProvider>
+        <PostHogProvider initialFeatureFlags={{ 'project-billing-ui': projectBillingUiEnabled }}>
            <MainContent>{children}</MainContent>
         </PostHogProvider>
       </body>

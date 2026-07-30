@@ -15,6 +15,9 @@ const clientConfig = readRepo('packages/projects/src/components/ClientPortalConf
 const clientSummary = readRepo('packages/client-portal/src/components/projects/ProjectBillingSummarySection.tsx');
 const invoicingHub = readRepo('packages/billing/src/components/billing-dashboard/InvoicingHub.tsx');
 const customTabs = readRepo('packages/ui/src/components/CustomTabs.tsx');
+const featureFlagHook = readRepo('packages/ui/src/hooks/useFeatureFlag.tsx');
+const rootLayout = readRepo('server/src/app/layout.tsx');
+const postHogProvider = readRepo('server/src/components/providers/PostHogProvider.tsx');
 const flagDocs = readRepo('docs/features/feature-flags.md');
 
 function sourceFiles(root: string): string[] {
@@ -58,7 +61,16 @@ describe('project-billing UI-only feature flag contract', () => {
     expect(clientSummary).toContain('if (!projectBillingUiEnabled || !summary || !summary.enabled)');
   });
 
-  it('documents the flag and keeps its runtime key out of backend code', () => {
+  it('bootstraps the flag on the server and subscribes clients to flag changes', () => {
+    expect(rootLayout).toContain("checkFeatureFlag('project-billing-ui')");
+    expect(rootLayout).toContain("<PostHogProvider initialFeatureFlags={{ 'project-billing-ui': projectBillingUiEnabled }}>");
+    expect(postHogProvider).toContain('featureFlags: initialFeatureFlagsRef.current');
+    expect(featureFlagHook).toContain('posthog.onFeatureFlags(() => {');
+    expect(featureFlagHook).toContain('unsubscribeFromFeatureFlags();');
+    expect(featureFlagHook).not.toContain('posthog.isFeatureEnabled === undefined');
+  });
+
+  it('documents the flag and keeps its runtime key out of backend behavior', () => {
     expect(flagDocs).toContain('### 11. `project-billing-ui`');
     expect(flagDocs).toContain('Backend actions, APIs, services, events, jobs, invoice behavior, database logic, and authorization are always available');
 
@@ -84,6 +96,7 @@ describe('project-billing UI-only feature flag contract', () => {
       'packages/projects/src/components/ProjectInfo.tsx',
       'packages/projects/src/components/TaskForm.tsx',
       'packages/scheduling/src/components/time-management/time-entry/time-sheet/TimeEntryDialog.tsx',
+      'server/src/app/layout.tsx',
     ]);
   });
 });

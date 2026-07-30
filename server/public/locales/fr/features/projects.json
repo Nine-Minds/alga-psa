@@ -1618,6 +1618,7 @@
       "manualSub": "Déclencheur manuel",
       "phaseRemoved": "Manuel · phase supprimée",
       "phaseTrigger": "Achèvement de la phase",
+      "phaseOverdue": "La date de fin de la phase est dépassée — marquez la phase comme terminée pour rendre cette entrée prête",
       "approve": "Approuver",
       "approveInvoice": "Approuver et facturer",
       "hold": "Suspendre",
@@ -1690,9 +1691,9 @@
       "saving": "Enregistrement...",
       "errorAmount": "Saisissez un plafond supérieur à zéro"
     },
+    "generateProjectInvoice": "Générer la facture du projet",
+    "generatingProjectInvoice": "Génération de la facture...",
     "tm": {
-      "generateInvoice": "Générer la facture du projet",
-      "generatingInvoice": "Génération de la facture...",
       "invoiceGenerated": "Facture du projet générée"
     },
     "overrides": {

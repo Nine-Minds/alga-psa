@@ -985,6 +985,7 @@ export const markPhaseComplete = withAuth(async (
         const phase = updatedPhase ?? await ProjectModel.getPhaseById(trx, tenant, phaseId);
         if (!phase) throw new Error('Project phase not found');
 
+        // LEVERAGE: friction phase-readiness-invariant — projects duplicates the billing readiness transition because feature packages cannot depend on each other; move this invariant behind a horizontal project-billing boundary when that layer exists.
         // projects cannot depend on @alga-psa/billing without introducing a
         // feature-package dependency cycle, so readiness is evaluated here
         // with the same optimistic pending predicate as the billing service.

@@ -239,6 +239,11 @@ export const getInvoiceSyncStatuses = withAuth(async (
     return {};
   }
 
+  const realm = await resolveDefaultRealm(knex, tenant).catch(() => null);
+  if (!realm) {
+    return {};
+  }
+
   const [mappings, ops] = await Promise.all([
     tenantDb(knex, tenant).table('tenant_external_entity_mappings')
       .where({ integration_type: SYNC_ADAPTER_TYPE, alga_entity_type: 'invoice' })
