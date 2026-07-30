@@ -1147,7 +1147,9 @@
     "clientRequired": "A client must be assigned to this ticket before materials can be added.",
     "serialUnit": "Serial / MAC (serialized product)",
     "selectUnit": "Select a unit to deliver...",
-    "onHandByLocation": "On hand by location"
+    "onHandByLocation": "On hand by location",
+    "catalogUnitCost": "Catalog unit cost",
+    "costNotConfigured": "Not configured"
   },
   "watchList": {
     "title": "Watch List",

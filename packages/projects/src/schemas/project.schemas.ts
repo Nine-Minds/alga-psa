@@ -147,7 +147,8 @@ export const createTaskSchema = projectTaskSchema.omit({
   created_at: true,
   updated_at: true,
   tenant: true,
-  wbs_code: true  // wbs_code is auto-generated
+  wbs_code: true,  // wbs_code is auto-generated
+  actual_hours: true,
 }).extend({
   assigned_to: z.string().uuid().nullable().or(z.literal('')).transform(val => val === '' ? null : val),
   service_id: z.string().uuid().nullable().or(z.literal('')).transform(val => val === '' ? null : val).optional()
@@ -157,7 +158,8 @@ export const updateTaskSchema = projectTaskSchema.partial().omit({
   task_id: true,
   created_at: true,
   updated_at: true,
-  tenant: true
+  tenant: true,
+  actual_hours: true,
 }).extend({
   assigned_to: z.string().uuid().nullable().or(z.literal('')).transform(val => val === '' ? null : val),
   service_id: z.string().uuid().nullable().or(z.literal('')).transform(val => val === '' ? null : val).optional()

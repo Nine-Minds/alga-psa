@@ -81,6 +81,8 @@ export default function TicketMaterialsCard({
   const [selectedProductLabel, setSelectedProductLabel] = useState<string>('');
   const [productPrices, setProductPrices] = useState<IServicePrice[]>([]);
   const [selectedCurrency, setSelectedCurrency] = useState<string>('');
+  const [selectedCatalogCost, setSelectedCatalogCost] = useState<{ cost: number; currency: string } | null>(null);
+  const catalogCostByProductId = useRef(new Map<string, { cost: number; currency: string } | null>());
   const [quantity, setQuantity] = useState<number>(1);
   const [description, setDescription] = useState<string>('');
   const [isLoadingPrices, setIsLoadingPrices] = useState(false);
@@ -150,11 +152,16 @@ export default function TicketMaterialsCard({
         is_active: true,
       });
 
-      const options: SelectOption[] = result.items.map((item) => ({
-        value: item.service_id,
-        label: item.sku ? `${item.service_name} (${item.sku})` : item.service_name,
-        badge: onHandBadge(item),
-      }));
+      const options: SelectOption[] = result.items.map((item) => {
+        catalogCostByProductId.current.set(item.service_id, item.cost == null || !item.cost_currency
+          ? null
+          : { cost: item.cost, currency: item.cost_currency });
+        return {
+          value: item.service_id,
+          label: item.sku ? `${item.service_name} (${item.sku})` : item.service_name,
+          badge: onHandBadge(item),
+        };
+      });
 
       return { options, total: result.totalCount };
     },
@@ -279,6 +286,7 @@ export default function TicketMaterialsCard({
       toast.success(t('materials.addSuccess', 'Material added'));
       setShowAddForm(false);
       setSelectedProductId('');
+      setSelectedCatalogCost(null);
       setSelectedProductLabel('');
       setProductPrices([]);
       setSelectedCurrency('');
@@ -364,6 +372,7 @@ export default function TicketMaterialsCard({
                 onChange={(value, option) => {
                   setSelectedProductId(value);
                   setSelectedProductLabel(option?.label ?? '');
+                  setSelectedCatalogCost(catalogCostByProductId.current.get(value) ?? null);
                   setSelectedCurrency('');
                   setAddError(null);
                 }}
@@ -405,6 +414,17 @@ export default function TicketMaterialsCard({
                     placeholder={t('materials.selectCurrency', 'Select currency...')}
                   />
                 )}
+              </div>
+            )}
+
+            {selectedProductId && (
+              <div className="space-y-2">
+                <Label>{t('materials.catalogUnitCost', 'Catalog unit cost')}</Label>
+                <div className="h-10 px-3 py-2 bg-gray-100 border rounded-md text-gray-700 flex items-center">
+                  {selectedCatalogCost
+                    ? formatCurrencyFromMinorUnits(selectedCatalogCost.cost, 'en-US', selectedCatalogCost.currency)
+                    : t('materials.costNotConfigured', 'Not configured')}
+                </div>
               </div>
             )}
 
@@ -485,6 +505,7 @@ export default function TicketMaterialsCard({
                 onClick={() => {
                   setShowAddForm(false);
                   setSelectedProductId('');
+                  setSelectedCatalogCost(null);
                   setSelectedProductLabel('');
                   setProductPrices([]);
                   setSelectedCurrency('');

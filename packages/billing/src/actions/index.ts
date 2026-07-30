@@ -36,6 +36,12 @@ export * from './invoiceModification';
 export * from './invoiceCogsActions';
 export * from './invoiceQueries';
 export * from './invoiceJobActions';
+export {
+  createSeparateProjectProductInvoices,
+  getSeparateProjectProductInvoiceReview,
+  type SeparateProjectProductInvoiceReview,
+  type SeparateProjectProductInvoiceReviewRow,
+} from './invoiceGeneration';
 export * from './invoiceTemplates';
 export * from './manualInvoiceActions';
 export * from './salesOrderInvoicingActions';

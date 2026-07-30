@@ -7,6 +7,7 @@ import {
   type InboundActionResult,
 } from '@alga-psa/shared/inboundWebhooks/actions/registry';
 import { writeEntityMapping } from '@alga-psa/shared/inboundWebhooks/externalEntityMappings';
+import { recalculateProjectTaskActualHoursForEntryChange } from '../lib/projectTaskActualHours';
 
 interface CreateTimeEntryMappedValues extends Record<string, unknown> {
   user_id: string;
@@ -143,6 +144,13 @@ const createTimeEntryAction: InboundActionDefinition<CreateTimeEntryMappedValues
             metadata: { source: 'inbound_webhook', delivery_id: ctx.deliveryId },
           });
         }
+
+        await recalculateProjectTaskActualHoursForEntryChange(
+          trx,
+          ctx.tenant,
+          null,
+          created,
+        );
 
         return created;
       });

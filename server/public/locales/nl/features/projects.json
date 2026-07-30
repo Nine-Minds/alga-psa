@@ -537,7 +537,16 @@
     "unknownProduct": "Onbekend product",
     "billed": "Gefactureerd",
     "pending": "In behandeling",
-    "unbilledTotal": "Niet gefactureerd ({{currency}}):"
+    "unbilledTotal": "Niet gefactureerd ({{currency}}):",
+    "priceCurrency": "Price currency", "salePrice": "Sale price", "catalogUnitCost": "Catalog unit cost", "costNotConfigured": "Not configured",
+    "invoiceDestination": "Invoice", "invoiceNextProject": "Next project invoice", "invoiceSeparate": "Separate product invoice",
+    "invoiceProjectCompletion": "When project is completed", "invoiceOnHold": "On hold", "currencySeparateHelp": "Products in a different currency use a separate product invoice.",
+    "invoiceColumn": "Invoice", "editProduct": "Edit product", "removeProduct": "Remove product", "salePriceOverrideHelp": "This price applies only to this project product row.",
+    "updateFailed": "Failed to update product", "updatedSuccess": "Product updated", "createProductInvoices": "Create product invoices",
+    "invoiceReviewTitle": "Review product invoices", "invoiceReviewHelp": "Eligible products are preselected. One draft invoice will be created per currency.",
+    "invoiceReviewFailed": "Failed to load invoice review", "invoiceCreateFailed": "Failed to create product invoices", "invoiceCreatedSuccess": "{{count}} draft product invoice(s) created",
+    "createDrafts": "Create drafts", "draftPreview": "{{currency}} draft ({{count}} products)", "invoiceLinksHelp": "Draft invoices were created. Open each currency group to review it.",
+    "currencyDraftLink": "{{currency}} draft invoice", "productCount": "{{count}} products", "productsMovedToHoldOnClose": "{{count}} linked product(s) moved to On hold because their billing event was canceled."
   },
   "export": {
     "title": "Projecttaken exporteren",
@@ -583,7 +592,7 @@
     "requiredFields": "Vereist:",
     "requiredFieldsList": "task_name",
     "optionalFields": "Optioneel:",
-    "optionalFieldsList": "phase_name, task_description, assigned_to, estimated_hours, actual_hours, due_date, priority, service, task_type, status, tags",
+    "optionalFieldsList": "phase_name, task_description, assigned_to, estimated_hours, due_date, priority, service, task_type, status, tags",
     "noteLabel": "Opmerking:",
     "defaultPhaseNote": "Taken zonder fasenaam worden gegroepeerd in \"{{phaseName}}\"",
     "downloadTemplate": "CSV-sjabloon downloaden",
@@ -1629,7 +1638,10 @@
       "holdReasonRequired": "Een reden voor aanhouden is vereist",
       "heldReason": "Aangehouden: {{reason}}",
       "releaseHold": "Aanhouden opheffen",
-      "holdReleased": "Aanhouden opgeheven"
+      "holdReleased": "Aanhouden opgeheven", "productsMovedToHold": "{{count}} linked product(s) moved to On hold", "setProjectTotal": "Set project total to {{amount}}",
+      "recalculateTitle": "Recalculate project total", "currentProjectTotal": "Current project total", "currentScheduleSum": "Current schedule sum",
+      "resultingProjectTotal": "Resulting project total", "recalculateWarning": "Editable percentage entries will become fixed-dollar entries so the displayed amounts do not move.",
+      "confirmSetProjectTotal": "Set project total", "totalRecalculated": "Project total updated from the schedule"
     },
     "entry": {
       "addTitle": "Mijlpaal of aanbetaling toevoegen",

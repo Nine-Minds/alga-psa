@@ -1980,16 +1980,9 @@ export default function TaskListView({
                                     case 'actual_hours':
                                       return (
                                         <td key="actual_hours" className={`py-2.5 px-3 align-middle ${tdBorder}`}>
-                                          {onTaskUpdate ? (
-                                            <InlineHoursEdit
-                                              minutes={task.actual_hours}
-                                              onCommit={(mins) => onTaskUpdate(task.task_id, { actual_hours: mins ?? 0 })}
-                                            />
-                                          ) : (
-                                            <span className="text-[13px] text-[rgb(var(--color-text-700))]">
-                                              {task.actual_hours != null ? (task.actual_hours / 60).toFixed(1) : '-'}
-                                            </span>
-                                          )}
+                                          <span className="text-[13px] text-[rgb(var(--color-text-700))]">
+                                            {task.actual_hours != null ? (task.actual_hours / 60).toFixed(1) : '-'}
+                                          </span>
                                         </td>
                                       );
                                     case 'checklist':

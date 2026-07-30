@@ -583,7 +583,7 @@
     "requiredFields": "Obrigatório:",
     "requiredFieldsList": "nome_tarefa",
     "optionalFields": "Opcional:",
-    "optionalFieldsList": "nome_da_fase, descrição_da_tarefa, atribuído_para, horas_estimadas, horas_reais, data_de_vencimento, prioridade, serviço, tipo_de_tarefa, status, tags",
+    "optionalFieldsList": "nome_da_fase, descrição_da_tarefa, atribuído_para, horas_estimadas, data_de_vencimento, prioridade, serviço, tipo_de_tarefa, status, tags",
     "noteLabel": "Observação:",
     "defaultPhaseNote": "As tarefas sem phase_name serão agrupadas em \"{{phaseName}}\"",
     "downloadTemplate": "Baixar modelo CSV",

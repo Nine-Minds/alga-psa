@@ -1139,7 +1139,9 @@
     "clientRequired": "Un client doit être attribué à ce ticket avant de pouvoir ajouter des matériaux.",
     "serialUnit": "Numéro de série / MAC (produit sérialisé)",
     "selectUnit": "Sélectionnez une unité à livrer...",
-    "onHandByLocation": "En stock par emplacement"
+    "onHandByLocation": "En stock par emplacement",
+    "catalogUnitCost": "Catalog unit cost",
+    "costNotConfigured": "Not configured"
   },
   "watchList": {
     "title": "Liste de surveillance",

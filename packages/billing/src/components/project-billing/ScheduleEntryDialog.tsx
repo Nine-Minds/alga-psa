@@ -112,15 +112,15 @@ export default function ScheduleEntryDialog({
     let percentage: number | undefined;
     if (valueMode === 'amount') {
       const major = Number(amountText);
-      if (!Number.isFinite(major) || major <= 0) {
-        toast.error(t('billing.entry.errorAmount', 'Enter an amount greater than zero'));
+      if (!Number.isFinite(major) || major < 0) {
+        toast.error(t('billing.entry.errorAmount', 'Enter an amount of zero or greater'));
         return;
       }
       amount = toMinorUnits(major, i18n.language, resolvedCurrency);
     } else {
       const value = Number(percentageText);
       if (!Number.isFinite(value) || value <= 0 || value > 100) {
-        toast.error(t('billing.entry.errorPercentage', 'Enter a percentage between 0 and 100'));
+        toast.error(t('billing.entry.errorPercentage', 'Enter a percentage greater than zero and no more than 100'));
         return;
       }
       percentage = value;
@@ -143,7 +143,7 @@ export default function ScheduleEntryDialog({
       phase_id: triggerType === 'phase' ? phaseId : null,
       trigger_date: triggerType === 'date' && triggerDate ? formatDateOnly(triggerDate) : null,
       requires_payment_before_work: requiresPaymentBeforeWork,
-      ...(!isEdit ? { increase_total: valueMode === 'amount' && increaseTotal } : {}),
+      ...(!isEdit ? { increase_total: valueMode === 'amount' && (amount ?? 0) > 0 && increaseTotal } : {}),
     };
 
     setSaving(true);
@@ -250,7 +250,7 @@ export default function ScheduleEntryDialog({
                 onChange={(e) => setAmountText(e.target.value)}
                 placeholder="0.00"
               />
-              {!isEdit && (
+              {!isEdit && Number(amountText) > 0 && (
                 <div className="mt-3 rounded-md border border-[rgb(var(--color-border-200))] p-3">
                   <Checkbox
                     id="billing-entry-increase-total"
@@ -276,7 +276,7 @@ export default function ScheduleEntryDialog({
               <Input
                 id="billing-entry-percentage"
                 type="number"
-                min="0"
+                min="0.1"
                 max="100"
                 step="0.1"
                 value={percentageText}

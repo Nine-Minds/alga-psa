@@ -11,6 +11,7 @@ import {
 } from '@alga-psa/db';
 import { hasPermission } from '@alga-psa/auth/rbac';
 import type { IUserWithRoles } from '@alga-psa/types';
+import { recalculateProjectTaskActualHoursForEntryChange } from '@alga-psa/scheduling/lib/projectTaskActualHours';
 
 export interface TeamsTicketRecord {
   ticket_id: string;
@@ -479,23 +480,27 @@ export async function createTeamsTimeEntry(params: {
     projectId = (task as { project_id?: string | null } | undefined)?.project_id ?? null;
   }
 
-  await tenantDb(knex, params.tenantId).table('time_entries').insert({
-    tenant: params.tenantId,
-    entry_id: entryId,
-    user_id: params.actorUserId,
-    start_time: startTime,
-    end_time: endTime,
-    work_date,
-    work_timezone,
-    notes: params.notes || null,
-    work_item_id: params.workItemId,
-    work_item_type: params.workItemType,
-    billable_duration: params.billable ? billableDuration : 0,
-    approval_status: 'DRAFT',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    created_by: params.actorUserId,
-    updated_by: params.actorUserId,
+  await withTransaction(knex, async (trx) => {
+    const entry = {
+      tenant: params.tenantId,
+      entry_id: entryId,
+      user_id: params.actorUserId,
+      start_time: startTime,
+      end_time: endTime,
+      work_date,
+      work_timezone,
+      notes: params.notes || null,
+      work_item_id: params.workItemId,
+      work_item_type: params.workItemType,
+      billable_duration: params.billable ? billableDuration : 0,
+      approval_status: 'DRAFT',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      created_by: params.actorUserId,
+      updated_by: params.actorUserId,
+    };
+    await tenantDb(trx, params.tenantId).table('time_entries').insert(entry);
+    await recalculateProjectTaskActualHoursForEntryChange(trx, params.tenantId, null, entry);
   });
 
   return {

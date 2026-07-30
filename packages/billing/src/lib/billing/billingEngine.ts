@@ -88,6 +88,7 @@ import {
   normalizeProjectBillingScheduleEntry,
   normalizeProjectPhaseRateOverride,
 } from "../../models/projectBillingModelUtils";
+import { isProjectMaterialEligible } from "@alga-psa/inventory/lib";
 // Workflow imports removed as event emission is moved back to the calling action
 
 type DiscountQueryRow = IDiscount & {
@@ -121,6 +122,9 @@ type CalculateBillingOptions = {
   projectTarget?: {
     projectId: string;
     entryIds?: string[];
+    projectClosed?: boolean;
+    materialMode?: "project_invoice" | "separate_invoice";
+    selectedMaterialIds?: string[];
   };
 };
 
@@ -633,7 +637,7 @@ export class BillingEngine {
       const db = tenantDb(this.knex, this.tenant);
       const project = await db.table("projects")
         .where({ project_id: projectId })
-        .first("project_id", "client_id", "start_date", "created_at");
+        .first("project_id", "client_id", "start_date", "created_at", "is_closed");
       if (!project) {
         throw new Error(`Project ${projectId} not found`);
       }
@@ -663,9 +667,64 @@ export class BillingEngine {
           projectTarget: {
             projectId,
             entryIds,
+            projectClosed: project.is_closed === true,
           },
         },
       );
+    });
+  }
+
+  async calculateSeparateProjectProductBilling(
+    projectId: string,
+    materialIds: string[],
+    currencyCode: string,
+  ): Promise<IBillingResult> {
+    this.clientDefaultTaxRegionCodeCache.clear();
+    this.locationTaxRegionCodeCache.clear();
+    return this.withPinnedTransaction(async () => {
+      await this.initKnex();
+      if (!this.tenant) {
+        throw new Error("tenant context not found");
+      }
+      if (materialIds.length === 0) {
+        throw new Error("At least one project product must be selected");
+      }
+
+      const db = tenantDb(this.knex, this.tenant);
+      const project = await db.table("projects")
+        .where({ project_id: projectId })
+        .first("project_id", "client_id", "start_date", "created_at", "is_closed");
+      if (!project) {
+        throw new Error(`Project ${projectId} not found`);
+      }
+      const context = await this.loadProjectBillingContext(project.client_id, projectId);
+      const billingPeriod: IBillingPeriod = {
+        startDate: toISODate(toPlainDate(project.start_date ?? project.created_at)),
+        endDate: toISODate(Temporal.Now.plainDateISO().add({ days: 1 })),
+      };
+      const charges = await this.calculateMaterialCharges(
+        project.client_id,
+        billingPeriod,
+        currencyCode,
+        projectId,
+        context ?? undefined,
+        {
+          projectId,
+          projectClosed: project.is_closed === true,
+          materialMode: "separate_invoice",
+          selectedMaterialIds: materialIds,
+        },
+      );
+      const totalAmount = charges.reduce((sum, charge) => sum + charge.total, 0);
+      return {
+        tenant: this.tenant,
+        charges,
+        totalAmount,
+        discounts: [],
+        adjustments: [],
+        finalAmount: totalAmount + charges.reduce((sum, charge) => sum + (charge.tax_amount || 0), 0),
+        currency_code: currencyCode,
+      };
     });
   }
 
@@ -1058,6 +1117,7 @@ export class BillingEngine {
           billingCurrency,
           options.projectTarget?.projectId,
           projectBillingContext,
+          options.projectTarget,
         )
       : await this.calculateMaterialCharges(
           clientId,
@@ -4768,6 +4828,7 @@ export class BillingEngine {
     currencyCode: string,
     projectId?: string,
     projectBillingContext?: ProjectBillingContext,
+    projectTarget?: CalculateBillingOptions["projectTarget"],
   ): Promise<IProductCharge[]> {
     await this.initKnex();
     if (!this.tenant) {
@@ -4802,6 +4863,8 @@ export class BillingEngine {
             "pm.currency_code",
             "pm.description",
             "pm.created_at",
+            "pm.billing_destination",
+            "pm.billing_schedule_entry_id",
             "sc.service_name",
             "sc.tax_rate_id",
           ]);
@@ -4811,7 +4874,27 @@ export class BillingEngine {
           "pm.client_id": clientId,
           "pm.project_id": projectId,
           "pm.is_billed": false,
-          "pm.currency_code": currencyCode,
+        });
+        const selectedScheduleEntryIds = new Set(projectTarget?.entryIds ?? []);
+        const selectedMaterialIds = projectTarget?.selectedMaterialIds
+          ? new Set(projectTarget.selectedMaterialIds)
+          : null;
+        materialRows = materialRows.filter((row) => {
+          if (selectedMaterialIds && !selectedMaterialIds.has(row.source_id)) {
+            return false;
+          }
+          const eligible = isProjectMaterialEligible(row, {
+            mode: projectTarget?.materialMode ?? "project_invoice",
+            selectedScheduleEntryIds,
+            projectClosed: projectTarget?.projectClosed === true,
+          });
+          if (eligible && row.currency_code !== currencyCode) {
+            throw new Error(
+              `Project product ${row.source_id} is routed to this project invoice in ${row.currency_code}, `
+              + `but the project bills in ${currencyCode}. Change it to Separate product invoice.`,
+            );
+          }
+          return eligible;
         });
       } else {
         const ticketMaterialsQuery = db.table("ticket_materials as tm")
@@ -4829,22 +4912,6 @@ export class BillingEngine {
             "sc.tax_rate_id",
           ]);
         db.tenantJoin(ticketMaterialsQuery, "service_catalog as sc", "tm.service_id", "sc.service_id");
-        const projectMaterialsQuery = db.table("project_materials as pm")
-          .select([
-            this.knex.raw(`'project' as source_type`),
-            "pm.project_material_id as source_id",
-            "pm.project_id",
-            "pm.service_id",
-            "pm.quantity",
-            "pm.rate",
-            "pm.currency_code",
-            "pm.description",
-            "pm.created_at",
-            "sc.service_name",
-            "sc.tax_rate_id",
-          ]);
-        db.tenantJoin(projectMaterialsQuery, "service_catalog as sc", "pm.service_id", "sc.service_id");
-
         materialRows = await ticketMaterialsQuery
           .where({
             "tm.tenant": tenant,
@@ -4853,18 +4920,7 @@ export class BillingEngine {
             "tm.currency_code": currencyCode,
           })
           .where("tm.created_at", ">=", billingPeriod.startDate)
-          .andWhere("tm.created_at", "<", billingPeriod.endDate)
-          .unionAll([
-            projectMaterialsQuery
-              .where({
-                "pm.tenant": tenant,
-                "pm.client_id": clientId,
-                "pm.is_billed": false,
-                "pm.currency_code": currencyCode,
-              })
-              .where("pm.created_at", ">=", billingPeriod.startDate)
-              .andWhere("pm.created_at", "<", billingPeriod.endDate),
-          ]);
+          .andWhere("tm.created_at", "<", billingPeriod.endDate);
       }
     } catch (err: any) {
       if (err?.code === "42P01") {
@@ -4940,6 +4996,8 @@ export class BillingEngine {
                 project_billing_config_id: projectConfig.config_id,
               }
             : {}),
+          material_source_type: row.source_type,
+          material_source_id: row.source_id,
         };
       },
     );
