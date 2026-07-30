@@ -1,9 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { describe, expect, it } from 'vitest';
+import { readRepoFile } from '../test-utils/repoPaths';
 
-const readRepoFile = (relativePath: string) =>
-  fs.readFileSync(path.resolve(process.cwd(), relativePath), 'utf8');
+
 
 describe('invoice template save/runtime wasm removal wiring', () => {
   it('does not expose legacy compile/wasm actions', () => {

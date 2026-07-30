@@ -22,6 +22,8 @@ vi.mock('@alga-psa/billing/actions/invoiceQueries', () => ({
 
 vi.mock('@alga-psa/billing/lib/adapters/invoiceAdapters', () => ({
   mapDbInvoiceToWasmViewModel: (...args: unknown[]) => mapDbInvoiceToWasmViewModelMock(...args),
+  // sampleScenarios.ts calls this at module load; grouping is irrelevant here.
+  enrichWithGroupedItems: (vm: unknown) => vm,
 }));
 
 vi.mock('@alga-psa/billing/actions/invoiceTemplatePreview', () => ({

@@ -27,7 +27,10 @@ vi.mock('@alga-psa/auth/rbac', () => ({
 }));
 
 vi.mock('@alga-psa/db', () => ({
-  createTenantKnex: vi.fn()
+  createTenantKnex: vi.fn(),
+  // Facade passthrough: the fakes below dispatch by table name; tenant
+  // scoping is the real facade's concern, not this test's.
+  tenantDb: (conn: any, _tenant: string) => ({ table: (name: string) => conn(name) })
 }));
 
 vi.mock('@alga-psa/integrations/lib/qbo/qboClientService', () => ({

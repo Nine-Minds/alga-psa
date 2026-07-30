@@ -113,6 +113,12 @@ vi.mock('../src/actions/materialCatalogActions', () => ({
   getServicePrices: vi.fn(async () => mockPrices),
   addProjectMaterial: vi.fn(async () => undefined),
   deleteProjectMaterial: vi.fn(async () => undefined),
+  // The drawer calls these in fire-and-forget effects/handlers; missing
+  // exports surface as unhandled vi.mock errors that nondeterministically
+  // mark the FILE failed even with every test passing.
+  getProjectMaterialBillingOptions: vi.fn(async () => ({ project_currency: null, entries: [] })),
+  listAvailableStockUnitsForMaterial: vi.fn(async () => []),
+  updateProjectMaterial: vi.fn(async () => undefined),
 }));
 
 describe('ProjectMaterialsDrawer', () => {

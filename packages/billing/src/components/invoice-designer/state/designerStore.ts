@@ -611,14 +611,19 @@ const materializeNodesFromSnapshot = (snapshot: Pick<DesignerWorkspaceSnapshot, 
     });
 
     // Keep CSS size in sync with numeric box size for authored/designer-native nodes.
-    // AST-imported nodes should remain fluid unless width/height existed in the source AST.
+    // AST-imported nodes should remain fluid unless width/height existed in the
+    // source AST. Check the AUTHORED style, not the merged one: the schema
+    // defaults spread above always fills width/height (fields default to
+    // 'auto'), which used to make these guards dead code and left native
+    // nodes without their px sync.
     const astImported = metadata.__astImported === true;
     const astHadWidth = metadata.__astHadWidth === true;
     const astHadHeight = metadata.__astHadHeight === true;
-    if (!style.width && (!astImported || astHadWidth)) {
+    const authoredStyle = rawStyle ?? {};
+    if (!authoredStyle.width && (!astImported || astHadWidth)) {
       style.width = `${Math.round(size.width)}px`;
     }
-    if (!style.height && (!astImported || astHadHeight)) {
+    if (!authoredStyle.height && (!astImported || astHadHeight)) {
       style.height = `${Math.round(size.height)}px`;
     }
 

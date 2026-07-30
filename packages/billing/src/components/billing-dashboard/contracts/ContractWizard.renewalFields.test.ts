@@ -53,7 +53,10 @@ describe('ContractWizardData renewal fields', () => {
     expect(wizardSource).toContain('const MIN_NOTICE_PERIOD_DAYS = 0;');
     expect(wizardSource).toContain('const MAX_NOTICE_PERIOD_DAYS = 3650;');
     expect(wizardSource).toContain("Notice period must be a whole number of days");
-    expect(wizardSource).toContain('Notice period must be between ${MIN_NOTICE_PERIOD_DAYS}');
+    // The bounds message is translated with i18n interpolation since the i18n sweep.
+    expect(wizardSource).toContain("defaultValue: 'Notice period must be between {{min}} and {{max}} days'");
+    expect(wizardSource).toContain('min: MIN_NOTICE_PERIOD_DAYS');
+    expect(wizardSource).toContain('max: MAX_NOTICE_PERIOD_DAYS');
   });
 
   it('validates renewal term months as positive integer when provided', () => {
