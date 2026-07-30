@@ -242,6 +242,9 @@
       "name": "extensions"
     },
     {
+      "name": "financial"
+    },
+    {
       "name": "import"
     },
     {
@@ -7025,6 +7028,11 @@
             "type": "number",
             "minimum": 0
           },
+          "default_currency_code": {
+            "type": "string",
+            "minLength": 3,
+            "maxLength": 3
+          },
           "preferred_payment_method": {
             "type": "string"
           },
@@ -11388,14 +11396,6 @@
           "operation",
           "credit_ids"
         ]
-      },
-      "FinancialReconciliationResolveBody": {
-        "type": "object",
-        "properties": {
-          "notes": {
-            "type": "string"
-          }
-        }
       },
       "InvoiceCreateBody": {
         "type": "object",
@@ -22162,7 +22162,11 @@
           "checkpoint": {
             "type": "string",
             "enum": [
-              "qualified"
+              "identified",
+              "qualified",
+              "assessment",
+              "proposed",
+              "verbal"
             ]
           },
           "detail": {
@@ -48137,406 +48141,6 @@
           },
           "500": {
             "description": "Unexpected operation failure.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/FinancialInvoiceApiError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/financial/reconciliation/run": {
-      "post": {
-        "summary": "Run financial reconciliation",
-        "description": "Triggers FinancialService.runCreditReconciliation(). Optional client_id query narrows reconciliation target.",
-        "tags": [
-          "Financial"
-        ],
-        "security": [
-          {
-            "ApiKeyAuth": []
-          }
-        ],
-        "extensions": {
-          "x-tenant-scoped": true,
-          "x-auth-mechanism": "x-api-key header validated in ApiBaseController.authenticate()",
-          "x-tenant-header": "x-tenant-id (optional; otherwise tenant inferred from key)",
-          "x-rbac-resource": "financial",
-          "x-rbac-action": "update"
-        },
-        "x-alga-products": [
-          "psa"
-        ],
-        "parameters": [
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "page",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "limit",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "sort",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "asc",
-                "desc"
-              ]
-            },
-            "required": false,
-            "name": "order",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "search",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "created_from",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "created_to",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "updated_from",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "updated_to",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "required": false,
-            "name": "client_id",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            },
-            "required": false,
-            "name": "invoice_id",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "type",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "status",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "amount_min",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "amount_max",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "true",
-                "false"
-              ]
-            },
-            "required": false,
-            "name": "include_expired",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "true",
-                "false"
-              ]
-            },
-            "required": false,
-            "name": "expiring_soon",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "true",
-                "false"
-              ]
-            },
-            "required": false,
-            "name": "has_remaining",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "true",
-                "false"
-              ]
-            },
-            "required": false,
-            "name": "has_expiration",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "date_from",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "date_to",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "day",
-                "week",
-                "month"
-              ]
-            },
-            "required": false,
-            "name": "group_by",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string",
-              "enum": [
-                "true",
-                "false"
-              ]
-            },
-            "required": false,
-            "name": "include_projections",
-            "in": "query"
-          },
-          {
-            "schema": {
-              "type": "string"
-            },
-            "required": false,
-            "name": "as_of_date",
-            "in": "query"
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Reconciliation run completed.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/FinancialInvoiceApiSuccess"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "API key missing/invalid.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/FinancialInvoiceApiError"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "financial:update permission denied.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/FinancialInvoiceApiError"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Unexpected reconciliation failure.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/FinancialInvoiceApiError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
-    "/api/v1/financial/reconciliation/{id}/resolve": {
-      "post": {
-        "summary": "Resolve reconciliation report",
-        "description": "Resolves one reconciliation report by id with optional operator notes.",
-        "tags": [
-          "Financial"
-        ],
-        "security": [
-          {
-            "ApiKeyAuth": []
-          }
-        ],
-        "extensions": {
-          "x-tenant-scoped": true,
-          "x-auth-mechanism": "x-api-key header validated in ApiBaseController.authenticate()",
-          "x-tenant-header": "x-tenant-id (optional; otherwise tenant inferred from key)",
-          "x-rbac-resource": "financial",
-          "x-rbac-action": "update"
-        },
-        "x-alga-products": [
-          "psa"
-        ],
-        "parameters": [
-          {
-            "schema": {
-              "type": "string",
-              "format": "uuid",
-              "description": "Path UUID parameter resolved by ApiBaseController.extractIdFromPath()."
-            },
-            "required": true,
-            "description": "Path UUID parameter resolved by ApiBaseController.extractIdFromPath().",
-            "name": "id",
-            "in": "path"
-          }
-        ],
-        "requestBody": {
-          "required": true,
-          "content": {
-            "application/json": {
-              "schema": {
-                "$ref": "#/components/schemas/FinancialReconciliationResolveBody"
-              }
-            }
-          }
-        },
-        "responses": {
-          "200": {
-            "description": "Reconciliation report resolved.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/FinancialInvoiceApiSuccess"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Invalid id or payload.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/FinancialInvoiceApiError"
-                }
-              }
-            }
-          },
-          "401": {
-            "description": "API key missing/invalid.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/FinancialInvoiceApiError"
-                }
-              }
-            }
-          },
-          "403": {
-            "description": "financial:update permission denied.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/FinancialInvoiceApiError"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Reconciliation report not found.",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/FinancialInvoiceApiError"
-                }
-              }
-            }
-          },
-          "500": {
-            "description": "Unexpected resolution failure.",
             "content": {
               "application/json": {
                 "schema": {
@@ -119940,6 +119544,126 @@
         ],
         "responses": {
           "200": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/financial/reconciliation/run": {
+      "post": {
+        "summary": "POST v1",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "financial"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "requestBody": {
+          "description": "Placeholder request body",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaceholderObject"
+              },
+              "description": "Placeholder request body"
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Placeholder success response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlaceholderObject"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Authentication required",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/financial/reconciliation/{id}/resolve": {
+      "post": {
+        "summary": "POST v1",
+        "description": "This operation was generated automatically from the route inventory. Replace with canonical OpenAPI metadata.",
+        "tags": [
+          "financial"
+        ],
+        "extensions": {
+          "x-generated-from": "docs/openapi/route-inventory.json",
+          "x-placeholder": true
+        },
+        "x-alga-products": [
+          "psa"
+        ],
+        "requestBody": {
+          "description": "Placeholder request body",
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlaceholderObject"
+              },
+              "description": "Placeholder request body"
+            }
+          }
+        },
+        "responses": {
+          "201": {
             "description": "Placeholder success response",
             "content": {
               "application/json": {
