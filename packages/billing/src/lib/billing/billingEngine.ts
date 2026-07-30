@@ -24,6 +24,7 @@ import {
   IProjectBillingCapUsage,
   IProjectMilestoneCharge,
   IProjectDepositCharge,
+  IProject,
   IClientContractLineCycle,
   IRecurringServicePeriod,
   IRecurringServicePeriodRecord,
@@ -132,6 +133,11 @@ type ProjectBillingConfigWithProject = IProjectBillingConfig & {
   project_name: string;
   project_number: string;
 };
+
+type ProjectBillingTarget = Pick<
+  IProject,
+  "project_id" | "client_id" | "start_date" | "created_at" | "is_closed"
+>;
 
 type ProjectPhaseRateOverrideWithService = IProjectPhaseRateOverride & {
   override_service_name: string | null;
@@ -635,9 +641,7 @@ export class BillingEngine {
       }
 
       const db = tenantDb(this.knex, this.tenant);
-      const project = await db.table("projects")
-        .where({ project_id: projectId })
-        .first("project_id", "client_id", "start_date", "created_at", "is_closed");
+      const project = await this.loadProjectBillingTarget(projectId);
       if (!project) {
         throw new Error(`Project ${projectId} not found`);
       }
@@ -690,10 +694,7 @@ export class BillingEngine {
         throw new Error("At least one project product must be selected");
       }
 
-      const db = tenantDb(this.knex, this.tenant);
-      const project = await db.table("projects")
-        .where({ project_id: projectId })
-        .first("project_id", "client_id", "start_date", "created_at", "is_closed");
+      const project = await this.loadProjectBillingTarget(projectId);
       if (!project) {
         throw new Error(`Project ${projectId} not found`);
       }
@@ -726,6 +727,33 @@ export class BillingEngine {
         currency_code: currencyCode,
       };
     });
+  }
+
+  private async loadProjectBillingTarget(
+    projectId: string,
+  ): Promise<ProjectBillingTarget | undefined> {
+    if (!this.tenant) {
+      throw new Error("tenant context not found");
+    }
+
+    const db = tenantDb(this.knex, this.tenant);
+    const query = db.table("projects as project")
+      .where("project.project_id", projectId);
+    db.tenantJoin(
+      query,
+      "statuses as project_status",
+      "project.status",
+      "project_status.status_id",
+      { type: "left" },
+    );
+
+    return await query.first(
+      "project.project_id",
+      "project.client_id",
+      "project.start_date",
+      "project.created_at",
+      "project_status.is_closed",
+    ) as ProjectBillingTarget | undefined;
   }
 
   async selectDueRecurringServicePeriodsForBillingWindow(
