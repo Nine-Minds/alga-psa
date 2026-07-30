@@ -147,6 +147,14 @@ jobs:
       # A few contract tests shell out to ripgrep; it isn't on the runner by default.
       - name: Install ripgrep
         run: sudo apt-get update && sudo apt-get install -y ripgrep
+      # Package suites that real-import @alga-psa/* through native Node
+      # resolution (onboarding seeds are .cjs) need the dists on disk; same
+      # project set the nx job builds.
+      - name: Build shared libraries
+        run: npx nx run-many -t build --projects=@alga-psa/db,@alga-psa/core,@alga-psa/shared,@alga-psa/types,@alga-psa/event-bus,@alga-psa/event-schemas,@alga-psa/validation,@alga-psa/formatting,@alga-psa/search --parallel=3
+        env:
+          NX_DAEMON: 'false'
+          NODE_OPTIONS: '--max-old-space-size=8192'
       - name: Run server unit tests with coverage
         working-directory: ./server
         run: npx vitest run src/test/unit ../packages ../shared ../ee/packages/workflows/src/actions --coverage.enabled=true --coverage.reporter=text-summary --coverage.reporter=lcov --coverage.reporter=json-summary --reporter=default --reporter=json --outputFile.json=./test-results.json
@@ -155,6 +163,12 @@ jobs:
           # This job has no database; *.db.test.* suites are DB-backed
           # integration tests (see the exclude block in server/vitest.config.ts).
           SKIP_DB_TESTS: '1'
+          # Root .env.localtest is committed and dotenv-loaded by
+          # vitest.globalSetup.js, so it would hand DB admin credentials to
+          # opt-in DB suites (packages/inventory) that then dial a database
+          # this job does not run. Blank them so those suites self-skip.
+          DB_USER_ADMIN: ''
+          DB_PASSWORD_ADMIN: ''
           VITEST_SEED: '20260610'
       # `if: always()`: a red run is exactly the data point the coverage
       # artifact and metrics sheet exist to capture.

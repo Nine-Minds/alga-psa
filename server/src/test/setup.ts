@@ -2,7 +2,7 @@ import '@testing-library/jest-dom'
 import path from 'node:path';
 import { mkdirSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { afterEach, beforeAll, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, vi } from 'vitest';
 
 // Native require reaches the SAME CJS instance the externalized imports use
 // (a Vite-side dynamic import would load a separate copy whose cleanup list
@@ -69,11 +69,35 @@ afterEach(async () => {
 // Baseline is captured in beforeAll — AFTER the test module's top-level code —
 // so files that legitimately set the edition at module scope (and restore in
 // their own afterAll) keep working; per-test setters are reset every test.
+// Two baselines, because the two hazards pull in opposite directions:
+//  - TEST baseline (captured in beforeEach, which runs before the file's own
+//    beforeEach because setup hooks register first): whatever module-scope
+//    and beforeAll code established stays put, while setters that run inside
+//    a test get reset between tests.
+//  - FORK baseline (captured the first time this setup runs in the process):
+//    restored when the file finishes, so a module-scope setter can't leak its
+//    edition into every later file in the shared fork.
+const FORK_ENV_KEY = Symbol.for('alga.test.forkEditionBaseline');
+const forkBaseline = ((globalThis as any)[FORK_ENV_KEY] ??= {
+  EDITION: process.env.EDITION,
+  NEXT_PUBLIC_EDITION: process.env.NEXT_PUBLIC_EDITION,
+}) as { EDITION?: string; NEXT_PUBLIC_EDITION?: string };
+
+const restoreEnv = (key: 'EDITION' | 'NEXT_PUBLIC_EDITION', value: string | undefined) => {
+  if (process.env[key] === value) return;
+  if (value === undefined) delete process.env[key];
+  else process.env[key] = value;
+};
+
 let realEdition: string | undefined;
 let realPublicEdition: string | undefined;
-beforeAll(() => {
+beforeEach(() => {
   realEdition = process.env.EDITION;
   realPublicEdition = process.env.NEXT_PUBLIC_EDITION;
+});
+afterAll(() => {
+  restoreEnv('EDITION', forkBaseline.EDITION);
+  restoreEnv('NEXT_PUBLIC_EDITION', forkBaseline.NEXT_PUBLIC_EDITION);
 });
 afterEach(() => {
   if (process.env.EDITION !== realEdition) {
