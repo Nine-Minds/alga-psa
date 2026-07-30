@@ -390,13 +390,15 @@ describe('BentoHero unsaved change model', () => {
     // Returning to the saved board restores status/category/priority, so the
     // pending diff self-cleans: no save bar, no warning, no {status_id: null}.
     // Generous timeout: under Nx parallel load the board-a refetch chain that
-    // self-cleans the diff can outlast waitFor's 1s default.
+    // self-cleans the diff can outlast waitFor's 1s default — and on a wide
+    // affected set (many projects at --parallel=3 on a 4-vCPU runner) fork
+    // starvation has blown through 5s too.
     await waitFor(() => {
       expect(screen.queryByRole('button', { name: /Save Changes/i })).not.toBeInTheDocument();
-    }, { timeout: 5_000 });
+    }, { timeout: 15_000 });
     await waitFor(() => {
       expect(onLiveDirtyFieldsChange).toHaveBeenLastCalledWith([]);
-    }, { timeout: 5_000 });
+    }, { timeout: 15_000 });
     expect(screen.queryByText('Select a status for the new board before saving.')).not.toBeInTheDocument();
     expect(screen.getByTestId('bento-hero-status-select')).toHaveValue('status-a');
   });
