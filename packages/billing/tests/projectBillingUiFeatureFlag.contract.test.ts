@@ -24,6 +24,7 @@ function sourceFiles(root: string): string[] {
   return readdirSync(root, { withFileTypes: true }).flatMap((entry) => {
     const absolutePath = path.join(root, entry.name);
     if (entry.isDirectory()) return sourceFiles(absolutePath);
+    if (/\.(test|spec)\.(ts|tsx)$/.test(entry.name)) return [];
     return /\.(ts|tsx)$/.test(entry.name) ? [absolutePath] : [];
   });
 }
@@ -65,6 +66,11 @@ describe('project-billing UI-only feature flag contract', () => {
     expect(rootLayout).toContain("checkFeatureFlag('project-billing-ui')");
     expect(rootLayout).toContain("<PostHogProvider initialFeatureFlags={{ 'project-billing-ui': projectBillingUiEnabled }}>");
     expect(postHogProvider).toContain('featureFlags: initialFeatureFlagsRef.current');
+    expect(postHogProvider).toContain(
+      '<FeatureFlagBootstrapProvider initialFeatureFlags={initialFeatureFlagsRef.current}>'
+    );
+    expect(featureFlagHook).toContain('const bootstrappedValue = useBootstrappedFeatureFlag(flagKey);');
+    expect(featureFlagHook).toContain('if (bootstrappedValue !== undefined) return Boolean(bootstrappedValue);');
     expect(featureFlagHook).toContain('posthog.onFeatureFlags(() => {');
     expect(featureFlagHook).toContain('unsubscribeFromFeatureFlags();');
     expect(featureFlagHook).not.toContain('posthog.isFeatureEnabled === undefined');

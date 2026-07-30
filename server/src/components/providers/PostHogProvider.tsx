@@ -5,6 +5,7 @@ import { PostHogProvider as PHProvider, usePostHog } from 'posthog-js/react';
 import { useEffect, useRef, useState } from 'react';
 import { usePathname, useSearchParams } from 'next/navigation';
 import { isPostHogEnabled, posthogConfig } from '@alga-psa/analytics/client';
+import { FeatureFlagBootstrapProvider } from '@alga-psa/ui/hooks';
 
 function SuspendedPostHogPageView() {
   const posthogClient = usePostHog();
@@ -71,8 +72,10 @@ export function PostHogProvider({ children, initialFeatureFlags }: PostHogProvid
 
   return (
     <PHProvider client={posthog}>
-      {isInitialized && <SuspendedPostHogPageView />}
-      {children}
+      <FeatureFlagBootstrapProvider initialFeatureFlags={initialFeatureFlagsRef.current}>
+        {isInitialized && <SuspendedPostHogPageView />}
+        {children}
+      </FeatureFlagBootstrapProvider>
     </PHProvider>
   );
 }
