@@ -184,6 +184,11 @@ const ProjectDetailsEdit: React.FC<ProjectDetailsEditProps> = ({
       console.log('Updated project with budgeted hours:', budgetedHours);
 
       toast.success(t('projectEdit.updatedSuccess', 'Project updated successfully'));
+      if ((updatedProject.products_moved_to_hold ?? 0) > 0) {
+        toast(t('materials.productsMovedToHoldOnClose', '{{count}} linked product(s) moved to On hold because their billing event was canceled.', {
+          count: updatedProject.products_moved_to_hold,
+        }), { icon: '⚠️' });
+      }
       onSave(updatedProject);
     } catch (error) {
       const errorMessage = error instanceof Error

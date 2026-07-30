@@ -34,6 +34,7 @@ import { useFormatters } from '@alga-psa/ui/lib/i18n/client';
 import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { getEntryDisplayPercentage } from './billingViewHelpers';
+import { recalculateProjectTotalFromSchedule } from '../../actions/projectBillingConfigActions';
 
 interface ScheduleTableProps {
   config: IProjectBillingConfig;
@@ -84,6 +85,8 @@ export default function ScheduleTable({
   const [dialogOpen, setDialogOpen] = useState(false);
   const [holdTarget, setHoldTarget] = useState<ScheduleEntryView | null>(null);
   const [holdReason, setHoldReason] = useState('');
+  const [recalculateOpen, setRecalculateOpen] = useState(false);
+  const [recalculating, setRecalculating] = useState(false);
 
   const allocation = useMemo(() => {
     const total = config.total_price ?? 0;
@@ -258,7 +261,19 @@ export default function ScheduleTable({
               size="xs"
               variant="outline"
               disabled={busy}
-              onClick={() => run(entry.schedule_entry_id, () => cancelScheduleEntry(entry.schedule_entry_id), 'billing.schedule.canceled', 'Entry canceled')}
+              onClick={() => run(
+                entry.schedule_entry_id,
+                () => cancelScheduleEntry(entry.schedule_entry_id),
+                'billing.schedule.canceled',
+                'Entry canceled',
+                (result) => {
+                  if (result.products_moved_to_hold > 0) {
+                    toast(t('billing.schedule.productsMovedToHold', '{{count}} linked product(s) moved to On hold', {
+                      count: result.products_moved_to_hold,
+                    }), { icon: '⚠️' });
+                  }
+                },
+              )}
             >
               {t('common:actions.cancel', 'Cancel')}
             </Button>
@@ -296,7 +311,19 @@ export default function ScheduleTable({
               id={`billing-delete-${entry.schedule_entry_id}`}
               type="button"
               disabled={busy}
-              onClick={() => run(entry.schedule_entry_id, () => deleteScheduleEntry(entry.schedule_entry_id), 'billing.schedule.deleted', 'Entry deleted')}
+              onClick={() => run(
+                entry.schedule_entry_id,
+                () => deleteScheduleEntry(entry.schedule_entry_id),
+                'billing.schedule.deleted',
+                'Entry deleted',
+                (result) => {
+                  if (result.products_moved_to_hold > 0) {
+                    toast(t('billing.schedule.productsMovedToHold', '{{count}} linked product(s) moved to On hold', {
+                      count: result.products_moved_to_hold,
+                    }), { icon: '⚠️' });
+                  }
+                },
+              )}
               className="rounded p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10"
               title={t('common:actions.delete', 'Delete')}
             >
@@ -306,6 +333,24 @@ export default function ScheduleTable({
         )}
       </div>
     );
+  };
+
+  const confirmRecalculation = async () => {
+    setRecalculating(true);
+    try {
+      const result = await recalculateProjectTotalFromSchedule(config.config_id, allocation.delta);
+      if (isActionMessageError(result) || isActionPermissionError(result)) {
+        toast.error(getErrorMessage(result));
+        return;
+      }
+      toast.success(t('billing.schedule.totalRecalculated', 'Project total updated from the schedule'));
+      setRecalculateOpen(false);
+      onChanged();
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : String(error));
+    } finally {
+      setRecalculating(false);
+    }
   };
 
   const allocationTone = allocation.delta === 0
@@ -416,6 +461,18 @@ export default function ScheduleTable({
               {money(allocation.total, currency ?? undefined)}
             </td>
             <td colSpan={3} className="px-3.5 py-2.5 text-right">
+              {canManage && allocation.delta > 0 && (
+                <Button
+                  id="billing-recalculate-project-total"
+                  variant="outline"
+                  size="xs"
+                  onClick={() => setRecalculateOpen(true)}
+                >
+                  {t('billing.schedule.setProjectTotal', 'Set project total to {{amount}}', {
+                    amount: money(allocation.sum, currency ?? undefined),
+                  })}
+                </Button>
+              )}
               {canManage && (
                 <Button id="billing-add-entry" variant="ghost" size="xs" onClick={openAdd}>
                   <Plus className="mr-1 h-3.5 w-3.5" />
@@ -436,6 +493,39 @@ export default function ScheduleTable({
           onClose={() => setDialogOpen(false)}
           onSaved={() => { setDialogOpen(false); onChanged(); }}
         />
+      )}
+
+      {recalculateOpen && (
+        <Dialog
+          isOpen
+          onClose={() => setRecalculateOpen(false)}
+          id="billing-recalculate-project-total-dialog"
+          title={t('billing.schedule.recalculateTitle', 'Recalculate project total')}
+          footer={(
+            <div className="flex justify-end gap-2">
+              <Button id="billing-recalculate-total-cancel" variant="outline" onClick={() => setRecalculateOpen(false)} disabled={recalculating}>
+                {t('common:actions.cancel', 'Cancel')}
+              </Button>
+              <Button id="billing-recalculate-total-confirm" onClick={confirmRecalculation} disabled={recalculating}>
+                {t('billing.schedule.confirmSetProjectTotal', 'Set project total')}
+              </Button>
+            </div>
+          )}
+        >
+          <DialogContent>
+            <dl className="grid grid-cols-2 gap-3 text-sm">
+              <dt className="text-[rgb(var(--color-text-500))]">{t('billing.schedule.currentProjectTotal', 'Current project total')}</dt>
+              <dd className="text-right font-medium">{money(allocation.total, currency ?? undefined)}</dd>
+              <dt className="text-[rgb(var(--color-text-500))]">{t('billing.schedule.currentScheduleSum', 'Current schedule sum')}</dt>
+              <dd className="text-right font-medium">{money(allocation.sum, currency ?? undefined)}</dd>
+              <dt className="text-[rgb(var(--color-text-500))]">{t('billing.schedule.resultingProjectTotal', 'Resulting project total')}</dt>
+              <dd className="text-right font-semibold">{money(allocation.sum, currency ?? undefined)}</dd>
+            </dl>
+            <p className="mt-4 rounded-md bg-amber-50 p-3 text-sm text-amber-800 dark:bg-amber-500/10 dark:text-amber-300">
+              {t('billing.schedule.recalculateWarning', 'Editable percentage entries will become fixed-dollar entries so the displayed amounts do not move.')}
+            </p>
+          </DialogContent>
+        </Dialog>
       )}
 
       {holdTarget && (

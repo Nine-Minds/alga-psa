@@ -20,7 +20,7 @@ function tenantScopedTable<Row extends object = Record<string, any>>(
 }
 
 const ProjectTaskModel = {
-  addTask: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, phaseId: string, taskData: Omit<IProjectTask, 'task_id' | 'phase_id' | 'created_at' | 'updated_at' | 'tenant' | 'wbs_code'> & { order_key?: string }): Promise<IProjectTask> => {
+  addTask: async (knexOrTrx: Knex | Knex.Transaction, tenant: string, phaseId: string, taskData: Omit<IProjectTask, 'task_id' | 'phase_id' | 'created_at' | 'updated_at' | 'tenant' | 'wbs_code' | 'actual_hours'> & { order_key?: string }): Promise<IProjectTask> => {
     try {
       if (!tenant) {
         throw new Error('Tenant context is required');
@@ -58,6 +58,7 @@ const ProjectTaskModel = {
           wbs_code: newWbsCode,
           order_key: orderKey,
           task_type_key: taskData.task_type_key || 'task',
+          actual_hours: 0,
           tenant,
         })
         .returning('*');
@@ -83,7 +84,6 @@ const ProjectTaskModel = {
         'assigned_to',
         'estimated_hours',
         'due_date',
-        'actual_hours',
         'wbs_code',
         'project_status_mapping_id',
         'order_key',
@@ -120,7 +120,6 @@ const ProjectTaskModel = {
               }
               break;
             case 'estimated_hours':
-            case 'actual_hours':
               if (typeof value === 'number') {
                 finalTaskData[typedKey] = value;
               }

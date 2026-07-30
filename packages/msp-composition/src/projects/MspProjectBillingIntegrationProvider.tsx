@@ -6,6 +6,10 @@ import {
   type ProjectBillingIntegrationContextType,
 } from '@alga-psa/projects/context/ProjectBillingIntegrationContext';
 import { getProjectBillingOverview } from '@alga-psa/billing/actions/projectBillingConfigActions';
+import {
+  createSeparateProjectProductInvoices,
+  getSeparateProjectProductInvoiceReview,
+} from '@alga-psa/billing/actions/invoiceGeneration';
 import ProjectBillingView from '@alga-psa/billing/components/project-billing/ProjectBillingView';
 import ProjectPaymentWarningBanner from '@alga-psa/billing/components/project-billing/ProjectPaymentWarningBanner';
 import ProjectBilledBar from '@alga-psa/billing/components/project-billing/ProjectBilledBar';
@@ -42,6 +46,8 @@ function IntegratedProjectBillingView(props: ProjectBillingViewProps) {
 export function MspProjectBillingIntegrationProvider({ children }: { children: React.ReactNode }) {
   const value = useMemo<ProjectBillingIntegrationContextType>(() => ({
     fetchOverview: getProjectBillingOverview,
+    getSeparateProjectProductInvoiceReview,
+    createSeparateProjectProductInvoices,
     BillingView: IntegratedProjectBillingView,
     PaymentWarningBanner: ProjectPaymentWarningBanner,
     BilledBar: ProjectBilledBar,

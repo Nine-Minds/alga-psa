@@ -659,6 +659,7 @@ export class ProjectService extends BaseService<IProject> {
   
         const taskData = {
           ...data,
+          actual_hours: 0,
           phase_id: phaseId,
           wbs_code: newWbsCode,
           order_key: orderKey,
@@ -739,8 +740,9 @@ export class ProjectService extends BaseService<IProject> {
           throw new NotFoundError('Project task not found');
         }
 
+        const { actual_hours: _derivedActualHours, ...writableData } = data as InternalUpdateProjectTaskData & { actual_hours?: number };
         const updateData = {
-          ...data,
+          ...writableData,
           updated_at: new Date()
         };
   

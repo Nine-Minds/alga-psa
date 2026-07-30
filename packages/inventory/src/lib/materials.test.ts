@@ -10,7 +10,7 @@ import { randomUUID } from 'node:crypto';
 import knexLib, { Knex } from 'knex';
 import { recordStockMovement } from './movements';
 import { recordStockConsumption, InsufficientStockError } from './consume';
-import { addMaterial, deleteMaterial, MaterialValidationError } from './materials';
+import { addMaterial, deleteMaterial, isProjectMaterialEligible, MaterialValidationError } from './materials';
 import { queryProductAvailability } from './availability';
 import { getInventoryTestDatabaseConnection } from '../test-utils/inventoryTestDatabase';
 
@@ -56,6 +56,39 @@ async function onHand(trx: Knex.Transaction, serviceId: string): Promise<number>
   const r = await trx('stock_levels').where({ tenant: TENANT, service_id: serviceId, location_id: LOCATION }).first();
   return r ? Number(r.quantity_on_hand) : 0;
 }
+
+describe('project product invoice eligibility', () => {
+  const material = (billing_destination: Parameters<typeof isProjectMaterialEligible>[0]['billing_destination'], billing_schedule_entry_id: string | null = null) => ({
+    billing_destination,
+    billing_schedule_entry_id,
+  });
+
+  it('routes each destination only to its explicit invoice path', () => {
+    expect(isProjectMaterialEligible(material('next_project_invoice'), { mode: 'project_invoice' })).toBe(true);
+    expect(isProjectMaterialEligible(material('separate'), { mode: 'project_invoice' })).toBe(false);
+    expect(isProjectMaterialEligible(material('separate'), { mode: 'separate_invoice' })).toBe(true);
+    expect(isProjectMaterialEligible(material('on_hold'), { mode: 'project_invoice' })).toBe(false);
+    expect(isProjectMaterialEligible(material('on_hold'), { mode: 'separate_invoice' })).toBe(false);
+  });
+
+  it('requires the assigned schedule entry to be selected', () => {
+    const scheduled = material('schedule_entry', 'entry-a');
+    expect(isProjectMaterialEligible(scheduled, {
+      mode: 'project_invoice',
+      selectedScheduleEntryIds: new Set(['entry-b']),
+    })).toBe(false);
+    expect(isProjectMaterialEligible(scheduled, {
+      mode: 'project_invoice',
+      selectedScheduleEntryIds: new Set(['entry-a']),
+    })).toBe(true);
+  });
+
+  it('makes completion-routed products eligible only after project closure', () => {
+    const completion = material('project_completion');
+    expect(isProjectMaterialEligible(completion, { mode: 'project_invoice', projectClosed: false })).toBe(false);
+    expect(isProjectMaterialEligible(completion, { mode: 'project_invoice', projectClosed: true })).toBe(true);
+  });
+});
 
 describe.skipIf(!databaseConnection)('F014/F015 negative-stock guard (T003)', () => {
   it('blocks insufficient consumption naming the available quantity; exact-to-zero succeeds', async () => {
