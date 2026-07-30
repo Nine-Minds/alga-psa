@@ -1,4 +1,11 @@
-import { computeWorkDateFields, createTenantKnex, resolveUserTimeZone, tenantDb, withTransaction } from '@alga-psa/db';
+import {
+  computeWorkDateFields,
+  createTenantKnex,
+  recalculateProjectTaskActualHoursForEntryChange,
+  resolveUserTimeZone,
+  tenantDb,
+  withTransaction,
+} from '@alga-psa/db';
 import { publishEvent } from '@alga-psa/event-bus/publishers';
 
 import {
@@ -7,7 +14,6 @@ import {
   type InboundActionResult,
 } from '@alga-psa/shared/inboundWebhooks/actions/registry';
 import { writeEntityMapping } from '@alga-psa/shared/inboundWebhooks/externalEntityMappings';
-import { recalculateProjectTaskActualHoursForEntryChange } from '@alga-psa/db';
 
 interface CreateTimeEntryMappedValues extends Record<string, unknown> {
   user_id: string;
