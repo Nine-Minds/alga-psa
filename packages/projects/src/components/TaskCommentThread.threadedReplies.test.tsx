@@ -3,13 +3,21 @@
 import '@testing-library/jest-dom/vitest';
 
 import React from 'react';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, within, configure, cleanup } from '@testing-library/react';
 
 // Components under test attach automation ids via the plain
 // `data-automation-id` attribute, so point Testing Library's testId queries
-// at that attribute.
-configure({ testIdAttribute: 'data-automation-id' });
+// at that attribute. configure() mutates GLOBAL Testing Library state — the
+// whole suite shares one fork, and the server-suite setup resets it after
+// every test — so set it per test (and restore on the way out for runs
+// without that setup, e.g. this package's own config).
+beforeEach(() => {
+  configure({ testIdAttribute: 'data-automation-id' });
+});
+afterAll(() => {
+  configure({ testIdAttribute: 'data-testid' });
+});
 import userEvent from '@testing-library/user-event';
 import TaskCommentThread from './TaskCommentThread';
 import type { IProjectTaskCommentWithUser } from '@alga-psa/types';

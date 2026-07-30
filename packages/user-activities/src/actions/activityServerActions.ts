@@ -13,7 +13,7 @@ import {
   NotificationActivity,
   IUser
 } from "@alga-psa/types";
-import { createTenantKnex } from "@alga-psa/db";
+import { createTenantKnex, tenantDb } from "@alga-psa/db";
 import {
   fetchUserActivities,
   fetchScheduleActivities as fetchScheduleActivitiesInternal,
@@ -436,8 +436,8 @@ export const getActivityViewableUsers = withAuth(async (
   }
 
   // Select only non-sensitive columns (never hashed_password / two_factor_secret).
-  const rows = await knex("users")
-    .where({ tenant, user_type: "internal", is_inactive: false })
+  const rows = await tenantDb(knex, tenant).table("users")
+    .where({ user_type: "internal", is_inactive: false })
     .whereNot({ user_id: user.user_id })
     .orderBy([{ column: "first_name" }, { column: "last_name" }])
     .select(

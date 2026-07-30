@@ -125,8 +125,12 @@ jobs:
   # Coverage report for the full server unit suite. This is the only gate that
   # runs the entire server suite, so it fails loudly on PRs and protected-branch
   # pushes rather than leaving a required check in the skipped state.
-  # Scope is src/test/unit only: src/test/infrastructure is DB-backed and runs
-  # in its own job below with a Postgres service.
+  # Scope: src/test/unit plus the workspace package/shared unit tests the
+  # server vitest config already includes — running them here is what gets
+  # package sources into the coverage report (the v8 provider only measures
+  # loaded files, and its untested-file crawl never leaves server/).
+  # src/test/infrastructure is DB-backed and runs in its own job below with a
+  # Postgres service.
   coverage-report:
     name: Server unit suite + coverage
     runs-on: ubuntu-latest
@@ -145,9 +149,12 @@ jobs:
         run: sudo apt-get update && sudo apt-get install -y ripgrep
       - name: Run server unit tests with coverage
         working-directory: ./server
-        run: npx vitest run src/test/unit --coverage.enabled=true --coverage.reporter=text-summary --coverage.reporter=lcov --coverage.reporter=json-summary --reporter=default --reporter=json --outputFile.json=./test-results.json
+        run: npx vitest run src/test/unit ../packages ../shared ../ee/packages/workflows/src/actions --coverage.enabled=true --coverage.reporter=text-summary --coverage.reporter=lcov --coverage.reporter=json-summary --reporter=default --reporter=json --outputFile.json=./test-results.json
         env:
           NODE_OPTIONS: '--max-old-space-size=14336'
+          # This job has no database; *.db.test.* suites are DB-backed
+          # integration tests (see the exclude block in server/vitest.config.ts).
+          SKIP_DB_TESTS: '1'
           VITEST_SEED: '20260610'
       # `if: always()`: a red run is exactly the data point the coverage
       # artifact and metrics sheet exist to capture.

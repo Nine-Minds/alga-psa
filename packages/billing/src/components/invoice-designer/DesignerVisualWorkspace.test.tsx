@@ -144,8 +144,12 @@ afterEach(() => {
 describe('DesignerVisualWorkspace', () => {
   beforeEach(() => {
     vi.useRealTimers();
+    // writable matters: jsdom is reused across files in the shared fork, and
+    // a non-writable descriptor here makes every later file's plain
+    // `Element.prototype.scrollIntoView = ...` assignment throw.
     Object.defineProperty(Element.prototype, 'scrollIntoView', {
       configurable: true,
+      writable: true,
       value: vi.fn(),
     });
     useInvoiceDesignerStore.getState().resetWorkspace();

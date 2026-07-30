@@ -47,7 +47,8 @@ const gauge: EmulatorPackage = {
   },
 };
 
-describe('scenario runner', () => {
+// Steps build on prior scenario state; opt out of intra-file shuffle.
+describe('scenario runner', { shuffle: false }, () => {
   let host: EmulatorHost | undefined;
 
   afterEach(async () => {

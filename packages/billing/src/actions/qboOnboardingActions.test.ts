@@ -7,9 +7,14 @@
  */
 
 // Set EE flag before any module loads
+const prevEdition = process.env.EDITION;
 process.env.EDITION = 'ee';
+afterAll(() => {
+  if (prevEdition === undefined) delete process.env.EDITION;
+  else process.env.EDITION = prevEdition;
+});
 
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterAll } from 'vitest';
 
 // ─── Module mocks (must be hoisted before imports) ───────────────────────────
 

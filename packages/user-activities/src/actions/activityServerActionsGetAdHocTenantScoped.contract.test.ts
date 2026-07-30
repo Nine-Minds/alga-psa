@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'fs';
 import { resolve } from 'path';
 
-const sourcePath = resolve(__dirname, 'activityServerActions.ts');
+const sourcePath = resolve(__dirname, 'adHocActivityCore.ts');
 const source = readFileSync(sourcePath, 'utf8');
 
 function sectionBetween(startMarker: string, endMarker: string): string {
@@ -17,7 +17,10 @@ function sectionBetween(startMarker: string, endMarker: string): string {
 
 describe('activity server get ad-hoc tenant-scoped query contract', () => {
   it('uses structural tenant scoping for get-ad-hoc entry and assignee reads', () => {
-    const section = sectionBetween('export const getAdHocActivity', 'export interface UpdateAdHocActivityInput');
+    const section = sectionBetween(
+      'export async function getAdHocActivityForApi',
+      'export async function getAdHocActivityAsActivityForApi'
+    );
 
     expect(section).toContain(".table(\"schedule_entries");
     expect(section).toContain(".table(\"schedule_entry_assignees");

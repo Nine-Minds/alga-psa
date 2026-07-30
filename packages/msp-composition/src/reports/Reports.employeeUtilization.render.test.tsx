@@ -7,6 +7,11 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 const getEmployeeUtilizationReport = vi.fn();
 
+// The server-suite setup stubs this hook with empty automationIdProps, which
+// strips DOM ids off UI Buttons — this test locates cards by #reports-view-*,
+// so restore the real hook. No-op under this package's own config.
+vi.unmock('@alga-psa/ui/ui-reflection/useAutomationIdAndRegister');
+
 vi.mock('next/link', () => ({
   default: ({ children, ...rest }: any) => <a {...rest}>{children}</a>,
 }));

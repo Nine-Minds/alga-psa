@@ -1,18 +1,151 @@
 import '@testing-library/jest-dom'
 import path from 'node:path';
 import { mkdirSync } from 'node:fs';
-import { afterEach, vi } from 'vitest';
+import { createRequire } from 'node:module';
+import { afterEach, beforeAll, vi } from 'vitest';
+
+// Native require reaches the SAME CJS instance the externalized imports use
+// (a Vite-side dynamic import would load a separate copy whose cleanup list
+// and config are empty).
+const nativeRequire = createRequire(import.meta.url);
+const loadRootRtl = (): any | null => {
+  try {
+    return nativeRequire(
+      path.resolve(__dirname, '../../../node_modules/@testing-library/react/dist/index.js')
+    );
+  } catch {
+    return null; // Root copy absent (deduped) — nothing to reach.
+  }
+};
 
 // @testing-library/react is externalized, so its module-level auto-cleanup
 // afterEach registers only in the first file that imports it per fork
 // (singleFork runs the whole suite in one process). Every later jsdom file
 // would stack renders within itself and leak mounted trees into the files
 // after it. Register cleanup here instead — setup runs per test file.
+//
+// The monorepo holds TWO RTL copies: server/node_modules (16.x, what this
+// setup file resolves) and the hoisted root copy (14.x, what tests under
+// ../packages/* resolve). cleanup() only unmounts trees tracked by its own
+// copy, so clean both — otherwise package component tests stack renders
+// ("Found multiple elements ...") while this hook faithfully cleans the
+// copy they never used.
 afterEach(async () => {
   if (typeof document === 'undefined') return;
   const { cleanup } = await import('@testing-library/react');
   cleanup();
+  loadRootRtl()?.cleanup?.();
 });
+
+// jsdom environments are REUSED across test files in this single-fork suite,
+// and several tests mount via raw react-dom createRoot into document.body
+// without unmounting — their leftovers surface in later files as duplicate
+// rows/textboxes. Start every file with a clean body (per-file only, so
+// within-file state is untouched).
+beforeAll(() => {
+  if (typeof document !== 'undefined') {
+    document.body.innerHTML = '';
+  }
+});
+
+// Testing-library failure output prints the whole document; some suites build
+// very large DOMs and a retrying waitFor re-prints them until the fork OOMs.
+// Cap the dump. (An explicit env wins, so local debugging can raise it.)
+process.env.DEBUG_PRINT_LIMIT = process.env.DEBUG_PRINT_LIMIT || '10000';
+
+// configure({ testIdAttribute }) mutates GLOBAL Testing Library state and the
+// suite shares one fork — reset it after every test, against both RTL copies
+// (see the dual-copy note on the cleanup hook below).
+afterEach(async () => {
+  if (typeof document === 'undefined') return;
+  const { configure } = await import('@testing-library/react');
+  configure({ testIdAttribute: 'data-testid' });
+  loadRootRtl()?.configure?.({ testIdAttribute: 'data-testid' });
+});
+
+// Edition-gated suites set EDITION / NEXT_PUBLIC_EDITION per test and not all
+// restore; in the shared fork a leaked edition flips later suites' code paths
+// (Temporal-vs-PgBoss SLA backend, Microsoft consumer availability, ...).
+// Baseline is captured in beforeAll — AFTER the test module's top-level code —
+// so files that legitimately set the edition at module scope (and restore in
+// their own afterAll) keep working; per-test setters are reset every test.
+let realEdition: string | undefined;
+let realPublicEdition: string | undefined;
+beforeAll(() => {
+  realEdition = process.env.EDITION;
+  realPublicEdition = process.env.NEXT_PUBLIC_EDITION;
+});
+afterEach(() => {
+  if (process.env.EDITION !== realEdition) {
+    if (realEdition === undefined) delete process.env.EDITION;
+    else process.env.EDITION = realEdition;
+  }
+  if (process.env.NEXT_PUBLIC_EDITION !== realPublicEdition) {
+    if (realPublicEdition === undefined) delete process.env.NEXT_PUBLIC_EDITION;
+    else process.env.NEXT_PUBLIC_EDITION = realPublicEdition;
+  }
+});
+
+// Several suites replace global fetch (vi.stubGlobal or direct assignment)
+// and never restore it — in the shared fork every later file then calls a
+// mock that resolves undefined ("Cannot read properties of undefined
+// (reading 'json')" from real HTTP tests like the emulator smokes). Restore
+// after every test to the per-file baseline (captured in beforeAll so files
+// that stub fetch at module scope keep their stub through the file).
+let realFetch: typeof globalThis.fetch;
+beforeAll(() => {
+  realFetch = globalThis.fetch;
+});
+afterEach(() => {
+  if (globalThis.fetch !== realFetch) {
+    globalThis.fetch = realFetch;
+  }
+});
+
+// Node 25 ships an experimental global localStorage that shadows jsdom's and
+// throws/no-ops without --localstorage-file ("setItem is not a function").
+// CI's Node 20 has no such global; guard local runs with a Map-backed stub.
+if (typeof window !== 'undefined') {
+  let broken = false;
+  try {
+    broken = typeof window.localStorage?.setItem !== 'function';
+    if (!broken) {
+      window.localStorage.setItem('__probe__', '1');
+      window.localStorage.removeItem('__probe__');
+    }
+  } catch {
+    broken = true;
+  }
+  if (broken) {
+    const backing = new Map<string, string>();
+    const storage = {
+      get length() { return backing.size; },
+      clear: () => backing.clear(),
+      getItem: (k: string) => (backing.has(k) ? backing.get(k)! : null),
+      key: (i: number) => [...backing.keys()][i] ?? null,
+      removeItem: (k: string) => { backing.delete(k); },
+      setItem: (k: string, v: string) => { backing.set(k, String(v)); },
+    } as Storage;
+    Object.defineProperty(window, 'localStorage', { value: storage, configurable: true });
+    Object.defineProperty(globalThis, 'localStorage', { value: storage, configurable: true });
+  }
+}
+
+// jsdom does not implement matchMedia; responsive components query it on
+// mount. Same guarded polyfill the package-level vitest setups use.
+if (typeof window !== 'undefined' && typeof window.matchMedia !== 'function') {
+  window.matchMedia = (query: string): MediaQueryList =>
+    ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: () => undefined,
+      removeListener: () => undefined,
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+      dispatchEvent: () => false,
+    }) as unknown as MediaQueryList;
+}
 
 // Same reused-jsdom hazard for window.location: several suites replace it with
 // a plain stub (to swallow jsdom's not-implemented navigation), and an
@@ -81,13 +214,17 @@ vi.mock('@alga-psa/ui/ui-reflection/UIStateContext', () => ({
 // Stable singletons: components that key a useMemo/useEffect on `t` or `i18n`
 // would otherwise re-run forever (a synchronous render loop vitest's testTimeout
 // cannot interrupt) because every useTranslation() call returned fresh refs.
-const mockT = (_key: string, options?: string | { defaultValue?: string; [key: string]: unknown }) => {
-  if (typeof options === 'string') {
-    return options;
-  }
-  const template = options?.defaultValue ?? _key;
+const mockT = (
+  _key: string,
+  options?: string | { defaultValue?: string; [key: string]: unknown },
+  params?: { [key: string]: unknown }
+) => {
+  // Support both call forms: t(key, {defaultValue, ...vars}) and
+  // t(key, 'default string', {...vars}).
+  const template = typeof options === 'string' ? options : (options?.defaultValue ?? _key);
+  const vars = typeof options === 'string' ? params : options;
   return template.replace(/\{\{(\w+)\}\}/g, (match: string, name: string) => {
-    const value = options?.[name];
+    const value = vars?.[name];
     return value === undefined ? match : String(value);
   });
 };

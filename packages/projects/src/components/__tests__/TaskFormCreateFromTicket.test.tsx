@@ -6,6 +6,11 @@ import '@testing-library/jest-dom/vitest';
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react';
 import TaskForm from '../TaskForm';
+
+// The server-suite setup stubs this hook with empty automationIdProps, which
+// strips DOM ids — these tests locate the create-from-ticket button by id.
+// No-op under this package's own config.
+vi.unmock('@alga-psa/ui/ui-reflection/useAutomationIdAndRegister');
 import type { IProjectPhase, ProjectStatus } from '@alga-psa/types';
 import type { IUser } from '@shared/interfaces/user.interfaces';
 import { TicketIntegrationProvider, type TicketIntegrationContextType } from '../../context/TicketIntegrationContext';

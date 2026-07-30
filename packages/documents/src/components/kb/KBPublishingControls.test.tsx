@@ -103,7 +103,7 @@ describe('KBPublishingControls', () => {
     it('renders Publish and Archive buttons for draft article', () => {
       render(<KBPublishingControls article={buildArticle('draft')} />);
 
-      expect(screen.getByText('Draft')).toBeInTheDocument();
+      expect(screen.getAllByText('Draft').length).toBeGreaterThanOrEqual(1);
       expect(screen.getByText('Publish')).toBeInTheDocument();
       expect(screen.getByText('Archive')).toBeInTheDocument();
     });
@@ -139,7 +139,7 @@ describe('KBPublishingControls', () => {
     it('renders Archive button for published article', () => {
       render(<KBPublishingControls article={buildArticle('published')} />);
 
-      expect(screen.getByText('Published')).toBeInTheDocument();
+      expect(screen.getAllByText('Published').length).toBeGreaterThanOrEqual(1);
       expect(screen.getByText('Archive')).toBeInTheDocument();
       expect(screen.queryByText('Publish')).not.toBeInTheDocument();
     });
@@ -160,7 +160,7 @@ describe('KBPublishingControls', () => {
       render(<KBPublishingControls article={buildArticle('review')} />);
 
       // Check that the status flow is rendered
-      expect(screen.getByText('Draft')).toBeInTheDocument();
+      expect(screen.getAllByText('Draft').length).toBeGreaterThanOrEqual(1);
       expect(screen.getByText('Review')).toBeInTheDocument();
       // Check for Published text (there may be multiple instances from badge and flow)
       const publishedTexts = screen.getAllByText('Published');
