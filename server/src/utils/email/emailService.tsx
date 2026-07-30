@@ -139,7 +139,7 @@ export class EmailService {
       subject: template.subject
         .replace('{{invoice_number}}', invoice.invoice_number)
         .replace('{{company_name}}', options?.companyName || 'Your Company'),
-      html: this.renderInvoiceTemplate(template.body, invoice, options),
+      html: this.renderInvoiceTemplate(template.body, invoice, emailLocale, options),
       attachments
     });
   }
@@ -175,6 +175,7 @@ export class EmailService {
   private renderInvoiceTemplate(
     template: string,
     invoice: InvoiceViewModel,
+    emailLocale: string,
     options?: {
       paymentLink?: string;
       companyName?: string;
