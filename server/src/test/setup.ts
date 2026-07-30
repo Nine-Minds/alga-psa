@@ -98,6 +98,11 @@ beforeEach(() => {
 afterAll(() => {
   restoreEnv('EDITION', forkBaseline.EDITION);
   restoreEnv('NEXT_PUBLIC_EDITION', forkBaseline.NEXT_PUBLIC_EDITION);
+  // Per-file stubGlobal hygiene: a file that stubs a global (e.g. a gutted
+  // `navigator` for clipboard tests) and never unstubs leaks it to every
+  // later file in the shared fork. In-file persistence is preserved — this
+  // only runs after the file's own tests finish.
+  vi.unstubAllGlobals();
 });
 afterEach(() => {
   if (process.env.EDITION !== realEdition) {
@@ -238,59 +243,71 @@ vi.mock('@alga-psa/ui/ui-reflection/UIStateContext', () => ({
 // Stable singletons: components that key a useMemo/useEffect on `t` or `i18n`
 // would otherwise re-run forever (a synchronous render loop vitest's testTimeout
 // cannot interrupt) because every useTranslation() call returned fresh refs.
-const mockT = (
-  _key: string,
-  options?: string | { defaultValue?: string; [key: string]: unknown },
-  params?: { [key: string]: unknown }
-) => {
-  // Support both call forms: t(key, {defaultValue, ...vars}) and
-  // t(key, 'default string', {...vars}).
-  const template = typeof options === 'string' ? options : (options?.defaultValue ?? _key);
-  const vars = typeof options === 'string' ? params : options;
-  return template.replace(/\{\{(\w+)\}\}/g, (match: string, name: string) => {
-    const value = vars?.[name];
-    return value === undefined ? match : String(value);
-  });
-};
-const mockI18n = { language: 'en' };
-const mockUseTranslation = () => ({ t: mockT, i18n: mockI18n });
+//
+// Defined via vi.hoisted: the mock factory below can fire while this file's
+// const section is still evaluating (seen in CI when a jsdom environment
+// re-init imported keyboard-shortcuts/display mid-setup), and plain top-level
+// consts are TDZ at that point. vi.hoisted runs before any import executes,
+// so the factory can never observe these uninitialized.
+const i18nMocks = vi.hoisted(() => {
+  const mockT = (
+    _key: string,
+    options?: string | { defaultValue?: string; [key: string]: unknown },
+    params?: { [key: string]: unknown }
+  ) => {
+    // Support both call forms: t(key, {defaultValue, ...vars}) and
+    // t(key, 'default string', {...vars}).
+    const template = typeof options === 'string' ? options : (options?.defaultValue ?? _key);
+    const vars = typeof options === 'string' ? params : options;
+    return template.replace(/\{\{(\w+)\}\}/g, (match: string, name: string) => {
+      const value = vars?.[name];
+      return value === undefined ? match : String(value);
+    });
+  };
+  const mockI18n = { language: 'en' };
 
-// Stable formatter singleton (en locale). Components key useMemo/useEffect on
-// the return value, so it must be referentially stable across renders.
-const mockFormatters = {
-  formatDate: (date: Date | string, options?: Intl.DateTimeFormatOptions) => {
-    const dateObj = typeof date === 'string' ? new Date(date) : date;
-    return new Intl.DateTimeFormat('en', options).format(dateObj);
-  },
-  formatNumber: (value: number, options?: Intl.NumberFormatOptions) =>
-    new Intl.NumberFormat('en', options).format(value),
-  formatCurrency: (value: number, currency: string, options?: Intl.NumberFormatOptions) =>
-    new Intl.NumberFormat('en', { style: 'currency', currency, ...options }).format(value),
-  formatRelativeTime: (date: Date | string) => {
-    const dateObj = typeof date === 'string' ? new Date(date) : date;
-    const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
-    const diff = dateObj.getTime() - Date.now();
-    const seconds = Math.floor(diff / 1000);
-    const minutes = Math.floor(seconds / 60);
-    const hours = Math.floor(minutes / 60);
-    const days = Math.floor(hours / 24);
-    if (Math.abs(days) > 0) return rtf.format(days, 'day');
-    if (Math.abs(hours) > 0) return rtf.format(hours, 'hour');
-    if (Math.abs(minutes) > 0) return rtf.format(minutes, 'minute');
-    return rtf.format(seconds, 'second');
-  },
-};
-const mockUseFormatters = () => mockFormatters;
+  // Stable formatter singleton (en locale). Components key useMemo/useEffect on
+  // the return value, so it must be referentially stable across renders.
+  const mockFormatters = {
+    formatDate: (date: Date | string, options?: Intl.DateTimeFormatOptions) => {
+      const dateObj = typeof date === 'string' ? new Date(date) : date;
+      return new Intl.DateTimeFormat('en', options).format(dateObj);
+    },
+    formatNumber: (value: number, options?: Intl.NumberFormatOptions) =>
+      new Intl.NumberFormat('en', options).format(value),
+    formatCurrency: (value: number, currency: string, options?: Intl.NumberFormatOptions) =>
+      new Intl.NumberFormat('en', { style: 'currency', currency, ...options }).format(value),
+    formatRelativeTime: (date: Date | string) => {
+      const dateObj = typeof date === 'string' ? new Date(date) : date;
+      const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
+      const diff = dateObj.getTime() - Date.now();
+      const seconds = Math.floor(diff / 1000);
+      const minutes = Math.floor(seconds / 60);
+      const hours = Math.floor(minutes / 60);
+      const days = Math.floor(hours / 24);
+      if (Math.abs(days) > 0) return rtf.format(days, 'day');
+      if (Math.abs(hours) > 0) return rtf.format(hours, 'hour');
+      if (Math.abs(minutes) > 0) return rtf.format(minutes, 'minute');
+      return rtf.format(seconds, 'second');
+    },
+  };
 
-// Stable i18n context value used by useI18n/useOptionalI18n (locale-aware
-// shared components like DatePicker/CurrencyInput read this).
-const mockI18nContext = { locale: 'en', t: mockT, i18n: mockI18n };
-
+  return {
+    mockT,
+    mockI18n,
+    mockUseTranslation: () => ({ t: mockT, i18n: mockI18n }),
+    mockFormatters,
+    mockUseFormatters: () => mockFormatters,
+    // Stable i18n context value used by useI18n/useOptionalI18n (locale-aware
+    // shared components like DatePicker/CurrencyInput read this).
+    mockI18nContext: { locale: 'en', t: mockT, i18n: mockI18n },
+  };
+});
 vi.mock('@alga-psa/ui/lib/i18n/client', () => ({
-  useTranslation: mockUseTranslation,
-  useFormatters: mockUseFormatters,
-  useI18n: () => mockI18nContext,
-  useOptionalI18n: () => mockI18nContext,
+  useTranslation: i18nMocks.mockUseTranslation,
+  useFormatters: i18nMocks.mockUseFormatters,
+  useI18n: () => i18nMocks.mockI18nContext,
+  useOptionalI18n: () => i18nMocks.mockI18nContext,
   detectClientLocale: () => 'en',
   I18nProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
