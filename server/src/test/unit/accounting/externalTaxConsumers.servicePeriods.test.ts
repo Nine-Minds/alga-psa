@@ -98,7 +98,7 @@ describe('external tax consumers service-period policy', () => {
         difference: 0
       }
     ]);
-    expect(invoiceBuilder.select).toHaveBeenCalledWith('invoice_id', 'tax_source');
+    expect(invoiceBuilder.select).toHaveBeenCalledWith('invoice_id', 'tax_source', 'currency_code');
     expect(chargeBuilder.select).toHaveBeenCalledWith(
       'item_id',
       'description',

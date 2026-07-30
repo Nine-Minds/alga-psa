@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { Card } from '@alga-psa/ui/components/Card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@alga-psa/ui/components/Tabs';
 import { DataTable } from '@alga-psa/ui/components/DataTable';
@@ -61,6 +62,7 @@ const yesNoLabel = (value: boolean, t: Translator): string => (
 const ContractReports: React.FC = () => {
   const { t } = useTranslation('msp/reports');
   const { formatCurrency, formatDate } = useFormatters();
+  const { currencyCode: tenantCurrency } = useCurrencyFormat();
   const [activeReport, setActiveReport] = useState('revenue');
   const [revenueData, setRevenueData] = useState<ContractRevenue[]>([]);
   const [expirationData, setExpirationData] = useState<ContractExpiration[]>([]);
@@ -119,7 +121,7 @@ const ContractReports: React.FC = () => {
 
   // Format currency
   const formatCents = (cents: number): string => {
-    return formatCurrency(cents / 100, 'USD');
+    return formatCurrency(cents / 100, tenantCurrency);
   };
 
   // Revenue Report Columns

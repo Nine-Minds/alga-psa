@@ -7,6 +7,7 @@ import { Tooltip } from '@alga-psa/ui/components/Tooltip';
 import { Calculator, Cloud, ArrowRight, AlertTriangle, CheckCircle, Info } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useFormatters } from '@alga-psa/ui/lib/i18n/client';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { getErrorMessage, isActionMessageError, isActionPermissionError } from '@alga-psa/ui/lib/errorHandling';
 
 import { getInvoiceTaxReconciliation } from '@alga-psa/billing/actions/externalTaxImportActions';
@@ -17,6 +18,7 @@ interface TaxReconciliationViewProps {
 
 interface ReconciliationData {
   invoiceId: string;
+  currencyCode?: string | null;
   internalTax: number;
   externalTax: number;
   difference: number;
@@ -34,6 +36,7 @@ interface ReconciliationData {
 export function TaxReconciliationView({ invoiceId }: TaxReconciliationViewProps) {
   const { t } = useTranslation('msp/invoicing');
   const { formatCurrency, formatNumber } = useFormatters();
+  const { currencyCode: tenantCurrency } = useCurrencyFormat();
   const [data, setData] = useState<ReconciliationData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -131,7 +134,7 @@ export function TaxReconciliationView({ invoiceId }: TaxReconciliationViewProps)
               </span>
             </div>
             <p className="text-2xl font-bold text-success">
-              {formatCurrency(data.internalTax / 100, 'USD')}
+              {formatCurrency(data.internalTax / 100, data.currencyCode ?? tenantCurrency)}
             </p>
           </div>
 
@@ -141,7 +144,7 @@ export function TaxReconciliationView({ invoiceId }: TaxReconciliationViewProps)
               <span className={`text-sm font-medium mt-1 ${
                 data.hasSignificantDifference ? 'text-warning' : 'text-success'
               }`}>
-                {formatCurrency(data.difference / 100, 'USD')}
+                {formatCurrency(data.difference / 100, data.currencyCode ?? tenantCurrency)}
               </span>
               <span className={`text-xs ${
                 data.hasSignificantDifference ? 'text-warning' : 'text-muted-foreground'
@@ -160,7 +163,7 @@ export function TaxReconciliationView({ invoiceId }: TaxReconciliationViewProps)
                 })}
               </span>
               <p className="text-2xl font-bold">
-                {formatCurrency(data.externalTax / 100, 'USD')}
+                {formatCurrency(data.externalTax / 100, data.currencyCode ?? tenantCurrency)}
               </p>
             </AlertDescription>
           </Alert>
@@ -231,15 +234,15 @@ export function TaxReconciliationView({ invoiceId }: TaxReconciliationViewProps)
                       })}
                     </td>
                     <td className="px-4 py-2 text-right font-mono">
-                      {formatCurrency(line.internalTax / 100, 'USD')}
+                      {formatCurrency(line.internalTax / 100, data.currencyCode ?? tenantCurrency)}
                     </td>
                     <td className="px-4 py-2 text-right font-mono">
-                      {formatCurrency(line.externalTax / 100, 'USD')}
+                      {formatCurrency(line.externalTax / 100, data.currencyCode ?? tenantCurrency)}
                     </td>
                     <td className={`px-4 py-2 text-right font-mono ${
                       line.difference !== 0 ? 'text-amber-600 font-medium' : 'text-green-600'
                     }`}>
-                      {line.difference >= 0 ? '+' : ''}{formatCurrency(line.difference / 100, 'USD')}
+                      {line.difference >= 0 ? '+' : ''}{formatCurrency(line.difference / 100, data.currencyCode ?? tenantCurrency)}
                     </td>
                   </tr>
                 ))}
@@ -250,15 +253,15 @@ export function TaxReconciliationView({ invoiceId }: TaxReconciliationViewProps)
                     {t('externalTax.reconciliationView.labels.total', { defaultValue: 'Total' })}
                   </td>
                   <td className="px-4 py-2 text-right font-mono">
-                    {formatCurrency(data.internalTax / 100, 'USD')}
+                    {formatCurrency(data.internalTax / 100, data.currencyCode ?? tenantCurrency)}
                   </td>
                   <td className="px-4 py-2 text-right font-mono">
-                    {formatCurrency(data.externalTax / 100, 'USD')}
+                    {formatCurrency(data.externalTax / 100, data.currencyCode ?? tenantCurrency)}
                   </td>
                   <td className={`px-4 py-2 text-right font-mono ${
                     data.difference !== 0 ? 'text-amber-600' : 'text-green-600'
                   }`}>
-                    {data.difference >= 0 ? '+' : ''}{formatCurrency(data.difference / 100, 'USD')}
+                    {data.difference >= 0 ? '+' : ''}{formatCurrency(data.difference / 100, data.currencyCode ?? tenantCurrency)}
                   </td>
                 </tr>
               </tfoot>

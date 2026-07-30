@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { useRouter } from 'next/navigation';
 import { Badge, type BadgeVariant } from '@alga-psa/ui/components/Badge';
 import { Button } from '@alga-psa/ui/components/Button';
@@ -128,13 +129,13 @@ const QuoteDetailPage: React.FC<QuoteDetailPageProps> = ({ quoteId }) => {
   const [isSubmittingDecision, setIsSubmittingDecision] = useState(false);
   const [isDownloadingPdf, setIsDownloadingPdf] = useState(false);
   const [confirmAction, setConfirmAction] = useState<'accept' | 'reject' | null>(null);
+  const { money } = useCurrencyFormat();
 
-  const formatCurrency = useCallback((amountInCents: number, currencyCode: string = 'USD') => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: currencyCode,
-    }).format(amountInCents / 100);
-  }, []);
+  // money() takes minor units and formats with the tenant's locale + currency
+  // from CurrencyFormatProvider.
+  const formatCurrency = useCallback((amountInCents: number, currencyCode?: string) => {
+    return money(amountInCents, currencyCode);
+  }, [money]);
 
   const formatDate = useCallback((date: string | { toString(): string } | undefined | null) => {
     if (!date) return 'N/A';

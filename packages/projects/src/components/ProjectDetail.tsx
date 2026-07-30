@@ -36,7 +36,8 @@ import { getProjectTaskStatuses, getProjectStatusesByPhase, updatePhase, deleteP
 import { checkCurrentUserPermissions } from '@alga-psa/auth/actions';
 import type { ProjectBillingOverview } from '@alga-psa/types';
 import { useProjectBillingIntegration } from '../context/ProjectBillingIntegrationContext';
-import { derivePhaseBillingBadges, formatCurrencyFromMinorUnits } from '@alga-psa/core';
+import { derivePhaseBillingBadges } from '@alga-psa/core';
+import { useCurrencyFormat } from '@alga-psa/ui/lib';
 import { updateTaskStatus, reorderTask, reorderTasksInStatus, moveTaskToPhase, updateTaskWithChecklist, getTaskChecklistItems, getTaskResourcesAction, getTaskTicketLinksAction, duplicateTaskToPhase, deleteTask as deleteTaskAction, getTasksForPhase, getTaskById, getProjectTaskData, assignTeamToProjectTask, removeTeamFromProjectTask, bulkAddTagsToTasks } from '../actions/projectTaskActions';
 import styles from './ProjectDetail.module.css';
 import { toast } from 'react-hot-toast';
@@ -240,6 +241,7 @@ export default function ProjectDetail({
   onUrlUpdate
 }: ProjectDetailProps) {
   const { t } = useTranslation(['features/projects', 'common']);
+  const { money } = useCurrencyFormat();
   const {
     enabled: projectBillingUiEnabled,
     loading: projectBillingUiLoading,
@@ -3458,7 +3460,7 @@ export default function ProjectDetail({
         ? t('billing.header.notEnabled', 'Not enabled')
         : config.billing_model === 'fixed_price'
           ? t('billing.header.fixedChip', 'Fixed price · {{total}}', {
-            total: formatCurrencyFromMinorUnits(config.total_price ?? 0, 'en-US', config.currency ?? 'USD'),
+            total: money(config.total_price ?? 0, config.currency ?? undefined),
           })
           : t('billing.header.tmChip', 'Time & materials');
       return (
