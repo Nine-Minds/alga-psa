@@ -26,3 +26,9 @@ exports.up = async function up(knex) {
 exports.down = async function down() {
   // No-op: email template migrations are forward-only content corrections.
 };
+
+// Citus: notification_categories is a reference table, and knex otherwise runs
+// the whole pending batch in one transaction — a parallel multi-shard operation
+// from an earlier migration in that transaction makes this upsert error. The
+// upserts are idempotent, so running outside a transaction is safe.
+exports.config = { transaction: false };

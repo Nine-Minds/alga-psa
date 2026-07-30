@@ -26,3 +26,9 @@ exports.up = async function up(knex) {
 exports.down = async function down() {
   // No-op: notification template migrations are forward-only content corrections.
 };
+
+// Citus: internal_notification_categories/subtypes are FK'd from the
+// distributed internal_notifications table, so this upsert cannot share a
+// transaction with a parallel multi-shard operation from another migration in
+// the batch. The upserts are idempotent, so no transaction is safe.
+exports.config = { transaction: false };
